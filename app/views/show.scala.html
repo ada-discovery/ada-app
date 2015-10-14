@@ -1,0 +1,43 @@
+@(form: Form[_], elements : Any, updateCall : Call, listCall : Call, deleteCall : Call)(implicit msg: play.api.i18n.Messages)
+
+@import helper.{inputText, FieldConstructor}
+@import util.getDomainName
+
+@defining(getDomainName(form)) { domainName =>
+
+	@main(Messages("show.title", domainName)) {
+    
+        <!-- Begin page content -->
+	    <div class="container">
+		    <div class="page-header">
+    			<h1>@Messages("show.title", domainName)</h1>
+	    	</div>
+
+		    @form.errors.map{ error =>
+			    <div class="alert alert-dismissable alert-danger">
+				    <button type="button" class="close" data-dismiss="alert">×</button>
+				    @Messages(error.message, Messages(domainName + "." + error.key))
+			    </div>
+		    }
+
+		    <div class="row">
+			    <div class="col-md-8">
+					<fieldset>
+					    @elements
+					</fieldset>
+				
+					<div class="actions">
+					   <a href="@listCall" class="btn btn-default">Cancel</a>
+					</div>
+			    </div>
+			    <div class="col-md-4">
+				    @info()
+			    </div>
+		    </div>
+		
+		    @helper.form(deleteCall, 'class -> "topRight") {
+			    <input type="submit" value="Delete this @domainName" class="btn btn-danger">
+		    }
+	    </div>
+    }
+}

@@ -1,0 +1,8 @@
+@(form: Form[User])(implicit msg: play.api.i18n.Messages)
+
+@views.html.create(
+	form = form,
+	elements = editableTextElements(form),
+	saveCall = routes.UserController.save(),
+	listCall = routes.UserController.listAll()
+)

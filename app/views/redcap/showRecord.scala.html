@@ -1,0 +1,8 @@
+@import play.api.libs.json.JsObject
+@(item: JsObject)(implicit msg: play.api.i18n.Messages)
+
+@views.html.jsonShow(
+	"Record",
+    item,
+	routes.RedCapController.listRecords()
+)

@@ -1,0 +1,36 @@
+@import play.api.libs.json.JsObject
+@(domainName : String, item: JsObject, listCall : Call)(implicit msg: play.api.i18n.Messages)
+
+@import helper.{inputText, FieldConstructor}
+@import util.getDomainName
+
+@import helper.{inputText, FieldConstructor}
+@import util.getDomainName
+@import views.html.helper.FieldElements
+
+	@main(Messages("show.title", domainName)) {
+    
+        <!-- Begin page content -->
+	    <div class="container" style="padding-bottom: 190px;">
+		    <div class="page-header">
+    			<h1>@Messages("show.title", domainName)</h1>
+	    	</div>
+
+		    <div class="row">
+			    <div class="col-md-8">
+					<fieldset>
+						@item.fields.map { case (key, value) =>
+							@twitterBootstrapJsValue(key, attributeLabel(domainName, key), value.asOpt[String].getOrElse(value.toString()), false)
+						}
+					</fieldset>
+				
+					<div class="actions" align="center">
+					   <a href="@listCall" class="btn btn-default">Go Back</a>
+					</div>
+			    </div>
+			    <div class="col-md-4">
+				    @info()
+			    </div>
+		    </div>
+	    </div>
+    }

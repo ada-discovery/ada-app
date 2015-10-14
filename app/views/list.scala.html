@@ -1,0 +1,62 @@
+@(domainName : String, actions: Html, table : Html, displayCall : (Int, Option[String]) => Any, currentPage: Page[_], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages)
+
+@main(Messages("list.title", domainName)) {
+
+	<!-- Begin page content -->
+	<div class="container">
+		<div class="page-header">
+			<h3>
+				@Messages("list.count.title", currentPage.total, domainName)
+			</h3>
+		</div>
+	
+		@flash.get("success").map { message =>
+			<div class="alert alert-dismissable alert-success">
+				<button type="button" class="close" data-dismiss="alert">×</button>
+				<strong>Well done!</strong> @message
+			</div>
+		}
+
+		<div id="actions">
+			@actions
+		</div>
+
+		@if(!currentPage.items.isEmpty) {
+
+            @table
+
+			<hr/>
+			
+            <ul class="pager" style="padding-bottom: 120px;">
+                @currentPage.prev.map { page =>
+                    <li class="previous">
+                        <a href="@displayCall(page, None)">&larr; Previous</a>
+                    </li> 
+                }.getOrElse {
+                    <li class="previous disabled">
+                        <a>&larr; Previous</a>
+                    </li>
+                }
+                <li class="current">
+                    <a>Displaying @(currentPage.offset + 1) to @(currentPage.offset + currentPage.items.size) of @currentPage.total</a>
+                </li>
+                @currentPage.next.map { page =>
+                    <li class="next">
+                        <a href="@displayCall(page, None)">Next &rarr;</a>
+                    </li> 
+                }.getOrElse {
+                    <li class="next disabled">
+                        <a>Next &rarr;</a>
+                    </li>
+                }
+            </ul>
+		} else {
+			<div class="panel panel-default">
+			  <div class="panel-body">
+			    <em>Nothing to display</em>
+			  </div>
+			</div>	
+		}
+	</div>
+}
+

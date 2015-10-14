@@ -1,0 +1,45 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Default path will just redirect to the RedCap view
+GET         /                                 controllers.RedCapController.index
+
+# Users list (look at the default values for pagination parameters)
+GET         /users                            controllers.UserController.findByName(p: Int ?= 0, s: String ?= "name", f ?= "")
+GET         /users/all                        controllers.UserController.listAll(s: Int ?= 2)
+
+# Add user
+GET         /users/new                        controllers.UserController.create
+POST        /users/save                       controllers.UserController.save
+
+# Get/edit existing user
+GET         /users/:id/get                    controllers.UserController.get(id: BSONObjectID)
+GET         /users/:id                        controllers.UserController.edit(id: BSONObjectID)
+POST        /users/:id                        controllers.UserController.update(id: BSONObjectID)
+
+# Delete user
+POST        /users/:id/delete                 controllers.UserController.delete(id: BSONObjectID)
+
+
+# Rest API
+
+POST        /rest/users/save                  controllers.UserController.saveRest
+GET         /rest/users/:id/get               controllers.UserController.getRest(id: BSONObjectID)
+POST        /rest/users/:id                   controllers.UserController.updateRest(id: BSONObjectID)
+GET         /rest/users/all                   controllers.UserController.listAllRest
+
+# RedCap
+
+GET         /redcap/records                   controllers.RedCapController.listRecords(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f ?= "")
+GET         /redcap/metadatas                 controllers.RedCapController.listMetadatas(p: Int ?= 0, s: String ?= "field_name", f ?= "")
+GET         /redcap/fieldNames                controllers.RedCapController.listFieldNames(p: Int ?= 0, s: String ?= "original_field_name", f ?= "")
+GET         /redcap/records/:id/get           controllers.RedCapController.showRecord(id: String)
+GET         /redcap/metadatas/:id/get         controllers.RedCapController.showMetadata(id: String)
+GET         /redcap/fieldNames/:id/get        controllers.RedCapController.showFieldName(id: String)
+
+# Map static resources from the /public folder to the /assets URL path
+GET         /assets/*file                     controllers.Assets.at(path="/public", file)
+
+# Map the webjar static assets to the /webjars URL
+GET         /webjars/*file                    controllers.WebJarAssets.at(file)
