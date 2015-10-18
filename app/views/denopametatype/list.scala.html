@@ -1,0 +1,61 @@
+@(currentPage: Page[User], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@**********************************
+* Helper generating table headers *
+***********************************@
+@header(fieldName: String, title: String) = {
+    <th class="col header @if(currentOrderBy == fieldName){'glyphicon glyphicon-chevron-down'}">
+        <a href="@displayCall(0, Some(fieldName))">@title</a>
+    </th>
+}
+
+@actions = {
+    @helper.form(action=routes.UserController.findByName(), 'class -> "navbar-form navbar-left", 'role -> "search") {
+        <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by user name...">
+        <input type="submit" id="searchsubmit" value="Filter by name" class="btn btn-primary btn-sm">
+    }
+    <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.UserController.create()">Add a new user</a>
+}
+
+@table = {
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                @header("name", "Name")
+                @header("address", "Address")
+                @header("dob", "Date of Birth")
+                @header("joiningDate", "Joining Date")
+                @header("designation", "Designation")
+            </tr>
+        </thead>
+        <tbody>
+
+        @currentPage.items.map { user =>
+            <tr>
+                <td><a href="@routes.UserController.edit(user._id)">@user.name</a></td>
+                <td>@user.address</td>
+                <td>@user.dob.format("dd MMM yyyy")</td>
+                <td>@user.joiningDate.format("dd MMM yyyy")</td>
+                <td>@user.designation</td>
+            </tr>
+        }
+
+        </tbody>
+    </table>
+}
+
+@displayCall(newPage : Int, newOrderBy : Option[String]) = @{
+    routes.UserController.findByName(newPage, newOrderBy.map { orderBy =>
+        if(orderBy == currentOrderBy) "-" + currentOrderBy else orderBy
+    }.getOrElse(currentOrderBy), currentFilter)
+}
+
+@views.html.list(
+    "user",
+    actions,
+    table,
+    displayCall,
+    currentPage,
+    currentOrderBy,
+    currentFilter
+)

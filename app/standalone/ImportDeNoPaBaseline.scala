@@ -2,30 +2,37 @@ package standalone
 
 import javax.inject.Inject
 
-import play.api.libs.json.{JsString, JsObject}
+import persistence.DeNoPaBaselineRepo
+import play.api.libs.json.{JsNull, JsString, JsObject}
 import play.modules.reactivemongo.ReactiveMongoApi
 import play.modules.reactivemongo.json.collection.JSONCollection
 import play.modules.reactivemongo.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import scala.concurrent.duration._
 
+import scala.concurrent.Await
 import scala.io.Source
+import util.encodeMongoKey
 
-class ImportDeNoPaData @Inject()(reactiveMongoApi: ReactiveMongoApi) extends Runnable {
+class ImportBaselineDeNoPaData @Inject()(deNoPaBaselineRepo: DeNoPaBaselineRepo) extends Runnable {
 
-  val filename = "/Users/peter.banda/Documents/DeNoPa/Denopa-V1-BL-Datensatz-1.unfiltered.csv"
-  val denopaCollection: JSONCollection = reactiveMongoApi.db.collection("denopa")
+  val filename = "/home/tremor/Downloads/DeNoPa/Denopa-V1-BL-Datensatz-1.unfiltered.csv"
 
   override def run = {
     val lines = Source.fromFile(filename).getLines
 
     // remove all records in the collection
-    denopaCollection.drop()
+    deNoPaBaselineRepo.drop()
 
     // collect the column names
     val columnNames = lines.take(1).map {
-      _.split(",").map(_.replaceAll("\"", "").trim)
-    }.toSeq.flatten
+      _.split(",").map(columnName =>
+        encodeMongoKey(columnName.replaceAll("\"", "").trim)
+    )}.toSeq.flatten
 
+    columnNames.foreach{columnName =>
+      if (columnName.contains(".")) println(columnName)
+    }
     // for each lince create a JSON record and insert to the database
     lines.zipWithIndex.foreach { case (line, index) =>
       // dirty fix of the "", problem
@@ -44,11 +51,18 @@ class ImportDeNoPaData @Inject()(reactiveMongoApi: ReactiveMongoApi) extends Run
       // create a JSON record
       val jsonRecord = JsObject(
         (columnNames, values).zipped.map {
-          case (columnName, value) => (columnName, JsString(value))
+          case (columnName, value) => (
+            if (columnName.isEmpty) "Line_Nr" else columnName,
+            if (value.isEmpty) JsNull else JsString(value)
+          )
         })
 
-      // inser the record to the database
-      denopaCollection.insert(jsonRecord)
+      // insert the record to the database
+      val future = deNoPaBaselineRepo.save(jsonRecord)
+
+      // wait for the execution to complete, i.e., synchronize
+      Await.result(future, 10000 millis)
+
       println(s"Record $index imported.")
     }
   }
@@ -66,6 +80,6 @@ class ImportDeNoPaData @Inject()(reactiveMongoApi: ReactiveMongoApi) extends Run
     ).flatten.map(_.trim)
 }
 
-object ImportDeNoPaData extends GuiceBuilderRunnable[ImportDeNoPaData] with App {
+object ImportBaselineDeNoPaData extends GuiceBuilderRunnable[ImportBaselineDeNoPaData] with App {
   override def main(args: Array[String]) = run
 }

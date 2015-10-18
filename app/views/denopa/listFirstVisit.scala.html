@@ -1,0 +1,12 @@
+@(currentPage: Page[MetaTypeStats], currentOrderBy: String, currentFilter: String, currentSearchField : String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@views.html.denopametatype.list(
+    "first visit meta type stat",
+    currentPage,
+    currentOrderBy,
+    currentFilter,
+    currentSearchField,
+    routes.DeNoPaFirstVisitMetaTypeStatsController.find,
+    routes.DeNoPaFirstVisitMetaTypeStatsController.find(),
+    routes.DeNoPaFirstVisitMetaTypeStatsController.get
+)
