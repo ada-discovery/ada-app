@@ -14,15 +14,18 @@ import scala.concurrent.Await
 import scala.io.Source
 import util.encodeMongoKey
 
-class ImportBaselineDeNoPaData @Inject()(deNoPaBaselineRepo: DeNoPaBaselineRepo) extends Runnable {
+class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends Runnable {
 
   val filename = "/home/tremor/Downloads/DeNoPa/Denopa-V1-BL-Datensatz-1.unfiltered.csv"
+  val timeout = 50000 millis
 
   override def run = {
-    val lines = Source.fromFile(filename).getLines
+    // remove the records from the collection
+    val deleteFuture = baselineRepo.deleteAll
+    Await.result(deleteFuture, timeout)
 
-    // remove all records in the collection
-    deNoPaBaselineRepo.drop()
+    // read all the lines
+    val lines = Source.fromFile(filename).getLines
 
     // collect the column names
     val columnNames = lines.take(1).map {
@@ -58,10 +61,10 @@ class ImportBaselineDeNoPaData @Inject()(deNoPaBaselineRepo: DeNoPaBaselineRepo)
         })
 
       // insert the record to the database
-      val future = deNoPaBaselineRepo.save(jsonRecord)
+      val future = baselineRepo.save(jsonRecord)
 
       // wait for the execution to complete, i.e., synchronize
-      Await.result(future, 10000 millis)
+      Await.result(future, timeout)
 
       println(s"Record $index imported.")
     }
@@ -80,6 +83,6 @@ class ImportBaselineDeNoPaData @Inject()(deNoPaBaselineRepo: DeNoPaBaselineRepo)
     ).flatten.map(_.trim)
 }
 
-object ImportBaselineDeNoPaData extends GuiceBuilderRunnable[ImportBaselineDeNoPaData] with App {
+object ImportDeNoPaBaseline extends GuiceBuilderRunnable[ImportDeNoPaBaseline] with App {
   override def main(args: Array[String]) = run
 }

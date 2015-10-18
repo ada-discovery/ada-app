@@ -1,11 +1,7 @@
-@(currentPage: Page[MetaTypeStats], currentOrderBy: String, currentFilter: String, currentSearchField : String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(item: MetaTypeStats)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
-@views.html.denopametatype.list(
-    "baseline mate type stat",
-    currentPage,
-    currentOrderBy,
-    currentFilter,
-    currentSearchField,
-    routes.DeNoPaMetaTypeController.find(),
-    routes.DeNoPaMetaTypeController.get()
+@views.html.denopametatype.show(
+    "first visit meta type stat",
+    item,
+    routes.DeNoPaFirstVisitMetaTypeStatsController.find()
 )

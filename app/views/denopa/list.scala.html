@@ -1,57 +1,38 @@
-@(currentPage: Page[User], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages)
-
-@**********************************
-* Helper generating table headers *
-***********************************@
-@header(fieldName: String, title: String) = {
-    <th class="col header @if(currentOrderBy == fieldName){'glyphicon glyphicon-chevron-down'}">
-        <a href="@displayCall(0, Some(fieldName))">@title</a>
-    </th>
-}
+@import play.api.libs.json.JsObject
+@import reactivemongo.bson.BSONObjectID
+@import play.modules.reactivemongo.json._
+@(domainName : String, currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String, findCall : (Int, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
-    @helper.form(action=routes.UserController.findByName(), 'class -> "navbar-form navbar-left", 'role -> "search") {
-        <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by user name...">
-        <input type="submit" id="searchsubmit" value="Filter by name" class="btn btn-primary btn-sm">
-    }
-    <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.UserController.create()">Add a new user</a>
+@helper.form(action=plainFindCall, 'class -> "navbar-form navbar-left", 'role -> "search") {
+    <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by Probanden Nr...">
+    <input type="submit" id="searchsubmit" value="Filter by Probanden Nr" class="btn btn-primary btn-sm">
 }
-
-@table = {
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                @header("name", "Name")
-                @header("address", "Address")
-                @header("dob", "Date of Birth")
-                @header("joiningDate", "Joining Date")
-                @header("designation", "Designation")
-            </tr>
-        </thead>
-        <tbody>
-
-        @currentPage.items.map { user =>
-            <tr>
-                <td><a href="@routes.UserController.edit(user._id)">@user.name</a></td>
-                <td>@user.address</td>
-                <td>@user.dob.format("dd MMM yyyy")</td>
-                <td>@user.joiningDate.format("dd MMM yyyy")</td>
-                <td>@user.designation</td>
-            </tr>
-        }
-
-        </tbody>
-    </table>
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{
-    routes.UserController.findByName(newPage, newOrderBy.map { orderBy =>
-        if(orderBy == currentOrderBy) "-" + currentOrderBy else orderBy
+    findCall(newPage, newOrderBy.map { nOrderBy =>
+        if (nOrderBy == currentOrderBy) {
+            "-" + currentOrderBy
+        } else if (("-" + nOrderBy) == currentOrderBy) {
+            nOrderBy
+        } else nOrderBy
     }.getOrElse(currentOrderBy), currentFilter)
 }
 
+@rowClickCall(item : JsObject) = @{
+    getCall(item.value.get("_id").get.as[BSONObjectID]).url
+}
+
+@table = {
+    @jsonTable(currentPage.items, currentOrderBy, displayCall(_, _),
+        Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe")),
+        Some(rowClickCall)
+    )
+}
+
 @views.html.list(
-    "user",
+    domainName,
     actions,
     table,
     displayCall,

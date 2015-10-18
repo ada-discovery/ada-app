@@ -1,4 +1,4 @@
-@(form: Form[User])(implicit msg: play.api.i18n.Messages)
+@(form: Form[User])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @views.html.create(
 	form = form,

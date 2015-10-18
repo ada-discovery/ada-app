@@ -1,12 +1,6 @@
-@import play.api.libs.json.JsObject
-@(domainName : String, item: JsObject, listCall : Call)(implicit msg: play.api.i18n.Messages)
-
-@import helper.{inputText, FieldConstructor}
-@import util.getDomainName
-
-@import helper.{inputText, FieldConstructor}
-@import util.getDomainName
-@import views.html.helper.FieldElements
+@import play.api.libs.json.{JsObject, JsNull}
+@import util.decodeMongoKey
+@(domainName : String, item: JsObject, listCall : Call, nonNullOnly : Boolean = true)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 	@main(Messages("show.title", domainName)) {
     
@@ -17,10 +11,12 @@
 	    	</div>
 
 		    <div class="row">
-			    <div class="col-md-8">
+			    <div class="col-md-9">
 					<fieldset>
 						@item.fields.map { case (key, value) =>
-							@twitterBootstrapJsValue(key, attributeLabel(domainName, key), value.asOpt[String].getOrElse(value.toString()), false)
+							@if(!nonNullOnly || value != JsNull) {
+								@twitterBootstrapJsValue(key, attributeLabel(domainName, decodeMongoKey(key).take(35)), value.asOpt[String].getOrElse(value.toString()), false)
+							}
 						}
 					</fieldset>
 				
@@ -28,7 +24,7 @@
 					   <a href="@listCall" class="btn btn-default">Go Back</a>
 					</div>
 			    </div>
-			    <div class="col-md-4">
+			    <div class="col-md-3">
 				    @info()
 			    </div>
 		    </div>

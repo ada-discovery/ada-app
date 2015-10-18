@@ -1,77 +1,68 @@
 package controllers
 
-import javax.inject.Inject
+import java.util.concurrent.TimeoutException
 
 import models.Page
-import play.api.i18n.MessagesApi
+import persistence.AsyncReadonlyRepo
+import play.api.Logger
+import play.api.i18n.{Messages, MessagesApi}
+import play.api.libs.json.{JsObject, Json}
+import play.api.mvc.{Action, Flash, Controller, RequestHeader}
+import play.twirl.api.Html
+import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import services.RedCapService
-import views.html
-import play.api.mvc.{Action, Controller}
 
-class DeNoPaController @Inject() (
-    redCapService: RedCapService,
+abstract class DeNoPaController(
+    repo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     messagesApi: MessagesApi
   ) extends Controller {
 
-  val limit = 20
+  def showView(item : JsObject)(implicit msg: Messages, request: RequestHeader) : Html
 
-  def index = Action { Redirect(routes.RedCapController.listFieldNames()) }
+  def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) : Html
 
-  def listRecords(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
+  def get(id: BSONObjectID) = Action.async { implicit request =>
+    repo.get(id).map(_.fold(
+      NotFound(s"Entity #$id not found")
+    ){ entity =>
+      implicit val msg = messagesApi.preferred(request)
 
-    redCapService.listRecords(page, orderBy, filter).map( items =>
-      Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size), orderBy, filter))
-    )
-  }
-
-  def listMetadatas(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
-
-    redCapService.listMetadatas(page, orderBy, filter).map( items =>
-      Ok(html.redcap.listMetadatas(Page(items.drop(page * limit).take(limit), page, page * limit, items.size), orderBy, filter))
-    )
-  }
-
-  def listFieldNames(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
-
-    redCapService.listFieldNames(page, orderBy, filter).map( items =>
-      Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size), orderBy, filter))
-    )
-  }
-
-  def showRecord(id: String) = Action.async { implicit request =>
-    redCapService.getRecord(id).map { foundItems =>
-      if (foundItems.isEmpty) {
-        NotFound(s"Entity #$id not found")
-      } else {
-        implicit val msg = messagesApi.preferred(request)
-        Ok(html.redcap.showRecord(foundItems.head))
-      }
+      Ok(showView(entity))
+    }).recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the edit process")
+        InternalServerError(t.getMessage)
     }
   }
 
-  def showMetadata(id: String) = Action.async { implicit request =>
-    redCapService.getMetadata(id).map { foundItems =>
-      if (foundItems.isEmpty) {
-        NotFound(s"Entity #$id not found")
-      } else {
-        implicit val msg = messagesApi.preferred(request)
-        Ok(html.redcap.showMetadata(foundItems.head))
-      }
-    }
-  }
+  /**
+   * Display the paginated list.
+   *
+   * @param page Current page number (starts from 0)
+   * @param orderBy Column to be sorted
+   * @param query Filter applied on items
+   */
+  def find(page: Int, orderBy: String, query: String) = Action.async { implicit request =>
+    val limit = 20
+    val criteria = if (!query.isEmpty)
+      Some(Json.obj("Probanden_Nr" -> Json.obj("$regex" -> (query + ".*"), "$options" -> "i")))
+    else
+      None
+    val sort = if (!orderBy.isEmpty)
+      Some(Json.obj(orderBy -> 1))
+    else
+      None
 
-  def showFieldName(id: String) = Action.async { implicit request =>
-    redCapService.getFieldName(id).map { foundItems =>
-      if (foundItems.isEmpty) {
-        NotFound(s"Entity #$id not found")
-      } else {
-        implicit val msg = messagesApi.preferred(request)
-        Ok(html.redcap.showFieldName(foundItems.head))
-      }
+    val futureItems = repo.find(criteria, sort, None, Some(limit), Some(page))
+    val futureCount = repo.count(criteria)
+    futureItems.zip(futureCount).map({ case (items, count) =>
+      implicit val msg = messagesApi.preferred(request)
+
+      Ok(listView(Page(items, page, page * limit, count), orderBy, query))
+    }).recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the list process")
+        InternalServerError(t.getMessage)
     }
   }
 }

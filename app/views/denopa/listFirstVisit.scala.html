@@ -1,12 +1,12 @@
-@(currentPage: Page[MetaTypeStats], currentOrderBy: String, currentFilter: String, currentSearchField : String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@import play.api.libs.json.JsObject
+@(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
-@views.html.denopametatype.list(
-    "first visit meta type stat",
+@views.html.denopa.list(
+    "first visit record",
     currentPage,
     currentOrderBy,
     currentFilter,
-    currentSearchField,
-    routes.DeNoPaFirstVisitMetaTypeStatsController.find,
-    routes.DeNoPaFirstVisitMetaTypeStatsController.find(),
-    routes.DeNoPaFirstVisitMetaTypeStatsController.get
+    routes.DeNoPaFirstVisitController.find,
+    routes.DeNoPaFirstVisitController.find(),
+    routes.DeNoPaFirstVisitController.get
 )

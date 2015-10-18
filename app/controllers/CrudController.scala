@@ -29,18 +29,18 @@ abstract class CrudController[E: Format, ID](
   private val DEFAULT_LIMIT = Seq("20")
 
   def form : Form[E]
-  def createView(formx: Form[E])(implicit msg: Messages) : Html
-  def editView(id : ID, formx : Form[E])(implicit msg: Messages) : Html
-  def listView(currentPage: Page[E], currentOrderBy: String, currentFilter: String)(implicit flash: Flash, msg: Messages) : Html
+  def createView(formx: Form[E])(implicit msg: Messages, request: RequestHeader) : Html
+  def editView(id : ID, formx : Form[E])(implicit msg: Messages, request: RequestHeader) : Html
+  def listView(currentPage: Page[E], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) : Html
   def home : Result
   def defaultCreateEntity : E
 
-  def create = Action { request =>
+  def create = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
     Ok(createView(form.fill(defaultCreateEntity)))
   }
 
-  def get(id: ID) = Action.async {  request =>
+  def get(id: ID) = Action.async { implicit request =>
     dao.get(id).map(_.fold(
       NotFound(s"Entity #$id not found")
     ){ entity =>
@@ -62,7 +62,7 @@ abstract class CrudController[E: Format, ID](
     )
   }
 
-  def edit(id: ID) = Action.async { request =>
+  def edit(id: ID) = Action.async { implicit request =>
 //    println(request.tags.get(Router.Tags.RouteController))
 //    println(request.tags.get(Router.Tags.RouteActionMethod))
 
@@ -84,7 +84,7 @@ abstract class CrudController[E: Format, ID](
     val criteria = Json.parse(query).as[JsObject]
     val sort = Json.parse(orderBy).as[JsObject]
 
-    val futureItems = dao.find(Some(criteria), Some(sort), Some(limit), Some(page))
+    val futureItems = dao.find(Some(criteria), Some(sort), None, Some(limit), Some(page))
     val futureCount = dao.count(Some(criteria))
     futureItems.zip(futureCount).map({ case (items, count) =>
       Ok(Json.toJson(items))
@@ -107,7 +107,7 @@ abstract class CrudController[E: Format, ID](
     val criteria = Json.parse(query).as[JsObject]
     val sort = Json.parse(orderBy).as[JsObject]
 
-    val futureItems = dao.find(Some(criteria), Some(sort), Some(limit), Some(page))
+    val futureItems = dao.find(Some(criteria), Some(sort), None, Some(limit), Some(page))
     val futureCount = dao.count(Some(criteria))
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
@@ -127,7 +127,7 @@ abstract class CrudController[E: Format, ID](
    */
   def listAll(orderBy: Int) = Action.async { implicit request =>
     val limit = 5
-    val futureItems = dao.find(None, None, Some(limit), None)
+    val futureItems = dao.find(None, None, None, Some(limit), None)
     val futureCount = dao.count(None)
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
@@ -141,7 +141,7 @@ abstract class CrudController[E: Format, ID](
   }
 
   def listAllRest = Action.async { implicit request =>
-    val futureItems = dao.find(None, None, None, None)
+    val futureItems = dao.find(None, None, None, None, None)
     futureItems.map { items =>
       Ok(Json.toJson(items))
     }.recover {
@@ -191,7 +191,7 @@ abstract class CrudController[E: Format, ID](
       Future.successful(BadRequest(editView(id, formWithErrors)))
     },
     item => {
-      val savedItemId = dao.update(id, item)
+      val savedItemId = dao.update(identity.set(item, id))
       savedItemId.map {
         case Right(id) => home.flashing("success" -> s"Item ${id} has been updated")
         case Left(err) => BadRequest(err)
@@ -205,7 +205,7 @@ abstract class CrudController[E: Format, ID](
 
   def updateRest(id: ID) = Action.async(parse.json) { implicit request =>
     parseValidateAndProcess[E] { entity =>
-      dao.update(id, entity).map {
+      dao.update(identity.set(entity, id)).map {
         case Right(id) => Ok(Json.obj("message" -> "Item successly updated", "id" -> id.toString))
         case Left(err) => BadRequest(err)
       }

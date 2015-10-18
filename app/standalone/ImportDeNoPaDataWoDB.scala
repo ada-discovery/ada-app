@@ -4,15 +4,6 @@ import scala.io.Source
 
 object ImportDeNoPaDataWoDB extends App {
 
-  class TypeEvidence(
-    var intCount: Int,
-    var longCount: Int,
-    var doubleCount: Int,
-    var booleanCount: Int,
-    var nullCount: Int,
-    var valueCountMap : Map[String, Int]
-  )
-
   lazy val filename = "/Users/peter.banda/Documents/DeNoPa/Denopa-V1-BL-Datensatz-1.unfiltered.csv"
 
   private def parseNaive = {

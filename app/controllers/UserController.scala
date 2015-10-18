@@ -17,7 +17,7 @@ import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import views.html
 import play.api.i18n.Messages
-import play.api.mvc.{Action, Flash}
+import play.api.mvc.{Action, Flash, RequestHeader}
 
 import scala.concurrent.duration.DurationInt
 
@@ -43,13 +43,13 @@ class UserController @Inject() (
   override val home =
     Redirect(routes.UserController.listAll())
 
-  override def createView(f : Form[User])(implicit msg: Messages) =
+  override def createView(f : Form[User])(implicit msg: Messages, request: RequestHeader) =
     html.user.create(f).asInstanceOf[Html]
 
-  override def editView(id: BSONObjectID, f : Form[User])(implicit msg: Messages) =
+  override def editView(id: BSONObjectID, f : Form[User])(implicit msg: Messages, request: RequestHeader) =
     html.user.edit(id, f).asInstanceOf[Html]
 
-  override def listView(currentPage: Page[User], currentOrderBy: String, currentFilter: String)(implicit flash: Flash, msg: Messages) =
+  override def listView(currentPage: Page[User], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
     html.user.list(currentPage, currentOrderBy, currentFilter).asInstanceOf[Html]
 
   override val defaultCreateEntity =
@@ -67,7 +67,7 @@ class UserController @Inject() (
     val criteria = Json.parse("{\"name\":{\"$regex\":\"^" + name + ".*\",\"$options\":\"i\"}}").as[JsObject]
     val sort = Json.obj(orderBy -> 1)
 
-    val futureItems = dao.find(Some(criteria), Some(sort), Some(limit), Some(page))
+    val futureItems = dao.find(Some(criteria), Some(sort), None, Some(limit), Some(page))
     val futureCount = dao.count(Some(criteria))
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)

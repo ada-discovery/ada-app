@@ -2,7 +2,6 @@ package persistence
 
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.api.libs.json.JsObject
-import reactivemongo.bson.BSONDocument
 import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
 import reactivemongo.api.indexes.{ IndexType, Index }
 import reactivemongo.bson.BSONObjectID
@@ -14,16 +13,28 @@ import scala.concurrent.Future
  * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
-trait AsyncRepo[E, ID] {
-  def save(entity: E): Future[Either[String, ID]]
+trait AsyncReadonlyRepo[E, ID] {
   def get(id: ID): Future[Option[E]]
-  def find(criteria: Option[JsObject], orderBy: Option[JsObject], limit: Option[Int], page: Option[Int]): Future[Traversable[E]]
+
+  def find(
+    criteria: Option[JsObject] = None,
+    orderBy: Option[JsObject] = None,
+    projection : Option[JsObject] = None,
+    limit: Option[Int] = None,
+    page: Option[Int] = None
+  ): Future[Traversable[E]]
+
   def count(criteria: Option[JsObject]) : Future[Int]
 }
 
+trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
+  def save(entity: E): Future[Either[String, ID]]
+}
+
 trait CrudRepo[E, ID] extends AsyncRepo[E, ID] {
-  def update(id: ID, entity: E): Future[Either[String, ID]]
+  def update(entity: E): Future[Either[String, ID]]
   def delete(id: ID): Future[Either[String, ID]]
+  def deleteAll : Future[String]
 }
 
 trait StreamRepo[E, ID] extends AsyncRepo[E, ID] {
@@ -34,10 +45,7 @@ import models.Identity
 import play.api.libs.json._
 import reactivemongo.api._
 
-/**
- * Abstract {{CRUDService}} impl backed by JSONCollection
- */
-abstract class MongoAsyncRepo[E: Format, ID: Format](implicit identity: Identity[E, ID]) extends AsyncRepo[E, ID] {
+abstract class MongoReadonlyRepo[E: Format, ID: Format](identityName : String) extends AsyncReadonlyRepo[E, ID] {
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
@@ -46,30 +54,19 @@ abstract class MongoAsyncRepo[E: Format, ID: Format](implicit identity: Identity
   /** Mongo collection deserializable to [E] */
   def collection: JSONCollection
 
-  override def save(entity: E): Future[Either[String, ID]] = {
-    val id = identity.next
-    val doc = Json.toJson(identity.set(entity, id)).as[JsObject]
-    collection.insert(doc).map {
-      case le if le.ok == true => Right(id)
-      case le => Left(le.message)
-    }
-  }
-
   override def get(id: ID): Future[Option[E]] =
-    collection.find(Json.obj(identity.name -> id)).one[E]
+    collection.find(Json.obj(identityName -> id)).one[E]
 
   override def find(
     criteria: Option[JsObject],
     orderBy: Option[JsObject],
+    projection : Option[JsObject],
     limit: Option[Int],
     page: Option[Int]
   ): Future[Traversable[E]] = {
 
-    // handle criteria (if any)
-    val queryBuilder = criteria match {
-      case Some(criteria) => collection.find(criteria)
-      case None => collection.genericQueryBuilder
-    }
+    // handle criteria and projection (if any)
+    val queryBuilder = collection.find(criteria.getOrElse(Json.obj()), projection.getOrElse(Json.obj()))
 
     // handle sort (if any)
     val queryBuilder2 = orderBy match {
@@ -103,26 +100,52 @@ abstract class MongoAsyncRepo[E: Format, ID: Format](implicit identity: Identity
     }
 }
 
-/**
- * Abstract {{CRUDService}} impl backed by JSONCollection
- */
-abstract class MongoRepo[E: Format, ID: Format](implicit identity: Identity[E, ID]) extends MongoAsyncRepo[E, ID] with CrudRepo[E, ID] {
+abstract class MongoAsyncRepo[E: Format, ID: Format](implicit identity: Identity[E, ID]) extends MongoReadonlyRepo[E, ID](identity.name) with AsyncRepo[E, ID] {
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
 
-  override def update(id: ID, entity: E): Future[Either[String, ID]] = {
+  override def save(entity: E): Future[Either[String, ID]] = {
+    val id = identity.next
     val doc = Json.toJson(identity.set(entity, id)).as[JsObject]
-    collection.update(Json.obj(identity.name -> id), doc) map {
+    collection.insert(doc).map {
       case le if le.ok == true => Right(id)
       case le => Left(le.message)
     }
+  }
+}
+
+/**
+ * Abstract {{CRUDService}} impl backed by JSONCollection
+ */
+abstract class MongoCrudRepo[E: Format, ID: Format](implicit identity: Identity[E, ID]) extends MongoAsyncRepo[E, ID] with CrudRepo[E, ID] {
+
+  import play.api.libs.concurrent.Execution.Implicits.defaultContext
+  import play.modules.reactivemongo.json._
+
+  override def update(entity: E): Future[Either[String, ID]] = {
+    val doc = Json.toJson(entity).as[JsObject]
+    identity.of(entity).map{ id =>
+      collection.update(Json.obj(identity.name -> id), doc) map {
+        case le if le.ok == true => Right(id)
+        case le => Left(le.message)
+      }
+    }.getOrElse(
+        Future(Left("Id required for update."))
+    )
   }
 
   override def delete(id: ID): Future[Either[String, ID]] = {
     collection.remove(Json.obj(identity.name -> id)) map {  // collection.remove(Json.obj(identity.name -> id), firstMatchOnly = true)
       case le if le.ok == true => Right(id)
       case le => Left(le.message)
+    }
+  }
+
+  override def deleteAll : Future[String] = {
+    collection.remove(Json.obj()).map {
+      case le if le.ok == true => "ok"
+      case le => le.message
     }
   }
 }

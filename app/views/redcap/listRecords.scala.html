@@ -1,5 +1,5 @@
 @import play.api.libs.json.JsObject
-@(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages)
+@(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
     @helper.form(action=routes.RedCapController.listRecords(), 'class -> "navbar-form navbar-left", 'role -> "search") {

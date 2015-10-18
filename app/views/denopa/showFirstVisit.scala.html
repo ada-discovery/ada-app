@@ -2,7 +2,7 @@
 @(item: JsObject)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @views.html.jsonShow(
-	"Item",
+	"First Visit Item",
 	item,
-	routes.DeNoPaController.find()
+	routes.DeNoPaFirstVisitController.find()
 )

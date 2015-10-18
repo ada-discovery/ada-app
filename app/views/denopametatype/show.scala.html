@@ -1,0 +1,35 @@
+@import play.api.libs.json.{JsObject, JsNull}
+@import util.decodeMongoKey
+@(domainName : String, item: MetaTypeStats, listCall : Call)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+
+	@main(Messages("show.title", domainName)) {
+    
+        <!-- Begin page content -->
+	    <div class="container" style="padding-bottom: 190px;">
+		    <div class="page-header">
+    			<h1>@Messages("show.title", domainName)</h1>
+	    	</div>
+
+		    <div class="row">
+			    <div class="col-md-9">
+					<fieldset>
+						@views.html.twitterBootstrapJsValue("attributeName", attributeLabel("metaTypeStat", "attributeName"), decodeMongoKey(item.attributeName), false)
+						@views.html.twitterBootstrapJsValue("intRatio", attributeLabel("metaTypeStat", "intRatio"), item.intRatio.toString, false)
+						@views.html.twitterBootstrapJsValue("longRatio", attributeLabel("metaTypeStat", "longRatio"), item.longRatio.toString, false)
+						@views.html.twitterBootstrapJsValue("floatRatio", attributeLabel("metaTypeStat", "floatRatio"), item.floatRatio.toString, false)
+						@views.html.twitterBootstrapJsValue("doubleRatio", attributeLabel("metaTypeStat", "doubleRatio"), item.doubleRatio.toString, false)
+						@views.html.twitterBootstrapJsValue("booleanRatio", attributeLabel("metaTypeStat", "booleanRatio"), item.booleanRatio.toString, false)
+						@views.html.twitterBootstrapJsValue("nullRatio", attributeLabel("metaTypeStat", "nullRatio"), item.nullRatio.toString, false)
+						@views.html.twitterBootstrapTextArea("valueRatioMap", attributeLabel("metaTypeStat", "valueRatioMap"), item.valueRatioMap.toSeq.sortBy(_._2).reverse.map(a => a._1 + " -> " + a._2).mkString("\n"), false)
+					</fieldset>
+				
+					<div class="actions" align="center">
+					   <a href="@listCall" class="btn btn-default">Go Back</a>
+					</div>
+			    </div>
+			    <div class="col-md-3">
+				    @info()
+			    </div>
+		    </div>
+	    </div>
+    }

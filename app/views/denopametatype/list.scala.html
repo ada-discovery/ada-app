@@ -1,42 +1,65 @@
-@(currentPage: Page[User], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@import helper.{select}
+@import reactivemongo.bson.BSONObjectID
+
+@(domainName : String, currentPage: Page[MetaTypeStats], currentOrderBy: String, currentFilter: String, currentSearchField : String, findCall : (Int, String, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @**********************************
 * Helper generating table headers *
 ***********************************@
 @header(fieldName: String, title: String) = {
-    <th class="col header @if(currentOrderBy == fieldName){'glyphicon glyphicon-chevron-down'}">
+    <th class="col header @if(currentOrderBy == fieldName){glyphicon glyphicon-chevron-down} @if(currentOrderBy == "-" + fieldName){glyphicon glyphicon-chevron-up}">
         <a href="@displayCall(0, Some(fieldName))">@title</a>
     </th>
 }
 
+@option(key : String, value : String) = {
+    <option value="@key" @if(currentSearchField == key){selected="selected"}>@value</option>
+}
+
 @actions = {
-    @helper.form(action=routes.UserController.findByName(), 'class -> "navbar-form navbar-left", 'role -> "search") {
-        <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by user name...">
-        <input type="submit" id="searchsubmit" value="Filter by name" class="btn btn-primary btn-sm">
+    @helper.form(action=plainFindCall, 'class -> "navbar-form navbar-left", 'role -> "search") {
+        <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by...">
+        <select name="searchField" id="searchField" value="@currentSearchField">
+            @option("attributeName", "Name")
+            @option("intRatio", "Int")
+            @option("longRatio", "Long")
+            @option("floatRatio", "Float")
+            @option("doubleRatio", "Double")
+            @option("nullRatio", "Null")
+        </select>
+        <input type="submit" id="searchsubmit" value="Filter" class="btn btn-primary btn-sm">
     }
-    <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.UserController.create()">Add a new user</a>
+}
+
+@formatDouble(d : Double) = @{
+    if (d == 0d)
+        "0"
+    else
+        "%,.3f".format(d)
 }
 
 @table = {
     <table class="table table-striped">
         <thead>
             <tr>
-                @header("name", "Name")
-                @header("address", "Address")
-                @header("dob", "Date of Birth")
-                @header("joiningDate", "Joining Date")
-                @header("designation", "Designation")
+                @header("attributeName", "Name")
+                @header("intRatio", "Int Ratio")
+                @header("longRatio", "Long Ratio")
+                @header("floatRatio", "Float Ratio")
+                @header("doubleRatio", "Double Ratio")
+                @header("nullRatio", "Null Ratio")
             </tr>
         </thead>
         <tbody>
 
-        @currentPage.items.map { user =>
-            <tr>
-                <td><a href="@routes.UserController.edit(user._id)">@user.name</a></td>
-                <td>@user.address</td>
-                <td>@user.dob.format("dd MMM yyyy")</td>
-                <td>@user.joiningDate.format("dd MMM yyyy")</td>
-                <td>@user.designation</td>
+        @currentPage.items.map { item =>
+            <tr class='clickable-row' data-href='@getCall(item._id.get)'>
+                <td>@item.attributeName</td>
+                <td>@formatDouble(item.intRatio)</td>
+                <td>@formatDouble(item.longRatio)</td>
+                <td>@formatDouble(item.floatRatio)</td>
+                <td>@formatDouble(item.doubleRatio)</td>
+                <td>@formatDouble(item.nullRatio)</td>
             </tr>
         }
 
@@ -45,13 +68,13 @@
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{
-    routes.UserController.findByName(newPage, newOrderBy.map { orderBy =>
+    findCall(newPage, newOrderBy.map { orderBy =>
         if(orderBy == currentOrderBy) "-" + currentOrderBy else orderBy
-    }.getOrElse(currentOrderBy), currentFilter)
+    }.getOrElse(currentOrderBy), currentFilter, currentSearchField)
 }
 
 @views.html.list(
-    "user",
+    domainName,
     actions,
     table,
     displayCall,

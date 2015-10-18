@@ -1,5 +1,5 @@
 @import play.api.Play.current
-@(title: String)(content: Html)
+@(title: String)(content: Html)(implicit request: RequestHeader)
 
 <!DOCTYPE html>
 
@@ -15,7 +15,7 @@
 		@* <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootstrap", "bootstrap-theme.min.css"))"> *@
         
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery.min.js"))"></script>
 
 		<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
 	    <!--[if lt IE 9]>
@@ -27,23 +27,22 @@
     <body>
     
     	<!-- Fixed navbar -->
-	    @navbar()
+	    @navbar(request)
 	    
         @content
 
 	    <div id="footer">
 
 	      <div class="container">
-
-			<p class="text-muted" align="center">This little demo, which is a part of NCER-PD project, shows some clinical data accessed through the Rest API of Production <a href="@current.configuration.getString("redcap.prodserver.url").get">RedCap</a>'s server. </p>
-            <p class="text-muted" align="center">Version 0.0.1. &copy; LCSB 2015. <img style="float: right;" src="@routes.Assets.at("images/LCSB_logo.png")" /></p>
+            <p class="text-muted" align="center">NCER-PD Data and Computing Platform, Version 0.0.2<img style="float: right;" src="@routes.Assets.at("images/LCSB_logo.png")" /></p>
+            <p class="text-muted" align="center">&copy; LCSB 2015</p>
 		</div>
 	    </div>
         
         <!-- Bootstrap core JavaScript
 	    ================================================== -->
 	    <!-- Placed at the end of the document so the pages load faster -->
-	    <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery.min.js"))"></script>
+
 	    
 	    <!-- Latest compiled and minified JavaScript -->
 		<script src="@routes.WebJarAssets.at(WebJarAssets.locate("bootswatch-united", "bootstrap.min.js"))"></script>

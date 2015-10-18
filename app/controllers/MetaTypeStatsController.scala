@@ -4,21 +4,26 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import models.{MetaTypeStats, Page}
-import persistence.DeNoPaBaselineMetaTypeStatsRepo
+import persistence.{AsyncReadonlyRepo, DeNoPaBaselineMetaTypeStatsRepo}
 import play.api.Logger
-import play.api.data.Forms.{date, ignored, mapping, nonEmptyText, bigDecimal}
 import play.api.i18n.MessagesApi
-import play.api.mvc.{Flash, Action, Controller, RequestHeader}
-import play.api.libs.json.{JsObject, Json}
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.Json
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.api.mvc.{Action, Controller}
+import play.api.i18n.Messages
+import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
+import play.api.mvc.{Action, Flash, RequestHeader}
 
-class MetaTypeStatsController @Inject() (
-    baselineMetaTypeStatsRepo: DeNoPaBaselineMetaTypeStatsRepo,
-    MmetaTypeStatsRepo: DeNoPaBaselineMetaTypeStatsRepo,
+abstract class MetaTypeStatsController(
+    repo: AsyncReadonlyRepo[MetaTypeStats, BSONObjectID],
     messagesApi: MessagesApi
   ) extends Controller {
+
+  def showView(item : MetaTypeStats)(implicit msg: Messages, request: RequestHeader) : Html
+
+  def listView(currentPage: Page[MetaTypeStats], currentOrderBy: String, currentFilter: String, currentSearchField : String)(implicit msg: Messages, request: RequestHeader) : Html
 
 //  override val form = Form(
 //    mapping(
@@ -33,12 +38,12 @@ class MetaTypeStatsController @Inject() (
 //      "valueRationMap" -> nonEmptyText)(MetaTypeStats.apply)(MetaTypeStats.unapply))
 
   def get(id: BSONObjectID) = Action.async { implicit request =>
-    baselineMetaTypeStatsRepo.get(id).map(_.fold(
+    repo.get(id).map(_.fold(
       NotFound(s"Entity #$id not found")
     ){ entity =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(views.html.denopametatype.show(entity))
+      Ok(showView(entity))
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the get process")
@@ -68,12 +73,12 @@ class MetaTypeStatsController @Inject() (
       None
     val sort = Json.obj(orderBy -> 1)
 
-    val futureItems = baselineMetaTypeStatsRepo.find(criteria, Some(sort), None, Some(limit), Some(page))
-    val futureCount = baselineMetaTypeStatsRepo.count(criteria)
+    val futureItems = repo.find(criteria, Some(sort), None, Some(limit), Some(page))
+    val futureCount = repo.count(criteria)
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(views.html.denopametatype.list(Page(items, page, page * limit, count), orderBy, if (criteria.isDefined) query else "", searchField))
+      Ok(listView(Page(items, page, page * limit, count), orderBy, if (criteria.isDefined) query else "", searchField))
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")

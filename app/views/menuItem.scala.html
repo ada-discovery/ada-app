@@ -1,0 +1,6 @@
+@import util.matchesPath
+@(call: Call, text: String, matchPrefixDepth : Option[Int] = None)(implicit request: RequestHeader)
+
+<li @if(matchesPath(call.url, request.path, matchPrefixDepth)) { class="active"}>
+    <a href="@call">@text</a>
+</li>

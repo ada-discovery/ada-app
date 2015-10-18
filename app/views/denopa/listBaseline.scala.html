@@ -1,12 +1,12 @@
-@(currentPage: Page[MetaTypeStats], currentOrderBy: String, currentFilter: String, currentSearchField : String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@import play.api.libs.json.JsObject
+@(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
-@views.html.denopametatype.list(
-    "baseline meta type stat",
+@views.html.denopa.list(
+    "baseline record",
     currentPage,
     currentOrderBy,
     currentFilter,
-    currentSearchField,
-    routes.DeNoPaBaselineMetaTypeStatsController.find,
-    routes.DeNoPaBaselineMetaTypeStatsController.find(),
-    routes.DeNoPaBaselineMetaTypeStatsController.get
+    routes.DeNoPaBaselineController.find,
+    routes.DeNoPaBaselineController.find(),
+    routes.DeNoPaBaselineController.get
 )

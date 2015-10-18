@@ -1,4 +1,4 @@
-@(form: Form[_], elements : Any, updateCall : Call, listCall : Call, deleteCall : Call)(implicit msg: play.api.i18n.Messages)
+@(form: Form[_], elements : Any, updateCall : Call, listCall : Call, deleteCall : Call)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @import helper.{inputText, FieldConstructor}
 @import util.getDomainName

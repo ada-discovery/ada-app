@@ -26,3 +26,14 @@ object Message {
     protected def set(entity: Message, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }
 }
+
+case class MetaTypeStats(_id: Option[BSONObjectID], attributeName : String, intRatio: Double, longRatio: Double, floatRatio: Double, doubleRatio: Double, booleanRatio: Double, nullRatio: Double, valueRatioMap: Map[String, Double])
+
+object MetaTypeStats {
+  implicit val MetaAndTypeStatsFormat = Json.format[MetaTypeStats]
+
+  implicit object MetaAndTypeStatsIdentity extends BSONObjectIdentity[MetaTypeStats] {
+    def of(entity: MetaTypeStats): Option[BSONObjectID] = entity._id
+    protected def set(entity: MetaTypeStats, id: Option[BSONObjectID]) = entity.copy(_id = id)
+  }
+}
