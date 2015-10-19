@@ -6,7 +6,7 @@ import models.Page
 import persistence.AsyncReadonlyRepo
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsNumber, JsValue, JsObject, Json}
 import play.api.mvc.{Action, Flash, Controller, RequestHeader}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
@@ -16,6 +16,8 @@ abstract class DeNoPaController(
     repo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     messagesApi: MessagesApi
   ) extends Controller {
+
+  def listViewProjection : JsObject
 
   def showView(item : JsObject)(implicit msg: Messages, request: RequestHeader) : Html
 
@@ -53,7 +55,7 @@ abstract class DeNoPaController(
     else
       None
 
-    val futureItems = repo.find(criteria, sort, None, Some(limit), Some(page))
+    val futureItems = repo.find(criteria, sort, Some(listViewProjection), Some(limit), Some(page))
     val futureCount = repo.count(criteria)
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)

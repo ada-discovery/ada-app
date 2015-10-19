@@ -1,7 +1,7 @@
 @import play.api.libs.json.JsObject
 @import reactivemongo.bson.BSONObjectID
 @import play.modules.reactivemongo.json._
-@(domainName : String, currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String, findCall : (Int, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(domainName : String, currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String, fieldsToShow : Seq[String], findCall : (Int, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
 @helper.form(action=plainFindCall, 'class -> "navbar-form navbar-left", 'role -> "search") {
@@ -26,7 +26,7 @@
 
 @table = {
     @jsonTable(currentPage.items, currentOrderBy, displayCall(_, _),
-        Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe")),
+        Some(fieldsToShow),
         Some(rowClickCall)
     )
 }

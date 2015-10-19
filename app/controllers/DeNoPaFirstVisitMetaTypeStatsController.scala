@@ -5,6 +5,7 @@ import javax.inject.Inject
 import models.{MetaTypeStats, Page}
 import persistence.DeNoPaFirstVisitMetaTypeStatsRepo
 import play.api.i18n.{Messages, MessagesApi}
+import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import play.twirl.api.Html
 import views.html
