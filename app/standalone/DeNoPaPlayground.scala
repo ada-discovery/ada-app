@@ -2,14 +2,17 @@ package standalone
 
 import javax.inject.Inject
 
+import models.MetaTypeStats
 import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
-import persistence.DeNoPaFirstVisitMetaTypeStatsRepo
+import persistence.{AsyncReadonlyRepo, CrudRepo, DeNoPaBaselineMetaTypeStatsRepo, DeNoPaFirstVisitMetaTypeStatsRepo}
 import scala.concurrent.Await
 
 class DeNoPaPlayground @Inject() (
-    metaTypeStatsRepo : DeNoPaFirstVisitMetaTypeStatsRepo
+    baselineStatsRepo : DeNoPaBaselineMetaTypeStatsRepo,
+    firstVisitStatsRepo : DeNoPaFirstVisitMetaTypeStatsRepo
   ) extends Runnable {
 
   val timeout = 120000 millis
@@ -17,14 +20,22 @@ class DeNoPaPlayground @Inject() (
   val truthValues = List("na", "ja", "nein", "falsch", "richtig", "fehlend")
 
   override def run = {
-    val statsFuture = metaTypeStatsRepo.find(None, Some(Json.obj("attributeName" -> 1)))
+    val baselineTexts = collectTexts(baselineStatsRepo)
+    val firstVisitTexts = collectTexts(firstVisitStatsRepo)
+    val mergedTexts = (baselineTexts ++ firstVisitTexts).toSet.toSeq.sorted
+    println(mergedTexts.size)
+  }
+
+  private def collectTexts(repo : AsyncReadonlyRepo[MetaTypeStats, BSONObjectID]) = {
+    val statsFuture = repo.find(None, Some(Json.obj("attributeName" -> 1)))
     val enumFields = Await.result(statsFuture, timeout).filter{ item =>
       val keys = item.valueRatioMap.keySet
-      (keys.size > 1 && keys.size < 15 && keys.filterNot(_.equals("NA")).exists(_.exists(_.isLetter) && !keys.forall(s => truthValues.contains(s.toLowerCase))))
+      (keys.size > 1 && keys.size < 20 && keys.filterNot(_.equals("NA")).exists(_.exists(_.isLetter) && !keys.forall(s => truthValues.contains(s.toLowerCase))))
     }
-    enumFields.foreach(field =>
-      println(s"${field.attributeName}§${field.valueRatioMap.keySet.toSeq.filterNot(_.equals("NA")).sorted.mkString("§")}")
-    )
+    enumFields.map { field =>
+      //      println(s"${field.attributeName}§${field.valueRatioMap.keySet.toSeq.filterNot(_.equals("NA")).sorted.mkString("§")}")
+      field.valueRatioMap.keySet.toSeq.filter(s => !s.equals("NA") && s.exists(_.isLetter)).sorted
+    }.flatten.toSet.toSeq.sorted
   }
 }
 
