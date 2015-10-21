@@ -16,7 +16,8 @@ import util.encodeMongoKey
 
 class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends Runnable {
 
-  val filename = "/Users/peter.banda/Documents/DeNoPa/Denopa-V1-BL-Datensatz-1.unfiltered.csv"
+  val filename = "/home/tremor/Downloads/DeNoPa/Denopa-V1-BL-Datensatz-1_w_§§.csv"
+  val separator = "§§"
   val timeout = 50000 millis
 
   override def run = {
@@ -29,7 +30,7 @@ class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends R
 
     // collect the column names
     val columnNames = lines.take(1).map {
-      _.split(",").map(columnName =>
+      _.split(separator).map(columnName =>
         encodeMongoKey(columnName.replaceAll("\"", "").trim)
     )}.toSeq.flatten
 
@@ -38,18 +39,15 @@ class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends R
     }
     // for each lince create a JSON record and insert to the database
     lines.zipWithIndex.foreach { case (line, index) =>
-      // dirty fix of the "", problem
-      val fixedLine = if (index == 161)
-        line.replaceFirst("\"\"huschen\"\",", "\"\"huschen\"\" ,")
-      else
-        line
 
       // parse the line
-      val values = parseLine(fixedLine)
+      val values = parseLine(line)
 
       // check if the number of items is as expected
-      if (values.size != 5647)
+      if (values.size != 5647) {
+        println(values.mkString("\n"))
         throw new IllegalStateException(s"Line ${index} has a bad count '${values.size}'!!!")
+      }
 
       // create a JSON record
       val jsonRecord = JsObject(
@@ -71,16 +69,12 @@ class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends R
   }
 
   // parse the lines, returns the parsed items
-  private def parseLine(line : String) =
-    line.split("\",").map(l =>
-      if (l.startsWith("\""))
-        Array(l.substring(1))
-      else if (l.contains("\"")) {
-        val l2 = l.split("\"", 2)
-        l2(0).split(',') ++ List(l2(1))
-      } else
-        l.replaceAll("\"", "").split(',')
-    ).flatten.map(_.trim)
+  private def parseLine(line: String) =
+    line.split(separator).map { l =>
+      val start = if (l.startsWith("\"")) 1 else 0
+      val end = if (l.endsWith("\"")) l.size - 1 else l.size
+      l.substring(start, end).trim
+    }
 }
 
 object ImportDeNoPaBaseline extends GuiceBuilderRunnable[ImportDeNoPaBaseline] with App {

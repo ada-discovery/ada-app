@@ -16,8 +16,11 @@ import util.encodeMongoKey
 
 class ImportDeNoPaFirstVisit @Inject()(firstVisitRepo: DeNoPaFirstVisitRepo) extends Runnable {
 
-  val filename = "/Users/peter.banda/Documents/DeNoPa/Denopa-V2-FU1-Datensatz.sav-unfiltered.csv"
+  val filename = "/home/tremor/Downloads/DeNoPa/Denopa-V2-FU1-Datensatz_w_§§.csv"
+  val separator = "§§"
   val timeout = 50000 millis
+
+  val splitLineIndeces = List(122, 154, 219)
 
   override def run = {
     // remove the records from the collection
@@ -29,39 +32,27 @@ class ImportDeNoPaFirstVisit @Inject()(firstVisitRepo: DeNoPaFirstVisitRepo) ext
 
     // collect the column names
     val columnNames = lines.take(1).map {
-      _.split(",").map(columnName =>
+      _.split(separator).map(columnName =>
         encodeMongoKey(columnName.replaceAll("\"", "").trim)
-    )}.toSeq.flatten
+      )
+    }.toSeq.flatten
 
-    val badLineIndeces = List(98, 122, 123, 154, 155, 219, 220)
+    var prevLine = ""
 
     // for each lince create a JSON record and insert to the database
     lines.zipWithIndex.foreach { case (line, index) =>
-      // dirty fix of the "", problem
-      val fixedLine = if (index == 56)
-        line.replaceAll("\"\"habe mit dem Sprechen Probleme\"\",", "\"\"habe mit dem Sprechen Probleme\"\" ,").replaceAll("\"\"der Mund würde schwer\"\",", "\"\"der Mund würde schwer\"\" ,")
-      else if (index == 101)
-        line.replaceAll("\"\"zu verzetteln\"\",", "\"\"zu verzetteln\"\" ,")
-      else if (index == 159)
-        line.replaceAll("\"\"verliert den Faden\"\",","\"\"verliert den Faden\"\" ,").replaceAll("\"\"Burn-Out\"\",", "\"\"Burn-Out\"\" ,")
-      else if (index == 163)
-        line.replaceAll("\"\"Gefühl\"\",", "\"\"Gefühl\"\" ,")
-      else if (index == 211 || index == 212)
-        line.replaceAll("\"\"Migräne\"\",", "\"\"Migräne\"\" ,")
+
+      val linex = if (splitLineIndeces.contains(index - 1))
+        prevLine + line
       else
         line
 
-      // println(values.mkString("\n"))
-
       // parse the line
-      val values = parseLine(fixedLine)
+      val values = parseLine(linex)
 
-      if (!badLineIndeces.contains(index)) {
-        // check if the number of items is as expected
-        if (values.size != 8918) {
-          println(values.filter(_.contains("\"")).mkString("\n"))
+      if (!splitLineIndeces.contains(index)) {
+        if (values.size != 8918)
           throw new IllegalStateException(s"Line ${index} has a bad count '${values.size}'!!!")
-        }
 
         // create a JSON record
         val jsonRecord = JsObject(
@@ -80,20 +71,17 @@ class ImportDeNoPaFirstVisit @Inject()(firstVisitRepo: DeNoPaFirstVisitRepo) ext
 
         println(s"Record $index imported.")
       }
+      prevLine = line
     }
   }
 
   // parse the lines, returns the parsed items
-  private def parseLine(line : String) =
-    line.split("\",").map(l =>
-      if (l.startsWith("\""))
-        Array(l.substring(1))
-      else if (l.contains("\"")) {
-        val l2 = l.split("\"", 2)
-        l2(0).split(',') ++ List(l2(1))
-      } else
-        l.replaceAll("\"", "").split(',')
-    ).flatten.map(_.trim)
+  private def parseLine(line: String) =
+    line.split(separator).map { l =>
+      val start = if (l.startsWith("\"")) 1 else 0
+      val end = if (l.endsWith("\"")) l.size - 1 else l.size
+      l.substring(start, end).trim
+    }
 }
 
 object ImportDeNoPaFirstVisit extends GuiceBuilderRunnable[ImportDeNoPaFirstVisit] with App {
