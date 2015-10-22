@@ -16,7 +16,8 @@ import util.encodeMongoKey
 
 class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends Runnable {
 
-  val filename = "/home/tremor/Downloads/DeNoPa/Denopa-V1-BL-Datensatz-1_w_§§.csv"
+//  val filename = "/Users/peter.banda/Documents/DeNoPa/Denopa-V1-BL-Datensatz-1.csv"
+  val filename = "/home/peter.banda/DeNoPa/Denopa-V1-BL-Datensatz-1.csv"
   val separator = "§§"
   val timeout = 50000 millis
 
@@ -29,19 +30,20 @@ class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends R
     val lines = Source.fromFile(filename).getLines
 
     // collect the column names
-    val columnNames = lines.take(1).map {
+    val columnNames =  "Line_Nr" :: lines.take(1).map {
       _.split(separator).map(columnName =>
         encodeMongoKey(columnName.replaceAll("\"", "").trim)
-    )}.toSeq.flatten
+    )}.flatten.toList
 
-    columnNames.foreach{columnName =>
-      if (columnName.contains(".")) println(columnName)
-    }
     // for each lince create a JSON record and insert to the database
     lines.zipWithIndex.foreach { case (line, index) =>
 
       // parse the line
       val values = parseLine(line)
+
+//      val appValues = values.filter(_.contains("\""))
+//      if (!appValues.isEmpty)
+//        println(appValues.mkString("\n"))
 
       // check if the number of items is as expected
       if (values.size != 5647) {
@@ -52,10 +54,7 @@ class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends R
       // create a JSON record
       val jsonRecord = JsObject(
         (columnNames, values).zipped.map {
-          case (columnName, value) => (
-            if (columnName.isEmpty) "Line_Nr" else columnName,
-            if (value.isEmpty) JsNull else JsString(value)
-          )
+          case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
         })
 
       // insert the record to the database
@@ -73,7 +72,7 @@ class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends R
     line.split(separator).map { l =>
       val start = if (l.startsWith("\"")) 1 else 0
       val end = if (l.endsWith("\"")) l.size - 1 else l.size
-      l.substring(start, end).trim
+      l.substring(start, end).trim.replaceAll("\\\\\"", "\"")
     }
 }
 

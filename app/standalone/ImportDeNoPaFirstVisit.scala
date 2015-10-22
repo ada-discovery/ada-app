@@ -16,7 +16,8 @@ import util.encodeMongoKey
 
 class ImportDeNoPaFirstVisit @Inject()(firstVisitRepo: DeNoPaFirstVisitRepo) extends Runnable {
 
-  val filename = "/home/tremor/Downloads/DeNoPa/Denopa-V2-FU1-Datensatz_w_§§.csv"
+//  val filename = "/Users/peter.banda/Documents/DeNoPa/Denopa-V2-FU1-Datensatz.csv"
+  val filename = "/home/peter.banda/DeNoPa/Denopa-V2-FU1-Datensatz.csv"
   val separator = "§§"
   val timeout = 50000 millis
 
@@ -31,11 +32,10 @@ class ImportDeNoPaFirstVisit @Inject()(firstVisitRepo: DeNoPaFirstVisitRepo) ext
     val lines = Source.fromFile(filename).getLines
 
     // collect the column names
-    val columnNames = lines.take(1).map {
+    val columnNames =  "Line_Nr" :: lines.take(1).map {
       _.split(separator).map(columnName =>
         encodeMongoKey(columnName.replaceAll("\"", "").trim)
-      )
-    }.toSeq.flatten
+      )}.flatten.toList
 
     var prevLine = ""
 
@@ -50,6 +50,10 @@ class ImportDeNoPaFirstVisit @Inject()(firstVisitRepo: DeNoPaFirstVisitRepo) ext
       // parse the line
       val values = parseLine(linex)
 
+//      val appValues = values.filter(_.contains("\""))
+//      if (!appValues.isEmpty)
+//        println(appValues.mkString("\n"))
+
       if (!splitLineIndeces.contains(index)) {
         if (values.size != 8918)
           throw new IllegalStateException(s"Line ${index} has a bad count '${values.size}'!!!")
@@ -57,10 +61,7 @@ class ImportDeNoPaFirstVisit @Inject()(firstVisitRepo: DeNoPaFirstVisitRepo) ext
         // create a JSON record
         val jsonRecord = JsObject(
           (columnNames, values).zipped.map {
-            case (columnName, value) => (
-              if (columnName.isEmpty) "Line_Nr" else columnName,
-              if (value.isEmpty) JsNull else JsString(value)
-              )
+            case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
           })
 
         // insert the record to the database
@@ -80,7 +81,7 @@ class ImportDeNoPaFirstVisit @Inject()(firstVisitRepo: DeNoPaFirstVisitRepo) ext
     line.split(separator).map { l =>
       val start = if (l.startsWith("\"")) 1 else 0
       val end = if (l.endsWith("\"")) l.size - 1 else l.size
-      l.substring(start, end).trim
+      l.substring(start, end).trim.replaceAll("\\\\\"", "\"")
     }
 }
 
