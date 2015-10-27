@@ -3,13 +3,13 @@
 @import play.modules.reactivemongo.json._
 @(domainName: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
-@main("Baseline Type Overview") {
+@main("First Visit Type Overview") {
 
     <!-- Begin page content -->
     <div class="container">
         <div class="page-header">
             <h3>
-            @Messages("Baseline Type Overview")
+            @Messages("First Visit Type Overview")
             </h3>
         </div>
 
@@ -55,22 +55,22 @@
                     colorByPoint: true,
                     data: [{
                         name : "null-or-Nas",
-                        y :	3926
+                        y :	6982
                     }, {
                         name : "booleans",
-                        y :	566
+                        y :	384
                     }, {
                         name : "number enums",
-                        y :	447
+                        y :	371
                     }, {
                         name : "free numbers",
-                        y :	325
+                        y :	385
                     }, {
                         name : "text enums",
-                        y :	253
+                        y :	393
                     }, {
                         name : "free texts",
-                        y :	130
+                        y :	403
                     }]
                 }]
             });

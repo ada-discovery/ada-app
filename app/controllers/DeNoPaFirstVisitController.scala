@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
+import play.api.mvc.Action
 import models.Page
 import persistence.DeNoPaFirstVisitRepo
 import play.api.i18n.{Messages, MessagesApi}
@@ -22,4 +23,9 @@ class DeNoPaFirstVisitController @Inject() (
 
   override def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
     html.denopa.listFirstVisit(currentPage, currentOrderBy, currentFilter).asInstanceOf[Html]
+
+  def overview = Action { implicit request =>
+    implicit val msg = messagesApi.preferred(request)
+    Ok(views.html.denopa.overviewFirstVisit("LALA"))
+  }
 }

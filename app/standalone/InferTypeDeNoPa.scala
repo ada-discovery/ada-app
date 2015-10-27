@@ -11,6 +11,7 @@ import scala.concurrent.{Future, Await}
 class InferTypeDeNoPa {
 
   val timeout = 120000 millis
+  val truthValues = List("na", "ja", "nein", "falsch", "richtig", "fehlend")
 
   class MetaTypeCounts(
     var intCount: Int = 0,

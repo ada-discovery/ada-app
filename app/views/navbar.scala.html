@@ -29,8 +29,10 @@
                         @menuItem(routes.DeNoPaBaselineController.find(), "Baseline Records", Some(3))
                         @menuItem(routes.DeNoPaFirstVisitController.find(), "First Visit Records", Some(3))
                         <li role="separator" class="divider"></li>
-                        @menuItem(routes.DeNoPaBaselineMetaTypeStatsController.find(), "Baseline Meta Type Stats", Some(3))
-                        @menuItem(routes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Meta Type Stats", Some(3))
+                        @menuItem(routes.DeNoPaBaselineController.overview(), "Baseline Type Overview", Some(3))
+                        @menuItem(routes.DeNoPaFirstVisitController.overview(), "First Visit Type Overview", Some(3))
+                        @menuItem(routes.DeNoPaBaselineMetaTypeStatsController.find(), "Baseline Type Stats", Some(3))
+                        @menuItem(routes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Type Stats", Some(3))
                     </ul>
                 </li>
 

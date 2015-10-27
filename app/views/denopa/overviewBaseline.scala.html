@@ -1,42 +1,81 @@
 @import play.api.libs.json.JsObject
 @import reactivemongo.bson.BSONObjectID
 @import play.modules.reactivemongo.json._
-@(domainName : String, currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String, fieldsToShow : Seq[String], findCall : (Int, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(domainName: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
-@actions = {
-@helper.form(action=plainFindCall, 'class -> "navbar-form navbar-left", 'role -> "search") {
-    <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by Probanden Nr...">
-    <input type="submit" id="searchsubmit" value="Filter by Probanden Nr" class="btn btn-primary btn-sm">
-}
-}
+@main("Baseline Type Overview") {
 
-@displayCall(newPage : Int, newOrderBy : Option[String]) = @{
-    findCall(newPage, newOrderBy.map { nOrderBy =>
-        if (nOrderBy == currentOrderBy) {
-            "-" + currentOrderBy
-        } else if (("-" + nOrderBy) == currentOrderBy) {
-            nOrderBy
-        } else nOrderBy
-    }.getOrElse(currentOrderBy), currentFilter)
-}
+    <!-- Begin page content -->
+    <div class="container">
+        <div class="page-header">
+            <h3>
+            @Messages("Baseline Type Overview")
+            </h3>
+        </div>
 
-@rowClickCall(item : JsObject) = @{
-    getCall(item.value.get("_id").get.as[BSONObjectID]).url
-}
+        <div class="panel panel-info">
+            <div class="panel-body" style="padding-bottom: 120px;">
+                <div id="pieChart" class="chart-holder"></div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        $(function () {
+            $('#pieChart').highcharts({
+                chart: {
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: false,
+                    type: 'pie'
+                },
+                title: {
+                    text: 'Type Stats'
+                },
+                tooltip: {
+                    pointFormat: '{series.name}: <b>{point.y}</b>'
+                },
+                plotOptions: {
+                    pie: {
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: {
+                            enabled: true,
+                            format: '<b>{point.name}</b>: {point.percentage:.1f}%',
+                            style: {
+                                color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                            }
+                        }
+                    }
+                },
+                credits: {
+                    enabled: false
+                },
+                series: [{
+                    name: "Type Count",
+                    colorByPoint: true,
+                    data: [{
+                        name : "null-or-Nas",
+                        y :	3926
+                    }, {
+                        name : "booleans",
+                        y :	566
+                    }, {
+                        name : "number enums",
+                        y :	447
+                    }, {
+                        name : "free numbers",
+                        y :	325
+                    }, {
+                        name : "text enums",
+                        y :	253
+                    }, {
+                        name : "free texts",
+                        y :	130
+                    }]
+                }]
+            });
+        });
 
-@table = {
-    @jsonTable(currentPage.items, currentOrderBy, displayCall(_, _),
-        Some(fieldsToShow),
-        Some(rowClickCall)
-    )
-}
 
-@views.html.list(
-    domainName,
-    actions,
-    table,
-    displayCall,
-    currentPage,
-    currentOrderBy,
-    currentFilter
-)
+    </script>
+}
