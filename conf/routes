@@ -31,6 +31,7 @@ GET         /rest/users/all                             controllers.UserControll
 
 # RedCap
 
+GET         /redcap/records/exportAllAsCsv              controllers.RedCapController.exportRecordsAsCsv(delimiter : String ?= ",")
 GET         /redcap/records                             controllers.RedCapController.listRecords(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f ?= "")
 GET         /redcap/metadatas                           controllers.RedCapController.listMetadatas(p: Int ?= 0, s: String ?= "field_name", f ?= "")
 GET         /redcap/fieldNames                          controllers.RedCapController.listFieldNames(p: Int ?= 0, s: String ?= "original_field_name", f ?= "")

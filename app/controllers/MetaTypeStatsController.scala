@@ -42,8 +42,11 @@ abstract class MetaTypeStatsController(
       NotFound(s"Entity #$id not found")
     ){ entity =>
       implicit val msg = messagesApi.preferred(request)
-
-      Ok(showView(entity))
+      if (entity.nullRatio > 0) {
+        val entityWithNull = entity.copy(valueRatioMap = entity.valueRatioMap.updated("null", entity.nullRatio))
+        Ok(showView(entityWithNull))
+      } else
+        Ok(showView(entity))
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the get process")

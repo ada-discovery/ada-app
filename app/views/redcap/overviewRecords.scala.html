@@ -1,5 +1,5 @@
 @import standalone.TypeCount
-@(title: String, typeCount : TypeCount)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(title: String, genderData : Seq[(String, Any)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @main(title) {
 
@@ -13,7 +13,10 @@
 
         <div class="panel panel-info">
             <div class="panel-body" style="padding-bottom: 120px;">
-                @typeCountChart(typeCount)
+                @views.html.pieChart(
+                    "Gender",
+                    genderData
+                )
             </div>
         </div>
     </div>

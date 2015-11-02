@@ -14,12 +14,6 @@
 			    <div class="col-md-9">
 					<fieldset>
 						@views.html.twitterBootstrapJsValue("attributeName", attributeLabel("metaTypeStat", "attributeName"), decodeMongoKey(item.attributeName), false)
-						@views.html.twitterBootstrapJsValue("intRatio", attributeLabel("metaTypeStat", "intRatio"), item.intRatio.toString, false)
-						@views.html.twitterBootstrapJsValue("longRatio", attributeLabel("metaTypeStat", "longRatio"), item.longRatio.toString, false)
-						@views.html.twitterBootstrapJsValue("floatRatio", attributeLabel("metaTypeStat", "floatRatio"), item.floatRatio.toString, false)
-						@views.html.twitterBootstrapJsValue("doubleRatio", attributeLabel("metaTypeStat", "doubleRatio"), item.doubleRatio.toString, false)
-						@views.html.twitterBootstrapJsValue("booleanRatio", attributeLabel("metaTypeStat", "booleanRatio"), item.booleanRatio.toString, false)
-						@views.html.twitterBootstrapJsValue("nullRatio", attributeLabel("metaTypeStat", "nullRatio"), item.nullRatio.toString, false)
                         @views.html.twitterBootstrapLabelValue("valueOccurrenceChart", attributeLabel("metaTypeStat", "valueOccurrenceChart"), false) {
                             @views.html.pieChart("Value Occurrences - " + decodeMongoKey(item.attributeName), item.valueRatioMap.toSeq.sortBy(_._2).reverse)
                             <div align="right">
@@ -46,7 +40,12 @@
                                 </table>
                             }
                         </div>
-					</fieldset>
+                        @views.html.twitterBootstrapJsValue("intRatio", attributeLabel("metaTypeStat", "intRatio"), item.intRatio.toString, false)
+                        @views.html.twitterBootstrapJsValue("longRatio", attributeLabel("metaTypeStat", "longRatio"), item.longRatio.toString, false)
+                        @views.html.twitterBootstrapJsValue("floatRatio", attributeLabel("metaTypeStat", "floatRatio"), item.floatRatio.toString, false)
+                        @views.html.twitterBootstrapJsValue("doubleRatio", attributeLabel("metaTypeStat", "doubleRatio"), item.doubleRatio.toString, false)
+                        @views.html.twitterBootstrapJsValue("booleanRatio", attributeLabel("metaTypeStat", "booleanRatio"), item.booleanRatio.toString, false)
+                    </fieldset>
 
 					<div class="actions" align="center" style="padding-top: 50px;">
 					   <a href="@listCall" class="btn btn-default">Go Back</a>

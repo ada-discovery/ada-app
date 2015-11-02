@@ -5,16 +5,18 @@ import java.util.Date
 import javax.inject.Inject
 
 import models.MetaTypeStats
-import play.api.libs.json.{JsValue, JsObject, JsNull, Json}
+import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
-import persistence.{DeNoPaBaselineRepo, DeNoPaFirstVisitRepo, AsyncReadonlyRepo, DeNoPaBaselineMetaTypeStatsRepo, DeNoPaFirstVisitMetaTypeStatsRepo}
+import persistence._
 import scala.concurrent.Await
 
 class DeNoPaCleanup @Inject() (
     baselineRepo: DeNoPaBaselineRepo,
     firstVisitRepo: DeNoPaFirstVisitRepo,
+    curatedBaselineRepo : DeNoPaCuratedBaselineRepo,
+    curatedFirstVisitRepo: DeNoPaCuratedFirstVisitRepo,
     baselineTypeStatsRepo : DeNoPaBaselineMetaTypeStatsRepo,
     firstVisitTypeStatsRepo : DeNoPaFirstVisitMetaTypeStatsRepo
   ) extends Runnable {
@@ -44,6 +46,9 @@ class DeNoPaCleanup @Inject() (
     val cleanedupBaselineItems = cleanupItems(baselineRepo, baselineAttributeTypeMap)
     val cleanedupFirstVisitItems = cleanupItems(firstVisitRepo, firstVisitAttributeTypeMap)
 
+    cleanedupBaselineItems.foreach(curatedBaselineRepo.save)
+    cleanedupFirstVisitItems.foreach(curatedFirstVisitRepo.save)
+
     println("Base line")
     println("---------")
     println(cleanedupBaselineItems.size)
@@ -60,25 +65,31 @@ class DeNoPaCleanup @Inject() (
     val itemsFuture = repo.find(None, Some(Json.obj("_id" -> 1)))
 
     val convertedJsItems = Await.result(itemsFuture, timeout).map { item =>
-      val newFieldValues : Seq[(String, JsValue)] = item.fields.filter(_._1 != InferredType.Null).map{ case (attribute, jsValue) =>
-        if (jsValue == JsNull)
-          (attribute, JsNull)
-        else {
-          val string = jsValue.as[String]
-          if (nullAliases.contains(string.toLowerCase))
-            (attribute, JsNull)
-          else {
-            val convertedValue = attributeTypeMap.get(attribute).get match {
-              case InferredType.Null => JsNull
-              case InferredType.Date => Json.toJson(toDate(string))
-              case InferredType.Boolean => Json.toJson(toBoolean(string))
-              case InferredType.NumberEnum => Json.toJson(string.toDouble)
-              case InferredType.FreeNumber => Json.toJson(string.toDouble)
-              case InferredType.StringEnum => Json.toJson(string)
-              case InferredType.FreeString => Json.toJson(string)
+      val newFieldValues: Seq[(String, JsValue)] = item.fields.filter(_._1 != InferredType.Null).map { case (attribute, jsValue) =>
+        jsValue match {
+          case JsNull => (attribute, JsNull)
+          case id: BSONObjectID => ("orig_id", id)
+          case _: JsString => {
+            val string = jsValue.asOpt[String].getOrElse(
+              throw new IllegalArgumentException(jsValue + " is not String.")
+            )
+            if (nullAliases.contains(string.toLowerCase))
+              (attribute, JsNull)
+            else {
+              val convertedValue = attributeTypeMap.get(attribute).get match {
+                case InferredType.Null => JsNull
+                case InferredType.Date => Json.toJson(toDate(string))
+                case InferredType.Boolean => Json.toJson(toBoolean(string))
+                case InferredType.NumberEnum => Json.toJson(string.toDouble)
+                case InferredType.FreeNumber => Json.toJson(string.toDouble)
+                case InferredType.StringEnum => Json.toJson(string)
+                case InferredType.FreeString => Json.toJson(string)
+              }
+              (attribute, convertedValue)
             }
-            (attribute, convertedValue)
+            (attribute, jsValue)
           }
+          case _ => (attribute, jsValue)
         }
       }
       JsObject(newFieldValues)
@@ -157,7 +168,7 @@ class DeNoPaCleanup @Inject() (
       try {
         val year = string.toInt
         if (year > 1900 && year < 2100)
-          new SimpleDateFormat(string).parse("01.01." + string)
+          new SimpleDateFormat("dd.MM.yyyy").parse("01.01." + string)
         else
           throw dateExpectedException(string)
       } catch {
@@ -168,7 +179,7 @@ class DeNoPaCleanup @Inject() (
   }
 
   private def toBoolean(string : String) : Boolean =
-    (textBooleanMap ++ numBooleanMap).getOrElse(string, throw booleanExpectedException(string))
+    (textBooleanMap ++ numBooleanMap).getOrElse(string.toLowerCase, throw booleanExpectedException(string))
 
   private def isBoolean(valuesWoNA : Set[String]) =
     isTextBoolean(valuesWoNA) || isNumberBoolean(valuesWoNA)

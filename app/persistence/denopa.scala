@@ -27,6 +27,21 @@ trait DeNoPaFirstVisitRepo extends CrudRepo[JsObject, BSONObjectID]
 
 class DeNoPaFirstVisitMongoCrudRepo @Inject()(reactiveMongoApi: ReactiveMongoApi) extends JsObjectMongoCrudRepo(reactiveMongoApi, "denopa-first_visit") with DeNoPaFirstVisitRepo
 
+
+
+@ImplementedBy(classOf[DeNoPaCuratedBaselineMongoCrudRepo])
+trait DeNoPaCuratedBaselineRepo extends CrudRepo[JsObject, BSONObjectID]
+
+class DeNoPaCuratedBaselineMongoCrudRepo @Inject()(reactiveMongoApi: ReactiveMongoApi) extends JsObjectMongoCrudRepo(reactiveMongoApi, "denopa-baseline_visit-curated") with DeNoPaCuratedBaselineRepo
+
+// firstvisit
+@ImplementedBy(classOf[DeNoPaCuratedFirstVisitMongoCrudRepo])
+trait DeNoPaCuratedFirstVisitRepo extends CrudRepo[JsObject, BSONObjectID]
+
+class DeNoPaCuratedFirstVisitMongoCrudRepo @Inject()(reactiveMongoApi: ReactiveMongoApi) extends JsObjectMongoCrudRepo(reactiveMongoApi, "denopa-first_visit-curated") with DeNoPaCuratedFirstVisitRepo
+
+
+
 // baseline
 @ImplementedBy(classOf[DeNoPaBaselineMetaTypeStatsMongoCrudRepo])
 trait DeNoPaBaselineMetaTypeStatsRepo extends CrudRepo[MetaTypeStats, BSONObjectID]
