@@ -1,5 +1,4 @@
-@import standalone.TypeCount
-@(typeCount : TypeCount)
+@(title : String, elements : Seq[(String, Any)])
     <div id="pieChart" class="chart-holder"></div>
     <script type="text/javascript">
         $(function () {
@@ -11,7 +10,7 @@
                     type: 'pie'
                 },
                 title: {
-                    text: 'Type Stats'
+                    text: "@title"
                 },
                 tooltip: {
                     pointFormat: '{series.name}: <b>{point.y}</b>'
@@ -33,30 +32,13 @@
                     enabled: false
                 },
                 series: [{
-                    name: "Type Count",
+                    name: "@title",
                     colorByPoint: true,
-                    data: [{
-                        name : "null-or-Nas",
-                        y :	@typeCount.nullOrNa
-                    }, {
-                        name : "booleans",
-                        y :	@typeCount.boolean
-                    }, {
-                        name : "dates",
-                        y :	@typeCount.date
-                    }, {
-                        name : "number enums",
-                        y :	@typeCount.numberEnum
-                    }, {
-                        name : "free numbers",
-                        y :	@typeCount.freeNumber
-                    }, {
-                        name : "text enums",
-                        y :	@typeCount.textEnum
-                    }, {
-                        name : "free texts",
-                        y :	@typeCount.freeText
-                    }]
+                    data: [
+                        @elements.map { case (name, value) =>
+                            {name : '@name', y : @value},
+                        }
+                    ]
                 }]
             });
         });

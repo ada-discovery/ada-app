@@ -17,7 +17,8 @@ import util.encodeMongoKey
 class ImportDeNoPaFirstVisit @Inject()(firstVisitRepo: DeNoPaFirstVisitRepo) extends Runnable {
 
 //  val filename = "/Users/peter.banda/Documents/DeNoPa/Denopa-V2-FU1-Datensatz.csv"
-  val filename = "/home/peter.banda/DeNoPa/Denopa-V2-FU1-Datensatz.csv"
+//  val filename = "/home/peter.banda/DeNoPa/Denopa-V2-FU1-Datensatz.csv"
+  val filename = "/home/tremor/Downloads/DeNoPa/Denopa-V2-FU1-Datensatz_w_§§.csv"
   val separator = "§§"
   val timeout = 50000 millis
 

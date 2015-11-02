@@ -1,0 +1,16 @@
+@import standalone.TypeCount
+@import scala.collection.immutable.ListMap
+
+@(typeCount : TypeCount)
+    @views.html.pieChart(
+        "Type Stats",
+        ListMap[String, Any](
+            "null-or-Nas" -> typeCount.nullOrNa,
+            "booleans" -> typeCount.boolean,
+            "dates" -> typeCount.date,
+            "number enums" -> typeCount.numberEnum,
+            "free numbers" -> typeCount.freeNumber,
+            "text enums" -> typeCount.textEnum,
+            "free texts" -> typeCount.freeText
+        ).toSeq
+    )

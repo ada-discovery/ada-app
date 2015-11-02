@@ -9,12 +9,16 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{Json, JsObject}
 import play.api.mvc.RequestHeader
 import play.twirl.api.Html
+import standalone.DeNoPaTypeStats
 import views.html
 
 class DeNoPaBaselineController @Inject() (
     repo: DeNoPaBaselineRepo,
+    deNoPaTypeStats : DeNoPaTypeStats,
     messagesApi: MessagesApi
   ) extends DeNoPaController(repo, messagesApi) {
+
+  lazy val typeStats = deNoPaTypeStats.collectBaselineGlobalTypeStats
 
   override def listViewProjection = Json.obj("Line_Nr" -> 1, "Probanden_Nr" -> 1, "Geb_Datum" -> 1, "a_Gruppe" -> 1, "b_Gruppe" -> 1)
 
@@ -26,6 +30,6 @@ class DeNoPaBaselineController @Inject() (
 
   def overview = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
-    Ok(views.html.denopa.overviewBaseline("LALA"))
+    Ok(views.html.denopa.typeOverview("Baseline Type Overview", typeStats))
   }
 }

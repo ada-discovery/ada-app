@@ -1,4 +1,4 @@
-@(key : String, label : Any, value : String, hasError : Boolean)
+@(key : String, label : Any,  hasError : Boolean)(valueElement : Any)
 
 @**************************************************
 * Generate input according twitter bootsrap rules *
@@ -6,7 +6,6 @@
 <div class="form-group @if(hasError) {has-error}">
   <label for="@key" class="col-sm-4 control-label">@label</label>
   <div class="col-sm-8">
-    <input class="form-control" type="text" value="@value" readonly="true"/>
-    <span class="help-block"></span>
+    @valueElement
   </div>
 </div>

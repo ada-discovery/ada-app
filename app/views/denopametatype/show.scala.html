@@ -20,10 +20,35 @@
 						@views.html.twitterBootstrapJsValue("doubleRatio", attributeLabel("metaTypeStat", "doubleRatio"), item.doubleRatio.toString, false)
 						@views.html.twitterBootstrapJsValue("booleanRatio", attributeLabel("metaTypeStat", "booleanRatio"), item.booleanRatio.toString, false)
 						@views.html.twitterBootstrapJsValue("nullRatio", attributeLabel("metaTypeStat", "nullRatio"), item.nullRatio.toString, false)
-						@views.html.twitterBootstrapTextArea("valueRatioMap", attributeLabel("metaTypeStat", "valueRatioMap"), item.valueRatioMap.toSeq.sortBy(_._2).reverse.map(a => a._1 + " -> " + a._2).mkString("\n"), false)
+                        @views.html.twitterBootstrapLabelValue("valueOccurrenceChart", attributeLabel("metaTypeStat", "valueOccurrenceChart"), false) {
+                            @views.html.pieChart("Value Occurrences - " + decodeMongoKey(item.attributeName), item.valueRatioMap.toSeq.sortBy(_._2).reverse)
+                            <div align="right">
+                                <button type="button" class="btn btn-default btn-sm" data-toggle="collapse" data-target="#more-info">Show as Table</button>
+                            </div>
+                        }
+                        <div id="more-info" class="collapse">
+                            @views.html.twitterBootstrapLabelValue("valueRatioMap", attributeLabel("metaTypeStat", "valueRatioMap"), false) {
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <td>Value</td>
+                                            <td>Occurrence</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    @item.valueRatioMap.toSeq.sortBy(_._2).reverse.map { case (value, freq) =>
+                                    <tr>
+                                        <td>@value</td>
+                                        <td>@freq</td>
+                                    </tr>
+                                    }
+                                    </tbody>
+                                </table>
+                            }
+                        </div>
 					</fieldset>
-				
-					<div class="actions" align="center">
+
+					<div class="actions" align="center" style="padding-top: 50px;">
 					   <a href="@listCall" class="btn btn-default">Go Back</a>
 					</div>
 			    </div>
