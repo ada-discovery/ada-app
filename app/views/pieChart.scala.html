@@ -1,24 +1,6 @@
-@import play.api.libs.json.JsObject
-@import reactivemongo.bson.BSONObjectID
-@import play.modules.reactivemongo.json._
-@(domainName: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
-
-@main("Baseline Type Overview") {
-
-    <!-- Begin page content -->
-    <div class="container">
-        <div class="page-header">
-            <h3>
-            @Messages("Baseline Type Overview")
-            </h3>
-        </div>
-
-        <div class="panel panel-info">
-            <div class="panel-body" style="padding-bottom: 120px;">
-                <div id="pieChart" class="chart-holder"></div>
-            </div>
-        </div>
-    </div>
+@import standalone.TypeCount
+@(typeCount : TypeCount)
+    <div id="pieChart" class="chart-holder"></div>
     <script type="text/javascript">
         $(function () {
             $('#pieChart').highcharts({
@@ -55,27 +37,27 @@
                     colorByPoint: true,
                     data: [{
                         name : "null-or-Nas",
-                        y :	3926
+                        y :	@typeCount.nullOrNa
                     }, {
                         name : "booleans",
-                        y :	566
+                        y :	@typeCount.boolean
+                    }, {
+                        name : "dates",
+                        y :	@typeCount.date
                     }, {
                         name : "number enums",
-                        y :	447
+                        y :	@typeCount.numberEnum
                     }, {
                         name : "free numbers",
-                        y :	325
+                        y :	@typeCount.freeNumber
                     }, {
                         name : "text enums",
-                        y :	253
+                        y :	@typeCount.textEnum
                     }, {
                         name : "free texts",
-                        y :	130
+                        y :	@typeCount.freeText
                     }]
                 }]
             });
         });
-
-
     </script>
-}

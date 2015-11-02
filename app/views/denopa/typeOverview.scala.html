@@ -1,0 +1,20 @@
+@import standalone.TypeCount
+@(title: String, typeCount : TypeCount)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@main(title) {
+
+    <!-- Begin page content -->
+    <div class="container">
+        <div class="page-header">
+            <h3>
+                @Messages(title)
+            </h3>
+        </div>
+
+        <div class="panel panel-info">
+            <div class="panel-body" style="padding-bottom: 120px;">
+                @typeCountChart(typeCount)
+            </div>
+        </div>
+    </div>
+}
