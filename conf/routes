@@ -3,57 +3,71 @@
 # ~~~~
 
 # Default path will just redirect to the RedCap view
-GET         /                                           controllers.AppController.index
+GET         /                                                       controllers.AppController.index
 
-# Users list (look at the default values for pagination parameters)
-GET         /users                                      controllers.UserController.findByName(p: Int ?= 0, s: String ?= "name", f ?= "")
-GET         /users/all                                  controllers.UserController.listAll(s: Int ?= 2)
+# Users
+GET         /users                                                  controllers.UserController.findByName(p: Int ?= 0, s: String ?= "name", f ?= "")
+GET         /users/all                                              controllers.UserController.listAll(s: Int ?= 2)
+GET         /users/new                                              controllers.UserController.create
+POST        /users/save                                             controllers.UserController.save
+GET         /users/:id/get                                          controllers.UserController.get(id: BSONObjectID)
+GET         /users/:id                                              controllers.UserController.edit(id: BSONObjectID)
+POST        /users/:id                                              controllers.UserController.update(id: BSONObjectID)
+POST        /users/:id/delete                                       controllers.UserController.delete(id: BSONObjectID)
 
-# Add user
-GET         /users/new                                  controllers.UserController.create
-POST        /users/save                                 controllers.UserController.save
+# User Rest API
 
-# Get/edit existing user
-GET         /users/:id/get                              controllers.UserController.get(id: BSONObjectID)
-GET         /users/:id                                  controllers.UserController.edit(id: BSONObjectID)
-POST        /users/:id                                  controllers.UserController.update(id: BSONObjectID)
+POST        /rest/users/save                                        controllers.UserController.saveRest
+GET         /rest/users/get/:id                                     controllers.UserController.getRest(id: BSONObjectID)
+POST        /rest/users/:id                                         controllers.UserController.updateRest(id: BSONObjectID)
+GET         /rest/users/all                                         controllers.UserController.listAllRest
 
-# Delete user
-POST        /users/:id/delete                           controllers.UserController.delete(id: BSONObjectID)
-
-
-# Rest API
-
-POST        /rest/users/save                            controllers.UserController.saveRest
-GET         /rest/users/get/:id                         controllers.UserController.getRest(id: BSONObjectID)
-POST        /rest/users/:id                             controllers.UserController.updateRest(id: BSONObjectID)
-GET         /rest/users/all                             controllers.UserController.listAllRest
+# Translations
+GET         /translations                                           controllers.TranslationController.findByOriginal(p: Int ?= 0, s: String ?= "original", f ?= "")
+GET         /translations/all                                       controllers.TranslationController.listAll(s: Int ?= 2)
+GET         /translations/new                                       controllers.TranslationController.create
+POST        /translations/save                                      controllers.TranslationController.save
+GET         /translations/:id/get                                   controllers.TranslationController.get(id: BSONObjectID)
+GET         /translations/:id                                       controllers.TranslationController.edit(id: BSONObjectID)
+POST        /translations/:id                                       controllers.TranslationController.update(id: BSONObjectID)
+POST        /translations/:id/delete                                controllers.TranslationController.delete(id: BSONObjectID)
 
 # RedCap
 
-GET         /redcap/records/exportAllAsCsv              controllers.RedCapController.exportRecordsAsCsv(delimiter : String ?= ",")
-GET         /redcap/records                             controllers.RedCapController.listRecords(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f ?= "")
-GET         /redcap/metadatas                           controllers.RedCapController.listMetadatas(p: Int ?= 0, s: String ?= "field_name", f ?= "")
-GET         /redcap/fieldNames                          controllers.RedCapController.listFieldNames(p: Int ?= 0, s: String ?= "original_field_name", f ?= "")
-GET         /redcap/records//get/:id                    controllers.RedCapController.showRecord(id: String)
-GET         /redcap/metadatas/get/:id                   controllers.RedCapController.showMetadata(id: String)
-GET         /redcap/fieldNames/get/:id                  controllers.RedCapController.showFieldName(id: String)
+GET         /redcap/records/exportAllAsCsv                          controllers.RedCapController.exportRecordsAsCsv(delimiter : String ?= ",")
+GET         /redcap/records                                         controllers.RedCapController.listRecords(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f ?= "")
+GET         /redcap/overview                                        controllers.RedCapController.overview
+GET         /redcap/metadatas                                       controllers.RedCapController.listMetadatas(p: Int ?= 0, s: String ?= "field_name", f ?= "")
+GET         /redcap/fieldNames                                      controllers.RedCapController.listFieldNames(p: Int ?= 0, s: String ?= "original_field_name", f ?= "")
+GET         /redcap/records//get/:id                                controllers.RedCapController.showRecord(id: String)
+GET         /redcap/metadatas/get/:id                               controllers.RedCapController.showMetadata(id: String)
+GET         /redcap/fieldNames/get/:id                              controllers.RedCapController.showFieldName(id: String)
 
 # DeNoPa
 
-GET         /denopa/baseline/records                    controllers.DeNoPaBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
-GET         /denopa/baseline/records/get/:id            controllers.DeNoPaBaselineController.get(id: BSONObjectID)
-GET         /denopa/firstvisit/records                  controllers.DeNoPaFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
-GET         /denopa/firstvisit/records/get/:id          controllers.DeNoPaFirstVisitController.get(id: BSONObjectID)
-GET         /denopa/baseline/metastats                  controllers.DeNoPaBaselineMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
-GET         /denopa/baseline/metastats/get/:id          controllers.DeNoPaBaselineMetaTypeStatsController.get(id: BSONObjectID)
-GET         /denopa/firstvisit/metastats                controllers.DeNoPaFirstVisitMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
-GET         /denopa/firstvisit/metastats/get/:id        controllers.DeNoPaFirstVisitMetaTypeStatsController.get(id: BSONObjectID)
-GET         /denopa/baseline/overview                   controllers.DeNoPaBaselineController.overview
-GET         /denopa/firstvisit/overview                 controllers.DeNoPaFirstVisitController.overview
+GET         /denopa/baseline/records                                controllers.DeNoPaBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/baseline/records/get/:id                        controllers.DeNoPaBaselineController.get(id: BSONObjectID)
+GET         /denopa/baseline/records/exportAllAsCsv                 controllers.DeNoPaBaselineController.exportRecordsAsCsv(delimiter : String ?= ",")
+GET         /denopa/firstvisit/records                              controllers.DeNoPaFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/firstvisit/records/get/:id                      controllers.DeNoPaFirstVisitController.get(id: BSONObjectID)
+GET         /denopa/firstvisit/records/exportAllAsCsv               controllers.DeNoPaFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",")
+
+GET         /denopa/curatedbaseline/records                         controllers.DeNoPaCuratedBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/curatedbaseline/records/get/:id                 controllers.DeNoPaCuratedBaselineController.get(id: BSONObjectID)
+GET         /denopa/curatedbaseline/records/exportAllAsCsv          controllers.DeNoPaCuratedBaselineController.exportRecordsAsCsv(delimiter : String ?= ",")
+GET         /denopa/curatedfirstvisit/records                       controllers.DeNoPaCuratedFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/curatedfirstvisit/records/get/:id               controllers.DeNoPaCuratedFirstVisitController.get(id: BSONObjectID)
+GET         /denopa/curatedfirstvisit/records/exportAllAsCsv        controllers.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",")
+
+GET         /denopa/baseline/metastats                              controllers.DeNoPaBaselineMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
+GET         /denopa/baseline/metastats/get/:id                      controllers.DeNoPaBaselineMetaTypeStatsController.get(id: BSONObjectID)
+GET         /denopa/firstvisit/metastats                            controllers.DeNoPaFirstVisitMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
+GET         /denopa/firstvisit/metastats/get/:id                    controllers.DeNoPaFirstVisitMetaTypeStatsController.get(id: BSONObjectID)
+GET         /denopa/baseline/overview                               controllers.DeNoPaBaselineController.overview
+GET         /denopa/firstvisit/overview                             controllers.DeNoPaFirstVisitController.overview
 
 # Map static resources from the /public folder to the /assets URL path
-GET         /assets/*file                               controllers.Assets.at(path="/public", file)
+GET         /assets/*file                                           controllers.Assets.at(path="/public", file)
 
 # Map the webjar static assets to the /webjars URL
-GET         /webjars/*file                              controllers.WebJarAssets.at(file)
+GET         /webjars/*file                                          controllers.WebJarAssets.at(file)
