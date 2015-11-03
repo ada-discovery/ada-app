@@ -23,13 +23,15 @@ class DeNoPaFirstVisitController @Inject() (
   override def listViewProjection = Json.obj("Line_Nr" -> 1, "Probanden_Nr" -> 1, "Geb_Datum" -> 1, "b_Gruppe" -> 1) // no a_Gruppe here
 
   override def showView(item : JsObject)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.showFirstVisit(item).asInstanceOf[Html]
+    html.denopa.showFirstVisit(item)
 
   override def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.listFirstVisit(currentPage, currentOrderBy, currentFilter).asInstanceOf[Html]
+    html.denopa.listFirstVisit(currentPage, currentOrderBy, currentFilter)
 
   def overview = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
     Ok(views.html.denopa.typeOverview("First Visit Type Overview", typeStats))
   }
+
+  def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo("denopa-firstvisit", delimiter)
 }

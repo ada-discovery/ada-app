@@ -23,13 +23,15 @@ class DeNoPaBaselineController @Inject() (
   override def listViewProjection = Json.obj("Line_Nr" -> 1, "Probanden_Nr" -> 1, "Geb_Datum" -> 1, "a_Gruppe" -> 1, "b_Gruppe" -> 1)
 
   override def showView(item : JsObject)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.showBaseline(item).asInstanceOf[Html]
+    html.denopa.showBaseline(item)
 
   override def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.listBaseline(currentPage, currentOrderBy, currentFilter).asInstanceOf[Html]
+    html.denopa.listBaseline(currentPage, currentOrderBy, currentFilter)
 
   def overview = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
     Ok(views.html.denopa.typeOverview("Baseline Type Overview", typeStats))
   }
+
+  def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo("denopa-baseline", delimiter)
 }

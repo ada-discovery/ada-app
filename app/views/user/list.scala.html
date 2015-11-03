@@ -4,8 +4,8 @@
 * Helper generating table headers *
 ***********************************@
 @header(fieldName: String, title: String) = {
-    <th class="col header @if(currentOrderBy == fieldName){'glyphicon glyphicon-chevron-down'}">
-        <a href="@displayCall(0, Some(fieldName))">@title</a>
+    <th class="col header @if(currentOrderBy == fieldName){glyphicon glyphicon-chevron-down} @if(currentOrderBy == "-" + fieldName){glyphicon glyphicon-chevron-up}">
+            <a href="@displayCall(0, Some(fieldName))">@title</a>
     </th>
 }
 

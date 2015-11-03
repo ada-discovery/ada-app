@@ -1,8 +1,8 @@
-@(title : String, elements : Seq[(String, Any)])
-    <div id="pieChart" class="chart-holder"></div>
+@(title : String, chartElementName : String, elements : Seq[(String, Any)])
+    <div id="@chartElementName" class="chart-holder"></div>
     <script type="text/javascript">
         $(function () {
-            $('#pieChart').highcharts({
+            $('#@{chartElementName}').highcharts({
                 chart: {
                     plotBackgroundColor: null,
                     plotBorderWidth: null,

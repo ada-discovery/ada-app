@@ -1,8 +1,8 @@
-@(form: Form[User])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(form: Form[Translation])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @views.html.create(
 	form = form,
 	elements = editableTextElements(form),
-	saveCall = routes.UserController.save(),
-	listCall = routes.UserController.listAll()
+	saveCall = routes.TranslationController.save(),
+	listCall = routes.TranslationController.listAll()
 )

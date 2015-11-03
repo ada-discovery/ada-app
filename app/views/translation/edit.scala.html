@@ -1,9 +1,9 @@
-@(id: reactivemongo.bson.BSONObjectID, form: Form[User])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(id: reactivemongo.bson.BSONObjectID, form: Form[Translation])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @views.html.edit(
 	form = form,
     elements = editableTextElements(form),
-	updateCall = routes.UserController.update(id),
-	listCall = routes.UserController.listAll(),
-    deleteCall = routes.UserController.delete(id)
+	updateCall = routes.TranslationController.update(id),
+	listCall = routes.TranslationController.listAll(),
+    deleteCall = routes.TranslationController.delete(id)
 )

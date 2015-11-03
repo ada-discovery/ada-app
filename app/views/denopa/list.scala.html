@@ -1,13 +1,17 @@
 @import play.api.libs.json.JsObject
 @import reactivemongo.bson.BSONObjectID
 @import play.modules.reactivemongo.json._
-@(domainName : String, currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String, fieldsToShow : Seq[String], findCall : (Int, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(domainName : String, currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String, fieldsToShow : Seq[String], findCall : (Int, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call, exportCsvCall : Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
-@helper.form(action=plainFindCall, 'class -> "navbar-form navbar-left", 'role -> "search") {
-    <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by Probanden Nr...">
-    <input type="submit" id="searchsubmit" value="Filter by Probanden Nr" class="btn btn-primary btn-sm">
-}
+    @helper.form(action=plainFindCall, 'class -> "navbar-form navbar-left", 'role -> "search") {
+        <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by Probanden Nr...">
+        <input type="submit" id="searchsubmit" value="Filter by Probanden Nr" class="btn btn-primary btn-sm">
+        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportModal">
+            Export All as CSV
+        </button>
+    }
+    @views.html.exportCsvModal("exportModal", "DeNoPa CSV Export", exportCsvCall)
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{

@@ -37,3 +37,16 @@ object MetaTypeStats {
     protected def set(entity: MetaTypeStats, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }
 }
+
+case class Translation(_id : Option[BSONObjectID], original : String, translated : String) {
+  override def toString = original + " -> " + translated
+}
+
+object Translation {
+  implicit val TranslationFormat = Json.format[Translation]
+
+  implicit object TranslationIdentity extends BSONObjectIdentity[Translation] {
+    def of(entity: Translation): Option[BSONObjectID] = entity._id
+    protected def set(entity: Translation, id: Option[BSONObjectID]) = entity.copy(_id = id)
+  }
+}

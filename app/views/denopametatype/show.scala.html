@@ -15,7 +15,7 @@
 					<fieldset>
 						@views.html.twitterBootstrapJsValue("attributeName", attributeLabel("metaTypeStat", "attributeName"), decodeMongoKey(item.attributeName), false)
                         @views.html.twitterBootstrapLabelValue("valueOccurrenceChart", attributeLabel("metaTypeStat", "valueOccurrenceChart"), false) {
-                            @views.html.pieChart("Value Occurrences - " + decodeMongoKey(item.attributeName), item.valueRatioMap.toSeq.sortBy(_._2).reverse)
+                            @views.html.pieChart("Value Occurrences - " + decodeMongoKey(item.attributeName), "valueChart", item.valueRatioMap.toSeq.sortBy(_._2).reverse)
                             <div align="right">
                                 <button type="button" class="btn btn-default btn-sm" data-toggle="collapse" data-target="#more-info">Show as Table</button>
                             </div>

@@ -2,7 +2,7 @@
 @(item: JsObject)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @views.html.jsonShow(
-	"Baseline Item",
+	"Curated baseline Item",
 	item,
-	routes.DeNoPaBaselineController.find()
+	routes.DeNoPaCuratedBaselineController.find()
 )

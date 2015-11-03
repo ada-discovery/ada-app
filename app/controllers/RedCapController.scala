@@ -9,7 +9,7 @@ import models.Page
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsString, JsNull}
+import play.api.libs.json.{JsObject, JsString, JsNull}
 import services.RedCapService
 import views.html
 import play.api.mvc.{ResponseHeader, Action, Controller, Result}
@@ -85,22 +85,36 @@ class RedCapController @Inject() (
     }
   }
 
-  val genderField = "Cdisc_dm_sex"
-  val deathField = "Dm_death"
-  val statusField = "Cdisc_sc_sctestcd_maritstat"
+  val genderField = "cdisc_dm_sex"
+  val deathField = "dm_death"
+  val statusField = "cdisc_sc_sctestcd_maritstat"
 
-//  def overviewRecords = Action.async { implicit request =>
-//    implicit val msg = messagesApi.preferred(request)
-//
-//    redCapService.listRecords(0, "", "").map { items =>
-//      val genderMap = MMap[String, Int]()
-//      items.map{item =>
-//        val gender = item.fields.find(_._1 == genderField).get._2
-////        genderMap.getOrElse(gender)
-//      }
-//      Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size), orderBy, filter))
-//    }
-//  }
+  def overview = Action.async { implicit request =>
+    implicit val msg = messagesApi.preferred(request)
+
+    redCapService.listRecords(0, "cdisc_dm_usubjd", "").map { items =>
+
+      val genderValueCounts = createValueCountMap(items, genderField)
+      val deathValueCounts = createValueCountMap(items, deathField)
+      val statusValueCounts = createValueCountMap(items, statusField)
+
+      Ok(html.redcap.overviewRecords("LuxPark REDCap Overview", genderValueCounts, deathValueCounts, statusValueCounts))
+    }
+  }
+
+  private def createValueCountMap(items : Iterable[JsObject], fieldName : String) = {
+    val countMap = MMap[String, Int]()
+    items.map{item =>
+      val rawWalue = item.fields.find(_._1 == fieldName).get._2
+      val stringValue = if (rawWalue == JsNull)
+        null
+      else
+        rawWalue.as[String]
+      val count = countMap.getOrElse(stringValue, 0)
+      countMap.update(stringValue, count + 1)
+    }
+    countMap.toSeq.sortBy(_._2)
+  }
 
   def exportRecordsAsCsv(delimiter : String) = Action { implicit request =>
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
@@ -129,6 +143,5 @@ class RedCapController @Inject() (
       header = ResponseHeader(200, Map(CONTENT_TYPE->"application/x-download", CONTENT_LENGTH -> sb.length.toString, CONTENT_DISPOSITION->"attachment; filename=luxpark-redcap-records.csv")),
       body = fileContent
     )
-//    Ok.sendFile(new File("path to file/abc.csv"), inline=true).withHeaders(CACHE_CONTROL->"max-age=3600",CONTENT_DISPOSITION->"attachment; filename=abc.csv", CONTENT_TYPE->"application/x-download");
   }
 }

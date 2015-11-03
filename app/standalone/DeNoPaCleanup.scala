@@ -17,6 +17,7 @@ class DeNoPaCleanup @Inject() (
     firstVisitRepo: DeNoPaFirstVisitRepo,
     curatedBaselineRepo : DeNoPaCuratedBaselineRepo,
     curatedFirstVisitRepo: DeNoPaCuratedFirstVisitRepo,
+    translationRepo : TranslationRepo,
     baselineTypeStatsRepo : DeNoPaBaselineMetaTypeStatsRepo,
     firstVisitTypeStatsRepo : DeNoPaFirstVisitMetaTypeStatsRepo
   ) extends Runnable {
@@ -40,14 +41,33 @@ class DeNoPaCleanup @Inject() (
   }
 
   override def run = {
+    // remove the curated baseline records from the collection
+    Await.result(curatedBaselineRepo.deleteAll, timeout)
+
+    // remove the curated first visit records from the collection
+    Await.result(curatedFirstVisitRepo.deleteAll, timeout)
+
+    val translationMap = Await.result(translationRepo.find(), timeout).map(translation =>
+      (translation.original, translation.translated)
+    ).toMap
+
     val baselineAttributeTypeMap = getAttributeTypeMap(baselineTypeStatsRepo)
     val firstVisitAttributeTypeMap = getAttributeTypeMap(firstVisitTypeStatsRepo)
 
-    val cleanedupBaselineItems = cleanupItems(baselineRepo, baselineAttributeTypeMap)
-    val cleanedupFirstVisitItems = cleanupItems(firstVisitRepo, firstVisitAttributeTypeMap)
+    val cleanedupBaselineItems = cleanupItems(baselineRepo, baselineAttributeTypeMap, translationMap)
+    val cleanedupFirstVisitItems = cleanupItems(firstVisitRepo, firstVisitAttributeTypeMap, translationMap)
 
-    cleanedupBaselineItems.foreach(curatedBaselineRepo.save)
-    cleanedupFirstVisitItems.foreach(curatedFirstVisitRepo.save)
+    cleanedupBaselineItems.foreach { item =>
+      val future = curatedBaselineRepo.save(item)
+      // wait for the execution to complete, i.e., synchronize
+      Await.result(future, timeout)
+    }
+
+    cleanedupFirstVisitItems.foreach { item =>
+      val future = curatedFirstVisitRepo.save(item)
+      // wait for the execution to complete, i.e., synchronize
+      Await.result(future, timeout)
+    }
 
     println("Base line")
     println("---------")
@@ -60,12 +80,15 @@ class DeNoPaCleanup @Inject() (
 
   private def cleanupItems(
     repo : AsyncReadonlyRepo[JsObject, BSONObjectID],
-    attributeTypeMap : Map[String, InferredType.Value]
+    attributeTypeMap : Map[String, InferredType.Value],
+    translationMap : Map[String, String]
   ) = {
     val itemsFuture = repo.find(None, Some(Json.obj("_id" -> 1)))
 
     val convertedJsItems = Await.result(itemsFuture, timeout).map { item =>
-      val newFieldValues: Seq[(String, JsValue)] = item.fields.filter(_._1 != InferredType.Null).map { case (attribute, jsValue) =>
+      val newFieldValues: Seq[(String, JsValue)] = item.fields.filter{case (attribute, value) =>
+        attribute == "_id" || attributeTypeMap.get(attribute).get != InferredType.Null
+      }.map { case (attribute, jsValue) =>
         jsValue match {
           case JsNull => (attribute, JsNull)
           case id: BSONObjectID => ("orig_id", id)
@@ -73,21 +96,20 @@ class DeNoPaCleanup @Inject() (
             val string = jsValue.asOpt[String].getOrElse(
               throw new IllegalArgumentException(jsValue + " is not String.")
             )
-            if (nullAliases.contains(string.toLowerCase))
+            if (nullAliases.contains(string.toLowerCase)) {
               (attribute, JsNull)
-            else {
+            } else {
               val convertedValue = attributeTypeMap.get(attribute).get match {
                 case InferredType.Null => JsNull
                 case InferredType.Date => Json.toJson(toDate(string))
                 case InferredType.Boolean => Json.toJson(toBoolean(string))
-                case InferredType.NumberEnum => Json.toJson(string.toDouble)
-                case InferredType.FreeNumber => Json.toJson(string.toDouble)
-                case InferredType.StringEnum => Json.toJson(string)
-                case InferredType.FreeString => Json.toJson(string)
+                case InferredType.NumberEnum => toJsonNum(string)
+                case InferredType.FreeNumber => toJsonNum(string)
+                case InferredType.StringEnum => Json.toJson(translationMap.get(string).getOrElse(string))
+                case InferredType.FreeString => Json.toJson(translationMap.get(string).getOrElse(string))
               }
               (attribute, convertedValue)
             }
-            (attribute, jsValue)
           }
           case _ => (attribute, jsValue)
         }
@@ -96,7 +118,15 @@ class DeNoPaCleanup @Inject() (
     }
 
     // remove all items without any content
-    convertedJsItems.filter(item => item.values.exists(_ != JsNull))
+    convertedJsItems.filter(item => item.fields.exists{ case (attribute, value) => attribute != "Line_Nr" && attribute != "orig_id" && attribute != "_id" && value != JsNull})
+  }
+
+  private def toJsonNum(string : String) = {
+    try {
+      Json.toJson(string.toLong)
+    } catch {
+      case t: NumberFormatException => Json.toJson(string.toDouble)
+    }
   }
 
   private def getAttributeTypeMap(repo : AsyncReadonlyRepo[MetaTypeStats, BSONObjectID]) : Map[String, InferredType.Value] = {

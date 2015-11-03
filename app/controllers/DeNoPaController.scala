@@ -2,20 +2,28 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
+import scala.concurrent.duration._
 import models.Page
+import org.apache.commons.lang3.StringEscapeUtils
 import persistence.AsyncReadonlyRepo
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.json.{JsNumber, JsValue, JsObject, Json}
-import play.api.mvc.{Action, Flash, Controller, RequestHeader}
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json._
+import play.api.mvc._
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
+import scala.concurrent.Await
 
 abstract class DeNoPaController(
     repo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     messagesApi: MessagesApi
   ) extends Controller {
+
+  val exportCharset = "UTF-8"
+  val timeout = 120000 millis
 
   def listViewProjection : JsObject
 
@@ -66,5 +74,34 @@ abstract class DeNoPaController(
         Logger.error("Problem found in the list process")
         InternalServerError(t.getMessage)
     }
+  }
+
+  protected def exportRecordsAsCsvTo(filename : String, delimiter : String) = Action { implicit request =>
+    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+    val sb = new StringBuilder(10000)
+    val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
+    val records = Await.result(recordsFuture, timeout)
+    if (!records.isEmpty) {
+      val header = records.head.fields.map(_._1).mkString(unescapedDelimiter)
+      sb.append(header + "\n")
+
+      records.foreach { record =>
+        val row = record.fields.map { case (attributeName, value) =>
+          value match {
+            case JsNull => ""
+            case _: JsString => value.as[String] // .replaceAll("\r", " ").replaceAll("\n", " ")
+            case _ => value.toString()
+          }
+        }.mkString(unescapedDelimiter)
+        sb.append(row + "\n")
+      }
+    }
+
+    val fileContent: Enumerator[Array[Byte]] = Enumerator(sb.toString.getBytes(exportCharset))
+
+    Result(
+      header = ResponseHeader(200, Map(CONTENT_TYPE->"application/x-download", CONTENT_LENGTH -> sb.length.toString, CONTENT_DISPOSITION->s"attachment; filename=${filename}.csv")),
+      body = fileContent
+    )
   }
 }

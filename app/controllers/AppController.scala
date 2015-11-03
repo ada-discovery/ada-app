@@ -3,17 +3,24 @@ package controllers
 import javax.inject.Inject
 
 import play.api.mvc.{Flash, Action, Controller}
-import standalone.{InferTypeDeNoPaFirstVisit, InferTypeDeNoPaBaseline, ImportDeNoPaFirstVisit, ImportDeNoPaBaseline}
+import standalone._
 
 class AppController extends Controller {
-//  @Inject()(
-//    importDeNoPaBaseline: ImportDeNoPaBaseline,
-//    importDeNoPaFirstVisit: ImportDeNoPaFirstVisit,
-//    inferTypeDeNoPaBaseline: InferTypeDeNoPaBaseline,
-//    inferTypeDeNoPaFirstVisit: InferTypeDeNoPaFirstVisit
-//  )
 
+//  @Inject()(
+//    deNoPaTranslations: DeNoPaTranslations,
+//    denopaCleanup : DeNoPaCleanup
+//    //    importDeNoPaBaseline: ImportDeNoPaBaseline,
+//    //    importDeNoPaFirstVisit: ImportDeNoPaFirstVisit,
+//    //    inferTypeDeNoPaBaseline: InferTypeDeNoPaBaseline,
+//    //    inferTypeDeNoPaFirstVisit: InferTypeDeNoPaFirstVisit
+//  )
   def index = Action { implicit request =>
+//    println("Translations")
+//    deNoPaTranslations.run
+//
+//    println("Cleanup")
+//    denopaCleanup.run
 //    println("--------------------")
 //    println("BASELINE------------")
 //    importDeNoPaBaseline.run

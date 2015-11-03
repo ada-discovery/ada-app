@@ -15,8 +15,9 @@
         <div id="navigation" class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">RedCap<span class="caret"></span></a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">LuxPark REDCap<span class="caret"></span></a>
                     <ul class="dropdown-menu">
+                        @menuItem(routes.RedCapController.overview(), "Basic Overview", Some(2))
                         @menuItem(routes.RedCapController.listRecords(), "Records", Some(2))
                     <li role="separator" class="divider"></li>
                         @menuItem(routes.RedCapController.listFieldNames(), "Fields", Some(2))
@@ -26,13 +27,17 @@
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">DeNoPa<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        @menuItem(routes.DeNoPaBaselineController.find(), "Baseline Records", Some(3))
-                        @menuItem(routes.DeNoPaFirstVisitController.find(), "First Visit Records", Some(3))
+                        @menuItem(routes.DeNoPaCuratedBaselineController.find(), "Curated Baseline Records", Some(3))
+                        @menuItem(routes.DeNoPaCuratedFirstVisitController.find(), "Curated First Visit Records", Some(3))
+                        @menuItem(routes.TranslationController.findByOriginal(), "DE-EN Translations", Some(3))
+                        <li role="separator" class="divider"></li>
+                        @menuItem(routes.DeNoPaBaselineController.find(), "Raw Baseline Records", Some(3))
+                        @menuItem(routes.DeNoPaFirstVisitController.find(), "Raw First Visit Records", Some(3))
                         <li role="separator" class="divider"></li>
                         @menuItem(routes.DeNoPaBaselineController.overview(), "Baseline Type Overview", Some(3))
                         @menuItem(routes.DeNoPaFirstVisitController.overview(), "First Visit Type Overview", Some(3))
-                        @menuItem(routes.DeNoPaBaselineMetaTypeStatsController.find(), "Baseline Type Stats", Some(3))
-                        @menuItem(routes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Type Stats", Some(3))
+                        @menuItem(routes.DeNoPaBaselineMetaTypeStatsController.find(), "Baseline Attributes", Some(3))
+                        @menuItem(routes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Attributes", Some(3))
                     </ul>
                 </li>
 

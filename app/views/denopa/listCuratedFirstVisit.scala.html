@@ -2,12 +2,13 @@
 @(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @views.html.denopa.list(
-    "first visit record",
+    "curated first visit record",
     currentPage,
     currentOrderBy,
     currentFilter,
     List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe"),
-    routes.DeNoPaFirstVisitController.find,
-    routes.DeNoPaFirstVisitController.find(),
-    routes.DeNoPaFirstVisitController.get
+    routes.DeNoPaCuratedFirstVisitController.find,
+    routes.DeNoPaCuratedFirstVisitController.find(),
+    routes.DeNoPaCuratedFirstVisitController.get,
+    routes.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv()
 )

@@ -4,6 +4,7 @@
 @(typeCount : TypeCount)
     @views.html.pieChart(
         "Type Stats",
+        "typeChart",
         ListMap[String, Any](
             "null-or-Nas" -> typeCount.nullOrNa,
             "booleans" -> typeCount.boolean,

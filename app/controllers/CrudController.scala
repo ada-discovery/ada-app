@@ -126,7 +126,7 @@ abstract class CrudController[E: Format, ID](
    * @param orderBy Column to be sorted
    */
   def listAll(orderBy: Int) = Action.async { implicit request =>
-    val limit = 5
+    val limit = 20
     val futureItems = dao.find(None, None, None, Some(limit), None)
     val futureCount = dao.count(None)
     futureItems.zip(futureCount).map({ case (items, count) =>
