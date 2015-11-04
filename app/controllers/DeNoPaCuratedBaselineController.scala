@@ -7,12 +7,14 @@ import persistence.DeNoPaCuratedBaselineRepo
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, RequestHeader}
+import services.TranSMARTService
 import views.html
 
 class DeNoPaCuratedBaselineController @Inject() (
     repo: DeNoPaCuratedBaselineRepo,
+    tranSMARTService: TranSMARTService,
     messagesApi: MessagesApi
-  ) extends DeNoPaController(repo, messagesApi) {
+  ) extends DeNoPaController(repo, tranSMARTService, messagesApi) {
 
   override def listViewProjection = Json.obj("Line_Nr" -> 1, "Probanden_Nr" -> 1, "Geb_Datum" -> 1, "a_Gruppe" -> 1, "b_Gruppe" -> 1)
 
@@ -23,4 +25,8 @@ class DeNoPaCuratedBaselineController @Inject() (
     html.denopa.listCuratedBaseline(currentPage, currentOrderBy, currentFilter)
 
   def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo("denopa-curated-baseline", delimiter)
+
+  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTDataFileAsCsvTo("denopa-curated-baseline_data_file", delimiter)
+
+  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTDataFileAsCsvTo("denopa-curated-baseline_data_file", "denopa-curated-baseline_mapping_file", delimiter)
 }

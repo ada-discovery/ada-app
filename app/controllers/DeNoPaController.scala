@@ -3,7 +3,9 @@ package controllers
 import java.util.concurrent.TimeoutException
 
 import scala.concurrent.duration._
-import models.Page
+import services.TranSMARTService
+import services.DeNoPaTranSMARTMapping._
+import models.{Category => CCategory, Page}
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.AsyncReadonlyRepo
 import play.api.Logger
@@ -19,22 +21,23 @@ import scala.concurrent.Await
 
 abstract class DeNoPaController(
     repo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    tranSMARTService: TranSMARTService,
     messagesApi: MessagesApi
   ) extends Controller {
 
   val exportCharset = "UTF-8"
   val timeout = 120000 millis
 
-  def listViewProjection : JsObject
+  def listViewProjection: JsObject
 
-  def showView(item : JsObject)(implicit msg: Messages, request: RequestHeader) : Html
+  def showView(item: JsObject)(implicit msg: Messages, request: RequestHeader): Html
 
-  def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) : Html
+  def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader): Html
 
   def get(id: BSONObjectID) = Action.async { implicit request =>
     repo.get(id).map(_.fold(
       NotFound(s"Entity #$id not found")
-    ){ entity =>
+    ) { entity =>
       implicit val msg = messagesApi.preferred(request)
 
       Ok(showView(entity))
@@ -76,7 +79,7 @@ abstract class DeNoPaController(
     }
   }
 
-  protected def exportRecordsAsCsvTo(filename : String, delimiter : String) = Action { implicit request =>
+  protected def exportRecordsAsCsvTo(filename: String, delimiter: String) = Action { implicit request =>
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val sb = new StringBuilder(10000)
     val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
@@ -100,7 +103,37 @@ abstract class DeNoPaController(
     val fileContent: Enumerator[Array[Byte]] = Enumerator(sb.toString.getBytes(exportCharset))
 
     Result(
-      header = ResponseHeader(200, Map(CONTENT_TYPE->"application/x-download", CONTENT_LENGTH -> sb.length.toString, CONTENT_DISPOSITION->s"attachment; filename=${filename}.csv")),
+      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_LENGTH -> sb.length.toString, CONTENT_DISPOSITION -> s"attachment; filename=${filename}.csv")),
+      body = fileContent
+    )
+  }
+
+  protected def exportTransSMARTDataFileAsCsvTo(dataFilename: String, delimiter: String) = Action { implicit request =>
+    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+
+    val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
+    val records = Await.result(recordsFuture, timeout)
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, fieldsCategoryMap, rootCategory)
+
+    val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._1.getBytes(exportCharset))
+
+    Result(
+      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_LENGTH -> fileContents._1.length.toString, CONTENT_DISPOSITION -> s"attachment; filename=${dataFilename}")),
+      body = fileContent
+    )
+  }
+
+  protected def exportTransSMARTDataFileAsCsvTo(dataFilename: String, mappingFilename: String, delimiter: String) = Action { implicit request =>
+    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+
+    val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
+    val records = Await.result(recordsFuture, timeout)
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, fieldsCategoryMap, rootCategory)
+
+    val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._2.getBytes(exportCharset))
+
+    Result(
+      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_LENGTH -> fileContents._2.length.toString, CONTENT_DISPOSITION -> s"attachment; filename=${mappingFilename}")),
       body = fileContent
     )
   }

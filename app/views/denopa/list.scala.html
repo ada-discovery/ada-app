@@ -1,17 +1,25 @@
 @import play.api.libs.json.JsObject
 @import reactivemongo.bson.BSONObjectID
 @import play.modules.reactivemongo.json._
-@(domainName : String, currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String, fieldsToShow : Seq[String], findCall : (Int, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call, exportCsvCall : Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(domainName : String, currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String, fieldsToShow : Seq[String], findCall : (Int, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call, exportCsvCall : Call, exportTranSMARTDataCall : Call, exportTranSMARTMappingCall : Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
     @helper.form(action=plainFindCall, 'class -> "navbar-form navbar-left", 'role -> "search") {
         <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by Probanden Nr...">
         <input type="submit" id="searchsubmit" value="Filter by Probanden Nr" class="btn btn-primary btn-sm">
-        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportModal">
+        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportCsvModal">
             Export All as CSV
         </button>
+        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportTranSMARTDataModal">
+            Export TransSMART Data
+        </button>
+        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportTranSMARTMappingModal">
+            Export TransSMART Mapping
+        </button>
     }
-    @views.html.exportCsvModal("exportModal", "DeNoPa CSV Export", exportCsvCall)
+    @views.html.exportCsvModal("exportCsvModal", "DeNoPa CSV Export", exportCsvCall)
+    @views.html.exportCsvModal("exportTranSMARTDataModal", "DeNoPa CSV TranSMART Data Export", exportTranSMARTDataCall)
+    @views.html.exportCsvModal("exportTranSMARTMappingModal", "DeNoPa CSV TranSMART Mapping Export", exportTranSMARTMappingCall)
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{

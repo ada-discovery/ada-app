@@ -9,14 +9,16 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{Json, JsObject}
 import play.api.mvc.RequestHeader
 import play.twirl.api.Html
+import services.TranSMARTService
 import standalone.DeNoPaTypeStats
 import views.html
 
 class DeNoPaFirstVisitController @Inject() (
     repo: DeNoPaFirstVisitRepo,
+    tranSMARTService: TranSMARTService,
     deNoPaTypeStats : DeNoPaTypeStats,
     messagesApi: MessagesApi
-  ) extends DeNoPaController(repo, messagesApi) {
+  ) extends DeNoPaController(repo, tranSMARTService, messagesApi) {
 
   lazy val typeStats = deNoPaTypeStats.collectFirstVisitGlobalTypeStats
 
@@ -34,4 +36,8 @@ class DeNoPaFirstVisitController @Inject() (
   }
 
   def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo("denopa-firstvisit", delimiter)
+
+  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTDataFileAsCsvTo("denopa-firstvisit_data_file", delimiter)
+
+  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTDataFileAsCsvTo("denopa-firstvisit_data_file", "denopa-firstvisit_mapping_file", delimiter)
 }

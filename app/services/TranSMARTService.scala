@@ -2,126 +2,108 @@ package services
 
 import javax.inject.{Inject, Singleton}
 
-import com.fasterxml.jackson.core.JsonParseException
+import util.jsonObjectsToCsv
 import com.google.inject.ImplementedBy
-import play.api.libs.json.{JsObject, JsArray}
-import play.api.libs.ws.ning.NingWSClient
-import play.api.libs.ws.{WSRequest, WSClient}
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.Json
+import models.Category
+import play.api.libs.json._
 
-import scala.concurrent.Future
+@ImplementedBy(classOf[TranSMARTServiceImpl])
+trait TranSMARTService {
 
-@ImplementedBy(classOf[RedCapServiceWSImpl])
-trait RedCapService {
+  def createClinicalData(
+    items : Iterable[JsObject],
+    fieldsToInclude : Option[List[String]],
+    fieldsToExclude : Option[List[String]]
+  ) : Iterable[JsObject]
 
-  def listRecords(page: Int, orderBy: String, filter: String) : Future[Seq[JsObject]]
+  def createClinicalMapping(
+    dataFileName : String,
+    fieldsInOrder : Iterable[String],
+    fieldCategoryMap : Map[String, Category],
+    rootCategory : Category
+  ) : Iterable[JsObject]
 
-  def listMetadatas(page: Int, orderBy: String, filter: String) : Future[Seq[JsObject]]
-
-  def listFieldNames(page: Int, orderBy: String, filter: String) : Future[Seq[JsObject]]
-
-  def getRecord(id: String) : Future[Seq[JsObject]]
-
-  def getMetadata(id: String) : Future[Seq[JsObject]]
-
-  def getFieldName(id: String) : Future[Seq[JsObject]]
+  def createClinicalDataAndMappingFiles(
+    delimiter : String,
+    newLine : String
+  )(
+    items : Iterable[JsObject],
+    dataFileName : String,
+    fieldCategoryMap : Map[String, Category],
+    rootCategory : Category
+  ) : (String, String)
 }
 
 @Singleton
-class RedCapServiceWSImpl @Inject() (ws: WSClient) extends RedCapService {
+class TranSMARTServiceImpl extends TranSMARTService {
 
-//  implicit val sslClient = NingWSClient()
+  override def createClinicalData(
+    items : Iterable[JsObject],
+    fieldsToInclude : Option[List[String]],
+    fieldsToExclude : Option[List[String]]
+  ) = {
+    if (fieldsToInclude.isDefined && fieldsToExclude.isDefined)
+      throw new IllegalArgumentException("'Fields to include' and 'fields to exclude' cannot be defined at the same time.")
 
-//  val req: WSRequest = sslClient.url(current.configuration.getString("redcap.prodserver.api.url").get)
-
-  val req: WSRequest = ws.url(current.configuration.getString("redcap.prodserver.api.url").get)
-
-  val baseRequestData = Map(
-    "token" -> current.configuration.getString("redcap.prodserver.token").get,
-    "format" -> "json"
-  )
-
-  val recordRequestData = baseRequestData ++ Map("content" -> "record", "type" -> "flat")
-  val metadataRequestData = baseRequestData ++ Map("content" -> "metadata")
-  val fieldNamesRequestData = baseRequestData ++ Map("content" -> "exportFieldNames")
-
-  // Primitive cache
-
-  lazy val jsonRecords = runRedCapQuery(recordRequestData)
-
-  lazy val jsonMetadatas = runRedCapQuery(metadataRequestData)
-
-  lazy val jsonFieldNames = runRedCapQuery(fieldNamesRequestData)
-
-  // Services
-
-  override def listRecords(page: Int, orderBy: String, filter: String) = jsonRecords.map( items =>
-    filterAndSort(items, orderBy, filter, "cdisc_dm_usubjd")
-  )
-
-  override def listMetadatas(page: Int, orderBy: String, filter: String) = jsonMetadatas.map( items =>
-    filterAndSort(items, orderBy, filter, "field_name")
-  )
-
-  override def listFieldNames(page: Int, orderBy: String, filter: String) = jsonFieldNames.map( items =>
-    filterAndSort(items, orderBy, filter, "original_field_name")
-  )
-
-  override def getRecord(id: String) = jsonRecords.map { items =>
-    findBy(items, id, "cdisc_dm_usubjd")
-  }
-
-  override def getMetadata(id: String) = jsonMetadatas.map { items =>
-    findBy(items, id, "field_name")
-  }
-
-  override def getFieldName(id: String) = jsonFieldNames.map { items =>
-    findBy(items, id, "export_field_name")
-  }
-
-  // Helper methods
-
-  private def runRedCapQuery(requestData : Map[String, String]) = {
-      req.post(requestData.map { case (a, b) => (a, Seq(b)) }).map { response =>
-        try {
-          response.json.as[JsArray].value.asInstanceOf[Seq[JsObject]]
-        } catch {
-          case e: JsonParseException => {
-            println(response.toString())
-            List[JsObject]()
-          }
-        }
-      }
-  }
-
-  private def filterAndSort(items : Seq[JsObject], orderBy : String, filter : String, filterFieldName : String) = {
-    val filteredItems = if (filter.isEmpty) {
+    if (fieldsToInclude.isDefined) {
+      def filterFields(field : String, value : JsValue) = fieldsToInclude.get.contains(field)
+      items.map(filterJson(filterFields))
+    } else if (fieldsToExclude.isDefined) {
+      def filterFields(field : String, value : JsValue) = !fieldsToExclude.get.contains(field)
+      items.map(filterJson(filterFields))
+    } else
       items
-    } else {
-      val f = (filter + ".*").r
-      items.filter { item =>
-        val v = item.value.get(filterFieldName).get
-        f.unapplySeq(v.asOpt[String].getOrElse(v.toString())).isDefined
-      }
-    }
-
-    val orderByField = if (orderBy.startsWith("-")) orderBy.substring(1) else orderBy
-
-    val sortedItems = filteredItems.sortBy { item =>
-      val v = item.value.get(orderByField).get
-      v.asOpt[String].getOrElse(v.toString())
-    }
-
-    if (orderBy.startsWith("-"))
-      sortedItems.reverse
-    else
-      sortedItems
   }
 
-  private def findBy(items : Seq[JsObject], value : String, filterFieldName : String) =
-    items.filter { item =>
-      val v = item.value.get(filterFieldName).get
-      v.asOpt[String].getOrElse(v.toString()).equals(value)
+  private def filterJson(condition : (String, JsValue) => Boolean)(item : JsObject) = {
+    val filteredFields = item.fields.filter{case (field, value) => condition(field, value)}
+    JsObject(filteredFields)
+  }
+
+  override def createClinicalMapping(
+    dataFileName : String,
+    fieldsInOrder : Iterable[String],
+    fieldCategoryMap : Map[String, Category],
+    rootCategory : Category
+   ) = {
+    fieldsInOrder.zipWithIndex.map{ case (field, index) =>
+      val path = fieldCategoryMap.get(field).map(_.getPath.mkString("+"))
+      JsObject(
+        List(
+          ("filename", JsString(dataFileName)),
+          ("category_cd", if (path.isDefined) JsString(path.get) else JsNull),
+          ("col_nbr", Json.toJson(index + 1)),
+          ("data_label", JsString(toCamel(field)))
+        )
+      )
     }
+  }
+
+  override def createClinicalDataAndMappingFiles(
+    delimiter : String,
+    newLine : String
+  )(
+    items : Iterable[JsObject],
+    dataFileName : String,
+    fieldCategoryMap : Map[String, Category],
+    rootCategory : Category
+  ) = {
+    val fieldsToInclude = fieldCategoryMap.map(_._1).toList
+    val clinicalData = createClinicalData(items, Some(fieldsToInclude), None)
+    if (!clinicalData.isEmpty) {
+      val fieldsInOrder = clinicalData.head.fields.map(_._1).filter(fieldsToInclude.contains)
+      val mappingData = createClinicalMapping(dataFileName, fieldsInOrder, fieldCategoryMap, rootCategory)
+
+      val dataContent = jsonObjectsToCsv(delimiter, newLine)(clinicalData)
+      val mappingContent = jsonObjectsToCsv(delimiter, newLine)(mappingData)
+      (dataContent, mappingContent)
+    } else
+      ("" , "")
+  }
+
+  private def toCamel(s: String): String = {
+    val split = s.split("_")
+    split.map { x => x.capitalize}.mkString(" ")
+  }
 }
