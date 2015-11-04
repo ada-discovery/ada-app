@@ -2,7 +2,7 @@ package services
 
 import javax.inject.{Inject, Singleton}
 
-import _root_.util.{jsonObjectsToCsv, encodeMongoKey}
+import _root_.util.{jsonObjectsToCsv, encodeMongoKey, decodeMongoKey}
 import com.google.inject.ImplementedBy
 import play.api.libs.json._
 import models.Category
@@ -21,7 +21,8 @@ trait TranSMARTService {
     keyField : String,
     fieldsInOrder : Iterable[String],
     fieldCategoryMap : Map[String, Category],
-    rootCategory : Category
+    rootCategory : Category,
+    fieldLabelMap : Map[String, String]
   ) : Iterable[JsObject]
 
   def createClinicalDataAndMappingFiles(
@@ -32,7 +33,8 @@ trait TranSMARTService {
     dataFileName : String,
     keyField : String,
     fieldCategoryMap : Map[String, Category],
-    rootCategory : Category
+    rootCategory : Category,
+    fieldLabelMap : Map[String, String]
   ) : (String, String)
 }
 
@@ -67,17 +69,18 @@ class TranSMARTServiceImpl extends TranSMARTService {
     keyField : String,
     fieldsInOrder : Iterable[String],
     fieldCategoryMap : Map[String, Category],
-    rootCategory : Category
+    rootCategory : Category,
+    fieldLabelMap : Map[String, String]
    ) = {
     fieldsInOrder.zipWithIndex.map{ case (field, index) =>
-      val fieldName = encodeMongoKey(field)
+      val fieldName = decodeMongoKey(field)
       val path = fieldCategoryMap.get(fieldName).map(_.getPath.mkString("+").replaceAll(" ", "_"))
       JsObject(
         List(
           ("filename", JsString(dataFileName)),
           ("category_cd", if (path.isDefined) JsString(path.get) else JsNull),
           ("col_nbr", Json.toJson(index + 1)),
-          ("data_label", if (field.equals(keyField)) JsString("SUBJ_ID") else JsString(toCamel(fieldName)))
+          ("data_label", if (field.equals(keyField)) JsString("SUBJ_ID") else JsString(toCamel(fieldLabelMap.getOrElse(fieldName, fieldName))))
         )
       )
     }
@@ -91,13 +94,14 @@ class TranSMARTServiceImpl extends TranSMARTService {
     dataFileName : String,
     keyField : String,
     fieldCategoryMap : Map[String, Category],
-    rootCategory : Category
+    rootCategory : Category,
+    fieldLabelMap : Map[String, String]
   ) = {
     val fieldsToInclude = List(keyField) ++ fieldCategoryMap.map{case (field, category) => encodeMongoKey(field)}.filterNot(_.equals(keyField)).toList
     val clinicalData = createClinicalData(items, Some(fieldsToInclude), None)
     if (!clinicalData.isEmpty) {
       val fieldsInOrder = clinicalData.head.fields.map(_._1).filter(fieldsToInclude.contains)
-      val mappingData = createClinicalMapping(dataFileName, keyField, fieldsInOrder, fieldCategoryMap, rootCategory)
+      val mappingData = createClinicalMapping(dataFileName, keyField, fieldsInOrder, fieldCategoryMap, rootCategory, fieldLabelMap)
 
       val dataContent = jsonObjectsToCsv(delimiter, newLine)(clinicalData)
       val mappingContent = jsonObjectsToCsv(delimiter, newLine)(mappingData)

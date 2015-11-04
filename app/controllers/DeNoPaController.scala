@@ -100,7 +100,7 @@ abstract class DeNoPaController(
 
     val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
     val records = Await.result(recordsFuture, timeout)
-    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, keyField, fieldsCategoryMap, rootCategory)
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, keyField, fieldCategoryMap, rootCategory, fieldLabelMap)
 
     val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._1.getBytes(exportCharset))
 
@@ -115,7 +115,7 @@ abstract class DeNoPaController(
 
     val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
     val records = Await.result(recordsFuture, timeout)
-    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, keyField, fieldsCategoryMap, rootCategory)
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, keyField, fieldCategoryMap, rootCategory, fieldLabelMap)
 
     val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._2.getBytes(exportCharset))
 
