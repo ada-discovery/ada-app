@@ -2,6 +2,7 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
+import util.jsonObjectsToCsv
 import scala.concurrent.duration._
 import services.TranSMARTService
 import services.DeNoPaTranSMARTMapping._
@@ -27,6 +28,7 @@ abstract class DeNoPaController(
 
   val exportCharset = "UTF-8"
   val timeout = 120000 millis
+  val keyField = "Probanden_Nr"
 
   def listViewProjection: JsObject
 
@@ -81,29 +83,14 @@ abstract class DeNoPaController(
 
   protected def exportRecordsAsCsvTo(filename: String, delimiter: String) = Action { implicit request =>
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    val sb = new StringBuilder(10000)
     val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
     val records = Await.result(recordsFuture, timeout)
-    if (!records.isEmpty) {
-      val header = records.head.fields.map(_._1).mkString(unescapedDelimiter)
-      sb.append(header + "\n")
 
-      records.foreach { record =>
-        val row = record.fields.map { case (attributeName, value) =>
-          value match {
-            case JsNull => ""
-            case _: JsString => value.as[String] // .replaceAll("\r", " ").replaceAll("\n", " ")
-            case _ => value.toString()
-          }
-        }.mkString(unescapedDelimiter)
-        sb.append(row + "\n")
-      }
-    }
-
-    val fileContent: Enumerator[Array[Byte]] = Enumerator(sb.toString.getBytes(exportCharset))
+    val csvString = jsonObjectsToCsv(unescapedDelimiter, "\n")(records)
+    val fileContent: Enumerator[Array[Byte]] = Enumerator(csvString.getBytes(exportCharset))
 
     Result(
-      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_LENGTH -> sb.length.toString, CONTENT_DISPOSITION -> s"attachment; filename=${filename}.csv")),
+      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_LENGTH -> csvString.length.toString, CONTENT_DISPOSITION -> s"attachment; filename=${filename}.csv")),
       body = fileContent
     )
   }
@@ -113,7 +100,7 @@ abstract class DeNoPaController(
 
     val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
     val records = Await.result(recordsFuture, timeout)
-    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, fieldsCategoryMap, rootCategory)
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, keyField, fieldsCategoryMap, rootCategory)
 
     val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._1.getBytes(exportCharset))
 
@@ -128,7 +115,7 @@ abstract class DeNoPaController(
 
     val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
     val records = Await.result(recordsFuture, timeout)
-    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, fieldsCategoryMap, rootCategory)
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, keyField, fieldsCategoryMap, rootCategory)
 
     val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._2.getBytes(exportCharset))
 

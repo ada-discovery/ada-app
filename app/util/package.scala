@@ -25,10 +25,10 @@ package object util {
   def decodeMongoKey(key : String) =
     key.replaceAll("u002e", "\\.") // .replaceAll("\\u0024", "\\$").replaceAll("\\\\", "\\")
 
-  def jsonObjectsToCsv(delimiter : String, newLine : String = "\n")(items : Iterable[JsObject]) = {
+  def jsonObjectsToCsv(delimiter : String, newLine : String = "\n")(items : Traversable[JsObject]) = {
     val sb = new StringBuilder(10000)
     if (!items.isEmpty) {
-      val header = items.head.fields.map(_._1).mkString(delimiter)
+      val header = items.head.fields.map{ case (field, value) => decodeMongoKey(field)}.mkString(delimiter)
       sb.append(header + newLine)
 
       items.foreach { item =>

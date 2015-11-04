@@ -9,7 +9,7 @@
             Export All as CSV
         </button>
     }
-    @views.html.exportCsvModal("exportModal", "LuxPark REDCap CSV Export", routes.RedCapController.exportRecordsAsCsv())
+    @views.html.exportCsvModal("exportModal", "LuxPark REDCap CSV Export", ",", routes.RedCapController.exportRecordsAsCsv())
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{

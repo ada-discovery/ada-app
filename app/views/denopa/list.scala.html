@@ -17,9 +17,9 @@
             Export TransSMART Mapping
         </button>
     }
-    @views.html.exportCsvModal("exportCsvModal", "DeNoPa CSV Export", exportCsvCall)
-    @views.html.exportCsvModal("exportTranSMARTDataModal", "DeNoPa CSV TranSMART Data Export", exportTranSMARTDataCall)
-    @views.html.exportCsvModal("exportTranSMARTMappingModal", "DeNoPa CSV TranSMART Mapping Export", exportTranSMARTMappingCall)
+    @views.html.exportCsvModal("exportCsvModal", "DeNoPa CSV Export", ",", exportCsvCall)
+    @views.html.exportCsvModal("exportTranSMARTDataModal", "DeNoPa CSV TranSMART Data Export", "\\t", exportTranSMARTDataCall)
+    @views.html.exportCsvModal("exportTranSMARTMappingModal", "DeNoPa CSV TranSMART Mapping Export", "\\t", exportTranSMARTMappingCall)
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{

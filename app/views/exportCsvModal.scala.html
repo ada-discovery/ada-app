@@ -1,4 +1,4 @@
-@(modalName : String, title : String, exportCall : Call)
+@(modalName : String, title : String, delimiter : String, exportCall : Call)
 
 <div class="modal fade" id="@modalName" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
     <div class="modal-dialog">
@@ -10,7 +10,7 @@
             <form action="@exportCall">
                 <div class="modal-body">
                     <p>Delimeter</p>
-                    <input id="delimiter" name="delimiter" value=",">
+                    <input id="delimiter" name="delimiter" value="@delimiter">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
