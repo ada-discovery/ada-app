@@ -86,7 +86,7 @@ abstract class DeNoPaController(
     val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 
-    val csvString = jsonObjectsToCsv(unescapedDelimiter, "\n")(records)
+    val csvString = jsonObjectsToCsv(unescapedDelimiter, "\n", List[(String, String)]())(records)
     val fileContent: Enumerator[Array[Byte]] = Enumerator(csvString.getBytes(exportCharset))
 
     Result(
@@ -95,12 +95,17 @@ abstract class DeNoPaController(
     )
   }
 
-  protected def exportTransSMARTDataFileAsCsvTo(dataFilename: String, delimiter: String) = Action { implicit request =>
+  val mmstSumField = "a_CRF_MMST_Summe"
+  val mmstCognitiveCategoryField = "a_CRF_MMST_Category"
+
+  protected def exportTransSMARTMappingFileAsCsvTo(dataFilename: String, delimiter: String) = Action { implicit request =>
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
     val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
     val records = Await.result(recordsFuture, timeout)
-    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, keyField, fieldCategoryMap, rootCategory, fieldLabelMap)
+    val extendedRecords = getExtendedRecords(records)
+
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", List[(String, String)]())(extendedRecords.toList, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
 
     val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._1.getBytes(exportCharset))
 
@@ -110,12 +115,14 @@ abstract class DeNoPaController(
     )
   }
 
-  protected def exportTransSMARTDataFileAsCsvTo(dataFilename: String, mappingFilename: String, delimiter: String) = Action { implicit request =>
+  protected def exportTransSMARTMappingFileAsCsvTo(dataFilename: String, mappingFilename: String, delimiter: String) = Action { implicit request =>
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
     val recordsFuture = repo.find(None, Some(Json.obj("Line_Nr" -> 1)), None, None, None)
     val records = Await.result(recordsFuture, timeout)
-    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n")(records.toList, dataFilename, keyField, fieldCategoryMap, rootCategory, fieldLabelMap)
+    val extendedRecords = getExtendedRecords(records)
+
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", List[(String, String)]())(extendedRecords.toList, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
 
     val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._2.getBytes(exportCharset))
 
@@ -123,5 +130,26 @@ abstract class DeNoPaController(
       header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_LENGTH -> fileContents._2.length.toString, CONTENT_DISPOSITION -> s"attachment; filename=${mappingFilename}")),
       body = fileContent
     )
+  }
+
+  private def getExtendedRecords(records : Traversable[JsObject]) =
+    records.map{ record =>
+      val mmstSum = (record \ mmstSumField).toOption
+      if (mmstSum.isDefined) {
+        val category = if (mmstSum.get == JsNull) {
+          null
+        } else {
+          val sum = mmstSum.get.as[Int]
+          sum match {
+            case x1 if x1 <= 9 => "Severe"
+            case x1 if ((x1 >= 10) && (x1 <= 18)) => "Moderate"
+            case x1 if ((x1 >= 19) && (x1 <= 24)) => "Mild"
+            case x1 if ((x1 >= 25) && (x1 <= 26)) => "Sub-Normal"
+            case x1 if ((x1 >= 27) && (x1 <= 30)) => "Normal"
+          }
+        }
+        record + (mmstCognitiveCategoryField -> Json.toJson(category))
+      } else
+        record
   }
 }

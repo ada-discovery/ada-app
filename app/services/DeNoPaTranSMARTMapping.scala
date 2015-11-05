@@ -8,18 +8,18 @@ object DeNoPaTranSMARTMapping {
 
   // Tests
   val mmseTest = CCategory("PSP. MMSE (Folstein Mini-Mental State Exam)")
-  val clockDrawingTest = CCategory("A. Clock Drawing Test")
-  val mdsUPDRSTest = CCategory("A. MDS-UPDRS - Part I to Part IV")
-  val hYTest = CCategory("A. H&Y (Hoehn and Yahr")
-  val nmsPDTest = CCategory("A. NMS-PD (Non-Movement Problems in Parkinson's)")
-  val moCaTest = CCategory("A. MoCA (Montreal Cognitive Assessment Test)")
-  val pdssTest = CCategory("A. PDSS (Parkinson's Disease Sleep Scale)")
+  val clockDrawingTest = CCategory("Clock Drawing Test")
+  val mdsUPDRSTest = CCategory("MDS-UPDRS - Part I to Part IV")
+  val hYTest = CCategory("H&Y (Hoehn and Yahr")
+  val nmsPDTest = CCategory("NMS-PD (Non-Movement Problems in Parkinson's)")
+  val moCaTest = CCategory("MoCA (Montreal Cognitive Assessment Test)")
+  val pdssTest = CCategory("PDSS (Parkinson's Disease Sleep Scale)")
   val essTest = CCategory("ESS (Epworth Sleepiness Scale)")
-  val remSleepTest = CCategory("Similar (13 Qs): A. REM Sleep Behavior Disorder Screening Questionnaire")
+  val remSleepTest = CCategory("Similar (13 Qs): REM Sleep Behavior Disorder Screening Questionnaire")
 
   val subjectsData = CCategory("Subjects").addChildren(List(demographics))
-  val motorTest = CCategory("Motor").addChildren(List(mdsUPDRSTest))
-  val nonmotorTest = CCategory("Motor").addChildren(List(mmseTest, clockDrawingTest, hYTest, nmsPDTest, moCaTest, pdssTest, essTest, remSleepTest))
+  val motorTest = CCategory("Motor").addChildren(List(mdsUPDRSTest, hYTest))
+  val nonmotorTest = CCategory("NonMotor").addChildren(List(mmseTest, clockDrawingTest, nmsPDTest, moCaTest, pdssTest, essTest, remSleepTest))
   val clinicalData = CCategory("Clinical Data").addChildren(List(motorTest, nonmotorTest))
 
   val rootCategory = CCategory("").addChildren(List(subjectsData, clinicalData))
@@ -49,6 +49,8 @@ object DeNoPaTranSMARTMapping {
     "a_CRF_MMST_10" -> mmseTest,
     "a_CRF_MMST_11" -> mmseTest,
     "a_CRF_MMST_Summe" -> mmseTest,
+    "a_CRF_MMST_Category" -> mmseTest,
+
     "a_CRF_Uhrentest" -> clockDrawingTest,
 
     "a_MDS_UPDRS_1a" -> mdsUPDRSTest,
@@ -230,7 +232,7 @@ object DeNoPaTranSMARTMapping {
   )
 
   val fieldLabelMap = Map(
-    "Geb_Datum" -> "Birthsday",
+    "Geb_Datum" -> "Birthday",
     "Geschlecht" -> "Gender",
     "b_Gruppe" -> "Group",
     "a_CRF_Schuljahre" -> "School Year",
@@ -254,6 +256,7 @@ object DeNoPaTranSMARTMapping {
     "a_CRF_MMST_10" -> "MMST_10",
     "a_CRF_MMST_11" -> "MMST_11",
     "a_CRF_MMST_Summe" -> "MMST_Sum",
+    "a_CRF_MMST_Category" -> "MMST_Category",
 
     "a_CRF_Uhrentest" -> "Clock Drawing Test",
 

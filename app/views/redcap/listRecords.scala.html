@@ -5,11 +5,19 @@
     @helper.form(action=routes.RedCapController.listRecords(), 'class -> "navbar-form navbar-left", 'role -> "search") {
         <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by record id...">
         <input type="submit" id="searchsubmit" value="Filter by record id" class="btn btn-primary btn-sm">
-        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportModal">
+        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportCsvModal">
             Export All as CSV
         </button>
+        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportTranSMARTDataModal">
+            Export TransSMART Data
+        </button>
+        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportTranSMARTMappingModal">
+            Export TransSMART Mapping
+        </button>
     }
-    @views.html.exportCsvModal("exportModal", "LuxPark REDCap CSV Export", ",", routes.RedCapController.exportRecordsAsCsv())
+    @views.html.exportCsvModal("exportCsvModal", "LuxPark REDCap CSV Export", ",", routes.RedCapController.exportRecordsAsCsv())
+    @views.html.exportCsvModal("exportTranSMARTDataModal", "LuxPark CSV TranSMART Data Export", "\\t", routes.RedCapController.exportTranSMARTDataFile())
+    @views.html.exportCsvModal("exportTranSMARTMappingModal", "LuxPark CSV TranSMART Mapping Export", "\\t", routes.RedCapController.exportTranSMARTMappingFile())
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{

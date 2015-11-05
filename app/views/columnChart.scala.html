@@ -1,38 +1,46 @@
-@(title : String, chartElementName : String, elements : Seq[(String, Any)])
+@(title : String, chartElementName : String, xAxisCaption : String, yAxisCaption : String, elements : Seq[(String, Any)])
     <div id="@chartElementName" class="chart-holder"></div>
     <script type="text/javascript">
         $(function () {
             $('#@{chartElementName}').highcharts({
                 chart: {
-                    plotBackgroundColor: null,
-                    plotBorderWidth: null,
-                    plotShadow: false,
-                    type: 'pie'
+                    type: 'column'
                 },
                 title: {
                     text: "@title"
                 },
-                tooltip: {
-                    pointFormat: '{series.name}: <b>{point.y}</b>'
+                xAxis: {
+                    type: '@xAxisCaption'
                 },
-                plotOptions: {
-                    pie: {
-                        allowPointSelect: true,
-                        cursor: 'pointer',
-                        dataLabels: {
-                            enabled: true,
-                            format: '<b>{point.name}</b>: {point.percentage:.1f}%',
-                            style: {
-                                color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
-                            }
-                        }
+                yAxis: {
+                    title: {
+                        text: '@yAxisCaption'
                     }
+                },
+                legend: {
+                    enabled: false
                 },
                 credits: {
                     enabled: false
                 },
+                plotOptions: {
+                    series: {
+                        borderWidth: 0,
+                        dataLabels: {
+                            enabled: true,
+                            format: '{point.y:.1f}%'
+                        }
+                    }
+                },
+
+                tooltip: {
+                    headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+                    pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}%</b><br/>'
+                },
+
                 series: [{
                     name: "@title",
+                    colorByPoint: true,
                     colorByPoint: true,
                     data: [
                         @elements.map { case (name, value) =>

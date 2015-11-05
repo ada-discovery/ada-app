@@ -7,4 +7,8 @@ case class Category(name : String, var parent : Option[Category] = None, var chi
     children.foreach(_.parent = Some(this))
     this
   }
+
+  override def toString = name
+
+  override def hashCode = name.hashCode
 }

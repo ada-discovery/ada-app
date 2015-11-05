@@ -9,22 +9,29 @@ import models.Page
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsObject, JsString, JsNull}
-import services.RedCapService
+import play.api.libs.json.{Json, JsObject, JsString, JsNull}
+import services.{TranSMARTService, RedCapService}
 import views.html
 import play.api.mvc.{ResponseHeader, Action, Controller, Result}
 import collection.mutable.{Map => MMap}
+import models.Category
+import util.jsonObjectsToCsv
 
 import scala.concurrent.Await
 
 class RedCapController @Inject() (
     redCapService: RedCapService,
+    tranSMARTService: TranSMARTService,
     messagesApi: MessagesApi
   ) extends Controller {
 
   val limit = 20
   val timeout = 120000 millis
   val exportCharset = "UTF-8"
+
+  val csvFileName = "luxpark-redcap_records.csv"
+  val tranSMARTDataFileName = "luxpark-redcap_data_file"
+  val tranSMARTMappingFileName = "luxpark-redcap_mapping_file"
 
   def index = Action { Redirect(routes.RedCapController.listFieldNames()) }
 
@@ -116,31 +123,109 @@ class RedCapController @Inject() (
     countMap.toSeq.sortBy(_._2)
   }
 
+  val replacements = List(("\r", " "), ("\n", " "))
+
   def exportRecordsAsCsv(delimiter : String) = Action { implicit request =>
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    val sb = new StringBuilder(10000)
+
     val recordsFuture = redCapService.listRecords(0, "cdisc_dm_usubjd", "")
     val records = Await.result(recordsFuture, timeout)
-    if (!records.isEmpty) {
-      val header = records(0).fields.map(_._1.replaceAll("\r", " ").replaceAll("\n", " ")).mkString(unescapedDelimiter)
-      sb.append(header + "\n")
 
-      records.foreach { record =>
-        val row = record.fields.map { case (attributeName, value) =>
-          value match {
-            case JsNull => ""
-            case _: JsString => value.as[String].replaceAll("\r", " ").replaceAll("\n", " ")
-            case _ => value.toString()
-          }
-        }.mkString(unescapedDelimiter)
-        sb.append(row + "\n")
-      }
-    }
+    val content = jsonObjectsToCsv(unescapedDelimiter, "\n", replacements)(records)
 
-    val fileContent: Enumerator[Array[Byte]] = Enumerator(sb.toString.getBytes(exportCharset))
+    val fileContent: Enumerator[Array[Byte]] = Enumerator(content.getBytes(exportCharset))
 
     Result(
-      header = ResponseHeader(200, Map(CONTENT_TYPE->"application/x-download", CONTENT_LENGTH -> sb.length.toString, CONTENT_DISPOSITION->"attachment; filename=luxpark-redcap-records.csv")),
+      header = ResponseHeader(200, Map(CONTENT_TYPE->"application/x-download", CONTENT_LENGTH -> content.length.toString, CONTENT_DISPOSITION->s"attachment; filename=${csvFileName}")),
+      body = fileContent
+    )
+  }
+
+  val keyField = "cdisc_dm_usubjd"
+  val visitField = Some("redcap_event_name")
+
+  def exportTranSMARTDataFile(delimiter: String) = Action { implicit request =>
+    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+
+    val recordsFuture = redCapService.listRecords(0, "cdisc_dm_usubjd", "")
+    val records = Await.result(recordsFuture, timeout)
+
+    val metadataFuture = redCapService.listMetadatas(0, "field_name", "")
+    val metadatas = Await.result(metadataFuture, timeout)
+
+    // categories
+    val rootCategory = Category("")
+    val categories = metadatas.map{ metadata =>
+      (metadata \ "form_name").as[String]
+    }.toSet.map { name : String => Category(name) }
+    rootCategory.addChildren(categories)
+    val nameCategoryMap = categories.map(category => (category.name, category)).toMap
+
+    // field category map
+    val fieldCategoryMap = metadatas.map{metadata =>
+      val field = (metadata \ "field_name").as[String]
+      val categoryName = (metadata \ "form_name").as[String]
+      (field, nameCategoryMap.get(categoryName).get)
+    }.toMap
+
+    // field label map
+    val fieldLabelMap = metadatas.map{metadata =>
+      val field = (metadata \ "field_name").as[String]
+      val label = (metadata \ "field_label").as[String]
+      (field, label)
+    }.toMap
+
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
+
+    val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._1.getBytes(exportCharset))
+
+    Result(
+      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_LENGTH -> fileContents._1.length.toString, CONTENT_DISPOSITION -> s"attachment; filename=${tranSMARTDataFileName}")),
+      body = fileContent
+    )
+  }
+
+  def exportTranSMARTMappingFile(delimiter: String) = Action { implicit request =>
+    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+
+    val recordsFuture = redCapService.listRecords(0, "cdisc_dm_usubjd", "")
+    val records = Await.result(recordsFuture, timeout)
+
+    val metadataFuture = redCapService.listMetadatas(0, "field_name", "")
+    val metadatas = Await.result(metadataFuture, timeout)
+
+    // categories
+    val rootCategory = Category("")
+    val categories = metadatas.map{ metadata =>
+      (metadata \ "form_name").as[String]
+    }.toSet.map { name : String => Category(name) }
+
+    rootCategory.addChildren(categories)
+    val nameCategoryMap = categories.map(category => (category.name, category)).toMap
+
+    // field category map
+    val fieldCategoryMap = metadatas.map{ metadata =>
+      val field = (metadata \ "field_name").as[String]
+      val categoryName = (metadata \ "form_name").as[String]
+      (field, nameCategoryMap.get(categoryName).get)
+    }.toMap
+
+    // field label map
+    val fieldLabelMap = metadatas.map{metadata =>
+      val field = (metadata \ "field_name").as[String]
+      val label = (metadata \ "field_label").as[String]
+      (field, label)
+    }.toMap
+
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
+
+    val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._2.getBytes(exportCharset))
+
+    // TODO
+    // CONTENT_LENGTH -> fileContents._2.length.toString,
+
+    Result(
+      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_DISPOSITION -> s"attachment; filename=${tranSMARTMappingFileName}")),
       body = fileContent
     )
   }

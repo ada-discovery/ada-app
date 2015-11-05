@@ -27,7 +27,7 @@ class DeNoPaCuratedFirstVisitController @Inject() (
 
   def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo("denopa-curated-firstvisit", delimiter)
 
-  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTDataFileAsCsvTo("denopa-curated-firstvisit_data_file", delimiter)
+  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-curated-firstvisit_data_file", delimiter)
 
-  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTDataFileAsCsvTo("denopa-curated-firstvisit_data_file", "denopa-curated-firstvisit_mapping_file", delimiter)
+  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-curated-firstvisit_data_file", "denopa-curated-firstvisit_mapping_file", delimiter)
 }

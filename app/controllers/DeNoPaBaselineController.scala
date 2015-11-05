@@ -37,7 +37,7 @@ class DeNoPaBaselineController @Inject() (
 
   def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo("denopa-baseline", delimiter)
 
-  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTDataFileAsCsvTo("denopa-baseline_data_file", delimiter)
+  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-baseline_data_file", delimiter)
 
-  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTDataFileAsCsvTo("denopa-baseline_data_file", "denopa-baseline_mapping_file", delimiter)
+  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-baseline_data_file", "denopa-baseline_mapping_file", delimiter)
 }
