@@ -32,6 +32,7 @@ class DeNoPaCleanup @Inject() (
   val numBooleanMap = Map("0" -> false, "1" -> true)
 
   val dateFormats = List("yyyy-MM-dd", "dd.MM.yyyy", "MM.yyyy")
+  val storeDateFormat =  new SimpleDateFormat("dd.MM.yyyy")
 
   val enumValuesThreshold = 20
   val enumFrequencyThreshold = 0.02
@@ -101,7 +102,7 @@ class DeNoPaCleanup @Inject() (
             } else {
               val convertedValue = attributeTypeMap.get(attribute).get match {
                 case InferredType.Null => JsNull
-                case InferredType.Date => Json.toJson(toDate(string))
+                case InferredType.Date => Json.toJson(storeDateFormat.format(toDate(string)))
                 case InferredType.Boolean => Json.toJson(toBoolean(string))
                 case InferredType.NumberEnum => toJsonNum(string)
                 case InferredType.FreeNumber => toJsonNum(string)
@@ -166,8 +167,9 @@ class DeNoPaCleanup @Inject() (
   private def isDate(valuesWoNA : Set[String]) =
     valuesWoNA.forall(s => dateFormats.exists { format =>
       try {
-        new SimpleDateFormat(format).parse(s)
-        true
+        val date = new SimpleDateFormat(format).parse(s)
+        val year1900 = date.getYear
+        year1900 > 0 && year1900 < 200
       } catch {
         case e: ParseException => false
       }

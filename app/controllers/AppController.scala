@@ -5,28 +5,26 @@ import javax.inject.Inject
 import play.api.mvc.{Flash, Action, Controller}
 import standalone._
 
-class AppController extends Controller {
-
-//  @Inject()(
-//    deNoPaTranslations: DeNoPaTranslations,
-//    denopaCleanup : DeNoPaCleanup
-//    //    importDeNoPaBaseline: ImportDeNoPaBaseline,
-//    //    importDeNoPaFirstVisit: ImportDeNoPaFirstVisit,
-//    //    inferTypeDeNoPaBaseline: InferTypeDeNoPaBaseline,
-//    //    inferTypeDeNoPaFirstVisit: InferTypeDeNoPaFirstVisit
+class AppController
+//  @Inject() (
+//    denopaCleanup : DeNoPaCleanup,
+//    importDeNoPaBaseline: ImportDeNoPaBaseline,
+//    importDeNoPaFirstVisit: ImportDeNoPaFirstVisit,
+//    inferTypeDeNoPaBaseline: InferTypeDeNoPaBaseline,
+//    inferTypeDeNoPaFirstVisit: InferTypeDeNoPaFirstVisit
 //  )
+  extends Controller {
+
   def index = Action { implicit request =>
 //    println("Translations")
 //    deNoPaTranslations.run
-//
-//    println("Cleanup")
-//    denopaCleanup.run
+
 //    println("--------------------")
-//    println("BASELINE------------")
+//    println("IMPORT BASELINE-----")
 //    importDeNoPaBaseline.run
 //
 //    println("--------------------")
-//    println("FIRST VISIT---------")
+//    println("IMPORT FIRST VISIT--")
 //    importDeNoPaFirstVisit.run
 //
 //    println("--------------------")
@@ -36,6 +34,12 @@ class AppController extends Controller {
 //    println("--------------------")
 //    println("FIRST VISIT INFER---")
 //    inferTypeDeNoPaFirstVisit.run
+//
+//    println("--------------------")
+//    println("CLEANUP-------------")
+//    denopaCleanup.run
+//
+//    println("All done")
 
     Ok(views.html.home())
   }
