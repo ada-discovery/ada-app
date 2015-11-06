@@ -16,7 +16,8 @@ class DeNoPaTranslations @Inject() (
   ) extends Runnable {
 
 //  val foldername = "/Users/peter.banda/Projects/ncer-pd/project/translations/"
-  val foldername = "/home/peter.banda/DeNoPa/translations/"
+//  val foldername = "/home/peter.banda/DeNoPa/translations/"
+  val foldername = "/home/tremor/Projects/ncer-pd/project/translations/"
 
   val filename_de = foldername + "DeNoPa_dictionary_de"
   val filename_en = foldername + "DeNoPa_dictionary_en-utf8"

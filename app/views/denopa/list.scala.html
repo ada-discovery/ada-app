@@ -4,18 +4,39 @@
 @(domainName : String, currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String, fieldsToShow : Seq[String], findCall : (Int, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call, exportCsvCall : Call, exportTranSMARTDataCall : Call, exportTranSMARTMappingCall : Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
-    @helper.form(action=plainFindCall, 'class -> "navbar-form navbar-left", 'role -> "search") {
-        <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by Probanden Nr...">
-        <input type="submit" id="searchsubmit" value="Filter by Probanden Nr" class="btn btn-primary btn-sm">
-        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportCsvModal">
-            Export All as CSV
-        </button>
-        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportTranSMARTDataModal">
-            Export TransSMART Data
-        </button>
-        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#exportTranSMARTMappingModal">
-            Export TransSMART Mapping
-        </button>
+    @helper.form(action=plainFindCall, 'role -> "search") {
+        <div class="row">
+            <div class="col-md-8">
+                <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by Probanden Nr...">
+                <input type="submit" id="searchsubmit" value="Filter by Probanden Nr" class="btn btn-primary btn-sm">
+            </div>
+            <div class="col-md-4">
+                <div class="pull-right dropdown">
+                    <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Export All
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a href="#" data-toggle="modal" data-target="#exportCsvModal">
+                                Export All as CSV
+                            </a>
+                        </li>
+                        <li role="separator" class="divider"></li>
+                        <li>
+                            <a href="#" data-toggle="modal" data-target="#exportTranSMARTDataModal">
+                                Export TransSMART Data
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" data-toggle="modal" data-target="#exportTranSMARTMappingModal">
+                                Export TransSMART Mapping
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     }
     @views.html.exportCsvModal("exportCsvModal", "DeNoPa CSV Export", ",", exportCsvCall)
     @views.html.exportCsvModal("exportTranSMARTDataModal", "DeNoPa CSV TranSMART Data Export", "\\t", exportTranSMARTDataCall)

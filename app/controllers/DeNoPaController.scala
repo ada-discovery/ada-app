@@ -139,14 +139,17 @@ abstract class DeNoPaController(
         val category = if (mmstSum.get == JsNull) {
           null
         } else {
-          val sum = mmstSum.get.as[Int]
-          sum match {
-            case x1 if x1 <= 9 => "Severe"
-            case x1 if ((x1 >= 10) && (x1 <= 18)) => "Moderate"
-            case x1 if ((x1 >= 19) && (x1 <= 24)) => "Mild"
-            case x1 if ((x1 >= 25) && (x1 <= 26)) => "Sub-Normal"
-            case x1 if ((x1 >= 27) && (x1 <= 30)) => "Normal"
-          }
+          val sum = mmstSum.get.asOpt[Int]
+          if (!sum.isDefined)
+            null
+          else
+            sum.get match {
+              case x if x <= 9 => "Severe"
+              case x if ((x >= 10) && (x <= 18)) => "Moderate"
+              case x if ((x >= 19) && (x <= 24)) => "Mild"
+              case x if ((x >= 25) && (x <= 26)) => "Sub-Normal"
+              case x if ((x >= 27) && (x <= 30)) => "Normal"
+            }
         }
         record + (mmstCognitiveCategoryField -> Json.toJson(category))
       } else
