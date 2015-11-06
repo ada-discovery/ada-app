@@ -1,8 +1,10 @@
 import com.github.play2war.plugin._
 
+// val conf = play.api.Configuration.load(new File("."))
+
 name := "ncer-pd"
 
-version := "0.0.3"
+version := "0.0.4"
 
 Play2WarPlugin.play2WarSettings
 
