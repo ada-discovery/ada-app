@@ -16,7 +16,7 @@ import util.encodeMongoKey
 
 class ImportDeNoPaFirstVisit @Inject()(firstVisitRepo: DeNoPaFirstVisitRepo) extends Runnable {
 
-  val folder = "/home/peter.banda/DeNoPa/"
+  val folder = "/home/peter/Data/DeNoPa/"
 
   val filename = folder + "Denopa-V2-FU1-Datensatz-final.csv"
   val separator = "§§"

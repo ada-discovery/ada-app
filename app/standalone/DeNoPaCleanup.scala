@@ -7,6 +7,7 @@ import javax.inject.Inject
 import models.MetaTypeStats
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
+import services.DeNoPaSetting._
 
 import scala.concurrent.duration._
 import persistence._
@@ -23,19 +24,6 @@ class DeNoPaCleanup @Inject() (
   ) extends Runnable {
 
   val timeout = 120000 millis
-
-  val nullAliases = List("na")
-  val textBooleanValues = List("ja", "nein", "falsch", "richtig")
-  val numBooleanValues = List("0", "1")
-
-  val textBooleanMap = Map("nein" -> false, "ja" -> true, "falsch" -> false, "richtig" -> true)
-  val numBooleanMap = Map("0" -> false, "1" -> true)
-
-  val dateFormats = List("yyyy-MM-dd", "dd.MM.yyyy", "MM.yyyy")
-  val storeDateFormat =  new SimpleDateFormat("dd.MM.yyyy")
-
-  val enumValuesThreshold = 20
-  val enumFrequencyThreshold = 0.02
 
   object InferredType extends Enumeration {
     val Null, Date, Boolean, NumberEnum, FreeNumber, StringEnum, FreeString = Value
@@ -139,17 +127,17 @@ class DeNoPaCleanup @Inject() (
       val freqsWoNa = valueFreqsWoNa.values.toSeq
 
       val inferredType =
-        if (isNullOrNA(valuesWoNa))
+        if (typeInferenceProvider.isNullOrNA(valuesWoNa))
           InferredType.Null
-        else if (isBoolean(valuesWoNa))
+        else if (typeInferenceProvider.isBoolean(valuesWoNa))
           InferredType.Boolean
-        else if (isDate(valuesWoNa))
+        else if (typeInferenceProvider.isDate(valuesWoNa))
           InferredType.Date
-        else if (isNumberEnum(valuesWoNa, freqsWoNa))
+        else if (typeInferenceProvider.isNumberEnum(valuesWoNa, freqsWoNa))
           InferredType.NumberEnum
-        else if (isNumber(valuesWoNa))
+        else if (typeInferenceProvider.isNumber(valuesWoNa))
           InferredType.FreeNumber
-        else if (isTextEnum(valuesWoNa, freqsWoNa))
+        else if (typeInferenceProvider.isTextEnum(valuesWoNa, freqsWoNa))
           InferredType.StringEnum
         else
           InferredType.FreeString
@@ -157,31 +145,6 @@ class DeNoPaCleanup @Inject() (
       (item.attributeName, inferredType)
     }.toMap
   }
-
-  private def isNullOrNA(valuesWoNA : Set[String]) =
-    valuesWoNA.size == 0
-
-  private def isNumber(valuesWoNA : Set[String]) =
-    valuesWoNA.forall(s => s.forall(c => c.isDigit || c == '.') && s.count(_ == '.') <= 1)
-
-  private def isDate(valuesWoNA : Set[String]) =
-    valuesWoNA.forall(s => dateFormats.exists { format =>
-      try {
-        val date = new SimpleDateFormat(format).parse(s)
-        val year1900 = date.getYear
-        year1900 > 0 && year1900 < 200
-      } catch {
-        case e: ParseException => false
-      }
-    } || {
-      try {
-        val year = s.toInt
-        year > 1900 && year < 2100
-      } catch {
-        case t: NumberFormatException => false
-      }
-    }
-  )
 
   def dateExpectedException(string : String) = new IllegalArgumentException(s"String ${string} is expected to be date-convertible but it's not.")
   def booleanExpectedException(string : String) = new IllegalArgumentException(s"String ${string} is expected to be boolean-convertible but it's not.")
@@ -212,24 +175,6 @@ class DeNoPaCleanup @Inject() (
 
   private def toBoolean(string : String) : Boolean =
     (textBooleanMap ++ numBooleanMap).getOrElse(string.toLowerCase, throw booleanExpectedException(string))
-
-  private def isBoolean(valuesWoNA : Set[String]) =
-    isTextBoolean(valuesWoNA) || isNumberBoolean(valuesWoNA)
-
-  private def isTextBoolean(valuesWoNA : Set[String]) =
-    valuesWoNA.forall(s => textBooleanValues.contains(s.toLowerCase))
-
-  private def isNumberBoolean(valuesWoNA : Set[String]) =
-    valuesWoNA.forall(s => numBooleanValues.contains(s)) //    isNumber(valuesWoNA) && valuesWoNA.size <= 2
-
-  private def isEnum(freqsWoNa : Seq[Double]) =
-    freqsWoNa.size < enumValuesThreshold && (freqsWoNa.sum / freqsWoNa.size) > enumFrequencyThreshold
-
-  private def isNumberEnum(valuesWoNA : Set[String], freqsWoNa : Seq[Double]) =
-    isNumber(valuesWoNA) && isEnum(freqsWoNa)
-
-  private def isTextEnum(valuesWoNA : Set[String], freqsWoNa : Seq[Double]) =
-    isEnum(freqsWoNa) && valuesWoNA.exists(_.exists(_.isLetter))
 }
 
 object DeNoPaCleanup extends GuiceBuilderRunnable[DeNoPaCleanup] with App {

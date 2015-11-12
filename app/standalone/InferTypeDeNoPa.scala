@@ -1,17 +1,14 @@
 package standalone
 
-import javax.inject.Inject
-
 import models.MetaTypeStats
-import play.api.libs.json.{JsNull, JsValue, JsObject, Json}
+import play.api.libs.json.{JsNull, JsValue}
 import scala.concurrent.duration._
 import scala.collection.mutable.{Map => MMap}
-import scala.concurrent.{Future, Await}
+import services.DeNoPaSetting._
 
 class InferTypeDeNoPa {
 
   val timeout = 120000 millis
-  val truthValues = List("na", "ja", "nein", "falsch", "richtig", "fehlend")
 
   class MetaTypeCounts(
     var intCount: Int = 0,
@@ -44,45 +41,17 @@ class InferTypeDeNoPa {
     }
 
     val text = jsValue.as[String]
-    // integer type
-    try {
-      text.toInt
-      cumulativeStats.intCount += 1
-    } catch {
-      case t: NumberFormatException => // nothing to do
-    }
 
-    // long type
-    try {
-      text.toLong
-      cumulativeStats.longCount += 1
-    } catch {
-      case t: NumberFormatException => // nothing to do
-    }
-
-    // float type
-    try {
-      text.toFloat
-      cumulativeStats.floatCount += 1
-    } catch {
-      case t: NumberFormatException => // nothing to do
-    }
-
-    // double type
-    try {
-      text.toDouble
-      cumulativeStats.doubleCount += 1
-    } catch {
-      case t: NumberFormatException => // nothing to do
-    }
-
-    // boolean type
-    try {
-      text.toBoolean
+    if (typeInferenceProvider.isBoolean(text))
       cumulativeStats.booleanCount += 1
-    } catch {
-      case t: IllegalArgumentException => // nothing to do
-    }
+    else if (typeInferenceProvider.isInt(text))
+      cumulativeStats.intCount += 1
+    else if (typeInferenceProvider.isLong(text))
+    cumulativeStats.longCount += 1
+    else if (typeInferenceProvider.isFloat(text))
+      cumulativeStats.floatCount += 1
+    else if (typeInferenceProvider.isDouble(text))
+      cumulativeStats.doubleCount += 1
 
     // value counts
     val count = cumulativeStats.valueCountMap.getOrElse(text, 0)

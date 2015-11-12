@@ -16,7 +16,7 @@ import util.encodeMongoKey
 
 class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends Runnable {
 
-  val folder = "/home/peter.banda/DeNoPa/"
+  val folder = "/home/peter/Data/DeNoPa/"
 
   val filename = folder + "Denopa-V1-BL-Datensatz-1-final.csv"
   val separator = "§§"
