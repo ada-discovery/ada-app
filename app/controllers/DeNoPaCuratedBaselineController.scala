@@ -16,17 +16,33 @@ class DeNoPaCuratedBaselineController @Inject() (
     messagesApi: MessagesApi
   ) extends DeNoPaController(repo, tranSMARTService, messagesApi) {
 
-  override def listViewProjection = Json.obj("Line_Nr" -> 1, "Probanden_Nr" -> 1, "Geb_Datum" -> 1, "a_Gruppe" -> 1, "b_Gruppe" -> 1)
+  override val listViewColumns = List("Line_Nr", "Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe")
+
+  override val csvFileName = "denopa-curated-baseline"
+
+  override val transSMARTDataFileName = "denopa-curated-baseline_data_file"
+
+  override val transSMARTMappingFileName = "denopa-curated-baseline_mapping_file"
 
   override def showView(item : JsObject)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.showCuratedBaseline(item)
+    html.jsonShow(
+      "Curated baseline Item",
+      item,
+      routes.DeNoPaCuratedBaselineController.find()
+    )
 
   override def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.listCuratedBaseline(currentPage, currentOrderBy, currentFilter)
-
-  def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo("denopa-curated-baseline", delimiter)
-
-  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-curated-baseline_data_file", delimiter)
-
-  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-curated-baseline_data_file", "denopa-curated-baseline_mapping_file", delimiter)
+    html.denopa.list(
+      "curated baseline record",
+      currentPage,
+      currentOrderBy,
+      currentFilter,
+      listViewColumns,
+      routes.DeNoPaCuratedBaselineController.find,
+      routes.DeNoPaCuratedBaselineController.find(),
+      routes.DeNoPaCuratedBaselineController.get,
+      routes.DeNoPaCuratedBaselineController.exportRecordsAsCsv(),
+      routes.DeNoPaCuratedBaselineController.exportTransSMARTDataFile(),
+      routes.DeNoPaCuratedBaselineController.exportTransSMARTMappingFile()
+    )
 }

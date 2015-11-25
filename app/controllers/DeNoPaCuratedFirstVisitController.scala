@@ -17,17 +17,33 @@ class DeNoPaCuratedFirstVisitController @Inject() (
     messagesApi: MessagesApi
   ) extends DeNoPaController(repo, tranSMARTService, messagesApi) {
 
-  override def listViewProjection = Json.obj("Line_Nr" -> 1, "Probanden_Nr" -> 1, "Geb_Datum" -> 1, "b_Gruppe" -> 1) // no a_Gruppe here
+  override val listViewColumns = List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe")
+
+  override val csvFileName = "denopa-curated-firstvisit"
+
+  override val transSMARTDataFileName = "denopa-curated-firstvisit_data_file"
+
+  override val transSMARTMappingFileName = "denopa-curated-firstvisit_mapping_file"
 
   override def showView(item : JsObject)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.showCuratedFirstVisit(item)
+    html.jsonShow(
+      "Curated First Visit Item",
+      item,
+      routes.DeNoPaCuratedFirstVisitController.find()
+    )
 
   override def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.listCuratedFirstVisit(currentPage, currentOrderBy, currentFilter)
-
-  def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo("denopa-curated-firstvisit", delimiter)
-
-  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-curated-firstvisit_data_file", delimiter)
-
-  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-curated-firstvisit_data_file", "denopa-curated-firstvisit_mapping_file", delimiter)
+    html.denopa.list(
+      "curated first visit record",
+      currentPage,
+      currentOrderBy,
+      currentFilter,
+      listViewColumns,
+      routes.DeNoPaCuratedFirstVisitController.find,
+      routes.DeNoPaCuratedFirstVisitController.find(),
+      routes.DeNoPaCuratedFirstVisitController.get,
+      routes.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(),
+      routes.DeNoPaCuratedFirstVisitController.exportTransSMARTDataFile(),
+      routes.DeNoPaCuratedFirstVisitController.exportTransSMARTMappingFile()
+    )
 }

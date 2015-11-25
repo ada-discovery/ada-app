@@ -30,11 +30,21 @@ abstract class DeNoPaController(
   val timeout = 120000 millis
   val keyField = "Probanden_Nr"
 
-  def listViewProjection: JsObject
+  def listViewColumns : List[String]
 
   def showView(item: JsObject)(implicit msg: Messages, request: RequestHeader): Html
 
   def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader): Html
+
+  def csvFileName : String
+
+  def transSMARTDataFileName : String
+
+  def transSMARTMappingFileName : String
+
+
+
+  protected def listViewProjection = JsObject(listViewColumns.map(column => (column, Json.toJson(1))))
 
   def get(id: BSONObjectID) = Action.async { implicit request =>
     repo.get(id).map(_.fold(
@@ -45,7 +55,7 @@ abstract class DeNoPaController(
       Ok(showView(entity))
     }).recover {
       case t: TimeoutException =>
-        Logger.error("Problem found in the edit process")
+        Logger.error("Problem found in the get process")
         InternalServerError(t.getMessage)
     }
   }
@@ -63,9 +73,13 @@ abstract class DeNoPaController(
       Some(Json.obj("Probanden_Nr" -> Json.obj("$regex" -> (query + ".*"), "$options" -> "i")))
     else
       None
-    val sort = if (!orderBy.isEmpty)
-      Some(Json.obj(orderBy -> 1))
-    else
+
+    val sort = if (!orderBy.isEmpty) {
+      if (orderBy.startsWith("-"))
+        Some(Json.obj(orderBy.substring(1) -> -1))
+      else
+        Some(Json.obj(orderBy -> 1))
+    } else
       None
 
     val futureItems = repo.find(criteria, sort, Some(listViewProjection), Some(limit), Some(page))
@@ -80,6 +94,12 @@ abstract class DeNoPaController(
         InternalServerError(t.getMessage)
     }
   }
+
+  def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo(csvFileName, delimiter)
+
+  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo(transSMARTDataFileName, delimiter)
+
+  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo(transSMARTDataFileName, transSMARTMappingFileName, delimiter)
 
   protected def exportRecordsAsCsvTo(filename: String, delimiter: String) = Action { implicit request =>
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)

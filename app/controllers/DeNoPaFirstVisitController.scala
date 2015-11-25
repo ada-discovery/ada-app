@@ -22,22 +22,38 @@ class DeNoPaFirstVisitController @Inject() (
 
   lazy val typeStats = deNoPaTypeStats.collectFirstVisitGlobalTypeStats
 
-  override def listViewProjection = Json.obj("Line_Nr" -> 1, "Probanden_Nr" -> 1, "Geb_Datum" -> 1, "b_Gruppe" -> 1) // no a_Gruppe here
+  override val listViewColumns = List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe")
+
+  override val csvFileName = "denopa-firstvisit"
+
+  override val transSMARTDataFileName = "denopa-firstvisit_data_file"
+
+  override val transSMARTMappingFileName = "denopa-firstvisit_mapping_file"
 
   override def showView(item : JsObject)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.showFirstVisit(item)
+    html.jsonShow(
+      "First Visit Item",
+      item,
+      routes.DeNoPaFirstVisitController.find()
+    )
 
   override def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.listFirstVisit(currentPage, currentOrderBy, currentFilter)
+    html.denopa.list(
+      "first visit record",
+      currentPage,
+      currentOrderBy,
+      currentFilter,
+      listViewColumns,
+      routes.DeNoPaFirstVisitController.find,
+      routes.DeNoPaFirstVisitController.find(),
+      routes.DeNoPaFirstVisitController.get,
+      routes.DeNoPaFirstVisitController.exportRecordsAsCsv(),
+      routes.DeNoPaFirstVisitController.exportTransSMARTDataFile(),
+      routes.DeNoPaFirstVisitController.exportTransSMARTMappingFile()
+    )
 
   def overview = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
     Ok(views.html.denopa.typeOverview("First Visit Type Overview", typeStats))
   }
-
-  def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo("denopa-firstvisit", delimiter)
-
-  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-firstvisit_data_file", delimiter)
-
-  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-firstvisit_data_file", "denopa-firstvisit_mapping_file", delimiter)
 }

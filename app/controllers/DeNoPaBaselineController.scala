@@ -22,22 +22,38 @@ class DeNoPaBaselineController @Inject() (
 
   lazy val typeStats = deNoPaTypeStats.collectBaselineGlobalTypeStats
 
-  override def listViewProjection = Json.obj("Line_Nr" -> 1, "Probanden_Nr" -> 1, "Geb_Datum" -> 1, "a_Gruppe" -> 1, "b_Gruppe" -> 1)
+  override val listViewColumns = List("Line_Nr", "Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe")
+
+  override val csvFileName = "denopa-baseline"
+
+  override val transSMARTDataFileName = "denopa-baseline_data_file"
+
+  override val transSMARTMappingFileName = "denopa-baseline_mapping_file"
 
   override def showView(item : JsObject)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.showBaseline(item)
+    html.jsonShow(
+      "Baseline Item",
+      item,
+      routes.DeNoPaBaselineController.find()
+    )
 
   override def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.listBaseline(currentPage, currentOrderBy, currentFilter)
+    html.denopa.list(
+      "baseline record",
+      currentPage,
+      currentOrderBy,
+      currentFilter,
+      listViewColumns,
+      routes.DeNoPaBaselineController.find,
+      routes.DeNoPaBaselineController.find(),
+      routes.DeNoPaBaselineController.get,
+      routes.DeNoPaBaselineController.exportRecordsAsCsv(),
+      routes.DeNoPaBaselineController.exportTransSMARTDataFile(),
+      routes.DeNoPaBaselineController.exportTransSMARTMappingFile()
+    )
 
   def overview = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
-    Ok(views.html.denopa.typeOverview("Baseline Type Overview", typeStats))
+    Ok(html.denopa.typeOverview("Baseline Type Overview", typeStats))
   }
-
-  def exportRecordsAsCsv(delimiter : String) = exportRecordsAsCsvTo("denopa-baseline", delimiter)
-
-  def exportTransSMARTDataFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-baseline_data_file", delimiter)
-
-  def exportTransSMARTMappingFile(delimiter : String) = exportTransSMARTMappingFileAsCsvTo("denopa-baseline_data_file", "denopa-baseline_mapping_file", delimiter)
 }
