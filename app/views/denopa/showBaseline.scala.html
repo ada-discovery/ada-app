@@ -1,8 +1,0 @@
-@import play.api.libs.json.JsObject
-@(item: JsObject)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
-
-@views.html.jsonShow(
-	"Baseline Item",
-	item,
-	routes.DeNoPaBaselineController.find()
-)
