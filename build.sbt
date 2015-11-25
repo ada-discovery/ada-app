@@ -16,7 +16,9 @@ scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq(cache, ws)
 
-resolvers += "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
+resolvers ++= Seq(
+  "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
+)
 
 routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._")
 
