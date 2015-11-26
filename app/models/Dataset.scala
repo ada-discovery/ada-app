@@ -17,6 +17,7 @@ case class Field(
   _id : Option[BSONObjectId],
   name : String,
   fieldType : FieldType,
+  isArray : Boolean,
   aliases : List[String],
   labels : List[String],
   category : Category
