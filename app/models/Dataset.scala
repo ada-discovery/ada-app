@@ -3,7 +3,7 @@ package models
 import reactivemongo.bson.BSONObjectID
 
 case class Dictionary(
-  _id : Option[BSONObjectId],
+  _id : Option[BSONObjectID],
   dataSetName : String,
   fields : Traversable[Field]
   //  parents : List[Dictionary],
@@ -14,9 +14,9 @@ object FieldType extends Enumeration {
 }
 
 case class Field(
-  _id : Option[BSONObjectId],
+  _id : Option[BSONObjectID],
   name : String,
-  fieldType : FieldType,
+  fieldType : FieldType.Value,
   isArray : Boolean,
   aliases : List[String],
   labels : List[String],
