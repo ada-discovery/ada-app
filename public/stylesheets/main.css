@@ -39,6 +39,26 @@ body > .container {
   padding-bottom: 20px;
 }
 
+
+/* Prototyoe for sidebar*/
+#sidebar > .container{
+  position: absolute;
+
+  bottom: 0;
+  height: 100%;
+  width: 10%;
+
+  line-height:100px;
+  background-color:#eeeeee;
+  width:150px;
+  float:left;
+  padding:5px;
+}
+/* end sidebar layout */
+
+
+
+
 code {
   font-size: 80%;
 }
