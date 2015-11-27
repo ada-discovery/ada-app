@@ -1,6 +1,6 @@
 package standalone
 
-import javax.inject.Inject
+import javax.inject.{Named, Inject}
 
 import models.Translation
 
@@ -11,8 +11,8 @@ import scala.io.Source
 
 class DeNoPaTranslations @Inject() (
     translationRepo: TranslationRepo,
-    baselineStatsRepo : DeNoPaBaselineMetaTypeStatsRepo,
-    firstVisitStatsRepo : DeNoPaFirstVisitMetaTypeStatsRepo
+    @Named("DeNoPaBaselineMetaTypeStatsRepo") baselineStatsRepo : MetaTypeStatsRepo,
+    @Named("DeNoPaFirstVisitMetaTypeStatsRepo") firstVisitStatsRepo : MetaTypeStatsRepo
   ) extends Runnable {
 
 //  val foldername = "/Users/peter.banda/Projects/ncer-pd/project/translations/"

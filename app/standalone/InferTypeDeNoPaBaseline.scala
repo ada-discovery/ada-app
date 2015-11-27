@@ -1,29 +1,29 @@
 package standalone
 
-import javax.inject.Inject
+import javax.inject.{Named, Inject}
 
-import persistence.{DeNoPaBaselineMetaTypeStatsRepo, DeNoPaBaselineRepo}
+import persistence.{JsObjectCrudRepo, MetaTypeStatsRepo}
 import play.api.libs.json.{JsNull, JsValue, JsObject, Json}
 import scala.concurrent.{Future, Await}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 class InferTypeDeNoPaBaseline @Inject() (
-    baselineRepo: DeNoPaBaselineRepo,
-    baselineMetaTypeStatsRepo : DeNoPaBaselineMetaTypeStatsRepo
+    @Named("DeNoPaBaselineRepo") dataRepo: JsObjectCrudRepo,
+    @Named("DeNoPaBaselineMetaTypeStatsRepo") typeStatsRepo : MetaTypeStatsRepo
   ) extends InferTypeDeNoPa with Runnable {
 
   override def run = {
     // get the keys (attributes)
     val uniqueCriteria = Some(Json.obj("Line_Nr" -> "1"))
-    val keysFuture = baselineRepo.find(uniqueCriteria).map(_.head.keys)
+    val keysFuture = dataRepo.find(uniqueCriteria).map(_.head.keys)
 
     // clean up the collection
-    val deleteFuture = baselineMetaTypeStatsRepo.deleteAll
+    val deleteFuture = typeStatsRepo.deleteAll
     Await.result(deleteFuture, timeout)
 
     Await.result(keysFuture, timeout).filter(_ != "_id").par.foreach { key =>
       // get all the values for a given key
-      val valuesFuture = baselineRepo.find(None, None, Some(Json.obj(key -> 1))).map(_.map(item => item.value.get(key).get))
+      val valuesFuture = dataRepo.find(None, None, Some(Json.obj(key -> 1))).map(_.map(item => item.value.get(key).get))
       // collect type stats
       println(key)
       val counts = new MetaTypeCounts
@@ -33,7 +33,7 @@ class InferTypeDeNoPaBaseline @Inject() (
         inferType(value.as[JsValue], counts)
       }
       val stats = createStats(key, counts, fullCount)
-      baselineMetaTypeStatsRepo.save(stats)
+      typeStatsRepo.save(stats)
     }
   }
 }

@@ -1,6 +1,6 @@
 package standalone
 
-import javax.inject.Inject
+import javax.inject.{Named, Inject}
 
 import models.MetaTypeStats
 import play.api.libs.json.Json
@@ -8,12 +8,12 @@ import reactivemongo.bson.BSONObjectID
 import services.DeNoPaSetting._
 
 import scala.concurrent.duration._
-import persistence.{AsyncReadonlyRepo, DeNoPaBaselineMetaTypeStatsRepo, DeNoPaFirstVisitMetaTypeStatsRepo}
+import persistence.{MetaTypeStatsRepo, AsyncReadonlyRepo}
 import scala.concurrent.Await
 
 class DeNoPaTypeStats @Inject() (
-    baselineStatsRepo : DeNoPaBaselineMetaTypeStatsRepo,
-    firstVisitStatsRepo : DeNoPaFirstVisitMetaTypeStatsRepo
+    @Named("DeNoPaBaselineMetaTypeStatsRepo") baselineStatsRepo : MetaTypeStatsRepo,
+    @Named("DeNoPaFirstVisitMetaTypeStatsRepo") firstVisitStatsRepo : MetaTypeStatsRepo
   ) extends Runnable {
 
   val timeout = 120000 millis

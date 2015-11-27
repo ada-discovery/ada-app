@@ -1,6 +1,6 @@
-@(title : String, chartElementName : String, xAxisCaption : String, yAxisCaption : String, elements : Seq[(String, Any)])
-    <div id="@chartElementName" class="chart-holder"></div>
-    <script type="text/javascript">
+@(title : String, chartElementName : String, xAxisCaption : String, yAxisCaption : String, elements : Seq[(Any, Any)])
+<div id="@chartElementName" class="chart-holder"></div>
+<script type="text/javascript">
         $(function () {
             $('#@{chartElementName}').highcharts({
                 chart: {
@@ -16,6 +16,14 @@
                     title: {
                         text: '@yAxisCaption'
                     }
+                },
+                xAxis: {
+                    categories: [
+                        @elements.map { case (x, y) =>
+                        '@("%.2f".format(x))',
+                        }
+                    ],
+                    crosshair: true
                 },
                 legend: {
                     enabled: false
@@ -43,11 +51,11 @@
                     colorByPoint: true,
                     colorByPoint: true,
                     data: [
-                        @elements.map { case (name, value) =>
-                            {name : '@{if (name.length > 20) {name.substring(0, 18) + "../../../"} else name}', y : @value},
+                        @elements.map { case (x, y) =>
+                        @y,
                         }
                     ]
                 }]
             });
         });
-    </script>
+</script>

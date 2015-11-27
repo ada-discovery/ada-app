@@ -1,8 +1,8 @@
 package standalone
 
-import javax.inject.Inject
+import javax.inject.{Named, Inject}
 
-import persistence.DeNoPaBaselineRepo
+import persistence.{JsObjectCrudRepo}
 import play.api.libs.json.{JsNull, JsString, JsObject}
 import play.modules.reactivemongo.ReactiveMongoApi
 import play.modules.reactivemongo.json.collection.JSONCollection
@@ -14,7 +14,7 @@ import scala.concurrent.Await
 import scala.io.Source
 import util.encodeMongoKey
 
-class ImportDeNoPaBaseline @Inject()(baselineRepo: DeNoPaBaselineRepo) extends Runnable {
+class ImportDeNoPaBaseline @Inject()(@Named("DeNoPaBaselineRepo") baselineRepo: JsObjectCrudRepo) extends Runnable {
 
   val folder = "/home/peter/Data/DeNoPa/"
 

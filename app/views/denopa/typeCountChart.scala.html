@@ -2,7 +2,7 @@
 @import scala.collection.immutable.ListMap
 
 @(typeCount : TypeCount)
-    @views.html.pieChart(
+    @views.html.chart.pieChart(
         "Type Stats",
         "typeChart",
         ListMap[String, Any](

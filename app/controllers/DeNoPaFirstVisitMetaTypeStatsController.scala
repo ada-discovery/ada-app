@@ -1,17 +1,17 @@
 package controllers
 
-import javax.inject.Inject
+import javax.inject.{Named, Inject}
 
 import models.{MetaTypeStats, Page}
-import persistence.DeNoPaFirstVisitMetaTypeStatsRepo
+import persistence.MetaTypeStatsRepo
+import persistence.RepoTypeRegistry.MetaTypeStatsRepo2
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import play.twirl.api.Html
 import views.html
 
 class DeNoPaFirstVisitMetaTypeStatsController @Inject() (
-    metaTypeStatsRepo: DeNoPaFirstVisitMetaTypeStatsRepo,
+    @Named("DeNoPaFirstVisitMetaTypeStatsRepo") metaTypeStatsRepo: MetaTypeStatsRepo,
     messagesApi: MessagesApi
   ) extends MetaTypeStatsController(metaTypeStatsRepo, messagesApi) {
 

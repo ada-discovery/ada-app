@@ -1,19 +1,19 @@
 package standalone
 
-import javax.inject.Inject
+import javax.inject.{Named, Inject}
 
 import models.MetaTypeStats
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
-import persistence.{AsyncReadonlyRepo, CrudRepo, DeNoPaBaselineMetaTypeStatsRepo, DeNoPaFirstVisitMetaTypeStatsRepo}
+import persistence._
 import scala.concurrent.Await
 import scala.io.Source
 
 class DeNoPaPlayground @Inject() (
-    baselineStatsRepo : DeNoPaBaselineMetaTypeStatsRepo,
-    firstVisitStatsRepo : DeNoPaFirstVisitMetaTypeStatsRepo
+    @Named("DeNoPaBaselineMetaTypeStatsRepo") baselineStatsRepo : MetaTypeStatsRepo,
+    @Named("DeNoPaFirstVisitMetaTypeStatsRepo") firstVisitStatsRepo : MetaTypeStatsRepo
   ) extends Runnable {
 
   val filename_de = "/Users/peter.banda/Documents/DeNoPa/translations/DeNoPa_dictionary_de"

@@ -2,7 +2,7 @@ package standalone
 
 import java.text.{ParseException, SimpleDateFormat}
 import java.util.Date
-import javax.inject.Inject
+import javax.inject.{Inject, Named}
 
 import models.MetaTypeStats
 import play.api.libs.json._
@@ -14,13 +14,13 @@ import persistence._
 import scala.concurrent.Await
 
 class DeNoPaCleanup @Inject() (
-    baselineRepo: DeNoPaBaselineRepo,
-    firstVisitRepo: DeNoPaFirstVisitRepo,
-    curatedBaselineRepo : DeNoPaCuratedBaselineRepo,
-    curatedFirstVisitRepo: DeNoPaCuratedFirstVisitRepo,
-    translationRepo : TranslationRepo,
-    baselineTypeStatsRepo : DeNoPaBaselineMetaTypeStatsRepo,
-    firstVisitTypeStatsRepo : DeNoPaFirstVisitMetaTypeStatsRepo
+    @Named("DeNoPaBaselineRepo") baselineRepo: JsObjectCrudRepo,
+    @Named("DeNoPaFirstVisitRepo") firstVisitRepo: JsObjectCrudRepo,
+    @Named("DeNoPaCuratedBaselineRepo") curatedBaselineRepo : JsObjectCrudRepo,
+    @Named("DeNoPaCuratedFirstVisitRepo") curatedFirstVisitRepo: JsObjectCrudRepo,
+    @Named("DeNoPaBaselineMetaTypeStatsRepo") baselineTypeStatsRepo : MetaTypeStatsRepo,
+    @Named("DeNoPaFirstVisitMetaTypeStatsRepo") firstVisitTypeStatsRepo : MetaTypeStatsRepo,
+    translationRepo : TranslationRepo
   ) extends Runnable {
 
   val timeout = 120000 millis

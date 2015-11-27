@@ -1,9 +1,9 @@
 package controllers
 
-import javax.inject.Inject
+import javax.inject.{Named, Inject}
 
 import models.Page
-import persistence.DeNoPaCuratedBaselineRepo
+import persistence.{JsObjectCrudRepo}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, RequestHeader}
@@ -11,7 +11,7 @@ import services.TranSMARTService
 import views.html
 
 class DeNoPaCuratedBaselineController @Inject() (
-    repo: DeNoPaCuratedBaselineRepo,
+    @Named("DeNoPaCuratedBaselineRepo") repo: JsObjectCrudRepo,
     tranSMARTService: TranSMARTService,
     messagesApi: MessagesApi
   ) extends DeNoPaController(repo, tranSMARTService, messagesApi) {
