@@ -44,7 +44,7 @@
                     colorByPoint: true,
                     data: [
                         @elements.map { case (name, value) =>
-                            {name : '@{if (name.length > 20) {name.substring(0, 18) + ".."} else name}', y : @value},
+                            {name : '@{if (name.length > 20) {name.substring(0, 18) + "../../../"} else name}', y : @value},
                         }
                     ]
                 }]
