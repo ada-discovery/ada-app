@@ -2,7 +2,9 @@ package standalone
 
 import javax.inject.{Named, Inject}
 
-import models.Translation
+import models.{MetaTypeStats, Translation}
+import persistence.RepoTypeRegistry._
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
 import persistence._

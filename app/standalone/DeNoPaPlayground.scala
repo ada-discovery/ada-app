@@ -3,6 +3,7 @@ package standalone
 import javax.inject.{Named, Inject}
 
 import models.MetaTypeStats
+import persistence.RepoTypeRegistry._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 

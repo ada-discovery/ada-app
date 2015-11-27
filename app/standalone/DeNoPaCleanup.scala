@@ -5,6 +5,7 @@ import java.util.Date
 import javax.inject.{Inject, Named}
 
 import models.MetaTypeStats
+import persistence.RepoTypeRegistry._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.DeNoPaSetting._

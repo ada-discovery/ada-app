@@ -3,12 +3,13 @@ package standalone
 import javax.inject.{Named, Inject}
 
 import models.MetaTypeStats
+import persistence.RepoTypeRegistry._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import services.DeNoPaSetting._
 
 import scala.concurrent.duration._
-import persistence.{MetaTypeStatsRepo, AsyncReadonlyRepo}
+import persistence.{CrudRepo, AsyncReadonlyRepo}
 import scala.concurrent.Await
 
 class DeNoPaTypeStats @Inject() (

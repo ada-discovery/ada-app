@@ -2,8 +2,11 @@ package standalone
 
 import javax.inject.{Named, Inject}
 
-import persistence.{JsObjectCrudRepo, MetaTypeStatsRepo}
+import models.MetaTypeStats
+import persistence.RepoTypeRegistry._
+import persistence.{CrudRepo, JsObjectCrudRepo}
 import play.api.libs.json.{JsNull, JsValue, JsObject, Json}
+import reactivemongo.bson.BSONObjectID
 import scala.concurrent.{Future, Await}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 

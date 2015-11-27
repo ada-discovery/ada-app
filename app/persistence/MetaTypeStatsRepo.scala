@@ -6,6 +6,6 @@ import models.MetaTypeStats
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json._
 
-trait MetaTypeStatsRepo extends CrudRepo[MetaTypeStats, BSONObjectID]
+// trait MetaTypeStatsRepo extends CrudRepo[MetaTypeStats, BSONObjectID]
 
-protected class MetaTypeStatsMongoCrudRepo(collectionName : String) extends EntityMongoCrudRepo[MetaTypeStats, BSONObjectID](collectionName) with MetaTypeStatsRepo
+protected class MetaTypeStatsMongoCrudRepo(collectionName : String) extends EntityMongoCrudRepo[MetaTypeStats, BSONObjectID](collectionName)// with MetaTypeStatsRepo

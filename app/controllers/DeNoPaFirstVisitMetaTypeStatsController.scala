@@ -3,11 +3,12 @@ package controllers
 import javax.inject.{Named, Inject}
 
 import models.{MetaTypeStats, Page}
-import persistence.MetaTypeStatsRepo
-import persistence.RepoTypeRegistry.MetaTypeStatsRepo2
+import persistence.{CrudRepo}
+import persistence.RepoTypeRegistry.MetaTypeStatsRepo
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.mvc.RequestHeader
 import play.twirl.api.Html
+import reactivemongo.bson.BSONObjectID
 import views.html
 
 class DeNoPaFirstVisitMetaTypeStatsController @Inject() (

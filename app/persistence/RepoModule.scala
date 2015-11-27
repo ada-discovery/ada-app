@@ -1,16 +1,17 @@
 package persistence
 
 import models.MetaTypeStats
-import persistence.RepoTypeRegistry.MetaTypeStatsRepo2
+import persistence.RepoTypeRegistry.MetaTypeStatsRepo
 import play.api._
 import play.api.inject._
 import com.google.inject.{TypeLiteral, Provides, AbstractModule}
 import com.google.inject.name.Names
 import persistence.{CrudRepo, JsObjectCrudRepo}
 import reactivemongo.bson.BSONObjectID
+import play.modules.reactivemongo.json._
 
 object RepoTypeRegistry {
-  type MetaTypeStatsRepo2 = CrudRepo[MetaTypeStats, BSONObjectID]
+  type MetaTypeStatsRepo = CrudRepo[MetaTypeStats, BSONObjectID]
 }
 
 class RepoModule extends AbstractModule {
@@ -32,13 +33,13 @@ class RepoModule extends AbstractModule {
         .annotatedWith(Names.named("DeNoPaCuratedFirstVisitRepo"))
         .toInstance(new JsObjectMongoCrudRepo("denopa-first_visit-curated"))
 
-      bind(classOf[MetaTypeStatsRepo]) // new TypeLiteral[CrudRepo[MetaTypeStats, BSONObjectID]]{})
+      bind(new TypeLiteral[MetaTypeStatsRepo]{})
         .annotatedWith(Names.named("DeNoPaBaselineMetaTypeStatsRepo"))
-        .toInstance(new MetaTypeStatsMongoCrudRepo("denopa-baseline_visit-metatype_stats"))
+        .toInstance(new EntityMongoCrudRepo[MetaTypeStats, BSONObjectID]("denopa-baseline_visit-metatype_stats"))
 
-      bind(classOf[MetaTypeStatsRepo])
+      bind(new TypeLiteral[MetaTypeStatsRepo]{})
         .annotatedWith(Names.named("DeNoPaFirstVisitMetaTypeStatsRepo"))
-        .toInstance(new MetaTypeStatsMongoCrudRepo("denopa-first_visit-metatype_stats"))
+        .toInstance(new EntityMongoCrudRepo[MetaTypeStats, BSONObjectID]("denopa-first_visit-metatype_stats"))
     }
 }
 
