@@ -1,0 +1,19 @@
+@import play.api.Play.current
+@(implicit request: RequestHeader)
+<div class="sidebar" role="navigation">
+    <div class="container">
+
+
+        <br>
+
+        <par>
+            @menuItem(routes.RedCapController.overview(), "RedCap Data Overview", Some(2))
+            <input type="checkbox" name="dataset" value="RedCap Data" />
+        </par>
+
+
+
+
+
+    </div>
+</div>
