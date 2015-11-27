@@ -1,6 +1,6 @@
 package persistence
 
-import models.MetaTypeStats
+import models.{User, Translation, MetaTypeStats}
 import persistence.RepoTypeRegistry.MetaTypeStatsRepo
 import play.api._
 import play.api.inject._
@@ -12,6 +12,8 @@ import play.modules.reactivemongo.json._
 
 object RepoTypeRegistry {
   type MetaTypeStatsRepo = CrudRepo[MetaTypeStats, BSONObjectID]
+  type TranslationRepo2 = CrudRepo[Translation, BSONObjectID]
+  type UserRepo2 = CrudRepo[User, BSONObjectID]
 }
 
 class RepoModule extends AbstractModule {
