@@ -1,8 +1,11 @@
 package persistence
 
-/**
-  * Created by peter on 27/11/15.
-  */
-class MetaTypeStatsRepo {
+import javax.inject.{Inject}
 
-}
+import models.MetaTypeStats
+import reactivemongo.bson.BSONObjectID
+import play.modules.reactivemongo.json._
+
+trait MetaTypeStatsRepo extends CrudRepo[MetaTypeStats, BSONObjectID]
+
+protected class MetaTypeStatsMongoCrudRepo(collectionName : String) extends EntityMongoCrudRepo[MetaTypeStats, BSONObjectID](collectionName) with MetaTypeStatsRepo

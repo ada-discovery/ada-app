@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import models.{MetaTypeStats, Page}
-import persistence.{AsyncReadonlyRepo, DeNoPaBaselineMetaTypeStatsRepo}
+import persistence.{AsyncReadonlyRepo}
 import play.api.Logger
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

@@ -11,11 +11,5 @@ import play.modules.reactivemongo.json.BSONFormats._
 @ImplementedBy(classOf[UserMongoCrudRepo])
 trait UserRepo extends CrudRepo[User, BSONObjectID]
 
-import play.modules.reactivemongo.json.collection._
-
 @Singleton
-class UserMongoCrudRepo @Inject() (
-    val reactiveMongoApi: ReactiveMongoApi) extends MongoCrudRepo[User, BSONObjectID] with UserRepo {
-
-  override val collection: JSONCollection = reactiveMongoApi.db.collection("users")
-}
+class UserMongoCrudRepo extends EntityMongoCrudRepo[User, BSONObjectID]("users") with UserRepo
