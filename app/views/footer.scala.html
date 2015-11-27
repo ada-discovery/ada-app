@@ -1,7 +1,7 @@
 @import play.api.Play.current
 @(implicit request: RequestHeader)
 
-<div id="footer">
+<div class="footer">
 
     <div class="container">
         <p class="text-muted" align="center">NCER-PD Data and Computing Platform, Version @current.configuration.getString("app.version").get<img style="float: right;" src="@routes.Assets.at("images/LCSB_logo.png")" /></p>
