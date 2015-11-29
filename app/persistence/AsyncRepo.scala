@@ -1,10 +1,7 @@
 package persistence
 
-import play.api.libs.iteratee.{ Concurrent, Enumerator }
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsObject
-import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
-import reactivemongo.api.indexes.{ IndexType, Index }
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 
@@ -31,12 +28,12 @@ trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
   def save(entity: E): Future[Either[String, ID]]
 }
 
-trait CrudRepo[E, ID] extends AsyncRepo[E, ID] {
+trait AsyncCrudRepo[E, ID] extends AsyncRepo[E, ID] {
   def update(entity: E): Future[Either[String, ID]]
   def delete(id: ID): Future[Either[String, ID]]
   def deleteAll : Future[String]
 }
 
-trait StreamRepo[E, ID] extends AsyncRepo[E, ID] {
+trait AsyncStreamRepo[E, ID] extends AsyncRepo[E, ID] {
   def stream: Enumerator[E]
 }

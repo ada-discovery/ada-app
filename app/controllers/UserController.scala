@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import models.User
-import persistence.UserRepo
+import persistence.RepoTypeRegistry.UserRepo
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms.{date, ignored, mapping, nonEmptyText}

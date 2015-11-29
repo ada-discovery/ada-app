@@ -1,7 +1,10 @@
 package persistence
 
+import javax.inject.Inject
+
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.api.libs.json.JsObject
+import play.modules.reactivemongo.ReactiveMongoApi
 import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
 import reactivemongo.api.indexes.{ IndexType, Index }
 import reactivemongo.bson.BSONObjectID
@@ -11,14 +14,19 @@ import models.Identity
 import play.api.libs.json._
 import reactivemongo.api._
 
-abstract class MongoReadonlyRepo[E: Format, ID: Format](identityName : String) extends AsyncReadonlyRepo[E, ID] {
+protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
+    collectionName : String,
+    identityName : String
+  ) extends AsyncReadonlyRepo[E, ID] {
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
   import play.modules.reactivemongo.json.collection.JSONCollection
 
+  @Inject var reactiveMongoApi : ReactiveMongoApi = _
+
   /** Mongo collection deserializable to [E] */
-  def collection: JSONCollection
+  protected lazy val collection: JSONCollection = reactiveMongoApi.db.collection(collectionName)
 
   override def get(id: ID): Future[Option[E]] =
     collection.find(Json.obj(identityName -> id)).one[E]
@@ -66,7 +74,10 @@ abstract class MongoReadonlyRepo[E: Format, ID: Format](identityName : String) e
     }
 }
 
-abstract class MongoAsyncRepo[E: Format, ID: Format](implicit identity: Identity[E, ID]) extends MongoReadonlyRepo[E, ID](identity.name) with AsyncRepo[E, ID] {
+protected class MongoAsyncRepo[E: Format, ID: Format](
+    collectionName : String)(
+    implicit identity: Identity[E, ID]
+  ) extends MongoAsyncReadonlyRepo[E, ID](collectionName, identity.name) with AsyncRepo[E, ID] {
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
@@ -81,10 +92,10 @@ abstract class MongoAsyncRepo[E: Format, ID: Format](implicit identity: Identity
   }
 }
 
-/**
- * Abstract {{CRUDService}} impl backed by JSONCollection
- */
-abstract class MongoCrudRepo[E: Format, ID: Format](implicit identity: Identity[E, ID]) extends MongoAsyncRepo[E, ID] with CrudRepo[E, ID] {
+protected class MongoAsyncCrudRepo[E: Format, ID: Format](
+    collectionName : String)(
+    implicit identity: Identity[E, ID]
+  ) extends MongoAsyncRepo[E, ID](collectionName) with AsyncCrudRepo[E, ID] {
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
@@ -116,10 +127,10 @@ abstract class MongoCrudRepo[E: Format, ID: Format](implicit identity: Identity[
   }
 }
 
-/**
- * Abstract {{CRUDService}} impl backed by JSONCollection
- */
-abstract class MongoStreamRepo[E: Format, ID: Format](implicit identity: Identity[E, ID]) extends MongoAsyncRepo[E, ID] with StreamRepo[E, ID] {
+protected class MongoAsyncStreamRepo[E: Format, ID: Format](
+    collectionName : String)(
+    implicit identity: Identity[E, ID]
+  ) extends MongoAsyncRepo[E, ID](collectionName) with AsyncStreamRepo[E, ID] {
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._

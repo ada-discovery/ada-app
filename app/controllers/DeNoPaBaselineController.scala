@@ -4,7 +4,7 @@ import javax.inject.{Inject, Named}
 
 import play.api.mvc.Action
 import models.Page
-import persistence.{JsObjectCrudRepo}
+import persistence.RepoTypeRegistry._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{Json, JsObject}
 import play.api.mvc.RequestHeader

@@ -1,26 +1,16 @@
 package persistence
 
-import javax.inject.Inject
-
 import play.api.libs.json.{Json, JsObject}
-import play.modules.reactivemongo.ReactiveMongoApi
-import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json._
+import persistence.RepoTypeRegistry.JsObjectCrudRepo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-
 import scala.concurrent.Future
 
-trait JsObjectCrudRepo extends CrudRepo[JsObject, BSONObjectID]
-
-class JsObjectMongoCrudRepo(
+protected class JsObjectMongoCrudRepo(
     collectionName : String,
     identityName : String = "_id"
-  ) extends MongoReadonlyRepo[JsObject, BSONObjectID](identityName) with JsObjectCrudRepo {
-
-  @Inject var reactiveMongoApi : ReactiveMongoApi = _
-
-  override lazy val collection: JSONCollection = reactiveMongoApi.db.collection(collectionName)
+  ) extends MongoAsyncReadonlyRepo[JsObject, BSONObjectID](collectionName, identityName) with JsObjectCrudRepo {
 
   override def save(entity: JsObject): Future[Either[String, BSONObjectID]] = {
     val id = BSONObjectID.generate

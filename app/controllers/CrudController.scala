@@ -3,7 +3,7 @@ package controllers
 import java.util.concurrent.TimeoutException
 
 import models.{Page, Identity}
-import persistence.CrudRepo
+import persistence.AsyncCrudRepo
 import play.api.Logger
 import play.api.routing.Router
 import play.api.i18n.{Messages, MessagesApi}
@@ -22,7 +22,7 @@ import play.twirl.api.Html
  * @param ID type of identity of entity (primary key)
  */
 abstract class CrudController[E: Format, ID](
-    val dao: CrudRepo[E, ID],
+    val dao: AsyncCrudRepo[E, ID],
     val messagesApi: MessagesApi
   )(implicit identity: Identity[E, ID]) extends Controller {
 

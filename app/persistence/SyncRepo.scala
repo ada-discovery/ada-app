@@ -1,20 +1,20 @@
 package persistence
 
-import play.api.libs.iteratee.{ Concurrent, Enumerator }
-import play.api.libs.json.JsObject
-import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
-import reactivemongo.api.indexes.{ IndexType, Index }
-import reactivemongo.bson.BSONObjectID
+import java.util.concurrent.Future
 
-import scala.concurrent.Future
+import play.api.libs.iteratee.{ Enumerator }
+import play.api.libs.json.JsObject
+
+import scala.concurrent.{Await, Awaitable}
+import scala.concurrent.duration.Duration
 
 /**
- * Generic async repo trait
+ * Generic sync repo trait
  * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
-trait AsyncReadonlyRepo[E, ID] {
-  def get(id: ID): Future[Option[E]]
+trait SyncReadonlyRepo[E, ID] {
+  def get(id: ID): Option[E]
 
   def find(
     criteria: Option[JsObject] = None,
@@ -22,21 +22,93 @@ trait AsyncReadonlyRepo[E, ID] {
     projection : Option[JsObject] = None,
     limit: Option[Int] = None,
     page: Option[Int] = None
-  ): Future[Traversable[E]]
+  ): Traversable[E]
 
-  def count(criteria: Option[JsObject]) : Future[Int]
+  def count(criteria: Option[JsObject]) : Int
 }
 
-trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
-  def save(entity: E): Future[Either[String, ID]]
+trait SyncRepo[E, ID] extends SyncReadonlyRepo[E, ID] {
+  def save(entity: E): Either[String, ID]
 }
 
-trait AsyncCrudRepo[E, ID] extends AsyncRepo[E, ID] {
-  def update(entity: E): Future[Either[String, ID]]
-  def delete(id: ID): Future[Either[String, ID]]
-  def deleteAll : Future[String]
+trait SyncCrudRepo[E, ID] extends SyncRepo[E, ID] {
+  def update(entity: E): Either[String, ID]
+  def delete(id: ID): Either[String, ID]
+  def deleteAll : String
 }
 
-trait AsyncStreamRepo[E, ID] extends AsyncRepo[E, ID] {
+trait SyncStreamRepo[E, ID] extends SyncRepo[E, ID] {
   def stream: Enumerator[E]
+}
+
+// Adapters
+
+protected class SyncReadonlyRepoAdapter[E, ID](
+    asyncRepo : AsyncReadonlyRepo[E, ID],
+    timeout : Duration
+  ) extends SyncReadonlyRepo[E, ID] {
+
+  override def get(id: ID) =
+    wait(asyncRepo.get(id))
+
+  override def find(
+    criteria: Option[JsObject] = None,
+    orderBy: Option[JsObject] = None,
+    projection : Option[JsObject] = None,
+    limit: Option[Int] = None,
+    page: Option[Int] = None
+  ) = wait(asyncRepo.find(criteria, orderBy, projection, limit, page))
+
+  override def count(criteria: Option[JsObject]) =
+    wait(asyncRepo.count(criteria))
+
+  protected def wait[T](future : Awaitable[T]) =
+    Await.result(future, timeout)
+}
+
+private class SyncRepoAdapter[E, ID](
+    asyncRepo : AsyncRepo[E, ID],
+    timeout : Duration
+  ) extends SyncReadonlyRepoAdapter[E, ID](asyncRepo, timeout) with SyncRepo[E, ID] {
+
+  override def save(entity: E) =
+    wait(asyncRepo.save(entity))
+}
+
+private class SyncCrudRepoAdapter[E, ID](
+   asyncRepo : AsyncCrudRepo[E, ID],
+   timeout : Duration
+  ) extends SyncRepoAdapter[E, ID](asyncRepo, timeout) with SyncCrudRepo[E, ID] {
+
+  override def update(entity: E) =
+    wait(asyncRepo.update(entity))
+
+  override def delete(id: ID) =
+    wait(asyncRepo.delete(id))
+
+  override def deleteAll =
+    wait(asyncRepo.deleteAll)
+}
+
+private class SyncStreamRepoAdapter[E, ID](
+    asyncRepo : AsyncStreamRepo[E, ID],
+    timeout : Duration
+  ) extends SyncRepoAdapter[E, ID](asyncRepo, timeout) with SyncStreamRepo[E, ID] {
+
+  override def stream = asyncRepo.stream
+}
+
+object RepoSynchronizer {
+
+  def apply[E, ID](asyncRepo : AsyncReadonlyRepo[E, ID], timeout : Duration) : SyncReadonlyRepo[E, ID] =
+    new SyncReadonlyRepoAdapter(asyncRepo, timeout)
+
+  def apply[E, ID](asyncRepo : AsyncRepo[E, ID], timeout : Duration) : SyncRepo[E, ID] =
+    new SyncRepoAdapter(asyncRepo, timeout)
+
+  def apply[E, ID](asyncRepo : AsyncCrudRepo[E, ID], timeout : Duration) : SyncCrudRepo[E, ID] =
+    new SyncCrudRepoAdapter(asyncRepo, timeout)
+
+  def apply[E, ID](asyncRepo : AsyncStreamRepo[E, ID], timeout : Duration) : SyncStreamRepo[E, ID] =
+    new SyncStreamRepoAdapter(asyncRepo, timeout)
 }

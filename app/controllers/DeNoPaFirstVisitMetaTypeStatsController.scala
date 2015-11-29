@@ -3,7 +3,7 @@ package controllers
 import javax.inject.{Named, Inject}
 
 import models.{MetaTypeStats, Page}
-import persistence.{CrudRepo}
+import persistence.{AsyncCrudRepo}
 import persistence.RepoTypeRegistry.MetaTypeStatsRepo
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.mvc.RequestHeader

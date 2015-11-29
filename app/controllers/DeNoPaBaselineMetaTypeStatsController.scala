@@ -4,7 +4,7 @@ import javax.inject.{Named, Inject}
 
 import models.{MetaTypeStats, Page}
 import persistence.RepoTypeRegistry.MetaTypeStatsRepo
-import persistence.{CrudRepo}
+import persistence.{AsyncCrudRepo}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.mvc.RequestHeader
 import play.twirl.api.Html

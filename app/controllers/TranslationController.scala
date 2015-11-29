@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import models.{Page, Translation}
-import persistence.TranslationRepo
+import persistence.RepoTypeRegistry._
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms.{date, ignored, mapping, nonEmptyText}

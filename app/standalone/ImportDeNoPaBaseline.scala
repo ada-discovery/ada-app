@@ -2,12 +2,8 @@ package standalone
 
 import javax.inject.{Named, Inject}
 
-import persistence.{JsObjectCrudRepo}
+import persistence.RepoTypeRegistry._
 import play.api.libs.json.{JsNull, JsString, JsObject}
-import play.modules.reactivemongo.ReactiveMongoApi
-import play.modules.reactivemongo.json.collection.JSONCollection
-import play.modules.reactivemongo.json._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 
 import scala.concurrent.Await
@@ -16,7 +12,7 @@ import util.encodeMongoKey
 
 class ImportDeNoPaBaseline @Inject()(@Named("DeNoPaBaselineRepo") baselineRepo: JsObjectCrudRepo) extends Runnable {
 
-  val folder = "/home/peter/Data/DeNoPa/"
+  val folder = "/home/tremor/Data/DeNoPa/"
 
   val filename = folder + "Denopa-V1-BL-Datensatz-1-final.csv"
   val separator = "§§"

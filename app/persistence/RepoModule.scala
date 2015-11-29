@@ -1,47 +1,56 @@
 package persistence
 
-import models.{User, Translation, MetaTypeStats}
-import persistence.RepoTypeRegistry.MetaTypeStatsRepo
-import play.api._
-import play.api.inject._
-import com.google.inject.{TypeLiteral, Provides, AbstractModule}
+import models.{Message, User, Translation, MetaTypeStats}
+import persistence.RepoTypeRegistry._
+import com.google.inject.{TypeLiteral, AbstractModule}
 import com.google.inject.name.Names
-import persistence.{CrudRepo, JsObjectCrudRepo}
+import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json._
 
 object RepoTypeRegistry {
-  type MetaTypeStatsRepo = CrudRepo[MetaTypeStats, BSONObjectID]
-  type TranslationRepo2 = CrudRepo[Translation, BSONObjectID]
-  type UserRepo2 = CrudRepo[User, BSONObjectID]
+  type JsObjectCrudRepo = AsyncCrudRepo[JsObject, BSONObjectID]
+  type MetaTypeStatsRepo = AsyncCrudRepo[MetaTypeStats, BSONObjectID]
+  type TranslationRepo = AsyncCrudRepo[Translation, BSONObjectID]
+  type UserRepo = AsyncCrudRepo[User, BSONObjectID]
+  type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
 }
 
 class RepoModule extends AbstractModule {
     def configure() = {
 
-      bind(classOf[JsObjectCrudRepo])
+      bind(new TypeLiteral[JsObjectCrudRepo]{})
         .annotatedWith(Names.named("DeNoPaBaselineRepo"))
         .toInstance(new JsObjectMongoCrudRepo("denopa-baseline_visit"))
 
-      bind(classOf[JsObjectCrudRepo])
+      bind(new TypeLiteral[JsObjectCrudRepo]{})
         .annotatedWith(Names.named("DeNoPaFirstVisitRepo"))
         .toInstance(new JsObjectMongoCrudRepo("denopa-first_visit"))
 
-      bind(classOf[JsObjectCrudRepo])
+      bind(new TypeLiteral[JsObjectCrudRepo]{})
         .annotatedWith(Names.named("DeNoPaCuratedBaselineRepo"))
         .toInstance(new JsObjectMongoCrudRepo("denopa-baseline_visit-curated"))
 
-      bind(classOf[JsObjectCrudRepo])
+      bind(new TypeLiteral[JsObjectCrudRepo]{})
         .annotatedWith(Names.named("DeNoPaCuratedFirstVisitRepo"))
         .toInstance(new JsObjectMongoCrudRepo("denopa-first_visit-curated"))
 
       bind(new TypeLiteral[MetaTypeStatsRepo]{})
         .annotatedWith(Names.named("DeNoPaBaselineMetaTypeStatsRepo"))
-        .toInstance(new EntityMongoCrudRepo[MetaTypeStats, BSONObjectID]("denopa-baseline_visit-metatype_stats"))
+        .toInstance(new MongoAsyncCrudRepo[MetaTypeStats, BSONObjectID]("denopa-baseline_visit-metatype_stats"))
 
       bind(new TypeLiteral[MetaTypeStatsRepo]{})
         .annotatedWith(Names.named("DeNoPaFirstVisitMetaTypeStatsRepo"))
-        .toInstance(new EntityMongoCrudRepo[MetaTypeStats, BSONObjectID]("denopa-first_visit-metatype_stats"))
+        .toInstance(new MongoAsyncCrudRepo[MetaTypeStats, BSONObjectID]("denopa-first_visit-metatype_stats"))
+
+      bind(new TypeLiteral[TranslationRepo]{})
+        .toInstance(new MongoAsyncCrudRepo[Translation, BSONObjectID]("translations"))
+
+      bind(new TypeLiteral[UserRepo]{})
+        .toInstance(new MongoAsyncCrudRepo[User, BSONObjectID]("users"))
+
+      bind(new TypeLiteral[MessageRepo]{})
+        .toInstance(new MongoAsyncStreamRepo[Message, BSONObjectID]("messages"))
     }
 }
 

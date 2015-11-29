@@ -9,7 +9,7 @@ import reactivemongo.bson.BSONObjectID
 import services.DeNoPaSetting._
 
 import scala.concurrent.duration._
-import persistence.{CrudRepo, AsyncReadonlyRepo}
+import persistence.{AsyncCrudRepo, AsyncReadonlyRepo}
 import scala.concurrent.Await
 
 class DeNoPaTypeStats @Inject() (

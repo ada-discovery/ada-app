@@ -3,7 +3,7 @@ package controllers
 import javax.inject.{Named, Inject}
 
 import models.Page
-import persistence.{JsObjectCrudRepo}
+import persistence.RepoTypeRegistry._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, RequestHeader}

@@ -2,12 +2,8 @@ package standalone
 
 import javax.inject.{Named, Inject}
 
-import persistence.{JsObjectCrudRepo}
+import persistence.RepoTypeRegistry._
 import play.api.libs.json.{JsNull, JsString, JsObject}
-import play.modules.reactivemongo.ReactiveMongoApi
-import play.modules.reactivemongo.json.collection.JSONCollection
-import play.modules.reactivemongo.json._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 
 import scala.concurrent.Await
