@@ -1,7 +1,14 @@
 package persistence;
 
-/**
- * Created by peter on 30/11/15.
- */
-public class NamedRepo {
+import javax.inject.Qualifier;
+import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+
+@Qualifier
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+// TODO
+public @interface NamedRepo {
+    String repo();
 }

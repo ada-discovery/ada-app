@@ -8,7 +8,6 @@ import persistence.RepoTypeRegistry._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{Json, JsObject}
 import play.api.mvc.RequestHeader
-import play.twirl.api.Html
 import services.TranSMARTService
 import standalone.DeNoPaTypeStats
 import views.html

@@ -28,7 +28,8 @@ libraryDependencies ++= Seq(
   "org.webjars" % "bootstrap" % "3.3.5",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
   "org.webjars" % "html5shiv" % "3.7.0",
-  "org.webjars" % "respond" % "1.4.2"
+  "org.webjars" % "respond" % "1.4.2",
+  "net.codingwell" %% "scala-guice" % "4.0.1"
 )
 
 routesGenerator := InjectedRoutesGenerator
