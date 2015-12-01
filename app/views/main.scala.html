@@ -30,17 +30,25 @@
 		
     </head>
     <body>
-    
-    	<!-- Fixed navbar -->
-	    @navbar(request)
-	    
-        @content
+        <div id="wrapper">
+            @{sidebar(request)}
 
-        <!--@sidebar(request)-->
+            <div id="page-content-wrapper">
+            @navbar(request)
+            <div class="page-content">
+                @content
+            </div>
 
-        @footer(request)
-        
-        <!-- Bootstrap core JavaScript
+            @footer(request)
+        </div>
+
+        </div>
+
+
+
+
+
+            <!-- Bootstrap core JavaScript
 	    ================================================== -->
 	    <!-- Placed at the end of the document so the pages load faster -->
 
