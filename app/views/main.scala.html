@@ -34,13 +34,12 @@
             @{sidebar(request)}
 
             <div id="page-content-wrapper">
-            @navbar(request)
-            <div class="page-content">
-                @content
+                @navbar(request)
+                <div class="page-content">
+                    @content
+                </div>
+                @footer(request)
             </div>
-
-            @footer(request)
-        </div>
 
         </div>
 

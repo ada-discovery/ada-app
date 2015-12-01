@@ -17,10 +17,10 @@
                     </div>
                     <div id="collapse1" class="panel-collapse collapse">
                         <ul class="list-group">
-                            @listGroupItem(routes.RedCapController.overview(), "Basic Overview")
-                            @listGroupItem(routes.RedCapController.listRecords(), "Records")
-                            @listGroupItem(routes.RedCapController.listFieldNames(), "Fields")
-                            @listGroupItem(routes.RedCapController.listMetadatas(), "Metadata")
+                            @listGroupItem("Overview", Some(routes.RedCapController.overview()))
+                            @listGroupItem("Records", Some(routes.RedCapController.listRecords()))
+                            @listGroupItem("Fields", Some(routes.RedCapController.listFieldNames()))
+                            @listGroupItem("Metadata", Some(routes.RedCapController.listMetadatas()))
                         </ul>
                     </div>
                 </div>
@@ -38,10 +38,10 @@
                     </div>
                     <div id="collapse2" class="panel-collapse collapse">
                         <ul class="list-group">
-                            @listGroupItem(routes.DeNoPaBaselineController.overview(), "Overview")
-                            @listGroupItem(routes.DeNoPaBaselineController.find(), "Raw Records")
-                            @listGroupItem(routes.DeNoPaCuratedBaselineController.find(), "Curated Records")
-                            @listGroupItem(routes.DeNoPaBaselineMetaTypeStatsController.find(), "Metadata Statistics")
+                            @listGroupItem("Overview", Some(routes.DeNoPaBaselineController.overview()))
+                            @listGroupItem("Raw Records", Some(routes.DeNoPaBaselineController.find()))
+                            @listGroupItem("Curated Records", Some(routes.DeNoPaCuratedBaselineController.find()))
+                            @listGroupItem("Metadata Statistics", Some(routes.DeNoPaBaselineMetaTypeStatsController.find()))
                         </ul>
                     </div>
                 </div>
@@ -59,10 +59,10 @@
                     </div>
                     <div id="collapse3" class="panel-collapse collapse">
                         <ul class="list-group">
-                            @listGroupItem(routes.DeNoPaFirstVisitController.overview(), "Overview")
-                            @listGroupItem(routes.DeNoPaFirstVisitController.find(), "Raw Records")
-                            @listGroupItem(routes.DeNoPaCuratedFirstVisitController.find(), "Curated Records")
-                            @listGroupItem(routes.DeNoPaFirstVisitMetaTypeStatsController.find(), "Metadata Statistics")
+                            @listGroupItem("Overview", Some(routes.DeNoPaFirstVisitController.overview()))
+                            @listGroupItem("Raw Records", Some(routes.DeNoPaFirstVisitController.find()))
+                            @listGroupItem("Curated Records", Some(routes.DeNoPaCuratedFirstVisitController.find()))
+                            @listGroupItem("Metadata Statistics", Some(routes.DeNoPaFirstVisitMetaTypeStatsController.find()))
                         </ul>
                     </div>
                 </div>

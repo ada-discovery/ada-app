@@ -1,6 +1,6 @@
 @import util.matchesPath
-@(call: Call, text: String)(implicit request: RequestHeader)
+@(text: String, call: Option[Call] = None)(implicit request: RequestHeader)
 
 <li class="list-group-item">
-<a href="@call">@text</a>
+<a @if(!call.isEmpty){href="@call.get"}>@text</a>
 </li>

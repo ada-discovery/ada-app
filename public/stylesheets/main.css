@@ -30,7 +30,7 @@ body > .container {
 }
 
 div > .page-content {
-  padding: 40px 15px 60px;
+  padding: 40px 15px 60px 10%;
 }
 
 .container .text-muted {
