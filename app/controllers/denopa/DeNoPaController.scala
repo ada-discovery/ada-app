@@ -1,13 +1,14 @@
-package controllers
+package controllers.denopa
 
-import services.TranSMARTService
-import services.DeNoPaTranSMARTMapping._
+import controllers.JsObjectReadonlyController
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.AsyncReadonlyRepo
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 import play.api.mvc._
 import reactivemongo.bson.BSONObjectID
+import services.DeNoPaTranSMARTMapping._
+import services.TranSMARTService
 
 import scala.concurrent.Await
 
