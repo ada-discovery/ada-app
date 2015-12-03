@@ -10,7 +10,7 @@
 }
 
 @actions = {
-    @helper.form(action=routes.UserController.findByName(), 'class -> "navbar-form navbar-left", 'role -> "search") {
+    @helper.form(action=routes.UserController.find(), 'class -> "navbar-form navbar-left", 'role -> "search") {
         <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by user name...">
         <input type="submit" id="searchsubmit" value="Filter by name" class="btn btn-primary btn-sm">
     }
@@ -45,7 +45,7 @@
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{
-    routes.UserController.findByName(newPage, newOrderBy.map { orderBy =>
+    routes.UserController.find(newPage, newOrderBy.map { orderBy =>
         if(orderBy == currentOrderBy) "-" + currentOrderBy else orderBy
     }.getOrElse(currentOrderBy), currentFilter)
 }

@@ -6,7 +6,7 @@
 GET         /                                                               controllers.AppController.index
 
 # Users
-GET         /users                                                          controllers.UserController.findByName(p: Int ?= 0, s: String ?= "name", f ?= "")
+GET         /users                                                          controllers.UserController.find(p: Int ?= 0, s: String ?= "name", f ?= "")
 GET         /users/all                                                      controllers.UserController.listAll(s: Int ?= 2)
 GET         /users/new                                                      controllers.UserController.create
 POST        /users/save                                                     controllers.UserController.save
@@ -23,7 +23,7 @@ POST        /rest/users/:id                                                 cont
 GET         /rest/users/all                                                 controllers.UserController.listAllRest
 
 # Translations
-GET         /translations                                                   controllers.TranslationController.findByOriginal(p: Int ?= 0, s: String ?= "original", f ?= "")
+GET         /translations                                                   controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", f ?= "")
 GET         /translations/all                                               controllers.TranslationController.listAll(s: Int ?= 2)
 GET         /translations/new                                               controllers.TranslationController.create
 POST        /translations/save                                              controllers.TranslationController.save

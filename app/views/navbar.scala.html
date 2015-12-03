@@ -29,7 +29,7 @@
                     <ul class="dropdown-menu">
                         @menuItem(routes.DeNoPaCuratedBaselineController.find(), "Curated Baseline Records", Some(3))
                         @menuItem(routes.DeNoPaCuratedFirstVisitController.find(), "Curated First Visit Records", Some(3))
-                        @menuItem(routes.TranslationController.findByOriginal(), "DE-EN Translations", Some(3))
+                        @menuItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
                         <li role="separator" class="divider"></li>
                         @menuItem(routes.DeNoPaBaselineController.find(), "Raw Baseline Records", Some(3))
                         @menuItem(routes.DeNoPaFirstVisitController.find(), "Raw First Visit Records", Some(3))
@@ -59,7 +59,7 @@
                 <li>
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Users<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                    @menuItem(routes.UserController.findByName(), "Registered Users", Some(3))
+                    @menuItem(routes.UserController.find(), "Registered Users", Some(3))
                     </ul>
                 </li>
                 -->

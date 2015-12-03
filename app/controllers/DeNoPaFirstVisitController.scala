@@ -8,6 +8,7 @@ import persistence.RepoTypeRegistry._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{Json, JsObject}
 import play.api.mvc.RequestHeader
+import reactivemongo.bson.BSONObjectID
 import services.TranSMARTService
 import standalone.DeNoPaTypeStats
 import views.html
@@ -15,34 +16,33 @@ import views.html
 class DeNoPaFirstVisitController @Inject() (
     @Named("DeNoPaFirstVisitRepo") repo: JsObjectCrudRepo,
     tranSMARTService: TranSMARTService,
-    deNoPaTypeStats : DeNoPaTypeStats,
-    messagesApi: MessagesApi
-  ) extends DeNoPaController(repo, tranSMARTService, messagesApi) {
+    deNoPaTypeStats : DeNoPaTypeStats
+  ) extends DeNoPaController(repo, tranSMARTService) {
 
-  lazy val typeStats = deNoPaTypeStats.collectFirstVisitGlobalTypeStats
+  private lazy val typeStats = deNoPaTypeStats.collectFirstVisitGlobalTypeStats
 
-  override val listViewColumns = List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe")
+  override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe"))
 
-  override val csvFileName = "denopa-firstvisit"
+  override protected val csvFileName = "denopa-firstvisit"
 
-  override val transSMARTDataFileName = "denopa-firstvisit_data_file"
+  override protected val transSMARTDataFileName = "denopa-firstvisit_data_file"
 
-  override val transSMARTMappingFileName = "denopa-firstvisit_mapping_file"
+  override protected val transSMARTMappingFileName = "denopa-firstvisit_mapping_file"
 
-  override def showView(item : JsObject)(implicit msg: Messages, request: RequestHeader) =
+  override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: RequestHeader) =
     html.jsonShow(
       "First Visit Item",
       item,
       routes.DeNoPaFirstVisitController.find()
     )
 
-  override def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
+  override protected def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
     html.denopa.list(
       "first visit record",
       currentPage,
       currentOrderBy,
       currentFilter,
-      listViewColumns,
+      listViewColumns.get,
       routes.DeNoPaFirstVisitController.find,
       routes.DeNoPaFirstVisitController.find(),
       routes.DeNoPaFirstVisitController.get,
