@@ -2,7 +2,7 @@ package services
 
 import javax.inject.{Inject, Singleton}
 
-import _root_.util.{jsonObjectsToCsv, encodeMongoKey, decodeMongoKey}
+import _root_.util.JsonUtil.{jsonObjectsToCsv, escapeKey, unescapeKey}
 import com.google.inject.ImplementedBy
 import play.api.libs.json._
 import models.Category
@@ -77,7 +77,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
     fieldLabelMap : Map[String, String]
    ) = {
     fieldsInOrder.zipWithIndex.map{ case (field, index) =>
-      val fieldName = decodeMongoKey(field)
+      val fieldName = unescapeKey(field)
 
       val (label, path) = if (field.equals(keyField))
         (JsString("SUBJ_ID"), None)
@@ -114,7 +114,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
     fieldLabelMap : Map[String, String]
   ) = {
     val fieldsToInclude = (if (visitField.isDefined) List(keyField, visitField.get) else List(keyField)) ++
-      fieldCategoryMap.map{case (field, category) => encodeMongoKey(field)}.filterNot(_.equals(keyField)).toList
+      fieldCategoryMap.map{case (field, category) => escapeKey(field)}.filterNot(_.equals(keyField)).toList
 
     val clinicalData = createClinicalData(items, Some(fieldsToInclude), None)
     if (!clinicalData.isEmpty) {

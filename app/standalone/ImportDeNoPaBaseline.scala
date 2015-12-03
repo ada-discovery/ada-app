@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 
 import scala.concurrent.Await
 import scala.io.Source
-import util.encodeMongoKey
+import util.JsonUtil.escapeKey
 
 class ImportDeNoPaBaseline @Inject()(@Named("DeNoPaBaselineRepo") baselineRepo: JsObjectCrudRepo) extends Runnable {
 
@@ -29,7 +29,7 @@ class ImportDeNoPaBaseline @Inject()(@Named("DeNoPaBaselineRepo") baselineRepo: 
     // collect the column names
     val columnNames =  "Line_Nr" :: lines.take(1).map {
       _.split(separator).map(columnName =>
-        encodeMongoKey(columnName.replaceAll("\"", "").trim)
+        escapeKey(columnName.replaceAll("\"", "").trim)
     )}.flatten.toList
 
     // for each lince create a JSON record and insert to the database

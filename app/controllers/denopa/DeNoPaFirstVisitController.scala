@@ -2,28 +2,25 @@ package controllers.denopa
 
 import javax.inject.{Inject, Named}
 
-import controllers.routes
 import models.Page
 import persistence.RepoTypeRegistry._
 import play.api.i18n.Messages
 import play.api.libs.json.JsObject
 import play.api.mvc.{Action, RequestHeader}
 import reactivemongo.bson.BSONObjectID
-import services.TranSMARTService
 import standalone.DeNoPaTypeStats
 import views.html
 
 class DeNoPaFirstVisitController @Inject() (
     @Named("DeNoPaFirstVisitRepo") repo: JsObjectCrudRepo,
-    tranSMARTService: TranSMARTService,
     deNoPaTypeStats : DeNoPaTypeStats
-  ) extends DeNoPaController(repo, tranSMARTService) {
+  ) extends DeNoPaController(repo) {
 
   private lazy val typeStats = deNoPaTypeStats.collectFirstVisitGlobalTypeStats
 
   override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe"))
 
-  override protected val csvFileName = "denopa-firstvisit"
+  override protected val csvFileName = "denopa-firstvisit.csv"
 
   override protected val transSMARTDataFileName = "denopa-firstvisit_data_file"
 
@@ -47,8 +44,8 @@ class DeNoPaFirstVisitController @Inject() (
       routes.DeNoPaFirstVisitController.find(),
       routes.DeNoPaFirstVisitController.get,
       routes.DeNoPaFirstVisitController.exportRecordsAsCsv(),
-      routes.DeNoPaFirstVisitController.exportTransSMARTDataFile(),
-      routes.DeNoPaFirstVisitController.exportTransSMARTMappingFile()
+      routes.DeNoPaFirstVisitController.exportTranSMARTDataFile(),
+      routes.DeNoPaFirstVisitController.exportTranSMARTMappingFile()
     )
 
   def overview = Action { implicit request =>

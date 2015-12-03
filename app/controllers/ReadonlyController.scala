@@ -24,7 +24,7 @@ protected abstract class ReadonlyController[E : Format, ID](repo: AsyncReadonlyR
 
   @Inject var messagesApi: MessagesApi = _
 
-  private val DEFAULT_LIMIT = Seq("20")
+  private val DEFAULT_LIMIT = 20
 
   protected def listViewColumns : Option[List[String]] = None
 
@@ -65,7 +65,7 @@ protected abstract class ReadonlyController[E : Format, ID](repo: AsyncReadonlyR
   }
 
   def findRest(page: Int, orderBy: String, query: String) = Action.async { implicit request =>
-    val limit = 20
+    val limit = DEFAULT_LIMIT
     val criteria = toJsonCriteria(query)
     val sort = toJsonSort(orderBy)
 
@@ -88,7 +88,7 @@ protected abstract class ReadonlyController[E : Format, ID](repo: AsyncReadonlyR
    * @param query Filter applied on items
    */
   def find(page: Int, orderBy: String, query: String) = Action.async { implicit request =>
-    val limit = 20
+    val limit = DEFAULT_LIMIT
     val criteria = toJsonCriteria(query)
     val sort = toJsonSort(orderBy)
 
@@ -111,7 +111,7 @@ protected abstract class ReadonlyController[E : Format, ID](repo: AsyncReadonlyR
    * @param orderBy Column to be sorted
    */
   def listAll(orderBy: Int) = Action.async { implicit request =>
-    val limit = 20
+    val limit = DEFAULT_LIMIT
     val futureItems = repo.find(None, None, listViewProjection, Some(limit), None)
     val futureCount = repo.count(None)
     futureItems.zip(futureCount).map({ case (items, count) =>

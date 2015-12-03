@@ -1,5 +1,5 @@
 @import play.api.libs.json.{JsObject, JsNull}
-@import util.decodeMongoKey
+@import util.JsonUtil.unescapeKey
 @(domainName : String, item: JsObject, listCall : Call, nonNullOnly : Boolean = true)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 	@main(Messages("show.title", domainName)) {
@@ -15,7 +15,7 @@
 					<fieldset>
 						@item.fields.map { case (key, value) =>
 							@if(!nonNullOnly || value != JsNull) {
-								@twitterBootstrapJsValue(key, attributeLabel(domainName, decodeMongoKey(key).take(35)), value.asOpt[String].getOrElse(value.toString()), false)
+								@twitterBootstrapJsValue(key, attributeLabel(domainName, unescapeKey(key).take(35)), value.asOpt[String].getOrElse(value.toString()), false)
 							}
 						}
 					</fieldset>

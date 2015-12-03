@@ -1,4 +1,6 @@
 @import play.api.Play.current
+@import controllers.denopa.{routes => denoparoutes}
+
 @(implicit request: RequestHeader)
 <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
     <div class="container">
@@ -27,17 +29,17 @@
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">DeNoPa<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        @menuItem(routes.DeNoPaCuratedBaselineController.find(), "Curated Baseline Records", Some(3))
-                        @menuItem(routes.DeNoPaCuratedFirstVisitController.find(), "Curated First Visit Records", Some(3))
+                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.find(), "Curated Baseline Records", Some(3))
+                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.find(), "Curated First Visit Records", Some(3))
                         @menuItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
                         <li role="separator" class="divider"></li>
-                        @menuItem(routes.DeNoPaBaselineController.find(), "Raw Baseline Records", Some(3))
-                        @menuItem(routes.DeNoPaFirstVisitController.find(), "Raw First Visit Records", Some(3))
+                        @menuItem(denoparoutes.DeNoPaBaselineController.find(), "Raw Baseline Records", Some(3))
+                        @menuItem(denoparoutes.DeNoPaFirstVisitController.find(), "Raw First Visit Records", Some(3))
                         <li role="separator" class="divider"></li>
-                        @menuItem(routes.DeNoPaBaselineController.overview(), "Baseline Type Overview", Some(3))
-                        @menuItem(routes.DeNoPaFirstVisitController.overview(), "First Visit Type Overview", Some(3))
-                        @menuItem(routes.DeNoPaBaselineMetaTypeStatsController.find(), "Baseline Fields", Some(3))
-                        @menuItem(routes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Fields", Some(3))
+                        @menuItem(denoparoutes.DeNoPaBaselineController.overview(), "Baseline Type Overview", Some(3))
+                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overview(), "First Visit Type Overview", Some(3))
+                        @menuItem(denoparoutes.DeNoPaBaselineMetaTypeStatsController.find(), "Baseline Fields", Some(3))
+                        @menuItem(denoparoutes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Fields", Some(3))
                     </ul>
                 </li>
 

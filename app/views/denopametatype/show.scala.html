@@ -1,5 +1,5 @@
 @import play.api.libs.json.{JsObject, JsNull}
-@import util.decodeMongoKey
+@import util.JsonUtil.unescapeKey
 @(domainName : String, item: MetaTypeStats, listCall : Call)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 	@main(Messages("show.title", domainName)) {
@@ -13,9 +13,9 @@
 		    <div class="row">
 			    <div class="col-md-9">
 					<fieldset>
-						@views.html.twitterBootstrapJsValue("attributeName", attributeLabel("metaTypeStat", "attributeName"), decodeMongoKey(item.attributeName), false)
+						@views.html.twitterBootstrapJsValue("attributeName", attributeLabel("metaTypeStat", "attributeName"), unescapeKey(item.attributeName), false)
                         @views.html.twitterBootstrapLabelValue("valueOccurrenceChart", attributeLabel("metaTypeStat", "valueOccurrenceChart"), false) {
-                            @views.html.chart.pieChart("Value Occurrences - " + decodeMongoKey(item.attributeName), "valueChart", item.valueRatioMap.toSeq.sortBy(_._2).reverse)
+                            @views.html.chart.pieChart("Value Occurrences - " + unescapeKey(item.attributeName), "valueChart", item.valueRatioMap.toSeq.sortBy(_._2).reverse)
                             <div align="right">
                                 <button type="button" class="btn btn-default btn-sm" data-toggle="collapse" data-target="#more-info">Show as Table</button>
                             </div>

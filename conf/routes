@@ -47,36 +47,36 @@ GET         /redcap/records/exportTranSMARTMapping                          cont
 
 # DeNoPa
 
-GET         /denopa/baseline/records                                        controllers.DeNoPaBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
-GET         /denopa/baseline/records/get/:id                                controllers.DeNoPaBaselineController.get(id: BSONObjectID)
-GET         /denopa/baseline/records/exportAllAsCsv                         controllers.DeNoPaBaselineController.exportRecordsAsCsv(delimiter : String ?= ",")
-GET         /denopa/baseline/records/exportTranSMARTData                    controllers.DeNoPaBaselineController.exportTransSMARTDataFile(delimiter : String ?= "\t")
-GET         /denopa/baseline/records/exportTranSMARTMapping                 controllers.DeNoPaBaselineController.exportTransSMARTMappingFile(delimiter : String ?= "\t")
+GET         /denopa/baseline/records                                        controllers.denopa.DeNoPaBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/baseline/records/get/:id                                controllers.denopa.DeNoPaBaselineController.get(id: BSONObjectID)
+GET         /denopa/baseline/records/exportAllAsCsv                         controllers.denopa.DeNoPaBaselineController.exportRecordsAsCsv(delimiter : String ?= ",")
+GET         /denopa/baseline/records/exportTranSMARTData                    controllers.denopa.DeNoPaBaselineController.exportTranSMARTDataFile(delimiter : String ?= "\t")
+GET         /denopa/baseline/records/exportTranSMARTMapping                 controllers.denopa.DeNoPaBaselineController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 
-GET         /denopa/firstvisit/records                                      controllers.DeNoPaFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
-GET         /denopa/firstvisit/records/get/:id                              controllers.DeNoPaFirstVisitController.get(id: BSONObjectID)
-GET         /denopa/firstvisit/records/exportAllAsCsv                       controllers.DeNoPaFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",")
-GET         /denopa/firstvisit/records/exportTranSMARTData                  controllers.DeNoPaFirstVisitController.exportTransSMARTDataFile(delimiter : String ?= "\t")
-GET         /denopa/firstvisit/records/exportTranSMARTMapping               controllers.DeNoPaFirstVisitController.exportTransSMARTMappingFile(delimiter : String ?= "\t")
+GET         /denopa/firstvisit/records                                      controllers.denopa.DeNoPaFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/firstvisit/records/get/:id                              controllers.denopa.DeNoPaFirstVisitController.get(id: BSONObjectID)
+GET         /denopa/firstvisit/records/exportAllAsCsv                       controllers.denopa.DeNoPaFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",")
+GET         /denopa/firstvisit/records/exportTranSMARTData                  controllers.denopa.DeNoPaFirstVisitController.exportTranSMARTDataFile(delimiter : String ?= "\t")
+GET         /denopa/firstvisit/records/exportTranSMARTMapping               controllers.denopa.DeNoPaFirstVisitController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 
-GET         /denopa/curatedbaseline/records                                 controllers.DeNoPaCuratedBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
-GET         /denopa/curatedbaseline/records/get/:id                         controllers.DeNoPaCuratedBaselineController.get(id: BSONObjectID)
-GET         /denopa/curatedbaseline/records/exportAllAsCsv                  controllers.DeNoPaCuratedBaselineController.exportRecordsAsCsv(delimiter : String ?= ",")
-GET         /denopa/curatedbaseline/records/exportTranSMARTData             controllers.DeNoPaCuratedBaselineController.exportTransSMARTDataFile(delimiter : String ?= "\t")
-GET         /denopa/curatedbaseline/records/exportTranSMARTMapping          controllers.DeNoPaCuratedBaselineController.exportTransSMARTMappingFile(delimiter : String ?= "\t")
+GET         /denopa/curatedbaseline/records                                 controllers.denopa.DeNoPaCuratedBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/curatedbaseline/records/get/:id                         controllers.denopa.DeNoPaCuratedBaselineController.get(id: BSONObjectID)
+GET         /denopa/curatedbaseline/records/exportAllAsCsv                  controllers.denopa.DeNoPaCuratedBaselineController.exportRecordsAsCsv(delimiter : String ?= ",")
+GET         /denopa/curatedbaseline/records/exportTranSMARTData             controllers.denopa.DeNoPaCuratedBaselineController.exportTranSMARTDataFile(delimiter : String ?= "\t")
+GET         /denopa/curatedbaseline/records/exportTranSMARTMapping          controllers.denopa.DeNoPaCuratedBaselineController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 
-GET         /denopa/curatedfirstvisit/records                               controllers.DeNoPaCuratedFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
-GET         /denopa/curatedfirstvisit/records/get/:id                       controllers.DeNoPaCuratedFirstVisitController.get(id: BSONObjectID)
-GET         /denopa/curatedfirstvisit/records/exportAllAsCsv                controllers.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",")
-GET         /denopa/curatedfirstvisit/records/exportTranSMARTData           controllers.DeNoPaCuratedFirstVisitController.exportTransSMARTDataFile(delimiter : String ?= "\t")
-GET         /denopa/curatedfirstvisit/records/exportTranSMARTMapping        controllers.DeNoPaCuratedFirstVisitController.exportTransSMARTMappingFile(delimiter : String ?= "\t")
+GET         /denopa/curatedfirstvisit/records                               controllers.denopa.DeNoPaCuratedFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/curatedfirstvisit/records/get/:id                       controllers.denopa.DeNoPaCuratedFirstVisitController.get(id: BSONObjectID)
+GET         /denopa/curatedfirstvisit/records/exportAllAsCsv                controllers.denopa.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",")
+GET         /denopa/curatedfirstvisit/records/exportTranSMARTData           controllers.denopa.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(delimiter : String ?= "\t")
+GET         /denopa/curatedfirstvisit/records/exportTranSMARTMapping        controllers.denopa.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 
-GET         /denopa/baseline/metastats                                      controllers.DeNoPaBaselineMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
-GET         /denopa/baseline/metastats/get/:id                              controllers.DeNoPaBaselineMetaTypeStatsController.get(id: BSONObjectID)
-GET         /denopa/firstvisit/metastats                                    controllers.DeNoPaFirstVisitMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
-GET         /denopa/firstvisit/metastats/get/:id                            controllers.DeNoPaFirstVisitMetaTypeStatsController.get(id: BSONObjectID)
-GET         /denopa/baseline/overview                                       controllers.DeNoPaBaselineController.overview
-GET         /denopa/firstvisit/overview                                     controllers.DeNoPaFirstVisitController.overview
+GET         /denopa/baseline/metastats                                      controllers.denopa.DeNoPaBaselineMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
+GET         /denopa/baseline/metastats/get/:id                              controllers.denopa.DeNoPaBaselineMetaTypeStatsController.get(id: BSONObjectID)
+GET         /denopa/firstvisit/metastats                                    controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
+GET         /denopa/firstvisit/metastats/get/:id                            controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.get(id: BSONObjectID)
+GET         /denopa/baseline/overview                                       controllers.denopa.DeNoPaBaselineController.overview
+GET         /denopa/firstvisit/overview                                     controllers.denopa.DeNoPaFirstVisitController.overview
 
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                                                   controllers.Assets.at(path="/public", file)

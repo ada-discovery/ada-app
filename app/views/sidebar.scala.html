@@ -1,4 +1,6 @@
 @import play.api.Play.current
+@import controllers.denopa.{routes => denoparoutes}
+
 @(implicit request: RequestHeader)
 <div id="sidebar-wrapper">
     <ul class="sidebar-nav nav nav-list bs-docs-sidenav">
@@ -38,10 +40,10 @@
                     </div>
                     <div id="collapse2" class="panel-collapse collapse">
                         <ul class="list-group">
-                            @listGroupItem("Overview", Some(routes.DeNoPaBaselineController.overview()))
-                            @listGroupItem("Raw Records", Some(routes.DeNoPaBaselineController.find()))
-                            @listGroupItem("Curated Records", Some(routes.DeNoPaCuratedBaselineController.find()))
-                            @listGroupItem("Metadata Statistics", Some(routes.DeNoPaBaselineMetaTypeStatsController.find()))
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaBaselineController.overview()))
+                            @listGroupItem("Raw Records", Some(denoparoutes.DeNoPaBaselineController.find()))
+                            @listGroupItem("Curated Records", Some(denoparoutes.DeNoPaCuratedBaselineController.find()))
+                            @listGroupItem("Metadata Statistics", Some(denoparoutes.DeNoPaBaselineMetaTypeStatsController.find()))
                         </ul>
                     </div>
                 </div>
@@ -59,10 +61,10 @@
                     </div>
                     <div id="collapse3" class="panel-collapse collapse">
                         <ul class="list-group">
-                            @listGroupItem("Overview", Some(routes.DeNoPaFirstVisitController.overview()))
-                            @listGroupItem("Raw Records", Some(routes.DeNoPaFirstVisitController.find()))
-                            @listGroupItem("Curated Records", Some(routes.DeNoPaCuratedFirstVisitController.find()))
-                            @listGroupItem("Metadata Statistics", Some(routes.DeNoPaFirstVisitMetaTypeStatsController.find()))
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaFirstVisitController.overview()))
+                            @listGroupItem("Raw Records", Some(denoparoutes.DeNoPaFirstVisitController.find()))
+                            @listGroupItem("Curated Records", Some(denoparoutes.DeNoPaCuratedFirstVisitController.find()))
+                            @listGroupItem("Metadata Statistics", Some(denoparoutes.DeNoPaFirstVisitMetaTypeStatsController.find()))
                         </ul>
                     </div>
                 </div>
