@@ -1,0 +1,73 @@
+@(setcount: Int = 5)(implicit request: RequestHeader)
+
+@main("NCER-PD Home") {
+    <div class="container">
+
+        <div class="page-header" align="center">
+            <h2>Placeholder for data selection</h2>
+        </div>
+
+        @defining(List(
+            ("first set", 150, 3, 50),
+            ("second set", 100, 5, 20),
+            ("third set", 120, 6, 60))
+        ){testdata =>
+
+            <!-- call to venn diagram module -->
+            <div class="panel panel-info">
+                <div class="panel-body" style="padding-bottom: 120px;">
+                @views.html.chart.vennDiagram("", "selectedSets", testdata.toSeq)
+                </div>
+            </div>
+
+            <!-- Table with Set information -->
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Study Name</th>
+                        <th>Number of Fields</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @testdata.map{case(name, radius, x, y)=>
+                        <tr>
+                            <td>@name</td>
+                            <td>@radius</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+
+
+
+
+
+        }
+
+
+        @{/*
+        @helper.form(action = routes.RedCapController.listRecords(), 'role -> "search") {
+            <div class="row">
+                <div class="col-md-8">
+                    <input type="submit" id="searchsubmit" value="Select Set" class="btn btn-primary btn-sm">
+                </div>
+            </div>
+        }
+
+        <!-- placeholder -->
+        <div align="center">
+                @for( i <- 1 to setcount){
+                    <svg width="100" height="100">
+                        <circle cx=50 cy="50" r="40" fill="333333" />
+                        <text fill="white" font-size="12" font-family="Verdana" x="20" y="55">Set Name</text>
+                    </svg>
+                }
+        </div>
+        */}
+
+
+
+    </div>
+
+}
