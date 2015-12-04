@@ -1,6 +1,6 @@
 @(title : String, chartElementName : String, yAxisCaption : String, elements : Seq[(String, Any)])
-<div id="@chartElementName" class="chart-holder"></div>
-<script type="text/javascript">
+    <div id="@chartElementName" class="chart-holder"></div>
+    <script type="text/javascript">
         $(function () {
             $('#@{chartElementName}').highcharts({
                 chart: {
@@ -35,17 +35,14 @@
                     pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}</b><br/>'
                 },
 
-                series: [{
-                    @for(e <- elements){
-                        name: "@title",
-                        colorByPoint: true,
-                        data: [
-                            @elements.map { case (name, value) =>
-                                {name : '@name', data : [@value]}
-                            }
-                        ],
+                series: [
+                    @elements.map { case (name, value) =>
+                        {
+                            name : '@name',
+                            data : [@value]
+                        },
                     }
-                }]
+                ]
             });
         });
-</script>
+    </script>
