@@ -16,26 +16,22 @@ import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import play.api.mvc.{Action, Flash, RequestHeader}
 
-abstract class MetaTypeStatsController(
-    repo: AsyncReadonlyRepo[MetaTypeStats, BSONObjectID],
-    messagesApi: MessagesApi
-  ) extends Controller {
+protected abstract class MetaTypeStatsController(repo: AsyncReadonlyRepo[MetaTypeStats, BSONObjectID]) extends Controller {
 
-  def showView(item : MetaTypeStats)(implicit msg: Messages, request: RequestHeader) : Html
+  @Inject var messagesApi: MessagesApi = _
 
-  def listView(currentPage: Page[MetaTypeStats], currentOrderBy: String, currentFilter: String, currentSearchField : String)(implicit msg: Messages, request: RequestHeader) : Html
+  protected def showView(
+    item : MetaTypeStats)(
+    implicit msg: Messages, request: RequestHeader
+  ) : Html
 
-//  override val form = Form(
-//    mapping(
-//      "id" -> ignored(BSONObjectID.generate: BSONObjectID),
-//      "attributeName" -> nonEmptyText,
-//      "intRatio" -> bigDecimal,
-//      "longRatio" -> bigDecimal,
-//      "floatRatio" -> bigDecimal,
-//      "doubleRatio" -> bigDecimal,
-//      "booleanRatio" -> bigDecimal,
-//      "nullRatio" -> bigDecimal,
-//      "valueRationMap" -> nonEmptyText)(MetaTypeStats.apply)(MetaTypeStats.unapply))
+  protected def listView(
+    currentPage: Page[MetaTypeStats],
+    currentOrderBy: String,
+    currentFilter: String,
+    currentSearchField : String)(
+    implicit msg: Messages, request: RequestHeader
+  ) : Html
 
   def get(id: BSONObjectID) = Action.async { implicit request =>
     repo.get(id).map(_.fold(

@@ -15,7 +15,7 @@ import views.html
 import play.api.mvc.{ResponseHeader, Action, Controller, Result}
 import collection.mutable.{Map => MMap}
 import models.Category
-import util.jsonObjectsToCsv
+import util.JsonUtil.jsonObjectsToCsv
 
 import scala.concurrent.Await
 
@@ -25,13 +25,16 @@ class RedCapController @Inject() (
     messagesApi: MessagesApi
   ) extends Controller {
 
-  val limit = 20
-  val timeout = 120000 millis
-  val exportCharset = "UTF-8"
+  private val limit = 20
+  private val timeout = 120000 millis
+  private val exportCharset = "UTF-8"
 
-  val csvFileName = "luxpark-redcap_records.csv"
-  val tranSMARTDataFileName = "luxpark-redcap_data_file"
-  val tranSMARTMappingFileName = "luxpark-redcap_mapping_file"
+  private val csvFileName = "luxpark-redcap_records.csv"
+  private val tranSMARTDataFileName = "luxpark-redcap_data_file"
+  private val tranSMARTMappingFileName = "luxpark-redcap_mapping_file"
+  private val genderField = "cdisc_dm_sex"
+  private val deathField = "dm_death"
+  private val statusField = "cdisc_sc_sctestcd_maritstat"
 
   def index = Action { Redirect(routes.RedCapController.listFieldNames()) }
 
@@ -91,10 +94,6 @@ class RedCapController @Inject() (
       }
     }
   }
-
-  val genderField = "cdisc_dm_sex"
-  val deathField = "dm_death"
-  val statusField = "cdisc_sc_sctestcd_maritstat"
 
   def overview = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)

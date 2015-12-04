@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 
 import scala.concurrent.Await
 import scala.io.Source
-import util.encodeMongoKey
+import util.JsonUtil.escapeKey
 
 class ImportDeNoPaFirstVisit @Inject()(@Named("DeNoPaFirstVisitRepo") firstVisitRepo: JsObjectCrudRepo) extends Runnable {
 
@@ -31,7 +31,7 @@ class ImportDeNoPaFirstVisit @Inject()(@Named("DeNoPaFirstVisitRepo") firstVisit
     // collect the column names
     val columnNames =  "Line_Nr" :: lines.take(1).map {
       _.split(separator).map(columnName =>
-        encodeMongoKey(columnName.replaceAll("\"", "").trim)
+        escapeKey(columnName.replaceAll("\"", "").trim)
       )}.flatten.toList
 
     var prevLine = ""
