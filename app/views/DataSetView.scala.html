@@ -1,4 +1,7 @@
-@(setcount: Int = 5)(implicit request: RequestHeader)
+@import persistence.DataSet
+@import util.VennLayouter
+
+@(dataSet: Seq[_])(implicit request: RequestHeader)
 
 @main("NCER-PD Home") {
     <div class="container">
@@ -7,32 +10,42 @@
             <h2>Placeholder for data selection</h2>
         </div>
 
+
+
+
+
         @defining(List(
-            ("first set", 150, 3, 50),
+            ("first set", 130, 3, 50),
             ("second set", 100, 5, 20),
-            ("third set", 120, 6, 60))
+            ("third set", 100, 5, 20),
+            ("fourth set", 100, 5, 20),
+            ("fifth set", 120, 6, 60))
         ){testdata =>
 
             <!-- call to venn diagram module -->
             <div class="panel panel-info">
                 <div class="panel-body" style="padding-bottom: 120px;">
-                @views.html.chart.vennDiagram("", "selectedSets", testdata.toSeq)
+                @views.html.chart.vennDiagram("", "selectedSets", VennLayouter.calculateCoordinates(testdata.toSeq))
                 </div>
             </div>
 
-            <!-- Table with Set information -->
-            <table class="table table-hover">
+            <!-- Table with study information -->
+            <table class="table table-hover table-responsive">
                 <thead>
                     <tr>
                         <th>Study Name</th>
                         <th>Number of Fields</th>
+                        <th>X</th>
+                        <th>Y</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @testdata.map{case(name, radius, x, y)=>
+                    @VennLayouter.calculateCoordinates(testdata.toSeq).map{case(name, radius, x, y)=>
                         <tr>
                             <td>@name</td>
                             <td>@radius</td>
+                            <td>@x</td>
+                            <td>@y</td>
                         </tr>
                     }
                 </tbody>

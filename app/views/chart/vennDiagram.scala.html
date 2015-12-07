@@ -1,7 +1,9 @@
 @(title : String, chartElementName : String, elements : Seq[(String, Int, Int, Int)])
 
-<--                      Venn diagram module                            -->
-<-- Expects sequence of element names, radius, x position, y position   -->
+@{/*
+Venn diagram module
+Expects sequence of element names, radius, x position, y position
+*/}
 
 <div id="@chartElementName" class="chart-holder">></div>
 <script type="text/javascript">
@@ -18,7 +20,7 @@
                 },
                 xAxis: {
                     min:0,
-                    max:10,
+                    max:100,
                     lineWidth:0,
                     gridLineWidth:0,
                     title:{text:""},
