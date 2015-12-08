@@ -81,5 +81,5 @@ class DeNoPaPlayground @Inject() (
 }
 
 object DeNoPaPlayground extends GuiceBuilderRunnable[DeNoPaPlayground] with App {
-  override def main(args: Array[String]) = run
+  run
 }

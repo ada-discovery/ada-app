@@ -74,5 +74,5 @@ class ImportDeNoPaBaseline @Inject()(@Named("DeNoPaBaselineRepo") baselineRepo: 
 }
 
 object ImportDeNoPaBaseline extends GuiceBuilderRunnable[ImportDeNoPaBaseline] with App {
-  override def main(args: Array[String]) = run
+  run
 }

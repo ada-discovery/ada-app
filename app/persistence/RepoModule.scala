@@ -1,6 +1,6 @@
 package persistence
 
-import models.{Message, User, Translation, MetaTypeStats}
+import models._
 import net.codingwell.scalaguice.ScalaModule
 import persistence.RepoTypeRegistry._
 import com.google.inject.name.Names
@@ -16,6 +16,8 @@ object RepoTypeRegistry {
   type TranslationRepo = AsyncCrudRepo[Translation, BSONObjectID]
   type UserRepo = AsyncCrudRepo[User, BSONObjectID]
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
+
+  type FieldRepo = AsyncCrudRepo[Field, BSONObjectID]
 }
 
 object RepoDef extends Enumeration {
@@ -25,14 +27,28 @@ object RepoDef extends Enumeration {
   val DeNoPaBaselineRepo = Repo[JsObjectCrudRepo](
     new JsObjectMongoCrudRepo("denopa-baseline_visit"), true)
 
+  val DeNoPaBaselineDictionaryRepo = Repo[DictionaryRepo](
+    new DictionaryMongoAsyncCrudRepo("denopa-baseline_visit", DeNoPaBaselineRepo.repo), true)
+
   val DeNoPaFirstVisitRepo = Repo[JsObjectCrudRepo](
     new JsObjectMongoCrudRepo("denopa-first_visit"), true)
+
+  val DeNoPaFirstVisitDictionaryRepo = Repo[DictionaryRepo](
+    new DictionaryMongoAsyncCrudRepo("denopa-first_visit", DeNoPaFirstVisitRepo.repo), true)
 
   val DeNoPaCuratedBaselineRepo = Repo[JsObjectCrudRepo](
     new JsObjectMongoCrudRepo("denopa-baseline_visit-curated"), true)
 
+  val DeNoPaCuratedBaselineDictionaryRepo = Repo[DictionaryRepo](
+    new DictionaryMongoAsyncCrudRepo("denopa-baseline_visit-curated", DeNoPaCuratedBaselineRepo.repo), true)
+
   val DeNoPaCuratedFirstVisitRepo = Repo[JsObjectCrudRepo](
     new JsObjectMongoCrudRepo("denopa-first_visit-curated"), true)
+
+  val DeNoPaCuratedFirstVisitDictionaryRepo = Repo[DictionaryRepo](
+    new DictionaryMongoAsyncCrudRepo("denopa-baseline_visit-curated", DeNoPaCuratedFirstVisitRepo.repo), true)
+
+
 
   val DeNoPaBaselineMetaTypeStatsRepo = Repo[MetaTypeStatsRepo](
     new MongoAsyncCrudRepo[MetaTypeStats, BSONObjectID]("denopa-baseline_visit-metatype_stats"), true)
@@ -59,14 +75,24 @@ class RepoModule extends ScalaModule {
     // RepoDef.values.foreach {r => bindRepo(r)}
 
     bindRepo(RepoDef.DeNoPaBaselineRepo)
+    bindRepo(RepoDef.DeNoPaBaselineDictionaryRepo)
+
     bindRepo(RepoDef.DeNoPaFirstVisitRepo)
+    bindRepo(RepoDef.DeNoPaFirstVisitDictionaryRepo)
+
     bindRepo(RepoDef.DeNoPaCuratedBaselineRepo)
+    bindRepo(RepoDef.DeNoPaCuratedBaselineDictionaryRepo)
+
     bindRepo(RepoDef.DeNoPaCuratedFirstVisitRepo)
+    bindRepo(RepoDef.DeNoPaCuratedFirstVisitDictionaryRepo)
+
     bindRepo(RepoDef.DeNoPaBaselineMetaTypeStatsRepo)
     bindRepo(RepoDef.DeNoPaFirstVisitMetaTypeStatsRepo)
+
     bindRepo(RepoDef.TranslationRepo)
     bindRepo(RepoDef.UserRepo)
     bindRepo(RepoDef.MessageRepo)
+
   }
 
   private def bindRepo[T : Manifest](repo : Repo[T]) =

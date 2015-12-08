@@ -4,25 +4,25 @@ import models.{Category => CCategory}
 
 object DeNoPaTranSMARTMapping {
 
-  val demographics = CCategory("Demographics")
+  val demographics = new CCategory("Demographics")
 
   // Tests
-  val mmseTest = CCategory("PSP. MMSE (Folstein Mini-Mental State Exam)")
-  val clockDrawingTest = CCategory("Clock Drawing Test")
-  val mdsUPDRSTest = CCategory("MDS-UPDRS - Part I to Part IV")
-  val hYTest = CCategory("H&Y (Hoehn and Yahr")
-  val nmsPDTest = CCategory("NMS-PD (Non-Movement Problems in Parkinson's)")
-  val moCaTest = CCategory("MoCA (Montreal Cognitive Assessment Test)")
-  val pdssTest = CCategory("PDSS (Parkinson's Disease Sleep Scale)")
-  val essTest = CCategory("ESS (Epworth Sleepiness Scale)")
-  val remSleepTest = CCategory("Similar (13 Qs): REM Sleep Behavior Disorder Screening Questionnaire")
+  val mmseTest = new CCategory("PSP. MMSE (Folstein Mini-Mental State Exam)")
+  val clockDrawingTest = new CCategory("Clock Drawing Test")
+  val mdsUPDRSTest = new CCategory("MDS-UPDRS - Part I to Part IV")
+  val hYTest = new CCategory("H&Y (Hoehn and Yahr")
+  val nmsPDTest = new CCategory("NMS-PD (Non-Movement Problems in Parkinson's)")
+  val moCaTest = new CCategory("MoCA (Montreal Cognitive Assessment Test)")
+  val pdssTest = new CCategory("PDSS (Parkinson's Disease Sleep Scale)")
+  val essTest = new CCategory("ESS (Epworth Sleepiness Scale)")
+  val remSleepTest = new CCategory("Similar (13 Qs): REM Sleep Behavior Disorder Screening Questionnaire")
 
-  val subjectsData = CCategory("Subjects").addChildren(List(demographics))
-  val motorTest = CCategory("Motor").addChildren(List(mdsUPDRSTest, hYTest))
-  val nonmotorTest = CCategory("NonMotor").addChildren(List(mmseTest, clockDrawingTest, nmsPDTest, moCaTest, pdssTest, essTest, remSleepTest))
-  val clinicalData = CCategory("Clinical Data").addChildren(List(motorTest, nonmotorTest))
+  val subjectsData = new CCategory("Subjects").addChildren(List(demographics))
+  val motorTest = new CCategory("Motor").addChildren(List(mdsUPDRSTest, hYTest))
+  val nonmotorTest = new CCategory("NonMotor").addChildren(List(mmseTest, clockDrawingTest, nmsPDTest, moCaTest, pdssTest, essTest, remSleepTest))
+  val clinicalData = new CCategory("Clinical Data").addChildren(List(motorTest, nonmotorTest))
 
-  val rootCategory = CCategory("").addChildren(List(subjectsData, clinicalData))
+  val rootCategory = new CCategory("").addChildren(List(subjectsData, clinicalData))
 
   val fieldCategoryMap = Map(
     "Geb_Datum" -> demographics,

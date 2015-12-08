@@ -153,10 +153,10 @@ class RedCapController @Inject() (
     val metadatas = Await.result(metadataFuture, timeout)
 
     // categories
-    val rootCategory = Category("")
+    val rootCategory = new Category("")
     val categories = metadatas.map{ metadata =>
       (metadata \ "form_name").as[String]
-    }.toSet.map { name : String => Category(name) }
+    }.toSet.map { name : String => new Category(name) }.toList
     rootCategory.addChildren(categories)
     val nameCategoryMap = categories.map(category => (category.name, category)).toMap
 
@@ -194,10 +194,10 @@ class RedCapController @Inject() (
     val metadatas = Await.result(metadataFuture, timeout)
 
     // categories
-    val rootCategory = Category("")
+    val rootCategory = new Category("")
     val categories = metadatas.map{ metadata =>
       (metadata \ "form_name").as[String]
-    }.toSet.map { name : String => Category(name) }
+    }.toSet.map { name : String => new Category(name) }.toList
 
     rootCategory.addChildren(categories)
     val nameCategoryMap = categories.map(category => (category.name, category)).toMap

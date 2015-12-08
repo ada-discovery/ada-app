@@ -1,60 +1,70 @@
 package standalone
 
-import models.MetaTypeStats
-import play.api.libs.json.{JsNull, JsValue}
-import scala.concurrent.duration._
+import javax.inject.{Inject, Named}
+
+import models.{Field, MetaTypeStats}
+import persistence.{RepoSynchronizer, AsyncReadonlyRepo, DictionaryRepo}
+import play.api.libs.json.{Json, JsNull, JsValue}
+
 import scala.collection.mutable.{Map => MMap}
-import services.DeNoPaSetting._
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
-class InferDictionary {
+abstract class InferDictionary extends Runnable {
 
-  val timeout = 120000 millis
+  protected def dictionaryRepo: DictionaryRepo
 
-  class MetaTypeCounts(
-    var intCount: Int = 0,
-    var longCount: Int = 0,
-    var floatCount: Int = 0,
-    var doubleCount: Int = 0,
-    var booleanCount: Int = 0,
-    var nullCount: Int = 0,
-    var valueCountMap: MMap[String, Int] = MMap[String, Int]()
-  ) {
-    override def toString() : String = s"Int : $intCount, long: $longCount, float : $floatCount, double : $doubleCount, boolean : $booleanCount, null : $nullCount, value count map: $valueCountMap"
-  }
+  private val timeout = 120000 millis
 
-  protected def createStats(attributeName : String, counts : MetaTypeCounts, fullCount : Int) = MetaTypeStats(
-    None,
-    attributeName,
-    counts.intCount.toDouble / fullCount,
-    counts.longCount.toDouble / fullCount,
-    counts.floatCount.toDouble / fullCount,
-    counts.doubleCount.toDouble / fullCount,
-    counts.booleanCount.toDouble / fullCount,
-    counts.nullCount.toDouble / fullCount,
-    counts.valueCountMap.toMap.map{case (key, count) => (key, count.toDouble / fullCount)}
-  )
+  def run = {
+    // init dictionary if needed
+    dictionaryRepo.initIfNeeded
 
-  protected def inferType(jsValue : JsValue, cumulativeStats : MetaTypeCounts) {
-    if (jsValue == JsNull) {
-      cumulativeStats.nullCount += 1
-      return
+    val syncDataRepo = RepoSynchronizer(dictionaryRepo.dataRepo, timeout)
+
+    // get the keys (attributes)
+    val uniqueCriteria = Some(Json.obj("Line_Nr" -> "1"))
+    val fieldNames = syncDataRepo.find(uniqueCriteria).head.keys
+
+    fieldNames.filter(_ != "_id").par.foreach { field =>
+      println(field)
+      // get all the values for a given field
+      val values = syncDataRepo.find(None, None, Some(Json.obj(field -> 1))).map(item => (item \ field))
+      println(values.toSet.size)
+      Field(field)
     }
-
-    val text = jsValue.as[String]
-
-    if (typeInferenceProvider.isBoolean(text))
-      cumulativeStats.booleanCount += 1
-    else if (typeInferenceProvider.isInt(text))
-      cumulativeStats.intCount += 1
-    else if (typeInferenceProvider.isLong(text))
-    cumulativeStats.longCount += 1
-    else if (typeInferenceProvider.isFloat(text))
-      cumulativeStats.floatCount += 1
-    else if (typeInferenceProvider.isDouble(text))
-      cumulativeStats.doubleCount += 1
-
-    // value counts
-    val count = cumulativeStats.valueCountMap.getOrElse(text, 0)
-    cumulativeStats.valueCountMap.update(text, count + 1)
   }
+//    val statsFuture = repo.find(None, Some(Json.obj("attributeName" -> 1)))
+//    val globalCounts = new TypeCount
+//
+//    Await.result(statsFuture, timeout).foreach{ item =>
+//      val valueFreqsWoNa = item.valueRatioMap.filterNot(_._1.toLowerCase.equals("na"))
+//      val valuesWoNa = valueFreqsWoNa.keySet
+//      val freqsWoNa = valueFreqsWoNa.values.toSeq
+//
+//      if (typeInferenceProvider.isNullOrNA(valuesWoNa))
+//        globalCounts.nullOrNa += 1
+//      else if (typeInferenceProvider.isBoolean(valuesWoNa))
+//        globalCounts.boolean += 1
+//      else if (typeInferenceProvider.isDate(valuesWoNa))
+//        globalCounts.date += 1
+//      else if (typeInferenceProvider.isNumberEnum(valuesWoNa, freqsWoNa))
+//        globalCounts.numberEnum += 1
+//      else if (typeInferenceProvider.isNumber(valuesWoNa))
+//        globalCounts.freeNumber += 1
+//      else if (typeInferenceProvider.isTextEnum(valuesWoNa, freqsWoNa))
+//        globalCounts.textEnum += 1
+//      else
+//        globalCounts.freeText += 1
+//    }
+//
+//    globalCounts
+}
+
+class InferDeNoPaBaselineDictionary extends InferDictionary {
+  @Inject @Named("DeNoPaBaselineDictionaryRepo") var dictionaryRepo: DictionaryRepo = _
+}
+
+object InferDeNoPaBaselineDictionary extends GuiceBuilderRunnable[InferDeNoPaBaselineDictionary] with App {
+  run
 }

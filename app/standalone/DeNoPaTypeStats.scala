@@ -66,5 +66,5 @@ class DeNoPaTypeStats @Inject() (
 }
 
 object DeNoPaTypeStats extends GuiceBuilderRunnable[DeNoPaTypeStats] with App {
-  override def main(args: Array[String]) = run
+  run
 }

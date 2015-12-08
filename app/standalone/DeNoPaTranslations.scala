@@ -67,5 +67,5 @@ class DeNoPaTranslations @Inject() (
 }
 
 object DeNoPaTranslations extends GuiceBuilderRunnable[DeNoPaTranslations] with App {
-  override def main(args: Array[String]) = run
+  run
 }

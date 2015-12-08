@@ -39,5 +39,5 @@ class InferTypeDeNoPaFirstVisit @Inject() (
 }
 
 object InferTypeDeNoPaFirstVisit extends GuiceBuilderRunnable[InferTypeDeNoPaFirstVisit] with App {
-  override def main(args: Array[String]) = run
+  run
 }

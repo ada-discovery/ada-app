@@ -179,5 +179,5 @@ class DeNoPaCleanup @Inject() (
 }
 
 object DeNoPaCleanup extends GuiceBuilderRunnable[DeNoPaCleanup] with App {
-  override def main(args: Array[String]) = run
+  run
 }

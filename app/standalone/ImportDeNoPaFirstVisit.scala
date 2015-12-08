@@ -83,5 +83,5 @@ class ImportDeNoPaFirstVisit @Inject()(@Named("DeNoPaFirstVisitRepo") firstVisit
 }
 
 object ImportDeNoPaFirstVisit extends GuiceBuilderRunnable[ImportDeNoPaFirstVisit] with App {
-  override def main(args: Array[String]) = run
+  run
 }
