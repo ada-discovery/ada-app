@@ -23,6 +23,15 @@ object WebExportUtil {
     stringToFile(filename, charset)(csvString)
   }
 
+  def jsonsToJsonFile(
+    filename: String,
+    charset : String = DEFAULT_CHARSET)(
+    jsons : Traversable[JsObject]
+  ) = {
+    val content = jsons.map(_.toString()).mkString(",\n")
+    stringToFile(filename, charset)(content)
+  }
+
   def stringToFile(
     filename: String,
     charset : String = DEFAULT_CHARSET)(

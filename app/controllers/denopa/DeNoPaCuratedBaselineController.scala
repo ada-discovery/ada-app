@@ -18,6 +18,8 @@ class DeNoPaCuratedBaselineController @Inject() (
 
   override protected val csvFileName = "denopa-curated-baseline.csv"
 
+  override protected val jsonFileName = "denopa-curated-baseline.json"
+
   override protected val transSMARTDataFileName = "denopa-curated-baseline_data_file"
 
   override protected val transSMARTMappingFileName = "denopa-curated-baseline_mapping_file"
@@ -40,6 +42,7 @@ class DeNoPaCuratedBaselineController @Inject() (
       routes.DeNoPaCuratedBaselineController.find(),
       routes.DeNoPaCuratedBaselineController.get,
       routes.DeNoPaCuratedBaselineController.exportRecordsAsCsv(),
+      routes.DeNoPaCuratedBaselineController.exportRecordsAsJson(),
       routes.DeNoPaCuratedBaselineController.exportTranSMARTDataFile(),
       routes.DeNoPaCuratedBaselineController.exportTranSMARTMappingFile()
     )

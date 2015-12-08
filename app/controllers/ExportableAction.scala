@@ -10,31 +10,37 @@ import scala.concurrent.duration._
 
 protected trait ExportableAction[E] {
 
-  private implicit val jsonFormatable = implicitly[Format[E]]
-
   protected val timeout = 120000 millis
 
-  protected def csvFileName : String
-
-  protected def repo: AsyncReadonlyRepo[E, _]
+  protected def repoHook: AsyncReadonlyRepo[E, _]
 
   protected def toJsonSort(string : String) : Option[JsObject]
 
-  def exportToCsv(filename: String, delimiter: String, orderBy: String) = Action { implicit request =>
-    val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
-    val records = Await.result(recordsFuture, timeout)
-
-    val docs = Json.toJson(records).as[Traversable[JsObject]]
-
-    jsonsToCsvFile(filename, delimiter)(docs)
+  def exportAllToCsv(
+    filename: String,
+    delimiter: String,
+    orderBy: String)(
+    implicit ev: Format[E]
+  ) = Action { implicit request =>
+    jsonsToCsvFile(filename, delimiter)(getJsons(orderBy))
   }
 
-  def exportToJson(filename: String, delimiter: String, orderBy: String) = Action { implicit request =>
-    val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
+  def exportAllToJson(
+    filename: String,
+    orderBy: String)(
+    implicit ev: Format[E]
+  ) = Action { implicit request =>
+    jsonsToJsonFile(filename)(getJsons(orderBy))
+  }
+
+  private def getJsons(orderBy: String)(implicit ev: Format[E]) = {
+    val recordsFuture = repoHook.find(None, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 
-    val docs = Json.toJson(records).as[Traversable[JsObject]]
-
-    jsonsToJsonFile(filename, delimiter)(docs)
+    if (!records.isEmpty && records.head.isInstanceOf[JsObject]) {
+      // if jsobject no need to convert
+      records.asInstanceOf[Traversable[JsObject]]
+    } else
+      Json.toJson(records).as[Traversable[JsObject]]
   }
 }

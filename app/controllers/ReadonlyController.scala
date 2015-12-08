@@ -26,6 +26,8 @@ protected abstract class ReadonlyController[E : Format, ID](repo: AsyncReadonlyR
 
   private val DEFAULT_LIMIT = 20
 
+  protected def repoHook = repo
+
   protected def listViewColumns : Option[List[String]] = None
 
   protected def showView(

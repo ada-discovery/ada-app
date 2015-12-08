@@ -18,6 +18,8 @@ class DeNoPaCuratedFirstVisitController @Inject() (
 
   override protected val csvFileName = "denopa-curated-firstvisit.csv"
 
+  override protected val jsonFileName = "denopa-curated-firstvisit.json"
+
   override protected val transSMARTDataFileName = "denopa-curated-firstvisit_data_file"
 
   override protected val transSMARTMappingFileName = "denopa-curated-firstvisit_mapping_file"
@@ -40,6 +42,7 @@ class DeNoPaCuratedFirstVisitController @Inject() (
       routes.DeNoPaCuratedFirstVisitController.find(),
       routes.DeNoPaCuratedFirstVisitController.get,
       routes.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(),
+      routes.DeNoPaCuratedFirstVisitController.exportRecordsAsJson(),
       routes.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(),
       routes.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile()
     )

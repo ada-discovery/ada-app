@@ -2,7 +2,7 @@ package controllers.denopa
 
 import javax.inject.Inject
 
-import controllers.JsObjectReadonlyController
+import controllers.{ReadonlyController, ExportableAction}
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.AsyncReadonlyRepo
 import play.api.mvc.Action
@@ -14,7 +14,9 @@ import services.TranSMARTService
 
 import scala.concurrent.Await
 
-protected abstract class DeNoPaController(repo: AsyncReadonlyRepo[JsObject, BSONObjectID]) extends JsObjectReadonlyController(repo) {
+protected abstract class DeNoPaController(
+    repo: AsyncReadonlyRepo[JsObject, BSONObjectID])
+  extends ReadonlyController[JsObject, BSONObjectID](repo) with ExportableAction[JsObject] {
 
   private val keyField = "Probanden_Nr"
   private val lineNrField = "Line_Nr"
@@ -23,12 +25,19 @@ protected abstract class DeNoPaController(repo: AsyncReadonlyRepo[JsObject, BSON
 
   @Inject var tranSMARTService: TranSMARTService = _
 
+  protected def csvFileName : String
+
+  protected def jsonFileName : String
+
   protected def transSMARTDataFileName : String
 
   protected def transSMARTMappingFileName : String
 
   def exportRecordsAsCsv(delimiter : String) =
-    exportRecordsAsCsvTo(csvFileName, delimiter, lineNrField)
+    exportAllToCsv(csvFileName, delimiter, lineNrField)
+
+  def exportRecordsAsJson =
+    exportAllToJson(jsonFileName, lineNrField)
 
   /**
    * TranSMART functionality
