@@ -9,6 +9,14 @@
                 title: {
                     text: "@title"
                 },
+                xAxis: {
+                    categories: [
+                        @elements.map { case (x, y) =>
+                            '@x',
+                        }
+                    ],
+                    crosshair: true
+                },
                 yAxis: {
                     title: {
                         text: '@yAxisCaption'
@@ -35,14 +43,16 @@
                     pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}</b><br/>'
                 },
 
-                series: [
-                    @elements.map { case (name, value) =>
-                        {
-                            name : '@name',
-                            data : [@value]
-                        },
-                    }
-                ]
+                series: [{
+                    name: "@title",
+                    colorByPoint: true,
+                    colorByPoint: true,
+                    data: [
+                        @elements.map { case (x, y) =>
+                            @y,
+                        }
+                    ]
+                }]
             });
         });
     </script>
