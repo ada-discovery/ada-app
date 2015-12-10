@@ -36,6 +36,11 @@ class RedCapController @Inject() (
   private val deathField = "dm_death"
   private val statusField = "cdisc_sc_sctestcd_maritstat"
 
+  private val replacements = List(("\r", " "), ("\n", " "))
+  private val keyField = "cdisc_dm_usubjd"
+  private val visitField = Some("redcap_event_name")
+
+
   def index = Action { Redirect(routes.RedCapController.listFieldNames()) }
 
   def listRecords(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
@@ -98,7 +103,7 @@ class RedCapController @Inject() (
   def overview = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    redCapService.listRecords(0, "cdisc_dm_usubjd", "").map { items =>
+      redCapService.listRecords(0, keyField, "").map { items =>
 
       val genderValueCounts = createValueCountMap(items, genderField)
       val deathValueCounts = createValueCountMap(items, deathField)
@@ -122,12 +127,11 @@ class RedCapController @Inject() (
     countMap.toSeq.sortBy(_._2)
   }
 
-  val replacements = List(("\r", " "), ("\n", " "))
 
   def exportRecordsAsCsv(delimiter : String) = Action { implicit request =>
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
-    val recordsFuture = redCapService.listRecords(0, "cdisc_dm_usubjd", "")
+    val recordsFuture = redCapService.listRecords(0, keyField, "")
     val records = Await.result(recordsFuture, timeout)
 
     val content = jsonObjectsToCsv(unescapedDelimiter, "\n", replacements)(records)
@@ -140,13 +144,10 @@ class RedCapController @Inject() (
     )
   }
 
-  val keyField = "cdisc_dm_usubjd"
-  val visitField = Some("redcap_event_name")
-
   def exportTranSMARTDataFile(delimiter: String) = Action { implicit request =>
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
-    val recordsFuture = redCapService.listRecords(0, "cdisc_dm_usubjd", "")
+    val recordsFuture = redCapService.listRecords(0, keyField, "")
     val records = Await.result(recordsFuture, timeout)
 
     val metadataFuture = redCapService.listMetadatas(0, "field_name", "")
@@ -187,7 +188,7 @@ class RedCapController @Inject() (
   def exportTranSMARTMappingFile(delimiter: String) = Action { implicit request =>
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
-    val recordsFuture = redCapService.listRecords(0, "cdisc_dm_usubjd", "")
+    val recordsFuture = redCapService.listRecords(0, keyField, "")
     val records = Await.result(recordsFuture, timeout)
 
     val metadataFuture = redCapService.listMetadatas(0, "field_name", "")

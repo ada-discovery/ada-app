@@ -21,6 +21,8 @@ trait RedCapService {
 
   def listFieldNames(page: Int, orderBy: String, filter: String) : Future[Seq[JsObject]]
 
+  def countRecords(filter: String) : Future[Int]
+
   def getRecord(id: String) : Future[Seq[JsObject]]
 
   def getMetadata(id: String) : Future[Seq[JsObject]]
@@ -67,6 +69,11 @@ protected class RedCapServiceWSImpl @Inject() (ws: WSClient) extends RedCapServi
   override def listFieldNames(page: Int, orderBy: String, filter: String) =
     jsonFieldNames.map( items =>
       filterAndSort(items, orderBy, filter, "original_field_name"))
+
+  override def countRecords(filter: String) =
+    jsonFieldNames.map( items =>
+      filterAndSort(items, "", filter, "cdisc_dm_usubjd").length
+    )
 
   override def getRecord(id: String) =
     jsonRecords.map { items =>
