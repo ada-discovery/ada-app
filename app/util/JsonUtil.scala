@@ -78,4 +78,18 @@ object JsonUtil {
 
   def getMax(items : Traversable[JsObject], fieldName : String) =
     items.map { item => (item \ fieldName).toString.toDouble }.max
+
+  def count(items : Seq[JsObject], filter : String, filterFieldName : String) = {
+    val filteredItems = if (filter.isEmpty) {
+      items
+    } else {
+      val f = (filter + ".*").r
+      items.filter { item =>
+        val v = (item \ filterFieldName)
+        f.unapplySeq(v.asOpt[String].getOrElse(v.toString())).isDefined
+      }
+    }
+    filteredItems.length
+  }
+
 }

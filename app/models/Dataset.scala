@@ -12,7 +12,7 @@ case class Field(
   name : String,
 //  fieldType : FieldType.Value,
   isArray : Boolean = false,
-  aliases : List[String] = List[String](),
+//  aliases : List[String] = List[String](),
   labels : List[String] = List[String]()
 //  category : Category
 )

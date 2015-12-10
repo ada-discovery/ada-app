@@ -1,5 +1,7 @@
 package util
 
+import models.Dictionary
+
 package object VennLayouter {
 
   /**
@@ -12,42 +14,72 @@ package object VennLayouter {
     * @return sequence of values aligned in circle around center of specified box.
     *
     * */
-  def calculateCoordinates(elements: Seq[(String, Int, Int, Int)], sizeX: Int = 100, sizeY: Int = 100): Seq[(String, Int, Int, Int)] =
+  /*def calculateCoordinates(elements: Seq[(String, Int, Int, Int)], sizeX: Int = 100, sizeY: Int = 100): Seq[(String, Int, Int, Int)] =
   {
-    val vennSize = (sizeX + sizeY) / 2;
-    val scale = vennSize / 10;
-    val num = elements.length;
+    val vennSize = (sizeX + sizeY) / 2
+    val scale = vennSize / 10
+    val num = elements.length
     val factor = (2.0 * math.Pi) / num
 
 
     // replace with folding
-    var maxRadius = 0;
+    var maxRadius = 0
     for(e <- elements){
      e match {
        case (_, m, _, _) =>
-         maxRadius = math.max(maxRadius, m);
+         maxRadius = math.max(maxRadius, m)
      }
     }
 
     //center points
     //replace with final value
-    val cx = sizeX / 2;
-    val cy = sizeY / 2;
-    var i = 0;
+    val cx = sizeX / 2
+    val cy = sizeY / 2
+    var i = 0
 
     // define function for value mapping
     def f(x : (String, Int, Int, Int)) = {
-      val px = math.cos((factor*i).toInt);
-      val py = math.sin((factor*i).toInt);
-      i += 1;
+      val px = math.cos((factor*i).toInt)
+      val py = math.sin((factor*i).toInt)
+      i += 1
       x match{
         case(name, radius, _, _) => {
           (name, ((radius * vennSize) / maxRadius).toInt, (cx + scale * px).toInt, (cy + scale * py).toInt)
         }
       }
-    };
+    }
 
-    return elements.map(f);
+    return elements.map(f)
+  }*/
+
+
+
+  def calculateCoordinates(elements: Seq[Dictionary], sizeX: Int = 100, sizeY: Int = 100): Seq[(String, Int, Int, Int)] = {
+    val vennSize = (sizeX + sizeY) / 2
+    val scale = vennSize / 10
+    val num = elements.length
+    val factor = (2.0 * math.Pi) / num
+
+
+    // replace with folding
+    var maxRadius = 0;
+    for (e <- elements) {
+      maxRadius = math.max(maxRadius, e.fields.length)
+    }
+
+    //center points
+    //replace with final value
+    val cx = sizeX / 2
+    val cy = sizeY / 2
+    var i = 0
+
+    // define function for value mapping
+    def f(x: Dictionary) = {
+      val px = math.cos((factor * i).toInt)
+      val py = math.sin((factor * i).toInt)
+      i += 1
+      (x.dataSetName, /*(x.fields.length * vennSize) / maxRadius).toInt*/100, (cx + scale * px).toInt, (cy + scale * py).toInt)
+    }
+    return elements.map(f)
   }
-
 }

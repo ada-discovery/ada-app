@@ -1,6 +1,7 @@
+@import models.Dictionary
 @import util.VennLayouter
 
-@(dataSet: Seq[_], history: String)(implicit request: RequestHeader)
+@(dataSets: Seq[Dictionary], history: String)(implicit request: RequestHeader)
 
 @main("NCER-PD Home") {
     <div class="container">
@@ -21,7 +22,7 @@
             <!-- call to venn diagram module -->
             <div class="panel panel-info">
                 <div class="panel-body" style="padding-bottom: 120px;">
-                @views.html.chart.vennDiagram("", "selectedSets", VennLayouter.calculateCoordinates(testdata.toSeq))
+                @views.html.chart.vennDiagram("", "selectedSets", VennLayouter.calculateCoordinates(dataSets.toSeq))
                 </div>
             </div>
 
@@ -31,22 +32,33 @@
                     <tr>
                         <th>Study Name</th>
                         <th>Number of Fields</th>
-                        <th>X</th>
-                        <th>Y</th>
+
                     </tr>
                 </thead>
                 <tbody>
-                    @VennLayouter.calculateCoordinates(testdata.toSeq).map{case(name, radius, x, y)=>
+                    @{/*
+                        @VennLayouter.calculateCoordinates(testdata.toSeq).map{case(name, radius, x, y)=>
+                            <tr>
+                                <td>@name</td>
+                                <td>@radius</td>
+                                <td>@x</td>
+                                <td>@y</td>
+                                <td> <a href=@routes.DataSetController.setOps(name, "+")> <button type="button" class="btn btn-success btn-block">Add</button> </a> </td>
+                                <td> <a href=@routes.DataSetController.setOps(name, "/")> <button type="button" class="btn btn-warning btn-block">Intersect</button> </a> </td>
+                                <td> <a href=@routes.DataSetController.setOps(name, "-")> <button type="button" class="btn btn-danger btn-block">Remove</button> </a> </td>
+                            </tr>
+                        }
+                    */}
+                    @dataSets.map{ element =>
                         <tr>
-                            <td>@name</td>
-                            <td>@radius</td>
-                            <td>@x</td>
-                            <td>@y</td>
-                            <td> <a href=@routes.DataSetController.setOps(name, "+")> <button type="button" class="btn btn-success btn-block">Add</button> </a> </td>
-                            <td> <a href=@routes.DataSetController.setOps(name, "/")> <button type="button" class="btn btn-warning btn-block">Intersect</button> </a> </td>
-                            <td> <a href=@routes.DataSetController.setOps(name, "-")> <button type="button" class="btn btn-danger btn-block">Remove</button> </a> </td>
+                            <td>@element.dataSetName</td>
+                            <td>@element.fields.length</td>
+                            <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "+")> <button type="button" class="btn btn-success btn-block">Add</button> </a> </td>
+                            <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "/")> <button type="button" class="btn btn-warning btn-block">Intersect</button> </a> </td>
+                            <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "-")> <button type="button" class="btn btn-danger btn-block">Remove</button> </a> </td>
                         </tr>
                     }
+
                 </tbody>
             </table>
 
