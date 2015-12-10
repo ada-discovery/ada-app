@@ -9,10 +9,8 @@ import play.api.mvc.{Action, Controller}
 
 
 
-
-import models.Dictionary
-
 import services.RedCapService
+
 import scala.concurrent.{Await, Future}
 import controllers.{ReadonlyController, ExportableAction}
 
@@ -42,27 +40,12 @@ class DataSetController @Inject() (
     val ops = Array('+', '-', '/')
     val steps = hist.split(ops)
 
+    
+    val dicBaseline = denopabaselineRepo.getDictionary
+    val dicFirstVisit = denopafirstvisitRepo.getDictionary
+    val dicRedCap = redCapService.getDictionary
 
-
-
-    val timeout = 120000 millis
-
-    // get records and pass to visualization
-    // move this later, as this is rather messy
-
-    val redcapcountFuture = redCapService.countRecords("")
-    val redcapcount = Await.result(redcapcountFuture, timeout)
-
-    //val denopabaselinerecordsFuture = denopabaselineRepo.find(None, denopabaselineRepo.toJsonSort("Line_Nr"), None, None, None)
-    //val denopabaselinerecords = Await.result(denopabaselinerecordsFuture, timeout)
-    val denopaCountFuture = denopabaselineRepo.count(None)
-    val denopaCount = Await.result(denopaCountFuture, timeout)
-
-
-
-    val dic = redCapService.getDictionary
-    val dics = List(dic)
-
+    val dics = List(dicRedCap, dicBaseline, dicFirstVisit)
 
     // dummy
     Ok(views.html.DataSetView(dics.toSeq, hist)).withSession(

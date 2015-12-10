@@ -13,61 +13,33 @@
             }
         </div>
 
-        @defining(List(
-            ("first set", 100, 3, 50),
-            ("second set", 100, 5, 20),
-            ("third set", 100, 5, 20)
-        )){testdata =>
-
-            <!-- call to venn diagram module -->
-            <div class="panel panel-info">
-                <div class="panel-body" style="padding-bottom: 120px;">
-                @views.html.chart.vennDiagram("", "selectedSets", VennLayouter.calculateCoordinates(dataSets.toSeq))
-                </div>
+        <!-- call to venn diagram module -->
+        <div class="panel panel-info">
+            <div class="panel-body" style="padding-bottom: 120px;">
+            @views.html.chart.vennDiagram("", "selectedSets", VennLayouter.calculateCoordinates(dataSets.toSeq))
             </div>
+        </div>
 
-            <!-- Table with study information -->
-            <table class="table table-hover table-responsive">
-                <thead>
+        <!-- Table with study information -->
+        <table class="table table-hover table-responsive">
+            <thead>
+                <tr>
+                    <th>Study Name</th>
+                    <th>Number of Fields</th>
+                </tr>
+            </thead>
+            <tbody>
+                @dataSets.map{ element =>
                     <tr>
-                        <th>Study Name</th>
-                        <th>Number of Fields</th>
-
+                        <td>@element.dataSetName</td>
+                        <td>@element.fields.length</td>
+                        <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "+")> <button type="button" class="btn btn-success btn-block">Add</button> </a> </td>
+                        <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "/")> <button type="button" class="btn btn-warning btn-block">Intersect</button> </a> </td>
+                        <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "-")> <button type="button" class="btn btn-danger btn-block">Remove</button> </a> </td>
                     </tr>
-                </thead>
-                <tbody>
-                    @{/*
-                        @VennLayouter.calculateCoordinates(testdata.toSeq).map{case(name, radius, x, y)=>
-                            <tr>
-                                <td>@name</td>
-                                <td>@radius</td>
-                                <td>@x</td>
-                                <td>@y</td>
-                                <td> <a href=@routes.DataSetController.setOps(name, "+")> <button type="button" class="btn btn-success btn-block">Add</button> </a> </td>
-                                <td> <a href=@routes.DataSetController.setOps(name, "/")> <button type="button" class="btn btn-warning btn-block">Intersect</button> </a> </td>
-                                <td> <a href=@routes.DataSetController.setOps(name, "-")> <button type="button" class="btn btn-danger btn-block">Remove</button> </a> </td>
-                            </tr>
-                        }
-                    */}
-                    @dataSets.map{ element =>
-                        <tr>
-                            <td>@element.dataSetName</td>
-                            <td>@element.fields.length</td>
-                            <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "+")> <button type="button" class="btn btn-success btn-block">Add</button> </a> </td>
-                            <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "/")> <button type="button" class="btn btn-warning btn-block">Intersect</button> </a> </td>
-                            <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "-")> <button type="button" class="btn btn-danger btn-block">Remove</button> </a> </td>
-                        </tr>
-                    }
-
-                </tbody>
-            </table>
-
-
-
-
-        }
-
-
+                }
+            </tbody>
+        </table>
 
     </div>
 
