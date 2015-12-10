@@ -9,8 +9,8 @@ import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCom
 import reactivemongo.api.indexes.{ IndexType, Index }
 import reactivemongo.bson.BSONObjectID
 
-import scala.concurrent.Future
-import models.Identity
+import scala.concurrent.{Await, Future}
+import models.{Field, Dictionary, Identity}
 import play.api.libs.json._
 import reactivemongo.api._
 
@@ -72,6 +72,19 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
       case Some(criteria) => collection.runCommand(Count(criteria)).map(_.value)
       case None => collection.count()
     }
+
+
+  override def getDictionary = {
+    import scala.concurrent.duration._
+    import scala.concurrent.{Await, Future}
+
+    val fieldnamesFuture = find(None, None, None, None, None)
+    val fieldnames = Await.result(fieldnamesFuture, 120000 millis)
+    val finalfields = fieldnames.map( f => Field(f.toString, false, List())).toList
+
+    Dictionary(None, collectionName, finalfields)
+  }
+
 }
 
 protected class MongoAsyncRepo[E: Format, ID: Format](

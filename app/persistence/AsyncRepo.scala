@@ -22,6 +22,8 @@ trait AsyncReadonlyRepo[E, ID] {
   ): Future[Traversable[E]]
 
   def count(criteria: Option[JsObject]) : Future[Int]
+
+  def getDictionary : models.Dictionary
 }
 
 trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {

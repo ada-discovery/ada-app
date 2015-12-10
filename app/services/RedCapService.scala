@@ -14,6 +14,10 @@ import util.JsonUtil._
 import models.Dictionary
 import models.Field
 
+
+
+
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 
@@ -115,18 +119,11 @@ protected class RedCapServiceWSImpl @Inject() (ws: WSClient) extends RedCapServi
     *
     * */
   override def getDictionary = {
+    val fieldnamesFuture = listRecords(0, "", "")
+    val fieldnames: Seq[JsObject] = Await.result(fieldnamesFuture, 120000 millis)
+    val finalfields = fieldnames.map( f => Field(f.toString, false, List())).toList
 
-    val fieldnames = listFieldNames(0, "", "")
-    //val fieldnames: Seq[JsObject] = Await.result(fieldnamesFuture, 120000 millis)
-
-
-    /*val names: Seq[String] = fieldnames.map{ field =>
-      field.toString()
-    }.toList*/
-
-    val fields = List()
-
-    Dictionary(None, "LuxPark REDCap", fields)
+    Dictionary(None, "LuxPark REDCap", finalfields)
   }
 
 }
