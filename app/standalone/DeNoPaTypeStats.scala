@@ -45,7 +45,7 @@ class DeNoPaTypeStats @Inject() (
       val valuesWoNa = valueFreqsWoNa.keySet
       val freqsWoNa = valueFreqsWoNa.values.toSeq
 
-      if (typeInferenceProvider.isNullOrNA(valuesWoNa))
+      if (typeInferenceProvider.isNull(valuesWoNa))
         globalCounts.nullOrNa += 1
       else if (typeInferenceProvider.isBoolean(valuesWoNa))
         globalCounts.boolean += 1

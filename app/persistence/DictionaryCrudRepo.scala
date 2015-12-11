@@ -1,19 +1,20 @@
 package persistence
 
+import javax.inject.Inject
+
 import models.{Dictionary, Field}
-import persistence.RepoTypeRegistry.{FieldRepo, JsObjectCrudRepo}
-import play.api.libs.json.Json
+import persistence.RepoTypeRegistry.{DictionaryRootRepo, JsObjectCrudRepo}
+import play.api.libs.json.{JsObject, Json}
 import reactivemongo.bson.BSONObjectID
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.json.BSONFormats._
-import models.Dictionary.DictionaryFormat
+import models.Dictionary._
+import scala.concurrent.duration._
 
-trait DictionaryRepo {
+trait DictionaryRepo extends AsyncCrudRepo[Field, String] {
 
   def dataRepo : JsObjectCrudRepo
-//  def fieldRepo : JsObjectCrudRepo
-
   def get : Future[Dictionary]
   def initIfNeeded : Future[Boolean]
 }
@@ -21,7 +22,9 @@ trait DictionaryRepo {
 protected class DictionaryMongoAsyncCrudRepo(
     private val dataSetName : String,
     private val _dataSetRepo : JsObjectCrudRepo
-  ) extends MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries") with DictionaryRepo {
+  ) extends DictionaryRepo {
+
+  @Inject var dictionaryRepo : DictionaryRootRepo = _
 
   override def dataRepo = _dataSetRepo
 
@@ -35,9 +38,11 @@ protected class DictionaryMongoAsyncCrudRepo(
   }
 
   override def initIfNeeded = synchronized {
+    // init dictionary id: TODO: move after dictionaryrepo injection
+      dictionaryId
     getByDataSetName.map(dictionaries =>
       if (dictionaries.isEmpty) {
-        save(Dictionary(None, dataSetName, List[Field]()))
+        dictionaryRepo.save(Dictionary(None, dataSetName, List[Field]()))
         true
       } else
         false
@@ -45,9 +50,61 @@ protected class DictionaryMongoAsyncCrudRepo(
   }
 
   private def getByDataSetName =
-    find(Some(Json.obj("dataSetName" -> dataSetName)))
-}
+    dictionaryRepo.find(Some(Json.obj("dataSetName" -> dataSetName)))
 
-//protected class FieldMongoAsyncCrudRepo extends MongoAsyncCrudRepo[Field, BSONObjectID] with FieldRepo {
-//
-//}
+  private lazy val dictionaryId = synchronized {
+    //       Some(Json.obj("dataSetName" -> 1)
+    val futureId = dictionaryRepo.find(
+      Some(Json.obj("dataSetName" -> dataSetName)), None, None
+    ).map(_.head._id.get)
+    Await.result(futureId, 120000 millis)
+  }
+
+  override def update(entity: Field): Future[Either[String, String]] = ???
+
+  override def updateCustom(id: String, modifier: JsObject): Future[Either[String, String]] = ???
+
+  override def deleteAll: Future[String] =
+    get.flatMap { dictionary =>
+      dictionaryRepo.update(dictionary.copy(fields = List[Field]())).map {
+        case Right(id) => "success"
+        case Left(err) => "fail"
+      }
+    }
+
+  override def delete(id: String): Future[Either[String, String]] =
+    get.flatMap { dictionary =>
+      val field = Field(id)
+      val newFields = dictionary.fields.filterNot(_.equals(field))
+      if (dictionary.fields.size == newFields.size) {
+        Future(Left("id"))
+      } else {
+        dictionaryRepo.update(dictionary.copy(fields = newFields)).map {
+          case Right(id) => Right("success")
+          case Left(err) => Right("fail")
+        }
+      }
+    }
+
+  override def save(entity: Field): Future[Either[String, String]] = {
+    val modifier = Json.obj {
+      "$push" -> Json.obj{ "fields" -> Json.toJson(entity) }
+    }
+    dictionaryRepo.updateCustom(dictionaryId, modifier) map {
+      case Right(id) => Right("success")
+      case Left(err) => Right("fail")
+    }
+  }
+
+  override def count(criteria: Option[JsObject]): Future[Int] = ???
+
+  override def get(id: String): Future[Option[Field]] = ???
+
+  override def find(
+    criteria: Option[JsObject],
+    orderBy: Option[JsObject],
+    projection: Option[JsObject],
+    limit: Option[Int],
+    page: Option[Int]
+  ): Future[Traversable[Field]] = ???
+}

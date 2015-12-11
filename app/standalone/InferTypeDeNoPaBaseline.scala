@@ -22,9 +22,9 @@ class InferTypeDeNoPaBaseline @Inject() (
 
     // get the keys (attributes)
     val uniqueCriteria = Some(Json.obj("Line_Nr" -> "1"))
-    val fields = syncDataRepo.find(uniqueCriteria).head.keys
+    val fieldNames = syncDataRepo.find(uniqueCriteria).head.keys
 
-    fields.filter(_ != "_id").par.foreach { field =>
+    fieldNames.filter(_ != "_id").par.foreach { field =>
       println(field)
       // get all the values for a given field
       val values = syncDataRepo.find(None, None, Some(Json.obj(field -> 1))).map(item => item.value.get(field).get)

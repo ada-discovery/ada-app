@@ -30,6 +30,7 @@ trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
 
 trait AsyncCrudRepo[E, ID] extends AsyncRepo[E, ID] {
   def update(entity: E): Future[Either[String, ID]]
+  def updateCustom(id: ID, modifier : JsObject): Future[Either[String, ID]]
   def delete(id: ID): Future[Either[String, ID]]
   def deleteAll : Future[String]
 }

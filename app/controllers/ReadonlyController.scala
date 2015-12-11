@@ -20,7 +20,7 @@ import scala.util._
  * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
-protected abstract class ReadonlyController[E : Format, ID](repo: AsyncReadonlyRepo[E, ID]) extends Controller {
+protected abstract class ReadonlyController[E : Format, ID](protected val repo: AsyncReadonlyRepo[E, ID]) extends Controller {
 
   @Inject var messagesApi: MessagesApi = _
 

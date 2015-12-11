@@ -11,10 +11,10 @@ import models.Category
 trait TranSMARTService {
 
   def createClinicalData(
-    items : Iterable[JsObject],
+    items : Traversable[JsObject],
     fieldsToInclude : Option[List[String]],
     fieldsToExclude : Option[List[String]]
-  ) : Iterable[JsObject]
+  ) : Traversable[JsObject]
 
   def createClinicalMapping(
     dataFileName : String,
@@ -24,14 +24,14 @@ trait TranSMARTService {
     fieldCategoryMap : Map[String, Category],
     rootCategory : Category,
     fieldLabelMap : Map[String, String]
-  ) : Iterable[JsObject]
+  ) : Traversable[JsObject]
 
   def createClinicalDataAndMappingFiles(
     delimiter : String,
     newLine : String,
     replacements : Iterable[(String, String)]
   )(
-    items : Iterable[JsObject],
+    items : Traversable[JsObject],
     dataFileName : String,
     keyField : String,
     visitField : Option[String],
@@ -45,7 +45,7 @@ trait TranSMARTService {
 class TranSMARTServiceImpl extends TranSMARTService {
 
   override def createClinicalData(
-    items : Iterable[JsObject],
+    items : Traversable[JsObject],
     fieldsToInclude : Option[List[String]],
     fieldsToExclude : Option[List[String]]
   ) = {
@@ -105,7 +105,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
     newLine : String,
     replacements : Iterable[(String, String)]
   )(
-    items : Iterable[JsObject],
+    items : Traversable[JsObject],
     dataFileName : String,
     keyField : String,
     visitField : Option[String],

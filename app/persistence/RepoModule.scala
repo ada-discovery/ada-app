@@ -17,38 +17,29 @@ object RepoTypeRegistry {
   type UserRepo = AsyncCrudRepo[User, BSONObjectID]
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
 
-  type FieldRepo = AsyncCrudRepo[Field, BSONObjectID]
+  type DictionaryRootRepo = AsyncCrudRepo[Dictionary, BSONObjectID]
 }
 
 object RepoDef extends Enumeration {
   case class Repo[T : Manifest](repo : T, named : Boolean = false) extends super.Val
   implicit def valueToRepo[T](x: Value) = x.asInstanceOf[Repo[T]]
 
-  val DeNoPaBaselineRepo = Repo[JsObjectCrudRepo](
-    new JsObjectMongoCrudRepo("denopa-baseline_visit"), true)
+  private val DeNoPaBaselineRepos = crateDataAndDictionaryRepos("denopa-baseline_visit")
+  private val DeNoFirstVisitRepos = crateDataAndDictionaryRepos("denopa-first_visit")
+  private val DeNoPaCuratedBaselineRepos = crateDataAndDictionaryRepos("denopa-baseline_visit-curated")
+  private val DeNoPaCuratedFirstVisitRepos = crateDataAndDictionaryRepos("denopa-first_visit-curated")
 
-  val DeNoPaBaselineDictionaryRepo = Repo[DictionaryRepo](
-    new DictionaryMongoAsyncCrudRepo("denopa-baseline_visit", DeNoPaBaselineRepo.repo), true)
+  val DeNoPaBaselineRepo = DeNoPaBaselineRepos._1
+  val DeNoPaBaselineDictionaryRepo = DeNoPaBaselineRepos._2
 
-  val DeNoPaFirstVisitRepo = Repo[JsObjectCrudRepo](
-    new JsObjectMongoCrudRepo("denopa-first_visit"), true)
+  val DeNoPaFirstVisitRepo = DeNoFirstVisitRepos._1
+  val DeNoPaFirstVisitDictionaryRepo = DeNoFirstVisitRepos._2
 
-  val DeNoPaFirstVisitDictionaryRepo = Repo[DictionaryRepo](
-    new DictionaryMongoAsyncCrudRepo("denopa-first_visit", DeNoPaFirstVisitRepo.repo), true)
+  val DeNoPaCuratedBaselineRepo = DeNoPaCuratedBaselineRepos._1
+  val DeNoPaCuratedBaselineDictionaryRepo = DeNoPaCuratedBaselineRepos._2
 
-  val DeNoPaCuratedBaselineRepo = Repo[JsObjectCrudRepo](
-    new JsObjectMongoCrudRepo("denopa-baseline_visit-curated"), true)
-
-  val DeNoPaCuratedBaselineDictionaryRepo = Repo[DictionaryRepo](
-    new DictionaryMongoAsyncCrudRepo("denopa-baseline_visit-curated", DeNoPaCuratedBaselineRepo.repo), true)
-
-  val DeNoPaCuratedFirstVisitRepo = Repo[JsObjectCrudRepo](
-    new JsObjectMongoCrudRepo("denopa-first_visit-curated"), true)
-
-  val DeNoPaCuratedFirstVisitDictionaryRepo = Repo[DictionaryRepo](
-    new DictionaryMongoAsyncCrudRepo("denopa-baseline_visit-curated", DeNoPaCuratedFirstVisitRepo.repo), true)
-
-
+  val DeNoPaCuratedFirstVisitRepo = DeNoPaCuratedFirstVisitRepos._1
+  val DeNoPaCuratedFirstVisitDictionaryRepo = DeNoPaCuratedFirstVisitRepos._2
 
   val DeNoPaBaselineMetaTypeStatsRepo = Repo[MetaTypeStatsRepo](
     new MongoAsyncCrudRepo[MetaTypeStats, BSONObjectID]("denopa-baseline_visit-metatype_stats"), true)
@@ -64,6 +55,19 @@ object RepoDef extends Enumeration {
 
   val MessageRepo = Repo[MessageRepo](
     new MongoAsyncStreamRepo[Message, BSONObjectID]("messages"))
+
+  val DictionaryRootRepo = Repo[DictionaryRootRepo](
+    new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
+
+  private def crateDataAndDictionaryRepos(dataCollectionName : String) = {
+    val dataRepo = Repo[JsObjectCrudRepo](
+      new JsObjectMongoCrudRepo(dataCollectionName), true)
+
+    val dictionaryRepo = Repo[DictionaryRepo](
+      new DictionaryMongoAsyncCrudRepo(dataCollectionName, dataRepo.repo), true)
+
+    (dataRepo, dictionaryRepo)
+  }
 }
 
 
@@ -93,6 +97,7 @@ class RepoModule extends ScalaModule {
     bindRepo(RepoDef.UserRepo)
     bindRepo(RepoDef.MessageRepo)
 
+    bindRepo(RepoDef.DictionaryRootRepo)
   }
 
   private def bindRepo[T : Manifest](repo : Repo[T]) =

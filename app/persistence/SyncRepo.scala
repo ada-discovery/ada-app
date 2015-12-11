@@ -5,7 +5,7 @@ import java.util.concurrent.Future
 import play.api.libs.iteratee.{ Enumerator }
 import play.api.libs.json.JsObject
 
-import scala.concurrent.{Await, Awaitable}
+import scala.concurrent.{Future, Await, Awaitable}
 import scala.concurrent.duration.Duration
 
 /**
@@ -33,6 +33,7 @@ trait SyncRepo[E, ID] extends SyncReadonlyRepo[E, ID] {
 
 trait SyncCrudRepo[E, ID] extends SyncRepo[E, ID] {
   def update(entity: E): Either[String, ID]
+  def updateCustom(id: ID, modifier : JsObject): Either[String, ID]
   def delete(id: ID): Either[String, ID]
   def deleteAll : String
 }
@@ -82,6 +83,9 @@ private class SyncCrudRepoAdapter[E, ID](
 
   override def update(entity: E) =
     wait(asyncRepo.update(entity))
+
+  override def updateCustom(id: ID, modifier : JsObject) =
+    wait(asyncRepo.updateCustom(id, modifier))
 
   override def delete(id: ID) =
     wait(asyncRepo.delete(id))

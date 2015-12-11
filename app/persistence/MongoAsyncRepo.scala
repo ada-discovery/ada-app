@@ -10,7 +10,7 @@ import reactivemongo.api.indexes.{ IndexType, Index }
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
-import models.Identity
+import models.{Field, Identity}
 import play.api.libs.json._
 import reactivemongo.api._
 
@@ -111,6 +111,12 @@ protected class MongoAsyncCrudRepo[E: Format, ID: Format](
         Future(Left("Id required for update."))
     )
   }
+
+  override def updateCustom(id: ID, modifier : JsObject) =
+    collection.update(Json.obj(identity.name -> id), modifier) map {
+      case le if le.ok == true => Right(id)
+      case le => Left(le.message)
+    }
 
   override def delete(id: ID): Future[Either[String, ID]] = {
     collection.remove(Json.obj(identity.name -> id)) map {  // collection.remove(Json.obj(identity.name -> id), firstMatchOnly = true)

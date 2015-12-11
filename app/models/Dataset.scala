@@ -4,37 +4,40 @@ import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 
-object FieldType extends Enumeration {
-  val Null, Boolean, Double, Integer, String, Date = Value
-}
+case class Dictionary(
+  _id : Option[BSONObjectID],
+  dataSetName : String,
+  fields : List[Field]
+//  parents : List[Dictionary],
+)
 
 case class Field(
   name : String,
-//  fieldType : FieldType.Value,
+  fieldType : FieldType.Value = null,
+  numValues : Option[List[String]] = None,
   isArray : Boolean = false,
   aliases : List[String] = List[String](),
   labels : List[String] = List[String]()
 //  category : Category
-)
-
-object Field {
-  implicit val FieldFormat = Json.format[Field]
-
+) {
+  override def equals(o : Any) = o match {
+    case field: Field => this.name.equals(field.name)
+    case _ => false
+  }
 }
 
-case class Dictionary(
-   _id : Option[BSONObjectID],
-   dataSetName : String,
-   fields : List[Field]
-//  parents : List[Dictionary],
-   )
+case class NumFieldStats(min : Double, max : Double, mean : Double, variance : Double)
+
+object FieldType extends Enumeration {
+  val Null, Boolean, Double, Integer, String, Date = Value
+}
 
 case class Category(
-    _id : Option[BSONObjectID],
-    name : String,
-    var parent : Option[Category] = None,
-    var children : List[Category] = List[Category]()
-  ) {
+  _id : Option[BSONObjectID],
+  name : String,
+  var parent : Option[Category] = None,
+  var children : List[Category] = List[Category]()
+) {
 
   def this(name : String) = this(None, name)
 
@@ -54,8 +57,8 @@ case class Category(
 // JSON converters and identities
 
 object Dictionary {
-  import Field.FieldFormat
-
+  implicit val enumTypeFormat = EnumFormat.enumFormat(FieldType)
+  implicit val FieldFormat = Json.format[Field]
   implicit val DictionaryFormat = Json.format[Dictionary]
 
   implicit object DictionaryIdentity extends BSONObjectIdentity[Dictionary] {

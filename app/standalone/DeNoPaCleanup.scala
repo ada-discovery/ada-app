@@ -128,7 +128,7 @@ class DeNoPaCleanup @Inject() (
       val freqsWoNa = valueFreqsWoNa.values.toSeq
 
       val inferredType =
-        if (typeInferenceProvider.isNullOrNA(valuesWoNa))
+        if (typeInferenceProvider.isNull(valuesWoNa))
           InferredType.Null
         else if (typeInferenceProvider.isBoolean(valuesWoNa))
           InferredType.Boolean

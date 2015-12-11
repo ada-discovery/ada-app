@@ -2,14 +2,19 @@ package util
 
 import java.text.{ParseException, SimpleDateFormat}
 
+import models.FieldType
+
 case class TypeInferenceProvider(
-    nullAliases : Traversable[String],
+    nullAliases : List[String],
     textBooleanValues : List[String],
     numBooleanValues  : List[String],
     dateFormats : Traversable[String],
     enumValuesThreshold : Int,
     enumFrequencyThreshold : Double
   ) {
+
+  def isNull(values : Set[String]) =
+    values.forall(s => nullAliases.contains(s.toLowerCase))
 
   def isBoolean(valuesWoNA : Set[String]) =
     isTextBoolean(valuesWoNA) || isNumberBoolean(valuesWoNA)
@@ -29,11 +34,14 @@ case class TypeInferenceProvider(
   def isTextEnum(valuesWoNA : Set[String], freqsWoNa : Seq[Double]) =
     isEnum(freqsWoNa) && valuesWoNA.exists(_.exists(_.isLetter))
 
-  def isNullOrNA(valuesWoNA : Set[String]) =
-    valuesWoNA.size == 0
-
   def isNumber(valuesWoNA : Set[String]) =
     valuesWoNA.forall(s => s.forall(c => c.isDigit || c == '.') && s.count(_ == '.') <= 1)
+
+  def isDouble(valuesWoNA : Set[String]) : Boolean =
+    valuesWoNA.forall(isDouble)
+
+  def isInt(valuesWoNA : Set[String]) : Boolean =
+    valuesWoNA.forall(isInt)
 
   def isDate(valuesWoNA : Set[String]) =
     valuesWoNA.forall(s => dateFormats.exists { format =>
@@ -53,6 +61,23 @@ case class TypeInferenceProvider(
       }
     }
    )
+
+  def getType(values : Set[String]) = {
+    val valuesWoNull = values.filterNot(value => nullAliases.contains(value.toLowerCase))
+
+    if (isNull(values))
+      FieldType.Null
+    else if (isBoolean(valuesWoNull))
+      FieldType.Boolean
+    else if (isDate(valuesWoNull))
+      FieldType.Date
+    else if (isInt(valuesWoNull))
+      FieldType.Integer
+    else if (isDouble(valuesWoNull))
+      FieldType.Double
+    else
+      FieldType.String
+  }
 
   def isDouble(text : String) =
     try {

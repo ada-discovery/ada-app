@@ -5,6 +5,7 @@ import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json._
 import persistence.RepoTypeRegistry.JsObjectCrudRepo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import scala.concurrent.Future
 
 protected class JsObjectMongoCrudRepo(
@@ -24,6 +25,13 @@ protected class JsObjectMongoCrudRepo(
   override def update(entity: JsObject): Future[Either[String, BSONObjectID]] = {
     val id = (entity \ identityName).as[BSONObjectID]
     collection.update(Json.obj(identityName -> id), entity) map {
+      case le if le.ok == true => Right(id)
+      case le => Left(le.message)
+    }
+  }
+
+  override def updateCustom(id: BSONObjectID, modifier : JsObject): Future[Either[String, BSONObjectID]] = {
+    collection.update(Json.obj(identityName -> id), modifier) map {
       case le if le.ok == true => Right(id)
       case le => Left(le.message)
     }
