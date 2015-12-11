@@ -121,7 +121,7 @@ protected class RedCapServiceWSImpl @Inject() (ws: WSClient) extends RedCapServi
   override def getDictionary = {
     val fieldnamesFuture = listRecords(0, "", "")
     val fieldnames: Seq[JsObject] = Await.result(fieldnamesFuture, 120000 millis)
-    val finalfields = fieldnames.map( f => Field(f.toString, false, List())).toList
+    val finalfields = fieldnames.map( f => Field(f.toString)).toList
 
     Dictionary(None, "LuxPark REDCap", finalfields)
   }

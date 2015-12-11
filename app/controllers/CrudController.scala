@@ -23,7 +23,7 @@ import play.twirl.api.Html
  * @param ID type of identity of entity (primary key)
  */
 protected abstract class CrudController[E: Format, ID](
-    val repo: AsyncCrudRepo[E, ID]
+    repo: AsyncCrudRepo[E, ID]
   )(implicit identity: Identity[E, ID]) extends ReadonlyController[E, ID](repo) {
 
   protected def form : Form[E]

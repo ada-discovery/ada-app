@@ -33,9 +33,11 @@
                     <tr>
                         <td>@element.dataSetName</td>
                         <td>@element.fields.length</td>
-                        <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "+")> <button type="button" class="btn btn-success btn-block">Add</button> </a> </td>
-                        <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "/")> <button type="button" class="btn btn-warning btn-block">Intersect</button> </a> </td>
-                        <td> <a href=@routes.DataSetController.setOps(element.dataSetName, "-")> <button type="button" class="btn btn-danger btn-block">Remove</button> </a> </td>
+                        @{//PB: no routes found / does not compile ( with or without 'Jans' prefix)
+                        //<td> <a href=@routes.JansDataSetController.setOps(element.dataSetName, "+")> <button type="button" class="btn btn-success btn-block">Add</button> </a> </td>
+                        //<td> <a href=@routes.JansDataSetController.setOps(element.dataSetName, "/")> <button type="button" class="btn btn-warning btn-block">Intersect</button> </a> </td>
+                        //<td> <a href=@routes.JansDataSetController.setOps(element.dataSetName, "-")> <button type="button" class="btn btn-danger btn-block">Remove</button> </a> </td>
+                        }
                     </tr>
                 }
             </tbody>
