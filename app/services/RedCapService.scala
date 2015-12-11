@@ -8,9 +8,18 @@ import play.api.libs.json.{JsObject, JsArray}
 import play.api.libs.ws.{WSRequest, WSClient}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import reactivemongo.bson.BSONObjectID
 import util.JsonUtil._
 
-import scala.concurrent.Future
+import models.Dictionary
+import models.Field
+
+
+
+
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+
 
 @ImplementedBy(classOf[RedCapServiceWSImpl])
 trait RedCapService {
@@ -28,6 +37,8 @@ trait RedCapService {
   def getMetadata(id: String) : Future[Seq[JsObject]]
 
   def getFieldName(id: String) : Future[Seq[JsObject]]
+
+  def getDictionary : Dictionary
 }
 
 @Singleton
@@ -71,8 +82,8 @@ protected class RedCapServiceWSImpl @Inject() (ws: WSClient) extends RedCapServi
       filterAndSort(items, orderBy, filter, "original_field_name"))
 
   override def countRecords(filter: String) =
-    jsonFieldNames.map( items =>
-      filterAndSort(items, "", filter, "cdisc_dm_usubjd").length
+    jsonRecords.map( items =>
+      count(items, filter, "cdisc_dm_usubjd")
     )
 
   override def getRecord(id: String) =
@@ -100,4 +111,19 @@ protected class RedCapServiceWSImpl @Inject() (ws: WSClient) extends RedCapServi
         }
       }
     }
+
+
+  /**
+    * Generate dictionary
+    * TODO: incomplete, partially implemented for testing
+    *
+    * */
+  override def getDictionary = {
+    val fieldnamesFuture = listRecords(0, "", "")
+    val fieldnames: Seq[JsObject] = Await.result(fieldnamesFuture, 120000 millis)
+    val finalfields = fieldnames.map( f => Field(f.toString, false, List())).toList
+
+    Dictionary(None, "LuxPark REDCap", finalfields)
+  }
+
 }
