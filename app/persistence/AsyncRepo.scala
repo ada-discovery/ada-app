@@ -23,7 +23,7 @@ trait AsyncReadonlyRepo[E, ID] {
 
   def count(criteria: Option[JsObject]) : Future[Int]
 
-  def getDictionary : models.Dictionary
+//  def getDictionary : models.Dictionary
 }
 
 trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
