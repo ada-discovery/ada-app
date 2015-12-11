@@ -2,9 +2,9 @@ package controllers.denopa
 
 import javax.inject.Inject
 
-import controllers.{ReadonlyController, ExportableAction}
+import controllers.{DataSetController, ReadonlyController, ExportableAction}
 import org.apache.commons.lang3.StringEscapeUtils
-import persistence.AsyncReadonlyRepo
+import persistence.{DictionaryRepo, AsyncReadonlyRepo}
 import play.api.mvc.Action
 import util.WebExportUtil.stringToFile
 import play.api.libs.json._
@@ -14,45 +14,15 @@ import services.TranSMARTService
 
 import scala.concurrent.Await
 
-protected abstract class DeNoPaController(
-    repo: AsyncReadonlyRepo[JsObject, BSONObjectID])
-  extends ReadonlyController[JsObject, BSONObjectID](repo) with ExportableAction[JsObject] {
+protected abstract class DeNoPaController(dictionaryRepo: DictionaryRepo) extends DataSetController(dictionaryRepo) {
 
-  private val keyField = "Probanden_Nr"
-  private val lineNrField = "Line_Nr"
+  protected override val keyField = "Probanden_Nr"
+  protected override val exportOrderByField = "Line_Nr"
+
   private val mmstSumField = "a_CRF_MMST_Summe"
   private val mmstCognitiveCategoryField = "a_CRF_MMST_Category"
 
-  @Inject var tranSMARTService: TranSMARTService = _
-
-  protected def csvFileName : String
-
-  protected def jsonFileName : String
-
-  protected def transSMARTDataFileName : String
-
-  protected def transSMARTMappingFileName : String
-
-  def exportRecordsAsCsv(delimiter : String) =
-    exportAllToCsv(csvFileName, delimiter, lineNrField)
-
-  def exportRecordsAsJson =
-    exportAllToJson(jsonFileName, lineNrField)
-
-  /**
-   * TranSMART functionality
-   */
-  def exportTranSMARTDataFile(delimiter : String) = Action { implicit request =>
-    val fileContents = getTransSMARTDataAndMappingFiles(transSMARTDataFileName, delimiter, lineNrField)
-    stringToFile(transSMARTDataFileName)(fileContents._1)
-  }
-
-  def exportTranSMARTMappingFile(delimiter : String) = Action { implicit request =>
-    val fileContents = getTransSMARTDataAndMappingFiles(transSMARTDataFileName, delimiter, lineNrField)
-    stringToFile(transSMARTMappingFileName)(fileContents._2)
-  }
-
-  private def getTransSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String) = {
+  override protected def getTransSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String) = {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
     val extendedRecords = getExtendedRecords(records)

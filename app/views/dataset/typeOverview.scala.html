@@ -1,0 +1,23 @@
+@(title: String, fieldTypeCounts : Traversable[(FieldType.Value, Int)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@main(title) {
+
+    <!-- Begin page content -->
+    <div class="container">
+        <div class="page-header">
+            <h3>
+                @Messages(title)
+            </h3>
+        </div>
+
+        <div class="panel panel-info">
+            <div class="panel-body" style="padding-bottom: 120px;">
+                @views.html.chart.pieChart(
+                    "Type Stats",
+                    "typeChart",
+                    fieldTypeCounts.map{case (fieldType, count) => (fieldType.toString, count) }.toSeq
+                )
+            </div>
+        </div>
+    </div>
+}

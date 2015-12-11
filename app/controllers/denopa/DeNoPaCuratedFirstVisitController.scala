@@ -2,17 +2,16 @@ package controllers.denopa
 
 import javax.inject.{Inject, Named}
 
-import models.Page
-import persistence.RepoTypeRegistry._
-import play.api.i18n.Messages
-import play.api.libs.json.JsObject
-import play.api.mvc.RequestHeader
-import reactivemongo.bson.BSONObjectID
-import views.html
+import controllers.DataSetRouter
+import persistence.DictionaryRepo
 
 class DeNoPaCuratedFirstVisitController @Inject() (
-    @Named("DeNoPaCuratedFirstVisitRepo") repo: JsObjectCrudRepo
+    @Named("DeNoPaCuratedFirstVisitDictionaryRepo") repo: DictionaryRepo
   ) extends DeNoPaController(repo) {
+
+  override protected def showTitle = "Curated First Visit Item"
+
+  override protected def listTitle = "curated first visit item"
 
   override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe"))
 
@@ -24,26 +23,13 @@ class DeNoPaCuratedFirstVisitController @Inject() (
 
   override protected val transSMARTMappingFileName = "denopa-curated-firstvisit_mapping_file"
 
-  override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: RequestHeader) =
-    html.jsonShow(
-      "Curated First Visit Item",
-      item,
-      routes.DeNoPaCuratedFirstVisitController.find()
-    )
-
-  override protected def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
-    html.denopa.list(
-      "curated first visit record",
-      currentPage,
-      currentOrderBy,
-      currentFilter,
-      listViewColumns.get,
-      routes.DeNoPaCuratedFirstVisitController.find,
-      routes.DeNoPaCuratedFirstVisitController.find(),
-      routes.DeNoPaCuratedFirstVisitController.get,
-      routes.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(),
-      routes.DeNoPaCuratedFirstVisitController.exportRecordsAsJson(),
-      routes.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(),
-      routes.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile()
-    )
+  override protected def router = DataSetRouter(
+    routes.DeNoPaCuratedFirstVisitController.find,
+    routes.DeNoPaCuratedFirstVisitController.find(),
+    routes.DeNoPaCuratedFirstVisitController.get,
+    routes.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(),
+    routes.DeNoPaCuratedFirstVisitController.exportRecordsAsJson(),
+    routes.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(),
+    routes.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile()
+  )
 }

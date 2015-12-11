@@ -16,7 +16,7 @@ case class Field(
   fieldType : FieldType.Value = null,
   numValues : Option[List[String]] = None,
   isArray : Boolean = false,
-//  aliases : List[String] = List[String](),
+  aliases : List[String] = List[String](),
   labels : List[String] = List[String]()
 //  category : Category
 ) {

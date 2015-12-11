@@ -40,7 +40,7 @@
                     </div>
                     <div id="collapse2" class="panel-collapse collapse">
                         <ul class="list-group">
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaBaselineController.overview()))
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaBaselineController.overviewFieldTypes()))
                             @listGroupItem("Raw Records", Some(denoparoutes.DeNoPaBaselineController.find()))
                             @listGroupItem("Curated Records", Some(denoparoutes.DeNoPaCuratedBaselineController.find()))
                             @listGroupItem("Metadata Statistics", Some(denoparoutes.DeNoPaBaselineMetaTypeStatsController.find()))
@@ -61,7 +61,7 @@
                     </div>
                     <div id="collapse3" class="panel-collapse collapse">
                         <ul class="list-group">
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaFirstVisitController.overview()))
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaFirstVisitController.overviewFieldTypes()))
                             @listGroupItem("Raw Records", Some(denoparoutes.DeNoPaFirstVisitController.find()))
                             @listGroupItem("Curated Records", Some(denoparoutes.DeNoPaCuratedFirstVisitController.find()))
                             @listGroupItem("Metadata Statistics", Some(denoparoutes.DeNoPaFirstVisitMetaTypeStatsController.find()))

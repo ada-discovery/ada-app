@@ -31,15 +31,19 @@
                     <ul class="dropdown-menu">
                         @menuItem(denoparoutes.DeNoPaCuratedBaselineController.find(), "Curated Baseline Records", Some(3))
                         @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.find(), "Curated First Visit Records", Some(3))
-                        @menuItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
-                        <li role="separator" class="divider"></li>
                         @menuItem(denoparoutes.DeNoPaBaselineController.find(), "Raw Baseline Records", Some(3))
                         @menuItem(denoparoutes.DeNoPaFirstVisitController.find(), "Raw First Visit Records", Some(3))
                         <li role="separator" class="divider"></li>
-                        @menuItem(denoparoutes.DeNoPaBaselineController.overview(), "Baseline Type Overview", Some(3))
-                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overview(), "First Visit Type Overview", Some(3))
+                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overviewFieldTypes, "Curated Baseline Type Overview", Some(3))
+                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overviewFieldTypes, "Curated First Visit Type Overview", Some(3))
+                        @menuItem(denoparoutes.DeNoPaBaselineController.overviewFieldTypes, "Baseline Type Overview", Some(3))
+                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overviewFieldTypes, "First Visit Type Overview", Some(3))
+                        <!--
                         @menuItem(denoparoutes.DeNoPaBaselineMetaTypeStatsController.find(), "Baseline Fields", Some(3))
                         @menuItem(denoparoutes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Fields", Some(3))
+                        -->
+                        <li role="separator" class="divider"></li>
+                        @menuItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
                     </ul>
                 </li>
 

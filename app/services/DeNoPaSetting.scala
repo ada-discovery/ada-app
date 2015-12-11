@@ -7,10 +7,10 @@ import util.TypeInferenceProvider
 object DeNoPaSetting {
 
   val nullAliases = List("na")
-  val textBooleanValues = List("ja", "nein", "falsch", "richtig")
+  val textBooleanValues = List("false", "true", "nein", "ja", "richtig", "falsch")
   val numBooleanValues = List("0", "1")
 
-  val textBooleanMap = Map("nein" -> false, "ja" -> true, "falsch" -> false, "richtig" -> true)
+  val textBooleanMap = Map("false" -> false, "true" -> true, "nein" -> false, "ja" -> true, "falsch" -> false, "richtig" -> true)
   val numBooleanMap = Map("0" -> false, "1" -> true)
   val dateFormats = List("yyyy-MM-dd", "dd.MM.yyyy", "MM.yyyy")
   val storeDateFormat =  new SimpleDateFormat("dd.MM.yyyy")

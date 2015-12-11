@@ -38,30 +38,35 @@ protected class DictionaryMongoAsyncCrudRepo(
   }
 
   override def initIfNeeded = synchronized {
-    // init dictionary id: TODO: move after dictionaryrepo injection
-      dictionaryId
-    getByDataSetName.map(dictionaries =>
+    val responseFuture = getByDataSetName.map(dictionaries =>
       if (dictionaries.isEmpty) {
         dictionaryRepo.save(Dictionary(None, dataSetName, List[Field]()))
         true
       } else
         false
     )
+
+    // init dictionary id: TODO: move after dictionaryrepo injection
+    responseFuture.map{response =>
+      dictionaryId;
+      response
+    }
   }
 
   private def getByDataSetName =
     dictionaryRepo.find(Some(Json.obj("dataSetName" -> dataSetName)))
 
   private lazy val dictionaryId = synchronized {
-    //       Some(Json.obj("dataSetName" -> 1)
     val futureId = dictionaryRepo.find(
       Some(Json.obj("dataSetName" -> dataSetName)), None, None
     ).map(_.head._id.get)
     Await.result(futureId, 120000 millis)
   }
 
+  // TODO
   override def update(entity: Field): Future[Either[String, String]] = ???
 
+  // TODO
   override def updateCustom(id: String, modifier: JsObject): Future[Either[String, String]] = ???
 
   override def deleteAll: Future[String] =
@@ -96,9 +101,11 @@ protected class DictionaryMongoAsyncCrudRepo(
     }
   }
 
+  // TODO
   override def count(criteria: Option[JsObject]): Future[Int] = ???
 
-  override def get(id: String): Future[Option[Field]] = ???
+  override def get(name: String): Future[Option[Field]] =
+    get.map(dictionary => dictionary.fields.find(_.name.equals(name)))
 
   override def find(
     criteria: Option[JsObject],
@@ -106,5 +113,7 @@ protected class DictionaryMongoAsyncCrudRepo(
     projection: Option[JsObject],
     limit: Option[Int],
     page: Option[Int]
-  ): Future[Traversable[Field]] = ???
+  ): Future[Traversable[Field]] =
+    // TODO
+    get.map(dictionary => dictionary.fields)
 }
