@@ -3,7 +3,7 @@ package standalone
 import javax.inject.{Inject, Named}
 
 import models.Field
-import persistence.{RepoSynchronizer, DictionaryRepo}
+import persistence.{RepoSynchronizer, DictionaryFieldRepo}
 import play.api.libs.json.{JsObject, Json, JsNull, JsString}
 import services.DeNoPaSetting
 import util.TypeInferenceProvider
@@ -11,7 +11,7 @@ import util.TypeInferenceProvider
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-abstract class InferDictionary(dictionaryRepo: DictionaryRepo) extends Runnable {
+abstract class InferDictionary(dictionaryRepo: DictionaryFieldRepo) extends Runnable {
 
   protected def typeInferenceProvider : TypeInferenceProvider
   protected def uniqueCriteria : JsObject
@@ -56,24 +56,24 @@ abstract class InferDictionary(dictionaryRepo: DictionaryRepo) extends Runnable 
   }
 }
 
-protected abstract class InferDeNoPaDictionary(dictionaryRepo: DictionaryRepo) extends InferDictionary(dictionaryRepo) {
+protected abstract class InferDeNoPaDictionary(dictionaryRepo: DictionaryFieldRepo) extends InferDictionary(dictionaryRepo) {
   override protected val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider
   override protected val uniqueCriteria = Json.obj("Line_Nr" -> "1")
 }
 
 class InferDeNoPaBaselineDictionary @Inject()(
-  @Named("DeNoPaBaselineDictionaryRepo") dictionaryRepo: DictionaryRepo) extends InferDeNoPaDictionary(dictionaryRepo)
+  @Named("DeNoPaBaselineDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo)
 
 class InferDeNoPaFirstVisitDictionary @Inject()(
-  @Named("DeNoPaFirstVisitDictionaryRepo") dictionaryRepo: DictionaryRepo) extends InferDeNoPaDictionary(dictionaryRepo)
+  @Named("DeNoPaFirstVisitDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo)
 
 class InferDeNoPaCuratedBaselineDictionary @Inject()(
-  @Named("DeNoPaCuratedBaselineDictionaryRepo") dictionaryRepo: DictionaryRepo) extends InferDeNoPaDictionary(dictionaryRepo) {
+  @Named("DeNoPaCuratedBaselineDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo) {
   override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
 }
 
 class InferDeNoPaCuratedFirstVisitDictionary @Inject()(
-  @Named("DeNoPaCuratedFirstVisitDictionaryRepo") dictionaryRepo: DictionaryRepo) extends InferDeNoPaDictionary(dictionaryRepo) {
+  @Named("DeNoPaCuratedFirstVisitDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo) {
   override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
 }
 

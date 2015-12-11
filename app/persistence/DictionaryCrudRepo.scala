@@ -12,17 +12,17 @@ import play.modules.reactivemongo.json.BSONFormats._
 import models.Dictionary._
 import scala.concurrent.duration._
 
-trait DictionaryRepo extends AsyncCrudRepo[Field, String] {
+trait DictionaryFieldRepo extends AsyncCrudRepo[Field, String] {
 
   def dataRepo : JsObjectCrudRepo
   def get : Future[Dictionary]
   def initIfNeeded : Future[Boolean]
 }
 
-protected class DictionaryMongoAsyncCrudRepo(
+protected class DictionaryFieldMongoAsyncCrudRepo(
     private val dataSetName : String,
     private val _dataSetRepo : JsObjectCrudRepo
-  ) extends DictionaryRepo {
+  ) extends DictionaryFieldRepo {
 
   @Inject var dictionaryRepo : DictionaryRootRepo = _
 

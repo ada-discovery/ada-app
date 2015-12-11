@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import org.apache.commons.lang3.StringEscapeUtils
 import models.{Page, FieldType}
-import persistence.DictionaryRepo
+import persistence.DictionaryFieldRepo
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{RequestHeader, Action, Call}
@@ -18,7 +18,7 @@ import views.html
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Await
 
-protected abstract class DataSetController(dictionaryRepo: DictionaryRepo)
+protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   extends ReadonlyController[JsObject, BSONObjectID](dictionaryRepo.dataRepo) with ExportableAction[JsObject] {
 
   dictionaryRepo.initIfNeeded

@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import controllers.{DataSetController, ReadonlyController, ExportableAction}
 import org.apache.commons.lang3.StringEscapeUtils
-import persistence.{DictionaryRepo, AsyncReadonlyRepo}
+import persistence.{DictionaryFieldRepo, AsyncReadonlyRepo}
 import play.api.mvc.Action
 import util.WebExportUtil.stringToFile
 import play.api.libs.json._
@@ -14,7 +14,7 @@ import services.TranSMARTService
 
 import scala.concurrent.Await
 
-protected abstract class DeNoPaController(dictionaryRepo: DictionaryRepo) extends DataSetController(dictionaryRepo) {
+protected abstract class DeNoPaController(dictionaryRepo: DictionaryFieldRepo) extends DataSetController(dictionaryRepo) {
 
   protected override val keyField = "Probanden_Nr"
   protected override val exportOrderByField = "Line_Nr"

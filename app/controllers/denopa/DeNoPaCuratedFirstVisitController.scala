@@ -3,10 +3,10 @@ package controllers.denopa
 import javax.inject.{Inject, Named}
 
 import controllers.DataSetRouter
-import persistence.DictionaryRepo
+import persistence.DictionaryFieldRepo
 
 class DeNoPaCuratedFirstVisitController @Inject() (
-    @Named("DeNoPaCuratedFirstVisitDictionaryRepo") repo: DictionaryRepo
+    @Named("DeNoPaCuratedFirstVisitDictionaryRepo") repo: DictionaryFieldRepo
   ) extends DeNoPaController(repo) {
 
   override protected def showTitle = "Curated First Visit Item"

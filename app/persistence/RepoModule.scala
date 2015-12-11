@@ -63,8 +63,8 @@ object RepoDef extends Enumeration {
     val dataRepo = Repo[JsObjectCrudRepo](
       new JsObjectMongoCrudRepo(dataCollectionName), true)
 
-    val dictionaryRepo = Repo[DictionaryRepo](
-      new DictionaryMongoAsyncCrudRepo(dataCollectionName, dataRepo.repo), true)
+    val dictionaryRepo = Repo[DictionaryFieldRepo](
+      new DictionaryFieldMongoAsyncCrudRepo(dataCollectionName, dataRepo.repo), true)
 
     (dataRepo, dictionaryRepo)
   }
