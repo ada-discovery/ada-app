@@ -1,0 +1,29 @@
+@(title : String, chartElementName : String, elements : Seq[(String, Any)])
+
+<h3>@title</h3>
+<div id="@chartElementName"></div>
+<script type="text/javascript">
+
+        ID = document.getElementById('@chartElementName');
+
+        var data = [{
+            x: [
+                @elements.map { case (label, _) =>
+                '@{if (label.length > 20) {label.substring(0, 18) + ".."} else label}',
+                }
+            ],
+            y: [
+                @elements.map { case (_, value) =>
+                @value,
+                }
+            ],
+            type: 'bar'
+        }];
+
+        var layout = {
+            //height: 380,
+            //width: 480
+        };
+
+        Plotly.newPlot(ID, data, layout);
+</script>

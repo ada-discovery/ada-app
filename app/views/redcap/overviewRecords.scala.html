@@ -13,25 +13,24 @@
 
         <div class="panel panel-info" style="padding-bottom: 100px;">
             <div class="panel-body">
-                @views.html.chart.pieChart(
+                @views.html.chart.plotlyPieChart(
                     "Gender",
                     "genderChart",
                     genderData
                 )
-                @views.html.chart.pieChart(
+                @views.html.chart.plotlyPieChart(
                     "Death",
                     "deathChart",
                     deathData
                 )
-                @views.html.chart.pieChart(
+                @views.html.chart.plotlyPieChart(
                     "Status",
                     "statusChart",
                     statusData
                 )
-                @{views.html.chart.columnChart(
+                @{views.html.chart.plotlyBarChart(
                     "Status",
                     "statusChart",
-                    "Count",
                     statusData
                 )}
             </div>
