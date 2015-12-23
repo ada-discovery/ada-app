@@ -15,6 +15,7 @@ package object VennLayouter {
     *
     * */
   def calculateCoordinates(elements: Seq[Dictionary], sizeX: Int = 100, sizeY: Int = 100): Seq[(String, Int, Int, Int)] = {
+    val offset = math.Pi / 2
     val vennSize = (sizeX + sizeY) / 2
     val scale = vennSize / 10
     val num = elements.length
@@ -35,8 +36,8 @@ package object VennLayouter {
 
     // define function for value mapping
     def f(x: Dictionary) = {
-      val px = math.cos((factor * i).toInt)
-      val py = math.sin((factor * i).toInt)
+      val px = math.cos(offset + (factor * i).toInt)
+      val py = math.sin(offset + (factor * i).toInt)
       i += 1
       (x.dataSetName, /*(x.fields.length * vennSize) / maxRadius).toInt*/100, (cx + scale * px).toInt, (cy + scale * py).toInt)
     }

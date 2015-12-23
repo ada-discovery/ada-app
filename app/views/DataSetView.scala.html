@@ -3,7 +3,7 @@
 
 @(dataSets: Seq[Dictionary], history: String)(implicit request: RequestHeader)
 
-@main("NCER-PD Home") {
+@main("Study Selection") {
     <div class="container">
 
         <div class="page-header" align="center">
@@ -16,8 +16,14 @@
         <!-- call to venn diagram module -->
         <div class="panel panel-info">
             <div class="panel-body" style="padding-bottom: 120px;">
-            @views.html.chart.vennDiagram("", "selectedSets", VennLayouter.calculateCoordinates(dataSets.toSeq))
-            </div>
+            @{
+                var dummyA = Dictionary(None, "A", List());
+                var dummyB = Dictionary(None, "B", List());
+                var dummyC = Dictionary(None, "C", List());
+                views.html.chart.plotlyVennDiagram("selectedSets", List(dummyA, dummyB, dummyC).toSeq)
+                /*views.html.chart.vennDiagram("", "selectedSets", VennLayouter.calculateCoordinates(dataSets))*/
+            }
+        </div>
         </div>
 
         <!-- Table with study information -->
