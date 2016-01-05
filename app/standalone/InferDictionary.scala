@@ -26,7 +26,10 @@ abstract class InferDictionary(dictionaryRepo: DictionaryFieldRepo) extends Runn
     dictionarySyncRepo.deleteAll
 
     // get the field names
-    val fieldNames = syncDataRepo.find(Some(uniqueCriteria)).head.keys
+    val uniqueRecords = syncDataRepo.find(Some(uniqueCriteria))
+    if (uniqueRecords.isEmpty)
+      throw new IllegalStateException(s"No records found for $uniqueCriteria")
+    val fieldNames = uniqueRecords.head.keys
 
     val futures = fieldNames.filter(_ != "_id").par.map { fieldName =>
       println(fieldName)
