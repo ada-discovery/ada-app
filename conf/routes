@@ -84,6 +84,16 @@ GET         /denopa/baseline/metastats/get/:id                              cont
 GET         /denopa/firstvisit/metastats                                    controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
 GET         /denopa/firstvisit/metastats/get/:id                            controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.get(id: BSONObjectID)
 
+# LuxPark (New)
+
+GET         /luxpark/records                                                controllers.LuxParkController.find(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f ?= "")
+GET         /luxpark/records/get/:id                                        controllers.LuxParkController.get(id: BSONObjectID)
+GET         /luxpark/records/exportAllAsCsv                                 controllers.LuxParkController.exportRecordsAsCsv(delimiter : String ?= ",")
+GET         /luxpark/records/exportAllAsJson                                controllers.LuxParkController.exportRecordsAsJson
+GET         /luxpark/records/exportTranSMARTData                            controllers.LuxParkController.exportTranSMARTDataFile(delimiter : String ?= "\t")
+GET         /luxpark/records/exportTranSMARTMapping                         controllers.LuxParkController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
+GET         /luxpark/overviewFieldTypes                                     controllers.LuxParkController.overviewFieldTypes
+
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                                                   controllers.Assets.at(path="/public", file)
 
