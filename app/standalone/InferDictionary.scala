@@ -1,11 +1,8 @@
 package standalone
 
-import javax.inject.{Inject, Named}
-
 import models.Field
 import persistence.{RepoSynchronizer, DictionaryFieldRepo}
 import play.api.libs.json.{JsObject, Json, JsNull, JsString}
-import services.DeNoPaSetting
 import util.TypeInferenceProvider
 
 import scala.concurrent.Await
@@ -55,29 +52,3 @@ abstract class InferDictionary(dictionaryRepo: DictionaryFieldRepo) extends Runn
     println(elapsedTimeInSecs)
   }
 }
-
-protected abstract class InferDeNoPaDictionary(dictionaryRepo: DictionaryFieldRepo) extends InferDictionary(dictionaryRepo) {
-  override protected val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider
-  override protected val uniqueCriteria = Json.obj("Line_Nr" -> "1")
-}
-
-class InferDeNoPaBaselineDictionary @Inject()(
-  @Named("DeNoPaBaselineDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo)
-
-class InferDeNoPaFirstVisitDictionary @Inject()(
-  @Named("DeNoPaFirstVisitDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo)
-
-class InferDeNoPaCuratedBaselineDictionary @Inject()(
-  @Named("DeNoPaCuratedBaselineDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo) {
-  override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
-}
-
-class InferDeNoPaCuratedFirstVisitDictionary @Inject()(
-  @Named("DeNoPaCuratedFirstVisitDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo) {
-  override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
-}
-
-object InferDeNoPaBaselineDictionary extends GuiceBuilderRunnable[InferDeNoPaBaselineDictionary] with App { run }
-object InferDeNoPaFirstVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaFirstVisitDictionary] with App { run }
-object InferDeNoPaCuratedBaselineDictionary extends GuiceBuilderRunnable[InferDeNoPaCuratedBaselineDictionary] with App { run }
-object InferDeNoPaCuratedFirstVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaCuratedFirstVisitDictionary] with App { run }
