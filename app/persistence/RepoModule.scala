@@ -7,7 +7,6 @@ import com.google.inject.name.Names
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
-import scala.tools.nsc.doc.model.Val
 import persistence.RepoDef.Repo
 
 object RepoTypeRegistry {
@@ -28,6 +27,7 @@ object RepoDef extends Enumeration {
   private val DeNoFirstVisitRepos = crateDataAndDictionaryRepos("denopa-first_visit")
   private val DeNoPaCuratedBaselineRepos = crateDataAndDictionaryRepos("denopa-baseline_visit-curated")
   private val DeNoPaCuratedFirstVisitRepos = crateDataAndDictionaryRepos("denopa-first_visit-curated")
+  private val LuxParkRepos = crateDataAndDictionaryRepos("luxpark")
 
   val DeNoPaBaselineRepo = DeNoPaBaselineRepos._1
   val DeNoPaBaselineDictionaryRepo = DeNoPaBaselineRepos._2
@@ -40,6 +40,9 @@ object RepoDef extends Enumeration {
 
   val DeNoPaCuratedFirstVisitRepo = DeNoPaCuratedFirstVisitRepos._1
   val DeNoPaCuratedFirstVisitDictionaryRepo = DeNoPaCuratedFirstVisitRepos._2
+
+  val LuxParkRepo = LuxParkRepos._1
+  val LuxParkDictionaryRepo = LuxParkRepos._2
 
   val DeNoPaBaselineMetaTypeStatsRepo = Repo[MetaTypeStatsRepo](
     new MongoAsyncCrudRepo[MetaTypeStats, BSONObjectID]("denopa-baseline_visit-metatype_stats"), true)
@@ -70,7 +73,6 @@ object RepoDef extends Enumeration {
   }
 }
 
-
 // repo module used to bind repo types/instances withing Guice IoC container
 class RepoModule extends ScalaModule {
 
@@ -92,6 +94,9 @@ class RepoModule extends ScalaModule {
 
     bindRepo(RepoDef.DeNoPaBaselineMetaTypeStatsRepo)
     bindRepo(RepoDef.DeNoPaFirstVisitMetaTypeStatsRepo)
+
+    bindRepo(RepoDef.LuxParkRepo)
+    bindRepo(RepoDef.LuxParkDictionaryRepo)
 
     bindRepo(RepoDef.TranslationRepo)
     bindRepo(RepoDef.UserRepo)

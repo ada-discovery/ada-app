@@ -80,5 +80,5 @@ class MergeBirthdayDeNoPaFirstVisit extends Runnable {
 }
 
 object MergeBirthdayDeNoPaFirstVisit extends GuiceBuilderRunnable[MergeBirthdayDeNoPaFirstVisit] with App {
-  override def main(args: Array[String]) = run
+  run
 }

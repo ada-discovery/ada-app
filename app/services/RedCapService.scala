@@ -7,15 +7,12 @@ import com.google.inject.ImplementedBy
 import play.api.libs.json.{JsObject, JsArray}
 import play.api.libs.ws.{WSRequest, WSClient}
 import play.api.Play.current
+import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import reactivemongo.bson.BSONObjectID
 import util.JsonUtil._
 
 import models.Dictionary
 import models.Field
-
-
-
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -24,11 +21,11 @@ import scala.concurrent.{Await, Future}
 @ImplementedBy(classOf[RedCapServiceWSImpl])
 trait RedCapService {
 
-  def listRecords(page: Int, orderBy: String, filter: String) : Future[Seq[JsObject]]
+  def listRecords(orderBy: String, filter: String) : Future[Seq[JsObject]]
 
-  def listMetadatas(page: Int, orderBy: String, filter: String) : Future[Seq[JsObject]]
+  def listMetadatas(orderBy: String, filter: String) : Future[Seq[JsObject]]
 
-  def listFieldNames(page: Int, orderBy: String, filter: String) : Future[Seq[JsObject]]
+  def listFieldNames(orderBy: String, filter: String) : Future[Seq[JsObject]]
 
   def countRecords(filter: String) : Future[Int]
 
@@ -42,16 +39,19 @@ trait RedCapService {
 }
 
 @Singleton
-protected class RedCapServiceWSImpl @Inject() (ws: WSClient) extends RedCapService {
+protected class RedCapServiceWSImpl @Inject() (
+    ws: WSClient,
+    configuration: Configuration
+  ) extends RedCapService {
 
 //  implicit val sslClient = NingWSClient()
 
 //  val req: WSRequest = sslClient.url(current.configuration.getString("redcap.prodserver.api.url").get)
 
-  val req: WSRequest = ws.url(current.configuration.getString("redcap.prodserver.api.url").get)
+  val req: WSRequest = ws.url(configuration.getString("redcap.prodserver.api.url").get)
 
   val baseRequestData = Map(
-    "token" -> current.configuration.getString("redcap.prodserver.token").get,
+    "token" -> configuration.getString("redcap.prodserver.token").get,
     "format" -> "json"
   )
 
@@ -69,15 +69,15 @@ protected class RedCapServiceWSImpl @Inject() (ws: WSClient) extends RedCapServi
 
   // Services
 
-  override def listRecords(page: Int, orderBy: String, filter: String) =
+  override def listRecords(orderBy: String, filter: String) =
     jsonRecords.map( items =>
       filterAndSort(items, orderBy, filter, "cdisc_dm_usubjd"))
 
-  override def listMetadatas(page: Int, orderBy: String, filter: String) =
+  override def listMetadatas(orderBy: String, filter: String) =
     jsonMetadatas.map( items =>
       filterAndSort(items, orderBy, filter, "field_name"))
 
-  override def listFieldNames(page: Int, orderBy: String, filter: String) =
+  override def listFieldNames(orderBy: String, filter: String) =
     jsonFieldNames.map( items =>
       filterAndSort(items, orderBy, filter, "original_field_name"))
 
@@ -119,7 +119,7 @@ protected class RedCapServiceWSImpl @Inject() (ws: WSClient) extends RedCapServi
     *
     * */
   override def getDictionary = {
-    val fieldnamesFuture = listRecords(0, "", "")
+    val fieldnamesFuture = listRecords("", "")
     val fieldnames: Seq[JsObject] = Await.result(fieldnamesFuture, 120000 millis)
     val finalfields = fieldnames.map( f => Field(f.toString)).toList
 
