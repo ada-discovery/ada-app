@@ -1,4 +1,4 @@
-package standalone
+package standalone.denopa
 
 import java.text.{ParseException, SimpleDateFormat}
 import java.util.Date
@@ -6,13 +6,14 @@ import javax.inject.{Inject, Named}
 
 import models.MetaTypeStats
 import persistence.RepoTypeRegistry._
+import persistence._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.DeNoPaSetting._
+import standalone.GuiceBuilderRunnable
 
-import scala.concurrent.duration._
-import persistence._
 import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class DeNoPaCleanup @Inject() (
     @Named("DeNoPaBaselineRepo") baselineRepo: JsObjectCrudRepo,

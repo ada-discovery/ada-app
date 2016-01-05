@@ -1,11 +1,8 @@
-package standalone
+package standalone.denopa
 
-import play.api.libs.json.{JsNull, JsString, JsObject}
-import scala.concurrent.duration._
+import standalone.GuiceBuilderRunnable
 
-import scala.concurrent.Await
 import scala.io.Source
-import play.api.Play.current
 
 class MergeBirthdayDeNoPaFirstVisit extends Runnable {
 

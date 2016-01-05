@@ -1,14 +1,15 @@
-package standalone
+package standalone.denopa
 
-import javax.inject.{Named, Inject}
+import javax.inject.{Inject, Named}
 
 import persistence.RepoTypeRegistry._
-import play.api.libs.json.{JsNull, JsString, JsObject}
-import scala.concurrent.duration._
+import play.api.libs.json.{JsNull, JsObject, JsString}
+import standalone.GuiceBuilderRunnable
+import util.JsonUtil.escapeKey
 
 import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.io.Source
-import util.JsonUtil.escapeKey
 
 class ImportDeNoPaFirstVisit @Inject()(@Named("DeNoPaFirstVisitRepo") firstVisitRepo: JsObjectCrudRepo) extends Runnable {
 

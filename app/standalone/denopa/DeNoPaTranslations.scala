@@ -1,14 +1,13 @@
-package standalone
+package standalone.denopa
 
-import javax.inject.{Named, Inject}
+import javax.inject.{Inject, Named}
 
-import models.{MetaTypeStats, Translation}
+import models.Translation
 import persistence.RepoTypeRegistry._
-import reactivemongo.bson.BSONObjectID
+import standalone.GuiceBuilderRunnable
 
-import scala.concurrent.duration._
-import persistence._
 import scala.concurrent.Await
+import scala.concurrent.duration._
 import scala.io.Source
 
 class DeNoPaTranslations @Inject() (
