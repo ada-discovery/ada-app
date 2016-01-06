@@ -69,6 +69,11 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   def exportRecordsAsJson =
     exportAllToJson(jsonFileName, exportOrderByField)
 
+  /**
+    * Fetch specified field (column) entries by name and wrap them in a JSObject.
+    * @param fieldName Name of the field of interest.
+    * @return JsObject containing the entries of the field.
+    */
   def getFieldValues(fieldName : String) = {
     for {
       field <- dictionaryRepo.get(fieldName)
@@ -86,7 +91,10 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     }
   }
 
-  // Accessses the dictionary repo and shows a pie chart with the distribution of field types.
+  /**
+    * Display field types in piechart.
+    *
+    */
   def overviewFieldTypes = Action.async { implicit request =>
     dictionaryRepo.find().map{ fields =>
       if (fields.isEmpty)
