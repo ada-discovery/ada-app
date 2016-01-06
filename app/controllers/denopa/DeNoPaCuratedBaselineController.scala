@@ -9,9 +9,9 @@ class DeNoPaCuratedBaselineController @Inject() (
     @Named("DeNoPaCuratedBaselineDictionaryRepo") dictionaryRepo: DictionaryFieldRepo
   ) extends DeNoPaController(dictionaryRepo) {
 
-  override protected def showTitle = "Curated Baseline Item"
+  override protected val showTitle = "Curated Baseline Item"
 
-  override protected def listTitle = "curated baseline item"
+  override protected val listTitle = "curated baseline item"
 
   override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe"))
 
