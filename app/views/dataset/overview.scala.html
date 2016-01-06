@@ -1,0 +1,25 @@
+@(title: String, chartDatas : Iterable[(String, Seq[(String, Any)])])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+
+@main(title) {
+
+    <!-- Begin page content -->
+    <div class="container">
+        <div class="page-header">
+            <h3>
+                @Messages(title)
+            </h3>
+        </div>
+
+        <div class="panel panel-info" style="padding-bottom: 100px;">
+            <div class="panel-body">
+                @chartDatas.map { chartData =>
+                    @views.html.chart.plotlyPieChart(
+                        chartData._1,
+                        chartData._1 + "Chart",
+                        chartData._2
+                    )
+                }
+            </div>
+        </div>
+    </div>
+}
