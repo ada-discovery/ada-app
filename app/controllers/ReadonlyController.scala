@@ -44,6 +44,12 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   protected def toJsonCriteria(string : String) : Option[JsObject]
 
 
+  /**
+   * Retrieve single object by its BSON Id.
+   * NotFound response is generated if key does not exists.
+   *
+   * @param id BSON id/ primary key of the object.
+   */
   def get(id: ID) = Action.async { implicit request =>
     repo.get(id).map(_.fold(
       NotFound(s"Entity #$id not found")
@@ -58,6 +64,12 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     }
   }
 
+  /**
+    * Return response with json representation of object with given key.
+    * Used for rest interface.
+    *
+    * @param id primary key of object
+    */
   def getRest(id: ID) = Action.async {
     repo.get(id).map(_.fold(
       NotFound(s"Entity #$id not found")
@@ -66,6 +78,17 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     )
   }
 
+  /**
+    * Return reponse with json representation of all objects mathing the query string.
+    * Objects are ordered by a reference column and split into chunks.
+    * Used for rest interface.
+    *
+    * @see find
+    * @param page index for the chunk which is to be returned.
+    * @param orderBy label of the reference column for sorting.
+    * @param query query string for matchng entries. Use empty string to retrieve all objects.
+    * @return
+    */
   def findRest(page: Int, orderBy: String, query: String) = Action.async { implicit request =>
     val limit = DEFAULT_LIMIT
     val criteria = toJsonCriteria(query)
@@ -127,6 +150,11 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     }
   }
 
+  /**
+    * Return response with json represenation of all stored objects
+    * Used for rest interface.
+    *
+    */
   def listAllRest = Action.async { implicit request =>
     val futureItems = repo.find(None, None, listViewProjection, None, None)
     futureItems.map { items =>
@@ -137,6 +165,60 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
         InternalServerError(t.getMessage)
     }
   }
+
+
+  /**
+    * Return all field names in paginated list.
+    * We assume the data to have a header in first row.
+    *
+    */
+  def listFieldNames = Action.async { implicit request =>
+    val limit = DEFAULT_LIMIT
+    //val futureItems = repo.find(None, None, listViewProjection, None, None)
+    val futureCount = repo.count(None)
+
+
+    listViewColumns.map(columns =>
+      JsObject(columns.map(column => (column, Json.toJson(1)))))
+
+    //val names = listViewColumns.map(_ => _)
+
+    //listViewColumns.
+    val futureItems = repo.find(None, None, None, None, None)
+
+
+
+
+    /*futureItems.foreach({
+      case (items, count) =>
+        implicit val msg = messagesApi.preferred(request)
+        Ok(listView(Page(items, 0, 0, count), "", ""))
+    })*/
+
+
+    futureItems.zip(futureCount).map({ case (items, count) =>
+      implicit val msg = messagesApi.preferred(request)
+
+      Ok(listViewColumns.toString);
+    }).recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the list process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+
+  /*
+  def listFieldNames(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
+    implicit val msg = messagesApi.preferred(request)
+
+    redCapService.listFieldNames(page, orderBy, filter).map( items =>
+      Ok(html.denopa.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size), orderBy, filter))
+    )
+  }
+  */
+
+
 
   protected def toJsonSort(string : String) =
     if (!string.isEmpty) {

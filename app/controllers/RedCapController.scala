@@ -46,7 +46,7 @@ class RedCapController @Inject() (
   def listRecords(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    redCapService.listRecords(page, orderBy, filter).map( items =>
+    redCapService.listRecords(page, orderBy, filter, keyField).map( items =>
       Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size), orderBy, filter))
     )
   }
@@ -103,7 +103,7 @@ class RedCapController @Inject() (
   def overview = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-      redCapService.listRecords(0, keyField, "").map { items =>
+      redCapService.listRecords(0, keyField, "", keyField).map { items =>
 
       val genderValueCounts = createValueCountMap(items, genderField)
       val deathValueCounts = createValueCountMap(items, deathField)

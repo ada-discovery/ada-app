@@ -24,7 +24,7 @@ import scala.concurrent.{Await, Future}
 @ImplementedBy(classOf[RedCapServiceWSImpl])
 trait RedCapService {
 
-  def listRecords(page: Int, orderBy: String, filter: String) : Future[Seq[JsObject]]
+  def listRecords(page: Int, orderBy: String, filter: String, filterField: String = "cdisc_dm_usubjd") : Future[Seq[JsObject]]
 
   def listMetadatas(page: Int, orderBy: String, filter: String) : Future[Seq[JsObject]]
 
@@ -69,9 +69,9 @@ protected class RedCapServiceWSImpl @Inject() (ws: WSClient) extends RedCapServi
 
   // Services
 
-  override def listRecords(page: Int, orderBy: String, filter: String) =
+  override def listRecords(page: Int, orderBy: String, filter: String, filterField: String) =
     jsonRecords.map( items =>
-      filterAndSort(items, orderBy, filter, "cdisc_dm_usubjd"))
+      filterAndSort(items, orderBy, filter, filterField))
 
   override def listMetadatas(page: Int, orderBy: String, filter: String) =
     jsonMetadatas.map( items =>
