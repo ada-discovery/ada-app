@@ -5,12 +5,11 @@
 @(
     domainName : String,
     currentPage: Page[JsObject],
-    currentOrderBy: String,
-    currentFilter: String,
     fieldsToShow : Seq[String],
 
     // All calls wrapped in a router object
-    router : DataSetRouter)(
+    router : DataSetRouter
+)(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
@@ -18,7 +17,7 @@
     @helper.form(action=router.plainFindCall, 'role -> "search") {
         <div class="row">
             <div class="col-md-8">
-                <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by id...">
+                <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by id...">
                 <input type="submit" id="searchsubmit" value="Filter by id" class="btn btn-primary btn-sm">
             </div>
             <div class="col-md-4">
@@ -61,12 +60,12 @@
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{
     router.findCall(newPage, newOrderBy.map { nOrderBy =>
-        if (nOrderBy == currentOrderBy) {
-            "-" + currentOrderBy
-        } else if (("-" + nOrderBy) == currentOrderBy) {
+        if (nOrderBy == currentPage.orderBy) {
+            "-" + currentPage.orderBy
+        } else if (("-" + nOrderBy) == currentPage.orderBy) {
             nOrderBy
         } else nOrderBy
-    }.getOrElse(currentOrderBy), currentFilter)
+    }.getOrElse(currentPage.orderBy), currentPage.filter)
 }
 
 @rowClickCall(item : JsObject) = @{
@@ -74,7 +73,7 @@
 }
 
 @table = {
-    @jsonTable(currentPage.items, currentOrderBy, displayCall(_, _),
+    @jsonTable(currentPage.items, currentPage.orderBy, displayCall(_, _),
         Some(fieldsToShow),
         Some(rowClickCall)
     )
@@ -85,7 +84,5 @@
     actions,
     table,
     displayCall,
-    currentPage,
-    currentOrderBy,
-    currentFilter
+    currentPage
 )

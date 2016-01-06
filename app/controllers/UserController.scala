@@ -39,8 +39,8 @@ class UserController @Inject() (
   override protected def editView(id: BSONObjectID, f : Form[User])(implicit msg: Messages, request: RequestHeader) =
     html.user.edit(id, f)
 
-  override protected def listView(currentPage: Page[User], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
-    html.user.list(currentPage, currentOrderBy, currentFilter)
+  override protected def listView(currentPage: Page[User])(implicit msg: Messages, request: RequestHeader) =
+    html.user.list(currentPage)
 
   override protected def toJsonCriteria(string : String) =
     if (!string.isEmpty)

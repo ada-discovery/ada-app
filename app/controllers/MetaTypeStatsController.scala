@@ -27,8 +27,6 @@ protected abstract class MetaTypeStatsController(repo: AsyncReadonlyRepo[MetaTyp
 
   protected def listView(
     currentPage: Page[MetaTypeStats],
-    currentOrderBy: String,
-    currentFilter: String,
     currentSearchField : String)(
     implicit msg: Messages, request: RequestHeader
   ) : Html
@@ -77,7 +75,7 @@ protected abstract class MetaTypeStatsController(repo: AsyncReadonlyRepo[MetaTyp
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(listView(Page(items, page, page * limit, count), orderBy, if (criteria.isDefined) query else "", searchField))
+      Ok(listView(Page(items, page, page * limit, count, orderBy, if (criteria.isDefined) query else ""), searchField))
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")

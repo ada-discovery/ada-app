@@ -50,18 +50,16 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       showTitle,
       item,
       router.plainFindCall
-    ).asInstanceOf[Html]
+    )
 
   // generic list view
-  override def listView(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
+  override def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
     html.dataset.list(
       listTitle,
       currentPage,
-      currentOrderBy,
-      currentFilter,
       listViewColumns.get,
       router
-    ).asInstanceOf[Html]
+    )
 
   def exportRecordsAsCsv(delimiter : String) =
     exportAllToCsv(csvFileName, delimiter, exportOrderByField)
