@@ -86,6 +86,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     }
   }
 
+  // Accessses the dictionary repo and shows a pie chart with the distribution of field types.
   def overviewFieldTypes = Action.async { implicit request =>
     dictionaryRepo.find().map{ fields =>
       if (fields.isEmpty)

@@ -165,61 +165,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
         InternalServerError(t.getMessage)
     }
   }
-
-
-  /**
-    * Return all field names in paginated list.
-    * We assume the data to have a header in first row.
-    *
-    */
-  def listFieldNames = Action.async { implicit request =>
-    val limit = DEFAULT_LIMIT
-    //val futureItems = repo.find(None, None, listViewProjection, None, None)
-    val futureCount = repo.count(None)
-
-
-    listViewColumns.map(columns =>
-      JsObject(columns.map(column => (column, Json.toJson(1)))))
-
-    //val names = listViewColumns.map(_ => _)
-
-    //listViewColumns.
-    val futureItems = repo.find(None, None, None, None, None)
-
-
-
-
-    /*futureItems.foreach({
-      case (items, count) =>
-        implicit val msg = messagesApi.preferred(request)
-        Ok(listView(Page(items, 0, 0, count), "", ""))
-    })*/
-
-
-    futureItems.zip(futureCount).map({ case (items, count) =>
-      implicit val msg = messagesApi.preferred(request)
-
-      Ok(listViewColumns.toString);
-    }).recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the list process")
-        InternalServerError(t.getMessage)
-    }
-  }
-
-
-  /*
-  def listFieldNames(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
-
-    redCapService.listFieldNames(page, orderBy, filter).map( items =>
-      Ok(html.denopa.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size), orderBy, filter))
-    )
-  }
-  */
-
-
-
+  
   protected def toJsonSort(string : String) =
     if (!string.isEmpty) {
       if (string.startsWith("-"))
