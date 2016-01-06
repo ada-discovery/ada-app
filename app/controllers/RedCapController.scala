@@ -47,7 +47,7 @@ class RedCapController @Inject() (
     implicit val msg = messagesApi.preferred(request)
 
     redCapService.listRecords(orderBy, filter).map( items =>
-      Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size), orderBy, filter))
+      Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, filter)))
     )
   }
 
@@ -55,7 +55,7 @@ class RedCapController @Inject() (
     implicit val msg = messagesApi.preferred(request)
 
     redCapService.listMetadatas(orderBy, filter).map( items =>
-      Ok(html.redcap.listMetadatas(Page(items.drop(page * limit).take(limit), page, page * limit, items.size), orderBy, filter))
+      Ok(html.redcap.listMetadatas(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, filter)))
     )
   }
 
@@ -63,7 +63,7 @@ class RedCapController @Inject() (
     implicit val msg = messagesApi.preferred(request)
 
     redCapService.listFieldNames(orderBy, filter).map( items =>
-      Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size), orderBy, filter))
+      Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, filter)))
     )
   }
 

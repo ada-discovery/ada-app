@@ -1,17 +1,17 @@
 @import play.api.libs.json.JsObject
-@(currentPage: Page[JsObject], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(currentPage: Page[JsObject])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
     @helper.form(action=routes.RedCapController.listFieldNames(), 'class -> "navbar-form navbar-left", 'role -> "search") {
-        <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by original field name...">
+        <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by original field name...">
         <input type="submit" id="searchsubmit" value="Filter by field name" class="btn btn-primary btn-sm">
     }
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{
     routes.RedCapController.listFieldNames(newPage, newOrderBy.map { orderBy =>
-        if(orderBy == currentOrderBy) "-" + currentOrderBy else orderBy
-    }.getOrElse(currentOrderBy), currentFilter)
+        if(orderBy == currentPage.orderBy) "-" + currentPage.orderBy else orderBy
+    }.getOrElse(currentPage.orderBy), currentPage.filter)
 }
 
 @rowClickCall(item : JsObject) = @{
@@ -19,7 +19,7 @@
 }
 
 @table = {
-    @jsonTable(currentPage.items, currentOrderBy, displayCall(_, _), None, Some(rowClickCall))
+    @jsonTable(currentPage.items, currentPage.orderBy, displayCall(_, _), None, Some(rowClickCall))
 }
 
 @views.html.list(
@@ -27,7 +27,5 @@
     actions,
     table,
     displayCall,
-    currentPage,
-    currentOrderBy,
-    currentFilter
+    currentPage
 )

@@ -20,10 +20,8 @@ class DeNoPaFirstVisitMetaTypeStatsController @Inject() (
 
   override protected def listView(
     currentPage: Page[MetaTypeStats],
-    currentOrderBy: String,
-    currentFilter: String,
     currentSearchField : String)(
     implicit msg: Messages, request: RequestHeader
   ) =
-    html.denopametatype.listFirstVisit(currentPage, currentOrderBy, currentFilter, currentSearchField)
+    html.denopametatype.listFirstVisit(currentPage, currentSearchField)
 }

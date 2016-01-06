@@ -36,9 +36,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   )(implicit msg: Messages, request: RequestHeader) : Html
 
   protected def listView(
-    currentPage: Page[E],
-    currentOrderBy: String,
-    currentFilter: String
+    currentPage: Page[E]
   )(implicit msg: Messages, request: RequestHeader) : Html
 
   protected def toJsonCriteria(string : String) : Option[JsObject]
@@ -59,7 +57,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
       Ok(showView(id, entity))
     }).recover {
       case t: TimeoutException =>
-        Logger.error("Problem found in the edit process")
+        Logger.error("Problem found in the get process")
         InternalServerError(t.getMessage)
     }
   }
@@ -122,7 +120,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(listView(Page(items, page, page * limit, count), orderBy, query))
+      Ok(listView(Page(items, page, page * limit, count, orderBy, query)))
     }).recover {
        case t: TimeoutException =>
          Logger.error("Problem found in the list process")
@@ -142,7 +140,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(listView(Page(items, 0, 0, count), "", ""))
+      Ok(listView(Page(items, 0, 0, count, "", "")))
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")

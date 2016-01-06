@@ -36,8 +36,8 @@ class TranslationController @Inject() (
   override protected def editView(id: BSONObjectID, f : Form[Translation])(implicit msg: Messages, request: RequestHeader) =
     html.translation.edit(id, f)
 
-  override protected def listView(currentPage: Page[Translation], currentOrderBy: String, currentFilter: String)(implicit msg: Messages, request: RequestHeader) =
-    html.translation.list(currentPage, currentOrderBy, currentFilter)
+  override protected def listView(currentPage: Page[Translation])(implicit msg: Messages, request: RequestHeader) =
+    html.translation.list(currentPage)
 
   override protected def toJsonCriteria(string : String) =
     if (!string.isEmpty)

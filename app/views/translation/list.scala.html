@@ -1,18 +1,18 @@
-@(currentPage: Page[Translation], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(currentPage: Page[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @**********************************
 * Helper generating table headers *
 ***********************************@
 
 @header(fieldName: String, title: String) = {
-    <th class="col header @if(currentOrderBy == fieldName){glyphicon glyphicon-chevron-down} @if(currentOrderBy == "-" + fieldName){glyphicon glyphicon-chevron-up}">
+    <th class="col header @if(currentPage.orderBy == fieldName){glyphicon glyphicon-chevron-down} @if(currentPage.orderBy == "-" + fieldName){glyphicon glyphicon-chevron-up}">
         <a href="@displayCall(0, Some(fieldName))">@title</a>
     </th>
 }
 
 @actions = {
     @helper.form(action=routes.TranslationController.find(), 'class -> "navbar-form navbar-left", 'role -> "search") {
-        <input type="search" id="searchbox" name="f" value="@currentFilter" placeholder="Filter by original entry...">
+        <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by original entry...">
         <input type="submit" id="searchsubmit" value="Filter by name" class="btn btn-primary btn-sm">
     }
     <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.TranslationController.create()">Add a new translation</a>
@@ -41,8 +41,8 @@
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{
     routes.TranslationController.find(newPage, newOrderBy.map { orderBy =>
-        if(orderBy == currentOrderBy) "-" + currentOrderBy else orderBy
-    }.getOrElse(currentOrderBy), currentFilter)
+        if(orderBy == currentPage.orderBy) "-" + currentPage.orderBy else orderBy
+    }.getOrElse(currentPage.orderBy), currentPage.filter)
 }
 
 @views.html.list(
@@ -50,7 +50,5 @@
     actions,
     table,
     displayCall,
-    currentPage,
-    currentOrderBy,
-    currentFilter
+    currentPage
 )

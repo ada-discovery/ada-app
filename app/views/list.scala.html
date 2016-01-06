@@ -1,4 +1,4 @@
-@(domainName : String, actions: Html, table : Html, displayCall : (Int, Option[String]) => Any, currentPage: Page[_], currentOrderBy: String, currentFilter: String)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(domainName : String, actions: Html, table : Html, displayCall : (Int, Option[String]) => Any, currentPage: Page[_])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
     @main(Messages("list.title", domainName)) {
 
@@ -6,7 +6,7 @@
         <div class="container">
             <div class="page-header">
                 <h3>
-                @Messages("list.count.title", currentPage.total, domainName)
+                    @Messages("list.count.title", currentPage.total, domainName)
                 </h3>
             </div>
 
@@ -18,38 +18,13 @@
             }
 
             <div id="actions">
-            @actions
+                @actions
             </div>
 
             @if(!currentPage.items.isEmpty) {
-
                 @table
-
                 <hr/>
-
-                <ul class="pager" style="padding-bottom: 120px;">
-                    @currentPage.prev.map { page =>
-                    <li class="previous">
-                        <a href="@displayCall(page, None)">&larr; Previous</a>
-                    </li>
-                    }.getOrElse {
-                        <li class="previous disabled">
-                            <a>&larr; Previous</a>
-                        </li>
-                    }
-                    <li class="current">
-                        <a>Displaying @(currentPage.offset + 1) to @(currentPage.offset + currentPage.items.size) of @currentPage.total</a>
-                    </li>
-                    @currentPage.next.map { page =>
-                    <li class="next">
-                        <a href="@displayCall(page, None)">Next &rarr;</a>
-                    </li>
-                    }.getOrElse {
-                        <li class="next disabled">
-                            <a>Next &rarr;</a>
-                        </li>
-                    }
-                </ul>
+                @pagination(displayCall, currentPage)
             } else {
                 <div class="panel panel-default">
                     <div class="panel-body">
