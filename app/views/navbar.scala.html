@@ -32,14 +32,19 @@
                         @menuItem(denoparoutes.DeNoPaBaselineController.find(), "Raw Baseline Records", Some(3))
                         @menuItem(denoparoutes.DeNoPaFirstVisitController.find(), "Raw First Visit Records", Some(3))
                         <li role="separator" class="divider"></li>
-                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overviewFieldTypes, "Curated Baseline Type Overview", Some(3))
-                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overviewFieldTypes, "Curated First Visit Type Overview", Some(3))
-                        @menuItem(denoparoutes.DeNoPaBaselineController.overviewFieldTypes, "Baseline Type Overview", Some(3))
-                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overviewFieldTypes, "First Visit Type Overview", Some(3))
+                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overviewFieldTypes, "Curated Baseline Types")
+                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overviewFieldTypes, "Curated First Visit Types")
+                        @menuItem(denoparoutes.DeNoPaBaselineController.overviewFieldTypes, "Baseline Types")
+                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overviewFieldTypes, "First Visit Types")
                         <!--
                         @menuItem(denoparoutes.DeNoPaBaselineMetaTypeStatsController.find(), "Baseline Fields", Some(3))
                         @menuItem(denoparoutes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Fields", Some(3))
                         -->
+                        <li role="separator" class="divider"></li>
+                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overview, "Curated Baseline Overview")
+                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overview, "Curated First Visit Overview")
+                        @menuItem(denoparoutes.DeNoPaBaselineController.overview, "Baseline Overview")
+                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overview, "First Visit Overview")
                         <li role="separator" class="divider"></li>
                         @menuItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
                     </ul>
