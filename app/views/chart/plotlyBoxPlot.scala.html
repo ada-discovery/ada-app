@@ -1,4 +1,7 @@
-@(title : String, chartElementName : String, elements : Seq[(String, Any)], jitter: Double = 0.3)
+@(title : String, chartElementName : String, elements : Traversable[(String, Seq[Any])], jitter: Double = 0.3)
+
+// Be aware that plotly expects the full data set!
+// Apparently median, mean, etc are calculated automatically for the boxes.
 
 <h3>@title</h3>
 <div id="@chartElementName"></div>
@@ -6,17 +9,18 @@
 
         ID = document.getElementById('@chartElementName');
 
-        var data = [{
-            y: [
-                @elements.map { case (_, value) =>
-                @value,
-                }
-            ],
-            boxpoints: 'all',
-            pointpos: -1.8,
-            jitter: @jitter,
-            type: 'box'
-        }];
+        var data = [];
+        @elements.map{ case (name, data) =>
+            var tmp = {
+                y: [
+                    @data.map{ case (value) => @value, }
+                ],
+                type: 'box',
+                jitter: @jitter,
+                name: @name
+            };
+            data.push(tmp);
+        }
 
         var layout = {
             //height: 380,
