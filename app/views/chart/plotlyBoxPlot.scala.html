@@ -1,0 +1,27 @@
+@(title : String, chartElementName : String, elements : Seq[(String, Any)], jitter: Double = 0.3)
+
+<h3>@title</h3>
+<div id="@chartElementName"></div>
+<script type="text/javascript">
+
+        ID = document.getElementById('@chartElementName');
+
+        var data = [{
+            y: [
+                @elements.map { case (_, value) =>
+                @value,
+                }
+            ],
+            boxpoints: 'all',
+            pointpos: -1.8,
+            jitter: @jitter,
+            type: 'box'
+        }];
+
+        var layout = {
+            //height: 380,
+            //width: 480
+        };
+
+        Plotly.newPlot(ID, data, layout);
+</script>
