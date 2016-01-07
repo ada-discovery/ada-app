@@ -1,0 +1,45 @@
+@(title : String, chartElementName : String, elements : Traversable[(String, Seq[Any])])
+
+// arguments:
+// plot title, name fo chart element, sequence of elements [(name, ([lower whisker, lower boxbound, median, upper boxbound, upper whisker])]
+
+<div id="@chartElementName" class="chart-holder"></div>
+<script type="text/javascript">
+        $(function () {
+            $('#@{chartElementName}').highcharts({
+                chart: {
+                    type: 'boxplot',
+                },
+                title: {
+                    text:  "@title"
+                },
+                xAxis: {
+                    categories: [
+                        @elements.map{ case (name, _) => '@name',}
+                    ],
+                    title: {text: 'Fields'}
+                },
+                yAxis: {
+
+                },
+                legend: {
+                    enabled: false
+                },
+                credits: {
+                    enabled: false
+                },
+                series: [
+                    {
+                        name: 'Observations',
+                        data: [
+                            @elements.map{ case (_, data) =>
+                                @data.map{ case (wlow, blow, med, bup, wup) =>
+                                    [@wlow, @blow, @med, @bup, @wup],
+                                },
+                            }
+                        ]
+                    }
+                ]
+            });
+        });
+</script>

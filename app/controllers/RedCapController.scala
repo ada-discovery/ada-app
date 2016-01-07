@@ -32,9 +32,8 @@ class RedCapController @Inject() (
   private val csvFileName = "luxpark-redcap_records.csv"
   private val tranSMARTDataFileName = "luxpark-redcap_data_file"
   private val tranSMARTMappingFileName = "luxpark-redcap_mapping_file"
-  private val genderField = "cdisc_dm_sex"
-  private val deathField = "dm_death"
-  private val statusField = "cdisc_sc_sctestcd_maritstat"
+
+  private val fieldsOfInterest = List(("Gender", "cdisc_dm_sex"), ("Survival", "dm_death"), ("Status", "cdisc_sc_sctestcd_maritstat"))
 
   private val replacements = List(("\r", " "), ("\n", " "))
   private val keyField = "cdisc_dm_usubjd"
@@ -105,11 +104,10 @@ class RedCapController @Inject() (
 
       redCapService.listRecords(keyField, "").map { items =>
 
-      val genderValueCounts = createValueCountMap(items, genderField)
-      val deathValueCounts = createValueCountMap(items, deathField)
-      val statusValueCounts = createValueCountMap(items, statusField)
-
-      Ok(html.redcap.overviewRecords("LuxPark REDCap Overview", genderValueCounts, deathValueCounts, statusValueCounts))
+        val valueCounts = fieldsOfInterest.map{ case(name, key) =>
+          (name, createValueCountMap(items, key))
+        }
+        Ok(html.redcap.overviewRecords("LuxPark REDCap Overview", valueCounts))
     }
   }
 
