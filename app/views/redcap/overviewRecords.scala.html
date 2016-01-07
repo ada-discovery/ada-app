@@ -1,4 +1,6 @@
-@(title: String, genderData : Seq[(String, Any)], deathData : Seq[(String, Any)], statusData : Seq[(String, Any)])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(title: String, valueCounts : Seq[(String, Seq[(String, Any)])])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+
+@{/*(title: String, genderData : Seq[(String, Any)], deathData : Seq[(String, Any)], statusData : Seq[(String, Any)])(implicit msg: play.api.i18n.Messages, request: RequestHeader)*/}
 
 @main(title) {
 
@@ -12,26 +14,19 @@
 
         <div class="panel panel-info" style="padding-bottom: 100px;">
             <div class="panel-body">
-                @views.html.chart.plotlyPieChart(
-                    "Gender",
-                    "genderChart",
-                    genderData
-                )
-                @views.html.chart.plotlyPieChart(
-                    "Death",
-                    "deathChart",
-                    deathData
-                )
-                @views.html.chart.plotlyPieChart(
-                    "Status",
-                    "statusChart",
-                    statusData
-                )
-                @{views.html.chart.plotlyBarChart(
-                    "Status",
-                    "statusChart",
-                    statusData
-                )}
+
+                @valueCounts.map{case(name, data) =>
+
+                    @views.html.chart.plotlyPieChart(
+                        name,
+                        name,
+                        data
+                    )
+
+
+                }
+
+
             </div>
         </div>
     </div>
