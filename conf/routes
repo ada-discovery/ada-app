@@ -54,7 +54,7 @@ GET         /denopa/baseline/records/exportAllAsJson                        cont
 GET         /denopa/baseline/records/exportTranSMARTData                    controllers.denopa.DeNoPaBaselineController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /denopa/baseline/records/exportTranSMARTMapping                 controllers.denopa.DeNoPaBaselineController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 GET         /denopa/baseline/overviewFieldTypes                             controllers.denopa.DeNoPaBaselineController.overviewFieldTypes
-GET         /denopa/baseline/overview                                       controllers.denopa.DeNoPaBaselineController.overview(fieldNames: List[String] = List("Geschlecht", "a_Gruppe", "b_Gruppe", "a_MCI_group"))
+GET         /denopa/baseline/overview                                       controllers.denopa.DeNoPaBaselineController.overview(fieldNames: Option[Seq[String]] = None)
 
 GET         /denopa/firstvisit/records                                      controllers.denopa.DeNoPaFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
 GET         /denopa/firstvisit/records/get/:id                              controllers.denopa.DeNoPaFirstVisitController.get(id: BSONObjectID)
@@ -63,7 +63,7 @@ GET         /denopa/firstvisit/records/exportAllAsJson                      cont
 GET         /denopa/firstvisit/records/exportTranSMARTData                  controllers.denopa.DeNoPaFirstVisitController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /denopa/firstvisit/records/exportTranSMARTMapping               controllers.denopa.DeNoPaFirstVisitController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 GET         /denopa/firstvisit/overviewFieldTypes                           controllers.denopa.DeNoPaFirstVisitController.overviewFieldTypes
-GET         /denopa/firstvisit/overview                                     controllers.denopa.DeNoPaFirstVisitController.overview(fieldNames: List[String] = List("Geschlecht", "b_Gruppe", "a_MCI_group"))
+GET         /denopa/firstvisit/overview                                     controllers.denopa.DeNoPaFirstVisitController.overview(fieldNames: Option[Seq[String]] = None)
 
 GET         /denopa/curatedbaseline/records                                 controllers.denopa.DeNoPaCuratedBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
 GET         /denopa/curatedbaseline/records/get/:id                         controllers.denopa.DeNoPaCuratedBaselineController.get(id: BSONObjectID)
@@ -72,7 +72,7 @@ GET         /denopa/curatedbaseline/records/exportAllAsJson                 cont
 GET         /denopa/curatedbaseline/records/exportTranSMARTData             controllers.denopa.DeNoPaCuratedBaselineController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /denopa/curatedbaseline/records/exportTranSMARTMapping          controllers.denopa.DeNoPaCuratedBaselineController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 GET         /denopa/curatedbaseline/overviewFieldTypes                      controllers.denopa.DeNoPaCuratedBaselineController.overviewFieldTypes
-GET         /denopa/curatedbaseline/overview                                controllers.denopa.DeNoPaCuratedBaselineController.overview(fieldNames: List[String] = List("Geschlecht", "a_Gruppe", "b_Gruppe", "a_MCI_group"))
+GET         /denopa/curatedbaseline/overview                                controllers.denopa.DeNoPaCuratedBaselineController.overview(fieldNames: Option[Seq[String]] = None)
 
 GET         /denopa/curatedfirstvisit/records                               controllers.denopa.DeNoPaCuratedFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
 GET         /denopa/curatedfirstvisit/records/get/:id                       controllers.denopa.DeNoPaCuratedFirstVisitController.get(id: BSONObjectID)
@@ -81,7 +81,7 @@ GET         /denopa/curatedfirstvisit/records/exportAllAsJson               cont
 GET         /denopa/curatedfirstvisit/records/exportTranSMARTData           controllers.denopa.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /denopa/curatedfirstvisit/records/exportTranSMARTMapping        controllers.denopa.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 GET         /denopa/curatedfirstvisit/overviewFieldTypes                    controllers.denopa.DeNoPaCuratedFirstVisitController.overviewFieldTypes
-GET         /denopa/curatedfirstvisit/overview                              controllers.denopa.DeNoPaCuratedFirstVisitController.overview(fieldNames: List[String] = List("Geschlecht", "b_Gruppe", "a_MCI_group"))
+GET         /denopa/curatedfirstvisit/overview                              controllers.denopa.DeNoPaCuratedFirstVisitController.overview(fieldNames: Option[Seq[String]] = None)
 
 GET         /denopa/baseline/metastats                                      controllers.denopa.DeNoPaBaselineMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
 GET         /denopa/baseline/metastats/get/:id                              controllers.denopa.DeNoPaBaselineMetaTypeStatsController.get(id: BSONObjectID)
@@ -97,6 +97,7 @@ GET         /luxpark/records/exportAllAsJson                                cont
 GET         /luxpark/records/exportTranSMARTData                            controllers.LuxParkController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /luxpark/records/exportTranSMARTMapping                         controllers.LuxParkController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 GET         /luxpark/overviewFieldTypes                                     controllers.LuxParkController.overviewFieldTypes
+GET         /luxpark/overview                                               controllers.LuxParkController.overview(fieldNames: Option[Seq[String]] = None)
 
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                                                   controllers.Assets.at(path="/public", file)

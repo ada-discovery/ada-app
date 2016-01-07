@@ -2,21 +2,22 @@ package controllers
 
 import javax.inject.Inject
 
+import _root_.util.ChartSpec
 import org.apache.commons.lang3.StringEscapeUtils
 import models.{Page, FieldType}
 import persistence.DictionaryFieldRepo
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{RequestHeader, Action}
+import play.api.Play.current
 import util.WebExportUtil.stringToFile
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.DeNoPaTranSMARTMapping._
 import services.TranSMARTService
-import views.html
+import views.html.dataset
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Future, Await}
-import collection.mutable.{Map => MMap}
 
 protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   extends ReadonlyController[JsObject, BSONObjectID](dictionaryRepo.dataRepo) with ExportableAction[JsObject] {
@@ -42,11 +43,13 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
   protected def transSMARTMappingFileName : String
 
+  protected def overviewFiledNamesConfPrefix : String
+
   protected def router : DataSetRouter
 
   // generic show view
   override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: RequestHeader) =
-    html.dataset.show(
+    dataset.show(
       showTitle,
       item,
       router.plainFindCall
@@ -54,7 +57,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
   // generic list view
   override def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
-    html.dataset.list(
+    dataset.list(
       listTitle,
       currentPage,
       listViewColumns.get,
@@ -100,52 +103,40 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
       val fieldTypeCounts = ArrayBuffer.fill(FieldType.values.size)(0)
       fields.foreach { field =>
-        val fieldType = field.fieldType
-        fieldTypeCounts(fieldType.id) += 1
+        fieldTypeCounts(field.fieldType.id) += 1
       }
 
       implicit val msg = messagesApi.preferred(request)
-      Ok(views.html.dataset.typeOverview("Baseline Type Overview", (FieldType.values, fieldTypeCounts).zipped.toList))
+      Ok(views.html.dataset.typeOverview("Overview", (FieldType.values, fieldTypeCounts).zipped.toList))
     }
   }
 
-  def overview(fieldNames : List[String]) = Action.async { implicit request =>
-    val futureFrequencyChartDatas = fieldNames.map(getFutureFrequencyChartData)
+  def overview(fieldNames : Option[Seq[String]]) = Action.async { implicit request =>
+    val futureChartSpecs = fieldNames.getOrElse {
+      val strings = current.configuration.getStringSeq(overviewFiledNamesConfPrefix + ".overview.fieldnames").get
+      strings
+    }.map(getChartSpec)
 
-    Future.sequence(futureFrequencyChartDatas).map { frequencyChartDatas =>
+    Future.sequence(futureChartSpecs).map { chartSpecs =>
       implicit val msg = messagesApi.preferred(request)
-      Ok(html.dataset.overview("Overview", frequencyChartDatas))
+      Ok(dataset.overview("Overview", chartSpecs))
     }
   }
 
-  private def getFutureFrequencyChartData(fieldName : String) =
-    dictionaryRepo.find(Some(Json.obj("name" -> fieldName))).flatMap { foundFields =>
-      if (!foundFields.isEmpty) {
-        val foundField = foundFields.head
-
+  private def getChartSpec(fieldName : String) : Future[ChartSpec] =
+    dictionaryRepo.get(fieldName).flatMap { foundField =>
+      if (foundField.isDefined) {
         repo.find(None, None, Some(Json.obj(fieldName -> 1))).map(items =>
-          if (foundField.fieldType == FieldType.String)
-            (fieldName, createFrequencyMap(items, fieldName))
-          else
-            (fieldName, createFrequencyMap(items, fieldName))
+          foundField.get.fieldType match {
+            case FieldType.String => ChartSpec.pie(items, fieldName)
+            case FieldType.Double => ChartSpec.column(items, fieldName, 20)
+            case FieldType.Integer => ChartSpec.column(items, fieldName, 20)
+            case _ => ChartSpec.pie(items, fieldName)
+          }
         )
       } else
-        Future((fieldName, createFrequencyMap(List[JsObject](), fieldName)))
+        Future(ChartSpec.pie(List[JsObject](), fieldName))
     }
-
-  private def createFrequencyMap(items : Traversable[JsObject], fieldName : String) : Seq[(String, Int)] = {
-    val countMap = MMap[String, Int]()
-    items.map{item =>
-      val rawWalue = (item \ fieldName).get
-      val stringValue = if (rawWalue == JsNull)
-        "null"
-      else
-        rawWalue.as[String]
-      val count = countMap.getOrElse(stringValue, 0)
-      countMap.update(stringValue, count + 1)
-    }
-    countMap.toSeq.sortBy(_._2)
-  }
 
   private def readJsValueTyped(value : JsValue, fieldType : FieldType.Value) {
 

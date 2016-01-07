@@ -23,6 +23,8 @@ class DeNoPaBaselineController @Inject() (
 
   override protected val transSMARTMappingFileName = "denopa-baseline_mapping_file"
 
+  override protected val overviewFiledNamesConfPrefix = "denopa.baseline"
+
   override protected def router = DataSetRouter(
     routes.DeNoPaBaselineController.find,
     routes.DeNoPaBaselineController.find(),

@@ -30,6 +30,8 @@ class LuxParkController @Inject()(
 
   override protected val transSMARTMappingFileName = "luxpark-redcap_mapping_file"
 
+  override protected val overviewFiledNamesConfPrefix = "luxpark"
+
   override protected def getTransSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String) = {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)

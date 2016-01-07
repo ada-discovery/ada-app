@@ -1,4 +1,7 @@
-@(title: String, chartDatas : Iterable[(String, Seq[(String, Any)])])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@import util.{ChartSpec, PieChartSpec, ColumnChartSpec}
+@import views.html.chart._
+@import util.ScatterChartSpec
+@(title: String, chartDatas : Iterable[ChartSpec])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @main(title) {
 
@@ -12,13 +15,17 @@
 
         <div class="panel panel-info" style="padding-bottom: 100px;">
             <div class="panel-body">
-                @chartDatas.map { chartData =>
-                    @views.html.chart.plotlyPieChart(
-                        chartData._1,
-                        chartData._1 + "Chart",
-                        chartData._2
-                    )
-                }
+                <div class="row">
+                    @chartDatas.map { chartSpec =>
+                        <div class="col-md-4">
+                            @{chartSpec match {
+                                case PieChartSpec(title, data) => plotlyPieChart(title, title + "Chart", data)
+                                case ColumnChartSpec(title, data) => columnChart(title, title + "Chart", "Count", data)
+                                case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
+                            }}
+                        </div>
+                    }
+                </div>
             </div>
         </div>
     </div>

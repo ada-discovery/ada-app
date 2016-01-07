@@ -21,7 +21,9 @@
                     <ul class="dropdown-menu">
                         @menuItem(routes.LuxParkController.find(), "Records", Some(2))
                         <li role="separator" class="divider"></li>
-                        @menuItem(routes.LuxParkController.overviewFieldTypes, "Type Overview", Some(2))
+                        @menuItem(routes.LuxParkController.overviewFieldTypes, "Types", Some(2))
+                        <li role="separator" class="divider"></li>
+                        @menuItem(routes.LuxParkController.overview(), "Overview", Some(2))
                     </ul>
                 </li>
                 <li class="dropdown">
@@ -41,10 +43,10 @@
                         @menuItem(denoparoutes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Fields", Some(3))
                         -->
                         <li role="separator" class="divider"></li>
-                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overview, "Curated Baseline Overview")
-                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overview, "Curated First Visit Overview")
-                        @menuItem(denoparoutes.DeNoPaBaselineController.overview, "Baseline Overview")
-                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overview, "First Visit Overview")
+                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overview(), "Curated Baseline Overview")
+                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overview(), "Curated First Visit Overview")
+                        @menuItem(denoparoutes.DeNoPaBaselineController.overview(), "Baseline Overview")
+                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overview(), "First Visit Overview")
                         <li role="separator" class="divider"></li>
                         @menuItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
                     </ul>

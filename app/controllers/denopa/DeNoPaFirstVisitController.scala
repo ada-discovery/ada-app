@@ -23,6 +23,8 @@ class DeNoPaFirstVisitController @Inject() (
 
   override protected val transSMARTMappingFileName = "denopa-firstvisit_mapping_file"
 
+  override protected val overviewFiledNamesConfPrefix = "denopa.firstvisit"
+
   override protected def router = DataSetRouter(
     routes.DeNoPaFirstVisitController.find,
     routes.DeNoPaFirstVisitController.find(),
