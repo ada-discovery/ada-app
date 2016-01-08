@@ -19,7 +19,7 @@
                     @chartDatas.map { chartSpec =>
                         <div class="col-md-4">
                             @{chartSpec match {
-                                case PieChartSpec(title, data) => plotly.plotlyPieChart(title, title + "Chart", data)
+                                case PieChartSpec(title, data) => plotly.pieChart(title, title + "Chart", data)
                                 case ColumnChartSpec(title, data) => highcharts.columnChart(title, title + "Chart", "Count", data)
                                 case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
                             }}

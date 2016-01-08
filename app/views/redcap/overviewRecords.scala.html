@@ -16,17 +16,12 @@
             <div class="panel-body">
 
                 @valueCounts.map{case(name, data) =>
-
-                    @views.html.chart.plotly.plotlyPieChart(
+                    @views.html.chart.plotly.pieChart(
                         name,
                         name,
                         data
                     )
-
-
                 }
-
-
             </div>
         </div>
     </div>
