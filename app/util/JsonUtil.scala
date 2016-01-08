@@ -70,15 +70,40 @@ object JsonUtil {
       v.asOpt[String].getOrElse(v.toString()).equals(value)
     }
 
+  /**
+    * Retrieve all items fo specified field.
+    * @param items Input items.
+    * @param fieldName Field of interest.
+    * @return Items in specified field.
+    */
   def project(items : Seq[JsObject], fieldName : String) =
     items.map { item => (item \ fieldName) }
 
+  /**
+    * Get smallest value of specified field. The values are cast to double before comparison.
+    * @param items Json items.
+    * @param fieldName Name of the field for finding minimum.
+    * @return Minimal value.
+    */
   def getMin(items : Traversable[JsObject], fieldName : String) =
     items.map { item => (item \ fieldName).toString.toDouble }.min
 
+  /**
+    * Get greatest value of specified field. The values are cast to double before comparison.
+    * @param items Json items.
+    * @param fieldName Name of the field for finding maximum.
+    * @return Maximal value.
+    */
   def getMax(items : Traversable[JsObject], fieldName : String) =
     items.map { item => (item \ fieldName).toString.toDouble }.max
 
+  /**
+    * Count objects of specified field to which the filter applies.
+    * @param items Json input items.
+    * @param filter Filter string.
+    * @param filterFieldName Name of he fields to be filtered.
+    * @return Number of items to which the filter applies.
+    */
   def count(items : Seq[JsObject], filter : String, filterFieldName : String) = {
     val filteredItems = if (filter.isEmpty) {
       items
