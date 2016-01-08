@@ -8,13 +8,14 @@ abstract class ChartSpec(title: String)
 case class PieChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec(title)
 case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec(title)
 case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec(title)
+case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec(title)
 
 object ChartSpec {
 
   def pie(
     items : Traversable[JsObject],
     fieldName : String
-  ) : PieChartSpec = {
+     ) : PieChartSpec = {
     val countMap = MMap[String, Int]()
     items.map{item =>
       val rawWalue = (item \ fieldName).get
@@ -66,6 +67,16 @@ object ChartSpec {
         )
       }.toSeq
     )
+
+
+  /*def box(
+    items : Traversable[JsObject],
+    fieldName : String
+  ) : BoxPlotSpec = BoxPlotSpec(
+    fieldName,
+    items.map{x => x}
+  )*/
+
 
   private def toDouble(jsValue : JsLookupResult) : Option[Double] =
     jsValue.asOpt[Double].map(Some(_)).getOrElse {

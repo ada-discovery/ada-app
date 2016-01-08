@@ -64,6 +64,13 @@ object JsonUtil {
       sortedItems
   }
 
+  /**
+    * Find items in field exactly matching input value.
+    * @param items Input items.
+    * @param value Value for matching.
+    * @param filterFieldName Field to be queried for value.
+    * @return Found items.
+    */
   def findBy(items : Seq[JsObject], value : String, filterFieldName : String) =
     items.filter { item =>
       val v = (item \ filterFieldName)

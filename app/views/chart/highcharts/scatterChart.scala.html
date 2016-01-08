@@ -60,7 +60,7 @@
                 },
                 series: [
                     @series.map { case (name, color, data) =>
-                        {name : '@{if (name.length > 20) {name.substring(0, 18) + ".."} else name}', color : '@color', data : [@data.map{ point =>
+                        {name : '@{if (name.length > 20) {name.substring(0, 18) + "../../../../"} else name}', color : '@color', data : [@data.map{ point =>
                                 [@{point.mkString(",")}],
                             }]
                         },

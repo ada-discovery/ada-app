@@ -9,7 +9,7 @@
         var data = [{
             x: [
                 @elements.map { case (label, _) =>
-                '@{if (label.length > 20) {label.substring(0, 18) + ".."} else label}',
+                '@{if (label.length > 20) {label.substring(0, 18) + "../../../../"} else label}',
                 }
             ],
             y: [
