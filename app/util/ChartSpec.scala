@@ -68,14 +68,15 @@ object ChartSpec {
       }.toSeq
     )
 
-
-  /*def box(
+  def box(
     items : Traversable[JsObject],
     fieldName : String
-  ) : BoxPlotSpec = BoxPlotSpec(
-    fieldName,
-    items.map{x => x}
-  )*/
+  ) : BoxPlotSpec =
+    {
+      // calculate values for (lower whisker, lower boxbound, median, upper boxbound upper whisker) externally
+      val elements = List().toSeq
+      BoxPlotSpec(fieldName, elements)
+    }
 
 
   private def toDouble(jsValue : JsLookupResult) : Option[Double] =
