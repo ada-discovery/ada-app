@@ -16,9 +16,7 @@ class LuxParkController @Inject()(
 
   override protected val exportOrderByField = "cdisc_dm_usubjd"
 
-  override protected val showTitle = "LuxPark Item"
-
-  override protected val listTitle = "LuxPark item"
+  override protected val dataSetName = "LuxPark"
 
   override protected val listViewColumns = Some(List("cdisc_dm_usubjd", "redcap_event_name", "cdisc_dm_subjid_2", "dm_site", "cdisc_dm_brthdtc", "cdisc_dm_sex", "cdisc_sc_sctestcd_maritstat"))
 

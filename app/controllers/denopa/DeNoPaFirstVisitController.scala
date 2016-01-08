@@ -9,9 +9,7 @@ class DeNoPaFirstVisitController @Inject() (
     @Named("DeNoPaFirstVisitDictionaryRepo") dictionaryRepo: DictionaryFieldRepo
   ) extends DeNoPaController(dictionaryRepo) {
 
-  override protected val showTitle = "First Visit Item"
-
-  override protected val listTitle = "first visit item"
+  override protected val dataSetName = "DeNoPa First Visit"
 
   override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe"))
 

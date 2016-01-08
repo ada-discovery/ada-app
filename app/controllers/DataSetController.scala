@@ -27,9 +27,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   @Inject var tranSMARTService: TranSMARTService = _
 
   // hooks
-  protected def showTitle : String
-
-  protected def listTitle : String
+  protected def dataSetName : String
 
   protected def keyField : String
 
@@ -50,7 +48,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   // generic show view
   override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: RequestHeader) =
     dataset.show(
-      showTitle,
+      dataSetName + " Overview",
       item,
       router.plainFindCall
     )
@@ -58,7 +56,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   // generic list view
   override def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
     dataset.list(
-      listTitle,
+      dataSetName + " Item",
       currentPage,
       listViewColumns.get,
       router

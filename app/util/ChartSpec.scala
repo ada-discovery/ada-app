@@ -68,6 +68,11 @@ object ChartSpec {
       }.toSeq
     )
 
+
+  /**
+    * TOOD: finalize data layout
+    *
+    */
   def box(
     items : Traversable[JsObject],
     fieldName : String
