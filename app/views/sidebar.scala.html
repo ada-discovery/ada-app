@@ -15,36 +15,14 @@
                 <div class="panel panel-default">
                     <div class="panel-heading">
                         <h4 class="panel-title">
-                            <a data-toggle="collapse" href="#collapse1">LuxPark REDCap Server</a>
-                        </h4>
-                    </div>
-                    <div id="collapse1" class="panel-collapse collapse1">
-                        <ul class="list-group">
-                            @listGroupItem("Overview", Some(routes.RedCapController.overview()))
-                            @listGroupItem("Records", Some(routes.RedCapController.listRecords()))
-                            @listGroupItem("Fields", Some(routes.RedCapController.listFieldNames()))
-                            @listGroupItem("Metadata", Some(routes.RedCapController.listMetadatas()))
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-        </li>
-
-        <li>
-
-            <div class="panel-group">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h4 class="panel-title">
-                            <a data-toggle="collapse" href="#collapse2">LuxPark Data Snapshot</a>
+                            <a data-toggle="collapse" href="#collapse2">LuxPark</a>
                         </h4>
                     </div>
                     <div id="collapse2" class="panel-collapse collapse">
                         <ul class="list-group">
                             @listGroupItem("Overview", Some(routes.LuxParkController.overview()))
                             @listGroupItem("Records", Some(routes.LuxParkController.find()))
-                            @listGroupItem("Type Overview", Some(routes.LuxParkController.overviewFieldTypes()))
+                            @listGroupItem("Types", Some(routes.LuxParkController.overviewFieldTypes()))
                         </ul>
                     </div>
                 </div>
@@ -63,10 +41,14 @@
                     </div>
                     <div id="collapse3" class="panel-collapse collapse">
                         <ul class="list-group">
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaBaselineController.overviewFieldTypes()))
-                            @listGroupItem("Raw Records", Some(denoparoutes.DeNoPaBaselineController.find()))
-                            @listGroupItem("Curated Records", Some(denoparoutes.DeNoPaCuratedBaselineController.find()))
-                            @listGroupItem("Metadata Statistics", Some(denoparoutes.DeNoPaBaselineMetaTypeStatsController.find()))
+                            <li role="separator" class="list-group-item divider"><i>Curated</i></li>
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaCuratedBaselineController.overview()))
+                            @listGroupItem("Records", Some(denoparoutes.DeNoPaCuratedBaselineController.find()))
+                            @listGroupItem("Types", Some(denoparoutes.DeNoPaCuratedBaselineController.overviewFieldTypes()))
+                            <li role="separator" class="list-group-item divider"><i>Raw</i></li>
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaBaselineController.overview()))
+                            @listGroupItem("Records", Some(denoparoutes.DeNoPaBaselineController.find()))
+                            @listGroupItem("Types", Some(denoparoutes.DeNoPaBaselineController.overviewFieldTypes()))
                         </ul>
                     </div>
                 </div>
@@ -84,10 +66,36 @@
                     </div>
                     <div id="collapse4" class="panel-collapse collapse">
                         <ul class="list-group">
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaFirstVisitController.overviewFieldTypes()))
-                            @listGroupItem("Raw Records", Some(denoparoutes.DeNoPaFirstVisitController.find()))
-                            @listGroupItem("Curated Records", Some(denoparoutes.DeNoPaCuratedFirstVisitController.find()))
-                            @listGroupItem("Metadata Statistics", Some(denoparoutes.DeNoPaFirstVisitMetaTypeStatsController.find()))
+                            <li role="separator" class="list-group-item divider"><i>Curated</i></li>
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaCuratedFirstVisitController.overview()))
+                            @listGroupItem("Records", Some(denoparoutes.DeNoPaCuratedFirstVisitController.find()))
+                            @listGroupItem("Types", Some(denoparoutes.DeNoPaCuratedFirstVisitController.overviewFieldTypes()))
+                            <li role="separator" class="list-group-item divider"><i>Raw</i></li>
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaFirstVisitController.overview()))
+                            @listGroupItem("Records", Some(denoparoutes.DeNoPaFirstVisitController.find()))
+                            @listGroupItem("Types", Some(denoparoutes.DeNoPaFirstVisitController.overviewFieldTypes()))
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </li>
+
+        <li>
+
+            <div class="panel-group">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h4 class="panel-title">
+                            <a data-toggle="collapse" href="#collapse1">LuxPark REDCap Server</a>
+                        </h4>
+                    </div>
+                    <div id="collapse1" class="panel-collapse collapse">
+                        <ul class="list-group">
+                            @listGroupItem("Overview", Some(routes.RedCapController.overview()))
+                            @listGroupItem("Records", Some(routes.RedCapController.listRecords()))
+                            @listGroupItem("Fields", Some(routes.RedCapController.listFieldNames()))
+                            @listGroupItem("Metadata", Some(routes.RedCapController.listMetadatas()))
                         </ul>
                     </div>
                 </div>

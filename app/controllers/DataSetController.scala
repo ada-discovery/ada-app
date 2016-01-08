@@ -48,7 +48,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   // generic show view
   override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: RequestHeader) =
     dataset.show(
-      dataSetName + " Overview",
+      dataSetName + " Item",
       item,
       router.plainFindCall
     )
