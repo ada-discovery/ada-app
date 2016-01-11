@@ -10,12 +10,33 @@ import models.Category
 @ImplementedBy(classOf[TranSMARTServiceImpl])
 trait TranSMARTService {
 
+  /**
+    * Takes fields and filters them according to parameters by either including or excluding fields.
+    * Be aware that this call can not be made with both fieldsToInclude and fieldsToExclude being defined at the same time.
+    *
+    * @param items Input items to be filtered.
+    * @param fieldsToInclude List of fields to be used for result generation.
+    * @param fieldsToExclude List of fields to be exluded from result.
+    * @return Items with defined entries included/ excluded.
+    */
   def createClinicalData(
     items : Traversable[JsObject],
     fieldsToInclude : Option[List[String]],
     fieldsToExclude : Option[List[String]]
   ) : Traversable[JsObject]
 
+  /**
+    * Creates a template for the clinical mapping
+    *
+    * @param dataFileName Name of output file.
+    * @param keyField Field for use as unique key for tranSMART mapping file.
+    * @param visitField Field to be used as visit field in tranSMART mapping file.
+    * @param fieldsInOrder Filtered input fields.
+    * @param fieldCategoryMap Define which field names map to which tranSMART categories.
+    * @param rootCategory Category to be used as tranSMART root.
+    * @param fieldLabelMap (Re)map field to labels in tranSMART file.
+    * @return Items containing the values for the clinical mapping file.
+    */
   def createClinicalMapping(
     dataFileName : String,
     keyField : String,
@@ -26,6 +47,25 @@ trait TranSMARTService {
     fieldLabelMap : Map[String, String]
   ) : Traversable[JsObject]
 
+  /**
+    * Process input items to create clinical mapping file.
+    * Replace substrings and symbols if necessary, map columns to tranSMART properties and fields.
+    *
+    * @see createClinicalData()
+    * @see createClinicalMapping()
+    *
+    * @param delimiter String to use as entry delimiter.
+    * @param newLine String to use as line delimiter.
+    * @param replacements List of pairs for replacing strings and symbols of format: (input string, replacement).
+    * @param items Items to be written into output file. May be modified with respect to the other parameters.
+    * @param dataFileName Name of output file.
+    * @param keyField Field for use as unique key for tranSMART mapping file.
+    * @param visitField Field to be used as visit field in tranSMART mapping file.
+    * @param fieldCategoryMap Define which field names map to which tranSMART categories.
+    * @param rootCategory Category to be used as tranSMART root.
+    * @param fieldLabelMap (Re)map field to labels in tranSMART file.
+    * @return Pair containing the content for the tranSMART datafile and the tranSMART mapping file.
+    */
   def createClinicalDataAndMappingFiles(
     delimiter : String,
     newLine : String,
@@ -62,6 +102,14 @@ class TranSMARTServiceImpl extends TranSMARTService {
       items
   }
 
+  /**
+    * Filters the given JsObject with a condition function.
+    * TODO: This belongs into a utility object/ singleton.
+    *
+    * @param condition Filter function. Takes a string identifying an entry of the JsValue. Could be a e.g. a test for elements.
+    * @param item JsObject to be filtered.
+    * @return JsObject with entriies filtered by condition function.
+    */
   private def filterJson(condition : (String, JsValue) => Boolean)(item : JsObject) = {
     val filteredFields = item.fields.filter{case (field, value) => condition(field, value)}
     JsObject(filteredFields)
@@ -128,6 +176,14 @@ class TranSMARTServiceImpl extends TranSMARTService {
       ("" , "")
   }
 
+  /**
+    * Helper function for conversion of input string to camel case.
+    * Replaces underscores "_" with whitespace " " and turns the next character into uppercase.
+    * TODO: This belongs into a utility object/ singleton.
+    *
+    * @param s Input string.
+    * @return String converted to camel case.
+    */
   private def toCamel(s: String): String = {
     val split = s.split("_")
     split.map { x => x.capitalize}.mkString(" ")
