@@ -1,0 +1,69 @@
+@(currentXField : String, currentYField : String, numericFieldNames : Seq[String], stats : Seq[(Any, Any)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@optionX(key : String, value : String) = {
+    <option value="@key" @if(currentXField == key){selected="selected"}>@value</option>
+}
+
+@optionY(key : String, value : String) = {
+    <option value="@key" @if(currentYField == key){selected="selected"}>@value</option>
+}
+
+@actions(call : Call) = {
+    @helper.form(action=call, 'role -> "search", 'id -> "myForm") {
+        <div class="row">
+            <div class="col-md-8">
+                <select name="xField" id="xField" class="input-lg" value="@currentXField">
+                    @numericFieldNames.map( fieldName => optionX(fieldName, fieldName) )
+                </select>
+                vs.
+                <select name="yField" id="yField" class="input-lg" value="@currentYField">
+                    @numericFieldNames.map( fieldName => optionY(fieldName, fieldName) )
+                </select>
+            </div>
+        </div>
+        <script>
+            $('#xField').change(function() {
+                $('#myForm').submit();
+            });
+            $('#yField').change(function() {
+                $('#myForm').submit();
+            });
+        </script>
+    }
+}
+
+@main("Scatter Analysis") {
+
+    <!-- Begin page content -->
+    <div class="container">
+        <div class="page-header">
+            <h3>
+                Scatter Analysis
+            </h3>
+        </div>
+
+        @flash.get("success").map { message =>
+            <div class="alert alert-dismissable alert-success">
+                <button type="button" class="close" data-dismiss="alert">×</button>
+                <strong>Well done!</strong> @message
+            </div>
+        }
+
+        <div id="actions">
+
+        </div>
+        <div class="panel" style="padding-bottom: 100px;">
+            <div class="panel-body">
+                @views.html.chart.highcharts.scatterChart(
+                    "Comparison",
+                    "scatterChart",
+                    currentXField.capitalize,
+                    currentYField.capitalize,
+                    Seq(
+                        ("All", "rgba(223, 83, 83, .5)", stats.map(pair => Seq(pair._1, pair._2)))
+                    )
+                )
+            </div>
+        </div>
+    </div>
+}
