@@ -19,16 +19,19 @@
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">LuxPark<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        @menuItem(routes.LuxParkController.find(), "Records", Some(2))
-                        <li role="separator" class="divider"></li>
-                        @menuItem(routes.LuxParkController.overviewFieldTypes, "Types", Some(2))
-                        <li role="separator" class="divider"></li>
                         @menuItem(routes.LuxParkController.overview(), "Overview", Some(2))
+                        @menuItem(routes.LuxParkController.find(), "Records", Some(2))
+                        @menuItem(routes.LuxParkController.overviewFieldTypes, "Types", Some(2))
                     </ul>
                 </li>
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">DeNoPa<span class="caret"></span></a>
                     <ul class="dropdown-menu">
+                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overview(), "Curated Baseline Overview")
+                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overview(), "Curated First Visit Overview")
+                        @menuItem(denoparoutes.DeNoPaBaselineController.overview(), "Baseline Overview")
+                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overview(), "First Visit Overview")
+                        <li role="separator" class="divider"></li>
                         @menuItem(denoparoutes.DeNoPaCuratedBaselineController.find(), "Curated Baseline Records", Some(3))
                         @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.find(), "Curated First Visit Records", Some(3))
                         @menuItem(denoparoutes.DeNoPaBaselineController.find(), "Raw Baseline Records", Some(3))
@@ -42,11 +45,6 @@
                         @menuItem(denoparoutes.DeNoPaBaselineMetaTypeStatsController.find(), "Baseline Fields", Some(3))
                         @menuItem(denoparoutes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Fields", Some(3))
                         -->
-                        <li role="separator" class="divider"></li>
-                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overview(), "Curated Baseline Overview")
-                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overview(), "Curated First Visit Overview")
-                        @menuItem(denoparoutes.DeNoPaBaselineController.overview(), "Baseline Overview")
-                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overview(), "First Visit Overview")
                         <li role="separator" class="divider"></li>
                         @menuItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
                     </ul>
