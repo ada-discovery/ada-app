@@ -21,20 +21,64 @@ import scala.concurrent.{Await, Future}
 @ImplementedBy(classOf[RedCapServiceWSImpl])
 trait RedCapService {
 
+
+  /**
+    * Retrive all fields matching the filtering criterion and order them according to a reference field.
+    * @param orderBy Reference field for ordering/ sorting.
+    * @param filter Field for macthing and filtering the reference field.
+    * @return Sorted records matching filter criterion.
+    */
   def listRecords(orderBy: String, filter: String) : Future[Seq[JsObject]]
 
+  /**
+    * Retrive all metadata fields matching the filtering criterion and order them according to a reference field.
+    * @param orderBy Reference field for ordering/ sorting.
+    * @param filter Field for macthing and filtering the reference field.
+    * @return Sorted records matching filter criterion.
+    */
   def listMetadatas(orderBy: String, filter: String) : Future[Seq[JsObject]]
 
+  /**
+    * Create list of all field names. Field names are sorted and filtered if they don't match filter criterion.
+    * @param orderBy Reference field for sorting.
+    * @param filter Specify filter to exclude fields from name list.
+    * @return Filtered and sorted list of records.
+    */
   def listFieldNames(orderBy: String, filter: String) : Future[Seq[JsObject]]
 
+  /**
+    * Count all records in reference field.
+    * @param filter Value for filtering reference field.
+    * @return The number of records matching the filter string.
+    */
   def countRecords(filter: String) : Future[Int]
 
+  /**
+    * Get the name of the field specified by given id string.
+    * @param id String for matching with reference field.
+    * @return Json representation of matching record.
+    */
   def getRecord(id: String) : Future[Seq[JsObject]]
 
+  /**
+    * Retrieve the metadata matching the filter.
+    * @param id
+    * @return
+    */
   def getMetadata(id: String) : Future[Seq[JsObject]]
 
+  /**
+    * Get the name of the field(s) specified by given id string.
+    * @param id String for matching with reference field.
+    * @return Sequence of field(s) matching id.
+    */
   def getFieldName(id: String) : Future[Seq[JsObject]]
 
+  /**
+    * Generate a Dictionary (i.e. for matching with other Dictionary objects).
+    * @see models.Dictionary
+    * @return Dictionary object containing the data of the assigned REDCap instance.
+    */
   def getDictionary : Dictionary
 }
 

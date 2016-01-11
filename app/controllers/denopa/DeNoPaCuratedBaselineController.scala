@@ -13,14 +13,6 @@ class DeNoPaCuratedBaselineController @Inject() (
 
   override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe"))
 
-  override protected val csvFileName = "denopa-curated-baseline.csv"
-
-  override protected val jsonFileName = "denopa-curated-baseline.json"
-
-  override protected val transSMARTDataFileName = "denopa-curated-baseline_data_file"
-
-  override protected val transSMARTMappingFileName = "denopa-curated-baseline_mapping_file"
-
   override protected val overviewFiledNamesConfPrefix = "denopa.curatedbaseline"
 
   override protected def router = DataSetRouter(

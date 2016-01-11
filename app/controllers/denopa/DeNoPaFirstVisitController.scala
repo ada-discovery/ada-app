@@ -13,14 +13,6 @@ class DeNoPaFirstVisitController @Inject() (
 
   override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe"))
 
-  override protected val csvFileName = "denopa-firstvisit.csv"
-
-  override protected val jsonFileName = "denopa-firstvisit.json"
-
-  override protected val transSMARTDataFileName = "denopa-firstvisit_data_file"
-
-  override protected val transSMARTMappingFileName = "denopa-firstvisit_mapping_file"
-
   override protected val overviewFiledNamesConfPrefix = "denopa.firstvisit"
 
   override protected def router = DataSetRouter(

@@ -34,13 +34,13 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
   protected def exportOrderByField : String
 
-  protected def csvFileName : String
+  protected def csvFileName : String = dataSetName.replace(" ", "-") + ".csv"
 
-  protected def jsonFileName : String
+  protected def jsonFileName : String = dataSetName.replace(" ", "-") + ".json"
 
-  protected def transSMARTDataFileName : String
+  protected def transSMARTDataFileName : String = dataSetName.replace(" ", "-") + "_data_file"
 
-  protected def transSMARTMappingFileName : String
+  protected def transSMARTMappingFileName : String = dataSetName.replace(" ", "-") + "_mapping_file"
 
   protected def overviewFiledNamesConfPrefix : String
 
