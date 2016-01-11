@@ -106,7 +106,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       }
 
       implicit val msg = messagesApi.preferred(request)
-      Ok(views.html.dataset.typeOverview("Overview", (FieldType.values, fieldTypeCounts).zipped.toList))
+      Ok(views.html.dataset.typeOverview(dataSetName + " Fields", (FieldType.values, fieldTypeCounts).zipped.toList))
     }
   }
 
@@ -118,7 +118,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
     Future.sequence(futureChartSpecs).map { chartSpecs =>
       implicit val msg = messagesApi.preferred(request)
-      Ok(dataset.overview("Overview", chartSpecs))
+      Ok(dataset.overview(dataSetName + " Overview", chartSpecs))
     }
   }
 

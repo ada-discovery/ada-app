@@ -10,14 +10,12 @@
             </h3>
         </div>
 
-        <div class="panel panel-info">
-            <div class="panel-body" style="padding-bottom: 120px;">
-                @views.html.chart.plotly.pieChart(
-                    "Type Stats",
-                    "typeChart",
-                    fieldTypeCounts.map{case (fieldType, count) => (fieldType.toString, count) }.toSeq
-                )
-            </div>
+        <div class="row" style="padding-bottom: 120px;">
+            @views.html.chart.plotly.pieChart(
+                "",
+                "typeChart",
+                fieldTypeCounts.map{case (fieldType, count) => (fieldType.toString, count) }.toSeq
+            )
         </div>
     </div>
 }
