@@ -1,5 +1,3 @@
-@import controllers.denopa.{routes => denoparoutes}
-
 @(currentXField : String, currentYField : String, getScatterStatsCall : Call, numericFieldNames : Seq[String], stats : Seq[(Any, Any)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @optionX(key : String, value : String) = {
