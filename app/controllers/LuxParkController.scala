@@ -54,6 +54,7 @@ class LuxParkController @Inject()(
     routes.LuxParkController.exportRecordsAsCsv(),
     routes.LuxParkController.exportRecordsAsJson(),
     routes.LuxParkController.exportTranSMARTDataFile(),
-    routes.LuxParkController.exportTranSMARTMappingFile()
+    routes.LuxParkController.exportTranSMARTMappingFile(),
+    routes.LuxParkController.getScatterStats()
   )
 }

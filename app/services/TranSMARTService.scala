@@ -117,7 +117,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
       fieldCategoryMap.map{case (field, category) => escapeKey(field)}.filterNot(_.equals(keyField)).toList
 
     val clinicalData = createClinicalData(items, Some(fieldsToInclude), None)
-    if (!clinicalData.isEmpty) {
+    if (clinicalData.nonEmpty) {
       val fieldsInOrder = clinicalData.head.fields.map(_._1).filter(fieldsToInclude.contains)
       val mappingData = createClinicalMapping(dataFileName, keyField, visitField, fieldsInOrder, fieldCategoryMap, rootCategory, fieldLabelMap)
 

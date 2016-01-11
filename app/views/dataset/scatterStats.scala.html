@@ -1,4 +1,6 @@
-@(currentXField : String, currentYField : String, numericFieldNames : Seq[String], stats : Seq[(Any, Any)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@import controllers.denopa.{routes => denoparoutes}
+
+@(currentXField : String, currentYField : String, getScatterStatsCall : Call, numericFieldNames : Seq[String], stats : Seq[(Any, Any)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @optionX(key : String, value : String) = {
     <option value="@key" @if(currentXField == key){selected="selected"}>@value</option>
@@ -11,14 +13,20 @@
 @actions(call : Call) = {
     @helper.form(action=call, 'role -> "search", 'id -> "myForm") {
         <div class="row">
-            <div class="col-md-8">
+            <div class="col-md-6">
+                <div class="row">
                 <select name="xField" id="xField" class="input-lg" value="@currentXField">
                     @numericFieldNames.map( fieldName => optionX(fieldName, fieldName) )
                 </select>
+                </div>
+                <div class="row" align="center">
                 vs.
+                </div>
+                <div class="row">
                 <select name="yField" id="yField" class="input-lg" value="@currentYField">
                     @numericFieldNames.map( fieldName => optionY(fieldName, fieldName) )
                 </select>
+                </div>
             </div>
         </div>
         <script>
@@ -50,7 +58,7 @@
         }
 
         <div id="actions">
-
+            @actions(getScatterStatsCall)
         </div>
         <div class="panel" style="padding-bottom: 100px;">
             <div class="panel-body">

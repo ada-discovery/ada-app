@@ -82,18 +82,4 @@ object ChartSpec {
       val elements = List().toSeq
       BoxPlotSpec(fieldName, elements)
     }
-
-
-  private def toDouble(jsValue : JsLookupResult) : Option[Double] =
-    jsValue.asOpt[Double].map(Some(_)).getOrElse {
-      jsValue.asOpt[String] match {
-        case Some(string) =>
-          try {
-            Some(string.toDouble)
-          } catch {
-            case e: NumberFormatException => None
-          }
-        case None => None
-      }
-    }
 }

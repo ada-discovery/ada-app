@@ -30,6 +30,7 @@ class DeNoPaFirstVisitController @Inject() (
     routes.DeNoPaFirstVisitController.exportRecordsAsCsv(),
     routes.DeNoPaFirstVisitController.exportRecordsAsJson(),
     routes.DeNoPaFirstVisitController.exportTranSMARTDataFile(),
-    routes.DeNoPaFirstVisitController.exportTranSMARTMappingFile()
+    routes.DeNoPaFirstVisitController.exportTranSMARTMappingFile(),
+    routes.DeNoPaFirstVisitController.getScatterStats()
   )
 }

@@ -1,6 +1,6 @@
 package util
 
-import play.api.libs.json.{JsString, JsNull, JsObject}
+import play.api.libs.json.{JsLookupResult, JsString, JsNull, JsObject}
 
 object JsonUtil {
 
@@ -85,6 +85,22 @@ object JsonUtil {
     */
   def project(items : Seq[JsObject], fieldName : String) =
     items.map { item => (item \ fieldName) }
+
+  def projectDouble(items : Seq[JsObject], fieldName : String) : Seq[Option[Double]] =
+    project(items, fieldName).map(toDouble)
+
+  def toDouble(jsValue : JsLookupResult) : Option[Double] =
+    jsValue.asOpt[Double].map(Some(_)).getOrElse {
+      jsValue.asOpt[String] match {
+        case Some(string) =>
+          try {
+            Some(string.toDouble)
+          } catch {
+            case e: NumberFormatException => None
+          }
+        case None => None
+      }
+    }
 
   /**
     * Get smallest value of specified field. The values are cast to double before comparison.

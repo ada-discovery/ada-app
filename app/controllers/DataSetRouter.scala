@@ -14,6 +14,7 @@ import reactivemongo.bson.BSONObjectID
   * @param exportJsonCall
   * @param exportTranSMARTDataCall
   * @param exportTranSMARTMappingCall
+  * @param getScatterStatsCall
   */
 case class DataSetRouter(
   findCall : (Int, String, String) => Call,
@@ -22,5 +23,6 @@ case class DataSetRouter(
   exportCsvCall : Call,
   exportJsonCall : Call,
   exportTranSMARTDataCall : Call,
-  exportTranSMARTMappingCall : Call
+  exportTranSMARTMappingCall : Call,
+  getScatterStatsCall : Call
 )

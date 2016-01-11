@@ -30,6 +30,7 @@ class DeNoPaCuratedBaselineController @Inject() (
     routes.DeNoPaCuratedBaselineController.exportRecordsAsCsv(),
     routes.DeNoPaCuratedBaselineController.exportRecordsAsJson(),
     routes.DeNoPaCuratedBaselineController.exportTranSMARTDataFile(),
-    routes.DeNoPaCuratedBaselineController.exportTranSMARTMappingFile()
+    routes.DeNoPaCuratedBaselineController.exportTranSMARTMappingFile(),
+    routes.DeNoPaCuratedBaselineController.getScatterStats()
   )
 }

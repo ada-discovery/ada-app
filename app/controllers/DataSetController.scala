@@ -18,6 +18,7 @@ import services.TranSMARTService
 import views.html.dataset
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Future, Await}
+import _root_.util.JsonUtil._
 
 protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   extends ReadonlyController[JsObject, BSONObjectID](dictionaryRepo.dataRepo) with ExportableAction[JsObject] {
@@ -135,6 +136,86 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       } else
         Future(ChartSpec.pie(List[JsObject](), fieldName))
     }
+
+  def getScatterStats(xFieldName : String, yFieldName : String) = Action.async { implicit request =>
+    val fieldsFuture = dictionaryRepo.find()
+    val xFieldFuture = dictionaryRepo.get(xFieldName)
+    val yFieldFuture = dictionaryRepo.get(yFieldName)
+
+    fieldsFuture.zip(xFieldFuture).zip(yFieldFuture).flatMap{ case ((fields, xField), yField) =>
+      implicit val msg = messagesApi.preferred(request)
+
+      val numericFields = fields.filter{field =>
+        field.fieldType == FieldType.Double || field.fieldType == FieldType.Integer
+      }
+      val numericFieldNames = numericFields.map(_.name).toSeq.sorted
+      val valuesFuture : Future[Seq[(Any, Any)]] = if (xField.isDefined && yField.isDefined) {
+        val futureXItems = repo.find(None, None, Some(Json.obj(xFieldName -> 1)))
+        val futureYItems = repo.find(None, None, Some(Json.obj(yFieldName -> 1)))
+
+        futureXItems.zip(futureYItems).map{ case (xItems, yItems) =>
+          val xValues = projectDouble(xItems.toSeq, xFieldName)
+          val yValues = projectDouble(yItems.toSeq, yFieldName)
+          (xValues, yValues).zipped.map{ case (xValue, yValue) =>
+            if (xValue.isDefined && yValue.isDefined)
+              Some(xValue.get, yValue.get)
+            else
+              None
+          }.flatten
+        }
+      } else
+        Future(Seq[(Any, Any)]())
+
+      valuesFuture.map( values =>
+        Ok(dataset.scatterStats(xFieldName, yFieldName, router.getScatterStatsCall, numericFieldNames, values))
+      )
+    }
+
+//    futureXField.zip(futureYField).map { case (xField, yField) =>
+//      if (xField.isDefined && yField.isDefined) {
+//        val futureXItems = repo.find(None, None, Some(Json.obj(xFieldName -> 1)))
+//        val futureYItems = repo.find(None, None, Some(Json.obj(yFieldName -> 1)))
+//
+//          .flatMap(items =>
+//          xField.get.fieldType match {
+//            case FieldType.Double => ChartSpec.column(items, xFieldName, 20)
+//            case FieldType.Integer => ChartSpec.column(items, xFieldName, 20)
+//            case _ =>
+//          }
+//        )
+//      }
+  }
+
+//    val (xRootField, xSubField) = getRootAndSubFields(xField)
+//    val (yRootField, ySubField) = getRootAndSubFields(yField)
+//
+//    val statsFuture = statsRepo.find(None, None, Some(Json.obj("data_id" -> 1, xRootField -> 1, yRootField -> 1)))
+//    statsFuture.map({ stats =>
+//      implicit val msg = messagesApi.preferred(request)
+//
+//      val diagnosisMap = MMap[String, Seq[(JsObject, JsObject)]]()
+//
+//      stats.foreach { stat =>
+//        val diagnosis = getDiagnosis(stat)
+//
+//        val xStats = (stat \ xRootField \ xSubField).as[JsObject]
+//        val yStats = (stat \ yRootField \ ySubField).as[JsObject]
+//
+//        val diagnosisData = diagnosisMap.get(diagnosis)
+//        if (diagnosisData.isDefined) {
+//          diagnosisMap.update(diagnosis, diagnosisData.get ++ Seq((xStats, yStats)))
+//        } else {
+//          diagnosisMap.put(diagnosis, Seq((xStats, yStats)))
+//        }
+//      }
+//
+//      Ok(html.mpower.showScatterStats(xField, yField, diagnosisMap.toSeq))
+//    }).recover {
+//      case t: TimeoutException =>
+//        Logger.error("Problem found in the getStats process")
+//        InternalServerError(t.getMessage)
+//    }
+//  }
 
   private def readJsValueTyped(value : JsValue, fieldType : FieldType.Value) {
 
