@@ -5,6 +5,10 @@
 # Default path will just redirect to the RedCap view
 GET         /                                                               controllers.AppController.index
 
+# Admin
+
+GET         /runnables                                                      controllers.AppController.listRunnables
+
 # Users
 GET         /users                                                          controllers.UserController.find(p: Int ?= 0, s: String ?= "name", f ?= "")
 GET         /users/all                                                      controllers.UserController.listAll(s: Int ?= 2)
