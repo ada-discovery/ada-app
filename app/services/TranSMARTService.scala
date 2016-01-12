@@ -79,7 +79,39 @@ trait TranSMARTService {
     rootCategory : Category,
     fieldLabelMap : Map[String, String]
   ) : (String, String)
+
+
+  def createClinicalDataFile(
+      delimiter : String,
+      newLine : String,
+      replacements : Iterable[(String, String)]
+    )(
+      items : Traversable[JsObject],
+      keyField : String,
+      visitField : Option[String],
+      fieldCategoryMap : Map[String, Category]
+  ) : String
+
+
+
+  def createMappingFile(
+    delimiter : String,
+    newLine : String,
+    replacements : Iterable[(String, String)]
+  )(
+    items : Traversable[JsObject],
+    dataFileName : String,
+    keyField : String,
+    visitField : Option[String],
+    fieldCategoryMap : Map[String, Category],
+    rootCategory : Category,
+    fieldLabelMap : Map[String, String]
+  ) : String
+
 }
+
+
+
 
 @Singleton
 class TranSMARTServiceImpl extends TranSMARTService {
@@ -175,6 +207,58 @@ class TranSMARTServiceImpl extends TranSMARTService {
     } else
       ("" , "")
   }
+
+
+  def createClinicalDataFile(
+    delimiter : String,
+    newLine : String,
+    replacements : Iterable[(String, String)]
+  )(
+    items : Traversable[JsObject],
+    keyField : String,
+    visitField : Option[String],
+    fieldCategoryMap : Map[String, Category]
+  )  = {
+    val fieldsToInclude = (if (visitField.isDefined) List(keyField, visitField.get) else List(keyField)) ++
+      fieldCategoryMap.map{case (field, category) => escapeKey(field)}.filterNot(_.equals(keyField)).toList
+
+    val clinicalData = createClinicalData(items, Some(fieldsToInclude), None)
+    if (clinicalData.nonEmpty) {
+      val dataContent = jsonObjectsToCsv(delimiter, newLine, replacements)(clinicalData)
+      dataContent
+    } else
+      ""
+  }
+
+
+  def createMappingFile(
+    delimiter : String,
+    newLine : String,
+    replacements : Iterable[(String, String)]
+  )(
+    items : Traversable[JsObject],
+    dataFileName : String,
+    keyField : String,
+    visitField : Option[String],
+    fieldCategoryMap : Map[String, Category],
+    rootCategory : Category,
+    fieldLabelMap : Map[String, String]
+   ) = {
+    val fieldsToInclude = (if (visitField.isDefined) List(keyField, visitField.get) else List(keyField)) ++
+      fieldCategoryMap.map{case (field, category) => escapeKey(field)}.filterNot(_.equals(keyField)).toList
+
+    val clinicalData = createClinicalData(items, Some(fieldsToInclude), None)
+    if (clinicalData.nonEmpty) {
+      val fieldsInOrder = clinicalData.head.fields.map(_._1).filter(fieldsToInclude.contains)
+      val mappingData = createClinicalMapping(dataFileName, keyField, visitField, fieldsInOrder, fieldCategoryMap, rootCategory, fieldLabelMap)
+
+      val mappingContent = jsonObjectsToCsv(delimiter, newLine, replacements)(mappingData)
+      mappingContent
+    } else
+      ""
+  }
+
+
 
   /**
     * Helper function for conversion of input string to camel case.
