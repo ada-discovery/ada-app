@@ -30,23 +30,40 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   // hooks
   protected def dataSetName : String
 
+  // keyfield, mainly used for data export
   protected def keyField : String
 
+  // reference field for sorting the data
   protected def exportOrderByField : String
 
+  // auto-generated filename for csv files
   protected def csvFileName : String = dataSetName.replace(" ", "-") + ".csv"
 
+  // auto-generated filename for json files
   protected def jsonFileName : String = dataSetName.replace(" ", "-") + ".json"
 
-  protected def transSMARTDataFileName : String = dataSetName.replace(" ", "-") + "_data_file"
+  // auto-generated filename for tranSMART data files
+  protected def tranSMARTDataFileName : String = dataSetName.replace(" ", "-") + "_data_file"
 
-  protected def transSMARTMappingFileName : String = dataSetName.replace(" ", "-") + "_mapping_file"
+  // auto-generated filename for tranSMART mapping files
+  protected def tranSMARTMappingFileName : String = dataSetName.replace(" ", "-") + "_mapping_file"
 
-  protected def overviewFiledNamesConfPrefix : String
+  // key for associated field in config file
+  protected def overviewFieldNamesConfPrefix : String
 
+  // router for requests; to be passed to views as helper.
   protected def router : DataSetRouter
 
-  // generic show view
+
+  /**
+    * Shows all fields of the selected subject.
+    *
+    * @param id BSON ID key of subject.
+    * @param item JsObject represenation of subject data.
+    * @param msg Internal request message.
+    * @param request Header of original request.
+    * @return View for subject entries.
+    */
   override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: RequestHeader) =
     dataset.show(
       dataSetName + " Item",
@@ -54,7 +71,15 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       router.plainFindCall
     )
 
-  // generic list view
+
+  /**
+    * Table displaying given paginated content. Generally used to display fields of the datasets.
+    *
+    * @param currentPage Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
+    * @param msg Internal request message.
+    * @param request Header of original request.
+    * @return View for all available fields.
+    */
   override def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
     dataset.list(
       dataSetName + " Item",
@@ -63,14 +88,28 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       router
     )
 
+
+  /**
+    * Generate content of csv export file and create download.
+    *
+    * @param delimiter Delimiter for csv output file.
+    * @return View for download.
+    */
   def exportRecordsAsCsv(delimiter : String) =
     exportAllToCsv(csvFileName, delimiter, exportOrderByField)
 
+
+  /**
+    * Generate content of Json export file and create donwload.
+    *
+    * @return View for download.
+    */
   def exportRecordsAsJson =
     exportAllToJson(jsonFileName, exportOrderByField)
 
   /**
     * Fetch specified field (column) entries by name and wrap them in a JSObject.
+    *
     * @param fieldName Name of the field of interest.
     * @return JsObject containing the entries of the field.
     */
@@ -92,8 +131,12 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   }
 
   /**
-    * Display field types in piechart.
+    * TODO: Instead of throwing an exception, provide option to run one of the standalone scripts for dictionary generation.
     *
+    * Generates a view showign the field types of the records.
+    * Repo with inferred type dictionaries required!
+    *
+    * @return View with piechart showing field types.
     */
   def overviewFieldTypes = Action.async { implicit request =>
     dictionaryRepo.find().map{ fields =>
@@ -110,9 +153,10 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     }
   }
 
+
   def overview(fieldNames : Option[Seq[String]]) = Action.async { implicit request =>
     val futureChartSpecs = fieldNames.getOrElse {
-      val strings = current.configuration.getStringSeq(overviewFiledNamesConfPrefix + ".overview.fieldnames").get
+      val strings = current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").get
       strings
     }.map(getChartSpec)
 
@@ -122,6 +166,15 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     }
   }
 
+  /**
+    * Infers which chart type to use for a field by checking its type.
+    * Strings are identified as pie charts.
+    * Doubles and Integers are identified as Barplots.
+    * All plots which can not be matched are identified as pie charts.
+    *
+    * @param fieldName Name of the field. Used to find field in data repo.
+    * @return Inferred chart type.
+    */
   private def getChartSpec(fieldName : String) : Future[ChartSpec] =
     dictionaryRepo.get(fieldName).flatMap { foundField =>
       if (foundField.isDefined) {
@@ -137,6 +190,15 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
         Future(ChartSpec.pie(List[JsObject](), fieldName))
     }
 
+
+  /**
+    * Fetches, checks and prepares the specified data fields for a scatterplot.
+    * Displays the resulting scatterplot in a view.
+    *
+    * @param xFieldName Name of field to be used for x coordinates.
+    * @param yFieldName Name of field to be used for y coordinates.
+    * @return View with scatterplot and selection option for different xFieldName and yFieldName.
+    */
   def getScatterStats(xFieldName : String, yFieldName : String) = Action.async { implicit request =>
     val fieldsFuture = dictionaryRepo.find()
     val xFieldFuture = dictionaryRepo.get(xFieldName)
@@ -172,33 +234,50 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     }
   }
 
+
+  /**
+    * TODO: implement. what is it supposed to do?
+    *
+    * @param value ???
+    * @param fieldType ???
+    */
   private def readJsValueTyped(value : JsValue, fieldType : FieldType.Value) {
 
   }
 
+
   /**
-   * TranSMART functionality
-   */
+    * Generate and content of TRANSMART data file and create a download.
+    *
+    * @param delimiter Delimiter for output file.
+    * @return View for download.
+    */
   def exportTranSMARTDataFile(delimiter : String) = Action { implicit request =>
-    //val fileContents = getTransSMARTDataAndMappingFiles(transSMARTDataFileName, delimiter, exportOrderByField)
-    //stringToFile(transSMARTDataFileName)(fileContents._1)
-
-
-    val fileContent = generateTranSMARTDataFile(transSMARTDataFileName, delimiter, exportOrderByField)
-    stringToFile(transSMARTDataFileName)(fileContent)
+    val fileContent = generateTranSMARTDataFile(tranSMARTDataFileName, delimiter, exportOrderByField)
+    stringToFile(tranSMARTDataFileName)(fileContent)
   }
 
+
+  /**
+    * Generate content of TRANSMART mapping file and create a download.
+    *
+    * @param delimiter Delimiter for output file.
+    * @return View for download.
+    */
   def exportTranSMARTMappingFile(delimiter : String) = Action { implicit request =>
-    //val fileContents = getTransSMARTDataAndMappingFiles(transSMARTDataFileName, delimiter, exportOrderByField)
-    //stringToFile(transSMARTMappingFileName)(fileContents._2)
-
-    val fileContent = generateTranSMARTMappingFile(transSMARTDataFileName, delimiter, exportOrderByField)
-    stringToFile(transSMARTMappingFileName)(fileContent)
+    val fileContent = generateTranSMARTMappingFile(tranSMARTDataFileName, delimiter, exportOrderByField)
+    stringToFile(tranSMARTMappingFileName)(fileContent)
   }
 
 
-
-
+  /**
+    * Generate  content of TRANSMART data file for download.
+    *
+    * @param dataFilename Name of output file.
+    * @param delimiter Delimiter for output file.
+    * @param orderBy Order of fields in data file.
+    * @return VString with file content.
+    */
   protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String) =
   {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
@@ -207,27 +286,17 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     tranSMARTService.createClinicalDataFile(unescapedDelimiter , "\n", List[(String, String)]())(
       records, keyField, None, fieldCategoryMap)
-
-
-
-
-
-    /*delimiter : String,
-    newLine : String,
-    replacements : Iterable[(String, String)]
-    )(
-    items : Traversable[JsObject],
-    keyField : String,
-    visitField : Option[String],
-    fieldCategoryMap : Map[String, Category]*/
-
-
-
-    //tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", List[(String, String)]())(
-    //  records, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)._1
   }
 
 
+  /**
+    * Generate the content of TRANSMART mapping file for downnload.
+    *
+    * @param dataFilename Name of output file.
+    * @param delimiter Delimiter for output file.
+    * @param orderBy Order of fields in data file.
+    * @return VString with file content.
+    */
   protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String) =
   {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
@@ -236,12 +305,18 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     tranSMARTService.createMappingFile(unescapedDelimiter , "\n", List[(String, String)]())(
       records, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
-    //tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", List[(String, String)]())(
-    //  records, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)._2
   }
 
 
-  protected def getTransSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String) = {
+  /**
+    * Generate the content of TRANSMART data and mapping file for downnload.
+    *
+    * @param dataFilename Name of output file.
+    * @param delimiter Delimiter for output file.
+    * @param orderBy Order of fields in data file.
+    * @return VString with file content.
+    */
+  protected def getTranSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String) = {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 

@@ -20,9 +20,9 @@ class LuxParkController @Inject()(
 
   override protected val listViewColumns = Some(List("cdisc_dm_usubjd", "redcap_event_name", "cdisc_dm_subjid_2", "dm_site", "cdisc_dm_brthdtc", "cdisc_dm_sex", "cdisc_sc_sctestcd_maritstat"))
 
-  override protected val overviewFiledNamesConfPrefix = "luxpark"
+  override protected val overviewFieldNamesConfPrefix = "luxpark"
 
-  override protected def getTransSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String) = {
+  override protected def getTranSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String) = {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 

@@ -13,7 +13,7 @@ class DeNoPaCuratedBaselineController @Inject() (
 
   override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe"))
 
-  override protected val overviewFiledNamesConfPrefix = "denopa.curatedbaseline"
+  override protected val overviewFieldNamesConfPrefix = "denopa.curatedbaseline"
 
   override protected def router = DataSetRouter(
     routes.DeNoPaCuratedBaselineController.find,

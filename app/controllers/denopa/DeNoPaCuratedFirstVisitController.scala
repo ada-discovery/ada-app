@@ -13,7 +13,7 @@ class DeNoPaCuratedFirstVisitController @Inject() (
 
   override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe"))
 
-  override protected val overviewFiledNamesConfPrefix = "denopa.curatedfirstvisit"
+  override protected val overviewFieldNamesConfPrefix = "denopa.curatedfirstvisit"
 
   override protected def router = DataSetRouter(
     routes.DeNoPaCuratedFirstVisitController.find,

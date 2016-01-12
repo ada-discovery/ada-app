@@ -48,7 +48,8 @@ trait TranSMARTService {
   ) : Traversable[JsObject]
 
   /**
-    * Process input items to create clinical mapping file.
+    * Deprecated.
+    * Process input items to create clinical and mapping file.
     * Replace substrings and symbols if necessary, map columns to tranSMART properties and fields.
     *
     * @see createClinicalData()
@@ -81,6 +82,19 @@ trait TranSMARTService {
   ) : (String, String)
 
 
+  /**
+    * Generates the content for the clinical data file.
+    * Replace substrings and symbols if necessary, map columns to tranSMART properties and fields.
+    *
+    * @param delimiter String to use as entry delimiter.
+    * @param newLine String to use as line delimiter.
+    * @param replacements List of pairs for replacing strings and symbols of format: (input string, replacement).
+    * @param items Items to be written into output file. May be modified with respect to the other parameters.
+    * @param keyField Field for use as unique key for tranSMART mapping file.
+    * @param visitField Field to be used as visit field in tranSMART mapping file.
+    * @param fieldCategoryMap Define which field names map to which tranSMART categories.
+    * @return
+    */
   def createClinicalDataFile(
       delimiter : String,
       newLine : String,
@@ -93,7 +107,24 @@ trait TranSMARTService {
   ) : String
 
 
-
+  /**
+    * TODO: still inefficient, since processing the clinical data is required.
+    *
+    * Generate the content for the data mapping file.
+    * Replace substrings and symbols if necessary, map columns to tranSMART properties and fields.
+    *
+    * @param delimiter String to use as entry delimiter.
+    * @param newLine String to use as line delimiter.
+    * @param replacements List of pairs for replacing strings and symbols of format: (input string, replacement).
+    * @param items Items to be written into output file. May be modified with respect to the other parameters.
+    * @param dataFileName Name of output file.
+    * @param keyField Field for use as unique key for tranSMART mapping file.
+    * @param visitField Field to be used as visit field in tranSMART mapping file.
+    * @param fieldCategoryMap Define which field names map to which tranSMART categories.
+    * @param rootCategory Category to be used as tranSMART root.
+    * @param fieldLabelMap (Re)map field to labels in tranSMART file.
+    * @return
+    */
   def createMappingFile(
     delimiter : String,
     newLine : String,
