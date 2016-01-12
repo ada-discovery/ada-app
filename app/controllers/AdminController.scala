@@ -19,7 +19,7 @@ class AdminController extends Controller {
       try {
         classInfo.name.startsWith("runnables") &&
           classInfo.isConcrete &&
-          classOf[Runnable].isAssignableFrom(Class.forName(classInfo.name))
+            classOf[Runnable].isAssignableFrom(Class.forName(classInfo.name))
       } catch {
         case _ : ClassNotFoundException => false
         case _ : ExceptionInInitializerError => false
