@@ -1,4 +1,4 @@
-package standalone.denopa
+package runnables.denopa
 
 import javax.inject.{Inject, Named}
 
@@ -7,7 +7,7 @@ import persistence.RepoTypeRegistry._
 import persistence._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import standalone.GuiceBuilderRunnable
+import runnables.GuiceBuilderRunnable
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

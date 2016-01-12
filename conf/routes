@@ -7,7 +7,8 @@ GET         /                                                               cont
 
 # Admin
 
-GET         /runnables                                                      controllers.AppController.listRunnables
+GET         /runnables                                                      controllers.AdminController.listRunnables
+GET         /runScript                                                      controllers.AdminController.runScript(className : String)
 
 # Users
 GET         /users                                                          controllers.UserController.find(p: Int ?= 0, s: String ?= "name", f ?= "")

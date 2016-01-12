@@ -1,8 +1,9 @@
-package standalone.denopa
+package runnables.denopa
 
-import standalone.GuiceBuilderRunnable
+import runnables.GuiceBuilderRunnable
 
 import scala.io.Source
+import scala.reflect.io.File
 
 class MergeBirthdayDeNoPaFirstVisit extends Runnable {
 
@@ -75,7 +76,7 @@ class MergeBirthdayDeNoPaFirstVisit extends Runnable {
     }
 
     sb.append(newLines.mkString("\n"))
-    scala.tools.nsc.io.File(mergedFilename).writeAll(sb.toString)
+    File(mergedFilename).writeAll(sb.toString)
   }
 }
 

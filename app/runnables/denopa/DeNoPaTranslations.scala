@@ -1,10 +1,10 @@
-package standalone.denopa
+package runnables.denopa
 
 import javax.inject.{Inject, Named}
 
 import models.Translation
 import persistence.RepoTypeRegistry._
-import standalone.GuiceBuilderRunnable
+import runnables.GuiceBuilderRunnable
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

@@ -1,4 +1,4 @@
-package standalone
+package runnables
 
 import play.api.inject.guice.GuiceApplicationBuilder
 

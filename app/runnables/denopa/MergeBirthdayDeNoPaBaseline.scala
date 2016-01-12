@@ -1,6 +1,6 @@
-package standalone.denopa
+package runnables.denopa
 
-import standalone.GuiceBuilderRunnable
+import runnables.GuiceBuilderRunnable
 
 import scala.io.Source
 

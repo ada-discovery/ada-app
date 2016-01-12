@@ -1,0 +1,54 @@
+@(runnableNames : Iterable[String])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@main("Runnables") {
+
+    <!-- Begin page content -->
+    <div class="container">
+        <div class="page-header">
+            <h3>
+                @Messages("Runnables")
+            </h3>
+        </div>
+
+        @flash.get("success").map { message =>
+            <div class="alert alert-dismissable alert-success">
+                <button type="button" class="close" data-dismiss="alert">×</button>
+                <strong>Well done!</strong> @message
+            </div>
+        }
+
+        @flash.get("errors").map{ error =>
+            <div class="alert alert-dismissable alert-danger">
+                <button type="button" class="close" data-dismiss="alert">×</button>
+                    @error
+            </div>
+        }
+
+        <div class="col-md-8">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <td>
+                        Name
+                    </td>
+                    <td>
+                        Run
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                @runnableNames.map { name =>
+                    <tr>
+                        <td>
+                            @name
+                        </td>
+                        <td>
+                            <a href="@routes.AdminController.runScript(name)">Run</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+}

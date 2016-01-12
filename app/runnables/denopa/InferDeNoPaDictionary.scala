@@ -1,11 +1,11 @@
-package standalone.denopa
+package runnables.denopa
 
 import javax.inject.{Named, Inject}
 
 import persistence.DictionaryFieldRepo
 import play.api.libs.json.Json
 import services.DeNoPaSetting
-import standalone.{InferDictionary, GuiceBuilderRunnable}
+import runnables.{InferDictionary, GuiceBuilderRunnable}
 
 protected abstract class InferDeNoPaDictionary(dictionaryRepo: DictionaryFieldRepo) extends InferDictionary(dictionaryRepo) {
   override protected val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider

@@ -1,4 +1,4 @@
-package standalone
+package runnables
 
 import javax.inject.{Named, Inject}
 

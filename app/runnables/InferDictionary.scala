@@ -1,4 +1,4 @@
-package standalone
+package runnables
 
 import models.Field
 import persistence.{RepoSynchronizer, DictionaryFieldRepo}
@@ -19,8 +19,6 @@ abstract class InferDictionary(dictionaryRepo: DictionaryFieldRepo) extends Runn
     val dictionarySyncRepo = RepoSynchronizer(dictionaryRepo, timeout)
     val syncDataRepo = RepoSynchronizer(dictionaryRepo.dataRepo, timeout)
 
-    val startTime = new java.util.Date()
-
     // init dictionary if needed
     dictionaryRepo.initIfNeeded
     dictionarySyncRepo.deleteAll
@@ -28,7 +26,7 @@ abstract class InferDictionary(dictionaryRepo: DictionaryFieldRepo) extends Runn
     // get the field names
     val uniqueRecords = syncDataRepo.find(Some(uniqueCriteria))
     if (uniqueRecords.isEmpty)
-      throw new IllegalStateException(s"No records found for $uniqueCriteria")
+      throw new IllegalStateException(s"No records found for $uniqueCriteria. The associated data set might be empty.")
     val fieldNames = uniqueRecords.head.keys
 
     val futures = fieldNames.filter(_ != "_id").par.map { fieldName =>
@@ -49,9 +47,5 @@ abstract class InferDictionary(dictionaryRepo: DictionaryFieldRepo) extends Runn
 
     // to be safe, wait for each save call to finish
     futures.toList.foreach(future => Await.result(future, timeout))
-
-    val endTime = new java.util.Date()
-    val elapsedTimeInSecs = (endTime.getTime - startTime.getTime) / 1000
-    println(elapsedTimeInSecs)
   }
 }

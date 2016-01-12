@@ -1,4 +1,4 @@
-package standalone.denopa
+package runnables.denopa
 
 import java.text.{ParseException, SimpleDateFormat}
 import java.util.Date
@@ -10,7 +10,7 @@ import persistence._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.DeNoPaSetting._
-import standalone.GuiceBuilderRunnable
+import runnables.GuiceBuilderRunnable
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

@@ -1,10 +1,10 @@
-package standalone.denopa
+package runnables.denopa
 
 import javax.inject.{Inject, Named}
 
 import persistence.RepoTypeRegistry._
 import play.api.libs.json.{JsNull, JsObject, JsString}
-import standalone.GuiceBuilderRunnable
+import runnables.GuiceBuilderRunnable
 import util.JsonUtil.escapeKey
 
 import scala.concurrent.Await
