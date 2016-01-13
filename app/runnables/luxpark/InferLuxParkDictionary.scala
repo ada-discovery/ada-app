@@ -1,9 +1,10 @@
-package runnables
+package runnables.luxpark
 
-import javax.inject.{Named, Inject}
+import javax.inject.{Inject, Named}
 
 import persistence.DictionaryFieldRepo
 import play.api.libs.json.Json
+import runnables.{GuiceBuilderRunnable, InferDictionary}
 import services.DeNoPaSetting
 
 class InferLuxParkDictionary @Inject()(

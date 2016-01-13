@@ -1,14 +1,14 @@
-package runnables
+package runnables.luxpark
 
-import javax.inject.{Named, Inject}
+import javax.inject.{Inject, Named}
 
 import persistence.RepoSynchronizer
 import persistence.RepoTypeRegistry._
+import runnables.GuiceBuilderRunnable
 import services.RedCapService
-import scala.concurrent.duration._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class ImportLuxParkDataFromRedCap @Inject() (
     @Named("LuxParkRepo") dataRepo: JsObjectCrudRepo,

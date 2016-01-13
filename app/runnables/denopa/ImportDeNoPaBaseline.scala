@@ -3,6 +3,7 @@ package runnables.denopa
 import javax.inject.{Inject, Named}
 
 import persistence.RepoTypeRegistry._
+import play.api.Configuration
 import play.api.libs.json.{JsNull, JsObject, JsString}
 import runnables.GuiceBuilderRunnable
 import util.JsonUtil.escapeKey
@@ -11,9 +12,12 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.io.Source
 
-class ImportDeNoPaBaseline @Inject()(@Named("DeNoPaBaselineRepo") baselineRepo: JsObjectCrudRepo) extends Runnable {
+class ImportDeNoPaBaseline @Inject()(
+    configuration: Configuration,
+    @Named("DeNoPaBaselineRepo") baselineRepo: JsObjectCrudRepo
+  ) extends Runnable {
 
-  val folder = "/home/tremor/Data/DeNoPa/"
+  val folder = configuration.getString("denopa.import.folder").get
 
   val filename = folder + "Denopa-V1-BL-Datensatz-1-final.csv"
   val separator = "§§"
@@ -38,10 +42,6 @@ class ImportDeNoPaBaseline @Inject()(@Named("DeNoPaBaselineRepo") baselineRepo: 
 
       // parse the line
       val values = parseLine(line)
-
-//      val appValues = values.filter(_.contains("\""))
-//      if (!appValues.isEmpty)
-//        println(appValues.mkString("\n"))
 
       // check if the number of items is as expected
       if (values.size != 5647) {

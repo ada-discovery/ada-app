@@ -1,27 +1,21 @@
-package runnables.denopa
+package runnables
 
 import java.text.{ParseException, SimpleDateFormat}
 import java.util.Date
-import javax.inject.{Inject, Named}
 
-import models.MetaTypeStats
 import persistence.RepoTypeRegistry._
-import persistence._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.DeNoPaSetting._
-import runnables.GuiceBuilderRunnable
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class DeNoPaCleanup @Inject() (
-    @Named("DeNoPaBaselineRepo") baselineRepo: JsObjectCrudRepo,
-    @Named("DeNoPaFirstVisitRepo") firstVisitRepo: JsObjectCrudRepo,
-    @Named("DeNoPaCuratedBaselineRepo") curatedBaselineRepo : JsObjectCrudRepo,
-    @Named("DeNoPaCuratedFirstVisitRepo") curatedFirstVisitRepo: JsObjectCrudRepo,
-    @Named("DeNoPaBaselineMetaTypeStatsRepo") baselineTypeStatsRepo : MetaTypeStatsRepo,
-    @Named("DeNoPaFirstVisitMetaTypeStatsRepo") firstVisitTypeStatsRepo : MetaTypeStatsRepo,
+// TODO: replace MetaTypeStatsRepo with DictionaryRepo
+abstract class CleanupDataSet (
+    dataRepo: JsObjectCrudRepo,
+    curatedDataRepo : JsObjectCrudRepo,
+    typeStatsRepo : MetaTypeStatsRepo,
     translationRepo : TranslationRepo
   ) extends Runnable {
 
@@ -32,49 +26,29 @@ class DeNoPaCleanup @Inject() (
   }
 
   override def run = {
-    // remove the curated baseline records from the collection
-    Await.result(curatedBaselineRepo.deleteAll, timeout)
-
-    // remove the curated first visit records from the collection
-    Await.result(curatedFirstVisitRepo.deleteAll, timeout)
+    // remove the curated records from the collection
+    Await.result(curatedDataRepo.deleteAll, timeout)
 
     val translationMap = Await.result(translationRepo.find(), timeout).map(translation =>
       (translation.original, translation.translated)
     ).toMap
 
-    val baselineAttributeTypeMap = getAttributeTypeMap(baselineTypeStatsRepo)
-    val firstVisitAttributeTypeMap = getAttributeTypeMap(firstVisitTypeStatsRepo)
+    val baselineAttributeTypeMap = getAttributeTypeMap
 
-    val cleanedupBaselineItems = cleanupItems(baselineRepo, baselineAttributeTypeMap, translationMap)
-    val cleanedupFirstVisitItems = cleanupItems(firstVisitRepo, firstVisitAttributeTypeMap, translationMap)
+    val cleanedupBaselineItems = cleanupItems(baselineAttributeTypeMap, translationMap)
 
     cleanedupBaselineItems.foreach { item =>
-      val future = curatedBaselineRepo.save(item)
+      val future = curatedDataRepo.save(item)
       // wait for the execution to complete, i.e., synchronize
       Await.result(future, timeout)
     }
-
-    cleanedupFirstVisitItems.foreach { item =>
-      val future = curatedFirstVisitRepo.save(item)
-      // wait for the execution to complete, i.e., synchronize
-      Await.result(future, timeout)
-    }
-
-    println("Base line")
-    println("---------")
-    println(cleanedupBaselineItems.size)
-    println
-    println("First visit")
-    println("-----------")
-    println(cleanedupFirstVisitItems.size)
   }
 
-  private def cleanupItems(
-    repo : AsyncReadonlyRepo[JsObject, BSONObjectID],
+  protected def cleanupItems(
     attributeTypeMap : Map[String, InferredType.Value],
     translationMap : Map[String, String]
   ) = {
-    val itemsFuture = repo.find(None, Some(Json.obj("_id" -> 1)))
+    val itemsFuture = dataRepo.find(None, Some(Json.obj("_id" -> 1)))
 
     val convertedJsItems = Await.result(itemsFuture, timeout).map { item =>
       val newFieldValues: Seq[(String, JsValue)] = item.fields.filter{case (attribute, value) =>
@@ -120,8 +94,8 @@ class DeNoPaCleanup @Inject() (
     }
   }
 
-  private def getAttributeTypeMap(repo : AsyncReadonlyRepo[MetaTypeStats, BSONObjectID]) : Map[String, InferredType.Value] = {
-    val statsFuture = repo.find(None, Some(Json.obj("attributeName" -> 1)))
+  protected def getAttributeTypeMap : Map[String, InferredType.Value] = {
+    val statsFuture = typeStatsRepo.find(None, Some(Json.obj("attributeName" -> 1)))
 
     Await.result(statsFuture, timeout).map{ item =>
       val valueFreqsWoNa = item.valueRatioMap.filterNot(_._1.toLowerCase.equals("na"))
@@ -177,8 +151,4 @@ class DeNoPaCleanup @Inject() (
 
   private def toBoolean(string : String) : Boolean =
     (textBooleanMap ++ numBooleanMap).getOrElse(string.toLowerCase, throw booleanExpectedException(string))
-}
-
-object DeNoPaCleanup extends GuiceBuilderRunnable[DeNoPaCleanup] with App {
-  run
 }

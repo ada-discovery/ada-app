@@ -3,6 +3,7 @@ package runnables.denopa
 import javax.inject.{Inject, Named}
 
 import persistence.RepoTypeRegistry._
+import play.api.Configuration
 import play.api.libs.json.{JsNull, JsObject, JsString}
 import runnables.GuiceBuilderRunnable
 import util.JsonUtil.escapeKey
@@ -11,9 +12,12 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.io.Source
 
-class ImportDeNoPaFirstVisit @Inject()(@Named("DeNoPaFirstVisitRepo") firstVisitRepo: JsObjectCrudRepo) extends Runnable {
+class ImportDeNoPaFirstVisit @Inject()(
+    configuration: Configuration,
+    @Named("DeNoPaFirstVisitRepo") firstVisitRepo: JsObjectCrudRepo
+  ) extends Runnable {
 
-  val folder = "/home/peter/Data/DeNoPa/"
+  val folder = configuration.getString("denopa.import.folder").get
 
   val filename = folder + "Denopa-V2-FU1-Datensatz-final.csv"
   val separator = "§§"
@@ -47,10 +51,6 @@ class ImportDeNoPaFirstVisit @Inject()(@Named("DeNoPaFirstVisitRepo") firstVisit
 
       // parse the line
       val values = parseLine(linex)
-
-//      val appValues = values.filter(_.contains("\""))
-//      if (!appValues.isEmpty)
-//        println(appValues.mkString("\n"))
 
       if (!splitLineIndeces.contains(index)) {
         if (values.size != 8918)

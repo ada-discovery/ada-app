@@ -4,6 +4,7 @@ import javax.inject.{Inject, Named}
 
 import models.Translation
 import persistence.RepoTypeRegistry._
+import play.api.Configuration
 import runnables.GuiceBuilderRunnable
 
 import scala.concurrent.Await
@@ -11,13 +12,12 @@ import scala.concurrent.duration._
 import scala.io.Source
 
 class DeNoPaTranslations @Inject() (
+    configuration: Configuration,
     translationRepo: TranslationRepo,
     @Named("DeNoPaBaselineMetaTypeStatsRepo") baselineStatsRepo : MetaTypeStatsRepo,
     @Named("DeNoPaFirstVisitMetaTypeStatsRepo") firstVisitStatsRepo : MetaTypeStatsRepo
   ) extends Runnable {
 
-//  val foldername = "/Users/peter.banda/Projects/ncer-pd/project/translations/"
-//  val foldername = "/home/peter.banda/DeNoPa/translations/"
   val foldername = "/home/peter/Projects/ncer-pd/project/translations/"
 
   val filename_de = foldername + "DeNoPa_dictionary_de"

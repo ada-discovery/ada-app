@@ -12,6 +12,10 @@ class AdminController extends Controller {
 
   @Inject var messagesApi: MessagesApi = _
 
+  val tomcatLibFolder = "../webapps/ROOT/WEB-INF/lib/"
+  // we scan only the jars starting with this prefix to speed up the class search
+  val libPrefix = "ncer-pd"
+
   /**
     * Creates view showign all runnables.
     * The view provides an option to launch the runnables and displays feedback once the job is finished.
@@ -19,7 +23,17 @@ class AdminController extends Controller {
     * @return View listing all runnables in directory "runnables".
     */
   def listRunnables = Action { implicit request =>
-    val classpath = List(".").map(new File(_))
+    val defaultClasspath = List(".").map(new File(_))
+
+    val tomcatLibFiles = new File(tomcatLibFolder).listFiles
+    val classpath : List[File] =
+      if (tomcatLibFiles != null) {
+        val tomcatClasspath = tomcatLibFiles.filter(file =>
+          file.isFile && file.getName.startsWith(libPrefix) && file.getName.endsWith(".jar"))
+        (tomcatClasspath ++ defaultClasspath).toList
+      } else
+        defaultClasspath
+
     val finder = ClassFinder(classpath)
     val runnableClassInfos = finder.getClasses.filter{ classInfo =>
       try {
@@ -54,7 +68,7 @@ class AdminController extends Controller {
       val start = new java.util.Date()
       runnable.run()
       val execTimeSec = (new java.util.Date().getTime - start.getTime) / 1000
-      runnablesRedirect.flashing("success" -> s"Script ${className} successfully executed in ${execTimeSec} sec.")
+      runnablesRedirect.flashing("success" -> s"Script ${className} was successfully executed in ${execTimeSec} sec.")
     } catch {
       case _ : ClassNotFoundException => runnablesRedirect.flashing("errors" -> s"Script ${className} does not exist.")
       case e : Exception => runnablesRedirect.flashing("errors" -> s"Script ${className} failed due to: ${e.getMessage}")

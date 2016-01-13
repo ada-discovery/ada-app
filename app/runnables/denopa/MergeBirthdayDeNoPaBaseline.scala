@@ -1,13 +1,14 @@
 package runnables.denopa
 
+import com.google.inject.Inject
 import runnables.GuiceBuilderRunnable
 
 import scala.io.Source
+import play.api.Configuration
 
-class MergeBirthdayDeNoPaBaseline extends Runnable {
+class MergeBirthdayDeNoPaBaseline @Inject()(configuration : Configuration) extends Runnable {
 
-//  val folder = "/Users/peter.banda/Documents/DeNoPa/"
-  val folder = "/home/tremor/Downloads/DeNoPa/"
+  val folder = configuration.getString("denopa.import.folder").get
 
   val filenameWithBirthday = folder + "Denopa-V1-BL-Datensatz-1-dates.csv"
   val originalFilename = folder + "Denopa-V1-BL-Datensatz-1.csv"
