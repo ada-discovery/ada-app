@@ -12,6 +12,12 @@ class AdminController extends Controller {
 
   @Inject var messagesApi: MessagesApi = _
 
+  /**
+    * Creates view showign all runnables.
+    * The view provides an option to launch the runnables and displays feedback once the job is finished.
+    *
+    * @return View listing all runnables in directory "runnables".
+    */
   def listRunnables = Action { implicit request =>
     val classpath = List(".").map(new File(_))
     val finder = ClassFinder(classpath)
@@ -34,6 +40,12 @@ class AdminController extends Controller {
 
   private val runnablesRedirect = Redirect(routes.AdminController.listRunnables())
 
+  /**
+    * Runs the script given its path (i.e. "runnables.denopa.DeNoPaCleanup").
+    *
+    * @param className Path of runnable to launch.
+    * @return Redirects to listRunnables()
+    */
   def runScript(className : String) = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
     try {
