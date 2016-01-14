@@ -8,7 +8,7 @@ import models.{Page, FieldType}
 import persistence.DictionaryFieldRepo
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{RequestHeader, Action}
+import play.api.mvc.{AnyContent, RequestHeader, Action}
 import play.api.Play.current
 import util.WebExportUtil.stringToFile
 import play.api.libs.json._
@@ -113,7 +113,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param fieldName Name of the field of interest.
     * @return JsObject containing the entries of the field.
     */
-  def getFieldValues(fieldName : String) = {
+  def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] = {
     for {
       field <- dictionaryRepo.get(fieldName)
       values <- repo.find(None, None, Some(Json.obj(fieldName -> 1)))
@@ -138,7 +138,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     *
     * @return View with piechart showing field types.
     */
-  def overviewFieldTypes = Action.async { implicit request =>
+  def overviewFieldTypes: Action[AnyContent] = Action.async { implicit request =>
     dictionaryRepo.find().map{ fields =>
       if (fields.isEmpty)
         throw new IllegalStateException(s"Empty dictionary found. Pls. create one by running 'standalone.InferXXXDictionary' script.")
@@ -199,7 +199,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param yFieldName Name of field to be used for y coordinates.
     * @return View with scatterplot and selection option for different xFieldName and yFieldName.
     */
-  def getScatterStats(xFieldName : String, yFieldName : String) = Action.async { implicit request =>
+  def getScatterStats(xFieldName : String, yFieldName : String): Action[AnyContent] = Action.async { implicit request =>
     val fieldsFuture = dictionaryRepo.find()
     val xFieldFuture = dictionaryRepo.get(xFieldName)
     val yFieldFuture = dictionaryRepo.get(yFieldName)
@@ -236,7 +236,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
 
   /**
-    * TODO: implement. what is it supposed to do?
+    * TODO: implement. what is it supposed to return?
     *
     * @param value ???
     * @param fieldType ???
@@ -252,7 +252,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param delimiter Delimiter for output file.
     * @return View for download.
     */
-  def exportTranSMARTDataFile(delimiter : String) = Action { implicit request =>
+  def exportTranSMARTDataFile(delimiter : String): Action[AnyContent] = Action { implicit request =>
     val fileContent = generateTranSMARTDataFile(tranSMARTDataFileName, delimiter, exportOrderByField)
     stringToFile(tranSMARTDataFileName)(fileContent)
   }
@@ -264,7 +264,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param delimiter Delimiter for output file.
     * @return View for download.
     */
-  def exportTranSMARTMappingFile(delimiter : String) = Action { implicit request =>
+  def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent] = Action { implicit request =>
     val fileContent = generateTranSMARTMappingFile(tranSMARTDataFileName, delimiter, exportOrderByField)
     stringToFile(tranSMARTMappingFileName)(fileContent)
   }
@@ -278,7 +278,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param orderBy Order of fields in data file.
     * @return VString with file content.
     */
-  protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String) =
+  protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String): String =
   {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
@@ -297,7 +297,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param orderBy Order of fields in data file.
     * @return VString with file content.
     */
-  protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String) =
+  protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String): String =
   {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
@@ -314,9 +314,9 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param dataFilename Name of output file.
     * @param delimiter Delimiter for output file.
     * @param orderBy Order of fields in data file.
-    * @return VString with file content.
+    * @return String with file content.
     */
-  protected def getTranSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String) = {
+  protected def getTranSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String): (String, String) = {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 

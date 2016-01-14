@@ -149,6 +149,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   }
 
   /**
+    *
     * Return response with json represenation of all stored objects
     * Used for rest interface.
     *
@@ -163,8 +164,15 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
         InternalServerError(t.getMessage)
     }
   }
-  
-  protected def toJsonSort(string : String) =
+
+  /**
+    * TODO: Move this into utility object.
+    * Convert String into Json object for sorting.
+    *
+    * @param string Reference column sorting.
+    * @return Option with JsObject indicating sorting index. None, if string is empty.
+    */
+  protected def toJsonSort(string : String): Option[JsObject] =
     if (!string.isEmpty) {
       if (string.startsWith("-"))
         Some(Json.obj(string.substring(1) -> -1))
@@ -173,7 +181,12 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     } else
       None
 
-  protected def listViewProjection =
+
+  /**
+    *
+    * @return
+    */
+  protected def listViewProjection: Option[JsObject] =
     listViewColumns.map(columns =>
       JsObject(columns.map(column => (column, Json.toJson(1)))))
 }

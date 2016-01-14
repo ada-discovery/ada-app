@@ -20,7 +20,15 @@ case class Field(
   labels : List[String] = List[String]()
 //  category : Category
 ) {
-  override def equals(o : Any) = o match {
+
+  /**
+    * Field matching.
+    * Matches by Field.name.
+    *
+    * @param o Other Field to be matched with this one.
+    * @return Boolean indicating similarity.
+    */
+  override def equals(o : Any): Boolean = o match {
     case field: Field => this.name.equals(field.name)
     case _ => false
   }
