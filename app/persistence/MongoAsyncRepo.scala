@@ -6,6 +6,7 @@ import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.api.libs.json.JsObject
 import play.modules.reactivemongo.ReactiveMongoApi
 import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
+import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.indexes.{ IndexType, Index }
 import reactivemongo.bson.BSONObjectID
 
@@ -40,16 +41,16 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
   ): Future[Traversable[E]] = {
 
     // handle criteria and projection (if any)
-    val queryBuilder = collection.find(criteria.getOrElse(Json.obj()), projection.getOrElse(Json.obj()))
+    val queryBuilder: GenericQueryBuilder[collection.pack.type] = collection.find(criteria.getOrElse(Json.obj()), projection.getOrElse(Json.obj()))
 
     // handle sort (if any)
-    val queryBuilder2 = orderBy match {
+    val queryBuilder2: GenericQueryBuilder[collection.pack.type] = orderBy match {
       case Some(orderBy) => queryBuilder.sort(orderBy)
       case None => queryBuilder
     }
 
     // handle pagination (if requested)
-    val cursor = page match {
+    val cursor: CursorProducer[E]#ProducedCursor = page match {
       case Some(page) => limit.map(l =>
         queryBuilder2.options(QueryOpts(page * l, l)).cursor[E]()
       ).getOrElse(
@@ -67,7 +68,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     }
   }
 
-  override def count(criteria: Option[JsObject]) =
+  override def count(criteria: Option[JsObject]): Future[Int] =
     criteria match {
       case Some(criteria) => collection.runCommand(Count(criteria)).map(_.value)
       case None => collection.count()
@@ -82,12 +83,12 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
 
-  override def save(entity: E): Future[Either[String, ID]] = {
+  override def save(entity: E): Future[ID] = {
     val id = identity.next
     val doc = Json.toJson(identity.set(entity, id)).as[JsObject]
     collection.insert(doc).map {
-      case le if le.ok == true => Right(id)
-      case le => Left(le.message)
+      case le if le.ok == true => id
+      case le => throw new IllegalArgumentException(le.message)
     }
   }
 }
@@ -100,28 +101,28 @@ protected class MongoAsyncCrudRepo[E: Format, ID: Format](
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
 
-  override def update(entity: E): Future[Either[String, ID]] = {
+  override def update(entity: E): Future[String] = {
     val doc = Json.toJson(entity).as[JsObject]
     identity.of(entity).map{ id =>
       collection.update(Json.obj(identity.name -> id), doc) map {
-        case le if le.ok == true => Right(id)
-        case le => Left(le.message)
+        case le if le.ok == true => id.toString
+        case le => throw new IllegalArgumentException(le.message)
       }
     }.getOrElse(
-        Future(Left("Id required for update."))
+        throw new IllegalArgumentException("Id required for update.")
     )
   }
 
-  override def updateCustom(id: ID, modifier : JsObject) =
+  override def updateCustom(id: ID, modifier : JsObject): Future[String] =
     collection.update(Json.obj(identity.name -> id), modifier) map {
-      case le if le.ok == true => Right(id)
-      case le => Left(le.message)
+      case le if le.ok == true => id.toString
+      case le => throw new IllegalArgumentException(le.message)
     }
 
-  override def delete(id: ID): Future[Either[String, ID]] = {
+  override def delete(id: ID): Future[ID] = {
     collection.remove(Json.obj(identity.name -> id)) map {  // collection.remove(Json.obj(identity.name -> id), firstMatchOnly = true)
-      case le if le.ok == true => Right(id)
-      case le => Left(le.message)
+      case le if le.ok == true => id
+      case le => throw new IllegalAccessException(le.message)
     }
   }
 

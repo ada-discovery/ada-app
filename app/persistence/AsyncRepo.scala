@@ -38,19 +38,21 @@ trait AsyncReadonlyRepo[E, ID] {
     * @param criteria Filtering criteria object. Use a String to filter according to value of reference column. Use None for no filtering.
     * @return Number of maching elements.
     */
-  def count(criteria: Option[JsObject]) : Future[Int]
+  def count(
+    criteria: Option[JsObject] = None
+  ): Future[Int]
 
 //  def getDictionary : models.Dictionary
 }
 
 trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
-  def save(entity: E): Future[Either[String, ID]]
+  def save(entity: E): Future[ID]
 }
 
 trait AsyncCrudRepo[E, ID] extends AsyncRepo[E, ID] {
-  def update(entity: E): Future[Either[String, ID]]
-  def updateCustom(id: ID, modifier : JsObject): Future[Either[String, ID]]
-  def delete(id: ID): Future[Either[String, ID]]
+  def update(entity: E): Future[String]
+  def updateCustom(id: ID, modifier : JsObject): Future[String]
+  def delete(id: ID): Future[ID]
   def deleteAll : Future[String]
 }
 

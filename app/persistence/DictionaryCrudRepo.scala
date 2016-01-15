@@ -8,7 +8,6 @@ import play.api.libs.json.{JsObject, Json}
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.{Await, Future}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.reactivemongo.json.BSONFormats._
 import models.Dictionary._
 import scala.concurrent.duration._
 
@@ -31,7 +30,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
   override def get: Future[Dictionary] = {
     getByDataSetName.map(dictionaries =>
       if (dictionaries.isEmpty)
-        throw new IllegalArgumentException("Dictionary was not initialized")
+        throw new IllegalAccessException("Dictionary was not initialized")
       else
         dictionaries.head
     )
@@ -72,7 +71,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @param entity Field to be updated. entity.name must match an existing Field.name.
     * @return Either object with Right indicating the success or failure.
     */
-  override def update(entity: Field): Future[Either[String, String]] = ???
+  override def update(entity: Field): Future[String] = ???
 
 
   /**
@@ -83,7 +82,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @param modifier
     * @return
     */
-  override def updateCustom(id: String, modifier: JsObject): Future[Either[String, String]] = ???
+  override def updateCustom(id: String, modifier: JsObject): Future[String] = ???
 
 
   /**
@@ -92,14 +91,15 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     *
     * @return String indicating success or failure ("success", "fail").
     */
-  override def deleteAll: Future[String] =
+  override def deleteAll: Future[String] = {
     get.flatMap { dictionary =>
-      dictionaryRepo.update(dictionary.copy(fields = List[Field]())).map {
-        case Right(id) => "success"
-        case Left(err) => "fail"
-      }
+      dictionaryRepo.update(dictionary.copy(fields = List[Field]())).map { id => id.toString}
     }
+    /*get.flatMap(dictionary =>
+      dictionary.
+    )*/
 
+  }
 
   /**
     * Delete single entry identified by its id (name).
@@ -107,20 +107,17 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @param id Name of the field to be deleted.
     * @return Either object with Right indicating the success or failure.
     */
-  override def delete(id: String): Future[Either[String, String]] =
+  override def delete(id: String): Future[String] = {
     get.flatMap { dictionary =>
       val field = Field(id)
       val newFields = dictionary.fields.filterNot(_.equals(field))
       if (dictionary.fields.size == newFields.size) {
-        Future(Left("id"))
+        Future("id")
       } else {
-        dictionaryRepo.update(dictionary.copy(fields = newFields)).map {
-          case Right(id) => Right("success")
-          case Left(err) => Right("fail")
-        }
+        dictionaryRepo.update(dictionary.copy(fields = newFields))
       }
     }
-
+  }
 
   /**
     * Converts the given Field into Json format and calls updateCustom() to update/ save it in the repo.
@@ -129,15 +126,14 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @param entity Field to be updated/ saved
     * @return Either object with Right indicating the success or failure.
     */
-  override def save(entity: Field): Future[Either[String, String]] = {
+  override def save(entity: Field): Future[String] = {
     val modifier = Json.obj {
       "$push" -> Json.obj {
         "fields" -> Json.toJson(entity)
       }
     }
     dictionaryRepo.updateCustom(dictionaryId, modifier) map {
-      case Right(id) => Right("success")
-      case Left(err) => Right("fail")
+      id => id
     }
   }
 
@@ -149,7 +145,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @return Number of maching elements.
     */
   override def count(criteria: Option[JsObject]): Future[Int] = {
-    var futureResult: Future[Traversable[Field]] = find(criteria, None, None, None, None)
+    val futureResult: Future[Traversable[Field]] = find(criteria, None, None, None, None)
     futureResult.map(t => t.size)
   }
 
@@ -160,10 +156,13 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @return Fields in the dicitonary with exact name match.
     */
   override def get(name: String): Future[Option[Field]] =
+  {
     get.map(dictionary => dictionary.fields.find(_.name.equals(name)))
+  }
 
   /**
     * TODO: use pagination and projection parameters or remove them.
+    * Use mongo modifier slice for projection
     *
     * Find object matching the filtering criteria. Fields may be ordered and only a subset of them used.
     * Pagination options for page limit and page number are available to limit number of returned results.
@@ -176,26 +175,40 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @return Traversable object for iteration.
     */
   override def find(
-     criteria: Option[JsObject],
-     orderBy: Option[JsObject],
-     projection: Option[JsObject],
-     limit: Option[Int],
-     page: Option[Int]
+     criteria: Option[JsObject] = None,
+     orderBy: Option[JsObject] = None,
+     projection: Option[JsObject] = None,
+     limit: Option[Int] = None,
+     page: Option[Int] = None
   ): Future[Traversable[Field]] = {
-    criteria match {
-      case None => get.map(dictionary => dictionary.fields)
-      case _ => get.map(dictionary =>
-        // start filtering
-        // use slice for pagination
 
+    /*
+    // helper for pagination
+    val pageIdx = if(page.isEmpty) 0 else page.get;
+    val pageOffset = if(limit.isEmpty) count().map(x => x) else limit.get;
 
+    // extract criteria
+    val useCriteria = criteria match {
+      case None => Json.obj()
+      case Some(c) => c
+    }*/
 
-        dictionary.fields
+    /*dictionaryRepo.find(criteria, orderBy, projection, limit, page).map(x =>
+      x.map(dict =>
+        dict.fields
       )
-    }
+    )
+    */
 
-    //get.map(dictionary => dictionary.fields)
-    //get.map(dictionary => dictionary.fields.map(field =>
+    /*val modifier = Json.obj {
+      "find" -> Json.obj {
+        "comments" -> Json.obj(
+          "$slice" -> Json.toJson(Seq(pageIdx, pageOffset))
+        )
+      }
+    }*/
+
+    get.map(dictionary => dictionary.fields)
   }
 
 

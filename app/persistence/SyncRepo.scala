@@ -28,13 +28,13 @@ trait SyncReadonlyRepo[E, ID] {
 }
 
 trait SyncRepo[E, ID] extends SyncReadonlyRepo[E, ID] {
-  def save(entity: E): Either[String, ID]
+  def save(entity: E): String
 }
 
 trait SyncCrudRepo[E, ID] extends SyncRepo[E, ID] {
-  def update(entity: E): Either[String, ID]
-  def updateCustom(id: ID, modifier : JsObject): Either[String, ID]
-  def delete(id: ID): Either[String, ID]
+  def update(entity: E): String
+  def updateCustom(id: ID, modifier : JsObject): String
+  def delete(id: ID): String
   def deleteAll : String
 }
 
@@ -49,7 +49,7 @@ protected class SyncReadonlyRepoAdapter[E, ID](
     timeout : Duration
   ) extends SyncReadonlyRepo[E, ID] {
 
-  override def get(id: ID) =
+  override def get(id: ID): Option[E] =
     wait(asyncRepo.get(id))
 
   override def find(
@@ -58,12 +58,14 @@ protected class SyncReadonlyRepoAdapter[E, ID](
     projection : Option[JsObject] = None,
     limit: Option[Int] = None,
     page: Option[Int] = None
-  ) = wait(asyncRepo.find(criteria, orderBy, projection, limit, page))
+  ): Traversable[E] = {
+    wait(asyncRepo.find(criteria, orderBy, projection, limit, page))
+  }
 
-  override def count(criteria: Option[JsObject]) =
+  override def count(criteria: Option[JsObject]): Int =
     wait(asyncRepo.count(criteria))
 
-  protected def wait[T](future : Awaitable[T]) =
+  protected def wait[T](future : Awaitable[T]): T =
     Await.result(future, timeout)
 }
 
@@ -72,8 +74,8 @@ private class SyncRepoAdapter[E, ID](
     timeout : Duration
   ) extends SyncReadonlyRepoAdapter[E, ID](asyncRepo, timeout) with SyncRepo[E, ID] {
 
-  override def save(entity: E) =
-    wait(asyncRepo.save(entity))
+  override def save(entity: E): String =
+    wait(asyncRepo.save(entity)).toString
 }
 
 private class SyncCrudRepoAdapter[E, ID](
@@ -81,16 +83,16 @@ private class SyncCrudRepoAdapter[E, ID](
    timeout : Duration
   ) extends SyncRepoAdapter[E, ID](asyncRepo, timeout) with SyncCrudRepo[E, ID] {
 
-  override def update(entity: E) =
+  override def update(entity: E): String =
     wait(asyncRepo.update(entity))
 
-  override def updateCustom(id: ID, modifier : JsObject) =
+  override def updateCustom(id: ID, modifier : JsObject): String =
     wait(asyncRepo.updateCustom(id, modifier))
 
-  override def delete(id: ID) =
-    wait(asyncRepo.delete(id))
+  override def delete(id: ID): String =
+    wait(asyncRepo.delete(id)).toString
 
-  override def deleteAll =
+  override def deleteAll: String =
     wait(asyncRepo.deleteAll)
 }
 

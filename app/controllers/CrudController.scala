@@ -81,13 +81,15 @@ protected abstract class CrudController[E: Format, ID](
     },
     item => {
       val savedItemId = repo.save(item)
-      savedItemId.map {
-        case Right(id) => home.flashing("success" -> s"Item ${id} has been created")
-        case Left(err) => BadRequest(err)
+      savedItemId.map { id =>
+        home.flashing("success" -> s"Item ${id} has been created")
       }.recover {
         case t: TimeoutException =>
           Logger.error("Problem found in the update process")
           InternalServerError(t.getMessage)
+        case i: IllegalAccessException =>
+          Logger.error("Problem found in the update process")
+          InternalServerError(i.getMessage)
       }
     })
   }
@@ -99,9 +101,15 @@ protected abstract class CrudController[E: Format, ID](
       Future.successful(BadRequest(formWithErrors.errorsAsJson))
     },
     entity =>
-      repo.save(entity).map {
-        case Right(id) => Created(Json.obj("message" -> "Item successly created", "id" -> id.toString))
-        case Left(err) => BadRequest(err)
+      repo.save(entity).map { id =>
+        Created(Json.obj("message" -> "Item successly created", "id" -> id.toString))
+      }.recover {
+        case t: TimeoutException =>
+          Logger.error("Problem found in the update process")
+          InternalServerError(t.getMessage)
+        case i: IllegalAccessException =>
+          Logger.error("Problem found in the update process")
+          InternalServerError(i.getMessage)
       }
     )
   }
@@ -115,12 +123,14 @@ protected abstract class CrudController[E: Format, ID](
     item => {
       val savedItemId = repo.update(identity.set(item, id))
       savedItemId.map {
-        case Right(id) => home.flashing("success" -> s"Item ${id} has been updated")
-        case Left(err) => BadRequest(err)
+        id => home.flashing("success" -> s"Item ${id} has been updated")
       }.recover {
         case t: TimeoutException =>
           Logger.error("Problem found in the update process")
           InternalServerError(t.getMessage)
+        case i: IllegalAccessException =>
+          Logger.error("Problem found in the update process")
+          InternalServerError(i.getMessage)
       }
     })
   }
@@ -128,27 +138,45 @@ protected abstract class CrudController[E: Format, ID](
   def updateRest(id: ID) = Action.async(parse.json) { implicit request =>
     parseValidateAndProcess[E] { entity =>
       repo.update(identity.set(entity, id)).map {
-        case Right(id) => Ok(Json.obj("message" -> "Item successly updated", "id" -> id.toString))
-        case Left(err) => BadRequest(err)
+        id => Ok(Json.obj("message" -> "Item successly updated", "id" -> id.toString))
+      }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the update process")
+        InternalServerError(t.getMessage)
+      case i: IllegalAccessException =>
+        Logger.error("Problem found in the update process")
+        InternalServerError(i.getMessage)
       }
     }
   }
 
   def delete(id: ID) = Action.async {
-    repo.delete(id).map {
-      case Right(id) => home.flashing("success" -> s"Item ${id} has been deleted")
-      case Left(err) => BadRequest(err)
+    repo.delete(id).map { id =>
+      home.flashing("success" -> s"Item ${id} has been deleted")
+      //case Right(id) => home.flashing("success" -> s"Item ${id} has been deleted")
+      //case Left(err) => BadRequest(err)
     }.recover {
       case t: TimeoutException =>
         Logger.error(s"Problem deleting item ${id}")
         InternalServerError(t.getMessage)
+      case i: IllegalAccessException =>
+        Logger.error(s"Problem deleting item ${id}")
+        InternalServerError(i.getMessage)
     }
   }
 
   def deleteRest(id: ID) = Action.async {
-    repo.delete(id).map {
-      case Right(id) => Ok(Json.obj("message" -> "Item successly deleted", "id" -> id.toString))
-      case Left(err) => BadRequest(err)
+    repo.delete(id).map { id =>
+      Ok(Json.obj("message" -> "Item successly deleted", "id" -> id.toString))
+      //case Right(id) => Ok(Json.obj("message" -> "Item successly deleted", "id" -> id.toString))
+      //case Left(err) => BadRequest(err)
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error(s"Problem deleting item ${id}")
+        InternalServerError(t.getMessage)
+      case i: IllegalAccessException =>
+        Logger.error(s"Problem deleting item ${id}")
+        InternalServerError(i.getMessage)
     }
   }
 
