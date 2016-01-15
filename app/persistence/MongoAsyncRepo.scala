@@ -7,6 +7,7 @@ import play.api.libs.json.JsObject
 import play.modules.reactivemongo.ReactiveMongoApi
 import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
 import reactivemongo.api.collections.GenericQueryBuilder
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{ IndexType, Index }
 import reactivemongo.bson.BSONObjectID
 
@@ -73,6 +74,9 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
       case Some(criteria) => collection.runCommand(Count(criteria)).map(_.value)
       case None => collection.count()
     }
+
+  protected def handleResult(result : WriteResult) =
+    if (!result.ok) throw new RepoException(result.message)
 }
 
 protected class MongoAsyncRepo[E: Format, ID: Format](
@@ -87,8 +91,8 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
     val id = identity.next
     val doc = Json.toJson(identity.set(entity, id)).as[JsObject]
     collection.insert(doc).map {
-      case le if le.ok == true => id
-      case le => throw new IllegalArgumentException(le.message)
+      case le if le.ok => id
+      case le => throw new RepoException(le.message)
     }
   }
 }
@@ -101,37 +105,27 @@ protected class MongoAsyncCrudRepo[E: Format, ID: Format](
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
 
-  override def update(entity: E): Future[String] = {
+  override def update(entity: E): Future[ID] = {
     val doc = Json.toJson(entity).as[JsObject]
     identity.of(entity).map{ id =>
       collection.update(Json.obj(identity.name -> id), doc) map {
-        case le if le.ok == true => id.toString
-        case le => throw new IllegalArgumentException(le.message)
+        case le if le.ok => id
+        case le => throw new RepoException(le.message)
       }
     }.getOrElse(
-        throw new IllegalArgumentException("Id required for update.")
+        throw new RepoException("Id required for update.")
     )
   }
 
-  override def updateCustom(id: ID, modifier : JsObject): Future[String] =
-    collection.update(Json.obj(identity.name -> id), modifier) map {
-      case le if le.ok == true => id.toString
-      case le => throw new IllegalArgumentException(le.message)
-    }
+  override def updateCustom(id: ID, modifier : JsObject): Future[Unit] =
+    collection.update(Json.obj(identity.name -> id), modifier) map handleResult
 
-  override def delete(id: ID): Future[ID] = {
-    collection.remove(Json.obj(identity.name -> id)) map {  // collection.remove(Json.obj(identity.name -> id), firstMatchOnly = true)
-      case le if le.ok == true => id
-      case le => throw new IllegalAccessException(le.message)
-    }
-  }
+  // collection.remove(Json.obj(identity.name -> id), firstMatchOnly = true)
+  override def delete(id: ID): Future[Unit] =
+    collection.remove(Json.obj(identity.name -> id)) map handleResult
 
-  override def deleteAll : Future[String] = {
-    collection.remove(Json.obj()).map {
-      case le if le.ok == true => "ok"
-      case le => le.message
-    }
-  }
+  override def deleteAll: Future[Unit] =
+    collection.remove(Json.obj()) map handleResult
 }
 
 protected class MongoAsyncStreamRepo[E: Format, ID: Format](

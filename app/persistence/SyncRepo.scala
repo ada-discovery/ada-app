@@ -28,14 +28,14 @@ trait SyncReadonlyRepo[E, ID] {
 }
 
 trait SyncRepo[E, ID] extends SyncReadonlyRepo[E, ID] {
-  def save(entity: E): String
+  def save(entity: E): ID
 }
 
 trait SyncCrudRepo[E, ID] extends SyncRepo[E, ID] {
-  def update(entity: E): String
-  def updateCustom(id: ID, modifier : JsObject): String
-  def delete(id: ID): String
-  def deleteAll : String
+  def update(entity: E): ID
+  def updateCustom(id: ID, modifier : JsObject)
+  def delete(id: ID)
+  def deleteAll
 }
 
 trait SyncStreamRepo[E, ID] extends SyncRepo[E, ID] {
@@ -58,11 +58,10 @@ protected class SyncReadonlyRepoAdapter[E, ID](
     projection : Option[JsObject] = None,
     limit: Option[Int] = None,
     page: Option[Int] = None
-  ): Traversable[E] = {
+  ) =
     wait(asyncRepo.find(criteria, orderBy, projection, limit, page))
-  }
 
-  override def count(criteria: Option[JsObject]): Int =
+  override def count(criteria: Option[JsObject]) =
     wait(asyncRepo.count(criteria))
 
   protected def wait[T](future : Awaitable[T]): T =
@@ -74,8 +73,8 @@ private class SyncRepoAdapter[E, ID](
     timeout : Duration
   ) extends SyncReadonlyRepoAdapter[E, ID](asyncRepo, timeout) with SyncRepo[E, ID] {
 
-  override def save(entity: E): String =
-    wait(asyncRepo.save(entity)).toString
+  override def save(entity: E) =
+    wait(asyncRepo.save(entity))
 }
 
 private class SyncCrudRepoAdapter[E, ID](
@@ -83,16 +82,16 @@ private class SyncCrudRepoAdapter[E, ID](
    timeout : Duration
   ) extends SyncRepoAdapter[E, ID](asyncRepo, timeout) with SyncCrudRepo[E, ID] {
 
-  override def update(entity: E): String =
+  override def update(entity: E) =
     wait(asyncRepo.update(entity))
 
-  override def updateCustom(id: ID, modifier : JsObject): String =
+  override def updateCustom(id: ID, modifier : JsObject) =
     wait(asyncRepo.updateCustom(id, modifier))
 
-  override def delete(id: ID): String =
-    wait(asyncRepo.delete(id)).toString
+  override def delete(id: ID) =
+    wait(asyncRepo.delete(id))
 
-  override def deleteAll: String =
+  override def deleteAll  =
     wait(asyncRepo.deleteAll)
 }
 

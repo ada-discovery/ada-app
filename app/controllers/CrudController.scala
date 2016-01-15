@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import models.{Page, Identity}
-import persistence.AsyncCrudRepo
+import persistence.{RepoException, AsyncCrudRepo}
 import play.api.Logger
 import play.api.routing.Router
 import play.api.i18n.{Messages, MessagesApi}
@@ -87,7 +87,7 @@ protected abstract class CrudController[E: Format, ID](
         case t: TimeoutException =>
           Logger.error("Problem found in the update process")
           InternalServerError(t.getMessage)
-        case i: IllegalAccessException =>
+        case i: RepoException =>
           Logger.error("Problem found in the update process")
           InternalServerError(i.getMessage)
       }
@@ -107,7 +107,7 @@ protected abstract class CrudController[E: Format, ID](
         case t: TimeoutException =>
           Logger.error("Problem found in the update process")
           InternalServerError(t.getMessage)
-        case i: IllegalAccessException =>
+        case i: RepoException =>
           Logger.error("Problem found in the update process")
           InternalServerError(i.getMessage)
       }
@@ -128,7 +128,7 @@ protected abstract class CrudController[E: Format, ID](
         case t: TimeoutException =>
           Logger.error("Problem found in the update process")
           InternalServerError(t.getMessage)
-        case i: IllegalAccessException =>
+        case i: RepoException =>
           Logger.error("Problem found in the update process")
           InternalServerError(i.getMessage)
       }
@@ -143,7 +143,7 @@ protected abstract class CrudController[E: Format, ID](
       case t: TimeoutException =>
         Logger.error("Problem found in the update process")
         InternalServerError(t.getMessage)
-      case i: IllegalAccessException =>
+      case i: RepoException =>
         Logger.error("Problem found in the update process")
         InternalServerError(i.getMessage)
       }
@@ -151,31 +151,28 @@ protected abstract class CrudController[E: Format, ID](
   }
 
   def delete(id: ID) = Action.async {
-    repo.delete(id).map { id =>
+    repo.delete(id).map { _ =>
       home.flashing("success" -> s"Item ${id} has been deleted")
-      //case Right(id) => home.flashing("success" -> s"Item ${id} has been deleted")
-      //case Left(err) => BadRequest(err)
     }.recover {
       case t: TimeoutException =>
         Logger.error(s"Problem deleting item ${id}")
         InternalServerError(t.getMessage)
-      case i: IllegalAccessException =>
+      case i: RepoException =>
         Logger.error(s"Problem deleting item ${id}")
         InternalServerError(i.getMessage)
     }
   }
 
   def deleteRest(id: ID) = Action.async {
-    repo.delete(id).map { id =>
+    repo.delete(id).map { _ =>
       Ok(Json.obj("message" -> "Item successly deleted", "id" -> id.toString))
-      //case Right(id) => Ok(Json.obj("message" -> "Item successly deleted", "id" -> id.toString))
-      //case Left(err) => BadRequest(err)
     }.recover {
       case t: TimeoutException =>
         Logger.error(s"Problem deleting item ${id}")
         InternalServerError(t.getMessage)
-      case i: IllegalAccessException =>
+      case i: RepoException =>
         Logger.error(s"Problem deleting item ${id}")
+        // TODO: What about returning BadRequest?
         InternalServerError(i.getMessage)
     }
   }

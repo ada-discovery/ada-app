@@ -27,14 +27,13 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
 
   override def dataRepo = _dataSetRepo
 
-  override def get: Future[Dictionary] = {
+  override def get: Future[Dictionary] =
     getByDataSetName.map(dictionaries =>
       if (dictionaries.isEmpty)
         throw new IllegalAccessException("Dictionary was not initialized")
       else
         dictionaries.head
     )
-  }
 
   override def initIfNeeded: Future[Boolean] = synchronized {
     val responseFuture = getByDataSetName.map(dictionaries =>
@@ -82,41 +81,39 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @param modifier
     * @return
     */
-  override def updateCustom(id: String, modifier: JsObject): Future[String] = ???
+  override def updateCustom(id: String, modifier: JsObject): Future[Unit] = ???
 
 
   /**
-    * Iterate over all elements in repo and reset them.
+    * Delets all fields in the dictionary.
     * @see update()
     *
-    * @return String indicating success or failure ("success", "fail").
+    * @return Nothing (Unit)
     */
-  override def deleteAll: Future[String] = {
-    get.flatMap { dictionary =>
-      dictionaryRepo.update(dictionary.copy(fields = List[Field]())).map { id => id.toString}
+  override def deleteAll: Future[Unit] = {
+    val modifier = Json.obj {
+      "$set" -> Json.obj {
+        "fields" -> List[Field]()
+      }
     }
-    /*get.flatMap(dictionary =>
-      dictionary.
-    )*/
-
+    dictionaryRepo.updateCustom(dictionaryId, modifier)
   }
 
   /**
     * Delete single entry identified by its id (name).
     *
     * @param id Name of the field to be deleted.
-    * @return Either object with Right indicating the success or failure.
+    * @return Nothing (Unit)
     */
-  override def delete(id: String): Future[String] = {
-    get.flatMap { dictionary =>
-      val field = Field(id)
-      val newFields = dictionary.fields.filterNot(_.equals(field))
-      if (dictionary.fields.size == newFields.size) {
-        Future("id")
-      } else {
-        dictionaryRepo.update(dictionary.copy(fields = newFields))
+  override def delete(name: String): Future[Unit] = {
+    val modifier = Json.obj {
+      "$pull" -> Json.obj {
+        "fields" -> Json.obj {
+          "name" -> name
+        }
       }
     }
+    dictionaryRepo.updateCustom(dictionaryId, modifier)
   }
 
   /**
@@ -132,11 +129,10 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
         "fields" -> Json.toJson(entity)
       }
     }
-    dictionaryRepo.updateCustom(dictionaryId, modifier) map {
-      id => id
+    dictionaryRepo.updateCustom(dictionaryId, modifier) map { _ =>
+      entity.name
     }
   }
-
 
   /**
     * Counts all items in repo matching criteria.

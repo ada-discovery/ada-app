@@ -17,37 +17,25 @@ protected class JsObjectMongoCrudRepo(
     val id = BSONObjectID.generate
     entity ++ Json.obj(identityName -> id)
     collection.insert(entity).map {
-      case le if le.ok == true => id
-      case le => throw new IllegalAccessException(le.message)
+      case le if le.ok => id
+      case le => throw new RepoException(le.message)
     }
   }
 
-  override def update(entity: JsObject): Future[String] = {
+  override def update(entity: JsObject): Future[BSONObjectID] = {
     val id = (entity \ identityName).as[BSONObjectID]
     collection.update(Json.obj(identityName -> id), entity) map {
-      case le if le.ok == true => id.toString
-      case le => throw new IllegalAccessException(le.message)
+      case le if le.ok => id
+      case le => throw new RepoException(le.message)
     }
   }
 
-  override def updateCustom(id: BSONObjectID, modifier : JsObject): Future[String] = {
-    collection.update(Json.obj(identityName -> id), modifier) map {
-      case le if le.ok == true => id.toString
-      case le => throw new IllegalAccessException(le.message)
-    }
-  }
+  override def updateCustom(id: BSONObjectID, modifier : JsObject) =
+    collection.update(Json.obj(identityName -> id), modifier) map handleResult
 
-  override def delete(id: BSONObjectID): Future[BSONObjectID] = {
-    collection.remove(Json.obj(identityName -> id)) map {  // collection.remove(Json.obj(identity.name -> id), firstMatchOnly = true)
-      case le if le.ok == true => id
-      case le => throw new IllegalAccessException(le.message)
-    }
-  }
+  override def delete(id: BSONObjectID) =
+    collection.remove(Json.obj(identityName -> id)) map handleResult
 
-  override def deleteAll : Future[String] = {
-    collection.remove(Json.obj()).map {
-      case le if le.ok == true => "ok"
-      case le => throw new IllegalAccessException(le.message)
-    }
-  }
+  override def deleteAll : Future[Unit] =
+    collection.remove(Json.obj()) map handleResult
 }
