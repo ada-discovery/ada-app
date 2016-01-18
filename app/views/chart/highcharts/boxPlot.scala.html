@@ -1,3 +1,5 @@
+@import util.BoxplotStats
+
 @(title : String, chartElementName : String, elements : Seq[(String, Seq[Any])])
 
 // arguments:
@@ -32,10 +34,9 @@
                     {
                         name: 'Observations',
                         data: [
-                            @elements.map{ case (_, data) =>
-                                @data.map{ case (wlow, blow, med, bup, wup) =>
-                                    [@wlow, @blow, @med, @bup, @wup],
-                                },
+                            // extract quantiles from data series
+                            @elements.map{case (_, data) =>
+                                [@util.BoxplotStats.quantiles(data)],
                             }
                         ]
                     }
