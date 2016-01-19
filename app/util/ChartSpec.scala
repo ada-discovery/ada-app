@@ -12,6 +12,15 @@ case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends 
 
 object ChartSpec {
 
+  /**
+    * Given the raw items and fieldnames, all items per field are counted.
+    * Fieldnames will be used as labels for the pie chart.
+    * Calculated fraction of a field is used as pie chart slice sizes.
+    *
+    * @param items Raw items.
+    * @param fieldName Fields of iterest.
+    * @return PieChartSpec object for use in view.
+    */
   def pie(
     items : Traversable[JsObject],
     fieldName : String
@@ -29,6 +38,17 @@ object ChartSpec {
     PieChartSpec(fieldName, countMap.toSeq.sortBy(_._2))
   }
 
+  /**
+    * Given raw items and field names, column chart properties are generated.
+    * Non-defined optional values are auto-calculated.
+    *
+    * @param items Raw items.
+    * @param fieldName Fields of interest.
+    * @param columnCount Number of columns
+    * @param explMin Optional max value for scaling of the columns.
+    * @param explMax Optional min value for scaling of the columns.
+    * @return ColumnChartSpec for us in view.
+    */
   def column(
     items : Traversable[JsObject],
     fieldName : String,
@@ -55,6 +75,13 @@ object ChartSpec {
     ColumnChartSpec(fieldName, data.toSeq)
   }
 
+  /**
+    * Extracts the fields of interest from the raw item lists for plotting.
+    *
+    * @param items Raw items.
+    * @param fieldName Fields of interest.
+    * @return ScatterChartSpec for use in view.
+    */
   def scatter(
     items : Traversable[(JsObject, JsObject)],
     fieldName : String
@@ -70,16 +97,29 @@ object ChartSpec {
 
 
   /**
-    * TOOD: finalize data layout
+    * Exctracts fields of interest from the raw items for boxplotting.
+    * TODO: May throw an exception (double conversion step)
+    * TODO: It would be more meaningful to precaculate boxplot quantiles here.
+    *       However Highcharts expects boxplot quantiles as arguments, while plotly calculates them itself.
     *
+    * @param title Plot title
+    * @param items Raw items.
+    * @param fieldNames Fields of interest.
+    * @return BoxPlotSpec for use in view.
     */
   def box(
-    items : Traversable[JsObject],
-    fieldName : String
+   title : String,
+   items : Traversable[JsObject],
+   fieldNames : Seq[String]
   ) : BoxPlotSpec =
     {
-      // calculate values for (lower whisker, lower boxbound, median, upper boxbound upper whisker) externally
-      val elements = List().toSeq
-      BoxPlotSpec(fieldName, elements)
+      val elements: Seq[(String, Seq[Double])] = fieldNames.map{ field =>
+        val entries: Seq[Double] = items.map{ (item: JsObject) =>
+          val entry: JsValue = (item \ field).get
+          entry.toString.toDouble
+        }.toSeq
+        (field, entries)
+      }
+      BoxPlotSpec(title, elements)
     }
 }
