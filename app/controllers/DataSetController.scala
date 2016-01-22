@@ -71,6 +71,30 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       Some(Json.obj(keyField -> Json.obj("$regex" -> (string + ".*"), "$options" -> "i")))
     else
       None
+
+    /*if (!string.isEmpty) {
+      val criteria : Array[String] = string.split(addCrit)
+      if(criteria.head.equals(string))      //if string can not be split
+        return None
+
+      //val regex = Json.obj("$regex" -> JsString(string + ".*"), "$options" -> "i")
+      //val exp : JsObject = Json.obj(keyField -> regex)
+
+      val exp: JsObject = criteria.map{ crit: String =>
+        if(crit.contains(equalCrit)){
+          val c: Array[String] = crit.split(equalCrit)
+          c match{
+            case Array(s1, s2) => Json.obj(s1 -> Json.obj("$regex" -> JsString(s2 + ".*")))
+            case _ => Json.obj()
+          }
+        }else
+          Json.obj()
+      }.head
+
+      Some(exp)
+    } else {
+      None
+    }*/
   }
 
 
