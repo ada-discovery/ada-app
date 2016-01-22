@@ -1,4 +1,4 @@
-@import util.BoxplotStats
+@import util.BasicStats
 
 @(title : String, chartElementName : String, elements : Seq[(String, Seq[Any])])
 
@@ -36,7 +36,7 @@
                         data: [
                             // extract quantiles from data series
                             @elements.map{case (_, data) =>
-                                [@util.BoxplotStats.quantiles(data)],
+                                [@util.BasicStats.quantiles(data)],
                             }
                         ]
                     }
