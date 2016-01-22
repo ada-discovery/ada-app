@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import _root_.util.ChartSpec
+import _root_.util.{JsonUtil, ChartSpec}
 import org.apache.commons.lang3.StringEscapeUtils
 import models.{Page, FieldType}
 import persistence.DictionaryFieldRepo
@@ -56,6 +56,25 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
 
   /**
+    * TODO: change and add actual querying.
+    *
+    * Turns String into JsObject compatible with reactiveMongo.
+    * The JsObject is used for querzing and filtering the data.
+    * Returns None, if no criteria given.
+    *
+    * @param string Input String to be converted.
+    * @return JsObject containing the criteria.
+    */
+  override protected def toJsonCriteria(string : String) : Option[JsObject] =
+  {
+    if (!string.isEmpty)
+      Some(Json.obj(keyField -> Json.obj("$regex" -> (string + ".*"), "$options" -> "i")))
+    else
+      None
+  }
+
+
+  /**
     * Shows all fields of the selected subject.
     *
     * @param id BSON ID key of subject.
@@ -80,13 +99,18 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param request Header of original request.
     * @return View for all available fields.
     */
-  override def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
+  override def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) ={
+    //val fieldsFuture = dictionaryRepo.find()
+    //val fieldNames = fieldsFuture.map{field => field.map(f => f.name)}
     dataset.list(
       dataSetName + " Item",
       currentPage,
       listViewColumns.get,
-      router
+      router,
+      listViewColumns.get,
+      keyField
     )
+  }
 
 
   /**
@@ -108,24 +132,20 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     exportAllToJson(jsonFileName, exportOrderByField)
 
   /**
-    * Fetch specified field (column) entries by name and wrap them in a JSObject.
+    * Fetch specified field (column) entries from repo and wrap them in a Traversable object.
+    * If a field contains an empty json, it is represented by None.
     *
     * @param fieldName Name of the field of interest.
-    * @return JsObject containing the entries of the field.
+    * @return Traversable object containing the String entries of the field.
     */
   def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] = {
     for {
       field <- dictionaryRepo.get(fieldName)
       values <- repo.find(None, None, Some(Json.obj(fieldName -> 1)))
     } yield {
-      val fieldType = field.get.fieldType
       values.map { item =>
-        val jsValue = (item \ fieldName).get
-        jsValue match {
-          case JsNull => None
-          case x : JsString => Some(jsValue.as[String])
-          case _ => Some(jsValue.toString)
-        }
+        val jsValue: JsValue = (item \ fieldName).get
+        JsonUtil.toString(jsValue)
       }
     }
   }
@@ -133,7 +153,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   /**
     * TODO: Instead of throwing an exception, provide option to run one of the standalone scripts for dictionary generation.
     *
-    * Generates a view showign the field types of the records.
+    * Generates a view showing the field types of the records.
     * Repo with inferred type dictionaries required!
     *
     * @return View with piechart showing field types.
@@ -193,6 +213,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
   /**
     * Fetches, checks and prepares the specified data fields for a scatterplot.
+    * Only compatible FieldTypes (FieldType.Double and FieldType.Integer) are used.
     * Displays the resulting scatterplot in a view.
     *
     * @param xFieldName Name of field to be used for x coordinates.
