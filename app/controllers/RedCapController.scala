@@ -1,6 +1,7 @@
 package controllers
 
 import org.apache.commons.lang3.StringEscapeUtils
+import util.{ConditionType, FilterCondition, FilterSpec}
 
 import scala.concurrent.duration._
 import javax.inject.Inject
@@ -45,8 +46,15 @@ class RedCapController @Inject() (
   def listRecords(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
+    // Just for playing
+    val filterSpec = new FilterSpec(Seq[FilterCondition](
+      new FilterCondition("cdisc_dm_sex", ConditionType.Equals, "1"),
+      new FilterCondition("dm_death", ConditionType.Greater, "2")
+    ))
+    println(Json.stringify(Json.toJson(filterSpec)))
+
     redCapService.listRecords(orderBy, filter).map( items =>
-      Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, filter)))
+      Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, filter), filterSpec))
     )
   }
 

@@ -1,0 +1,87 @@
+@import util.FilterSpec
+@import play.api.libs.json.Json
+@(filter: FilterSpec)
+
+<div class="row">
+    <div class="modal fade" id="editConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Edit Condition</h4>
+                </div>
+                <form action="@routes.AppController.index()">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                Field Name
+                            </div>
+                            <div class="col-md-2">
+                                Operator
+                            </div>
+                            <div class="col-md-6">
+                                Condition
+                            </div>
+                        </div>
+                        <div class="row">
+                            <input class="col-md-4" id="fieldName" name="fieldName">
+                            <input class="col-md-2" id="conditionType" name="conditionType">
+                            <input class="col-md-6" id="condition" name="condition">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" id="exportButton" class="btn btn-primary">Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-12">
+        <ul class="list-inline">
+            <li>
+                Filter:
+            </li>
+            @filter.conditions.zipWithIndex.map { case (condition, index) =>
+                <li class="condition-full">
+                    <h4>
+                        <span class="condition">
+                            <span class="label label-primary">@condition.fieldName</span>
+                            <span>@condition.conditionType</span>
+                            <span class="label label-primary">@condition.condition</span>
+                        </span>
+                        <span class="condition-buttons" style="display: none">
+                            <button type="button" class="btn btn-sm btn-default" onclick="editCondition('@index');">
+                                <span class="glyphicon glyphicon-pencil"></span>
+                            </button>
+                            <a href="@routes.AppController.index()" class="btn btn-sm btn-default">
+                                <span class="glyphicon glyphicon-trash"></span>
+                            </a>
+                        </span>
+                    </h4>
+                </li>
+            }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
+        </ul>
+    </div>
+</div>
+<script type="text/javascript">
+    var filterJs = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}')
+
+    $(".condition-full").hover(null, function() {
+        var buttons = $(this).find(".condition-buttons").first();
+        buttons.fadeOut( 500 );
+    });
+
+    $(".condition").click(function() {
+        var buttons = $(this).parent().children(".condition-buttons").first();
+        buttons.fadeIn( 500 );
+    });
+
+    function editCondition(index) {
+        var condition = filterJs.conditions[index]
+        $("#editConditionModal").find("#fieldName").first().val(condition.fieldName);
+        $("#editConditionModal").find("#conditionType").first().val(condition.conditionType);
+        $("#editConditionModal").find("#condition").first().val(condition.condition);
+        $("#editConditionModal").modal('show');
+    }
+</script>

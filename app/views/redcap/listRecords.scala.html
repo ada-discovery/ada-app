@@ -1,5 +1,6 @@
 @import play.api.libs.json.JsObject
-@(currentPage: Page[JsObject])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@import util.FilterSpec
+@(currentPage: Page[JsObject], filterSpec: FilterSpec)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
     @helper.form(action=routes.RedCapController.listRecords(), 'role -> "search") {
@@ -39,6 +40,7 @@
     @views.html.exportCsvModal("exportCsvModal", "LuxPark REDCap CSV Export", ",", routes.RedCapController.exportRecordsAsCsv())
     @views.html.exportCsvModal("exportTranSMARTDataModal", "LuxPark CSV TranSMART Data Export", "\\t", routes.RedCapController.exportTranSMARTDataFile())
     @views.html.exportCsvModal("exportTranSMARTMappingModal", "LuxPark CSV TranSMART Mapping Export", "\\t", routes.RedCapController.exportTranSMARTMappingFile())
+    @filter(filterSpec)
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{
