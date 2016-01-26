@@ -27,6 +27,12 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
 
   override def dataRepo = _dataSetRepo
 
+  /**
+    * Forwards call to getByDataSetName.
+    *
+    * @see getByDataSetName()
+    * @return Currently selected data set.
+    */
   override def get: Future[Dictionary] =
     getByDataSetName.map(dictionaries =>
       if (dictionaries.isEmpty)
@@ -35,6 +41,11 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
         dictionaries.head
     )
 
+  /**
+    * Initialize dictionary if it does not exist.
+    *
+    * @return true, if initialization required.
+    */
   override def initIfNeeded: Future[Boolean] = synchronized {
     val responseFuture = getByDataSetName.map(dictionaries =>
       if (dictionaries.isEmpty) {
@@ -51,6 +62,11 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     }
   }
 
+  /**
+    * Internally used to search the dictionary with current data set name.
+    *
+    * @return Traversable with all dictionaries matching the current data set name.
+    */
   private def getByDataSetName: Future[Traversable[Dictionary]] =
     dictionaryRepo.find(Some(Json.obj("dataSetName" -> dataSetName)))
 
@@ -137,19 +153,18 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
   /**
     * Counts all items in repo matching criteria.
     *
-    * @param criteria Filtering criteria object. Use a String to filter according to value of reference column. Use None for no filtering.
-    * @return Number of maching elements.
+    * @param criteria Filtering criteria object. Use a JsObject to filter according to value of reference column. Use None for no filtering.
+    * @return Number of matching elements.
     */
   override def count(criteria: Option[JsObject]): Future[Int] = {
-    val futureResult: Future[Traversable[Field]] = find(criteria, None, None, None, None)
-    futureResult.map(t => t.size)
+    dictionaryRepo.count(criteria)
   }
 
   /**
     * Retrieve field(s) from the repo.
     *
     * @param name Name of object.
-    * @return Fields in the dicitonary with exact name match.
+    * @return Fields in the dictionary with exact name match.
     */
   override def get(name: String): Future[Option[Field]] =
   {
@@ -178,7 +193,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
      page: Option[Int] = None
   ): Future[Traversable[Field]] = {
 
-    /*
+
     // helper for pagination
     val pageIdx = if(page.isEmpty) 0 else page.get;
     val pageOffset = if(limit.isEmpty) count().map(x => x) else limit.get;
@@ -187,14 +202,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     val useCriteria = criteria match {
       case None => Json.obj()
       case Some(c) => c
-    }*/
-
-    /*dictionaryRepo.find(criteria, orderBy, projection, limit, page).map(x =>
-      x.map(dict =>
-        dict.fields
-      )
-    )
-    */
+    }
 
     /*val modifier = Json.obj {
       "find" -> Json.obj {
@@ -203,6 +211,9 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
         )
       }
     }*/
+    //dictionaryRepo.find(criteria, orderBy, projection, limit, page);
+    //val test: Future[Dictionary] = get
+
 
     get.map(dictionary => dictionary.fields)
   }

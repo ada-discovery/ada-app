@@ -31,13 +31,6 @@ protected abstract class DeNoPaController(dictionaryRepo: DictionaryFieldRepo) e
     tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", List[(String, String)]())(extendedRecords.toList, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
   }
 
-  // Filter definition
-  override protected def toJsonCriteria(string : String) =
-    if (!string.isEmpty)
-      Some(Json.obj("Probanden_Nr" -> Json.obj("$regex" -> (string + ".*"), "$options" -> "i")))
-    else
-      None
-
   // Ad-hoc extension requested by Venkata
   private def getExtendedRecords(records : Traversable[JsObject]) =
     records.map{ record =>

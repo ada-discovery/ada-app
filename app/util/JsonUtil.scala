@@ -1,6 +1,6 @@
 package util
 
-import play.api.libs.json.{JsLookupResult, JsString, JsNull, JsObject}
+import play.api.libs.json.{JsLookupResult, JsString, JsNull, JsObject, JsValue}
 
 object JsonUtil {
 
@@ -78,12 +78,12 @@ object JsonUtil {
     }
 
   /**
-    * Retrieve all items fo specified field.
+    * Retrieve all items of specified field.
     * @param items Input items.
     * @param fieldName Field of interest.
     * @return Items in specified field.
     */
-  def project(items : Seq[JsObject], fieldName : String) =
+  def project(items : Seq[JsObject], fieldName : String): Seq[JsLookupResult] =
     items.map { item => (item \ fieldName) }
 
   def projectDouble(items : Seq[JsObject], fieldName : String) : Seq[Option[Double]] =
@@ -102,32 +102,43 @@ object JsonUtil {
       }
     }
 
+  def toString(value: JsValue) : Option[String] = {
+    value match {
+      case JsNull => None
+      case x : JsString => Some(value.as[String])
+      case _ => Some(value.toString)
+    }
+  }
+
   /**
     * Get smallest value of specified field. The values are cast to double before comparison.
+    *
     * @param items Json items.
     * @param fieldName Name of the field for finding minimum.
     * @return Minimal value.
     */
-  def getMin(items : Traversable[JsObject], fieldName : String) =
+  def getMin(items : Traversable[JsObject], fieldName : String): Double =
     items.map { item => (item \ fieldName).toString.toDouble }.min
 
   /**
     * Get greatest value of specified field. The values are cast to double before comparison.
+    *
     * @param items Json items.
     * @param fieldName Name of the field for finding maximum.
     * @return Maximal value.
     */
-  def getMax(items : Traversable[JsObject], fieldName : String) =
+  def getMax(items : Traversable[JsObject], fieldName : String): Double =
     items.map { item => (item \ fieldName).toString.toDouble }.max
 
   /**
     * Count objects of specified field to which the filter applies.
+    *
     * @param items Json input items.
     * @param filter Filter string.
     * @param filterFieldName Name of he fields to be filtered.
     * @return Number of items to which the filter applies.
     */
-  def count(items : Seq[JsObject], filter : String, filterFieldName : String) = {
+  def count(items : Seq[JsObject], filter : String, filterFieldName : String): Int = {
     val filteredItems = if (filter.isEmpty) {
       items
     } else {

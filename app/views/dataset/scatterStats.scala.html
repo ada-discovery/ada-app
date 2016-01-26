@@ -1,3 +1,5 @@
+@import util.BasicStats
+
 @(currentXField : String, currentYField : String, getScatterStatsCall : Call, numericFieldNames : Seq[String], stats : Seq[(Any, Any)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @optionX(key : String, value : String) = {
@@ -11,19 +13,28 @@
 @actions(call : Call) = {
     @helper.form(action=call, 'role -> "search", 'id -> "myForm") {
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-8">
                 <div class="row">
-                <select name="xField" id="xField" class="input-lg" value="@currentXField">
-                    @numericFieldNames.map( fieldName => optionX(fieldName, fieldName) )
-                </select>
+                    <select name="xField" id="xField" class="input-lg" value="@currentXField">
+                        @numericFieldNames.map( fieldName => optionX(fieldName, fieldName) )
+                    </select>
                 </div>
                 <div class="row" align="center">
                 vs.
                 </div>
                 <div class="row">
-                <select name="yField" id="yField" class="input-lg" value="@currentYField">
-                    @numericFieldNames.map( fieldName => optionY(fieldName, fieldName) )
-                </select>
+                    <select name="yField" id="yField" class="input-lg" value="@currentYField">
+                        @numericFieldNames.map( fieldName => optionY(fieldName, fieldName) )
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-md-4" align="right">
+                <div class="well">
+                    Mean: @(BigDecimal(BasicStats.mean(stats.map(x => x._1)).get).setScale(3,BigDecimal.RoundingMode.FLOOR))
+                </div>
+                <div class="well">
+                    Mean: @(BigDecimal(BasicStats.mean(stats.map(x => x._2)).get).setScale(3,BigDecimal.RoundingMode.FLOOR))
                 </div>
             </div>
         </div>

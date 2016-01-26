@@ -32,13 +32,6 @@ class LuxParkController @Inject()(
       records.toList, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
   }
 
-  // Filter definition
-  override protected def toJsonCriteria(string : String) =
-    if (!string.isEmpty)
-      Some(Json.obj("cdisc_dm_usubjd" -> Json.obj("$regex" -> (string + ".*"), "$options" -> "i")))
-    else
-      None
-
   override protected def router = DataSetRouter(
     routes.LuxParkController.find,
     routes.LuxParkController.find(),
