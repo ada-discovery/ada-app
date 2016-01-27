@@ -1,4 +1,4 @@
-@(title : String, chartElementName : String, elements : Seq[(String, Any)])
+@(title : String, chartElementName : String, showLabels: Boolean, showLegend: Boolean, elements : Seq[(String, Any)])
     <div id="@chartElementName" class="chart-holder"></div>
     <script type="text/javascript">
         $(function () {
@@ -20,12 +20,13 @@
                         allowPointSelect: true,
                         cursor: 'pointer',
                         dataLabels: {
-                            enabled: true,
+                            enabled: @showLabels,
                             format: '<b>{point.name}</b>: {point.percentage:.1f}%',
                             style: {
                                 color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
                             }
-                        }
+                        },
+                        showInLegend: @showLegend
                     }
                 },
                 credits: {

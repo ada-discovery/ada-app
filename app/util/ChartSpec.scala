@@ -5,7 +5,7 @@ import collection.mutable.{Map => MMap}
 import _root_.util.JsonUtil._
 
 abstract class ChartSpec(title: String)
-case class PieChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec(title)
+case class PieChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[(String, Int)]) extends ChartSpec(title)
 case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec(title)
 case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec(title)
 case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec(title)
@@ -23,8 +23,10 @@ object ChartSpec {
     */
   def pie(
     items : Traversable[JsObject],
-    fieldName : String
-     ) : PieChartSpec = {
+    fieldName : String,
+    showLabels : Boolean,
+    showLegend : Boolean
+  ) : PieChartSpec = {
     val countMap = MMap[String, Int]()
     items.map{item =>
       val rawWalue = (item \ fieldName).get
@@ -35,7 +37,7 @@ object ChartSpec {
       val count = countMap.getOrElse(stringValue, 0)
       countMap.update(stringValue, count + 1)
     }
-    PieChartSpec(fieldName, countMap.toSeq.sortBy(_._2))
+    PieChartSpec(fieldName, showLabels, showLegend, countMap.toSeq.sortBy(_._2))
   }
 
   /**

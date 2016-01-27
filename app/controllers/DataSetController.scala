@@ -174,14 +174,14 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       if (foundField.isDefined) {
         repo.find(None, None, Some(Json.obj(fieldName -> 1))).map(items =>
           foundField.get.fieldType match {
-            case FieldType.String => ChartSpec.pie(items, fieldName)
+            case FieldType.String => ChartSpec.pie(items, fieldName, false, true)
             case FieldType.Double => ChartSpec.column(items, fieldName, 20)
             case FieldType.Integer => ChartSpec.column(items, fieldName, 20)
-            case _ => ChartSpec.pie(items, fieldName)
+            case _ => ChartSpec.pie(items, fieldName, false, true)
           }
         )
       } else
-        Future(ChartSpec.pie(List[JsObject](), fieldName))
+        Future(ChartSpec.pie(List[JsObject](), fieldName, false, true))
     }
 
 
