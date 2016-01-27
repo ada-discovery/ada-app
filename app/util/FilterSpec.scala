@@ -1,7 +1,8 @@
 package util
 
 import models.EnumFormat
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.Json.JsValueWrapper
+import play.api.libs.json.{JsString, JsObject, Json}
 
 case class FilterSpec(conditions : Seq[FilterCondition]) {
   def this() = this(Seq())
@@ -10,20 +11,25 @@ case class FilterSpec(conditions : Seq[FilterCondition]) {
 
   def toCriteria = JsObject(
     conditions.map{ case FilterCondition(fieldName, conditionType, condition) =>
-      conditionType match {
-        case Equals => (fieldName, Json.toJson(condition))
-        case RegexEquals => (fieldName, Json.obj("$regex" -> condition, "$options" -> "i"))
-//        case RegexEquals => (fieldName, Json.obj("$regex" -> (condition + ".*"), "$options" -> "i"))
-        case Greater => (fieldName, Json.obj("$gt" -> Json.toJson(condition)))
-        case Less => (fieldName, Json.obj("$lt" -> Json.toJson(condition)))
+      val jsonCondition = conditionType match {
+        case Equals => Json.toJson(condition)
+        case RegexEquals => Json.obj("$regex" -> condition, "$options" -> "i")
+        case In => {
+          val inValues = condition.split(",").map(s => Json.toJson(s.trim) : JsValueWrapper)
+          Json.obj("$in" -> Json.arr(inValues : _*))
+        }
+        case Greater => Json.obj("$gt" -> Json.toJson(condition))
+        case Less => Json.obj("$lt" -> Json.toJson(condition))
       }
+      (fieldName, jsonCondition)
     }
   )
 }
 
 object ConditionType extends Enumeration {
   val Equals = Value("=")
-  val RegexEquals = Value("LIKE")
+  val RegexEquals = Value("like")
+  val In = Value("in")
   val Greater = Value(">")
   val Less = Value("<")
 }
