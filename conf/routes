@@ -11,7 +11,7 @@ GET         /runnables                                                      cont
 GET         /runScript                                                      controllers.AdminController.runScript(className : String)
 
 # Users
-GET         /users                                                          controllers.UserController.find(p: Int ?= 0, s: String ?= "name", f ?= "")
+GET         /users                                                          controllers.UserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /users/all                                                      controllers.UserController.listAll(s: Int ?= 2)
 GET         /users/new                                                      controllers.UserController.create
 POST        /users/save                                                     controllers.UserController.save
@@ -28,7 +28,7 @@ POST        /rest/users/:id                                                 cont
 GET         /rest/users/all                                                 controllers.UserController.listAllRest
 
 # Translations
-GET         /translations                                                   controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", f ?= "")
+GET         /translations                                                   controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /translations/all                                               controllers.TranslationController.listAll(s: Int ?= 2)
 GET         /translations/new                                               controllers.TranslationController.create
 POST        /translations/save                                              controllers.TranslationController.save
@@ -39,11 +39,11 @@ POST        /translations/:id/delete                                        cont
 
 # RedCap
 
-GET         /redcap/records                                                 controllers.RedCapController.listRecords(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f ?= "")
+GET         /redcap/records                                                 controllers.RedCapController.listRecords(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f: String ?= "", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /redcap/overview                                                controllers.RedCapController.overview
-GET         /redcap/metadatas                                               controllers.RedCapController.listMetadatas(p: Int ?= 0, s: String ?= "field_name", f ?= "")
-GET         /redcap/fieldNames                                              controllers.RedCapController.listFieldNames(p: Int ?= 0, s: String ?= "original_field_name", f ?= "")
-GET         /redcap/records//get/:id                                        controllers.RedCapController.showRecord(id: String)
+GET         /redcap/metadatas                                               controllers.RedCapController.listMetadatas(p: Int ?= 0, s: String ?= "field_name", f: String ?= "")
+GET         /redcap/fieldNames                                              controllers.RedCapController.listFieldNames(p: Int ?= 0, s: String ?= "original_field_name", f: String ?= "")
+GET         /redcap/records/get/:id                                         controllers.RedCapController.showRecord(id: String)
 GET         /redcap/metadatas/get/:id                                       controllers.RedCapController.showMetadata(id: String)
 GET         /redcap/fieldNames/get/:id                                      controllers.RedCapController.showFieldName(id: String)
 GET         /redcap/records/exportAllAsCsv                                  controllers.RedCapController.exportRecordsAsCsv(delimiter : String ?= ",")
@@ -52,7 +52,7 @@ GET         /redcap/records/exportTranSMARTMapping                          cont
 
 # DeNoPa
 
-GET         /denopa/baseline/records                                        controllers.denopa.DeNoPaBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/baseline/records                                        controllers.denopa.DeNoPaBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/baseline/records/get/:id                                controllers.denopa.DeNoPaBaselineController.get(id: BSONObjectID)
 GET         /denopa/baseline/records/exportAllAsCsv                         controllers.denopa.DeNoPaBaselineController.exportRecordsAsCsv(delimiter : String ?= ",")
 GET         /denopa/baseline/records/exportAllAsJson                        controllers.denopa.DeNoPaBaselineController.exportRecordsAsJson
@@ -62,7 +62,7 @@ GET         /denopa/baseline/overviewFieldTypes                             cont
 GET         /denopa/baseline/overview                                       controllers.denopa.DeNoPaBaselineController.overview(fieldNames: Option[Seq[String]] = None)
 GET         /denopa/baseline/getScatterStats                                controllers.denopa.DeNoPaBaselineController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "a_AESD_I_mean")
 
-GET         /denopa/firstvisit/records                                      controllers.denopa.DeNoPaFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/firstvisit/records                                      controllers.denopa.DeNoPaFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/firstvisit/records/get/:id                              controllers.denopa.DeNoPaFirstVisitController.get(id: BSONObjectID)
 GET         /denopa/firstvisit/records/exportAllAsCsv                       controllers.denopa.DeNoPaFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",")
 GET         /denopa/firstvisit/records/exportAllAsJson                      controllers.denopa.DeNoPaFirstVisitController.exportRecordsAsJson
@@ -72,7 +72,7 @@ GET         /denopa/firstvisit/overviewFieldTypes                           cont
 GET         /denopa/firstvisit/overview                                     controllers.denopa.DeNoPaFirstVisitController.overview(fieldNames: Option[Seq[String]] = None)
 GET         /denopa/firstvisit/getScatterStats                              controllers.denopa.DeNoPaFirstVisitController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "b_AESD_S_sum")
 
-GET         /denopa/curatedbaseline/records                                 controllers.denopa.DeNoPaCuratedBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/curatedbaseline/records                                 controllers.denopa.DeNoPaCuratedBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/curatedbaseline/records/get/:id                         controllers.denopa.DeNoPaCuratedBaselineController.get(id: BSONObjectID)
 GET         /denopa/curatedbaseline/records/exportAllAsCsv                  controllers.denopa.DeNoPaCuratedBaselineController.exportRecordsAsCsv(delimiter : String ?= ",")
 GET         /denopa/curatedbaseline/records/exportAllAsJson                 controllers.denopa.DeNoPaCuratedBaselineController.exportRecordsAsJson
@@ -82,7 +82,7 @@ GET         /denopa/curatedbaseline/overviewFieldTypes                      cont
 GET         /denopa/curatedbaseline/overview                                controllers.denopa.DeNoPaCuratedBaselineController.overview(fieldNames: Option[Seq[String]] = None)
 GET         /denopa/curatedbaseline/getScatterStats                         controllers.denopa.DeNoPaCuratedBaselineController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "a_AESD_I_mean")
 
-GET         /denopa/curatedfirstvisit/records                               controllers.denopa.DeNoPaCuratedFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", f ?= "")
+GET         /denopa/curatedfirstvisit/records                               controllers.denopa.DeNoPaCuratedFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/curatedfirstvisit/records/get/:id                       controllers.denopa.DeNoPaCuratedFirstVisitController.get(id: BSONObjectID)
 GET         /denopa/curatedfirstvisit/records/exportAllAsCsv                controllers.denopa.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",")
 GET         /denopa/curatedfirstvisit/records/exportAllAsJson               controllers.denopa.DeNoPaCuratedFirstVisitController.exportRecordsAsJson
@@ -92,14 +92,14 @@ GET         /denopa/curatedfirstvisit/overviewFieldTypes                    cont
 GET         /denopa/curatedfirstvisit/overview                              controllers.denopa.DeNoPaCuratedFirstVisitController.overview(fieldNames: Option[Seq[String]] = None)
 GET         /denopa/curatedfirstvisit/getScatterStats                       controllers.denopa.DeNoPaCuratedFirstVisitController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "b_AESD_S_sum")
 
-GET         /denopa/baseline/metastats                                      controllers.denopa.DeNoPaBaselineMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
+GET         /denopa/baseline/metastats                                      controllers.denopa.DeNoPaBaselineMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/baseline/metastats/get/:id                              controllers.denopa.DeNoPaBaselineMetaTypeStatsController.get(id: BSONObjectID)
-GET         /denopa/firstvisit/metastats                                    controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", f ?= "", searchField : String ?= "")
+GET         /denopa/firstvisit/metastats                                    controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/firstvisit/metastats/get/:id                            controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.get(id: BSONObjectID)
 
 # LuxPark (New)
 
-GET         /luxpark/records                                                controllers.LuxParkController.find(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f ?= "")
+GET         /luxpark/records                                                controllers.LuxParkController.find(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /luxpark/records/get/:id                                        controllers.LuxParkController.get(id: BSONObjectID)
 GET         /luxpark/records/exportAllAsCsv                                 controllers.LuxParkController.exportRecordsAsCsv(delimiter : String ?= ",")
 GET         /luxpark/records/exportAllAsJson                                controllers.LuxParkController.exportRecordsAsJson

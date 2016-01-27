@@ -21,7 +21,7 @@ resolvers ++= Seq(
   "JCenter" at "http://jcenter.bintray.com/"
 )
 
-routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._")
+routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._", "util.FilterSpec.FilterSpecQueryStringBinder")
 
 libraryDependencies ++= Seq(
   "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24",
