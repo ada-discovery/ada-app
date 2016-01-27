@@ -1,4 +1,5 @@
 @import util.FilterSpec
+@import util.ConditionType
 @import play.api.libs.json.Json
 @(filter: FilterSpec, submitCall : Call)
 
@@ -10,7 +11,7 @@
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                     <h4 class="modal-title">Add/Edit Condition</h4>
                 </div>
-                <form>
+                <form onsubmit="return false;">
                     <div class="modal-body">
                         <input id="conditionIndex" type="hidden" value=""/>
                         <div class="row">
@@ -26,13 +27,17 @@
                         </div>
                         <div class="row">
                             <input id="fieldName" class="col-md-4"/>
-                            <input id="conditionType" class="col-md-2"/>
+                            <select id="conditionType" class="col-md-2">
+                                @ConditionType.values.map{ conditionType =>
+                                    <option value="@conditionType">@conditionType</option>
+                                }
+                            </select>
                             <input id="condition" class="col-md-6"/>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="addEditConditionFinished();">Confirm</button>
+                        <button type="submit" class="btn btn-primary" data-dismiss="modal" onclick="addEditConditionFinished();">Confirm</button>
                     </div>
                 </form>
             </div>
@@ -87,7 +92,8 @@
     function addCondition() {
         $("#addEditConditionModal").find("#conditionIndex").first().val("");
 
-        resetModal(conditionFields);
+        var condition = {conditionType : "="};
+        updateModalFromModel(condition, conditionFields);
 
         $("#addEditConditionModal").modal('show');
     }
@@ -143,12 +149,6 @@
     function updateModalFromModel(condition, fields) {
         $.each(fields,  function( i, field ) {
             $("#addEditConditionModal").find("#" + field).first().val(condition[field]);
-        })
-    }
-
-    function resetModal(fields) {
-        $.each(fields, function( i, field ) {
-            $("#addEditConditionModal").find("#" + field).first().val("");
         })
     }
 
