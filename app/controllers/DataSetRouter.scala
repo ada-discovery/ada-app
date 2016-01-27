@@ -2,6 +2,7 @@ package controllers
 
 import play.api.mvc.Call
 import reactivemongo.bson.BSONObjectID
+import util.FilterSpec
 
 
 /**
@@ -17,7 +18,7 @@ import reactivemongo.bson.BSONObjectID
   * @param getScatterStatsCall
   */
 case class DataSetRouter(
-  findCall : (Int, String, String) => Call,
+  findCall : (Int, String, FilterSpec) => Call,
   plainFindCall : Call,
   getCall : BSONObjectID => Call,
   exportCsvCall : Call,

@@ -3,6 +3,7 @@ package controllers
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
+import _root_.util.{FilterCondition, FilterSpec}
 import models.{Identity, Page}
 import persistence.{AsyncReadonlyRepo, AsyncCrudRepo}
 import play.api.Logger
@@ -38,9 +39,6 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   protected def listView(
     currentPage: Page[E]
   )(implicit msg: Messages, request: RequestHeader) : Html
-
-  protected def toJsonCriteria(string : String) : Option[JsObject]
-
 
   /**
    * Retrieve single object by its BSON Id.
@@ -84,12 +82,15 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     * @see find
     * @param page index for the chunk which is to be returned.
     * @param orderBy label of the reference column for sorting.
-    * @param query query string for matchng entries. Use empty string to retrieve all objects.
+    * @param filter query string for matchng entries. Use empty string to retrieve all objects.
     * @return
     */
-  def findRest(page: Int, orderBy: String, query: String) = Action.async { implicit request =>
+  def findRest(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
     val limit = DEFAULT_LIMIT
-    val criteria = toJsonCriteria(query)
+    val criteria = if (!filter.conditions.isEmpty)
+      Some(filter.toCriteria)
+    else
+      None
     val sort = toJsonSort(orderBy)
 
     val futureItems = repo.find(criteria, sort, listViewProjection, Some(limit), Some(page))
@@ -108,11 +109,14 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
    *
    * @param page Current page number (starts from 0)
    * @param orderBy Column to be sorted
-   * @param query Filter applied on items
+   * @param filter Filter applied on items
    */
-  def find(page: Int, orderBy: String, query: String) = Action.async { implicit request =>
+  def find(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
     val limit = DEFAULT_LIMIT
-    val criteria = toJsonCriteria(query)
+    val criteria = if (!filter.conditions.isEmpty)
+      Some(filter.toCriteria)
+    else
+      None
     val sort = toJsonSort(orderBy)
 
     val futureItems = repo.find(criteria, sort, listViewProjection, Some(limit), Some(page))
@@ -120,7 +124,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(listView(Page(items, page, page * limit, count, orderBy, query)))
+      Ok(listView(Page(items, page, page * limit, count, orderBy, filter)))
     }).recover {
        case t: TimeoutException =>
          Logger.error("Problem found in the list process")
@@ -140,7 +144,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(listView(Page(items, 0, 0, count, "", "")))
+      Ok(listView(Page(items, 0, 0, count, "", new FilterSpec())))
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")

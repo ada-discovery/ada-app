@@ -1,8 +1,29 @@
 package util
 
-import play.api.libs.json.{JsLookupResult, JsString, JsNull, JsObject, JsValue}
+import play.api.libs.json._
+import play.api.mvc.QueryStringBindable
 
 object JsonUtil {
+
+  def createQueryStringBinder[E:Format](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[E] {
+
+    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, E]] = {
+      for {
+        jsonString <- stringBinder.bind(key, params)
+      } yield {
+        jsonString match {
+          case Right(jsonString) => {
+            val filterJson = Json.parse(jsonString)
+            Right(filterJson.as[E])
+          }
+          case _ => Left("Unable to bind from JSON to " + key)
+        }
+      }
+    }
+
+    override def unbind(key: String, filterSpec: E): String =
+      stringBinder.unbind(key, Json.stringify(Json.toJson(filterSpec)))
+  }
 
   def escapeKey(key : String) =
     key.replaceAll("\\.", "\\u002e") // \u2024// replaceAll("\\", "\\\\").replaceAll("\\$", "\\u0024").

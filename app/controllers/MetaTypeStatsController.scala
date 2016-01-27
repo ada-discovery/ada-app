@@ -15,21 +15,15 @@ import play.api.i18n.Messages
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import play.api.mvc.{Action, Flash, RequestHeader}
+import util.FilterSpec
 
 protected abstract class MetaTypeStatsController(repo: AsyncReadonlyRepo[MetaTypeStats, BSONObjectID]) extends Controller {
 
   @Inject var messagesApi: MessagesApi = _
 
-  protected def showView(
-    item : MetaTypeStats)(
-    implicit msg: Messages, request: RequestHeader
-  ) : Html
+  protected def showView(item : MetaTypeStats)(implicit msg: Messages, request: RequestHeader) : Html
 
-  protected def listView(
-    currentPage: Page[MetaTypeStats],
-    currentSearchField : String)(
-    implicit msg: Messages, request: RequestHeader
-  ) : Html
+  protected def listView(currentPage: Page[MetaTypeStats])(implicit msg: Messages, request: RequestHeader) : Html
 
   def get(id: BSONObjectID) = Action.async { implicit request =>
     repo.get(id).map(_.fold(
@@ -53,21 +47,27 @@ protected abstract class MetaTypeStatsController(repo: AsyncReadonlyRepo[MetaTyp
    *
    * @param page Current page number (starts from 0)
    * @param orderBy Column to be sorted
-   * @param query Filter applied on items
+   * @param filter Filter applied on items
    */
-  def find(page: Int, orderBy: String, query: String, searchField : String) = Action.async { implicit request =>
+  def find(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
     val limit = 20
-    val criteria = if (!query.isEmpty)
-      if (searchField == "attributeName")
-        Some(Json.obj(searchField -> Json.obj("$regex" -> (query + ".*"), "$options" -> "i")))
-      else
-        try {
-          Some(Json.obj(searchField -> query.toDouble))
-        } catch {
-          case e : NumberFormatException => None
-        }
+    val criteria = if (!filter.conditions.isEmpty)
+      Some(filter.toCriteria)
     else
       None
+
+//    val criteria = if (!query.isEmpty)
+//      if (searchField == "attributeName")
+//        Some(Json.obj(searchField -> Json.obj("$regex" -> (query + ".*"), "$options" -> "i")))
+//      else
+//        try {
+//          Some(Json.obj(searchField -> query.toDouble))
+//        } catch {
+//          case e : NumberFormatException => None
+//        }
+//    else
+//      None
+
     val sort = Json.obj(orderBy -> 1)
 
     val futureItems = repo.find(criteria, Some(sort), None, Some(limit), Some(page))
@@ -75,7 +75,7 @@ protected abstract class MetaTypeStatsController(repo: AsyncReadonlyRepo[MetaTyp
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(listView(Page(items, page, page * limit, count, orderBy, if (criteria.isDefined) query else ""), searchField))
+      Ok(listView(Page(items, page, page * limit, count, orderBy, filter)))
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")

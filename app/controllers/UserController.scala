@@ -42,12 +42,6 @@ class UserController @Inject() (
   override protected def listView(currentPage: Page[User])(implicit msg: Messages, request: RequestHeader) =
     html.user.list(currentPage)
 
-  override protected def toJsonCriteria(string : String) =
-    if (!string.isEmpty)
-      Some(Json.obj("name" -> Json.obj("$regex" -> (string + ".*"), "$options" -> "i")))
-    else
-      None
-
   override protected val defaultCreateEntity =
     new User(null, null, null, null, null, null)
 }

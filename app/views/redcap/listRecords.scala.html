@@ -40,13 +40,13 @@
     @views.html.exportCsvModal("exportCsvModal", "LuxPark REDCap CSV Export", ",", routes.RedCapController.exportRecordsAsCsv())
     @views.html.exportCsvModal("exportTranSMARTDataModal", "LuxPark CSV TranSMART Data Export", "\\t", routes.RedCapController.exportTranSMARTDataFile())
     @views.html.exportCsvModal("exportTranSMARTMappingModal", "LuxPark CSV TranSMART Mapping Export", "\\t", routes.RedCapController.exportTranSMARTMappingFile())
-    @filter(filterSpec)
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{
     routes.RedCapController.listRecords(newPage, newOrderBy.map { orderBy =>
         if(orderBy == currentPage.orderBy) "-" + currentPage.orderBy else orderBy
-    }.getOrElse(currentPage.orderBy), currentPage.filter)
+      // TODO
+    }.getOrElse(currentPage.orderBy), "")
 }
 
 @rowClickCall(item : JsObject) = @{

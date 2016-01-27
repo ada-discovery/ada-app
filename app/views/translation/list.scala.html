@@ -11,11 +11,20 @@
 }
 
 @actions = {
-    @helper.form(action=routes.TranslationController.find(), 'class -> "navbar-form navbar-left", 'role -> "search") {
-        <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by original entry...">
-        <input type="submit" id="searchsubmit" value="Filter by name" class="btn btn-primary btn-sm">
-    }
-    <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.TranslationController.create()">Add a new translation</a>
+    <div class="row">
+        <div class="col-md-8">
+            @filter(currentPage.filter, routes.TranslationController.find())
+            <!--
+                @helper.form(action=routes.TranslationController.find(), 'class -> "navbar-form navbar-left", 'role -> "search") {
+                <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by original entry...">
+                <input type="submit" id="searchsubmit" value="Filter by name" class="btn btn-primary btn-sm">
+                }
+            -->
+        </div>
+        <div class="col-md-4">
+            <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.TranslationController.create()">Add a new translation</a>
+        </div>
+    </div>
 }
 
 @table = {

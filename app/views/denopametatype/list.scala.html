@@ -1,7 +1,8 @@
 @import helper.{select}
 @import reactivemongo.bson.BSONObjectID
+@import util.FilterSpec
 
-@(domainName : String, currentPage: Page[MetaTypeStats], currentSearchField : String, findCall : (Int, String, String, String) => Call, plainFindCall : Call, getCall : BSONObjectID => Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(domainName : String, currentPage: Page[MetaTypeStats], findCall : (Int, String, FilterSpec) => Call, plainFindCall : Call, getCall : BSONObjectID => Call)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @**********************************
 * Helper generating table headers *
@@ -12,23 +13,12 @@
     </th>
 }
 
-@option(key : String, value : String) = {
-    <option value="@key" @if(currentSearchField == key){selected="selected"}>@value</option>
-}
-
 @actions = {
-    @helper.form(action=plainFindCall, 'class -> "navbar-form navbar-left", 'role -> "search") {
-        <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by...">
-        <select name="searchField" id="searchField" value="@currentSearchField">
-            @option("attributeName", "Name")
-            @option("intRatio", "Int")
-            @option("longRatio", "Long")
-            @option("floatRatio", "Float")
-            @option("doubleRatio", "Double")
-            @option("nullRatio", "Null")
-        </select>
-        <input type="submit" id="searchsubmit" value="Filter" class="btn btn-primary btn-sm">
-    }
+    <div class="row">
+        <div class="col-md-8">
+            @filter(currentPage.filter, plainFindCall)
+        </div>
+    </div>
 }
 
 @formatDouble(d : Double) = @{
@@ -70,7 +60,7 @@
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{
     findCall(newPage, newOrderBy.map { orderBy =>
         if(orderBy == currentPage.orderBy) "-" + currentPage.orderBy else orderBy
-    }.getOrElse(currentPage.orderBy), currentPage.filter, currentSearchField)
+    }.getOrElse(currentPage.orderBy), currentPage.filter)
 }
 
 @views.html.list(

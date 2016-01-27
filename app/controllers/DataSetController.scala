@@ -54,50 +54,6 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   // router for requests; to be passed to views as helper.
   protected def router : DataSetRouter
 
-
-  /**
-    * TODO: change and add actual querying.
-    *
-    * Turns String into JsObject compatible with reactiveMongo.
-    * The JsObject is used for querzing and filtering the data.
-    * Returns None, if no criteria given.
-    *
-    * @param string Input String to be converted.
-    * @return JsObject containing the criteria.
-    */
-  override protected def toJsonCriteria(string : String) : Option[JsObject] =
-  {
-    if (!string.isEmpty)
-      Some(Json.obj(keyField -> Json.obj("$regex" -> (string + ".*"), "$options" -> "i")))
-    else
-      None
-
-    /*if (!string.isEmpty) {
-      val criteria : Array[String] = string.split(addCrit)
-      if(criteria.head.equals(string))      //if string can not be split
-        return None
-
-      //val regex = Json.obj("$regex" -> JsString(string + ".*"), "$options" -> "i")
-      //val exp : JsObject = Json.obj(keyField -> regex)
-
-      val exp: JsObject = criteria.map{ crit: String =>
-        if(crit.contains(equalCrit)){
-          val c: Array[String] = crit.split(equalCrit)
-          c match{
-            case Array(s1, s2) => Json.obj(s1 -> Json.obj("$regex" -> JsString(s2 + ".*")))
-            case _ => Json.obj()
-          }
-        }else
-          Json.obj()
-      }.head
-
-      Some(exp)
-    } else {
-      None
-    }*/
-  }
-
-
   /**
     * Shows all fields of the selected subject.
     *
@@ -123,19 +79,13 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param request Header of original request.
     * @return View for all available fields.
     */
-  override def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) ={
-    //val fieldsFuture = dictionaryRepo.find()
-    //val fieldNames = fieldsFuture.map{field => field.map(f => f.name)}
+  override def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
     dataset.list(
       dataSetName + " Item",
       currentPage,
       listViewColumns.get,
-      router,
-      listViewColumns.get,
-      keyField
+      router
     )
-  }
-
 
   /**
     * Generate content of csv export file and create download.

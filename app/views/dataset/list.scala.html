@@ -17,8 +17,7 @@
     @helper.form(action=router.plainFindCall, 'role -> "search") {
         <div class="row">
             <div class="col-md-8">
-                <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by id...">
-                <input type="submit" id="searchsubmit" value="Filter by id" class="btn btn-primary btn-sm">
+                @filter(currentPage.filter, router.plainFindCall)
             </div>
             <div class="col-md-4">
                 <div class="pull-right dropdown">

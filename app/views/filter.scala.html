@@ -1,17 +1,18 @@
 @import util.FilterSpec
 @import play.api.libs.json.Json
-@(filter: FilterSpec)
+@(filter: FilterSpec, submitCall : Call)
 
 <div class="row">
-    <div class="modal fade" id="editConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title">Edit Condition</h4>
+                    <h4 class="modal-title">Add/Edit Condition</h4>
                 </div>
-                <form action="@routes.AppController.index()">
+                <form>
                     <div class="modal-body">
+                        <input id="conditionIndex" type="hidden" value=""/>
                         <div class="row">
                             <div class="col-md-4">
                                 Field Name
@@ -24,14 +25,14 @@
                             </div>
                         </div>
                         <div class="row">
-                            <input class="col-md-4" id="fieldName" name="fieldName">
-                            <input class="col-md-2" id="conditionType" name="conditionType">
-                            <input class="col-md-6" id="condition" name="condition">
+                            <input id="fieldName" class="col-md-4"/>
+                            <input id="conditionType" class="col-md-2"/>
+                            <input id="condition" class="col-md-6"/>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button type="submit" id="exportButton" class="btn btn-primary">Confirm</button>
+                        <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="addEditConditionFinished();">Confirm</button>
                     </div>
                 </form>
             </div>
@@ -43,45 +44,138 @@
                 Filter:
             </li>
             @filter.conditions.zipWithIndex.map { case (condition, index) =>
-                <li class="condition-full">
+                <li id="condition-full@index" class="condition-full">
                     <h4>
                         <span class="condition">
-                            <span class="label label-primary">@condition.fieldName</span>
-                            <span>@condition.conditionType</span>
-                            <span class="label label-primary">@condition.condition</span>
+                            <span id="fieldName" class="label label-primary">@condition.fieldName</span>
+                            <span id="conditionType">@condition.conditionType</span>
+                            <span id="condition" class="label label-primary">@condition.condition</span>
                         </span>
                         <span class="condition-buttons" style="display: none">
                             <button type="button" class="btn btn-sm btn-default" onclick="editCondition('@index');">
                                 <span class="glyphicon glyphicon-pencil"></span>
                             </button>
-                            <a href="@routes.AppController.index()" class="btn btn-sm btn-default">
+                            <button type="button" class="btn btn-sm btn-default" onclick="deleteCondition('@index');">
                                 <span class="glyphicon glyphicon-trash"></span>
-                            </a>
+                            </button>
                         </span>
                     </h4>
                 </li>
             }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
+            <li>
+                <button type="button" class="btn btn-sm btn-default" onclick="addCondition();">
+                    <span class="glyphicon glyphicon-plus"></span>
+                </button>
+            </li>
         </ul>
     </div>
 </div>
 <script type="text/javascript">
-    var filterJs = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}')
+    var jsFilter = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}');
+    var conditionFields = ["fieldName", "conditionType", "condition"];
 
     $(".condition-full").hover(null, function() {
         var buttons = $(this).find(".condition-buttons").first();
-        buttons.fadeOut( 500 );
+        buttons.fadeOut( 400 );
     });
 
     $(".condition").click(function() {
         var buttons = $(this).parent().children(".condition-buttons").first();
-        buttons.fadeIn( 500 );
+        buttons.fadeIn( 400 );
     });
 
+    function addCondition() {
+        $("#addEditConditionModal").find("#conditionIndex").first().val("");
+
+        resetModal(conditionFields);
+
+        $("#addEditConditionModal").modal('show');
+    }
+
     function editCondition(index) {
-        var condition = filterJs.conditions[index]
-        $("#editConditionModal").find("#fieldName").first().val(condition.fieldName);
-        $("#editConditionModal").find("#conditionType").first().val(condition.conditionType);
-        $("#editConditionModal").find("#condition").first().val(condition.condition);
-        $("#editConditionModal").modal('show');
+        $("#addEditConditionModal").find("#conditionIndex").first().val(index);
+
+        var condition = jsFilter.conditions[index]
+        updateModalFromModel(condition, conditionFields);
+
+        $("#addEditConditionModal").modal('show');
+    }
+
+    function addEditConditionFinished() {
+        var index =  $("#addEditConditionModal").find("#conditionIndex").val();
+        if (index)
+            editConditionFinished(index)
+        else
+            addConditionFinished()
+    }
+
+    function addConditionFinished() {
+        var condition = { };
+        jsFilter.conditions.push(condition);
+
+        updateModelFromModal(condition, conditionFields);
+
+        submit('get', '@submitCall', {filter: JSON.stringify(jsFilter)});
+    }
+
+    function editConditionFinished(index) {
+        var condition = jsFilter.conditions[index];
+
+        updateModelFromModal(condition, conditionFields);
+        updateFilterFromModel(index, condition, conditionFields);
+
+        submit('get', '@submitCall', {filter: JSON.stringify(jsFilter)});
+    }
+
+    function deleteCondition(index) {
+        jsFilter.conditions.splice(index, 1);
+
+        submit('get', '@submitCall', {filter: JSON.stringify(jsFilter)});
+    }
+
+    // update functions
+    function updateModelFromModal(condition, fields) {
+        $.each(fields, function( i, field ) {
+            condition[field] = $("#addEditConditionModal").find("#" + field).first().val();
+        })
+    }
+
+    function updateModalFromModel(condition, fields) {
+        $.each(fields,  function( i, field ) {
+            $("#addEditConditionModal").find("#" + field).first().val(condition[field]);
+        })
+    }
+
+    function resetModal(fields) {
+        $.each(fields, function( i, field ) {
+            $("#addEditConditionModal").find("#" + field).first().val("");
+        })
+    }
+
+    function updateFilterFromModel(index, condition, fields) {
+        $.each(fields, function( i, field ) {
+            $("#condition-full" + index).find("#" + field).first().html(condition[field]);
+        })
+    }
+
+    // submit synchronously to a provided URL (action) and parameters.
+    function submit(method, action, parameters) {
+        var form = $('<form></form>');
+
+        form.attr("method", method);
+        form.attr("action", action);
+
+        $.each(parameters, function(key, value) {
+            var field = $('<input></input>');
+
+            field.attr("type", "hidden");
+            field.attr("name", key);
+            field.attr("value", value);
+
+            form.append(field);
+        });
+
+        $(document.body).append(form);
+        form.submit();
     }
 </script>
