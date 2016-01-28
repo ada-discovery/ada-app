@@ -51,10 +51,7 @@ protected abstract class MetaTypeStatsController(repo: AsyncReadonlyRepo[MetaTyp
    */
   def find(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
     val limit = 20
-    val criteria = if (!filter.conditions.isEmpty)
-      Some(filter.toCriteria)
-    else
-      None
+    val criteria = filter.toJsonCriteria
 
 //    val criteria = if (!query.isEmpty)
 //      if (searchField == "attributeName")

@@ -1,6 +1,7 @@
 @import play.api.libs.json.JsObject
 @import reactivemongo.bson.BSONObjectID
 @import play.modules.reactivemongo.json._
+@import views.html
 
 @(
     domainName : String,
@@ -14,47 +15,14 @@
 )
 
 @actions = {
-    @helper.form(action=router.plainFindCall, 'role -> "search") {
-        <div class="row">
-            <div class="col-md-8">
-                @filter(currentPage.filter, router.plainFindCall)
-            </div>
-            <div class="col-md-4">
-                <div class="pull-right dropdown">
-                    <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Export All
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a href="#" data-toggle="modal" data-target="#exportCsvModal">
-                                Export All as CSV
-                            </a>
-                        </li>
-                        <li>
-                            <a href="@router.exportJsonCall">
-                                Export All as JSON
-                            </a>
-                        </li>
-                        <li role="separator" class="divider"></li>
-                        <li>
-                            <a href="#" data-toggle="modal" data-target="#exportTranSMARTDataModal">
-                                Export TransSMART Data
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" data-toggle="modal" data-target="#exportTranSMARTMappingModal">
-                                Export TransSMART Mapping
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+    <div class="row">
+        <div class="col-md-8">
+            @filter(currentPage.filter, router.plainFindCall)
         </div>
-    }
-    @views.html.exportCsvModal("exportCsvModal", "CSV Export", ",", router.exportCsvCall)
-    @views.html.exportCsvModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", "\\t", router.exportTranSMARTDataCall)
-    @views.html.exportCsvModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", "\\t", router.exportTranSMARTMappingCall)
+        <div class="col-md-4">
+            @html.dataset.exportDropdown(router.exportAllCsvCall, router.exportAllJsonCall, router.exportTranSMARTDataCall, router.exportTranSMARTMappingCall)
+        </div>
+    </div>
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{
@@ -68,7 +36,7 @@
 }
 
 @rowClickCall(item : JsObject) = @{
-    router.getCall(item.value.get("_id").get.as[BSONObjectID]).url
+    router.getCall((item \ "_id").as[BSONObjectID]).url
 }
 
 @table = {

@@ -22,7 +22,7 @@ protected trait ExportableAction[E] {
     orderBy: String)(
     implicit ev: Format[E]
   ) = Action { implicit request =>
-    jsonsToCsvFile(filename, delimiter)(getJsons(orderBy))
+    jsonsToCsvFile(filename, delimiter)(getJsons(None, orderBy))
   }
 
   def exportAllToJson(
@@ -30,11 +30,30 @@ protected trait ExportableAction[E] {
     orderBy: String)(
     implicit ev: Format[E]
   ) = Action { implicit request =>
-    jsonsToJsonFile(filename)(getJsons(orderBy))
+    jsonsToJsonFile(filename)(getJsons(None, orderBy))
   }
 
-  private def getJsons(orderBy: String)(implicit ev: Format[E]) = {
-    val recordsFuture = repoHook.find(None, toJsonSort(orderBy), None, None, None)
+  def exportToCsv(
+     filename: String,
+     delimiter: String,
+     criteria : Option[JsObject],
+     orderBy: String)(
+     implicit ev: Format[E]
+  ) = Action { implicit request =>
+    jsonsToCsvFile(filename, delimiter)(getJsons(criteria, orderBy))
+  }
+
+  def exportToJson(
+    filename: String,
+    criteria : Option[JsObject],
+    orderBy: String)(
+    implicit ev: Format[E]
+  ) = Action { implicit request =>
+    jsonsToJsonFile(filename)(getJsons(criteria, orderBy))
+  }
+
+  private def getJsons(criteria : Option[JsObject], orderBy: String)(implicit ev: Format[E]) = {
+    val recordsFuture = repoHook.find(criteria, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 
     if (!records.isEmpty && records.head.isInstanceOf[JsObject]) {

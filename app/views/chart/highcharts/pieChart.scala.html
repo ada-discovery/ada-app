@@ -1,3 +1,5 @@
+@import util.shorten
+
 @(title : String, chartElementName : String, showLabels: Boolean, showLegend: Boolean, elements : Seq[(String, Any)])
     <div id="@chartElementName" class="chart-holder"></div>
     <script type="text/javascript">
@@ -37,7 +39,7 @@
                     colorByPoint: true,
                     data: [
                         @elements.map { case (name, value) =>
-                            {name : '@{if (name.length > 20) {name.substring(0, 18) + "../../../../"} else name}', y : @value},
+                            {name : '@shorten(name)', y : @value},
                         }
                     ]
                 }]

@@ -18,7 +18,11 @@ class DeNoPaBaselineController @Inject() (
   override protected def router = DataSetRouter(
     routes.DeNoPaBaselineController.find,
     routes.DeNoPaBaselineController.find(),
+    routes.DeNoPaBaselineController.overviewList,
+    routes.DeNoPaBaselineController.overviewList(),
     routes.DeNoPaBaselineController.get,
+    routes.DeNoPaBaselineController.exportAllRecordsAsCsv(),
+    routes.DeNoPaBaselineController.exportAllRecordsAsJson(),
     routes.DeNoPaBaselineController.exportRecordsAsCsv(),
     routes.DeNoPaBaselineController.exportRecordsAsJson(),
     routes.DeNoPaBaselineController.exportTranSMARTDataFile(),

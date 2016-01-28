@@ -1,15 +1,18 @@
 package controllers
 
+import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import _root_.util.{JsonUtil, ChartSpec}
+import _root_.util.{FilterSpec, JsonUtil, ChartSpec}
 import org.apache.commons.lang3.StringEscapeUtils
 import models.{Page, FieldType}
 import persistence.DictionaryFieldRepo
+import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{AnyContent, RequestHeader, Action}
 import play.api.Play.current
+import play.twirl.api.Html
 import util.WebExportUtil.stringToFile
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
@@ -70,7 +73,6 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       router.plainFindCall
     )
 
-
   /**
     * Table displaying given paginated content. Generally used to display fields of the datasets.
     *
@@ -79,11 +81,28 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param request Header of original request.
     * @return View for all available fields.
     */
-  override def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
+  override protected def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
     dataset.list(
       dataSetName + " Item",
       currentPage,
       listViewColumns.get,
+      router
+    )
+
+  /**
+    * Table displaying given paginated content with charts on the top. Generally used to display fields of the datasets.
+    *
+    * @param currentPage Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
+    * @param msg Internal request message.
+    * @param request Header of original request.
+    * @return View for all available fields.
+    */
+  private def overviewListView(currentPage: Page[JsObject], chartSpecs : Iterable[ChartSpec])(implicit msg: Messages, request: RequestHeader) : Html =
+    dataset.overviewList(
+      dataSetName + " Item",
+      currentPage,
+      listViewColumns.get,
+      chartSpecs,
       router
     )
 
@@ -93,17 +112,33 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param delimiter Delimiter for csv output file.
     * @return View for download.
     */
-  def exportRecordsAsCsv(delimiter : String) =
+  def exportAllRecordsAsCsv(delimiter : String) =
     exportAllToCsv(csvFileName, delimiter, exportOrderByField)
-
 
   /**
     * Generate content of Json export file and create donwload.
     *
     * @return View for download.
     */
-  def exportRecordsAsJson =
+  def exportAllRecordsAsJson =
     exportAllToJson(jsonFileName, exportOrderByField)
+
+  /**
+    * Generate content of csv export file and create download.
+    *
+    * @param delimiter Delimiter for csv output file.
+    * @return View for download.
+    */
+  def exportRecordsAsCsv(delimiter : String, filter: FilterSpec) =
+    exportToCsv(csvFileName, delimiter, filter.toJsonCriteria, exportOrderByField)
+
+  /**
+    * Generate content of Json export file and create donwload.
+    *
+    * @return View for download.
+    */
+  def exportRecordsAsJson(filter: FilterSpec) =
+    exportToJson(jsonFileName, filter.toJsonCriteria, exportOrderByField)
 
   /**
     * Fetch specified field (column) entries from repo and wrap them in a Traversable object.
@@ -112,7 +147,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param fieldName Name of the field of interest.
     * @return Traversable object containing the String entries of the field.
     */
-  def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] = {
+  private def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] = {
     for {
       field <- dictionaryRepo.get(fieldName)
       values <- repo.find(None, None, Some(Json.obj(fieldName -> 1)))
@@ -132,7 +167,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     *
     * @return View with piechart showing field types.
     */
-  def overviewFieldTypes: Action[AnyContent] = Action.async { implicit request =>
+  def overviewFieldTypes = Action.async { implicit request =>
     dictionaryRepo.find().map{ fields =>
       if (fields.isEmpty)
         throw new IllegalStateException(s"Empty dictionary found. Pls. create one by running 'standalone.InferXXXDictionary' script.")
@@ -147,17 +182,33 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     }
   }
 
-
-  def overview(fieldNames : Option[Seq[String]]) = Action.async { implicit request =>
-    val futureChartSpecs = fieldNames.getOrElse {
-      val strings = current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").get
-      strings
-    }.map(getChartSpec)
+  def overview = Action.async { implicit request =>
+    val futureChartSpecs = getFutureChartSpecs(None)
 
     Future.sequence(futureChartSpecs).map { chartSpecs =>
       implicit val msg = messagesApi.preferred(request)
       Ok(dataset.overview(dataSetName + " Overview", chartSpecs))
     }
+  }
+
+  def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+    val futureChartSpecs = getFutureChartSpecs(filter.toJsonCriteria)
+    val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
+
+    futureItems.zip(futureCount).zip(Future.sequence(futureChartSpecs)).map{
+      case ((items, count), chartSpecs) => {
+        implicit val msg = messagesApi.preferred(request)
+        Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), chartSpecs))
+    }}.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the list process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+  private def getFutureChartSpecs(criteria : Option[JsObject]) = {
+    val fieldNames = current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
+    fieldNames.map(getChartSpec(criteria))
   }
 
   /**
@@ -169,10 +220,10 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param fieldName Name of the field. Used to find field in data repo.
     * @return Inferred chart type.
     */
-  private def getChartSpec(fieldName : String) : Future[ChartSpec] =
+  private def getChartSpec(criteria : Option[JsObject])(fieldName : String) : Future[ChartSpec] =
     dictionaryRepo.get(fieldName).flatMap { foundField =>
       if (foundField.isDefined) {
-        repo.find(None, None, Some(Json.obj(fieldName -> 1))).map(items =>
+        repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map(items =>
           foundField.get.fieldType match {
             case FieldType.String => ChartSpec.pie(items, fieldName, false, true)
             case FieldType.Double => ChartSpec.column(items, fieldName, 20)

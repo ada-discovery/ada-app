@@ -37,9 +37,9 @@
             </div>
         </div>
     }
-    @views.html.exportCsvModal("exportCsvModal", "LuxPark REDCap CSV Export", ",", routes.RedCapController.exportRecordsAsCsv())
-    @views.html.exportCsvModal("exportTranSMARTDataModal", "LuxPark CSV TranSMART Data Export", "\\t", routes.RedCapController.exportTranSMARTDataFile())
-    @views.html.exportCsvModal("exportTranSMARTMappingModal", "LuxPark CSV TranSMART Mapping Export", "\\t", routes.RedCapController.exportTranSMARTMappingFile())
+    @views.html.exportModal("exportCsvModal", "LuxPark REDCap CSV Export", ",", routes.RedCapController.exportRecordsAsCsv())
+    @views.html.exportModal("exportTranSMARTDataModal", "LuxPark CSV TranSMART Data Export", "\\t", routes.RedCapController.exportTranSMARTDataFile())
+    @views.html.exportModal("exportTranSMARTMappingModal", "LuxPark CSV TranSMART Mapping Export", "\\t", routes.RedCapController.exportTranSMARTMappingFile())
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{

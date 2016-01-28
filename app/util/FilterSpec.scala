@@ -9,21 +9,26 @@ case class FilterSpec(conditions : Seq[FilterCondition]) {
 
   import ConditionType._
 
-  def toCriteria = JsObject(
-    conditions.map{ case FilterCondition(fieldName, conditionType, condition) =>
-      val jsonCondition = conditionType match {
-        case Equals => Json.toJson(condition)
-        case RegexEquals => Json.obj("$regex" -> condition, "$options" -> "i")
-        case In => {
-          val inValues = condition.split(",").map(s => Json.toJson(s.trim) : JsValueWrapper)
-          Json.obj("$in" -> Json.arr(inValues : _*))
-        }
-        case Greater => Json.obj("$gt" -> Json.toJson(condition))
-        case Less => Json.obj("$lt" -> Json.toJson(condition))
+  def toJsonCriteria = if (conditions.nonEmpty)
+    Some(JsObject(
+      conditions.map{ case FilterCondition(fieldName, conditionType, condition) =>
+        (fieldName, toJsonCondition(conditionType, condition))
       }
-      (fieldName, jsonCondition)
+    ))
+  else
+    None
+
+  private def toJsonCondition(conditionType : ConditionType.Value, condition : String) =
+    conditionType match {
+      case Equals => Json.toJson(condition)
+      case RegexEquals => Json.obj("$regex" -> condition, "$options" -> "i")
+      case In => {
+        val inValues = condition.split(",").map(s => Json.toJson(s.trim) : JsValueWrapper)
+        Json.obj("$in" -> Json.arr(inValues : _*))
+      }
+      case Greater => Json.obj("$gt" -> Json.toJson(condition))
+      case Less => Json.obj("$lt" -> Json.toJson(condition))
     }
-  )
 }
 
 object ConditionType extends Enumeration {

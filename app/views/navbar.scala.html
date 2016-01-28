@@ -19,29 +19,23 @@
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">LuxPark<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        @menuItem(routes.LuxParkController.overview(), "Overview", Some(2))
+                        @menuItem(routes.LuxParkController.overviewList(), "Overview", Some(2))
                         @menuItem(routes.LuxParkController.getScatterStats(), "Scatter Analysis", Some(2))
-                        @menuItem(routes.LuxParkController.find(), "Records", Some(2))
                         @menuItem(routes.LuxParkController.overviewFieldTypes, "Types", Some(2))
                     </ul>
                 </li>
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">DeNoPa<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overview(), "Curated Baseline Overview")
-                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overview(), "Curated First Visit Overview")
-                        @menuItem(denoparoutes.DeNoPaBaselineController.overview(), "Baseline Overview")
-                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overview(), "First Visit Overview")
+                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overviewList(), "Curated Baseline Overview")
+                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overviewList(), "Curated First Visit Overview")
+                        @menuItem(denoparoutes.DeNoPaBaselineController.overviewList(), "Baseline Overview")
+                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overviewList(), "First Visit Overview")
                         <li role="separator" class="divider"></li>
                         @menuItem(denoparoutes.DeNoPaCuratedBaselineController.getScatterStats(), "Curated Baseline Scatter Analysis", Some(3))
                         @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.getScatterStats(), "Curated First Scatter Analysis", Some(3))
                         @menuItem(denoparoutes.DeNoPaBaselineController.getScatterStats(), "Baseline Scatter Analysis", Some(3))
                         @menuItem(denoparoutes.DeNoPaFirstVisitController.getScatterStats(), "First Visit Scatter Analysis", Some(3))
-                        <li role="separator" class="divider"></li>
-                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.find(), "Curated Baseline Records", Some(3))
-                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.find(), "Curated First Visit Records", Some(3))
-                        @menuItem(denoparoutes.DeNoPaBaselineController.find(), "Raw Baseline Records", Some(3))
-                        @menuItem(denoparoutes.DeNoPaFirstVisitController.find(), "Raw First Visit Records", Some(3))
                         <li role="separator" class="divider"></li>
                         @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overviewFieldTypes, "Curated Baseline Types")
                         @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overviewFieldTypes, "Curated First Visit Types")

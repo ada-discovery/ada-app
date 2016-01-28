@@ -25,7 +25,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
 
   @Inject var messagesApi: MessagesApi = _
 
-  private val DEFAULT_LIMIT = 20
+  protected val limit = 20
 
   protected def repoHook = repo
 
@@ -75,6 +75,26 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   }
 
   /**
+    * Display the paginated list.
+    *
+    * @param page Current page number (starts from 0)
+    * @param orderBy Column to be sorted
+    * @param filter Filter applied on items
+    */
+  def find(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+    val (futureItems, futureCount) = getFutureItemsAndCount(page ,orderBy, filter)
+    futureItems.zip(futureCount).map{ case (items, count) =>
+      implicit val msg = messagesApi.preferred(request)
+
+      Ok(listView(Page(items, page, page * limit, count, orderBy, filter)))
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the list process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+  /**
     * Return reponse with json representation of all objects mathing the query string.
     * Objects are ordered by a reference column and split into chunks.
     * Used for rest interface.
@@ -86,49 +106,13 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     * @return
     */
   def findRest(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
-    val limit = DEFAULT_LIMIT
-    val criteria = if (!filter.conditions.isEmpty)
-      Some(filter.toCriteria)
-    else
-      None
-    val sort = toJsonSort(orderBy)
-
-    val futureItems = repo.find(criteria, sort, listViewProjection, Some(limit), Some(page))
-    val futureCount = repo.count(criteria)
-    futureItems.zip(futureCount).map({ case (items, count) =>
+    val (futureItems, futureCount) = getFutureItemsAndCount(page ,orderBy, filter)
+    futureItems.zip(futureCount).map{ case (items, count) =>
       Ok(Json.toJson(items))
-    }).recover {
+    }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
         InternalServerError(t.getMessage)
-    }
-  }
-
-  /**
-   * Display the paginated list.
-   *
-   * @param page Current page number (starts from 0)
-   * @param orderBy Column to be sorted
-   * @param filter Filter applied on items
-   */
-  def find(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
-    val limit = DEFAULT_LIMIT
-    val criteria = if (!filter.conditions.isEmpty)
-      Some(filter.toCriteria)
-    else
-      None
-    val sort = toJsonSort(orderBy)
-
-    val futureItems = repo.find(criteria, sort, listViewProjection, Some(limit), Some(page))
-    val futureCount = repo.count(criteria)
-    futureItems.zip(futureCount).map({ case (items, count) =>
-      implicit val msg = messagesApi.preferred(request)
-
-      Ok(listView(Page(items, page, page * limit, count, orderBy, filter)))
-    }).recover {
-       case t: TimeoutException =>
-         Logger.error("Problem found in the list process")
-         InternalServerError(t.getMessage)
     }
   }
 
@@ -138,14 +122,12 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
    * @param orderBy Column to be sorted
    */
   def listAll(orderBy: Int) = Action.async { implicit request =>
-    val limit = DEFAULT_LIMIT
-    val futureItems = repo.find(None, None, listViewProjection, Some(limit), None)
-    val futureCount = repo.count(None)
-    futureItems.zip(futureCount).map({ case (items, count) =>
+    val (futureItems, futureCount) = getFutureItemsAndCount(0 ,"", new FilterSpec())
+    futureItems.zip(futureCount).map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
       Ok(listView(Page(items, 0, 0, count, "", new FilterSpec())))
-    }).recover {
+    }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
         InternalServerError(t.getMessage)
@@ -159,7 +141,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     *
     */
   def listAllRest = Action.async { implicit request =>
-    val futureItems = repo.find(None, None, listViewProjection, None, None)
+    val (futureItems, futureCount) = getFutureItemsAndCount(0 ,"", new FilterSpec())
     futureItems.map { items =>
       Ok(Json.toJson(items))
     }.recover {
@@ -167,6 +149,19 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
         Logger.error("Problem found in the list process")
         InternalServerError(t.getMessage)
     }
+  }
+
+  protected def getFutureItemsAndCount(
+    page: Int,
+    orderBy: String,
+    filter : FilterSpec
+  ): (Future[Traversable[E]], Future[Int]) = {
+    val criteria = filter.toJsonCriteria
+    val sort = toJsonSort(orderBy)
+
+    val futureItems = repo.find(criteria, sort, listViewProjection, Some(limit), Some(page))
+    val futureCount = repo.count(criteria)
+    (futureItems, futureCount)
   }
 
   /**
@@ -184,7 +179,6 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
         Some(Json.obj(string -> 1))
     } else
       None
-
 
   /**
     *

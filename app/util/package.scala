@@ -18,4 +18,7 @@ package object util {
       }
       case None => coreUrl.equals(url)
     }
+
+  def shorten(string : String) =
+    if (string.length > 20) {string.substring(0, 18) + ".."} else string
 }

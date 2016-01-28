@@ -11,6 +11,8 @@ import util.FilterSpec
   * @param findCall
   * @param plainFindCall
   * @param getCall
+  * @param exportAllCsvCall
+  * @param exportAllJsonCall
   * @param exportCsvCall
   * @param exportJsonCall
   * @param exportTranSMARTDataCall
@@ -20,7 +22,11 @@ import util.FilterSpec
 case class DataSetRouter(
   findCall : (Int, String, FilterSpec) => Call,
   plainFindCall : Call,
+  overviewListCall : (Int, String, FilterSpec) => Call,
+  plainOverviewListCall : Call,
   getCall : BSONObjectID => Call,
+  exportAllCsvCall : Call,
+  exportAllJsonCall : Call,
   exportCsvCall : Call,
   exportJsonCall : Call,
   exportTranSMARTDataCall : Call,

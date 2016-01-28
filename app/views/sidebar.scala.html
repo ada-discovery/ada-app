@@ -20,9 +20,8 @@
                     </div>
                     <div id="collapse2" class="panel-collapse collapse">
                         <ul class="list-group">
-                            @listGroupItem("Overview", Some(routes.LuxParkController.overview()))
+                            @listGroupItem("Overview", Some(routes.LuxParkController.overviewList()))
                             @listGroupItem("Scatter Analysis", Some(routes.LuxParkController.getScatterStats()))
-                            @listGroupItem("Records", Some(routes.LuxParkController.find()))
                             @listGroupItem("Types", Some(routes.LuxParkController.overviewFieldTypes()))
                         </ul>
                     </div>
@@ -43,14 +42,12 @@
                     <div id="collapse3" class="panel-collapse collapse">
                         <ul class="list-group">
                             <li role="separator" class="list-group-item divider"><i>Curated</i></li>
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaCuratedBaselineController.overview()))
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaCuratedBaselineController.overviewList()))
                             @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaCuratedBaselineController.getScatterStats()))
-                            @listGroupItem("Records", Some(denoparoutes.DeNoPaCuratedBaselineController.find()))
                             @listGroupItem("Types", Some(denoparoutes.DeNoPaCuratedBaselineController.overviewFieldTypes()))
                             <li role="separator" class="list-group-item divider"><i>Raw</i></li>
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaBaselineController.overview()))
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaBaselineController.overviewList()))
                             @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaBaselineController.getScatterStats()))
-                            @listGroupItem("Records", Some(denoparoutes.DeNoPaBaselineController.find()))
                             @listGroupItem("Types", Some(denoparoutes.DeNoPaBaselineController.overviewFieldTypes()))
                         </ul>
                     </div>
@@ -70,14 +67,12 @@
                     <div id="collapse4" class="panel-collapse collapse">
                         <ul class="list-group">
                             <li role="separator" class="list-group-item divider"><i>Curated</i></li>
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaCuratedFirstVisitController.overview()))
-                            @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaCuratedFirstVisitController.getScatterStats()))
-                            @listGroupItem("Records", Some(denoparoutes.DeNoPaCuratedFirstVisitController.find()))
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaCuratedFirstVisitController.overviewList()))
+                            @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaCuratedFirstVisitController.getScatterStats())))
                             @listGroupItem("Types", Some(denoparoutes.DeNoPaCuratedFirstVisitController.overviewFieldTypes()))
                             <li role="separator" class="list-group-item divider"><i>Raw</i></li>
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaFirstVisitController.overview()))
+                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaFirstVisitController.overviewList()))
                             @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaFirstVisitController.getScatterStats()))
-                            @listGroupItem("Records", Some(denoparoutes.DeNoPaFirstVisitController.find()))
                             @listGroupItem("Types", Some(denoparoutes.DeNoPaFirstVisitController.overviewFieldTypes()))
                         </ul>
                     </div>

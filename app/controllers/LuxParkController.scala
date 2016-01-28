@@ -35,7 +35,11 @@ class LuxParkController @Inject()(
   override protected def router = DataSetRouter(
     routes.LuxParkController.find,
     routes.LuxParkController.find(),
+    routes.LuxParkController.overviewList,
+    routes.LuxParkController.overviewList(),
     routes.LuxParkController.get,
+    routes.LuxParkController.exportAllRecordsAsCsv(),
+    routes.LuxParkController.exportAllRecordsAsJson(),
     routes.LuxParkController.exportRecordsAsCsv(),
     routes.LuxParkController.exportRecordsAsJson(),
     routes.LuxParkController.exportTranSMARTDataFile(),
