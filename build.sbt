@@ -4,7 +4,7 @@ import com.github.play2war.plugin._
 
 name := "ncer-pd"
 
-version := "0.1.1"
+version := "0.1.2"
 
 Play2WarPlugin.play2WarSettings
 
