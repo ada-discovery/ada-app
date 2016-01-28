@@ -5,6 +5,21 @@
 # Default path will just redirect to the RedCap view
 GET         /                                                               controllers.AppController.index
 
+
+# no functionality yet
+GET         /login                                                          controllers.JansDataSetController.login
+# deadbolt
+#GET         /logout                                                         com.feth.play.module.pa.controllers.Authenticate.logout
+#GET         /authenticate/:provider                                         com.feth.play.module.pa.controllers.Authenticate.authenticate(provider: String)
+#GET         /authenticate/:provider/denied                                  controllers.Application.oAuthDenied(provider: String)
+# deadbolt tests
+GET         /nosubj                                                         controllers.JansDataSetController.notpresent
+GET         /asubj                                                          controllers.JansDataSetController.present
+
+
+
+
+
 # Admin
 
 GET         /runnables                                                      controllers.AdminController.listRunnables

@@ -8,18 +8,32 @@
     fieldsToShow : Seq[String],
 
     // All calls wrapped in a router object
-    router : DataSetRouter
+    router : DataSetRouter,
+
+    dataSetFields : Seq[String],
+    currentField : String
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
+
+@optionField(key : String, value : String) = {
+    <option value="@key" @if(currentField == key) {selected="selected"}>@value</option>
+}
+
 @actions = {
     @helper.form(action=router.plainFindCall, 'role -> "search") {
         <div class="row">
-            <div class="col-md-8">
+            <div class="col-md-8 form-group">
+
                 <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by id...">
+                @{/*<select type="selection" id="field" name="s" value="@dataSetFields"class="form-control input-sm col-xs-2" >
+                fieldsToShow.map( fieldName => optionField(fieldName, fieldName))
+                </select>*/}
                 <input type="submit" id="searchsubmit" value="Filter by id" class="btn btn-primary btn-sm">
+
             </div>
+            <!--export fields-->
             <div class="col-md-4">
                 <div class="pull-right dropdown">
                     <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -51,11 +65,12 @@
                     </ul>
                 </div>
             </div>
+            @views.html.exportCsvModal("exportCsvModal", "CSV Export", ",", router.exportCsvCall)
+            @views.html.exportCsvModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", "\\t", router.exportTranSMARTDataCall)
+            @views.html.exportCsvModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", "\\t", router.exportTranSMARTMappingCall)
         </div>
     }
-    @views.html.exportCsvModal("exportCsvModal", "CSV Export", ",", router.exportCsvCall)
-    @views.html.exportCsvModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", "\\t", router.exportTranSMARTDataCall)
-    @views.html.exportCsvModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", "\\t", router.exportTranSMARTMappingCall)
+
 }
 
 @displayCall(newPage : Int, newOrderBy : Option[String]) = @{

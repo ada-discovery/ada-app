@@ -1,3 +1,5 @@
+
+
 import com.github.play2war.plugin._
 
 // val conf = play.api.Configuration.load(new File("."))
@@ -31,7 +33,12 @@ libraryDependencies ++= Seq(
   "org.webjars" % "html5shiv" % "3.7.0",
   "org.webjars" % "respond" % "1.4.2",
   "net.codingwell" %% "scala-guice" % "4.0.1",
-  "org.clapper" % "classutil_2.11" % "1.0.5"
+  "org.clapper" % "classutil_2.11" % "1.0.5",
+  "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",
+  "com.feth" % "play-easymail_2.11" % "0.7.0",
+  "com.feth" % "play-authenticate_2.11" % "0.6.6",
+  "be.objectify" % "deadbolt-scala_2.11" % "2.4.3",
+  "be.objectify" % "deadbolt-java_2.11" % "2.4.3"
 )
 
 routesGenerator := InjectedRoutesGenerator

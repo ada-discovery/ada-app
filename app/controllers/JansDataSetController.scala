@@ -1,11 +1,21 @@
 package controllers
 
 import javax.inject.{Named, Inject}
+import be.objectify.deadbolt.scala.DeadboltActions
 import persistence.RepoTypeRegistry._
+import play.Application
 import play.api.libs.json.JsObject
+import reactivemongo.core.commands.Group
 
 import scala.concurrent.duration._
 import play.api.mvc.{Action, Controller}
+
+
+
+// authentification, authorisation
+import be.objectify.deadbolt.java.actions.Restrict
+import com.feth.play.module.pa.PlayAuthenticate
+import com.feth.play.module.pa.user.AuthUser
 
 
 
@@ -20,6 +30,7 @@ import controllers.{ReadonlyController, ExportableAction}
  * PB: Renamed due to the conflicted name
  */
 class JansDataSetController @Inject() (
+    deadbolt: DeadboltActions,
     @Named("DeNoPaCuratedBaselineRepo") denopabaselineRepo: JsObjectCrudRepo,
     @Named("DeNoPaCuratedFirstVisitRepo") denopafirstvisitRepo: JsObjectCrudRepo,
     redCapService: RedCapService
@@ -31,21 +42,32 @@ class JansDataSetController @Inject() (
   }
 
 
-  def index = Action { implicit request =>
+  //@Restrict(@Group(Application.USER_ROLE))
+  def restrictedCall = Action { implicit request =>
+    Ok("you are in")
+  }
 
+  def notpresent = deadbolt.SubjectNotPresent(){
+    Action{
+      Ok("subject not present, but everything is fine!")
+    }
+  }
+
+  def present = deadbolt.SubjectPresent(){
+    Action{
+      Ok("there you are, present subject!")
+    }
+  }
+
+
+
+  def index = Action { implicit request =>
     // build history for set operations
     val oldValue = if(request.session.get("setOp").isEmpty) "" else "<a href>" + request.session.get("setOp").get + "</a>"
     val hist = oldValue
 
     val ops = Array('+', '-', '/')
     val steps = hist.split(ops)
-
-    // PB comments:
-    // 1. getDictionary at the AsyncReadonlyRepo level is misplaced/wrong.
-    // 2. All classes handled by persistence (such as Translation and User) would implement that
-    // 3. Even at Json data set level the implementation of getDictionary as listed bellow is not correct.
-    //    It returns ALL the objects e.g. Denopa baseline entries with all fields (several thousand) and then turns them individual rows (NOT fields!) into string
-    //    For correct dictionary inference look at: standalone.InferDictionary class
 //      override def getDictionary = {
 //        import scala.concurrent.duration._
 //        import scala.concurrent.{Await, Future}
@@ -93,6 +115,10 @@ class JansDataSetController @Inject() (
     Ok("sessions cleared").withNewSession
   }
 
+
+  def login = Action{ implicit request =>
+    Ok(views.html.login())
+  }
 
   def pagecalls = Action { implicit request =>
     var calls = 0
