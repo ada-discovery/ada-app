@@ -54,42 +54,54 @@ GET         /redcap/records/exportTranSMARTMapping                          cont
 
 GET         /denopa/baseline/records                                        controllers.denopa.DeNoPaBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/baseline/records/get/:id                                controllers.denopa.DeNoPaBaselineController.get(id: BSONObjectID)
-GET         /denopa/baseline/records/exportAllAsCsv                         controllers.denopa.DeNoPaBaselineController.exportRecordsAsCsv(delimiter : String ?= ",")
-GET         /denopa/baseline/records/exportAllAsJson                        controllers.denopa.DeNoPaBaselineController.exportRecordsAsJson
+GET         /denopa/baseline/records/exportAllAsCsv                         controllers.denopa.DeNoPaBaselineController.exportAllRecordsAsCsv(delimiter : String ?= ",")
+GET         /denopa/baseline/records/exportAllAsJson                        controllers.denopa.DeNoPaBaselineController.exportAllRecordsAsJson
+GET         /denopa/baseline/records/exportAsCsv                            controllers.denopa.DeNoPaBaselineController.exportRecordsAsCsv(delimiter : String ?= ",", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /denopa/baseline/records/exportAsJson                           controllers.denopa.DeNoPaBaselineController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/baseline/records/exportTranSMARTData                    controllers.denopa.DeNoPaBaselineController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /denopa/baseline/records/exportTranSMARTMapping                 controllers.denopa.DeNoPaBaselineController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 GET         /denopa/baseline/overviewFieldTypes                             controllers.denopa.DeNoPaBaselineController.overviewFieldTypes
-GET         /denopa/baseline/overview                                       controllers.denopa.DeNoPaBaselineController.overview(fieldNames: Option[Seq[String]] = None)
+GET         /denopa/baseline/overview                                       controllers.denopa.DeNoPaBaselineController.overview
+GET         /denopa/baseline/overviewList                                   controllers.denopa.DeNoPaBaselineController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/baseline/getScatterStats                                controllers.denopa.DeNoPaBaselineController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "a_AESD_I_mean")
 
 GET         /denopa/firstvisit/records                                      controllers.denopa.DeNoPaFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/firstvisit/records/get/:id                              controllers.denopa.DeNoPaFirstVisitController.get(id: BSONObjectID)
-GET         /denopa/firstvisit/records/exportAllAsCsv                       controllers.denopa.DeNoPaFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",")
-GET         /denopa/firstvisit/records/exportAllAsJson                      controllers.denopa.DeNoPaFirstVisitController.exportRecordsAsJson
+GET         /denopa/firstvisit/records/exportAllAsCsv                       controllers.denopa.DeNoPaFirstVisitController.exportAllRecordsAsCsv(delimiter : String ?= ",")
+GET         /denopa/firstvisit/records/exportAllAsJson                      controllers.denopa.DeNoPaFirstVisitController.exportAllRecordsAsJson
+GET         /denopa/firstvisit/records/exportAsCsv                          controllers.denopa.DeNoPaFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /denopa/firstvisit/records/exportAsJson                         controllers.denopa.DeNoPaFirstVisitController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/firstvisit/records/exportTranSMARTData                  controllers.denopa.DeNoPaFirstVisitController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /denopa/firstvisit/records/exportTranSMARTMapping               controllers.denopa.DeNoPaFirstVisitController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 GET         /denopa/firstvisit/overviewFieldTypes                           controllers.denopa.DeNoPaFirstVisitController.overviewFieldTypes
-GET         /denopa/firstvisit/overview                                     controllers.denopa.DeNoPaFirstVisitController.overview(fieldNames: Option[Seq[String]] = None)
+GET         /denopa/firstvisit/overview                                     controllers.denopa.DeNoPaFirstVisitController.overview
+GET         /denopa/firstvisit/overviewList                                 controllers.denopa.DeNoPaFirstVisitController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/firstvisit/getScatterStats                              controllers.denopa.DeNoPaFirstVisitController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "b_AESD_S_sum")
 
 GET         /denopa/curatedbaseline/records                                 controllers.denopa.DeNoPaCuratedBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/curatedbaseline/records/get/:id                         controllers.denopa.DeNoPaCuratedBaselineController.get(id: BSONObjectID)
-GET         /denopa/curatedbaseline/records/exportAllAsCsv                  controllers.denopa.DeNoPaCuratedBaselineController.exportRecordsAsCsv(delimiter : String ?= ",")
-GET         /denopa/curatedbaseline/records/exportAllAsJson                 controllers.denopa.DeNoPaCuratedBaselineController.exportRecordsAsJson
+GET         /denopa/curatedbaseline/records/exportAllAsCsv                  controllers.denopa.DeNoPaCuratedBaselineController.exportAllRecordsAsCsv(delimiter : String ?= ",")
+GET         /denopa/curatedbaseline/records/exportAllAsJson                 controllers.denopa.DeNoPaCuratedBaselineController.exportAllRecordsAsJson
+GET         /denopa/curatedbaseline/records/exportAsCsv                     controllers.denopa.DeNoPaCuratedBaselineController.exportRecordsAsCsv(delimiter : String ?= ",", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /denopa/curatedbaseline/records/exportAsJson                    controllers.denopa.DeNoPaCuratedBaselineController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/curatedbaseline/records/exportTranSMARTData             controllers.denopa.DeNoPaCuratedBaselineController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /denopa/curatedbaseline/records/exportTranSMARTMapping          controllers.denopa.DeNoPaCuratedBaselineController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 GET         /denopa/curatedbaseline/overviewFieldTypes                      controllers.denopa.DeNoPaCuratedBaselineController.overviewFieldTypes
-GET         /denopa/curatedbaseline/overview                                controllers.denopa.DeNoPaCuratedBaselineController.overview(fieldNames: Option[Seq[String]] = None)
+GET         /denopa/curatedbaseline/overview                                controllers.denopa.DeNoPaCuratedBaselineController.overview
+GET         /denopa/curatedbaseline/overviewList                            controllers.denopa.DeNoPaCuratedBaselineController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/curatedbaseline/getScatterStats                         controllers.denopa.DeNoPaCuratedBaselineController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "a_AESD_I_mean")
 
 GET         /denopa/curatedfirstvisit/records                               controllers.denopa.DeNoPaCuratedFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/curatedfirstvisit/records/get/:id                       controllers.denopa.DeNoPaCuratedFirstVisitController.get(id: BSONObjectID)
-GET         /denopa/curatedfirstvisit/records/exportAllAsCsv                controllers.denopa.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",")
-GET         /denopa/curatedfirstvisit/records/exportAllAsJson               controllers.denopa.DeNoPaCuratedFirstVisitController.exportRecordsAsJson
+GET         /denopa/curatedfirstvisit/records/exportAllAsCsv                controllers.denopa.DeNoPaCuratedFirstVisitController.exportAllRecordsAsCsv(delimiter : String ?= ",")
+GET         /denopa/curatedfirstvisit/records/exportAllAsJson               controllers.denopa.DeNoPaCuratedFirstVisitController.exportAllRecordsAsJson
+GET         /denopa/curatedfirstvisit/records/exportAsCsv                   controllers.denopa.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(delimiter : String ?= ",", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /denopa/curatedfirstvisit/records/exportAsJson                  controllers.denopa.DeNoPaCuratedFirstVisitController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/curatedfirstvisit/records/exportTranSMARTData           controllers.denopa.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /denopa/curatedfirstvisit/records/exportTranSMARTMapping        controllers.denopa.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 GET         /denopa/curatedfirstvisit/overviewFieldTypes                    controllers.denopa.DeNoPaCuratedFirstVisitController.overviewFieldTypes
-GET         /denopa/curatedfirstvisit/overview                              controllers.denopa.DeNoPaCuratedFirstVisitController.overview(fieldNames: Option[Seq[String]] = None)
+GET         /denopa/curatedfirstvisit/overview                              controllers.denopa.DeNoPaCuratedFirstVisitController.overview
+GET         /denopa/curatedfirstvisit/overviewList                          controllers.denopa.DeNoPaCuratedFirstVisitController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/curatedfirstvisit/getScatterStats                       controllers.denopa.DeNoPaCuratedFirstVisitController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "b_AESD_S_sum")
 
 GET         /denopa/baseline/metastats                                      controllers.denopa.DeNoPaBaselineMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", filter : util.FilterSpec ?= new util.FilterSpec())
@@ -101,12 +113,15 @@ GET         /denopa/firstvisit/metastats/get/:id                            cont
 
 GET         /luxpark/records                                                controllers.LuxParkController.find(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /luxpark/records/get/:id                                        controllers.LuxParkController.get(id: BSONObjectID)
-GET         /luxpark/records/exportAllAsCsv                                 controllers.LuxParkController.exportRecordsAsCsv(delimiter : String ?= ",")
-GET         /luxpark/records/exportAllAsJson                                controllers.LuxParkController.exportRecordsAsJson
+GET         /luxpark/records/exportAllAsCsv                                 controllers.LuxParkController.exportAllRecordsAsCsv(delimiter : String ?= ",")
+GET         /luxpark/records/exportAllAsJson                                controllers.LuxParkController.exportAllRecordsAsJson
+GET         /luxpark/records/exportAsCsv                                    controllers.LuxParkController.exportRecordsAsCsv(delimiter : String ?= ",", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /luxpark/records/exportAsJson                                   controllers.LuxParkController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /luxpark/records/exportTranSMARTData                            controllers.LuxParkController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /luxpark/records/exportTranSMARTMapping                         controllers.LuxParkController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 GET         /luxpark/overviewFieldTypes                                     controllers.LuxParkController.overviewFieldTypes
-GET         /luxpark/overview                                               controllers.LuxParkController.overview(fieldNames: Option[Seq[String]] = None)
+GET         /luxpark/overview                                               controllers.LuxParkController.overview
+GET         /luxpark/overviewList                                           controllers.LuxParkController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /luxpark/getScatterStats                                        controllers.LuxParkController.getScatterStats(xField: String ?= "digitsf_score", yField : String ?= "bentons_score")
 
 # Map static resources from the /public folder to the /assets URL path

@@ -13,6 +13,7 @@ create.title = Add a new {0}
 edit.title = Edit {0}
 show.title = Show {0}
 list.title = List {0}
+overviewList.title = Overview {0}
 list.count.title={0,choice,0#No {1}|1#One {1}|1<{0,number,integer} {1}s} found
 
 metaTypeStat.valueRatioMap.label = Value Occurrences
