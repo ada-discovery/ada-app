@@ -1,9 +1,9 @@
 @import play.api.libs.json.JsObject
 @import reactivemongo.bson.BSONObjectID
+@import util.ChartSpec
 @import play.modules.reactivemongo.json._
-@import util.{ChartSpec, PieChartSpec, ColumnChartSpec}
 @import views.html
-@import views.html.chart.highcharts
+@import views.html.dataset.chartPanel
 
 @(
     domainName : String,
@@ -51,7 +51,6 @@
 
 @main(Messages("overviewList.title", domainName)) {
 
-        <!-- Begin page content -->
     <div class="container">
         <div class="page-header">
             <h3>
@@ -61,32 +60,53 @@
 
         @flashMessages()
 
-        <div id="actions">
-            @actions
+        <div id="actions">@actions</div>
+
+        @chartPanel(chartDatas)
+
+        <br/><br/>
+
+        <div align="middle">
+            <div class="well">
+                <div class="row">
+                    <span id="arrowUp" class="glyphicon glyphicon-arrow-up"></span>
+                </div>
+                <div class="row">
+                    <button id="showHideTableButton" type="button" class="btn btn-default btn-sm" data-toggle="collapse" data-target="#table-panel">Hide Table</button>
+                </div>
+                <div class="row">
+                    <span id="arrowDown" class="glyphicon glyphicon-arrow-down" style="display:none"></span>
+                </div>
+            </div>
         </div>
 
-        <div class="row" style="padding-bottom: 100px;">
-            @chartDatas.map { chartSpec =>
-                <div class="col-md-3">
-                    @{chartSpec match {
-                        case PieChartSpec(title, showLabels, showLegend, data) => highcharts.pieChart(title, title + "Chart", showLabels, showLegend, data)
-                        case ColumnChartSpec(title, data) => highcharts.columnChart(title, title + "Chart", "Count", data)
-                        case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
-                    }}
+        <div id="table-panel" class="collapse in">
+            @if(!currentPage.items.isEmpty) {
+                @table
+                <hr/>
+                @pagination(displayCall, currentPage)
+            } else {
+                <div class="panel panel-default">
+                    <div class="panel-body">
+                        <em>Nothing to display</em>
+                    </div>
                 </div>
             }
         </div>
-
-        @if(!currentPage.items.isEmpty) {
-            @table
-            <hr/>
-            @pagination(displayCall, currentPage)
-        } else {
-            <div class="panel panel-default">
-                <div class="panel-body">
-                    <em>Nothing to display</em>
-                </div>
-            </div>
-        }
     </div>
+    <script>
+        var tableShown = true
+        $('#showHideTableButton').on('click', function() {
+            if (tableShown) {
+                $('#arrowUp').hide();
+                $('#arrowDown').show();
+                $('#showHideTableButton').html("Show Table");
+            } else {
+                $('#arrowUp').show();
+                $('#arrowDown').hide();
+                $('#showHideTableButton').html("Hide Table");
+            }
+            tableShown = !tableShown;
+        });
+    </script>
 }

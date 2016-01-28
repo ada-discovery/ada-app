@@ -1,8 +1,8 @@
+@import views.html.chart._
+
 @(title: String, fieldTypeCounts : Traversable[(FieldType.Value, Int)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @main(title) {
-
-    <!-- Begin page content -->
     <div class="container">
         <div class="page-header">
             <h3>
@@ -10,10 +10,12 @@
             </h3>
         </div>
 
-        <div class="row" style="padding-bottom: 120px;">
-            @views.html.chart.plotly.pieChart(
+        <div class="row">
+            @chart.highcharts.pieChart(
                 "",
                 "typeChart",
+                true,
+                false,
                 fieldTypeCounts.map{case (fieldType, count) => (fieldType.toString, count) }.toSeq
             )
         </div>

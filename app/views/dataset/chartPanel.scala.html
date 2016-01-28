@@ -1,0 +1,16 @@
+@import util.{ChartSpec, PieChartSpec, ColumnChartSpec}
+@import views.html.chart._
+
+@(chartDatas : Iterable[ChartSpec])
+
+<div class="row">
+    @chartDatas.map { chartSpec =>
+        <div class="col-md-3">
+            @{chartSpec match {
+                case PieChartSpec(title, showLabels, showLegend, data) => highcharts.pieChart(title, title + "Chart", showLabels, showLegend, data)
+                case ColumnChartSpec(title, data) => highcharts.columnChart(title, title + "Chart", "Count", data)
+                case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
+            }}
+        </div>
+    }
+</div>
