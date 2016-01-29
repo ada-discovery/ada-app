@@ -16,10 +16,10 @@
 
 @actions = {
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-10">
             @filter(currentPage.filter, router.plainFindCall)
         </div>
-        <div class="col-md-4">
+        <div class="col-md-2">
             @html.dataset.exportDropdown(router.exportAllCsvCall, router.exportAllJsonCall, router.exportTranSMARTDataCall, router.exportTranSMARTMappingCall)
         </div>
     </div>

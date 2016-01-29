@@ -1,0 +1,25 @@
+@import util.{ChartSpec, PieChartSpec, ColumnChartSpec}
+@import views.html.dataset.chartPanel
+
+@(fieldNameChartSpecs : Iterable[(String, ChartSpec)])
+
+@chartPanel(fieldNameChartSpecs.map(_._2))
+
+@listenToPointClick(chartElementName : String, fieldName : String) = {
+    $('#@chartElementName').on('pointClick', function(event, data) {
+//        alert('Category: ' + data.name + ', point: ' + data.y);
+        var condition = { fieldName : "@fieldName", conditionType : "=", condition : data.name};
+        addAndSubmitCondition(condition);
+    });
+}
+
+<script type="text/javascript">
+    $(function () {
+        @fieldNameChartSpecs.map { case (fieldName, chartSpec) =>
+            @{chartSpec match {
+                case PieChartSpec(title, _, _, _) => listenToPointClick(title + "Chart", fieldName)
+                case _ => ""
+            }
+        }
+    }});
+</script>

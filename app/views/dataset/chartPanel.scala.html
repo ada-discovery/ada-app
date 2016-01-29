@@ -1,10 +1,10 @@
 @import util.{ChartSpec, PieChartSpec, ColumnChartSpec}
 @import views.html.chart._
 
-@(chartDatas : Iterable[ChartSpec])
+@(chartSpecs : Iterable[ChartSpec])
 
 <div class="row">
-    @chartDatas.map { chartSpec =>
+    @chartSpecs.map { chartSpec =>
         <div class="col-md-3">
             @{chartSpec match {
                 case PieChartSpec(title, showLabels, showLegend, data) => highcharts.pieChart(title, title + "Chart", showLabels, showLegend, data)

@@ -59,22 +59,25 @@ object ChartSpec {
     explMax : Option[Double] = None
   ) : ColumnChartSpec = {
     val values = project(items.toList, fieldName).map(toDouble).flatten
-    val min = if (explMin.isDefined) explMin.get else values.min
-    val max = if (explMax.isDefined) explMax.get else values.max
-    val stepSize = (max - min) / columnCount
+    val data = if (values.nonEmpty) {
+      val min = if (explMin.isDefined) explMin.get else values.min
+      val max = if (explMax.isDefined) explMax.get else values.max
+      val stepSize = (max - min) / columnCount
 
-    val data = for (step <- 0 until columnCount) yield {
-      val left = min + step * stepSize
-      val right = left + stepSize
-      val count = if (step == columnCount - 1) {
-        values.filter(value => value >= left && value <= right).size
-      } else {
-        values.filter(value => value >= left && value < right).size
+      for (step <- 0 until columnCount) yield {
+        val left = min + step * stepSize
+        val right = left + stepSize
+        val count = if (step == columnCount - 1) {
+          values.filter(value => value >= left && value <= right).size
+        } else {
+          values.filter(value => value >= left && value < right).size
+        }
+
+        (left.toString, count)
       }
-
-      (left.toString, count)
-    }
-    ColumnChartSpec(fieldName, data.toSeq)
+    } else
+      Seq[(String, Int)]()
+    ColumnChartSpec(fieldName, data)
   }
 
   /**

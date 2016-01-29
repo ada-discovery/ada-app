@@ -3,7 +3,6 @@
 @import play.api.libs.json.Json
 @(filter: FilterSpec, submitCall : Call)
 
-<div class="row">
     <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -43,38 +42,37 @@
             </div>
         </div>
     </div>
-    <div class="col-md-12">
-        <ul class="list-inline">
-            <li>
-                Filter:
+    <ul class="list-inline">
+        <li>
+            Filter:
+        </li>
+        @filter.conditions.zipWithIndex.map { case (condition, index) =>
+            <li id="condition-full@index" class="condition-full">
+                <h4>
+                    <span class="condition">
+                        <span id="fieldName" class="label label-primary">@condition.fieldName</span>
+                        <span id="conditionType">@condition.conditionType</span>
+                        <span id="condition" class="label label-primary">@condition.condition</span>
+                    </span>
+                    <span class="condition-buttons" style="display: none">
+                        <button type="button" class="btn btn-sm btn-default" onclick="showEditConditionModal('@index');">
+                            <span class="glyphicon glyphicon-pencil"></span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-default" onclick="deleteCondition('@index');">
+                            <span class="glyphicon glyphicon-trash"></span>
+                        </button>
+                    </span>
+                </h4>
             </li>
-            @filter.conditions.zipWithIndex.map { case (condition, index) =>
-                <li id="condition-full@index" class="condition-full">
-                    <h4>
-                        <span class="condition">
-                            <span id="fieldName" class="label label-primary">@condition.fieldName</span>
-                            <span id="conditionType">@condition.conditionType</span>
-                            <span id="condition" class="label label-primary">@condition.condition</span>
-                        </span>
-                        <span class="condition-buttons" style="display: none">
-                            <button type="button" class="btn btn-sm btn-default" onclick="editCondition('@index');">
-                                <span class="glyphicon glyphicon-pencil"></span>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-default" onclick="deleteCondition('@index');">
-                                <span class="glyphicon glyphicon-trash"></span>
-                            </button>
-                        </span>
-                    </h4>
-                </li>
-            }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
-            <li>
-                <button type="button" class="btn btn-sm btn-default" onclick="addCondition();">
-                    <span class="glyphicon glyphicon-plus"></span>
-                </button>
-            </li>
-        </ul>
-    </div>
-</div>
+        }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
+        <li>
+            <button type="button" class="btn btn-sm btn-default" onclick="showAddConditionModal();">
+                <span class="glyphicon glyphicon-plus"></span>
+            </button>
+        </li>
+    </ul>
+
+
 <script type="text/javascript">
     var jsFilter = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}');
     var conditionFields = ["fieldName", "conditionType", "condition"];
@@ -89,7 +87,7 @@
         buttons.fadeIn( 400 );
     });
 
-    function addCondition() {
+    function showAddConditionModal() {
         $("#addEditConditionModal").find("#conditionIndex").first().val("");
 
         var condition = {conditionType : "="};
@@ -98,7 +96,7 @@
         $("#addEditConditionModal").modal('show');
     }
 
-    function editCondition(index) {
+    function showEditConditionModal(index) {
         $("#addEditConditionModal").find("#conditionIndex").first().val(index);
 
         var condition = jsFilter.conditions[index]
@@ -110,32 +108,39 @@
     function addEditConditionFinished() {
         var index =  $("#addEditConditionModal").find("#conditionIndex").val();
         if (index)
-            editConditionFinished(index)
+            editAndSubmitConditionFromModal(index)
         else
-            addConditionFinished()
+            addAndSubmitConditionFromModal()
     }
 
-    function addConditionFinished() {
+    function addAndSubmitConditionFromModal() {
         var condition = { };
-        jsFilter.conditions.push(condition);
 
         updateModelFromModal(condition, conditionFields);
 
-        submit('get', '@submitCall', {filter: JSON.stringify(jsFilter)});
+        addAndSubmitCondition(condition);
     }
 
-    function editConditionFinished(index) {
+    function editAndSubmitConditionFromModal(index) {
         var condition = jsFilter.conditions[index];
 
         updateModelFromModal(condition, conditionFields);
         updateFilterFromModel(index, condition, conditionFields);
 
-        submit('get', '@submitCall', {filter: JSON.stringify(jsFilter)});
+        submitFilter();
+    }
+
+    function addAndSubmitCondition(condition) {
+        jsFilter.conditions.push(condition);
+        submitFilter();
     }
 
     function deleteCondition(index) {
         jsFilter.conditions.splice(index, 1);
+        submitFilter();
+    }
 
+    function submitFilter() {
         submit('get', '@submitCall', {filter: JSON.stringify(jsFilter)});
     }
 

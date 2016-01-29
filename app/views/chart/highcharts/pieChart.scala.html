@@ -28,7 +28,14 @@
                                 color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
                             }
                         },
-                        showInLegend: @showLegend
+                        showInLegend: @showLegend,
+                        point: {
+                            events: {
+                                click: function () {
+                                    $('#@{chartElementName}').trigger("pointClick", this);
+                                }
+                            }
+                        }
                     }
                 },
                 credits: {

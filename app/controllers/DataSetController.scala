@@ -97,12 +97,12 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param request Header of original request.
     * @return View for all available fields.
     */
-  private def overviewListView(currentPage: Page[JsObject], chartSpecs : Iterable[ChartSpec])(implicit msg: Messages, request: RequestHeader) : Html =
+  private def overviewListView(currentPage: Page[JsObject], fieldNameChartSpecs : Iterable[(String, ChartSpec)])(implicit msg: Messages, request: RequestHeader) =
     dataset.overviewList(
       dataSetName + " Item",
       currentPage,
       listViewColumns.get,
-      chartSpecs,
+      fieldNameChartSpecs,
       router
     )
 
@@ -192,13 +192,13 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   }
 
   def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
-    val futureChartSpecs = getFutureChartSpecs(filter.toJsonCriteria)
+    val futureFieldNameChartSpecs = getFutureFieldNameChartSpecs(filter.toJsonCriteria)
     val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
 
-    futureItems.zip(futureCount).zip(Future.sequence(futureChartSpecs)).map{
-      case ((items, count), chartSpecs) => {
+    futureItems.zip(futureCount).zip(Future.sequence(futureFieldNameChartSpecs)).map{
+      case ((items, count), fieldNameChartSpecs) => {
         implicit val msg = messagesApi.preferred(request)
-        Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), chartSpecs))
+        Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), fieldNameChartSpecs))
     }}.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
@@ -208,7 +208,14 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
   private def getFutureChartSpecs(criteria : Option[JsObject]) = {
     val fieldNames = current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
-    fieldNames.map(getChartSpec(criteria))
+    fieldNames.map(getChartSpec(criteria, _))
+  }
+
+  private def getFutureFieldNameChartSpecs(criteria : Option[JsObject]) = {
+    val fieldNames = current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
+    fieldNames.map(fieldName =>
+      getChartSpec(criteria, fieldName).map(chartSpec => (fieldName, chartSpec))
+    )
   }
 
   /**
@@ -220,7 +227,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param fieldName Name of the field. Used to find field in data repo.
     * @return Inferred chart type.
     */
-  private def getChartSpec(criteria : Option[JsObject])(fieldName : String) : Future[ChartSpec] =
+  private def getChartSpec(criteria : Option[JsObject], fieldName : String) : Future[ChartSpec] =
     dictionaryRepo.get(fieldName).flatMap { foundField =>
       if (foundField.isDefined) {
         repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map(items =>
@@ -324,8 +331,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param orderBy Order of fields in data file.
     * @return VString with file content.
     */
-  protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String): String =
-  {
+  protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String): String = {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 
@@ -343,8 +349,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param orderBy Order of fields in data file.
     * @return VString with file content.
     */
-  protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String): String =
-  {
+  protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String): String = {
     val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 
