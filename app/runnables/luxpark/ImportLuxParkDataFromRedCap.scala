@@ -19,15 +19,13 @@ class ImportLuxParkDataFromRedCap @Inject() (
   private val syncDataRepo = RepoSynchronizer(dataRepo, timeout)
 
   override def run = {
-    // remove the records from the collection
+    // delete all the records
     syncDataRepo.deleteAll
 
-    // insert all the records are obtained from the service one by one
+    // insert the records obtained from the RedCap service to the repo (db) one by one
     val futureRecords = redCapService.listRecords("cdisc_dm_usubjd", "")
     Await.result(futureRecords, timeout).foreach(syncDataRepo.save(_))
   }
 }
 
-object ImportLuxParkDataFromRedCap extends GuiceBuilderRunnable[ImportLuxParkDataFromRedCap] with App {
-  run
-}
+object ImportLuxParkDataFromRedCap extends GuiceBuilderRunnable[ImportLuxParkDataFromRedCap] with App { run }

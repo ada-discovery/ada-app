@@ -7,17 +7,17 @@ import play.modules.reactivemongo.json.BSONFormats._
 case class Dictionary(
   _id : Option[BSONObjectID],
   dataSetName : String,
-  fields : List[Field]
-//  parents : List[Dictionary],
+  fields : Seq[Field]
+//  parents : Seq[Dictionary],
 )
 
 case class Field(
   name : String,
   fieldType : FieldType.Value = null,
-  numValues : Option[List[String]] = None,
+  numValues : Option[Seq[String]] = None,
   isArray : Boolean = false,
-  aliases : List[String] = List[String](),
-  labels : List[String] = List[String]()
+  aliases : Seq[String] = Seq[String](),
+  labels : Seq[String] = Seq[String]()
 //  category : Category
 ) {
 
@@ -44,14 +44,14 @@ case class Category(
   _id : Option[BSONObjectID],
   name : String,
   var parent : Option[Category] = None,
-  var children : List[Category] = List[Category]()
+  var children : Seq[Category] = Seq[Category]()
 ) {
 
   def this(name : String) = this(None, name)
 
-  def getPath : List[String] = (if (parent.isDefined && parent.get.parent.isDefined) parent.get.getPath else List[String]()) ++ List(name)
+  def getPath : Seq[String] = (if (parent.isDefined && parent.get.parent.isDefined) parent.get.getPath else Seq[String]()) ++ Seq(name)
 
-  def addChildren(newChildren  : List[Category]) : Category = {
+  def addChildren(newChildren  : Seq[Category]) : Category = {
     children = newChildren
     children.foreach(_.parent = Some(this))
     this

@@ -20,5 +20,5 @@ package object util {
     }
 
   def shorten(string : String) =
-    if (string.length > 20) {string.substring(0, 18) + ".."} else string
+    if (string.length > 25) {string.substring(0, 23) + ".."} else string
 }

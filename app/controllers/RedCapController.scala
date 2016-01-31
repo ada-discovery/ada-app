@@ -46,17 +46,8 @@ class RedCapController @Inject() (
   def listRecords(page: Int, orderBy: String, f: String, filter: FilterSpec) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    val filterSpec = if (filter == null) {
-      // Just for playing
-      new FilterSpec(Seq[FilterCondition](
-        new FilterCondition("cdisc_dm_sex", ConditionType.Equals, "1"),
-        new FilterCondition("dm_death", ConditionType.Greater, "2")
-      ))
-    } else
-      filter
-
     redCapService.listRecords(orderBy, f).map( items =>
-      Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, filterSpec), filterSpec))
+      Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, filter), filter))
     )
   }
 
