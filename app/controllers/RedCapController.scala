@@ -41,7 +41,7 @@ class RedCapController @Inject() (
   private val visitField = Some("redcap_event_name")
 
 
-  def index = Action { Redirect(routes.RedCapController.listFieldNames()) }
+  def index = Action { Redirect(routes.RedCapController.listExportFields()) }
 
   def listRecords(page: Int, orderBy: String, f: String, filter: FilterSpec) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
@@ -59,10 +59,10 @@ class RedCapController @Inject() (
     )
   }
 
-  def listFieldNames(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
+  def listExportFields(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    redCapService.listFieldNames(orderBy, filter).map( items =>
+    redCapService.listExportFields(orderBy, filter).map(items =>
       Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, new FilterSpec())))
     )
   }
@@ -89,8 +89,8 @@ class RedCapController @Inject() (
     }
   }
 
-  def showFieldName(id: String) = Action.async { implicit request =>
-    redCapService.getFieldName(id).map { foundItems =>
+  def showExportField(id: String) = Action.async { implicit request =>
+    redCapService.getExportField(id).map { foundItems =>
       if (foundItems.isEmpty) {
         NotFound(s"Entity #$id not found")
       } else {
@@ -154,24 +154,21 @@ class RedCapController @Inject() (
 
     // categories
     val rootCategory = new Category("")
-    val categories = metadatas.map{ metadata =>
-      (metadata \ "form_name").as[String]
-    }.toSet.map { name : String => new Category(name) }.toList
+    val categories = metadatas.map(_.form_name).toSet.map { formName : String =>
+      new Category(formName)
+    }.toList
+
     rootCategory.addChildren(categories)
     val nameCategoryMap = categories.map(category => (category.name, category)).toMap
 
     // field category map
     val fieldCategoryMap = metadatas.map{metadata =>
-      val field = (metadata \ "field_name").as[String]
-      val categoryName = (metadata \ "form_name").as[String]
-      (field, nameCategoryMap.get(categoryName).get)
+      (metadata.field_name, nameCategoryMap.get(metadata.form_name).get)
     }.toMap
 
     // field label map
     val fieldLabelMap = metadatas.map{metadata =>
-      val field = (metadata \ "field_name").as[String]
-      val label = (metadata \ "field_label").as[String]
-      (field, label)
+      (metadata.field_name, metadata.field_label)
     }.toMap
 
     val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
@@ -195,28 +192,25 @@ class RedCapController @Inject() (
 
     // categories
     val rootCategory = new Category("")
-    val categories = metadatas.map{ metadata =>
-      (metadata \ "form_name").as[String]
-    }.toSet.map { name : String => new Category(name) }.toList
+    val categories = metadatas.map(_.form_name).toSet.map { formName : String =>
+      new Category(formName)
+    }.toList
 
     rootCategory.addChildren(categories)
     val nameCategoryMap = categories.map(category => (category.name, category)).toMap
 
     // field category map
-    val fieldCategoryMap = metadatas.map{ metadata =>
-      val field = (metadata \ "field_name").as[String]
-      val categoryName = (metadata \ "form_name").as[String]
-      (field, nameCategoryMap.get(categoryName).get)
+    val fieldCategoryMap = metadatas.map{metadata =>
+      (metadata.field_name, nameCategoryMap.get(metadata.form_name).get)
     }.toMap
 
     // field label map
     val fieldLabelMap = metadatas.map{metadata =>
-      val field = (metadata \ "field_name").as[String]
-      val label = (metadata \ "field_label").as[String]
-      (field, label)
+      (metadata.field_name, metadata.field_label)
     }.toMap
 
-    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
+    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(
+      records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
 
     val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._2.getBytes(exportCharset))
 

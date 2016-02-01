@@ -6,24 +6,23 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.google.inject.ImplementedBy
 import play.api.libs.json.{JsObject, JsArray}
 import play.api.libs.ws.{WSRequest, WSClient}
-import play.api.Play.current
 import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import util.JsonUtil._
 
 import models.Dictionary
 import models.Field
+import models.redcap.JsonFormat._
+import models.redcap._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-
 @ImplementedBy(classOf[RedCapServiceWSImpl])
 trait RedCapService {
 
-
   /**
-    * Retrive all fields matching the filtering criterion and order them according to a reference field.
+    * Retrieve all fields matching the filtering criterion and order them according to a reference field.
     * @param orderBy Reference field for ordering/ sorting.
     * @param filter Field for macthing and filtering the reference field.
     * @return Sorted records matching filter criterion.
@@ -31,12 +30,12 @@ trait RedCapService {
   def listRecords(orderBy: String, filter: String) : Future[Seq[JsObject]]
 
   /**
-    * Retrive all metadata fields matching the filtering criterion and order them according to a reference field.
+    * Retrieve all metadata fields matching the filtering criterion and order them according to a reference field.
     * @param orderBy Reference field for ordering/ sorting.
     * @param filter Field for macthing and filtering the reference field.
     * @return Sorted records matching filter criterion.
     */
-  def listMetadatas(orderBy: String, filter: String) : Future[Seq[JsObject]]
+  def listMetadatas(orderBy: String, filter: String) : Future[Seq[Metadata]]
 
   /**
     * Create list of all field names. Field names are sorted and filtered if they don't match filter criterion.
@@ -44,7 +43,7 @@ trait RedCapService {
     * @param filter Specify filter to exclude fields from name list.
     * @return Filtered and sorted list of records.
     */
-  def listFieldNames(orderBy: String, filter: String) : Future[Seq[JsObject]]
+  def listExportFields(orderBy: String, filter: String) : Future[Seq[ExportField]]
 
   /**
     * Count all records in reference field.
@@ -72,7 +71,7 @@ trait RedCapService {
     * @param id String for matching with reference field.
     * @return Sequence of field(s) matching id.
     */
-  def getFieldName(id: String) : Future[Seq[JsObject]]
+  def getExportField(id: String) : Future[Seq[JsObject]]
 
   /**
     * Generate a Dictionary (i.e. for matching with other Dictionary objects).
@@ -117,13 +116,23 @@ protected class RedCapServiceWSImpl @Inject() (
     jsonRecords.map( items =>
       filterAndSort(items, orderBy, filter, "cdisc_dm_usubjd"))
 
-  override def listMetadatas(orderBy: String, filter: String) =
-    jsonMetadatas.map( items =>
+  override def listMetadatas(orderBy: String, filter: String) = {
+    val futureJsonMetadatas = jsonMetadatas.map(items =>
       filterAndSort(items, orderBy, filter, "field_name"))
 
-  override def listFieldNames(orderBy: String, filter: String) =
-    jsonFieldNames.map( items =>
+    futureJsonMetadatas.map(_.map(json =>
+      json.as[Metadata])
+    )
+  }
+
+  override def listExportFields(orderBy: String, filter: String) = {
+    val futureJsonExportFields = jsonFieldNames.map(items =>
       filterAndSort(items, orderBy, filter, "original_field_name"))
+
+    futureJsonExportFields.map(_.map(json =>
+      json.as[ExportField])
+    )
+  }
 
   override def countRecords(filter: String) =
     jsonRecords.map( items =>
@@ -138,7 +147,7 @@ protected class RedCapServiceWSImpl @Inject() (
     jsonMetadatas.map { items =>
       findBy(items, id, "field_name")}
 
-  override def getFieldName(id: String) =
+  override def getExportField(id: String) =
     jsonFieldNames.map { items =>
       findBy(items, id, "export_field_name")}
 
@@ -156,7 +165,6 @@ protected class RedCapServiceWSImpl @Inject() (
       }
     }
 
-
   /**
     * Generate dictionary
     * TODO: incomplete, partially implemented for testing
@@ -169,5 +177,4 @@ protected class RedCapServiceWSImpl @Inject() (
 
     Dictionary(None, "LuxPark REDCap", finalfields)
   }
-
 }

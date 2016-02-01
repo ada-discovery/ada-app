@@ -2,8 +2,9 @@
 @import reactivemongo.bson.BSONObjectID
 @import util.ChartSpec
 @import play.modules.reactivemongo.json._
-@import views.html
-@import views.html.dataset.chartPanel
+@import views.html.dataset.filterChartPanel
+@import views.html.table._
+@import views.html.dataset.exportDropdown
 
 @(
     domainName : String,
@@ -23,29 +24,17 @@
             @filter(currentPage.filter, router.plainOverviewListCall)
         </div>
         <div class="col-md-2">
-            @html.dataset.exportDropdown(router.exportAllCsvCall, router.exportAllJsonCall, router.exportTranSMARTDataCall, router.exportTranSMARTMappingCall)
+            @exportDropdown(router.exportAllCsvCall, router.exportAllJsonCall, router.exportTranSMARTDataCall, router.exportTranSMARTMappingCall)
         </div>
     </div>
 }
 
-@displayCall(newPage : Int, newOrderBy : Option[String]) = @{
-    router.overviewListCall(newPage, newOrderBy.map { nOrderBy =>
-        if (nOrderBy == currentPage.orderBy) {
-            "-" + currentPage.orderBy
-        } else if (("-" + nOrderBy) == currentPage.orderBy) {
-            nOrderBy
-        } else nOrderBy
-    }.getOrElse(currentPage.orderBy), currentPage.filter)
-}
-
-@rowClickCall(item : JsObject) = @{
-    router.getCall((item \ "_id").as[BSONObjectID]).url
-}
-
-@table = {
-    @jsonTable(currentPage.items, currentPage.orderBy, displayCall(_, _),
+@table = @{
+    paginatedJsonTable(
+        currentPage,
+        router.overviewListCall(_, _, currentPage.filter),
         Some(fieldsToShow),
-        Some(rowClickCall)
+        Some({ (item : JsObject) => router.getCall((item \ "_id").as[BSONObjectID])})
     )
 }
 
@@ -60,7 +49,10 @@
 
         @flashMessages()
 
-        <div id="actions">@actions</div>
+        <div id="actions">
+            @actions
+        </div>
+
         <hr/>
 
         @filterChartPanel(fieldNameChartSpecs)
@@ -82,20 +74,11 @@
         </div>
 
         <div id="table-panel" class="collapse in">
-            @if(!currentPage.items.isEmpty) {
-                @table
-                <hr/>
-                @pagination(displayCall, currentPage)
-            } else {
-                <div class="panel panel-default">
-                    <div class="panel-body">
-                        <em>Nothing to display</em>
-                    </div>
-                </div>
-            }
+            @table
         </div>
     </div>
-    <script>
+
+    <script type="text/javascript">
         var tableShown = true
         $('#showHideTableButton').on('click', function() {
             if (tableShown) {

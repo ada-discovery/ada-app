@@ -25,25 +25,21 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
 
     // categories
     val rootCategory = new Category("")
-    val categories = metadatas.map{ metadata =>
-      (metadata \ "form_name").as[String]
-    }.toSet.map { name : String => new Category(name) }.toList
+    val categories = metadatas.map(_.form_name).toSet.map { formName : String =>
+      new Category(formName)
+    }.toList
 
     rootCategory.addChildren(categories)
     val nameCategoryMap = categories.map(category => (category.name, category)).toMap
 
     // field category map
-    val fieldCategoryMap = metadatas.map{ metadata =>
-      val field = (metadata \ "field_name").as[String]
-      val categoryName = (metadata \ "form_name").as[String]
-      (field, nameCategoryMap.get(categoryName).get)
+    val fieldCategoryMap = metadatas.map{metadata =>
+      (metadata.field_name, nameCategoryMap.get(metadata.form_name).get)
     }.toMap
 
     // field label map
     val fieldLabelMap = metadatas.map{metadata =>
-      val field = (metadata \ "field_name").as[String]
-      val label = (metadata \ "field_label").as[String]
-      (field, label)
+      (metadata.field_name, metadata.field_label)
     }.toMap
   }
 }

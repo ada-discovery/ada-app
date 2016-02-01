@@ -1,5 +1,7 @@
 @import play.api.libs.json.JsObject
 @import util.FilterSpec
+@import views.html.table.paginatedJsonTable
+
 @(currentPage: Page[JsObject], filterSpec: FilterSpec)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
@@ -42,30 +44,20 @@
     @views.html.exportModal("exportTranSMARTMappingModal", "LuxPark CSV TranSMART Mapping Export", "\\t", routes.RedCapController.exportTranSMARTMappingFile())
 }
 
-@displayCall(newPage : Int, newOrderBy : Option[String]) = @{
-    routes.RedCapController.listRecords(newPage, newOrderBy.map { orderBy =>
-        if(orderBy == currentPage.orderBy) "-" + currentPage.orderBy else orderBy
-      // TODO
-    }.getOrElse(currentPage.orderBy), "")
-}
-
-@rowClickCall(item : JsObject) = @{
-    defining(item.value.get("cdisc_dm_usubjd").get) { v =>
-        routes.RedCapController.showRecord(v.asOpt[String].getOrElse(v.toString())).url
-    }
-}
-
-@table = {
-    @jsonTable(currentPage.items, currentPage.orderBy, displayCall(_, _),
+@table = @{
+    paginatedJsonTable(
+        currentPage,
+        routes.RedCapController.listRecords(_, _, ""),
         Some(List("cdisc_dm_usubjd", "redcap_event_name", "cdisc_dm_subjid_2", "dm_site", "cdisc_dm_brthdtc", "cdisc_dm_sex", "cdisc_sc_sctestcd_maritstat")),
-        Some(rowClickCall)
+        Some({ (item: JsObject) => routes.RedCapController.showRecord(
+            (item \ "cdisc_dm_usubjd").asOpt[String].getOrElse((item \ "cdisc_dm_usubjd").toString()))
+        })
     )
 }
 
 @views.html.list(
     "record",
+    currentPage.total,
     actions,
-    table,
-    displayCall,
-    currentPage
+    table
 )

@@ -1,32 +1,21 @@
-@(domainName : String, actions: Html, table : Html, displayCall : (Int, Option[String]) => Any, currentPage: Page[_])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(domainName : String, count : Long, actions: Html, table : Html)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
-    @main(Messages("list.title", domainName)) {
+@main(Messages("list.title", domainName)) {
 
-        <!-- Begin page content -->
-        <div class="container">
-            <div class="page-header">
-                <h3>
-                    @Messages("list.count.title", currentPage.total, domainName)
-                </h3>
-            </div>
-
-            @flashMessages()
-
-            <div id="actions">
-                @actions
-            </div>
-
-            @if(!currentPage.items.isEmpty) {
-                @table
-                <hr/>
-                @pagination(displayCall, currentPage)
-            } else {
-                <div class="panel panel-default">
-                    <div class="panel-body">
-                        <em>Nothing to display</em>
-                    </div>
-                </div>
-            }
+    <div class="container">
+        <div class="page-header">
+            <h3>
+            @Messages("list.count.title", count, domainName)
+            </h3>
         </div>
-    }
+
+        @flashMessages()
+
+        <div id="actions">
+            @actions
+        </div>
+
+        @table
+    </div>
+}
 

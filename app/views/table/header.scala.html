@@ -1,0 +1,5 @@
+@(orderByFieldName: String, listCall : (Int, Option[String]) => Call)(fieldName: String, label: String)
+
+<th class="col header @if(orderByFieldName == fieldName){glyphicon glyphicon-chevron-down} @if(orderByFieldName == "-" + fieldName){glyphicon glyphicon-chevron-up}">
+    <a href="@listCall(0, Some(fieldName))">@label</a>
+</th>

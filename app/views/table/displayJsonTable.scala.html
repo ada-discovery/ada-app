@@ -1,11 +1,11 @@
 @import play.api.libs.json.{JsObject, JsNull}
-@(items : Traversable[JsObject], currentOrderBy: String, displayCall : (Int, Option[String]) => Any, fieldsToShow : Option[Seq[String]] = None, rowClickCall : Option[JsObject => Any] = None)(implicit request: RequestHeader)
 
-@header(fieldName: String, title: String) = {
-	<th class="col header @if(currentOrderBy == fieldName){glyphicon glyphicon-chevron-down} @if(currentOrderBy == "-" + fieldName){glyphicon glyphicon-chevron-up}">
-		<a href="@displayCall(0, Some(fieldName))">@title</a>
-	</th>
-}
+@(
+    items : Traversable[JsObject],
+    header : (String, String) => Html,
+    fieldsToShow : Option[Seq[String]] = None,
+    rowClickCall : Option[JsObject => Call] = None
+)
 
 <table class="table table-striped">
 	<thead>

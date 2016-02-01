@@ -1,0 +1,31 @@
+@import play.api.libs.json.{JsObject, JsNull}
+@import views.html.table.{header, displayJsonTable, pagination}
+
+@(
+    page: Page[JsObject],
+    listCall : (Int, String) => Call,
+    fieldsToShow : Option[Seq[String]] = None,
+    rowClickCall : Option[JsObject => Call] = None
+)
+
+@listCallAux(newPage : Int, newOrderBy : Option[String]) = @{
+    listCall(newPage, newOrderBy.map { nOrderBy =>
+        if (nOrderBy == page.orderBy) {
+            "-" + page.orderBy
+        } else if (("-" + nOrderBy) == page.orderBy) {
+            nOrderBy
+        } else nOrderBy
+    }.getOrElse(page.orderBy))
+}
+
+@if(page.items.nonEmpty) {
+    @displayJsonTable(page.items, header(page.orderBy, listCallAux)(_, _), fieldsToShow, rowClickCall)
+    <hr/>
+    @pagination(page, listCallAux)
+} else {
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <em>Nothing to display</em>
+        </div>
+    </div>
+}
