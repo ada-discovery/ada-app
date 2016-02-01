@@ -42,10 +42,10 @@ POST        /translations/:id/delete                                        cont
 GET         /redcap/records                                                 controllers.RedCapController.listRecords(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f: String ?= "", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /redcap/overview                                                controllers.RedCapController.overview
 GET         /redcap/metadatas                                               controllers.RedCapController.listMetadatas(p: Int ?= 0, s: String ?= "field_name", f: String ?= "")
-GET         /redcap/fieldNames                                              controllers.RedCapController.listFieldNames(p: Int ?= 0, s: String ?= "original_field_name", f: String ?= "")
+GET         /redcap/fieldNames                                              controllers.RedCapController.listExportFields(p: Int ?= 0, s: String ?= "original_field_name", f: String ?= "")
 GET         /redcap/records/get/:id                                         controllers.RedCapController.showRecord(id: String)
 GET         /redcap/metadatas/get/:id                                       controllers.RedCapController.showMetadata(id: String)
-GET         /redcap/fieldNames/get/:id                                      controllers.RedCapController.showFieldName(id: String)
+GET         /redcap/fieldNames/get/:id                                      controllers.RedCapController.showExportField(id: String)
 GET         /redcap/records/exportAllAsCsv                                  controllers.RedCapController.exportRecordsAsCsv(delimiter : String ?= ",")
 GET         /redcap/records/exportTranSMARTData                             controllers.RedCapController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /redcap/records/exportTranSMARTMapping                          controllers.RedCapController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
