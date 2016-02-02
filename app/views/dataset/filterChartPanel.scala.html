@@ -5,7 +5,7 @@
 
 @chartPanel(fieldNameChartSpecs.map(_._2))
 
-@listenToPointClick(chartElementName : String, fieldName : String) = {
+@jsListenToPointClick(chartElementName : String, fieldName : String) = {
     $('#@chartElementName').on('pointClick', function(event, data) {
 //        alert('Category: ' + data.name + ', point: ' + data.y);
         var condition = { fieldName : "@fieldName", conditionType : "=", condition : data.name};
@@ -17,7 +17,7 @@
     $(function () {
         @fieldNameChartSpecs.map { case (fieldName, chartSpec) =>
             @{chartSpec match {
-                case PieChartSpec(title, _, _, _) => listenToPointClick(title + "Chart", fieldName)
+                case PieChartSpec(title, _, _, _) => jsListenToPointClick(title + "Chart", fieldName)
                 case _ => ""
             }
         }

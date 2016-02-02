@@ -1,14 +1,14 @@
 @import play.api.libs.json.JsObject
+@import play.modules.reactivemongo.json._
 @import reactivemongo.bson.BSONObjectID
 @import util.ChartSpec
-@import play.modules.reactivemongo.json._
 @import views.html.dataset.filterChartPanel
-@import views.html.table._
+@import views.html.table.paginatedJsonTable
 @import views.html.dataset.exportDropdown
 
 @(
     domainName : String,
-    currentPage: Page[JsObject],
+    page: Page[JsObject],
     fieldsToShow : Seq[String],
     fieldNameChartSpecs : Iterable[(String, ChartSpec)],
 
@@ -21,7 +21,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(currentPage.filter, router.plainOverviewListCall)
+            @filter(page.filter, router.plainOverviewListCall)
         </div>
         <div class="col-md-2">
             @exportDropdown(router.exportAllCsvCall, router.exportAllJsonCall, router.exportTranSMARTDataCall, router.exportTranSMARTMappingCall)
@@ -31,66 +31,17 @@
 
 @table = @{
     paginatedJsonTable(
-        currentPage,
-        router.overviewListCall(_, _, currentPage.filter),
+        page,
+        router.overviewListCall(_, _, page.filter),
         Some(fieldsToShow),
         Some({ (item : JsObject) => router.getCall((item \ "_id").as[BSONObjectID])})
     )
 }
 
-@main(Messages("overviewList.title", domainName)) {
-
-    <div class="container">
-        <div class="page-header">
-            <h3>
-                @Messages("list.count.title", currentPage.total, domainName)
-            </h3>
-        </div>
-
-        @flashMessages()
-
-        <div id="actions">
-            @actions
-        </div>
-
-        <hr/>
-
-        @filterChartPanel(fieldNameChartSpecs)
-
-        <br/><br/>
-
-        <div align="middle">
-            <div class="well">
-                <div class="row">
-                    <span id="arrowUp" class="glyphicon glyphicon-arrow-up"></span>
-                </div>
-                <div class="row">
-                    <button id="showHideTableButton" type="button" class="btn btn-default btn-sm" data-toggle="collapse" data-target="#table-panel">Hide Table</button>
-                </div>
-                <div class="row">
-                    <span id="arrowDown" class="glyphicon glyphicon-arrow-down" style="display:none"></span>
-                </div>
-            </div>
-        </div>
-
-        <div id="table-panel" class="collapse in">
-            @table
-        </div>
-    </div>
-
-    <script type="text/javascript">
-        var tableShown = true
-        $('#showHideTableButton').on('click', function() {
-            if (tableShown) {
-                $('#arrowUp').hide();
-                $('#arrowDown').show();
-                $('#showHideTableButton').html("Show Table");
-            } else {
-                $('#arrowUp').show();
-                $('#arrowDown').hide();
-                $('#showHideTableButton').html("Hide Table");
-            }
-            tableShown = !tableShown;
-        });
-    </script>
-}
+@views.html.overviewList(
+    domainName,
+    page.total,
+    actions,
+    filterChartPanel(fieldNameChartSpecs),
+    table
+)

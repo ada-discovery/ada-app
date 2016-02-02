@@ -2,44 +2,67 @@ package runnables.luxpark
 
 import javax.inject.{Named, Inject}
 
-import models.Category
-import persistence.RepoSynchronizer
+import models.{Field, Category}
+import persistence.{DictionaryFieldRepo, RepoSynchronizer}
 import persistence.RepoTypeRegistry._
-import services.RedCapService
+import play.api.libs.json.Json
+import runnables.{GuiceBuilderRunnable, InferDictionary}
+import services.{DeNoPaSetting, RedCapService}
 
 import scala.concurrent.duration._
 
 import scala.concurrent.Await
 
 class ImportLuxParkDictionaryFromRedCap @Inject() (
-    @Named("LuxParkRepo") dataRepo: JsObjectCrudRepo,
+    @Named("LuxParkDictionaryRepo") dictionaryRepo: DictionaryFieldRepo,
     redCapService: RedCapService
-  ) extends Runnable {
+  ) extends InferDictionary(dictionaryRepo) {
 
-  private val timeout = 120000 millis
-  private val syncDataRepo = RepoSynchronizer(dataRepo, timeout)
+  // TODO: Introduce a proper type inference setting for LuxPark Data
+  override protected val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider
+  override protected val uniqueCriteria = Json.obj("cdisc_dm_usubjd" -> "ND0001")
 
-  def run = {
+  override def run = {
+    val dictionarySyncRepo = RepoSynchronizer(dictionaryRepo, timeout)
+    // init dictionary if needed
+    Await.result(dictionaryRepo.initIfNeeded, timeout)
+    dictionarySyncRepo.deleteAll
+
     val metadataFuture = redCapService.listMetadatas("field_name", "")
     val metadatas = Await.result(metadataFuture, timeout)
 
     // categories
-    val rootCategory = new Category("")
     val categories = metadatas.map(_.form_name).toSet.map { formName : String =>
       new Category(formName)
     }.toList
-
-    rootCategory.addChildren(categories)
     val nameCategoryMap = categories.map(category => (category.name, category)).toMap
+    val rootCategory = new Category("")
+    rootCategory.addChildren(categories)
 
-    // field category map
-    val fieldCategoryMap = metadatas.map{metadata =>
-      (metadata.field_name, nameCategoryMap.get(metadata.form_name).get)
-    }.toMap
 
-    // field label map
-    val fieldLabelMap = metadatas.map{metadata =>
-      (metadata.field_name, metadata.field_label)
-    }.toMap
+    val futures = metadatas.par.map{ metadata =>
+      println(metadata.field_name)
+      val (inferredType, isEnum) = Await.result(inferType(metadata.field_name), timeout)
+
+      val fieldType = metadata.field_type match {
+        case radio => inferredType
+        case calc => inferredType
+        case text => inferredType
+        case checkbox => inferredType
+        case descriptive => inferredType
+        case yesno => inferredType
+        case dropdown => inferredType
+        case notes => inferredType
+        case file => inferredType
+      }
+
+      val category = nameCategoryMap.get(metadata.form_name).get
+      val field = Field(metadata.field_name, fieldType, false, isEnum, None, Seq[String](), Some(metadata.field_label))
+      dictionaryRepo.save(field)
+    }
+    // to be safe, wait for each save call to finish
+    futures.toList.foreach(future => Await.result(future, timeout))
   }
 }
+
+object ImportLuxParkDictionaryFromRedCap extends GuiceBuilderRunnable[ImportLuxParkDictionaryFromRedCap] with App { run }

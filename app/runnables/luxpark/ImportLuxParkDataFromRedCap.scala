@@ -24,7 +24,7 @@ class ImportLuxParkDataFromRedCap @Inject() (
 
     // insert the records obtained from the RedCap service to the repo (db) one by one
     val futureRecords = redCapService.listRecords("cdisc_dm_usubjd", "")
-    Await.result(futureRecords, timeout).foreach(syncDataRepo.save(_))
+    Await.result(futureRecords, timeout).foreach(syncDataRepo.save)
   }
 }
 

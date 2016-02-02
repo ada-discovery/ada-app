@@ -13,11 +13,12 @@ case class Dictionary(
 
 case class Field(
   name : String,
-  fieldType : FieldType.Value = null,
-  numValues : Option[Seq[String]] = None,
+  fieldType : FieldType.Value,
   isArray : Boolean = false,
+  isEnum : Boolean = false,
+  numValues : Option[Map[String, String]] = None,
   aliases : Seq[String] = Seq[String](),
-  labels : Seq[String] = Seq[String]()
+  label : Option[String] = None
 //  category : Category
 ) {
 

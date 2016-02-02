@@ -173,7 +173,7 @@ protected class RedCapServiceWSImpl @Inject() (
   override def getDictionary = {
     val fieldnamesFuture = listRecords("", "")
     val fieldnames: Seq[JsObject] = Await.result(fieldnamesFuture, 120000 millis)
-    val finalfields = fieldnames.map( f => Field(f.toString)).toList
+    val finalfields = fieldnames.map( f => Field(f.toString, models.FieldType.String)).toList
 
     Dictionary(None, "LuxPark REDCap", finalfields)
   }

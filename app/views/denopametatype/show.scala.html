@@ -1,10 +1,10 @@
 @import play.api.libs.json.{JsObject, JsNull}
 @import util.JsonUtil.unescapeKey
+
 @(domainName : String, item: MetaTypeStats, listCall : Call)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 	@main(Messages("show.title", domainName)) {
     
-        <!-- Begin page content -->
 	    <div class="container" style="padding-bottom: 190px;">
 		    <div class="page-header">
     			<h1>@Messages("show.title", domainName)</h1>

@@ -13,31 +13,50 @@ case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends 
 object ChartSpec {
 
   /**
-    * Given the raw items and fieldnames, all items per field are counted.
-    * Fieldnames will be used as labels for the pie chart.
+    * Given the raw items and field name, all items per value are counted.
+    * Unique values will be used as labels for the pie chart.
     * Calculated fraction of a field is used as pie chart slice sizes.
     *
     * @param items Raw items.
     * @param fieldName Fields of iterest.
     * @return PieChartSpec object for use in view.
     */
-  def pie(
+  def pieJson(
     items : Traversable[JsObject],
     fieldName : String,
     showLabels : Boolean,
     showLegend : Boolean
   ) : PieChartSpec = {
-    val countMap = MMap[String, Int]()
-    items.map{item =>
+    val values = items.map{item =>
       val rawWalue = (item \ fieldName).get
-      val stringValue = if (rawWalue == JsNull)
+      if (rawWalue == JsNull)
         "null"
       else
         rawWalue.as[String]
-      val count = countMap.getOrElse(stringValue, 0)
-      countMap.update(stringValue, count + 1)
     }
-    PieChartSpec(fieldName, showLabels, showLegend, countMap.toSeq.sortBy(_._2))
+    pie(values, fieldName, showLabels, showLegend)
+  }
+
+  /**
+    * Given the values the counts/frequencies are calculated.
+    * Unique values will be used as labels for the pie chart.
+    * Calculated fraction of a field is used as pie chart slice sizes.
+    *
+    * @param values Raw values.
+    * @return PieChartSpec object for use in view.
+    */
+  def pie(
+    values : Traversable[_],
+    title : String,
+    showLabels : Boolean,
+    showLegend : Boolean
+  ) : PieChartSpec = {
+    val countMap = MMap[String, Int]()
+    values.foreach{ value =>
+      val count = countMap.getOrElse(value.toString, 0)
+      countMap.update(value.toString, count + 1)
+    }
+    PieChartSpec(title, showLabels, showLegend, countMap.toSeq.sortBy(_._2))
   }
 
   /**

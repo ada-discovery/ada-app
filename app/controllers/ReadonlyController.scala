@@ -155,12 +155,23 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     page: Int,
     orderBy: String,
     filter : FilterSpec
-  ): (Future[Traversable[E]], Future[Int]) = {
+  ): (Future[Traversable[E]], Future[Int]) =
+    getFutureItemsAndCount(repo)(page, orderBy, filter, listViewColumns)
+
+  protected def getFutureItemsAndCount[T](
+    repox : AsyncReadonlyRepo[T, _]
+  )(
+    page: Int,
+    orderBy: String,
+    filter : FilterSpec,
+    projectedFieldNames : Option[Seq[String]]
+  ): (Future[Traversable[T]], Future[Int]) = {
     val criteria = filter.toJsonCriteria
     val sort = toJsonSort(orderBy)
+    val projection = toJsonProjection(projectedFieldNames)
 
-    val futureItems = repo.find(criteria, sort, listViewProjection, Some(limit), Some(page))
-    val futureCount = repo.count(criteria)
+    val futureItems = repox.find(criteria, sort, projection, Some(limit), Some(page))
+    val futureCount = repox.count(criteria)
     (futureItems, futureCount)
   }
 
@@ -180,11 +191,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     } else
       None
 
-  /**
-    *
-    * @return
-    */
-  protected def listViewProjection: Option[JsObject] =
-    listViewColumns.map(columns =>
-      JsObject(columns.map(column => (column, Json.toJson(1)))))
+  protected def toJsonProjection(fieldNames : Option[Seq[String]]): Option[JsObject] =
+    fieldNames.map(fieldNames =>
+      JsObject(fieldNames.map(fieldName => (fieldName, Json.toJson(1)))))
 }

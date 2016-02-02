@@ -47,12 +47,11 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @return true, if initialization required.
     */
   override def initIfNeeded: Future[Boolean] = synchronized {
-    val responseFuture = getByDataSetName.map(dictionaries =>
-      if (dictionaries.isEmpty) {
-        dictionaryRepo.save(Dictionary(None, dataSetName, List[Field]()))
-        true
-      } else
-        false
+    val responseFuture = getByDataSetName.flatMap(dictionaries =>
+      if (dictionaries.isEmpty)
+        dictionaryRepo.save(Dictionary(None, dataSetName, List[Field]())).map(_ => true)
+      else
+        Future(false)
     )
 
     // init dictionary id: TODO: move after dictionaryrepo injection
@@ -118,7 +117,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
   /**
     * Delete single entry identified by its id (name).
     *
-    * @param id Name of the field to be deleted.
+    * @param name Name of the field to be deleted.
     * @return Nothing (Unit)
     */
   override def delete(name: String): Future[Unit] = {
@@ -166,8 +165,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @param name Name of object.
     * @return Fields in the dictionary with exact name match.
     */
-  override def get(name: String): Future[Option[Field]] =
-  {
+  override def get(name: String): Future[Option[Field]] = {
     get.map(dictionary => dictionary.fields.find(_.name.equals(name)))
   }
 
@@ -217,19 +215,4 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
 
     get.map(dictionary => dictionary.fields)
   }
-
-
-  /**
-    * Return all field names.
-    *
-    * @return Field names.
-    */
-  def getFieldNames: Future[Traversable[String]] = {
-    get.map(dictionary =>
-      dictionary.fields.map(field =>
-        field.name
-      )
-    )
-  }
-
 }

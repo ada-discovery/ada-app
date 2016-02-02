@@ -1,46 +1,48 @@
-@(form: Form[_], elements : Any, updateCall : Call, listCall : Call, deleteCall : Call)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(
+	domainName : String,
+	errors : Seq[FormError],
+	elements : Html,
+	updateCall : Call,
+	listCall : Call,
+	deleteCall : Option[Call]
+)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
-@import helper.{inputText, FieldConstructor}
-@import util.getDomainName
+@main(Messages("edit.title", domainName)) {
 
-@defining(getDomainName(form)) { domainName =>
-
-	@main(Messages("edit.title", domainName)) {
-    
-        <!-- Begin page content -->
-	    <div class="container">
-		    <div class="page-header">
-    			<h1>@Messages("edit.title", domainName)</h1>
-	    	</div>
-
-		    @form.errors.map{ error =>
-			    <div class="alert alert-dismissable alert-danger">
-				    <button type="button" class="close" data-dismiss="alert">×</button>
-				    @Messages(error.message, Messages(domainName + "." + error.key))
-			    </div>
-		    }
-
-		    <div class="row">
-			    <div class="col-md-8">
-				    @helper.form(updateCall) {
-					    <fieldset>
-						    @elements
-					    </fieldset>
-				
-					    <div class="actions">
-						    <input type="submit" value="Update this @domainName" class="btn btn-primary">
-						    <a href="@listCall" class="btn btn-default">Cancel</a>
-					    </div>
-				    }
-			    </div>
-			    <div class="col-md-4">
-				    @info()
-			    </div>
-		    </div>
-		
-		    @helper.form(deleteCall, 'class -> "topRight") {
-			    <input type="submit" value="Delete this @domainName" class="btn btn-danger">
-		    }
+    <div class="container">
+	    <div class="page-header">
+    	    <h1>@Messages("edit.title", domainName)</h1>
 	    </div>
-    }
+
+		@errors.map{ error =>
+		    <div class="alert alert-dismissable alert-danger">
+			    <button type="button" class="close" data-dismiss="alert">×</button>
+				@Messages(error.message, Messages(domainName + "." + error.key))
+			</div>
+		}
+
+		<div class="row">
+		    <div class="col-md-8">
+			    @helper.form(updateCall) {
+				    <fieldset>
+					    @elements
+					</fieldset>
+				
+					<div class="actions">
+					    <input type="submit" value="Update" class="btn btn-primary">
+						<a href="@listCall" class="btn btn-default">Cancel</a>
+					</div>
+				}
+			</div>
+			<div class="col-md-4">
+			    @info()
+			</div>
+		</div>
+
+        @if(deleteCall.isDefined) {
+		    @helper.form(deleteCall.get, 'class -> "topRight") {
+		        <input type="submit" value="Delete" class="btn btn-danger">
+		    }
+        }
+	</div>
 }

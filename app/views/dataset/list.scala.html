@@ -1,12 +1,12 @@
 @import play.api.libs.json.JsObject
-@import reactivemongo.bson.BSONObjectID
 @import play.modules.reactivemongo.json._
-@import views.html.table._
+@import reactivemongo.bson.BSONObjectID
+@import views.html.table.paginatedJsonTable
 @import views.html.dataset.exportDropdown
 
 @(
     domainName : String,
-    currentPage: Page[JsObject],
+    page: Page[JsObject],
     fieldsToShow : Seq[String],
 
     // All calls wrapped in a router object
@@ -18,7 +18,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(currentPage.filter, router.plainFindCall)
+            @filter(page.filter, router.plainFindCall)
         </div>
         <div class="col-md-2">
             @exportDropdown(router.exportAllCsvCall, router.exportAllJsonCall, router.exportTranSMARTDataCall, router.exportTranSMARTMappingCall)
@@ -28,8 +28,8 @@
 
 @table = @{
     paginatedJsonTable(
-        currentPage,
-        router.findCall(_, _, currentPage.filter),
+        page,
+        router.findCall(_, _, page.filter),
         Some(fieldsToShow),
         Some({ (item : JsObject) => router.getCall((item \ "_id").as[BSONObjectID])})
     )
@@ -37,7 +37,7 @@
 
 @views.html.list(
     domainName,
-    currentPage.total,
+    page.total,
     actions,
     table
 )

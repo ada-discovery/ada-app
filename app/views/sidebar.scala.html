@@ -21,6 +21,7 @@
                     <div id="collapse2" class="panel-collapse collapse">
                         <ul class="list-group">
                             @listGroupItem("Overview", Some(routes.LuxParkController.overviewList()))
+                            @listGroupItem("Dictionary", Some(routes.LuxParkController.dictionary()))
                             @listGroupItem("Scatter Analysis", Some(routes.LuxParkController.getScatterStats()))
                             @listGroupItem("Types", Some(routes.LuxParkController.overviewFieldTypes()))
                         </ul>
@@ -43,10 +44,12 @@
                         <ul class="list-group">
                             <li role="separator" class="list-group-item divider"><i>Curated</i></li>
                             @listGroupItem("Overview", Some(denoparoutes.DeNoPaCuratedBaselineController.overviewList()))
+                            @listGroupItem("Dictionary", Some(denoparoutes.DeNoPaCuratedBaselineController.dictionary()))
                             @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaCuratedBaselineController.getScatterStats()))
                             @listGroupItem("Types", Some(denoparoutes.DeNoPaCuratedBaselineController.overviewFieldTypes()))
                             <li role="separator" class="list-group-item divider"><i>Raw</i></li>
                             @listGroupItem("Overview", Some(denoparoutes.DeNoPaBaselineController.overviewList()))
+                            @listGroupItem("Dictionary", Some(denoparoutes.DeNoPaBaselineController.dictionary()))
                             @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaBaselineController.getScatterStats()))
                             @listGroupItem("Types", Some(denoparoutes.DeNoPaBaselineController.overviewFieldTypes()))
                         </ul>
@@ -68,10 +71,12 @@
                         <ul class="list-group">
                             <li role="separator" class="list-group-item divider"><i>Curated</i></li>
                             @listGroupItem("Overview", Some(denoparoutes.DeNoPaCuratedFirstVisitController.overviewList()))
+                            @listGroupItem("Dictionary", Some(denoparoutes.DeNoPaCuratedFirstVisitController.dictionary()))
                             @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaCuratedFirstVisitController.getScatterStats()))
                             @listGroupItem("Types", Some(denoparoutes.DeNoPaCuratedFirstVisitController.overviewFieldTypes()))
                             <li role="separator" class="list-group-item divider"><i>Raw</i></li>
                             @listGroupItem("Overview", Some(denoparoutes.DeNoPaFirstVisitController.overviewList()))
+                            @listGroupItem("Dictionary", Some(denoparoutes.DeNoPaFirstVisitController.dictionary()))
                             @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaFirstVisitController.getScatterStats()))
                             @listGroupItem("Types", Some(denoparoutes.DeNoPaFirstVisitController.overviewFieldTypes()))
                         </ul>

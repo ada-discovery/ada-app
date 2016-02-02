@@ -17,7 +17,9 @@ import util.FilterSpec
   * @param exportJsonCall
   * @param exportTranSMARTDataCall
   * @param exportTranSMARTMappingCall
-  * @param getScatterStatsCall
+  * @param dictionaryCall
+  * @param plainDictionaryCall
+  * @param getFieldCall
   */
 case class DataSetRouter(
   findCall : (Int, String, FilterSpec) => Call,
@@ -31,5 +33,8 @@ case class DataSetRouter(
   exportJsonCall : Call,
   exportTranSMARTDataCall : Call,
   exportTranSMARTMappingCall : Call,
-  getScatterStatsCall : Call
+  getScatterStatsCall : Call,
+  dictionaryCall : (Int, String, FilterSpec) => Call,
+  plainDictionaryCall : Call,
+  getFieldCall : String => Call
 )

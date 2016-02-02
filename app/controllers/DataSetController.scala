@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import _root_.util.{FilterSpec, JsonUtil, ChartSpec}
 import org.apache.commons.lang3.StringEscapeUtils
-import models.{Page, FieldType}
+import models.{Page, FieldType, Field}
 import persistence.DictionaryFieldRepo
 import play.api.Logger
 import play.api.i18n.Messages
@@ -57,6 +57,44 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   // router for requests; to be passed to views as helper.
   protected def router : DataSetRouter
 
+  protected lazy val overviewFieldNames =
+    current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
+
+  protected val dictionaryViewColumns = Seq("name", "fieldType", "label", "isEnum")
+
+  /**
+    * Table displaying given paginated content. Generally used to display fields of the datasets.
+    *
+    * @param page Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
+    * @param msg Internal request message.
+    * @param request Header of original request.
+    * @return View for all available fields.
+    */
+  override protected def listView(page: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
+    dataset.list(
+      dataSetName + " Item",
+      page,
+      listViewColumns.get,
+      router
+    )
+
+  /**
+    * Table displaying given paginated content with charts on the top. Generally used to display fields of the datasets.
+    *
+    * @param page Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
+    * @param msg Internal request message.
+    * @param request Header of original request.
+    * @return View for all available fields.
+    */
+  private def overviewListView(page: Page[JsObject], fieldNameChartSpecs : Iterable[(String, ChartSpec)])(implicit msg: Messages, request: RequestHeader) =
+    dataset.overviewList(
+      dataSetName + " Item",
+      page,
+      listViewColumns.get,
+      fieldNameChartSpecs,
+      router
+    )
+
   /**
     * Shows all fields of the selected subject.
     *
@@ -73,37 +111,21 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       router.plainFindCall
     )
 
-  /**
-    * Table displaying given paginated content. Generally used to display fields of the datasets.
-    *
-    * @param currentPage Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
-    * @param msg Internal request message.
-    * @param request Header of original request.
-    * @return View for all available fields.
-    */
-  override protected def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
-    dataset.list(
-      dataSetName + " Item",
-      currentPage,
-      listViewColumns.get,
-      router
+  private def dictionaryView(page: Page[Field], fieldNameChartSpecs : Iterable[(String, ChartSpec)])(implicit msg: Messages, request: RequestHeader) =
+    dataset.dictionary(
+      dataSetName + " Field",
+      page,
+      fieldNameChartSpecs,
+      router.plainDictionaryCall,
+      router.dictionaryCall,
+      router.getFieldCall
     )
 
-  /**
-    * Table displaying given paginated content with charts on the top. Generally used to display fields of the datasets.
-    *
-    * @param currentPage Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
-    * @param msg Internal request message.
-    * @param request Header of original request.
-    * @return View for all available fields.
-    */
-  private def overviewListView(currentPage: Page[JsObject], fieldNameChartSpecs : Iterable[(String, ChartSpec)])(implicit msg: Messages, request: RequestHeader) =
-    dataset.overviewList(
-      dataSetName + " Item",
-      currentPage,
-      listViewColumns.get,
-      fieldNameChartSpecs,
-      router
+  private def showFieldView(field : Field)(implicit msg: Messages, request: RequestHeader) =
+    dataset.showField(
+      dataSetName,
+      field,
+      router.plainFindCall
     )
 
   /**
@@ -183,7 +205,8 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   }
 
   def overview = Action.async { implicit request =>
-    val futureChartSpecs = getFutureChartSpecs(None)
+    println(overviewFieldNames)
+    val futureChartSpecs = overviewFieldNames.map(getDataChartSpec(None, _))
 
     Future.sequence(futureChartSpecs).map { chartSpecs =>
       implicit val msg = messagesApi.preferred(request)
@@ -192,7 +215,11 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   }
 
   def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
-    val futureFieldNameChartSpecs = getFutureFieldNameChartSpecs(filter.toJsonCriteria)
+    println(overviewFieldNames)
+    val futureFieldNameChartSpecs = overviewFieldNames.map(fieldName =>
+      getDataChartSpec(filter.toJsonCriteria, fieldName).map(chartSpec => (fieldName, chartSpec))
+    )
+
     val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
 
     futureItems.zip(futureCount).zip(Future.sequence(futureFieldNameChartSpecs)).map{
@@ -206,18 +233,6 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     }
   }
 
-  private def getFutureChartSpecs(criteria : Option[JsObject]) = {
-    val fieldNames = current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
-    fieldNames.map(getChartSpec(criteria, _))
-  }
-
-  private def getFutureFieldNameChartSpecs(criteria : Option[JsObject]) = {
-    val fieldNames = current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
-    fieldNames.map(fieldName =>
-      getChartSpec(criteria, fieldName).map(chartSpec => (fieldName, chartSpec))
-    )
-  }
-
   /**
     * Infers which chart type to use for a field by checking its type.
     * Strings are identified as pie charts.
@@ -227,21 +242,34 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param fieldName Name of the field. Used to find field in data repo.
     * @return Inferred chart type.
     */
-  private def getChartSpec(criteria : Option[JsObject], fieldName : String) : Future[ChartSpec] =
+  private def getDataChartSpec(
+    criteria : Option[JsObject],
+    fieldName : String
+  ) : Future[ChartSpec] =
     dictionaryRepo.get(fieldName).flatMap { foundField =>
       if (foundField.isDefined) {
         repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map(items =>
           foundField.get.fieldType match {
-            case FieldType.String => ChartSpec.pie(items, fieldName, false, true)
+            case FieldType.String => ChartSpec.pieJson(items, fieldName, false, true)
             case FieldType.Double => ChartSpec.column(items, fieldName, 20)
             case FieldType.Integer => ChartSpec.column(items, fieldName, 20)
-            case _ => ChartSpec.pie(items, fieldName, false, true)
+            case _ => ChartSpec.pieJson(items, fieldName, false, true)
           }
         )
       } else
-        Future(ChartSpec.pie(List[JsObject](), fieldName, false, true))
+        Future(ChartSpec.pieJson(List[JsObject](), fieldName, false, true))
     }
 
+
+  private def getDictionaryChartSpec(
+    criteria : Option[JsObject],
+    fieldName : String,
+    fieldExtractor : Field => Any
+  ) : Future[ChartSpec] =
+    dictionaryRepo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { fields =>
+      val values = fields.map(field => fieldExtractor(field))
+      ChartSpec.pie(values, fieldName, false, true)
+    }
 
   /**
     * Fetches, checks and prepares the specified data fields for a scatterplot.
@@ -297,6 +325,57 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   private def readJsValueTyped(value : JsValue, fieldType : FieldType.Value) {
 
   }
+
+  ////////////////
+  // Dictionary //
+  ////////////////
+
+  def dictionary(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+    val fieldNameExtractors = Seq(
+      ("fieldType", (field : Field) => field.fieldType),
+      ("isEnum", (field : Field) => field.isEnum)
+    )
+
+    val futureFieldNameChartSpecs = fieldNameExtractors.map { case (fieldName, fieldExtractor) =>
+      getDictionaryChartSpec(filter.toJsonCriteria, fieldName, fieldExtractor).map(chartSpec => (fieldName, chartSpec))
+    }
+
+    val (futureItems, futureCount) = getFutureItemsAndCount(dictionaryRepo)(page, orderBy, filter, Some(dictionaryViewColumns))
+
+    futureItems.zip(futureCount).zip(Future.sequence(futureFieldNameChartSpecs)).map{
+      case ((items, count), fieldNameChartSpecs) => {
+        implicit val msg = messagesApi.preferred(request)
+        Ok(dictionaryView(Page(items, page, page * limit, count, orderBy, filter), fieldNameChartSpecs))
+      }}.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the dictionary list process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+  /**
+    * Retrieve a dictionary field by its name.
+    * NotFound response is generated if key does not exists.
+    *
+    * @param name
+    */
+  def getField(name: String) = Action.async { implicit request =>
+    dictionaryRepo.get(name).map(_.fold(
+      NotFound(s"Field #$name not found")
+    ){ entity =>
+      implicit val msg = messagesApi.preferred(request)
+
+      Ok(showFieldView(entity))
+    }).recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the field get process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+  //////////////////////
+  // Export Functions //
+  //////////////////////
 
 
   /**

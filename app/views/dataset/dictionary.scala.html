@@ -1,0 +1,45 @@
+@import models.Field
+@import util.{ChartSpec, FilterSpec}
+@import views.html.dataset.filterChartPanel
+@import views.html.table.paginatedTable
+@import views.html.dataset.exportDropdown
+
+@(
+    domainName : String,
+    page: Page[Field],
+    fieldNameChartSpecs : Iterable[(String, ChartSpec)],
+
+    plainListCall : Call,
+    listCall : (Int, String, FilterSpec) => Call,
+    getCall : String => Call
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@actions = {
+    <div class="row">
+        @filter(page.filter, plainListCall)
+    </div>
+}
+
+@table = @{
+    paginatedTable(
+        page,
+        listCall(_, _, page.filter),
+        Seq(
+            ("name", "Name", {item : Any => Html(item.asInstanceOf[Field].name)}),
+            ("fieldType", "Type", {item : Any => Html(item.asInstanceOf[Field].fieldType.toString)}),
+            ("label", "Label", {item : Any => Html(item.asInstanceOf[Field].label.getOrElse(""))}),
+            ("isEnum", "Enum", {item : Any => Html(item.asInstanceOf[Field].isEnum.toString)})
+        ),
+        Some({ item : Any => getCall(item.asInstanceOf[Field].name)})
+    )
+}
+
+@views.html.overviewList(
+    domainName,
+    page.total,
+    actions,
+    filterChartPanel(fieldNameChartSpecs),
+    table
+)

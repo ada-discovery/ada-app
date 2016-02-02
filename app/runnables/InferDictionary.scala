@@ -1,51 +1,61 @@
 package runnables
 
-import models.Field
+import models.{FieldType, Field}
 import persistence.{RepoSynchronizer, DictionaryFieldRepo}
 import play.api.libs.json.{JsObject, Json, JsNull, JsString}
 import util.TypeInferenceProvider
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 
 abstract class InferDictionary(dictionaryRepo: DictionaryFieldRepo) extends Runnable {
 
+  protected val dataRepo = dictionaryRepo.dataRepo
+  protected val timeout = 120000 millis
+
   protected def typeInferenceProvider : TypeInferenceProvider
   protected def uniqueCriteria : JsObject
 
-  private val timeout = 120000 millis
-
   def run = {
     val dictionarySyncRepo = RepoSynchronizer(dictionaryRepo, timeout)
-    val syncDataRepo = RepoSynchronizer(dictionaryRepo.dataRepo, timeout)
-
     // init dictionary if needed
-    dictionaryRepo.initIfNeeded
+    Await.result(dictionaryRepo.initIfNeeded, timeout)
     dictionarySyncRepo.deleteAll
 
-    // get the field names
-    val uniqueRecords = syncDataRepo.find(Some(uniqueCriteria))
-    if (uniqueRecords.isEmpty)
-      throw new IllegalStateException(s"No records found for $uniqueCriteria. The associated data set might be empty.")
-    val fieldNames = uniqueRecords.head.keys
-
-    val futures = fieldNames.filter(_ != "_id").par.map { fieldName =>
+    val futures = getFieldNames.filter(_ != "_id").par.map { fieldName =>
       println(fieldName)
-      // get all the values for a given field
-      val values = syncDataRepo.find(None, None, Some(Json.obj(fieldName -> 1))).map { item =>
-        val jsValue = (item \ fieldName).get
-        jsValue match {
-          case JsNull => None
-          case x : JsString => Some(jsValue.as[String])
-          case _ => Some(jsValue.toString)
-        }
-      }.flatten.toSet
-
-      val field = Field(fieldName, typeInferenceProvider.getType(values))
-      dictionaryRepo.save(field)
+      val (fieldType, isEnum) = Await.result(inferType(fieldName), timeout)
+      dictionaryRepo.save(Field(fieldName, fieldType, false, isEnum))
     }
 
     // to be safe, wait for each save call to finish
     futures.toList.foreach(future => Await.result(future, timeout))
+  }
+
+  protected def inferType(fieldName : String) : Future[(FieldType.Value, Boolean)] = {
+    // get all the values for a given field
+    dataRepo.find(None, None, Some(Json.obj(fieldName -> 1))).map { items =>
+      val values = items.map { item =>
+        val jsValue = (item \ fieldName).get
+        jsValue match {
+          case JsNull => None
+          case x: JsString => Some(jsValue.as[String])
+          case _ => Some(jsValue.toString)
+        }
+      }.flatten.toSet
+
+      val fieldType = typeInferenceProvider.getType(values)
+      val isEnum = typeInferenceProvider.isEnum(values)
+      (fieldType, isEnum)
+    }
+  }
+
+  protected def getFieldNames = {
+    val syncDataRepo = RepoSynchronizer(dataRepo, timeout)
+    val uniqueRecords = syncDataRepo.find(Some(uniqueCriteria))
+    if (uniqueRecords.isEmpty)
+      throw new IllegalStateException(s"No records found for $uniqueCriteria. The associated data set might be empty.")
+    uniqueRecords.head.keys
   }
 }

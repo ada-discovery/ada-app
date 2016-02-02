@@ -27,6 +27,9 @@ class DeNoPaCuratedFirstVisitController @Inject() (
     routes.DeNoPaCuratedFirstVisitController.exportRecordsAsJson(),
     routes.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(),
     routes.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile(),
-    routes.DeNoPaCuratedFirstVisitController.getScatterStats()
+    routes.DeNoPaCuratedFirstVisitController.getScatterStats(),
+    routes.DeNoPaCuratedFirstVisitController.dictionary,
+    routes.DeNoPaCuratedFirstVisitController.dictionary(),
+    routes.DeNoPaCuratedFirstVisitController.getField
   )
 }
