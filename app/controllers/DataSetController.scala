@@ -125,7 +125,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     dataset.showField(
       dataSetName,
       field,
-      router.plainFindCall
+      router.plainDictionaryCall
     )
 
   /**

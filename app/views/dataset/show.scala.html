@@ -1,4 +1,6 @@
+@import views.html.jsonShow
 @import play.api.libs.json.JsObject
+
 @(title : String, item: JsObject, listCall : Call, nonNullOnly : Boolean = true)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @{
@@ -6,7 +8,7 @@
     // Currently just redirects to the generic JSON show view, which displays all the items
 }
 
-@views.html.jsonShow(
+@jsonShow(
     title,
     item,
     listCall,

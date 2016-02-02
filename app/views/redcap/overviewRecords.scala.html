@@ -1,8 +1,9 @@
+@import views.html.layout.main
+
 @(title: String, valueCounts : Seq[(String, Seq[(String, Any)])])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @main(title) {
 
-    <!-- Begin page content -->
     <div class="container">
         <div class="page-header">
             <h3>

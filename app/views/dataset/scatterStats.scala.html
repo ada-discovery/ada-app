@@ -1,4 +1,5 @@
 @import util.BasicStats
+@import views.html.layout.main
 
 @(currentXField : String, currentYField : String, getScatterStatsCall : Call, numericFieldNames : Seq[String], stats : Seq[(Any, Any)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
@@ -51,7 +52,6 @@
 
 @main("Scatter Analysis") {
 
-    <!-- Begin page content -->
     <div class="container">
         <div class="page-header">
             <h3>
@@ -59,12 +59,7 @@
             </h3>
         </div>
 
-        @flash.get("success").map { message =>
-            <div class="alert alert-dismissable alert-success">
-                <button type="button" class="close" data-dismiss="alert">×</button>
-                <strong>Well done!</strong> @message
-            </div>
-        }
+        @flashMessages()
 
         <div id="actions">
             @actions(getScatterStatsCall)

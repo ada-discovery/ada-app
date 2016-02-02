@@ -1,3 +1,4 @@
+@import views.html.layout.show
 @import models.Field
 @import views.html.twitterBootstrapJsValue
 
@@ -13,7 +14,7 @@
     @twitterBootstrapJsValue("aliases", attributeLabel("field", "aliases"), field.aliases.mkString(", "), false)
 }
 
-@views.html.show(
+@show(
     domainName,
     Seq[FormError](),
     fields,

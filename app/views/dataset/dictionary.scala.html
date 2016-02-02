@@ -1,8 +1,9 @@
-@import models.Field
-@import util.{ChartSpec, FilterSpec}
+@import views.html.layout
 @import views.html.dataset.filterChartPanel
 @import views.html.table.paginatedTable
 @import views.html.dataset.exportDropdown
+@import models.Field
+@import util.{ChartSpec, FilterSpec}
 
 @(
     domainName : String,
@@ -36,7 +37,7 @@
     )
 }
 
-@views.html.overviewList(
+@layout.overviewList(
     domainName,
     page.total,
     actions,

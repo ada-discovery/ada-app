@@ -1,3 +1,4 @@
+@import views.html.layout.list
 @import play.api.libs.json.JsObject
 @import util.FilterSpec
 @import views.html.table.paginatedJsonTable
@@ -55,7 +56,7 @@
     )
 }
 
-@views.html.list(
+@list(
     "record",
     currentPage.total,
     actions,

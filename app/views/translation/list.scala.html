@@ -1,3 +1,4 @@
+@import views.html.layout
 @import views.html.table.paginatedTable
 
 @(page: Page[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
@@ -25,7 +26,7 @@
     )
 }
 
-@views.html.list(
+@layout.list(
     "translation",
     page.total,
     actions,

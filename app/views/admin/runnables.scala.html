@@ -1,8 +1,9 @@
+@import views.html.layout.main
+
 @(runnableNames : Iterable[String])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @main("Runnables") {
 
-    <!-- Begin page content -->
     <div class="container">
         <div class="page-header">
             <h3>

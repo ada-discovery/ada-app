@@ -10,6 +10,6 @@ class AppController extends Controller {
   @Inject var messagesApi: MessagesApi = _
 
   def index = Action { implicit request =>
-    Ok(views.html.home())
+    Ok(views.html.layout.home())
   }
 }

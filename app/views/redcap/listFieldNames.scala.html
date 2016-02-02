@@ -1,5 +1,6 @@
-@import models.redcap.ExportField
+@import views.html.layout.list
 @import views.html.table._
+@import models.redcap.ExportField
 
 @(currentPage: Page[ExportField])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
@@ -23,7 +24,7 @@
     )
 }
 
-@views.html.list(
+@list(
     "export field",
     currentPage.total,
     actions,

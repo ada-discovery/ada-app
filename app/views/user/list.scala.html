@@ -1,3 +1,4 @@
+@import views.html.layout
 @import views.html.table.paginatedTable
 
 @(page: Page[User])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
@@ -28,7 +29,7 @@
     )
 }
 
-@views.html.list(
+@layout.list(
     "user",
     page.total,
     actions,
