@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import _root_.util.{FilterCondition, FilterSpec}
 import models.{Identity, Page}
-import persistence.{AsyncReadonlyRepo, AsyncCrudRepo}
+import persistence._
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -167,7 +167,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     projectedFieldNames : Option[Seq[String]]
   ): (Future[Traversable[T]], Future[Int]) = {
     val criteria = filter.toJsonCriteria
-    val sort = toJsonSort(orderBy)
+    val sort = toSort(orderBy)
     val projection = toJsonProjection(projectedFieldNames)
 
     val futureItems = repox.find(criteria, sort, projection, Some(limit), Some(page))
@@ -177,17 +177,18 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
 
   /**
     * TODO: Move this into utility object.
-    * Convert String into Json object for sorting.
+    * Convert String into a Sort class.
     *
-    * @param string Reference column sorting.
-    * @return Option with JsObject indicating sorting index. None, if string is empty.
+    * @param fieldName Reference column sorting.
+    * @return Option with Sort class indicating an order (asc/desc). None, if string is empty.
     */
-  protected def toJsonSort(string : String): Option[JsObject] =
-    if (!string.isEmpty) {
-      if (string.startsWith("-"))
-        Some(Json.obj(string.substring(1) -> -1))
+  protected def toSort(fieldName : String): Option[Seq[Sort]] =
+    if (fieldName.nonEmpty) {
+      val sort = if (fieldName.startsWith("-"))
+        DescSort(fieldName)
       else
-        Some(Json.obj(string -> 1))
+        AscSort(fieldName)
+      Some(Seq(sort))
     } else
       None
 

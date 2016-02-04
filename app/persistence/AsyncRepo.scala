@@ -26,7 +26,7 @@ trait AsyncReadonlyRepo[E, ID] {
     */
   def find(
     criteria: Option[JsObject] = None,
-    orderBy: Option[JsObject] = None,
+    orderBy: Option[Seq[Sort]] = None,
     projection : Option[JsObject] = None,
     limit: Option[Int] = None,
     page: Option[Int] = None
@@ -38,11 +38,7 @@ trait AsyncReadonlyRepo[E, ID] {
     * @param criteria Filtering criteria object. Use a String to filter according to value of reference column. Use None for no filtering.
     * @return Number of maching elements.
     */
-  def count(
-    criteria: Option[JsObject] = None
-  ): Future[Int]
-
-//  def getDictionary : models.Dictionary
+  def count(criteria: Option[JsObject] = None): Future[Int]
 }
 
 trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
@@ -51,7 +47,6 @@ trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
 
 trait AsyncCrudRepo[E, ID] extends AsyncRepo[E, ID] {
   def update(entity: E): Future[ID]
-  def updateCustom(id: ID, modifier : JsObject): Future[Unit]
   def delete(id: ID): Future[Unit]
   def deleteAll : Future[Unit]
 }

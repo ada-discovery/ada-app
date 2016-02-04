@@ -5,11 +5,12 @@ import javax.inject.Inject
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.api.libs.json.JsObject
 import play.modules.reactivemongo.ReactiveMongoApi
-import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
 import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{ IndexType, Index }
 import reactivemongo.bson.BSONObjectID
+import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
+import reactivemongo.core.commands.Sort
 
 import scala.concurrent.Future
 import models.{Field, Identity}
@@ -35,7 +36,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
   override def find(
     criteria: Option[JsObject],
-    orderBy: Option[JsObject],
+    orderBy: Option[Seq[Sort]],
     projection : Option[JsObject],
     limit: Option[Int],
     page: Option[Int]
@@ -46,7 +47,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
     // handle sort (if any)
     val queryBuilder2: GenericQueryBuilder[collection.pack.type] = orderBy match {
-      case Some(orderBy) => queryBuilder.sort(orderBy)
+      case Some(orderBy) => queryBuilder.sort(toJsonSort(orderBy))
       case None => queryBuilder
     }
 
@@ -67,6 +68,15 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
       case Some(limit) => cursor.collect[List](limit)
       case None => cursor.collect[List]()
     }
+  }
+
+  private def toJsonSort(sorts: Seq[Sort]) = {
+    val jsonSorts = sorts.map{
+      _ match {
+        case AscSort(fieldName) => (fieldName -> JsNumber(1))
+        case DescSort(fieldName) => (fieldName -> JsNumber(-1))
+    }}
+    JsObject(jsonSorts)
   }
 
   override def count(criteria: Option[JsObject]): Future[Int] =
@@ -100,10 +110,11 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
 protected class MongoAsyncCrudRepo[E: Format, ID: Format](
     collectionName : String)(
     implicit identity: Identity[E, ID]
-  ) extends MongoAsyncRepo[E, ID](collectionName) with AsyncCrudRepo[E, ID] {
+  ) extends MongoAsyncRepo[E, ID](collectionName) with MongoAsyncCrudExtraRepo[E, ID] {
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
+  import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Match, Group, GroupFunction, Unwind, Sort => AggSort, Limit, Skip, Project, SumField, Push, SortOrder, Ascending, Descending}
 
   override def update(entity: E): Future[ID] = {
     val doc = Json.toJson(entity).as[JsObject]
@@ -117,15 +128,76 @@ protected class MongoAsyncCrudRepo[E: Format, ID: Format](
     )
   }
 
-  override def updateCustom(id: ID, modifier : JsObject): Future[Unit] =
-    collection.update(Json.obj(identity.name -> id), modifier) map handleResult
-
   // collection.remove(Json.obj(identity.name -> id), firstMatchOnly = true)
   override def delete(id: ID): Future[Unit] =
     collection.remove(Json.obj(identity.name -> id)) map handleResult
 
   override def deleteAll: Future[Unit] =
     collection.remove(Json.obj()) map handleResult
+
+  // extra functions which should not be exposed beyond the persistence layer
+  override protected[persistence] def updateCustom(id: ID, modifier : JsObject): Future[Unit] =
+    collection.update(Json.obj(identity.name -> id), modifier) map handleResult
+
+  override protected[persistence] def findAggregate(
+    criteria: Option[JsObject],
+    orderBy: Option[Seq[Sort]],
+    projection : Option[JsObject],
+    idGroup : Option[JsValue],
+    groups : Option[Seq[(String, GroupFunction)]],
+    unwindFieldName : Option[String],
+    limit: Option[Int],
+    page: Option[Int]
+  ): Future[Traversable[JsObject]] = {
+
+    val params = List(
+      unwindFieldName.map(Unwind(_)),                            // $unwind
+      criteria.map(Match(_)),                                    // $match
+      projection.map(Project(_)),                                // $project
+      orderBy.map(sort => AggSort(toAggregateSort(sort): _ *)),  // $sort
+      page.map(page  => Skip(page * limit.getOrElse(0))),        // $skip
+      limit.map(Limit(_)),                                       // $limit
+      idGroup.map(id => Group(id)(groups.get: _*))               // $group
+    ).flatten
+
+    val result = collection.aggregate(params.head, params.tail)
+
+    result.map(_.documents)
+  }
+
+  private def toAggregateSort(sorts: Seq[Sort]) =
+    sorts.map{
+      _ match {
+        case AscSort(fieldName) => Ascending(fieldName)
+        case DescSort(fieldName) => Descending(fieldName)
+      }}
+}
+
+trait MongoAsyncCrudExtraRepo[E, ID] extends AsyncCrudRepo[E, ID] {
+  import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{GroupFunction, SortOrder}
+
+  /*
+   * Special aggregate function closely tight to Mongo db functionality.
+   *
+   * Should be used only for special cases (only within the persistence layer)!
+   */
+  protected[persistence] def findAggregate(
+    criteria: Option[JsObject],
+    orderBy: Option[Seq[Sort]],
+    projection : Option[JsObject],
+    idGroup : Option[JsValue],
+    groups : Option[Seq[(String, GroupFunction)]],
+    unwindFieldName : Option[String],
+    limit: Option[Int],
+    page: Option[Int]
+  ): Future[Traversable[JsObject]]
+
+  /*
+   * Special update function expecting a modifier specified as a JSON object closely tight to Mongo db functionality
+   *
+   * should be used only for special cases (only within the persistence layer)!
+   */
+  protected[persistence] def updateCustom(id: ID, modifier : JsObject): Future[Unit]
 }
 
 protected class MongoAsyncStreamRepo[E: Format, ID: Format](

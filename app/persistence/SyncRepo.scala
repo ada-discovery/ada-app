@@ -18,7 +18,7 @@ trait SyncReadonlyRepo[E, ID] {
 
   def find(
     criteria: Option[JsObject] = None,
-    orderBy: Option[JsObject] = None,
+    orderBy: Option[Seq[Sort]] = None,
     projection : Option[JsObject] = None,
     limit: Option[Int] = None,
     page: Option[Int] = None
@@ -33,7 +33,6 @@ trait SyncRepo[E, ID] extends SyncReadonlyRepo[E, ID] {
 
 trait SyncCrudRepo[E, ID] extends SyncRepo[E, ID] {
   def update(entity: E): ID
-  def updateCustom(id: ID, modifier : JsObject)
   def delete(id: ID)
   def deleteAll
 }
@@ -54,7 +53,7 @@ protected class SyncReadonlyRepoAdapter[E, ID](
 
   override def find(
     criteria: Option[JsObject] = None,
-    orderBy: Option[JsObject] = None,
+    orderBy: Option[Seq[Sort]] = None,
     projection : Option[JsObject] = None,
     limit: Option[Int] = None,
     page: Option[Int] = None
@@ -84,9 +83,6 @@ private class SyncCrudRepoAdapter[E, ID](
 
   override def update(entity: E) =
     wait(asyncRepo.update(entity))
-
-  override def updateCustom(id: ID, modifier : JsObject) =
-    wait(asyncRepo.updateCustom(id, modifier))
 
   override def delete(id: ID) =
     wait(asyncRepo.delete(id))

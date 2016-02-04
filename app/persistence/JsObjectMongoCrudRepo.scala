@@ -30,9 +30,6 @@ protected class JsObjectMongoCrudRepo(
     }
   }
 
-  override def updateCustom(id: BSONObjectID, modifier : JsObject) =
-    collection.update(Json.obj(identityName -> id), modifier) map handleResult
-
   override def delete(id: BSONObjectID) =
     collection.remove(Json.obj(identityName -> id)) map handleResult
 

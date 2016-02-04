@@ -16,7 +16,7 @@ object RepoTypeRegistry {
   type UserRepo = AsyncCrudRepo[User, BSONObjectID]
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
 
-  type DictionaryRootRepo = AsyncCrudRepo[Dictionary, BSONObjectID]
+  type DictionaryRootRepo = MongoAsyncCrudExtraRepo[Dictionary, BSONObjectID]
 }
 
 object RepoDef extends Enumeration {

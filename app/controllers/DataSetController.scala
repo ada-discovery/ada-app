@@ -60,7 +60,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   protected lazy val overviewFieldNames =
     current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
 
-  protected val dictionaryViewColumns = Seq("name", "fieldType", "label", "isEnum")
+  protected val dictionaryViewColumns = Seq("name", "fieldType", "label", "isEnum", "isArray", "aliases")
 
   /**
     * Table displaying given paginated content. Generally used to display fields of the datasets.
@@ -205,7 +205,6 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   }
 
   def overview = Action.async { implicit request =>
-    println(overviewFieldNames)
     val futureChartSpecs = overviewFieldNames.map(getDataChartSpec(None, _))
 
     Future.sequence(futureChartSpecs).map { chartSpecs =>
@@ -215,7 +214,6 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   }
 
   def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
-    println(overviewFieldNames)
     val futureFieldNameChartSpecs = overviewFieldNames.map(fieldName =>
       getDataChartSpec(filter.toJsonCriteria, fieldName).map(chartSpec => (fieldName, chartSpec))
     )

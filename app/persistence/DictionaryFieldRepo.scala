@@ -1,15 +1,16 @@
 package persistence
 
-import javax.inject.Inject
+import javax.inject.{Inject, Named}
 
-import models.{Dictionary, Field}
+import models.{Dictionary, Field, FieldType}
 import persistence.RepoTypeRegistry.{DictionaryRootRepo, JsObjectCrudRepo}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsArray, JsString, JsObject, Json}
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.{Await, Future}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import models.Dictionary._
 import scala.concurrent.duration._
+import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Push, Ascending, Descending}
 
 trait DictionaryFieldRepo extends AsyncCrudRepo[Field, String] {
 
@@ -87,18 +88,6 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     */
   override def update(entity: Field): Future[String] = ???
 
-
-  /**
-    * TODO: implement
-    *
-    *
-    * @param id
-    * @param modifier
-    * @return
-    */
-  override def updateCustom(id: String, modifier: JsObject): Future[Unit] = ???
-
-
   /**
     * Delets all fields in the dictionary.
     * @see update()
@@ -156,7 +145,16 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @return Number of matching elements.
     */
   override def count(criteria: Option[JsObject]): Future[Int] = {
-    dictionaryRepo.count(criteria)
+//    val criteria =
+//      if (subCriteria.isDefined) {
+//        val extSubCriteria = subCriteria.get.fields.map { case (name, value) => ("fields." + name, value) }
+//        JsObject(extSubCriteria) + ("dataSetName" -> Json.toJson(dataSetName))
+//      } else
+//        Json.obj("dataSetName" -> dataSetName)
+
+    // TODO: optimize me
+    val futureFields = find(criteria)
+    futureFields.map(_.size)
   }
 
   /**
@@ -166,7 +164,13 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @return Fields in the dictionary with exact name match.
     */
   override def get(name: String): Future[Option[Field]] = {
-    get.map(dictionary => dictionary.fields.find(_.name.equals(name)))
+    val futureFields = find(Some(Json.obj("name" -> name)))
+    futureFields.map(fields =>
+      if (fields.isEmpty)
+        None
+      else
+        Some(fields.head)
+    )
   }
 
   /**
@@ -184,35 +188,60 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @return Traversable object for iteration.
     */
   override def find(
-     criteria: Option[JsObject] = None,
-     orderBy: Option[JsObject] = None,
-     projection: Option[JsObject] = None,
-     limit: Option[Int] = None,
-     page: Option[Int] = None
+    criteria: Option[JsObject] = None,
+    orderBy: Option[Seq[Sort]] = None,
+    projection: Option[JsObject] = None,
+    limit: Option[Int] = None,
+    page: Option[Int] = None
   ): Future[Traversable[Field]] = {
 
+//    val criteria =
+//      if (subCriteria.isDefined)
+//        Json.obj("fields" -> Json.obj(
+//          "$elemMatch" -> subCriteria.get
+//        )) + ("dataSetName" -> Json.toJson(dataSetName))
+//      else
+//        Json.obj("dataSetName" -> dataSetName)
+//
+//    val projection =
+//      if (limit.isDefined)
+//        Some(
+//          Json.obj("fields" -> Json.obj(
+//            "$slice" -> Json.toJson(Seq(page.getOrElse(0) * limit.get, limit.get))
+//          )))
+//      else
+//        None
 
-    // helper for pagination
-    val pageIdx = if(page.isEmpty) 0 else page.get;
-    val pageOffset = if(limit.isEmpty) count().map(x => x) else limit.get;
+    val fullCriteria =
+      if (criteria.isDefined) {
+        val extSubCriteria = criteria.get.fields.map { case (name, value) => ("fields." + name, value) }
+        JsObject(extSubCriteria) + ("dataSetName" -> Json.toJson(dataSetName))
+      } else
+        Json.obj("dataSetName" -> dataSetName)
 
-    // extract criteria
-    val useCriteria = criteria match {
-      case None => Json.obj()
-      case Some(c) => c
+    val fullProjection = projection.map{ proj =>
+      val extFields = proj.fields.map { case (name, value) => ("fields." + name, value) }
+      JsObject(extFields)
     }
 
-    /*val modifier = Json.obj {
-      "find" -> Json.obj {
-        "comments" -> Json.obj(
-          "$slice" -> Json.toJson(Seq(pageIdx, pageOffset))
-        )
-      }
-    }*/
-    //dictionaryRepo.find(criteria, orderBy, projection, limit, page);
-    //val test: Future[Dictionary] = get
+    val result = dictionaryRepo.findAggregate(
+      criteria = Some(fullCriteria),
+      orderBy = orderBy,
+      projection = None, //fullProjection,
+      idGroup = Some(JsString("$dataSetName")),
+      groups = Some(Seq("fields" -> Push("fields"))),
+      unwindFieldName = Some("fields"),
+      limit = limit,
+      page = page
+    )
 
-
-    get.map(dictionary => dictionary.fields)
+    result.map { result =>
+      if (result.nonEmpty) {
+        val jsonFields = (result.head \ "fields").as[JsArray].value
+        println(jsonFields)
+        jsonFields.map(_.as[Field])
+      } else
+        Seq[Field]()
+    }
   }
 }
