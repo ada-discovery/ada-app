@@ -23,7 +23,7 @@ class LuxParkController @Inject()(
   override protected val overviewFieldNamesConfPrefix = "luxpark"
 
   override protected def getTranSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String) = {
-    val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
+    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)

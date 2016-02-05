@@ -3,6 +3,7 @@ package runnables
 import java.text.{ParseException, SimpleDateFormat}
 import java.util.Date
 
+import persistence.AscSort
 import persistence.RepoTypeRegistry._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
@@ -48,7 +49,7 @@ abstract class CleanupDataSet (
     attributeTypeMap : Map[String, InferredType.Value],
     translationMap : Map[String, String]
   ) = {
-    val itemsFuture = dataRepo.find(None, Some(Json.obj("_id" -> 1)))
+    val itemsFuture = dataRepo.find(None, Some(Seq(AscSort("_id"))))
 
     val convertedJsItems = Await.result(itemsFuture, timeout).map { item =>
       val newFieldValues: Seq[(String, JsValue)] = item.fields.filter{case (attribute, value) =>
@@ -95,7 +96,7 @@ abstract class CleanupDataSet (
   }
 
   protected def getAttributeTypeMap : Map[String, InferredType.Value] = {
-    val statsFuture = typeStatsRepo.find(None, Some(Json.obj("attributeName" -> 1)))
+    val statsFuture = typeStatsRepo.find(None, Some(Seq(AscSort("attributeName"))))
 
     Await.result(statsFuture, timeout).map{ item =>
       val valueFreqsWoNa = item.valueRatioMap.filterNot(_._1.toLowerCase.equals("na"))

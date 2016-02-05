@@ -1,6 +1,6 @@
 package controllers
 
-import persistence.AsyncReadonlyRepo
+import persistence.{Sort, AsyncReadonlyRepo}
 import play.api.libs.json.{Json, Format, JsObject}
 import util.WebExportUtil.{jsonsToCsvFile, jsonsToJsonFile}
 import play.api.mvc._
@@ -14,7 +14,7 @@ protected trait ExportableAction[E] {
 
   protected def repoHook: AsyncReadonlyRepo[E, _]
 
-  protected def toJsonSort(string : String) : Option[JsObject]
+  protected def toSort(string : String) : Option[Seq[Sort]]
 
   def exportAllToCsv(
     filename: String,
@@ -53,7 +53,7 @@ protected trait ExportableAction[E] {
   }
 
   private def getJsons(criteria : Option[JsObject], orderBy: String)(implicit ev: Format[E]) = {
-    val recordsFuture = repoHook.find(criteria, toJsonSort(orderBy), None, None, None)
+    val recordsFuture = repoHook.find(criteria, toSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 
     if (!records.isEmpty && records.head.isInstanceOf[JsObject]) {

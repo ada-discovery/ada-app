@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import models.{MetaTypeStats, Page}
-import persistence.{AsyncReadonlyRepo}
+import persistence.{AscSort, AsyncReadonlyRepo}
 import play.api.Logger
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -65,9 +65,7 @@ protected abstract class MetaTypeStatsController(repo: AsyncReadonlyRepo[MetaTyp
 //    else
 //      None
 
-    val sort = Json.obj(orderBy -> 1)
-
-    val futureItems = repo.find(criteria, Some(sort), None, Some(limit), Some(page))
+    val futureItems = repo.find(criteria, Some(Seq(AscSort(orderBy))), None, Some(limit), Some(page))
     val futureCount = repo.count(criteria)
     futureItems.zip(futureCount).map({ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)

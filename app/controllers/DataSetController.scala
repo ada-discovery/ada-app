@@ -409,7 +409,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @return VString with file content.
     */
   protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String): String = {
-    val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
+    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
@@ -427,7 +427,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @return VString with file content.
     */
   protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String): String = {
-    val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
+    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
@@ -445,7 +445,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @return String with file content.
     */
   protected def getTranSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String): (String, String) = {
-    val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
+    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
 
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
