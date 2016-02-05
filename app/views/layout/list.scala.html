@@ -1,26 +1,17 @@
+@import views.html.layout.{plainList, chartList}
+
 @(
     domainName : String,
     count : Long,
     actions: Html,
-    table : Html
-)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+    table : Html,
+    charts : Option[Html] = None
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
 
-@main(Messages("list.title", domainName)) {
-
-    <div class="container">
-        <div class="page-header">
-            <h3>
-                @Messages("list.count.title", count, domainName)
-            </h3>
-        </div>
-
-        @flashMessages()
-
-        <div id="actions">
-            @actions
-        </div>
-
-        @table
-    </div>
+@if(charts.isDefined) {
+    @chartList(domainName, count, actions, table, charts.get)
+} else {
+    @plainList(domainName, count, actions, table)
 }
-

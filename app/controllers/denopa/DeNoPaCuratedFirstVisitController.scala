@@ -2,7 +2,7 @@ package controllers.denopa
 
 import javax.inject.{Inject, Named}
 
-import controllers.DataSetRouter
+import controllers.{DictionaryRouter, DataSetRouter}
 import persistence.DictionaryFieldRepo
 
 class DeNoPaCuratedFirstVisitController @Inject() (
@@ -27,7 +27,10 @@ class DeNoPaCuratedFirstVisitController @Inject() (
     routes.DeNoPaCuratedFirstVisitController.exportRecordsAsJson(),
     routes.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(),
     routes.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile(),
-    routes.DeNoPaCuratedFirstVisitController.getScatterStats(),
+    routes.DeNoPaCuratedFirstVisitController.getScatterStats()
+  )
+
+  override protected def dictionaryRouter = DictionaryRouter(
     routes.DeNoPaCuratedFirstVisitController.dictionary,
     routes.DeNoPaCuratedFirstVisitController.dictionary(),
     routes.DeNoPaCuratedFirstVisitController.getField

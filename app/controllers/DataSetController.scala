@@ -19,6 +19,7 @@ import reactivemongo.bson.BSONObjectID
 import services.DeNoPaTranSMARTMapping._
 import services.TranSMARTService
 import views.html.dataset
+import views.html.{dictionary => dictionaryviews}
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Future, Await}
 import _root_.util.JsonUtil._
@@ -56,6 +57,9 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
   // router for requests; to be passed to views as helper.
   protected def router : DataSetRouter
+
+  // router for requests; to be passed to views as helper.
+  protected def dictionaryRouter : DictionaryRouter
 
   protected lazy val overviewFieldNames =
     current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
@@ -112,20 +116,21 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     )
 
   private def dictionaryView(page: Page[Field], fieldNameChartSpecs : Iterable[(String, ChartSpec)])(implicit msg: Messages, request: RequestHeader) =
-    dataset.dictionary(
+    dictionaryviews.list(
       dataSetName + " Field",
       page,
       fieldNameChartSpecs,
-      router.plainDictionaryCall,
-      router.dictionaryCall,
-      router.getFieldCall
+      dictionaryRouter.plainFindCall,
+      dictionaryRouter.findCall,
+      dictionaryRouter.getCall
     )
 
-  private def showFieldView(field : Field)(implicit msg: Messages, request: RequestHeader) =
-    dataset.showField(
+  private def editFieldView(field : Field)(implicit msg: Messages, request: RequestHeader) =
+    dictionaryviews.editField(
       dataSetName,
       field,
-      router.plainDictionaryCall
+      dictionaryRouter.plainFindCall,
+      dictionaryRouter.plainFindCall
     )
 
   /**
@@ -363,7 +368,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     ){ entity =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(showFieldView(entity))
+      Ok(editFieldView(entity))
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the field get process")

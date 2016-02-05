@@ -44,7 +44,10 @@ class LuxParkController @Inject()(
     routes.LuxParkController.exportRecordsAsJson(),
     routes.LuxParkController.exportTranSMARTDataFile(),
     routes.LuxParkController.exportTranSMARTMappingFile(),
-    routes.LuxParkController.getScatterStats(),
+    routes.LuxParkController.getScatterStats()
+  )
+
+  override protected def dictionaryRouter = DictionaryRouter(
     routes.LuxParkController.dictionary,
     routes.LuxParkController.dictionary(),
     routes.LuxParkController.getField

@@ -98,8 +98,16 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
   import play.modules.reactivemongo.json._
 
   override def save(entity: E): Future[ID] = {
-    val id = identity.next
-    val doc = Json.toJson(identity.set(entity, id)).as[JsObject]
+    val givenId = identity.of(entity)
+    val (doc, id) = if (givenId.isDefined) {
+      val doc = Json.toJson(entity).as[JsObject]
+      (doc, givenId.get)
+    } else {
+      val id = identity.next
+      val doc = Json.toJson(identity.set(entity, id)).as[JsObject]
+      (doc, id)
+    }
+
     collection.insert(doc).map {
       case le if le.ok => id
       case le => throw new RepoException(le.message)
@@ -136,8 +144,11 @@ protected class MongoAsyncCrudRepo[E: Format, ID: Format](
     collection.remove(Json.obj()) map handleResult
 
   // extra functions which should not be exposed beyond the persistence layer
-  override protected[persistence] def updateCustom(id: ID, modifier : JsObject): Future[Unit] =
-    collection.update(Json.obj(identity.name -> id), modifier) map handleResult
+  override protected[persistence] def updateCustom(
+    selector: JsObject,
+    modifier : JsObject
+  ): Future[Unit] =
+    collection.update(selector, modifier) map handleResult
 
   override protected[persistence] def findAggregate(
     criteria: Option[JsObject],
@@ -197,7 +208,10 @@ trait MongoAsyncCrudExtraRepo[E, ID] extends AsyncCrudRepo[E, ID] {
    *
    * should be used only for special cases (only within the persistence layer)!
    */
-  protected[persistence] def updateCustom(id: ID, modifier : JsObject): Future[Unit]
+  protected[persistence] def updateCustom(
+    selector: JsObject,
+    modifier : JsObject
+  ): Future[Unit]
 }
 
 protected class MongoAsyncStreamRepo[E: Format, ID: Format](

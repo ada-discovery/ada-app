@@ -39,10 +39,10 @@
     )
 }
 
-@layout.overviewList(
+@layout.list(
     domainName,
     page.total,
     actions,
-    filterChartPanel(fieldNameChartSpecs),
-    table
+    table,
+    Some(filterChartPanel(fieldNameChartSpecs))
 )

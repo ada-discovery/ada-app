@@ -19,7 +19,7 @@
 
 @actions = {
     <div class="row">
-        @filter(page.filter, plainListCall)
+    @filter(page.filter, plainListCall)
     </div>
 }
 
@@ -37,10 +37,10 @@
     )
 }
 
-@layout.overviewList(
+@layout.list(
     domainName,
     page.total,
     actions,
-    filterChartPanel(fieldNameChartSpecs),
-    table
+    table,
+    Some(filterChartPanel(fieldNameChartSpecs))
 )

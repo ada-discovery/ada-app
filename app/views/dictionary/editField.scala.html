@@ -1,23 +1,24 @@
-@import views.html.layout.show
+@import views.html.layout.edit
 @import models.Field
 @import views.html.twitterBootstrapJsValue
 
-@(domainName : String, field: Field, listCall : Call)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(domainName : String, field: Field, updateCall : Call, listCall : Call)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @fields = {
     @twitterBootstrapJsValue("name", attributeLabel("field", "name"), field.name, false)
     @twitterBootstrapJsValue("fieldType", attributeLabel("field", "fieldType"), field.fieldType.toString, false)
-    @twitterBootstrapJsValue("label", attributeLabel("field", "label"), field.label.getOrElse(null), false)
+    @twitterBootstrapJsValue("label", attributeLabel("field", "label"), field.label.getOrElse(null), true)
     @twitterBootstrapJsValue("isArray", attributeLabel("field", "isArray"), field.isArray.toString, false)
     @twitterBootstrapJsValue("isEnum", attributeLabel("field", "isEnum"), field.isEnum.toString, false)
     @twitterBootstrapJsValue("numValues", attributeLabel("field", "numValues"), field.numValues.mkString(", "), false)
     @twitterBootstrapJsValue("aliases", attributeLabel("field", "aliases"), field.aliases.mkString(", "), false)
 }
 
-@show(
+@edit(
     domainName,
     Seq[FormError](),
     fields,
+    updateCall,
     listCall,
     None
 )

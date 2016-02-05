@@ -1,5 +1,7 @@
 package models
 
+import java.util.UUID
+
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
@@ -73,6 +75,13 @@ object Dictionary {
   implicit object DictionaryIdentity extends BSONObjectIdentity[Dictionary] {
     def of(entity: Dictionary): Option[BSONObjectID] = entity._id
     protected def set(entity: Dictionary, id: Option[BSONObjectID]) = entity.copy(_id = id)
+  }
+
+  implicit object FieldIdentity extends Identity[Field, String] {
+    override val name = "name"
+    override def next = UUID.randomUUID().toString
+    override def set(entity: Field, name: Option[String]): Field = entity.copy(name = name.getOrElse(""))
+    override def of(entity: Field): Option[String] = Some(entity.name)
   }
 }
 

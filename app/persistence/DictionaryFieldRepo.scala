@@ -10,6 +10,7 @@ import scala.concurrent.{Await, Future}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import models.Dictionary._
 import scala.concurrent.duration._
+import play.modules.reactivemongo.json.BSONObjectIDFormat
 import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Push, Ascending, Descending}
 
 trait DictionaryFieldRepo extends AsyncCrudRepo[Field, String] {
@@ -77,19 +78,67 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     Await.result(futureId, 120000 millis)
   }
 
+  private lazy val dictionaryIdSelector = Json.obj(DictionaryIdentity.name -> dictionaryId)
 
   /**
-    * TODO: implement
+   * Converts the given Field into Json format and calls updateCustom() to update/ save it in the repo.
+   * @see updateCustom()
+   *
+   * @param entity Field to be updated/ saved
+   * @return Field name as a confirmation of success.
+   */
+  override def save(entity: Field): Future[String] = {
+    val modifier = Json.obj {
+      "$push" -> Json.obj {
+        "fields" -> Json.toJson(entity)
+      }
+    }
+
+    dictionaryRepo.updateCustom(dictionaryIdSelector, modifier) map { _ =>
+      entity.name
+    }
+  }
+
+  /**
+   * Delete single entry identified by its id (name).
+   *
+   * @param name Name of the field to be deleted.
+   * @return Nothing (Unit)
+   */
+  override def delete(name: String): Future[Unit] = {
+    val modifier = Json.obj {
+      "$pull" -> Json.obj {
+        "fields" -> Json.obj {
+          "name" -> name
+        }
+      }
+    }
+    dictionaryRepo.updateCustom(dictionaryIdSelector, modifier)
+  }
+
+  /**
     * Update single Field in repo.
     * The properties of the passed field replace the properties of the field in the repo.
     *
     * @param entity Field to be updated. entity.name must match an existing Field.name.
-    * @return Either object with Right indicating the success or failure.
+    * @return Field name as a confirmation of success.
     */
-  override def update(entity: Field): Future[String] = ???
+  override def update(entity: Field): Future[String] = {
+    val selector =
+      dictionaryIdSelector + ("name" -> JsString(entity.name))
+
+    val modifier = Json.obj {
+      "$set" -> Json.obj {
+        "fields.$" -> Json.toJson(entity)
+      }
+    }
+    dictionaryRepo.updateCustom(selector, modifier) map { _ =>
+      entity.name
+    }
+  }
 
   /**
-    * Delets all fields in the dictionary.
+    * Deletes all fields in the dictionary.
     * @see update()
     *
     * @return Nothing (Unit)
@@ -100,42 +149,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
         "fields" -> List[Field]()
       }
     }
-    dictionaryRepo.updateCustom(dictionaryId, modifier)
-  }
-
-  /**
-    * Delete single entry identified by its id (name).
-    *
-    * @param name Name of the field to be deleted.
-    * @return Nothing (Unit)
-    */
-  override def delete(name: String): Future[Unit] = {
-    val modifier = Json.obj {
-      "$pull" -> Json.obj {
-        "fields" -> Json.obj {
-          "name" -> name
-        }
-      }
-    }
-    dictionaryRepo.updateCustom(dictionaryId, modifier)
-  }
-
-  /**
-    * Converts the given Field into Json format and calls updateCustom() to update/ save it in the repo.
-    * @see updateCustom()
-    *
-    * @param entity Field to be updated/ saved
-    * @return Either object with Right indicating the success or failure.
-    */
-  override def save(entity: Field): Future[String] = {
-    val modifier = Json.obj {
-      "$push" -> Json.obj {
-        "fields" -> Json.toJson(entity)
-      }
-    }
-    dictionaryRepo.updateCustom(dictionaryId, modifier) map { _ =>
-      entity.name
-    }
+    dictionaryRepo.updateCustom(dictionaryIdSelector, modifier)
   }
 
   /**
@@ -145,14 +159,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @return Number of matching elements.
     */
   override def count(criteria: Option[JsObject]): Future[Int] = {
-//    val criteria =
-//      if (subCriteria.isDefined) {
-//        val extSubCriteria = subCriteria.get.fields.map { case (name, value) => ("fields." + name, value) }
-//        JsObject(extSubCriteria) + ("dataSetName" -> Json.toJson(dataSetName))
-//      } else
-//        Json.obj("dataSetName" -> dataSetName)
-
-    // TODO: optimize me
+    // TODO: optimize me using aggregate count projection
     val futureFields = find(criteria)
     futureFields.map(_.size)
   }
@@ -174,9 +181,6 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
   }
 
   /**
-    * TODO: use pagination and projection parameters or remove them.
-    * Use mongo modifier slice for projection
-    *
     * Find object matching the filtering criteria. Fields may be ordered and only a subset of them used.
     * Pagination options for page limit and page number are available to limit number of returned results.
     *
@@ -185,7 +189,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @param projection Defines which columns are supposed to be returned. Leave at None to use default.
     * @param limit Page limit. Use to define chunk sizes for pagination. Leave at None to use default.
     * @param page Page to be returned. Specifies which chunk is returned.
-    * @return Traversable object for iteration.
+    * @return Traversable fields for iteration.
     */
   override def find(
     criteria: Option[JsObject] = None,
@@ -195,23 +199,6 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     page: Option[Int] = None
   ): Future[Traversable[Field]] = {
 
-//    val criteria =
-//      if (subCriteria.isDefined)
-//        Json.obj("fields" -> Json.obj(
-//          "$elemMatch" -> subCriteria.get
-//        )) + ("dataSetName" -> Json.toJson(dataSetName))
-//      else
-//        Json.obj("dataSetName" -> dataSetName)
-//
-//    val projection =
-//      if (limit.isDefined)
-//        Some(
-//          Json.obj("fields" -> Json.obj(
-//            "$slice" -> Json.toJson(Seq(page.getOrElse(0) * limit.get, limit.get))
-//          )))
-//      else
-//        None
-
     val fullCriteria =
       if (criteria.isDefined) {
         val extSubCriteria = criteria.get.fields.map { case (name, value) => ("fields." + name, value) }
@@ -219,14 +206,24 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
       } else
         Json.obj("dataSetName" -> dataSetName)
 
-    val fullProjection = projection.map{ proj =>
-      val extFields = proj.fields.map { case (name, value) => ("fields." + name, value) }
-      JsObject(extFields)
-    }
+    val fullOrderBy =
+      orderBy.map(_.map(
+        _ match {
+          case AscSort(fieldName) => AscSort("fields." + fieldName)
+          case DescSort(fieldName) => DescSort("fields." + fieldName)
+        }
+      ))
 
+    val fullProjection =
+      projection.map{ proj =>
+        val extFields = proj.fields.map { case (name, value) => ("fields." + name, value) }
+        JsObject(extFields)
+      }
+
+    // TODO: projection can not be passed here since Field JSON formatter expects ALL attributes to be returned. It could be solved either by making all Field attributes optional (Option[..]) or introducing a special JSON formatter with default values for each attribute
     val result = dictionaryRepo.findAggregate(
       criteria = Some(fullCriteria),
-      orderBy = orderBy,
+      orderBy = fullOrderBy,
       projection = None, //fullProjection,
       idGroup = Some(JsString("$dataSetName")),
       groups = Some(Seq("fields" -> Push("fields"))),
@@ -238,7 +235,6 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     result.map { result =>
       if (result.nonEmpty) {
         val jsonFields = (result.head \ "fields").as[JsArray].value
-        println(jsonFields)
         jsonFields.map(_.as[Field])
       } else
         Seq[Field]()

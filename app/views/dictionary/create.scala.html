@@ -1,0 +1,11 @@
+@import views.html.layout
+@import models.Field
+
+@(form: Form[Field])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+
+@layout.create(
+	form = form,
+	elements = editableTextElements(form),
+	saveCall = routes.TranslationController.save(),
+	listCall = routes.TranslationController.listAll()
+)
