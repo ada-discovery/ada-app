@@ -1,5 +1,6 @@
 @import play.api.Play.current
 @import controllers.denopa.{routes => denoparoutes}
+@import controllers.luxpark.{routes => luxparkroutes}
 
 @(implicit request: RequestHeader)
 <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
@@ -19,9 +20,9 @@
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">LuxPark<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        @menuItem(routes.LuxParkController.overviewList(), "Overview", Some(2))
-                        @menuItem(routes.LuxParkController.getScatterStats(), "Scatter Analysis", Some(2))
-                        @menuItem(routes.LuxParkController.overviewFieldTypes, "Types", Some(2))
+                        @menuItem(luxparkroutes.LuxParkController.overviewList(), "Overview", Some(2))
+                        @menuItem(luxparkroutes.LuxParkController.getScatterStats(), "Scatter Analysis", Some(2))
+                        @menuItem(luxparkroutes.LuxParkController.overviewFieldTypes, "Types", Some(2))
                     </ul>
                 </li>
                 <li class="dropdown">

@@ -8,6 +8,7 @@
 @(
     domainName : String,
     page: Page[JsObject],
+    fieldLabelMap : Map[String, String],
     fieldsToShow : Seq[String],
 
     // All calls wrapped in a router object
@@ -19,10 +20,10 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(page.filter, router.plainFindCall)
+            @filter(page.filter, router.plainList)
         </div>
         <div class="col-md-2">
-            @exportDropdown(router.exportAllCsvCall, router.exportAllJsonCall, router.exportTranSMARTDataCall, router.exportTranSMARTMappingCall)
+            @exportDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
         </div>
     </div>
 }
@@ -30,9 +31,10 @@
 @table = @{
     paginatedJsonTable(
         page,
-        router.findCall(_, _, page.filter),
+        router.list(_, _, page.filter),
+        Some(fieldLabelMap),
         Some(fieldsToShow),
-        Some({ (item : JsObject) => router.getCall((item \ "_id").as[BSONObjectID])})
+        Some({ (item : JsObject) => router.get((item \ "_id").as[BSONObjectID])})
     )
 }
 

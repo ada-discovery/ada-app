@@ -1,10 +1,10 @@
-package controllers
+package controllers.luxpark
 
-import javax.inject.{Named, Inject}
+import javax.inject.{Inject, Named}
 
+import controllers.{DataSetController, DataSetRouter, DictionaryRouter}
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.DictionaryFieldRepo
-import play.api.libs.json._
 import services.DeNoPaTranSMARTMapping._
 
 import scala.concurrent.Await
@@ -18,7 +18,7 @@ class LuxParkController @Inject()(
 
   override protected val dataSetName = "LuxPark"
 
-  override protected val listViewColumns = Some(List("cdisc_dm_usubjd", "redcap_event_name", "cdisc_dm_subjid_2", "dm_site", "cdisc_dm_brthdtc", "cdisc_dm_sex", "cdisc_sc_sctestcd_maritstat"))
+  override protected val listViewColumns = Some(Seq("cdisc_dm_usubjd", "redcap_event_name", "cdisc_dm_subjid_2", "dm_site", "cdisc_dm_brthdtc", "cdisc_dm_sex", "cdisc_sc_sctestcd_maritstat"))
 
   override protected val overviewFieldNamesConfPrefix = "luxpark"
 
@@ -45,11 +45,5 @@ class LuxParkController @Inject()(
     routes.LuxParkController.exportTranSMARTDataFile(),
     routes.LuxParkController.exportTranSMARTMappingFile(),
     routes.LuxParkController.getScatterStats()
-  )
-
-  override protected def dictionaryRouter = DictionaryRouter(
-    routes.LuxParkController.dictionary,
-    routes.LuxParkController.dictionary(),
-    routes.LuxParkController.getField
   )
 }

@@ -11,7 +11,7 @@ class DeNoPaBaselineController @Inject() (
 
   override protected val dataSetName = "DeNoPa Baseline"
 
-  override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe"))
+  override protected val listViewColumns = Some(Seq("Line_Nr", "Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe"))
 
   override protected val overviewFieldNamesConfPrefix = "denopa.baseline"
 
@@ -28,11 +28,5 @@ class DeNoPaBaselineController @Inject() (
     routes.DeNoPaBaselineController.exportTranSMARTDataFile(),
     routes.DeNoPaBaselineController.exportTranSMARTMappingFile(),
     routes.DeNoPaBaselineController.getScatterStats()
-  )
-
-  override protected def dictionaryRouter = DictionaryRouter(
-    routes.DeNoPaBaselineController.dictionary,
-    routes.DeNoPaBaselineController.dictionary(),
-    routes.DeNoPaBaselineController.getField
   )
 }

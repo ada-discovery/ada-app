@@ -25,15 +25,15 @@ abstract class InferDictionary(dictionaryRepo: DictionaryFieldRepo) extends Runn
 
     val futures = getFieldNames.filter(_ != "_id").par.map { fieldName =>
       println(fieldName)
-      val (fieldType, isEnum) = Await.result(inferType(fieldName), timeout)
-      dictionaryRepo.save(Field(fieldName, fieldType, false, isEnum))
+      val fieldType = Await.result(inferType(fieldName), timeout)
+      dictionaryRepo.save(Field(fieldName, fieldType, false))
     }
 
     // to be safe, wait for each save call to finish
     futures.toList.foreach(future => Await.result(future, timeout))
   }
 
-  protected def inferType(fieldName : String) : Future[(FieldType.Value, Boolean)] = {
+  protected def inferType(fieldName : String) : Future[FieldType.Value] = {
     // get all the values for a given field
     dataRepo.find(None, None, Some(Json.obj(fieldName -> 1))).map { items =>
       val values = items.map { item =>
@@ -45,9 +45,7 @@ abstract class InferDictionary(dictionaryRepo: DictionaryFieldRepo) extends Runn
         }
       }.flatten.toSet
 
-      val fieldType = typeInferenceProvider.getType(values)
-      val isEnum = typeInferenceProvider.isEnum(values)
-      (fieldType, isEnum)
+      typeInferenceProvider.getType(values)
     }
   }
 

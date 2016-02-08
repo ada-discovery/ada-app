@@ -3,7 +3,7 @@ package controllers
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import _root_.util.{FilterSpec, JsonUtil, ChartSpec}
+import _root_.util.{FilterSpec, JsonUtil, ChartSpec, FieldChartSpec}
 import org.apache.commons.lang3.StringEscapeUtils
 import models.{Page, FieldType, Field}
 import persistence.DictionaryFieldRepo
@@ -19,10 +19,10 @@ import reactivemongo.bson.BSONObjectID
 import services.DeNoPaTranSMARTMapping._
 import services.TranSMARTService
 import views.html.dataset
-import views.html.{dictionary => dictionaryviews}
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Future, Await}
 import _root_.util.JsonUtil._
+import scala.concurrent.duration._
 
 protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   extends ReadonlyController[JsObject, BSONObjectID](dictionaryRepo.dataRepo) with ExportableAction[JsObject] {
@@ -58,13 +58,8 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   // router for requests; to be passed to views as helper.
   protected def router : DataSetRouter
 
-  // router for requests; to be passed to views as helper.
-  protected def dictionaryRouter : DictionaryRouter
-
   protected lazy val overviewFieldNames =
     current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
-
-  protected val dictionaryViewColumns = Seq("name", "fieldType", "label", "isEnum", "isArray", "aliases")
 
   /**
     * Table displaying given paginated content. Generally used to display fields of the datasets.
@@ -78,6 +73,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     dataset.list(
       dataSetName + " Item",
       page,
+      Await.result(getFieldLabelMap(listViewColumns.get), 120000 millis), // TODO: refactor
       listViewColumns.get,
       router
     )
@@ -85,17 +81,18 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   /**
     * Table displaying given paginated content with charts on the top. Generally used to display fields of the datasets.
     *
-    * @param page Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
+    * @param page Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenantion of data for display.
     * @param msg Internal request message.
     * @param request Header of original request.
     * @return View for all available fields.
     */
-  private def overviewListView(page: Page[JsObject], fieldNameChartSpecs : Iterable[(String, ChartSpec)])(implicit msg: Messages, request: RequestHeader) =
+  private def overviewListView(page: Page[JsObject], fieldChartSpecs : Iterable[FieldChartSpec])(implicit msg: Messages, request: RequestHeader) =
     dataset.overviewList(
       dataSetName + " Item",
       page,
+      Await.result(getFieldLabelMap(listViewColumns.get), 120000 millis),  // TODO: refactor
       listViewColumns.get,
-      fieldNameChartSpecs,
+      fieldChartSpecs,
       router
     )
 
@@ -112,25 +109,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     dataset.show(
       dataSetName + " Item",
       item,
-      router.plainFindCall
-    )
-
-  private def dictionaryView(page: Page[Field], fieldNameChartSpecs : Iterable[(String, ChartSpec)])(implicit msg: Messages, request: RequestHeader) =
-    dictionaryviews.list(
-      dataSetName + " Field",
-      page,
-      fieldNameChartSpecs,
-      dictionaryRouter.plainFindCall,
-      dictionaryRouter.findCall,
-      dictionaryRouter.getCall
-    )
-
-  private def editFieldView(field : Field)(implicit msg: Messages, request: RequestHeader) =
-    dictionaryviews.editField(
-      dataSetName,
-      field,
-      dictionaryRouter.plainFindCall,
-      dictionaryRouter.plainFindCall
+      router.plainList
     )
 
   /**
@@ -219,16 +198,18 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   }
 
   def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
-    val futureFieldNameChartSpecs = overviewFieldNames.map(fieldName =>
-      getDataChartSpec(filter.toJsonCriteria, fieldName).map(chartSpec => (fieldName, chartSpec))
+    val futureFieldChartSpecs = overviewFieldNames.map(fieldName =>
+      getDataChartSpec(filter.toJsonCriteria, fieldName).map(chartSpec =>
+        FieldChartSpec(fieldName, chartSpec)
+      )
     )
 
     val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
 
-    futureItems.zip(futureCount).zip(Future.sequence(futureFieldNameChartSpecs)).map{
-      case ((items, count), fieldNameChartSpecs) => {
+    futureItems.zip(futureCount).zip(Future.sequence(futureFieldChartSpecs)).map{
+      case ((items, count), fieldChartSpecs) => {
         implicit val msg = messagesApi.preferred(request)
-        Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), fieldNameChartSpecs))
+        Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), fieldChartSpecs))
     }}.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
@@ -251,27 +232,18 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   ) : Future[ChartSpec] =
     dictionaryRepo.get(fieldName).flatMap { foundField =>
       if (foundField.isDefined) {
+        val chartTitle = foundField.get.label.getOrElse(fieldName)
         repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map(items =>
           foundField.get.fieldType match {
-            case FieldType.String => ChartSpec.pieJson(items, fieldName, false, true)
-            case FieldType.Double => ChartSpec.column(items, fieldName, 20)
-            case FieldType.Integer => ChartSpec.column(items, fieldName, 20)
-            case _ => ChartSpec.pieJson(items, fieldName, false, true)
+            case FieldType.String => ChartSpec.pieJson(items, fieldName, chartTitle, false, true)
+            case FieldType.Enum => ChartSpec.pieJson(items, fieldName, chartTitle, false, true)
+            case FieldType.Double => ChartSpec.column(items, fieldName, chartTitle, 20)
+            case FieldType.Integer => ChartSpec.column(items, fieldName, chartTitle, 20)
+            case _ => ChartSpec.pieJson(items, fieldName, chartTitle, false, true)
           }
         )
       } else
-        Future(ChartSpec.pieJson(List[JsObject](), fieldName, false, true))
-    }
-
-
-  private def getDictionaryChartSpec(
-    criteria : Option[JsObject],
-    fieldName : String,
-    fieldExtractor : Field => Any
-  ) : Future[ChartSpec] =
-    dictionaryRepo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { fields =>
-      val values = fields.map(field => fieldExtractor(field))
-      ChartSpec.pie(values, fieldName, false, true)
+        Future(ChartSpec.pieJson(List[JsObject](), fieldName, fieldName, false, true))
     }
 
   /**
@@ -302,18 +274,13 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
         futureXItems.zip(futureYItems).map{ case (xItems, yItems) =>
           val xValues = projectDouble(xItems.toSeq, xFieldName)
           val yValues = projectDouble(yItems.toSeq, yFieldName)
-          (xValues, yValues).zipped.map{ case (xValue, yValue) =>
-            if (xValue.isDefined && yValue.isDefined)
-              Some(xValue.get, yValue.get)
-            else
-              None
-          }.flatten
+          (xValues, yValues).zipped.map{ case (xValue, yValue) => (xValue, yValue).zipped}.flatten
         }
       } else
         Future(Seq[(Any, Any)]())
 
       valuesFuture.map( values =>
-        Ok(dataset.scatterStats(xFieldName, yFieldName, router.getScatterStatsCall, numericFieldNames, values))
+        Ok(dataset.scatterStats(xFieldName, yFieldName, router.getScatterStats, numericFieldNames, values))
       )
     }
   }
@@ -329,51 +296,15 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
   }
 
-  ////////////////
-  // Dictionary //
-  ////////////////
+  private def getFieldLabelMap(fieldNames : Traversable[String]): Future[Map[String, String]] = {
+    val futureFieldLabelPairs : Traversable[Future[Option[(String, String)]]]=
+      fieldNames.map { fieldName =>
+        dictionaryRepo.get(fieldName).map { fieldOption =>
+          fieldOption.flatMap{_.label}.map{ label => (fieldName, label)}
+        }
+      }
 
-  def dictionary(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
-    val fieldNameExtractors = Seq(
-      ("fieldType", (field : Field) => field.fieldType),
-      ("isEnum", (field : Field) => field.isEnum)
-    )
-
-    val futureFieldNameChartSpecs = fieldNameExtractors.map { case (fieldName, fieldExtractor) =>
-      getDictionaryChartSpec(filter.toJsonCriteria, fieldName, fieldExtractor).map(chartSpec => (fieldName, chartSpec))
-    }
-
-    val (futureItems, futureCount) = getFutureItemsAndCount(dictionaryRepo)(page, orderBy, filter, Some(dictionaryViewColumns))
-
-    futureItems.zip(futureCount).zip(Future.sequence(futureFieldNameChartSpecs)).map{
-      case ((items, count), fieldNameChartSpecs) => {
-        implicit val msg = messagesApi.preferred(request)
-        Ok(dictionaryView(Page(items, page, page * limit, count, orderBy, filter), fieldNameChartSpecs))
-      }}.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the dictionary list process")
-        InternalServerError(t.getMessage)
-    }
-  }
-
-  /**
-    * Retrieve a dictionary field by its name.
-    * NotFound response is generated if key does not exists.
-    *
-    * @param name
-    */
-  def getField(name: String) = Action.async { implicit request =>
-    dictionaryRepo.get(name).map(_.fold(
-      NotFound(s"Field #$name not found")
-    ){ entity =>
-      implicit val msg = messagesApi.preferred(request)
-
-      Ok(editFieldView(entity))
-    }).recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the field get process")
-        InternalServerError(t.getMessage)
-    }
+    Future.sequence(futureFieldLabelPairs).map{ _.flatten.toMap }
   }
 
   //////////////////////

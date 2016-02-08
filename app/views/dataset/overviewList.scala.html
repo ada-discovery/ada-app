@@ -5,13 +5,14 @@
 @import play.api.libs.json.JsObject
 @import play.modules.reactivemongo.json._
 @import reactivemongo.bson.BSONObjectID
-@import util.ChartSpec
+@import util.FieldChartSpec
 
 @(
     domainName : String,
     page: Page[JsObject],
+    fieldLabelMap : Map[String, String],
     fieldsToShow : Seq[String],
-    fieldNameChartSpecs : Iterable[(String, ChartSpec)],
+    fieldChartSpecs : Iterable[FieldChartSpec],
 
     // All calls wrapped in a router object
     router : DataSetRouter
@@ -22,10 +23,10 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(page.filter, router.plainOverviewListCall)
+            @filter(page.filter, router.plainOverviewList)
         </div>
         <div class="col-md-2">
-            @exportDropdown(router.exportAllCsvCall, router.exportAllJsonCall, router.exportTranSMARTDataCall, router.exportTranSMARTMappingCall)
+            @exportDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
         </div>
     </div>
 }
@@ -33,9 +34,10 @@
 @table = @{
     paginatedJsonTable(
         page,
-        router.overviewListCall(_, _, page.filter),
+        router.overviewList(_, _, page.filter),
+        Some(fieldLabelMap),
         Some(fieldsToShow),
-        Some({ (item : JsObject) => router.getCall((item \ "_id").as[BSONObjectID])})
+        Some({ (item : JsObject) => router.get((item \ "_id").as[BSONObjectID])})
     )
 }
 
@@ -44,5 +46,5 @@
     page.total,
     actions,
     table,
-    Some(filterChartPanel(fieldNameChartSpecs))
+    Some(filterChartPanel(fieldChartSpecs))
 )

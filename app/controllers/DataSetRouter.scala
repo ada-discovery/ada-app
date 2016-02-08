@@ -8,27 +8,27 @@ import util.FilterSpec
 /**
   * Container for various calls from Controllers.
   * To be passed to other modules like views to simplify data access.
-  * @param findCall
-  * @param plainFindCall
-  * @param getCall
-  * @param exportAllCsvCall
-  * @param exportAllJsonCall
-  * @param exportCsvCall
-  * @param exportJsonCall
-  * @param exportTranSMARTDataCall
-  * @param exportTranSMARTMappingCall
+  * @param list
+  * @param plainList
+  * @param get
+  * @param exportAllCsv
+  * @param exportAllJson
+  * @param exportCsv
+  * @param exportJson
+  * @param exportTranSMARTData
+  * @param exportTranSMARTMapping
   */
 case class DataSetRouter(
-  findCall : (Int, String, FilterSpec) => Call,
-  plainFindCall : Call,
-  overviewListCall : (Int, String, FilterSpec) => Call,
-  plainOverviewListCall : Call,
-  getCall : BSONObjectID => Call,
-  exportAllCsvCall : Call,
-  exportAllJsonCall : Call,
-  exportCsvCall : Call,
-  exportJsonCall : Call,
-  exportTranSMARTDataCall : Call,
-  exportTranSMARTMappingCall : Call,
-  getScatterStatsCall : Call
+  list: (Int, String, FilterSpec) => Call,
+  plainList: Call,
+  overviewList: (Int, String, FilterSpec) => Call,
+  plainOverviewList: Call,
+  get: BSONObjectID => Call,
+  exportAllCsv: Call,
+  exportAllJson: Call,
+  exportCsv: Call,
+  exportJson: Call,
+  exportTranSMARTData: Call,
+  exportTranSMARTMapping: Call,
+  getScatterStats: Call
 )

@@ -29,7 +29,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
 
   protected def repoHook = repo
 
-  protected def listViewColumns : Option[List[String]] = None
+  protected def listViewColumns : Option[Seq[String]] = None
 
   protected def showView(
     id : ID,
@@ -41,10 +41,10 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   )(implicit msg: Messages, request: RequestHeader) : Html
 
   /**
-   * Retrieve single object by its BSON Id.
+   * Retrieve single object by its Id.
    * NotFound response is generated if key does not exists.
    *
-   * @param id BSON id/ primary key of the object.
+   * @param id id/ primary key of the object.
    */
   def get(id: ID) = Action.async { implicit request =>
     repo.get(id).map(_.fold(
@@ -69,9 +69,13 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   def getRest(id: ID) = Action.async {
     repo.get(id).map(_.fold(
       NotFound(s"Entity #$id not found")
-    )(entity =>
-      Ok(Json.toJson(entity)))
-    )
+    ){entity =>
+      Ok(Json.toJson(entity))
+    }).recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the get process")
+        InternalServerError(t.getMessage)
+    }
   }
 
   /**
@@ -95,7 +99,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   }
 
   /**
-    * Return reponse with json representation of all objects mathing the query string.
+    * Return response with json representation of all objects mathing the query string.
     * Objects are ordered by a reference column and split into chunks.
     * Used for rest interface.
     *
@@ -136,7 +140,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
 
   /**
     *
-    * Return response with json represenation of all stored objects
+    * Return response with json representation of all stored objects
     * Used for rest interface.
     *
     */

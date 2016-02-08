@@ -9,12 +9,16 @@ import util.FilterSpec
   * Container for various calls from Controllers.
   * To be passed to other modules like views to simplify data access.
 
-  * @param findCall
-  * @param plainFindCall
-  * @param getCall
+  * @param list
+  * @param plainList
+  * @param get
+  * @param save
+  * @param update
   */
 case class DictionaryRouter(
-  findCall : (Int, String, FilterSpec) => Call,
-  plainFindCall : Call,
-  getCall : String => Call
+  list : (Int, String, FilterSpec) => Call,
+  plainList : Call,
+  get : String => Call,
+  save : Call,
+  update : String => Call
 )

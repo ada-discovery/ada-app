@@ -8,10 +8,11 @@ import persistence.RepoTypeRegistry._
 import play.api.libs.json.Json
 import runnables.{GuiceBuilderRunnable, InferDictionary}
 import services.{DeNoPaSetting, RedCapService}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.duration._
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 
 class ImportLuxParkDictionaryFromRedCap @Inject() (
     @Named("LuxParkDictionaryRepo") dictionaryRepo: DictionaryFieldRepo,
@@ -40,25 +41,31 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
     rootCategory.addChildren(categories)
 
 
+    val fieldNames = getFieldNames
+
     val futures = metadatas.par.map{ metadata =>
-      println(metadata.field_name)
-      val (inferredType, isEnum) = Await.result(inferType(metadata.field_name), timeout)
+      val fieldName = metadata.field_name
+      if (fieldNames.contains(fieldName)) {
+        println(fieldName)
+        val inferredType = Await.result(inferType(fieldName), timeout)
 
-      val fieldType = metadata.field_type match {
-        case radio => inferredType
-        case calc => inferredType
-        case text => inferredType
-        case checkbox => inferredType
-        case descriptive => inferredType
-        case yesno => inferredType
-        case dropdown => inferredType
-        case notes => inferredType
-        case file => inferredType
-      }
+        val fieldType = metadata.field_type match {
+          case radio => inferredType
+          case calc => inferredType
+          case text => inferredType
+          case checkbox => inferredType
+          case descriptive => inferredType
+          case yesno => inferredType
+          case dropdown => inferredType
+          case notes => inferredType
+          case file => inferredType
+        }
 
-      val category = nameCategoryMap.get(metadata.form_name).get
-      val field = Field(metadata.field_name, fieldType, false, isEnum, None, Seq[String](), Some(metadata.field_label))
-      dictionaryRepo.save(field)
+        val category = nameCategoryMap.get(metadata.form_name).get
+        val field = Field(metadata.field_name, fieldType, false, None, Seq[String](), Some(metadata.field_label))
+        dictionaryRepo.save(field)
+      } else
+        Future(Unit)
     }
     // to be safe, wait for each save call to finish
     futures.toList.foreach(future => Await.result(future, timeout))

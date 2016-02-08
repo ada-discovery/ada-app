@@ -11,7 +11,7 @@ class DeNoPaFirstVisitController @Inject() (
 
   override protected val dataSetName = "DeNoPa First Visit"
 
-  override protected val listViewColumns = Some(List("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe"))
+  override protected val listViewColumns = Some(Seq("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe"))
 
   override protected val overviewFieldNamesConfPrefix = "denopa.firstvisit"
 
@@ -28,11 +28,5 @@ class DeNoPaFirstVisitController @Inject() (
     routes.DeNoPaFirstVisitController.exportTranSMARTDataFile(),
     routes.DeNoPaFirstVisitController.exportTranSMARTMappingFile(),
     routes.DeNoPaFirstVisitController.getScatterStats()
-  )
-
-  override protected def dictionaryRouter = DictionaryRouter(
-    routes.DeNoPaFirstVisitController.dictionary,
-    routes.DeNoPaFirstVisitController.dictionary(),
-    routes.DeNoPaFirstVisitController.getField
   )
 }

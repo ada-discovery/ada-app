@@ -1,8 +1,10 @@
 @import play.api.libs.json.{JsObject, JsNull}
+@import util.fieldLabel
 
 @(
     items : Traversable[JsObject],
-    header : (String, String) => Html,
+    headerFun : (String, String) => Html,
+    fieldLabelMap : Option[Map[String, String]] = None,
     fieldsToShow : Option[Seq[String]] = None,
     rowClickCall : Option[JsObject => Call] = None
 )
@@ -12,12 +14,12 @@
 		<tr>
             @if(fieldsToShow.isDefined) {
                 @fieldsToShow.get.map { field =>
-                    @header(field, field.capitalize)
+                    @headerFun(field, fieldLabel(field, fieldLabelMap))
                 }
             } else {
                 @items.headOption.map { item =>
                     @item.fields.map { field =>
-                        @header(field._1, field._1.capitalize)
+                        @headerFun(field._1, fieldLabel(field._1, fieldLabelMap))
                     }
                 }
             }

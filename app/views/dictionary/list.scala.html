@@ -3,12 +3,12 @@
 @import views.html.table.paginatedTable
 @import views.html.dataset.exportDropdown
 @import models.Field
-@import util.{ChartSpec, FilterSpec}
+@import util.{ChartSpec, FilterSpec, FieldChartSpec}
 
 @(
     domainName : String,
     page: Page[Field],
-    fieldNameChartSpecs : Iterable[(String, ChartSpec)],
+    fieldChartSpecs : Iterable[FieldChartSpec],
 
     plainListCall : Call,
     listCall : (Int, String, FilterSpec) => Call,
@@ -30,8 +30,7 @@
         Seq(
             ("name", "Name", {item : Any => Html(item.asInstanceOf[Field].name)}),
             ("fieldType", "Type", {item : Any => Html(item.asInstanceOf[Field].fieldType.toString)}),
-            ("label", "Label", {item : Any => Html(item.asInstanceOf[Field].label.getOrElse(""))}),
-            ("isEnum", "Enum", {item : Any => Html(item.asInstanceOf[Field].isEnum.toString)})
+            ("label", "Label", {item : Any => Html(item.asInstanceOf[Field].label.getOrElse(""))})
         ),
         Some({ item : Any => getCall(item.asInstanceOf[Field].name)})
     )
@@ -42,5 +41,5 @@
     page.total,
     actions,
     table,
-    Some(filterChartPanel(fieldNameChartSpecs))
+    Some(filterChartPanel(fieldChartSpecs))
 )

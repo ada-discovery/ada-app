@@ -5,7 +5,7 @@
 @layout.edit(
     "translation",
 	errors = form.errors,
-    elements = editableTextElements(form),
+    elements = editableTextElements("translation", form),
 	updateCall = routes.TranslationController.update(id),
 	listCall = routes.TranslationController.listAll(),
     deleteCall = Some(routes.TranslationController.delete(id))

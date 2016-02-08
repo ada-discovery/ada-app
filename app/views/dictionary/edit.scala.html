@@ -1,13 +1,21 @@
 @import views.html.layout
 @import models.Field
 
-@(name: String, form: Form[Field])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(
+    domainName : String,
+    fieldName : String,
+    form: Form[Field],
+
+    router : DictionaryRouter
+)(
+    implicit msg: play.api.i18n.Messages, request: RequestHeader
+)
 
 @layout.edit(
-    "translation",
-	errors = form.errors,
-    elements = editableTextElements(form),
-	updateCall = routes.TranslationController.listAll(),
-	listCall = routes.TranslationController.listAll(),
+    domainName,
+	form.errors,
+    editableTextElements(domainName, form),
+    router.update(fieldName),
+    router.plainList,
     deleteCall = None
 )

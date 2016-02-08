@@ -1,11 +1,16 @@
 @import views.html.layout
 
-@(id: reactivemongo.bson.BSONObjectID, form: Form[User])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(
+    id: reactivemongo.bson.BSONObjectID,
+    form: Form[User]
+)(
+    implicit msg: play.api.i18n.Messages, request: RequestHeader
+)
 
 @layout.edit(
     "user",
 	errors = form.errors,
-    elements = editableTextElements(form),
+    elements = editableTextElements("user", form),
 	updateCall = routes.UserController.update(id),
 	listCall = routes.UserController.listAll(),
     deleteCall = Some(routes.UserController.delete(id))

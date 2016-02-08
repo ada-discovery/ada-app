@@ -10,6 +10,8 @@ case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends Char
 case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec(title)
 case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec(title)
 
+case class FieldChartSpec(fieldName : String, chartSpec : ChartSpec)
+
 object ChartSpec {
 
   /**
@@ -22,10 +24,11 @@ object ChartSpec {
     * @return PieChartSpec object for use in view.
     */
   def pieJson(
-    items : Traversable[JsObject],
-    fieldName : String,
-    showLabels : Boolean,
-    showLegend : Boolean
+    items: Traversable[JsObject],
+    fieldName: String,
+    title: String,
+    showLabels: Boolean,
+    showLegend: Boolean
   ) : PieChartSpec = {
     val values = items.map{item =>
       val rawWalue = (item \ fieldName).get
@@ -34,7 +37,7 @@ object ChartSpec {
       else
         rawWalue.as[String]
     }
-    pie(values, fieldName, showLabels, showLegend)
+    pie(values, title, showLabels, showLegend)
   }
 
   /**
@@ -46,10 +49,10 @@ object ChartSpec {
     * @return PieChartSpec object for use in view.
     */
   def pie(
-    values : Traversable[_],
-    title : String,
-    showLabels : Boolean,
-    showLegend : Boolean
+    values: Traversable[_],
+    title: String,
+    showLabels: Boolean,
+    showLegend: Boolean
   ) : PieChartSpec = {
     val countMap = MMap[String, Int]()
     values.foreach{ value =>
@@ -71,11 +74,12 @@ object ChartSpec {
     * @return ColumnChartSpec for us in view.
     */
   def column(
-    items : Traversable[JsObject],
-    fieldName : String,
-    columnCount : Int,
-    explMin : Option[Double] = None,
-    explMax : Option[Double] = None
+    items: Traversable[JsObject],
+    fieldName: String,
+    title: String,
+    columnCount: Int,
+    explMin: Option[Double] = None,
+    explMax: Option[Double] = None
   ) : ColumnChartSpec = {
     val values = project(items.toList, fieldName).map(toDouble).flatten
     val data = if (values.nonEmpty) {
@@ -96,7 +100,7 @@ object ChartSpec {
       }
     } else
       Seq[(String, Int)]()
-    ColumnChartSpec(fieldName, data)
+    ColumnChartSpec(title, data)
   }
 
   /**
@@ -107,10 +111,11 @@ object ChartSpec {
     * @return ScatterChartSpec for use in view.
     */
   def scatter(
-    items : Traversable[(JsObject, JsObject)],
-    fieldName : String
+    items: Traversable[(JsObject, JsObject)],
+    fieldName: String,
+    title: String
   ) : ScatterChartSpec =
-    ScatterChartSpec(fieldName,
+    ScatterChartSpec(title,
       items.map { case (item1, item2) =>
         Seq(
           toDouble(item1 \ fieldName).get,

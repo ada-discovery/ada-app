@@ -17,7 +17,6 @@ case class Field(
   name : String,
   fieldType : FieldType.Value,
   isArray : Boolean = false,
-  isEnum : Boolean = false,
   numValues : Option[Map[String, String]] = None,
   aliases : Seq[String] = Seq[String](),
   label : Option[String] = None
@@ -40,7 +39,7 @@ case class Field(
 case class NumFieldStats(min : Double, max : Double, mean : Double, variance : Double)
 
 object FieldType extends Enumeration {
-  val Null, Boolean, Double, Integer, String, Date = Value
+  val Null, Boolean, Double, Integer, Enum, String, Date = Value
 }
 
 case class Category(
@@ -49,7 +48,6 @@ case class Category(
   var parent : Option[Category] = None,
   var children : Seq[Category] = Seq[Category]()
 ) {
-
   def this(name : String) = this(None, name)
 
   def getPath : Seq[String] = (if (parent.isDefined && parent.get.parent.isDefined) parent.get.getPath else Seq[String]()) ++ Seq(name)

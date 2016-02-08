@@ -3,8 +3,9 @@
 @(form: Form[Translation])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @layout.create(
+    "translation",
 	form = form,
-	elements = editableTextElements(form),
+	elements = editableTextElements("translation", form),
 	saveCall = routes.TranslationController.save(),
 	listCall = routes.TranslationController.listAll()
 )

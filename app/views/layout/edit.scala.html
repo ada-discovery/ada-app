@@ -5,7 +5,9 @@
 	updateCall : Call,
 	listCall : Call,
 	deleteCall : Option[Call]
-)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+)(
+	implicit msg: play.api.i18n.Messages, request: RequestHeader
+)
 
 @main(Messages("edit.title", domainName)) {
 
@@ -17,7 +19,7 @@
 		@errors.map{ error =>
 		    <div class="alert alert-dismissable alert-danger">
 			    <button type="button" class="close" data-dismiss="alert">×</button>
-				@Messages(error.message, Messages(domainName + "../../../public" + error.key))
+				@Messages(error.message, Messages(domainName + "." + error.key))
 			</div>
 		}
 

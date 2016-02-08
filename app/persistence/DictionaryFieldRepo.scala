@@ -125,7 +125,7 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     */
   override def update(entity: Field): Future[String] = {
     val selector =
-      dictionaryIdSelector + ("name" -> JsString(entity.name))
+      dictionaryIdSelector + ("fields.name" -> JsString(entity.name))
 
     val modifier = Json.obj {
       "$set" -> Json.obj {

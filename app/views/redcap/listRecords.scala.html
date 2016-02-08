@@ -49,6 +49,7 @@
     paginatedJsonTable(
         currentPage,
         routes.RedCapController.listRecords(_, _, ""),
+        None,
         Some(List("cdisc_dm_usubjd", "redcap_event_name", "cdisc_dm_subjid_2", "dm_site", "cdisc_dm_brthdtc", "cdisc_dm_sex", "cdisc_sc_sctestcd_maritstat")),
         Some({ (item: JsObject) => routes.RedCapController.showRecord(
             (item \ "cdisc_dm_usubjd").asOpt[String].getOrElse((item \ "cdisc_dm_usubjd").toString()))

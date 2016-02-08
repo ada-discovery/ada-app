@@ -26,6 +26,18 @@ case class TypeInferenceProvider(
   def isNumberBoolean(valuesWoNA : Set[String]) =
     valuesWoNA.forall(s => numBooleanValues.contains(s)) //    isNumber(valuesWoNA) && valuesWoNA.size <= 2
 
+  def isEnum(valuesWoNull : Set[String]) : Boolean = {
+    val countMap = MMap[String, Int]()
+    valuesWoNull.foreach{value =>
+      val count = countMap.getOrElse(value, 0)
+      countMap.update(value, count + 1)
+    }
+
+    val sum = countMap.values.sum
+    val freqsWoNa = countMap.values.map(count => count.toDouble / sum)
+    isEnum(freqsWoNa)
+  }
+
   def isEnum(freqsWoNa : Iterable[Double]) =
     freqsWoNa.size < enumValuesThreshold && (freqsWoNa.sum / freqsWoNa.size) > enumFrequencyThreshold
 
@@ -72,26 +84,14 @@ case class TypeInferenceProvider(
       FieldType.Boolean
     else if (isDate(valuesWoNull))
       FieldType.Date
+    else if (isEnum(valuesWoNull))
+      FieldType.Enum
     else if (isInt(valuesWoNull))
       FieldType.Integer
     else if (isDouble(valuesWoNull))
       FieldType.Double
     else
       FieldType.String
-  }
-
-  def isEnum(values : Set[String]) : Boolean = {
-    val valuesWoNull = values.filterNot(value => nullAliases.contains(value.toLowerCase))
-
-    val countMap = MMap[String, Int]()
-    valuesWoNull.foreach{value =>
-      val count = countMap.getOrElse(value, 0)
-      countMap.update(value, count + 1)
-    }
-
-    val sum = countMap.values.sum
-    val freqsWoNa = countMap.values.map(count => count.toDouble / sum)
-    isEnum(freqsWoNa)
   }
 
   def isDouble(text : String) =

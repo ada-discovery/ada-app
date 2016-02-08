@@ -63,9 +63,16 @@ GET         /denopa/baseline/records/exportTranSMARTMapping                 cont
 GET         /denopa/baseline/overviewFieldTypes                             controllers.denopa.DeNoPaBaselineController.overviewFieldTypes
 GET         /denopa/baseline/overview                                       controllers.denopa.DeNoPaBaselineController.overview
 GET         /denopa/baseline/overviewList                                   controllers.denopa.DeNoPaBaselineController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /denopa/baseline/dictionary                                     controllers.denopa.DeNoPaBaselineController.dictionary(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /denopa/baseline/dictionary/get/:name                           controllers.denopa.DeNoPaBaselineController.getField(name : String)
 GET         /denopa/baseline/getScatterStats                                controllers.denopa.DeNoPaBaselineController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "a_AESD_I_mean")
+
+GET         /denopa/baseline/dictionary                                     controllers.denopa.DeNoPaBaselineDictionaryController.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /denopa/baseline/dictionary/get/:name                           controllers.denopa.DeNoPaBaselineDictionaryController.get(name : String)
+POST        /denopa/baseline/dictionary/save                                controllers.denopa.DeNoPaBaselineDictionaryController.save
+GET         /denopa/baseline/dictionary/:name                               controllers.denopa.DeNoPaBaselineDictionaryController.edit(name : String)
+POST        /denopa/baseline/dictionary/:name                               controllers.denopa.DeNoPaBaselineDictionaryController.update(name : String)
+
+
+
 
 GET         /denopa/firstvisit/records                                      controllers.denopa.DeNoPaFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/firstvisit/records/get/:id                              controllers.denopa.DeNoPaFirstVisitController.get(id: BSONObjectID)
@@ -78,9 +85,16 @@ GET         /denopa/firstvisit/records/exportTranSMARTMapping               cont
 GET         /denopa/firstvisit/overviewFieldTypes                           controllers.denopa.DeNoPaFirstVisitController.overviewFieldTypes
 GET         /denopa/firstvisit/overview                                     controllers.denopa.DeNoPaFirstVisitController.overview
 GET         /denopa/firstvisit/overviewList                                 controllers.denopa.DeNoPaFirstVisitController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /denopa/firstvisit/dictionary                                   controllers.denopa.DeNoPaFirstVisitController.dictionary(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /denopa/firstvisit/dictionary/get/:name                         controllers.denopa.DeNoPaFirstVisitController.getField(name : String)
 GET         /denopa/firstvisit/getScatterStats                              controllers.denopa.DeNoPaFirstVisitController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "b_AESD_S_sum")
+
+GET         /denopa/firstvisit/dictionary                                   controllers.denopa.DeNoPaFirstVisitDictionaryController.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /denopa/firstvisit/dictionary/get/:name                         controllers.denopa.DeNoPaFirstVisitDictionaryController.get(name : String)
+POST        /denopa/firstvisit/dictionary/save                              controllers.denopa.DeNoPaFirstVisitDictionaryController.save
+GET         /denopa/firstvisit/dictionary/:name                             controllers.denopa.DeNoPaFirstVisitDictionaryController.edit(name : String)
+POST        /denopa/firstvisit/dictionary/:name                             controllers.denopa.DeNoPaFirstVisitDictionaryController.update(name : String)
+
+
+
 
 GET         /denopa/curatedbaseline/records                                 controllers.denopa.DeNoPaCuratedBaselineController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/curatedbaseline/records/get/:id                         controllers.denopa.DeNoPaCuratedBaselineController.get(id: BSONObjectID)
@@ -93,9 +107,16 @@ GET         /denopa/curatedbaseline/records/exportTranSMARTMapping          cont
 GET         /denopa/curatedbaseline/overviewFieldTypes                      controllers.denopa.DeNoPaCuratedBaselineController.overviewFieldTypes
 GET         /denopa/curatedbaseline/overview                                controllers.denopa.DeNoPaCuratedBaselineController.overview
 GET         /denopa/curatedbaseline/overviewList                            controllers.denopa.DeNoPaCuratedBaselineController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /denopa/curatedbaseline/dictionary                              controllers.denopa.DeNoPaCuratedBaselineController.dictionary(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /denopa/curatedbaseline/dictionary/get/:name                    controllers.denopa.DeNoPaCuratedBaselineController.getField(name : String)
 GET         /denopa/curatedbaseline/getScatterStats                         controllers.denopa.DeNoPaCuratedBaselineController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "a_AESD_I_mean")
+
+GET         /denopa/curatedbaseline/dictionary                              controllers.denopa.DeNoPaCuratedBaselineDictionaryController.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /denopa/curatedbaseline/dictionary/get/:name                    controllers.denopa.DeNoPaCuratedBaselineDictionaryController.get(name : String)
+POST        /denopa/curatedbaseline/dictionary/save                         controllers.denopa.DeNoPaCuratedBaselineDictionaryController.save
+GET         /denopa/curatedbaseline/dictionary/:name                        controllers.denopa.DeNoPaCuratedBaselineDictionaryController.edit(name : String)
+POST        /denopa/curatedbaseline/dictionary/:name                        controllers.denopa.DeNoPaCuratedBaselineDictionaryController.update(name : String)
+
+
+
 
 GET         /denopa/curatedfirstvisit/records                               controllers.denopa.DeNoPaCuratedFirstVisitController.find(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/curatedfirstvisit/records/get/:id                       controllers.denopa.DeNoPaCuratedFirstVisitController.get(id: BSONObjectID)
@@ -108,9 +129,16 @@ GET         /denopa/curatedfirstvisit/records/exportTranSMARTMapping        cont
 GET         /denopa/curatedfirstvisit/overviewFieldTypes                    controllers.denopa.DeNoPaCuratedFirstVisitController.overviewFieldTypes
 GET         /denopa/curatedfirstvisit/overview                              controllers.denopa.DeNoPaCuratedFirstVisitController.overview
 GET         /denopa/curatedfirstvisit/overviewList                          controllers.denopa.DeNoPaCuratedFirstVisitController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /denopa/curatedfirstvisit/dictionary                            controllers.denopa.DeNoPaCuratedFirstVisitController.dictionary(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /denopa/curatedfirstvisit/dictionary/get/:name                  controllers.denopa.DeNoPaCuratedFirstVisitController.getField(name : String)
 GET         /denopa/curatedfirstvisit/getScatterStats                       controllers.denopa.DeNoPaCuratedFirstVisitController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "b_AESD_S_sum")
+
+GET         /denopa/curatedfirstvisit/dictionary                            controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /denopa/curatedfirstvisit/dictionary/get/:name                  controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.get(name : String)
+POST        /denopa/curatedfirstvisit/dictionary/save                       controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.save
+GET         /denopa/curatedfirstvisit/dictionary/:name                      controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.edit(name : String)
+POST        /denopa/curatedfirstvisit/dictionary/:name                      controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.update(name : String)
+
+
+
 
 GET         /denopa/baseline/metastats                                      controllers.denopa.DeNoPaBaselineMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/baseline/metastats/get/:id                              controllers.denopa.DeNoPaBaselineMetaTypeStatsController.get(id: BSONObjectID)
@@ -119,20 +147,26 @@ GET         /denopa/firstvisit/metastats/get/:id                            cont
 
 # LuxPark (New)
 
-GET         /luxpark/records                                                controllers.LuxParkController.find(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /luxpark/records/get/:id                                        controllers.LuxParkController.get(id: BSONObjectID)
-GET         /luxpark/records/exportAllAsCsv                                 controllers.LuxParkController.exportAllRecordsAsCsv(delimiter : String ?= ",")
-GET         /luxpark/records/exportAllAsJson                                controllers.LuxParkController.exportAllRecordsAsJson
-GET         /luxpark/records/exportAsCsv                                    controllers.LuxParkController.exportRecordsAsCsv(delimiter : String ?= ",", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /luxpark/records/exportAsJson                                   controllers.LuxParkController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /luxpark/records/exportTranSMARTData                            controllers.LuxParkController.exportTranSMARTDataFile(delimiter : String ?= "\t")
-GET         /luxpark/records/exportTranSMARTMapping                         controllers.LuxParkController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
-GET         /luxpark/overviewFieldTypes                                     controllers.LuxParkController.overviewFieldTypes
-GET         /luxpark/overview                                               controllers.LuxParkController.overview
-GET         /luxpark/overviewList                                           controllers.LuxParkController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /luxpark/dictionary                                             controllers.LuxParkController.dictionary(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /luxpark/dictionary/get/:name                                   controllers.LuxParkController.getField(name : String)
-GET         /luxpark/getScatterStats                                        controllers.LuxParkController.getScatterStats(xField: String ?= "digitsf_score", yField : String ?= "bentons_score")
+GET         /luxpark/records                                                controllers.luxpark.LuxParkController.find(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /luxpark/records/get/:id                                        controllers.luxpark.LuxParkController.get(id: BSONObjectID)
+GET         /luxpark/records/exportAllAsCsv                                 controllers.luxpark.LuxParkController.exportAllRecordsAsCsv(delimiter : String ?= ",")
+GET         /luxpark/records/exportAllAsJson                                controllers.luxpark.LuxParkController.exportAllRecordsAsJson
+GET         /luxpark/records/exportAsCsv                                    controllers.luxpark.LuxParkController.exportRecordsAsCsv(delimiter : String ?= ",", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /luxpark/records/exportAsJson                                   controllers.luxpark.LuxParkController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /luxpark/records/exportTranSMARTData                            controllers.luxpark.LuxParkController.exportTranSMARTDataFile(delimiter : String ?= "\t")
+GET         /luxpark/records/exportTranSMARTMapping                         controllers.luxpark.LuxParkController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
+GET         /luxpark/overviewFieldTypes                                     controllers.luxpark.LuxParkController.overviewFieldTypes
+GET         /luxpark/overview                                               controllers.luxpark.LuxParkController.overview
+GET         /luxpark/overviewList                                           controllers.luxpark.LuxParkController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /luxpark/getScatterStats                                        controllers.luxpark.LuxParkController.getScatterStats(xField: String ?= "digitsf_score", yField : String ?= "bentons_score")
+
+GET         /luxpark/dictionary                                             controllers.luxpark.LuxParkDictionaryController.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /luxpark/dictionary/get/:name                                   controllers.luxpark.LuxParkDictionaryController.get(name : String)
+POST        /luxpark/dictionary/save                                        controllers.luxpark.LuxParkDictionaryController.save
+GET         /luxpark/dictionary/:name                                       controllers.luxpark.LuxParkDictionaryController.edit(name : String)
+POST        /luxpark/dictionary/:name                                       controllers.luxpark.LuxParkDictionaryController.update(name : String)
+
+
 
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                                                   controllers.Assets.at(path="/public", file)
