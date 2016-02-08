@@ -30,6 +30,8 @@ libraryDependencies ++= Seq(
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
   "org.webjars" % "html5shiv" % "3.7.0",
   "org.webjars" % "respond" % "1.4.2",
+  "org.webjars" % "highcharts" % "4.2.2",
+  "org.webjars.bower" % "plotly.js" % "1.5.1",
   "net.codingwell" %% "scala-guice" % "4.0.1",
   "org.clapper" % "classutil_2.11" % "1.0.5"
 )
