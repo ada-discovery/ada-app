@@ -10,35 +10,31 @@
 
 @main(Messages("create.title", domainName)) {
 
-	<div class="container">
-
-		<div class="page-header">
-			<h1>@Messages("create.title", domainName)</h1>
-		</div>
-
-		@form.errors.map{ error =>
-    		<div class="alert alert-dismissable alert-danger">
-        		<button type="button" class="close" data-dismiss="alert">×</button>
-            	@Messages(error.message, Messages(domainName + "." + error.key))
-        	</div>
-    	}
-
-		<div class="row">
-			<div class="col-md-8">
-				@helper.form(saveCall) {
-					<fieldset>
-                        @elements
-                    </fieldset>
-				
-					<div class="actions">
-						<input type="submit" value="Create" class="btn btn-primary">
-						<a href="@listCall" class="btn btn-default">Cancel</a>
-					</div>
-				}
-			</div>
-			<div class="col-md-4">
-				@info()
-			</div>
-		</div>
+	<div class="page-header">
+		<h1>@Messages("create.title", domainName)</h1>
 	</div>
-}
+
+	@form.errors.map{ error =>
+		<div class="alert alert-dismissable alert-danger">
+			<button type="button" class="close" data-dismiss="alert">×</button>
+			@Messages(error.message, Messages(domainName + "." + error.key))
+		</div>
+	}
+
+	<div class="row">
+		<div class="col-md-8">
+		@helper.form(saveCall) {
+			<fieldset>
+				@elements
+			</fieldset>
+
+			<div class="actions">
+				<input type="submit" value="Create" class="btn btn-primary">
+				<a href="@listCall" class="btn btn-default">Cancel</a>
+			</div>
+		}
+		</div>
+		<div class="col-md-4">
+			@info()
+		</div>
+	</div>}

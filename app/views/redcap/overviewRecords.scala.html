@@ -1,26 +1,29 @@
 @import views.html.layout.main
 
-@(title: String, valueCounts : Seq[(String, Seq[(String, Any)])])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(
+    title: String,
+    valueCounts : Seq[(String, Seq[(String, Any)])]
+)(
+    implicit msg: play.api.i18n.Messages, request: RequestHeader
+)
 
 @main(title) {
 
-    <div class="container">
-        <div class="page-header">
-            <h3>
-                @Messages(title)
-            </h3>
-        </div>
+    <div class="page-header">
+        <h3>
+        @Messages(title)
+        </h3>
+    </div>
 
-        <div class="panel panel-info" style="padding-bottom: 100px;">
-            <div class="panel-body">
-                @valueCounts.map{case(name, data) =>
-                    @views.html.chart.plotly.pieChart(
-                        name,
-                        name,
-                        data
-                    )
-                }
-            </div>
+    <div class="panel panel-info">
+        <div class="panel-body">
+        @valueCounts.map{case(name, data) =>
+            @views.html.chart.plotly.pieChart(
+                name,
+                name,
+                data
+            )
+        }
         </div>
     </div>
 }

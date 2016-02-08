@@ -5,12 +5,12 @@
 <html>
     <head>
         <title>@title</title>
-        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
-        
         <!-- Latest compiled and minified CSS -->
         <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootswatch-united", "bootstrap.min.css"))">
-		
-		@* Optional theme *@
+
+        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+
+        @* Optional theme *@
 		@* <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootstrap", "bootstrap-theme.min.css"))"> *@
         
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
@@ -27,18 +27,21 @@
 		
     </head>
     <body>
-        <div id="wrapper">
-            @{sidebar(request)}
-
-            <div id="page-content-wrapper">
-                @navbar(request)
-                <div class="page-content">
-                    @content
+        @navbar(request)
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="menu col-md-2">
+                    @sidebar(request)
                 </div>
-                @footer()
+                <div class="col-md-8">
+                    <div class="content">
+                        @content
+                    </div>
+                    @footer()
+                </div>
             </div>
-
         </div>
+
 
         <!-- Bootstrap core JavaScript
 	    ================================================== -->

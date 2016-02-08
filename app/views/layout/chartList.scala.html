@@ -10,42 +10,40 @@
 
 @main(Messages("overviewList.title", domainName)) {
 
-    <div class="container">
-        <div class="page-header">
-            <h3>
-                @Messages("list.count.title", count, domainName)
-            </h3>
-        </div>
+    <div class="page-header">
+        <h3>
+        @Messages("list.count.title", count, domainName)
+        </h3>
+    </div>
 
-        @flashMessages()
+    @flashMessages()
 
-        <div id="actions">
-            @actions
-        </div>
+    <div id="actions">
+        @actions
+    </div>
 
-        <hr/>
+    <hr/>
 
-        @charts
+    @charts
 
-        <br/><br/>
+    <br/><br/>
 
-        <div align="middle">
-            <div class="well">
-                <div class="row">
-                    <span id="arrowUp" class="glyphicon glyphicon-arrow-up"></span>
-                </div>
-                <div class="row">
-                    <button id="showHideTableButton" type="button" class="btn btn-default btn-sm" data-toggle="collapse" data-target="#table-panel">Hide Table</button>
-                </div>
-                <div class="row">
-                    <span id="arrowDown" class="glyphicon glyphicon-arrow-down" style="display:none"></span>
-                </div>
+    <div align="middle">
+        <div class="well">
+            <div class="row">
+                <span id="arrowUp" class="glyphicon glyphicon-arrow-up"></span>
+            </div>
+            <div class="row">
+                <button id="showHideTableButton" type="button" class="btn btn-default btn-sm" data-toggle="collapse" data-target="#table-panel">Hide Table</button>
+            </div>
+            <div class="row">
+                <span id="arrowDown" class="glyphicon glyphicon-arrow-down" style="display:none"></span>
             </div>
         </div>
+    </div>
 
-        <div id="table-panel" class="collapse in">
-            @table
-        </div>
+    <div id="table-panel" class="collapse in">
+        @table
     </div>
 
     <script type="text/javascript">

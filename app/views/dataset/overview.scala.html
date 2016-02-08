@@ -5,13 +5,11 @@
 @(title: String, chartDatas : Iterable[ChartSpec])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @main(title) {
-    <div class="container">
-        <div class="page-header">
-            <h3>
-                @Messages(title)
-            </h3>
-        </div>
-
-        @chartPanel(chartDatas)
+    <div class="page-header">
+        <h3>
+            @Messages(title)
+        </h3>
     </div>
+
+    @chartPanel(chartDatas)
 }
