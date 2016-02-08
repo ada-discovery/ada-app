@@ -36,4 +36,6 @@ package object util {
 
   def fieldLabel(fieldName : String, fieldLabelMap : Option[Map[String, String]]) =
     fieldLabelMap.map(_.getOrElse(fieldName, toCamel(fieldName))).getOrElse(toCamel(fieldName))
+
+  def chartElementName(title: String) = title.hashCode + "Chart"
 }

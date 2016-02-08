@@ -1,5 +1,6 @@
 @import util.{ChartSpec, PieChartSpec, ColumnChartSpec, FieldChartSpec}
 @import views.html.dataset.chartPanel
+@import util.chartElementName
 
 @(fieldChartSpecs : Iterable[FieldChartSpec])
 
@@ -17,7 +18,7 @@
     $(function () {
         @fieldChartSpecs.map { case FieldChartSpec(fieldName, chartSpec) =>
             @{chartSpec match {
-                case PieChartSpec(title, _, _, _) => jsListenToPointClick(title.replaceAll(" ", "-") + "Chart", fieldName)
+                case PieChartSpec(title, _, _, _) => jsListenToPointClick(chartElementName(title), fieldName)
                 case _ => ""
             }
         }

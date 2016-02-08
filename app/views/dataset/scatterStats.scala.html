@@ -64,18 +64,14 @@
         <div id="actions">
             @actions(getScatterStatsCall)
         </div>
-        <div class="panel" style="padding-bottom: 100px;">
-            <div class="panel-body">
-                @views.html.chart.highcharts.scatterChart(
-                    "Comparison",
-                    "scatterChart",
-                    currentXField.capitalize,
-                    currentYField.capitalize,
-                    Seq(
-                        ("All", "rgba(223, 83, 83, .5)", stats.map(pair => Seq(pair._1, pair._2)))
-                    )
-                )
-            </div>
-        </div>
+        @views.html.chart.highcharts.scatterChart(
+            "Comparison",
+             "scatterChart",
+             currentXField.capitalize,
+             currentYField.capitalize,
+            Seq(
+                ("All", "rgba(223, 83, 83, .5)", stats.map(pair => Seq(pair._1, pair._2)))
+            )
+        )
     </div>
 }
