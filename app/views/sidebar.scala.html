@@ -1,5 +1,4 @@
-@import controllers.denopa.{routes => denoparoutes}
-@import controllers.luxpark.{routes => luxparkroutes}
+@import controllers.StudyRouter._
 
 @(implicit request: RequestHeader)
 
@@ -7,77 +6,7 @@
         Studies
     </h4>
     <ul class="sidebar-nav nav nav-list bs-docs-sidenav">
-
-        <li>
-            <div class="panel-group">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h4 class="panel-title">
-                            <a data-toggle="collapse" href="#collapse2">LuxPark</a>
-                        </h4>
-                    </div>
-                    <div id="collapse2" class="panel-collapse collapse in">
-                        <ul class="list-group">
-                            @listGroupItem("Overview", Some(luxparkroutes.LuxParkController.overviewList()))
-                            @listGroupItem("Dictionary", Some(luxparkroutes.LuxParkDictionaryController.overviewList()))
-                            @listGroupItem("Scatter Analysis", Some(luxparkroutes.LuxParkController.getScatterStats()))
-                            @listGroupItem("Types", Some(luxparkroutes.LuxParkController.overviewFieldTypes()))
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </li>
-
-        <li>
-            <div class="panel-group">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h4 class="panel-title">
-                            <a data-toggle="collapse" href="#collapse3">DeNoPa Baseline</a>
-                        </h4>
-                    </div>
-                    <div id="collapse3" class="panel-collapse collapse in">
-                        <ul class="list-group">
-                            <li role="separator" class="list-group-item divider"><i>Curated</i></li>
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaCuratedBaselineController.overviewList()))
-                            @listGroupItem("Dictionary", Some(denoparoutes.DeNoPaCuratedBaselineDictionaryController.overviewList()))
-                            @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaCuratedBaselineController.getScatterStats()))
-                            @listGroupItem("Types", Some(denoparoutes.DeNoPaCuratedBaselineController.overviewFieldTypes()))
-                            <li role="separator" class="list-group-item divider"><i>Raw</i></li>
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaBaselineController.overviewList()))
-                            @listGroupItem("Dictionary", Some(denoparoutes.DeNoPaBaselineDictionaryController.overviewList()))
-                            @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaBaselineController.getScatterStats()))
-                            @listGroupItem("Types", Some(denoparoutes.DeNoPaBaselineController.overviewFieldTypes()))
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-        </li>
-        <li>
-
-            <div class="panel-group">
-                <div class="panel panel-default">
-                    <div class="panel-heading">
-                        <h4 class="panel-title">
-                            <a data-toggle="collapse" href="#collapse4">DeNoPa First Visit</a>
-                        </h4>
-                    </div>
-                    <div id="collapse4" class="panel-collapse collapse in">
-                        <ul class="list-group">
-                            <li role="separator" class="list-group-item divider"><i>Curated</i></li>
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaCuratedFirstVisitController.overviewList()))
-                            @listGroupItem("Dictionary", Some(denoparoutes.DeNoPaCuratedFirstVisitDictionaryController.overviewList()))
-                            @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaCuratedFirstVisitController.getScatterStats()))
-                            @listGroupItem("Types", Some(denoparoutes.DeNoPaCuratedFirstVisitController.overviewFieldTypes()))
-                            <li role="separator" class="list-group-item divider"><i>Raw</i></li>
-                            @listGroupItem("Overview", Some(denoparoutes.DeNoPaFirstVisitController.overviewList()))
-                            @listGroupItem("Dictionary", Some(denoparoutes.DeNoPaFirstVisitDictionaryController.overviewList()))
-                            @listGroupItem("Scatter Analysis", Some(denoparoutes.DeNoPaFirstVisitController.getScatterStats()))
-                            @listGroupItem("Types", Some(denoparoutes.DeNoPaFirstVisitController.overviewFieldTypes()))
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </li>
+        @StudyRouter.values.map { studyRouterVal =>
+            @studyMenu(studyRouterVal)
+        }
     </ul>

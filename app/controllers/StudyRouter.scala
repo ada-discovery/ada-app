@@ -4,9 +4,11 @@ import controllers.denopa.{routes => denoparoutes}
 import controllers.luxpark.{routes => luxparkroutes}
 
 object StudyRouter extends Enumeration {
-  case class StudyRouter(dataSetRouter: DataSetRouter, dictionaryRouter: DictionaryRouter) extends super.Val
+  case class StudyRouterHolder(name: String, dataSetRouter: DataSetRouter, dictionaryRouter: DictionaryRouter) extends super.Val
+  implicit def valueToHolder(x: Value) = x.asInstanceOf[StudyRouterHolder]
 
-  val DeNoPaBaseline = StudyRouter(
+  val DeNoPaBaseline = StudyRouterHolder(
+    "DeNoPa Baseline",
     DataSetRouter(
       denoparoutes.DeNoPaBaselineController.find,
       denoparoutes.DeNoPaBaselineController.find(),
@@ -30,7 +32,8 @@ object StudyRouter extends Enumeration {
     )
   )
 
-  val DeNoPaFirstVisit = StudyRouter(
+  val DeNoPaFirstVisit = StudyRouterHolder(
+    "DeNoPa First Visit",
     DataSetRouter(
       denoparoutes.DeNoPaFirstVisitController.find,
       denoparoutes.DeNoPaFirstVisitController.find(),
@@ -54,7 +57,8 @@ object StudyRouter extends Enumeration {
     )
   )
 
-  val DeNoPaCuratedBaseline = StudyRouter(
+  val DeNoPaCuratedBaseline = StudyRouterHolder(
+    "DeNoPa Curated Baseline",
     DataSetRouter(
       denoparoutes.DeNoPaCuratedBaselineController.find,
       denoparoutes.DeNoPaCuratedBaselineController.find(),
@@ -78,7 +82,8 @@ object StudyRouter extends Enumeration {
     )
   )
 
-  val DeNoPaCuratedFirstVisit = StudyRouter(
+  val DeNoPaCuratedFirstVisit = StudyRouterHolder(
+    "DeNoPa Curated First Visit",
     DataSetRouter(
       denoparoutes.DeNoPaCuratedFirstVisitController.find,
       denoparoutes.DeNoPaCuratedFirstVisitController.find(),
@@ -102,7 +107,8 @@ object StudyRouter extends Enumeration {
     )
   )
 
-  val LuxPark = StudyRouter(
+  val LuxPark = StudyRouterHolder(
+    "LuxPark",
     DataSetRouter(
       luxparkroutes.LuxParkController.find,
       luxparkroutes.LuxParkController.find(),

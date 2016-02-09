@@ -1,0 +1,24 @@
+@import controllers.StudyRouter.StudyRouterHolder
+
+@(studyRouter: StudyRouterHolder)(implicit request: RequestHeader)
+
+@defining(scala.util.Random.nextLong()) { panelId =>
+    <li>
+        <div class="panel-group">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#collapse@panelId">@studyRouter.name</a>
+                    </h4>
+                </div>
+                <div id="collapse@panelId" class="panel-collapse collapse in">
+                    <ul class="list-group">
+                        @listGroupItem("Overview", Some(studyRouter.dataSetRouter.plainOverviewList))
+                        @listGroupItem("Dictionary", Some(studyRouter.dictionaryRouter.plainList))
+                        @listGroupItem("Scatter Analysis", Some(studyRouter.dataSetRouter.getScatterStats))
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </li>
+}
