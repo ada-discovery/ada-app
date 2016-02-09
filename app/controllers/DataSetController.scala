@@ -184,7 +184,14 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       }
 
       implicit val msg = messagesApi.preferred(request)
-      Ok(views.html.dataset.typeOverview(dataSetName + " Fields", (FieldType.values, fieldTypeCounts).zipped.toList))
+      render {
+        case Accepts.Html() => Ok(views.html.dataset.typeOverview(dataSetName + " Fields", (FieldType.values, fieldTypeCounts).zipped.toList))
+        case Accepts.Json() => Ok(JsObject(
+          (FieldType.values, fieldTypeCounts).zipped.map{ case (fieldType, count) =>
+            (fieldType.toString, JsNumber(count))
+          }.toSeq
+        ))
+      }
     }
   }
 
@@ -209,7 +216,11 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     futureItems.zip(futureCount).zip(Future.sequence(futureFieldChartSpecs)).map{
       case ((items, count), fieldChartSpecs) => {
         implicit val msg = messagesApi.preferred(request)
-        Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), fieldChartSpecs))
+
+        render {
+          case Accepts.Html() => Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), fieldChartSpecs))
+          case Accepts.Json() => Ok(Json.toJson(items))
+        }
     }}.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
@@ -296,11 +307,14 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
         Future(Seq[(Any, Any)]())
 
       valuesFuture.map( values =>
-        Ok(dataset.scatterStats(xFieldName, yFieldName, router.getScatterStats, numericFieldNames, values))
+
+        render {
+          case Accepts.Html() => Ok(dataset.scatterStats(xFieldName, yFieldName, router.getScatterStats, numericFieldNames, values))
+          case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
+        }
       )
     }
   }
-
 
   /**
     * TODO: implement. what is it supposed to return?

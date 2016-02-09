@@ -19,7 +19,7 @@ class TranslationController @Inject() (
 
   override protected val form = Form(
     mapping(
-      "id" -> ignored(Option(BSONObjectID.generate: BSONObjectID)),
+      "id" -> ignored(Option.empty[BSONObjectID]),
       "original" -> nonEmptyText,
       "translated" -> nonEmptyText
     )(Translation.apply)(Translation.unapply))

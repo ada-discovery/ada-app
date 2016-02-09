@@ -20,7 +20,7 @@ class UserController @Inject() (
 
   override protected val form = Form(
     mapping(
-      "id" -> ignored(BSONObjectID.generate: BSONObjectID),
+      "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
       "address" -> nonEmptyText,
       "dob" -> date("yyyy-MM-dd"),

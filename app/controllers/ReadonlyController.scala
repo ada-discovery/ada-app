@@ -52,25 +52,10 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     ){ entity =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(showView(id, entity))
-    }).recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the get process")
-        InternalServerError(t.getMessage)
-    }
-  }
-
-  /**
-    * Return response with json representation of object with given key.
-    * Used for rest interface.
-    *
-    * @param id primary key of object
-    */
-  def getRest(id: ID) = Action.async {
-    repo.get(id).map(_.fold(
-      NotFound(s"Entity #$id not found")
-    ){entity =>
-      Ok(Json.toJson(entity))
+      render {
+        case Accepts.Html() => Ok(showView(id, entity))
+        case Accepts.Json() => Ok(Json.toJson(entity))
+      }
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the get process")
@@ -90,29 +75,10 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     futureItems.zip(futureCount).map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(listView(Page(items, page, page * limit, count, orderBy, filter)))
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the list process")
-        InternalServerError(t.getMessage)
-    }
-  }
-
-  /**
-    * Return response with json representation of all objects mathing the query string.
-    * Objects are ordered by a reference column and split into chunks.
-    * Used for rest interface.
-    *
-    * @see find
-    * @param page index for the chunk which is to be returned.
-    * @param orderBy label of the reference column for sorting.
-    * @param filter query string for matchng entries. Use empty string to retrieve all objects.
-    * @return
-    */
-  def findRest(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
-    val (futureItems, futureCount) = getFutureItemsAndCount(page ,orderBy, filter)
-    futureItems.zip(futureCount).map{ case (items, count) =>
-      Ok(Json.toJson(items))
+      render {
+        case Accepts.Html() => Ok(listView(Page(items, page, page * limit, count, orderBy, filter)))
+        case Accepts.Json() => Ok(Json.toJson(items))
+      }
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
@@ -130,24 +96,10 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     futureItems.zip(futureCount).map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(listView(Page(items, 0, 0, count, "", new FilterSpec())))
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the list process")
-        InternalServerError(t.getMessage)
-    }
-  }
-
-  /**
-    *
-    * Return response with json representation of all stored objects
-    * Used for rest interface.
-    *
-    */
-  def listAllRest = Action.async { implicit request =>
-    val (futureItems, futureCount) = getFutureItemsAndCount(0 ,"", new FilterSpec())
-    futureItems.map { items =>
-      Ok(Json.toJson(items))
+      render {
+        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, "", new FilterSpec())))
+        case Accepts.Json() => Ok(Json.toJson(items))
+      }
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
