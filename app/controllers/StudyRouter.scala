@@ -4,60 +4,37 @@ import controllers.denopa.{routes => denoparoutes}
 import controllers.luxpark.{routes => luxparkroutes}
 
 object StudyRouter extends Enumeration {
-  case class StudyRouterHolder(name: String, dataSetRouter: DataSetRouter, dictionaryRouter: DictionaryRouter) extends super.Val
+  case class StudyRouterHolder(order: Int, name: String, dataSetRouter: DataSetRouter, dictionaryRouter: DictionaryRouter) extends super.Val
   implicit def valueToHolder(x: Value) = x.asInstanceOf[StudyRouterHolder]
 
-  val DeNoPaBaseline = StudyRouterHolder(
-    "DeNoPa Baseline",
+  val LuxPark = StudyRouterHolder(
+    0,
+    "LuxPark",
     DataSetRouter(
-      denoparoutes.DeNoPaBaselineController.find,
-      denoparoutes.DeNoPaBaselineController.find(),
-      denoparoutes.DeNoPaBaselineController.overviewList,
-      denoparoutes.DeNoPaBaselineController.overviewList(),
-      denoparoutes.DeNoPaBaselineController.get,
-      denoparoutes.DeNoPaBaselineController.exportAllRecordsAsCsv(),
-      denoparoutes.DeNoPaBaselineController.exportAllRecordsAsJson(),
-      denoparoutes.DeNoPaBaselineController.exportRecordsAsCsv(),
-      denoparoutes.DeNoPaBaselineController.exportRecordsAsJson(),
-      denoparoutes.DeNoPaBaselineController.exportTranSMARTDataFile(),
-      denoparoutes.DeNoPaBaselineController.exportTranSMARTMappingFile(),
-      denoparoutes.DeNoPaBaselineController.getScatterStats()
+      luxparkroutes.LuxParkController.find,
+      luxparkroutes.LuxParkController.find(),
+      luxparkroutes.LuxParkController.overviewList,
+      luxparkroutes.LuxParkController.overviewList(),
+      luxparkroutes.LuxParkController.get,
+      luxparkroutes.LuxParkController.exportAllRecordsAsCsv(),
+      luxparkroutes.LuxParkController.exportAllRecordsAsJson(),
+      luxparkroutes.LuxParkController.exportRecordsAsCsv(),
+      luxparkroutes.LuxParkController.exportRecordsAsJson(),
+      luxparkroutes.LuxParkController.exportTranSMARTDataFile(),
+      luxparkroutes.LuxParkController.exportTranSMARTMappingFile(),
+      luxparkroutes.LuxParkController.getScatterStats()
     ),
     DictionaryRouter(
-      denoparoutes.DeNoPaBaselineDictionaryController.overviewList,
-      denoparoutes.DeNoPaBaselineDictionaryController.overviewList(),
-      denoparoutes.DeNoPaBaselineDictionaryController.get,
-      denoparoutes.DeNoPaBaselineDictionaryController.save,
-      denoparoutes.DeNoPaBaselineDictionaryController.update
-    )
-  )
-
-  val DeNoPaFirstVisit = StudyRouterHolder(
-    "DeNoPa First Visit",
-    DataSetRouter(
-      denoparoutes.DeNoPaFirstVisitController.find,
-      denoparoutes.DeNoPaFirstVisitController.find(),
-      denoparoutes.DeNoPaFirstVisitController.overviewList,
-      denoparoutes.DeNoPaFirstVisitController.overviewList(),
-      denoparoutes.DeNoPaFirstVisitController.get,
-      denoparoutes.DeNoPaFirstVisitController.exportAllRecordsAsCsv(),
-      denoparoutes.DeNoPaFirstVisitController.exportAllRecordsAsJson(),
-      denoparoutes.DeNoPaFirstVisitController.exportRecordsAsCsv(),
-      denoparoutes.DeNoPaFirstVisitController.exportRecordsAsJson(),
-      denoparoutes.DeNoPaFirstVisitController.exportTranSMARTDataFile(),
-      denoparoutes.DeNoPaFirstVisitController.exportTranSMARTMappingFile(),
-      denoparoutes.DeNoPaFirstVisitController.getScatterStats()
-    ),
-    DictionaryRouter(
-      denoparoutes.DeNoPaFirstVisitDictionaryController.overviewList,
-      denoparoutes.DeNoPaFirstVisitDictionaryController.overviewList(),
-      denoparoutes.DeNoPaFirstVisitDictionaryController.get,
-      denoparoutes.DeNoPaFirstVisitDictionaryController.save,
-      denoparoutes.DeNoPaFirstVisitDictionaryController.update
+      luxparkroutes.LuxParkDictionaryController.overviewList,
+      luxparkroutes.LuxParkDictionaryController.overviewList(),
+      luxparkroutes.LuxParkDictionaryController.get,
+      luxparkroutes.LuxParkDictionaryController.save,
+      luxparkroutes.LuxParkDictionaryController.update
     )
   )
 
   val DeNoPaCuratedBaseline = StudyRouterHolder(
+    1,
     "DeNoPa Curated Baseline",
     DataSetRouter(
       denoparoutes.DeNoPaCuratedBaselineController.find,
@@ -83,6 +60,7 @@ object StudyRouter extends Enumeration {
   )
 
   val DeNoPaCuratedFirstVisit = StudyRouterHolder(
+    2,
     "DeNoPa Curated First Visit",
     DataSetRouter(
       denoparoutes.DeNoPaCuratedFirstVisitController.find,
@@ -107,28 +85,55 @@ object StudyRouter extends Enumeration {
     )
   )
 
-  val LuxPark = StudyRouterHolder(
-    "LuxPark",
+  val DeNoPaBaseline = StudyRouterHolder(
+    3,
+    "DeNoPa Baseline",
     DataSetRouter(
-      luxparkroutes.LuxParkController.find,
-      luxparkroutes.LuxParkController.find(),
-      luxparkroutes.LuxParkController.overviewList,
-      luxparkroutes.LuxParkController.overviewList(),
-      luxparkroutes.LuxParkController.get,
-      luxparkroutes.LuxParkController.exportAllRecordsAsCsv(),
-      luxparkroutes.LuxParkController.exportAllRecordsAsJson(),
-      luxparkroutes.LuxParkController.exportRecordsAsCsv(),
-      luxparkroutes.LuxParkController.exportRecordsAsJson(),
-      luxparkroutes.LuxParkController.exportTranSMARTDataFile(),
-      luxparkroutes.LuxParkController.exportTranSMARTMappingFile(),
-      luxparkroutes.LuxParkController.getScatterStats()
+      denoparoutes.DeNoPaBaselineController.find,
+      denoparoutes.DeNoPaBaselineController.find(),
+      denoparoutes.DeNoPaBaselineController.overviewList,
+      denoparoutes.DeNoPaBaselineController.overviewList(),
+      denoparoutes.DeNoPaBaselineController.get,
+      denoparoutes.DeNoPaBaselineController.exportAllRecordsAsCsv(),
+      denoparoutes.DeNoPaBaselineController.exportAllRecordsAsJson(),
+      denoparoutes.DeNoPaBaselineController.exportRecordsAsCsv(),
+      denoparoutes.DeNoPaBaselineController.exportRecordsAsJson(),
+      denoparoutes.DeNoPaBaselineController.exportTranSMARTDataFile(),
+      denoparoutes.DeNoPaBaselineController.exportTranSMARTMappingFile(),
+      denoparoutes.DeNoPaBaselineController.getScatterStats()
     ),
     DictionaryRouter(
-      luxparkroutes.LuxParkDictionaryController.overviewList,
-      luxparkroutes.LuxParkDictionaryController.overviewList(),
-      luxparkroutes.LuxParkDictionaryController.get,
-      luxparkroutes.LuxParkDictionaryController.save,
-      luxparkroutes.LuxParkDictionaryController.update
+      denoparoutes.DeNoPaBaselineDictionaryController.overviewList,
+      denoparoutes.DeNoPaBaselineDictionaryController.overviewList(),
+      denoparoutes.DeNoPaBaselineDictionaryController.get,
+      denoparoutes.DeNoPaBaselineDictionaryController.save,
+      denoparoutes.DeNoPaBaselineDictionaryController.update
+    )
+  )
+
+  val DeNoPaFirstVisit = StudyRouterHolder(
+    4,
+    "DeNoPa First Visit",
+    DataSetRouter(
+      denoparoutes.DeNoPaFirstVisitController.find,
+      denoparoutes.DeNoPaFirstVisitController.find(),
+      denoparoutes.DeNoPaFirstVisitController.overviewList,
+      denoparoutes.DeNoPaFirstVisitController.overviewList(),
+      denoparoutes.DeNoPaFirstVisitController.get,
+      denoparoutes.DeNoPaFirstVisitController.exportAllRecordsAsCsv(),
+      denoparoutes.DeNoPaFirstVisitController.exportAllRecordsAsJson(),
+      denoparoutes.DeNoPaFirstVisitController.exportRecordsAsCsv(),
+      denoparoutes.DeNoPaFirstVisitController.exportRecordsAsJson(),
+      denoparoutes.DeNoPaFirstVisitController.exportTranSMARTDataFile(),
+      denoparoutes.DeNoPaFirstVisitController.exportTranSMARTMappingFile(),
+      denoparoutes.DeNoPaFirstVisitController.getScatterStats()
+    ),
+    DictionaryRouter(
+      denoparoutes.DeNoPaFirstVisitDictionaryController.overviewList,
+      denoparoutes.DeNoPaFirstVisitDictionaryController.overviewList(),
+      denoparoutes.DeNoPaFirstVisitDictionaryController.get,
+      denoparoutes.DeNoPaFirstVisitDictionaryController.save,
+      denoparoutes.DeNoPaFirstVisitDictionaryController.update
     )
   )
 }

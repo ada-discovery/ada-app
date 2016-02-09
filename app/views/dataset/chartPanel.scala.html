@@ -2,11 +2,11 @@
 @import views.html.chart._
 @import util.chartElementName
 
-@(chartSpecs : Iterable[ChartSpec])
+@(chartSpecs : Iterable[ChartSpec], gridWidth: Int = 3)
 
 <div class="row">
     @chartSpecs.map { chartSpec =>
-        <div class="col-md-3">
+        <div class="col-md-@gridWidth">
             @{chartSpec match {
                 case PieChartSpec(title, showLabels, showLegend, data) => highcharts.pieChart(title, chartElementName(title), showLabels, showLegend, data)
                 case ColumnChartSpec(title, data) => highcharts.columnChart(title, chartElementName(title), "Count", data)

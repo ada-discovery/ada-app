@@ -1,10 +1,10 @@
 @(
-    domainName : String,
-    count : Long,
-    actions : Html,
-    table : Html,
-    charts : Html,
-    showSidebar : Boolean = true
+    domainName:  String,
+    count: Long,
+    actions: Html,
+    table: Html,
+    charts: Html,
+    showSidebar: Boolean = true
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
@@ -13,7 +13,7 @@
 
     <div class="page-header">
         <h3>
-        @Messages("list.count.title", count, domainName)
+            @Messages("list.count.title", count, domainName)
         </h3>
     </div>
 

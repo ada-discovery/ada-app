@@ -6,7 +6,7 @@
         Studies
     </h4>
     <ul class="sidebar-nav nav nav-list bs-docs-sidenav">
-        @StudyRouter.values.map { studyRouterVal =>
+        @StudyRouter.values.toSeq.sortBy(_.order).map { studyRouterVal =>
             @studyMenu(studyRouterVal)
         }
     </ul>

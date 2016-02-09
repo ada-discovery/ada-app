@@ -1,10 +1,10 @@
-@import util.{ChartSpec, PieChartSpec, ColumnChartSpec, FieldChartSpec}
+@import util.{PieChartSpec, FieldChartSpec}
 @import views.html.dataset.chartPanel
 @import util.chartElementName
 
-@(fieldChartSpecs : Iterable[FieldChartSpec])
+@(fieldChartSpecs : Iterable[FieldChartSpec], gridWidth: Int = 3)
 
-@chartPanel(fieldChartSpecs.map(_.chartSpec))
+@chartPanel(fieldChartSpecs.map(_.chartSpec), gridWidth)
 
 @jsListenToPointClick(chartElementName : String, fieldName : String) = {
     $('#@chartElementName').on('pointClick', function(event, data) {

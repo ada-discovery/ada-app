@@ -61,9 +61,8 @@ abstract class DictionaryController (
       dataSetName + " Field",
       page,
       fieldChartSpecs,
-      router.plainList,
-      router.list,
-      router.get
+      router,
+      6
     )
 
   def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>

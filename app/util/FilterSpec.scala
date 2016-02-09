@@ -3,6 +3,7 @@ package util
 import models.EnumFormat
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{JsString, JsObject, Json}
+import JsonUtil.toJsonNumber
 
 case class FilterSpec(conditions : Seq[FilterCondition]) {
   def this() = this(Seq())
@@ -26,8 +27,8 @@ case class FilterSpec(conditions : Seq[FilterCondition]) {
         val inValues = condition.split(",").map(s => Json.toJson(s.trim) : JsValueWrapper)
         Json.obj("$in" -> Json.arr(inValues : _*))
       }
-      case Greater => Json.obj("$gt" -> Json.toJson(condition))
-      case Less => Json.obj("$lt" -> Json.toJson(condition))
+      case Greater => Json.obj("$gt" -> toJsonNumber(condition))
+      case Less => Json.obj("$lt" -> toJsonNumber(condition))
     }
 }
 

@@ -110,7 +110,7 @@ object JsonUtil {
   def projectDouble(items : Seq[JsObject], fieldName : String) : Seq[Option[Double]] =
     project(items, fieldName).map(toDouble)
 
-  def toDouble(jsValue : JsLookupResult) : Option[Double] =
+  def toDouble(jsValue : JsReadable) : Option[Double] =
     jsValue.asOpt[Double].map(Some(_)).getOrElse {
       jsValue.asOpt[String] match {
         case Some(string) =>
@@ -122,6 +122,14 @@ object JsonUtil {
         case None => None
       }
     }
+
+  def toJsonNumber(value: String) : Option[JsNumber] = {
+    try {
+      Some(JsNumber(value.toDouble))
+    } catch {
+      case e: NumberFormatException => None
+    }
+  }
 
   def toString(value: JsValue) : Option[String] = {
     value match {
