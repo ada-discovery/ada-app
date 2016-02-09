@@ -21,13 +21,6 @@ GET         /users/:id                                                        co
 POST        /users/:id                                                        controllers.UserController.update(id: BSONObjectID)
 POST        /users/:id/delete                                                 controllers.UserController.delete(id: BSONObjectID)
 
-# User Rest API
-
-POST        /rest/users/save                                                  controllers.UserController.saveRest
-GET         /rest/users/get/:id                                               controllers.UserController.getRest(id: BSONObjectID)
-POST        /rest/users/:id                                                   controllers.UserController.updateRest(id: BSONObjectID)
-GET         /rest/users/all                                                   controllers.UserController.listAllRest
-
 # Translations
 GET         /translations                                                     controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /translations/all                                                 controllers.TranslationController.listAll(s: Int ?= 2)
@@ -61,7 +54,7 @@ GET         /studies/denopa/baseline/records/exportAsCsv                      co
 GET         /studies/denopa/baseline/records/exportAsJson                     controllers.denopa.DeNoPaBaselineController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/baseline/records/exportTranSMARTData              controllers.denopa.DeNoPaBaselineController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /studies/denopa/baseline/records/exportTranSMARTMapping           controllers.denopa.DeNoPaBaselineController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
-GET         /studies/denopa/baseline/overviewFieldTypes                       controllers.denopa.DeNoPaBaselineController.overviewFieldTypes
+GET         /studies/denopa/baseline/fieldTypes                               controllers.denopa.DeNoPaBaselineController.overviewFieldTypes
 GET         /studies/denopa/baseline/overview                                 controllers.denopa.DeNoPaBaselineController.overview
 GET         /studies/denopa/baseline/overviewList                             controllers.denopa.DeNoPaBaselineController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/baseline/getScatterStats                          controllers.denopa.DeNoPaBaselineController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "a_AESD_I_mean")
@@ -83,7 +76,7 @@ GET         /studies/denopa/firstvisit/records/exportAsCsv                    co
 GET         /studies/denopa/firstvisit/records/exportAsJson                   controllers.denopa.DeNoPaFirstVisitController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/firstvisit/records/exportTranSMARTData            controllers.denopa.DeNoPaFirstVisitController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /studies/denopa/firstvisit/records/exportTranSMARTMapping         controllers.denopa.DeNoPaFirstVisitController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
-GET         /studies/denopa/firstvisit/overviewFieldTypes                     controllers.denopa.DeNoPaFirstVisitController.overviewFieldTypes
+GET         /studies/denopa/firstvisit/fieldTypes                             controllers.denopa.DeNoPaFirstVisitController.overviewFieldTypes
 GET         /studies/denopa/firstvisit/overview                               controllers.denopa.DeNoPaFirstVisitController.overview
 GET         /studies/denopa/firstvisit/overviewList                           controllers.denopa.DeNoPaFirstVisitController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/firstvisit/getScatterStats                        controllers.denopa.DeNoPaFirstVisitController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "b_AESD_S_sum")
@@ -105,7 +98,7 @@ GET         /studies/denopa/curatedbaseline/records/exportAsCsv               co
 GET         /studies/denopa/curatedbaseline/records/exportAsJson              controllers.denopa.DeNoPaCuratedBaselineController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/curatedbaseline/records/exportTranSMARTData       controllers.denopa.DeNoPaCuratedBaselineController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /studies/denopa/curatedbaseline/records/exportTranSMARTMapping    controllers.denopa.DeNoPaCuratedBaselineController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
-GET         /studies/denopa/curatedbaseline/overviewFieldTypes                controllers.denopa.DeNoPaCuratedBaselineController.overviewFieldTypes
+GET         /studies/denopa/curatedbaseline/fieldTypes                        controllers.denopa.DeNoPaCuratedBaselineController.overviewFieldTypes
 GET         /studies/denopa/curatedbaseline/overview                          controllers.denopa.DeNoPaCuratedBaselineController.overview
 GET         /studies/denopa/curatedbaseline/overviewList                      controllers.denopa.DeNoPaCuratedBaselineController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/curatedbaseline/getScatterStats                   controllers.denopa.DeNoPaCuratedBaselineController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "a_AESD_I_mean")
@@ -127,7 +120,7 @@ GET         /studies/denopa/curatedfirstvisit/records/exportAsCsv             co
 GET         /studies/denopa/curatedfirstvisit/records/exportAsJson            controllers.denopa.DeNoPaCuratedFirstVisitController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/curatedfirstvisit/records/exportTranSMARTData     controllers.denopa.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /studies/denopa/curatedfirstvisit/records/exportTranSMARTMapping  controllers.denopa.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
-GET         /studies/denopa/curatedfirstvisit/overviewFieldTypes              controllers.denopa.DeNoPaCuratedFirstVisitController.overviewFieldTypes
+GET         /studies/denopa/curatedfirstvisit/fieldTypes                      controllers.denopa.DeNoPaCuratedFirstVisitController.overviewFieldTypes
 GET         /studies/denopa/curatedfirstvisit/overview                        controllers.denopa.DeNoPaCuratedFirstVisitController.overview
 GET         /studies/denopa/curatedfirstvisit/overviewList                    controllers.denopa.DeNoPaCuratedFirstVisitController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/curatedfirstvisit/getScatterStats                 controllers.denopa.DeNoPaCuratedFirstVisitController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "b_AESD_S_sum")
@@ -157,7 +150,7 @@ GET         /studies/luxpark/records/exportAsCsv                              co
 GET         /studies/luxpark/records/exportAsJson                             controllers.luxpark.LuxParkController.exportRecordsAsJson(filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/luxpark/records/exportTranSMARTData                      controllers.luxpark.LuxParkController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /studies/luxpark/records/exportTranSMARTMapping                   controllers.luxpark.LuxParkController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
-GET         /studies/luxpark/overviewFieldTypes                               controllers.luxpark.LuxParkController.overviewFieldTypes
+GET         /studies/luxpark/fieldTypes                                       controllers.luxpark.LuxParkController.overviewFieldTypes
 GET         /studies/luxpark/overview                                         controllers.luxpark.LuxParkController.overview
 GET         /studies/luxpark/overviewList                                     controllers.luxpark.LuxParkController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/luxpark/getScatterStats                                  controllers.luxpark.LuxParkController.getScatterStats(xField: String ?= "digitsf_score", yField : String ?= "bentons_score")
