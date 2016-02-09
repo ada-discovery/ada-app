@@ -2,7 +2,7 @@ package controllers.denopa
 
 import javax.inject.{Inject, Named}
 
-import controllers.{DictionaryRouter, DataSetRouter}
+import controllers.StudyRouter
 import persistence.DictionaryFieldRepo
 
 class DeNoPaCuratedFirstVisitController @Inject() (
@@ -15,18 +15,5 @@ class DeNoPaCuratedFirstVisitController @Inject() (
 
   override protected val overviewFieldNamesConfPrefix = "denopa.curatedfirstvisit"
 
-  override protected def router = DataSetRouter(
-    routes.DeNoPaCuratedFirstVisitController.find,
-    routes.DeNoPaCuratedFirstVisitController.find(),
-    routes.DeNoPaCuratedFirstVisitController.overviewList,
-    routes.DeNoPaCuratedFirstVisitController.overviewList(),
-    routes.DeNoPaCuratedFirstVisitController.get,
-    routes.DeNoPaCuratedFirstVisitController.exportAllRecordsAsCsv(),
-    routes.DeNoPaCuratedFirstVisitController.exportAllRecordsAsJson(),
-    routes.DeNoPaCuratedFirstVisitController.exportRecordsAsCsv(),
-    routes.DeNoPaCuratedFirstVisitController.exportRecordsAsJson(),
-    routes.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(),
-    routes.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile(),
-    routes.DeNoPaCuratedFirstVisitController.getScatterStats()
-  )
+  override protected def router = StudyRouter.DeNoPaCuratedFirstVisit.dataSetRouter
 }

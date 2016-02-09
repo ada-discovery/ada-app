@@ -3,7 +3,7 @@
 @import controllers.luxpark.{routes => luxparkroutes}
 
 @(implicit request: RequestHeader)
-<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+<div class="navbar navbar-inverse navbar-fixed-top navbar-custom" role="navigation">
     <div class="container">
         <div class="navbar-header">
             <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" aria-expanded="false">
@@ -17,37 +17,16 @@
 
         <div id="navigation" class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
+                @menuItem(routes.AppController.studies(), "Studies", Some(1))
                 <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">LuxPark<span class="caret"></span></a>
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Extras<span class="caret"></span></a>
                     <ul class="dropdown-menu">
-                        @menuItem(luxparkroutes.LuxParkController.overviewList(), "Overview", Some(2))
-                        @menuItem(luxparkroutes.LuxParkController.getScatterStats(), "Scatter Analysis", Some(2))
-                        @menuItem(luxparkroutes.LuxParkController.overviewFieldTypes, "Types", Some(2))
-                    </ul>
-                </li>
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">DeNoPa<span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overviewList(), "Curated Baseline Overview")
-                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overviewList(), "Curated First Visit Overview")
-                        @menuItem(denoparoutes.DeNoPaBaselineController.overviewList(), "Baseline Overview")
-                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overviewList(), "First Visit Overview")
-                        <li role="separator" class="divider"></li>
-                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.getScatterStats(), "Curated Baseline Scatter Analysis", Some(3))
-                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.getScatterStats(), "Curated First Scatter Analysis", Some(3))
-                        @menuItem(denoparoutes.DeNoPaBaselineController.getScatterStats(), "Baseline Scatter Analysis", Some(3))
-                        @menuItem(denoparoutes.DeNoPaFirstVisitController.getScatterStats(), "First Visit Scatter Analysis", Some(3))
-                        <li role="separator" class="divider"></li>
-                        @menuItem(denoparoutes.DeNoPaCuratedBaselineController.overviewFieldTypes, "Curated Baseline Types")
-                        @menuItem(denoparoutes.DeNoPaCuratedFirstVisitController.overviewFieldTypes, "Curated First Visit Types")
-                        @menuItem(denoparoutes.DeNoPaBaselineController.overviewFieldTypes, "Baseline Types")
-                        @menuItem(denoparoutes.DeNoPaFirstVisitController.overviewFieldTypes, "First Visit Types")
-                        <!--
-                        @menuItem(denoparoutes.DeNoPaBaselineMetaTypeStatsController.find(), "Baseline Fields", Some(3))
-                        @menuItem(denoparoutes.DeNoPaFirstVisitMetaTypeStatsController.find(), "First Visit Fields", Some(3))
-                        -->
-                        <li role="separator" class="divider"></li>
                         @menuItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
+                        <li role="separator" class="divider"></li>
+                        @menuItem(routes.RedCapController.listRecords(), "LuxPark REDCap Records")
+                        @menuItem(routes.RedCapController.listMetadatas(), "LuxPark REDCap Metadata")
+                        @menuItem(routes.RedCapController.listExportFields(), "LuxPark REDCap Export Fields")
+                        @menuItem(routes.RedCapController.overview(), "LuxPark REDCap Overview")
                     </ul>
                 </li>
                 <li class="dropdown">

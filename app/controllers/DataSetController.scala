@@ -233,17 +233,33 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     dictionaryRepo.get(fieldName).flatMap { foundField =>
       if (foundField.isDefined) {
         val chartTitle = foundField.get.label.getOrElse(fieldName)
-        repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map(items =>
+        val enumMap = foundField.get.numValues
+
+        repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { items =>
           foundField.get.fieldType match {
-            case FieldType.String => ChartSpec.pieJson(items, fieldName, chartTitle, false, true)
-            case FieldType.Enum => ChartSpec.pieJson(items, fieldName, chartTitle, false, true)
+            case FieldType.String => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, false, true)
+            case FieldType.Enum => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, false, true)
             case FieldType.Double => ChartSpec.column(items, fieldName, chartTitle, 20)
             case FieldType.Integer => ChartSpec.column(items, fieldName, chartTitle, 20)
-            case _ => ChartSpec.pieJson(items, fieldName, chartTitle, false, true)
+            case _ => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, false, true)
           }
-        )
+        }
       } else
-        Future(ChartSpec.pieJson(List[JsObject](), fieldName, fieldName, false, true))
+        Future(ChartSpec.pie(Seq(), None, fieldName, false, true))
+    }
+
+  private def getStringValues(
+    items: Traversable[JsObject],
+    fieldName: String
+  ) =
+    toStrings(project(items.toSeq, fieldName))
+
+  private def toStrings(rawValues: Traversable[JsReadable]) =
+    rawValues.map{rawWalue =>
+      if (rawWalue == JsNull)
+        "null"
+      else
+        rawWalue.as[String]
     }
 
   /**

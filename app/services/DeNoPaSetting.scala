@@ -6,7 +6,7 @@ import util.TypeInferenceProvider
 
 object DeNoPaSetting {
 
-  val nullAliases = List("na")
+  val nullAliases = List("na", "")
   val textBooleanValues = List("false", "true", "nein", "ja", "richtig", "falsch")
   val numBooleanValues = List("0", "1")
 

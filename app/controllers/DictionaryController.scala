@@ -26,13 +26,14 @@ abstract class DictionaryController (
   protected override val listViewColumns = Some(Seq("name", "fieldType", "label"))
 
   implicit val fieldTypeFormatter = EnumFormatter(FieldType)
+  implicit val mapFormatter = MapJsonFormatter.apply
 
   override protected val form = Form(
     mapping(
       "name" -> nonEmptyText,
       "fieldType" -> of[FieldType.Value],
       "isArray" -> boolean,
-      "numValues" -> optional(ignored(Map[String, String]())),
+      "numValues" -> optional(of[Map[String, String]]),
       "aliases" ->  seq(nonEmptyText),
       "label" ->  optional(nonEmptyText)
     )(Field.apply)(Field.unapply))
@@ -96,7 +97,7 @@ abstract class DictionaryController (
   ) : Future[ChartSpec] =
     dictionaryRepo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { fields =>
       val values = fields.map(fieldExtractor)
-      ChartSpec.pie(values, chartTitle, false, true)
+      ChartSpec.pie(values, None, chartTitle, false, true)
     }
 
   override protected val defaultCreateEntity =

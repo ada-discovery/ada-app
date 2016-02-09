@@ -3,12 +3,13 @@
     count : Long,
     actions : Html,
     table : Html,
-    charts : Html
+    charts : Html,
+    showSidebar : Boolean = true
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@main(Messages("overviewList.title", domainName)) {
+@main(Messages("overviewList.title", domainName), showSidebar) {
 
     <div class="page-header">
         <h3>

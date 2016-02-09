@@ -84,12 +84,12 @@ case class TypeInferenceProvider(
       FieldType.Boolean
     else if (isDate(valuesWoNull))
       FieldType.Date
-    else if (isEnum(valuesWoNull))
-      FieldType.Enum
     else if (isInt(valuesWoNull))
       FieldType.Integer
     else if (isDouble(valuesWoNull))
       FieldType.Double
+    else if (isEnum(valuesWoNull))
+      FieldType.Enum
     else
       FieldType.String
   }

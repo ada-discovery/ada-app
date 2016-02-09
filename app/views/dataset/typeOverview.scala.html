@@ -1,5 +1,6 @@
 @import views.html.layout.main
 @import views.html.chart._
+@import util.DataPoint
 
 @(
     title: String,
@@ -22,7 +23,7 @@
         "typeChart",
         true,
         false,
-        fieldTypeCounts.map{case (fieldType, count) => (fieldType.toString, count) }.toSeq
+        fieldTypeCounts.map{case (fieldType, count) => DataPoint(fieldType.toString, fieldType.toString, count) }.toSeq
     )
     </div>
 }

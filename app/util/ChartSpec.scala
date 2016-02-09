@@ -5,40 +5,16 @@ import collection.mutable.{Map => MMap}
 import _root_.util.JsonUtil._
 
 abstract class ChartSpec(title: String)
-case class PieChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[(String, Int)]) extends ChartSpec(title)
+
+case class PieChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[DataPoint]) extends ChartSpec(title)
 case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec(title)
 case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec(title)
 case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec(title)
-
 case class FieldChartSpec(fieldName : String, chartSpec : ChartSpec)
 
-object ChartSpec {
+case class DataPoint(key: String, label : String, value : Int)
 
-  /**
-    * Given the raw items and field name, all items per value are counted.
-    * Unique values will be used as labels for the pie chart.
-    * Calculated fraction of a field is used as pie chart slice sizes.
-    *
-    * @param items Raw items.
-    * @param fieldName Fields of iterest.
-    * @return PieChartSpec object for use in view.
-    */
-  def pieJson(
-    items: Traversable[JsObject],
-    fieldName: String,
-    title: String,
-    showLabels: Boolean,
-    showLegend: Boolean
-  ) : PieChartSpec = {
-    val values = items.map{item =>
-      val rawWalue = (item \ fieldName).get
-      if (rawWalue == JsNull)
-        "null"
-      else
-        rawWalue.as[String]
-    }
-    pie(values, title, showLabels, showLegend)
-  }
+object ChartSpec {
 
   /**
     * Given the values the counts/frequencies are calculated.
@@ -50,6 +26,7 @@ object ChartSpec {
     */
   def pie(
     values: Traversable[_],
+    keyLabelMap: Option[Map[String, String]] = None,
     title: String,
     showLabels: Boolean,
     showLegend: Boolean
@@ -59,7 +36,10 @@ object ChartSpec {
       val count = countMap.getOrElse(value.toString, 0)
       countMap.update(value.toString, count + 1)
     }
-    PieChartSpec(title, showLabels, showLegend, countMap.toSeq.sortBy(_._2))
+    val data = countMap.toSeq.sortBy(_._2).map{
+      case (key, count) => DataPoint(key, keyLabelMap.map(_.getOrElse(key, key)).getOrElse(key), count)
+    }
+    new PieChartSpec(title, showLabels, showLegend, data)
   }
 
   /**

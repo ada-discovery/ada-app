@@ -1,4 +1,4 @@
-@(title: String)(content: Html)(implicit request: RequestHeader)
+@(title: String, showSidebar : Boolean = true)(content: Html)(implicit request: RequestHeader)
 
 <!DOCTYPE html>
 
@@ -7,7 +7,7 @@
         <title>@title</title>
         <!-- Latest compiled and minified CSS -->
         <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootswatch-united", "bootstrap.min.css"))">
-
+        <link rel='stylesheet' type='text/css' href='https://fonts.googleapis.com/css?family=Oswald' >
         <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
 
         @* Optional theme *@
@@ -31,7 +31,7 @@
         <div class="container-fluid">
             <div class="row-fluid">
                 <div class="menu col-md-2">
-                    @sidebar(request)
+                    @{if(showSidebar) sidebar(request)}
                 </div>
                 <div class="col-md-8">
                     <div class="content">

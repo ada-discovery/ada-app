@@ -2,13 +2,16 @@ package runnables.luxpark
 
 import javax.inject.{Named, Inject}
 
-import models.{Field, Category}
+import models.redcap.Metadata
+import models.{FieldType, Field, Category}
+import models.redcap.{FieldType => RCFieldType}
 import persistence.{DictionaryFieldRepo, RepoSynchronizer}
 import persistence.RepoTypeRegistry._
 import play.api.libs.json.Json
 import runnables.{GuiceBuilderRunnable, InferDictionary}
 import services.{DeNoPaSetting, RedCapService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import util.JsonUtil
 
 import scala.concurrent.duration._
 
@@ -22,6 +25,9 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
   // TODO: Introduce a proper type inference setting for LuxPark Data
   override protected val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider
   override protected val uniqueCriteria = Json.obj("cdisc_dm_usubjd" -> "ND0001")
+
+  private val choicesDelimeter = "\\|"
+  private val choiceKeyValueDelimeter = ","
 
   override def run = {
     val dictionarySyncRepo = RepoSynchronizer(dictionaryRepo, timeout)
@@ -46,29 +52,47 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
     val futures = metadatas.par.map{ metadata =>
       val fieldName = metadata.field_name
       if (fieldNames.contains(fieldName)) {
-        println(fieldName)
+        println(fieldName + " " + metadata.field_type)
         val inferredType = Await.result(inferType(fieldName), timeout)
 
-        val fieldType = metadata.field_type match {
-          case radio => inferredType
-          case calc => inferredType
-          case text => inferredType
-          case checkbox => inferredType
-          case descriptive => inferredType
-          case yesno => inferredType
-          case dropdown => inferredType
-          case notes => inferredType
-          case file => inferredType
+        val (fieldType, numValues) = metadata.field_type match {
+          case RCFieldType.radio => (FieldType.Enum, getEnumValues(metadata))
+          case RCFieldType.checkbox => (FieldType.Enum, getEnumValues(metadata))
+          case RCFieldType.dropdown => (FieldType.Enum, getEnumValues(metadata))
+
+          case RCFieldType.calc => (inferredType, None)
+          case RCFieldType.text => (inferredType, None)
+          case RCFieldType.descriptive => (inferredType, None)
+          case RCFieldType.yesno => (inferredType, None)
+          case RCFieldType.notes => (inferredType, None)
+          case RCFieldType.file => (inferredType, None)
         }
 
         val category = nameCategoryMap.get(metadata.form_name).get
-        val field = Field(metadata.field_name, fieldType, false, None, Seq[String](), Some(metadata.field_label))
+        val field = Field(metadata.field_name, fieldType, false, numValues, Seq[String](), Some(metadata.field_label))
         dictionaryRepo.save(field)
       } else
         Future(Unit)
     }
     // to be safe, wait for each save call to finish
     futures.toList.foreach(future => Await.result(future, timeout))
+  }
+
+  private def getEnumValues(metadata: Metadata) : Option[Map[String, String]] = {
+    val choices = metadata.select_choices_or_calculations.trim
+
+    if (choices.nonEmpty) {
+      try {
+        val keyValueMap = choices.split(choicesDelimeter).map { choice =>
+          val keyValueString = choice.split(choiceKeyValueDelimeter, 2)
+          (JsonUtil.escapeKey(keyValueString(0).trim), keyValueString(1).trim)
+        }.toMap
+        Some(keyValueMap)
+      } catch {
+        case e: Exception => throw new IllegalArgumentException(s"RedCap Metadata '${metadata.field_name}' has non-parseable choices '${metadata.select_choices_or_calculations}'.")
+      }
+    } else
+      None
   }
 }
 

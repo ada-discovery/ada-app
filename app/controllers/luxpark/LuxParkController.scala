@@ -2,7 +2,7 @@ package controllers.luxpark
 
 import javax.inject.{Inject, Named}
 
-import controllers.{DataSetController, DataSetRouter, DictionaryRouter}
+import controllers.{DataSetController, StudyRouter}
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.DictionaryFieldRepo
 import services.DeNoPaTranSMARTMapping._
@@ -32,18 +32,5 @@ class LuxParkController @Inject()(
       records.toList, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
   }
 
-  override protected def router = DataSetRouter(
-    routes.LuxParkController.find,
-    routes.LuxParkController.find(),
-    routes.LuxParkController.overviewList,
-    routes.LuxParkController.overviewList(),
-    routes.LuxParkController.get,
-    routes.LuxParkController.exportAllRecordsAsCsv(),
-    routes.LuxParkController.exportAllRecordsAsJson(),
-    routes.LuxParkController.exportRecordsAsCsv(),
-    routes.LuxParkController.exportRecordsAsJson(),
-    routes.LuxParkController.exportTranSMARTDataFile(),
-    routes.LuxParkController.exportTranSMARTMappingFile(),
-    routes.LuxParkController.getScatterStats()
-  )
+  override protected def router = StudyRouter.LuxPark.dataSetRouter
 }

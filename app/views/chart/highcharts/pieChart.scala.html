@@ -1,6 +1,7 @@
 @import util.shorten
+@import util.DataPoint
 
-@(title : String, chartElementName : String, showLabels: Boolean, showLegend: Boolean, elements : Seq[(String, Any)])
+@(title : String, chartElementName : String, showLabels: Boolean, showLegend: Boolean, elements : Seq[DataPoint])
     <div id="@chartElementName" class="chart-holder"></div>
     <script type="text/javascript">
         $(function () {
@@ -45,8 +46,8 @@
                     name: "@title",
                     colorByPoint: true,
                     data: [
-                        @elements.map { case (name, value) =>
-                            {name : '@shorten(name)', y : @value},
+                        @elements.map { case DataPoint(key, label, value) =>
+                            {name : '@shorten(label)', y : @value, key: '@key'},
                         }
                     ]
                 }]
