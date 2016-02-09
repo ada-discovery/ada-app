@@ -19,6 +19,32 @@ body {
     box-shadow: 0 1px 2px rgba(0,0,0,.15);
 }
 
+.navbar-custom {
+    color: #FFFFFF;
+    background-color: dodgerblue;
+    border-color: dodgerblue;
+}
+
+.navbar .navbar-brand:focus,
+.navbar .navbar-brand:hover,
+.navbar .nav > li > a:hover,
+.navbar .nav > .open > a,
+.navbar .nav > .open > a:focus,
+.navbar .nav > .open > a:hover {
+    background-color: #005BC0;
+}
+
+.navbar .nav > .active > a,
+.navbar .nav > .active > a:focus,
+.navbar .nav > .active > a:hover {
+    background-color: #0074D9;
+}
+
+.navbar-brand {
+    font-family: 'Oswald', sans-serif !important;
+    font-weight: 700;
+}
+
 footer {
     padding-top: 10px;
     padding-bottom: 20px;
