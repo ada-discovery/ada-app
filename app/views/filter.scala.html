@@ -186,9 +186,13 @@
     function loadFieldNames() {
         if (!fieldNames) {
             @if(fieldNamesOrCall.isRight) {
-                $.get('@getFieldNamesUrl', function( data ) {
-                    fieldNames = data;
-                    populateFieldNames();
+                $.ajax({
+                    url: '@getFieldNamesUrl',
+                    success: function (data) {
+                        fieldNames = data;
+                        populateFieldNames();
+                    },
+                    async: false
                 });
             }
         }

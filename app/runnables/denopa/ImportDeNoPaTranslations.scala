@@ -11,20 +11,18 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.io.Source
 
-class DeNoPaTranslations @Inject() (
+class ImportDeNoPaTranslations @Inject()(
     configuration: Configuration,
-    translationRepo: TranslationRepo,
-    @Named("DeNoPaBaselineMetaTypeStatsRepo") baselineStatsRepo : MetaTypeStatsRepo,
-    @Named("DeNoPaFirstVisitMetaTypeStatsRepo") firstVisitStatsRepo : MetaTypeStatsRepo
+    translationRepo: TranslationRepo
   ) extends Runnable {
 
-  val foldername = "/home/peter/Projects/ncer-pd/project/translations/"
+  val folder = configuration.getString("denopa.translation.import.folder").get
 
-  val filename_de = foldername + "DeNoPa_dictionary_de"
-  val filename_en = foldername + "DeNoPa_dictionary_en-utf8"
+  val filename_de = folder + "DeNoPa_dictionary_de"
+  val filename_en = folder + "DeNoPa_dictionary_en-utf8"
 
-  val filename_extra_de = foldername + "DeNoPa_dictionary_extra_de-utf8"
-  val filename_extra_en = foldername + "DeNoPa_dictionary_extra_en-utf8"
+  val filename_extra_de = folder + "DeNoPa_dictionary_extra_de-utf8"
+  val filename_extra_en = folder + "DeNoPa_dictionary_extra_en-utf8"
 
   val timeout = 120000 millis
 
@@ -65,6 +63,6 @@ class DeNoPaTranslations @Inject() (
   }
 }
 
-object DeNoPaTranslations extends GuiceBuilderRunnable[DeNoPaTranslations] with App {
+object ImportDeNoPaTranslations extends GuiceBuilderRunnable[ImportDeNoPaTranslations] with App {
   run
 }

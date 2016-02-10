@@ -241,8 +241,10 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @return Inferred chart type.
     */
   private def getDataChartSpec(
-    criteria : Option[JsObject],
-    fieldName : String
+    criteria: Option[JsObject],
+    fieldName: String,
+    showLabels: Boolean = false,
+    showLegend: Boolean = true
   ) : Future[ChartSpec] =
     dictionaryRepo.get(fieldName).flatMap { foundField =>
       if (foundField.isDefined) {
@@ -251,15 +253,15 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
         repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { items =>
           foundField.get.fieldType match {
-            case FieldType.String => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, false, true)
-            case FieldType.Enum => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, false, true)
+            case FieldType.String => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
+            case FieldType.Enum => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
             case FieldType.Double => ChartSpec.column(items, fieldName, chartTitle, 20)
             case FieldType.Integer => ChartSpec.column(items, fieldName, chartTitle, 20)
-            case _ => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, false, true)
+            case _ => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
           }
         }
       } else
-        Future(ChartSpec.pie(Seq(), None, fieldName, false, true))
+        Future(ChartSpec.pie(Seq(), None, fieldName, showLabels, showLegend))
     }
 
   private def getStringValues(
@@ -318,7 +320,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
   def getDistribution(fieldName: String) = Action.async { implicit request =>
     val fieldsFuture = dictionaryRepo.find(None, Some(Seq(AscSort("name"))))
-    val chartSpecFuture = getDataChartSpec(None, fieldName)
+    val chartSpecFuture = getDataChartSpec(None, fieldName, true, false)
     chartSpecFuture.zip(fieldsFuture).map{ case (chartSpec, fields) =>
       implicit val msg = messagesApi.preferred(request)
       val fieldNameLabels = fields.map(field => (field.name, field.label)).toSeq
