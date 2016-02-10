@@ -38,4 +38,5 @@ libraryDependencies ++= Seq(
 
 routesGenerator := InjectedRoutesGenerator
 
-pipelineStages := Seq(rjs)
+// RequireJS
+// pipelineStages := Seq(rjs)
