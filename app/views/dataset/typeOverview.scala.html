@@ -3,17 +3,17 @@
 @import util.DataPoint
 
 @(
-    title: String,
+    domainName: String,
     fieldTypeCounts : Traversable[(FieldType.Value, Int)]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@main(title) {
+@main(Messages("typeOverview.title", domainName)) {
 
     <div class="page-header">
         <h3>
-            @Messages(title)
+            @Messages("typeOverview.title", domainName)
         </h3>
     </div>
 

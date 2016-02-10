@@ -15,6 +15,7 @@
                     <ul class="list-group">
                         @listGroupItem("Overview", Some(studyRouter.dataSetRouter.plainOverviewList))
                         @listGroupItem("Dictionary", Some(studyRouter.dictionaryRouter.plainList))
+                        @listGroupItem("Distribution", Some(studyRouter.dataSetRouter.getDistribution))
                         @listGroupItem("Scatter Analysis", Some(studyRouter.dataSetRouter.getScatterStats))
                     </ul>
                 </div>

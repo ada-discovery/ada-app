@@ -14,7 +14,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-8">
-            @filter(page.filter, plainFindCall)
+            @filter(page.filter, plainFindCall, Left(Seq("attributeName", "intRatio", "longRatio", "floatRatio", "doubleRatio", "nullRatio")))
         </div>
     </div>
 }

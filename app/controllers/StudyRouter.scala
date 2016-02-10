@@ -22,7 +22,9 @@ object StudyRouter extends Enumeration {
       luxparkroutes.LuxParkController.exportRecordsAsJson(),
       luxparkroutes.LuxParkController.exportTranSMARTDataFile(),
       luxparkroutes.LuxParkController.exportTranSMARTMappingFile(),
-      luxparkroutes.LuxParkController.getScatterStats()
+      luxparkroutes.LuxParkController.getScatterStats(),
+      luxparkroutes.LuxParkController.getDistribution(),
+      luxparkroutes.LuxParkDictionaryController.getFieldNames()
     ),
     DictionaryRouter(
       luxparkroutes.LuxParkDictionaryController.overviewList,
@@ -48,7 +50,9 @@ object StudyRouter extends Enumeration {
       denoparoutes.DeNoPaCuratedBaselineController.exportRecordsAsJson(),
       denoparoutes.DeNoPaCuratedBaselineController.exportTranSMARTDataFile(),
       denoparoutes.DeNoPaCuratedBaselineController.exportTranSMARTMappingFile(),
-      denoparoutes.DeNoPaCuratedBaselineController.getScatterStats()
+      denoparoutes.DeNoPaCuratedBaselineController.getScatterStats(),
+      denoparoutes.DeNoPaCuratedBaselineController.getDistribution(),
+      denoparoutes.DeNoPaCuratedBaselineDictionaryController.getFieldNames()
     ),
     DictionaryRouter(
       denoparoutes.DeNoPaCuratedBaselineDictionaryController.overviewList,
@@ -74,7 +78,9 @@ object StudyRouter extends Enumeration {
       denoparoutes.DeNoPaCuratedFirstVisitController.exportRecordsAsJson(),
       denoparoutes.DeNoPaCuratedFirstVisitController.exportTranSMARTDataFile(),
       denoparoutes.DeNoPaCuratedFirstVisitController.exportTranSMARTMappingFile(),
-      denoparoutes.DeNoPaCuratedFirstVisitController.getScatterStats()
+      denoparoutes.DeNoPaCuratedFirstVisitController.getScatterStats(),
+      denoparoutes.DeNoPaCuratedFirstVisitController.getDistribution(),
+      denoparoutes.DeNoPaCuratedFirstVisitDictionaryController.getFieldNames()
     ),
     DictionaryRouter(
       denoparoutes.DeNoPaCuratedFirstVisitDictionaryController.overviewList,
@@ -100,7 +106,9 @@ object StudyRouter extends Enumeration {
       denoparoutes.DeNoPaBaselineController.exportRecordsAsJson(),
       denoparoutes.DeNoPaBaselineController.exportTranSMARTDataFile(),
       denoparoutes.DeNoPaBaselineController.exportTranSMARTMappingFile(),
-      denoparoutes.DeNoPaBaselineController.getScatterStats()
+      denoparoutes.DeNoPaBaselineController.getScatterStats(),
+      denoparoutes.DeNoPaBaselineController.getDistribution(),
+      denoparoutes.DeNoPaBaselineDictionaryController.getFieldNames()
     ),
     DictionaryRouter(
       denoparoutes.DeNoPaBaselineDictionaryController.overviewList,
@@ -126,7 +134,9 @@ object StudyRouter extends Enumeration {
       denoparoutes.DeNoPaFirstVisitController.exportRecordsAsJson(),
       denoparoutes.DeNoPaFirstVisitController.exportTranSMARTDataFile(),
       denoparoutes.DeNoPaFirstVisitController.exportTranSMARTMappingFile(),
-      denoparoutes.DeNoPaFirstVisitController.getScatterStats()
+      denoparoutes.DeNoPaFirstVisitController.getScatterStats(),
+      denoparoutes.DeNoPaFirstVisitController.getDistribution(),
+      denoparoutes.DeNoPaFirstVisitDictionaryController.getFieldNames()
     ),
     DictionaryRouter(
       denoparoutes.DeNoPaFirstVisitDictionaryController.overviewList,

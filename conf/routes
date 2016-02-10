@@ -58,13 +58,14 @@ GET         /studies/denopa/baseline/fieldTypes                               co
 GET         /studies/denopa/baseline/overview                                 controllers.denopa.DeNoPaBaselineController.overview
 GET         /studies/denopa/baseline/overviewList                             controllers.denopa.DeNoPaBaselineController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/baseline/getScatterStats                          controllers.denopa.DeNoPaBaselineController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "a_AESD_I_mean")
+GET         /studies/denopa/baseline/getDistribution                          controllers.denopa.DeNoPaBaselineController.getDistribution(fieldName: String ?= "a_Alter")
 
 GET         /studies/denopa/baseline/dictionary                               controllers.denopa.DeNoPaBaselineDictionaryController.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/baseline/dictionary/get/:name                     controllers.denopa.DeNoPaBaselineDictionaryController.get(name : String)
 POST        /studies/denopa/baseline/dictionary/save                          controllers.denopa.DeNoPaBaselineDictionaryController.save
 GET         /studies/denopa/baseline/dictionary/:name                         controllers.denopa.DeNoPaBaselineDictionaryController.edit(name : String)
 POST        /studies/denopa/baseline/dictionary/:name                         controllers.denopa.DeNoPaBaselineDictionaryController.update(name : String)
-
+GET         /studies/denopa/baseline/fieldNames                               controllers.denopa.DeNoPaBaselineDictionaryController.getFieldNames
 
 
 
@@ -80,13 +81,14 @@ GET         /studies/denopa/firstvisit/fieldTypes                             co
 GET         /studies/denopa/firstvisit/overview                               controllers.denopa.DeNoPaFirstVisitController.overview
 GET         /studies/denopa/firstvisit/overviewList                           controllers.denopa.DeNoPaFirstVisitController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/firstvisit/getScatterStats                        controllers.denopa.DeNoPaFirstVisitController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "b_AESD_S_sum")
+GET         /studies/denopa/firstvisit/getDistribution                        controllers.denopa.DeNoPaFirstVisitController.getDistribution(fieldName: String ?= "a_Alter")
 
 GET         /studies/denopa/firstvisit/dictionary                             controllers.denopa.DeNoPaFirstVisitDictionaryController.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/firstvisit/dictionary/get/:name                   controllers.denopa.DeNoPaFirstVisitDictionaryController.get(name : String)
 POST        /studies/denopa/firstvisit/dictionary/save                        controllers.denopa.DeNoPaFirstVisitDictionaryController.save
 GET         /studies/denopa/firstvisit/dictionary/:name                       controllers.denopa.DeNoPaFirstVisitDictionaryController.edit(name : String)
 POST        /studies/denopa/firstvisit/dictionary/:name                       controllers.denopa.DeNoPaFirstVisitDictionaryController.update(name : String)
-
+GET         /studies/denopa/firstvisit/fieldNames                             controllers.denopa.DeNoPaFirstVisitDictionaryController.getFieldNames
 
 
 
@@ -102,13 +104,14 @@ GET         /studies/denopa/curatedbaseline/fieldTypes                        co
 GET         /studies/denopa/curatedbaseline/overview                          controllers.denopa.DeNoPaCuratedBaselineController.overview
 GET         /studies/denopa/curatedbaseline/overviewList                      controllers.denopa.DeNoPaCuratedBaselineController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/curatedbaseline/getScatterStats                   controllers.denopa.DeNoPaCuratedBaselineController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "a_AESD_I_mean")
+GET         /studies/denopa/curatedbaseline/getDistribution                   controllers.denopa.DeNoPaCuratedBaselineController.getDistribution(fieldName: String ?= "a_Alter")
 
 GET         /studies/denopa/curatedbaseline/dictionary                        controllers.denopa.DeNoPaCuratedBaselineDictionaryController.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/curatedbaseline/dictionary/get/:name              controllers.denopa.DeNoPaCuratedBaselineDictionaryController.get(name : String)
 POST        /studies/denopa/curatedbaseline/dictionary/save                   controllers.denopa.DeNoPaCuratedBaselineDictionaryController.save
 GET         /studies/denopa/curatedbaseline/dictionary/:name                  controllers.denopa.DeNoPaCuratedBaselineDictionaryController.edit(name : String)
 POST        /studies/denopa/curatedbaseline/dictionary/:name                  controllers.denopa.DeNoPaCuratedBaselineDictionaryController.update(name : String)
-
+GET         /studies/denopa/curatedbaseline/fieldNames                        controllers.denopa.DeNoPaCuratedBaselineDictionaryController.getFieldNames
 
 
 
@@ -124,13 +127,14 @@ GET         /studies/denopa/curatedfirstvisit/fieldTypes                      co
 GET         /studies/denopa/curatedfirstvisit/overview                        controllers.denopa.DeNoPaCuratedFirstVisitController.overview
 GET         /studies/denopa/curatedfirstvisit/overviewList                    controllers.denopa.DeNoPaCuratedFirstVisitController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/curatedfirstvisit/getScatterStats                 controllers.denopa.DeNoPaCuratedFirstVisitController.getScatterStats(xField: String ?= "a_Alter", yField : String ?= "b_AESD_S_sum")
+GET         /studies/denopa/curatedfirstvisit/getDistribution                 controllers.denopa.DeNoPaCuratedFirstVisitController.getDistribution(fieldName: String ?= "a_Alter")
 
 GET         /studies/denopa/curatedfirstvisit/dictionary                      controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/denopa/curatedfirstvisit/dictionary/get/:name            controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.get(name : String)
 POST        /studies/denopa/curatedfirstvisit/dictionary/save                 controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.save
 GET         /studies/denopa/curatedfirstvisit/dictionary/:name                controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.edit(name : String)
 POST        /studies/denopa/curatedfirstvisit/dictionary/:name                controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.update(name : String)
-
+GET         /studies/denopa/curatedfirstvisit/fieldNames                      controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.getFieldNames
 
 
 #TODO: to remove
@@ -140,7 +144,7 @@ GET         /denopa/baseline/metastats/get/:id                                co
 GET         /denopa/firstvisit/metastats                                      controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /denopa/firstvisit/metastats/get/:id                              controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.get(id: BSONObjectID)
 
-# LuxPark (New)
+# LuxPark
 
 GET         /studies/luxpark/records                                          controllers.luxpark.LuxParkController.find(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/luxpark/records/get/:id                                  controllers.luxpark.LuxParkController.get(id: BSONObjectID)
@@ -154,13 +158,14 @@ GET         /studies/luxpark/fieldTypes                                       co
 GET         /studies/luxpark/overview                                         controllers.luxpark.LuxParkController.overview
 GET         /studies/luxpark/overviewList                                     controllers.luxpark.LuxParkController.overviewList(p: Int ?= 0, s: String ?= "Line_Nr", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/luxpark/getScatterStats                                  controllers.luxpark.LuxParkController.getScatterStats(xField: String ?= "digitsf_score", yField : String ?= "bentons_score")
+GET         /studies/luxpark/getDistribution                                  controllers.luxpark.LuxParkController.getDistribution(fieldName: String ?= "digitsf_score")
 
 GET         /studies/luxpark/dictionary                                       controllers.luxpark.LuxParkDictionaryController.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/luxpark/dictionary/get/:name                             controllers.luxpark.LuxParkDictionaryController.get(name : String)
 POST        /studies/luxpark/dictionary/save                                  controllers.luxpark.LuxParkDictionaryController.save
 GET         /studies/luxpark/dictionary/:name                                 controllers.luxpark.LuxParkDictionaryController.edit(name : String)
 POST        /studies/luxpark/dictionary/:name                                 controllers.luxpark.LuxParkDictionaryController.update(name : String)
-
+GET         /studies/luxpark/fieldNames                                       controllers.luxpark.LuxParkDictionaryController.getFieldNames
 
 
 # Map static resources from the /public folder to the /assets URL path

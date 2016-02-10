@@ -1,0 +1,59 @@
+@import util.shorten
+@import views.html.layout.main
+@import views.html.dataset.chartPanel
+@import util.ChartSpec
+
+@(
+    domainName: String,
+    fieldName : String,
+    chartSpec: ChartSpec,
+    distributionCall : Call,
+    fields: Seq[(String, Option[String])]
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@label(key: String, value: Option[String]) = {
+    @shorten(value.map(_ + " : " + key).getOrElse(key), 80)
+}
+
+@option(key : String, value : Option[String]) = {
+    <option value="@key" @if(fieldName == key){selected="selected"}>@label(key, value)</option>
+}
+
+@actions(call : Call) = {
+    @helper.form(action=call, 'role -> "search", 'id -> "myForm") {
+        <div class="row">
+            <div class="col-md-8">
+                <div class="row">
+                    <select name="fieldName" id="fieldName" class="input-lg" value="@fieldName">
+                        @fields.map( field => option(field._1, field._2) )
+                    </select>
+                </div>
+            </div>
+        </div>
+        <script>
+            $('#fieldName').change(function() {
+                $('#myForm').submit();
+            });
+        </script>
+    }
+}
+
+@main(Messages("distribution.title", domainName)) {
+
+    <div class="page-header">
+        <h3>
+            @Messages("distribution.title", domainName)
+        </h3>
+    </div>
+
+    @flashMessages()
+
+    <div id="actions">
+        @actions(distributionCall)
+    </div>
+    <br/>
+    <br/>
+    @chartPanel(Seq(chartSpec), 12)
+}

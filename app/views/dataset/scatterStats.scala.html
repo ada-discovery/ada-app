@@ -1,14 +1,28 @@
 @import util.BasicStats
+@import util.shorten
 @import views.html.layout.main
 
-@(currentXField : String, currentYField : String, getScatterStatsCall : Call, numericFieldNames : Seq[String], stats : Seq[(Any, Any)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(
+    domainName: String,
+    xField: String,
+    yField: String,
+    getScatterStatsCall: Call,
+    numericFields: Seq[(String, Option[String])],
+    stats: Seq[(Any, Any)]
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
 
-@optionX(key : String, value : String) = {
-    <option value="@key" @if(currentXField == key){selected="selected"}>@value</option>
+@label(key: String, value: Option[String]) = {
+    @shorten(value.map(_ + " : " + key).getOrElse(key), 80)
 }
 
-@optionY(key : String, value : String) = {
-    <option value="@key" @if(currentYField == key){selected="selected"}>@value</option>
+@optionX(key : String, value : Option[String]) = {
+    <option value="@key" @if(xField == key){selected="selected"}>@label(key, value)</option>
+}
+
+@optionY(key : String, value : Option[String]) = {
+    <option value="@key" @if(yField == key){selected="selected"}>@label(key, value)</option>
 }
 
 @actions(call : Call) = {
@@ -16,16 +30,16 @@
         <div class="row">
             <div class="col-md-8">
                 <div class="row">
-                    <select name="xField" id="xField" class="input-lg" value="@currentXField">
-                        @numericFieldNames.map( fieldName => optionX(fieldName, fieldName) )
+                    <select name="xField" id="xField" class="input-lg" value="@xField">
+                        @numericFields.map( field => optionX(field._1, field._2) )
                     </select>
                 </div>
                 <div class="row" align="center">
-                vs.
+                    vs.
                 </div>
                 <div class="row">
-                    <select name="yField" id="yField" class="input-lg" value="@currentYField">
-                        @numericFieldNames.map( fieldName => optionY(fieldName, fieldName) )
+                    <select name="yField" id="yField" class="input-lg" value="@yField">
+                        @numericFields.map( field => optionY(field._1, field._2) )
                     </select>
                 </div>
             </div>
@@ -50,26 +64,27 @@
     }
 }
 
-@main("Scatter Analysis") {
+@main(Messages("scatterAnalysis.title", domainName)) {
 
-        <div class="page-header">
-            <h3>
-                Scatter Analysis
-            </h3>
-        </div>
+    <div class="page-header">
+        <h3>
+            @Messages("scatterAnalysis.title", domainName)
+        </h3>
+    </div>
 
-        @flashMessages()
+    @flashMessages()
 
-        <div id="actions">
-            @actions(getScatterStatsCall)
-        </div>
-        @views.html.chart.highcharts.scatterChart(
-            "Comparison",
-             "scatterChart",
-             currentXField.capitalize,
-             currentYField.capitalize,
-            Seq(
-                ("All", "rgba(223, 83, 83, .5)", stats.map(pair => Seq(pair._1, pair._2)))
-            )
+    <div id="actions">
+        @actions(getScatterStatsCall)
+    </div>
+
+    @views.html.chart.highcharts.scatterChart(
+        "Comparison",
+        "scatterChart",
+        xField.capitalize,
+        yField.capitalize,
+        Seq(
+            ("All", "rgba(223, 83, 83, .5)", stats.map(pair => Seq(pair._1, pair._2)))
         )
+    )
 }

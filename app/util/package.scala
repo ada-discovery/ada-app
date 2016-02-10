@@ -19,8 +19,8 @@ package object util {
       case None => coreUrl.equals(url)
     }
 
-  def shorten(string : String) =
-    if (string.length > 25) {string.substring(0, 23) + ".."} else string
+  def shorten(string : String, length: Int = 25) =
+    if (string.length > length) string.substring(0, length) + ".." else string
 
   /**
    * Helper function for conversion of input string to camel case.

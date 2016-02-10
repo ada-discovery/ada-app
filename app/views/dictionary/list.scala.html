@@ -17,7 +17,7 @@
 
 @actions = {
     <div class="row">
-        @filter(page.filter, router.plainList)
+        @filter(page.filter, router.plainList, Left(Seq("name", "fieldType", "label", "isArray")))
     </div>
 }
 

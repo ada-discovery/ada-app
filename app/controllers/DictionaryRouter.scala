@@ -16,9 +16,9 @@ import util.FilterSpec
   * @param update
   */
 case class DictionaryRouter(
-  list : (Int, String, FilterSpec) => Call,
-  plainList : Call,
-  get : String => Call,
-  save : Call,
-  update : String => Call
+  list: (Int, String, FilterSpec) => Call,
+  plainList: Call,
+  get: String => Call,
+  save: Call,
+  update: String => Call
 )

@@ -20,7 +20,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(page.filter, router.plainList)
+            @filter(page.filter, router.plainList, Right(router.fieldNames))
         </div>
         <div class="col-md-2">
             @exportDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)

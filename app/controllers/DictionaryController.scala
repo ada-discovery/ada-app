@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 
 import models._
 import models.Dictionary._
-import persistence.DictionaryFieldRepo
+import persistence.{DescSort, AscSort, DictionaryFieldRepo}
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, optional, seq, nonEmptyText, of, boolean}
@@ -18,8 +18,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.Future
 
 abstract class DictionaryController (
-    dictionaryRepo: DictionaryFieldRepo
-  ) extends CrudController[Field, String](dictionaryRepo) {
+    repo: DictionaryFieldRepo
+  ) extends CrudController[Field, String](repo) {
 
   protected def dataSetName : String
 
@@ -94,10 +94,15 @@ abstract class DictionaryController (
     fieldName : String,
     fieldExtractor : Field => Any
   ) : Future[ChartSpec] =
-    dictionaryRepo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { fields =>
+    repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { fields =>
       val values = fields.map(fieldExtractor)
       ChartSpec.pie(values, None, chartTitle, false, true)
     }
+
+  def getFieldNames = Action.async { implicit request =>
+    val futureFieldNames = repo.find(None, Some(Seq(AscSort("name")))).map(_.map(_.name))
+    futureFieldNames.map(fieldNames => Ok(Json.toJson(fieldNames)))
+  }
 
   override protected val defaultCreateEntity =
     new Field("", FieldType.Null)

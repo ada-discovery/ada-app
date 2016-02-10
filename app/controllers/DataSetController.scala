@@ -6,11 +6,12 @@ import javax.inject.Inject
 import _root_.util.{FilterSpec, JsonUtil, ChartSpec, FieldChartSpec}
 import org.apache.commons.lang3.StringEscapeUtils
 import models.{Page, FieldType, Field}
-import persistence.DictionaryFieldRepo
-import play.api.Logger
+import persistence.{AscSort, DictionaryFieldRepo}
+import play.api.routing.Router
+import play.api.{Routes, Logger}
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{AnyContent, RequestHeader, Action}
+import play.api.mvc.{Action, AnyContent, RequestHeader}
 import play.api.Play.current
 import play.twirl.api.Html
 import util.WebExportUtil.stringToFile
@@ -60,6 +61,8 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
   protected lazy val overviewFieldNames =
     current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
+
+  private val jsonNumericTypes = Json.arr(FieldType.Double.toString, FieldType.Integer.toString)
 
   /**
     * Table displaying given paginated content. Generally used to display fields of the datasets.
@@ -185,7 +188,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
 
       implicit val msg = messagesApi.preferred(request)
       render {
-        case Accepts.Html() => Ok(views.html.dataset.typeOverview(dataSetName + " Fields", (FieldType.values, fieldTypeCounts).zipped.toList))
+        case Accepts.Html() => Ok(views.html.dataset.typeOverview(dataSetName, (FieldType.values, fieldTypeCounts).zipped.toList))
         case Accepts.Json() => Ok(JsObject(
           (FieldType.values, fieldTypeCounts).zipped.map{ case (fieldType, count) =>
             (fieldType.toString, JsNumber(count))
@@ -223,7 +226,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
         }
     }}.recover {
       case t: TimeoutException =>
-        Logger.error("Problem found in the list process")
+        Logger.error("Problem found in the overviewList process")
         InternalServerError(t.getMessage)
     }
   }
@@ -282,18 +285,15 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param yFieldName Name of field to be used for y coordinates.
     * @return View with scatterplot and selection option for different xFieldName and yFieldName.
     */
-  def getScatterStats(xFieldName : String, yFieldName : String): Action[AnyContent] = Action.async { implicit request =>
-    val fieldsFuture = dictionaryRepo.find()
+  def getScatterStats(xFieldName : String, yFieldName : String) = Action.async { implicit request =>
+    val numericFieldsFuture = dictionaryRepo.find(Some(Json.obj("fieldType" -> Json.obj("$in" -> jsonNumericTypes))))
     val xFieldFuture = dictionaryRepo.get(xFieldName)
     val yFieldFuture = dictionaryRepo.get(yFieldName)
 
-    fieldsFuture.zip(xFieldFuture).zip(yFieldFuture).flatMap{ case ((fields, xField), yField) =>
+    numericFieldsFuture.zip(xFieldFuture).zip(yFieldFuture).flatMap{ case ((numericFields, xField), yField) =>
       implicit val msg = messagesApi.preferred(request)
 
-      val numericFields = fields.filter{field =>
-        field.fieldType == FieldType.Double || field.fieldType == FieldType.Integer
-      }
-      val numericFieldNames = numericFields.map(_.name).toSeq.sorted
+      val numericFieldNameLabels = numericFields.map(field => (field.name, field.label)).toSeq.sorted
       val valuesFuture : Future[Seq[(Any, Any)]] = if (xField.isDefined && yField.isDefined) {
         val futureXItems = repo.find(None, None, Some(Json.obj(xFieldName -> 1)))
         val futureYItems = repo.find(None, None, Some(Json.obj(yFieldName -> 1)))
@@ -309,10 +309,28 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       valuesFuture.map( values =>
 
         render {
-          case Accepts.Html() => Ok(dataset.scatterStats(xFieldName, yFieldName, router.getScatterStats, numericFieldNames, values))
+          case Accepts.Html() => Ok(dataset.scatterStats(dataSetName, xFieldName, yFieldName, router.getScatterStats, numericFieldNameLabels, values))
           case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
         }
       )
+    }
+  }
+
+  def getDistribution(fieldName: String) = Action.async { implicit request =>
+    val fieldsFuture = dictionaryRepo.find(None, Some(Seq(AscSort("name"))))
+    val chartSpecFuture = getDataChartSpec(None, fieldName)
+    chartSpecFuture.zip(fieldsFuture).map{ case (chartSpec, fields) =>
+      implicit val msg = messagesApi.preferred(request)
+      val fieldNameLabels = fields.map(field => (field.name, field.label)).toSeq
+
+      render {
+        case Accepts.Html() => Ok(dataset.distribution(dataSetName, fieldName, chartSpec, router.getDistribution, fieldNameLabels))
+        case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the distribution process")
+        InternalServerError(t.getMessage)
     }
   }
 

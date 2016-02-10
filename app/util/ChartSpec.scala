@@ -63,9 +63,9 @@ object ChartSpec {
   ) : ColumnChartSpec = {
     val values = project(items.toList, fieldName).map(toDouble).flatten
     val data = if (values.nonEmpty) {
-      val min = if (explMin.isDefined) explMin.get else values.min
-      val max = if (explMax.isDefined) explMax.get else values.max
-      val stepSize = (max - min) / columnCount
+      val min: BigDecimal = if (explMin.isDefined) explMin.get else values.min
+      val max: BigDecimal = if (explMax.isDefined) explMax.get else values.max
+      val stepSize: BigDecimal = (max - min) / columnCount
 
       for (step <- 0 until columnCount) yield {
         val left = min + step * stepSize

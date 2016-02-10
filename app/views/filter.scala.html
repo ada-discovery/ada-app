@@ -1,81 +1,99 @@
 @import util.FilterSpec
 @import util.ConditionType
 @import play.api.libs.json.Json
-@(filter: FilterSpec, submitCall : Call)
 
-    <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                    <h4 class="modal-title">Add/Edit Condition</h4>
-                </div>
-                <form onsubmit="return false;">
-                    <div class="modal-body">
-                        <input id="conditionIndex" type="hidden" value=""/>
-                        <div class="row">
-                            <div class="col-md-4">
-                                Field Name
-                            </div>
-                            <div class="col-md-2">
-                                Operator
-                            </div>
-                            <div class="col-md-6">
-                                Condition
-                            </div>
-                        </div>
-                        <div class="row">
-                            <input id="fieldName" class="col-md-4"/>
-                            <select id="conditionType" class="col-md-2">
-                                @ConditionType.values.map{ conditionType =>
-                                    <option value="@conditionType">@conditionType</option>
-                                }
-                            </select>
-                            <input id="condition" class="col-md-6"/>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary" data-dismiss="modal" onclick="addEditConditionFinished();">Confirm</button>
-                    </div>
-                </form>
+@(filter: FilterSpec, submitCall: Call, fieldNamesOrCall: Either[Traversable[String], Call])
+
+<div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Add/Edit Condition</h4>
             </div>
+            <form onsubmit="return false;">
+                <div class="modal-body">
+                    <input id="conditionIndex" type="hidden" value=""/>
+                    <div class="row">
+                        <div class="col-md-4">
+                            Field Name
+                        </div>
+                        <div class="col-md-2">
+                            Operator
+                        </div>
+                        <div class="col-md-6">
+                            Condition
+                        </div>
+                    </div>
+                    <div class="row">
+                        <select id="fieldName" class="col-md-4">
+                        </select>
+                        <select id="conditionType" class="col-md-2">
+                            @ConditionType.values.map{ conditionType =>
+                                <option value="@conditionType">@conditionType</option>
+                            }
+                        </select>
+                        <input id="condition" class="col-md-6"/>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" data-dismiss="modal" onclick="addEditConditionFinished();">Confirm</button>
+                </div>
+            </form>
         </div>
     </div>
-    <ul class="list-inline">
-        <li>
-            Filter:
+</div>
+<ul class="list-inline">
+    <li>
+         Filter:
+    </li>
+    @filter.conditions.zipWithIndex.map { case (condition, index) =>
+        <li id="condition-full@index" class="condition-full">
+            <h4>
+                <span class="condition">
+                    <span id="fieldName" class="label label-primary">@condition.fieldName</span>
+                    <span id="conditionType">@condition.conditionType</span>
+                    <span id="condition" class="label label-primary">@condition.condition</span>
+                </span>
+                <span class="condition-buttons" style="display: none">
+                    <button type="button" class="btn btn-sm btn-default" onclick="showEditConditionModal('@index');">
+                        <span class="glyphicon glyphicon-pencil"></span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-default" onclick="deleteCondition('@index');">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </span>
+            </h4>
         </li>
-        @filter.conditions.zipWithIndex.map { case (condition, index) =>
-            <li id="condition-full@index" class="condition-full">
-                <h4>
-                    <span class="condition">
-                        <span id="fieldName" class="label label-primary">@condition.fieldName</span>
-                        <span id="conditionType">@condition.conditionType</span>
-                        <span id="condition" class="label label-primary">@condition.condition</span>
-                    </span>
-                    <span class="condition-buttons" style="display: none">
-                        <button type="button" class="btn btn-sm btn-default" onclick="showEditConditionModal('@index');">
-                            <span class="glyphicon glyphicon-pencil"></span>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-default" onclick="deleteCondition('@index');">
-                            <span class="glyphicon glyphicon-trash"></span>
-                        </button>
-                    </span>
-                </h4>
-            </li>
-        }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
-        <li>
-            <button type="button" class="btn btn-sm btn-default" onclick="showAddConditionModal();">
-                <span class="glyphicon glyphicon-plus"></span>
-            </button>
-        </li>
-    </ul>
+    }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
+    <li>
+        <button type="button" class="btn btn-sm btn-default" onclick="showAddConditionModal();">
+            <span class="glyphicon glyphicon-plus"></span>
+        </button>
+    </li>
+</ul>
 
+@fieldNamesAsString = @{
+    fieldNamesOrCall match {case Left(strings) =>
+        Html(strings.map(s => "\"" + s + "\"").mkString(","))
+    }
+}
+
+@getFieldNamesUrl = @{
+    fieldNamesOrCall match {case Right(call) => call.url}
+}
 
 <script type="text/javascript">
     var jsFilter = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}');
     var conditionFields = ["fieldName", "conditionType", "condition"];
+    var fieldNames = @if(fieldNamesOrCall.isLeft) {
+        [@fieldNamesAsString]
+    } else {
+        null
+    }
+
+    populateFieldNames();
 
     $(".condition-full").hover(null, function() {
         var buttons = $(this).find(".condition-buttons").first();
@@ -88,6 +106,7 @@
     });
 
     function showAddConditionModal() {
+        loadFieldNames();
         $("#addEditConditionModal").find("#conditionIndex").first().val("");
 
         var condition = {conditionType : "="};
@@ -97,6 +116,7 @@
     }
 
     function showEditConditionModal(index) {
+        loadFieldNames();
         $("#addEditConditionModal").find("#conditionIndex").first().val(index);
 
         var condition = jsFilter.conditions[index]
@@ -161,6 +181,26 @@
         $.each(fields, function( i, field ) {
             $("#condition-full" + index).find("#" + field).first().html(condition[field]);
         })
+    }
+
+    function loadFieldNames() {
+        if (!fieldNames) {
+            @if(fieldNamesOrCall.isRight) {
+                $.get('@getFieldNamesUrl', function( data ) {
+                    fieldNames = data;
+                    populateFieldNames();
+                });
+            }
+        }
+    }
+
+    function populateFieldNames() {
+        if (fieldNames) {
+            $('#fieldName').html("");
+            $.each(fieldNames, function(key, val) {
+                $('#fieldName').append($('<option>', { value : val }).text(val));
+            });
+        }
     }
 
     // submit synchronously to a provided URL (action) and parameters.

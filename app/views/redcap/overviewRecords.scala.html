@@ -1,4 +1,4 @@
-@import views.html.layout.main
+@import views.html.layout
 
 @(
     title: String,
@@ -7,7 +7,9 @@
     implicit msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@main(title, false) {
+@layout.main(title, false) {
+
+    @layout.importPlotly()
 
     <div class="page-header">
         <h3>

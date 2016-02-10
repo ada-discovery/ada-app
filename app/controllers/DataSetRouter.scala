@@ -30,5 +30,7 @@ case class DataSetRouter(
   exportJson: Call,
   exportTranSMARTData: Call,
   exportTranSMARTMapping: Call,
-  getScatterStats: Call
+  getScatterStats: Call,
+  getDistribution: Call,
+  fieldNames: Call
 )

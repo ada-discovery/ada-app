@@ -6,7 +6,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-8">
-            @filter(page.filter, routes.TranslationController.find())
+            @filter(page.filter, routes.TranslationController.find(), Left(Seq("original", "translated")))
         </div>
         <div class="col-md-4">
             <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.TranslationController.create()">Add a new translation</a>
