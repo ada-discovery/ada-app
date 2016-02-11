@@ -42,6 +42,10 @@ body {
     background-color: #0074D9;
 }
 
+.list-group-item.active > a {
+   color: #FFFFFF;
+}
+
 .navbar-brand {
     font-family: 'Oswald', sans-serif !important;
     font-weight: 700;

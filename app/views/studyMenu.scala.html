@@ -13,10 +13,10 @@
                 </div>
                 <div id="collapse@panelId" class="panel-collapse collapse in">
                     <ul class="list-group">
-                        @listGroupItem("Overview", Some(studyRouter.dataSetRouter.plainOverviewList))
-                        @listGroupItem("Dictionary", Some(studyRouter.dictionaryRouter.plainList))
-                        @listGroupItem("Distribution", Some(studyRouter.dataSetRouter.getDistribution))
-                        @listGroupItem("Scatter Analysis", Some(studyRouter.dataSetRouter.getScatterStats))
+                        @listGroupItem(studyRouter.dataSetRouter.plainOverviewList, "Overview")
+                        @listGroupItem(studyRouter.dictionaryRouter.plainList, "Dictionary")
+                        @listGroupItem(studyRouter.dataSetRouter.getDistribution, "Distribution")
+                        @listGroupItem(studyRouter.dataSetRouter.getScatterStats, "Scatter Analysis")
                     </ul>
                 </div>
             </div>
