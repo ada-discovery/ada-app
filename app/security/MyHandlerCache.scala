@@ -6,9 +6,8 @@ import be.objectify.deadbolt.scala.{HandlerKey, DeadboltHandler}
 import be.objectify.deadbolt.scala.cache.HandlerCache
 
 /**
-  * Container for deadbolt handlers
+  * Container and hook for deadbolt handlers
   *
-  * @author Steve Chaloner (steve@objectify.be)
   */
 @Singleton
 class MyHandlerCache extends HandlerCache {

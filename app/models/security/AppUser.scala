@@ -8,15 +8,22 @@ import be.objectify.deadbolt.core.models.Subject
  * @author Steve Chaloner (steve@objectify.be)
  */
 
-class AppUser(val userName: String) extends Subject
+class AppUser(val userName: String) extends
 {
+  // temporary
+  def name: String = "root"
+  def email: String = "root@uni.lu"
+  def password: String = "123456"
+
   def getRoles: java.util.List[SecurityRole] = {
-    Scala.asJava(List(new SecurityRole("foo"),
-                      new SecurityRole("bar")))
+    Scala.asJava(List(new SecurityRole("user"),
+                      new SecurityRole("admin")))
   }
 
   def getPermissions: java.util.List[AppUserPermission] = {
-    Scala.asJava(List(new AppUserPermission("printers.edit")))
+    Scala.asJava(List(new AppUserPermission("view.data.basic"),
+                      new AppUserPermission("view.data.full"),
+                      new AppUserPermission("view.admin")))
   }
 
   def getIdentifier: String = userName

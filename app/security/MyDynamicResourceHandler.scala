@@ -26,12 +26,5 @@ class MyDynamicResourceHandler extends DynamicResourceHandler
 
 object MyDynamicResourceHandler {
   val handlers: Map[String, DynamicResourceHandler] =
-    Map(
-         "pureLuck" -> new DynamicResourceHandler() {
-           def isAllowed[A](name: String, meta: String, deadboltHandler: DeadboltHandler, request: Request[A]): Future[Boolean] =
-             Future(System.currentTimeMillis() % 2 == 0)
-
-           def checkPermission[A](permissionValue: String, deadboltHandler: DeadboltHandler, request: Request[A]): Future[Boolean] = Future(false)
-         }
-       )
+    Map( )
 }
