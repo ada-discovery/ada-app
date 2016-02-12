@@ -35,10 +35,11 @@ libraryDependencies ++= Seq(
   "net.codingwell" %% "scala-guice" % "4.0.1",
   "org.clapper" % "classutil_2.11" % "1.0.5",
   "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",
-  "com.feth" % "play-easymail_2.11" % "0.7.0",
-  "com.feth" % "play-authenticate_2.11" % "0.6.6",
   "be.objectify" % "deadbolt-scala_2.11" % "2.4.3",
-  "be.objectify" % "deadbolt-java_2.11" % "2.4.3"
+  "be.objectify" % "deadbolt-java_2.11" % "2.4.3",
+  "jp.t2v" %% "play2-auth"        % "0.14.1",
+  "jp.t2v" %% "play2-auth-social" % "0.14.1",
+  "jp.t2v" %% "play2-auth-test"   % "0.14.1" % "test"
 )
 
 routesGenerator := InjectedRoutesGenerator

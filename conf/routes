@@ -6,22 +6,27 @@
 GET         /                                                               controllers.AppController.index
 
 
-# no functionality yet
-GET         /login                                                          controllers.JansDataSetController.login
-# deadbolt
-#GET         /logout                                                         com.feth.play.module.pa.controllers.Authenticate.logout
-#GET         /authenticate/:provider                                         com.feth.play.module.pa.controllers.Authenticate.authenticate(provider: String)
-#GET         /authenticate/:provider/denied                                  controllers.Application.oAuthDenied(provider: String)
+
 # deadbolt tests
-GET         /nosubj                                                         controllers.JansDataSetController.notpresent
-GET         /asubj                                                          controllers.JansDataSetController.present
+GET         /nosubj                                                         controllers.AuthController.notpresent
+GET         /asubj                                                          controllers.AuthController.present
+GET         /restricted                                                     controllers.AuthController.restrictedCall
 
 
+
+
+
+GET         /login                                                          controllers.AuthController.login
+POST        /login                                                          controllers.AuthController.authenticate
+GET         /logout                                                         controllers.AuthController.logout
+
+# for testing
+GET         /loginUser                                                      controllers.AuthController.loginUser
+GET         /loginAdmin                                                     controllers.AuthController.loginAdmin
 
 
 
 # Admin
-
 GET         /runnables                                                      controllers.AdminController.listRunnables
 GET         /runScript                                                      controllers.AdminController.runScript(className : String)
 
