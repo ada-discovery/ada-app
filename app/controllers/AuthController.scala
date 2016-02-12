@@ -6,15 +6,17 @@ import jp.t2v.lab.play2.auth.LoginLogout
 import play.api.data.Forms._
 import play.api.data._
 
-import play.api.mvc.{Results, Action, Controller}
+
+import jp.t2v.lab.play2.auth.sample.Account
+import jp.t2v.lab.play2.auth.sample.Role.{NormalUser, Administrator}
+
+import play.api.mvc.{Action, Controller}
 
 
 // authentification, authorisation
 import be.objectify.deadbolt.scala.DeadboltActions
 
-import jp.t2v.lab.play2.auth.sample.{Role, Account}
-
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
 
 
@@ -82,17 +84,15 @@ class AuthController @Inject()(
 
 
 // debug logins
-def loginUser = Action{
-  //gotoLoginSucceeded(Account.accountNormal.id)
-  Ok("now logged in as regular user")
-}
+  def loginUser = Action.async{ implicit request =>
+    gotoLoginSucceeded(Account.accountNormal.id)
+    //Ok("now logged in as regular user")
+  }
 
-def loginAdmin = Action{
-  //gotoLoginSucceeded(Account.accountAdmin.id)
-  Ok("now logged in as admin user")
-}
-
-
+  def loginAdmin = Action.async{ implicit request =>
+    gotoLoginSucceeded(Account.accountAdmin.id)
+    //Ok("now logged in as admin user")
+  }
 
 
 
