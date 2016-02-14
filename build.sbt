@@ -33,7 +33,14 @@ libraryDependencies ++= Seq(
   "org.webjars" % "highcharts" % "4.2.2",
   "org.webjars.bower" % "plotly.js" % "1.5.1",
   "net.codingwell" %% "scala-guice" % "4.0.1",
-  "org.clapper" % "classutil_2.11" % "1.0.5"
+  "org.clapper" % "classutil_2.11" % "1.0.5",
+  "org.apache.spark" % "spark-core_2.11" % "1.6.0",
+  "org.apache.spark" % "spark-sql_2.11" % "1.6.0",
+  "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.0"
+)
+
+dependencyOverrides ++= Set(
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.4"
 )
 
 routesGenerator := InjectedRoutesGenerator

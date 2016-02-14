@@ -8,6 +8,7 @@ import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import persistence.RepoDef.Repo
+import runnables.Student
 
 object RepoTypeRegistry {
   type JsObjectCrudRepo = AsyncCrudRepo[JsObject, BSONObjectID]
@@ -17,6 +18,8 @@ object RepoTypeRegistry {
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
 
   type DictionaryRootRepo = MongoAsyncCrudExtraRepo[Dictionary, BSONObjectID]
+
+  type StudentDistRepo = DistributedRepo[Student, BSONObjectID]
 }
 
 object RepoDef extends Enumeration {
@@ -61,6 +64,9 @@ object RepoDef extends Enumeration {
 
   val DictionaryRootRepo = Repo[DictionaryRootRepo](
     new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
+
+  val StudentDistRepo = Repo[StudentDistRepo](
+    new SparkMongoDistributedRepo[Student, BSONObjectID]("students"))
 
   private def crateDataAndDictionaryRepos(dataCollectionName : String) = {
     val dataRepo = Repo[JsObjectCrudRepo](
