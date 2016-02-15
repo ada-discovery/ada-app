@@ -1,7 +1,1 @@
 1100:play.modules.reactivemongo.ReactiveMongoPlugin
-
-
-#10005:service.MyUserServicePlugin
-#10040:providers.MyUsernamePasswordAuthProvider
-#10050:com.feth.play.module.pa.providers.openid.OpenIdAuthProvider
-#10130:providers.MyStupidBasicAuthProvider

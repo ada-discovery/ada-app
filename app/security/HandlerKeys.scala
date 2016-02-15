@@ -3,14 +3,15 @@ package security
 import be.objectify.deadbolt.scala.HandlerKey
 
 /**
- * @author Steve Chaloner (steve@objectify.be)
- */
+  *
+  *  Deadbolt handler key defintions
+  *
+  */
 object HandlerKeys {
 
-  val defaultHandler = Key("defaultHandler")
-  val altHandler = Key("altHandler")
-  val userlessHandler = Key("userlessHandler")
+  val defaultHandler = Key("defaultHandler")              // key for default user
+  val altHandler = Key("altHandler")                      // alternative handler; to be changed
+  val userlessHandler = Key("userlessHandler")            // if no user logged in
 
   case class Key(name: String) extends HandlerKey
-
 }

@@ -14,10 +14,7 @@ import scala.concurrent.Future
 class MyDynamicResourceHandler extends DynamicResourceHandler
 {
   def isAllowed[A](name: String, meta: String, handler: DeadboltHandler, request: Request[A]): Future[Boolean] = {
-    MyDynamicResourceHandler.handlers(name).isAllowed(name,
-                                                      meta,
-                                                      handler,
-                                                      request)
+    MyDynamicResourceHandler.handlers(name).isAllowed(name, meta, handler, request)
   }
 
   // todo implement this when demonstrating permissions

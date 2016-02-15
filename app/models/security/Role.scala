@@ -1,4 +1,4 @@
-package jp.t2v.lab.play2.auth.sample
+package models.security
 
 
 // TODO rename package e.g. to "security.authentification"

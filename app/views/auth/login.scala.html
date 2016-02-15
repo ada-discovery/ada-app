@@ -1,6 +1,6 @@
-@import jp.t2v.lab.play2.auth.sample.Account
+@import models.security.Account
 
-@(form: Form[Option[Account]])(implicit request: RequestHeader, flash: Flash)
+@(form: Form[Option[Account]], message: Option[String] = None)(implicit request: RequestHeader, flash: Flash)
 @main("NCER-PD Home") {
 
     <!-- Begin page content -->
@@ -13,11 +13,21 @@
             <div class="login well well-lg col-md-6">
                 <form role="form">
 
+                    <!-- show login error -->
                     @form.globalError.map { error =>
                         <div class="alert alert-danger" role="alert">
                             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
                             <span class="sr-only">Error:</span>
                             @error.message
+                        </div>
+                    }
+
+                    <!-- optional message -->
+                    @if(message.isDefined){
+                        <div class="alert alert-danger" role="alert">
+                            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                            <span class="sr-only">Error:</span>
+                            @message.get
                         </div>
                     }
 

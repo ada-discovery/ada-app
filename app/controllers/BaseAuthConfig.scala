@@ -1,8 +1,8 @@
 package controllers
 
 import jp.t2v.lab.play2.auth.{AuthenticityToken, AsyncIdContainer, AuthConfig}
-import jp.t2v.lab.play2.auth.sample.{Role, Account}
-import jp.t2v.lab.play2.auth.sample.Role._
+import models.security.{Role, Account}
+import models.security.Role._
 import play.api.mvc.RequestHeader
 import play.api.mvc.Results._
 
@@ -13,7 +13,6 @@ import scala.collection.concurrent.TrieMap
 import scala.util.Random
 import java.security.SecureRandom
 import scala.annotation.tailrec
-import play.api.cache.Cache
 
 
 trait BaseAuthConfig  extends AuthConfig {

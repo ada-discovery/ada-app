@@ -8,14 +8,11 @@ GET         /                                                               cont
 
 
 # deadbolt tests
-GET         /nosubj                                                         controllers.AuthController.notpresent
-GET         /asubj                                                          controllers.AuthController.present
-GET         /restricted                                                     controllers.AuthController.restrictedCall
+GET         /nosubj                                                         controllers.JansDataSetController.notpresent
+GET         /asubj                                                          controllers.JansDataSetController.present
+GET         /restricted                                                     controllers.JansDataSetController.restrictedCall
 
-
-
-
-
+# logins
 GET         /login                                                          controllers.AuthController.login
 POST        /login                                                          controllers.AuthController.authenticate
 GET         /logout                                                         controllers.AuthController.logout
@@ -23,7 +20,6 @@ GET         /logout                                                         cont
 # for testing
 GET         /loginUser                                                      controllers.AuthController.loginUser
 GET         /loginAdmin                                                     controllers.AuthController.loginAdmin
-
 
 
 # Admin

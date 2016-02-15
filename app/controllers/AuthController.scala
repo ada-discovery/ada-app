@@ -1,48 +1,23 @@
 package controllers
 
-import javax.inject.Inject
-
-import jp.t2v.lab.play2.auth.LoginLogout
-import play.api.data.Forms._
-import play.api.data._
-
-
-import jp.t2v.lab.play2.auth.sample.Account
-import jp.t2v.lab.play2.auth.sample.Role.{NormalUser, Administrator}
-
-import play.api.mvc.{Action, Controller}
-
-
-// authentification, authorisation
-import be.objectify.deadbolt.scala.DeadboltActions
-
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
 
+import play.api.mvc.{Action, Controller}
+import play.api.data.Forms._
+import play.api.data._
+
+// authentificatio
+import jp.t2v.lab.play2.auth.LoginLogout
+import models.security.Account
 
 
-class AuthController @Inject()(
-    deadbolt: DeadboltActions
-  ) extends Controller with LoginLogout with AuthConfigImpl{
 
-  // deadbolt tests
-  def restrictedCall = deadbolt.Restrict(List(Array(""))) {
-    Action{implicit request =>
-        Ok("you are in")
-    }
+class AuthController extends Controller with LoginLogout with AuthConfigImpl{
+
+  def index = Action { implicit request =>
+    Redirect(routes.AuthController.login())
   }
-  def notpresent = deadbolt.SubjectNotPresent(){
-    Action{
-      Ok("subject not present, but everything is fine!")
-    }
-  }
-  def present = deadbolt.SubjectPresent(){
-    Action{
-      Ok("there you are, present subject!")
-    }
-  }
-
-
 
   ///
   /// play20-auth
@@ -50,13 +25,10 @@ class AuthController @Inject()(
   val loginForm = Form {
     mapping("email" -> email, "password" -> text)(Account.authenticate)(_.map(u => (u.email, "")))
       .verifying("Invalid email or password", result => result.isDefined)
-
   }
 
-  /** Alter the login page action to suit your application. */
   def login = Action { implicit request =>
     Ok(views.html.auth.login(loginForm))
-    //Ok("login screen here")
   }
 
   def logout = Action.async { implicit request =>
@@ -67,11 +39,6 @@ class AuthController @Inject()(
     ).removingFromSession("rememberme"))
   }
 
-  /*def authenticate = Action.async { implicit request =>
-    // dummy
-    gotoLogoutSucceeded
-  }*/
-
   def authenticate = Action.async { implicit request =>
     loginForm.bindFromRequest.fold(
       formWithErrors => Future.successful(BadRequest(views.html.auth.login(formWithErrors))),
@@ -79,70 +46,16 @@ class AuthController @Inject()(
     )
   }
 
-
-
-
-
-// debug logins
+  // TODO: debug login. remove later!
+  // immediately login as default user
   def loginUser = Action.async{ implicit request =>
     gotoLoginSucceeded(Account.accountNormal.id)
-    //Ok("now logged in as regular user")
   }
 
+  // TODO: debug login. remove later!
+  // immediately login as admin user
   def loginAdmin = Action.async{ implicit request =>
     gotoLoginSucceeded(Account.accountAdmin.id)
-    //Ok("now logged in as admin user")
   }
-
-
-
-
-
-
-
-
-
-
-///
-/// play-authenticate
-///
-/*def onUnauthorized(request: RequestHeader): Result = Results.Redirect(routes.AuthController.login())
-
-def doLogin = Action { implicit request =>
-  /*loginForm.bindFromRequest.fold(
-    formWithErrors => BadRequest(views.html.login(formWithErrors, routes.AuthController.login)),
-    user => Redirect(routes.AppController.index).withSession("user" -> user._1)
-  )*/
-  Ok("log")
-}
-
-def login = Action { implicit request =>
-  //Ok(views.html.login(loginForm, routes.AuthController.doLogin))
-  Ok("asf")
-  //Ok(views.html.auth.login(doLogin))
-}
-
-def logout = Action {
-  //Redirect(routes.AuthController.login).withNewSession.flashing(
-  //  "success" -> "You've been logged out"
-    Ok("logged out").withNewSession
-  //)
-}
-
-def authDenied(providerKey: String): Unit =
-{
-  com.feth.play.module.pa.controllers.Authenticate.noCache("")
-}
-
-*/
-
-
-///
-///
-
-
-def index = Action { implicit request =>
-  Redirect(routes.AuthController.login())
-}
 
 }

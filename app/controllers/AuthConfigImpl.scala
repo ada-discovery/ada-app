@@ -1,10 +1,12 @@
 package controllers
 
 import jp.t2v.lab.play2.auth.{AuthConfig, _}
-import jp.t2v.lab.play2.auth.sample.Role._
-import jp.t2v.lab.play2.auth.sample.{Account, Role}
+
+import models.security.Role.{NormalUser, Administrator}
+import models.security.{Account, Role}
+
 import play.api.mvc.Results._
-import play.api.mvc.{RequestHeader, _}
+import play.api.mvc.{RequestHeader, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect._
@@ -67,6 +69,7 @@ trait AuthConfigImpl extends AuthConfig {
 
   /**
     * Where to redirect the user after a successful login.
+    * TODO: redirect to different page
     */
   def loginSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
     //Future.successful(Redirect(routes.AppController.index()))
@@ -82,11 +85,11 @@ trait AuthConfigImpl extends AuthConfig {
   }
 
   /**
-    * If the user is not logged in and tries to access a protected resource then redirect them as follows:
+    * If the user is not logged in and tries to access a protected resource, redirect to login page
     */
   def authenticationFailed(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
-    Future.successful(Ok("authentification failed"))
-    //Future.successful(Redirect(routes.AuthController.login))
+    // Some("Please log in to proceed")
+    Future.successful(Redirect(routes.AuthController.login))
   }
 
 
@@ -94,7 +97,7 @@ trait AuthConfigImpl extends AuthConfig {
     * If authorization failed (usually incorrect password) redirect the user as follows:
     */
   override def authorizationFailed(request: RequestHeader, user: User, authority: Option[Authority])(implicit context: ExecutionContext): Future[Result] = {
-    Future.successful(Forbidden("no permission"))
+    Future.successful(Forbidden(routes.AuthController.login))
   }
 
   /**
@@ -114,8 +117,8 @@ trait AuthConfigImpl extends AuthConfig {
 
   /**
     * (Optional)
-    * You can custom SessionID Token handler.
-    * Default implementation use Cookie.
+    * You can use custom SessionID Token handler.
+    * Default implementation uses Cookie.
     */
   override lazy val tokenAccessor = new CookieTokenAccessor(
     /*
