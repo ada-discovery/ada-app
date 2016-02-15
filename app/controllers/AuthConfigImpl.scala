@@ -2,8 +2,7 @@ package controllers
 
 import jp.t2v.lab.play2.auth.{AuthConfig, _}
 
-import models.security.Role.{NormalUser, Administrator}
-import models.security.{Account, Role}
+import models.security.{Account, SecurityRole}
 
 import play.api.mvc.Results._
 import play.api.mvc.{RequestHeader, Result}
@@ -45,7 +44,7 @@ trait AuthConfigImpl extends AuthConfig {
     * case object Administrator extends Role
     * case object NormalUser extends Role
     */
-  type Authority = Role
+  type Authority = SecurityRole
 
   /**
     * A `ClassTag` is used to retrieve an id from the Cache API.
@@ -60,10 +59,10 @@ trait AuthConfigImpl extends AuthConfig {
 
   /**
     * A function that returns a `User` object from an `Id`.
-    * You can alter the procedure to suit your application.
+    * Retrieves user from Account class.
+    *
     */
   def resolveUser(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] = {
-    //Future(None)
     Future.successful(Account.findById(id))
   }
 
@@ -80,7 +79,6 @@ trait AuthConfigImpl extends AuthConfig {
     * Where to redirect the user after logging out
     */
   def logoutSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
-    //Future.successful((Ok("successfully logged out")))
     Future.successful(Redirect(routes.AppController.index))
   }
 
@@ -88,7 +86,6 @@ trait AuthConfigImpl extends AuthConfig {
     * If the user is not logged in and tries to access a protected resource, redirect to login page
     */
   def authenticationFailed(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
-    // Some("Please log in to proceed")
     Future.successful(Redirect(routes.AuthController.login))
   }
 
@@ -97,11 +94,12 @@ trait AuthConfigImpl extends AuthConfig {
     * If authorization failed (usually incorrect password) redirect the user as follows:
     */
   override def authorizationFailed(request: RequestHeader, user: User, authority: Option[Authority])(implicit context: ExecutionContext): Future[Result] = {
-    Future.successful(Forbidden(routes.AuthController.login))
+    Future.successful(Forbidden("Please login to proceed"))
   }
 
   /**
-    * TODO: exchange by deadbolt authorization
+    * TODO: exchange with deadbolt authorization
+    *       this is only used, if play2-auth authorization is required
     *
     * A function that determines what `Authority` a user has.
     * You should alter this procedure to suit your application.
@@ -109,23 +107,18 @@ trait AuthConfigImpl extends AuthConfig {
     */
   def authorize(user: User, authority: Authority)(implicit ctx: ExecutionContext): Future[Boolean] = Future.successful {
     (user.role, authority) match {
-      case (Administrator, _)       => true
-      case (NormalUser, NormalUser) => true
-      case _                        => false
+      case (accountAdmin, _)            => true
+      case (accountNormal, roleNormal)  => true
+      case _                            => false
     }
   }
 
   /**
     * (Optional)
-    * You can use custom SessionID Token handler.
-    * Default implementation uses Cookie.
+    * You can custom SessionID Token handler.
+    * Default implementation use Cookie.
     */
   override lazy val tokenAccessor = new CookieTokenAccessor(
-    /*
-     * Whether use the secure option or not use it in the cookie.
-     * Following code is default.
-     */
-    //cookieSecureOption = !play.api.Play.isProd(play.api.Play.current),
     cookieSecureOption = play.api.Play.isProd(play.api.Play.current),
     cookieMaxAge       = Some(sessionTimeoutInSeconds)
   )

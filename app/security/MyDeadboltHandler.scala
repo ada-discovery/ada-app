@@ -1,6 +1,7 @@
 package security
 
-import controllers.routes
+import controllers.{AuthConfigImpl, routes}
+import jp.t2v.lab.play2.auth.AuthElement
 
 import play.api.mvc.{Request, Result, Results}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -9,12 +10,14 @@ import scala.concurrent._
 import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
 import be.objectify.deadbolt.core.models.Subject
 
+import jp.t2v.lab.play2.auth
+
 
 /**
   * Hooks for deadbolt
   *
   */
-class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] = None) extends DeadboltHandler {
+class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] = None) extends DeadboltHandler with AuthConfigImpl {
 
   /**
     * Pre-authorization task. May block further execution.
@@ -49,9 +52,11 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
     * @return Current user, if logged in. None otherwise.
     */
   override def getSubject[A](request: Request[A]): Future[Option[Subject]] = {
-    // TODO: change to actual use
+    // TODO: change for actual use
     // right now, there never is a valid subject
-    //request.session.get("user")
+
+
+
     Future(None)
   }
 

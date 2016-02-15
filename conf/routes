@@ -20,6 +20,8 @@ GET         /logout                                                         cont
 # for testing
 GET         /loginUser                                                      controllers.AuthController.loginUser
 GET         /loginAdmin                                                     controllers.AuthController.loginAdmin
+GET         /currentUser                                                    controllers.JansDataSetController.currentUser
+
 
 
 # Admin

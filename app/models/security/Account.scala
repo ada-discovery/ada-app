@@ -1,52 +1,53 @@
 package models.security
 
-
-case class Account(id: Int, email: String, password: String, name: String, role: Role)
+case class Account(id: Int, email: String, password: String, name: String, role: SecurityRole)
 
 object Account {
 
   // dummy users
-  val accountNormal = Account(0, "normal@mail", "123456", "normal name", Role.NormalUser)
-  val accountAdmin  = Account(1, "admin@mail", "123456", "admin user", Role.Administrator)
+  val accountNormal = Account(0, "default@mail", "123456", "default name", new SecurityRole("default"))
+  val accountAdmin  = Account(1, "admin@mail", "123456", "admin user", new SecurityRole("admin"))
+  var accountList = List[Account](accountNormal, accountAdmin)
 
-
-  //def apply(a: SyntaxProvider[Account])(rs: WrappedResultSet): Account = accountAdmin
-  def apply(email: String, password: String): Account = Account(0, email, password, "admin user", Role.Administrator)
-
+  def apply(email: String, password: String): Account = accountNormal
 
   // TODO: mockup; change this
   def authenticate(email: String, password: String): Option[Account] = {
-    email match {
-      case accountNormal.email => if(password == accountNormal.password) Some(accountNormal) else None
-      case accountAdmin.email  => if(password == accountAdmin.password)  Some(accountAdmin)  else None
-      case _ => None
+        findByEmail(email) match {
+      case Some(account) =>
+        if(account.password == password)
+          Some(account)
+        else
+          None
+      case None => None
     }
   }
 
-
-  // use this, once we have user data base
+  // TODO mockup, change later
   def findByEmail(email: String): Option[Account] = {
-    None
+    email match {
+      case accountNormal.email => Some(accountNormal)
+      case accountAdmin.email => Some(accountAdmin)
+      case _ => None
+    }
   }
 
   // TODO mockup change later
   def findById(id: Int): Option[Account] = {
     id match {
-      case 0 => Some(accountAdmin)
-      case 1 => Some(accountNormal)
+      case 0 => Some(accountNormal)
+      case 1 => Some(accountAdmin)
       case _ => None
     }
 
   }
 
-  // TODO expand ot return dynamically built list of all users
   def findAll(): Seq[Account] = {
-    List(accountAdmin, accountNormal).toSeq
+    accountList.toSeq
   }
 
-  // TODO add new account to existing ones
-  def create(account: Account) : Unit = {
-    Unit
+  def add(account: Account) : Unit = {
+    accountList = account::accountList
   }
 
 }
