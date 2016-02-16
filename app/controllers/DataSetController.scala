@@ -394,15 +394,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param orderBy Order of fields in data file.
     * @return VString with file content.
     */
-  protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String): String = {
-    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
-    val records = Await.result(recordsFuture, timeout)
-
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    tranSMARTService.createClinicalDataFile(unescapedDelimiter , "\n", List[(String, String)]())(
-      records, keyField, None, fieldCategoryMap)
-  }
-
+  protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String): String
 
   /**
     * Generate the content of TRANSMART mapping file for downnload.
@@ -412,30 +404,5 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param orderBy Order of fields in data file.
     * @return VString with file content.
     */
-  protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String): String = {
-    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
-    val records = Await.result(recordsFuture, timeout)
-
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    tranSMARTService.createMappingFile(unescapedDelimiter , "\n", List[(String, String)]())(
-      records, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
-  }
-
-
-  /**
-    * Generate the content of TRANSMART data and mapping file for downnload.
-    *
-    * @param dataFilename Name of output file.
-    * @param delimiter Delimiter for output file.
-    * @param orderBy Order of fields in data file.
-    * @return String with file content.
-    */
-  protected def getTranSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String): (String, String) = {
-    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
-    val records = Await.result(recordsFuture, timeout)
-
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", List[(String, String)]())(
-      records, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
-  }
+  protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String): String
 }
