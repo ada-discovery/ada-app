@@ -1,9 +1,8 @@
 package security
 
 import controllers.{AuthConfigImpl, routes}
-import jp.t2v.lab.play2.auth.AuthElement
 
-import play.api.mvc.{Request, Result, Results}
+import play.api.mvc._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 
@@ -11,13 +10,20 @@ import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
 import be.objectify.deadbolt.core.models.Subject
 
 import jp.t2v.lab.play2.auth
+import jp.t2v.lab.play2.auth.{AuthenticityToken, LoginLogout, AuthElement}
 
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+
+import models.security.Account
 
 /**
   * Hooks for deadbolt
   *
   */
-class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] = None) extends DeadboltHandler with AuthConfigImpl {
+class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] = None) extends DeadboltHandler with AuthConfigImpl /*with AuthElement*/{
 
   /**
     * Pre-authorization task. May block further execution.
@@ -52,11 +58,31 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
     * @return Current user, if logged in. None otherwise.
     */
   override def getSubject[A](request: Request[A]): Future[Option[Subject]] = {
-    // TODO: change for actual use
-    // right now, there never is a valid subject
+    // TODO: change for actual use; right now, there never is a valid subject
+
+    // we can't call restoreUser, so we must retrieve the user manually
+    //val currentToken: Option[AuthenticityToken] = tokenAccessor.extract (request)
+    //val userId: Future[Option[Int]] = idContainer.get(currentToken.get)
+
+
+    val timeout = 120000 millis
+    val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
+    val userIdFuture: Future[Option[Int]] = idContainer.get(currentToken.get)
+    //userId.map()
+
+    val userId: Option[Int] = Await.result(userIdFuture, timeout)
+    //val user = resolveUser(userId)
 
 
 
+    val res: Future[Option[Account]] = userId match{
+      case Some(id) => resolveUser(id)
+      case None => Future(None)
+    }
+
+
+
+    //idContainer.prolongTimeout(currentToken.get, sessionTimeoutInSeconds)
     Future(None)
   }
 

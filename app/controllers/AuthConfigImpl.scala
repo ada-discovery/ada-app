@@ -23,7 +23,6 @@ import scala.reflect._
   */
 trait AuthConfigImpl extends AuthConfig {
 
-
   /**
     * A type that is used to identify a user.
     * `String`, `Int`, `Long` and so on.
@@ -91,18 +90,19 @@ trait AuthConfigImpl extends AuthConfig {
 
 
   /**
+    * TODO: exchange with deadbolt authorization
     * If authorization failed (usually incorrect password) redirect the user as follows:
+    * Show error message
     */
   override def authorizationFailed(request: RequestHeader, user: User, authority: Option[Authority])(implicit context: ExecutionContext): Future[Result] = {
-    Future.successful(Forbidden("Please login to proceed"))
+    Future.successful(Forbidden("Not authorised. Please change user or login to proceed"))
   }
 
   /**
     * TODO: exchange with deadbolt authorization
     *       this is only used, if play2-auth authorization is required
     *
-    * A function that determines what `Authority` a user has.
-    * You should alter this procedure to suit your application.
+    * Maps users to permissions
     *
     */
   def authorize(user: User, authority: Authority)(implicit ctx: ExecutionContext): Future[Boolean] = Future.successful {

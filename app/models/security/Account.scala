@@ -1,5 +1,7 @@
 package models.security
 
+
+
 case class Account(id: Int, email: String, password: String, name: String, role: SecurityRole)
 
 object Account {
@@ -42,12 +44,20 @@ object Account {
 
   }
 
+  // list all accounts
   def findAll(): Seq[Account] = {
     accountList.toSeq
   }
 
+  // add new account to list of existing accounts
   def add(account: Account) : Unit = {
     accountList = account::accountList
+  }
+
+
+  def toSubject(acc : Account) : AppUser = {
+    val name = acc.role.getName
+    new AppUser(name)
   }
 
 }
