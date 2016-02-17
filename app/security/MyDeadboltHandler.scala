@@ -64,26 +64,34 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
     //val currentToken: Option[AuthenticityToken] = tokenAccessor.extract (request)
     //val userId: Future[Option[Int]] = idContainer.get(currentToken.get)
 
-
-    val timeout = 120000 millis
-    val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
-    val userIdFuture: Future[Option[Int]] = idContainer.get(currentToken.get)
-    //userId.map()
-
-    val userId: Option[Int] = Await.result(userIdFuture, timeout)
     //val user = resolveUser(userId)
 
+    /*val res: Future[Option[Account]] = userId match{
+      case Some(id) => resolveUser(id)
+      case None     => Future(None)
+    }*/
+
+    val emptyDummy = Future(None)
+    val timeout = 120000 millis
+    val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
+    if(currentToken.isEmpty)
+      return emptyDummy
 
 
-    val res: Future[Option[Account]] = userId match{
+    val userIdFuture: Future[Option[Int]] = idContainer.get(currentToken.get)
+    val userId: Option[Int] = Await.result(userIdFuture, timeout)
+
+
+    val accountOpFuture: Future[Option[Account]] = userId match{
       case Some(id) => resolveUser(id)
       case None => Future(None)
     }
 
-
-
-    //idContainer.prolongTimeout(currentToken.get, sessionTimeoutInSeconds)
-    Future(None)
+    val accountOp: Option[Account] = Await.result(accountOpFuture, timeout)
+    if(accountOp.isDefined)
+      Future(Some(Account.toSubject(accountOp.get)))
+    else
+      Future(None)
   }
 
   /**
