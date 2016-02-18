@@ -4,14 +4,11 @@ import javax.inject.Inject
 
 import com.stratio.datasource.mongodb.config.MongodbConfigBuilder
 import play.api.Configuration
-import scala.reflect.runtime.{currentMirror => m, universe => ru}
+import scala.reflect.runtime.{ universe => ru}
 import com.stratio.datasource.mongodb._
-import com.stratio.datasource.mongodb.config._
 import com.stratio.datasource.mongodb.config.MongodbConfig._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, SQLContext}
-import org.apache.spark.{SparkContext, SparkConf}
-import com.mongodb.casbah.{WriteConcern => MongodbWriteConcern}
+import org.apache.spark.sql.{DataFrame}
 import play.api.libs.json._
 import services.SparkApp
 
