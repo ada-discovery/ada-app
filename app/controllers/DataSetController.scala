@@ -1,15 +1,19 @@
 package controllers
 
+import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import _root_.util.{JsonUtil, ChartSpec}
+import _root_.util.{FilterSpec, JsonUtil, ChartSpec, FieldChartSpec}
 import org.apache.commons.lang3.StringEscapeUtils
-import models.{Page, FieldType}
-import persistence.DictionaryFieldRepo
+import models.{Page, FieldType, Field}
+import persistence.{AscSort, DictionaryFieldRepo}
+import play.api.routing.Router
+import play.api.{Routes, Logger}
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{AnyContent, RequestHeader, Action}
+import play.api.mvc.{Action, AnyContent, RequestHeader}
 import play.api.Play.current
+import play.twirl.api.Html
 import util.WebExportUtil.stringToFile
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
@@ -19,6 +23,7 @@ import views.html.dataset
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Future, Await}
 import _root_.util.JsonUtil._
+import scala.concurrent.duration._
 
 protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   extends ReadonlyController[JsObject, BSONObjectID](dictionaryRepo.dataRepo) with ExportableAction[JsObject] {
@@ -54,49 +59,45 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   // router for requests; to be passed to views as helper.
   protected def router : DataSetRouter
 
+  protected lazy val overviewFieldNames =
+    current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
+
+  private val jsonNumericTypes = Json.arr(FieldType.Double.toString, FieldType.Integer.toString)
 
   /**
-    * TODO: change and add actual querying.
+    * Table displaying given paginated content. Generally used to display fields of the datasets.
     *
-    * Turns String into JsObject compatible with reactiveMongo.
-    * The JsObject is used for querzing and filtering the data.
-    * Returns None, if no criteria given.
-    *
-    * @param string Input String to be converted.
-    * @return JsObject containing the criteria.
+    * @param page Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
+    * @param msg Internal request message.
+    * @param request Header of original request.
+    * @return View for all available fields.
     */
-  override protected def toJsonCriteria(string : String) : Option[JsObject] =
-  {
-    if (!string.isEmpty)
-      Some(Json.obj(keyField -> Json.obj("$regex" -> (string + ".*"), "$options" -> "i")))
-    else
-      None
+  override protected def listView(page: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
+    dataset.list(
+      dataSetName + " Item",
+      page,
+      Await.result(getFieldLabelMap(listViewColumns.get), 120000 millis), // TODO: refactor
+      listViewColumns.get,
+      router
+    )
 
-    /*if (!string.isEmpty) {
-      val criteria : Array[String] = string.split(addCrit)
-      if(criteria.head.equals(string))      //if string can not be split
-        return None
-
-      //val regex = Json.obj("$regex" -> JsString(string + ".*"), "$options" -> "i")
-      //val exp : JsObject = Json.obj(keyField -> regex)
-
-      val exp: JsObject = criteria.map{ crit: String =>
-        if(crit.contains(equalCrit)){
-          val c: Array[String] = crit.split(equalCrit)
-          c match{
-            case Array(s1, s2) => Json.obj(s1 -> Json.obj("$regex" -> JsString(s2 + ".*")))
-            case _ => Json.obj()
-          }
-        }else
-          Json.obj()
-      }.head
-
-      Some(exp)
-    } else {
-      None
-    }*/
-  }
-
+  /**
+    * Table displaying given paginated content with charts on the top. Generally used to display fields of the datasets.
+    *
+    * @param page Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenantion of data for display.
+    * @param msg Internal request message.
+    * @param request Header of original request.
+    * @return View for all available fields.
+    */
+  private def overviewListView(page: Page[JsObject], fieldChartSpecs : Iterable[FieldChartSpec])(implicit msg: Messages, request: RequestHeader) =
+    dataset.overviewList(
+      dataSetName + " Item",
+      page,
+      Await.result(getFieldLabelMap(listViewColumns.get), 120000 millis),  // TODO: refactor
+      listViewColumns.get,
+      fieldChartSpecs,
+      router
+    )
 
   /**
     * Shows all fields of the selected subject.
@@ -111,31 +112,8 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     dataset.show(
       dataSetName + " Item",
       item,
-      router.plainFindCall
+      router.plainList
     )
-
-
-  /**
-    * Table displaying given paginated content. Generally used to display fields of the datasets.
-    *
-    * @param currentPage Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
-    * @param msg Internal request message.
-    * @param request Header of original request.
-    * @return View for all available fields.
-    */
-  override def listView(currentPage: Page[JsObject])(implicit msg: Messages, request: RequestHeader) ={
-    //val fieldsFuture = dictionaryRepo.find()
-    //val fieldNames = fieldsFuture.map{field => field.map(f => f.name)}
-    dataset.list(
-      dataSetName + " Item",
-      currentPage,
-      listViewColumns.get,
-      router,
-      listViewColumns.get,
-      keyField
-    )
-  }
-
 
   /**
     * Generate content of csv export file and create download.
@@ -143,17 +121,33 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param delimiter Delimiter for csv output file.
     * @return View for download.
     */
-  def exportRecordsAsCsv(delimiter : String) =
+  def exportAllRecordsAsCsv(delimiter : String) =
     exportAllToCsv(csvFileName, delimiter, exportOrderByField)
-
 
   /**
     * Generate content of Json export file and create donwload.
     *
     * @return View for download.
     */
-  def exportRecordsAsJson =
+  def exportAllRecordsAsJson =
     exportAllToJson(jsonFileName, exportOrderByField)
+
+  /**
+    * Generate content of csv export file and create download.
+    *
+    * @param delimiter Delimiter for csv output file.
+    * @return View for download.
+    */
+  def exportRecordsAsCsv(delimiter : String, filter: FilterSpec) =
+    exportToCsv(csvFileName, delimiter, filter.toJsonCriteria, exportOrderByField)
+
+  /**
+    * Generate content of Json export file and create donwload.
+    *
+    * @return View for download.
+    */
+  def exportRecordsAsJson(filter: FilterSpec) =
+    exportToJson(jsonFileName, filter.toJsonCriteria, exportOrderByField)
 
   /**
     * Fetch specified field (column) entries from repo and wrap them in a Traversable object.
@@ -162,7 +156,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param fieldName Name of the field of interest.
     * @return Traversable object containing the String entries of the field.
     */
-  def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] = {
+  private def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] = {
     for {
       field <- dictionaryRepo.get(fieldName)
       values <- repo.find(None, None, Some(Json.obj(fieldName -> 1)))
@@ -182,7 +176,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     *
     * @return View with piechart showing field types.
     */
-  def overviewFieldTypes: Action[AnyContent] = Action.async { implicit request =>
+  def overviewFieldTypes = Action.async { implicit request =>
     dictionaryRepo.find().map{ fields =>
       if (fields.isEmpty)
         throw new IllegalStateException(s"Empty dictionary found. Pls. create one by running 'standalone.InferXXXDictionary' script.")
@@ -193,20 +187,47 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
       }
 
       implicit val msg = messagesApi.preferred(request)
-      Ok(views.html.dataset.typeOverview(dataSetName + " Fields", (FieldType.values, fieldTypeCounts).zipped.toList))
+      render {
+        case Accepts.Html() => Ok(views.html.dataset.typeOverview(dataSetName, (FieldType.values, fieldTypeCounts).zipped.toList))
+        case Accepts.Json() => Ok(JsObject(
+          (FieldType.values, fieldTypeCounts).zipped.map{ case (fieldType, count) =>
+            (fieldType.toString, JsNumber(count))
+          }.toSeq
+        ))
+      }
     }
   }
 
-
-  def overview(fieldNames : Option[Seq[String]]) = Action.async { implicit request =>
-    val futureChartSpecs = fieldNames.getOrElse {
-      val strings = current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").get
-      strings
-    }.map(getChartSpec)
+  def overview = Action.async { implicit request =>
+    val futureChartSpecs = overviewFieldNames.map(getDataChartSpec(None, _))
 
     Future.sequence(futureChartSpecs).map { chartSpecs =>
       implicit val msg = messagesApi.preferred(request)
       Ok(dataset.overview(dataSetName + " Overview", chartSpecs))
+    }
+  }
+
+  def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+    val futureFieldChartSpecs = overviewFieldNames.map(fieldName =>
+      getDataChartSpec(filter.toJsonCriteria, fieldName).map(chartSpec =>
+        FieldChartSpec(fieldName, chartSpec)
+      )
+    )
+
+    val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
+
+    futureItems.zip(futureCount).zip(Future.sequence(futureFieldChartSpecs)).map{
+      case ((items, count), fieldChartSpecs) => {
+        implicit val msg = messagesApi.preferred(request)
+
+        render {
+          case Accepts.Html() => Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), fieldChartSpecs))
+          case Accepts.Json() => Ok(Json.toJson(items))
+        }
+    }}.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the overviewList process")
+        InternalServerError(t.getMessage)
     }
   }
 
@@ -219,21 +240,43 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param fieldName Name of the field. Used to find field in data repo.
     * @return Inferred chart type.
     */
-  private def getChartSpec(fieldName : String) : Future[ChartSpec] =
+  private def getDataChartSpec(
+    criteria: Option[JsObject],
+    fieldName: String,
+    showLabels: Boolean = false,
+    showLegend: Boolean = true
+  ) : Future[ChartSpec] =
     dictionaryRepo.get(fieldName).flatMap { foundField =>
       if (foundField.isDefined) {
-        repo.find(None, None, Some(Json.obj(fieldName -> 1))).map(items =>
+        val chartTitle = foundField.get.label.getOrElse(fieldName)
+        val enumMap = foundField.get.numValues
+
+        repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { items =>
           foundField.get.fieldType match {
-            case FieldType.String => ChartSpec.pie(items, fieldName)
-            case FieldType.Double => ChartSpec.column(items, fieldName, 20)
-            case FieldType.Integer => ChartSpec.column(items, fieldName, 20)
-            case _ => ChartSpec.pie(items, fieldName)
+            case FieldType.String => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
+            case FieldType.Enum => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
+            case FieldType.Double => ChartSpec.column(items, fieldName, chartTitle, 20)
+            case FieldType.Integer => ChartSpec.column(items, fieldName, chartTitle, 20)
+            case _ => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
           }
-        )
+        }
       } else
-        Future(ChartSpec.pie(List[JsObject](), fieldName))
+        Future(ChartSpec.pie(Seq(), None, fieldName, showLabels, showLegend))
     }
 
+  private def getStringValues(
+    items: Traversable[JsObject],
+    fieldName: String
+  ) =
+    toStrings(project(items.toSeq, fieldName))
+
+  private def toStrings(rawValues: Traversable[JsReadable]) =
+    rawValues.map{rawWalue =>
+      if (rawWalue == JsNull)
+        "null"
+      else
+        rawWalue.as[String]
+    }
 
   /**
     * Fetches, checks and prepares the specified data fields for a scatterplot.
@@ -244,18 +287,15 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param yFieldName Name of field to be used for y coordinates.
     * @return View with scatterplot and selection option for different xFieldName and yFieldName.
     */
-  def getScatterStats(xFieldName : String, yFieldName : String): Action[AnyContent] = Action.async { implicit request =>
-    val fieldsFuture = dictionaryRepo.find()
+  def getScatterStats(xFieldName : String, yFieldName : String) = Action.async { implicit request =>
+    val numericFieldsFuture = dictionaryRepo.find(Some(Json.obj("fieldType" -> Json.obj("$in" -> jsonNumericTypes))))
     val xFieldFuture = dictionaryRepo.get(xFieldName)
     val yFieldFuture = dictionaryRepo.get(yFieldName)
 
-    fieldsFuture.zip(xFieldFuture).zip(yFieldFuture).flatMap{ case ((fields, xField), yField) =>
+    numericFieldsFuture.zip(xFieldFuture).zip(yFieldFuture).flatMap{ case ((numericFields, xField), yField) =>
       implicit val msg = messagesApi.preferred(request)
 
-      val numericFields = fields.filter{field =>
-        field.fieldType == FieldType.Double || field.fieldType == FieldType.Integer
-      }
-      val numericFieldNames = numericFields.map(_.name).toSeq.sorted
+      val numericFieldNameLabels = numericFields.map(field => (field.name, field.label)).toSeq.sorted
       val valuesFuture : Future[Seq[(Any, Any)]] = if (xField.isDefined && yField.isDefined) {
         val futureXItems = repo.find(None, None, Some(Json.obj(xFieldName -> 1)))
         val futureYItems = repo.find(None, None, Some(Json.obj(yFieldName -> 1)))
@@ -263,22 +303,38 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
         futureXItems.zip(futureYItems).map{ case (xItems, yItems) =>
           val xValues = projectDouble(xItems.toSeq, xFieldName)
           val yValues = projectDouble(yItems.toSeq, yFieldName)
-          (xValues, yValues).zipped.map{ case (xValue, yValue) =>
-            if (xValue.isDefined && yValue.isDefined)
-              Some(xValue.get, yValue.get)
-            else
-              None
-          }.flatten
+          (xValues, yValues).zipped.map{ case (xValue, yValue) => (xValue, yValue).zipped}.flatten
         }
       } else
         Future(Seq[(Any, Any)]())
 
       valuesFuture.map( values =>
-        Ok(dataset.scatterStats(xFieldName, yFieldName, router.getScatterStatsCall, numericFieldNames, values))
+
+        render {
+          case Accepts.Html() => Ok(dataset.scatterStats(dataSetName, xFieldName, yFieldName, router.getScatterStats, numericFieldNameLabels, values))
+          case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
+        }
       )
     }
   }
 
+  def getDistribution(fieldName: String) = Action.async { implicit request =>
+    val fieldsFuture = dictionaryRepo.find(None, Some(Seq(AscSort("name"))))
+    val chartSpecFuture = getDataChartSpec(None, fieldName, true, false)
+    chartSpecFuture.zip(fieldsFuture).map{ case (chartSpec, fields) =>
+      implicit val msg = messagesApi.preferred(request)
+      val fieldNameLabels = fields.map(field => (field.name, field.label)).toSeq
+
+      render {
+        case Accepts.Html() => Ok(dataset.distribution(dataSetName, fieldName, chartSpec, router.getDistribution, fieldNameLabels))
+        case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the distribution process")
+        InternalServerError(t.getMessage)
+    }
+  }
 
   /**
     * TODO: implement. what is it supposed to return?
@@ -289,6 +345,21 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
   private def readJsValueTyped(value : JsValue, fieldType : FieldType.Value) {
 
   }
+
+  private def getFieldLabelMap(fieldNames : Traversable[String]): Future[Map[String, String]] = {
+    val futureFieldLabelPairs : Traversable[Future[Option[(String, String)]]]=
+      fieldNames.map { fieldName =>
+        dictionaryRepo.get(fieldName).map { fieldOption =>
+          fieldOption.flatMap{_.label}.map{ label => (fieldName, label)}
+        }
+      }
+
+    Future.sequence(futureFieldLabelPairs).map{ _.flatten.toMap }
+  }
+
+  //////////////////////
+  // Export Functions //
+  //////////////////////
 
 
   /**
@@ -323,16 +394,7 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param orderBy Order of fields in data file.
     * @return VString with file content.
     */
-  protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String): String =
-  {
-    val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
-    val records = Await.result(recordsFuture, timeout)
-
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    tranSMARTService.createClinicalDataFile(unescapedDelimiter , "\n", List[(String, String)]())(
-      records, keyField, None, fieldCategoryMap)
-  }
-
+  protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String): String
 
   /**
     * Generate the content of TRANSMART mapping file for downnload.
@@ -342,31 +404,5 @@ protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
     * @param orderBy Order of fields in data file.
     * @return VString with file content.
     */
-  protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String): String =
-  {
-    val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
-    val records = Await.result(recordsFuture, timeout)
-
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    tranSMARTService.createMappingFile(unescapedDelimiter , "\n", List[(String, String)]())(
-      records, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
-  }
-
-
-  /**
-    * Generate the content of TRANSMART data and mapping file for downnload.
-    *
-    * @param dataFilename Name of output file.
-    * @param delimiter Delimiter for output file.
-    * @param orderBy Order of fields in data file.
-    * @return String with file content.
-    */
-  protected def getTranSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String): (String, String) = {
-    val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
-    val records = Await.result(recordsFuture, timeout)
-
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", List[(String, String)]())(
-      records, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
-  }
+  protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String): String
 }

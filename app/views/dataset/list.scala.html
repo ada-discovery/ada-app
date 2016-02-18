@@ -1,103 +1,46 @@
+@import views.html.layout
+@import views.html.table.paginatedJsonTable
+@import views.html.dataset.exportDropdown
 @import play.api.libs.json.JsObject
-@import reactivemongo.bson.BSONObjectID
 @import play.modules.reactivemongo.json._
+@import reactivemongo.bson.BSONObjectID
 
 @(
     domainName : String,
-    currentPage: Page[JsObject],
+    page: Page[JsObject],
+    fieldLabelMap : Map[String, String],
     fieldsToShow : Seq[String],
 
     // All calls wrapped in a router object
-    router : DataSetRouter,
-
-    dataSetFields : Seq[String],
-    currentField : String
+    router : DataSetRouter
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-
-@optionField(key : String, value : String) = {
-    <option value="@key" @if(currentField == key) {selected="selected"}>@value</option>
-}
-
 @actions = {
-    @helper.form(action=router.plainFindCall, 'role -> "search") {
-        <div class="row">
-            <div class="col-md-8 form-group">
-
-                <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by id...">
-                @{/*<select type="selection" id="field" name="s" value="@dataSetFields"class="form-control input-sm col-xs-2" >
-                fieldsToShow.map( fieldName => optionField(fieldName, fieldName))
-                </select>*/}
-                <input type="submit" id="searchsubmit" value="Filter by id" class="btn btn-primary btn-sm">
-
-            </div>
-            <!--export fields-->
-            <div class="col-md-4">
-                <div class="pull-right dropdown">
-                    <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Export All
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li>
-                            <a href="#" data-toggle="modal" data-target="#exportCsvModal">
-                                Export All as CSV
-                            </a>
-                        </li>
-                        <li>
-                            <a href="@router.exportJsonCall">
-                                Export All as JSON
-                            </a>
-                        </li>
-                        <li role="separator" class="divider"></li>
-                        <li>
-                            <a href="#" data-toggle="modal" data-target="#exportTranSMARTDataModal">
-                                Export TransSMART Data
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" data-toggle="modal" data-target="#exportTranSMARTMappingModal">
-                                Export TransSMART Mapping
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-            @views.html.exportCsvModal("exportCsvModal", "CSV Export", ",", router.exportCsvCall)
-            @views.html.exportCsvModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", "\\t", router.exportTranSMARTDataCall)
-            @views.html.exportCsvModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", "\\t", router.exportTranSMARTMappingCall)
+    <div class="row">
+        <div class="col-md-10">
+            @filter(page.filter, router.plainList, Right(router.fieldNames))
         </div>
-    }
-
+        <div class="col-md-2">
+            @exportDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
+        </div>
+    </div>
 }
 
-@displayCall(newPage : Int, newOrderBy : Option[String]) = @{
-    router.findCall(newPage, newOrderBy.map { nOrderBy =>
-        if (nOrderBy == currentPage.orderBy) {
-            "-" + currentPage.orderBy
-        } else if (("-" + nOrderBy) == currentPage.orderBy) {
-            nOrderBy
-        } else nOrderBy
-    }.getOrElse(currentPage.orderBy), currentPage.filter)
-}
-
-@rowClickCall(item : JsObject) = @{
-    router.getCall(item.value.get("_id").get.as[BSONObjectID]).url
-}
-
-@table = {
-    @jsonTable(currentPage.items, currentPage.orderBy, displayCall(_, _),
+@table = @{
+    paginatedJsonTable(
+        page,
+        router.list(_, _, page.filter),
+        Some(fieldLabelMap),
         Some(fieldsToShow),
-        Some(rowClickCall)
+        Some({ (item : JsObject) => router.get((item \ "_id").as[BSONObjectID])})
     )
 }
 
-@views.html.list(
+@layout.list(
     domainName,
+    page.total,
     actions,
-    table,
-    displayCall,
-    currentPage
+    table
 )

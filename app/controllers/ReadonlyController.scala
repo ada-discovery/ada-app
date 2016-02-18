@@ -3,8 +3,9 @@ package controllers
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
+import _root_.util.{FilterCondition, FilterSpec}
 import models.{Identity, Page}
-import persistence.{AsyncReadonlyRepo, AsyncCrudRepo}
+import persistence._
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -24,11 +25,11 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
 
   @Inject var messagesApi: MessagesApi = _
 
-  private val DEFAULT_LIMIT = 20
+  protected val limit = 20
 
   protected def repoHook = repo
 
-  protected def listViewColumns : Option[List[String]] = None
+  protected def listViewColumns : Option[Seq[String]] = None
 
   protected def showView(
     id : ID,
@@ -39,14 +40,11 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     currentPage: Page[E]
   )(implicit msg: Messages, request: RequestHeader) : Html
 
-  protected def toJsonCriteria(string : String) : Option[JsObject]
-
-
   /**
-   * Retrieve single object by its BSON Id.
+   * Retrieve single object by its Id.
    * NotFound response is generated if key does not exists.
    *
-   * @param id BSON id/ primary key of the object.
+   * @param id id/ primary key of the object.
    */
   def get(id: ID) = Action.async { implicit request =>
     repo.get(id).map(_.fold(
@@ -54,7 +52,10 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     ){ entity =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(showView(id, entity))
+      render {
+        case Accepts.Html() => Ok(showView(id, entity))
+        case Accepts.Json() => Ok(Json.toJson(entity))
+      }
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the get process")
@@ -63,68 +64,25 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   }
 
   /**
-    * Return response with json representation of object with given key.
-    * Used for rest interface.
+    * Display the paginated list.
     *
-    * @param id primary key of object
+    * @param page Current page number (starts from 0)
+    * @param orderBy Column to be sorted
+    * @param filter Filter applied on items
     */
-  def getRest(id: ID) = Action.async {
-    repo.get(id).map(_.fold(
-      NotFound(s"Entity #$id not found")
-    )(entity =>
-      Ok(Json.toJson(entity)))
-    )
-  }
+  def find(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+    val (futureItems, futureCount) = getFutureItemsAndCount(page ,orderBy, filter)
+    futureItems.zip(futureCount).map{ case (items, count) =>
+      implicit val msg = messagesApi.preferred(request)
 
-  /**
-    * Return reponse with json representation of all objects mathing the query string.
-    * Objects are ordered by a reference column and split into chunks.
-    * Used for rest interface.
-    *
-    * @see find
-    * @param page index for the chunk which is to be returned.
-    * @param orderBy label of the reference column for sorting.
-    * @param query query string for matchng entries. Use empty string to retrieve all objects.
-    * @return
-    */
-  def findRest(page: Int, orderBy: String, query: String) = Action.async { implicit request =>
-    val limit = DEFAULT_LIMIT
-    val criteria = toJsonCriteria(query)
-    val sort = toJsonSort(orderBy)
-
-    val futureItems = repo.find(criteria, sort, listViewProjection, Some(limit), Some(page))
-    val futureCount = repo.count(criteria)
-    futureItems.zip(futureCount).map({ case (items, count) =>
-      Ok(Json.toJson(items))
-    }).recover {
+      render {
+        case Accepts.Html() => Ok(listView(Page(items, page, page * limit, count, orderBy, filter)))
+        case Accepts.Json() => Ok(Json.toJson(items))
+      }
+    }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
         InternalServerError(t.getMessage)
-    }
-  }
-
-  /**
-   * Display the paginated list.
-   *
-   * @param page Current page number (starts from 0)
-   * @param orderBy Column to be sorted
-   * @param query Filter applied on items
-   */
-  def find(page: Int, orderBy: String, query: String) = Action.async { implicit request =>
-    val limit = DEFAULT_LIMIT
-    val criteria = toJsonCriteria(query)
-    val sort = toJsonSort(orderBy)
-
-    val futureItems = repo.find(criteria, sort, listViewProjection, Some(limit), Some(page))
-    val futureCount = repo.count(criteria)
-    futureItems.zip(futureCount).map({ case (items, count) =>
-      implicit val msg = messagesApi.preferred(request)
-
-      Ok(listView(Page(items, page, page * limit, count, orderBy, query)))
-    }).recover {
-       case t: TimeoutException =>
-         Logger.error("Problem found in the list process")
-         InternalServerError(t.getMessage)
     }
   }
 
@@ -134,30 +92,14 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
    * @param orderBy Column to be sorted
    */
   def listAll(orderBy: Int) = Action.async { implicit request =>
-    val limit = DEFAULT_LIMIT
-    val futureItems = repo.find(None, None, listViewProjection, Some(limit), None)
-    val futureCount = repo.count(None)
-    futureItems.zip(futureCount).map({ case (items, count) =>
+    val (futureItems, futureCount) = getFutureItemsAndCount(0 ,"", new FilterSpec())
+    futureItems.zip(futureCount).map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
-      Ok(listView(Page(items, 0, 0, count, "", "")))
-    }).recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the list process")
-        InternalServerError(t.getMessage)
-    }
-  }
-
-  /**
-    *
-    * Return response with json represenation of all stored objects
-    * Used for rest interface.
-    *
-    */
-  def listAllRest = Action.async { implicit request =>
-    val futureItems = repo.find(None, None, listViewProjection, None, None)
-    futureItems.map { items =>
-      Ok(Json.toJson(items))
+      render {
+        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, "", new FilterSpec())))
+        case Accepts.Json() => Ok(Json.toJson(items))
+      }
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
@@ -165,28 +107,48 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
     }
   }
 
+  protected def getFutureItemsAndCount(
+    page: Int,
+    orderBy: String,
+    filter : FilterSpec
+  ): (Future[Traversable[E]], Future[Int]) =
+    getFutureItemsAndCount(repo)(page, orderBy, filter, listViewColumns)
+
+  protected def getFutureItemsAndCount[T](
+    repox : AsyncReadonlyRepo[T, _]
+  )(
+    page: Int,
+    orderBy: String,
+    filter : FilterSpec,
+    projectedFieldNames : Option[Seq[String]]
+  ): (Future[Traversable[T]], Future[Int]) = {
+    val criteria = filter.toJsonCriteria
+    val sort = toSort(orderBy)
+    val projection = toJsonProjection(projectedFieldNames)
+
+    val futureItems = repox.find(criteria, sort, projection, Some(limit), Some(page))
+    val futureCount = repox.count(criteria)
+    (futureItems, futureCount)
+  }
+
   /**
     * TODO: Move this into utility object.
-    * Convert String into Json object for sorting.
+    * Convert String into a Sort class.
     *
-    * @param string Reference column sorting.
-    * @return Option with JsObject indicating sorting index. None, if string is empty.
+    * @param fieldName Reference column sorting.
+    * @return Option with Sort class indicating an order (asc/desc). None, if string is empty.
     */
-  protected def toJsonSort(string : String): Option[JsObject] =
-    if (!string.isEmpty) {
-      if (string.startsWith("-"))
-        Some(Json.obj(string.substring(1) -> -1))
+  protected def toSort(fieldName : String): Option[Seq[Sort]] =
+    if (fieldName.nonEmpty) {
+      val sort = if (fieldName.startsWith("-"))
+        DescSort(fieldName)
       else
-        Some(Json.obj(string -> 1))
+        AscSort(fieldName)
+      Some(Seq(sort))
     } else
       None
 
-
-  /**
-    *
-    * @return
-    */
-  protected def listViewProjection: Option[JsObject] =
-    listViewColumns.map(columns =>
-      JsObject(columns.map(column => (column, Json.toJson(1)))))
+  protected def toJsonProjection(fieldNames : Option[Seq[String]]): Option[JsObject] =
+    fieldNames.map(fieldNames =>
+      JsObject(fieldNames.map(fieldName => (fieldName, Json.toJson(1)))))
 }

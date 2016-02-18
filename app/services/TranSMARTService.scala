@@ -3,6 +3,7 @@ package services
 import javax.inject.{Inject, Singleton}
 
 import _root_.util.JsonUtil.{jsonObjectsToCsv, escapeKey, unescapeKey}
+import _root_.util.toCamel
 import com.google.inject.ImplementedBy
 import play.api.libs.json._
 import models.Category
@@ -287,20 +288,5 @@ class TranSMARTServiceImpl extends TranSMARTService {
       mappingContent
     } else
       ""
-  }
-
-
-
-  /**
-    * Helper function for conversion of input string to camel case.
-    * Replaces underscores "_" with whitespace " " and turns the next character into uppercase.
-    * TODO: This belongs into a utility object/ singleton.
-    *
-    * @param s Input string.
-    * @return String converted to camel case.
-    */
-  private def toCamel(s: String): String = {
-    val split = s.split("_")
-    split.map { x => x.capitalize}.mkString(" ")
   }
 }

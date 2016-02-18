@@ -1,0 +1,41 @@
+@import play.api.libs.json.{JsObject, JsNull}
+@import util.fieldLabel
+
+@(
+    items : Traversable[JsObject],
+    headerFun : (String, String) => Html,
+    fieldLabelMap : Option[Map[String, String]] = None,
+    fieldsToShow : Option[Seq[String]] = None,
+    rowClickCall : Option[JsObject => Call] = None
+)
+
+<table class="table table-striped">
+	<thead>
+		<tr>
+            @if(fieldsToShow.isDefined) {
+                @fieldsToShow.get.map { field =>
+                    @headerFun(field, fieldLabel(field, fieldLabelMap))
+                }
+            } else {
+                @items.headOption.map { item =>
+                    @item.fields.map { field =>
+                        @headerFun(field._1, fieldLabel(field._1, fieldLabelMap))
+                    }
+                }
+            }
+		</tr>
+	</thead>
+	<tbody>
+    	@items.map { item =>
+	    	<tr class='@if(rowClickCall.isDefined) {clickable-row}' data-href='@if(rowClickCall.isDefined){@rowClickCall.get(item)}'>
+		    	@item.fields.map { field =>
+                    @if(!fieldsToShow.isDefined || fieldsToShow.get.contains(field._1)) {
+                        <td>
+                            @if(field._2 != JsNull) {@field._2.asOpt[String].getOrElse(field._2)}
+                        </td>
+                    }
+                }
+		    </tr>
+	    }
+	</tbody>
+</table>

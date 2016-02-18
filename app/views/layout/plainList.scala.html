@@ -1,0 +1,27 @@
+@(
+    domainName : String,
+    count : Long,
+    actions: Html,
+    table : Html,
+    showSidebar : Boolean = true
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@main(Messages("list.title", domainName), showSidebar) {
+
+    <div class="page-header">
+        <h3>
+            @Messages("list.count.title", count, domainName)
+        </h3>
+    </div>
+
+    @flashMessages()
+
+    <div id="actions">
+        @actions
+    </div>
+
+    @table
+}
+

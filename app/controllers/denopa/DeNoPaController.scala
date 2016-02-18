@@ -22,13 +22,41 @@ protected abstract class DeNoPaController(dictionaryRepo: DictionaryFieldRepo) e
   private val mmstSumField = "a_CRF_MMST_Summe"
   private val mmstCognitiveCategoryField = "a_CRF_MMST_Category"
 
-  override protected def getTranSMARTDataAndMappingFiles(dataFilename: String, delimiter: String, orderBy : String) = {
-    val recordsFuture = repo.find(None, toJsonSort(orderBy), None, None, None)
+  /**
+    * Generate  content of TRANSMART data file for download.
+    *
+    * @param dataFilename Name of output file.
+    * @param delimiter Delimiter for output file.
+    * @param orderBy Order of fields in data file.
+    * @return VString with file content.
+    */
+  override protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String): String = {
+    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
     val records = Await.result(recordsFuture, timeout)
     val extendedRecords = getExtendedRecords(records)
 
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", List[(String, String)]())(extendedRecords.toList, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
+    tranSMARTService.createClinicalDataFile(unescapedDelimiter , "\n", List[(String, String)]())(
+      extendedRecords, keyField, None, fieldCategoryMap)
+  }
+
+
+  /**
+    * Generate the content of TRANSMART mapping file for downnload.
+    *
+    * @param dataFilename Name of output file.
+    * @param delimiter Delimiter for output file.
+    * @param orderBy Order of fields in data file.
+    * @return VString with file content.
+    */
+  override protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String): String = {
+    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
+    val records = Await.result(recordsFuture, timeout)
+    val extendedRecords = getExtendedRecords(records)
+
+    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+    tranSMARTService.createMappingFile(unescapedDelimiter , "\n", List[(String, String)]())(
+      extendedRecords, dataFilename, keyField, None, fieldCategoryMap, rootCategory, fieldLabelMap)
   }
 
   // Ad-hoc extension requested by Venkata

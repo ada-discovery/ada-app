@@ -1,0 +1,230 @@
+@import util.FilterSpec
+@import util.ConditionType
+@import play.api.libs.json.Json
+
+@(filter: FilterSpec, submitCall: Call, fieldNamesOrCall: Either[Traversable[String], Call])
+
+<div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Add/Edit Condition</h4>
+            </div>
+            <form onsubmit="return false;">
+                <div class="modal-body">
+                    <input id="conditionIndex" type="hidden" value=""/>
+                    <div class="row">
+                        <div class="col-md-4">
+                            Field Name
+                        </div>
+                        <div class="col-md-2">
+                            Operator
+                        </div>
+                        <div class="col-md-6">
+                            Condition
+                        </div>
+                    </div>
+                    <div class="row">
+                        <select id="fieldName" class="col-md-4">
+                        </select>
+                        <select id="conditionType" class="col-md-2">
+                            @ConditionType.values.map{ conditionType =>
+                                <option value="@conditionType">@conditionType</option>
+                            }
+                        </select>
+                        <input id="condition" class="col-md-6"/>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" data-dismiss="modal" onclick="addEditConditionFinished();">Confirm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<ul class="list-inline">
+    <li>
+         Filter:
+    </li>
+    @filter.conditions.zipWithIndex.map { case (condition, index) =>
+        <li id="condition-full@index" class="condition-full">
+            <h4>
+                <span class="condition">
+                    <span id="fieldName" class="label label-primary">@condition.fieldName</span>
+                    <span id="conditionType">@condition.conditionType</span>
+                    <span id="condition" class="label label-primary">@condition.condition</span>
+                </span>
+                <span class="condition-buttons" style="display: none">
+                    <button type="button" class="btn btn-sm btn-default" onclick="showEditConditionModal('@index');">
+                        <span class="glyphicon glyphicon-pencil"></span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-default" onclick="deleteCondition('@index');">
+                        <span class="glyphicon glyphicon-trash"></span>
+                    </button>
+                </span>
+            </h4>
+        </li>
+    }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
+    <li>
+        <button type="button" class="btn btn-sm btn-default" onclick="showAddConditionModal();">
+            <span class="glyphicon glyphicon-plus"></span>
+        </button>
+    </li>
+</ul>
+
+@fieldNamesAsString = @{
+    fieldNamesOrCall match {case Left(strings) =>
+        Html(strings.map(s => "\"" + s + "\"").mkString(","))
+    }
+}
+
+@getFieldNamesUrl = @{
+    fieldNamesOrCall match {case Right(call) => call.url}
+}
+
+<script type="text/javascript">
+    var jsFilter = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}');
+    var conditionFields = ["fieldName", "conditionType", "condition"];
+    var fieldNames = @if(fieldNamesOrCall.isLeft) {
+        [@fieldNamesAsString]
+    } else {
+        null
+    }
+
+    populateFieldNames();
+
+    $(".condition-full").hover(null, function() {
+        var buttons = $(this).find(".condition-buttons").first();
+        buttons.fadeOut( 400 );
+    });
+
+    $(".condition").click(function() {
+        var buttons = $(this).parent().children(".condition-buttons").first();
+        buttons.fadeIn( 400 );
+    });
+
+    function showAddConditionModal() {
+        loadFieldNames();
+        $("#addEditConditionModal").find("#conditionIndex").first().val("");
+
+        var condition = {conditionType : "="};
+        updateModalFromModel(condition, conditionFields);
+
+        $("#addEditConditionModal").modal('show');
+    }
+
+    function showEditConditionModal(index) {
+        loadFieldNames();
+        $("#addEditConditionModal").find("#conditionIndex").first().val(index);
+
+        var condition = jsFilter.conditions[index]
+        updateModalFromModel(condition, conditionFields);
+
+        $("#addEditConditionModal").modal('show');
+    }
+
+    function addEditConditionFinished() {
+        var index =  $("#addEditConditionModal").find("#conditionIndex").val();
+        if (index)
+            editAndSubmitConditionFromModal(index)
+        else
+            addAndSubmitConditionFromModal()
+    }
+
+    function addAndSubmitConditionFromModal() {
+        var condition = { };
+
+        updateModelFromModal(condition, conditionFields);
+
+        addAndSubmitCondition(condition);
+    }
+
+    function editAndSubmitConditionFromModal(index) {
+        var condition = jsFilter.conditions[index];
+
+        updateModelFromModal(condition, conditionFields);
+        updateFilterFromModel(index, condition, conditionFields);
+
+        submitFilter();
+    }
+
+    function addAndSubmitCondition(condition) {
+        jsFilter.conditions.push(condition);
+        submitFilter();
+    }
+
+    function deleteCondition(index) {
+        jsFilter.conditions.splice(index, 1);
+        submitFilter();
+    }
+
+    function submitFilter() {
+        submit('get', '@submitCall', {filter: JSON.stringify(jsFilter)});
+    }
+
+    // update functions
+    function updateModelFromModal(condition, fields) {
+        $.each(fields, function( i, field ) {
+            condition[field] = $("#addEditConditionModal").find("#" + field).first().val();
+        })
+    }
+
+    function updateModalFromModel(condition, fields) {
+        $.each(fields,  function( i, field ) {
+            $("#addEditConditionModal").find("#" + field).first().val(condition[field]);
+        })
+    }
+
+    function updateFilterFromModel(index, condition, fields) {
+        $.each(fields, function( i, field ) {
+            $("#condition-full" + index).find("#" + field).first().html(condition[field]);
+        })
+    }
+
+    function loadFieldNames() {
+        if (!fieldNames) {
+            @if(fieldNamesOrCall.isRight) {
+                $.ajax({
+                    url: '@getFieldNamesUrl',
+                    success: function (data) {
+                        fieldNames = data;
+                        populateFieldNames();
+                    },
+                    async: false
+                });
+            }
+        }
+    }
+
+    function populateFieldNames() {
+        if (fieldNames) {
+            $('#fieldName').html("");
+            $.each(fieldNames, function(key, val) {
+                $('#fieldName').append($('<option>', { value : val }).text(val));
+            });
+        }
+    }
+
+    // submit synchronously to a provided URL (action) and parameters.
+    function submit(method, action, parameters) {
+        var form = $('<form></form>');
+
+        form.attr("method", method);
+        form.attr("action", action);
+
+        $.each(parameters, function(key, value) {
+            var field = $('<input></input>');
+
+            field.attr("type", "hidden");
+            field.attr("name", key);
+            field.attr("value", value);
+
+            form.append(field);
+        });
+
+        $(document.body).append(form);
+        form.submit();
+    }
+</script>

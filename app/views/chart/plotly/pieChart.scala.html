@@ -1,3 +1,5 @@
+@import util.shorten
+
 @(title : String, chartElementName : String, elements : Seq[(String, Any)])
 
 <h3>@title</h3>
@@ -9,7 +11,7 @@
             var data = [{
                 labels: [
                     @elements.map { case (label, _) =>
-                        '@{if (label.length > 20) {label.substring(0, 18) + "../../../../"} else label}',
+                        '@shorten(label)',
                     }
                 ],
                 values: [

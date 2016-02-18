@@ -5,37 +5,41 @@ import collection.mutable.{Map => MMap}
 import _root_.util.JsonUtil._
 
 abstract class ChartSpec(title: String)
-case class PieChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec(title)
+
+case class PieChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[DataPoint]) extends ChartSpec(title)
 case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec(title)
 case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec(title)
 case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec(title)
+case class FieldChartSpec(fieldName : String, chartSpec : ChartSpec)
+
+case class DataPoint(key: String, label : String, value : Int)
 
 object ChartSpec {
 
   /**
-    * Given the raw items and fieldnames, all items per field are counted.
-    * Fieldnames will be used as labels for the pie chart.
+    * Given the values the counts/frequencies are calculated.
+    * Unique values will be used as labels for the pie chart.
     * Calculated fraction of a field is used as pie chart slice sizes.
     *
-    * @param items Raw items.
-    * @param fieldName Fields of iterest.
+    * @param values Raw values.
     * @return PieChartSpec object for use in view.
     */
   def pie(
-    items : Traversable[JsObject],
-    fieldName : String
-     ) : PieChartSpec = {
+    values: Traversable[_],
+    keyLabelMap: Option[Map[String, String]] = None,
+    title: String,
+    showLabels: Boolean,
+    showLegend: Boolean
+  ) : PieChartSpec = {
     val countMap = MMap[String, Int]()
-    items.map{item =>
-      val rawWalue = (item \ fieldName).get
-      val stringValue = if (rawWalue == JsNull)
-        "null"
-      else
-        rawWalue.as[String]
-      val count = countMap.getOrElse(stringValue, 0)
-      countMap.update(stringValue, count + 1)
+    values.foreach{ value =>
+      val count = countMap.getOrElse(value.toString, 0)
+      countMap.update(value.toString, count + 1)
     }
-    PieChartSpec(fieldName, countMap.toSeq.sortBy(_._2))
+    val data = countMap.toSeq.sortBy(_._2).map{
+      case (key, count) => DataPoint(key, keyLabelMap.map(_.getOrElse(key, key)).getOrElse(key), count)
+    }
+    new PieChartSpec(title, showLabels, showLegend, data)
   }
 
   /**
@@ -50,29 +54,33 @@ object ChartSpec {
     * @return ColumnChartSpec for us in view.
     */
   def column(
-    items : Traversable[JsObject],
-    fieldName : String,
-    columnCount : Int,
-    explMin : Option[Double] = None,
-    explMax : Option[Double] = None
+    items: Traversable[JsObject],
+    fieldName: String,
+    title: String,
+    columnCount: Int,
+    explMin: Option[Double] = None,
+    explMax: Option[Double] = None
   ) : ColumnChartSpec = {
     val values = project(items.toList, fieldName).map(toDouble).flatten
-    val min = if (explMin.isDefined) explMin.get else values.min
-    val max = if (explMax.isDefined) explMax.get else values.max
-    val stepSize = (max - min) / columnCount
+    val data = if (values.nonEmpty) {
+      val min: BigDecimal = if (explMin.isDefined) explMin.get else values.min
+      val max: BigDecimal = if (explMax.isDefined) explMax.get else values.max
+      val stepSize: BigDecimal = (max - min) / columnCount
 
-    val data = for (step <- 0 until columnCount) yield {
-      val left = min + step * stepSize
-      val right = left + stepSize
-      val count = if (step == columnCount - 1) {
-        values.filter(value => value >= left && value <= right).size
-      } else {
-        values.filter(value => value >= left && value < right).size
+      for (step <- 0 until columnCount) yield {
+        val left = min + step * stepSize
+        val right = left + stepSize
+        val count = if (step == columnCount - 1) {
+          values.filter(value => value >= left && value <= right).size
+        } else {
+          values.filter(value => value >= left && value < right).size
+        }
+
+        (left.toString, count)
       }
-
-      (left.toString, count)
-    }
-    ColumnChartSpec(fieldName, data.toSeq)
+    } else
+      Seq[(String, Int)]()
+    ColumnChartSpec(title, data)
   }
 
   /**
@@ -83,10 +91,11 @@ object ChartSpec {
     * @return ScatterChartSpec for use in view.
     */
   def scatter(
-    items : Traversable[(JsObject, JsObject)],
-    fieldName : String
+    items: Traversable[(JsObject, JsObject)],
+    fieldName: String,
+    title: String
   ) : ScatterChartSpec =
-    ScatterChartSpec(fieldName,
+    ScatterChartSpec(title,
       items.map { case (item1, item2) =>
         Seq(
           toDouble(item1 \ fieldName).get,

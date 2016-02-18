@@ -1,0 +1,20 @@
+@import views.html.layout
+@import models.Field
+@import controllers.DictionaryRouter
+
+@(
+    domainName : String,
+	form: Form[Field],
+
+	router : DictionaryRouter
+)(
+	implicit msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@layout.create(
+    domainName,
+	form,
+	editableTextElements(domainName, form),
+    router.save,
+    router.plainList
+)

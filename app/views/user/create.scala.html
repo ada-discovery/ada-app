@@ -1,8 +1,11 @@
+@import views.html.layout
+
 @(form: Form[User])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
-@views.html.create(
+@layout.create(
+    "user",
 	form = form,
-	elements = editableTextElements(form),
+	elements = editableTextElements("user", form),
 	saveCall = routes.UserController.save(),
 	listCall = routes.UserController.listAll()
 )

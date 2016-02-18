@@ -20,7 +20,7 @@ class UserController @Inject() (
 
   override protected val form = Form(
     mapping(
-      "id" -> ignored(BSONObjectID.generate: BSONObjectID),
+      "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
       "address" -> nonEmptyText,
       "dob" -> date("yyyy-MM-dd"),
@@ -41,12 +41,6 @@ class UserController @Inject() (
 
   override protected def listView(currentPage: Page[User])(implicit msg: Messages, request: RequestHeader) =
     html.user.list(currentPage)
-
-  override protected def toJsonCriteria(string : String) =
-    if (!string.isEmpty)
-      Some(Json.obj("name" -> Json.obj("$regex" -> (string + ".*"), "$options" -> "i")))
-    else
-      None
 
   override protected val defaultCreateEntity =
     new User(null, null, null, null, null, null)

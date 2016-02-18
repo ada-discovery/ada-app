@@ -1,31 +1,34 @@
-@import play.api.libs.json.JsObject
-@(currentPage: Page[JsObject])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@import views.html.layout.list
+@import views.html.table._
+@import models.redcap.ExportField
+
+@(currentPage: Page[ExportField])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
-    @helper.form(action=routes.RedCapController.listFieldNames(), 'class -> "navbar-form navbar-left", 'role -> "search") {
+    @helper.form(action=routes.RedCapController.listExportFields(), 'class -> "navbar-form navbar-left", 'role -> "search") {
         <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by original field name...">
         <input type="submit" id="searchsubmit" value="Filter by field name" class="btn btn-primary btn-sm">
     }
 }
 
-@displayCall(newPage : Int, newOrderBy : Option[String]) = @{
-    routes.RedCapController.listFieldNames(newPage, newOrderBy.map { orderBy =>
-        if(orderBy == currentPage.orderBy) "-" + currentPage.orderBy else orderBy
-    }.getOrElse(currentPage.orderBy), currentPage.filter)
+@table = @{
+    paginatedTable(
+        currentPage,
+        routes.RedCapController.listExportFields(_, _, ""),
+        Seq(
+            ("original_field_name", "Original Name", {item : Any => Html(item.asInstanceOf[ExportField].original_field_name)}),
+            ("choice_value", "Choice Value", {item : Any => Html(item.asInstanceOf[ExportField].choice_value)}),
+            ("export_field_name", "Export Name", {item : Any => Html(item.asInstanceOf[ExportField].export_field_name)})
+        ),
+        Some({ item : Any => routes.RedCapController.showExportField(item.asInstanceOf[ExportField].export_field_name)})
+    )
 }
 
-@rowClickCall(item : JsObject) = @{
-    routes.RedCapController.showFieldName(item.value.get("export_field_name").get.as[String]).url
-}
-
-@table = {
-    @jsonTable(currentPage.items, currentPage.orderBy, displayCall(_, _), None, Some(rowClickCall))
-}
-
-@views.html.list(
-    "field",
+@list(
+    "export field",
+    currentPage.total,
     actions,
     table,
-    displayCall,
-    currentPage
+    None,
+    false
 )

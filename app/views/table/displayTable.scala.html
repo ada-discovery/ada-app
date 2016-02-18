@@ -1,0 +1,29 @@
+@import play.api.libs.json.{JsObject, JsNull}
+
+@(
+    items : Traversable[_],
+    header : (String, String) => Html,
+    columns : Traversable[(String, String, Any => Html)],
+    rowClickCall : Option[Any => Call] = None
+)
+
+<table class="table table-striped">
+	<thead>
+		<tr>
+            @columns.map { case (fieldName, fieldLabel, _) =>
+                @header(fieldName, fieldLabel)
+            }
+		</tr>
+	</thead>
+	<tbody>
+    	@items.map { item =>
+	    	<tr class='@if(rowClickCall.isDefined) {clickable-row}' data-href='@if(rowClickCall.isDefined){@rowClickCall.get(item)}'>
+		    	@columns.map { case (_, _, content) =>
+                    <td>
+                        @content(item)
+                    </td>
+                }
+		    </tr>
+	    }
+	</tbody>
+</table>

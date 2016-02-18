@@ -3,7 +3,7 @@ import play.api.libs.json.{JsObject, JsString, JsNull}
 
 package object util {
 
-  def getDomainName(form: Form[_]) = form.get.getClass.getSimpleName.toLowerCase
+//  def getDomainName(form: Form[_]) = form.get.getClass.getSimpleName.toLowerCase
 
   def matchesPath(coreUrl : String, url : String, matchPrefixDepth : Option[Int] = None) =
     matchPrefixDepth match {
@@ -18,4 +18,24 @@ package object util {
       }
       case None => coreUrl.equals(url)
     }
+
+  def shorten(string : String, length: Int = 25) =
+    if (string.length > length) string.substring(0, length) + ".." else string
+
+  /**
+   * Helper function for conversion of input string to camel case.
+   * Replaces underscores "_" with whitespace " " and turns the next character into uppercase.
+   *
+   * @param s Input string.
+   * @return String converted to camel case.
+   */
+  def toCamel(s: String): String = {
+    val split = s.split("_")
+    split.map { x => x.capitalize}.mkString(" ")
+  }
+
+  def fieldLabel(fieldName : String, fieldLabelMap : Option[Map[String, String]]) =
+    fieldLabelMap.map(_.getOrElse(fieldName, toCamel(fieldName))).getOrElse(toCamel(fieldName))
+
+  def chartElementName(title: String) = title.hashCode + "Chart"
 }

@@ -1,4 +1,7 @@
-@(title : String, chartElementName : String, elements : Seq[(String, Any)])
+@import util.shorten
+@import util.DataPoint
+
+@(title : String, chartElementName : String, showLabels: Boolean, showLegend: Boolean, elements : Seq[DataPoint])
     <div id="@chartElementName" class="chart-holder"></div>
     <script type="text/javascript">
         $(function () {
@@ -13,17 +16,25 @@
                     text: "@title"
                 },
                 tooltip: {
-                    pointFormat: '{series.name}: <b>{point.y}</b>'
+                    pointFormat: 'Count: <b>{point.y}</b>'
                 },
                 plotOptions: {
                     pie: {
                         allowPointSelect: true,
                         cursor: 'pointer',
                         dataLabels: {
-                            enabled: true,
+                            enabled: @showLabels,
                             format: '<b>{point.name}</b>: {point.percentage:.1f}%',
                             style: {
                                 color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                            }
+                        },
+                        showInLegend: @showLegend,
+                        point: {
+                            events: {
+                                click: function () {
+                                    $('#@{chartElementName}').trigger("pointClick", this);
+                                }
                             }
                         }
                     }
@@ -35,8 +46,8 @@
                     name: "@title",
                     colorByPoint: true,
                     data: [
-                        @elements.map { case (name, value) =>
-                            {name : '@{if (name.length > 20) {name.substring(0, 18) + "../../../../"} else name}', y : @value},
+                        @elements.map { case DataPoint(key, label, value) =>
+                            {name : '@shorten(label)', y : @value, key: '@key'},
                         }
                     ]
                 }]

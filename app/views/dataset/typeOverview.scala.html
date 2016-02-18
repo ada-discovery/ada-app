@@ -1,21 +1,29 @@
-@(title: String, fieldTypeCounts : Traversable[(FieldType.Value, Int)])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@import views.html.layout.main
+@import views.html.chart._
+@import util.DataPoint
 
-@main(title) {
+@(
+    domainName: String,
+    fieldTypeCounts : Traversable[(FieldType.Value, Int)]
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
 
-    <!-- Begin page content -->
-    <div class="container">
-        <div class="page-header">
-            <h3>
-                @Messages(title)
-            </h3>
-        </div>
+@main(Messages("typeOverview.title", domainName)) {
 
-        <div class="row" style="padding-bottom: 120px;">
-            @views.html.chart.plotly.pieChart(
-                "",
-                "typeChart",
-                fieldTypeCounts.map{case (fieldType, count) => (fieldType.toString, count) }.toSeq
-            )
-        </div>
+    <div class="page-header">
+        <h3>
+            @Messages("typeOverview.title", domainName)
+        </h3>
+    </div>
+
+    <div class="row">
+    @chart.highcharts.pieChart(
+        "",
+        "typeChart",
+        true,
+        false,
+        fieldTypeCounts.map{case (fieldType, count) => DataPoint(fieldType.toString, fieldType.toString, count) }.toSeq
+    )
     </div>
 }

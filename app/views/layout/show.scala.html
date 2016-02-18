@@ -1,0 +1,44 @@
+@(
+	domainName : String,
+	errors : Seq[FormError],
+	elements : Html,
+	listCall : Call,
+	deleteCall : Option[Call]
+)(
+	implicit msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@main(Messages("show.title", domainName)) {
+
+	<div class="page-header">
+		<h1>@Messages("edit.title", domainName)</h1>
+	</div>
+
+	@errors.map{ error =>
+		<div class="alert alert-dismissable alert-danger">
+			<button type="button" class="close" data-dismiss="alert">×</button>
+			@Messages(error.message, Messages(domainName + "." + error.key))
+		</div>
+	}
+
+	<div class="row">
+		<div class="col-md-8">
+			<fieldset>
+			@elements
+			</fieldset>
+
+			<div class="actions">
+				<a href="@listCall" class="btn btn-default">Cancel</a>
+			</div>
+		</div>
+		<div class="col-md-4">
+		@info()
+		</div>
+	</div>
+
+	@if(deleteCall.isDefined) {
+		@helper.form(deleteCall.get, 'class -> "topRight") {
+			<input type="submit" value="Delete" class="btn btn-danger">
+		}
+	}
+}

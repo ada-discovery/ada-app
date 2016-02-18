@@ -16,7 +16,11 @@ object RepoTypeRegistry {
   type UserRepo = AsyncCrudRepo[User, BSONObjectID]
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
 
-  type DictionaryRootRepo = AsyncCrudRepo[Dictionary, BSONObjectID]
+  type DictionaryRootRepo = MongoAsyncCrudExtraRepo[Dictionary, BSONObjectID]
+
+  // experimental
+  type StudentDistRepo = DistributedRepo[Student, BSONObjectID]
+  type JsObjectDistRepo = DistributedRepo[JsObject, BSONObjectID]
 }
 
 object RepoDef extends Enumeration {
@@ -62,6 +66,13 @@ object RepoDef extends Enumeration {
   val DictionaryRootRepo = Repo[DictionaryRootRepo](
     new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
 
+  // experimental distributed repos
+  val StudentDistRepo = Repo[StudentDistRepo](
+    new SparkMongoDistributedRepo[Student, BSONObjectID]("students"))
+
+  val LuxDistParkRepo = Repo[JsObjectDistRepo](
+    new SparkMongoDistributedRepo[JsObject, BSONObjectID]("luxpark"), true)
+
   private def crateDataAndDictionaryRepos(dataCollectionName : String) = {
     val dataRepo = Repo[JsObjectCrudRepo](
       new JsObjectMongoCrudRepo(dataCollectionName), true)
@@ -103,6 +114,10 @@ class RepoModule extends ScalaModule {
     bindRepo(RepoDef.MessageRepo)
 
     bindRepo(RepoDef.DictionaryRootRepo)
+
+    // experimental distributed repos
+    bindRepo(RepoDef.StudentDistRepo)
+    bindRepo(RepoDef.LuxDistParkRepo)
   }
 
   private def bindRepo[T : Manifest](repo : Repo[T]) =

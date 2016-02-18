@@ -69,7 +69,7 @@ class DeNoPaPlayground @Inject() (
   }
 
   private def collectTexts(repo : AsyncReadonlyRepo[MetaTypeStats, BSONObjectID]) = {
-    val statsFuture = repo.find(None, Some(Json.obj("attributeName" -> 1)))
+    val statsFuture = repo.find(None, Some(Seq(AscSort("attributeName"))))
     val enumFields = Await.result(statsFuture, timeout).filter{ item =>
       val keys = item.valueRatioMap.keySet
       (keys.size > 1 && keys.size < 25 && keys.filterNot(_.equals("NA")).exists(_.exists(_.isLetter) && !keys.forall(s => truthValues.contains(s.toLowerCase))))

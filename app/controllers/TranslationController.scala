@@ -19,7 +19,7 @@ class TranslationController @Inject() (
 
   override protected val form = Form(
     mapping(
-      "id" -> ignored(Option(BSONObjectID.generate: BSONObjectID)),
+      "id" -> ignored(Option.empty[BSONObjectID]),
       "original" -> nonEmptyText,
       "translated" -> nonEmptyText
     )(Translation.apply)(Translation.unapply))
@@ -38,12 +38,6 @@ class TranslationController @Inject() (
 
   override protected def listView(currentPage: Page[Translation])(implicit msg: Messages, request: RequestHeader) =
     html.translation.list(currentPage)
-
-  override protected def toJsonCriteria(string : String) =
-    if (!string.isEmpty)
-      Some(Json.obj("original" -> Json.obj("$regex" -> (string + ".*"), "$options" -> "i")))
-    else
-      None
 
   override protected val defaultCreateEntity =
     new Translation(None, null, null)

@@ -1,7 +1,7 @@
 @import models.security.Account
 
 @(form: Form[Option[Account]], message: Option[String] = None)(implicit request: RequestHeader, flash: Flash)
-@main("NCER-PD Home") {
+@layout.main("NCER-PD Home") {
 
     <!-- Begin page content -->
     <div class="container" style="padding-bottom: 190px;" xmlns="http://www.w3.org/1999/html">

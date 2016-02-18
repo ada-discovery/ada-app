@@ -1,42 +1,31 @@
+@import views.html.layout.main
+
 @(runnableNames : Iterable[String])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
-@main("Runnables") {
+@main("Runnables", false) {
 
-    <!-- Begin page content -->
-    <div class="container">
-        <div class="page-header">
-            <h3>
-                @Messages("Runnables")
-            </h3>
-        </div>
+    <div class="page-header">
+        <h3>
+            @Messages("Runnables")
+        </h3>
+    </div>
 
-        @flash.get("success").map { message =>
-            <div class="alert alert-dismissable alert-success">
-                <button type="button" class="close" data-dismiss="alert">×</button>
-                <strong>Well done!</strong> @message
-            </div>
-        }
+    @flashMessages()
 
-        @flash.get("errors").map{ error =>
-            <div class="alert alert-dismissable alert-danger">
-                <button type="button" class="close" data-dismiss="alert">×</button>
-                    @error
-            </div>
-        }
-
+    <div class="row">
         <div class="col-md-8">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <td>
-                        Name
-                    </td>
-                    <td>
-                        Run
-                    </td>
-                </tr>
-            </thead>
-            <tbody>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <td>
+                            Name
+                        </td>
+                        <td>
+                            Run
+                        </td>
+                    </tr>
+                </thead>
+                <tbody>
                 @runnableNames.map { name =>
                     <tr>
                         <td>
@@ -47,8 +36,8 @@
                         </td>
                     </tr>
                 }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
         </div>
     </div>
 }

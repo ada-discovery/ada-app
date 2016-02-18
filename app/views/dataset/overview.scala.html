@@ -1,28 +1,15 @@
-@import util.{ChartSpec, PieChartSpec, ColumnChartSpec}
-@import views.html.chart._
-@import util.ScatterChartSpec
+@import util.ChartSpec
+@import views.html.dataset.chartPanel
+@import views.html.layout.main
+
 @(title: String, chartDatas : Iterable[ChartSpec])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @main(title) {
-
-    <!-- Begin page content -->
-    <div class="container">
-        <div class="page-header">
-            <h3>
-                @Messages(title)
-            </h3>
-        </div>
-
-        <div class="row" style="padding-bottom: 100px;">
-            @chartDatas.map { chartSpec =>
-                <div class="col-md-4">
-                    @{chartSpec match {
-                        case PieChartSpec(title, data) => highcharts.pieChart(title, title + "Chart", data)
-                        case ColumnChartSpec(title, data) => highcharts.columnChart(title, title + "Chart", "Count", data)
-                        case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
-                    }}
-                </div>
-            }
-        </div>
+    <div class="page-header">
+        <h3>
+            @Messages(title)
+        </h3>
     </div>
+
+    @chartPanel(chartDatas)
 }

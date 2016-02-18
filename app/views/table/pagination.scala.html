@@ -1,0 +1,25 @@
+@(page: Page[_], listCall : (Int, Option[String]) => Call)
+
+<ul class="pager" style="padding-bottom: 120px;">
+    @page.prev.map { page =>
+    <li class="previous">
+        <a href="@listCall(page, None)">&larr; Previous</a>
+    </li>
+    }.getOrElse {
+        <li class="previous disabled">
+            <a>&larr; Previous</a>
+        </li>
+    }
+<li class="current">
+    <a>Displaying @(page.offset + 1) to @(page.offset + page.items.size) of @page.total</a>
+</li>
+    @page.next.map { page =>
+    <li class="next">
+        <a href="@listCall(page, None)">Next &rarr;</a>
+    </li>
+    }.getOrElse {
+        <li class="next disabled">
+            <a>Next &rarr;</a>
+        </li>
+    }
+</ul>

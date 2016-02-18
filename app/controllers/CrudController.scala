@@ -65,7 +65,11 @@ protected abstract class CrudController[E: Format, ID](
       NotFound(s"Entity #$id not found")
     ) { entity =>
       implicit val msg = messagesApi.preferred(request)
-      Ok(editView(id, form.fill(entity)))
+
+      render {
+        case Accepts.Html() => Ok(editView(id, form.fill(entity)))
+        case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+      }
     }).recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the edit process")
@@ -80,9 +84,11 @@ protected abstract class CrudController[E: Format, ID](
       Future.successful(BadRequest(createView(formWithErrors)))
     },
     item => {
-      val savedItemId = repo.save(item)
-      savedItemId.map { id =>
-        home.flashing("success" -> s"Item ${id} has been created")
+      repo.save(item).map { id =>
+        render {
+          case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been created")
+          case Accepts.Json() => Created(Json.obj("message" -> "Item successly created", "id" -> id.toString))
+        }
       }.recover {
         case t: TimeoutException =>
           Logger.error("Problem found in the update process")
@@ -92,26 +98,6 @@ protected abstract class CrudController[E: Format, ID](
           InternalServerError(i.getMessage)
       }
     })
-  }
-
-  def saveRest = Action.async(parse.json) { implicit request =>
-    form.bindFromRequest.fold(
-    { formWithErrors =>
-      implicit val msg = messagesApi.preferred(request)
-      Future.successful(BadRequest(formWithErrors.errorsAsJson))
-    },
-    entity =>
-      repo.save(entity).map { id =>
-        Created(Json.obj("message" -> "Item successly created", "id" -> id.toString))
-      }.recover {
-        case t: TimeoutException =>
-          Logger.error("Problem found in the update process")
-          InternalServerError(t.getMessage)
-        case i: RepoException =>
-          Logger.error("Problem found in the update process")
-          InternalServerError(i.getMessage)
-      }
-    )
   }
 
   def update(id: ID) = Action.async { implicit request =>
@@ -121,9 +107,11 @@ protected abstract class CrudController[E: Format, ID](
       Future.successful(BadRequest(editView(id, formWithErrors)))
     },
     item => {
-      val savedItemId = repo.update(identity.set(item, id))
-      savedItemId.map {
-        id => home.flashing("success" -> s"Item ${id} has been updated")
+      repo.update(identity.set(item, id)).map { _ =>
+        render {
+          case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been updated")
+          case Accepts.Json() => Ok(Json.obj("message" -> "Item successly updated", "id" -> id.toString))
+        }
       }.recover {
         case t: TimeoutException =>
           Logger.error("Problem found in the update process")
@@ -135,44 +123,18 @@ protected abstract class CrudController[E: Format, ID](
     })
   }
 
-  def updateRest(id: ID) = Action.async(parse.json) { implicit request =>
-    parseValidateAndProcess[E] { entity =>
-      repo.update(identity.set(entity, id)).map {
-        id => Ok(Json.obj("message" -> "Item successly updated", "id" -> id.toString))
-      }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the update process")
-        InternalServerError(t.getMessage)
-      case i: RepoException =>
-        Logger.error("Problem found in the update process")
-        InternalServerError(i.getMessage)
+  def delete(id: ID) = Action.async { implicit request =>
+    repo.delete(id).map { _ =>
+      render {
+        case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been deleted")
+        case Accepts.Json() => Ok(Json.obj("message" -> "Item successly deleted", "id" -> id.toString))
       }
-    }
-  }
-
-  def delete(id: ID) = Action.async {
-    repo.delete(id).map { _ =>
-      home.flashing("success" -> s"Item ${id} has been deleted")
     }.recover {
       case t: TimeoutException =>
         Logger.error(s"Problem deleting item ${id}")
         InternalServerError(t.getMessage)
       case i: RepoException =>
         Logger.error(s"Problem deleting item ${id}")
-        InternalServerError(i.getMessage)
-    }
-  }
-
-  def deleteRest(id: ID) = Action.async {
-    repo.delete(id).map { _ =>
-      Ok(Json.obj("message" -> "Item successly deleted", "id" -> id.toString))
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error(s"Problem deleting item ${id}")
-        InternalServerError(t.getMessage)
-      case i: RepoException =>
-        Logger.error(s"Problem deleting item ${id}")
-        // TODO: What about returning BadRequest?
         InternalServerError(i.getMessage)
     }
   }

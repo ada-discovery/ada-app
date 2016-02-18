@@ -1,34 +1,37 @@
-@import play.api.libs.json.JsObject
-@(currentPage: Page[JsObject])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@import views.html.layout.list
+@import views.html.table.paginatedTable
+@import models.redcap.Metadata
+
+@(page: Page[Metadata])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
     @helper.form(action=routes.RedCapController.listMetadatas(), 'class -> "navbar-form navbar-left", 'role -> "search") {
-        <input type="search" id="searchbox" name="f" value="@currentPage.filter" placeholder="Filter by field name...">
+        <input type="search" id="searchbox" name="f" value="@page.filter" placeholder="Filter by field name...">
         <input type="submit" id="searchsubmit" value="Filter by field name" class="btn btn-primary btn-sm">
     }
 }
 
-@displayCall(newPage : Int, newOrderBy : Option[String]) = @{
-    routes.RedCapController.listMetadatas(newPage, newOrderBy.map { orderBy =>
-        if(orderBy == currentPage.orderBy) "-" + currentPage.orderBy else orderBy
-    }.getOrElse(currentPage.orderBy), currentPage.filter)
-}
-
-@rowClickCall(item : JsObject) = @{
-    routes.RedCapController.showMetadata(item.value.get("field_name").get.as[String]).url
-}
-
-@table = {
-    @jsonTable(currentPage.items, currentPage.orderBy, displayCall(_, _),
-        Some(List("field_name", "form_name", "section_header", "field_type", "field_label" ,"select_choices_or_calculations")),
-        Some(rowClickCall)
+@table = @{
+    paginatedTable(
+        page,
+        routes.RedCapController.listMetadatas(_, _, ""),
+        Seq(
+            ("field_name", "Name", {item : Any => Html(item.asInstanceOf[Metadata].field_name)}),
+            ("form_name", "Form", {item : Any => Html(item.asInstanceOf[Metadata].form_name)}),
+            ("section_header", "Section", {item : Any => Html(item.asInstanceOf[Metadata].section_header)}),
+            ("field_type", "Type", {item : Any => Html(item.asInstanceOf[Metadata].field_type.toString)}),
+            ("field_label", "Label", {item : Any => Html(item.asInstanceOf[Metadata].field_label)}),
+            ("select_choices_or_calculations", "Select Choices or Calculations", {item : Any => Html(item.asInstanceOf[Metadata].select_choices_or_calculations)})
+        ),
+        Some({ item : Any => routes.RedCapController.showMetadata(item.asInstanceOf[Metadata].field_name)})
     )
 }
 
-@views.html.list(
+@list(
     "metadata",
+    page.total,
     actions,
     table,
-    displayCall,
-    currentPage
+    None,
+    false
 )

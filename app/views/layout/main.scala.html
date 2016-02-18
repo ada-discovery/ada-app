@@ -1,0 +1,54 @@
+@(title: String, showSidebar : Boolean = true)(content: Html)(implicit request: RequestHeader)
+
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>@title</title>
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootswatch-united", "bootstrap.min.css"))">
+        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+
+        @* Optional theme *@
+		@* <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootstrap", "bootstrap-theme.min.css"))"> *@
+        
+        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery.min.js"))"></script>
+
+		<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+	    <!--[if lt IE 9]>
+	      <script src="@routes.WebJarAssets.at(WebJarAssets.locate("html5shiv.js"))"></script>
+	      <script src="@routes.WebJarAssets.at(WebJarAssets.locate("respond.min.js"))"></script>
+	    <![endif]-->
+		
+    </head>
+    <body>
+        @navbar(request)
+        <div class="container-fluid">
+            <div class="row-fluid">
+                <div class="menu col-md-2">
+                    @{if(showSidebar) sidebar(request)}
+                </div>
+                <div class="col-md-8">
+                    <div class="content">
+                        @content
+                    </div>
+                    @footer()
+                </div>
+            </div>
+        </div>
+
+        <!-- Bootstrap core JavaScript
+	    ================================================== -->
+	    <!-- Placed at the end of the document so the pages load faster -->
+	    <!-- Latest compiled and minified JavaScript -->
+		<script src="@routes.WebJarAssets.at(WebJarAssets.locate("bootswatch-united", "bootstrap.min.js"))"></script>
+
+        <!-- HighCharts -->
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "highcharts.js"))"></script>
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "exporting.js"))"></script>
+        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "highcharts-more.js"))"></script>
+
+        <script type="text/javascript" src="@routes.Assets.at("javascripts/rowClickable.js")"></script>
+    </body>
+</html>
