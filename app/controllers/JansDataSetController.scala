@@ -3,8 +3,7 @@ package controllers
 import javax.inject.Inject
 import play.api.mvc.{Action, Controller}
 
-import models.security.Account
-import models.security.SecurityRole
+import models.security.{SecurityRoleCache, Account, SecurityRole}
 
 import jp.t2v.lab.play2.auth.AuthElement
 import be.objectify.deadbolt.scala.DeadboltActions
@@ -20,53 +19,32 @@ class JansDataSetController @Inject() (
   // deadbolt tests
   def restrictedCall = deadbolt.Restrict(List(Array(""))) {
     Action{implicit request =>
-      Ok("you are in")
+      Ok("this call is only seen, if subject matches restrictions")
     }
   }
   def notpresent = deadbolt.SubjectNotPresent(){
     Action{
-      Ok("this works if not subject present")
+      Ok("deadbolt does not see a subject")
     }
   }
   // only visible if logged in
   def present = deadbolt.SubjectPresent(){
     Action{
-      Ok("there you are, present subject!")
+      Ok("deadbolt sees a present subject!")
     }
   }
 
-  def currentUser = StackAction(AuthorityKey -> new SecurityRole("DefaultUser")) { implicit request =>
+  // substitute stackaction with deadbolt action
+  def currentUser = StackAction(AuthorityKey -> SecurityRoleCache.basicRole) { implicit request =>
     val user: Account = loggedIn
     Ok("logged in as: " + user.email)
   }
 
-  // play2-auth tests
-  /*def main = StackAction(AuthorityKey -> DefaultUser) { implicit request =>
-    val user: Account = loggedIn
-    Ok("logged in as: " + user.name)
+  def resolve = Action { implicit request =>
+    //Account.findById()
+    //val usr = resolveUser()
+    Ok("")
   }
-
-  def list = StackAction(AuthorityKey -> NormalUser) { implicit request =>
-    val user = loggedIn
-    val title = "all messages"
-    Ok(title)
-  }
-
-  def detail(id: Int) = StackAction(AuthorityKey -> NormalUser) { implicit request =>
-    val user = loggedIn
-    val title = "messages detail "
-    Ok(title + id)
-  }
-
-  // Only Administrator can execute this action.
-  def write = StackAction(AuthorityKey -> Administrator) { implicit request =>
-    val user = loggedIn
-    val title: String = "write message"
-    Ok(title)
-  }*/
-
-
-
 
   // debug: show session
   def showSession = Action { implicit request =>

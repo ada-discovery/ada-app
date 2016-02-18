@@ -1,21 +1,30 @@
 package models.security
 
-
+import be.objectify.deadbolt.core.models.Subject
 
 case class Account(id: Int, email: String, password: String, name: String, role: SecurityRole)
 
 object Account {
 
-  // dummy users
-  val accountNormal = Account(0, "default@mail", "123456", "default name", new SecurityRole("default"))
-  val accountAdmin  = Account(1, "admin@mail", "123456", "admin user", new SecurityRole("admin"))
-  var accountList = List[Account](accountNormal, accountAdmin)
+  // Dummy user profiles.
+  // To be changed as soon as user database will be used.
+  val basicAccount = Account(0, "basic@mail", "123456", "basic user", SecurityRoleCache.basicRole)
+  val adminAccount  = Account(1, "admin@mail", "123456", "admin user", SecurityRoleCache.adminRole)
+  var accountCache = List[Account](basicAccount, adminAccount)
 
-  def apply(email: String, password: String): Account = accountNormal
+  // syntactic sugar.
+  def apply(email: String, password: String): Option[Account] = authenticate(email, password)
 
-  // TODO: mockup; change this
+  /**
+    * Matches email and password for authentification.
+    * Returns an Account, if successful.
+    *
+    * @param email Mail for matching.
+    * @param password Password which should match the password associated to the mail.
+    * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
+    */
   def authenticate(email: String, password: String): Option[Account] = {
-        findByEmail(email) match {
+    findByEmail(email) match {
       case Some(account) =>
         if(account.password == password)
           Some(account)
@@ -25,39 +34,57 @@ object Account {
     }
   }
 
-  // TODO mockup, change later
+  /**
+    * Given a mail, find the corresponding account.
+    *
+    * @param email mail to be matched.
+    * @return Option containing Account with matching mail; None otherwise
+    */
   def findByEmail(email: String): Option[Account] = {
-    email match {
-      case accountNormal.email => Some(accountNormal)
-      case accountAdmin.email => Some(accountAdmin)
-      case _ => None
-    }
+    accountCache.find(acc => (acc.email == email))
   }
 
-  // TODO mockup change later
+  /**
+    * Given an id, find the corresponding account.
+    *
+    * @param id ID to be matched.
+    * @return Option containing Account with matching ID; None otherwise
+    */
   def findById(id: Int): Option[Account] = {
-    id match {
-      case 0 => Some(accountNormal)
-      case 1 => Some(accountAdmin)
-      case _ => None
-    }
-
+    accountCache.find(acc => (acc.id == id))
   }
 
-  // list all accounts
+
+  /**
+    * Return a sequence with all cached Accounts.
+    *
+    * @return
+    */
   def findAll(): Seq[Account] = {
-    accountList.toSeq
+    accountCache.toSeq
   }
 
-  // add new account to list of existing accounts
+  /**
+    * Add new Account to cache of existing ones.
+    * Use this for initialization (e.g. in conjunction with a database).
+    *
+    * @param account account to be added.
+    */
   def add(account: Account) : Unit = {
-    accountList = account::accountList
+    accountCache = account::accountCache
   }
 
 
-  def toSubject(acc : Account) : AppUser = {
+  /**
+    * TODO: give each Account a subject so it directly be accessed. This method should not be necessary!
+    * Convert given Account into a deadbolt Subject.
+    *
+    * @param acc Account to be converted.
+    * @return Subject resulting from conversion.
+    */
+  def toSubject(acc : Account) : Subject = {
     val name = acc.role.getName
-    new AppUser(name)
+    new CustomUser(name, List(), List())
   }
 
 }

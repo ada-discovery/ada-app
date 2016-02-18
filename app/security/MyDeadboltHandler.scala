@@ -50,7 +50,7 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
 
   /**
     * Retrieves the current user, wrapped into an Option.
-    * TODO: Not implemented yet, will always return None
+    * TODO: Cleanup
     *
     *
     * @param request
@@ -58,40 +58,25 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
     * @return Current user, if logged in. None otherwise.
     */
   override def getSubject[A](request: Request[A]): Future[Option[Subject]] = {
-    // TODO: change for actual use; right now, there never is a valid subject
-
     // we can't call restoreUser, so we must retrieve the user manually
-    //val currentToken: Option[AuthenticityToken] = tokenAccessor.extract (request)
-    //val userId: Future[Option[Int]] = idContainer.get(currentToken.get)
-
-    //val user = resolveUser(userId)
-
-    /*val res: Future[Option[Account]] = userId match{
-      case Some(id) => resolveUser(id)
-      case None     => Future(None)
-    }*/
-
-    val emptyDummy = Future(None)
     val timeout = 120000 millis
     val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
-    if(currentToken.isEmpty)
-      return emptyDummy
 
+    val userIdFuture = currentToken match{
+      case Some(token) => idContainer.get(token)
+      case None => Future(None)
+    }
 
-    val userIdFuture: Future[Option[Int]] = idContainer.get(currentToken.get)
-    val userId: Option[Int] = Await.result(userIdFuture, timeout)
-
-
+    val userId: Option[Id] = Await.result(userIdFuture, timeout)
     val accountOpFuture: Future[Option[Account]] = userId match{
       case Some(id) => resolveUser(id)
       case None => Future(None)
     }
 
-    val accountOp: Option[Account] = Await.result(accountOpFuture, timeout)
-    if(accountOp.isDefined)
-      Future(Some(Account.toSubject(accountOp.get)))
-    else
-      Future(None)
+    accountOpFuture.map{
+      case Some(acc) => Some(Account.toSubject(acc))
+      case None => None
+    }
   }
 
   /**

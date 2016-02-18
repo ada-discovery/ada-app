@@ -18,7 +18,7 @@ POST        /login                                                          cont
 GET         /logout                                                         controllers.AuthController.logout
 
 # for testing
-GET         /loginUser                                                      controllers.AuthController.loginUser
+GET         /loginBasic                                                     controllers.AuthController.loginUser
 GET         /loginAdmin                                                     controllers.AuthController.loginAdmin
 GET         /currentUser                                                    controllers.JansDataSetController.currentUser
 

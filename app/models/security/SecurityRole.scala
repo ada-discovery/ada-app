@@ -2,17 +2,21 @@ package models.security
 
 import be.objectify.deadbolt.core.models.Role
 
-
-class SecurityRole(val roleName: String) extends Role
-{
-  case class AdminRole() extends SecurityRole("Administrator")
-  case class DefaultRole() extends SecurityRole("DefaultUser")
-
+/**
+  * Implementation of the security role interface.
+  * SecurityRole is just a wrapper for a String.
+  *
+  */
+class SecurityRole(val roleName: String) extends Role {
   def getName: String = roleName
+}
 
-  def valueOf(value: String): Role = value match {
-    case "Administrator" => AdminRole()
-    case "DefaultUser"    => DefaultRole()
-    case _               => throw new IllegalArgumentException()
-  }
+/**
+  * Cached defintions of predefined security roles.
+  * Use these for convenience.
+  *
+  */
+object SecurityRoleCache {
+  lazy val adminRole = new SecurityRole("admin")
+  lazy val basicRole = new SecurityRole("basic")
 }
