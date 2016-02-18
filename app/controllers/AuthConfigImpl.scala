@@ -2,7 +2,7 @@ package controllers
 
 import jp.t2v.lab.play2.auth.{AuthConfig, _}
 
-import models.security.{Account, SecurityRole}
+import models.security.{UserManager, SecurityRole, AbstractUser}
 
 import play.api.mvc.Results._
 import play.api.mvc.{RequestHeader, Result}
@@ -27,13 +27,9 @@ trait AuthConfigImpl extends AuthConfig {
     * A type that is used to identify a user.
     * `String`, `Int`, `Long` and so on.
     */
-  type Id = Int
+  type Id = String
 
-  /**
-    * A type that represents a user in your application.
-    * `User`, `Account` and so on.
-    */
-  type User = Account
+  type User = AbstractUser
 
   /**
     * A type that is defined by every action for authorization.
@@ -62,7 +58,7 @@ trait AuthConfigImpl extends AuthConfig {
     *
     */
   def resolveUser(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] = {
-    Future.successful(Account.findById(id))
+    Future.successful(UserManager.findById(id))
   }
 
   /**
@@ -106,11 +102,12 @@ trait AuthConfigImpl extends AuthConfig {
     *
     */
   def authorize(user: User, authority: Authority)(implicit ctx: ExecutionContext): Future[Boolean] = Future.successful {
-    (user.role, authority) match {
+    /*(user.role, authority) match {
       case (accountAdmin, _)            => true
       case (accountNormal, roleNormal)  => true
       case _                            => false
-    }
+    }*/
+    true
   }
 
   /**

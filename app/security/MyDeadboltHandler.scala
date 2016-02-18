@@ -13,11 +13,6 @@ import be.objectify.deadbolt.core.models.Subject
 import jp.t2v.lab.play2.auth.AuthenticityToken
 
 
-
-
-
-import models.security.Account
-
 /**
   * Hooks for deadbolt
   *
@@ -29,7 +24,6 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
     * Empty right now.
     *
     * @param request
-    * @tparam A
     * @return
     */
   override def beforeAuthCheck[A](request: Request[A]) = {
@@ -40,7 +34,6 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
     * Hook for dynamic constraint types.
     *
     * @param request
-    * @tparam A
     * @return
     */
   override def getDynamicResourceHandler[A](request: Request[A]): Future[Option[DynamicResourceHandler]] = {
@@ -48,11 +41,9 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
   }
 
   /**
-    * * TODO: Cleanup. Move content into a "resolveUser" method in AuthConfigImpl
     * Retrieves the current user, wrapped into an Option.
     *
-    * @param request
-    * @tparam A
+    * @param request Current request.
     * @return Current user, if logged in. None otherwise.
     */
   override def getSubject[A](request: Request[A]): Future[Option[Subject]] = {
@@ -66,23 +57,18 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
     }
 
     val userId: Option[Id] = Await.result(userIdFuture, timeout)
-    val accountOpFuture: Future[Option[Account]] = userId match{
+    userId match{
       case Some(id) => resolveUser(id)
       case None => Future(None)
-    }
-
-    accountOpFuture.map{
-      case Some(acc) => Some(Account.toSubject(acc))
-      case None => None
     }
   }
 
   /**
+    * TODO: execute more meaningful action.
     * Action if user is not authorized.
     * Redirects user to login form if not authorized.
     *
     * @param request request leading to failure.
-    * @tparam A
     * @return Redirect to login form.
     */
   def onAuthFailure[A](request: Request[A]): Future[Result] = {

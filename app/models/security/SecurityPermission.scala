@@ -18,11 +18,11 @@ class SecurityPermission(val value: String) extends Permission {
   *
   */
 object SecurityPermissionCache {
-  lazy val adminPermissions = Scala.asJava(List(
+  lazy val adminPermissions = List(
     new SecurityPermission("view.data.basic"),
     new SecurityPermission("view.data.full"),
-    new SecurityPermission("view.admin")))
+    new SecurityPermission("view.admin"))
 
-  lazy val basicPermissions = Scala.asJava(List(
-    new SecurityPermission("view.data.basic")))
+  lazy val basicPermissions = List(
+    new SecurityPermission("view.data.basic"))
 }

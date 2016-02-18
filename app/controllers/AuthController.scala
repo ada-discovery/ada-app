@@ -9,19 +9,16 @@ import play.api.data._
 
 // authentification
 import jp.t2v.lab.play2.auth.LoginLogout
-import models.security.Account
+import models.security.UserManager
 
 
 class AuthController extends Controller with LoginLogout with AuthConfigImpl{
 
-  ///
-  /// play20-auth
-  ///
   /**
     * Login form defintion.
     */
   val loginForm = Form {
-    mapping("email" -> email, "password" -> text)(Account.authenticate)(_.map(u => (u.email, "")))
+    mapping("email" -> email, "password" -> text)(UserManager.authenticate)(_.map(u => (u.getMail, "")))
       .verifying("Invalid email or password", result => result.isDefined)
   }
 
@@ -52,7 +49,7 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
   def authenticate = Action.async { implicit request =>
     loginForm.bindFromRequest.fold(
       formWithErrors => Future.successful(BadRequest(views.html.auth.login(formWithErrors))),
-      user => gotoLoginSucceeded(user.get.id)
+      user => gotoLoginSucceeded(user.get.getIdentifier)
     )
   }
 
@@ -60,13 +57,13 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
   // TODO: debug login. remove later!
   // immediately login as default user
   def loginUser = Action.async{ implicit request =>
-    gotoLoginSucceeded(Account.basicAccount.id)
+    gotoLoginSucceeded(UserManager.basicAccount.getIdentifier)
   }
 
   // TODO: debug login. remove later!
   // immediately login as admin user
   def loginAdmin = Action.async{ implicit request =>
-    gotoLoginSucceeded(Account.adminAccount.id)
+    gotoLoginSucceeded(UserManager.adminAccount.getIdentifier)
   }
 
 }
