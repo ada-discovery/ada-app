@@ -4,17 +4,16 @@ import controllers.{AuthConfigImpl, routes}
 
 import play.api.mvc._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent._
+import scala.concurrent.{Future, Await}
+import scala.concurrent.duration._
 
 import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
 import be.objectify.deadbolt.core.models.Subject
 
-import jp.t2v.lab.play2.auth
-import jp.t2v.lab.play2.auth.{AuthenticityToken, LoginLogout, AuthElement}
+import jp.t2v.lab.play2.auth.AuthenticityToken
 
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
+
 
 
 import models.security.Account
@@ -23,7 +22,7 @@ import models.security.Account
   * Hooks for deadbolt
   *
   */
-class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] = None) extends DeadboltHandler with AuthConfigImpl /*with AuthElement*/{
+class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] = None) extends DeadboltHandler with AuthConfigImpl {
 
   /**
     * Pre-authorization task. May block further execution.
@@ -49,9 +48,8 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
   }
 
   /**
+    * * TODO: Cleanup. Move content into a "resolveUser" method in AuthConfigImpl
     * Retrieves the current user, wrapped into an Option.
-    * TODO: Cleanup
-    *
     *
     * @param request
     * @tparam A

@@ -41,7 +41,7 @@ object Account {
     * @return Option containing Account with matching mail; None otherwise
     */
   def findByEmail(email: String): Option[Account] = {
-    accountCache.find(acc => (acc.email == email))
+    accountCache.find((acc: Account) => (acc.email == email))
   }
 
   /**
@@ -51,7 +51,7 @@ object Account {
     * @return Option containing Account with matching ID; None otherwise
     */
   def findById(id: Int): Option[Account] = {
-    accountCache.find(acc => (acc.id == id))
+    accountCache.find((acc: Account) => (acc.id == id))
   }
 
 

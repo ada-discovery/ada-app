@@ -8,7 +8,17 @@ import be.objectify.deadbolt.core.models.Subject
   * Use for specialized user construction.
   *
   */
+/*class User(val userName: String, val roles: List[SecurityRole], val permissions: List[SecurityPermission]) extends Subject {
+
+  //0, "basic@mail", "123456", "basic user", SecurityRoleCache.basicRole
+  def getIdentifier: String = userName
+  def getRoles: java.util.List[SecurityRole] =  Scala.asJava(roles)
+  def getPermissions: java.util.List[SecurityPermission] =  Scala.asJava(permissions)
+}*/
+
 class CustomUser(val userName: String, val roles: List[SecurityRole], val permissions: List[SecurityPermission]) extends Subject {
+
+  //val basicAccount = Account(0, "basic@mail", "123456", "basic user", SecurityRoleCache.basicRole)
   def getIdentifier: String = userName
   def getRoles: java.util.List[SecurityRole] =  Scala.asJava(roles)
   def getPermissions: java.util.List[SecurityPermission] =  Scala.asJava(permissions)

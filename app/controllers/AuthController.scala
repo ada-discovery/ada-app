@@ -60,13 +60,13 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
   // TODO: debug login. remove later!
   // immediately login as default user
   def loginUser = Action.async{ implicit request =>
-    gotoLoginSucceeded(Account.accountBasic.id)
+    gotoLoginSucceeded(Account.basicAccount.id)
   }
 
   // TODO: debug login. remove later!
   // immediately login as admin user
   def loginAdmin = Action.async{ implicit request =>
-    gotoLoginSucceeded(Account.accountAdmin.id)
+    gotoLoginSucceeded(Account.adminAccount.id)
   }
 
 }
