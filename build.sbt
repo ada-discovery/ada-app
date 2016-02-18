@@ -4,7 +4,7 @@ import com.github.play2war.plugin._
 
 name := "ncer-pd"
 
-version := "0.1.3"
+version := "0.2.0-alpha"
 
 Play2WarPlugin.play2WarSettings
 
@@ -12,7 +12,7 @@ Play2WarKeys.servletVersion := "3.0"
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala)
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 libraryDependencies ++= Seq(cache, ws)
 
@@ -33,10 +33,10 @@ libraryDependencies ++= Seq(
   "org.webjars" % "highcharts" % "4.2.2",
   "org.webjars.bower" % "plotly.js" % "1.5.1",
   "net.codingwell" %% "scala-guice" % "4.0.1",
-  "org.clapper" % "classutil_2.11" % "1.0.5",
-  "org.apache.spark" % "spark-core_2.11" % "1.6.0",
-  "org.apache.spark" % "spark-sql_2.11" % "1.6.0",
-  "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.0"
+  "org.clapper" % "classutil_2.11" % "1.0.6",
+  "org.apache.spark" % "spark-core_2.11" % "1.6.0" exclude("asm", "asm"),
+  "org.apache.spark" % "spark-sql_2.11" % "1.6.0" exclude("asm", "asm"),
+  "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.0" exclude("asm", "asm")
 )
 
 dependencyOverrides ++= Set(
