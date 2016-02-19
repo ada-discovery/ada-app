@@ -1,36 +1,47 @@
 package controllers
 
-import play.api.mvc.{Controller}
+import javax.inject.Inject
+
+import controllers.denopa.{DeNoPaBaselineDictionaryController, DeNoPaBaselineController}
+import controllers.luxpark.{LuxParkDictionaryController, LuxParkController}
 import reactivemongo.bson.BSONObjectID
 import util.FilterSpec
 
-class DataSetDispatcher extends Controller {
+class DataSetDispatcher @Inject() (
+    luxParkController : LuxParkController,
+    luxParkDictionaryController : LuxParkDictionaryController,
+    deNoPaBaselineController : DeNoPaBaselineController,
+    deNoPaBaselineDictionaryController : DeNoPaBaselineDictionaryController
+  ) extends ControllerDispatcher[DataSetController]("dataSet", Seq(
+      ("luxpark", luxParkController),
+      ("denopa-baseline", deNoPaBaselineController))
+  ) with DataSetController {
 
-  def get(controllerId : String)(id: BSONObjectID) = ???
+  override def get(id: BSONObjectID) = dispatch(_.get(id))
 
-  def find(controllerId : String)(page: Int, orderBy: String, filter: FilterSpec) = ???
+  override def find(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.find(page, orderBy, filter))
 
-  def listAll(controllerId : String)(orderBy: Int) = ???
+  override def listAll(orderBy: Int) = dispatch(_.listAll(orderBy))
 
-  def exportAllRecordsAsCsv(controllerId : String)(delimiter : String) = ???
+  override def exportAllRecordsAsCsv(delimiter : String) = dispatch(_.exportAllRecordsAsCsv(delimiter))
 
-  def exportAllRecordsAsJson(controllerId : String) = ???
+  override def exportAllRecordsAsJson = dispatch(_.exportAllRecordsAsJson())
 
-  def exportRecordsAsCsv(controllerId : String)(delimiter : String, filter: FilterSpec) = ???
+  override def exportRecordsAsCsv(delimiter : String, filter: FilterSpec) = dispatch(_.exportRecordsAsCsv(delimiter, filter))
 
-  def exportRecordsAsJson(filter: FilterSpec) = ???
+  override def exportRecordsAsJson(filter: FilterSpec) = dispatch(_.exportRecordsAsJson(filter))
 
-  def overviewFieldTypes(controllerId : String) = ???
+  override def overviewFieldTypes = dispatch(_.overviewFieldTypes())
 
-  def overview(controllerId : String) = ???
+  override def overview = dispatch(_.overview())
 
-  def overviewList(controllerId : String)(page: Int, orderBy: String, filter: FilterSpec) = ???
+  override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.overviewList(page, orderBy, filter))
 
-  def getScatterStats(controllerId : String)(xFieldName : String, yFieldName : String) = ???
+  override def getScatterStats(xFieldName : String, yFieldName : String) = dispatch(_.getScatterStats(xFieldName, yFieldName))
 
-  def getDistribution(controllerId : String)(fieldName: String) = ???
+  override def getDistribution(fieldName: String) = dispatch(_.getDistribution(fieldName))
 
-  def exportTranSMARTDataFile(controllerId : String)(delimiter : String) = ???
+  override def exportTranSMARTDataFile(delimiter : String) = dispatch(_.exportTranSMARTDataFile(delimiter))
 
-  def exportTranSMARTMappingFile(controllerId : String)(delimiter : String) = ???
+  override def exportTranSMARTMappingFile(delimiter : String) = dispatch(_.exportTranSMARTMappingFile(delimiter))
 }

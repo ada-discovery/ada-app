@@ -2,7 +2,7 @@ package controllers.luxpark
 
 import javax.inject.{Inject, Named}
 
-import controllers.{DataSetController, StudyRouter}
+import controllers.{DataSetControllerImpl, StudyRouter}
 import models.Category
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.DictionaryFieldRepo
@@ -13,7 +13,7 @@ import scala.concurrent.Await
 class LuxParkController @Inject() (
     @Named("LuxParkDictionaryRepo") dictionaryRepo: DictionaryFieldRepo,
     redCapService: RedCapService
-  ) extends DataSetController(dictionaryRepo) {
+  ) extends DataSetControllerImpl(dictionaryRepo) {
 
   override protected val keyField = "cdisc_dm_usubjd"
 

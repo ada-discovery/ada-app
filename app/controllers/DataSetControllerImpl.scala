@@ -25,8 +25,39 @@ import scala.concurrent.{Future, Await}
 import _root_.util.JsonUtil._
 import scala.concurrent.duration._
 
-protected abstract class DataSetController(dictionaryRepo: DictionaryFieldRepo)
-  extends ReadonlyController[JsObject, BSONObjectID](dictionaryRepo.dataRepo) with ExportableAction[JsObject] {
+trait DataSetController {
+
+  def get(id : BSONObjectID): Action[AnyContent]
+
+  def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
+
+  def listAll(orderBy: Int): Action[AnyContent]
+
+  def exportAllRecordsAsCsv(delimiter : String): Action[AnyContent]
+
+  def exportAllRecordsAsJson: Action[AnyContent]
+
+  def exportRecordsAsCsv(delimiter : String, filter: FilterSpec): Action[AnyContent]
+
+  def exportRecordsAsJson(filter: FilterSpec): Action[AnyContent]
+
+  def overviewFieldTypes: Action[AnyContent]
+
+  def overview: Action[AnyContent]
+
+  def overviewList(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
+
+  def getScatterStats(xFieldName : String, yFieldName : String): Action[AnyContent]
+
+  def getDistribution(fieldName: String): Action[AnyContent]
+
+  def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
+
+  def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent]
+}
+
+protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRepo)
+  extends ReadonlyController[JsObject, BSONObjectID](dictionaryRepo.dataRepo) with DataSetController with ExportableAction[JsObject] {
 
   dictionaryRepo.initIfNeeded
 
