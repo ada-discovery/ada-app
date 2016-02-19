@@ -41,26 +41,13 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
   }
 
   /**
-    * Retrieves the current user, wrapped into an Option.
+    * Retrieves the current user, wrapped in an Option.
     *
     * @param request Current request.
     * @return Current user, if logged in. None otherwise.
     */
   override def getSubject[A](request: Request[A]): Future[Option[Subject]] = {
-    // we can't call restoreUser, so we must retrieve the user manually
-    val timeout = 120000 millis
-    val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
-
-    val userIdFuture = currentToken match{
-      case Some(token) => idContainer.get(token)
-      case None => Future(None)
-    }
-
-    val userId: Option[Id] = Await.result(userIdFuture, timeout)
-    userId match{
-      case Some(id) => resolveUser(id)
-      case None => Future(None)
-    }
+    currentUser(request)
   }
 
   /**
@@ -72,8 +59,7 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
     * @return Redirect to login form.
     */
   def onAuthFailure[A](request: Request[A]): Future[Result] = {
-    Future(Results.Redirect(routes.AuthController.login))
-    //Future(Results.Unauthorized)
+    Future(Results.Redirect(routes.AuthController.unauthorized))
   }
 
 }

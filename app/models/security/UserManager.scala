@@ -4,16 +4,14 @@ import be.objectify.deadbolt.core.models.Subject
 
 /**
   * Class for managing and accessing Users.
-  *
-  *
   */
 object UserManager {
 
   // Dummy user profiles.
   // TODO: eventually remove these
-  val adminAccount = new AdminUser
-  val basicAccount = new BasicUser
-  var accountList = List[AbstractUser](basicAccount, adminAccount)
+  val adminUser = new AdminUser
+  val basicUser = new BasicUser
+  var userList = List[AbstractUser](basicUser, adminUser)
 
   /**
     * Syntactic sugar. Calls "authenticate".
@@ -46,7 +44,7 @@ object UserManager {
     * @return Option containing Account with matching mail; None otherwise
     */
   def findByEmail(email: String): Option[AbstractUser] = {
-    accountList.find((acc: AbstractUser) => (acc.getMail == email))
+    userList.find((usr: AbstractUser) => (usr.getMail == email))
   }
 
   /**
@@ -56,26 +54,25 @@ object UserManager {
     * @return Option containing Account with matching ID; None otherwise
     */
   def findById(id: String): Option[AbstractUser] = {
-    accountList.find((acc: AbstractUser) => (acc.getIdentifier == id))
+    userList.find((acc: AbstractUser) => (acc.getIdentifier == id))
   }
 
-
   /**
-    * Return a sequence with all cached Accounts.
+    * Return a sequence with all cached Users.
     *
     * @return
     */
   def findAll(): Seq[AbstractUser] = {
-    accountList.toSeq
+    userList.toSeq
   }
 
   /**
-    * Add new Account to cache of existing ones.
+    * Add new AbstractUser to cache of existing ones.
     * Use this for initialization (e.g. in conjunction with a database).
     *
-    * @param account account to be added.
+    * @param user User to be added.
     */
-  def add(account: AbstractUser) : Unit = {
-    accountList = account::accountList
+  def add(user: AbstractUser) : Unit = {
+    userList = user::userList
   }
 }

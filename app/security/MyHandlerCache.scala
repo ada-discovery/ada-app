@@ -14,9 +14,10 @@ class MyHandlerCache extends HandlerCache {
 
   val defaultHandler: DeadboltHandler = new MyDeadboltHandler
   val userlessHandler: DeadboltHandler = new MyUserlessDeadboltHandler
+  val alternativeDynamicResourceHandler: DeadboltHandler = new MyDeadboltHandler(Some(MyAlternativeDynamicResourceHandler))
 
   val handlers: Map[Any, DeadboltHandler] = Map(HandlerKeys.defaultHandler -> defaultHandler,
-                                                HandlerKeys.altHandler -> new MyDeadboltHandler(Some(MyAlternativeDynamicResourceHandler)),
+                                                HandlerKeys.altHandler -> alternativeDynamicResourceHandler,
                                                 HandlerKeys.userlessHandler -> userlessHandler)
 
   override def apply(): DeadboltHandler = defaultHandler

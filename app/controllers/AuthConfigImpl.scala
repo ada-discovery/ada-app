@@ -5,9 +5,11 @@ import models.security.{UserManager, AbstractUser}
 import be.objectify.deadbolt.core.models.Role
 
 import play.api.mvc.Results._
-import play.api.mvc.{RequestHeader, Result}
+import play.api.mvc.{Request, RequestHeader, Result}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.duration._
+
 import scala.reflect._
 
 
@@ -54,6 +56,24 @@ trait AuthConfigImpl extends AuthConfig {
     */
   val sessionTimeoutInSeconds: Int = 3600
 
+
+  def currentUser[A](request: Request[A])(implicit ctx: ExecutionContext): Future[Option[AbstractUser]] = {
+    // we can't call restoreUser, so we must retrieve the user manually
+    val timeout = 120000 millis
+    val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
+
+    val userIdFuture = currentToken match{
+      case Some(token) => idContainer.get(token)
+      case None => Future(None)
+    }
+
+    val userId: Option[Id] = Await.result(userIdFuture, timeout)
+    userId match{
+      case Some(id) => resolveUser(id)
+      case None => Future(None)
+    }
+  }
+
   /**
     * A function that returns a `User` object from an `Id`.
     * Retrieves user from Account class.
@@ -69,7 +89,7 @@ trait AuthConfigImpl extends AuthConfig {
     */
   def loginSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
     //Future.successful(Redirect(routes.AppController.index()))
-    Future.successful(Ok("login succeeded"))
+    Future.successful(Redirect(routes.AppController.index))
   }
 
   /**
@@ -119,5 +139,4 @@ trait AuthConfigImpl extends AuthConfig {
     cookieSecureOption = play.api.Play.isProd(play.api.Play.current),
     cookieMaxAge       = Some(sessionTimeoutInSeconds)
   )
-
 }
