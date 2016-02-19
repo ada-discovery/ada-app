@@ -2,11 +2,9 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# Default path will just redirect to the RedCap view
+# Default path
 GET         /                                                                 controllers.AppController.index
 GET         /studies                                                          controllers.AppController.studies
-
-
 
 
 # deadbolt tests
@@ -62,6 +60,13 @@ GET         /redcap/fieldNames/get/:id                                        co
 GET         /redcap/records/exportAllAsCsv                                    controllers.RedCapController.exportRecordsAsCsv(delimiter : String ?= ",")
 GET         /redcap/records/exportTranSMARTData                               controllers.RedCapController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /redcap/records/exportTranSMARTMapping                            controllers.RedCapController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
+
+
+#Generic studies handler
+
+GET         /studies                                                          controllers.AppController.studies
+
+
 
 # DeNoPa
 
