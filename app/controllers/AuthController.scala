@@ -24,7 +24,6 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
 
   /**
     * Redirect to login page.
-    *
     */
   def login = Action { implicit request =>
     Ok(views.html.auth.login(loginForm))
@@ -32,14 +31,21 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
 
   /**
     * Remember log out state and redirect to main page.
-    *
-    * @return Redirect to main page.
     */
   def logout = Action.async { implicit request =>
     gotoLogoutSucceeded.map(_.flashing(
       "success" -> "Logged out"
     ).removingFromSession("rememberme"))
   }
+
+  /**
+    * Redirect to logout message page
+    */
+  def loggedOut = Action { implicit request =>
+    Ok(views.html.auth.loggedOut())
+  }
+
+
 
   /**
     * Check user name and password.
@@ -53,10 +59,9 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
     )
   }
 
-
   // TODO: debug login. remove later!
   // immediately login as default user
-  def loginUser = Action.async{ implicit request =>
+  def loginBasic = Action.async{ implicit request =>
     gotoLoginSucceeded(UserManager.basicAccount.getIdentifier)
   }
 

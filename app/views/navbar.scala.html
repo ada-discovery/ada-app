@@ -2,6 +2,10 @@
 @import controllers.denopa.{routes => denoparoutes}
 @import controllers.luxpark.{routes => luxparkroutes}
 
+@import models.security
+@import be.objectify.deadbolt.scala.views.html.subjectNotPresentOr
+
+
 @(implicit request: RequestHeader)
 <div class="navbar navbar-inverse navbar-fixed-top navbar-custom" role="navigation">
     <div class="container">
@@ -61,10 +65,34 @@
                 </li>
                 -->
 
-
                 <li>
                     <a href="#">Contact</a>
                 </li>
+
+
+                @{/*
+                <li>
+                    <!-- show login link, if no subject present; otherwise show logout link/ user dropdown list -->
+                    @subjectNotPresentOr(){
+                        <a href=@routes.AuthController.login()>Login  <span class="glyphicon glyphicon-log-in"></span></a>
+                    }{
+                        <a href=@routes.AuthController.logout()>Logout  <span class="glyphicon glyphicon-log-out"></span></a>
+                    }
+                </li>
+                */}
+                @{/*
+                    <!-- only show these links if admin subject is present -->
+                    @restrict(List(Array(SecurityRole.adminRole.getName)){
+                        <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Admin<span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                @menuItem(routes.AdminController.listRunnables(), "Runnables")
+                            </ul>
+                        </li>
+                    }
+                */}
+
+
             </ul>
         </div>
     </div>

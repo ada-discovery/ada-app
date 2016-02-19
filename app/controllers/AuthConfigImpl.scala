@@ -1,8 +1,8 @@
 package controllers
 
 import jp.t2v.lab.play2.auth.{AuthConfig, _}
-
-import models.security.{UserManager, SecurityRole, AbstractUser}
+import models.security.{UserManager, AbstractUser}
+import be.objectify.deadbolt.core.models.Role
 
 import play.api.mvc.Results._
 import play.api.mvc.{RequestHeader, Result}
@@ -18,7 +18,7 @@ import scala.reflect._
   * TODO add redirects to meaningful pages
   * TODO add logic
   *
-  * used by auth controller and messages controller module
+  * used by auth controller
   *
   */
 trait AuthConfigImpl extends AuthConfig {
@@ -29,17 +29,19 @@ trait AuthConfigImpl extends AuthConfig {
     */
   type Id = String
 
+  /**
+    *  Play2-auth specific.
+    *  Type defintion for User object.
+    *  Set to AbstractUser, a class extending deadbolt's Subject.
+    */
   type User = AbstractUser
 
   /**
+    * Play2-auth specific.
     * A type that is defined by every action for authorization.
-    * This sample uses the following trait:
-    *
-    * sealed trait Role
-    * case object Administrator extends Role
-    * case object NormalUser extends Role
+    * Set to deadbolt's Role class.
     */
-  type Authority = SecurityRole
+  type Authority = Role
 
   /**
     * A `ClassTag` is used to retrieve an id from the Cache API.
@@ -74,7 +76,8 @@ trait AuthConfigImpl extends AuthConfig {
     * Where to redirect the user after logging out
     */
   def logoutSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
-    Future.successful(Redirect(routes.AppController.index))
+    //Future.successful(Redirect(routes.AppController.index))
+    Future.successful(Redirect(routes.AuthController.loggedOut))
   }
 
   /**
@@ -84,30 +87,27 @@ trait AuthConfigImpl extends AuthConfig {
     Future.successful(Redirect(routes.AuthController.login))
   }
 
-
   /**
-    * TODO: exchange with deadbolt authorization
-    * If authorization failed (usually incorrect password) redirect the user as follows:
-    * Show error message
+    * TODO: Exchange with deadbolt authorization.
+    *       This is only used, if play2-auth authorization is required.
+    *       However, Play2-auth authorization is never used.
+    *
+    * Shows error message on authorization failure.
     */
   override def authorizationFailed(request: RequestHeader, user: User, authority: Option[Authority])(implicit context: ExecutionContext): Future[Result] = {
     Future.successful(Forbidden("Not authorised. Please change user or login to proceed"))
   }
 
   /**
-    * TODO: exchange with deadbolt authorization
-    *       this is only used, if play2-auth authorization is required
+    * TODO: Exchange with deadbolt authorization.
+    *       This is only used, if play2-auth authorization is required.
+    *       However, Play2-auth authorization is never used.
+    *       Always returns true.
     *
-    * Maps users to permissions
-    *
+    * Maps users to permissions.
     */
   def authorize(user: User, authority: Authority)(implicit ctx: ExecutionContext): Future[Boolean] = Future.successful {
-    /*(user.role, authority) match {
-      case (accountAdmin, _)            => true
-      case (accountNormal, roleNormal)  => true
-      case _                            => false
-    }*/
-    true
+    user.getRoles.contains(authority)
   }
 
   /**
@@ -115,7 +115,7 @@ trait AuthConfigImpl extends AuthConfig {
     * You can custom SessionID Token handler.
     * Default implementation use Cookie.
     */
-  override lazy val tokenAccessor = new CookieTokenAccessor(
+  override lazy val tokenAccessor: CookieTokenAccessor = new CookieTokenAccessor(
     cookieSecureOption = play.api.Play.isProd(play.api.Play.current),
     cookieMaxAge       = Some(sessionTimeoutInSeconds)
   )

@@ -18,12 +18,12 @@ GET         /restricted                                                     cont
 GET         /login                                                          controllers.AuthController.login
 POST        /login                                                          controllers.AuthController.authenticate
 GET         /logout                                                         controllers.AuthController.logout
+GET         /loggedout                                                      controllers.AuthController.loggedOut
 
 # for testing
-GET         /loginBasic                                                     controllers.AuthController.loginUser
+GET         /loginBasic                                                     controllers.AuthController.loginBasic
 GET         /loginAdmin                                                     controllers.AuthController.loginAdmin
 GET         /currentUser                                                    controllers.JansDataSetController.currentUser
-
 
 
 # Admin

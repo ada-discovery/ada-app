@@ -15,7 +15,6 @@ class JansDataSetController @Inject() (
     deadbolt: DeadboltActions
   ) extends Controller with AuthElement with AuthConfigImpl{
 
-
   // deadbolt tests
   def restrictedCall = deadbolt.Restrict(List(Array(""))) {
     Action{implicit request =>
@@ -38,12 +37,6 @@ class JansDataSetController @Inject() (
   def currentUser = StackAction(AuthorityKey -> SecurityRoleCache.basicRole) { implicit request =>
     val user: AbstractUser = loggedIn
     Ok("logged in as: " + user.getMail)
-  }
-
-  def resolve = Action { implicit request =>
-    //Account.findById()
-    //val usr = resolveUser()
-    Ok("")
   }
 
   // debug: show session

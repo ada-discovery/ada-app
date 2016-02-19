@@ -7,10 +7,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 /**
- *
- * @author Steve Chaloner (steve@objectify.be)
- */
+  * DeadboltHandler to be used if no Subject present
+  *
+  */
 class MyUserlessDeadboltHandler extends MyDeadboltHandler
 {
+  // Dummy method. Always returns Future(None)
   override def getSubject[A](request: Request[A]): Future[Option[Subject]] = Future(None)
 }

@@ -73,6 +73,7 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
     */
   def onAuthFailure[A](request: Request[A]): Future[Result] = {
     Future(Results.Redirect(routes.AuthController.login))
+    //Future(Results.Unauthorized)
   }
 
 }

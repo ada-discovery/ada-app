@@ -13,10 +13,11 @@ import be.objectify.deadbolt.scala.cache.HandlerCache
 class MyHandlerCache extends HandlerCache {
 
   val defaultHandler: DeadboltHandler = new MyDeadboltHandler
+  val userlessHandler: DeadboltHandler = new MyUserlessDeadboltHandler
 
   val handlers: Map[Any, DeadboltHandler] = Map(HandlerKeys.defaultHandler -> defaultHandler,
                                                 HandlerKeys.altHandler -> new MyDeadboltHandler(Some(MyAlternativeDynamicResourceHandler)),
-                                                HandlerKeys.userlessHandler -> new MyUserlessDeadboltHandler)
+                                                HandlerKeys.userlessHandler -> userlessHandler)
 
   override def apply(): DeadboltHandler = defaultHandler
 
