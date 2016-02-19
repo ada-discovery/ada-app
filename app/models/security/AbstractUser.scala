@@ -1,19 +1,19 @@
 package models.security
 
 import play.libs.Scala
-import be.objectify.deadbolt.core.models.Subject
+import be.objectify.deadbolt.core.models.{Role, Permission, Subject}
 
 /**
   * Abstract User class.
   * Mainly a container for user-specific information.
   * Extends Subject class by a handful of helpful methods for authentification.
-  *
+  * For simplicity, Subject.getIdentifier is represented by a String.
   */
-abstract class AbstractUser(val userName: String, val roles: List[SecurityRole], val permissions: List[SecurityPermission]) extends Subject {
+abstract class AbstractUser(val userName: String, val roles: List[Role], val permissions: List[Permission]) extends Subject {
   // basic methods required by Subject class
   def getIdentifier: String = userName
-  def getRoles: java.util.List[SecurityRole] = Scala.asJava(roles)
-  def getPermissions: java.util.List[SecurityPermission] = Scala.asJava(permissions)
+  def getRoles: java.util.List[Role] = Scala.asJava(roles)
+  def getPermissions: java.util.List[Permission] = Scala.asJava(permissions)
 
   // additional fields
   def getMail: String = ???
@@ -25,7 +25,7 @@ abstract class AbstractUser(val userName: String, val roles: List[SecurityRole],
   * Use for user construction.
   *
   */
-class CustomUser(val email: String, val password: String, userName: String, roles: List[SecurityRole], permissions: List[SecurityPermission]) extends AbstractUser(userName, roles, permissions) {
+class CustomUser(val email: String, val password: String, userName: String, roles: List[Role], permissions: List[Permission]) extends AbstractUser(userName, roles, permissions) {
   override def getMail: String = email
   override def getPassword: String = password
 }

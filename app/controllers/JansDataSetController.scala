@@ -15,35 +15,18 @@ class JansDataSetController @Inject() (
     deadbolt: DeadboltActions
   ) extends Controller with AuthElement with AuthConfigImpl{
 
-
   // deadbolt tests
-  def restrictedCall = deadbolt.Restrict(List(Array(""))) {
+  def restrictedCall = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole.getName))) {
     Action{implicit request =>
       Ok("this call is only seen, if subject matches restrictions")
     }
   }
-  def notpresent = deadbolt.SubjectNotPresent(){
-    Action{
-      Ok("deadbolt does not see a subject")
-    }
-  }
-  // only visible if logged in
-  def present = deadbolt.SubjectPresent(){
-    Action{
-      Ok("deadbolt sees a present subject!")
-    }
-  }
 
   // substitute stackaction with deadbolt action
+  //
   def currentUser = StackAction(AuthorityKey -> SecurityRoleCache.basicRole) { implicit request =>
     val user: AbstractUser = loggedIn
     Ok("logged in as: " + user.getMail)
-  }
-
-  def resolve = Action { implicit request =>
-    //Account.findById()
-    //val usr = resolveUser()
-    Ok("")
   }
 
   // debug: show session

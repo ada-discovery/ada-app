@@ -31,9 +31,10 @@
                         </div>
                     }
 
-                    @flash.get("success").map { message =>
+                    @* Unneccessary *@
+                    @flash.get("success").map { msg =>
                         <p class="success">
-                            @message
+                            @msg
                         </p>
                     }
 

@@ -1,6 +1,8 @@
 package controllers
 
-import scala.concurrent.Future
+import play.twirl.api.Html
+
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
 
 import play.api.mvc.{Action, Controller}
@@ -9,7 +11,7 @@ import play.api.data._
 
 // authentification
 import jp.t2v.lab.play2.auth.LoginLogout
-import models.security.UserManager
+import models.security.{AbstractUser, UserManager}
 
 
 class AuthController extends Controller with LoginLogout with AuthConfigImpl{
@@ -24,21 +26,29 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
 
   /**
     * Redirect to login page.
-    *
     */
   def login = Action { implicit request =>
+    /*if()
+      Ok(views.html.auth.login(loginForm))
+    else
+      Redirect(routes.AppController.index)*/
     Ok(views.html.auth.login(loginForm))
   }
 
   /**
     * Remember log out state and redirect to main page.
-    *
-    * @return Redirect to main page.
     */
   def logout = Action.async { implicit request =>
     gotoLogoutSucceeded.map(_.flashing(
       "success" -> "Logged out"
     ).removingFromSession("rememberme"))
+  }
+
+  /**
+    * Redirect to logout message page
+    */
+  def loggedOut = Action { implicit request =>
+    Ok(views.html.auth.loggedOut())
   }
 
   /**
@@ -53,17 +63,26 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
     )
   }
 
+  /**
+    * TODO: Give more specific error message (e.g. you are supposed to be admin)
+    * Redirect user on authorization failure.
+    */
+  def unauthorized = Action { implicit request =>
+    val message = "It appears that you don't have sufficient rights for access. Please login to proceed."
+    Ok(views.html.auth.login(loginForm, Some(message)))
+  }
+
 
   // TODO: debug login. remove later!
-  // immediately login as default user
-  def loginUser = Action.async{ implicit request =>
-    gotoLoginSucceeded(UserManager.basicAccount.getIdentifier)
+  // immediately login as basic user
+  def loginBasic = Action.async{ implicit request =>
+    gotoLoginSucceeded(UserManager.basicUser.getIdentifier)
   }
 
   // TODO: debug login. remove later!
   // immediately login as admin user
   def loginAdmin = Action.async{ implicit request =>
-    gotoLoginSucceeded(UserManager.adminAccount.getIdentifier)
+    gotoLoginSucceeded(UserManager.adminUser.getIdentifier)
   }
 
 }

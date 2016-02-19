@@ -2,6 +2,10 @@
 @import controllers.denopa.{routes => denoparoutes}
 @import controllers.luxpark.{routes => luxparkroutes}
 
+@import models.security
+@import be.objectify.deadbolt.scala.views.html.subjectNotPresentOr
+
+
 @(implicit request: RequestHeader)
 <div class="navbar navbar-inverse navbar-fixed-top navbar-custom" role="navigation">
     <div class="container">
@@ -61,10 +65,48 @@
                 </li>
                 -->
 
-
                 <li>
                     <a href="#">Contact</a>
                 </li>
+
+
+                  @**
+                    * Hack. It's cleaner to use deadbolt template functions here.
+                    * However, this navbar is used throughout the entire platform.
+                    * Accessing deadbolt template functions is only possible if the template was called through a deadbolt action.
+                    * Thus, if we were to use deadbolt functions here, we would require every page call on the entire platform to be wrapped in deadbolt actions.
+                    *
+                    *@
+                <li>
+                    <!-- show login link, if no subject present; otherwise show user dropdown list -->
+                    @if(request.cookies.get("PLAY2AUTH_SESS_ID").isEmpty){
+                        <a href=@routes.AuthController.login()>Login&#160;&#160;&#160;<span class="glyphicon glyphicon-log-in"></span></a>
+                    }else{
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user"></span><span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                <li><a>View Profile</a></li>
+                                <li><a>Workspace</a></li>
+                                <li role="separator" class="divider"></li>
+                                <li><a href=@routes.AuthController.logout()>Logout&#160;&#160;&#160;<span class="glyphicon glyphicon-log-out"></span></a></li>
+                            </ul>
+                        </li>
+                    }
+                </li>
+
+                @{/*
+                    <!-- only show these links if admin subject is present -->
+                    @restrict(List(Array(SecurityRole.adminRole.getName)){
+                        <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Admin<span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                @menuItem(routes.AdminController.listRunnables(), "Runnables")
+                            </ul>
+                        </li>
+                    }
+                */}
+
+
             </ul>
         </div>
     </div>

@@ -17,6 +17,6 @@ class SecurityRole(val roleName: String) extends Role {
   *
   */
 object SecurityRoleCache {
-  lazy val adminRole = new SecurityRole("admin")
-  lazy val basicRole = new SecurityRole("basic")
+  lazy val adminRole: Role = new SecurityRole("admin")
+  lazy val basicRole: Role = new SecurityRole("basic")
 }
