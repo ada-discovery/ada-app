@@ -81,12 +81,12 @@ GET         /studiez/overviewList                                               
 GET         /studiez/getScatterStats                                                controllers.DataSetDispatcher.getScatterStats(xField: String ?= "digitsf_score", yField: String ?= "bentons_score")
 GET         /studiez/getDistribution                                                controllers.DataSetDispatcher.getDistribution(fieldName: String ?= "digitsf_score")
 
-#GET         /studiez/:controllerId/dictionary                                       controllers.DataSetDispatcher.overviewList(controllerId : String)(        p:        Int ?= 0,        s:        String ?= "name",        filter :        util.FilterSpec ?= new        util.FilterSpec())
-#GET         /studiez/:controllerId/dictionary/get/:name                             controllers.DataSetDispatcher.get(controllerId : String)(        name :        String)
-#POST        /studiez/:controllerId/dictionary/save                                  controllers.DataSetDispatcher.save(controllerId : String)
-#GET         /studiez/:controllerId/dictionary/:name                                 controllers.DataSetDispatcher.edit(controllerId : String)(        name :        String)
-#POST        /studiez/:controllerId/dictionary/:name                                 controllers.DataSetDispatcher.update(controllerId : String)(        name :        String)
-#GET         /studiez/:controllerId/fieldNames                                       controllers.DataSetDispatcher.getFieldNames(controllerId : String)
+#GET         /studiez/:controllerId/dictionary                                       controllers.DictionaryDispatcher.overviewList(controllerId : String)(        p:        Int ?= 0,        s:        String ?= "name",        filter :        util.FilterSpec ?= new        util.FilterSpec())
+#GET         /studiez/:controllerId/dictionary/get/:name                             controllers.DictionaryDispatcher.get(controllerId : String)(        name :        String)
+#POST        /studiez/:controllerId/dictionary/save                                  controllers.DictionaryDispatcher.save(controllerId : String)
+#GET         /studiez/:controllerId/dictionary/:name                                 controllers.DictionaryDispatcher.edit(controllerId : String)(        name :        String)
+#POST        /studiez/:controllerId/dictionary/:name                                 controllers.DictionaryDispatcher.update(controllerId : String)(        name :        String)
+#GET         /studiez/:controllerId/fieldNames                                       controllers.DictionaryDispatcher.getFieldNames(controllerId : String)
 
 # DeNoPa
 

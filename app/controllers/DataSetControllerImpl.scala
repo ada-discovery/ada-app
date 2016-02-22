@@ -27,7 +27,9 @@ import scala.concurrent.duration._
 
 trait DataSetController {
 
-  def get(id : BSONObjectID): Action[AnyContent]
+  def dataSetName: String
+
+  def get(id: BSONObjectID): Action[AnyContent]
 
   def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
 
@@ -64,7 +66,6 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
   @Inject var tranSMARTService: TranSMARTService = _
 
   // hooks
-  protected def dataSetName : String
 
   // keyfield, mainly used for data export
   protected def keyField : String

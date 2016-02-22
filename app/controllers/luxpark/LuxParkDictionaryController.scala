@@ -2,12 +2,12 @@ package controllers.luxpark
 
 import javax.inject.{Inject, Named}
 
-import controllers.{DictionaryController, StudyRouter}
+import controllers.{DictionaryControllerImpl, DictionaryController, StudyRouter}
 import persistence.DictionaryFieldRepo
 
 class LuxParkDictionaryController @Inject()(
    @Named("LuxParkDictionaryRepo") dictionaryRepo: DictionaryFieldRepo
-  ) extends DictionaryController(dictionaryRepo) {
+  ) extends DictionaryControllerImpl(dictionaryRepo) {
 
   override protected val dataSetName = "LuxPark"
 
