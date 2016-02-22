@@ -5,7 +5,7 @@ import javax.inject.Inject
 import models.User
 import persistence.RepoTypeRegistry.UserRepo
 import play.api.data.Form
-import play.api.data.Forms.{date, ignored, mapping, nonEmptyText}
+import play.api.data.Forms.{date, ignored, mapping, nonEmptyText, optional, seq}
 import models.Page
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
@@ -21,11 +21,14 @@ class UserController @Inject() (
   override protected val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
+      "userName" -> nonEmptyText,
       "name" -> nonEmptyText,
-      "address" -> nonEmptyText,
-      "dob" -> date("yyyy-MM-dd"),
-      "joiningDate" -> date("yyyy-MM-dd"),
-      "designation" -> nonEmptyText)(User.apply)(User.unapply))
+      "roleNames" -> seq(nonEmptyText),
+      "permissionNames" -> seq(nonEmptyText),
+      "address" -> optional(nonEmptyText),
+      "dob" -> optional(date("yyyy-MM-dd")),
+      "joiningDate" -> optional(date("yyyy-MM-dd")),
+      "designation" -> optional(nonEmptyText))(User.apply)(User.unapply))
 
   override protected val home =
     Redirect(routes.UserController.listAll())
@@ -42,6 +45,7 @@ class UserController @Inject() (
   override protected def listView(currentPage: Page[User])(implicit msg: Messages, request: RequestHeader) =
     html.user.list(currentPage)
 
+  @Deprecated
   override protected val defaultCreateEntity =
-    new User(null, null, null, null, null, null)
+    new User(null, null, null, null, null, null, null, null, null)
 }

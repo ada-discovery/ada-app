@@ -26,7 +26,7 @@ class AdminController @Inject() (
     *
     * @return View listing all runnables in directory "runnables".
     */
-  def listRunnables = /*deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole.getName)))*/ {
+  def listRunnables = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole.getName))) {
     Action { implicit request =>
       val defaultClasspath = List(".").map(new File(_))
 

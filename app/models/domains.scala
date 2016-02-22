@@ -1,11 +1,18 @@
 package models
 
+import models.security.{SecurityPermission, SecurityRole}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import java.util.{UUID, Date}
 import play.modules.reactivemongo.json.BSONFormats._
 
-case class User(_id: Option[BSONObjectID], name: String, address: String, dob: Date, joiningDate: Date, designation: String)
+case class User(_id: Option[BSONObjectID], userName: String, name: String, roleNames: Seq[String], permissionNames: Seq[String],
+                address: Option[String], dob: Option[Date], joiningDate: Option[Date], designation: Option[String]) {
+
+  def roles = roleNames.map(new SecurityRole(_))
+
+  def permissions = roleNames.map(new SecurityPermission(_))
+}
 
 object User {
   implicit val UserFormat = Json.format[User]
