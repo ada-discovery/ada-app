@@ -9,7 +9,9 @@ class DeNoPaBaselineController @Inject() (
     @Named("DeNoPaBaselineDictionaryRepo") dictionaryRepo: DictionaryFieldRepo
   ) extends DeNoPaController(dictionaryRepo) {
 
-  override val dataSetName = "DeNoPa Baseline"
+  override val dataSetId = "denopa-baseline"
+
+  override protected val dataSetName = "DeNoPa Baseline"
 
   override protected val listViewColumns = Some(Seq("Line_Nr", "Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe"))
 

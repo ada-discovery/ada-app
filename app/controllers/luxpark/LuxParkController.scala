@@ -15,7 +15,9 @@ class LuxParkController @Inject() (
     redCapService: RedCapService
   ) extends DataSetControllerImpl(dictionaryRepo) {
 
-  override val dataSetName = "LuxPark"
+  override val dataSetId = "luxpark"
+
+  override protected val dataSetName = "LuxPark"
 
   override protected val keyField = "cdisc_dm_usubjd"
 

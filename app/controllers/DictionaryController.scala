@@ -19,6 +19,8 @@ import scala.concurrent.Future
 
 trait DictionaryController {
 
+  def dataSetId: String
+
   def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
 
   def listAll(orderBy: Int): Action[AnyContent]
@@ -34,6 +36,10 @@ trait DictionaryController {
   def update(id: String): Action[AnyContent]
 
   def delete(id: String): Action[AnyContent]
+
+  def overviewList(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
+
+  def getFieldNames: Action[AnyContent]
 }
 
 abstract class DictionaryControllerImpl (
@@ -84,7 +90,7 @@ abstract class DictionaryControllerImpl (
       6
     )
 
-  def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+  override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
     val fieldNameExtractors = Seq(
       ("Field Type", "fieldType", (field : Field) => field.fieldType)
 //      ("Enum", "isEnum", (field : Field) => field.isEnum)
@@ -118,7 +124,7 @@ abstract class DictionaryControllerImpl (
       ChartSpec.pie(values, None, chartTitle, false, true)
     }
 
-  def getFieldNames = Action.async { implicit request =>
+  override def getFieldNames = Action.async { implicit request =>
     val futureFieldNames = repo.find(None, Some(Seq(AscSort("name")))).map(_.map(_.name))
     futureFieldNames.map(fieldNames => Ok(Json.toJson(fieldNames)))
   }

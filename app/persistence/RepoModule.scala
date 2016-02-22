@@ -11,7 +11,6 @@ import persistence.RepoDef.Repo
 
 object RepoTypeRegistry {
   type JsObjectCrudRepo = AsyncCrudRepo[JsObject, BSONObjectID]
-  type MetaTypeStatsRepo = AsyncCrudRepo[MetaTypeStats, BSONObjectID]
   type TranslationRepo = AsyncCrudRepo[Translation, BSONObjectID]
   type UserRepo = AsyncCrudRepo[User, BSONObjectID]
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
@@ -47,12 +46,6 @@ object RepoDef extends Enumeration {
 
   val LuxParkRepo = LuxParkRepos._1
   val LuxParkDictionaryRepo = LuxParkRepos._2
-
-  val DeNoPaBaselineMetaTypeStatsRepo = Repo[MetaTypeStatsRepo](
-    new MongoAsyncCrudRepo[MetaTypeStats, BSONObjectID]("denopa-baseline_visit-metatype_stats"), true)
-
-  val DeNoPaFirstVisitMetaTypeStatsRepo = Repo[MetaTypeStatsRepo](
-    new MongoAsyncCrudRepo[MetaTypeStats, BSONObjectID]("denopa-first_visit-metatype_stats"), true)
 
   val TranslationRepo = Repo[TranslationRepo](
     new MongoAsyncCrudRepo[Translation, BSONObjectID]("translations"))
@@ -102,9 +95,6 @@ class RepoModule extends ScalaModule {
 
     bindRepo(RepoDef.DeNoPaCuratedFirstVisitRepo)
     bindRepo(RepoDef.DeNoPaCuratedFirstVisitDictionaryRepo)
-
-    bindRepo(RepoDef.DeNoPaBaselineMetaTypeStatsRepo)
-    bindRepo(RepoDef.DeNoPaFirstVisitMetaTypeStatsRepo)
 
     bindRepo(RepoDef.LuxParkRepo)
     bindRepo(RepoDef.LuxParkDictionaryRepo)

@@ -34,8 +34,10 @@ object Message {
   }
 }
 
+@Deprecated
 case class MetaTypeStats(_id: Option[BSONObjectID], attributeName : String, intRatio: Double, longRatio: Double, floatRatio: Double, doubleRatio: Double, booleanRatio: Double, nullRatio: Double, valueRatioMap: Map[String, Double])
 
+@Deprecated
 object MetaTypeStats {
   implicit val MetaAndTypeStatsFormat = Json.format[MetaTypeStats]
 

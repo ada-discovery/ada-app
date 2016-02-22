@@ -33,5 +33,5 @@ class DataSetDispatcher(controllers : Iterable[(String, DataSetController)]) ext
 
   override def exportTranSMARTMappingFile(delimiter : String) = dispatch(_.exportTranSMARTMappingFile(delimiter))
 
-  override def dataSetName = ???
+  override def dataSetId = ???
 }

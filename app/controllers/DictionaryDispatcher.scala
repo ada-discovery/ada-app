@@ -19,4 +19,10 @@ class DictionaryDispatcher(controllers : Iterable[(String, DictionaryController)
   override def delete(id: String) = dispatch(_.delete(id))
 
   override def save = dispatch(_.save)
+
+  override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.overviewList(page, orderBy, filter))
+
+  override def getFieldNames = dispatch(_.getFieldNames)
+
+  override def dataSetId = ???
 }
