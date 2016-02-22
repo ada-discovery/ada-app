@@ -8,19 +8,22 @@ GET         /studies                                                            
 
 
 # deadbolt tests
-GET         /nosubj                                                                 controllers.JansDataSetController.notpresent
-GET         /asubj                                                                  controllers.JansDataSetController.present
+#GET         /nosubj                                                                 controllers.JansDataSetController.notpresent
+#GET         /asubj                                                                  controllers.JansDataSetController.present
 GET         /restricted                                                             controllers.JansDataSetController.restrictedCall
 
 # logins
 GET         /login                                                                  controllers.AuthController.login
 POST        /login                                                                  controllers.AuthController.authenticate
 GET         /logout                                                                 controllers.AuthController.logout
+GET         /loggedout                                                              controllers.AuthController.loggedOut
+GET         /unauthorized                                                           controllers.AuthController.unauthorized
 
 # for testing
-GET         /loginBasic                                                             controllers.AuthController.loginUser
+GET         /loginBasic                                                             controllers.AuthController.loginBasic
 GET         /loginAdmin                                                             controllers.AuthController.loginAdmin
 GET         /currentUser                                                            controllers.JansDataSetController.currentUser
+GET         /restricted                                                             controllers.JansDataSetController.restrictedCall
 
 # Admin
 GET         /runnables                                                              controllers.AdminController.listRunnables
