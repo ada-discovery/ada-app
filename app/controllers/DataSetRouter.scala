@@ -1,6 +1,5 @@
 package controllers
 
-import controllers.denopa.routes
 import play.api.mvc.Call
 import reactivemongo.bson.BSONObjectID
 import util.FilterSpec
