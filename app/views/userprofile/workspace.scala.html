@@ -1,0 +1,45 @@
+@import models.security.AbstractUser
+@import be.objectify.deadbolt.scala.views.html.restrict
+@import models.security.SecurityRoleCache
+
+@(user: AbstractUser)(implicit request: Request[Any])
+
+@layout.main("NCER-PD Home", false) {
+    <!-- user profile header; move to designated template -->
+    <div class="container" style="padding-bottom: 190px;" xmlns="http://www.w3.org/1999/html">
+        @userprofile.profileHeader(2)
+        <br>
+
+        <!-- Concept -->
+
+
+        <div class="row">
+            <div class="col-sm-4">
+                    <!-- empty for now -->
+            </div>
+            <div class="col-sm-4">
+                <!-- empty for now -->
+            </div>
+            <div class="col-sm-4">
+                <div class="panel-group">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h4 class="panel-title">
+                                <a data-toggle="collapse" href="#collapsepermissions">Saved Filters&#160;&#160;<span class="badge">3</span></a>
+                            </h4>
+                        </div>
+                        <div id="collapsepermissions" class="panel-collapse collapse">
+                            <ul class="list-group">
+                                <li class="list-group-item">Filter A</li>
+                                <li class="list-group-item">Filter B</li>
+                                <li class="list-group-item">Filter C</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+}

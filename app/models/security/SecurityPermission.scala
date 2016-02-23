@@ -39,5 +39,5 @@ object SecurityPermissionCache {
     new ViewPermission("admin"))                            // permission to access admin controls
 
   lazy val basicPermissions: List[Permission] = List(
-    new ViewPermission("view.data.basic"))                  // permission to view data
+    new ViewPermission("data.basic"))                  // permission to view data
 }

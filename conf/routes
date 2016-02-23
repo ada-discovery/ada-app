@@ -6,11 +6,11 @@
 GET         /                                                                       controllers.AppController.index
 GET         /studies                                                                controllers.AppController.studies
 
-
-# deadbolt tests
-#GET         /nosubj                                                                 controllers.JansDataSetController.notpresent
-#GET         /asubj                                                                  controllers.JansDataSetController.present
-GET         /restricted                                                             controllers.JansDataSetController.restrictedCall
+# User profiles
+GET         /profile                                                                controllers.UserProfileController.profile
+GET         /workspace                                                              controllers.UserProfileController.workspace
+GET         /settings                                                               controllers.UserProfileController.settings
+GET         /adminpanel                                                             controllers.UserProfileController.adminPanel
 
 # logins
 GET         /login                                                                  controllers.AuthController.login
@@ -29,7 +29,7 @@ GET         /restricted                                                         
 GET         /runnables                                                              controllers.AdminController.listRunnables
 GET         /runScript                                                              controllers.AdminController.runScript(className : String)
 
-# Users
+# Users management
 GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /users/all                                                              controllers.UserController.listAll(s: Int ?= 2)
 GET         /users/new                                                              controllers.UserController.create

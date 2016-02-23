@@ -85,8 +85,9 @@
                         <li class="dropdown">
                             <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user"></span><span class="caret"></span></a>
                             <ul class="dropdown-menu">
-                                <li><a>View Profile</a></li>
-                                <li><a>Workspace</a></li>
+                                <li><a href=@routes.UserProfileController.profile()>My Profile</a></li>
+                                <li><a href=@routes.UserProfileController.workspace()>My Workspace</a></li>
+                                <li><a>Settings</a></li>
                                 <li role="separator" class="divider"></li>
                                 <li><a href=@routes.AuthController.logout()>Logout&#160;&#160;&#160;<span class="glyphicon glyphicon-log-out"></span></a></li>
                             </ul>

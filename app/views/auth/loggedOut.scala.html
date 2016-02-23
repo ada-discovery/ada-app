@@ -3,13 +3,11 @@
 @layout.main("NCER-PD Home", false) {
     <!-- Begin page content -->
     <div class="container" style="padding-bottom: 190px;" xmlns="http://www.w3.org/1999/html">
-        <center>
-            <div class="alert alert-info">
-                <h2>Logout Succeeded.</h2>
-            </div>
-            <h3>You can now:</h3>
-            <h3><a href="@routes.AppController.index">Return to main page</a></h3>
-            <h3><a href="@routes.AuthController.login">Login as a different user</a></h3>
-        </center>
+        <div class="alert alert-info">
+            <h2>Logout Succeeded.</h2>
+        </div>
+        <h3>You can now:</h3>
+        <h3><a href="@routes.AppController.index">Return to main page</a></h3>
+        <h3><a href="@routes.AuthController.login">Login as a different user</a></h3>
     </div>
 }

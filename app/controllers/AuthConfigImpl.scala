@@ -56,7 +56,6 @@ trait AuthConfigImpl extends AuthConfig {
     */
   val sessionTimeoutInSeconds: Int = 3600
 
-
   def currentUser[A](request: Request[A])(implicit ctx: ExecutionContext): Future[Option[AbstractUser]] = {
     // we can't call restoreUser, so we must retrieve the user manually
     val timeout = 120000 millis
@@ -89,7 +88,7 @@ trait AuthConfigImpl extends AuthConfig {
     */
   def loginSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
     //Future.successful(Redirect(routes.AppController.index()))
-    Future.successful(Redirect(routes.AppController.index))
+    Future.successful(Redirect(routes.UserProfileController.profile()))
   }
 
   /**

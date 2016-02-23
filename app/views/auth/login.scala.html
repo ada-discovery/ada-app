@@ -31,13 +31,6 @@
                         </div>
                     }
 
-                    @* Unneccessary *@
-                    @flash.get("success").map { msg =>
-                        <p class="success">
-                            @msg
-                        </p>
-                    }
-
                     <div class="form-group row">
                         <label form="user"> User name: <br></label>
                         <input type="email" class="form-control" id="email" name="email" value="" placeholder="Enter user name">
