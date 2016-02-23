@@ -1,9 +1,13 @@
 package models.security
 
 import be.objectify.deadbolt.core.models.Subject
+import models.User
 import persistence.RepoDef
 
 import persistence.RepoTypeRegistry.UserRepo
+import play.api.libs.json.JsObject
+
+import scala.concurrent.Future
 
 /**
   * Class for managing and accessing Users.
@@ -52,7 +56,10 @@ object UserManager {
     userList.find((usr: AbstractUser) => (usr.getMail == email))
   }*/
   def findByEmail(email: String): Option[AbstractUser] = {
-    val bla = userRepo.count(None)
+    val criteria: Option[JsObject] = None
+    val userFutureTrav: Future[Traversable[User]] = userRepo.find(criteria, None, None, None, None)
+
+    //val userTrav = Await
 
 
     None

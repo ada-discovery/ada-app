@@ -4,16 +4,16 @@ import be.objectify.deadbolt.scala.{DeadboltExecutionContextProvider, TemplateFa
 import be.objectify.deadbolt.scala.cache.HandlerCache
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
-import security.{CustomDeadboltExecutionContextProvider, CustomHandlerCache, CustomCustomTemplateFailureListener}
+import security.{CustomDeadboltExecutionContextProvider, CustomHandlerCache, AdaCustomTemplateFailureListener}
 
 /**
   * Exposes handlers to deadbolt module
   *
   * @author Steve Chaloner (steve@objectify.be)
   */
-class CustomDeadboltHook extends Module {
+class DeadboltHook extends Module {
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = Seq(
-    bind[TemplateFailureListener].to[CustomCustomTemplateFailureListener],
+    bind[TemplateFailureListener].to[AdaCustomTemplateFailureListener],
     bind[HandlerCache].to[CustomHandlerCache],
     bind[DeadboltExecutionContextProvider].to[CustomDeadboltExecutionContextProvider]
   )
