@@ -27,7 +27,9 @@ import scala.concurrent.duration._
 
 trait DataSetController {
 
-  def get(id : BSONObjectID): Action[AnyContent]
+  def dataSetId: String
+
+  def get(id: BSONObjectID): Action[AnyContent]
 
   def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
 
@@ -64,25 +66,26 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
   @Inject var tranSMARTService: TranSMARTService = _
 
   // hooks
-  protected def dataSetName : String
+
+  protected def dataSetName: String
 
   // keyfield, mainly used for data export
-  protected def keyField : String
+  protected def keyField: String
 
   // reference field for sorting the data
   protected def exportOrderByField : String
 
   // auto-generated filename for csv files
-  protected def csvFileName : String = dataSetName.replace(" ", "-") + ".csv"
+  protected def csvFileName: String = dataSetName.replace(" ", "-") + ".csv"
 
   // auto-generated filename for json files
-  protected def jsonFileName : String = dataSetName.replace(" ", "-") + ".json"
+  protected def jsonFileName: String = dataSetName.replace(" ", "-") + ".json"
 
   // auto-generated filename for tranSMART data files
-  protected def tranSMARTDataFileName : String = dataSetName.replace(" ", "-") + "_data_file"
+  protected def tranSMARTDataFileName: String = dataSetName.replace(" ", "-") + "_data_file"
 
   // auto-generated filename for tranSMART mapping files
-  protected def tranSMARTMappingFileName : String = dataSetName.replace(" ", "-") + "_mapping_file"
+  protected def tranSMARTMappingFileName: String = dataSetName.replace(" ", "-") + "_mapping_file"
 
   // key for associated field in config file
   protected def overviewFieldNamesConfPrefix : String

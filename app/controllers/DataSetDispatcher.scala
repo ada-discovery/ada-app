@@ -1,21 +1,9 @@
 package controllers
 
-import javax.inject.Inject
-
-import controllers.denopa.{DeNoPaBaselineDictionaryController, DeNoPaBaselineController}
-import controllers.luxpark.{LuxParkDictionaryController, LuxParkController}
 import reactivemongo.bson.BSONObjectID
 import util.FilterSpec
 
-class DataSetDispatcher @Inject() (
-    luxParkController : LuxParkController,
-    luxParkDictionaryController : LuxParkDictionaryController,
-    deNoPaBaselineController : DeNoPaBaselineController,
-    deNoPaBaselineDictionaryController : DeNoPaBaselineDictionaryController
-  ) extends ControllerDispatcher[DataSetController]("dataSet", Seq(
-      ("luxpark", luxParkController),
-      ("denopa-baseline", deNoPaBaselineController))
-  ) with DataSetController {
+class DataSetDispatcher(controllers : Iterable[(String, DataSetController)]) extends ControllerDispatcher[DataSetController]("dataSet", controllers) with DataSetController {
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 
@@ -44,4 +32,6 @@ class DataSetDispatcher @Inject() (
   override def exportTranSMARTDataFile(delimiter : String) = dispatch(_.exportTranSMARTDataFile(delimiter))
 
   override def exportTranSMARTMappingFile(delimiter : String) = dispatch(_.exportTranSMARTMappingFile(delimiter))
+
+  override def dataSetId = ???
 }

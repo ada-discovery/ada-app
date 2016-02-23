@@ -10,16 +10,41 @@ import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, optional, seq, nonEmptyText, of, boolean}
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, JsObject}
-import play.api.mvc.{Action, RequestHeader}
+import play.api.mvc.{AnyContent, Action, RequestHeader}
 import util.{ChartSpec, FilterSpec, FieldChartSpec}
 import views.html.dictionary
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.Future
 
-abstract class DictionaryController (
+trait DictionaryController {
+
+  def dataSetId: String
+
+  def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
+
+  def listAll(orderBy: Int): Action[AnyContent]
+
+  def get(id: String): Action[AnyContent]
+
+  def create: Action[AnyContent]
+
+  def edit(id: String): Action[AnyContent]
+
+  def save: Action[AnyContent]
+
+  def update(id: String): Action[AnyContent]
+
+  def delete(id: String): Action[AnyContent]
+
+  def overviewList(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
+
+  def getFieldNames: Action[AnyContent]
+}
+
+abstract class DictionaryControllerImpl (
     repo: DictionaryFieldRepo
-  ) extends CrudController[Field, String](repo) {
+  ) extends CrudController[Field, String](repo) with DictionaryController {
 
   protected def dataSetName : String
 
@@ -65,7 +90,7 @@ abstract class DictionaryController (
       6
     )
 
-  def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+  override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
     val fieldNameExtractors = Seq(
       ("Field Type", "fieldType", (field : Field) => field.fieldType)
 //      ("Enum", "isEnum", (field : Field) => field.isEnum)
@@ -99,7 +124,7 @@ abstract class DictionaryController (
       ChartSpec.pie(values, None, chartTitle, false, true)
     }
 
-  def getFieldNames = Action.async { implicit request =>
+  override def getFieldNames = Action.async { implicit request =>
     val futureFieldNames = repo.find(None, Some(Seq(AscSort("name")))).map(_.map(_.name))
     futureFieldNames.map(fieldNames => Ok(Json.toJson(fieldNames)))
   }

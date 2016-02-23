@@ -81,12 +81,12 @@ GET         /studiez/overviewList                                               
 GET         /studiez/getScatterStats                                                controllers.DataSetDispatcher.getScatterStats(xField: String ?= "digitsf_score", yField: String ?= "bentons_score")
 GET         /studiez/getDistribution                                                controllers.DataSetDispatcher.getDistribution(fieldName: String ?= "digitsf_score")
 
-#GET         /studiez/:controllerId/dictionary                                       controllers.DataSetDispatcher.overviewList(controllerId : String)(        p:        Int ?= 0,        s:        String ?= "name",        filter :        util.FilterSpec ?= new        util.FilterSpec())
-#GET         /studiez/:controllerId/dictionary/get/:name                             controllers.DataSetDispatcher.get(controllerId : String)(        name :        String)
-#POST        /studiez/:controllerId/dictionary/save                                  controllers.DataSetDispatcher.save(controllerId : String)
-#GET         /studiez/:controllerId/dictionary/:name                                 controllers.DataSetDispatcher.edit(controllerId : String)(        name :        String)
-#POST        /studiez/:controllerId/dictionary/:name                                 controllers.DataSetDispatcher.update(controllerId : String)(        name :        String)
-#GET         /studiez/:controllerId/fieldNames                                       controllers.DataSetDispatcher.getFieldNames(controllerId : String)
+GET         /studiez/dictionary                                                     controllers.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /studiez/dictionary/get/:name                                           controllers.DictionaryDispatcher.get(name: String)
+POST        /studiez/dictionary/save                                                controllers.DictionaryDispatcher.save
+GET         /studiez/dictionary/:name                                               controllers.DictionaryDispatcher.edit(name: String)
+POST        /studiez/dictionary/:name                                               controllers.DictionaryDispatcher.update(name: String)
+GET         /studiez/fieldNames                                                     controllers.DictionaryDispatcher.getFieldNames
 
 # DeNoPa
 
@@ -179,14 +179,6 @@ POST        /studies/denopa/curatedfirstvisit/dictionary/save                   
 GET         /studies/denopa/curatedfirstvisit/dictionary/:name                      controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.edit(name : String)
 POST        /studies/denopa/curatedfirstvisit/dictionary/:name                      controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.update(name : String)
 GET         /studies/denopa/curatedfirstvisit/fieldNames                            controllers.denopa.DeNoPaCuratedFirstVisitDictionaryController.getFieldNames
-
-
-#TODO: to remove
-
-GET         /denopa/baseline/metastats                                              controllers.denopa.DeNoPaBaselineMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /denopa/baseline/metastats/get/:id                                      controllers.denopa.DeNoPaBaselineMetaTypeStatsController.get(id: BSONObjectID)
-GET         /denopa/firstvisit/metastats                                            controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.find(p: Int ?= 0, s: String ?= "attributeName", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /denopa/firstvisit/metastats/get/:id                                    controllers.denopa.DeNoPaFirstVisitMetaTypeStatsController.get(id: BSONObjectID)
 
 # LuxPark
 
