@@ -10,11 +10,11 @@ import be.objectify.deadbolt.scala.cache.HandlerCache
   *
   */
 @Singleton
-class MyHandlerCache extends HandlerCache {
+class CustomHandlerCache extends HandlerCache {
 
-  val defaultHandler: DeadboltHandler = new MyDeadboltHandler
-  val userlessHandler: DeadboltHandler = new MyUserlessDeadboltHandler
-  val alternativeDynamicResourceHandler: DeadboltHandler = new MyDeadboltHandler(Some(MyAlternativeDynamicResourceHandler))
+  val defaultHandler: DeadboltHandler = new CustomDeadboltHandler
+  val userlessHandler: DeadboltHandler = new AdaCustomUserlessDeadboltHandler
+  val alternativeDynamicResourceHandler: DeadboltHandler = new CustomDeadboltHandler(Some(CustomAlternativeDynamicResourceHandler))
 
   val handlers: Map[Any, DeadboltHandler] = Map(HandlerKeys.defaultHandler -> defaultHandler,
                                                 HandlerKeys.altHandler -> alternativeDynamicResourceHandler,

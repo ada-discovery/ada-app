@@ -12,7 +12,7 @@ import scala.concurrent.Future
  * @author Steve Chaloner (steve@objectify.be)
  */
 
-object MyAlternativeDynamicResourceHandler extends DynamicResourceHandler {
+object CustomAlternativeDynamicResourceHandler extends DynamicResourceHandler {
   def isAllowed[A](name: String,
                    meta: String,
                    handler: DeadboltHandler,
