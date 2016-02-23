@@ -27,7 +27,7 @@ object DictionaryRouter {
   def apply(dataSetId: String): DictionaryRouter = {
 
     def route(call: Call) = {
-      val delimiter = if (call.url.contains("?")) ";" else "?"
+      val delimiter = if (call.url.contains("?")) "&" else "?"
       call.copy(url = call.url + delimiter + "dataSet=" + dataSetId)
     }
 

@@ -2,7 +2,7 @@ package controllers.luxpark
 
 import javax.inject.{Inject, Named}
 
-import controllers.{DataSetControllerImpl, StudyRouter}
+import controllers.DataSetControllerImpl
 import models.Category
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.DictionaryFieldRepo
@@ -27,9 +27,13 @@ class LuxParkController @Inject() (
 
   override protected val overviewFieldNamesConfPrefix = "luxpark"
 
-  private val visitField = Some("redcap_event_name")
+  override protected val defaultScatterXFieldName = "digitsf_score"
 
-  override protected def router = StudyRouter.LuxPark.dataSetRouter
+  override protected val defaultScatterYFieldName = "bentons_score"
+
+  override protected val defaultDistributionFieldName = "digitsf_score"
+
+  private val visitField = Some("redcap_event_name")
 
   /**
     * Generate  content of TRANSMART data file for download.

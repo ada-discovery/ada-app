@@ -7,6 +7,7 @@
     xField: String,
     yField: String,
     getScatterStatsCall: Call,
+    dataSetId: String,
     numericFields: Seq[(String, Option[String])],
     stats: Seq[(Any, Any)]
 )(
@@ -29,6 +30,8 @@
     @helper.form(action=call, 'role -> "search", 'id -> "myForm") {
         <div class="row">
             <div class="col-md-8">
+                <!-- hacky solution to pass data set param since it's ignored when passed as a part of call in form action -->
+                <input type="hidden" name="dataSet" value="@dataSetId"/>
                 <div class="row">
                     <select name="xField" id="xField" class="input-lg" value="@xField">
                         @numericFields.map( field => optionX(field._1, field._2) )
@@ -46,10 +49,10 @@
 
             <div class="col-md-4" align="right">
                 <div class="well">
-                    Mean: @(BigDecimal(BasicStats.mean(stats.map(x => x._1)).get).setScale(3,BigDecimal.RoundingMode.FLOOR))
+                    Mean: @(BasicStats.mean(stats.map(x => x._1)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
                 </div>
                 <div class="well">
-                    Mean: @(BigDecimal(BasicStats.mean(stats.map(x => x._2)).get).setScale(3,BigDecimal.RoundingMode.FLOOR))
+                    Mean: @(BasicStats.mean(stats.map(x => x._2)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
                 </div>
             </div>
         </div>

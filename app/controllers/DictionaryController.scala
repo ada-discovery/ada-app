@@ -38,8 +38,6 @@ trait DictionaryController {
   def delete(id: String): Action[AnyContent]
 
   def overviewList(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
-
-  def getFieldNames: Action[AnyContent]
 }
 
 abstract class DictionaryControllerImpl (
@@ -63,7 +61,8 @@ abstract class DictionaryControllerImpl (
       "label" ->  optional(nonEmptyText)
     )(Field.apply)(Field.unapply))
 
-  protected def router : DictionaryRouter
+  // router for requests; to be passed to views as helper.
+  protected lazy val router: DictionaryRouter = DictionaryRouter(dataSetId)
 
   override protected val home =
     Redirect(router.plainList)
@@ -123,11 +122,6 @@ abstract class DictionaryControllerImpl (
       val values = fields.map(fieldExtractor)
       ChartSpec.pie(values, None, chartTitle, false, true)
     }
-
-  override def getFieldNames = Action.async { implicit request =>
-    val futureFieldNames = repo.find(None, Some(Seq(AscSort("name")))).map(_.map(_.name))
-    futureFieldNames.map(fieldNames => Ok(Json.toJson(fieldNames)))
-  }
 
   override protected val defaultCreateEntity =
     new Field("", FieldType.Null)

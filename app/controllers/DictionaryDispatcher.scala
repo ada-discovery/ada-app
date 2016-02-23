@@ -22,7 +22,5 @@ class DictionaryDispatcher(controllers : Iterable[(String, DictionaryController)
 
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.overviewList(page, orderBy, filter))
 
-  override def getFieldNames = dispatch(_.getFieldNames)
-
   override def dataSetId = ???
 }

@@ -13,7 +13,9 @@ abstract class ControllerDispatcher[C](controllerParamId: String, controllers : 
     // helper function to find a matching controller
     val matchingController: C = {
       val controllerIdOption = request.queryString.get(controllerParamId)
-      val controllerId = controllerIdOption.getOrElse(throw new IllegalArgumentException(s"Controller param id '${controllerParamId}' not found.")).head
+      val controllerId = controllerIdOption.getOrElse(
+        throw new IllegalArgumentException(s"Controller param id '${controllerParamId}' not found.")
+      ).head
       controllerIdMap.getOrElse(controllerId, throw new IllegalArgumentException(s"Controller id '${controllerId}' not recognized."))
     }
 

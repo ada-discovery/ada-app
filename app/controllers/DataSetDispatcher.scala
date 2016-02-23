@@ -25,13 +25,15 @@ class DataSetDispatcher(controllers : Iterable[(String, DataSetController)]) ext
 
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.overviewList(page, orderBy, filter))
 
-  override def getScatterStats(xFieldName : String, yFieldName : String) = dispatch(_.getScatterStats(xFieldName, yFieldName))
+  override def getScatterStats(xFieldName: Option[String], yFieldName: Option[String]) = dispatch(_.getScatterStats(xFieldName, yFieldName))
 
-  override def getDistribution(fieldName: String) = dispatch(_.getDistribution(fieldName))
+  override def getDistribution(fieldName: Option[String]) = dispatch(_.getDistribution(fieldName))
 
   override def exportTranSMARTDataFile(delimiter : String) = dispatch(_.exportTranSMARTDataFile(delimiter))
 
   override def exportTranSMARTMappingFile(delimiter : String) = dispatch(_.exportTranSMARTMappingFile(delimiter))
+
+  override def getFieldNames = dispatch(_.getFieldNames)
 
   override def dataSetId = ???
 }
