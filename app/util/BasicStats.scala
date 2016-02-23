@@ -50,14 +50,15 @@ package object BasicStats {
     * @return Option containing mean. If mean can not be calculated, None.
     */
   def mean(elements: Seq[Any]) : Option[Double] =
-  {
-    try{elements.head.toString.toDouble}
-    catch {case e: NumberFormatException => return None}
-
-    val length = elements.length
-    val sum = elements.map{x => x.toString.toDouble}.sum
-    //val sum = elements.sum
-    Some(sum / length)
-  }
-
+    try {
+      if (elements.nonEmpty) {
+        val length = elements.length
+        val sum = elements.map { x => x.toString.toDouble }.sum
+        //val sum = elements.sum
+        Some(sum / length)
+      } else
+        None
+    } catch {
+      case e: NumberFormatException => None
+    }
 }

@@ -49,13 +49,15 @@ trait DataSetController {
 
   def overviewList(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
 
-  def getScatterStats(xFieldName : String, yFieldName : String): Action[AnyContent]
+  def getScatterStats(xFieldName: Option[String], yFieldName: Option[String]): Action[AnyContent]
 
-  def getDistribution(fieldName: String): Action[AnyContent]
+  def getDistribution(fieldName: Option[String]): Action[AnyContent]
 
   def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
 
   def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent]
+
+  def getFieldNames: Action[AnyContent]
 }
 
 protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRepo)
@@ -88,10 +90,17 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
   protected def tranSMARTMappingFileName: String = dataSetName.replace(" ", "-") + "_mapping_file"
 
   // key for associated field in config file
-  protected def overviewFieldNamesConfPrefix : String
+  protected def overviewFieldNamesConfPrefix: String
+
+  // for scatter plot
+  protected def defaultScatterXFieldName: String
+  protected def defaultScatterYFieldName: String
+
+  // for distribution plot
+  protected def defaultDistributionFieldName: String
 
   // router for requests; to be passed to views as helper.
-  protected def router : DataSetRouter
+  protected lazy val router: DataSetRouter = DataSetRouter(dataSetId)
 
   protected lazy val overviewFieldNames =
     current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
@@ -155,7 +164,7 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
     * @param delimiter Delimiter for csv output file.
     * @return View for download.
     */
-  def exportAllRecordsAsCsv(delimiter : String) =
+  override def exportAllRecordsAsCsv(delimiter : String) =
     exportAllToCsv(csvFileName, delimiter, exportOrderByField)
 
   /**
@@ -163,7 +172,7 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
     *
     * @return View for download.
     */
-  def exportAllRecordsAsJson =
+  override def exportAllRecordsAsJson =
     exportAllToJson(jsonFileName, exportOrderByField)
 
   /**
@@ -172,7 +181,7 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
     * @param delimiter Delimiter for csv output file.
     * @return View for download.
     */
-  def exportRecordsAsCsv(delimiter : String, filter: FilterSpec) =
+  override def exportRecordsAsCsv(delimiter : String, filter: FilterSpec) =
     exportToCsv(csvFileName, delimiter, filter.toJsonCriteria, exportOrderByField)
 
   /**
@@ -180,7 +189,7 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
     *
     * @return View for download.
     */
-  def exportRecordsAsJson(filter: FilterSpec) =
+  override def exportRecordsAsJson(filter: FilterSpec) =
     exportToJson(jsonFileName, filter.toJsonCriteria, exportOrderByField)
 
   /**
@@ -210,7 +219,7 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
     *
     * @return View with piechart showing field types.
     */
-  def overviewFieldTypes = Action.async { implicit request =>
+  override def overviewFieldTypes = Action.async { implicit request =>
     dictionaryRepo.find().map{ fields =>
       if (fields.isEmpty)
         throw new IllegalStateException(s"Empty dictionary found. Pls. create one by running 'standalone.InferXXXDictionary' script.")
@@ -241,7 +250,7 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
     }
   }
 
-  def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+  override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
     val futureFieldChartSpecs = overviewFieldNames.map(fieldName =>
       getDataChartSpec(filter.toJsonCriteria, fieldName).map(chartSpec =>
         FieldChartSpec(fieldName, chartSpec)
@@ -317,11 +326,14 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
     * Only compatible FieldTypes (FieldType.Double and FieldType.Integer) are used.
     * Displays the resulting scatterplot in a view.
     *
-    * @param xFieldName Name of field to be used for x coordinates.
-    * @param yFieldName Name of field to be used for y coordinates.
+    * @param xFieldNameOption Name of field to be used for x coordinates.
+    * @param yFieldNameOption Name of field to be used for y coordinates.
     * @return View with scatterplot and selection option for different xFieldName and yFieldName.
     */
-  def getScatterStats(xFieldName : String, yFieldName : String) = Action.async { implicit request =>
+  override def getScatterStats(xFieldNameOption : Option[String], yFieldNameOption: Option[String]) = Action.async { implicit request =>
+    val xFieldName = xFieldNameOption.getOrElse(defaultScatterXFieldName)
+    val yFieldName = yFieldNameOption.getOrElse(defaultScatterYFieldName)
+
     val numericFieldsFuture = dictionaryRepo.find(Some(Json.obj("fieldType" -> Json.obj("$in" -> jsonNumericTypes))))
     val xFieldFuture = dictionaryRepo.get(xFieldName)
     val yFieldFuture = dictionaryRepo.get(yFieldName)
@@ -345,14 +357,16 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
       valuesFuture.map( values =>
 
         render {
-          case Accepts.Html() => Ok(dataset.scatterStats(dataSetName, xFieldName, yFieldName, router.getScatterStats, numericFieldNameLabels, values))
+          case Accepts.Html() => Ok(dataset.scatterStats(dataSetName, xFieldName, yFieldName, router.getScatterStats, dataSetId, numericFieldNameLabels, values))
           case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
         }
       )
     }
   }
 
-  def getDistribution(fieldName: String) = Action.async { implicit request =>
+  override def getDistribution(fieldNameOption: Option[String]) = Action.async { implicit request =>
+    val fieldName = fieldNameOption.getOrElse(defaultDistributionFieldName)
+
     val fieldsFuture = dictionaryRepo.find(None, Some(Seq(AscSort("name"))))
     val chartSpecFuture = getDataChartSpec(None, fieldName, true, false)
     chartSpecFuture.zip(fieldsFuture).map{ case (chartSpec, fields) =>
@@ -360,7 +374,7 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
       val fieldNameLabels = fields.map(field => (field.name, field.label)).toSeq
 
       render {
-        case Accepts.Html() => Ok(dataset.distribution(dataSetName, fieldName, chartSpec, router.getDistribution, fieldNameLabels))
+        case Accepts.Html() => Ok(dataset.distribution(dataSetName, fieldName, chartSpec, router.getDistribution, dataSetId, fieldNameLabels))
         case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
       }
     }.recover {
@@ -368,6 +382,12 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
         Logger.error("Problem found in the distribution process")
         InternalServerError(t.getMessage)
     }
+  }
+
+
+  override def getFieldNames = Action.async { implicit request =>
+    val futureFieldNames = dictionaryRepo.find(None, Some(Seq(AscSort("name")))).map(_.map(_.name))
+    futureFieldNames.map(fieldNames => Ok(Json.toJson(fieldNames)))
   }
 
   /**

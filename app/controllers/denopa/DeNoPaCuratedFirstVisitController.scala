@@ -17,5 +17,5 @@ class DeNoPaCuratedFirstVisitController @Inject() (
 
   override protected val overviewFieldNamesConfPrefix = "denopa.curatedfirstvisit"
 
-  override protected def router = StudyRouter.DeNoPaCuratedFirstVisit.dataSetRouter
+  override protected val defaultScatterYFieldName = "b_AESD_I_mean"
 }

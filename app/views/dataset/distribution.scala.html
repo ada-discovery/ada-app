@@ -8,6 +8,7 @@
     fieldName : String,
     chartSpec: ChartSpec,
     distributionCall : Call,
+    dataSetId: String,
     fields: Seq[(String, Option[String])]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
@@ -26,6 +27,8 @@
         <div class="row">
             <div class="col-md-8">
                 <div class="row">
+                    <!-- hacky solution to pass data set param since it's ignored when passed as a part of call in form action -->
+                    <input type="hidden" name="dataSet" value="@dataSetId"/>
                     <select name="fieldName" id="fieldName" class="input-lg" value="@fieldName">
                         @fields.map( field => option(field._1, field._2) )
                     </select>

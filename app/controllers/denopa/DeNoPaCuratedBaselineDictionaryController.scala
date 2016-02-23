@@ -2,7 +2,7 @@ package controllers.denopa
 
 import javax.inject.{Inject, Named}
 
-import controllers.{DictionaryControllerImpl, DictionaryController, StudyRouter}
+import controllers.DictionaryControllerImpl
 import persistence.DictionaryFieldRepo
 
 class DeNoPaCuratedBaselineDictionaryController @Inject() (
@@ -12,6 +12,4 @@ class DeNoPaCuratedBaselineDictionaryController @Inject() (
   override val dataSetId = "denopa-curated-baseline"
 
   override protected val dataSetName = "DeNoPa Curated Baseline"
-
-  override protected def router = StudyRouter.DeNoPaCuratedBaseline.dictionaryRouter
 }

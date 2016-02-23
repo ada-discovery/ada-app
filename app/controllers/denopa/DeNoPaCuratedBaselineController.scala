@@ -2,7 +2,6 @@ package controllers.denopa
 
 import javax.inject.{Inject, Named}
 
-import controllers.StudyRouter
 import persistence.DictionaryFieldRepo
 
 class DeNoPaCuratedBaselineController @Inject() (
@@ -17,5 +16,5 @@ class DeNoPaCuratedBaselineController @Inject() (
 
   override protected val overviewFieldNamesConfPrefix = "denopa.curatedbaseline"
 
-  override protected def router = StudyRouter.DeNoPaCuratedBaseline.dataSetRouter
+  override protected val defaultScatterYFieldName = "a_AESD_I_mean"
 }

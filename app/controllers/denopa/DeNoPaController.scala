@@ -16,8 +16,10 @@ import scala.concurrent.Await
 
 protected abstract class DeNoPaController(dictionaryRepo: DictionaryFieldRepo) extends DataSetControllerImpl(dictionaryRepo) {
 
-  protected override val keyField = "Probanden_Nr"
-  protected override val exportOrderByField = "Line_Nr"
+  override protected val keyField = "Probanden_Nr"
+  override protected val exportOrderByField = "Line_Nr"
+  override protected val defaultScatterXFieldName = "a_Alter"
+  override protected val defaultDistributionFieldName = "a_Alter"
 
   private val mmstSumField = "a_CRF_MMST_Summe"
   private val mmstCognitiveCategoryField = "a_CRF_MMST_Category"
