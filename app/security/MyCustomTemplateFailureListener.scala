@@ -11,7 +11,7 @@ import play.api.Logger
   * @author Steve Chaloner (steve@objectify.be)
   */
 @Singleton
-class MyCustomTemplateFailureListener extends TemplateFailureListener {
+class CustomCustomTemplateFailureListener extends TemplateFailureListener {
 
   val logger: Logger = Logger("deadbolt.template")
 

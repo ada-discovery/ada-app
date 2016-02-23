@@ -17,7 +17,7 @@ import jp.t2v.lab.play2.auth.AuthenticityToken
   * Hooks for deadbolt
   *
   */
-class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] = None) extends DeadboltHandler with AuthConfigImpl {
+class CustomDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] = None) extends DeadboltHandler with AuthConfigImpl {
 
   /**
     * Pre-authorization task. May block further execution.
@@ -37,7 +37,7 @@ class MyDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] =
     * @return
     */
   override def getDynamicResourceHandler[A](request: Request[A]): Future[Option[DynamicResourceHandler]] = {
-    Future(dynamicResourceHandler.orElse(Some(new MyDynamicResourceHandler())))
+    Future(dynamicResourceHandler.orElse(Some(new CustomDynamicResourceHandler())))
   }
 
   /**
