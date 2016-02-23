@@ -5,7 +5,7 @@ import javax.inject.Inject
 import models.User
 import persistence.RepoTypeRegistry.UserRepo
 import play.api.data.Form
-import play.api.data.Forms.{date, ignored, mapping, nonEmptyText, optional, seq}
+import play.api.data.Forms.{ignored, mapping, nonEmptyText, seq, email, text}
 import models.Page
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
@@ -19,7 +19,7 @@ class UserController @Inject() (
   ) extends CrudController[User, BSONObjectID](userRepo) {
 
   override protected val form = Form(
-    mapping(
+    /*mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "userName" -> nonEmptyText,
       "name" -> nonEmptyText,
@@ -28,7 +28,21 @@ class UserController @Inject() (
       "address" -> optional(nonEmptyText),
       "dob" -> optional(date("yyyy-MM-dd")),
       "joiningDate" -> optional(date("yyyy-MM-dd")),
-      "designation" -> optional(nonEmptyText))(User.apply)(User.unapply))
+      "designation" -> optional(nonEmptyText))(User.apply)(User.unapply))*/
+    mapping(
+      "id" -> ignored(Option.empty[BSONObjectID]),
+      "firstName" -> nonEmptyText,
+      "lastName" -> nonEmptyText,
+      "email" -> email,
+      "password" -> nonEmptyText,
+      "affilitation" -> text,
+      "roleNames" -> seq(text),
+      "permissionNames" -> seq(text)
+      )(User.apply)(User.unapply))
+    /*mapping(
+      "id" -> ignored(Option.empty[BSONObjectID]),
+      "firstName" -> nonEmptyText
+    )(User.apply)(User.unapply))*/
 
   override protected val home =
     Redirect(routes.UserController.listAll())
@@ -47,5 +61,5 @@ class UserController @Inject() (
 
   @Deprecated
   override protected val defaultCreateEntity =
-    new User(null, null, null, null, null, null, null, null, null)
+    new User(None, "", "", "", "", "", Seq(), Seq())
 }

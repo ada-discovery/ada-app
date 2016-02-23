@@ -2,6 +2,7 @@ package models.security
 
 import play.libs.Scala
 import be.objectify.deadbolt.core.models.{Role, Permission, Subject}
+import util.FilterSpec
 
 /**
   * Abstract User class.
@@ -18,6 +19,17 @@ abstract class AbstractUser(val userName: String, val roles: List[Role], val per
   // additional fields
   def getMail: String = ???
   def getPassword: String = ???
+
+
+  //def getIdentifier: BSONObjectID = ???
+
+  //def getAffilition: String = ???
+  //def getFirstName: String = ???
+  //def getLastName: String = ???
+  //def getFullName = (getFirstName + " " + getLastName)
+
+  //add later
+  //def getSavedFilters: Seq[FilterSpec] = ???
 }
 
 /**

@@ -1,14 +1,19 @@
 package models.security
 
 import be.objectify.deadbolt.core.models.Subject
+import persistence.RepoDef
+
+import persistence.RepoTypeRegistry.UserRepo
 
 /**
   * Class for managing and accessing Users.
   */
 object UserManager {
 
-  // Dummy user profiles.
-  // TODO: eventually remove these
+  // TODO: move UserManager functionality directly into specialized UserRepo class
+  val userRepo: UserRepo = RepoDef.UserRepo.repo
+
+  // TODO: dummy user profiles. eventually remove them.
   val adminUser = new AdminUser
   val basicUser = new BasicUser
   var userList = List[AbstractUser](basicUser, adminUser)
@@ -43,9 +48,19 @@ object UserManager {
     * @param email mail to be matched.
     * @return Option containing Account with matching mail; None otherwise
     */
-  def findByEmail(email: String): Option[AbstractUser] = {
+  /*def findByEmail(email: String): Option[AbstractUser] = {
     userList.find((usr: AbstractUser) => (usr.getMail == email))
+  }*/
+  def findByEmail(email: String): Option[AbstractUser] = {
+    val bla = userRepo.count(None)
+
+
+    None
   }
+
+
+
+
 
   /**
     * Given an id, find the corresponding account.

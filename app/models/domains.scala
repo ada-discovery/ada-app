@@ -6,12 +6,12 @@ import reactivemongo.bson.BSONObjectID
 import java.util.{UUID, Date}
 import play.modules.reactivemongo.json.BSONFormats._
 
-case class User(_id: Option[BSONObjectID], userName: String, name: String, roleNames: Seq[String], permissionNames: Seq[String],
-                address: Option[String], dob: Option[Date], joiningDate: Option[Date], designation: Option[String]) {
 
-  def roles = roleNames.map(new SecurityRole(_))
-
-  def permissions = roleNames.map(new SecurityPermission(_))
+//case class User(_id: Option[BSONObjectID], userName: String) {
+case class User(_id: Option[BSONObjectID], firstName: String, lastName: String, affiliation: String, email: String, password: String, roleNames: Seq[String], permissionNames: Seq[String]) {
+  def userName = (firstName + " " + lastName)
+  //def roles = roleNames.map(new SecurityRole(_))
+  //def permissions = roleNames.map(new SecurityPermission(_))
 }
 
 object User {

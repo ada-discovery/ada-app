@@ -71,7 +71,8 @@
 
 
                   @**
-                    * Hack. It's cleaner to use deadbolt template functions here.
+                    * TODO: Hack. BUG: Might display user options if expired authentification cookie is present (deadbolt will however block the user).
+                    * It's cleaner to use deadbolt template functions here.
                     * However, this navbar is used throughout the entire platform.
                     * Accessing deadbolt template functions is only possible if the template was called through a deadbolt action.
                     * Thus, if we were to use deadbolt functions here, we would require every page call on the entire platform to be wrapped in deadbolt actions.
