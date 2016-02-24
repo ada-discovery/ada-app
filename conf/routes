@@ -23,7 +23,6 @@ GET         /unauthorized                                                       
 GET         /loginBasic                                                             controllers.AuthController.loginBasic
 GET         /loginAdmin                                                             controllers.AuthController.loginAdmin
 GET         /currentUser                                                            controllers.JansDataSetController.currentUser
-GET         /restricted                                                             controllers.JansDataSetController.restrictedCall
 
 # Admin
 GET         /runnables                                                              controllers.AdminController.listRunnables

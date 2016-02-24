@@ -5,9 +5,11 @@ import models.User
 import persistence.RepoDef
 
 import persistence.RepoTypeRegistry.UserRepo
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsString, JsObject, Json}
 
-import scala.concurrent.Future
+
+import scala.concurrent.{Future, Await}
+import scala.concurrent.duration._
 
 /**
   * Class for managing and accessing Users.
@@ -46,6 +48,15 @@ object UserManager {
     }
   }
 
+
+
+  // TODO temporary -> remove!
+  def convert(user: User): AbstractUser = {
+    new CustomUser(user.email, user.password, user.userName)
+  }
+
+
+
   /**
     * Given a mail, find the corresponding account.
     *
@@ -57,17 +68,20 @@ object UserManager {
   }*/
   def findByEmail(email: String): Option[AbstractUser] = {
     val criteria: Option[JsObject] = None
+    //val criteria: Option[JsObject] = Some(JsObject("conditions" -> JsObject("fieldName" -> JsString("email") :: ("conditionType" -> JsString("=")) :: ("condition" -> JsString(email)) :: Nil) :: Nil))
     val userFutureTrav: Future[Traversable[User]] = userRepo.find(criteria, None, None, None, None)
 
-    //val userTrav = Await
+    val timeout = 3600 millis
+    val userTrav: Traversable[User] = Await.result(userFutureTrav, timeout)
+    val userOp = userTrav.find((usr: User) => (usr.email == email))
 
-
-    None
+    if(userOp.isDefined){
+      Some(convert(userOp.get))
+    }else{
+      // override for debugging
+      userList.find((usr: AbstractUser) => (usr.getMail == email))
+    }
   }
-
-
-
-
 
   /**
     * Given an id, find the corresponding account.
@@ -75,9 +89,25 @@ object UserManager {
     * @param id ID to be matched.
     * @return Option containing Account with matching ID; None otherwise
     */
-  def findById(id: String): Option[AbstractUser] = {
+  /*def findById(id: String): Option[AbstractUser] = {
     userList.find((acc: AbstractUser) => (acc.getIdentifier == id))
+  }*/
+  def findById(id: String): Option[AbstractUser] = {
+    val criteria: Option[JsObject] = None
+    val userFutureTrav: Future[Traversable[User]] = userRepo.find(criteria, None, None, None, None)
+
+    val timeout = 3600 millis
+    val userTrav: Traversable[User] = Await.result(userFutureTrav, timeout)
+    val userOp = userTrav.find((usr: User) => (usr.userName == id))
+
+    if(userOp.isDefined){
+      Some(convert(userOp.get))
+    }else{
+      // override for debugging
+      userList.find((usr: AbstractUser) => (usr.getIdentifier == id))
+    }
   }
+
 
   /**
     * Return a sequence with all cached Users.

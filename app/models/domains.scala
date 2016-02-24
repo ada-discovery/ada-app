@@ -8,7 +8,7 @@ import play.modules.reactivemongo.json.BSONFormats._
 
 
 //case class User(_id: Option[BSONObjectID], userName: String) {
-case class User(_id: Option[BSONObjectID], firstName: String, lastName: String, affiliation: String, email: String, password: String, roleNames: Seq[String], permissionNames: Seq[String]) {
+case class User(_id: Option[BSONObjectID], firstName: String, lastName: String, email: String, password: String, affiliation: String, roleNames: Seq[String], permissionNames: Seq[String]) {
   def userName = (firstName + " " + lastName)
   //def roles = roleNames.map(new SecurityRole(_))
   //def permissions = roleNames.map(new SecurityPermission(_))

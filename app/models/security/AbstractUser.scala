@@ -1,8 +1,28 @@
 package models.security
 
+import models.BSONObjectIdentity
+import play.api.libs.json.Json
 import play.libs.Scala
 import be.objectify.deadbolt.core.models.{Role, Permission, Subject}
-import util.FilterSpec
+import reactivemongo.bson.BSONObjectID
+
+
+/*object AbstractUser {
+
+  def apply() = None
+  def apply(value: String) = None
+  def apply(value1: String, value2: String) = None
+
+  implicit val UserFormat = Json.format[AbstractUser]
+
+  implicit object UserIdentity extends BSONObjectIdentity[AbstractUser] {
+    def of(entity: AbstractUser): Option[BSONObjectID] = entity._id
+    protected def set(entity: AbstractUser, id: Option[BSONObjectID]) = entity.copy(_id = id)
+  }
+}*/
+
+
+
 
 /**
   * Abstract User class.
@@ -21,6 +41,12 @@ abstract class AbstractUser(val userName: String, val roles: List[Role], val per
   def getPassword: String = ???
 
 
+
+
+  def _id = None
+  //def _id = BSONObjectID("empoty")
+
+  //replace string with BSONID
   //def getIdentifier: BSONObjectID = ???
 
   //def getAffilition: String = ???
@@ -37,7 +63,8 @@ abstract class AbstractUser(val userName: String, val roles: List[Role], val per
   * Use for user construction.
   *
   */
-class CustomUser(val email: String, val password: String, userName: String, roles: List[Role], permissions: List[Permission]) extends AbstractUser(userName, roles, permissions) {
+//class CustomUser(val email: String, val password: String, userName: String, roles: List[Role], permissions: List[Permission]) extends AbstractUser(userName, roles, permissions) {
+class CustomUser(val email: String, val password: String, userName: String) extends AbstractUser(userName, List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions) {
   override def getMail: String = email
   override def getPassword: String = password
 }

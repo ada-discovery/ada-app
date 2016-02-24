@@ -24,7 +24,7 @@ class JansDataSetController @Inject() (
 
   // substitute stackaction with deadbolt action
   //
-  def currentUser = StackAction(AuthorityKey -> SecurityRoleCache.basicRole) { implicit request =>
+  def currentUser = StackAction(AuthorityKey -> SecurityRoleCache.adminRole, AuthorityKey -> SecurityRoleCache.basicRole) { implicit request =>
     val user: AbstractUser = loggedIn
     Ok("logged in as: " + user.getMail)
   }

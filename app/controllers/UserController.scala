@@ -35,7 +35,7 @@ class UserController @Inject() (
       "lastName" -> nonEmptyText,
       "email" -> email,
       "password" -> nonEmptyText,
-      "affilitation" -> text,
+      "affiliation" -> text,
       "roleNames" -> seq(text),
       "permissionNames" -> seq(text)
       )(User.apply)(User.unapply))
@@ -61,5 +61,5 @@ class UserController @Inject() (
 
   @Deprecated
   override protected val defaultCreateEntity =
-    new User(None, "", "", "", "", "", Seq(), Seq())
+    new User(None, "", "", "", "", "", Seq("admin"), Seq("admin"))
 }

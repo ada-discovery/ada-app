@@ -4,13 +4,11 @@ import controllers.{AuthConfigImpl, routes}
 
 import play.api.mvc._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Future, Await}
-import scala.concurrent.duration._
+import scala.concurrent.Future
 
 import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
 import be.objectify.deadbolt.core.models.Subject
 
-import jp.t2v.lab.play2.auth.AuthenticityToken
 
 
 /**
