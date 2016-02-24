@@ -1,8 +1,8 @@
-@import models.security.AbstractUser
+@import models.security.CustomUser
 @import be.objectify.deadbolt.scala.views.html.restrict
 @import models.security.SecurityRoleCache
 
-@(user: AbstractUser)(implicit request: Request[Any])
+@(user: CustomUser)(implicit request: Request[Any])
 
 @layout.main("NCER-PD Home", false) {
     <!-- Begin page content -->

@@ -11,6 +11,6 @@
     <li @if(active==2){class="active"}><a href="@routes.UserProfileController.workspace()">Workspace</a></li>
     <li @if(active==3){class="active"}><a href="">Settings</a></li>
     @restrict(roles = List(Array(SecurityRoleCache.adminRole.getName()))){
-        <li @if(active==4){class="active"}><a href="">Admin Panel</a></li>
+        <li @if(active==4){class="active"}><a href="@routes.AdminController.listRunnables()">Admin Panel</a></li>
     }
 </ul>

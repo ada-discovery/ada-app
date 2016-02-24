@@ -1,6 +1,6 @@
-@import models.security.AbstractUser
+@import models.security.CustomUser
 
-@(form: Form[Option[AbstractUser]], message: Option[String] = None)(implicit request: RequestHeader, flash: Flash)
+@(form: Form[Option[CustomUser]], message: Option[String] = None)(implicit request: RequestHeader, flash: Flash)
 @layout.main("NCER-PD Home", false) {
 
     <!-- Begin page content -->

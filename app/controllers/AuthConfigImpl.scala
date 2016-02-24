@@ -1,7 +1,7 @@
 package controllers
 
 import jp.t2v.lab.play2.auth.{AuthConfig, _}
-import models.security.{UserManager, AbstractUser}
+import models.security.{CustomUser, UserManager}
 import be.objectify.deadbolt.core.models.Role
 
 import play.api.mvc.Results._
@@ -36,7 +36,7 @@ trait AuthConfigImpl extends AuthConfig {
     *  Type defintion for User object.
     *  Set to AbstractUser, a class extending deadbolt's Subject.
     */
-  type User = AbstractUser
+  type User = CustomUser
 
   /**
     * Play2-auth specific.
@@ -56,7 +56,7 @@ trait AuthConfigImpl extends AuthConfig {
     */
   val sessionTimeoutInSeconds: Int = 3600
 
-  def currentUser[A](request: Request[A])(implicit ctx: ExecutionContext): Future[Option[AbstractUser]] = {
+  def currentUser[A](request: Request[A])(implicit ctx: ExecutionContext): Future[Option[CustomUser]] = {
     // we can't call restoreUser, so we must retrieve the user manually
     val timeout = 120000 millis
     val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)

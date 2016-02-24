@@ -22,7 +22,6 @@ GET         /unauthorized                                                       
 # for testing
 GET         /loginBasic                                                             controllers.AuthController.loginBasic
 GET         /loginAdmin                                                             controllers.AuthController.loginAdmin
-GET         /currentUser                                                            controllers.JansDataSetController.currentUser
 
 # Admin
 GET         /runnables                                                              controllers.AdminController.listRunnables

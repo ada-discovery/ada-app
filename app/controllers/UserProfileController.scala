@@ -3,11 +3,11 @@ package controllers
 import play.api.mvc.{Action, Controller}
 
 import scala.concurrent.ExecutionContext.Implicits._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 import javax.inject.Inject
 
-import models.security.{AbstractUser, UserManager, SecurityRoleCache}
+import models.security.{CustomUser, SecurityRoleCache}
 import be.objectify.deadbolt.scala.DeadboltActions
 
 
@@ -21,7 +21,7 @@ class UserProfileController @Inject() (
 
   def profile() = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
-      val usrFutureOp: Future[Option[AbstractUser]] = currentUser(request)
+      val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
       usrFutureOp.map { usr =>
         Ok(views.html.userprofile.profile(usr.get))
       }
@@ -30,7 +30,7 @@ class UserProfileController @Inject() (
 
   def workspace() = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
-      val usrFutureOp: Future[Option[AbstractUser]] = currentUser(request)
+      val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
       usrFutureOp.map { usr =>
         Ok(views.html.userprofile.workspace(usr.get))
       }

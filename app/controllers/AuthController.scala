@@ -11,7 +11,7 @@ import play.api.data._
 
 // authentification
 import jp.t2v.lab.play2.auth.LoginLogout
-import models.security.{AbstractUser, UserManager}
+import models.security.{CustomUser, UserManager}
 
 
 class AuthController extends Controller with LoginLogout with AuthConfigImpl{
