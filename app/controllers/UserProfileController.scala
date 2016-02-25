@@ -15,15 +15,11 @@ class UserProfileController @Inject() (
     deadbolt: DeadboltActions
   ) extends Controller with AuthConfigImpl{
 
-  def index() = Action{
-    Redirect(routes.UserProfileController.profile)
-  }
-
   def profile() = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
       val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
-      usrFutureOp.map { usr =>
-        Ok(views.html.userprofile.profile(usr.get))
+      usrFutureOp.map { usrOp =>
+        Ok(views.html.userprofile.profile(usrOp.get))
       }
     }
   }

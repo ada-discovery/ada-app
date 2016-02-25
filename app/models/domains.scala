@@ -1,27 +1,10 @@
 package models
 
-import models.security.{SecurityPermission, SecurityRole}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import java.util.{UUID, Date}
 import play.modules.reactivemongo.json.BSONFormats._
 
-
-//case class User(_id: Option[BSONObjectID], userName: String) {
-case class User(_id: Option[BSONObjectID], firstName: String, lastName: String, email: String, password: String, affiliation: String, roleNames: Seq[String], permissionNames: Seq[String]) {
-  def userName = (firstName + " " + lastName)
-  //def roles = roleNames.map(new SecurityRole(_))
-  //def permissions = roleNames.map(new SecurityPermission(_))
-}
-
-object User {
-  implicit val UserFormat = Json.format[User]
-
-  implicit object UserIdentity extends BSONObjectIdentity[User] {
-    def of(entity: User): Option[BSONObjectID] = entity._id
-    protected def set(entity: User, id: Option[BSONObjectID]) = entity.copy(_id = id)
-  }
-}
 
 case class Message(_id: Option[BSONObjectID], content: String)
 

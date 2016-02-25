@@ -7,7 +7,7 @@ import be.objectify.deadbolt.core.models.Role
   * SecurityRole is just a wrapper for a String.
   *
   */
-class SecurityRole(val roleName: String) extends Role {
+case class SecurityRole(val roleName: String) extends Role {
   def getName: String = roleName
 }
 
@@ -17,6 +17,6 @@ class SecurityRole(val roleName: String) extends Role {
   *
   */
 object SecurityRoleCache {
-  lazy val adminRole: Role = new SecurityRole("admin")
-  lazy val basicRole: Role = new SecurityRole("basic")
+  lazy val adminRole: String = "admin"
+  lazy val basicRole: String = "basic"
 }

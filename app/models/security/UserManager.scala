@@ -1,11 +1,9 @@
 package models.security
 
-import be.objectify.deadbolt.core.models.Subject
-import models.{BSONObjectIdentity, User}
+import models.BSONObjectIdentity
 import persistence.RepoDef
 
 import persistence.RepoTypeRegistry.UserRepo
-import play.api.libs.json.{JsString, JsObject, Json}
 import reactivemongo.bson.BSONObjectID
 
 
@@ -21,22 +19,22 @@ object UserManager {
   val userRepo: UserRepo = RepoDef.UserRepo.repo
 
   // TODO: dummy user profiles. eventually remove them.
-  val adminUser = new CustomUser("admin", "user", "admin@mail", "123456", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  val basicUser = new CustomUser("basic", "user", "basic@mail", "123456", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  val adminUser = new CustomUser(None, "admin user", "admin@mail", "123456", "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
+  val basicUser = new CustomUser(None, "basic user", "basic@mail", "123456", "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
 
   // user cache
   lazy val userList: List[CustomUser] = {
     val timeout = 3600 millis
-    val userFutureTrav: Future[Traversable[User]] = userRepo.find(None, None, None, None, None)
-    val userTrav: Traversable[User] = Await.result(userFutureTrav, timeout)
-    val temp: List[CustomUser] = userTrav.map{usr: User => convert(usr)}.toList
+    val userFutureTrav: Future[Traversable[CustomUser]] = userRepo.find(None, None, None, None, None)
+    val userTrav: Traversable[CustomUser] = Await.result(userFutureTrav, timeout)
+    val temp: List[CustomUser] = userTrav.toList
     basicUser::adminUser::temp
   }
 
   /**
     * Syntactic sugar. Calls "authenticate".
     */
-  def apply(email: String, password: String): Option[Subject] = authenticate(email, password)
+  //def apply(email: String, password: String): Option[Subject] = authenticate(email, password)
 
   /**
     * Matches email and password for authentification.
@@ -49,7 +47,7 @@ object UserManager {
   def authenticate(email: String, password: String): Option[CustomUser] = {
     findByEmail(email) match {
       case Some(account) =>
-        if(account.getPassword == password)
+        if(account.password == password)
           Some(account)
         else
           None
@@ -60,9 +58,9 @@ object UserManager {
 
 
   // TODO temporary -> remove!
-  def convert(user: User): CustomUser = {
-    new CustomUser(user.userName, "", user.email, user.password)
-  }
+  /*def convert(user: User): CustomUser = {
+    new CustomUser(None, user.userName, user.email, user.password, "None")
+  }*/
 
 
 
@@ -73,7 +71,7 @@ object UserManager {
     * @return Option containing Account with matching mail; None otherwise
     */
   def findByEmail(email: String): Option[CustomUser] = {
-    userList.find((usr: CustomUser) => (usr.getMail == email))
+    userList.find((usr: CustomUser) => (usr.email == email))
   }
 
   /**

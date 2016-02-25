@@ -1,7 +1,9 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 
-@(page: Page[User])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@import models.security.CustomUser
+
+@(page: Page[CustomUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @actions = {
     <div class="row">
@@ -19,13 +21,13 @@
         page,
         routes.UserController.find(_, _, page.filter),
         Seq(
-            ("name", "Name", {item : Any => Html(item.asInstanceOf[User].userName)})
+            ("name", "Name", {item : Any => Html(item.asInstanceOf[CustomUser].name)})
             //("address", "Address", {item : Any => Html(item.asInstanceOf[User].address.getOrElse(""))}),
             //("dob", "Date of Birth", {item : Any => Html(item.asInstanceOf[User].dob.getOrElse(new java.util.Date()).format("dd MMM yyyy"))}),
             //("joiningDate", "Joining Date", {item : Any => Html(item.asInstanceOf[User].joiningDate.getOrElse(new java.util.Date()).format("dd MMM yyyy"))}),
             //("designation", "Designation", {item : Any => Html(item.asInstanceOf[User].designation.getOrElse(""))})
         ),
-        Some({ item : Any => routes.UserController.get(item.asInstanceOf[User]._id.get)})
+        Some({ item : Any => routes.UserController.get(item.asInstanceOf[CustomUser]._id.get)})
     )
 }
 

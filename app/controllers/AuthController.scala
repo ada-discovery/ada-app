@@ -20,7 +20,7 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
     * Login form defintion.
     */
   val loginForm = Form {
-    mapping("email" -> email, "password" -> text)(UserManager.authenticate)(_.map(u => (u.getMail, "")))
+    mapping("email" -> email, "password" -> text)(UserManager.authenticate)(_.map(u => (u.email, "")))
       .verifying("Invalid email or password", result => result.isDefined)
   }
 

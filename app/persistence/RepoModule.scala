@@ -9,10 +9,13 @@ import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import persistence.RepoDef.Repo
 
+import models.security.CustomUser
+
+
 object RepoTypeRegistry {
   type JsObjectCrudRepo = AsyncCrudRepo[JsObject, BSONObjectID]
   type TranslationRepo = AsyncCrudRepo[Translation, BSONObjectID]
-  type UserRepo = AsyncCrudRepo[User, BSONObjectID]
+  type UserRepo = AsyncCrudRepo[CustomUser, BSONObjectID]
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
 
   type DictionaryRootRepo = MongoAsyncCrudExtraRepo[Dictionary, BSONObjectID]
@@ -51,7 +54,7 @@ object RepoDef extends Enumeration {
     new MongoAsyncCrudRepo[Translation, BSONObjectID]("translations"))
 
   val UserRepo = Repo[UserRepo](
-    new MongoAsyncCrudRepo[User, BSONObjectID]("users"))
+    new MongoAsyncCrudRepo[CustomUser, BSONObjectID]("users"))
 
   val MessageRepo = Repo[MessageRepo](
     new MongoAsyncStreamRepo[Message, BSONObjectID]("messages"))

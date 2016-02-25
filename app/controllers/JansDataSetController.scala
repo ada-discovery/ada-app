@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 import play.api.mvc.{Action, Controller}
 
-import models.security.{AbstractUser, SecurityRoleCache, UserManager}
+import models.security.{CustomUser, SecurityRoleCache, UserManager}
 
 import jp.t2v.lab.play2.auth.AuthElement
 import be.objectify.deadbolt.scala.DeadboltActions
@@ -16,7 +16,7 @@ class JansDataSetController @Inject() (
   ) extends Controller with AuthElement with AuthConfigImpl{
 
   // deadbolt tests
-  def restrictedCall = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole.getName))) {
+  def restrictedCall = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole))) {
     Action{implicit request =>
       Ok("this call is only seen, if subject matches restrictions")
     }

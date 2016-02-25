@@ -1,11 +1,12 @@
 package models.security
 
 import models.BSONObjectIdentity
-import play.api.libs.json.Json
+import play.api.libs.json._
 import play.libs.Scala
 import be.objectify.deadbolt.core.models.{Role, Permission, Subject}
 import reactivemongo.bson.BSONObjectID
 
+import play.modules.reactivemongo.json.BSONFormats._
 
 /**
   * Custom user class.
@@ -15,25 +16,23 @@ import reactivemongo.bson.BSONObjectID
   * For simplicity, Subject.getIdentifier is represented by a String.
   *
   */
-//class CustomUser(val email: String, val password: String, userName: String, roles: List[Role], permissions: List[Permission]) extends AbstractUser(userName, roles, permissions) {
-case class CustomUser(val firstName: String, val lastName: String, val email: String, val password: String, val roles: List[Role] = List(SecurityRoleCache.basicRole), val permissions: List[Permission] = SecurityPermissionCache.basicPermissions, val _id: Option[BSONObjectID] = None) extends Subject{
-  def getMail: String = email
-  def getPassword: String = password
-  def getID: Option[BSONObjectID] = _id
+case class CustomUser(_id: Option[BSONObjectID], name: String, email: String, password: String, affiliation: String, roles: Seq[String], permissions: Seq[String]) extends Subject{
 
   // basic methods required by Subject class
-  def getIdentifier: String = firstName + lastName
-  def getRoles: java.util.List[Role] = Scala.asJava(roles)
-  def getPermissions: java.util.List[Permission] = Scala.asJava(permissions)
+  def getIdentifier: String = name
+  def getRoles: java.util.List[Role] = Scala.asJava(roles.map(r => SecurityRole(r)))
+  def getPermissions: java.util.List[Permission] = Scala.asJava(permissions.map(p => SecurityPermission(p)))
 
-  //replace string with BSONID
-  //def getIdentifier: BSONObjectID = ???
+  // usable for views, to retrieve infos on available fields
+  // replace with unapply
+  def getProperties: Seq[String] = Seq[String](name, email, affiliation)
+}
 
-  //def getAffilition: String = ???
-  //def getFirstName: String = ???
-  //def getLastName: String = ???
-  //def getFullName = (getFirstName + " " + getLastName)
+object CustomUser{
+  implicit val format: Format[CustomUser] = Json.format[CustomUser]
 
-  //add later
-  //def getSavedFilters: Seq[FilterSpec] = ???
+  implicit object UserIdentity extends BSONObjectIdentity[CustomUser] {
+    def of(entity: CustomUser): Option[BSONObjectID] = entity._id
+    protected def set(entity: CustomUser, id: Option[BSONObjectID]) = entity.copy(id)
+  }
 }
