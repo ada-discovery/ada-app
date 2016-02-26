@@ -37,7 +37,7 @@
         router.overviewList(_, _, page.filter),
         Some(fieldLabelMap),
         Some(fieldsToShow),
-        Some({ (item : JsObject) => router.get((item \ "_id").as[BSONObjectID])})
+        Some({ item : JsObject => router.get((item \ "_id").as[BSONObjectID])})
     )
 }
 

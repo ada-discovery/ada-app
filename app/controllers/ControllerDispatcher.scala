@@ -7,18 +7,24 @@ import play.api.mvc.{Action, AnyContent, Controller, Request}
  */
 abstract class ControllerDispatcher[C](controllerParamId: String, controllers : Iterable[(String, C)]) extends Controller {
 
-  val controllerIdMap = controllers.toMap
+  private val idControllerMap = controllers.toMap
 
   protected def dispatch(action: C => Action[AnyContent]) = Action.async { implicit request =>
-    // helper function to find a matching controller
-    val matchingController: C = {
-      val controllerIdOption = request.queryString.get(controllerParamId)
-      val controllerId = controllerIdOption.getOrElse(
-        throw new IllegalArgumentException(s"Controller param id '${controllerParamId}' not found.")
-      ).head
-      controllerIdMap.getOrElse(controllerId, throw new IllegalArgumentException(s"Controller id '${controllerId}' not recognized."))
-    }
+    val controllerId = getControllerId(request)
+
+    val matchingController = idControllerMap.getOrElse(
+      controllerId,
+      throw new IllegalArgumentException(s"Controller id '${controllerId}' not recognized.")
+    )
 
     action(matchingController).apply(request)
+  }
+
+  // a helper function
+  protected def getControllerId(request: Request[AnyContent]) = {
+    val controllerIdOption = request.queryString.get(controllerParamId)
+    controllerIdOption.getOrElse(
+      throw new IllegalArgumentException(s"Controller param id '${controllerParamId}' not found.")
+    ).head
   }
 }

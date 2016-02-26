@@ -1,6 +1,7 @@
 @import views.html.layout
+@import models.security.CustomUser
 
-@(form: Form[User])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(form: Form[CustomUser])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @layout.create(
     "user",

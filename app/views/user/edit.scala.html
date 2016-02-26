@@ -1,8 +1,9 @@
 @import views.html.layout
+@import models.security.CustomUser
 
 @(
     id: reactivemongo.bson.BSONObjectID,
-    form: Form[User]
+    form: Form[CustomUser]
 )(
     implicit msg: play.api.i18n.Messages, request: RequestHeader
 )

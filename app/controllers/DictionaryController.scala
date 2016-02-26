@@ -11,6 +11,7 @@ import play.api.data.Forms.{ignored, mapping, optional, seq, nonEmptyText, of, b
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, JsObject}
 import play.api.mvc.{AnyContent, Action, RequestHeader}
+import reactivemongo.bson.BSONObjectID
 import util.{ChartSpec, FilterSpec, FieldChartSpec}
 import views.html.dictionary
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -58,13 +59,15 @@ abstract class DictionaryControllerImpl (
       "isArray" -> boolean,
       "numValues" -> optional(of[Map[String, String]]),
       "aliases" ->  seq(nonEmptyText),
-      "label" ->  optional(nonEmptyText)
+      "label" ->  optional(nonEmptyText),
+      "categoryId" -> ignored(Option.empty[BSONObjectID]),
+      "category" -> ignored(Option.empty[Category])
     )(Field.apply)(Field.unapply))
 
   // router for requests; to be passed to views as helper.
   protected lazy val router: DictionaryRouter = DictionaryRouter(dataSetId)
 
-  override protected val home =
+  override protected lazy val home =
     Redirect(router.plainList)
 
   override protected def createView(f : Form[Field])(implicit msg: Messages, request: RequestHeader) =

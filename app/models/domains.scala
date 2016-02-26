@@ -1,10 +1,10 @@
 package models
 
+import models.security.{SecurityPermission, SecurityRole}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import java.util.{UUID, Date}
 import play.modules.reactivemongo.json.BSONFormats._
-
 
 case class Message(_id: Option[BSONObjectID], content: String)
 
