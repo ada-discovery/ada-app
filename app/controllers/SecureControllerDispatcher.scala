@@ -5,7 +5,7 @@ import javax.inject.Inject
 import be.objectify.deadbolt.scala.DeadboltActions
 import play.api.mvc.{Action, AnyContent}
 
-abstract class SecuredControllerDispatcher[C](controllerParamId: String, controllers: Iterable[(String, C, Array[String])])
+abstract class SecureControllerDispatcher[C](controllerParamId: String, controllers: Iterable[(String, C, Array[String])])
   extends ControllerDispatcher[C](controllerParamId, controllers.map(x => (x._1, x._2))) {
 
   @Inject protected var deadbolt: DeadboltActions = _
