@@ -1,28 +1,37 @@
 package controllers
 
-import play.twirl.api.Html
-
+import javax.inject.Inject
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
 
+import scala.concurrent.duration._
 import play.api.mvc.{Action, Controller}
 import play.api.data.Forms._
 import play.api.data._
 
 // authentification
 import jp.t2v.lab.play2.auth.LoginLogout
-import models.security.{CustomUser, UserManager}
+import models.security._
 
+class AuthController @Inject() (
+    myUserManager: UserManager
+  ) extends Controller with LoginLogout with AdaAuthConfig {
 
-class AuthController extends Controller with LoginLogout with AuthConfigImpl{
+  // a hook need by auth config
+  override val userManager = myUserManager
 
   /**
     * Login form defintion.
     */
   val loginForm = Form {
-    mapping("email" -> email, "password" -> text)(UserManager.authenticate)(_.map(u => (u.email, "")))
-      .verifying("Invalid email or password", result => result.isDefined)
+    mapping(
+      "email" -> email,
+      "password" -> text
+    )((email, password) => Await.result(userManager.authenticate(email, password), 120000 millis))(_.map(u => (u.email, "")))
+          .verifying("Invalid email or password", result => result.isDefined)
   }
+
+  // Await.result(userManager.authenticate, 120000 millis)
 
   /**
     * Redirect to login page.
@@ -76,13 +85,12 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
   // TODO: debug login. remove later!
   // immediately login as basic user
   def loginBasic = Action.async{ implicit request =>
-    gotoLoginSucceeded(UserManager.basicUser.getIdentifier)
+    gotoLoginSucceeded(userManager.basicUser.getIdentifier)
   }
 
   // TODO: debug login. remove later!
   // immediately login as admin user
   def loginAdmin = Action.async{ implicit request =>
-    gotoLoginSucceeded(UserManager.adminUser.getIdentifier)
+    gotoLoginSucceeded(userManager.adminUser.getIdentifier)
   }
-
 }

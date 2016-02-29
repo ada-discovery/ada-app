@@ -12,8 +12,12 @@ import be.objectify.deadbolt.scala.DeadboltActions
  * Class for testing and debugging
  */
 class JansDataSetController @Inject() (
+    myUserManager: UserManager,
     deadbolt: DeadboltActions
-  ) extends Controller with AuthElement with AuthConfigImpl{
+  ) extends Controller with AuthElement with AdaAuthConfig {
+
+  // a hook need by auth config
+  override val userManager = myUserManager
 
   // deadbolt tests
   def restrictedCall = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole))) {

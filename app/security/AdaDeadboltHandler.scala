@@ -1,6 +1,6 @@
 package security
 
-import controllers.{AuthConfigImpl, routes}
+import controllers.{routes}
 
 import play.api.mvc._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -9,13 +9,13 @@ import scala.concurrent.Future
 import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
 import be.objectify.deadbolt.core.models.Subject
 
-
-
 /**
   * Hooks for deadbolt
-  *
   */
-class CustomDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandler] = None) extends DeadboltHandler with AuthConfigImpl {
+class AdaDeadboltHandler(
+    getCurrentUser: Request[_] => Future[Option[Subject]],
+    dynamicResourceHandler: Option[DynamicResourceHandler] = None
+  ) extends DeadboltHandler {
 
   /**
     * Pre-authorization task. May block further execution.
@@ -44,9 +44,8 @@ class CustomDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandle
     * @param request Current request.
     * @return Current user, if logged in. None otherwise.
     */
-  override def getSubject[A](request: Request[A]): Future[Option[Subject]] = {
-    currentUser(request)
-  }
+  override def getSubject[A](request: Request[A]): Future[Option[Subject]] =
+    getCurrentUser(request)
 
   /**
     * TODO: execute more meaningful action.
@@ -59,5 +58,4 @@ class CustomDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandle
   def onAuthFailure[A](request: Request[A]): Future[Result] = {
     Future(Results.Redirect(routes.AuthController.unauthorized))
   }
-
 }

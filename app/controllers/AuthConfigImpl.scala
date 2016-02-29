@@ -6,24 +6,17 @@ import be.objectify.deadbolt.core.models.Role
 
 import play.api.mvc.Results._
 import play.api.mvc.{Request, RequestHeader, Result}
+import scala.concurrent.ExecutionContext.Implicits._
 
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
+import javax.inject.{Inject, Named}
 
 import scala.reflect._
 
+trait AdaAuthConfig extends AuthConfig {
 
-/**
-  *
-  *
-  * TODO clean
-  * TODO add redirects to meaningful pages
-  * TODO add logic
-  *
-  * used by auth controller
-  *
-  */
-trait AuthConfigImpl extends AuthConfig {
+  def userManager: UserManager
 
   /**
     * A type that is used to identify a user.
@@ -56,7 +49,7 @@ trait AuthConfigImpl extends AuthConfig {
     */
   val sessionTimeoutInSeconds: Int = 3600
 
-  def currentUser[A](request: Request[A])(implicit ctx: ExecutionContext): Future[Option[CustomUser]] = {
+  def currentUser(request: Request[_]): Future[Option[CustomUser]] = {
     // we can't call restoreUser, so we must retrieve the user manually
     val timeout = 120000 millis
     val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
@@ -78,9 +71,8 @@ trait AuthConfigImpl extends AuthConfig {
     * Retrieves user from Account class.
     *
     */
-  def resolveUser(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] = {
-    Future.successful(UserManager.findById(id))
-  }
+  def resolveUser(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] =
+    userManager.findById(id)
 
   /**
     * Where to redirect the user after a successful login.

@@ -1,95 +1,71 @@
 package models.security
 
-import models.BSONObjectIdentity
-import persistence.RepoDef
+import javax.inject.{Singleton, Inject}
 
+import com.google.inject.ImplementedBy
 import persistence.RepoTypeRegistry.UserRepo
-import reactivemongo.bson.BSONObjectID
+import play.api.libs.json.Json
 
-
+import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
+
+@ImplementedBy(classOf[UserManagerImpl])
+trait UserManager {
+  def authenticate(email: String, password: String): Future[Option[CustomUser]]
+  def findById(id: String): Future[Option[CustomUser]]
+
+  // TODO: remove
+  def adminUser: CustomUser
+  def basicUser: CustomUser
+}
 
 /**
   * Class for managing and accessing Users.
   */
-object UserManager {
-
-  // TODO: move UserManager functionality directly into specialized UserRepo class
-  val userRepo: UserRepo = RepoDef.UserRepo.repo
+@Singleton
+private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager {
 
   // TODO: dummy user profiles. eventually remove them.
-  val adminUser = new CustomUser(None, "admin user", "admin@mail", "123456", "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  val basicUser = new CustomUser(None, "basic user", "basic@mail", "123456", "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  override val adminUser = new CustomUser(None, "admin user", "admin@mail", "123456", "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
+  override val basicUser = new CustomUser(None, "basic user", "basic@mail", "123456", "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
 
-  // user cache
-  lazy val userList: List[CustomUser] = {
-    val timeout = 3600 millis
-    val userFutureTrav: Future[Traversable[CustomUser]] = userRepo.find(None, None, None, None, None)
-    val userTrav: Traversable[CustomUser] = Await.result(userFutureTrav, timeout)
-    val temp: List[CustomUser] = userTrav.toList
-    basicUser::adminUser::temp
-  }
+  // add admin and basic users
+  addUserIfNotPresent(adminUser)
+  addUserIfNotPresent(basicUser)
 
-  /**
-    * Syntactic sugar. Calls "authenticate".
-    */
-  //def apply(email: String, password: String): Option[Subject] = authenticate(email, password)
+  private def addUserIfNotPresent(user: CustomUser) =
+    userRepo.find(Some(Json.obj("name" -> user.name))).map{ users =>
+      if (users.isEmpty)
+        userRepo.save(user)
+    }
+
 
   /**
-    * Matches email and password for authentification.
-    * Returns an Account, if successful.
-    *
-    * @param email Mail for matching.
-    * @param password Password which should match the password associated to the mail.
-    * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
-    */
-  def authenticate(email: String, password: String): Option[CustomUser] = {
-    findByEmail(email) match {
-      case Some(account) =>
-        if(account.password == password)
-          Some(account)
-        else
-          None
-      case None => None
+   * Matches email and password for authentification.
+   * Returns an Account, if successful.
+   *
+   * @param email Mail for matching.
+   * @param password Password which should match the password associated to the mail.
+   * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
+   */
+  override def authenticate(email: String, password: String): Future[Option[CustomUser]] = {
+    val usersFuture = userRepo.find(Some(Json.obj("email" -> email, "password" -> password)))
+    usersFuture.map { users =>
+      if (users.nonEmpty) Some(users.head) else None
     }
   }
 
-
-
-  // TODO temporary -> remove!
-  /*def convert(user: User): CustomUser = {
-    new CustomUser(None, user.userName, user.email, user.password, "None")
-  }*/
-
-
-
   /**
-    * Given a mail, find the corresponding account.
-    *
-    * @param email mail to be matched.
-    * @return Option containing Account with matching mail; None otherwise
-    */
-  def findByEmail(email: String): Option[CustomUser] = {
-    userList.find((usr: CustomUser) => (usr.email == email))
-  }
-
-  /**
-    * Given an id, find the corresponding account.
-    *
-    * @param id ID to be matched.
-    * @return Option containing Account with matching ID; None otherwise
-    */
-  def findById(id: String): Option[CustomUser] = {
-    userList.find((acc: CustomUser) => (acc.getIdentifier == id))
-  }
-
-  /**
-    * Return a sequence with all cached Users.
-    *
-    * @return
-    */
-  def findAll(): Seq[CustomUser] = {
-    userList.toSeq
+   * Given an id, find the corresponding account.
+   *
+   * @param id ID to be matched.
+   * @return Option containing Account with matching ID; None otherwise
+   */
+  override def findById(id: String): Future[Option[CustomUser]] = {
+    val usersFuture = userRepo.find(Some(Json.obj("name" -> id)))
+    usersFuture.map { users =>
+      if (users.nonEmpty) Some(users.head) else None
+    }
   }
 }

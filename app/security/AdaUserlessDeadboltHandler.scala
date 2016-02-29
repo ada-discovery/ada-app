@@ -10,8 +10,7 @@ import scala.concurrent.Future
   * DeadboltHandler to be used if no Subject present
   *
   */
-class AdaCustomUserlessDeadboltHandler extends CustomDeadboltHandler
-{
+class AdaCustomUserlessDeadboltHandler(getCurrentUser: Request[_] => Future[Option[Subject]]) extends AdaDeadboltHandler(getCurrentUser) {
   // Dummy method. Always returns Future(None)
   override def getSubject[A](request: Request[A]): Future[Option[Subject]] = Future(None)
 }

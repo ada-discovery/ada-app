@@ -7,13 +7,17 @@ import scala.concurrent.Future
 
 import javax.inject.Inject
 
-import models.security.{CustomUser, SecurityRoleCache}
+import models.security.{UserManager, CustomUser, SecurityRoleCache}
 import be.objectify.deadbolt.scala.DeadboltActions
 
 
 class UserProfileController @Inject() (
+    myUserManager: UserManager,
     deadbolt: DeadboltActions
-  ) extends Controller with AuthConfigImpl{
+  ) extends Controller with AdaAuthConfig {
+
+  // a hook need by auth config
+  override val userManager = myUserManager
 
   def profile() = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
