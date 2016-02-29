@@ -1,6 +1,8 @@
 package controllers
 
 import javax.inject.Inject
+import security.AdaAuthConfig
+
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
 

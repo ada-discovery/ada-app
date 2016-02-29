@@ -10,7 +10,7 @@ import be.objectify.deadbolt.scala.DeadboltActions
 
 import modules.LdapModule
 import ldap._
-
+import security.AdaAuthConfig
 
 
 /**
