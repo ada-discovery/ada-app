@@ -9,7 +9,7 @@ import be.objectify.deadbolt.core.models.Permission
 
 /**
   * Generalized permission. Use to construct custom permissions.
-  * @param value descriptor of the permission. Refer to defintions in SecurityPermissionCache as samples.
+  * @param value descriptor of the permission. Refer to defintions in SecurityPermissionCache for samples.
   */
 case class SecurityPermission(val value: String) extends Permission {
   def getValue: String = value

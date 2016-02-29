@@ -24,7 +24,7 @@ class CustomDeadboltHandler(dynamicResourceHandler: Option[DynamicResourceHandle
     * @param request
     * @return
     */
-  override def beforeAuthCheck[A](request: Request[A]) = {
+  override def beforeAuthCheck[A](request: Request[A]): Future[Option[Result]] = {
     Future(None)
   }
 

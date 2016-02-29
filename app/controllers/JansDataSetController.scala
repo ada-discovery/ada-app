@@ -3,17 +3,21 @@ package controllers
 import javax.inject.Inject
 import play.api.mvc.{Action, Controller}
 
-import models.security.{CustomUser, SecurityRoleCache, UserManager}
+import models.security.SecurityRoleCache
 
-import jp.t2v.lab.play2.auth.AuthElement
 import be.objectify.deadbolt.scala.DeadboltActions
+
+import modules.LdapModule
+import ldap._
+
+
 
 /**
  * Class for testing and debugging
  */
 class JansDataSetController @Inject() (
-    deadbolt: DeadboltActions
-  ) extends Controller with AuthElement with AuthConfigImpl{
+    deadbolt: LdapActions
+  ) extends Controller{
 
   // deadbolt tests
   def restrictedCall = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole))) {

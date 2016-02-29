@@ -11,7 +11,7 @@ import play.api.data._
 
 // authentification
 import jp.t2v.lab.play2.auth.LoginLogout
-import models.security.{CustomUser, UserManager}
+import models.security.UserManager
 
 
 class AuthController extends Controller with LoginLogout with AuthConfigImpl{
@@ -28,10 +28,6 @@ class AuthController extends Controller with LoginLogout with AuthConfigImpl{
     * Redirect to login page.
     */
   def login = Action { implicit request =>
-    /*if()
-      Ok(views.html.auth.login(loginForm))
-    else
-      Redirect(routes.AppController.index)*/
     Ok(views.html.auth.login(loginForm))
   }
 

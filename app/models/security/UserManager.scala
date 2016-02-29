@@ -55,15 +55,6 @@ object UserManager {
     }
   }
 
-
-
-  // TODO temporary -> remove!
-  /*def convert(user: User): CustomUser = {
-    new CustomUser(None, user.userName, user.email, user.password, "None")
-  }*/
-
-
-
   /**
     * Given a mail, find the corresponding account.
     *
