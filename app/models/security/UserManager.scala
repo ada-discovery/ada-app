@@ -12,8 +12,10 @@ import scala.concurrent.duration._
 
 @ImplementedBy(classOf[UserManagerImpl])
 trait UserManager {
-  def authenticate(email: String, password: String): Future[Option[CustomUser]]
+
+  def authenticate(email: String, password: String): Future[Boolean]
   def findById(id: String): Future[Option[CustomUser]]
+  def findByEmail(email: String): Future[Option[CustomUser]]
 
   // TODO: remove
   def adminUser: CustomUser
@@ -40,16 +42,6 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager 
         userRepo.save(user)
     }
 
-//  /**
-//    * Given a mail, find the corresponding account.
-//    *
-//    * @param email mail to be matched.
-//    * @return Option containing Account with matching mail; None otherwise
-//    */
-//  def findByEmail(email: String): Option[CustomUser] = {
-//    userList.find((usr: CustomUser) => (usr.email == email))
-//  }
-
   /**
    * Matches email and password for authentification.
    * Returns an Account, if successful.
@@ -58,8 +50,19 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager 
    * @param password Password which should match the password associated to the mail.
    * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
    */
-  override def authenticate(email: String, password: String): Future[Option[CustomUser]] = {
+  override def authenticate(email: String, password: String): Future[Boolean] = {
     val usersFuture = userRepo.find(Some(Json.obj("email" -> email, "password" -> password)))
+    usersFuture.map(_.nonEmpty)
+  }
+
+  /**
+    * Given a mail, find the corresponding account.
+    *
+    * @param email mail to be matched.
+    * @return Option containing Account with matching mail; None otherwise
+    */
+  override def findByEmail(email: String): Future[Option[CustomUser]] = {
+    val usersFuture = userRepo.find(Some(Json.obj("email" -> email)))
     usersFuture.map { users =>
       if (users.nonEmpty) Some(users.head) else None
     }
