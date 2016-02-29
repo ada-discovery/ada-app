@@ -44,7 +44,8 @@ libraryDependencies ++= Seq(
   "be.objectify" % "deadbolt-java_2.11" % "2.4.3",
   "jp.t2v" %% "play2-auth"        % "0.14.1",
   "jp.t2v" %% "play2-auth-social" % "0.14.1",
-  "jp.t2v" %% "play2-auth-test"   % "0.14.1" % "test"
+  "jp.t2v" %% "play2-auth-test"   % "0.14.1" % "test",
+  "com.unboundid" % "unboundid-ldapsdk" % "2.3.8"
 )
 
 dependencyOverrides ++= Set(

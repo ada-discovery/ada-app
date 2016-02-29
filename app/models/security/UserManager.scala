@@ -40,6 +40,15 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager 
         userRepo.save(user)
     }
 
+//  /**
+//    * Given a mail, find the corresponding account.
+//    *
+//    * @param email mail to be matched.
+//    * @return Option containing Account with matching mail; None otherwise
+//    */
+//  def findByEmail(email: String): Option[CustomUser] = {
+//    userList.find((usr: CustomUser) => (usr.email == email))
+//  }
 
   /**
    * Matches email and password for authentification.

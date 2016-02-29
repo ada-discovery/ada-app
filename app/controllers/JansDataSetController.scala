@@ -1,19 +1,24 @@
 package controllers
 
 import javax.inject.Inject
+import jp.t2v.lab.play2.auth.AuthElement
 import play.api.mvc.{Action, Controller}
 
-import models.security.{CustomUser, SecurityRoleCache, UserManager}
+import models.security.{UserManager, SecurityRoleCache}
 
-import jp.t2v.lab.play2.auth.AuthElement
 import be.objectify.deadbolt.scala.DeadboltActions
+
+import modules.LdapModule
+import ldap._
+
+
 
 /**
  * Class for testing and debugging
  */
 class JansDataSetController @Inject() (
     myUserManager: UserManager,
-    deadbolt: DeadboltActions
+    deadbolt: LdapActions
   ) extends Controller with AuthElement with AdaAuthConfig {
 
   // a hook need by auth config

@@ -37,10 +37,6 @@ class AuthController @Inject() (
     * Redirect to login page.
     */
   def login = Action { implicit request =>
-    /*if()
-      Ok(views.html.auth.login(loginForm))
-    else
-      Redirect(routes.AppController.index)*/
     Ok(views.html.auth.login(loginForm))
   }
 

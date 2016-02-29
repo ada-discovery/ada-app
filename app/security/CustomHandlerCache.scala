@@ -5,6 +5,7 @@ import javax.inject.Singleton
 import javax.inject.{Inject, Named}
 import be.objectify.deadbolt.scala.{HandlerKey, DeadboltHandler}
 import be.objectify.deadbolt.scala.cache.HandlerCache
+import com.google.inject.ImplementedBy
 import controllers.AdaAuthConfig
 import models.security.UserManager
 import scala.concurrent.ExecutionContext.Implicits._
@@ -18,16 +19,17 @@ class CustomHandlerCacheImpl @Inject() (myUserManager: UserManager) extends Cust
   // a hook need by auth config
   override val userManager = myUserManager
 
-  override protected def defaultHandler = new AdaDeadboltHandler(currentUser)
-  override protected def userlessHandler = new AdaCustomUserlessDeadboltHandler(currentUser)
-  override protected def alternativeDynamicResourceHandler = new AdaDeadboltHandler(currentUser, Some(CustomAlternativeDynamicResourceHandler))
+  override def defaultHandler = new AdaDeadboltHandler(currentUser)
+  override def userlessHandler = new AdaCustomUserlessDeadboltHandler(currentUser)
+  override def alternativeDynamicResourceHandler = new AdaDeadboltHandler(currentUser, Some(CustomAlternativeDynamicResourceHandler))
 }
 
-abstract class CustomHandlerCache extends HandlerCache {
+@ImplementedBy(classOf[CustomHandlerCacheImpl])
+trait CustomHandlerCache extends HandlerCache {
 
-  protected def defaultHandler: DeadboltHandler
-  protected def userlessHandler: DeadboltHandler
-  protected def alternativeDynamicResourceHandler: DeadboltHandler
+  def defaultHandler: DeadboltHandler
+  def userlessHandler: DeadboltHandler
+  def alternativeDynamicResourceHandler: DeadboltHandler
 
   val handlers: Map[Any, DeadboltHandler] = Map(HandlerKeys.defaultHandler -> defaultHandler,
                                                 HandlerKeys.altHandler -> alternativeDynamicResourceHandler,
