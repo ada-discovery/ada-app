@@ -1,3 +1,5 @@
+
+
 package models.security
 
 import javax.inject.{Singleton, Inject}
@@ -14,8 +16,10 @@ import util.SecurityUtil
 
 @ImplementedBy(classOf[UserManagerImpl])
 trait UserManager {
-  def authenticate(email: String, password: String): Future[Option[CustomUser]]
+
+  def authenticate(email: String, password: String): Future[Boolean]
   def findById(id: String): Future[Option[CustomUser]]
+  def findByEmail(email: String): Future[Option[CustomUser]]
 
   // TODO: remove
   def adminUser: CustomUser
@@ -42,35 +46,39 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager 
         userRepo.save(user)
     }
 
-//  /**
-//    * Given a mail, find the corresponding account.
-//    *
-//    * @param email mail to be matched.
-//    * @return Option containing Account with matching mail; None otherwise
-//    */
-//  def findByEmail(email: String): Option[CustomUser] = {
-//    userList.find((usr: CustomUser) => (usr.email == email))
-//  }
-
   /**
-   * Matches email and password for authentification.
-   * Returns an Account, if successful.
-   *
-   * @param email Mail for matching.
-   * @param password Password which should match the password associated to the mail.
-   * @return False, if authentification failed.
-   */
+    * Matches email and password for authentification.
+    * Returns an Account, if successful.
+    *
+    * @param email Mail for matching.
+    * @param password Password which should match the password associated to the mail.
+    * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
+    */
   override def authenticate(email: String, password: String): Future[Boolean] = {
-    val usersFuture = userRepo.find(Some(Json.obj("email" -> email, "password" -> SecurityUtil.md5(password))))
+    val pwHash = SecurityUtil.md5(password)
+    val usersFuture = userRepo.find(Some(Json.obj("email" -> email, "password" -> pwHash)))
     usersFuture.map(_.nonEmpty)
   }
 
   /**
-   * Given an id, find the corresponding account.
-   *
-   * @param id ID to be matched.
-   * @return Option containing Account with matching ID; None otherwise
-   */
+    * Given a mail, find the corresponding account.
+    *
+    * @param email mail to be matched.
+    * @return Option containing Account with matching mail; None otherwise
+    */
+  override def findByEmail(email: String): Future[Option[CustomUser]] = {
+    val usersFuture = userRepo.find(Some(Json.obj("email" -> email)))
+    usersFuture.map { users =>
+      if (users.nonEmpty) Some(users.head) else None
+    }
+  }
+
+  /**
+    * Given an id, find the corresponding account.
+    *
+    * @param id ID to be matched.
+    * @return Option containing Account with matching ID; None otherwise
+    */
   override def findById(id: String): Future[Option[CustomUser]] = {
     val usersFuture = userRepo.find(Some(Json.obj("name" -> id)))
     usersFuture.map { users =>
@@ -78,3 +86,4 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager 
     }
   }
 }
+

@@ -63,7 +63,7 @@ class LdapUserManager extends UserManager {
     * @param password
     * @return
     */
-  def authenticate(email: String, password: String): Future[Option[CustomUser]] = {
+  def authenticate(email: String, password: String): Future[Boolean] = {
     val server = createServer
 
     val conn = server.getConnection
@@ -78,7 +78,7 @@ class LdapUserManager extends UserManager {
     } else {
       None
     }
-    Future(user)
+    Future(user.isDefined)
   }
 
 
@@ -102,5 +102,8 @@ class LdapUserManager extends UserManager {
     }
     Future(user)
   }
+
+
+  override def findByEmail(email: String) = Future(None)
 }
 
