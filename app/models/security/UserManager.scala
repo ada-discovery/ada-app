@@ -58,13 +58,11 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager 
    *
    * @param email Mail for matching.
    * @param password Password which should match the password associated to the mail.
-   * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
+   * @return False, if authentification failed.
    */
-  override def authenticate(email: String, password: String): Future[Option[CustomUser]] = {
+  override def authenticate(email: String, password: String): Future[Boolean] = {
     val usersFuture = userRepo.find(Some(Json.obj("email" -> email, "password" -> SecurityUtil.md5(password))))
-    usersFuture.map { users =>
-      if (users.nonEmpty) Some(users.head) else None
-    }
+    usersFuture.map(_.nonEmpty)
   }
 
   /**
