@@ -7,8 +7,10 @@ import persistence.RepoTypeRegistry.UserRepo
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits._
-import scala.concurrent.{Future, Await}
-import scala.concurrent.duration._
+import scala.concurrent.Future
+
+import util.SecurityUtil
+
 
 @ImplementedBy(classOf[UserManagerImpl])
 trait UserManager {
@@ -27,8 +29,8 @@ trait UserManager {
 private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager {
 
   // TODO: dummy user profiles. eventually remove them.
-  override val adminUser = new CustomUser(None, "admin user", "admin@mail", "123456", "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  override val basicUser = new CustomUser(None, "basic user", "basic@mail", "123456", "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  override val adminUser = new CustomUser(None, "admin user", "admin@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
+  override val basicUser = new CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
 
   // add admin and basic users
   addUserIfNotPresent(adminUser)
@@ -59,7 +61,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager 
    * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
    */
   override def authenticate(email: String, password: String): Future[Option[CustomUser]] = {
-    val usersFuture = userRepo.find(Some(Json.obj("email" -> email, "password" -> password)))
+    val usersFuture = userRepo.find(Some(Json.obj("email" -> email, "password" -> SecurityUtil.md5(password))))
     usersFuture.map { users =>
       if (users.nonEmpty) Some(users.head) else None
     }
