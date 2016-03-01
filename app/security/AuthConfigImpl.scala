@@ -1,17 +1,15 @@
-package controllers
+package security
 
+import be.objectify.deadbolt.core.models.Role
+import controllers.routes
 import jp.t2v.lab.play2.auth.{AuthConfig, _}
 import models.security.{CustomUser, UserManager}
-import be.objectify.deadbolt.core.models.Role
-
 import play.api.mvc.Results._
 import play.api.mvc.{Request, RequestHeader, Result}
+
 import scala.concurrent.ExecutionContext.Implicits._
-
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
-import javax.inject.{Inject, Named}
-
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect._
 
 trait AdaAuthConfig extends AuthConfig {

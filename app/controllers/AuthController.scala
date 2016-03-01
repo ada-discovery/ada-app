@@ -1,11 +1,13 @@
 package controllers
 
 import javax.inject.Inject
+import security.AdaAuthConfig
+
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
 
 import scala.concurrent.duration._
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.{Result, Action, Controller}
 import play.api.data.Forms._
 import play.api.data._
 
@@ -24,11 +26,13 @@ class AuthController @Inject() (
     * Login form defintion.
     */
   val loginForm = Form {
-    mapping(
+    tuple(
       "email" -> email,
       "password" -> text
-    )((email, password) => Await.result(userManager.authenticate(email, password), 120000 millis))(_.map(u => (u.email, "")))
-          .verifying("Invalid email or password", result => result.isDefined)
+    ).verifying(
+      "Invalid email or password",
+      emailPassword => Await.result(userManager.authenticate(emailPassword._1, emailPassword._2), 120000 millis)
+    )
   }
 
   // Await.result(userManager.authenticate, 120000 millis)
@@ -64,7 +68,7 @@ class AuthController @Inject() (
   def authenticate = Action.async { implicit request =>
     loginForm.bindFromRequest.fold(
       formWithErrors => Future.successful(BadRequest(views.html.auth.login(formWithErrors))),
-      user => gotoLoginSucceeded(user.get.getIdentifier)
+      emailPassword => myUserManager.findByEmail(emailPassword._1).flatMap(user => gotoLoginSucceeded(user.get.name))
     )
   }
 

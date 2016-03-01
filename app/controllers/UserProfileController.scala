@@ -1,6 +1,7 @@
 package controllers
 
 import play.api.mvc.{Action, Controller}
+import security.AdaAuthConfig
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
