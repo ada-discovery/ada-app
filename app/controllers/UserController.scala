@@ -15,6 +15,9 @@ import views.html
 import play.api.i18n.Messages
 import play.api.mvc.RequestHeader
 
+import util.SecurityUtil
+
+
 class UserController @Inject() (
     userRepo: UserRepo
   ) extends CrudController[CustomUser, BSONObjectID](userRepo) {
@@ -28,7 +31,7 @@ class UserController @Inject() (
       "affiliation" -> text,
       "roleNames" -> seq(text),
       "permissionNames" -> seq(text)
-      )(CustomUser.apply)(CustomUser.unapply))
+      )(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))//(CustomUser.apply)(CustomUser.unapply))
 
   override protected val home =
     Redirect(routes.UserController.listAll())
