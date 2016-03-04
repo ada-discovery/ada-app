@@ -1,8 +1,15 @@
-package controllers
+package controllers.dataset
 
+import controllers.ControllerDispatcher
 import util.FilterSpec
+import javax.inject.Inject
 
-class DictionaryDispatcher(controllers : Iterable[(String, DictionaryController)]) extends ControllerDispatcher[DictionaryController]("dataSet", controllers) with DictionaryController {
+class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: DictionaryControllerFactory)  extends ControllerDispatcher[DictionaryController]("dataSet") with DictionaryController {
+
+  override protected def getController(id: String) =
+    dscf(id).map(_ => dcf(id)).getOrElse(
+      throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
+    )
 
   override def get(id: String) = dispatch(_.get(id))
 

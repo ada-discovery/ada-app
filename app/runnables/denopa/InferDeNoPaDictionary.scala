@@ -1,33 +1,25 @@
 package runnables.denopa
 
-import javax.inject.{Named, Inject}
-
-import persistence.DictionaryFieldRepo
 import play.api.libs.json.Json
 import services.DeNoPaSetting
+import models.DataSetId._
 import runnables.{InferDictionary, GuiceBuilderRunnable}
 
-protected abstract class InferDeNoPaDictionary(dictionaryRepo: DictionaryFieldRepo) extends InferDictionary(dictionaryRepo) {
+protected abstract class InferDeNoPaDictionary(dataSetId: String) extends InferDictionary(dataSetId) {
   override protected val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider
   override protected val uniqueCriteria = Json.obj("Line_Nr" -> "1")
 }
 
-class InferDeNoPaBaselineDictionary @Inject()(
-  @Named("DeNoPaBaselineDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo)
-
-class InferDeNoPaFirstVisitDictionary @Inject()(
-  @Named("DeNoPaFirstVisitDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo)
-
-class InferDeNoPaCuratedBaselineDictionary @Inject()(
-  @Named("DeNoPaCuratedBaselineDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo) {
+class InferDeNoPaBaselineDictionary extends InferDeNoPaDictionary(denopa_baseline)
+class InferDeNoPaFirstVisitDictionary extends InferDeNoPaDictionary(denopa_firstvisit)
+class InferDeNoPaCuratedBaselineDictionary extends InferDeNoPaDictionary(denopa_curated_baseline) {
+  override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
+}
+class InferDeNoPaCuratedFirstVisitDictionary extends InferDeNoPaDictionary(denopa_curated_firstvisit) {
   override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
 }
 
-class InferDeNoPaCuratedFirstVisitDictionary @Inject()(
-  @Named("DeNoPaCuratedFirstVisitDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDeNoPaDictionary(dictionaryRepo) {
-  override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
-}
-
+// app main launchers
 object InferDeNoPaBaselineDictionary extends GuiceBuilderRunnable[InferDeNoPaBaselineDictionary] with App { run }
 object InferDeNoPaFirstVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaFirstVisitDictionary] with App { run }
 object InferDeNoPaCuratedBaselineDictionary extends GuiceBuilderRunnable[InferDeNoPaCuratedBaselineDictionary] with App { run }

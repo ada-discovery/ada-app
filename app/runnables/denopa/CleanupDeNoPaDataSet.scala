@@ -1,33 +1,32 @@
 package runnables.denopa
 
-import java.text.{ParseException, SimpleDateFormat}
-import java.util.Date
-import javax.inject.{Inject, Named}
+import javax.inject.Inject
 
-import models.MetaTypeStats
-import persistence.RepoTypeRegistry._
-import persistence._
-import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import services.DeNoPaSetting._
+import models.DataSetMetaInfo
+import persistence.RepoTypes._
+import persistence.dataset.DataSetAccessorFactory
 import runnables.{CleanupDataSet, GuiceBuilderRunnable}
-
-import scala.concurrent.Await
-import scala.concurrent.duration._
+import models.DataSetId._
 
 class CleanupDeNoPaBaseline @Inject()(
-    @Named("DeNoPaBaselineRepo") baselineRepo: JsObjectCrudRepo,
-    @Named("DeNoPaCuratedBaselineRepo") curatedBaselineRepo : JsObjectCrudRepo,
-    @Named("DeNoPaBaselineDictionaryRepo") baselineDictionaryRepo : DictionaryFieldRepo,
+    dsaf: DataSetAccessorFactory,
     translationRepo : TranslationRepo
-  ) extends CleanupDataSet(baselineRepo, curatedBaselineRepo, baselineDictionaryRepo, translationRepo)
+  ) extends CleanupDataSet(
+    denopa_baseline,
+    DataSetMetaInfo(None, denopa_curated_baseline, "DeNoPa Curated Baseline"),
+    dsaf,
+    translationRepo
+  )
 
 class CleanupDeNoPaFirstVisit @Inject()(
-    @Named("DeNoPaFirstVisitRepo") firstVisitRepo: JsObjectCrudRepo,
-    @Named("DeNoPaCuratedFirstVisitRepo") curatedFirstVisitRepo: JsObjectCrudRepo,
-    @Named("DeNoPaFirstVisitDictionaryRepo") firstVisitDictionaryRepo : DictionaryFieldRepo,
+    dsaf: DataSetAccessorFactory,
     translationRepo : TranslationRepo
-  ) extends CleanupDataSet(firstVisitRepo, curatedFirstVisitRepo, firstVisitDictionaryRepo, translationRepo)
+  ) extends CleanupDataSet(
+    denopa_firstvisit,
+    DataSetMetaInfo(None, denopa_curated_firstvisit, "DeNoPa Curated First Visit"),
+    dsaf,
+    translationRepo
+  )
 
 object CleanupDeNoPaBaseline extends GuiceBuilderRunnable[CleanupDeNoPaBaseline] with App { run }
 object CleanupDeNoPaFirstVisit extends GuiceBuilderRunnable[CleanupDeNoPaBaseline] with App { run }

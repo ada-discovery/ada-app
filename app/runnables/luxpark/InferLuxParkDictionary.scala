@@ -1,14 +1,11 @@
 package runnables.luxpark
 
-import javax.inject.{Inject, Named}
-
-import persistence.DictionaryFieldRepo
+import models.DataSetId._
 import play.api.libs.json.Json
 import runnables.{GuiceBuilderRunnable, InferDictionary}
 import services.DeNoPaSetting
 
-class InferLuxParkDictionary @Inject()(
-  @Named("LuxParkDictionaryRepo") dictionaryRepo: DictionaryFieldRepo) extends InferDictionary(dictionaryRepo) {
+class InferLuxParkDictionary extends InferDictionary(luxpark) {
 
   // TODO: Introduce a proper type inference setting for LuxPark Data
   override protected val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider

@@ -1,6 +1,3 @@
-import play.api.data.Form
-import play.api.libs.json.{JsObject, JsString, JsNull}
-
 package object util {
 
 //  def getDomainName(form: Form[_]) = form.get.getClass.getSimpleName.toLowerCase
@@ -16,7 +13,7 @@ package object util {
           slashPos = coreUrl.length
         url.startsWith(coreUrl.substring(0, slashPos))
       }
-      case None => coreUrl.equals(url)
+      case None => url.startsWith(coreUrl)
     }
 
   def shorten(string : String, length: Int = 25) =

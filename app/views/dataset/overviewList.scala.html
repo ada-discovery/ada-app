@@ -7,15 +7,14 @@
 @import reactivemongo.bson.BSONObjectID
 @import util.FieldChartSpec
 
+@import controllers.dataset.DataSetRouter
 @(
     domainName : String,
     page: Page[JsObject],
     fieldLabelMap : Map[String, String],
     fieldsToShow : Seq[String],
     fieldChartSpecs : Iterable[FieldChartSpec],
-
-    // All calls wrapped in a router object
-    router : DataSetRouter
+    router : DataSetRouter, dataSetMetaInfos: Traversable[DataSetMetaInfo]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
@@ -46,5 +45,6 @@
     page.total,
     actions,
     table,
-    Some(filterChartPanel(fieldChartSpecs))
+    Some(filterChartPanel(fieldChartSpecs)),
+    Some(datasetMenu(dataSetMetaInfos))
 )

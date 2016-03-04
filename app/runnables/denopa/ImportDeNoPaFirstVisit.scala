@@ -2,7 +2,9 @@ package runnables.denopa
 
 import javax.inject.{Inject, Named}
 
-import persistence.RepoTypeRegistry._
+import models.DataSetId._
+import models.DataSetMetaInfo
+import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import play.api.libs.json.{JsNull, JsObject, JsString}
 import runnables.GuiceBuilderRunnable
@@ -14,7 +16,7 @@ import scala.io.Source
 
 class ImportDeNoPaFirstVisit @Inject()(
     configuration: Configuration,
-    @Named("DeNoPaFirstVisitRepo") firstVisitRepo: JsObjectCrudRepo
+    dsaf: DataSetAccessorFactory
   ) extends Runnable {
 
   val folder = configuration.getString("denopa.import.folder").get
@@ -23,9 +25,18 @@ class ImportDeNoPaFirstVisit @Inject()(
   val separator = "§§"
   val timeout = 50000 millis
 
+  val metaInfo = DataSetMetaInfo(None, denopa_firstvisit, "DeNoPa First Visit")
+
+  val dataSetAccessor = {
+    val futureAccessor = dsaf.register(metaInfo)
+    Await.result(futureAccessor, 120000 millis)
+  }
+
   val splitLineIndeces = List(122, 154, 219)
 
   override def run = {
+    val firstVisitRepo = dataSetAccessor.dataSetRepo
+
     // remove the records from the collection
     val deleteFuture = firstVisitRepo.deleteAll
     Await.result(deleteFuture, timeout)

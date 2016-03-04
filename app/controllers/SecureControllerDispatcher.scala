@@ -6,7 +6,7 @@ import be.objectify.deadbolt.scala.DeadboltActions
 import play.api.mvc.{Action, AnyContent}
 
 abstract class SecureControllerDispatcher[C](controllerParamId: String, controllers: Iterable[(String, C, Array[String])])
-  extends ControllerDispatcher[C](controllerParamId, controllers.map(x => (x._1, x._2))) {
+  extends StaticControllerDispatcher[C](controllerParamId, controllers.map(x => (x._1, x._2))) {
 
   @Inject protected var deadbolt: DeadboltActions = _
   private val idRolesMap = controllers.map(x => (x._1, x._3)).toMap

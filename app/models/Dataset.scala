@@ -11,12 +11,12 @@ case class DataSetMetaInfo(
   _id: Option[BSONObjectID],
   id: String,
   name: String,
-  timeCreated: Date
+  timeCreated: Date = new Date()
 )
 
 case class Dictionary(
   _id: Option[BSONObjectID],
-  dataSetName: String,
+  dataSetId: String,
   fields: Seq[Field]
 //  parents : Seq[Dictionary],
 )
@@ -61,11 +61,12 @@ case class Category(
 
 // JSON converters and identities
 
-object Dictionary {
+object DataSetFormattersAndIds {
   implicit val enumTypeFormat = EnumFormat.enumFormat(FieldType)
-  implicit val CategoryFormat = Json.format[Category]
-  implicit val FieldFormat = Json.format[Field]
-  implicit val DictionaryFormat = Json.format[Dictionary]
+  implicit val categoryFormat = Json.format[Category]
+  implicit val fieldFormat = Json.format[Field]
+  implicit val dictionaryFormat = Json.format[Dictionary]
+  implicit val dataSetMetaInfoFormat = Json.format[DataSetMetaInfo]
 
   implicit object DictionaryIdentity extends BSONObjectIdentity[Dictionary] {
     def of(entity: Dictionary): Option[BSONObjectID] = entity._id
@@ -83,6 +84,19 @@ object Dictionary {
     def of(entity: Category): Option[BSONObjectID] = entity._id
     protected def set(entity: Category, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }
+
+  implicit object DataSetMetaInfoIdentity extends BSONObjectIdentity[DataSetMetaInfo] {
+    def of(entity: DataSetMetaInfo): Option[BSONObjectID] = entity._id
+    protected def set(entity: DataSetMetaInfo, id: Option[BSONObjectID]) = entity.copy(_id = id)
+  }
+}
+
+object DataSetId {
+  val luxpark = "luxpark"
+  val denopa_curated_baseline = "denopa_curated_baseline"
+  val denopa_curated_firstvisit = "denopa_curated_firstvisit"
+  val denopa_baseline = "denopa_baseline"
+  val denopa_firstvisit = "denopa_firstvisit"
 }
 
 // TODO:

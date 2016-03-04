@@ -7,12 +7,12 @@
 	item: JsObject,
 	listCall : Call,
 	nonNullOnly : Boolean = true,
-	showSidebar : Boolean = true
+	sideBar : Option[Html] = None
 )(
 	implicit msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@main(Messages("show.title", domainName), showSidebar) {
+@main(Messages("show.title", domainName), sideBar) {
 
 	<div class="page-header">
 		<h1>@Messages("show.title", domainName)</h1>

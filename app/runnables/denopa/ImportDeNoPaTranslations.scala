@@ -3,7 +3,7 @@ package runnables.denopa
 import javax.inject.{Inject, Named}
 
 import models.Translation
-import persistence.RepoTypeRegistry._
+import persistence.RepoTypes._
 import play.api.Configuration
 import runnables.GuiceBuilderRunnable
 

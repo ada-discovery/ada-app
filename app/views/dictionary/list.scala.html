@@ -4,12 +4,13 @@
 @import models.Field
 @import util.FieldChartSpec
 
+@import controllers.dataset.DictionaryRouter
 @(
     domainName : String,
     page: Page[Field],
     fieldChartSpecs : Iterable[FieldChartSpec],
-
     router : DictionaryRouter,
+    dataSetMetaInfos: Traversable[DataSetMetaInfo],
     chartGridWidth: Int = 3
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
@@ -39,5 +40,6 @@
     page.total,
     actions,
     table,
-    Some(filterChartPanel(fieldChartSpecs, chartGridWidth))
+    Some(filterChartPanel(fieldChartSpecs, chartGridWidth)),
+    Some(datasetMenu(dataSetMetaInfos))
 )

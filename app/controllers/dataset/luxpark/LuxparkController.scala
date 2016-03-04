@@ -1,23 +1,24 @@
-package controllers.luxpark
+package controllers.dataset.luxpark
 
-import javax.inject.{Inject, Named}
+import javax.inject.Inject
 
-import controllers.DataSetControllerImpl
+import controllers.dataset.DataSetControllerImpl
+import models.DataSetId._
 import models.Category
 import org.apache.commons.lang3.StringEscapeUtils
-import persistence.DictionaryFieldRepo
+import persistence.RepoTypes._
+import persistence.dataset.DataSetAccessorFactory
 import services.RedCapService
 
 import scala.concurrent.Await
 
-class LuxParkController @Inject() (
-    @Named("LuxParkDictionaryRepo") dictionaryRepo: DictionaryFieldRepo,
-    redCapService: RedCapService
-  ) extends DataSetControllerImpl(dictionaryRepo) {
+class LuxparkController @Inject()(
+    dsaf: DataSetAccessorFactory,
+    redCapService: RedCapService,
+    dataSetMetaInfoRepo: DataSetMetaInfoRepo
+  ) extends DataSetControllerImpl(luxpark, dsaf, dataSetMetaInfoRepo) {
 
-  override val dataSetId = "luxpark"
-
-  override protected val dataSetName = "LuxPark"
+//  override protected val dataSetName = "LuxPark"
 
   override protected val keyField = "cdisc_dm_usubjd"
 

@@ -3,7 +3,7 @@ package persistence
 import play.api.libs.json.{Json, JsObject}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json._
-import persistence.RepoTypeRegistry.JsObjectCrudRepo
+import persistence.RepoTypes.JsObjectCrudRepo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import scala.concurrent.Future

@@ -9,7 +9,8 @@
     chartSpec: ChartSpec,
     distributionCall : Call,
     dataSetId: String,
-    fields: Seq[(String, Option[String])]
+    fields: Seq[(String, Option[String])],
+    dataSetMetaInfos: Traversable[DataSetMetaInfo]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
@@ -43,7 +44,7 @@
     }
 }
 
-@main(Messages("distribution.title", domainName)) {
+@main(Messages("distribution.title", domainName), Some(datasetMenu(dataSetMetaInfos))) {
 
     <div class="page-header">
         <h3>

@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import models.security.{SecurityRoleCache, SecurityPermissionCache, CustomUser}
 
-import persistence.RepoTypeRegistry.UserRepo
+import persistence.RepoTypes.UserRepo
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, seq, email, text}
 import models.Page

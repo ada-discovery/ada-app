@@ -61,27 +61,27 @@ GET         /redcap/records/exportTranSMARTMapping                              
 
 
 #Generic study routes using DataSetDispatcher and DictionaryDispatcher
-GET         /studies/records                                                        controllers.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /studies/records/get/:id                                                controllers.DataSetDispatcher.get(id: BSONObjectID)
-GET         /studies/records/exportAllAsCsv                                         controllers.DataSetDispatcher.exportAllRecordsAsCsv(delimiter : String ?= ",")
-GET         /studies/records/exportAllAsJson                                        controllers.DataSetDispatcher.exportAllRecordsAsJson
+GET         /studies/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
+GET         /studies/records/exportAllAsCsv                                         controllers.dataset.DataSetDispatcher.exportAllRecordsAsCsv(delimiter : String ?= ",")
+GET         /studies/records/exportAllAsJson                                        controllers.dataset.DataSetDispatcher.exportAllRecordsAsJson
 
-GET         /studies/records/exportAsCsv                                            controllers.DataSetDispatcher.exportRecordsAsCsv(delimiter: String ?= ",", filter: util.FilterSpec ?= new util.FilterSpec())
-GET         /studies/records/exportAsJson                                           controllers.DataSetDispatcher.exportRecordsAsJson(filter: util.FilterSpec ?= new util.FilterSpec())
-GET         /studies/records/exportTranSMARTData                                    controllers.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
-GET         /studies/records/exportTranSMARTMapping                                 controllers.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
-GET         /studies/fieldTypes                                                     controllers.DataSetDispatcher.overviewFieldTypes
-GET         /studies/overview                                                       controllers.DataSetDispatcher.overview
-GET         /studies/overviewList                                                   controllers.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: util.FilterSpec ?= new util.FilterSpec())
-GET         /studies/scatterStats                                                   controllers.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None)
-GET         /studies/distribution                                                   controllers.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None)
-GET         /studies/fieldNames                                                     controllers.DataSetDispatcher.getFieldNames
+GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(delimiter: String ?= ",", filter: util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(filter: util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
+GET         /studies/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
+GET         /studies/fieldTypes                                                     controllers.dataset.DataSetDispatcher.overviewFieldTypes
+GET         /studies/overview                                                       controllers.dataset.DataSetDispatcher.overview
+GET         /studies/overviewList                                                   controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None)
+GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None)
+GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 
-GET         /studies/dictionary                                                     controllers.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /studies/dictionary/get/:name                                           controllers.DictionaryDispatcher.get(name: String)
-POST        /studies/dictionary/save                                                controllers.DictionaryDispatcher.save
-GET         /studies/dictionary/:name                                               controllers.DictionaryDispatcher.edit(name: String)
-POST        /studies/dictionary/:name                                               controllers.DictionaryDispatcher.update(name: String)
+GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)
+POST        /studies/dictionary/save                                                controllers.dataset.DictionaryDispatcher.save
+GET         /studies/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.edit(name: String)
+POST        /studies/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.update(name: String)
 
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                                                           controllers.Assets.at(path="/public", file)

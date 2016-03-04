@@ -1,20 +1,20 @@
-package controllers.denopa
+package controllers.dataset.denopa
 
-import javax.inject.Inject
-
-import controllers.{DataSetControllerImpl, ReadonlyController, ExportableAction}
+import controllers.dataset.DataSetControllerImpl
 import org.apache.commons.lang3.StringEscapeUtils
-import persistence.{DictionaryFieldRepo, AsyncReadonlyRepo}
-import play.api.mvc.Action
-import util.WebExportUtil.stringToFile
+import persistence.RepoTypes._
+import persistence.dataset.{DataSetAccessorFactory, DictionaryFieldRepo}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.DeNoPaTranSMARTMapping._
-import services.TranSMARTService
 
 import scala.concurrent.Await
 
-protected abstract class DeNoPaController(dictionaryRepo: DictionaryFieldRepo) extends DataSetControllerImpl(dictionaryRepo) {
+protected abstract class DenopaController(
+    dataSetId: String,
+    dsaf: DataSetAccessorFactory,
+    dataSetMetaInfoRepo: DataSetMetaInfoRepo
+  ) extends DataSetControllerImpl(dataSetId, dsaf, dataSetMetaInfoRepo) {
 
   override protected val keyField = "Probanden_Nr"
   override protected val exportOrderByField = "Line_Nr"

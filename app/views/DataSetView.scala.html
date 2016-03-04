@@ -1,4 +1,4 @@
-@import models.Dictionary
+@import models.DataSetFormattersAndIds
 @import util.VennLayouter
 @import views.html.layout.main
 
@@ -37,12 +37,12 @@
             <tbody>
                 @dataSets.map{ element =>
                     <tr>
-                        <td>@element.dataSetName</td>
+                        <td>@element.dataSetId</td>
                         <td>@element.fields.length</td>
                         @{//PB: no routes found / does not compile ( with or without 'Jans' prefix)
-                        //<td> <a href=@routes.JansDataSetController.setOps(element.dataSetName, "+")> <button type="button" class="btn btn-success btn-block">Add</button> </a> </td>
-                        //<td> <a href=@routes.JansDataSetController.setOps(element.dataSetName, "/")> <button type="button" class="btn btn-warning btn-block">Intersect</button> </a> </td>
-                        //<td> <a href=@routes.JansDataSetController.setOps(element.dataSetName, "-")> <button type="button" class="btn btn-danger btn-block">Remove</button> </a> </td>
+                        //<td> <a href=@routes.JansDataSetController.setOps(element.dataSetId, "+")> <button type="button" class="btn btn-success btn-block">Add</button> </a> </td>
+                        //<td> <a href=@routes.JansDataSetController.setOps(element.dataSetId, "/")> <button type="button" class="btn btn-warning btn-block">Intersect</button> </a> </td>
+                        //<td> <a href=@routes.JansDataSetController.setOps(element.dataSetId, "-")> <button type="button" class="btn btn-danger btn-block">Remove</button> </a> </td>
                         }
                     </tr>
                 }

@@ -3,28 +3,38 @@ package runnables
 import java.text.{ParseException, SimpleDateFormat}
 import java.util.Date
 
-import models.FieldType
-import persistence.{DictionaryFieldRepo, AscSort}
-import persistence.RepoTypeRegistry._
+import models.{DataSetMetaInfo, FieldType}
+import persistence.AscSort
+import persistence.RepoTypes._
+import persistence.dataset.{DataSetAccessorFactory, DataSetAccessor}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.DeNoPaSetting._
-
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 abstract class CleanupDataSet (
-    dataRepo: JsObjectCrudRepo,
-    curatedDataRepo : JsObjectCrudRepo,
-    dictionaryFieldRepo : DictionaryFieldRepo,
+    originalDataSetId: String,
+    newDataSetMetaInfo: DataSetMetaInfo,
+    dsaf: DataSetAccessorFactory,
     translationRepo : TranslationRepo
   ) extends Runnable {
+
+  val originalDsa = dsaf(originalDataSetId).get
+  val newDsa = {
+    val futureAccessor = dsaf.register(newDataSetMetaInfo)
+    Await.result(futureAccessor, 120000 millis)
+  }
+
+  val originalDataRepo = originalDsa.dataSetRepo
+  val newDataRepo = newDsa.dataSetRepo
+  val originalDictionaryRepo = originalDsa.dictionaryFieldRepo
 
   val timeout = 120000 millis
 
   override def run = {
     // remove the curated records from the collection
-    Await.result(curatedDataRepo.deleteAll, timeout)
+    Await.result(newDataRepo.deleteAll, timeout)
 
     val translationMap = Await.result(translationRepo.find(), timeout).map(translation =>
       (translation.original, translation.translated)
@@ -33,7 +43,7 @@ abstract class CleanupDataSet (
     val cleanedupItems = cleanupItems(fieldTypeMap, translationMap)
 
     cleanedupItems.foreach { item =>
-      val future = curatedDataRepo.save(item)
+      val future = newDataRepo.save(item)
       // wait for the execution to complete, i.e., synchronize
       Await.result(future, timeout)
     }
@@ -43,7 +53,7 @@ abstract class CleanupDataSet (
     fieldTypeMap : Map[String, FieldType.Value],
     translationMap : Map[String, String]
   ) = {
-    val itemsFuture = dataRepo.find(None, Some(Seq(AscSort("_id"))))
+    val itemsFuture = originalDataRepo.find(None, Some(Seq(AscSort("_id"))))
 
     val convertedJsItems = Await.result(itemsFuture, timeout).map { item =>
       val newFieldValues: Seq[(String, JsValue)] = item.fields.filter{case (attribute, value) =>
@@ -90,7 +100,7 @@ abstract class CleanupDataSet (
   }
 
   protected def fieldTypeMap : Map[String, FieldType.Value] = {
-    val fieldsFuture = dictionaryFieldRepo.find(None, Some(Seq(AscSort("name"))))
+    val fieldsFuture = originalDictionaryRepo.find(None, Some(Seq(AscSort("name"))))
 
     Await.result(fieldsFuture, timeout).map{
       field => (field.name, field.fieldType)

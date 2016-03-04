@@ -36,7 +36,7 @@ trait DistributedRepo[E, ID] {
   def deleteAll : Unit
 }
 
-class SparkMongoDistributedRepo[E <: scala.Product, ID](collectionName: String)(implicit format : Format[E], ev2 : ClassTag[E], ev3: ru.TypeTag[E]) extends DistributedRepo[E, ID] {
+protected class SparkMongoDistributedRepo[E <: scala.Product, ID](collectionName: String)(implicit format : Format[E], ev2 : ClassTag[E], ev3: ru.TypeTag[E]) extends DistributedRepo[E, ID] {
 
   @Inject var sparkApp: SparkApp = _
   @Inject var configuration: Configuration = _

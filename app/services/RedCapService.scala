@@ -23,6 +23,7 @@ trait RedCapService {
 
   /**
     * Retrieve all fields matching the filtering criterion and order them according to a reference field.
+    *
     * @param orderBy Reference field for ordering/ sorting.
     * @param filter Field for macthing and filtering the reference field.
     * @return Sorted records matching filter criterion.
@@ -31,6 +32,7 @@ trait RedCapService {
 
   /**
     * Retrieve all metadata fields matching the filtering criterion and order them according to a reference field.
+    *
     * @param orderBy Reference field for ordering/ sorting.
     * @param filter Field for macthing and filtering the reference field.
     * @return Sorted records matching filter criterion.
@@ -39,6 +41,7 @@ trait RedCapService {
 
   /**
     * Create list of all field names. Field names are sorted and filtered if they don't match filter criterion.
+    *
     * @param orderBy Reference field for sorting.
     * @param filter Specify filter to exclude fields from name list.
     * @return Filtered and sorted list of records.
@@ -47,6 +50,7 @@ trait RedCapService {
 
   /**
     * Count all records in reference field.
+    *
     * @param filter Value for filtering reference field.
     * @return The number of records matching the filter string.
     */
@@ -54,6 +58,7 @@ trait RedCapService {
 
   /**
     * Get the name of the field specified by given id string.
+    *
     * @param id String for matching with reference field.
     * @return Json representation of matching record.
     */
@@ -61,6 +66,7 @@ trait RedCapService {
 
   /**
     * Retrieve the metadata matching the filter.
+    *
     * @param id
     * @return
     */
@@ -68,6 +74,7 @@ trait RedCapService {
 
   /**
     * Get the name of the field(s) specified by given id string.
+    *
     * @param id String for matching with reference field.
     * @return Sequence of field(s) matching id.
     */
@@ -75,10 +82,11 @@ trait RedCapService {
 
   /**
     * Generate a Dictionary (i.e. for matching with other Dictionary objects).
+    *
     * @see models.Dictionary
     * @return Dictionary object containing the data of the assigned REDCap instance.
     */
-  def getDictionary : Dictionary
+  def getDictionary: Dictionary
 }
 
 @Singleton

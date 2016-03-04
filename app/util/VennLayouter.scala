@@ -39,7 +39,7 @@ package object VennLayouter {
       val px = math.cos(offset + (factor * i).toInt)
       val py = math.sin(offset + (factor * i).toInt)
       i += 1
-      (x.dataSetName, /*(x.fields.length * vennSize) / maxRadius).toInt*/100, (cx + scale * px).toInt, (cy + scale * py).toInt)
+      (x.dataSetId, /*(x.fields.length * vennSize) / maxRadius).toInt*/100, (cx + scale * px).toInt, (cy + scale * py).toInt)
     }
     return elements.map(f)
   }

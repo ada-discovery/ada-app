@@ -1,26 +1,22 @@
 package runnables.luxpark
 
-import javax.inject.{Named, Inject}
+import javax.inject.Inject
 
 import models.redcap.Metadata
 import models.{FieldType, Field, Category}
 import models.redcap.{FieldType => RCFieldType}
-import persistence.{DictionaryFieldRepo, RepoSynchronizer}
-import persistence.RepoTypeRegistry._
+import persistence.RepoSynchronizer
+import models.DataSetId._
 import play.api.libs.json.Json
 import runnables.{GuiceBuilderRunnable, InferDictionary}
 import services.{DeNoPaSetting, RedCapService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import util.JsonUtil
-
-import scala.concurrent.duration._
-
 import scala.concurrent.{Future, Await}
 
 class ImportLuxParkDictionaryFromRedCap @Inject() (
-    @Named("LuxParkDictionaryRepo") dictionaryRepo: DictionaryFieldRepo,
     redCapService: RedCapService
-  ) extends InferDictionary(dictionaryRepo) {
+  ) extends InferDictionary(luxpark) {
 
   // TODO: Introduce a proper type inference setting for LuxPark Data
   override protected val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider

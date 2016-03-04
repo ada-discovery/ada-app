@@ -3,7 +3,7 @@ package models.security
 import javax.inject.{Singleton, Inject}
 
 import com.google.inject.ImplementedBy
-import persistence.RepoTypeRegistry.UserRepo
+import persistence.RepoTypes.UserRepo
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits._

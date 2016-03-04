@@ -1,14 +1,13 @@
 package controllers
 
-import java.io.File
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
 import models.security.SecurityRoleCache
-import org.clapper.classutil.ClassFinder
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller}
 import play.api.Play.current
+import util.ReflectionUtil._
 
 class AdminController @Inject() (
     deadbolt: DeadboltActions
@@ -16,7 +15,6 @@ class AdminController @Inject() (
 
   @Inject var messagesApi: MessagesApi = _
 
-  val tomcatLibFolder = "../webapps/ROOT/WEB-INF/lib/"
   // we scan only the jars starting with this prefix to speed up the class search
   val libPrefix = "ncer-pd"
 
@@ -28,30 +26,8 @@ class AdminController @Inject() (
     */
   def listRunnables = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole))) {
     Action { implicit request =>
-      val defaultClasspath = List(".").map(new File(_))
-
-      val tomcatLibFiles = new File(tomcatLibFolder).listFiles
-      val classpath : List[File] =
-        if (tomcatLibFiles != null) {
-          val tomcatClasspath = tomcatLibFiles.filter(file =>
-            file.isFile && file.getName.startsWith(libPrefix) && file.getName.endsWith(".jar"))
-          (tomcatClasspath ++ defaultClasspath).toList
-        } else
-          defaultClasspath
-
-      val finder = ClassFinder(classpath)
-      val runnableClassInfos = finder.getClasses.filter{ classInfo =>
-        try {
-          classInfo.name.startsWith("runnables") &&
-            classInfo.isConcrete &&
-            classOf[Runnable].isAssignableFrom(Class.forName(classInfo.name))
-        } catch {
-          case _ : ClassNotFoundException => false
-          case _ : ExceptionInInitializerError => false
-          case _ : NoClassDefFoundError => false
-        }
-      }
-      val runnableNames = runnableClassInfos.map(_.name).sorted
+      val classes = findClasses[Runnable](libPrefix, Some("runnables."), None)
+      val runnableNames = classes.map(_.getName).sorted
 
       implicit val msg = messagesApi.preferred(request)
       Ok(views.html.admin.runnables(runnableNames))

@@ -1,5 +1,5 @@
 @import util.VennLayouter
-@import models.Dictionary
+@import models.DataSetFormattersAndIds
 
 @(chartElementName : String, elements : Seq[Dictionary])
 
@@ -13,7 +13,7 @@
                 y: [@coordinates.map{ case(_, radius, _, y) => @{y},}],
                 type: 'scatter',
                 mode: 'text',
-                text: [@elements.map{dic: Dictionary => "@dic.dataSetName",}],
+                text: [@elements.map{dic: Dictionary => "@dic.dataSetId",}],
                 textfont: {
                     color: 'black',
                     size: 18,

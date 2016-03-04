@@ -1,7 +1,10 @@
 package runnables
 
+import javax.inject.Inject
+
 import models.{FieldType, Field}
-import persistence.{RepoSynchronizer, DictionaryFieldRepo}
+import persistence.RepoSynchronizer
+import persistence.dataset.{DataSetAccessorFactory, DictionaryFieldRepo}
 import play.api.libs.json.{JsObject, Json, JsNull, JsString}
 import util.TypeInferenceProvider
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -9,9 +12,13 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 
-abstract class InferDictionary(dictionaryRepo: DictionaryFieldRepo) extends Runnable {
+abstract class InferDictionary(dataSetId: String) extends Runnable {
 
-  protected val dataRepo = dictionaryRepo.dataRepo
+  @Inject protected var dsaf: DataSetAccessorFactory = _
+  protected lazy val dsa = dsaf(dataSetId).get
+  protected lazy val dataRepo = dsa.dataSetRepo
+  protected lazy val dictionaryRepo = dsa.dictionaryFieldRepo
+
   protected val timeout = 120000 millis
 
   protected def typeInferenceProvider : TypeInferenceProvider

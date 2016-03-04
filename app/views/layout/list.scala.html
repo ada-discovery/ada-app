@@ -1,18 +1,18 @@
 @import views.html.layout.{plainList, chartList}
 
 @(
-    domainName : String,
-    count : Long,
+    domainName: String,
+    count: Long,
     actions: Html,
-    table : Html,
-    charts : Option[Html] = None,
-    showSidebar : Boolean = true
+    table: Html,
+    charts: Option[Html] = None,
+    sideBar: Option[Html] = None
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
 @if(charts.isDefined) {
-    @chartList(domainName, count, actions, table, charts.get, showSidebar)
+    @chartList(domainName, count, actions, table, charts.get, sideBar)
 } else {
-    @plainList(domainName, count, actions, table, showSidebar)
+    @plainList(domainName, count, actions, table, sideBar)
 }

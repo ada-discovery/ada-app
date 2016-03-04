@@ -2,19 +2,21 @@ package controllers
 
 import javax.inject.Inject
 
+import persistence.RepoTypes.DataSetMetaInfoRepo
 import views.html.layout
-import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
-class AppController extends Controller {
-
-  @Inject var messagesApi: MessagesApi = _
+class AppController @Inject() (dataSetMetaInfoRepo: DataSetMetaInfoRepo) extends Controller {
 
   def index = Action { implicit request =>
     Ok(layout.home())
   }
 
-  def studies = Action { implicit request =>
-    Ok(layout.studies())
+  // TODO: move elsewhere
+  def studies = Action.async { implicit request =>
+    dataSetMetaInfoRepo.find().map( metaInfos =>
+      Ok(layout.studies(metaInfos))
+    )
   }
 }

@@ -1,6 +1,6 @@
-@()(implicit request: RequestHeader)
+@(dataSetMetaInfos: Traversable[DataSetMetaInfo])(implicit request: RequestHeader)
 
-@main("NCER-PD Studies") {
+@main("NCER-PD Studies", Some(datasetMenu(dataSetMetaInfos))) {
 
     <div class="page-header">
         <h1>Studies</h1>

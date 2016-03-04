@@ -1,75 +1,45 @@
-package controllers
+package controllers.dataset
 
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import _root_.util.{FilterSpec, JsonUtil, ChartSpec, FieldChartSpec}
-import org.apache.commons.lang3.StringEscapeUtils
-import models.{Page, FieldType, Field}
-import persistence.{AscSort, DictionaryFieldRepo}
-import play.api.routing.Router
-import play.api.{Routes, Logger}
-import play.api.i18n.Messages
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{Action, AnyContent, RequestHeader}
-import play.api.Play.current
-import play.twirl.api.Html
-import util.WebExportUtil.stringToFile
-import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import services.DeNoPaTranSMARTMapping._
-import services.TranSMARTService
-import views.html.dataset
-import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Future, Await}
 import _root_.util.JsonUtil._
+import _root_.util.WebExportUtil._
+import _root_.util.{ChartSpec, FieldChartSpec, FilterSpec, JsonUtil}
+import controllers.{ExportableAction, ReadonlyController}
+import models.{DataSetMetaInfo, FieldType, Page}
+import persistence.AscSort
+import persistence.RepoTypes._
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import play.api.Logger
+import play.api.Play._
+import play.api.i18n.Messages
+import play.api.libs.json._
+import play.api.mvc.{Action, AnyContent, RequestHeader}
+import reactivemongo.bson.BSONObjectID
+import services.TranSMARTService
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
+import views.html.dataset
 
-trait DataSetController {
+import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.{Await, Future}
 
-  def dataSetId: String
+protected abstract class DataSetControllerImpl(
+    val dataSetId: String,
+    dsaf: DataSetAccessorFactory,
+    dataSetMetaInfoRepo: DataSetMetaInfoRepo
+  ) extends ReadonlyController[JsObject, BSONObjectID](dsaf(dataSetId).get.dataSetRepo) with DataSetController with ExportableAction[JsObject] {
 
-  def get(id: BSONObjectID): Action[AnyContent]
-
-  def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
-
-  def listAll(orderBy: Int): Action[AnyContent]
-
-  def exportAllRecordsAsCsv(delimiter : String): Action[AnyContent]
-
-  def exportAllRecordsAsJson: Action[AnyContent]
-
-  def exportRecordsAsCsv(delimiter : String, filter: FilterSpec): Action[AnyContent]
-
-  def exportRecordsAsJson(filter: FilterSpec): Action[AnyContent]
-
-  def overviewFieldTypes: Action[AnyContent]
-
-  def overview: Action[AnyContent]
-
-  def overviewList(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
-
-  def getScatterStats(xFieldName: Option[String], yFieldName: Option[String]): Action[AnyContent]
-
-  def getDistribution(fieldName: Option[String]): Action[AnyContent]
-
-  def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
-
-  def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent]
-
-  def getFieldNames: Action[AnyContent]
-}
-
-protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRepo)
-  extends ReadonlyController[JsObject, BSONObjectID](dictionaryRepo.dataRepo) with DataSetController with ExportableAction[JsObject] {
-
+  protected val dsa: DataSetAccessor = dsaf(dataSetId).get
+  protected val dictionaryRepo = dsa.dictionaryFieldRepo
   dictionaryRepo.initIfNeeded
 
-  @Inject var tranSMARTService: TranSMARTService = _
+  @Inject protected var tranSMARTService: TranSMARTService = _
 
   // hooks
 
-  protected def dataSetName: String
+  protected lazy val dataSetName = Await.result(dsa.metaInfo, 120000 millis).name
 
   // keyfield, mainly used for data export
   protected def keyField: String
@@ -78,16 +48,16 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
   protected def exportOrderByField : String
 
   // auto-generated filename for csv files
-  protected def csvFileName: String = dataSetName.replace(" ", "-") + ".csv"
+  protected def csvFileName: String = dataSetId.replace(" ", "-") + ".csv"
 
   // auto-generated filename for json files
-  protected def jsonFileName: String = dataSetName.replace(" ", "-") + ".json"
+  protected def jsonFileName: String = dataSetId.replace(" ", "-") + ".json"
 
   // auto-generated filename for tranSMART data files
-  protected def tranSMARTDataFileName: String = dataSetName.replace(" ", "-") + "_data_file"
+  protected def tranSMARTDataFileName: String = dataSetId.replace(" ", "-") + "_data_file"
 
   // auto-generated filename for tranSMART mapping files
-  protected def tranSMARTMappingFileName: String = dataSetName.replace(" ", "-") + "_mapping_file"
+  protected def tranSMARTMappingFileName: String = dataSetId.replace(" ", "-") + "_mapping_file"
 
   // key for associated field in config file
   protected def overviewFieldNamesConfPrefix: String
@@ -139,7 +109,8 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
       Await.result(getFieldLabelMap(listViewColumns.get), 120000 millis),  // TODO: refactor
       listViewColumns.get,
       fieldChartSpecs,
-      router
+      router,
+      getMetaInfos
     )
 
   /**
@@ -231,7 +202,7 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
 
       implicit val msg = messagesApi.preferred(request)
       render {
-        case Accepts.Html() => Ok(views.html.dataset.typeOverview(dataSetName, (FieldType.values, fieldTypeCounts).zipped.toList))
+        case Accepts.Html() => Ok(dataset.typeOverview(dataSetName, (FieldType.values, fieldTypeCounts).zipped.toList))
         case Accepts.Json() => Ok(JsObject(
           (FieldType.values, fieldTypeCounts).zipped.map{ case (fieldType, count) =>
             (fieldType.toString, JsNumber(count))
@@ -357,7 +328,9 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
       valuesFuture.map( values =>
 
         render {
-          case Accepts.Html() => Ok(dataset.scatterStats(dataSetName, xFieldName, yFieldName, router.getScatterStats, dataSetId, numericFieldNameLabels, values))
+          case Accepts.Html() => Ok(dataset.scatterStats(
+            dataSetName, xFieldName, yFieldName, router.getScatterStats, dataSetId, numericFieldNameLabels, values, getMetaInfos
+          ))
           case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
         }
       )
@@ -374,7 +347,9 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
       val fieldNameLabels = fields.map(field => (field.name, field.label)).toSeq
 
       render {
-        case Accepts.Html() => Ok(dataset.distribution(dataSetName, fieldName, chartSpec, router.getDistribution, dataSetId, fieldNameLabels))
+        case Accepts.Html() => Ok(dataset.distribution(
+          dataSetName, fieldName, chartSpec, router.getDistribution, dataSetId, fieldNameLabels, getMetaInfos
+        ))
         case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
       }
     }.recover {
@@ -410,6 +385,10 @@ protected abstract class DataSetControllerImpl(dictionaryRepo: DictionaryFieldRe
 
     Future.sequence(futureFieldLabelPairs).map{ _.flatten.toMap }
   }
+
+  // TODO: keep as async
+  private def getMetaInfos: Traversable[DataSetMetaInfo] =
+    Await.result(dataSetMetaInfoRepo.find(), 120000 millis)
 
   //////////////////////
   // Export Functions //

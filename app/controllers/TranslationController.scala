@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 
 import models.{Page, Translation}
-import persistence.RepoTypeRegistry._
+import persistence.RepoTypes._
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText}
 import play.api.i18n.{Messages}

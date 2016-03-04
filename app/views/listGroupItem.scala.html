@@ -2,7 +2,7 @@
 
 @(call: Call, text: String, matchPrefixDepth : Option[Int] = None)(implicit request: RequestHeader)
 
-<li @if(matchesPath(call.url, request.path, matchPrefixDepth)) {
+<li @if(matchesPath(call.url, request.uri, matchPrefixDepth)) {
     class="list-group-item active"
 } else {
     class="list-group-item"

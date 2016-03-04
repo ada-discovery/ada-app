@@ -1,9 +1,17 @@
-package controllers
+package controllers.dataset
 
+import javax.inject.Inject
+
+import controllers.ControllerDispatcher
 import reactivemongo.bson.BSONObjectID
 import util.FilterSpec
 
-class DataSetDispatcher(controllers : Iterable[(String, DataSetController)]) extends ControllerDispatcher[DataSetController]("dataSet", controllers) with DataSetController {
+class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends ControllerDispatcher[DataSetController]("dataSet") with DataSetController {
+
+  override protected def getController(id: String) =
+    dscf(id).getOrElse(
+      throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
+    )
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

@@ -1,42 +1,40 @@
-package persistence
+package persistence.dataset
 
-import javax.inject.{Inject, Named}
+import javax.inject.Inject
 
-import models.{Dictionary, Field, FieldType}
-import persistence.RepoTypeRegistry.{DictionaryRootRepo, JsObjectCrudRepo}
-import play.api.libs.json.{JsArray, JsString, JsObject, Json}
-import reactivemongo.bson.BSONObjectID
-import scala.concurrent.{Await, Future}
+import models.DataSetFormattersAndIds._
+import models.{Dictionary, Field}
+import persistence.{DescSort, AscSort, Sort, AsyncCrudRepo}
+import persistence.RepoTypes.{DictionaryRootRepo, JsObjectCrudRepo}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import models.Dictionary._
-import scala.concurrent.duration._
+import play.api.libs.json.{JsArray, JsObject, JsString, Json}
 import play.modules.reactivemongo.json.BSONObjectIDFormat
-import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Push, Ascending, Descending}
+import play.modules.reactivemongo.json.commands.JSONAggregationFramework.Push
+import reactivemongo.bson.BSONObjectID
+
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 trait DictionaryFieldRepo extends AsyncCrudRepo[Field, String] {
 
-  def dataRepo : JsObjectCrudRepo
-  def get : Future[Dictionary]
-  def initIfNeeded : Future[Boolean]
+  def get: Future[Dictionary]
+  def initIfNeeded: Future[Boolean]
 }
 
-protected class DictionaryFieldMongoAsyncCrudRepo(
-    private val dataSetName : String,
-    private val _dataSetRepo : JsObjectCrudRepo
+class DictionaryFieldMongoAsyncCrudRepo(
+    private val dataSetId : String
   ) extends DictionaryFieldRepo {
 
   @Inject var dictionaryRepo: DictionaryRootRepo = _
 
-  override def dataRepo = _dataSetRepo
-
   /**
-    * Forwards call to getByDataSetName.
+    * Forwards call to getByDataSetId.
     *
-    * @see getByDataSetName()
+    * @see getByDataSetId()
     * @return Currently selected data set.
     */
   override def get: Future[Dictionary] =
-    getByDataSetName.map(dictionaries =>
+    getByDataSetId.map(dictionaries =>
       if (dictionaries.isEmpty)
         throw new IllegalAccessException("Dictionary was not initialized")
       else
@@ -49,9 +47,9 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     * @return true, if initialization required.
     */
   override def initIfNeeded: Future[Boolean] = synchronized {
-    val responseFuture = getByDataSetName.flatMap(dictionaries =>
+    val responseFuture = getByDataSetId.flatMap(dictionaries =>
       if (dictionaries.isEmpty)
-        dictionaryRepo.save(Dictionary(None, dataSetName, List[Field]())).map(_ => true)
+        dictionaryRepo.save(Dictionary(None, dataSetId, List[Field]())).map(_ => true)
       else
         Future(false)
     )
@@ -68,12 +66,12 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     *
     * @return Traversable with all dictionaries matching the current data set name.
     */
-  private def getByDataSetName: Future[Traversable[Dictionary]] =
-    dictionaryRepo.find(Some(Json.obj("dataSetName" -> dataSetName)))
+  private def getByDataSetId: Future[Traversable[Dictionary]] =
+    dictionaryRepo.find(Some(Json.obj("dataSetId" -> dataSetId)))
 
   private lazy val dictionaryId: BSONObjectID = synchronized {
     val futureId = dictionaryRepo.find(
-      Some(Json.obj("dataSetName" -> dataSetName)), None, None
+      Some(Json.obj("dataSetId" -> dataSetId)), None, None
     ).map(_.head._id.get)
     Await.result(futureId, 120000 millis)
   }
@@ -82,9 +80,9 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
 
   /**
    * Converts the given Field into Json format and calls updateCustom() to update/ save it in the repo.
-   * @see updateCustom()
-   *
-   * @param entity Field to be updated/ saved
+    *
+    * @see updateCustom()
+    * @param entity Field to be updated/ saved
    * @return Field name as a confirmation of success.
    */
   override def save(entity: Field): Future[String] = {
@@ -139,8 +137,8 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
 
   /**
     * Deletes all fields in the dictionary.
-    * @see update()
     *
+    * @see update()
     * @return Nothing (Unit)
     */
   override def deleteAll: Future[Unit] = {
@@ -202,9 +200,9 @@ protected class DictionaryFieldMongoAsyncCrudRepo(
     val fullCriteria =
       if (criteria.isDefined) {
         val extSubCriteria = criteria.get.fields.map { case (name, value) => ("fields." + name, value) }
-        JsObject(extSubCriteria) + ("dataSetName" -> Json.toJson(dataSetName))
+        JsObject(extSubCriteria) + ("dataSetId" -> Json.toJson(dataSetId))
       } else
-        Json.obj("dataSetName" -> dataSetName)
+        Json.obj("dataSetId" -> dataSetId)
 
     val fullOrderBy =
       orderBy.map(_.map(

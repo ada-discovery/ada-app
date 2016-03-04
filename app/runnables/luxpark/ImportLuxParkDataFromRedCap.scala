@@ -1,9 +1,11 @@
 package runnables.luxpark
 
-import javax.inject.{Inject, Named}
+import javax.inject.Inject
 
+import models.DataSetMetaInfo
 import persistence.RepoSynchronizer
-import persistence.RepoTypeRegistry._
+import models.DataSetId._
+import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable
 import services.RedCapService
 
@@ -11,12 +13,19 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class ImportLuxParkDataFromRedCap @Inject() (
-    @Named("LuxParkRepo") dataRepo: JsObjectCrudRepo,
+    dsaf: DataSetAccessorFactory,
     redCapService: RedCapService
   ) extends Runnable {
 
   private val timeout = 120000 millis
-  private val syncDataRepo = RepoSynchronizer(dataRepo, timeout)
+
+  val metaInfo = DataSetMetaInfo(None, luxpark, "Lux Park")
+
+  val dataSetAccessor = {
+    val futureAccessor = dsaf.register(metaInfo)
+    Await.result(futureAccessor, timeout)
+  }
+  private val syncDataRepo = RepoSynchronizer(dataSetAccessor.dataSetRepo, timeout)
 
   override def run = {
     // delete all the records
