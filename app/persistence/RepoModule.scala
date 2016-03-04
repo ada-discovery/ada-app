@@ -1,11 +1,13 @@
 package persistence
 
+import com.google.inject.TypeLiteral
+import com.google.inject.assistedinject.FactoryModuleBuilder
 import models.DataSetFormattersAndIds._
 import models._
 import net.codingwell.scalaguice.ScalaModule
 import persistence.RepoTypes._
 import com.google.inject.name.Names
-import persistence.dataset.{DataSetAccessorMongoFactory, DataSetAccessorFactory}
+import persistence.dataset._
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
@@ -48,7 +50,20 @@ private object RepoDef extends Enumeration {
 class RepoModule extends ScalaModule {
 
   def configure = {
+
+    // bind repos defined above
     RepoDef.values.foreach(bindRepo(_))
+
+    // install JsObject repo factory
+    install(new FactoryModuleBuilder()
+      .implement(new TypeLiteral[JsObjectCrudRepo](){}, classOf[JsObjectMongoCrudRepo])
+      .build(classOf[JsObjectCrudRepoFactory]))
+
+    // install dictionary field repo factory
+    install(new FactoryModuleBuilder()
+      .implement(classOf[DictionaryFieldRepo], classOf[DictionaryFieldMongoAsyncCrudRepo])
+      .build(classOf[DictionaryFieldRepoFactory]))
+
 //    bind[DataSetAccessorFactory].to(classOf[DataSetAccessorMongoFactory]).asEagerSingleton
   }
 

@@ -1,10 +1,8 @@
-package modules
+package controllers
 
 import com.google.inject.AbstractModule
 import com.google.inject.assistedinject.FactoryModuleBuilder
-import controllers.dataset.{DictionaryControllerFactory, DictionaryController, DictionaryControllerImpl}
-import persistence.dataset.{DataSetAccessorMongoFactory, DataSetAccessorFactory}
-import play.api.inject.{Binding, Module}
+import controllers.dataset.{DictionaryController, DictionaryControllerFactory, DictionaryControllerImpl}
 
 class ControllerModule extends AbstractModule {
 

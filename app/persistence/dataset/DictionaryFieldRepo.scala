@@ -2,6 +2,7 @@ package persistence.dataset
 
 import javax.inject.Inject
 
+import com.google.inject.assistedinject.Assisted
 import models.DataSetFormattersAndIds._
 import models.{Dictionary, Field}
 import persistence.{DescSort, AscSort, Sort, AsyncCrudRepo}
@@ -16,16 +17,18 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 trait DictionaryFieldRepo extends AsyncCrudRepo[Field, String] {
-
   def get: Future[Dictionary]
   def initIfNeeded: Future[Boolean]
 }
 
-class DictionaryFieldMongoAsyncCrudRepo(
-    private val dataSetId : String
-  ) extends DictionaryFieldRepo {
+trait DictionaryFieldRepoFactory {
+  def apply(dataSetId: String): DictionaryFieldRepo
+}
 
-  @Inject var dictionaryRepo: DictionaryRootRepo = _
+protected[persistence] class DictionaryFieldMongoAsyncCrudRepo @Inject() (
+    @Assisted private val dataSetId : String,
+    dictionaryRepo: DictionaryRootRepo
+  ) extends DictionaryFieldRepo {
 
   /**
     * Forwards call to getByDataSetId.

@@ -1,5 +1,6 @@
 package persistence
 
+import com.google.inject.assistedinject.Assisted
 import play.api.libs.json.{Json, JsObject}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json._
@@ -7,9 +8,10 @@ import persistence.RepoTypes.JsObjectCrudRepo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import scala.concurrent.Future
+import javax.inject.Inject
 
-protected class JsObjectMongoCrudRepo(
-    collectionName : String,
+protected class JsObjectMongoCrudRepo @Inject() (
+    @Assisted collectionName : String,
     identityName : String = "_id"
   ) extends MongoAsyncReadonlyRepo[JsObject, BSONObjectID](collectionName, identityName) with JsObjectCrudRepo {
 
@@ -35,4 +37,8 @@ protected class JsObjectMongoCrudRepo(
 
   override def deleteAll : Future[Unit] =
     collection.remove(Json.obj()) map handleResult
+}
+
+trait JsObjectCrudRepoFactory {
+  def apply(collectionName: String): JsObjectCrudRepo
 }

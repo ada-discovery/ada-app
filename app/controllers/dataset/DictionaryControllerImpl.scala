@@ -27,7 +27,7 @@ trait DictionaryControllerFactory {
   def apply(dataSetId: String): DictionaryController
 }
 
-class DictionaryControllerImpl @Inject() (
+protected[controllers] class DictionaryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSetMetaInfoRepo: DataSetMetaInfoRepo
