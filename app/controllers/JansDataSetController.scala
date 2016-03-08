@@ -4,13 +4,15 @@ import javax.inject.Inject
 import jp.t2v.lab.play2.auth.AuthElement
 import play.api.mvc.{Action, Controller}
 
-import models.security.{UserManager, SecurityRoleCache}
+import models.security.{CustomUser, UserManager, SecurityRoleCache}
 
 import be.objectify.deadbolt.scala.DeadboltActions
 
-import modules.LdapModule
 import ldap._
 import security.AdaAuthConfig
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
 /**
@@ -18,6 +20,7 @@ import security.AdaAuthConfig
  */
 class JansDataSetController @Inject() (
     myUserManager: UserManager,
+    myLdapUserManager: LdapUserManager,
     deadbolt: LdapActions
   ) extends Controller with AuthElement with AdaAuthConfig {
 
@@ -38,6 +41,15 @@ class JansDataSetController @Inject() (
   // debug: clear session
   def clearSession = Action { implicit request =>
     Ok("sessions cleared").withNewSession
+  }
+
+
+
+  def listLDAP = Action {implicit request =>
+    val server = myLdapUserManager.ldapServer
+    val users: List[String] = myLdapUserManager.getEntryList
+    val content = "ldap entry list (" + users.size + "):\n" + users.fold("")((s,a)=> a+"\n\n"+s)
+    Ok(content)
   }
 
 }
