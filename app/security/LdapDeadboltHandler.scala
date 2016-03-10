@@ -1,18 +1,18 @@
 package security
 
-import controllers.{routes}
-
-import play.api.mvc._
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
-import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
 import be.objectify.deadbolt.core.models.Subject
+import be.objectify.deadbolt.scala.{DeadboltHandler, DynamicResourceHandler}
+import controllers.routes
+import play.api.mvc.{Results, Result, Request}
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits._
+
 
 /**
-  * Hooks for deadbolt
+  * Created by jan.martens on 3/9/2016.
   */
-class AdaDeadboltHandler(
+class LdapDeadboltHandler (
     getCurrentUser: Request[_] => Future[Option[Subject]],
     dynamicResourceHandler: Option[DynamicResourceHandler] = None
   ) extends DeadboltHandler {
@@ -35,7 +35,7 @@ class AdaDeadboltHandler(
     * @return
     */
   override def getDynamicResourceHandler[A](request: Request[A]): Future[Option[DynamicResourceHandler]] = {
-    Future(dynamicResourceHandler.orElse(Some(new CustomDynamicResourceHandler())))
+    Future(dynamicResourceHandler.orElse(Some(new LdapDynamicResourceHandler())))
   }
 
   /**

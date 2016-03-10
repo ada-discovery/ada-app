@@ -1,18 +1,17 @@
 package security
 
-import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
-import models.security.SecurityPermission
-import collection.immutable.Map
+import be.objectify.deadbolt.scala.{DeadboltHandler, DynamicResourceHandler}
 import play.api.mvc.Request
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.immutable.Map
 import scala.concurrent.Future
 
+import scala.concurrent.ExecutionContext.Implicits._
+
 /**
- *
- * @author Steve Chaloner (steve@objectify.be)
- */
-class CustomDynamicResourceHandler extends DynamicResourceHandler
+  * Created by jan.martens on 3/9/2016.
+  */
+class LdapDynamicResourceHandler extends DynamicResourceHandler
 {
   def isAllowed[A](name: String, meta: String, handler: DeadboltHandler, request: Request[A]): Future[Boolean] = {
     CustomDynamicResourceHandler.handlers(name).isAllowed(name, meta, handler, request)
@@ -20,12 +19,12 @@ class CustomDynamicResourceHandler extends DynamicResourceHandler
 
   // todo implement this when demonstrating permissions
   def checkPermission[A](permissionValue: String, deadboltHandler: DeadboltHandler, request: Request[A]): Future[Boolean] = {
-    //deadboltHandler.getSubject(request).getPermissions().contains(SecurityPermission(permissionValue))
+    //ldapusermanager.authorize(deadboltHandler.resolveUser().email, permissionValue)
     Future(false)
   }
 }
 
-object CustomDynamicResourceHandler {
+object LdapDynamicResourceHandler {
   val handlers: Map[String, DynamicResourceHandler] =
     Map( )
 }

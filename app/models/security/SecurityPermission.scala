@@ -27,4 +27,7 @@ object SecurityPermissionCache {
     "view.admin")                                                         // permission to access admin controls
 
   lazy val basicPermissions: List[String] = List("view.data.basic")
+
+  // sequence of all roles
+  def getPermissions: Seq[String] = Seq("none", "view.data.basic", "view.data.full", "edit.data" , "view.admin")
 }
