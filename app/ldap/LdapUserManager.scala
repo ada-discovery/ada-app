@@ -152,7 +152,7 @@ class LdapUserManager @Inject()(userRepo: UserRepo) extends UserManager {
     val config = new InMemoryDirectoryServerConfig("dc=ncer");
     config.setSchema(null); // do not check (attribute) schema
     config.setAuthenticationRequiredOperationTypes(OperationType.DELETE, OperationType.ADD, OperationType.MODIFY, OperationType.MODIFY_DN)
-    
+
     //val listenerConfig = new InMemoryListenerConfig("defaultListener", null, defaultPort, null, null, null);
     //config.setListenerConfigs(listenerConfig);
 

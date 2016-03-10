@@ -5,6 +5,7 @@ package models.security
 import javax.inject.{Singleton, Inject}
 
 import com.google.inject.ImplementedBy
+import persistence.CustomUserRepo
 import persistence.RepoTypes.UserRepo
 import play.api.libs.json.Json
 
@@ -12,6 +13,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 
 import util.SecurityUtil
+
 
 
 @ImplementedBy(classOf[UserManagerImpl])
