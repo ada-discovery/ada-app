@@ -44,8 +44,9 @@ class AdaDeadboltHandler(
     * @param request Current request.
     * @return Current user, if logged in. None otherwise.
     */
-  override def getSubject[A](request: Request[A]): Future[Option[Subject]] =
+  override def getSubject[A](request: Request[A]): Future[Option[Subject]] = {
     getCurrentUser(request)
+  }
 
   /**
     * TODO: execute more meaningful action.

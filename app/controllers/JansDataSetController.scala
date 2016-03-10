@@ -1,5 +1,6 @@
 package controllers
 
+import java.io.Serializable
 import javax.inject.Inject
 import jp.t2v.lab.play2.auth.AuthElement
 import play.api.mvc.{Action, Controller}
@@ -43,10 +44,7 @@ class JansDataSetController @Inject() (
     Ok("sessions cleared").withNewSession
   }
 
-
-
-  def listLDAP = Action {implicit request =>
-    val server = myLdapUserManager.ldapServer
+  def listLDAP = Action { implicit request =>
     val users: List[String] = myLdapUserManager.getEntryList
     val content = "ldap entry list (" + users.size + "):\n" + users.fold("")((s,a)=> a+"\n\n"+s)
     Ok(content)

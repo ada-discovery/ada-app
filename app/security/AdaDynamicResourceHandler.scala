@@ -1,6 +1,7 @@
 package security
 
 import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
+import models.security.SecurityPermission
 import collection.immutable.Map
 import play.api.mvc.Request
 
@@ -18,7 +19,10 @@ class CustomDynamicResourceHandler extends DynamicResourceHandler
   }
 
   // todo implement this when demonstrating permissions
-  def checkPermission[A](permissionValue: String, deadboltHandler: DeadboltHandler, request: Request[A]): Future[Boolean] = Future(false)
+  def checkPermission[A](permissionValue: String, deadboltHandler: DeadboltHandler, request: Request[A]): Future[Boolean] = {
+    //deadboltHandler.getSubject(request).getPermissions().contains(SecurityPermission(permissionValue))
+    Future(false)
+  }
 }
 
 object CustomDynamicResourceHandler {
