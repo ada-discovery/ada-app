@@ -1,5 +1,6 @@
 package security
 
+import be.objectify.deadbolt.core.models.Subject
 import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
 import models.security.SecurityPermission
 import collection.immutable.Map
@@ -18,10 +19,14 @@ class CustomDynamicResourceHandler extends DynamicResourceHandler
     CustomDynamicResourceHandler.handlers(name).isAllowed(name, meta, handler, request)
   }
 
-  // todo implement this when demonstrating permissions
   def checkPermission[A](permissionValue: String, deadboltHandler: DeadboltHandler, request: Request[A]): Future[Boolean] = {
-    //deadboltHandler.getSubject(request).getPermissions().contains(SecurityPermission(permissionValue))
-    Future(false)
+    val subjOpFuture: Future[Option[Subject]] = deadboltHandler.getSubject(request)
+    subjOpFuture.map{subjOp =>
+      subjOp match {
+        case Some(subj) => subj.getPermissions.contains(permissionValue)
+        case None => false
+      }
+    }
   }
 }
 

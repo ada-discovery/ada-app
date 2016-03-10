@@ -24,7 +24,7 @@ class AdminController @Inject() (
     *
     * @return View listing all runnables in directory "runnables".
     */
-  def listRunnables = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole))) {
+  def listRunnables = /*deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole)))*/ {
     Action { implicit request =>
       val classes = findClasses[Runnable](libPrefix, Some("runnables."), None)
       val runnableNames = classes.map(_.getName).sorted

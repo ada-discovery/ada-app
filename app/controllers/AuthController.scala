@@ -1,19 +1,21 @@
 package controllers
 
 import javax.inject.Inject
+import persistence.CustomUserRepo
 import security.AdaAuthConfig
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
 
 import scala.concurrent.duration._
-import play.api.mvc.{Result, Action, Controller}
+import play.api.mvc.{Action, Controller}
 import play.api.data.Forms._
 import play.api.data._
 
 // authentification
 import jp.t2v.lab.play2.auth.LoginLogout
 import models.security._
+
 
 class AuthController @Inject() (
     myUserManager: UserManager

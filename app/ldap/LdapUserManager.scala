@@ -2,6 +2,7 @@ package ldap
 
 import java.util
 import javax.inject.Inject
+import play.api.Play.current
 
 import _root_.util.SecurityUtil
 
@@ -31,15 +32,16 @@ class LdapUserManager @Inject()(userRepo: UserRepo) extends UserManager {
   override val adminUser = new CustomUser(None, "admin user", "admin@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
   override val basicUser = new CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
 
-  // configuration
-  val defaultPort: Int = 389
-  val defaultHost: String = "localhost"                                       // url of ldap directory
-  val serverTimeout: Int = 2000                                               // request timeout
+  // server configurati on; not used yet!
+  val defaultPort: Int = current.configuration.getString("ldap.port").getOrElse("389").toInt
+  val defaultHost: String = current.configuration.getString("ldap.host").getOrElse("locahost")
+  val serverTimeout: Int = current.configuration.getString("ldap.timeout").getOrElse("2000").toInt
 
-  val defaultbindDn: String = "admin@mail"
-  val defaultPassword: String = "123456"
+  // bind configuration; not used yet!
+  val defaultbindDn: String = "cn=" + adminUser.email + ",dc=users,dc=ncer"
+  val defaultPassword: String = adminUser.password
 
-  val dit = "ncer"                                                            // this variable is not used in the code
+  val dit = "ncer"       // this variable is not used yet
   val ldapServer: InMemoryDirectoryServer = createServer
 
 
@@ -63,9 +65,6 @@ class LdapUserManager @Inject()(userRepo: UserRepo) extends UserManager {
   def addPermissions(destination: LDAPInterface): Unit = {
     val dc : String = "dc=permissions,dc=ncer"
     val permissions: Seq[String] = SecurityPermissionCache.getPermissions
-    //server.add("dn: dc=view,dc=permissions,dc=ncer", "objectClass: top", "objectClass: domain", "dc: view")
-    //server.add("dn: dc=edit,dc=permissions,dc=ncer", "objectClass: top", "objectClass: domain", "dc: edit")
-    //server.add("dn: dc=execute,dc=permissions,dc=ncer", "objectClass: top", "objectClass: domain", "dc: execute")
     permissions.foreach{p: String =>
       destination.add("dn: dc=" + p + ","+dc, "objectClass: permission", "objectClass: top", "dc: "+p)
     }
@@ -88,12 +87,12 @@ class LdapUserManager @Inject()(userRepo: UserRepo) extends UserManager {
     * Fetches users from database and inserts them into ldap object
     * @param destination ldap object to operate on
     */
-  def addUsersFromDB(destination: LDAPInterface): Unit = {
+  def addUsersFromRepo(destination: LDAPInterface): Unit = {
     val timeout: FiniteDuration = 120000 millis
     val usersFuture: Future[Traversable[CustomUser]] = userRepo.find()
     val users: Traversable[CustomUser] = Await.result(usersFuture, timeout)
     users.foreach{user: CustomUser =>
-      addCustomUser(user, destination)
+      destination.add(userToEntry(user))
     }
   }
 
@@ -102,9 +101,8 @@ class LdapUserManager @Inject()(userRepo: UserRepo) extends UserManager {
     * Add users to ldap object
     * Make sure you called createTree, addRoles and addPermissions first.
     * @param user CustomUser to add.
-    * @param destination ldap object to add users to.
     */
-  def addCustomUser(user: CustomUser, destination: LDAPInterface): Unit = {
+  def userToEntry(user: CustomUser): Entry = {
     val dn = "dn: cn="+user.email+",dc=users,dc=ncer"
     val sn = "sn:" + user.name
     val cn = "cn:" + user.name
@@ -117,7 +115,7 @@ class LdapUserManager @Inject()(userRepo: UserRepo) extends UserManager {
     val permissions: String = if(user.permissions.isEmpty){"memberOf:none"}else{"memberOf:" + user.permissions.head}
     val roles: String = if (user.roles.isEmpty){"memberOf:none"}else{"memberOf:" + user.roles.head}
 
-    destination.add(dn, sn, cn, password, email, affiliation, objectClass, permissions, roles)
+    new Entry(dn, sn, cn, password, email, affiliation, objectClass, permissions, roles)
   }
 
 
@@ -154,10 +152,8 @@ class LdapUserManager @Inject()(userRepo: UserRepo) extends UserManager {
     val config = new InMemoryDirectoryServerConfig("dc=ncer");
     config.setSchema(null); // do not check (attribute) schema
     config.setAuthenticationRequiredOperationTypes(OperationType.DELETE, OperationType.ADD, OperationType.MODIFY, OperationType.MODIFY_DN)
-
-    // listener config
-    // TODO: change listenAddress, startTLSSocketFactory
-    val listenerConfig = new InMemoryListenerConfig("defaultListener", null, defaultPort, null, null, null);
+    
+    //val listenerConfig = new InMemoryListenerConfig("defaultListener", null, defaultPort, null, null, null);
     //config.setListenerConfigs(listenerConfig);
 
     val server = new InMemoryDirectoryServer(config);
@@ -167,8 +163,7 @@ class LdapUserManager @Inject()(userRepo: UserRepo) extends UserManager {
     createTree(server)
     addPermissions(server)
     addRoles(server)
-    // add users
-    addUsersFromDB(server)
+    addUsersFromRepo(server)
     server
   }
 

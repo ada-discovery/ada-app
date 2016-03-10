@@ -21,7 +21,6 @@ class CustomHandlerCacheImpl @Inject() (myUserManager: UserManager, myLdapUserMa
   //override val LdapUserManager = myLdapUserManager
 
   override def defaultHandler = new AdaDeadboltHandler(currentUser)
-  //override def alternativeDynamicResourceHandler = new AdaDeadboltHandler(currentUser, Some(EmptyDynamicResourceHandler))
   override def ldapHandler = new LdapDeadboltHandler(currentUser)
 }
 
@@ -29,11 +28,9 @@ class CustomHandlerCacheImpl @Inject() (myUserManager: UserManager, myLdapUserMa
 trait CustomHandlerCache extends HandlerCache {
 
   def defaultHandler: DeadboltHandler
-  //def alternativeDynamicResourceHandler: DeadboltHandler
   def ldapHandler: DeadboltHandler
 
   val handlers: Map[Any, DeadboltHandler] = Map(HandlerKeys.defaultHandler -> defaultHandler,
-                                                //HandlerKeys.altHandler -> alternativeDynamicResourceHandler,
                                                 HandlerKeys.ldapHandler -> ldapHandler)
 
   override def apply(): DeadboltHandler = defaultHandler
@@ -47,9 +44,8 @@ trait CustomHandlerCache extends HandlerCache {
  */
 object HandlerKeys {
 
-  val defaultHandler = Key("defaultHandler")              // key for default user
-  //val altHandler = Key("altHandler")                      // alternative handler; to be changed
-  val ldapHandler = Key("ldapHandler")
+  val defaultHandler = Key("defaultHandler")              // key for default handler; handler retrieves user, authority and permission informaation from userRepo
+  val ldapHandler = Key("ldapHandler")                    // key for ldap handler; handler retrieves user, authority and permission information from ldap server
 
   case class Key(name: String) extends HandlerKey
 }
