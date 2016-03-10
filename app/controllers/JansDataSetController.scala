@@ -12,7 +12,7 @@ import be.objectify.deadbolt.scala.DeadboltActions
 import ldap._
 import security.AdaAuthConfig
 
-import scala.concurrent.Future
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 

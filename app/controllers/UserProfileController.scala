@@ -29,7 +29,7 @@ class UserProfileController @Inject() (
     }
   }
 
-  def workspace() = deadbolt.SubjectPresent() {
+  def workspace() = /*deadbolt.SubjectPresent()*/ {
     Action.async { implicit request =>
       val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
       usrFutureOp.map { usr =>
