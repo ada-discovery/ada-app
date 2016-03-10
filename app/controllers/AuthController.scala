@@ -1,7 +1,6 @@
 package controllers
 
 import javax.inject.Inject
-import persistence.CustomUserRepo
 import security.AdaAuthConfig
 
 import scala.concurrent.{Await, Future}
