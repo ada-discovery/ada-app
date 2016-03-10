@@ -2,6 +2,7 @@ package persistence
 
 import models._
 import models.security.CustomUser
+import persistence.dataset.DictionarySubordinateRepo
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 
@@ -14,8 +15,12 @@ object RepoTypes {
   type UserRepo = AsyncCrudRepo[CustomUser, BSONObjectID]
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
 
+  type DictionaryFieldRepo = DictionarySubordinateRepo[Field, String]
+  type DictionaryCategoryRepo = DictionarySubordinateRepo[Category, BSONObjectID]
+
   type DataSetMetaInfoRepo = AsyncCrudRepo[DataSetMetaInfo, BSONObjectID]
   type DictionaryRootRepo = MongoAsyncCrudExtraRepo[Dictionary, BSONObjectID]
+  type CategoryRepo = AsyncCrudRepo[Category, BSONObjectID]
 
   // experimental
   type StudentDistRepo = DistributedRepo[Student, BSONObjectID]

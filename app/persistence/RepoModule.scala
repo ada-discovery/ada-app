@@ -56,13 +56,18 @@ class RepoModule extends ScalaModule {
 
     // install JsObject repo factory
     install(new FactoryModuleBuilder()
-      .implement(new TypeLiteral[JsObjectCrudRepo](){}, classOf[JsObjectMongoCrudRepo])
+      .implement(new TypeLiteral[JsObjectCrudRepo]{}, classOf[JsObjectMongoCrudRepo])
       .build(classOf[JsObjectCrudRepoFactory]))
 
     // install dictionary field repo factory
     install(new FactoryModuleBuilder()
-      .implement(classOf[DictionaryFieldRepo], classOf[DictionaryFieldMongoAsyncCrudRepo])
+      .implement(new TypeLiteral[DictionaryFieldRepo]{}, classOf[DictionaryFieldMongoAsyncCrudRepo])
       .build(classOf[DictionaryFieldRepoFactory]))
+
+    // install dictionary category repo factory
+    install(new FactoryModuleBuilder()
+      .implement(new TypeLiteral[DictionaryCategoryRepo]{}, classOf[DictionaryCategoryMongoAsyncCrudRepo])
+      .build(classOf[DictionaryCategoryRepoFactory]))
 
 //    bind[DataSetAccessorFactory].to(classOf[DataSetAccessorMongoFactory]).asEagerSingleton
   }

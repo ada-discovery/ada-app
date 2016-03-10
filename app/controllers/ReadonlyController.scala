@@ -47,7 +47,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
    * @param id id/ primary key of the object.
    */
   def get(id: ID) = Action.async { implicit request =>
-    repo.get(id).map(_.fold(
+    getCall(id).map(_.fold(
       NotFound(s"Entity #$id not found")
     ){ entity =>
       implicit val msg = messagesApi.preferred(request)
@@ -62,6 +62,8 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
         InternalServerError(t.getMessage)
     }
   }
+
+  protected def getCall(id: ID): Future[Option[E]] = repo.get(id)
 
   /**
     * Display the paginated list.

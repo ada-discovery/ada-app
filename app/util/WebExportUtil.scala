@@ -42,7 +42,8 @@ object WebExportUtil {
     Result(
       header = ResponseHeader(200, Map(
         CONTENT_TYPE -> "application/x-download",
-        CONTENT_LENGTH -> content.length.toString,
+        // TODO: an explicit setting of the content length sometimes shrinks the file by a few characters
+ //       CONTENT_LENGTH -> content.length.toString,
         CONTENT_DISPOSITION -> s"attachment; filename=${filename}")
       ),
       body = fileContent

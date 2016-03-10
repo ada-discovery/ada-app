@@ -1,0 +1,60 @@
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import models.Category
+@import controllers.dataset.CategoryRouter
+
+@(
+    domainName : String,
+    page: Page[Category],
+    router : CategoryRouter,
+    dataSetMetaInfos: Traversable[DataSetMetaInfo]
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@actions = {
+    <div class="row">
+        @filter(page.filter, router.plainList, Left(Seq("name")))
+    </div>
+}
+
+@treeChart = {
+    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/tree.css")">
+    <script src="@routes.WebJarAssets.at(WebJarAssets.locate("d3.min.js"))"></script>
+    <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
+    <script type="text/javascript" src="@routes.Assets.at("javascripts/tree.js")"></script>
+    <div id="treeDiv" name="treeDiv"></div>
+    <script>
+        $.ajax({
+            url: '@router.getCategoryD3Root',
+            success: function (data) {
+                $("#treeDiv").tree({
+                    jsonData: data,
+                    duration: 700,
+                    width: 1100,
+                    height: 500
+                });
+            },
+        });
+    </script>
+}
+
+@table = @{
+    paginatedTable(
+        page,
+        router.list(_, _, page.filter),
+        Seq(
+            ("name", "Name", {item : Any => Html(item.asInstanceOf[Category].name)})
+        ),
+        Some({ item : Any => router.get(item.asInstanceOf[Category]._id.get)})
+    )
+}
+
+@layout.list(
+    domainName,
+    page.total,
+    actions,
+    table,
+    Some(treeChart),
+    Some(datasetMenu(dataSetMetaInfos))
+)

@@ -3,9 +3,11 @@ package models
 import java.util.UUID
 import java.util.Date
 
-import play.api.libs.json.Json
+import com.fasterxml.jackson.annotation.JsonIgnore
+import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
+import play.api.libs.functional.syntax._
 
 case class DataSetMetaInfo(
   _id: Option[BSONObjectID],
@@ -17,7 +19,8 @@ case class DataSetMetaInfo(
 case class Dictionary(
   _id: Option[BSONObjectID],
   dataSetId: String,
-  fields: Seq[Field]
+  fields: Seq[Field],
+  categories: Seq[Category]
 //  parents : Seq[Dictionary],
 )
 
@@ -28,7 +31,7 @@ case class Field(
   numValues : Option[Map[String, String]] = None,
   aliases : Seq[String] = Seq[String](),
   label : Option[String] = None,
-  categoryId: Option[BSONObjectID] = None,
+  var categoryId: Option[BSONObjectID] = None,
   var category : Option[Category] = None
 )
 
@@ -41,6 +44,7 @@ object FieldType extends Enumeration {
 case class Category(
   _id : Option[BSONObjectID],
   name : String,
+  var parentId : Option[BSONObjectID] = None,
   var parent : Option[Category] = None,
   var children : Seq[Category] = Seq[Category]()
 ) {
@@ -48,9 +52,15 @@ case class Category(
 
   def getPath : Seq[String] = (if (parent.isDefined && parent.get.parent.isDefined) parent.get.getPath else Seq[String]()) ++ Seq(name)
 
-  def addChildren(newChildren  : Seq[Category]) : Category = {
+  def setChildren(newChildren: Seq[Category]): Category = {
     children = newChildren
     children.foreach(_.parent = Some(this))
+    this
+  }
+
+  def addChild(newChild: Category): Category = {
+    children = Seq(newChild) ++ children
+    newChild.parent = Some(this)
     this
   }
 
@@ -63,8 +73,25 @@ case class Category(
 
 object DataSetFormattersAndIds {
   implicit val enumTypeFormat = EnumFormat.enumFormat(FieldType)
-  implicit val categoryFormat = Json.format[Category]
-  implicit val fieldFormat = Json.format[Field]
+  implicit val categoryFormat: Format[Category] = (
+    (__ \ "_id").formatNullable[BSONObjectID] and
+    (__ \ "name").format[String] and
+    (__ \ "parentId").formatNullable[BSONObjectID]
+    )(Category(_, _, _), (item: Category) =>  (item._id, item.name, item.parentId))
+
+  implicit val fieldFormat: Format[Field] = (
+    (__ \ "name").format[String] and
+    (__ \ "fieldType").format[FieldType.Value] and
+    (__ \ "isArray").format[Boolean] and
+    (__ \ "numValues").formatNullable[Map[String, String]] and
+    (__ \ "aliases").format[Seq[String]] and
+    (__ \ "label").formatNullable[String] and
+    (__ \ "categoryId").formatNullable[BSONObjectID]
+  )(
+    Field(_, _, _, _, _, _, _),
+    (item: Field) =>  (item.name, item.fieldType, item.isArray, item.numValues, item.aliases, item.label, item.categoryId)
+  )
+
   implicit val dictionaryFormat = Json.format[Dictionary]
   implicit val dataSetMetaInfoFormat = Json.format[DataSetMetaInfo]
 

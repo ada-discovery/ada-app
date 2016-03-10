@@ -79,14 +79,6 @@ trait RedCapService {
     * @return Sequence of field(s) matching id.
     */
   def getExportField(id: String) : Future[Seq[JsObject]]
-
-  /**
-    * Generate a Dictionary (i.e. for matching with other Dictionary objects).
-    *
-    * @see models.Dictionary
-    * @return Dictionary object containing the data of the assigned REDCap instance.
-    */
-  def getDictionary: Dictionary
 }
 
 @Singleton
@@ -172,17 +164,4 @@ protected class RedCapServiceWSImpl @Inject() (
         }
       }
     }
-
-  /**
-    * Generate dictionary
-    * TODO: incomplete, partially implemented for testing
-    *
-    * */
-  override def getDictionary = {
-    val fieldnamesFuture = listRecords("", "")
-    val fieldnames: Seq[JsObject] = Await.result(fieldnamesFuture, 120000 millis)
-    val finalfields = fieldnames.map( f => Field(f.toString, models.FieldType.String)).toList
-
-    Dictionary(None, "LuxPark REDCap", finalfields)
-  }
 }

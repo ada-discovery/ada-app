@@ -29,7 +29,8 @@
         Seq(
             ("name", "Name", {item : Any => Html(item.asInstanceOf[Field].name)}),
             ("fieldType", "Type", {item : Any => Html(item.asInstanceOf[Field].fieldType.toString)}),
-            ("label", "Label", {item : Any => Html(item.asInstanceOf[Field].label.getOrElse(""))})
+            ("label", "Label", {item : Any => Html(item.asInstanceOf[Field].label.getOrElse(""))}),
+            ("category.name", "Category", {item : Any => Html(item.asInstanceOf[Field].category.map(_.name).getOrElse(""))})
         ),
         Some({ item : Any => router.get(item.asInstanceOf[Field].name)})
     )

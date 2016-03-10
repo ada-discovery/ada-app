@@ -1,10 +1,16 @@
 @import models.DataSetMetaInfo
+@import scala.util.Random
 
-@import controllers.dataset.{DataSetRouter, DictionaryRouter}
+@import controllers.dataset.{DataSetRouter, DictionaryRouter, CategoryRouter}
 
 @(metaInfo: DataSetMetaInfo)(implicit request: RequestHeader)
 
-@defining(scala.util.Random.nextLong()) { panelId =>
+@defining((
+    Random.nextLong(),
+    new DataSetRouter(metaInfo.id),
+    new DictionaryRouter(metaInfo.id),
+    new CategoryRouter(metaInfo.id)
+)) { case (panelId, dataSetRouter, dictionaryRouter, categoryRouter) =>
     <li>
         <div class="panel-group">
             <div class="panel panel-default">
@@ -15,10 +21,11 @@
                 </div>
                 <div id="collapse@panelId" class="panel-collapse collapse in">
                     <ul class="list-group">
-                        @listGroupItem(DataSetRouter(metaInfo.id).plainOverviewList, "Overview")
-                        @listGroupItem(DictionaryRouter(metaInfo.id).plainList, "Dictionary")
-                        @listGroupItem(DataSetRouter(metaInfo.id).getDistribution, "Distribution")
-                        @listGroupItem(DataSetRouter(metaInfo.id).getScatterStats, "Scatter Analysis")
+                        @listGroupItem(dataSetRouter.plainOverviewList, "Overview")
+                        @listGroupItem(dictionaryRouter.plainList, "Dictionary")
+                        @listGroupItem(categoryRouter.plainList, "Category Tree")
+                        @listGroupItem(dataSetRouter.getDistribution, "Distribution")
+                        @listGroupItem(dataSetRouter.getScatterStats, "Scatter Analysis")
                     </ul>
                 </div>
             </div>
