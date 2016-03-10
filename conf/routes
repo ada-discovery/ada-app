@@ -83,6 +83,15 @@ POST        /studies/dictionary/save                                            
 GET         /studies/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.edit(name: String)
 POST        /studies/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.update(name: String)
 
+GET         /studies/categories                                                     controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/categories/get/:id                                             controllers.dataset.CategoryDispatcher.get(id: BSONObjectID)
+GET         /studies/categories/new                                                 controllers.dataset.CategoryDispatcher.create
+POST        /studies/categories/save                                                controllers.dataset.CategoryDispatcher.save
+GET         /studies/categories/get/:id                                             controllers.dataset.CategoryDispatcher.edit(id: BSONObjectID)
+POST        /studies/categories/:id                                                 controllers.dataset.CategoryDispatcher.update(id: BSONObjectID)
+POST        /studies/categories/:id/delete                                          controllers.dataset.CategoryDispatcher.delete(id: BSONObjectID)
+GET         /studies/categories/getCategoryD3Root                                   controllers.dataset.CategoryDispatcher.getCategoryD3Root
+
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                                                           controllers.Assets.at(path="/public", file)
 

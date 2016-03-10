@@ -1,0 +1,29 @@
+@import views.html.layout
+@import views.html.elements._
+@import models.Category
+@import controllers.dataset.CategoryRouter
+@import reactivemongo.bson.BSONObjectID
+
+@(
+    domainName : String,
+    id : BSONObjectID,
+    form: Form[Category],
+    categories: Traversable[Category],
+    router : CategoryRouter
+)(
+    implicit msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@elements = {
+    @inputText(domainName, "name", form)
+    @select(domainName, "parentId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
+}
+
+@layout.edit(
+    domainName,
+	form.errors,
+    elements,
+    router.update(id),
+    router.plainList,
+    Some(router.delete(id))
+)

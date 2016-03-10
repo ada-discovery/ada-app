@@ -1,0 +1,25 @@
+@import helper.{options, FieldConstructor}
+
+@(
+    domainName : String,
+    attribute : String,
+    form: Form[_],
+    values: Seq[(String, String)],
+    optional: Boolean,
+    args: (Symbol,Any)*
+)(
+    implicit msg: play.api.i18n.Messages
+)
+
+@implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapInput.f) }
+
+@helper.select(
+    form(attribute),
+    options(values :_*),
+    List(
+        '_label -> attributeLabel(domainName, attribute),
+        'class -> "form-control"
+    ) ++
+      (if (optional) List('_default -> "") else List()) ++
+      args.toList : _*
+)

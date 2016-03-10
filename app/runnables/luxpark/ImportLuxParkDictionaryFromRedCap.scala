@@ -12,7 +12,8 @@ import runnables.{GuiceBuilderRunnable, InferDictionary}
 import services.{DeNoPaSetting, RedCapService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import util.JsonUtil
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Await, Future}
+import scala.concurrent.Await.result
 
 class ImportLuxParkDictionaryFromRedCap @Inject() (
     redCapService: RedCapService
@@ -26,22 +27,24 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
   private val choiceKeyValueDelimeter = ","
 
   override def run = {
-    val dictionarySyncRepo = RepoSynchronizer(dictionaryRepo, timeout)
+    val dictionarySyncRepo = RepoSynchronizer(fieldRepo, timeout)
     // init dictionary if needed
-    Await.result(dictionaryRepo.initIfNeeded, timeout)
+    result(fieldRepo.initIfNeeded, timeout)
+    // delete all fields
     dictionarySyncRepo.deleteAll
+    // delete all categories
+    result(categoryRepo.deleteAll, timeout)
 
     val metadataFuture = redCapService.listMetadatas("field_name", "")
-    val metadatas = Await.result(metadataFuture, timeout)
+    val metadatas = result(metadataFuture, timeout)
 
     // categories
-    val categories = metadatas.map(_.form_name).toSet.map { formName : String =>
-      new Category(formName)
-    }.toList
-    val nameCategoryMap = categories.map(category => (category.name, category)).toMap
-    val rootCategory = new Category("")
-    rootCategory.addChildren(categories)
+    val nameCategoryIdFutures = metadatas.map(_.form_name).toSet.map { formName : String =>
+      val category = new Category(formName)
+      categoryRepo.save(category).map(id => (category.name, id))
+    }
 
+    val nameCategoryIdMap = result(Future.sequence(nameCategoryIdFutures), timeout).toMap
 
     val fieldNames = getFieldNames
 
@@ -49,7 +52,7 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
       val fieldName = metadata.field_name
       if (fieldNames.contains(fieldName)) {
         println(fieldName + " " + metadata.field_type)
-        val inferredType = Await.result(inferType(fieldName), timeout)
+        val inferredType = result(inferType(fieldName), timeout)
 
         val (fieldType, numValues) = metadata.field_type match {
           case RCFieldType.radio => (FieldType.Enum, getEnumValues(metadata))
@@ -64,14 +67,15 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
           case RCFieldType.file => (inferredType, None)
         }
 
-        val category = nameCategoryMap.get(metadata.form_name).get
-        val field = Field(metadata.field_name, fieldType, false, numValues, Seq[String](), Some(metadata.field_label))
-        dictionaryRepo.save(field)
+        val categoryId = nameCategoryIdMap.get(metadata.form_name)
+        val field = Field(metadata.field_name, fieldType, false, numValues, Seq[String](), Some(metadata.field_label), categoryId)
+        fieldRepo.save(field)
       } else
         Future(Unit)
     }
+
     // to be safe, wait for each save call to finish
-    futures.toList.foreach(future => Await.result(future, timeout))
+    futures.toList.foreach(result(_, timeout))
   }
 
   private def getEnumValues(metadata: Metadata) : Option[Map[String, String]] = {

@@ -142,9 +142,6 @@ trait TranSMARTService {
 
 }
 
-
-
-
 @Singleton
 class TranSMARTServiceImpl extends TranSMARTService {
 
@@ -188,12 +185,10 @@ class TranSMARTServiceImpl extends TranSMARTService {
     rootCategory : Category,
     fieldLabelMap : Map[String, String]
    ) = {
-    fieldsInOrder.zipWithIndex.map{ case (field, index) =>
-      val fieldName = unescapeKey(field)
-
-      val (label, path) = if (field.equals(keyField))
+    fieldsInOrder.zipWithIndex.map{ case (fieldName, index) =>
+      val (label, path) = if (fieldName.equals(keyField))
         (JsString("SUBJ_ID"), None)
-      else if (visitField.isDefined && visitField.get.equals(field))
+      else if (visitField.isDefined && visitField.get.equals(fieldName))
         (JsString("VISIT_ID"), None)
       else {
         val label = JsString(toCamel(fieldLabelMap.getOrElse(fieldName, fieldName)))
@@ -226,7 +221,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
     fieldLabelMap : Map[String, String]
   ) = {
     val fieldsToInclude = (if (visitField.isDefined) List(keyField, visitField.get) else List(keyField)) ++
-      fieldCategoryMap.map{case (field, category) => escapeKey(field)}.filterNot(_.equals(keyField)).toList
+      fieldCategoryMap.keys.filterNot(_.equals(keyField)).toList
 
     val clinicalData = createClinicalData(items, Some(fieldsToInclude), None)
     if (clinicalData.nonEmpty) {

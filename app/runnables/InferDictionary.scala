@@ -17,7 +17,8 @@ abstract class InferDictionary(dataSetId: String) extends Runnable {
   @Inject protected var dsaf: DataSetAccessorFactory = _
   protected lazy val dsa = dsaf(dataSetId).get
   protected lazy val dataRepo = dsa.dataSetRepo
-  protected lazy val dictionaryRepo = dsa.dictionaryFieldRepo
+  protected lazy val fieldRepo = dsa.fieldRepo
+  protected lazy val categoryRepo = dsa.categoryRepo
 
   protected val timeout = 120000 millis
 
@@ -25,15 +26,16 @@ abstract class InferDictionary(dataSetId: String) extends Runnable {
   protected def uniqueCriteria : JsObject
 
   def run = {
-    val dictionarySyncRepo = RepoSynchronizer(dictionaryRepo, timeout)
+    val fieldSyncRepo = RepoSynchronizer(fieldRepo, timeout)
     // init dictionary if needed
-    Await.result(dictionaryRepo.initIfNeeded, timeout)
-    dictionarySyncRepo.deleteAll
+    Await.result(fieldRepo.initIfNeeded, timeout)
+    fieldSyncRepo.deleteAll
 
     val futures = getFieldNames.filter(_ != "_id").par.map { fieldName =>
       println(fieldName)
       val fieldType = Await.result(inferType(fieldName), timeout)
-      dictionaryRepo.save(Field(fieldName, fieldType, false))
+
+      fieldRepo.save(Field(fieldName, fieldType, false))
     }
 
     // to be safe, wait for each save call to finish

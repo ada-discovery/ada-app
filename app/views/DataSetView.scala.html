@@ -17,9 +17,9 @@
         <div class="panel panel-info">
             <div class="panel-body" style="padding-bottom: 120px;">
             @{
-                var dummyA = Dictionary(None, "A", List());
-                var dummyB = Dictionary(None, "B", List());
-                var dummyC = Dictionary(None, "C", List());
+                var dummyA = Dictionary(None, "A", List(), List());
+                var dummyB = Dictionary(None, "B", List(), List());
+                var dummyC = Dictionary(None, "C", List(), List());
                 views.html.chart.plotly.vennDiagram("selectedSets", List(dummyA, dummyB, dummyC).toSeq)
                 /*views.html.chart.vennDiagram("", "selectedSets", VennLayouter.calculateCoordinates(dataSets))*/
             }

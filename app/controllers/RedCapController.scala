@@ -158,7 +158,7 @@ class RedCapController @Inject() (
       new Category(formName)
     }.toList
 
-    rootCategory.addChildren(categories)
+    rootCategory.setChildren(categories)
     val nameCategoryMap = categories.map(category => (category.name, category)).toMap
 
     // field category map
@@ -196,7 +196,7 @@ class RedCapController @Inject() (
       new Category(formName)
     }.toList
 
-    rootCategory.addChildren(categories)
+    rootCategory.setChildren(categories)
     val nameCategoryMap = categories.map(category => (category.name, category)).toMap
 
     // field category map

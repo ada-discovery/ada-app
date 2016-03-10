@@ -7,7 +7,8 @@ import _root_.util.JsonUtil._
 import _root_.util.WebExportUtil._
 import _root_.util.{ChartSpec, FieldChartSpec, FilterSpec, JsonUtil}
 import controllers.{ExportableAction, ReadonlyController}
-import models.{DataSetMetaInfo, FieldType, Page}
+import models.{DataSetMetaInfo, FieldType, Page, Field, Category}
+import org.apache.commons.lang3.StringEscapeUtils
 import persistence.AscSort
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -19,11 +20,13 @@ import play.api.mvc.{Action, AnyContent, RequestHeader}
 import reactivemongo.bson.BSONObjectID
 import services.TranSMARTService
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.modules.reactivemongo.json.BSONObjectIDFormat
 import scala.concurrent.duration._
 import views.html.dataset
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
+import scala.concurrent.Await.result
 
 protected abstract class DataSetControllerImpl(
     val dataSetId: String,
@@ -32,14 +35,16 @@ protected abstract class DataSetControllerImpl(
   ) extends ReadonlyController[JsObject, BSONObjectID](dsaf(dataSetId).get.dataSetRepo) with DataSetController with ExportableAction[JsObject] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
-  protected val dictionaryRepo = dsa.dictionaryFieldRepo
-  dictionaryRepo.initIfNeeded
+  protected val fieldRepo = dsa.fieldRepo
+  fieldRepo.initIfNeeded
+
+  protected val categoryRepo = dsa.categoryRepo
 
   @Inject protected var tranSMARTService: TranSMARTService = _
 
   // hooks
 
-  protected lazy val dataSetName = Await.result(dsa.metaInfo, 120000 millis).name
+  protected lazy val dataSetName = result(dsa.metaInfo, timeout).name
 
   // keyfield, mainly used for data export
   protected def keyField: String
@@ -59,6 +64,11 @@ protected abstract class DataSetControllerImpl(
   // auto-generated filename for tranSMART mapping files
   protected def tranSMARTMappingFileName: String = dataSetId.replace(" ", "-") + "_mapping_file"
 
+  // visit field for transmart
+  protected def tranSMARTVisitField: Option[String] = None
+
+  protected def tranSMARTReplacements = List[(String, String)]()
+
   // key for associated field in config file
   protected def overviewFieldNamesConfPrefix: String
 
@@ -70,7 +80,7 @@ protected abstract class DataSetControllerImpl(
   protected def defaultDistributionFieldName: String
 
   // router for requests; to be passed to views as helper.
-  protected lazy val router: DataSetRouter = DataSetRouter(dataSetId)
+  protected lazy val router: DataSetRouter = new DataSetRouter(dataSetId)
 
   protected lazy val overviewFieldNames =
     current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
@@ -89,7 +99,7 @@ protected abstract class DataSetControllerImpl(
     dataset.list(
       dataSetName + " Item",
       page,
-      Await.result(getFieldLabelMap(listViewColumns.get), 120000 millis), // TODO: refactor
+      result(getFieldLabelMap(listViewColumns.get), 120000 millis), // TODO: refactor
       listViewColumns.get,
       router
     )
@@ -106,7 +116,7 @@ protected abstract class DataSetControllerImpl(
     dataset.overviewList(
       dataSetName + " Item",
       page,
-      Await.result(getFieldLabelMap(listViewColumns.get), 120000 millis),  // TODO: refactor
+      result(getFieldLabelMap(listViewColumns.get), 120000 millis),  // TODO: refactor
       listViewColumns.get,
       fieldChartSpecs,
       router,
@@ -172,7 +182,7 @@ protected abstract class DataSetControllerImpl(
     */
   private def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] = {
     for {
-      field <- dictionaryRepo.get(fieldName)
+      field <- fieldRepo.get(fieldName)
       values <- repo.find(None, None, Some(Json.obj(fieldName -> 1)))
     } yield {
       values.map { item =>
@@ -191,7 +201,7 @@ protected abstract class DataSetControllerImpl(
     * @return View with piechart showing field types.
     */
   override def overviewFieldTypes = Action.async { implicit request =>
-    dictionaryRepo.find().map{ fields =>
+    fieldRepo.find().map{ fields =>
       if (fields.isEmpty)
         throw new IllegalStateException(s"Empty dictionary found. Pls. create one by running 'standalone.InferXXXDictionary' script.")
 
@@ -222,23 +232,27 @@ protected abstract class DataSetControllerImpl(
   }
 
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+    implicit val msg = messagesApi.preferred(request)
+
     val futureFieldChartSpecs = overviewFieldNames.map(fieldName =>
       getDataChartSpec(filter.toJsonCriteria, fieldName).map(chartSpec =>
         FieldChartSpec(fieldName, chartSpec)
       )
     )
-
+    val fieldChartSpecsFuture = Future.sequence(futureFieldChartSpecs)
     val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
 
-    futureItems.zip(futureCount).zip(Future.sequence(futureFieldChartSpecs)).map{
-      case ((items, count), fieldChartSpecs) => {
-        implicit val msg = messagesApi.preferred(request)
-
+    {
+      for {
+        items <- futureItems
+        count <- futureCount
+        fieldChartSpecs <- fieldChartSpecsFuture
+      } yield
         render {
           case Accepts.Html() => Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), fieldChartSpecs))
           case Accepts.Json() => Ok(Json.toJson(items))
         }
-    }}.recover {
+    }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the overviewList process")
         InternalServerError(t.getMessage)
@@ -259,23 +273,21 @@ protected abstract class DataSetControllerImpl(
     fieldName: String,
     showLabels: Boolean = false,
     showLegend: Boolean = true
-  ) : Future[ChartSpec] =
-    dictionaryRepo.get(fieldName).flatMap { foundField =>
-      if (foundField.isDefined) {
-        val chartTitle = foundField.get.label.getOrElse(fieldName)
-        val enumMap = foundField.get.numValues
+  ): Future[ChartSpec] =
+    for {
+      Some(foundField) <- fieldRepo.get(fieldName)
+      items <- repo.find(criteria, None, Some(Json.obj(fieldName -> 1)))
+    } yield {
+      val chartTitle = foundField.label.getOrElse(fieldName)
+      val enumMap = foundField.numValues
 
-        repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { items =>
-          foundField.get.fieldType match {
-            case FieldType.String => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
-            case FieldType.Enum => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
-            case FieldType.Double => ChartSpec.column(items, fieldName, chartTitle, 20)
-            case FieldType.Integer => ChartSpec.column(items, fieldName, chartTitle, 20)
-            case _ => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
-          }
-        }
-      } else
-        Future(ChartSpec.pie(Seq(), None, fieldName, showLabels, showLegend))
+      foundField.fieldType match {
+        case FieldType.String => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
+        case FieldType.Enum => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
+        case FieldType.Double => ChartSpec.column(items, fieldName, chartTitle, 20)
+        case FieldType.Integer => ChartSpec.column(items, fieldName, chartTitle, 20)
+        case _ => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
+      }
     }
 
   private def getStringValues(
@@ -302,16 +314,16 @@ protected abstract class DataSetControllerImpl(
     * @return View with scatterplot and selection option for different xFieldName and yFieldName.
     */
   override def getScatterStats(xFieldNameOption : Option[String], yFieldNameOption: Option[String]) = Action.async { implicit request =>
+    implicit val msg = messagesApi.preferred(request)
+
     val xFieldName = xFieldNameOption.getOrElse(defaultScatterXFieldName)
     val yFieldName = yFieldNameOption.getOrElse(defaultScatterYFieldName)
 
-    val numericFieldsFuture = dictionaryRepo.find(Some(Json.obj("fieldType" -> Json.obj("$in" -> jsonNumericTypes))))
-    val xFieldFuture = dictionaryRepo.get(xFieldName)
-    val yFieldFuture = dictionaryRepo.get(yFieldName)
+    val numericFieldsFuture = fieldRepo.find(Some(Json.obj("fieldType" -> Json.obj("$in" -> jsonNumericTypes))))
+    val xFieldFuture = fieldRepo.get(xFieldName)
+    val yFieldFuture = fieldRepo.get(yFieldName)
 
     numericFieldsFuture.zip(xFieldFuture).zip(yFieldFuture).flatMap{ case ((numericFields, xField), yField) =>
-      implicit val msg = messagesApi.preferred(request)
-
       val numericFieldNameLabels = numericFields.map(field => (field.name, field.label)).toSeq.sorted
       val valuesFuture : Future[Seq[(Any, Any)]] = if (xField.isDefined && yField.isDefined) {
         val futureXItems = repo.find(None, None, Some(Json.obj(xFieldName -> 1)))
@@ -326,11 +338,9 @@ protected abstract class DataSetControllerImpl(
         Future(Seq[(Any, Any)]())
 
       valuesFuture.map( values =>
-
         render {
           case Accepts.Html() => Ok(dataset.scatterStats(
-            dataSetName, xFieldName, yFieldName, router.getScatterStats, dataSetId, numericFieldNameLabels, values, getMetaInfos
-          ))
+            dataSetName, xFieldName, yFieldName, router.getScatterStats, dataSetId, numericFieldNameLabels, values, getMetaInfos))
           case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
         }
       )
@@ -338,20 +348,24 @@ protected abstract class DataSetControllerImpl(
   }
 
   override def getDistribution(fieldNameOption: Option[String]) = Action.async { implicit request =>
+    implicit val msg = messagesApi.preferred(request)
+
     val fieldName = fieldNameOption.getOrElse(defaultDistributionFieldName)
-
-    val fieldsFuture = dictionaryRepo.find(None, Some(Seq(AscSort("name"))))
+    val fieldsFuture = fieldRepo.find(None, Some(Seq(AscSort("name"))))
+    val fieldNameLabelsFuture = fieldsFuture.map(_.map(field => (field.name, field.label)).toSeq)
     val chartSpecFuture = getDataChartSpec(None, fieldName, true, false)
-    chartSpecFuture.zip(fieldsFuture).map{ case (chartSpec, fields) =>
-      implicit val msg = messagesApi.preferred(request)
-      val fieldNameLabels = fields.map(field => (field.name, field.label)).toSeq
 
-      render {
-        case Accepts.Html() => Ok(dataset.distribution(
-          dataSetName, fieldName, chartSpec, router.getDistribution, dataSetId, fieldNameLabels, getMetaInfos
-        ))
-        case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
-      }
+    {
+      for {
+        chartSpec <- chartSpecFuture
+        fieldNameLabels <- fieldNameLabelsFuture
+      } yield
+        render {
+          case Accepts.Html() => Ok(dataset.distribution(
+            dataSetName, fieldName, chartSpec, router.getDistribution, dataSetId, fieldNameLabels, getMetaInfos
+          ))
+          case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
+        }
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the distribution process")
@@ -361,8 +375,10 @@ protected abstract class DataSetControllerImpl(
 
 
   override def getFieldNames = Action.async { implicit request =>
-    val futureFieldNames = dictionaryRepo.find(None, Some(Seq(AscSort("name")))).map(_.map(_.name))
-    futureFieldNames.map(fieldNames => Ok(Json.toJson(fieldNames)))
+    for {
+      fieldNames <- fieldRepo.find(None, Some(Seq(AscSort("name")))).map(_.map(_.name))
+    } yield
+      Ok(Json.toJson(fieldNames))
   }
 
   /**
@@ -378,7 +394,7 @@ protected abstract class DataSetControllerImpl(
   private def getFieldLabelMap(fieldNames : Traversable[String]): Future[Map[String, String]] = {
     val futureFieldLabelPairs : Traversable[Future[Option[(String, String)]]]=
       fieldNames.map { fieldName =>
-        dictionaryRepo.get(fieldName).map { fieldOption =>
+        fieldRepo.get(fieldName).map { fieldOption =>
           fieldOption.flatMap{_.label}.map{ label => (fieldName, label)}
         }
       }
@@ -388,7 +404,7 @@ protected abstract class DataSetControllerImpl(
 
   // TODO: keep as async
   private def getMetaInfos: Traversable[DataSetMetaInfo] =
-    Await.result(dataSetMetaInfoRepo.find(), 120000 millis)
+    result(dataSetMetaInfoRepo.find(), timeout)
 
   //////////////////////
   // Export Functions //
@@ -427,7 +443,23 @@ protected abstract class DataSetControllerImpl(
     * @param orderBy Order of fields in data file.
     * @return VString with file content.
     */
-  protected def generateTranSMARTDataFile(dataFilename: String, delimiter: String, orderBy : String): String
+  protected def generateTranSMARTDataFile(
+    dataFilename: String,
+    delimiter: String,
+    orderBy : String
+  ): String = {
+    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
+    val records = result(recordsFuture, timeout)
+    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+    val categoriesFuture = categoryRepo.find()
+
+    tranSMARTService.createClinicalDataFile(unescapedDelimiter , "\n", tranSMARTReplacements)(
+      records,
+      keyField,
+      tranSMARTVisitField,
+      result(fieldNameCategoryMap(categoriesFuture), timeout)
+    )
+  }
 
   /**
     * Generate the content of TRANSMART mapping file for downnload.
@@ -437,5 +469,73 @@ protected abstract class DataSetControllerImpl(
     * @param orderBy Order of fields in data file.
     * @return VString with file content.
     */
-  protected def generateTranSMARTMappingFile(dataFilename: String, delimiter: String, orderBy : String): String
+  protected def generateTranSMARTMappingFile(
+    dataFilename: String,
+    delimiter: String,
+    orderBy : String
+  ): String = {
+    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
+    val records = result(recordsFuture, timeout)
+    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+    val categoriesFuture = categoryRepo.find()
+
+    tranSMARTService.createMappingFile(unescapedDelimiter , "\n", tranSMARTReplacements)(
+      records,
+      dataFilename,
+      keyField,
+      tranSMARTVisitField,
+      result(fieldNameCategoryMap(categoriesFuture), timeout),
+      result(rootCategoryTree(categoriesFuture), timeout),
+      result(fieldLabelMap, timeout)
+    )
+  }
+
+  protected def fieldNameCategoryMap(
+    categoriesFuture: Future[Traversable[Category]]
+  ): Future[Map[String, Category]] = {
+    val idCategoriesFuture = categoriesFuture.map(_.map{ category =>
+      (category._id.get, category)
+    })
+
+    val fieldsWithCategoryFuture = fieldRepo.find(Some(
+      Json.obj("categoryId" -> Json.obj("$ne" -> Option.empty[BSONObjectID]))
+    ))
+
+    for {
+      idCategories <- idCategoriesFuture
+      fieldsWithCategories <- fieldsWithCategoryFuture
+    } yield {
+      val idCategoriesMap = idCategories.toMap
+      fieldsWithCategories.map(field =>
+        (field.name, idCategoriesMap(field.categoryId.get))
+      ).toMap
+    }
+  }
+
+  protected def fieldLabelMap: Future[Map[String, String]] =
+    for {
+      fields <- fieldRepo.find()
+    } yield
+      fields.map{ field =>
+        (field.name, field.label.getOrElse(field.name))
+      }.toMap
+
+  protected def rootCategoryTree(
+    categoriesFuture: Future[Traversable[Category]]
+  ): Future[Category] =
+    for {
+      categories <- categoriesFuture
+    } yield {
+      val idCategoryMap = categories.map( category => (category._id.get, category)).toMap
+      categories.foreach {category =>
+        if (category.parentId.isDefined) {
+          val parent = idCategoryMap(category.parentId.get)
+          parent.addChild(category)
+        }
+      }
+
+      val layerOneCategories = categories.filter(_.parentId.isEmpty).toSeq
+
+      new Category("").setChildren(layerOneCategories)
+    }
 }

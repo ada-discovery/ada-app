@@ -28,7 +28,7 @@ abstract class CleanupDataSet (
 
   val originalDataRepo = originalDsa.dataSetRepo
   val newDataRepo = newDsa.dataSetRepo
-  val originalDictionaryRepo = originalDsa.dictionaryFieldRepo
+  val originalDictionaryRepo = originalDsa.fieldRepo
 
   val timeout = 120000 millis
 

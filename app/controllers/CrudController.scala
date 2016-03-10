@@ -23,7 +23,7 @@ import play.twirl.api.Html
  * @param ID type of identity of entity (primary key)
  */
 protected abstract class CrudController[E: Format, ID](
-    repo: AsyncCrudRepo[E, ID]
+    override val repo: AsyncCrudRepo[E, ID]
   )(implicit identity: Identity[E, ID]) extends ReadonlyController[E, ID](repo) {
 
   protected def form : Form[E]
@@ -58,10 +58,7 @@ protected abstract class CrudController[E: Format, ID](
   }
 
   def edit(id: ID) = Action.async { implicit request =>
-//    println(request.tags.get(Router.Tags.RouteController))
-//    println(request.tags.get(Router.Tags.RouteActionMethod))
-
-    repo.get(id).map(_.fold(
+    editCall(id).map(_.fold(
       NotFound(s"Entity #$id not found")
     ) { entity =>
       implicit val msg = messagesApi.preferred(request)
@@ -77,6 +74,8 @@ protected abstract class CrudController[E: Format, ID](
     }
   }
 
+  protected def editCall(id: ID): Future[Option[E]] = repo.get(id)
+
   def save = Action.async { implicit request =>
     form.bindFromRequest.fold(
     { formWithErrors =>
@@ -84,7 +83,7 @@ protected abstract class CrudController[E: Format, ID](
       Future.successful(BadRequest(createView(formWithErrors)))
     },
     item => {
-      repo.save(item).map { id =>
+      saveCall(item).map { id =>
         render {
           case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been created")
           case Accepts.Json() => Created(Json.obj("message" -> "Item successly created", "id" -> id.toString))
@@ -100,6 +99,8 @@ protected abstract class CrudController[E: Format, ID](
     })
   }
 
+  protected def saveCall(item: E): Future[ID] = repo.save(item)
+
   def update(id: ID) = Action.async { implicit request =>
     form.bindFromRequest.fold(
     { formWithErrors =>
@@ -107,7 +108,7 @@ protected abstract class CrudController[E: Format, ID](
       Future.successful(BadRequest(editView(id, formWithErrors)))
     },
     item => {
-      repo.update(identity.set(item, id)).map { _ =>
+      updateCall(identity.set(item, id)).map { _ =>
         render {
           case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been updated")
           case Accepts.Json() => Ok(Json.obj("message" -> "Item successly updated", "id" -> id.toString))
@@ -122,6 +123,8 @@ protected abstract class CrudController[E: Format, ID](
       }
     })
   }
+
+  protected def updateCall(item: E): Future[ID] = repo.update(item)
 
   def delete(id: ID) = Action.async { implicit request =>
     repo.delete(id).map { _ =>

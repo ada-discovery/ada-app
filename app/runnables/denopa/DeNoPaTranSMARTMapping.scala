@@ -1,28 +1,27 @@
-package services
+package runnables.denopa
 
-import models.{Category => CCategory}
+import models.Category
 
+@Deprecated
 object DeNoPaTranSMARTMapping {
 
-  val demographics = new CCategory("Demographics")
+  val demographics = new Category("Demographics")
 
   // Tests
-  val mmseTest = new CCategory("PSP. MMSE (Folstein Mini-Mental State Exam)")
-  val clockDrawingTest = new CCategory("Clock Drawing Test")
-  val mdsUPDRSTest = new CCategory("MDS-UPDRS - Part I to Part IV")
-  val hYTest = new CCategory("H&Y (Hoehn and Yahr")
-  val nmsPDTest = new CCategory("NMS-PD (Non-Movement Problems in Parkinson's)")
-  val moCaTest = new CCategory("MoCA (Montreal Cognitive Assessment Test)")
-  val pdssTest = new CCategory("PDSS (Parkinson's Disease Sleep Scale)")
-  val essTest = new CCategory("ESS (Epworth Sleepiness Scale)")
-  val remSleepTest = new CCategory("Similar (13 Qs): REM Sleep Behavior Disorder Screening Questionnaire")
+  val mmseTest = new Category("PSP. MMSE (Folstein Mini-Mental State Exam)")
+  val clockDrawingTest = new Category("Clock Drawing Test")
+  val mdsUPDRSTest = new Category("MDS-UPDRS - Part I to Part IV")
+  val hYTest = new Category("H&Y (Hoehn and Yahr)")
+  val nmsPDTest = new Category("NMS-PD (Non-Movement Problems in Parkinson's)")
+  val moCaTest = new Category("MoCA (Montreal Cognitive Assessment Test)")
+  val pdssTest = new Category("PDSS (Parkinson's Disease Sleep Scale)")
+  val essTest = new Category("ESS (Epworth Sleepiness Scale)")
+  val remSleepTest = new Category("Similar (13 Qs): REM Sleep Behavior Disorder Screening Questionnaire")
 
-  val subjectsData = new CCategory("Subjects").addChildren(List(demographics))
-  val motorTest = new CCategory("Motor").addChildren(List(mdsUPDRSTest, hYTest))
-  val nonmotorTest = new CCategory("NonMotor").addChildren(List(mmseTest, clockDrawingTest, nmsPDTest, moCaTest, pdssTest, essTest, remSleepTest))
-  val clinicalData = new CCategory("Clinical Data").addChildren(List(motorTest, nonmotorTest))
-
-  val rootCategory = new CCategory("").addChildren(List(subjectsData, clinicalData))
+  val subjectsData = new Category("Subjects").setChildren(List(demographics))
+  val motorTest = new Category("Motor").setChildren(List(mdsUPDRSTest, hYTest))
+  val nonmotorTest = new Category("NonMotor").setChildren(List(mmseTest, clockDrawingTest, nmsPDTest, moCaTest, pdssTest, essTest, remSleepTest))
+  val clinicalData = new Category("Clinical Data").setChildren(List(motorTest, nonmotorTest))
 
   val fieldCategoryMap = Map(
     "Geb_Datum" -> demographics,
@@ -49,7 +48,6 @@ object DeNoPaTranSMARTMapping {
     "a_CRF_MMST_10" -> mmseTest,
     "a_CRF_MMST_11" -> mmseTest,
     "a_CRF_MMST_Summe" -> mmseTest,
-    "a_CRF_MMST_Category" -> mmseTest,
 
     "a_CRF_Uhrentest" -> clockDrawingTest,
 
@@ -218,11 +216,8 @@ object DeNoPaTranSMARTMapping {
     "a_RBD_SQ_5" -> remSleepTest,
     "a_RBD_SQ_6.1" -> remSleepTest,
     "a_RBD_SQ_6.2" -> remSleepTest,
-    "a_RBD_SQ_6.1" -> remSleepTest,
-    "a_RBD_SQ_6.2" -> remSleepTest,
     "a_RBD_SQ_6.3" -> remSleepTest,
     "a_RBD_SQ_6.4" -> remSleepTest,
-    "a_RBD_SQ_7" -> remSleepTest,
     "a_RBD_SQ_7" -> remSleepTest,
     "a_RBD_SQ_8" -> remSleepTest,
     "a_RBD_SQ_9" -> remSleepTest,
@@ -337,41 +332,41 @@ object DeNoPaTranSMARTMapping {
     "a_MDS_UPDRS_3_sum" -> "UPDRS_3_sum",
     "a_MDS_UPDRS_4_sum" -> "UPDRS_4_sum",
     "a_MDS_UPDRS_sum" -> "UPDRS_sum",
-    //
-    //    "a_MDS_UPDRS_H_Y" -> hYTest,
-    //
-    //    "a_PD_NMS_1" -> nmsPDTest,
-    //    "a_PD_NMS_2" -> nmsPDTest,
-    //    "a_PD_NMS_3" -> nmsPDTest,
-    //    "a_PD_NMS_4" -> nmsPDTest,
-    //    "a_PD_NMS_5" -> nmsPDTest,
-    //    "a_PD_NMS_6" -> nmsPDTest,
-    //    "a_PD_NMS_7" -> nmsPDTest,
-    //    "a_PD_NMS_8" -> nmsPDTest,
-    //    "a_PD_NMS_9" -> nmsPDTest,
-    //    "a_PD_NMS_10" -> nmsPDTest,
-    //    "a_PD_NMS_11" -> nmsPDTest,
-    //    "a_PD_NMS_12" -> nmsPDTest,
-    //    "a_PD_NMS_13" -> nmsPDTest,
-    //    "a_PD_NMS_14" -> nmsPDTest,
-    //    "a_PD_NMS_15" -> nmsPDTest,
-    //    "a_PD_NMS_16" -> nmsPDTest,
-    //    "a_PD_NMS_17" -> nmsPDTest,
-    //    "a_PD_NMS_18" -> nmsPDTest,
-    //    "a_PD_NMS_19" -> nmsPDTest,
-    //    "a_PD_NMS_20" -> nmsPDTest,
-    //    "a_PD_NMS_21" -> nmsPDTest,
-    //    "a_PD_NMS_22" -> nmsPDTest,
-    //    "a_PD_NMS_23" -> nmsPDTest,
-    //    "a_PD_NMS_24" -> nmsPDTest,
-    //    "a_PD_NMS_25" -> nmsPDTest,
-    //    "a_PD_NMS_26" -> nmsPDTest,
-    //    "a_PD_NMS_27" -> nmsPDTest,
-    //    "a_PD_NMS_28" -> nmsPDTest,
-    //    "a_PD_NMS_29" -> nmsPDTest,
-    //    "a_PD_NMS_30" -> nmsPDTest,
-    //    "a_PD_NMS_sum" -> nmsPDTest,
-    //    "a_PD_NMS_mean" -> nmsPDTest,
+
+    "a_MDS_UPDRS_H_Y" -> "UPDRS_H_Y",
+
+    "a_PD_NMS_1" -> "NMS_PD_1",
+    "a_PD_NMS_2" -> "NMS_PD_2",
+    "a_PD_NMS_3" -> "NMS_PD_3",
+    "a_PD_NMS_4" -> "NMS_PD_4",
+    "a_PD_NMS_5" -> "NMS_PD_5",
+    "a_PD_NMS_6" -> "NMS_PD_6",
+    "a_PD_NMS_7" -> "NMS_PD_7",
+    "a_PD_NMS_8" -> "NMS_PD_8",
+    "a_PD_NMS_9" -> "NMS_PD_9",
+    "a_PD_NMS_10" -> "NMS_PD_10",
+    "a_PD_NMS_11" -> "NMS_PD_11",
+    "a_PD_NMS_12" -> "NMS_PD_12",
+    "a_PD_NMS_13" -> "NMS_PD_13",
+    "a_PD_NMS_14" -> "NMS_PD_14",
+    "a_PD_NMS_15" -> "NMS_PD_15",
+    "a_PD_NMS_16" -> "NMS_PD_16",
+    "a_PD_NMS_17" -> "NMS_PD_17",
+    "a_PD_NMS_18" -> "NMS_PD_18",
+    "a_PD_NMS_19" -> "NMS_PD_19",
+    "a_PD_NMS_20" -> "NMS_PD_20",
+    "a_PD_NMS_21" -> "NMS_PD_21",
+    "a_PD_NMS_22" -> "NMS_PD_22",
+    "a_PD_NMS_23" -> "NMS_PD_23",
+    "a_PD_NMS_24" -> "NMS_PD_24",
+    "a_PD_NMS_25" -> "NMS_PD_25",
+    "a_PD_NMS_26" -> "NMS_PD_26",
+    "a_PD_NMS_27" -> "NMS_PD_27",
+    "a_PD_NMS_28" -> "NMS_PD_28",
+    "a_PD_NMS_29" -> "NMS_PD_29",
+    "a_PD_NMS_30" -> "NMS_PD_30",
+    "a_PD_NMS_sum" -> "NMS_PD_31",
+    "a_PD_NMS_mean" -> "NMS_PD_32",
 
     "a_MoCa_Exekutiv" -> "MoCa Executive",
     "a_MoCa_Benennen" -> "MoCa Name",
@@ -383,54 +378,51 @@ object DeNoPaTranSMARTMapping {
     "a_MoCa_Abstraktion" -> "MoCa Abstraction",
     "a_MoCa_Erinnerung" -> "MoCa Memory",
     "a_MoCa_Orientierung" -> "MoCa Orientation",
-    "a_MoCa_Gesamt" -> "MoCa Sum"
+    "a_MoCa_Gesamt" -> "MoCa Sum",
 
-    //    "a_PDSS_1" -> pdssTest,
-    //    "a_PDSS_2" -> pdssTest,
-    //    "a_PDSS_3" -> pdssTest,
-    //    "a_PDSS_4" -> pdssTest,
-    //    "a_PDSS_5" -> pdssTest,
-    //    "a_PDSS_6" -> pdssTest,
-    //    "a_PDSS_7" -> pdssTest,
-    //    "a_PDSS_8" -> pdssTest,
-    //    "a_PDSS_9" -> pdssTest,
-    //    "a_PDSS_10" -> pdssTest,
-    //    "a_PDSS_11" -> pdssTest,
-    //    "a_PDSS_12" -> pdssTest,
-    //    "a_PDSS_13" -> pdssTest,
-    //    "a_PDSS_14" -> pdssTest,
-    //    "a_PDSS_15" -> pdssTest,
-    //    "a_PDSS_sum" -> pdssTest,
-    //    "a_PDSS_mean" -> pdssTest,
-    //
-    //    "a_ESS_1" -> essTest,
-    //    "a_ESS_2" -> essTest,
-    //    "a_ESS_3" -> essTest,
-    //    "a_ESS_4" -> essTest,
-    //    "a_ESS_5" -> essTest,
-    //    "a_ESS_6" -> essTest,
-    //    "a_ESS_7" -> essTest,
-    //    "a_ESS_8" -> essTest,
-    //    "a_ESS_sum" -> essTest,
-    //    "a_ESS_mean" -> essTest,
-    //
-    //    "a_RBD_SQ_1" -> remSleepTest,
-    //    "a_RBD_SQ_2" -> remSleepTest,
-    //    "a_RBD_SQ_3" -> remSleepTest,
-    //    "a_RBD_SQ_4" -> remSleepTest,
-    //    "a_RBD_SQ_5" -> remSleepTest,
-    //    "a_RBD_SQ_6.1" -> remSleepTest,
-    //    "a_RBD_SQ_6.2" -> remSleepTest,
-    //    "a_RBD_SQ_6.1" -> remSleepTest,
-    //    "a_RBD_SQ_6.2" -> remSleepTest,
-    //    "a_RBD_SQ_6.3" -> remSleepTest,
-    //    "a_RBD_SQ_6.4" -> remSleepTest,
-    //    "a_RBD_SQ_7" -> remSleepTest,
-    //    "a_RBD_SQ_7" -> remSleepTest,
-    //    "a_RBD_SQ_8" -> remSleepTest,
-    //    "a_RBD_SQ_9" -> remSleepTest,
-    //    "a_RBD_SQ_10" -> remSleepTest,
-    //    "a_RBD_SQ_sum" -> remSleepTest,
-    //    "a_RBD_SQ_mean" -> remSleepTest
+    "a_PDSS_1" -> "PDSS_1",
+    "a_PDSS_2" -> "PDSS_2",
+    "a_PDSS_3" -> "PDSS_3",
+    "a_PDSS_4" -> "PDSS_4",
+    "a_PDSS_5" -> "PDSS_5",
+    "a_PDSS_6" -> "PDSS_6",
+    "a_PDSS_7" -> "PDSS_7",
+    "a_PDSS_8" -> "PDSS_8",
+    "a_PDSS_9" -> "PDSS_9",
+    "a_PDSS_10" -> "PDSS_10",
+    "a_PDSS_11" -> "PDSS_11",
+    "a_PDSS_12" -> "PDSS_12",
+    "a_PDSS_13" -> "PDSS_13",
+    "a_PDSS_14" -> "PDSS_14",
+    "a_PDSS_15" -> "PDSS_15",
+    "a_PDSS_sum" -> "PDSS_sum",
+    "a_PDSS_mean" -> "PDSS_mean",
+
+    "a_ESS_1" -> "ESS_1",
+    "a_ESS_2" -> "ESS_2",
+    "a_ESS_3" -> "ESS_3",
+    "a_ESS_4" -> "ESS_4",
+    "a_ESS_5" -> "ESS_5",
+    "a_ESS_6" -> "ESS_6",
+    "a_ESS_7" -> "ESS_7",
+    "a_ESS_8" -> "ESS_8",
+    "a_ESS_sum" -> "ESS_sum",
+    "a_ESS_mean" -> "ESS_mean",
+
+    "a_RBD_SQ_1" -> "RBD_SQ_1",
+    "a_RBD_SQ_2" -> "RBD_SQ_2",
+    "a_RBD_SQ_3" -> "RBD_SQ_3",
+    "a_RBD_SQ_4" -> "RBD_SQ_4",
+    "a_RBD_SQ_5" -> "RBD_SQ_5",
+    "a_RBD_SQ_6.1" -> "RBD_SQ_6.1",
+    "a_RBD_SQ_6.2" -> "RBD_SQ_6.2",
+    "a_RBD_SQ_6.3" -> "RBD_SQ_6.3",
+    "a_RBD_SQ_6.4" -> "RBD_SQ_6.4",
+    "a_RBD_SQ_7" -> "RBD_SQ_7",
+    "a_RBD_SQ_8" -> "RBD_SQ_8",
+    "a_RBD_SQ_9" -> "RBD_SQ_9",
+    "a_RBD_SQ_10" -> "RBD_SQ_10",
+    "a_RBD_SQ_sum" -> "RBD_SQ_sum",
+    "a_RBD_SQ_mean" -> "RBD_SQ_mean"
   )
 }

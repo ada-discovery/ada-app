@@ -2,7 +2,7 @@ package controllers
 
 import com.google.inject.AbstractModule
 import com.google.inject.assistedinject.FactoryModuleBuilder
-import controllers.dataset.{DictionaryController, DictionaryControllerFactory, DictionaryControllerImpl}
+import controllers.dataset._
 
 class ControllerModule extends AbstractModule {
 
@@ -10,5 +10,9 @@ class ControllerModule extends AbstractModule {
     install(new FactoryModuleBuilder()
       .implement(classOf[DictionaryController], classOf[DictionaryControllerImpl])
         .build(classOf[DictionaryControllerFactory]))
+
+    install(new FactoryModuleBuilder()
+      .implement(classOf[CategoryController], classOf[CategoryControllerImpl])
+      .build(classOf[CategoryControllerFactory]))
   }
 }

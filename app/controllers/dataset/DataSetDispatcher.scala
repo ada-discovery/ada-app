@@ -13,6 +13,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Contr
       throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
     )
 
+ //  override def get(id: BSONObjectID) = dispatch(_.get(id))
+
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 
   override def find(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.find(page, orderBy, filter))

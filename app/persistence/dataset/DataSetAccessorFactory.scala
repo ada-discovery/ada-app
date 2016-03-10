@@ -21,15 +21,18 @@ trait DataSetAccessorFactory {
 @Singleton
 protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     dataSetRepoFactory: JsObjectCrudRepoFactory,
-    dictionaryFieldRepoFactory: DictionaryFieldRepoFactory,
+    fieldRepoFactory: DictionaryFieldRepoFactory,
+    categoryRepoFactory: DictionaryCategoryRepoFactory,
     dataSetMetaInfoRepo: DataSetMetaInfoRepo
   ) extends RefreshableCache[String, DataSetAccessor] with DataSetAccessorFactory {
 
   override def createInstance(dataSetId: String): DataSetAccessor = {
     val collectionName = dataCollectionName(dataSetId)
     val dataSetRepo = dataSetRepoFactory(collectionName)
-    val dictionaryFieldRepo = dictionaryFieldRepoFactory(dataSetId)
-    new DataSetAccessorImpl(dataSetId, dataSetRepo, dictionaryFieldRepo, dataSetMetaInfoRepo)
+    val fieldRepo = fieldRepoFactory(dataSetId)
+    val categoryRepo = categoryRepoFactory(dataSetId)
+
+    new DataSetAccessorImpl(dataSetId, dataSetRepo, fieldRepo, categoryRepo, dataSetMetaInfoRepo)
   }
 
   override def register(metaInfo: DataSetMetaInfo) =

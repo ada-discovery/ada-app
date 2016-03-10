@@ -9,14 +9,16 @@ import scala.concurrent.Future
 trait DataSetAccessor{
   def dataSetId: String
   def dataSetRepo: JsObjectCrudRepo
-  def dictionaryFieldRepo: DictionaryFieldRepo
+  def fieldRepo: DictionaryFieldRepo
+  def categoryRepo: DictionaryCategoryRepo
   def metaInfo: Future[DataSetMetaInfo]
 }
 
 protected class DataSetAccessorImpl(
   val dataSetId: String,
   val dataSetRepo: JsObjectCrudRepo,
-  val dictionaryFieldRepo: DictionaryFieldRepo,
+  val fieldRepo: DictionaryFieldRepo,
+  val categoryRepo: DictionaryCategoryRepo,
   dataSetMetaInfoRepo: DataSetMetaInfoRepo
   ) extends DataSetAccessor{
 
@@ -30,4 +32,3 @@ protected class DataSetAccessorImpl(
     }
   }
 }
-

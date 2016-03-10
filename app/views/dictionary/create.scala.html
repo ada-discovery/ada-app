@@ -1,20 +1,32 @@
 @import controllers.dataset.DictionaryRouter
 @import views.html.layout
+@import views.html.elements._
 
-@import models.Field
+@import models.{Field, Category}
 
 @(
     domainName : String,
 	form: Form[Field],
+	categories: Traversable[Category],
 	router : DictionaryRouter
 )(
 	implicit msg: play.api.i18n.Messages, request: RequestHeader
 )
 
+@elements = {
+    @inputText(domainName, "name", form)
+    @inputText(domainName, "fieldType", form)
+    @inputText(domainName, "isArray", form)
+    @inputText(domainName, "numValues", form)
+    @inputText(domainName, "aliases", form)
+    @inputText(domainName, "label", form)
+    @select(domainName, "categoryId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
+}
+
 @layout.create(
     domainName,
 	form,
-	editableTextElements(domainName, form),
+    elements,
     router.save,
     router.plainList
 )

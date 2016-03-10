@@ -7,8 +7,10 @@ import com.google.inject.assistedinject.Assisted
 import controllers.{CrudController, EnumFormatter, MapJsonFormatter}
 import models._
 import models.DataSetFormattersAndIds._
+import persistence.AscSort
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.DictionaryFieldRepo._
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
@@ -31,13 +33,14 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSetMetaInfoRepo: DataSetMetaInfoRepo
-  ) extends CrudController[Field, String](dsaf(dataSetId).get.dictionaryFieldRepo) with DictionaryController {
+  ) extends CrudController[Field, String](dsaf(dataSetId).get.fieldRepo) with DictionaryController {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
+  protected val categoryRepo: CategoryRepo = dsa.categoryRepo
 
   protected lazy val dataSetName = Await.result(dsa.metaInfo, 120000 millis).name
 
-  protected override val listViewColumns = Some(Seq("name", "fieldType", "label"))
+  protected override val listViewColumns = Some(Seq("name", "fieldType", "label", "category"))
 
   implicit val fieldTypeFormatter = EnumFormatter(FieldType)
   implicit val mapFormatter = MapJsonFormatter.apply
@@ -50,28 +53,50 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       "numValues" -> optional(of[Map[String, String]]),
       "aliases" ->  seq(nonEmptyText),
       "label" ->  optional(nonEmptyText),
-      "categoryId" -> ignored(Option.empty[BSONObjectID]),
-      "category" -> ignored(Option.empty[Category])
-    )(Field.apply)(Field.unapply))
+      "categoryId" -> optional(nonEmptyText)
+      // TODO: make it more pretty perhaps by moving the category stuff to proxy/subclass of Field
+    ) { (name, fieldType, isArray, numValues, aliases, label, categoryId) =>
+      Field(name, fieldType, isArray, numValues, aliases, label, categoryId.map(BSONObjectID(_)))
+    }
+    ((field: Field) => Some(field.name, field.fieldType, field.isArray, field.numValues, field.aliases, field.label, field.categoryId.map(_.stringify)))
+  )
 
   // router for requests; to be passed to views as helper.
-  protected lazy val router: DictionaryRouter = DictionaryRouter(dataSetId)
+  protected lazy val router: DictionaryRouter = new DictionaryRouter(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)
 
   override protected def createView(f : Form[Field])(implicit msg: Messages, request: RequestHeader) =
-    dictionary.create(dataSetName + " Field", f, router)
+    dictionary.create(dataSetName + " Field", f, allCategories, router)
 
   override protected def showView(name: String, f : Form[Field])(implicit msg: Messages, request: RequestHeader) =
     editView(name, f)
 
   override protected def editView(name: String, f : Form[Field])(implicit msg: Messages, request: RequestHeader) =
-    dictionary.edit(dataSetName + " Field", name, f, router)
+    dictionary.edit(dataSetName + " Field", name, f, allCategories, router)
 
   // TODO: Remove
   override protected def listView(page: Page[Field])(implicit msg: Messages, request: RequestHeader) =
-    throw new IllegalAccessException("List not implemented... used overviewList instead.")
+    throw new IllegalAccessException("List not implemented... use overviewList instead.")
+
+  // TODO: change to an async call
+  protected def allCategories = {
+    val categoriesFuture = categoryRepo.find(None, Some(Seq(AscSort("name"))))
+    Await.result(categoriesFuture, 120000 millis)
+  }
+
+//  override protected  def getCall(name: String) =
+//    for {
+//      field <- repo.get(name)
+//      _ <- setCategoryById(categoryRepo, field.get) if (field.isDefined)
+//    } yield field
+
+//    repo.get(name).flatMap(_.fold(
+//      Future(Option.empty[Field])
+//    ) { field =>
+//      setCategoryById(categoryRepo, field).map(_ => Some(field))
+//    })
 
   private def overviewListView(
     page: Page[Field],
@@ -88,24 +113,29 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     )
 
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+    implicit val msg = messagesApi.preferred(request)
+
     val fieldNameExtractors = Seq(
       ("Field Type", "fieldType", (field : Field) => field.fieldType)
 //      ("Enum", "isEnum", (field : Field) => field.isEnum)
     )
-
     val futureFieldChartSpecs = fieldNameExtractors.map { case (title, fieldName, fieldExtractor) =>
       getDictionaryChartSpec(title, filter.toJsonCriteria, fieldName, fieldExtractor).map(chartSpec => FieldChartSpec(fieldName, chartSpec))
     }
-
+    val fieldChartSpecsFuture = Future.sequence(futureFieldChartSpecs)
     val futureMetaInfos = dataSetMetaInfoRepo.find()
-
     val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
 
-    futureItems.zip(futureCount).zip(futureMetaInfos).zip(Future.sequence(futureFieldChartSpecs)).map{
-      case (((items, count), metaInfos),fieldChartSpecs) => {
-        implicit val msg = messagesApi.preferred(request)
+    {
+      for {
+        items <- futureItems
+        count <- futureCount
+        metaInfos <- futureMetaInfos
+        fieldChartSpecs <- fieldChartSpecsFuture
+        _ <- setCategoriesById(categoryRepo, items)
+      } yield
         Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), fieldChartSpecs, metaInfos))
-      }}.recover {
+    }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the dictionary list process")
         InternalServerError(t.getMessage)
