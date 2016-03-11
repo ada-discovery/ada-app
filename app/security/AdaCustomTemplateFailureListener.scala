@@ -15,5 +15,5 @@ class AdaCustomTemplateFailureListener extends TemplateFailureListener {
 
   val logger: Logger = Logger("deadbolt.template")
 
-   override def failure(message: String, timeout: Long): Unit = logger.error(s"Bad things! Message [$message]  timeout [$timeout]ms")
+   override def failure(message: String, timeout: Long): Unit = logger.error(s"Unauthorized access. Message [$message]  timeout [$timeout]ms")
  }

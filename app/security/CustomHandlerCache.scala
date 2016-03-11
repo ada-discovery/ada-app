@@ -18,8 +18,8 @@ class CustomHandlerCacheImpl @Inject() (myUserManager: UserManager) extends Cust
   // a hook need by auth config
   override val userManager = myUserManager
 
-  override def defaultHandler = new AdaDeadboltHandler(currentUser)
-  override def ldapHandler = new LdapDeadboltHandler(currentUser)
+  override def defaultHandler = new AdaDeadboltHandler(currentUser, Some(new CustomDynamicResourceHandler))
+  override def ldapHandler = new LdapDeadboltHandler(currentUser, Some(new CustomDynamicResourceHandler))
 }
 
 @ImplementedBy(classOf[CustomHandlerCacheImpl])
