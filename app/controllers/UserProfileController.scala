@@ -8,7 +8,7 @@ import scala.concurrent.Future
 
 import javax.inject.Inject
 
-import models.security.{UserManager, CustomUser, SecurityRoleCache}
+import models.security.{UserManager, CustomUser}
 import be.objectify.deadbolt.scala.DeadboltActions
 
 

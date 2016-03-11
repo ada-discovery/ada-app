@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 class JansDataSetController @Inject() (
     myUserManager: UserManager,
-    myLdapUserManager: LdapUserManager,
+    //myLdapUserManager: LdapUserManager,
     deadbolt: LdapActions
   ) extends Controller with AuthElement with AdaAuthConfig {
 
@@ -44,10 +44,10 @@ class JansDataSetController @Inject() (
     Ok("sessions cleared").withNewSession
   }
 
-  def listLDAP = Action { implicit request =>
+  /*def listLDAP = Action { implicit request =>
     val users: List[String] = myLdapUserManager.getEntryList
     val content = "ldap entry list (" + users.size + "):\n" + users.fold("")((s,a)=> a+"\n\n"+s)
     Ok(content)
-  }
+  }*/
 
 }

@@ -23,8 +23,6 @@ GET         /unauthorized                                                       
 GET         /loginBasic                                                             controllers.AuthController.loginBasic
 GET         /loginAdmin                                                             controllers.AuthController.loginAdmin
 
-GET         /ldaplist                                                               controllers.JansDataSetController.listLDAP
-
 
 # Admin
 GET         /runnables                                                              controllers.AdminController.listRunnables
