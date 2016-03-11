@@ -1,8 +1,10 @@
 package security
 
-import controllers.{routes}
+import controllers.routes
 
 import play.api.mvc._
+import play.api.Logger
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -57,6 +59,17 @@ class AdaDeadboltHandler(
     * @return Redirect to login form.
     */
   def onAuthFailure[A](request: Request[A]): Future[Result] = {
+    val subjOpFuture: Future[Option[Subject]] = getSubject(request)
+
+    subjOpFuture.map { subjOp: Option[Subject] =>
+      if(subjOp.isDefined){
+        val username = subjOp.get.getIdentifier
+        Logger.error(s"Unauthorized access by [$username].")
+      }else{
+        Logger.error("Unauthorized access by unregistered user.")
+      }
+    }
+
     Future(Results.Redirect(routes.AuthController.unauthorized))
   }
 }
