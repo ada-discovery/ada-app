@@ -15,12 +15,10 @@ object RepoTypes {
   type UserRepo = AsyncCrudRepo[CustomUser, BSONObjectID]
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
 
+  type DictionaryRootRepo = MongoAsyncCrudExtraRepo[Dictionary, BSONObjectID]
   type DictionaryFieldRepo = DictionarySubordinateRepo[Field, String]
   type DictionaryCategoryRepo = DictionarySubordinateRepo[Category, BSONObjectID]
-
   type DataSetMetaInfoRepo = AsyncCrudRepo[DataSetMetaInfo, BSONObjectID]
-  type DictionaryRootRepo = MongoAsyncCrudExtraRepo[Dictionary, BSONObjectID]
-  type CategoryRepo = AsyncCrudRepo[Category, BSONObjectID]
 
   // experimental
   type StudentDistRepo = DistributedRepo[Student, BSONObjectID]

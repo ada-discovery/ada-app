@@ -28,12 +28,11 @@ protected abstract class InferDeNoPaDictionary(dataSetId: String) extends InferD
     val categoryIdMap: Map[Category, BSONObjectID] =
       (result(categoryIdsFuture1, timeout) ++ result(categoryIdsFuture2, timeout)).toMap
 
-//    super.run
+    super.run
 
     val fieldNames = (fieldCategoryMap.keys ++ fieldLabelMap.keys).toSet
 
     val updateFieldFutures = fieldNames.map{ fieldName =>
-      // TODO: is escape needed
       val escapedFieldName = escapeKey(fieldName)
 
       fieldRepo.find(Some(Json.obj("name" -> escapedFieldName))).map { fields =>
@@ -46,13 +45,13 @@ protected abstract class InferDeNoPaDictionary(dataSetId: String) extends InferD
           if (category.isDefined)
             field.categoryId = Some(categoryIdMap(category.get))
           else {
-            println(s"Not category found for the field $fieldName.")
+            println(s"No category found for the field $fieldName.")
           }
 
           val newField = if (label.isDefined)
             field.copy(label = Some(label.get))
           else {
-            println(s"Not category found for the field $fieldName.")
+            println(s"No category found for the field $fieldName.")
             field
           }
 

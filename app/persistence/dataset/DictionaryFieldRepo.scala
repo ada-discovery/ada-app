@@ -5,7 +5,7 @@ import javax.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import models.DataSetFormattersAndIds._
 import models.Field
-import persistence.RepoTypes.{DictionaryFieldRepo, CategoryRepo, DictionaryRootRepo}
+import persistence.RepoTypes._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import scala.concurrent.Future
@@ -22,7 +22,7 @@ protected[persistence] class DictionaryFieldMongoAsyncCrudRepo @Inject() (
 object DictionaryFieldRepo {
 
   def setCategoriesById(
-    categoryRepo: CategoryRepo,
+    categoryRepo: DictionaryCategoryRepo,
     fields: Traversable[Field]
   ): Future[Unit] = {
     val futureUnits = fields.map(setCategoryById(categoryRepo, _))
@@ -30,7 +30,7 @@ object DictionaryFieldRepo {
   }
 
   def setCategoryById(
-    categoryRepo: CategoryRepo,
+    categoryRepo: DictionaryCategoryRepo,
     field: Field
   ): Future[Unit] =
     field.categoryId match {
@@ -43,7 +43,7 @@ object DictionaryFieldRepo {
 
   // search for a category with a given name (if multiple, select the first one)
   def setCategoryByName(
-    categoryRepo: CategoryRepo,
+    categoryRepo: DictionaryCategoryRepo,
     field: Field
   ): Future[Unit] =
     field.category match {

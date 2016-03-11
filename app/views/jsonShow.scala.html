@@ -1,5 +1,5 @@
 @import views.html.layout.main
-@import views.html.elements.twitterBootstrapJsValue
+@import views.html.elements.{value => elementValue}
 @import play.api.libs.json.{JsObject, JsNull}
 @import util.JsonUtil.unescapeKey
 
@@ -24,7 +24,7 @@
 			<fieldset>
 			@item.fields.map { case (key, value) =>
 				@if(!nonNullOnly || value != JsNull) {
-					@twitterBootstrapJsValue(key, attributeLabel(domainName, unescapeKey(key).take(35)), value.asOpt[String].getOrElse(value.toString()), false)
+					@elementValue(key, attributeLabel(domainName, unescapeKey(key).take(35)), value.asOpt[String].getOrElse(value.toString()), false)
 				}
 			}
 			</fieldset>

@@ -11,9 +11,8 @@ import scala.concurrent.Future
 import javax.inject.Inject
 
 protected class JsObjectMongoCrudRepo @Inject() (
-    @Assisted collectionName : String,
-    identityName : String = "_id"
-  ) extends MongoAsyncReadonlyRepo[JsObject, BSONObjectID](collectionName, identityName) with JsObjectCrudRepo {
+    @Assisted collectionName : String
+  ) extends MongoAsyncReadonlyRepo[JsObject, BSONObjectID](collectionName, "_id") with JsObjectCrudRepo {
 
   override def save(entity: JsObject): Future[BSONObjectID] = {
     val id = BSONObjectID.generate

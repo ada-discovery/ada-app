@@ -36,7 +36,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   ) extends CrudController[Field, String](dsaf(dataSetId).get.fieldRepo) with DictionaryController {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
-  protected val categoryRepo: CategoryRepo = dsa.categoryRepo
+  protected val categoryRepo: DictionaryCategoryRepo = dsa.categoryRepo
 
   protected lazy val dataSetName = Await.result(dsa.metaInfo, 120000 millis).name
 

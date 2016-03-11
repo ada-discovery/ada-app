@@ -3,7 +3,7 @@ package controllers
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import _root_.util.{FilterCondition, FilterSpec}
+import _root_.util.FilterSpec
 import models.{Identity, Page}
 import persistence._
 import play.api.Logger
@@ -12,13 +12,16 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
 import play.twirl.api.Html
+import scala.concurrent.Await._
+import scala.concurrent.duration._
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.util._
 
 /**
  * Generic async readonly controller
- * @param E type of entity
+  *
+  * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
 protected abstract class ReadonlyController[E : Format, ID](protected val repo: AsyncReadonlyRepo[E, ID]) extends Controller {
@@ -26,6 +29,8 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   @Inject var messagesApi: MessagesApi = _
 
   protected val limit = 20
+
+  protected val timeout = 120000 millis
 
   protected def repoHook = repo
 
@@ -153,4 +158,7 @@ protected abstract class ReadonlyController[E : Format, ID](protected val repo: 
   protected def toJsonProjection(fieldNames : Option[Seq[String]]): Option[JsObject] =
     fieldNames.map(fieldNames =>
       JsObject(fieldNames.map(fieldName => (fieldName, Json.toJson(1)))))
+
+  protected def result[T](future: Future[T]): T =
+    Await.result(future, timeout)
 }

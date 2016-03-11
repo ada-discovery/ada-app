@@ -44,7 +44,7 @@ protected abstract class DataSetControllerImpl(
 
   // hooks
 
-  protected lazy val dataSetName = result(dsa.metaInfo, timeout).name
+  protected lazy val dataSetName = result(dsa.metaInfo).name
 
   // keyfield, mainly used for data export
   protected def keyField: String
@@ -99,7 +99,7 @@ protected abstract class DataSetControllerImpl(
     dataset.list(
       dataSetName + " Item",
       page,
-      result(getFieldLabelMap(listViewColumns.get), 120000 millis), // TODO: refactor
+      result(getFieldLabelMap(listViewColumns.get)), // TODO: refactor
       listViewColumns.get,
       router
     )
@@ -116,7 +116,7 @@ protected abstract class DataSetControllerImpl(
     dataset.overviewList(
       dataSetName + " Item",
       page,
-      result(getFieldLabelMap(listViewColumns.get), 120000 millis),  // TODO: refactor
+      result(getFieldLabelMap(listViewColumns.get)),  // TODO: refactor
       listViewColumns.get,
       fieldChartSpecs,
       router,
@@ -404,7 +404,7 @@ protected abstract class DataSetControllerImpl(
 
   // TODO: keep as async
   private def getMetaInfos: Traversable[DataSetMetaInfo] =
-    result(dataSetMetaInfoRepo.find(), timeout)
+    result(dataSetMetaInfoRepo.find())
 
   //////////////////////
   // Export Functions //
@@ -449,7 +449,7 @@ protected abstract class DataSetControllerImpl(
     orderBy : String
   ): String = {
     val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
-    val records = result(recordsFuture, timeout)
+    val records = result(recordsFuture)
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()
 
@@ -457,7 +457,7 @@ protected abstract class DataSetControllerImpl(
       records,
       keyField,
       tranSMARTVisitField,
-      result(fieldNameCategoryMap(categoriesFuture), timeout)
+      result(fieldNameCategoryMap(categoriesFuture))
     )
   }
 
@@ -475,7 +475,7 @@ protected abstract class DataSetControllerImpl(
     orderBy : String
   ): String = {
     val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
-    val records = result(recordsFuture, timeout)
+    val records = result(recordsFuture)
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()
 
@@ -484,9 +484,9 @@ protected abstract class DataSetControllerImpl(
       dataFilename,
       keyField,
       tranSMARTVisitField,
-      result(fieldNameCategoryMap(categoriesFuture), timeout),
-      result(rootCategoryTree(categoriesFuture), timeout),
-      result(fieldLabelMap, timeout)
+      result(fieldNameCategoryMap(categoriesFuture)),
+      result(rootCategoryTree(categoriesFuture)),
+      result(fieldLabelMap)
     )
   }
 

@@ -1,6 +1,7 @@
 @import views.html.layout
+@import views.html.table.displayTable
 @import views.html.elements._
-@import models.Category
+@import models.{Category, Field}
 @import controllers.dataset.CategoryRouter
 @import reactivemongo.bson.BSONObjectID
 
@@ -9,14 +10,28 @@
     id : BSONObjectID,
     form: Form[Category],
     categories: Traversable[Category],
-    router : CategoryRouter
+    fields: Traversable[Field],
+    router: CategoryRouter,
+    getField: String => Call
 )(
     implicit msg: play.api.i18n.Messages, request: RequestHeader
 )
 
+@table = @{
+    displayTable(
+        fields,
+        { (fieldName: String, fieldLabel: String)  => Html(fieldLabel)},
+        Seq(
+            ("name", "Name", {item : Any => Html(item.asInstanceOf[Field].name)})
+        ),
+        Some({ item : Any => getField(item.asInstanceOf[Field].name)})
+    )
+}
+
 @elements = {
     @inputText(domainName, "name", form)
     @select(domainName, "parentId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
+    @labelValue("fields", "Fields")(table)
 }
 
 @layout.edit(

@@ -30,7 +30,7 @@ protected[persistence] class DictionaryCategoryMongoAsyncCrudRepo @Inject() (
 object DictionaryCategoryRepo {
 
   def saveRecursively(
-    categoryRepo: CategoryRepo,
+    categoryRepo: DictionaryCategoryRepo,
     category: Category
   ): Future[Seq[(Category, BSONObjectID)]] =
     categoryRepo.save(category).flatMap { id =>

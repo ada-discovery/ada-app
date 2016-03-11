@@ -14,7 +14,12 @@
 
 @actions = {
     <div class="row">
-        @filter(page.filter, router.plainList, Left(Seq("name")))
+        <div class="col-md-9">
+            @filter(page.filter, router.plainList, Left(Seq("name")))
+        </div>
+        <div class="pull-right">
+            <a class="btn btn-success btn-sm pull-right" id="add" href="@router.create">Add new</a>
+        </div>
     </div>
 }
 

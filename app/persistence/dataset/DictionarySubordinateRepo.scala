@@ -3,7 +3,7 @@ package persistence.dataset
 import models.DataSetFormattersAndIds._
 import models.{Identity, Dictionary, Field, Category}
 import persistence.{DescSort, AscSort, Sort, AsyncCrudRepo}
-import persistence.RepoTypes.{CategoryRepo, DictionaryRootRepo}
+import persistence.RepoTypes.DictionaryRootRepo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.modules.reactivemongo.json.BSONObjectIDFormat
@@ -152,12 +152,7 @@ protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, 
     */
   override def get(id: ID): Future[Option[E]] = {
     val futureSubordinates = find(Some(Json.obj(identity.name -> id)))
-    futureSubordinates.map(subordinates =>
-      if (subordinates.isEmpty)
-        None
-      else
-        Some(subordinates.head)
-    )
+    futureSubordinates.map(_.headOption)
   }
 
   /**
@@ -200,7 +195,8 @@ protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, 
         JsObject(extsubordinateListNames)
       }
 
-    // TODO: projection can not be passed here since subordinateListName JSON formatter expects ALL attributes to be returned. It could be solved either by making all subordinateListName attributes optional (Option[..]) or introducing a special JSON formatter with default values for each attribute
+    // TODO: projection can not be passed here since subordinateListName JSON formatter expects ALL attributes to be returned.
+    // It could be solved either by making all subordinateListName attributes optional (Option[..]) or introducing a special JSON formatter with default values for each attribute
     val result = dictionaryRepo.findAggregate(
       criteria = Some(fullCriteria),
       orderBy = fullOrderBy,

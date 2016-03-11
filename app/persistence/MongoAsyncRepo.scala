@@ -19,7 +19,7 @@ import reactivemongo.api._
 
 protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     collectionName : String,
-    identityName : String
+    val identityName : String
   ) extends AsyncReadonlyRepo[E, ID] {
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -171,7 +171,7 @@ protected class MongoAsyncCrudRepo[E: Format, ID: Format](
       idGroup.map(id => Group(id)(groups.get: _*))               // $group
     ).flatten
 
-    val result = collection.aggregate(params.head, params.tail)
+    val result = collection.aggregate(params.head, params.tail, false, true)
 
     result.map(_.documents)
   }
