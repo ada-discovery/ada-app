@@ -2,12 +2,11 @@
         // default options
         options: {
             jsonData: null,
+            showNodeFun: null,
             duration: 750,
             width: 960,
             height: 800,
             maxTextLength: 20,
-            // callbacks
-            change: null
         },
 
         // the constructor
@@ -71,6 +70,10 @@
             var nodeEnter = node.enter().append("g")
                 .attr("class", "node")
                 .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
+
+            nodeEnter.append("circle")
+                .attr("r", 1e-6)
+                .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; })
                 .on("click", function(d) {
                     if (d.children) {
                         d._children = d.children;
@@ -80,11 +83,7 @@
                         d._children = null;
                     }
                     that._update(d);
-                });
-
-            nodeEnter.append("circle")
-                .attr("r", 1e-6)
-                .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+                })
 
             nodeEnter.append("text")
                 .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
@@ -94,7 +93,10 @@
                     var maxLength = that.options.maxTextLength;
                     return (d.name.length > maxLength) ? d.name.substring(0, maxLength - 2) + ".." : d.name;
                 })
-                .style("fill-opacity", 1e-6);
+                .style("fill-opacity", 1e-6)
+                .on("click", function(d) {
+                    that.options.showNodeFun(d)
+                })
 
             // Transition nodes to their new position.
             var nodeUpdate = node.transition()
@@ -102,7 +104,7 @@
                 .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
 
             nodeUpdate.select("circle")
-                .attr("r", 4.5)
+                .attr("r", 7)
                 .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
 
             nodeUpdate.select("text")
