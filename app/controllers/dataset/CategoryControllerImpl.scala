@@ -14,6 +14,7 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, Action, RequestHeader}
+import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.json.BSONObjectIDFormat
@@ -52,6 +53,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   // router for requests; to be passed to views as helper.
   protected lazy val router: CategoryRouter = new CategoryRouter(dataSetId)
+  protected lazy val jsRouter: CategoryJsRouter = new CategoryJsRouter(dataSetId)
 
   // field router
   protected lazy val fieldRouter: DictionaryRouter = new DictionaryRouter(dataSetId)
@@ -85,7 +87,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   override def getCategoryD3Root = Action { implicit request =>
     val categories = allCategories
 
-    val idD3NodeMap = categories.map(category => (category._id.get, D3Node(category.name, None))).toMap
+    val idD3NodeMap = categories.map(category => (category._id.get, D3Node(category._id, category.name, None))).toMap
 
     categories.foreach { category =>
       if (category.parentId.isDefined) {
@@ -97,15 +99,22 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
     val layerOneCategories = categories.filter(_.parentId.isEmpty)
 
-    val root = D3Node("Root", None, layerOneCategories.map(category => idD3NodeMap(category._id.get)).toSeq)
+    val root = D3Node(None, "Root", None, layerOneCategories.map(category => idD3NodeMap(category._id.get)).toSeq)
 
     Ok(Json.toJson(root))
+  }
+
+  override def jsRoutes = Action { implicit request =>
+    Ok(
+      JavaScriptReverseRouter("jsRoutes")(
+        jsRouter.get
+      )
+    ).as("text/javascript")
   }
 
   // TODO: change to an async call
   protected def allCategories = {
     val categoriesFuture = repo.find(None, Some(Seq(AscSort("name"))))
-//    val categoriesFuture = repo.find().map(_.toSeq.sortBy(_.name))
     result(categoriesFuture)
   }
 

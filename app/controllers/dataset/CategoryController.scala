@@ -23,4 +23,6 @@ trait CategoryController {
   def delete(id: BSONObjectID): Action[AnyContent]
 
   def getCategoryD3Root: Action[AnyContent]
+
+  def jsRoutes: Action[AnyContent]
 }

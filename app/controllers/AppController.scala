@@ -3,9 +3,10 @@ package controllers
 import javax.inject.Inject
 
 import persistence.RepoTypes.DataSetMetaInfoRepo
-import views.html.layout
-import play.api.mvc.{Action, Controller}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.{Action, Controller}
+import play.api.routing.JavaScriptReverseRouter
+import views.html.layout
 
 class AppController @Inject() (dataSetMetaInfoRepo: DataSetMetaInfoRepo) extends Controller {
 
@@ -18,5 +19,13 @@ class AppController @Inject() (dataSetMetaInfoRepo: DataSetMetaInfoRepo) extends
     dataSetMetaInfoRepo.find().map( metaInfos =>
       Ok(layout.studies(metaInfos))
     )
+  }
+
+  def javascriptRoutes = Action { implicit request =>
+    Ok(
+      JavaScriptReverseRouter("jsRoutes")(
+        routes.javascript.AdminController.listRunnables
+      )
+    ).as("text/javascript")
   }
 }

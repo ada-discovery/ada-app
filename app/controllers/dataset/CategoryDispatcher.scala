@@ -28,7 +28,9 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
 
   override def save = dispatch(_.save)
 
-  override def getCategoryD3Root= dispatch(_.getCategoryD3Root)
+  override def getCategoryD3Root = dispatch(_.getCategoryD3Root)
+
+  override def jsRoutes = dispatch(_.jsRoutes)
 
   override def dataSetId = ???
 }
