@@ -1,13 +1,16 @@
 package controllers
 
 import javax.inject.Inject
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
+import play.api.libs.json.{JsNull, JsString, JsObject}
 import security.AdaAuthConfig
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
 
 import scala.concurrent.duration._
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.{Result, Action, Controller}
 import play.api.data.Forms._
 import play.api.data._
 
@@ -36,8 +39,6 @@ class AuthController @Inject() (
     )
   }
 
-  // Await.result(userManager.authenticate, 120000 millis)
-
   /**
     * Redirect to login page.
     */
@@ -60,6 +61,32 @@ class AuthController @Inject() (
   def loggedOut = Action { implicit request =>
     Ok(views.html.auth.loggedOut())
   }
+
+  /**
+    * Login for restful api.
+    * Gives restful response for form errors and login success.
+    * @return
+    */
+  def loginREST = Action.async { implicit request =>
+    loginForm.bindFromRequest().fold(
+      formWithErrors => Future.successful(BadRequest(loginForm.errorsAsJson)),
+      emailPassword => {
+        val usrOpFuture: Future[Option[CustomUser]] = myUserManager.findByEmail(emailPassword._1)
+        usrOpFuture.flatMap{usrOp =>
+          val usrJs = JsObject("user" -> JsString(usrOp.get.name) :: Nil)
+          gotoLoginSucceeded(usrOp.get.name, Future.successful((Ok(usrJs))))}
+      }
+    )
+  }
+
+  /**
+    * Logout for restful api.
+    * @return
+    */
+  def logoutREST = Action { implicit request =>
+    Ok(JsNull).withNewSession
+  }
+
 
   /**
     * Check user name and password.

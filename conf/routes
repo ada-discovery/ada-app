@@ -16,6 +16,9 @@ GET         /adminpanel                                                         
 GET         /login                                                                  controllers.AuthController.login
 POST        /login                                                                  controllers.AuthController.authenticate
 GET         /logout                                                                 controllers.AuthController.logout
+POST        /loginRest                                                              controllers.AuthController.loginREST
+GET        /logoutRest                                                             controllers.AuthController.logoutREST
+
 GET         /loggedout                                                              controllers.AuthController.loggedOut
 GET         /unauthorized                                                           controllers.AuthController.unauthorized
 
