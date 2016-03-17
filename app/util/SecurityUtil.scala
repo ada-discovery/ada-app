@@ -44,16 +44,16 @@ object SecurityUtil {
 
   /**
     * Create CustomUser object, with password hashed.
-    * @return CusotmUser with hased password.
+    * @return CusotmUser with hashed password.
     */
   def secureUserApply(_id: Option[BSONObjectID], name: String, email: String, password: String, affiliation: String, roles: Seq[String], permissions: Seq[String]): CustomUser = {
     CustomUser(_id, name, email, md5(password), affiliation, roles, permissions)
   }
 
   /**
-    * Extract information from user and hash the password.
-    * @param user CustomUser for extraciton.
-    * @return Tuple with extracted user properties, password ist hashed.
+    * Extract information from user and hide the password hash.
+    * @param user CustomUser for extraction.
+    * @return Tuple with extracted user properties, password is hashed.
     */
   def secureUserUnapply(user: CustomUser): Option[(Option[BSONObjectID], String, String, String, String, Seq[String], Seq[String])] = {
     val hidden: String = user.password.map(_ => '*')

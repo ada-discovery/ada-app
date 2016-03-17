@@ -9,6 +9,6 @@ import scala.concurrent.ExecutionContext
  *
  * @author Steve Chaloner (steve@objectify.be)
  */
-class CustomDeadboltExecutionContextProvider extends DeadboltExecutionContextProvider {
+class AdaDeadboltExecutionContextProvider extends DeadboltExecutionContextProvider {
   override def get(): ExecutionContext = scala.concurrent.ExecutionContext.global
 }

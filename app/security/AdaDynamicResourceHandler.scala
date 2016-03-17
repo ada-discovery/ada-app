@@ -15,10 +15,10 @@ import scala.concurrent.Future
  *
  * @author Steve Chaloner (steve@objectify.be)
  */
-class CustomDynamicResourceHandler extends DynamicResourceHandler
+class AdaDynamicResourceHandler extends DynamicResourceHandler
 {
   def isAllowed[A](name: String, meta: String, handler: DeadboltHandler, request: Request[A]): Future[Boolean] = {
-    val successFuture : Future[Boolean] = CustomDynamicResourceHandler.handlers(name).isAllowed(name, meta, handler, request)
+    val successFuture : Future[Boolean] = AdaDynamicResourceHandler.handlers(name).isAllowed(name, meta, handler, request)
     successFuture.map((success: Boolean) =>
       if(!success){
         Logger.error(s"Unallowed access by [$name].")
@@ -45,7 +45,7 @@ class CustomDynamicResourceHandler extends DynamicResourceHandler
   }
 }
 
-object CustomDynamicResourceHandler {
+object AdaDynamicResourceHandler {
   val handlers: Map[String, DynamicResourceHandler] =
     Map( )
 }

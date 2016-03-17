@@ -59,3 +59,4 @@ class AdminController @Inject() (
     }
   }
 }
+

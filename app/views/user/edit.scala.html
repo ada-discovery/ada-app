@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.elements.editableTextElements
+@import views.html.elements.editableUserForm
 @import models.security.CustomUser
 
 @(
@@ -12,7 +12,7 @@
 @layout.edit(
     "user",
 	errors = form.errors,
-    elements = editableTextElements("user", form),
+    elements = editableUserForm("user", form),
 	updateCall = routes.UserController.update(id),
 	listCall = routes.UserController.listAll(),
     deleteCall = Some(routes.UserController.delete(id))

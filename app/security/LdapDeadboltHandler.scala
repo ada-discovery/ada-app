@@ -35,7 +35,7 @@ class LdapDeadboltHandler (
     * @return
     */
   override def getDynamicResourceHandler[A](request: Request[A]): Future[Option[DynamicResourceHandler]] = {
-    Future(dynamicResourceHandler.orElse(Some(new CustomDynamicResourceHandler())))
+    Future(dynamicResourceHandler.orElse(Some(new AdaDynamicResourceHandler())))
   }
 
   /**

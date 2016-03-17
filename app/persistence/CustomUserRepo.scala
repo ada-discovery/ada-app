@@ -15,6 +15,7 @@ import scala.concurrent.Future
   * Merge of former UserManagerImpl with UserRepo
   *
   */
+@Singleton
 class CustomUserRepo(collectionName: String) extends MongoAsyncCrudRepo[CustomUser, BSONObjectID](collectionName) with UserManager{
 
   // TODO: dummy user profiles. eventually remove them.

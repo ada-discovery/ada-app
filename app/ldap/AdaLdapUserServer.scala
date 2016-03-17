@@ -2,10 +2,10 @@ package ldap
 
 import java.util
 
-import com.unboundid.ldap.listener.{InMemoryDirectoryServerSnapshot, InMemoryDirectoryServerConfig, InMemoryDirectoryServer}
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.unboundid.ldap.listener.{InMemoryDirectoryServer, InMemoryDirectoryServerConfig}
 import com.unboundid.ldap.sdk._
 import persistence.CustomUserRepo
-import play.api.Play._
 
 import _root_.util.SecurityUtil
 
@@ -14,8 +14,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.FiniteDuration
 
-import models.security.{SecurityPermissionCache, SecurityRoleCache, CustomUser, UserManager}
-import persistence.RepoTypes.UserRepo
+import models.security.{UserManager, SecurityPermissionCache, SecurityRoleCache, CustomUser}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConversions._
@@ -28,55 +27,77 @@ import ldap.LdapUtil
   * If no LDAPInterface is used, an InMemoryDirectoryServer based is created.
   * Users from the current user repo are sued.
   */
-class AdaLdapUserServer(ldap: Option[LDAPInterface] = None) extends UserManager{
+@ImplementedBy(classOf[AdaLdapUserServerImpl])
+trait AdaLdapUserServer extends UserManager{
 
-  override val adminUser = new CustomUser(None, "admin user", "admin@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  override val basicUser = new CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  val ldapServer: LDAPInterface
+
+  def createTree(interface: LDAPInterface): Unit
+  def addPermissions(interface: LDAPInterface): Unit
+  def addRoles(sinterface: LDAPInterface): Unit
+
+  def addUsersFromRepo(userRepo: CustomUserRepo): Unit
+  def createServer(): InMemoryDirectoryServer
+  def authorize(userid: String, permission: String): Boolean
+  def getUsers(interface: LDAPInterface): Seq[CustomUser]
+
+  def shutdown(server: InMemoryDirectoryServer): Unit
+
+  def adminUser: CustomUser
+  def basicUser: CustomUser
+}
+
+
+@Singleton
+class AdaLdapUserServerImpl extends AdaLdapUserServer{
+
+  override val adminUser = CustomUser(None, "admin user", "admin@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
+  override val basicUser = CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
 
   // server configuration; not used yet!
-  val defaultPort: Int = current.configuration.getString("ldap.port").getOrElse("389").toInt
+  /*val defaultPort: Int = current.configuration.getString("ldap.port").getOrElse("389").toInt
   val defaultHost: String = current.configuration.getString("ldap.host").getOrElse("locahost")
-  val serverTimeout: Int = current.configuration.getString("ldap.timeout").getOrElse("2000").toInt
+  val serverTimeout: Int = current.configuration.getString("ldap.timeout").getOrElse("2000").toInt*/
 
   // bind configuration; not used yet!
   val defaultbindDn: String = "cn=" + adminUser.email + ",dc=users,dc=ncer"
   val defaultPassword: String = adminUser.password
 
-  val dit = "ncer"       // this variable is not used yet
-  val ldapServer: LDAPInterface = ldap.getOrElse(createServer)
+  //val dit = "ncer"       // this variable is not used yet
+  override val ldapServer: LDAPInterface = createServer
 
   /**
     * Creates branches for users, permissions and roles in ldap tree.
     */
-  def createTree: Unit = {
+  override def createTree(interface: LDAPInterface): Unit = {
     // add root
-    ldapServer.add("dn: dc=ncer", "objectClass: top", "objectClass: domain", "dc: ncer")
+    interface.add("dn: dc=ncer", "objectClass: top", "objectClass: domain", "dc: ncer")
     // add subtrees: roles, permissions, people
-    ldapServer.add("dn: dc=roles,dc=ncer", "objectClass: top", "objectClass: domain", "dc: roles")
-    ldapServer.add("dn: dc=permissions,dc=ncer", "objectClass: top", "objectClass: domain", "dc: permissions")
-    ldapServer.add("dn: dc=users,dc=ncer", "objectClass: top", "objectClass: domain", "dc: users")
+    interface.add("dn: dc=roles,dc=ncer", "objectClass: top", "objectClass: domain", "dc: roles")
+    interface.add("dn: dc=permissions,dc=ncer", "objectClass: top", "objectClass: domain", "dc: permissions")
+    interface.add("dn: dc=users,dc=ncer", "objectClass: top", "objectClass: domain", "dc: users")
   }
 
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat permission tree.
     */
-  def addPermissions: Unit = {
+  override def addPermissions(interface: LDAPInterface): Unit = {
     val dc : String = "dc=permissions,dc=ncer"
     val permissions: Seq[String] = SecurityPermissionCache.getPermissions
     permissions.foreach{p: String =>
-      ldapServer.add("dn: dc=" + p + ","+dc, "objectClass: permission", "objectClass: top", "dc: "+p)
+      interface.add("dn: dc=" + p + ","+dc, "objectClass: permission", "objectClass: top", "dc: "+p)
     }
   }
 
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat role tree.
     */
-  def addRoles: Unit = {
+  override def addRoles(interface: LDAPInterface): Unit = {
     val dc : String = "dc=roles,dc=ncer"
     val roles: Seq[String] = SecurityRoleCache.getRoles
     roles.foreach{r: String =>
       val cn: String = "cn=" + r + ","
-      ldapServer.add("dn: "+cn+dc, "objectClass: group", "objectClass: top", "dc: "+r)
+      interface.add("dn: "+cn+dc, "objectClass: group", "objectClass: top", "dc: "+r)
     }
   }
 
@@ -84,7 +105,7 @@ class AdaLdapUserServer(ldap: Option[LDAPInterface] = None) extends UserManager{
     * Fetches users from database and inserts them into ldap object
     * @param userRepo rep from which users are to be extr4acted and added
     */
-  def addUsersFromRepo(userRepo: CustomUserRepo): Unit = {
+  override def addUsersFromRepo(userRepo: CustomUserRepo): Unit = {
     val timeout: FiniteDuration = 120000 millis
     val usersFuture: Future[Traversable[CustomUser]] = userRepo.find()
     val users: Traversable[CustomUser] = Await.result(usersFuture, timeout)
@@ -99,12 +120,13 @@ class AdaLdapUserServer(ldap: Option[LDAPInterface] = None) extends UserManager{
     * Feed users from user database into server.
     * @return dummy server
     */
-  def createServer(): InMemoryDirectoryServer = {
+  override def createServer(): InMemoryDirectoryServer = {
     // setup configuration
     val config = new InMemoryDirectoryServerConfig("dc=ncer");
     config.setSchema(null); // do not check (attribute) schema
     config.setAuthenticationRequiredOperationTypes(OperationType.DELETE, OperationType.ADD, OperationType.MODIFY, OperationType.MODIFY_DN)
 
+    // required for interaction; commented out for debugging reasons
     //val listenerConfig = new InMemoryListenerConfig("defaultListener", null, defaultPort, null, null, null);
     //config.setListenerConfigs(listenerConfig);
 
@@ -112,10 +134,9 @@ class AdaLdapUserServer(ldap: Option[LDAPInterface] = None) extends UserManager{
     server.startListening();
 
     // initialize ldap structures
-    createTree
-    addPermissions
-    addRoles
-    //addUsersFromRepo(userrepo)
+    createTree(server)
+    addPermissions(server)
+    addRoles(server)
 
     server
   }
@@ -126,7 +147,7 @@ class AdaLdapUserServer(ldap: Option[LDAPInterface] = None) extends UserManager{
     * @param permission Permission to be checked.
     * @return true, if the user exists and has given permission associated.
     */
-  def authorize(userid: String, permission: String): Boolean = {
+  override def authorize(userid: String, permission: String): Boolean = {
     val timeout: FiniteDuration = 120000 millis
     val userFuture: Future[Option[CustomUser]] = findById(userid)
     val resFuture = userFuture.map{userOp =>
@@ -145,7 +166,7 @@ class AdaLdapUserServer(ldap: Option[LDAPInterface] = None) extends UserManager{
     * Reconstruct a sequence of customUsers from users registered in ldap server.
     * @return Seq[CustomUser] for use in other modules.
     */
-  def getUsers(interface: LDAPInterface): Seq[CustomUser] = {
+  override def getUsers(interface: LDAPInterface): Seq[CustomUser] = {
     val baseDN ="dc=users,dc=ncer"
     val scope = SearchScope.SUB
     val filter = Filter.createEqualityFilter("objectClass", "person")
@@ -187,10 +208,16 @@ class AdaLdapUserServer(ldap: Option[LDAPInterface] = None) extends UserManager{
     * @param email String of associated user mail
     * @return CustomUser, if found, None else
     */
-  def findByEmail(email: String): Future[Option[CustomUser]] = {
+  override def findByEmail(email: String): Future[Option[CustomUser]] = {
     //val conn: LDAPConnection = ldapServer.getConnection()
     val entry: SearchResultEntry = ldapServer.getEntry("cn="+email+",dc=users,dc=ncer")
     val user: Option[CustomUser] = LdapUtil.entryToUser(entry)
     Future(user)
   }
+
+
+  override def shutdown(server: InMemoryDirectoryServer): Unit = {
+    server.shutDown(true)
+  }
+
 }

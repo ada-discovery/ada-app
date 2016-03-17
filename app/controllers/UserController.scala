@@ -8,8 +8,6 @@ import persistence.RepoTypes.UserRepo
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, seq, email, text}
 import models.Page
-import play.api.libs.json.Json
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import reactivemongo.bson.BSONObjectID
 import views.html
 import play.api.i18n.Messages
@@ -29,9 +27,9 @@ class UserController @Inject() (
       "email" -> email,
       "password" -> nonEmptyText,
       "affiliation" -> text,
-      "roleNames" -> seq(text),
-      "permissionNames" -> seq(text)
-      )(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))//(CustomUser.apply)(CustomUser.unapply))
+      "roles" -> seq(text),
+      "permissions" -> seq(text)
+      )(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))
 
   override protected val home =
     Redirect(routes.UserController.listAll())
@@ -49,5 +47,5 @@ class UserController @Inject() (
     html.user.list(currentPage)
 
   //@Deprecated
-  override protected val defaultCreateEntity = new CustomUser(None, "", "", "", "", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  override protected val defaultCreateEntity = new CustomUser(None, "", "", "", "", Seq(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
 }

@@ -23,7 +23,6 @@ trait UserManager {
   def findById(id: String): Future[Option[CustomUser]]
   def findByEmail(email: String): Future[Option[CustomUser]]
 
-  // TODO: remove
   def adminUser: CustomUser
   def basicUser: CustomUser
 }
