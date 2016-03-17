@@ -1,13 +1,17 @@
+@import controllers.dataset.DataSetRouter
+@import util.FilterSpec
 @import util.shorten
 @import views.html.layout.main
 @import views.html.dataset.chartPanel
 @import util.ChartSpec
+@import play.api.libs.json.Json
 
 @(
     domainName: String,
     fieldName : String,
     chartSpec: ChartSpec,
-    distributionCall : Call,
+    filterSpec: FilterSpec,
+    router: DataSetRouter,
     dataSetId: String,
     fields: Seq[(String, Option[String])],
     dataSetMetaInfos: Traversable[DataSetMetaInfo]
@@ -23,21 +27,29 @@
     <option value="@key" @if(fieldName == key){selected="selected"}>@label(key, value)</option>
 }
 
-@actions(call : Call) = {
-    @helper.form(action=call, 'role -> "search", 'id -> "myForm") {
+@actions = {
+    <div class="row">
+        <div class="col-md-12">
+            @filter(filterSpec, router.getDistribution(Some(fieldName), filterSpec), Right(router.fieldNames))
+        </div>
+    </div>
+    <hr/>
+    @helper.form(action=router.getDistribution(Some(fieldName), filterSpec), 'role -> "search", 'id -> "myForm") {
         <div class="row">
             <div class="col-md-8">
                 <div class="row">
                     <!-- hacky solution to pass data set param since it's ignored when passed as a part of call in form action -->
                     <input type="hidden" name="dataSet" value="@dataSetId"/>
-                    <select name="fieldName" id="fieldName" class="input-lg" value="@fieldName">
+                    <input type="hidden" name="filter" value="@Json.toJson(filterSpec)"/>
+                    <select name="fieldName" id="fieldName" class="input-lg">
                         @fields.map( field => option(field._1, field._2) )
                     </select>
                 </div>
             </div>
         </div>
         <script>
-            $('#fieldName').change(function() {
+            $('#myForm').first('#fieldName').change(function() {
+                console.log("Bla");
                 $('#myForm').submit();
             });
         </script>
@@ -55,7 +67,7 @@
     @flashMessages()
 
     <div id="actions">
-        @actions(distributionCall)
+        @actions
     </div>
     <br/>
     <br/>

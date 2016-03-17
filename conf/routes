@@ -66,7 +66,6 @@ GET         /studies/records                                                    
 GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
 GET         /studies/records/exportAllAsCsv                                         controllers.dataset.DataSetDispatcher.exportAllRecordsAsCsv(delimiter : String ?= ",")
 GET         /studies/records/exportAllAsJson                                        controllers.dataset.DataSetDispatcher.exportAllRecordsAsJson
-
 GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(delimiter: String ?= ",", filter: util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(filter: util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
@@ -74,8 +73,8 @@ GET         /studies/records/exportTranSMARTMapping                             
 GET         /studies/fieldTypes                                                     controllers.dataset.DataSetDispatcher.overviewFieldTypes
 GET         /studies/overview                                                       controllers.dataset.DataSetDispatcher.overview
 GET         /studies/overviewList                                                   controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: util.FilterSpec ?= new util.FilterSpec())
-GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None)
-GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None)
+GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None, filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 
 GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())

@@ -107,7 +107,7 @@ protected abstract class DataSetControllerImpl(
   /**
     * Table displaying given paginated content with charts on the top. Generally used to display fields of the datasets.
     *
-    * @param page Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenantion of data for display.
+    * @param page Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject representation of data for display.
     * @param msg Internal request message.
     * @param request Header of original request.
     * @return View for all available fields.
@@ -203,7 +203,7 @@ protected abstract class DataSetControllerImpl(
   override def overviewFieldTypes = Action.async { implicit request =>
     fieldRepo.find().map{ fields =>
       if (fields.isEmpty)
-        throw new IllegalStateException(s"Empty dictionary found. Pls. create one by running 'standalone.InferXXXDictionary' script.")
+        throw new IllegalStateException(s"Empty dictionary found. Pls. create one by running 'runnables.InferXXXDictionary' script.")
 
       val fieldTypeCounts = ArrayBuffer.fill(FieldType.values.size)(0)
       fields.foreach { field =>
@@ -296,12 +296,12 @@ protected abstract class DataSetControllerImpl(
   ) =
     toStrings(project(items.toSeq, fieldName))
 
-  private def toStrings(rawValues: Traversable[JsReadable]) =
-    rawValues.map{rawWalue =>
-      if (rawWalue == JsNull)
-        "null"
+  private def toStrings(rawValues: Traversable[JsReadable]): Traversable[Option[String]] =
+    rawValues.map{rawValue =>
+      if (rawValue == JsNull)
+        None
       else
-        rawWalue.as[String]
+        rawValue.asOpt[String]
     }
 
   /**
@@ -313,7 +313,11 @@ protected abstract class DataSetControllerImpl(
     * @param yFieldNameOption Name of field to be used for y coordinates.
     * @return View with scatterplot and selection option for different xFieldName and yFieldName.
     */
-  override def getScatterStats(xFieldNameOption : Option[String], yFieldNameOption: Option[String]) = Action.async { implicit request =>
+  override def getScatterStats(
+    xFieldNameOption : Option[String],
+    yFieldNameOption: Option[String],
+    filter: FilterSpec
+  ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     val xFieldName = xFieldNameOption.getOrElse(defaultScatterXFieldName)
@@ -326,12 +330,14 @@ protected abstract class DataSetControllerImpl(
     numericFieldsFuture.zip(xFieldFuture).zip(yFieldFuture).flatMap{ case ((numericFields, xField), yField) =>
       val numericFieldNameLabels = numericFields.map(field => (field.name, field.label)).toSeq.sorted
       val valuesFuture : Future[Seq[(Any, Any)]] = if (xField.isDefined && yField.isDefined) {
-        val futureXItems = repo.find(None, None, Some(Json.obj(xFieldName -> 1)))
-        val futureYItems = repo.find(None, None, Some(Json.obj(yFieldName -> 1)))
+        val criteria = filter.toJsonCriteria
 
-        futureXItems.zip(futureYItems).map{ case (xItems, yItems) =>
-          val xValues = projectDouble(xItems.toSeq, xFieldName)
-          val yValues = projectDouble(yItems.toSeq, yFieldName)
+        val futureXYItems = repo.find(criteria, None, Some(Json.obj(xFieldName -> 1, yFieldName -> 1)))
+
+        futureXYItems.map{ xyItems =>
+          val xySeq = xyItems.toSeq
+          val xValues = projectDouble(xySeq, xFieldName)
+          val yValues = projectDouble(xySeq, yFieldName)
           (xValues, yValues).zipped.map{ case (xValue, yValue) => (xValue, yValue).zipped}.flatten
         }
       } else
@@ -340,20 +346,32 @@ protected abstract class DataSetControllerImpl(
       valuesFuture.map( values =>
         render {
           case Accepts.Html() => Ok(dataset.scatterStats(
-            dataSetName, xFieldName, yFieldName, router.getScatterStats, dataSetId, numericFieldNameLabels, values, getMetaInfos))
+            dataSetName,
+            xFieldName,
+            yFieldName,
+            filter,
+            router,
+            dataSetId,
+            numericFieldNameLabels,
+            values,
+            getMetaInfos
+          ))
           case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
         }
       )
     }
   }
 
-  override def getDistribution(fieldNameOption: Option[String]) = Action.async { implicit request =>
+  override def getDistribution(
+    fieldNameOption: Option[String],
+    filter: FilterSpec
+  ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     val fieldName = fieldNameOption.getOrElse(defaultDistributionFieldName)
     val fieldsFuture = fieldRepo.find(None, Some(Seq(AscSort("name"))))
     val fieldNameLabelsFuture = fieldsFuture.map(_.map(field => (field.name, field.label)).toSeq)
-    val chartSpecFuture = getDataChartSpec(None, fieldName, true, false)
+    val chartSpecFuture = getDataChartSpec(filter.toJsonCriteria, fieldName, true, false)
 
     {
       for {
@@ -362,7 +380,7 @@ protected abstract class DataSetControllerImpl(
       } yield
         render {
           case Accepts.Html() => Ok(dataset.distribution(
-            dataSetName, fieldName, chartSpec, router.getDistribution, dataSetId, fieldNameLabels, getMetaInfos
+            dataSetName, fieldName, chartSpec, filter, router, dataSetId, fieldNameLabels, getMetaInfos
           ))
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
         }

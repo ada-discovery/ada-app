@@ -161,9 +161,10 @@
     }
 
     function submitFilter() {
+        console.log('@submitCall.url')
         var params = getQueryParams('@submitCall')
         $.extend(params, {filter: JSON.stringify(jsFilter)});
-        console.log(params)
+        console.log(params);
         submit('get', '@submitCall', params);
     }
 
