@@ -20,7 +20,9 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val exportJson  = routeFun(_.exportRecordsAsJson())
   val exportTranSMARTData = routeFun(_.exportTranSMARTDataFile())
   val exportTranSMARTMapping = routeFun(_.exportTranSMARTMappingFile())
-  val getScatterStats = routeFun(_.getScatterStats())
-  val getDistribution = routeFun(_.getDistribution())
+  val plainGetScatterStats = routeFun(_.getScatterStats())
+  val getScatterStats = routes.getScatterStats _ map route
+  val plainGetDistribution = routeFun(_.getDistribution())
+  val getDistribution = routes.getDistribution _ map route
   val fieldNames = routeFun(_.getFieldNames)
 }

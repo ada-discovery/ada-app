@@ -28,9 +28,9 @@ trait DataSetController {
 
   def overviewList(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
 
-  def getScatterStats(xFieldName: Option[String], yFieldName: Option[String]): Action[AnyContent]
+  def getScatterStats(xFieldName: Option[String], yFieldName: Option[String], filter: FilterSpec): Action[AnyContent]
 
-  def getDistribution(fieldName: Option[String]): Action[AnyContent]
+  def getDistribution(fieldName: Option[String], filter: FilterSpec): Action[AnyContent]
 
   def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
 

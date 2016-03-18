@@ -41,7 +41,8 @@ function getQueryParams(qs) {
 
 
   while (tokens = re.exec(qs)) {
-    params[decodeURIComponent(tokens[1])] = decodeURIComponent(tokens[2]);
+    var paramName = decodeURIComponent(tokens[1]).replace("amp;", "");
+    params[paramName] = decodeURIComponent(tokens[2]);
   }
 
   return params;

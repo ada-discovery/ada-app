@@ -25,19 +25,22 @@ object ChartSpec {
     * @return PieChartSpec object for use in view.
     */
   def pie(
-    values: Traversable[_],
+    values: Traversable[Option[String]],
     keyLabelMap: Option[Map[String, String]] = None,
     title: String,
     showLabels: Boolean,
     showLegend: Boolean
   ) : PieChartSpec = {
-    val countMap = MMap[String, Int]()
+    val countMap = MMap[Option[String], Int]()
     values.foreach{ value =>
-      val count = countMap.getOrElse(value.toString, 0)
-      countMap.update(value.toString, count + 1)
+      val count = countMap.getOrElse(value, 0)
+      countMap.update(value, count + 1)
     }
     val data = countMap.toSeq.sortBy(_._2).map{
-      case (key, count) => DataPoint(key, keyLabelMap.map(_.getOrElse(key, key)).getOrElse(key), count)
+      case (key, count) => {
+        val keyOrEmpty = key.getOrElse("")
+        DataPoint(keyOrEmpty, keyLabelMap.map(_.getOrElse(keyOrEmpty, keyOrEmpty)).getOrElse(keyOrEmpty), count)
+      }
     }
     new PieChartSpec(title, showLabels, showLegend, data)
   }

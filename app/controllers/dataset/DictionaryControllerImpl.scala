@@ -149,7 +149,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     fieldExtractor : Field => Any
   ) : Future[ChartSpec] =
     repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { fields =>
-      val values = fields.map(fieldExtractor)
+      val values = fields.map(field => Some(fieldExtractor(field).toString))
       ChartSpec.pie(values, None, chartTitle, false, true)
     }
 

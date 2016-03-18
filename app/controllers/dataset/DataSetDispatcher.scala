@@ -13,8 +13,6 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Contr
       throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
     )
 
- //  override def get(id: BSONObjectID) = dispatch(_.get(id))
-
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 
   override def find(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.find(page, orderBy, filter))
@@ -35,9 +33,9 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Contr
 
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.overviewList(page, orderBy, filter))
 
-  override def getScatterStats(xFieldName: Option[String], yFieldName: Option[String]) = dispatch(_.getScatterStats(xFieldName, yFieldName))
+  override def getScatterStats(xFieldName: Option[String], yFieldName: Option[String], filter: FilterSpec) = dispatch(_.getScatterStats(xFieldName, yFieldName, filter))
 
-  override def getDistribution(fieldName: Option[String]) = dispatch(_.getDistribution(fieldName))
+  override def getDistribution(fieldName: Option[String], filter: FilterSpec) = dispatch(_.getDistribution(fieldName, filter))
 
   override def exportTranSMARTDataFile(delimiter : String) = dispatch(_.exportTranSMARTDataFile(delimiter))
 
