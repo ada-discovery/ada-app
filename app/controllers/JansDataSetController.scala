@@ -19,21 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
  * Class for testing and debugging
  */
-class JansDataSetController @Inject() (
-    myUserManager: UserManager,
-    //myLdapUserManager: LdapUserManager,
-    deadbolt: LdapActions
-  ) extends Controller with AuthElement with AdaAuthConfig {
-
-  // a hook need by auth config
-  override val userManager = myUserManager
-
-  // deadbolt tests
-  def restrictedCall = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole))) {
-    Action{implicit request =>
-      Ok("this call is only seen, if subject matches restrictions")
-    }
-  }
+class JansDataSetController extends Controller{
 
   // debug: show session
   def showSession = Action { implicit request =>

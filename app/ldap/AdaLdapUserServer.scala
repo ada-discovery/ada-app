@@ -42,17 +42,11 @@ trait AdaLdapUserServer extends UserManager{
   def getUsers(interface: LDAPInterface): Seq[CustomUser]
 
   def shutdown(server: InMemoryDirectoryServer): Unit
-
-  def adminUser: CustomUser
-  def basicUser: CustomUser
 }
 
 
 @Singleton
 class AdaLdapUserServerImpl extends AdaLdapUserServer{
-
-  override val adminUser = CustomUser(None, "admin user", "admin@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  override val basicUser = CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
 
   // server configuration; not used yet!
   /*val defaultPort: Int = current.configuration.getString("ldap.port").getOrElse("389").toInt

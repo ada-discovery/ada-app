@@ -12,6 +12,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.reflect._
 
+
 trait AdaAuthConfig extends AuthConfig {
 
   def userManager: UserManager
@@ -23,9 +24,9 @@ trait AdaAuthConfig extends AuthConfig {
   type Id = String
 
   /**
-    *  Play2-auth specific.
-    *  Type defintion for User object.
-    *  Set to AbstractUser, a class extending deadbolt's Subject.
+    * Play2-auth specific.
+    * Type defintion for User object.
+    * Set to AbstractUser, a class extending deadbolt's Subject.
     */
   type User = CustomUser
 
@@ -47,18 +48,21 @@ trait AdaAuthConfig extends AuthConfig {
     */
   val sessionTimeoutInSeconds: Int = 3600
 
-  def currentUser(request: Request[_]): Future[Option[CustomUser]] = {
-    // we can't call restoreUser, so we must retrieve the user manually
-    val timeout = 120000 millis
+  // useful helper for user extraction from current token
+  def getUserFromToken(request: Request[_]): Future[Option[Id]] = {
     val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
-
-    val userIdFuture = currentToken match{
+    currentToken match {
       case Some(token) => idContainer.get(token)
       case None => Future(None)
     }
+  }
 
+  // we can't call restoreUser, so we must retrieve the user manually
+  def currentUser(request: Request[_]): Future[Option[CustomUser]] = {
+    val timeout = 120000 millis
+    val userIdFuture: Future[Option[Id]] = getUserFromToken(request)
     val userId: Option[Id] = Await.result(userIdFuture, timeout)
-    userId match{
+    userId match {
       case Some(id) => resolveUser(id)
       case None => Future(None)
     }
@@ -67,17 +71,15 @@ trait AdaAuthConfig extends AuthConfig {
   /**
     * A function that returns a `User` object from an `Id`.
     * Retrieves user from Account class.
-    *
     */
-  def resolveUser(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] =
+  def resolveUser(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] = {
     userManager.findById(id)
+  }
 
   /**
     * Where to redirect the user after a successful login.
-    * TODO: redirect to different page
     */
   def loginSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
-    //Future.successful(Redirect(routes.AppController.index()))
     Future.successful(Redirect(routes.UserProfileController.profile()))
   }
 
@@ -85,7 +87,6 @@ trait AdaAuthConfig extends AuthConfig {
     * Where to redirect the user after logging out
     */
   def logoutSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
-    //Future.successful(Redirect(routes.AppController.index))
     Future.successful(Redirect(routes.AuthController.loggedOut))
   }
 
@@ -97,9 +98,8 @@ trait AdaAuthConfig extends AuthConfig {
   }
 
   /**
-    * TODO: Exchange with deadbolt authorization.
-    *       This is only used, if play2-auth authorization is required.
-    *       However, Play2-auth authorization is never used.
+    * Only used, if play2-auth authorization is required.
+    * However, Play2-auth authorization is never used.
     *
     * Shows error message on authorization failure.
     */
@@ -108,10 +108,8 @@ trait AdaAuthConfig extends AuthConfig {
   }
 
   /**
-    * TODO: Exchange with deadbolt authorization.
-    *       This is only used, if play2-auth authorization is required.
-    *       However, Play2-auth authorization is never used.
-    *       Always returns true.
+    * This is only used, if play2-auth authorization is required.
+    * However, Play2-auth authorization is never used.
     *
     * Maps users to permissions.
     */

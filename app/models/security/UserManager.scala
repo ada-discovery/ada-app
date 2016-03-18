@@ -23,8 +23,9 @@ trait UserManager {
   def findById(id: String): Future[Option[CustomUser]]
   def findByEmail(email: String): Future[Option[CustomUser]]
 
-  def adminUser: CustomUser
-  def basicUser: CustomUser
+  // TODO: dummy user profiles. eventually remove them.
+  def adminUser: CustomUser = CustomUser(None, "admin user", "admin@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
+  def basicUser: CustomUser = CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
 }
 
 /**
@@ -32,10 +33,6 @@ trait UserManager {
   */
 @Singleton
 private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager {
-
-  // TODO: dummy user profiles. eventually remove them.
-  override val adminUser = new CustomUser(None, "admin user", "admin@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  override val basicUser = new CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
 
   // add admin and basic users
   addUserIfNotPresent(adminUser)

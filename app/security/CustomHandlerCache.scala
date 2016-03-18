@@ -1,15 +1,17 @@
 package security
 
-import javax.inject.Singleton
-
-import javax.inject.{Inject, Named}
+import com.google.inject.ImplementedBy
+import javax.inject.{Inject, Singleton}
 import be.objectify.deadbolt.scala.{HandlerKey, DeadboltHandler}
 import be.objectify.deadbolt.scala.cache.HandlerCache
-import com.google.inject.ImplementedBy
 
-import models.security.UserManager
-import ldap.{AdaLdapUserServerImpl, AdaLdapUserServer}
+import models.security.{CustomUser, UserManager}
+import ldap.AdaLdapUserServer
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future, ExecutionContext}
+import play.api.mvc.Request
+import scala.concurrent.duration._
 
 /**
   * Container and hook for deadbolt handlers
@@ -21,7 +23,30 @@ class CustomHandlerCacheImpl @Inject() (myUserManager: UserManager, myAdaLdapUse
   override val userManager = myUserManager
 
   override def defaultHandler = new AdaDeadboltHandler(currentUser, Some(new AdaDynamicResourceHandler))
-  override def ldapHandler = new AdaDeadboltHandler(currentUser, Some(new AdaDynamicResourceHandler))
+  override def ldapHandler = new AdaDeadboltHandler(currentUserLdap, Some(new AdaDynamicResourceHandler))
+
+  /**
+    * Resolve user from currently held token and access ldap for authorization.
+    * @param request
+    * @return User idetified by held token, if found in ldap server.
+    */
+  def currentUserLdap(request: Request[_]): Future[Option[CustomUser]] ={
+    val timeout = 120000 millis
+    val idOpFuture: Future[Option[Id]] = getUserFromToken(request)
+    Await.result(idOpFuture, timeout) match{
+      case Some(id) => resolveUserLdap(id)
+      case None => Future(None)
+    }
+  }
+
+  /**
+    * Access ldap user server to check authority.
+    * @param id User identifier (user name string).
+    * @return User, if found in ldap server.
+    */
+  def resolveUserLdap(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] = {
+    myAdaLdapUserServer.findById(id)
+  }
 }
 
 @ImplementedBy(classOf[CustomHandlerCacheImpl])

@@ -8,7 +8,6 @@ import play.api.mvc.{Results, Result, Request}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits._
 
-
 /**
   * Created by jan.martens on 3/9/2016.
   */
