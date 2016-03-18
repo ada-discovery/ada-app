@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
  * Class for testing and debugging
  */
-class JansDataSetController extends Controller{
+class JansDataSetController @Inject()(ldapserver: AdaLdapUserServer) extends Controller{
 
   // debug: show session
   def showSession = Action { implicit request =>
@@ -30,10 +30,11 @@ class JansDataSetController extends Controller{
     Ok("sessions cleared").withNewSession
   }
 
-  /*def listLDAP = Action { implicit request =>
-    val users: List[String] = myLdapUserManager.getEntryList
-    val content = "ldap entry list (" + users.size + "):\n" + users.fold("")((s,a)=> a+"\n\n"+s)
+
+  def listLDAP = Action { implicit request =>
+    val entries: List[String] = ldapserver.getEntryList
+    val content = "ldap entry list (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
     Ok(content)
-  }*/
+  }
 
 }
