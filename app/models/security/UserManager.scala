@@ -19,7 +19,39 @@ import util.SecurityUtil
 @ImplementedBy(classOf[UserManagerImpl])
 trait UserManager {
 
-  def authenticate(email: String, password: String): Future[Boolean]
+  /**
+    * Matches email and password for authentification.
+    * Returns an Account, if successful.
+    * @param email Mail for matching.
+    * @param password Password which should match the password associated to the mail.
+    * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
+    */
+  def authenticate(email: String, password: String): Future[Boolean] = {
+    val pwHash = SecurityUtil.md5(password)
+    findByEmail(email).map(userOp =>
+      userOp match{
+        case Some(usr) => (usr.password == pwHash)
+        case None => false
+      }
+    )
+  }
+
+  /**
+    * Match userid with permission.
+    * @param userid usrid, most commonly mail
+    * @param permission permission to be checked.
+    * @return
+    */
+  def authorize(userid: String, permission: String): Future[Boolean] = {
+    val userOpFuture: Future[Option[CustomUser]] = findByEmail(userid)
+    userOpFuture.map{ (userOp: Option[CustomUser]) =>
+      userOp match{
+        case Some(usr) => usr.permissions.contains(permission)
+        case None => false
+      }
+    }
+  }
+
   def findById(id: String): Future[Option[CustomUser]]
   def findByEmail(email: String): Future[Option[CustomUser]]
 
@@ -44,19 +76,6 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager 
         userRepo.save(user)
     }
 
-  /**
-    * Matches email and password for authentification.
-    * Returns an Account, if successful.
-    *
-    * @param email Mail for matching.
-    * @param password Password which should match the password associated to the mail.
-    * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
-    */
-  override def authenticate(email: String, password: String): Future[Boolean] = {
-    val pwHash = SecurityUtil.md5(password)
-    val usersFuture = userRepo.find(Some(Json.obj("email" -> email, "password" -> pwHash)))
-    usersFuture.map(_.nonEmpty)
-  }
 
   /**
     * Given a mail, find the corresponding account.

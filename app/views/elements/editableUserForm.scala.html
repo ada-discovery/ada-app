@@ -1,0 +1,11 @@
+@import models.security.SecurityPermissionCache
+@import models.security.SecurityRoleCache
+
+@(domainName: String, form: Form[_])(implicit msg: play.api.i18n.Messages)
+
+@inputText(domainName, "name", form)
+@inputText(domainName, "email", form)
+@inputText(domainName, "password", form)
+@inputText(domainName, "affiliation", form)
+@select(domainName, "roles", form, SecurityRoleCache.getRoles.map{x=>(x,x)}, false)
+@select(domainName, "permissions", form, SecurityPermissionCache.getPermissions.map{x=>(x,x)}, false)

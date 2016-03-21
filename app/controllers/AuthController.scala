@@ -1,23 +1,22 @@
 package controllers
 
 import javax.inject.Inject
+
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json.{JsNull, JsString, JsObject}
-import security.AdaAuthConfig
+import play.api.mvc.{Action, Controller}
+import play.api.data.Forms._
+import play.api.data._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
-
 import scala.concurrent.duration._
-import play.api.mvc.{Result, Action, Controller}
-import play.api.data.Forms._
-import play.api.data._
 
 // authentification
 import jp.t2v.lab.play2.auth.LoginLogout
 import models.security._
-
+import security.AdaAuthConfig
 
 class AuthController @Inject() (
     myUserManager: UserManager
@@ -27,7 +26,7 @@ class AuthController @Inject() (
   override val userManager = myUserManager
 
   /**
-    * Login form defintion.
+    * Login form definition.
     */
   val loginForm = Form {
     tuple(
@@ -84,9 +83,8 @@ class AuthController @Inject() (
     * @return
     */
   def logoutREST = Action { implicit request =>
-    Ok(JsNull).withNewSession
+    tokenAccessor.delete(Ok(JsNull))
   }
-
 
   /**
     * Check user name and password.
@@ -108,7 +106,6 @@ class AuthController @Inject() (
     val message = "It appears that you don't have sufficient rights for access. Please login to proceed."
     Ok(views.html.auth.login(loginForm, Some(message)))
   }
-
 
   // TODO: debug login. remove later!
   // immediately login as basic user

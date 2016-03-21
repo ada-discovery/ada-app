@@ -3,12 +3,10 @@ package ldap
 import java.util
 
 import com.unboundid.ldap.listener.{InMemoryDirectoryServerSnapshot, InMemoryDirectoryServer}
-import com.unboundid.ldap.sdk.{ReadOnlyEntry, DN, LDAPInterface, Entry}
+import com.unboundid.ldap.sdk._
 import models.security.CustomUser
 
-/**
-  *
-  */
+
 object LdapUtil {
 
   /**
@@ -60,15 +58,20 @@ object LdapUtil {
     * Retrieves snapshot of server entries and converts them to string.
     * @return String representation of all server entries.
     */
-  def getEntryList(server: InMemoryDirectoryServer): List[String] = {
-    val snapshot: InMemoryDirectoryServerSnapshot = server.createSnapshot
-    val entryMap: util.Map[DN, ReadOnlyEntry] = snapshot.getEntryMap
-    val entries: util.Collection[ReadOnlyEntry] = entryMap.values()
+  def getEntryList(interface: LDAPInterface, baseDN: String="dc=ncer"): List[String] = {
+    //val snapshot: InMemoryDirectoryServerSnapshot = server.createSnapshot
+    //val entryMap: util.Map[DN, ReadOnlyEntry] = snapshot.getEntryMap
+    //val entries: util.Collection[ReadOnlyEntry] = entryMap.values()
+
+    //val filter: Filter = new Filter()      // dont filter
+    val searchRequest: SearchRequest = new SearchRequest(baseDN, SearchScope.SUB, Filter.create("(objectClass=*)"))
+    val searchResult: SearchResult = interface.search(searchRequest)
+    val entries: util.List[SearchResultEntry] =  searchResult.getSearchEntries()
     var userStringList = List[String]()
 
-    val it: util.Iterator[ReadOnlyEntry] = entries.iterator()
+    val it: util.Iterator[SearchResultEntry] = entries.iterator()
     while(it.hasNext){
-      val entry: ReadOnlyEntry = it.next
+      val entry: SearchResultEntry = it.next
       userStringList = entry.toString() :: userStringList
     }
     userStringList

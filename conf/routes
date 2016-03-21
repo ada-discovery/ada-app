@@ -16,11 +16,14 @@ GET         /adminpanel                                                         
 GET         /login                                                                  controllers.AuthController.login
 POST        /login                                                                  controllers.AuthController.authenticate
 GET         /logout                                                                 controllers.AuthController.logout
+
+# login/logout for REST interface
 POST        /loginRest                                                              controllers.AuthController.loginREST
 GET         /logoutRest                                                             controllers.AuthController.logoutREST
 
 GET         /ldaplist                                                               controllers.JansDataSetController.listLDAP
-
+GET         /ldapauth                                                               controllers.JansDataSetController.ldapAuth
+GET         /ldapmail/:mail                                                         controllers.JansDataSetController.ldapmail(mail:String)
 
 GET         /loggedout                                                              controllers.AuthController.loggedOut
 GET         /unauthorized                                                           controllers.AuthController.unauthorized
@@ -28,7 +31,6 @@ GET         /unauthorized                                                       
 # for testing
 GET         /loginBasic                                                             controllers.AuthController.loginBasic
 GET         /loginAdmin                                                             controllers.AuthController.loginAdmin
-
 
 # Admin
 GET         /runnables                                                              controllers.AdminController.listRunnables

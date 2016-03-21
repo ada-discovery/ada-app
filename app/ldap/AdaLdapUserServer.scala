@@ -22,7 +22,6 @@ import play.api.inject.ApplicationLifecycle
 import play.api.Configuration
 
 
-
 /**
   * Create Ldap user server or use an established connection..
   * If no LDAPInterface is used, an InMemoryDirectoryServer based is created.
@@ -31,19 +30,13 @@ import play.api.Configuration
 @ImplementedBy(classOf[AdaLdapUserServerImpl])
 trait AdaLdapUserServer extends UserManager{
 
-  val ldapServer: InMemoryDirectoryServer
-
-  def createTree(interface: LDAPInterface): Unit
-  def addPermissions(interface: LDAPInterface): Unit
-  def addRoles(sinterface: LDAPInterface): Unit
+  val ldapinterface: LDAPInterface
 
   def addUsersFromRepo(interface: LDAPInterface, userRepo: UserRepo): Unit
-  def createServer(): InMemoryDirectoryServer
-  def authorize(userid: String, permission: String): Boolean
   def getUsers(interface: LDAPInterface): Seq[CustomUser]
 
-  def shutdown(server: InMemoryDirectoryServer): Unit
-
+  def setupInterface(): LDAPInterface
+  def terminateInterface(interface: LDAPInterface): Unit
 
   def getEntryList: List[String]
 }
@@ -55,25 +48,49 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   // root of ldap tree
   val dit = "dc=ncer"
 
+  //switch for local ldap server or connection to remote server
+  val mode: String = configuration.getString("ldap.mode").getOrElse("local")
+
+  // local server options
   // port for listener
   val listenerPort: Int = configuration.getInt("ldap.port").getOrElse(389)
 
-  // not used yet: options, if connection ot existing ldap server should be used.
-  // to be used if no InMemoryServer is supposed to be used.
+
+  // options for connecting oto remote server
+  // general config for connection setup
   val defaultPort: Int = configuration.getInt("ldap.port").getOrElse(389)
   val defaultHost: String = configuration.getString("ldap.host").getOrElse("localhost")
-  // bind configuration for connecting
+  val serverTimeout: Int = configuration.getInt("ldap.timeout").getOrElse(2000)
+  // configuration for authorized binding
   val defaultbindDn: String = "cn=" + adminUser.email + ",dc=users," + dit
   val defaultPassword: String = adminUser.password
-  val serverTimeout: Int = configuration.getInt("ldap.timeout").getOrElse(2000)
 
 
-  override val ldapServer: InMemoryDirectoryServer = createServer
+  override val ldapinterface: LDAPInterface = setupInterface
+
+
+  /**
+    * Creates either a server or a connection, depending on the configuration.
+    * @return LDAPInterface, either of type InMemoryDirectoryServer or LDAPConnection.
+    */
+  override def setupInterface(): LDAPInterface = {
+    val interface = mode match{
+      case "local" => createServer
+      case "remote" => createConnection
+      case _ => createServer
+    }
+    // hook interface in lifecycle for proper cleanup
+    applicationLifecycle.addStopHook{ () =>
+      Future(terminateInterface(interface))
+    }
+    interface
+  }
+
 
   /**
     * Creates branches for users, permissions and roles in ldap tree.
     */
-  override def createTree(interface: LDAPInterface): Unit = {
+  def createTree(interface: LDAPInterface): Unit = {
     // add root
     interface.add("dn: " + dit, "objectClass: top", "objectClass: domain", dit.replace("=",":"))
     // add subtrees: roles, permissions, people
@@ -85,7 +102,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat permission tree.
     */
-  override def addPermissions(interface: LDAPInterface): Unit = {
+  def addPermissions(interface: LDAPInterface): Unit = {
     val dc : String = "dc=permissions," + dit
     val permissions: Seq[String] = SecurityPermissionCache.getPermissions
     permissions.foreach{p: String =>
@@ -96,7 +113,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat role tree.
     */
-  override def addRoles(interface: LDAPInterface): Unit = {
+  def addRoles(interface: LDAPInterface): Unit = {
     val dc : String = "dc=roles," + dit
     val roles: Seq[String] = SecurityRoleCache.getRoles
     roles.foreach{r: String =>
@@ -124,14 +141,13 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * Feed users from user database into server.
     * @return dummy server
     */
-  override def createServer(): InMemoryDirectoryServer = {
+  def createServer(): InMemoryDirectoryServer = {
     // setup configuration
     val config = new InMemoryDirectoryServerConfig(dit);
     config.setSchema(null); // do not check (attribute) schema
     config.setAuthenticationRequiredOperationTypes(OperationType.DELETE, OperationType.ADD, OperationType.MODIFY, OperationType.MODIFY_DN)
 
     // required for interaction; commented out for debugging reasons
-
     val listenerConfig = new InMemoryListenerConfig("defaultListener", null, listenerPort, null, null, null);
     config.setListenerConfigs(listenerConfig);
 
@@ -146,32 +162,31 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     // add default dummy users
     server.add(LdapUtil.userToEntry(basicUser))
     server.add(LdapUtil.userToEntry(adminUser))
-
-    applicationLifecycle.addStopHook{ () =>
-      Future(shutdown(ldapServer))
-    }
-
     server
   }
 
   /**
-    * Checks if user has given permission.
-    * @param userid User name to be checked.
-    * @param permission Permission to be checked.
-    * @return true, if the user exists and has given permission associated.
+    * Creates a connection to an existing LDAP server instance.
+    * Uses the options defined in the configuation.
+    * @return LDAPConnection object pointing with specified credentials.
     */
-  override def authorize(userid: String, permission: String): Boolean = {
-    val timeout: FiniteDuration = 120000 millis
-    val userFuture: Future[Option[CustomUser]] = findById(userid)
-    val resFuture = userFuture.map{userOp =>
-      if(userOp.isDefined){
-        val user = userOp.get
-        user.permissions.contains(permission)
-      }else{
-        false
-      }
+  def createConnection(): LDAPConnection = {
+    //val options: LDAPConnectionOptions = new LDAPConnectionOptions()
+    val connection = new LDAPConnection(defaultHost, defaultPort, defaultbindDn, defaultPassword)
+    connection
+  }
+
+  /**
+    * Closes LDAPConnection or shuts down InMemoryDirectoryServer.
+    * Ensures that application releases ports.
+    * @param interface Interface to be disconnected or shut down.
+    */
+  override def terminateInterface(interface: LDAPInterface): Unit = {
+    ldapinterface match{
+      case server: InMemoryDirectoryServer => server.shutDown(true)
+      case connection: LDAPConnection => connection.close()
+      case _ => Unit
     }
-    Await.result(resFuture, timeout)
   }
 
 
@@ -191,25 +206,6 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     userOps.filter{ user => user.isDefined}.map{ user => user.get}
   }
 
-  /**
-    * Check if user exists and match passwords.
-    * @param email Mail of user to be checked.
-    * @param password Password to be matched with user password.
-    * @return true, if user exists and password is correct.
-    */
-  override def authenticate(email: String, password: String): Future[Boolean] = {
-    val pwHash: String = SecurityUtil.md5(password)
-    val userFuture: Future[Option[CustomUser]] = findByEmail(email)
-    userFuture.map { userOp: Option[CustomUser] =>
-      if (userOp.isDefined){
-        val userPw: String = userOp.get.password
-        userPw == pwHash
-      }else {
-        false
-      }
-    }
-  }
-
   // forward to findByEmail
   override def findById(id: String): Future[Option[CustomUser]] = {
     findByEmail(id)
@@ -222,19 +218,21 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * @return CustomUser, if found, None else
     */
   override def findByEmail(email: String): Future[Option[CustomUser]] = {
-    val entry: SearchResultEntry = ldapServer.getEntry("cn=" + email + ",dc=users," + dit)
+    val entry: SearchResultEntry = ldapinterface.getEntry("cn=" + email + ",dc=users," + dit)
     val user: Option[CustomUser] = LdapUtil.entryToUser(entry)
     Future(user)
   }
 
 
-  override def shutdown(server: InMemoryDirectoryServer): Unit = {
-    server.shutDown(true)
-  }
-
-
+  /**
+    * For debugging purposes.
+    * Gets list of all entries.
+    * @return
+    */
   override def getEntryList: List[String] = {
-    LdapUtil.getEntryList(ldapServer)
+    LdapUtil.getEntryList(ldapinterface)
+    //List[String]()
   }
+
 
 }

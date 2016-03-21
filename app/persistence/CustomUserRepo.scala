@@ -33,20 +33,6 @@ class CustomUserRepo(collectionName: String) extends MongoAsyncCrudRepo[CustomUs
     }
 
   /**
-    * Matches email and password for authentification.
-    * Returns an Account, if successful.
-    *
-    * @param email Mail for matching.
-    * @param password Password which should match the password associated to the mail.
-    * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
-    */
-  override def authenticate(email: String, password: String): Future[Boolean] = {
-    val pwHash = SecurityUtil.md5(password)
-    val usersFuture = find(Some(Json.obj("email" -> email, "password" -> pwHash)))
-    usersFuture.map(_.nonEmpty)
-  }
-
-  /**
     * Given a mail, find the corresponding account.
     *
     * @param email mail to be matched.

@@ -1,8 +1,6 @@
 package controllers
 
-import java.io.Serializable
 import javax.inject.Inject
-import jp.t2v.lab.play2.auth.AuthElement
 import play.api.mvc.{Action, Controller}
 
 import models.security.{CustomUser, UserManager, SecurityRoleCache}
@@ -10,16 +8,20 @@ import models.security.{CustomUser, UserManager, SecurityRoleCache}
 import be.objectify.deadbolt.scala.DeadboltActions
 
 import ldap._
-import security.AdaAuthConfig
+import security.CustomHandlerCache
 
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits._
 
-import scala.concurrent.ExecutionContext.Implicits.global
 
 
 /**
  * Class for testing and debugging
  */
-class JansDataSetController @Inject()(ldapserver: AdaLdapUserServer) extends Controller{
+class JansDataSetController @Inject()(
+  ldapserver: AdaLdapUserServer,
+  handlerCache: CustomHandlerCache,
+  deadbolt: DeadboltActions) extends Controller{
 
   // debug: show session
   def showSession = Action { implicit request =>
@@ -30,6 +32,22 @@ class JansDataSetController @Inject()(ldapserver: AdaLdapUserServer) extends Con
     Ok("sessions cleared").withNewSession
   }
 
+
+  def ldapAuth = deadbolt.SubjectPresent(handlerCache.ldapHandler){
+    Action { implicit request =>
+      Ok("authotized")
+    }
+  }
+
+  def ldapmail(mail:String) = Action.async { implicit request =>
+    val usropfuture: Future[Option[CustomUser]] = ldapserver.findByEmail(mail)
+    usropfuture.map{userop =>
+      userop match{
+        case Some(usr) => Ok("found: " + usr)
+        case None => Ok("not found")
+      }
+    }
+  }
 
   def listLDAP = Action { implicit request =>
     val entries: List[String] = ldapserver.getEntryList

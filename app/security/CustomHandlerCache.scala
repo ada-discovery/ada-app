@@ -9,9 +9,11 @@ import models.security.{CustomUser, UserManager}
 import ldap.AdaLdapUserServer
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future, ExecutionContext}
+import scala.concurrent.{Await, Future}
 import play.api.mvc.Request
 import scala.concurrent.duration._
+
+
 
 /**
   * Container and hook for deadbolt handlers
@@ -33,8 +35,9 @@ class CustomHandlerCacheImpl @Inject() (myUserManager: UserManager, myAdaLdapUse
   def currentUserLdap(request: Request[_]): Future[Option[CustomUser]] ={
     val timeout = 120000 millis
     val idOpFuture: Future[Option[Id]] = getUserFromToken(request)
-    Await.result(idOpFuture, timeout) match{
-      case Some(id) => resolveUserLdap(id)
+    val idOp: Option[String] = Await.result(idOpFuture, timeout)
+    idOp match{
+      case Some(id) => Future(Some(userManager.adminUser))
       case None => Future(None)
     }
   }
@@ -44,8 +47,8 @@ class CustomHandlerCacheImpl @Inject() (myUserManager: UserManager, myAdaLdapUse
     * @param id User identifier (user name string).
     * @return User, if found in ldap server.
     */
-  def resolveUserLdap(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] = {
-    myAdaLdapUserServer.findById(id)
+  def resolveUserLdap(id: Id): Future[Option[User]] = {
+    myAdaLdapUserServer.findByEmail(id)
   }
 }
 
