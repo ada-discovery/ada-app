@@ -7,7 +7,6 @@ import persistence.RepoTypes._
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText}
 import play.api.i18n.{Messages}
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.libs.json.{Json}
 import play.api.mvc.{RequestHeader}
 import reactivemongo.bson.BSONObjectID

@@ -42,7 +42,7 @@ class AdminController @Inject() (
     * @param className Path of runnable to launch.
     * @return Redirects to listRunnables()
     */
-  def runScript(className : String) = /*deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole.getName)))*/ {
+  def runScript(className : String) = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole))) {
     Action { implicit request =>
       implicit val msg = messagesApi.preferred(request)
       try {

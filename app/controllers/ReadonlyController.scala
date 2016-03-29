@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import _root_.util.FilterSpec
-import models.{Identity, Page}
+import models.Page
 import persistence._
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
@@ -12,11 +12,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
 import play.twirl.api.Html
-import scala.concurrent.Await._
+
 import scala.concurrent.duration._
 
 import scala.concurrent.{Await, Future}
-import scala.util._
 
 /**
  * Generic async readonly controller

@@ -14,7 +14,7 @@ import play.modules.reactivemongo.json.BSONFormats._
 import persistence.RepoDef.Repo
 import models.security.CustomUser
 
-private object RepoDef extends Enumeration {
+object RepoDef extends Enumeration {
   case class Repo[T : Manifest](
     repo : T,
     named : Boolean = false

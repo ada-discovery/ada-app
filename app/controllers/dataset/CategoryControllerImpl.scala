@@ -13,15 +13,11 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc.{AnyContent, Action, RequestHeader}
+import play.api.mvc.{Action, RequestHeader}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.json.BSONObjectIDFormat
 import views.html.category
-import scala.concurrent.duration._
-
-import scala.concurrent.Await.result
 
 trait CategoryControllerFactory {
   def apply(dataSetId: String): CategoryController

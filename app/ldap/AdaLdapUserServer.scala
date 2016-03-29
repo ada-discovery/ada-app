@@ -5,7 +5,6 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.unboundid.ldap.listener.{InMemoryListenerConfig, InMemoryDirectoryServer, InMemoryDirectoryServerConfig}
 import com.unboundid.ldap.sdk._
 
-import util.SecurityUtil
 import persistence.RepoTypes._
 
 import scala.concurrent.duration._
@@ -46,7 +45,7 @@ trait AdaLdapUserServer extends UserManager{
 class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle, configuration: Configuration) extends AdaLdapUserServer{
 
   // root of ldap tree
-  val dit = "dc=ncer"
+  val dit = configuration.getString("ldap.dit").getOrElse("dc=ncer")
 
   //switch for local ldap server or connection to remote server
   val mode: String = configuration.getString("ldap.mode").getOrElse("local")
@@ -54,7 +53,6 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   // local server options
   // port for listener
   val listenerPort: Int = configuration.getInt("ldap.port").getOrElse(389)
-
 
   // options for connecting oto remote server
   // general config for connection setup
@@ -83,7 +81,6 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     }
     interface
   }
-
 
   /**
     * Creates branches for users, permissions and roles in ldap tree.

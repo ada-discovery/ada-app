@@ -1,20 +1,17 @@
 package controllers
 
 import java.util.concurrent.TimeoutException
-import javax.inject.Inject
 
-import models.{Page, Identity}
+import models.Identity
 import persistence.{RepoException, AsyncCrudRepo}
 import play.api.Logger
-import play.api.routing.Router
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
 import play.api.data.Form
 
 import scala.concurrent.Future
-import scala.util._
 import play.twirl.api.Html
 
 /**
