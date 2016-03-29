@@ -13,6 +13,7 @@ object LdapUtil {
     * TODO: add permissiosns and roles to users
     * Add users to ldap object
     * Make sure you called createTree, addRoles and addPermissions first.
+    *
     * @param user CustomUser to add.
     */
   def userToEntry(user: CustomUser): Entry = {
@@ -55,15 +56,11 @@ object LdapUtil {
 
   /**
     * For Debugging
-    * Retrieves snapshot of server entries and converts them to string.
+    * Retrieves server entries and converts them to string.
+    *
     * @return String representation of all server entries.
     */
   def getEntryList(interface: LDAPInterface, baseDN: String="dc=ncer"): List[String] = {
-    //val snapshot: InMemoryDirectoryServerSnapshot = server.createSnapshot
-    //val entryMap: util.Map[DN, ReadOnlyEntry] = snapshot.getEntryMap
-    //val entries: util.Collection[ReadOnlyEntry] = entryMap.values()
-
-    //val filter: Filter = new Filter()      // dont filter
     val searchRequest: SearchRequest = new SearchRequest(baseDN, SearchScope.SUB, Filter.create("(objectClass=*)"))
     val searchResult: SearchResult = interface.search(searchRequest)
     val entries: util.List[SearchResultEntry] =  searchResult.getSearchEntries()

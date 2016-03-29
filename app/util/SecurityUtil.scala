@@ -3,13 +3,15 @@ package util
 import java.security.MessageDigest
 
 import models.security.CustomUser
+import play.api.data.validation.{Invalid, Valid, ValidationError, Constraint}
 import reactivemongo.bson.BSONObjectID
 
 import scala.collection.immutable.IndexedSeq
+import scala.util.matching.Regex
 
 
 /**
-  * Created by jan.martens on 3/1/2016.
+  * Utils for password security.
   */
 object SecurityUtil {
 
@@ -40,7 +42,6 @@ object SecurityUtil {
       new String(md)
     }
   }
-
 
   /**
     * Create CustomUser object, with password hashed.

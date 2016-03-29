@@ -65,9 +65,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   val defaultbindDn: String = "cn=" + adminUser.email + ",dc=users," + dit
   val defaultPassword: String = adminUser.password
 
-
   override val ldapinterface: LDAPInterface = setupInterface
-
 
   /**
     * Creates either a server or a connection, depending on the configuration.
@@ -189,7 +187,6 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     }
   }
 
-
   /**
     * Reconstruct a sequence of customUsers from users registered in ldap server.
     * @return Seq[CustomUser] for use in other modules.
@@ -223,16 +220,12 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     Future(user)
   }
 
-
   /**
     * For debugging purposes.
     * Gets list of all entries.
     * @return
     */
   override def getEntryList: List[String] = {
-    LdapUtil.getEntryList(ldapinterface)
-    //List[String]()
+    LdapUtil.getEntryList(ldapinterface, dit)
   }
-
-
 }

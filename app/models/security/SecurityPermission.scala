@@ -20,14 +20,9 @@ case class SecurityPermission(val value: String) extends Permission {
   * Use these for convenience.
   */
 object SecurityPermissionCache {
-  lazy val adminPermissions: Seq[String] = Seq(
-    "view.data.basic",                                                    // permission to view data
-    "view.data.full",                                                     // permission to view extended data, including metadata
-    "edit.data" ,                                                         // permission to edit data
-    "view.admin")                                                         // permission to access admin controls
-
+  lazy val adminPermissions: Seq[String] = getPermissions
   lazy val basicPermissions: Seq[String] = Seq("view.data.basic")
 
   // sequence of all roles
-  def getPermissions: Seq[String] = Seq("none", "view.data.basic", "view.data.full", "edit.data" , "view.admin")
+  def getPermissions: Seq[String] = Seq("view.data.basic", "view.data.full", "edit.data" , "view.admin")
 }

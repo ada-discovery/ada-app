@@ -16,6 +16,8 @@ import play.api.mvc.RequestHeader
 import util.SecurityUtil
 
 
+import play.data.validation.Constraints._
+
 class UserController @Inject() (
     userRepo: UserRepo
   ) extends CrudController[CustomUser, BSONObjectID](userRepo) {

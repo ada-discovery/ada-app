@@ -19,8 +19,7 @@ case class SecurityRole(val roleName: String) extends Role {
 object SecurityRoleCache {
   lazy val adminRole: String = "admin"
   lazy val basicRole: String = "basic"
-  lazy val undefined: String = "none"               // dummy if no role defined
 
   // sequence of all roles
-  def getRoles: Seq[String] = Seq(basicRole, adminRole, undefined)
+  def getRoles: Seq[String] = Seq(basicRole, adminRole)
 }

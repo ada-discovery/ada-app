@@ -7,5 +7,5 @@
 @inputText(domainName, "email", form)
 @inputText(domainName, "password", form)
 @inputText(domainName, "affiliation", form)
-@select(domainName, "roles", form, SecurityRoleCache.getRoles.map{x=>(x,x)}, false)
-@select(domainName, "permissions", form, SecurityPermissionCache.getPermissions.map{x=>(x,x)}, false)
+@checkboxGroup(domainName, "roles", form, SecurityRoleCache.getRoles.map{x=>(x,x)})
+@checkboxGroup(domainName, "permissions", form, SecurityPermissionCache.getPermissions.map{x=>(x,x)})

@@ -1,0 +1,18 @@
+@import helper.{options, FieldConstructor}
+
+@(
+        domainName : String,
+        attribute : String,
+        form: Form[_],
+        values: Seq[(String, String)]
+)(
+        implicit msg: play.api.i18n.Messages
+)
+
+@implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapInput.f) }
+
+@helper.inputCheckboxGroup(
+    form(attribute),
+    options = values,
+        '_label -> domainName
+)

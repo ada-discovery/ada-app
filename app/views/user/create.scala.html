@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.elements.editableTextElements
+@import views.html.elements.editableUserForm
 @import models.security.CustomUser
 
 @(form: Form[CustomUser])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
@@ -7,7 +7,7 @@
 @layout.create(
     "user",
 	form = form,
-	elements = editableTextElements("user", form),
+	elements = editableUserForm("user", form),
 	saveCall = routes.UserController.save(),
 	listCall = routes.UserController.listAll()
 )
