@@ -42,7 +42,7 @@ body {
     background-color: #0074D9;
 }
 
-.list-group-item.active > a {
+.sidebar-nav > .active > a {
    color: #FFFFFF;
 }
 
