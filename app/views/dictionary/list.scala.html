@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.dataset.filterChartPanel
+@import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu}
 @import views.html.table.paginatedTable
 @import models.Field
 @import util.FieldChartSpec
@@ -42,5 +42,6 @@
     actions,
     table,
     Some(filterChartPanel(fieldChartSpecs, chartGridWidth)),
-    Some(datasetMenu(dataSetMetaInfos))
+    Some(datasetMenu(dataSetMetaInfos)),
+    Some(datasetSubNav())
 )

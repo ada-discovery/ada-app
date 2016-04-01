@@ -1,0 +1,38 @@
+@import util.{matchesPath, getParamValue}
+@import controllers.dataset.{DataSetRouter, DictionaryRouter, CategoryRouter}
+
+@()(implicit request: RequestHeader)
+
+@listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
+    <li @if(matchesPath(call.url, request.uri, matchPrefixDepth)) {class="active"}>
+        <a href="@call">@text</a>
+    </li>
+}
+
+@defining(getParamValue(request.uri, "dataSet").get) { dataSetId =>
+    @defining((
+        new DataSetRouter(dataSetId),
+        new DictionaryRouter(dataSetId),
+        new CategoryRouter(dataSetId)
+    )) { case (dataSetRouter, dictionaryRouter, categoryRouter) =>
+        <ul class="nav nav-tabs">
+            @listItem(dataSetRouter.plainOverviewList, "Overview")
+            @listItem(dictionaryRouter.plainList, "Dictionary")
+            @listItem(categoryRouter.plainList, "Category Tree")
+            <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">Statistics<span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    @listItem(dataSetRouter.plainGetDistribution, "Distribution")
+                    @listItem(dataSetRouter.plainGetScatterStats, "Scatter Analysis")
+                </ul>
+            </li>
+        </ul>
+    }
+}
+
+<script type="text/javascript">
+    $("li.dropdown").each(function() {
+        if($(this).find("li.active").size() > 0)
+            $(this).addClass("active")
+    });
+</script>

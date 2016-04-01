@@ -1,7 +1,9 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
+@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import views.html.category.treeChart
 @import models.Category
-@import controllers.dataset.{CategoryRouter, CategoryJsRouter}
+@import controllers.dataset.CategoryRouter
 
 @(
     domainName : String,
@@ -23,35 +25,6 @@
     </div>
 }
 
-@treeChart = {
-    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/tree.css")">
-    <script src="@routes.WebJarAssets.at(WebJarAssets.locate("d3.min.js"))"></script>
-    <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
-    <script type="text/javascript" src="@routes.Assets.at("javascripts/tree.js")"></script>
-    <script type="text/javascript" src="@router.jsRoutes"></script>
-    <div id="treeDiv" name="treeDiv"></div>
-    <script>
-        $.ajax({
-            url: '@router.getCategoryD3Root',
-            success: function (data) {
-                $("#treeDiv").tree({
-                    jsonData: data,
-                    duration: 700,
-                    width: 1100,
-                    height: 500,
-                    showNodeFun: function(data) {
-                        if (data._id) {
-                            var id = data._id.$oid
-                            var r = jsRoutes.controllers.dataset.CategoryDispatcher.get(id);
-                            submit('get', r.url, getQueryParams(r.url))
-                        }
-                    }
-                });
-            },
-        });
-    </script>
-}
-
 @table = @{
     paginatedTable(
         page,
@@ -68,6 +41,7 @@
     page.total,
     actions,
     table,
-    Some(treeChart),
-    Some(datasetMenu(dataSetMetaInfos))
+    Some(treeChart(router)),
+    Some(datasetMenu(dataSetMetaInfos)),
+    Some(datasetSubNav())
 )

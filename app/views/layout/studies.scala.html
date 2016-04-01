@@ -1,3 +1,5 @@
+@import views.html.dataset.datasetMenu
+
 @(dataSetMetaInfos: Traversable[DataSetMetaInfo])(implicit request: RequestHeader)
 
 @main("NCER-PD Studies", Some(datasetMenu(dataSetMetaInfos))) {

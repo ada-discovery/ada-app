@@ -2,6 +2,7 @@
 @import util.{BasicStats, FilterSpec}
 @import util.shorten
 @import views.html.layout.main
+@import views.html.dataset.datasetSubNav
 @import play.api.libs.json.Json
 
 @(
@@ -79,7 +80,7 @@
     }
 }
 
-@main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSetMetaInfos))) {
+@main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSetMetaInfos)), Some(datasetSubNav())) {
 
     <div class="page-header">
         <h3>

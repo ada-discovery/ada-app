@@ -2,7 +2,7 @@
 @import util.FilterSpec
 @import util.shorten
 @import views.html.layout.main
-@import views.html.dataset.chartPanel
+@import views.html.dataset.{chartPanel, datasetSubNav}
 @import util.ChartSpec
 @import play.api.libs.json.Json
 
@@ -49,14 +49,13 @@
         </div>
         <script>
             $('#myForm').first('#fieldName').change(function() {
-                console.log("Bla");
                 $('#myForm').submit();
             });
         </script>
     }
 }
 
-@main(Messages("distribution.title", domainName), Some(datasetMenu(dataSetMetaInfos))) {
+@main(Messages("distribution.title", domainName), Some(datasetMenu(dataSetMetaInfos)), Some(datasetSubNav())) {
 
     <div class="page-header">
         <h3>

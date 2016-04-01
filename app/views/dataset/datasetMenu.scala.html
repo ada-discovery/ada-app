@@ -1,0 +1,20 @@
+@import controllers.dataset.DataSetRouter
+@import models.DataSetMetaInfo
+@import util.getParamValue
+
+@(dataSetMetaInfos: Traversable[DataSetMetaInfo])(implicit request: RequestHeader)
+
+@listItem(call: Call, dataSetId: String, text: String) = {
+    @defining(getParamValue(request.uri, "dataSet")) { reqDataSetId =>
+        <li @if(reqDataSetId.isDefined && reqDataSetId.get.equals(dataSetId)) { class="active" }>
+            <a href="@call"><h4>@text</h4></a>
+        </li>
+    }
+}
+
+<h3 class="text-muted">Studies</h3>
+<ul class="sidebar-nav nav nav-pills nav-stacked">
+    @dataSetMetaInfos.map { metaInfo =>
+        @listItem(new DataSetRouter(metaInfo.id).plainOverviewList, metaInfo.id, metaInfo.name)
+    }
+</ul>

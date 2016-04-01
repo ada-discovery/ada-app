@@ -16,6 +16,14 @@ package object util {
       case None => url.startsWith(coreUrl)
     }
 
+  def getParamValue(url : String, param: String): Option[String] = {
+    val tokens = url.split(param + "=")
+    if (tokens.isDefinedAt(1))
+      Some(tokens(1).split("&")(0))
+    else
+      None
+  }
+
   def shorten(string : String, length: Int = 25) =
     if (string.length > length) string.substring(0, length) + ".." else string
 

@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.dataset.filterChartPanel
+@import views.html.dataset.{filterChartPanel, datasetSubNav}
 @import views.html.table.paginatedJsonTable
 @import views.html.dataset.exportDropdown
 @import play.api.libs.json.JsObject
@@ -14,7 +14,8 @@
     fieldLabelMap : Map[String, String],
     fieldsToShow : Seq[String],
     fieldChartSpecs : Iterable[FieldChartSpec],
-    router : DataSetRouter, dataSetMetaInfos: Traversable[DataSetMetaInfo]
+    router : DataSetRouter,
+    dataSetMetaInfos: Traversable[DataSetMetaInfo]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
@@ -46,5 +47,6 @@
     actions,
     table,
     Some(filterChartPanel(fieldChartSpecs)),
-    Some(datasetMenu(dataSetMetaInfos))
+    Some(datasetMenu(dataSetMetaInfos)),
+    Some(datasetSubNav())
 )

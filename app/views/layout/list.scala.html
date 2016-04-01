@@ -6,13 +6,14 @@
     actions: Html,
     table: Html,
     charts: Option[Html] = None,
-    sideBar: Option[Html] = None
+    sideBar: Option[Html] = None,
+    topContentBar: Option[Html] = None
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
 @if(charts.isDefined) {
-    @chartList(domainName, count, actions, table, charts.get, sideBar)
+    @chartList(domainName, count, actions, table, charts.get, sideBar, topContentBar)
 } else {
-    @plainList(domainName, count, actions, table, sideBar)
+    @plainList(domainName, count, actions, table, sideBar, topContentBar)
 }

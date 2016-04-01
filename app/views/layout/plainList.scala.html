@@ -3,12 +3,13 @@
     count: Long,
     actions: Html,
     table: Html,
-    sideBar: Option[Html] = None
+    sideBar: Option[Html] = None,
+    topContentBar: Option[Html] = None
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@main(Messages("list.title", domainName), sideBar) {
+@main(Messages("list.title", domainName), sideBar, topContentBar) {
 
     <div class="page-header">
         <h3>
