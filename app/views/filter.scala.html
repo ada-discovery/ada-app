@@ -26,8 +26,9 @@
                         </div>
                     </div>
                     <div class="row">
-                        <select id="fieldName" class="col-md-4">
-                        </select>
+                        <div class="col-md-4">
+                            <input id="fieldName" class="typeahead" type="text" placeholder="Field Name">
+                        </div>
                         <select id="conditionType" class="col-md-2">
                             @ConditionType.values.map{ conditionType =>
                                 <option value="@conditionType">@conditionType</option>
@@ -84,7 +85,7 @@
     fieldNamesOrCall match {case Right(call) => call.url}
 }
 
-<script type="text/javascript">
+<script type="text/javascript" defer="defer">
     var jsFilter = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}');
     var conditionFields = ["fieldName", "conditionType", "condition"];
     var fieldNames = @if(fieldNamesOrCall.isLeft) {
@@ -204,10 +205,11 @@
 
     function populateFieldNames() {
         if (fieldNames) {
-            $('#fieldName').html("");
-            $.each(fieldNames, function(key, val) {
-                $('#fieldName').append($('<option>', { value : val }).text(val));
-            });
+//            $('#fieldName').html("");
+//            $.each(fieldNames, function(key, val) {
+//                $('#fieldName').append($('<option>', { value : val }).text(val));
+//            });
+            populateTypeahead($('#fieldName'), fieldNames);
         }
     }
 </script>
