@@ -47,3 +47,21 @@ function getQueryParams(qs) {
 
   return params;
 }
+
+function populateTypeahead(element, values) {
+  var list = new Bloodhound({
+    datumTokenizer: Bloodhound.tokenizers.whitespace,
+    queryTokenizer: Bloodhound.tokenizers.whitespace,
+    local: values
+  });
+
+  element.typeahead({
+        hint: true,
+        highlight: true,
+        minLength: 1
+      },{
+        name: 'list',
+        source: list
+      }
+  );
+}
