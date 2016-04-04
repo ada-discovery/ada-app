@@ -12,8 +12,18 @@
         // the constructor
         _create: function() {
             this.i = 0;
-            var margin = {top: 0, right: 100, bottom: 0, left: 100},
-                width = this.options.width - margin.right - margin.left,
+
+            var margin = {top: 0, right: 100, bottom: 0, left: 100};
+
+            var elementId = this.element.attr("id");
+            this.svg = d3.select("#" + elementId).append("svg")
+                .attr("width", this.options.width)
+                .attr("height", this.options.height)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+            var width = this.element.width() - margin.right - margin.left,
                 height = this.options.height - margin.top - margin.bottom;
 
             this.tree = d3.layout.tree()
@@ -24,12 +34,6 @@
                     return [d.y, d.x];
                 });
 
-            var elementId = this.element.attr("id");
-            this.svg = d3.select("#" + elementId).append("svg")
-                .attr("width", width + margin.right + margin.left)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
-                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
             var that = this;
             that.root = this.options.jsonData;
@@ -48,6 +52,10 @@
             that._update(that.root);
 
             d3.select(self.frameElement).style("height", this.options.height + "px");
+
+            $(window).resize(function(){
+                that._update(that.root);
+            });
         },
 
         _update: function(source) {
@@ -57,8 +65,15 @@
             var nodes = this.tree.nodes(this.root).reverse(),
                 links = this.tree.links(nodes);
 
+            var depths = $.map( nodes, function(val){ return val.depth; })
+            var maxDepth = Math.max.apply( null, depths);
+
+            var step = 0;
+            if (maxDepth > 0)
+                step = 0.75 * this.element.width() / maxDepth;
+
             // Normalize for fixed-depth.
-            nodes.forEach(function(d) { d.y = d.depth * 330; });
+            nodes.forEach(function(d) { d.y = d.depth * step; });
 
             // Update the nodes…
             var node = this.svg.selectAll("g.node")
@@ -71,9 +86,17 @@
                 .attr("class", "node")
                 .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
 
+            function isInnerNode(d) {
+                return (d.children && d.children.length > 0) || (d._children && d._children.length > 0);
+            }
+
+            function isOpenNode(d) {
+                return d._children && d._children.length > 0;
+            }
+
             nodeEnter.append("circle")
                 .attr("r", 1e-6)
-                .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; })
+                .style("fill", function(d) { return isOpenNode(d) ? "lightsteelblue" : "#fff"; })
                 .on("click", function(d) {
                     if (d.children) {
                         d._children = d.children;
@@ -86,9 +109,9 @@
                 })
 
             nodeEnter.append("text")
-                .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
+                .attr("x", function(d) { return isInnerNode(d) ? -10 : 10; })
                 .attr("dy", ".35em")
-                .attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
+                .attr("text-anchor", function(d) { return isInnerNode(d) ? "end" : "start"; })
                 .text(function(d) {
                     var maxLength = that.options.maxTextLength;
                     return (d.name.length > maxLength) ? d.name.substring(0, maxLength - 2) + ".." : d.name;
@@ -105,7 +128,7 @@
 
             nodeUpdate.select("circle")
                 .attr("r", 7)
-                .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+                .style("fill", function(d) { return isOpenNode(d) ? "lightsteelblue" : "#fff"; });
 
             nodeUpdate.select("text")
                 .style("fill-opacity", 1);
