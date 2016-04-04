@@ -58,7 +58,8 @@ function populateTypeahead(element, values) {
   element.typeahead({
         hint: true,
         highlight: true,
-        minLength: 1
+        minLength: 0,  // TODO: minlength 0 does not work. Should show ALL items if nothing entered.
+        limit: 100,
       },{
         name: 'list',
         source: list

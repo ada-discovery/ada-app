@@ -4,6 +4,8 @@
 
 @(filter: FilterSpec, submitCall: Call, fieldNamesOrCall: Either[Traversable[String], Call])
 
+<link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/typeahead.css")">
+<script src="@routes.WebJarAssets.at(WebJarAssets.locate("typeahead.bundle.min.js"))"></script>
 <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -16,17 +18,6 @@
                     <input id="conditionIndex" type="hidden" value=""/>
                     <div class="row">
                         <div class="col-md-4">
-                            Field Name
-                        </div>
-                        <div class="col-md-2">
-                            Operator
-                        </div>
-                        <div class="col-md-6">
-                            Condition
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-4">
                             <input id="fieldName" class="typeahead" type="text" placeholder="Field Name">
                         </div>
                         <select id="conditionType" class="col-md-2">
@@ -34,7 +25,7 @@
                                 <option value="@conditionType">@conditionType</option>
                             }
                         </select>
-                        <input id="condition" class="col-md-6"/>
+                        <input id="condition" class="col-md-6" placeholder="Condition"/>
                     </div>
                 </div>
                 <div class="modal-footer">
