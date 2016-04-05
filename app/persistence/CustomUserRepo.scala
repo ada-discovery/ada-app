@@ -58,4 +58,9 @@ class CustomUserRepo(collectionName: String) extends MongoAsyncCrudRepo[CustomUs
     }
   }
 
+  // TODO: strub
+  override def updateUser(user: CustomUser): Future[Boolean] = {
+    Future(true)
+  }
+
 }

@@ -6,8 +6,10 @@ import models.security.CustomUser
 import play.api.data.validation.{Invalid, Valid, ValidationError, Constraint}
 import reactivemongo.bson.BSONObjectID
 
+
 import scala.collection.immutable.IndexedSeq
 import scala.util.matching.Regex
+import scala.util.Random
 
 
 /**
@@ -44,6 +46,17 @@ object SecurityUtil {
   }
 
   /**
+    * Generate random sequence of alphanumerics.
+    * Useful for random password generation.
+    * @param length Number of characters in resulting sequence
+    * @return Random alphanumeric String
+    */
+  def randomString(length: Int): String = {
+    val rand = Random.alphanumeric
+    rand.take(length).mkString
+  }
+
+  /**
     * Create CustomUser object, with password hashed.
     * @return CusotmUser with hashed password.
     */
@@ -52,7 +65,7 @@ object SecurityUtil {
   }
 
   /**
-    * Extract information from user and hide the password hash.
+    * Extract information from user and hide the password.
     * @param user CustomUser for extraction.
     * @return Tuple with extracted user properties, password is hashed.
     */

@@ -10,6 +10,7 @@ GET         /studies                                                            
 GET         /profile                                                                controllers.UserProfileController.profile
 GET         /workspace                                                              controllers.UserProfileController.workspace
 GET         /settings                                                               controllers.UserProfileController.settings
+POST        /settings                                                               controllers.UserProfileController.updateSettings
 GET         /adminpanel                                                             controllers.UserProfileController.adminPanel
 
 # logins

@@ -225,4 +225,9 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   override def getEntryList: List[String] = {
     LdapUtil.getEntryList(ldapinterface, dit)
   }
+
+  // TODO: stub
+  override def updateUser(user: CustomUser): Future[Boolean] = {
+    Future(true)
+  }
 }
