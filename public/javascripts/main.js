@@ -66,3 +66,51 @@ function populateTypeahead(element, values) {
       }
   );
 }
+
+function showMessage(text) {
+  $('#messageDiv').hide();
+
+  var closeX = '<button type="button" class="close" data-dismiss="alert">×</button>'
+  var messageBlock = $('<div class="alert alert-dismissable alert-success">')
+  messageBlock.append(closeX)
+  messageBlock.append('<strong>Well done!</strong> ')
+  messageBlock.append(text)
+  $('#messageDiv').html(messageBlock);
+  $('#messageDiv').fadeIn('2000');
+}
+
+function showError(message) {
+  $('#errorDiv').hide();
+
+  var closeX = '<button type="button" class="close" data-dismiss="alert">×</button>'
+  var innerDiv = $('<div class="alert alert-dismissable alert-danger">');
+  innerDiv.append(closeX);
+  innerDiv.append(message);
+  $('#errorDiv').html(innerDiv);
+  $('#errorDiv').fadeIn('2000');
+}
+
+function hideMessages() {
+  $('#messageDiv').fadeOut('2000');
+  $('#messageDiv').html('');
+}
+
+function showErrors(errors) {
+  if (errors.length > 0) {
+    var closeX = '<button type="button" class="close" data-dismiss="alert">×</button>'
+    $('#errorDiv').hide();
+    $('#errorDiv').html("");
+    $.each(errors, function(index, error) {
+      var innerDiv = $('<div class="alert alert-dismissable alert-danger">');
+      innerDiv.append(closeX);
+      innerDiv.append(error.message);
+      $('#errorDiv').append(innerDiv);
+    });
+    $('#errorDiv').fadeIn('2000');
+  }
+}
+
+function hideErrors() {
+  $('#errorDiv').fadeOut('2000');
+  $('#errorDiv').html('');
+}

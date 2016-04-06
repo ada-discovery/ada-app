@@ -69,15 +69,23 @@ protected abstract class InferDeNoPaDictionary(dataSetId: String) extends InferD
 
 class InferDeNoPaBaselineDictionary extends InferDeNoPaDictionary(denopa_baseline)
 class InferDeNoPaFirstVisitDictionary extends InferDeNoPaDictionary(denopa_firstvisit)
+class InferDeNoPaSecondVisitDictionary extends InferDeNoPaDictionary(denopa_secondvisit)
+
 class InferDeNoPaCuratedBaselineDictionary extends InferDeNoPaDictionary(denopa_curated_baseline) {
   override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
 }
 class InferDeNoPaCuratedFirstVisitDictionary extends InferDeNoPaDictionary(denopa_curated_firstvisit) {
   override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
 }
+class InferDeNoPaCuratedSecondVisitDictionary extends InferDeNoPaDictionary(denopa_curated_secondvisit) {
+  override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
+}
 
 // app main launchers
 object InferDeNoPaBaselineDictionary extends GuiceBuilderRunnable[InferDeNoPaBaselineDictionary] with App { run }
 object InferDeNoPaFirstVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaFirstVisitDictionary] with App { run }
+object InferDeNoPaSecondVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaSecondVisitDictionary] with App { run }
+
 object InferDeNoPaCuratedBaselineDictionary extends GuiceBuilderRunnable[InferDeNoPaCuratedBaselineDictionary] with App { run }
 object InferDeNoPaCuratedFirstVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaCuratedFirstVisitDictionary] with App { run }
+object InferDeNoPaCuratedSecondVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaCuratedSecondVisitDictionary] with App { run }

@@ -124,7 +124,7 @@ protected abstract class CrudController[E: Format, ID](
   protected def updateCall(item: E): Future[ID] = repo.update(item)
 
   def delete(id: ID) = Action.async { implicit request =>
-    repo.delete(id).map { _ =>
+    deleteCall(id).map { _ =>
       render {
         case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been deleted")
         case Accepts.Json() => Ok(Json.obj("message" -> "Item successly deleted", "id" -> id.toString))
@@ -138,6 +138,8 @@ protected abstract class CrudController[E: Format, ID](
         InternalServerError(i.getMessage)
     }
   }
+
+  protected def deleteCall(id: ID): Future[Unit] = repo.delete(id)
 
   private def parseValidateAndProcess[T: Reads](t: T => Future[Result])(implicit request: Request[JsValue]) = {
     request.body.validate[T].map(t) match {

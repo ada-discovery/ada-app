@@ -98,6 +98,7 @@ POST        /studies/categories/save                                            
 POST        /studies/categories/:id                                                 controllers.dataset.CategoryDispatcher.update(id: BSONObjectID)
 POST        /studies/categories/:id/delete                                          controllers.dataset.CategoryDispatcher.delete(id: BSONObjectID)
 GET         /studies/categories/getCategoryD3Root                                   controllers.dataset.CategoryDispatcher.getCategoryD3Root
+GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
 GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
 
 # Map static resources from the /public folder to the /assets URL path

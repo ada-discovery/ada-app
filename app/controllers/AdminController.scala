@@ -53,8 +53,14 @@ class AdminController @Inject() (
         val execTimeSec = (new java.util.Date().getTime - start.getTime) / 1000
         runnablesRedirect.flashing("success" -> s"Script ${className} was successfully executed in ${execTimeSec} sec.")
       } catch {
-        case _ : ClassNotFoundException => runnablesRedirect.flashing("errors" -> s"Script ${className} does not exist.")
-        case e : Exception => runnablesRedirect.flashing("errors" -> s"Script ${className} failed due to: ${e.getMessage}")
+        case e: ClassNotFoundException => {
+          e.printStackTrace
+          runnablesRedirect.flashing("errors" -> s"Script ${className} does not exist.")
+        }
+        case e: Exception => {
+          e.printStackTrace
+          runnablesRedirect.flashing("errors" -> s"Script ${className} failed due to: ${e.getMessage}")
+        }
       }
     }
   }

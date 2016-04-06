@@ -24,5 +24,7 @@ trait CategoryController {
 
   def getCategoryD3Root: Action[AnyContent]
 
+  def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]): Action[AnyContent]
+
   def jsRoutes: Action[AnyContent]
 }

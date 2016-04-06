@@ -23,6 +23,22 @@
                             var r = jsRoutes.controllers.dataset.CategoryDispatcher.get(id);
                             submit('get', r.url, getQueryParams(r.url))
                         }
+                    },
+                    dragRelocateToParent: function(node, parent) {
+                        if (node._id) {
+                            var id = node._id.$oid
+                            var parentId = "";
+                            if (parent._id)
+                                parentId = parent._id.$oid;
+                            jsRoutes.controllers.dataset.CategoryDispatcher.relocateToParent(id, parentId).ajax( {
+                                success: function() {
+                                    showMessage("The category '" + node.name + "' successfully relocated to '" + parent.name + "'.");
+                                },
+                                error: function(data){
+                                    showError( data.responseText );
+                                }
+                            });
+                        }
                     }
                 });
             },

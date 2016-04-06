@@ -28,5 +28,16 @@ class CleanupDeNoPaFirstVisit @Inject()(
     translationRepo
   )
 
+class CleanupDeNoPaSecondVisit @Inject()(
+    dsaf: DataSetAccessorFactory,
+    translationRepo : TranslationRepo
+  ) extends CleanupDataSet(
+    denopa_secondvisit,
+    DataSetMetaInfo(None, denopa_curated_secondvisit, "DeNoPa Curated Second Visit"),
+    dsaf,
+    translationRepo
+  )
+
 object CleanupDeNoPaBaseline extends GuiceBuilderRunnable[CleanupDeNoPaBaseline] with App { run }
-object CleanupDeNoPaFirstVisit extends GuiceBuilderRunnable[CleanupDeNoPaBaseline] with App { run }
+object CleanupDeNoPaFirstVisit extends GuiceBuilderRunnable[CleanupDeNoPaFirstVisit] with App { run }
+object CleanupDeNoPaSecondVisit extends GuiceBuilderRunnable[CleanupDeNoPaSecondVisit] with App { run }

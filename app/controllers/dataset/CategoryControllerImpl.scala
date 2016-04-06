@@ -9,6 +9,7 @@ import models.{D3Node, Page, Category}
 import persistence.AscSort
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
@@ -18,6 +19,7 @@ import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONObjectIDFormat
 import views.html.category
+import scala.concurrent.Future
 
 trait CategoryControllerFactory {
   def apply(dataSetId: String): CategoryController
@@ -80,6 +82,38 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     )
   }
 
+  override protected def deleteCall(id: BSONObjectID): Future[Unit] = {
+    // relocate the children to a new parent
+    val updateChildrenFutures =
+      for {
+        Some(category) <- repo.get(id)
+        children <- repo.find(Some(Json.obj("parentId" -> id)))
+      } yield
+        children.map{ child =>
+          child.parentId = category.parentId
+          repo.update(child)
+        }
+
+    // remove the field category refs
+    val updateFieldFutures =
+      for {
+        fields <- fieldRepo.find(Some(Json.obj("categoryId" -> id)))
+      } yield
+        fields.map { field =>
+          field.categoryId = None
+          fieldRepo.update(field)
+        }
+
+    // finally, combine all the futures and delete the category
+    for {
+      updateFutures1 <- updateChildrenFutures
+      updateFutures2 <- updateFieldFutures
+      _ <- Future.sequence(updateFutures1)
+      _ <- Future.sequence(updateFutures2)
+    } yield
+      repo.delete(id)
+  }
+
   override def getCategoryD3Root = Action { implicit request =>
     val categories = allCategories
 
@@ -100,10 +134,34 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     Ok(Json.toJson(root))
   }
 
+  override def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]) = Action.async{ implicit request =>
+    getCall(id).flatMap{ category =>
+      if (category.isEmpty)
+        Future(notFoundCategory(id))
+      else if (parentId.isDefined)
+        getCall(parentId.get).flatMap { parent =>
+          if (parent.isEmpty)
+            Future(notFoundCategory(parentId.get))
+          else {
+            category.get.parentId = parent.get._id
+            repo.update(category.get).map(_ => Ok("Done"))
+          }
+        }
+      else {
+        category.get.parentId = None
+        repo.update(category.get).map(_ => Ok("Done"))
+      }
+    }
+  }
+
+  private def notFoundCategory(id: BSONObjectID) =
+    NotFound(s"Category with id #${id.stringify} not found. It has been probably deleted (by a different user). It's highly recommended to refresh your screen.")
+
   override def jsRoutes = Action { implicit request =>
     Ok(
       JavaScriptReverseRouter("jsRoutes")(
-        jsRouter.get
+        jsRouter.get,
+        jsRouter.relocateToParent
       )
     ).as("text/javascript")
   }

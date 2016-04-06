@@ -20,9 +20,24 @@
             @filter(page.filter, router.plainList, Left(Seq("name")))
         </div>
         <div class="pull-right">
-            <a class="btn btn-success btn-sm pull-right" id="add" href="@router.create">Add new</a>
+            <a class="btn btn-info btn-sm" id="expandAll" href="#" data-toggle="tooltip" title="Expand All" onclick="$('#treeDiv').tree('expandAll');return false;">
+                <span class="glyphicon glyphicon-resize-full" aria-hidden="true"></span>
+            </a>
+            <a class="btn btn-info btn-sm" id="collapseAll" href="#" data-toggle="tooltip" title="Collapse All" onclick="$('#treeDiv').tree('collapseAll');return false;">
+                <span class="glyphicon glyphicon-resize-small" aria-hidden="true"></span>
+            </a>
+            <a class="btn btn-info btn-sm" id="add" href="@router.create" data-toggle="tooltip" title="Add New">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+            </a>
         </div>
     </div>
+    <script type="text/javascript">
+        $(document).ready(function(){
+            $('[data-toggle="tooltip"]').tooltip({
+                placement : 'bottom'
+            });
+        });
+    </script>
 }
 
 @table = @{

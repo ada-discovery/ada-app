@@ -5,6 +5,7 @@ import javax.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import models.DataSetFormattersAndIds.{categoryFormat, CategoryIdentity => identity}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.Json
 import models.Category
 import persistence.RepoTypes._
 import play.modules.reactivemongo.json.BSONObjectIDFormat

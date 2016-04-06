@@ -61,4 +61,18 @@ object PathBindables {
     def unbind(key: String, value: BSONObjectID): String =
       b.unbind(key, value.stringify)
   }
+  implicit object OptionalBSONObjectIDPathBindable extends PathBindable[Option[BSONObjectID]] {
+    val b = implicitly[PathBindable[BSONObjectID]]
+    def bind(key: String, value: String): Either[String, Option[BSONObjectID]] = {
+      if (value.isEmpty)
+        Right(None)
+      else
+        b.bind(key, value).right.map(Some(_))
+    }
+    def unbind(key: String, value: Option[BSONObjectID]): String =
+      if (value.isEmpty)
+        ""
+      else
+        b.unbind(key, value.get)
+  }
 }
