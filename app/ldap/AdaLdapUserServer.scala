@@ -226,8 +226,50 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     LdapUtil.getEntryList(ldapinterface, dit)
   }
 
-  // TODO: stub
+  /**
+    * Update specified user. The user id is used for querying the user, the other fields are updated.
+    * TODO: This updates all fields, even if they did not change. Lazy updates should be preferred.
+    * @param user CustomUser to be updated.
+    * @return true, if user found and updated.
+    */
   override def updateUser(user: CustomUser): Future[Boolean] = {
-    Future(true)
+    // lookup user and terminate early, if not present
+    val entry: SearchResultEntry = ldapinterface.getEntry("cn=" + user.email + ",dc=users," + dit)
+    if(entry == null)
+      return Future(false)
+
+    val dn: String = entry.getDN
+    val permissions: String = if(user.permissions.isEmpty){"none"}else{user.permissions.head}
+    val roles: String = if (user.roles.isEmpty){"none"}else{user.roles.head}
+
+    val modSN: Modification = new Modification(
+      ModificationType.REPLACE,
+      "sn",
+      user.name
+    )
+
+    val modCN: Modification = new Modification(
+      ModificationType.REPLACE,
+      "cn",
+      user.name
+    )
+
+    val modO: Modification = new Modification(
+      ModificationType.REPLACE,
+      "o",
+      user.affiliation
+    )
+
+    val modMemberOf = new Modification(
+      ModificationType.REPLACE,
+      "memberOf",
+      roles + permissions
+    )
+
+    val request: ModifyRequest = new ModifyRequest(dn, modSN, modCN, modO, modMemberOf)
+    val response = ldapinterface.modify(request)
+    val success = response.getResultCode == ResultCode.SUCCESS
+    Future(success)
   }
+
 }
