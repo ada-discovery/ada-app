@@ -284,6 +284,7 @@ protected abstract class DataSetControllerImpl(
       foundField.fieldType match {
         case FieldType.String => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
         case FieldType.Enum => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
+        case FieldType.Boolean => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
         case FieldType.Double => ChartSpec.column(items, fieldName, chartTitle, 20)
         case FieldType.Integer => ChartSpec.column(items, fieldName, chartTitle, 20)
         case _ => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
@@ -300,8 +301,13 @@ protected abstract class DataSetControllerImpl(
     rawValues.map{rawValue =>
       if (rawValue == JsNull)
         None
-      else
-        rawValue.asOpt[String]
+      else {
+        val booleanValue = rawValue.asOpt[Boolean]
+        if (booleanValue.isDefined)
+          Some(booleanValue.get.toString)
+        else
+          rawValue.asOpt[String]
+      }
     }
 
   /**

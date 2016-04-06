@@ -11,7 +11,7 @@ class DenopaSecondvisitController @Inject()(
     dataSetMetaInfoRepo: DataSetMetaInfoRepo
   ) extends DenopaController(denopa_secondvisit, dsaf, dataSetMetaInfoRepo) {
 
-  override protected val listViewColumns = Some(Seq("Line_Nr", "Probanden_Nr", "Geburtsdatum", "C_group"))
+  override protected val listViewColumns = Some(Seq("Line_Nr", "Probanden_Nr", "Geburtsdatum", "c_group"))
 
   override protected val overviewFieldNamesConfPrefix = "denopa.secondvisit"
 
