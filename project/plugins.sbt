@@ -24,4 +24,6 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.0.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-mocha" % "1.0.0")
 
+addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.8.2")
+
 // addSbtPlugin("me.lessis" % "bintray-sbt" % "0.1.1")

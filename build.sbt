@@ -42,6 +42,7 @@ libraryDependencies ++= Seq(
   "org.scalaz" % "scalaz-core_2.11" % "7.2.1",
   "org.apache.spark" % "spark-core_2.11" % "1.6.0" exclude("asm", "asm"),
   "org.apache.spark" % "spark-sql_2.11" % "1.6.0" exclude("asm", "asm"),
+  "org.apache.spark" % "spark-mllib_2.11" % "1.6.0",
   "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.0" exclude("asm", "asm"),
   "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",
   "be.objectify" % "deadbolt-scala_2.11" % "2.4.3",
@@ -52,8 +53,12 @@ libraryDependencies ++= Seq(
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8"
 )
 
+// Following overrides are needed since Spark 1.6 uses jackson-databind 2.4.4
+// Note that deadbolt's dependency jackson-datatype-jsr310 has to be overriden as well because of transitivity
 dependencyOverrides ++= Set(
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.5.4"
+  "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.4",
+  "com.fasterxml.jackson.core" % "jackson-annotations" % "2.4.4",
+  "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.4.4"
 )
 
 routesGenerator := InjectedRoutesGenerator
