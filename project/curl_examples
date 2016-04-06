@@ -1,2 +1,17 @@
 curl -X GET -H "Accept: application/json" http://localhost:9000/studies/denopa/curatedbaseline/records/get/56957b6440f75a8790d943a7 | jq .
 curl --include -X POST -H "Content-type: application/json" -H "Accept: application/json" -d '{"original":"aaa", "translated":"bbb"}' http://localhost:9000/translations/save
+
+
+Samples for curl usge:
+
+Login in restful API on local instance:
+$ curl --dump-header authtoken --data "email=sample@mail&password=samplepassword" localhost:9000/loginRest
+Response on login success:
+{"user":"basic user"}
+Response on login failure:
+{}
+
+Accessing protected pages with token:
+$ curl --cookie authtoken localhost:9000/profile
+Response on failure:
+[BLANK]

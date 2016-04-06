@@ -39,6 +39,19 @@ class AuthController @Inject() (
   }
 
   /**
+    * Form for resetting password.
+    */
+  val recoveryForm = Form {
+    single(
+      "email" -> email
+    ).verifying(
+      "Invalid or unknown email",
+      email => Await.result(userManager.findByEmail(email), 120000 millis).isDefined
+    )
+  }
+
+
+  /**
     * Redirect to login page.
     */
   def login = Action { implicit request =>
@@ -105,6 +118,37 @@ class AuthController @Inject() (
   def unauthorized = Action { implicit request =>
     val message = "It appears that you don't have sufficient rights for access. Please login to proceed."
     Ok(views.html.auth.login(loginForm, Some(message)))
+  }
+
+
+  /**
+    * Leads to page for password recovery.
+    */
+  def passwordRecovery() = Action{ implicit reqeust =>
+    Ok(views.html.auth.recoverPassword(recoveryForm))
+  }
+
+  /**
+    *
+    * @return
+    */
+  def resetPassword = Action.async { implicit request =>
+    recoveryForm.bindFromRequest.fold(
+      formWithErrors => Future.successful(BadRequest(views.html.auth.recoverPassword(formWithErrors))),
+      email => {
+        /*var mail: Email = new Email
+        mail.setSubject("Reset password")
+        mail.setFrom("Ada Reporting System")
+        mail.addTo("TO <" + email + ">")
+        mail.setBodyText("1337")
+        mail.setBodyHtml("1337")
+
+        mailer.send(mail)
+        */
+
+        Future(Ok(views.html.auth.passwordChange(email)))
+      }
+    )
   }
 
   // TODO: debug login. remove later!
