@@ -1,0 +1,9 @@
+@import models.security.SecurityPermissionCache
+@import models.security.SecurityRoleCache
+
+@** Very similar to editableUserForm.scala.html, but with key fields hidden from user **@
+@(domainName: String, form: Form[_])(implicit msg: play.api.i18n.Messages)
+
+@inputText(domainName, "name", form)
+@inputText(domainName, "password", form)
+@inputText(domainName, "affiliation", form)

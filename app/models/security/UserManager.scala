@@ -52,6 +52,8 @@ trait UserManager {
     }
   }
 
+  def updateUser(user: CustomUser): Future[Boolean]
+
   def findById(id: String): Future[Option[CustomUser]]
   def findByEmail(email: String): Future[Option[CustomUser]]
 
@@ -101,6 +103,16 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager 
     usersFuture.map { users =>
       if (users.nonEmpty) Some(users.head) else None
     }
+  }
+
+  /**
+    * Update the user by looking up the username in the database and changing the other fields.
+    * @param user
+    * @return
+    */
+  override def updateUser(user: CustomUser): Future[Boolean] = {
+    userRepo.update(user)
+    Future(true)
   }
 }
 

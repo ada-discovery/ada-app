@@ -10,6 +10,7 @@ GET         /studies                                                            
 GET         /profile                                                                controllers.UserProfileController.profile
 GET         /workspace                                                              controllers.UserProfileController.workspace
 GET         /settings                                                               controllers.UserProfileController.settings
+POST        /settings                                                               controllers.UserProfileController.updateSettings
 GET         /adminpanel                                                             controllers.UserProfileController.adminPanel
 
 # logins
@@ -21,6 +22,10 @@ GET         /logout                                                             
 POST        /loginRest                                                              controllers.AuthController.loginREST
 GET         /logoutRest                                                             controllers.AuthController.logoutREST
 
+GET         /recoverPassword                                                        controllers.AuthController.passwordRecovery()
+POST        /recoverPassword                                                        controllers.AuthController.resetPassword
+
+# ldap debugging
 GET         /ldaplist                                                               controllers.JansDataSetController.listLDAP
 GET         /ldapauth                                                               controllers.JansDataSetController.ldapAuth
 GET         /ldapmail/:mail                                                         controllers.JansDataSetController.ldapmail(mail:String)
