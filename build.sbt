@@ -1,5 +1,3 @@
-
-
 import com.github.play2war.plugin._
 
 // val conf = play.api.Configuration.load(new File("."))
