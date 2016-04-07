@@ -8,6 +8,8 @@ import play.api.libs.json.{JsNull, JsString, JsObject}
 import play.api.mvc.{Action, Controller}
 import play.api.data.Forms._
 import play.api.data._
+import play.api.libs.mailer._
+import play.api.{Configuration, Logger}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
@@ -17,13 +19,33 @@ import scala.concurrent.duration._
 import jp.t2v.lab.play2.auth.LoginLogout
 import models.security._
 import security.AdaAuthConfig
+import util.SecurityUtil
+
+
 
 class AuthController @Inject() (
-    myUserManager: UserManager
+    myUserManager: UserManager,
+    configuration: Configuration
   ) extends Controller with LoginLogout with AdaAuthConfig {
 
   // a hook need by auth config
   override val userManager = myUserManager
+
+  // define custom mailer
+  def mailer: MailerClient = new SMTPMailer(
+    new SMTPConfiguration(
+      host = configuration.getString("play.mailer.host").getOrElse("smtp-1.uni.lu"),
+      port = configuration.getInt("play.mailer.port").getOrElse(587),
+      ssl = configuration.getBoolean("play.mailer.ssl").getOrElse(false),
+      tls = configuration.getBoolean("play.mailer.tls").getOrElse(false),
+      user = configuration.getString("play.mailer.user"),
+      password = configuration.getString("play.mailer.password"),
+      debugMode = configuration.getBoolean("play.mailer.host").getOrElse(false),
+      timeout = configuration.getInt("play.mailer.host"),
+      connectionTimeout = configuration.getInt("play.mailer.host"),
+      mock = configuration.getBoolean("play.mailer.host").getOrElse(true)
+    )
+  )
 
   /**
     * Login form definition.
@@ -135,18 +157,27 @@ class AuthController @Inject() (
   def resetPassword = Action.async { implicit request =>
     recoveryForm.bindFromRequest.fold(
       formWithErrors => Future.successful(BadRequest(views.html.auth.recoverPassword(formWithErrors))),
-      email => {
-        /*var mail: Email = new Email
-        mail.setSubject("Reset password")
-        mail.setFrom("Ada Reporting System")
-        mail.addTo("TO <" + email + ">")
-        mail.setBodyText("1337")
-        mail.setBodyHtml("1337")
-
-        mailer.send(mail)
-        */
-
-        Future(Ok(views.html.auth.passwordChange(email)))
+      emailDst => {
+        val newPassword: String = SecurityUtil.randomString(9)
+        val userOpFuture: Future[Option[CustomUser]] = userManager.findByEmail(emailDst)
+        userOpFuture.map{ userOp: Option[CustomUser] =>
+          val user: CustomUser = userOp.get
+          val mail = Email(
+            "[Ada Reporting System] Password Reset",
+            "Jan MARTENS FROM <jan.martens@uni.lu>",
+            Seq(emailDst),
+            attachments = Seq(),
+            bodyText = Some("This message has been sent to you due to a password reset request to the Ada Reporting System." + System.lineSeparator() +
+                            "If you did not request the password change, ignore this mail." + System.lineSeparator() +
+                            "Your newly generated password is: " + newPassword + System.lineSeparator() +
+                            "Use this password to login at Ada's login page."),
+            bodyHtml = None
+          )
+          mailer.send(mail)
+          Logger.info("Password reset for user [" + emailDst + "] requested")
+          userManager.updateUser(CustomUser(user._id, user.name, user.email, SecurityUtil.md5(newPassword), user.affiliation, user.roles, user.permissions))
+          Ok(views.html.auth.passwordChange(emailDst))
+        }
       }
     )
   }
