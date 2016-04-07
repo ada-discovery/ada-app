@@ -50,7 +50,8 @@ libraryDependencies ++= Seq(
   "jp.t2v" %% "play2-auth"        % "0.14.1",
   "jp.t2v" %% "play2-auth-social" % "0.14.1",
   "jp.t2v" %% "play2-auth-test"   % "0.14.1" % "test",
-  "com.unboundid" % "unboundid-ldapsdk" % "2.3.8"
+  "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
+  "com.typesafe.play" %% "play-mailer" % "4.0.0"
 )
 
 // Following overrides are needed since Spark 1.6 uses jackson-databind 2.4.4
