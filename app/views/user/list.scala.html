@@ -20,13 +20,7 @@
     paginatedTable(
         page,
         routes.UserController.find(_, _, page.filter),
-        Seq(
-            ("name", "Name", {item : Any => Html(item.asInstanceOf[CustomUser].name)})
-            //("address", "Address", {item : Any => Html(item.asInstanceOf[User].address.getOrElse(""))}),
-            //("dob", "Date of Birth", {item : Any => Html(item.asInstanceOf[User].dob.getOrElse(new java.util.Date()).format("dd MMM yyyy"))}),
-            //("joiningDate", "Joining Date", {item : Any => Html(item.asInstanceOf[User].joiningDate.getOrElse(new java.util.Date()).format("dd MMM yyyy"))}),
-            //("designation", "Designation", {item : Any => Html(item.asInstanceOf[User].designation.getOrElse(""))})
-        ),
+        Seq(("name", "Name", {item : Any => Html(item.asInstanceOf[CustomUser].name)})),
         Some({ item : Any => routes.UserController.get(item.asInstanceOf[CustomUser]._id.get)})
     )
 }

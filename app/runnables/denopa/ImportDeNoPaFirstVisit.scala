@@ -1,6 +1,6 @@
 package runnables.denopa
 
-import javax.inject.{Inject, Named}
+import javax.inject.Inject
 
 import models.DataSetId._
 import models.DataSetMetaInfo

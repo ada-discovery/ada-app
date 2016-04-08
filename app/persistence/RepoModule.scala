@@ -13,6 +13,7 @@ import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import persistence.RepoDef.Repo
 import models.security.CustomUser
+import models.workspace.Workspace
 
 object RepoDef extends Enumeration {
   case class Repo[T : Manifest](
@@ -31,6 +32,9 @@ object RepoDef extends Enumeration {
 
   val MessageRepo = Repo[MessageRepo](
     new MongoAsyncStreamRepo[Message, BSONObjectID]("messages"))
+
+  val UserSettingsRepo = Repo[WorkspaceRepo](
+    new MongoAsyncCrudRepo[Workspace, BSONObjectID]("workspace"))
 
   val DictionaryRootRepo = Repo[DictionaryRootRepo](
     new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))

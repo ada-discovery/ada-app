@@ -1,10 +1,9 @@
 package runnables.denopa
 
-import javax.inject.{Inject, Named}
+import javax.inject.Inject
 
 import models.DataSetId._
 import models.DataSetMetaInfo
-import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import play.api.libs.json.{JsNull, JsObject, JsString}
