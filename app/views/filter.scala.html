@@ -2,7 +2,7 @@
 @import util.ConditionType
 @import play.api.libs.json.Json
 
-@(filter: FilterSpec, submitCall: Call, fieldNamesOrCall: Either[Traversable[String], Call])
+@(filter: FilterSpec, submitCall: Call, fieldNamesOrCall: Either[Traversable[String], Call], saveCall: Option[Call]=None)
 
 <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/typeahead.css")">
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("typeahead.bundle.min.js"))"></script>
@@ -63,6 +63,12 @@
         <button type="button" class="btn btn-sm btn-default" onclick="showAddConditionModal();">
             <span class="glyphicon glyphicon-plus"></span>
         </button>
+
+        @if(saveCall.isDefined){
+            <button type="button" class="btn btn-sm btn-default" onclick="showAddConditionModal();">
+                <span class="glyphicon glyphicon-floppy-disk"></span>
+            </button>
+        }
     </li>
 </ul>
 

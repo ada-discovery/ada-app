@@ -2,20 +2,23 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
-import persistence.RepoException
+import models.workspace.Workspace
+import persistence.RepoTypes.WorkspaceRepo
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
 import play.api.Play.current
+import play.api.i18n.MessagesApi
 import play.api.i18n.Messages.Implicits._
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import javax.inject.Inject
+
+import persistence.RepoException
 
 import models.security.{UserManager, CustomUser}
 import security.AdaAuthConfig
@@ -28,7 +31,8 @@ import reactivemongo.bson.BSONObjectID
 class UserProfileController @Inject() (
     myUserManager: UserManager,
     deadbolt: DeadboltActions,
-    messagesApi: MessagesApi
+    messagesApi: MessagesApi,
+    workspaceRepo: WorkspaceRepo
   ) extends Controller with AdaAuthConfig {
 
 
@@ -63,9 +67,15 @@ class UserProfileController @Inject() (
     */
   def workspace() = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
+      val timeout = 12000 millis
       val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
-      usrFutureOp.map { usr =>
-        Ok(views.html.userprofile.workspace(usr.get))
+      usrFutureOp.map { (usrOp: Option[CustomUser]) =>
+        val workspaceFutureTrav: Future[Traversable[Workspace]] = workspaceRepo.find(Some(Json.obj("email" -> usrOp.get.email)))
+        val workspaceTrav = Await.result(workspaceFutureTrav, timeout)
+        if(workspaceTrav.isEmpty) // TODO: workspace will not be empty in final version!
+          Ok(views.html.userprofile.workspace(usrOp.get, new Workspace(None, "dummy", Seq(), Seq(), Seq())))
+        else
+          Ok(views.html.userprofile.workspace(usrOp.get, workspaceTrav.head))
       }
     }
   }
@@ -105,7 +115,7 @@ class UserProfileController @Inject() (
         Future.successful(BadRequest(formWithErrors.errors.toString).flashing("failure" -> "An unexpected error occured"))
       },
       (newUserData: CustomUser) => {
-        updateCall(loggedUser, newUserData).map { _ =>
+        updateUserCall(loggedUser, newUserData).map { _ =>
           render {
             case Accepts.Html() => Redirect(routes.UserProfileController.profile()).flashing("success" -> "Profile has been updated")
             case Accepts.Json() => Ok(Json.obj("message" -> "Profile successfully updated"))
@@ -136,8 +146,11 @@ class UserProfileController @Inject() (
     * @param newData New values, with _id, email, password, roles, permissions being ignored.
     * @return Future(true), if user successfully found and updated in database/ usermanager.
     */
-  protected def updateCall(refData: CustomUser, newData: CustomUser): Future[Boolean] = {
+  protected def updateUserCall(refData: CustomUser, newData: CustomUser): Future[Boolean] = {
     userManager.updateUser(new CustomUser(refData._id, newData.name, refData.email, newData.password, newData.affiliation, refData.roles, refData.permissions))
   }
 
+  protected def updateWorkspace() = {
+    Ok("")
+  }
 }

@@ -1,8 +1,11 @@
 @import models.security.CustomUser
 @import be.objectify.deadbolt.scala.views.html.restrict
 @import models.security.SecurityRoleCache
+@import models.workspace.Workspace
 
-@(user: CustomUser)(implicit request: Request[Any])
+
+@import play.api.libs.json.JsObject
+@(user: CustomUser, workspace: Workspace)(implicit request: Request[Any])
 
 @layout.main("NCER-PD Home") {
     <!-- user profile header; move to designated template -->
@@ -11,38 +14,16 @@
         <br>
 
         <div class="row">
-            <div class="col-sm-8">
-                    <!-- empty for now -->
-            </div>
             <div class="col-sm-3">
-                <div class="panel-group">
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <h4 class="panel-title">
-                                <a data-toggle="collapse" href="#collapsepermissions">Saved Filters&#160;&#160;<span class="badge">3</span></a>
-                            </h4>
-                        </div>
-                        <div id="collapsepermissions" class="panel-collapse collapse">
-                            <ul class="list-group">
-                                <li class="list-group-item">
-                                    Filter A
-                                    <button type="button" class="btn btn-info btn-sm pull-right">delete</button>
-                                    <button type="button" class="btn btn-info btn-sm pull-right">edit</button>
-                                </li>
-                                <li class="list-group-item">
-                                    Filter B
-                                    <button type="button" class="btn btn-info btn-sm pull-right">delete</button>
-                                    <button type="button" class="btn btn-info btn-sm pull-right">edit</button>
-                                </li>
-                                <li class="list-group-item">
-                                    Filter C
-                                    <button type="button" class="btn btn-info btn-sm pull-right">delete</button>
-                                    <button type="button" class="btn btn-info btn-sm pull-right">edit</button>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+                @userItems("Saved Filters", workspace.filters.map{x=>x.toString()})
+            </div>
+
+            <div class="col-sm-3">
+                @userItems("Saved Tree Projections", workspace.treeProjections.map{x=>x.toString()})
+            </div>
+
+            <div class="col-sm-3">
+                @userItems("List of Collaborators", workspace.collaborators.map{x=>x.toString()})
             </div>
         </div>
 
