@@ -9,7 +9,7 @@
         <div class="col-md-@gridWidth">
             @{chartSpec match {
                 case PieChartSpec(title, showLabels, showLegend, data) => highcharts.pieChart(title, chartElementName(title), showLabels, showLegend, data)
-                case ColumnChartSpec(title, data) => highcharts.columnChart(title, chartElementName(title), "Count", data)
+                case ColumnChartSpec(title, data) => highcharts.columnChart(title, chartElementName(title), Some(title), Some("Count"), data)
                 case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
             }}
         </div>

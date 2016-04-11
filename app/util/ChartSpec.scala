@@ -1,5 +1,7 @@
 package util
 
+import scala.math.BigDecimal.RoundingMode
+
 import play.api.libs.json._
 import collection.mutable.{Map => MMap}
 import _root_.util.JsonUtil._
@@ -61,6 +63,7 @@ object ChartSpec {
     fieldName: String,
     title: String,
     columnCount: Int,
+    xAxisScale: Option[Int] = None,
     explMin: Option[Double] = None,
     explMax: Option[Double] = None
   ) : ColumnChartSpec = {
@@ -79,7 +82,11 @@ object ChartSpec {
           values.filter(value => value >= left && value < right).size
         }
 
-        (left.toString, count)
+        val xValue = if (xAxisScale.isDefined)
+          left.setScale(xAxisScale.get, RoundingMode.HALF_UP)
+        else
+          left
+        (xValue.toString(), count)
       }
     } else
       Seq[(String, Int)]()

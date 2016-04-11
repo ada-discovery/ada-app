@@ -1,4 +1,10 @@
-@(title : String, chartElementName : String, yAxisCaption : String, elements : Seq[(String, Any)])
+@(
+    title : String,
+    chartElementName : String,
+    xAxisCaption: Option[String],
+    yAxisCaption: Option[String],
+    elements : Seq[(String, Any)]
+)
     <div id="@chartElementName" class="chart-holder"></div>
     <script type="text/javascript">
         $(function () {
@@ -10,6 +16,11 @@
                     text: "@title"
                 },
                 xAxis: {
+                    @if(xAxisCaption.isDefined) {
+                        title: {
+                            text: '@xAxisCaption.get'
+                        },
+                    }
                     categories: [
                         @elements.map { case (x, y) =>
                             '@x',
@@ -18,8 +29,10 @@
                     crosshair: true
                 },
                 yAxis: {
-                    title: {
-                        text: '@yAxisCaption'
+                    @if(yAxisCaption.isDefined) {
+                        title: {
+                            text: '@yAxisCaption.get'
+                        }
                     }
                 },
                 legend: {

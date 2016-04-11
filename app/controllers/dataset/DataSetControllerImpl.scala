@@ -285,8 +285,8 @@ protected abstract class DataSetControllerImpl(
         case FieldType.String => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
         case FieldType.Enum => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
         case FieldType.Boolean => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
-        case FieldType.Double => ChartSpec.column(items, fieldName, chartTitle, 20)
-        case FieldType.Integer => ChartSpec.column(items, fieldName, chartTitle, 20)
+        case FieldType.Double => ChartSpec.column(items, fieldName, chartTitle, 20, Some(1))
+        case FieldType.Integer => ChartSpec.column(items, fieldName, chartTitle, 20, Some(1))
         case _ => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
       }
     }

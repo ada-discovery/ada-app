@@ -44,9 +44,9 @@
         <li id="condition-full@index" class="condition-full">
             <h4>
                 <span class="condition">
-                    <span id="fieldName" class="label label-primary">@condition.fieldName</span>
-                    <span id="conditionType">@condition.conditionType</span>
-                    <span id="condition" class="label label-primary">@condition.condition</span>
+                    <span class="label label-primary">@condition.fieldName</span>
+                    <span>@condition.conditionType</span>
+                    <span class="label label-primary">@condition.condition</span>
                 </span>
                 <span class="condition-buttons" style="display: none">
                     <button type="button" class="btn btn-sm btn-default" onclick="showEditConditionModal('@index');">
@@ -90,6 +90,13 @@
     } else {
         null
     }
+
+    $('#addEditConditionModal').on('shown.bs.modal', function () {
+        if ($(this).find("#conditionIndex:first").val())
+            $('#condition').focus();
+        else
+            $('#fieldName').focus();
+    })
 
     populateFieldNames();
 
