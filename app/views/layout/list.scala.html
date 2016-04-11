@@ -1,4 +1,4 @@
-@import views.html.layout.{plainList, chartList}
+@import views.html.layout.genList
 
 @(
     domainName: String,
@@ -12,8 +12,9 @@
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
+
 @if(charts.isDefined) {
-    @chartList(domainName, count, actions, table, charts.get, sideBar, topContentBar)
+    @genList(domainName, count, actions, table, charts, sideBar, topContentBar)
 } else {
-    @plainList(domainName, count, actions, table, sideBar, topContentBar)
+    @genList(domainName, count, actions, table, None, sideBar, topContentBar)
 }

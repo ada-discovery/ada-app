@@ -73,7 +73,7 @@ class UserProfileController @Inject() (
         val workspaceFutureTrav: Future[Traversable[Workspace]] = workspaceRepo.find(Some(Json.obj("email" -> usrOp.get.email)))
         val workspaceTrav = Await.result(workspaceFutureTrav, timeout)
         if(workspaceTrav.isEmpty) // TODO: workspace will not be empty in final version!
-          Ok(views.html.userprofile.workspace(usrOp.get, new Workspace(None, "dummy", Seq(), Seq(), Seq())))
+          Ok(views.html.userprofile.workspace(usrOp.get, new Workspace(None, "dummy", Workspace.emptyUserGroup, Seq(), Seq())))
         else
           Ok(views.html.userprofile.workspace(usrOp.get, workspaceTrav.head))
       }
@@ -89,7 +89,7 @@ class UserProfileController @Inject() (
       usrFutureOp.map { (usrOp: Option[CustomUser]) =>
         usrOp match {
           case Some(usr) => Ok(views.html.userprofile.profileSettings(usr._id.get, userUpdateForm.fill(usr)))
-          case None => Ok("error")
+          case None => Ok("error")  // not supposed to ever occur due to deadbolt
         }
       }
     }
