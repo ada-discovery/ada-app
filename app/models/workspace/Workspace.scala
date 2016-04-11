@@ -9,9 +9,11 @@ import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 
 
-case class Workspace(_id: Option[BSONObjectID], userId: String, collaborators: Seq[String], filters: Seq[FilterSpec], treeProjections: Seq[JsObject])
+case class Workspace(_id: Option[BSONObjectID], userId: String, collaborators: UserGroup, filters: Seq[FilterSpec], treeProjections: Seq[JsObject])
 
 object Workspace {
+  val emptyUserGroup = UserGroup(None, "empty", Seq())
+
   implicit val WorkspaceFormat = Json.format[Workspace]
 
   implicit object WorkspaceIdentity extends BSONObjectIdentity[Workspace] {

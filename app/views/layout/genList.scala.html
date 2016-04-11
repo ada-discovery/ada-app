@@ -1,0 +1,37 @@
+@(
+        domainName:  String,
+        count: Long,
+        actions: Html,
+        table: Html,
+        charts: Option[Html] = None,
+        sideBar: Option[Html] = None,
+        topContentBar: Option[Html] = None
+)(
+        implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@main(Messages("overviewList.title", domainName), sideBar, topContentBar) {
+
+    <div class="page-header">
+        <h3>
+        @Messages("list.count.title", count, domainName)
+        </h3>
+    </div>
+
+    @flashMessages()
+
+    <div id="actions">
+    @actions
+    </div>
+    <hr/>
+
+    @if(charts.isDefined){
+        @charts.get
+
+        @if(count > 0) {
+            @collapsibleElement(table)
+        }
+    }else{
+        @table
+    }
+}

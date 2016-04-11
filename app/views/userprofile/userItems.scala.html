@@ -1,4 +1,9 @@
-@(title: String, elements: Seq[String], editCall: Option[Call]=None, deleteCall:Option[Call]=None)
+@(title: String, elements: Iterable[String], editCall: Option[Call]=None, deleteCall:Option[Call]=None, createCall:Option[Call]=None)
+
+@**
+ * Generate collapsable list of items.
+ * If options for create/edit/delete calls are provided, associated buttons will be created.
+ **@
 
 <div class="panel-group">
     <div class="panel panel-default">
@@ -12,10 +17,15 @@
             @elements.map{ e =>
                 <li class="list-group-item">
                     @e.toString()
-                    @if(deleteCall.isDefined){<button type="submit" class="btn btn-info btn-sm pull-right" onclick="deleteCall.get();">delete</button>}
-                    @if(editCall.isDefined){<button type="submit" class="btn btn-info btn-sm pull-right" onclick="editCall.get();">edit</button>}
+                    @if(deleteCall.isDefined){<button type="submit" class="btn btn-info btn-sm pull-right" onclick="deleteCall.get()(e);">delete</button>}
+                    @if(editCall.isDefined){<button type="submit" class="btn btn-info btn-sm pull-right" onclick="editCall.get()(e);">edit</button>}
                 </li>
             }
+                @if(editCall.isDefined){
+                    <li class="list-group-item-success">
+                        <button type="submit" class="btn btn-info" onclick="createCall.get();">create</button>
+                    </li>
+                }
             </ul>
         </div>
     </div>
