@@ -9,32 +9,26 @@ import runnables.{CleanupDataSet, GuiceBuilderRunnable}
 import models.DataSetId._
 
 class CleanupDeNoPaBaseline @Inject()(
-    dsaf: DataSetAccessorFactory,
     translationRepo : TranslationRepo
   ) extends CleanupDataSet(
     denopa_baseline,
-    DataSetMetaInfo(None, denopa_curated_baseline, "DeNoPa Curated Baseline"),
-    dsaf,
+    DataSetMetaInfo(None, denopa_curated_baseline, "DeNoPa Curated Baseline", None),
     translationRepo
   )
 
 class CleanupDeNoPaFirstVisit @Inject()(
-    dsaf: DataSetAccessorFactory,
     translationRepo : TranslationRepo
   ) extends CleanupDataSet(
     denopa_firstvisit,
-    DataSetMetaInfo(None, denopa_curated_firstvisit, "DeNoPa Curated First Visit"),
-    dsaf,
+    DataSetMetaInfo(None, denopa_curated_firstvisit, "DeNoPa Curated First Visit", None),
     translationRepo
   )
 
 class CleanupDeNoPaSecondVisit @Inject()(
-    dsaf: DataSetAccessorFactory,
     translationRepo : TranslationRepo
   ) extends CleanupDataSet(
     denopa_secondvisit,
-    DataSetMetaInfo(None, denopa_curated_secondvisit, "DeNoPa Curated Second Visit"),
-    dsaf,
+    DataSetMetaInfo(None, denopa_curated_secondvisit, "DeNoPa Curated Second Visit", None),
     translationRepo
   )
 

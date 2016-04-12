@@ -10,7 +10,7 @@ class DenopaFirstvisitController @Inject()(
     dataSetMetaInfoRepo: DataSetMetaInfoRepo
   ) extends DenopaController(denopa_firstvisit, dsaf, dataSetMetaInfoRepo) {
 
-  override protected val listViewColumns = Some(Seq("Line_Nr", "Probanden_Nr", "Geb_Datum", "b_Gruppe"))
+  override protected val listViewColumns = Some(Seq("Probanden_Nr", "Geb_Datum", "b_Gruppe"))
 
   override protected val overviewFieldNamesConfPrefix = "denopa.firstvisit"
 

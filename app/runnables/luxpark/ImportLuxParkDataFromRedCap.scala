@@ -19,7 +19,7 @@ class ImportLuxParkDataFromRedCap @Inject() (
 
   private val timeout = 120000 millis
 
-  val metaInfo = DataSetMetaInfo(None, luxpark, "Lux Park")
+  val metaInfo = DataSetMetaInfo(None, luxpark, "Lux Park", None)
 
   val dataSetAccessor = {
     val futureAccessor = dsaf.register(metaInfo)

@@ -3,6 +3,8 @@ package runnables
 import java.text.{ParseException, SimpleDateFormat}
 import java.util.Date
 
+import javax.inject.Inject
+
 import models.{DataSetMetaInfo, FieldType}
 import persistence.AscSort
 import persistence.RepoTypes._
@@ -16,21 +18,22 @@ import scala.concurrent.duration._
 abstract class CleanupDataSet (
     originalDataSetId: String,
     newDataSetMetaInfo: DataSetMetaInfo,
-    dsaf: DataSetAccessorFactory,
     translationRepo : TranslationRepo
   ) extends Runnable {
 
-  val originalDsa = dsaf(originalDataSetId).get
-  val newDsa = {
-    val futureAccessor = dsaf.register(newDataSetMetaInfo)
-    Await.result(futureAccessor, 120000 millis)
-  }
-
-  val originalDataRepo = originalDsa.dataSetRepo
-  val newDataRepo = newDsa.dataSetRepo
-  val originalDictionaryRepo = originalDsa.fieldRepo
+  @Inject() protected var dsaf: DataSetAccessorFactory = _
 
   val timeout = 120000 millis
+
+  lazy val originalDsa = dsaf(originalDataSetId).get
+  lazy val newDsa = {
+    val futureAccessor = dsaf.register(newDataSetMetaInfo)
+    Await.result(futureAccessor, timeout)
+  }
+
+  lazy val originalDataRepo = originalDsa.dataSetRepo
+  lazy val newDataRepo = newDsa.dataSetRepo
+  lazy val originalDictionaryRepo = originalDsa.fieldRepo
 
   override def run = {
     // remove the curated records from the collection

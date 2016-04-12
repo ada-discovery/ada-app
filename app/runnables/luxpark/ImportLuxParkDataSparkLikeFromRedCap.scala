@@ -21,7 +21,7 @@ class ImportLuxParkDataSparkLikeFromRedCap @Inject() (
 
   private val timeout = 120000 millis
 
-  val metaInfo = DataSetMetaInfo(None, luxpark.toString, "Lux Park")
+  val metaInfo = DataSetMetaInfo(None, luxpark.toString, "Lux Park", None)
 
   val dataSetAccessor = {
     val futureAccessor = dsaf.register(metaInfo)

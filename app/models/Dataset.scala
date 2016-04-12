@@ -9,11 +9,24 @@ import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.functional.syntax._
 
+case class DataSpaceMetaInfo(
+  _id: Option[BSONObjectID],
+  name: String,
+  timeCreated: Date = new Date()
+)
+
 case class DataSetMetaInfo(
   _id: Option[BSONObjectID],
   id: String,
   name: String,
-  timeCreated: Date = new Date()
+  dataSpaceId: Option[BSONObjectID],
+  timeCreated: Date = new Date(),
+  sourceDataSetId: Option[BSONObjectID] = None
+)
+
+case class DataSetUISetting(
+  _id: Option[BSONObjectID],
+  dataSetId: Option[BSONObjectID]
 )
 
 case class Dictionary(
