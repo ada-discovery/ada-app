@@ -7,7 +7,7 @@ import _root_.util.JsonUtil._
 import _root_.util.WebExportUtil._
 import _root_.util.{ChartSpec, FieldChartSpec, FilterSpec, JsonUtil}
 import controllers.{ExportableAction, ReadonlyController}
-import models.{DataSetMetaInfo, FieldType, Page, Field, Category}
+import models._
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.AscSort
 import persistence.RepoTypes._
@@ -46,12 +46,6 @@ protected abstract class DataSetControllerImpl(
 
   protected lazy val dataSetName = result(dsa.metaInfo).name
 
-  // keyfield, mainly used for data export
-  protected def keyField: String
-
-  // reference field for sorting the data
-  protected def exportOrderByField : String
-
   // auto-generated filename for csv files
   protected def csvFileName: String = dataSetId.replace(" ", "-") + ".csv"
 
@@ -64,26 +58,13 @@ protected abstract class DataSetControllerImpl(
   // auto-generated filename for tranSMART mapping files
   protected def tranSMARTMappingFileName: String = dataSetId.replace(" ", "-") + "_mapping_file"
 
-  // visit field for transmart
-  protected def tranSMARTVisitField: Option[String] = None
-
-  protected def tranSMARTReplacements = List[(String, String)]()
-
-  // key for associated field in config file
-  protected def overviewFieldNamesConfPrefix: String
-
-  // for scatter plot
-  protected def defaultScatterXFieldName: String
-  protected def defaultScatterYFieldName: String
-
-  // for distribution plot
-  protected def defaultDistributionFieldName: String
+  // setting of data set ui aspects such as overview chart field names, etc.
+  protected def setting: DataSetSetting
 
   // router for requests; to be passed to views as helper.
   protected lazy val router: DataSetRouter = new DataSetRouter(dataSetId)
 
-  protected lazy val overviewFieldNames =
-    current.configuration.getStringSeq(overviewFieldNamesConfPrefix + ".overview.fieldnames").getOrElse(Seq[String]())
+  override protected lazy val listViewColumns = Some(setting.listViewTableColumnName)
 
   private val jsonNumericTypes = Json.arr(FieldType.Double.toString, FieldType.Integer.toString)
 
@@ -146,7 +127,7 @@ protected abstract class DataSetControllerImpl(
     * @return View for download.
     */
   override def exportAllRecordsAsCsv(delimiter : String) =
-    exportAllToCsv(csvFileName, delimiter, exportOrderByField)
+    exportAllToCsv(csvFileName, delimiter, setting.exportOrderByFieldName)
 
   /**
     * Generate content of Json export file and create donwload.
@@ -154,7 +135,7 @@ protected abstract class DataSetControllerImpl(
     * @return View for download.
     */
   override def exportAllRecordsAsJson =
-    exportAllToJson(jsonFileName, exportOrderByField)
+    exportAllToJson(jsonFileName, setting.exportOrderByFieldName)
 
   /**
     * Generate content of csv export file and create download.
@@ -163,7 +144,7 @@ protected abstract class DataSetControllerImpl(
     * @return View for download.
     */
   override def exportRecordsAsCsv(delimiter : String, filter: FilterSpec) =
-    exportToCsv(csvFileName, delimiter, filter.toJsonCriteria, exportOrderByField)
+    exportToCsv(csvFileName, delimiter, filter.toJsonCriteria, setting.exportOrderByFieldName)
 
   /**
     * Generate content of Json export file and create donwload.
@@ -171,7 +152,7 @@ protected abstract class DataSetControllerImpl(
     * @return View for download.
     */
   override def exportRecordsAsJson(filter: FilterSpec) =
-    exportToJson(jsonFileName, filter.toJsonCriteria, exportOrderByField)
+    exportToJson(jsonFileName, filter.toJsonCriteria, setting.exportOrderByFieldName)
 
   /**
     * Fetch specified field (column) entries from repo and wrap them in a Traversable object.
@@ -223,7 +204,7 @@ protected abstract class DataSetControllerImpl(
   }
 
   def overview = Action.async { implicit request =>
-    val futureChartSpecs = overviewFieldNames.map(getDataChartSpec(None, _))
+    val futureChartSpecs = setting.overviewChartFieldNames.map(getDataChartSpec(None, _))
 
     Future.sequence(futureChartSpecs).map { chartSpecs =>
       implicit val msg = messagesApi.preferred(request)
@@ -234,7 +215,7 @@ protected abstract class DataSetControllerImpl(
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    val futureFieldChartSpecs = overviewFieldNames.map(fieldName =>
+    val futureFieldChartSpecs = setting.overviewChartFieldNames.map(fieldName =>
       getDataChartSpec(filter.toJsonCriteria, fieldName).map(chartSpec =>
         FieldChartSpec(fieldName, chartSpec)
       )
@@ -326,8 +307,8 @@ protected abstract class DataSetControllerImpl(
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    val xFieldName = xFieldNameOption.getOrElse(defaultScatterXFieldName)
-    val yFieldName = yFieldNameOption.getOrElse(defaultScatterYFieldName)
+    val xFieldName = xFieldNameOption.getOrElse(setting.defaultScatterXFieldName)
+    val yFieldName = yFieldNameOption.getOrElse(setting.defaultScatterYFieldName)
 
     val numericFieldsFuture = fieldRepo.find(Some(Json.obj("fieldType" -> Json.obj("$in" -> jsonNumericTypes))))
     val xFieldFuture = fieldRepo.get(xFieldName)
@@ -374,7 +355,7 @@ protected abstract class DataSetControllerImpl(
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    val fieldName = fieldNameOption.getOrElse(defaultDistributionFieldName)
+    val fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
     val fieldsFuture = fieldRepo.find(None, Some(Seq(AscSort("name"))))
     val fieldNameLabelsFuture = fieldsFuture.map(_.map(field => (field.name, field.label)).toSeq)
     val chartSpecFuture = getDataChartSpec(filter.toJsonCriteria, fieldName, true, false)
@@ -442,7 +423,7 @@ protected abstract class DataSetControllerImpl(
     * @return View for download.
     */
   def exportTranSMARTDataFile(delimiter : String): Action[AnyContent] = Action { implicit request =>
-    val fileContent = generateTranSMARTDataFile(tranSMARTDataFileName, delimiter, exportOrderByField)
+    val fileContent = generateTranSMARTDataFile(tranSMARTDataFileName, delimiter, setting.exportOrderByFieldName)
     stringToFile(tranSMARTDataFileName)(fileContent)
   }
 
@@ -454,7 +435,7 @@ protected abstract class DataSetControllerImpl(
     * @return View for download.
     */
   def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent] = Action { implicit request =>
-    val fileContent = generateTranSMARTMappingFile(tranSMARTDataFileName, delimiter, exportOrderByField)
+    val fileContent = generateTranSMARTMappingFile(tranSMARTDataFileName, delimiter, setting.exportOrderByFieldName)
     stringToFile(tranSMARTMappingFileName)(fileContent)
   }
 
@@ -477,10 +458,10 @@ protected abstract class DataSetControllerImpl(
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()
 
-    tranSMARTService.createClinicalDataFile(unescapedDelimiter , "\n", tranSMARTReplacements)(
+    tranSMARTService.createClinicalDataFile(unescapedDelimiter , "\n", setting.tranSMARTReplacements)(
       records,
-      keyField,
-      tranSMARTVisitField,
+      setting.keyFieldName,
+      setting.tranSMARTVisitFieldName,
       result(fieldNameCategoryMap(categoriesFuture))
     )
   }
@@ -503,11 +484,11 @@ protected abstract class DataSetControllerImpl(
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()
 
-    tranSMARTService.createMappingFile(unescapedDelimiter , "\n", tranSMARTReplacements)(
+    tranSMARTService.createMappingFile(unescapedDelimiter , "\n", setting.tranSMARTReplacements)(
       records,
       dataFilename,
-      keyField,
-      tranSMARTVisitField,
+      setting.keyFieldName,
+      setting.tranSMARTVisitFieldName,
       result(fieldNameCategoryMap(categoriesFuture)),
       result(rootCategoryTree(categoriesFuture)),
       result(fieldLabelMap)

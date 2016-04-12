@@ -2,18 +2,28 @@ package controllers.dataset.denopa
 
 import javax.inject.Inject
 
+import controllers.dataset.DataSetControllerImpl
 import models.DataSetId._
+import models.DataSetSetting
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
 
 class DenopaCuratedFirstvisitController @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetMetaInfoRepo: DataSetMetaInfoRepo
-  ) extends DenopaController(denopa_curated_firstvisit, dsaf, dataSetMetaInfoRepo) {
+  ) extends DataSetControllerImpl(denopa_curated_firstvisit, dsaf, dataSetMetaInfoRepo) {
 
-  override protected val listViewColumns = Some(Seq("Probanden_Nr", "Geb_Datum", "b_Gruppe"))
-
-  override protected val overviewFieldNamesConfPrefix = "denopa.curatedfirstvisit"
-
-  override protected val defaultScatterYFieldName = "b_AESD_I_mean"
+  override protected def setting = DataSetSetting(
+    None,
+    None,
+    "Probanden_Nr",
+    "Line_Nr",
+    Seq("Probanden_Nr", "Geb_Datum", "b_Gruppe"),
+    Seq("Geschlecht", "b_Gruppe", "a_Alter"),
+    "a_Alter",
+    "b_AESD_I_mean",
+    "a_Alter",
+    None,
+    List(("\r", " "), ("\n", " "))
+  )
 }

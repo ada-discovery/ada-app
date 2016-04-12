@@ -24,9 +24,18 @@ case class DataSetMetaInfo(
   sourceDataSetId: Option[BSONObjectID] = None
 )
 
-case class DataSetUISetting(
+case class DataSetSetting(
   _id: Option[BSONObjectID],
-  dataSetId: Option[BSONObjectID]
+  dataSetId: Option[BSONObjectID],
+  keyFieldName: String,
+  exportOrderByFieldName: String,
+  listViewTableColumnName: Seq[String],
+  overviewChartFieldNames: Seq[String],
+  defaultScatterXFieldName: String,
+  defaultScatterYFieldName:String,
+  defaultDistributionFieldName: String,
+  tranSMARTVisitFieldName: Option[String],
+  tranSMARTReplacements: Seq[(String, String)]
 )
 
 case class Dictionary(
@@ -107,6 +116,7 @@ object DataSetFormattersAndIds {
 
   implicit val dictionaryFormat = Json.format[Dictionary]
   implicit val dataSetMetaInfoFormat = Json.format[DataSetMetaInfo]
+  implicit val dataSpaceMetaInfoFormat = Json.format[DataSpaceMetaInfo]
 
   implicit object DictionaryIdentity extends BSONObjectIdentity[Dictionary] {
     def of(entity: Dictionary): Option[BSONObjectID] = entity._id
@@ -129,8 +139,14 @@ object DataSetFormattersAndIds {
     def of(entity: DataSetMetaInfo): Option[BSONObjectID] = entity._id
     protected def set(entity: DataSetMetaInfo, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }
+
+  implicit object DataSpaceMetaInfoIdentity extends BSONObjectIdentity[DataSpaceMetaInfo] {
+    def of(entity: DataSpaceMetaInfo): Option[BSONObjectID] = entity._id
+    protected def set(entity: DataSpaceMetaInfo, id: Option[BSONObjectID]) = entity.copy(_id = id)
+  }
 }
 
+// TODO: remove
 object DataSetId {
   val luxpark = "luxpark"
   val denopa_curated_baseline = "denopa_curated_baseline"
@@ -140,10 +156,3 @@ object DataSetId {
   val denopa_firstvisit = "denopa_firstvisit"
   val denopa_secondvisit = "denopa_secondvisit"
 }
-
-// TODO:
-//trait BSONIdentifiable {
-//
-//}
-
-// def union(refSet : Dataset, anotherset : Dataset)
