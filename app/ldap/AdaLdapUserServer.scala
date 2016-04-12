@@ -29,13 +29,13 @@ import play.api.Configuration
 @ImplementedBy(classOf[AdaLdapUserServerImpl])
 trait AdaLdapUserServer extends UserManager{
 
-  val ldapinterface: LDAPInterface
+  val ldapinterface: Option[LDAPInterface]
 
   def addUsersFromRepo(interface: LDAPInterface, userRepo: UserRepo): Unit
   def getUsers(interface: LDAPInterface): Seq[CustomUser]
 
-  def setupInterface(): LDAPInterface
-  def terminateInterface(interface: LDAPInterface): Unit
+  def setupInterface(): Option[LDAPInterface]
+  def terminateInterface(interface: Option[LDAPInterface]): Unit
 
   def getEntryList: List[String]
 }
@@ -47,33 +47,36 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   // root of ldap tree
   val dit = configuration.getString("ldap.dit").getOrElse("dc=ncer")
 
-  //switch for local ldap server or connection to remote server
+  // switch for local ldap server or connection to remote server
+  // use "local" to set up local in-memory server
+  // use "remote" to set up connection to remote server
+  // this flag defaults to "local", if no option is given
   val mode: String = configuration.getString("ldap.mode").getOrElse("local")
 
   // local server options
   // port for listener
   val listenerPort: Int = configuration.getInt("ldap.port").getOrElse(389)
 
-  // options for connecting oto remote server
+  // options for connecting to remote server
   // general config for connection setup
   val defaultPort: Int = configuration.getInt("ldap.port").getOrElse(389)
   val defaultHost: String = configuration.getString("ldap.host").getOrElse("localhost")
   val serverTimeout: Int = configuration.getInt("ldap.timeout").getOrElse(2000)
   // configuration for authorized binding
-  val defaultbindDn: String = "cn=" + adminUser.email + ",dc=users," + dit
+  val defaultbindDn: String = configuration.getString("ldap.bindDN").getOrElse("cn=" + adminUser.email + ",dc=users," + dit)
   val defaultPassword: String = adminUser.password
 
-  override val ldapinterface: LDAPInterface = setupInterface
+  override val ldapinterface: Option[LDAPInterface] = setupInterface
 
   /**
     * Creates either a server or a connection, depending on the configuration.
     * @return LDAPInterface, either of type InMemoryDirectoryServer or LDAPConnection.
     */
-  override def setupInterface(): LDAPInterface = {
+  override def setupInterface(): Option[LDAPInterface] = {
     val interface = mode match{
-      case "local" => createServer
-      case "remote" => createConnection
-      case _ => createServer
+      case "local" => Some(createServer)
+      case "remote" => Some(createConnection)
+      case _ => None
     }
     // hook interface in lifecycle for proper cleanup
     applicationLifecycle.addStopHook{ () =>
@@ -176,11 +179,13 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * Ensures that application releases ports.
     * @param interface Interface to be disconnected or shut down.
     */
-  override def terminateInterface(interface: LDAPInterface): Unit = {
-    ldapinterface match{
-      case server: InMemoryDirectoryServer => server.shutDown(true)
-      case connection: LDAPConnection => connection.close()
-      case _ => Unit
+  override def terminateInterface(interface: Option[LDAPInterface]): Unit = {
+    if(interface.isDefined){
+      interface.get match{
+        case server: InMemoryDirectoryServer => server.shutDown(true)
+        case connection: LDAPConnection => connection.close()
+        case _ => Unit
+      }
     }
   }
 
@@ -212,8 +217,12 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * @return CustomUser, if found, None else
     */
   override def findByEmail(email: String): Future[Option[CustomUser]] = {
-    val entry: SearchResultEntry = ldapinterface.getEntry("cn=" + email + ",dc=users," + dit)
-    val user: Option[CustomUser] = LdapUtil.entryToUser(entry)
+    val user: Option[CustomUser] = ldapinterface match{
+      case Some(interface) => {
+        val entry: SearchResultEntry = interface.getEntry("cn=" + email + ",dc=users," + dit)
+        LdapUtil.entryToUser(entry)
+      }
+    }
     Future(user)
   }
 
@@ -223,7 +232,10 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * @return
     */
   override def getEntryList: List[String] = {
-    LdapUtil.getEntryList(ldapinterface, dit)
+    ldapinterface match{
+      case Some(interface) => LdapUtil.getEntryList(interface, dit)
+      case None => List()
+    }
   }
 
   /**
@@ -234,7 +246,11 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     */
   override def updateUser(user: CustomUser): Future[Boolean] = {
     // lookup user and terminate early, if not present
-    val entry: SearchResultEntry = ldapinterface.getEntry("cn=" + user.email + ",dc=users," + dit)
+    val entry = ldapinterface match{
+      case Some(interface) => interface.getEntry("cn=" + user.email + ",dc=users," + dit)
+      case None => null
+    }
+
     if(entry == null)
       return Future(false)
 
@@ -267,9 +283,15 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     )
 
     val request: ModifyRequest = new ModifyRequest(dn, modSN, modCN, modO, modMemberOf)
-    val response = ldapinterface.modify(request)
-    val success = response.getResultCode == ResultCode.SUCCESS
-    Future(success)
+    ldapinterface match{
+      case Some(interface) => {
+        val response = interface.modify(request)
+        val success = response.getResultCode == ResultCode.SUCCESS
+        Future(success)
+      }
+      case None => Future(true)
+    }
+
   }
 
 }
