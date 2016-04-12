@@ -74,8 +74,7 @@
         _dragstart: function (node, uiNode) {
             node.dragstartx = node.x
             node.dragstarty = node.y
-
-            d3.event.sourceEvent.stopPropagation();
+            //d3.event.sourceEvent.stopPropagation();
         },
 
         _drag: function(node, uiNode) {
