@@ -1,14 +1,17 @@
 package ldap
 
 
+import javax.net.ssl.SSLSocketFactory
+
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.unboundid.ldap.listener.{InMemoryListenerConfig, InMemoryDirectoryServer, InMemoryDirectoryServerConfig}
 import com.unboundid.ldap.sdk._
+import com.unboundid.util.ssl.{TrustAllTrustManager, SSLUtil}
+import com.unboundid.util.{SynchronizedSocketFactory, SynchronizedSSLSocketFactory}
 
 import persistence.RepoTypes._
 
 import scala.concurrent.duration._
-
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.FiniteDuration
 
@@ -44,6 +47,9 @@ trait AdaLdapUserServer extends UserManager{
 @Singleton
 class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle, configuration: Configuration) extends AdaLdapUserServer{
 
+  // be aware that by default, client certificates are disabled and server certificates are always trusted!
+  // do not use remote mode unless you know the server you connect to!
+
   // root of ldap tree
   val dit = configuration.getString("ldap.dit").getOrElse("dc=ncer")
 
@@ -63,8 +69,10 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   val defaultHost: String = configuration.getString("ldap.host").getOrElse("localhost")
   val serverTimeout: Int = configuration.getInt("ldap.timeout").getOrElse(2000)
   // configuration for authorized binding
-  val defaultbindDn: String = configuration.getString("ldap.bindDN").getOrElse("cn=" + adminUser.email + ",dc=users," + dit)
-  val defaultPassword: String = adminUser.password
+  val bindDn: String = configuration.getString("ldap.bindDN").getOrElse("cn=" + adminUser.email + ",dc=users," + dit)
+  val bindPassword: String = configuration.getString("ldap.bindPassword").getOrElse(adminUser.password)
+  val encryption: String = configuration.getString("ldap.encryption").getOrElse("none")
+
 
   override val ldapinterface: Option[LDAPInterface] = setupInterface
 
@@ -166,11 +174,20 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   /**
     * Creates a connection to an existing LDAP server instance.
     * Uses the options defined in the configuation.
+    * Used options from configuration are ldap.encryption, ldap.host, ldap.prt, ldap.bindDN, ldap.bindPassword
     * @return LDAPConnection object pointing with specified credentials.
     */
   def createConnection(): LDAPConnection = {
-    //val options: LDAPConnectionOptions = new LDAPConnectionOptions()
-    val connection = new LDAPConnection(defaultHost, defaultPort, defaultbindDn, defaultPassword)
+    val connection = encryption match{
+      case "SSL" => {
+        val sslUtil: SSLUtil = new SSLUtil(new TrustAllTrustManager());
+        val sslSocketFactory: SSLSocketFactory = sslUtil.createSSLSocketFactory();
+        new LDAPConnection(sslSocketFactory, defaultHost, defaultPort, bindDn, bindPassword)
+      }
+      case "none" =>
+        new LDAPConnection(defaultHost, defaultPort, bindDn, bindPassword)
+    }
+
     connection
   }
 
@@ -222,6 +239,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
         val entry: SearchResultEntry = interface.getEntry("cn=" + email + ",dc=users," + dit)
         LdapUtil.entryToUser(entry)
       }
+      case None => None
     }
     Future(user)
   }

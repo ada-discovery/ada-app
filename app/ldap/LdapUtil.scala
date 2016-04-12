@@ -4,6 +4,8 @@ import java.util
 
 import com.unboundid.ldap.listener.{InMemoryDirectoryServerSnapshot, InMemoryDirectoryServer}
 import com.unboundid.ldap.sdk._
+import com.unboundid.ldap.sdk.LDAPSearchException
+
 import models.security.CustomUser
 
 
@@ -62,15 +64,16 @@ object LdapUtil {
     */
   def getEntryList(interface: LDAPInterface, baseDN: String="dc=ncer"): List[String] = {
     val searchRequest: SearchRequest = new SearchRequest(baseDN, SearchScope.SUB, Filter.create("(objectClass=*)"))
-    val searchResult: SearchResult = interface.search(searchRequest)
-    val entries: util.List[SearchResultEntry] =  searchResult.getSearchEntries()
     var userStringList = List[String]()
-
-    val it: util.Iterator[SearchResultEntry] = entries.iterator()
-    while(it.hasNext){
-      val entry: SearchResultEntry = it.next
-      userStringList = entry.toString() :: userStringList
-    }
+    try{
+      val searchResult: SearchResult = interface.search(searchRequest)
+      val entries: util.List[SearchResultEntry] =  searchResult.getSearchEntries()
+      val it: util.Iterator[SearchResultEntry] = entries.iterator()
+      while(it.hasNext){
+        val entry: SearchResultEntry = it.next
+        userStringList = entry.toString() :: userStringList
+      }
+    }catch{case _ => Unit}
     userStringList
   }
 
