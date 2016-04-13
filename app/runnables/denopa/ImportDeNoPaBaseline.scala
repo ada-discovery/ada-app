@@ -9,6 +9,7 @@ import runnables.{ImportDataSet, GuiceBuilderRunnable}
 class ImportDeNoPaBaseline @Inject() (configuration: Configuration) extends ImportDataSet(
   denopa_baseline,
   "DeNoPa Baseline",
+  Some(DeNoPaDataSetSetting.BaseLine),
   configuration.getString("denopa.import.folder").get,
   "Denopa-V1-BL-Datensatz-1-final.csv",
   "§§"

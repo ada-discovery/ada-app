@@ -8,6 +8,10 @@ class ControllerModule extends AbstractModule {
 
   override def configure() {
     install(new FactoryModuleBuilder()
+      .implement(classOf[DataSetController], classOf[DataSetControllerImpl])
+      .build(classOf[GenericDataSetControllerFactory]))
+
+    install(new FactoryModuleBuilder()
       .implement(classOf[DictionaryController], classOf[DictionaryControllerImpl])
         .build(classOf[DictionaryControllerFactory]))
 

@@ -2,7 +2,7 @@ package runnables
 
 import javax.inject.Inject
 
-import models.DataSetMetaInfo
+import models.{DataSetSetting, DataSetMetaInfo}
 import persistence.RepoSynchronizer
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsObject, JsString}
@@ -15,6 +15,7 @@ import scala.io.Source
 class ImportDataSet(
     dataSetId: String,
     dataSetName: String,
+    setting: Option[DataSetSetting],
     folder: String,
     filename: String,
     separator: String,
@@ -27,7 +28,7 @@ class ImportDataSet(
   protected val metaInfo = DataSetMetaInfo(None, dataSetId, dataSetName, None)
 
   lazy val dataSetAccessor = {
-    val futureAccessor = dsaf.register(metaInfo)
+    val futureAccessor = dsaf.register(metaInfo, setting)
     result(futureAccessor, timeout)
   }
 

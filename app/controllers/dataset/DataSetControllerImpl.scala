@@ -6,6 +6,7 @@ import javax.inject.Inject
 import _root_.util.JsonUtil._
 import _root_.util.WebExportUtil._
 import _root_.util.{ChartSpec, FieldChartSpec, FilterSpec, JsonUtil}
+import com.google.inject.assistedinject.Assisted
 import controllers.{ExportableAction, ReadonlyController}
 import models._
 import org.apache.commons.lang3.StringEscapeUtils
@@ -28,8 +29,12 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
 import scala.concurrent.Await.result
 
-protected abstract class DataSetControllerImpl(
-    val dataSetId: String,
+trait GenericDataSetControllerFactory {
+  def apply(dataSetId: String): DataSetController
+}
+
+protected[controllers] class DataSetControllerImpl @Inject() (
+    @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSetMetaInfoRepo: DataSetMetaInfoRepo
   ) extends ReadonlyController[JsObject, BSONObjectID](dsaf(dataSetId).get.dataSetRepo) with DataSetController with ExportableAction[JsObject] {
@@ -59,7 +64,7 @@ protected abstract class DataSetControllerImpl(
   protected def tranSMARTMappingFileName: String = dataSetId.replace(" ", "-") + "_mapping_file"
 
   // setting of data set ui aspects such as overview chart field names, etc.
-  protected def setting: DataSetSetting
+  protected def setting = result(dsa.setting)
 
   // router for requests; to be passed to views as helper.
   protected lazy val router: DataSetRouter = new DataSetRouter(dataSetId)

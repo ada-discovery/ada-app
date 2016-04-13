@@ -26,17 +26,19 @@ case class DataSetMetaInfo(
 
 case class DataSetSetting(
   _id: Option[BSONObjectID],
-  dataSetId: Option[BSONObjectID],
+  dataSetId: String,
   keyFieldName: String,
   exportOrderByFieldName: String,
   listViewTableColumnName: Seq[String],
   overviewChartFieldNames: Seq[String],
   defaultScatterXFieldName: String,
-  defaultScatterYFieldName:String,
+  defaultScatterYFieldName: String,
   defaultDistributionFieldName: String,
   tranSMARTVisitFieldName: Option[String],
-  tranSMARTReplacements: Seq[(String, String)]
-)
+  tranSMARTReplacements: Map[String, String]
+) {
+  def this(dataSetId: String) = this(None, dataSetId, "", "", Seq[String](), Seq[String](), "", "", "", None, Map[String, String]())
+}
 
 case class Dictionary(
   _id: Option[BSONObjectID],
@@ -117,6 +119,7 @@ object DataSetFormattersAndIds {
   implicit val dictionaryFormat = Json.format[Dictionary]
   implicit val dataSetMetaInfoFormat = Json.format[DataSetMetaInfo]
   implicit val dataSpaceMetaInfoFormat = Json.format[DataSpaceMetaInfo]
+  implicit val dataSetSettingFormat = Json.format[DataSetSetting]
 
   implicit object DictionaryIdentity extends BSONObjectIdentity[Dictionary] {
     def of(entity: Dictionary): Option[BSONObjectID] = entity._id
@@ -143,6 +146,11 @@ object DataSetFormattersAndIds {
   implicit object DataSpaceMetaInfoIdentity extends BSONObjectIdentity[DataSpaceMetaInfo] {
     def of(entity: DataSpaceMetaInfo): Option[BSONObjectID] = entity._id
     protected def set(entity: DataSpaceMetaInfo, id: Option[BSONObjectID]) = entity.copy(_id = id)
+  }
+
+  implicit object DataSpaceSettingIdentity extends BSONObjectIdentity[DataSetSetting] {
+    def of(entity: DataSetSetting): Option[BSONObjectID] = entity._id
+    protected def set(entity: DataSetSetting, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }
 }
 

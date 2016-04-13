@@ -20,6 +20,7 @@ trait DataSetControllerFactory {
 @Singleton
 protected class DataSetControllerFactoryImpl @Inject()(
     dsaf: DataSetAccessorFactory,
+    genericFactory: GenericDataSetControllerFactory,
     dataSetMetaInfoRepo: DataSetMetaInfoRepo,
     injector : Injector
   ) extends DataSetControllerFactory {
@@ -45,8 +46,10 @@ protected class DataSetControllerFactoryImpl @Inject()(
     val controllerClass = findControllerClass[DataSetController](dataSetId)
     if (controllerClass.isDefined)
       injector.instanceOf(controllerClass.get)
-    else
-      throw new IllegalArgumentException(s"Controller class for the data set id '$dataSetId' not found.")
+    else {
+      println(s"Controller class for the data set id '$dataSetId' not found. Creating a generic one...")
+      genericFactory.apply(dataSetId)
+    }
   }
 
   private def controllerClassName(dataSetId: String) = toCamel(dataSetId).replace(" ", "") + "Controller"

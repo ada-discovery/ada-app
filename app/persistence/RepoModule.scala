@@ -42,6 +42,9 @@ object RepoDef extends Enumeration {
   val DataSetMetaInfoRepo = Repo[DataSetMetaInfoRepo](
     new MongoAsyncCrudRepo[DataSetMetaInfo, BSONObjectID]("dataset_meta_infos"))
 
+  val DataSetSettingRepo = Repo[DataSetSettingRepo](
+    new MongoAsyncCrudRepo[DataSetSetting, BSONObjectID]("dataset_setting"))
+
   // experimental distributed repos
   val StudentDistRepo = Repo[StudentDistRepo](
     new SparkMongoDistributedRepo[Student, BSONObjectID]("students"))

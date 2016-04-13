@@ -20,6 +20,7 @@ object RepoTypes {
   type DictionaryFieldRepo = DictionarySubordinateRepo[Field, String]
   type DictionaryCategoryRepo = DictionarySubordinateRepo[Category, BSONObjectID]
   type DataSetMetaInfoRepo = AsyncCrudRepo[DataSetMetaInfo, BSONObjectID]
+  type DataSetSettingRepo = AsyncCrudRepo[DataSetSetting, BSONObjectID]
 
   // experimental
   type StudentDistRepo = DistributedRepo[Student, BSONObjectID]

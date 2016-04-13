@@ -5,7 +5,7 @@ import java.util.Date
 
 import javax.inject.Inject
 
-import models.{DataSetMetaInfo, FieldType}
+import models.{DataSetSetting, DataSetMetaInfo, FieldType}
 import persistence.AscSort
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessorFactory, DataSetAccessor}
@@ -18,6 +18,7 @@ import scala.concurrent.duration._
 abstract class CleanupDataSet (
     originalDataSetId: String,
     newDataSetMetaInfo: DataSetMetaInfo,
+    newDataSetSetting: Option[DataSetSetting],
     translationRepo : TranslationRepo
   ) extends Runnable {
 
@@ -27,7 +28,7 @@ abstract class CleanupDataSet (
 
   lazy val originalDsa = dsaf(originalDataSetId).get
   lazy val newDsa = {
-    val futureAccessor = dsaf.register(newDataSetMetaInfo)
+    val futureAccessor = dsaf.register(newDataSetMetaInfo, newDataSetSetting)
     Await.result(futureAccessor, timeout)
   }
 

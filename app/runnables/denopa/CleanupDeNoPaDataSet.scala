@@ -13,6 +13,7 @@ class CleanupDeNoPaBaseline @Inject()(
   ) extends CleanupDataSet(
     denopa_baseline,
     DataSetMetaInfo(None, denopa_curated_baseline, "DeNoPa Curated Baseline", None),
+    Some(DeNoPaDataSetSetting.CuratedBaseLine),
     translationRepo
   )
 
@@ -21,6 +22,7 @@ class CleanupDeNoPaFirstVisit @Inject()(
   ) extends CleanupDataSet(
     denopa_firstvisit,
     DataSetMetaInfo(None, denopa_curated_firstvisit, "DeNoPa Curated First Visit", None),
+    Some(DeNoPaDataSetSetting.CuratedFirstVisit),
     translationRepo
   )
 
@@ -29,6 +31,7 @@ class CleanupDeNoPaSecondVisit @Inject()(
   ) extends CleanupDataSet(
     denopa_secondvisit,
     DataSetMetaInfo(None, denopa_curated_secondvisit, "DeNoPa Curated Second Visit", None),
+    Some(DeNoPaDataSetSetting.CuratedSecondVisit),
     translationRepo
   )
 
