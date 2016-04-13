@@ -107,6 +107,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat permission tree.
+    * @param interface LDAPInterface to operate on.
     */
   def addPermissions(interface: LDAPInterface): Unit = {
     val dc : String = "dc=permissions," + dit
@@ -118,6 +119,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat role tree.
+    * @param interface LDAPInterface to operate on.
     */
   def addRoles(interface: LDAPInterface): Unit = {
     val dc : String = "dc=roles," + dit
@@ -130,6 +132,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
   /**
     * Fetches users from database and inserts them into ldap object
+    * @param interface LDAPInterface to operate on.
     * @param userRepo rep from which users are to be extr4acted and added
     */
   override def addUsersFromRepo(interface: LDAPInterface, userRepo: UserRepo): Unit = {
@@ -166,8 +169,8 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     addRoles(server)
 
     // add default dummy users
-    server.add(LdapUtil.userToEntry(basicUser))
-    server.add(LdapUtil.userToEntry(adminUser))
+    server.add(LdapUtil.userToEntry(basicUser, dit))
+    server.add(LdapUtil.userToEntry(adminUser, dit))
     server
   }
 
@@ -187,7 +190,6 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
       case "none" =>
         new LDAPConnection(defaultHost, defaultPort, bindDn, bindPassword)
     }
-
     connection
   }
 
@@ -221,6 +223,18 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     val userOps: List[Option[CustomUser]] = entries.map{LdapUtil.entryToUser}
     userOps.filter{ user => user.isDefined}.map{ user => user.get}
   }
+
+
+  def findByDN(dn: String): Option[CustomUser] = {
+    ldapinterface match{
+      case Some(interface) => {
+        val entry: SearchResultEntry = interface.getEntry(dn)
+        LdapUtil.entryToUser(entry)
+      }
+      case None => None
+    }
+  }
+
 
   // forward to findByEmail
   override def findById(id: String): Future[Option[CustomUser]] = {

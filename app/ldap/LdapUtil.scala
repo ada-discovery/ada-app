@@ -18,8 +18,8 @@ object LdapUtil {
     *
     * @param user CustomUser to add.
     */
-  def userToEntry(user: CustomUser): Entry = {
-    val dn = "dn: cn="+user.email+",dc=users,dc=ncer"
+  def userToEntry(user: CustomUser, dit: String="dc=ncer"): Entry = {
+    val dn = "dn: cn="+user.email+",dc=users," + dit
     val sn = "sn:" + user.name
     val cn = "cn:" + user.name
     val password = "userPassword:" + user.password
@@ -44,12 +44,12 @@ object LdapUtil {
     */
   def entryToUser(entry: Entry): Option[CustomUser] = {
     if (entry != null) {
-      val name: String = entry.getAttributeValue("cn")
+      val name: String = entry.getAttributeValue("uid")
       val email: String = entry.getAttributeValue("mail")
       val password: String = entry.getAttributeValue("userPassword")
       val affiliation: String = entry.getAttributeValue("o")
-      val permissions: Array[String] = entry.getAttributeValues("memberOf")
-      val roles: Array[String] = entry.getAttributeValues("memberOf")
+      val permissions: Array[String] = entry.getAttributeValues("memberof")
+      val roles: Array[String] = entry.getAttributeValues("memberof")
       Some(CustomUser(None, name, email, password, affiliation, permissions.toSeq, roles.toSeq))
     } else {
       None
