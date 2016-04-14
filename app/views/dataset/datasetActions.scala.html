@@ -1,0 +1,13 @@
+@import controllers.dataset.DataSetRouter
+@import views.html.dataset.exportDropdown
+
+@(router : DataSetRouter, page: Page[_])
+
+<div class="row">
+    <div class="col-md-10">
+    @filter(page.filter, router.plainOverviewList, Right(router.fieldNames))
+    </div>
+    <div class="col-md-2">
+    @exportDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
+    </div>
+</div>

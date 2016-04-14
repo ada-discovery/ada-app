@@ -1,13 +1,12 @@
 package ldap
 
 
-import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.{SSLContext, SSLSocketFactory}
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.unboundid.ldap.listener.{InMemoryListenerConfig, InMemoryDirectoryServer, InMemoryDirectoryServerConfig}
 import com.unboundid.ldap.sdk._
-import com.unboundid.util.ssl.{TrustAllTrustManager, SSLUtil}
-import com.unboundid.util.{SynchronizedSocketFactory, SynchronizedSSLSocketFactory}
+import com.unboundid.util.ssl.{TrustStoreTrustManager, TrustAllTrustManager, SSLUtil}
 
 import persistence.RepoTypes._
 
@@ -71,10 +70,12 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   // configuration for authorized binding
   val bindDn: String = configuration.getString("ldap.bindDN").getOrElse("cn=" + adminUser.email + ",dc=users," + dit)
   val bindPassword: String = configuration.getString("ldap.bindPassword").getOrElse(adminUser.password)
-  val encryption: String = configuration.getString("ldap.encryption").getOrElse("none")
-
+  val SSLenabled: String = configuration.getString("ldap.SSL").getOrElse("no")
+  val StartTLSenabled: String = configuration.getString("ldap.StartTLS").getOrElse("no")
+  val trustStorePath: Option[String] = configuration.getString("ldap.trustStore")
 
   override val ldapinterface: Option[LDAPInterface] = setupInterface
+
 
   /**
     * Creates either a server or a connection, depending on the configuration.
@@ -181,17 +182,31 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * @return LDAPConnection object pointing with specified credentials.
     */
   def createConnection(): LDAPConnection = {
-    val connection = encryption match{
-      case "SSL" => {
-        val sslUtil: SSLUtil = new SSLUtil(new TrustAllTrustManager());
-        val sslSocketFactory: SSLSocketFactory = sslUtil.createSSLSocketFactory();
+    val sslUtil: SSLUtil = setupSSLUtil
+    val connection = SSLenabled match{
+      case "yes" => {
+        val sslSocketFactory: SSLSocketFactory = sslUtil.createSSLSocketFactory()
         new LDAPConnection(sslSocketFactory, defaultHost, defaultPort, bindDn, bindPassword)
       }
-      case "none" =>
+      case _ =>
         new LDAPConnection(defaultHost, defaultPort, bindDn, bindPassword)
     }
     connection
   }
+
+  /**
+    * Setup SSL context (e.g) for use with startTLS.
+    * If a truststore file has been defined in the config, it will be loaded.
+    * Otherwise, server certificates will be blindly trusted.
+    * @return Created SSLContext.
+    */
+  def setupSSLUtil(): SSLUtil = {
+    trustStorePath match{
+      case Some(path) => new SSLUtil(new TrustStoreTrustManager(path))
+      case None => new SSLUtil(new TrustAllTrustManager())
+    }
+  }
+
 
   /**
     * Closes LDAPConnection or shuts down InMemoryDirectoryServer.
@@ -215,7 +230,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   override def getUsers(interface: LDAPInterface): Seq[CustomUser] = {
     val baseDN ="dc=users," + dit
     val scope = SearchScope.SUB
-    val filter = Filter.createEqualityFilter("objectClass", "person")
+    val filter = Filter.createEqualityFilter("cn", "users")
     val request: SearchRequest = new SearchRequest(baseDN, scope, filter)
 
     val result: SearchResult = interface.search(request)
@@ -224,7 +239,11 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     userOps.filter{ user => user.isDefined}.map{ user => user.get}
   }
 
-
+  /**
+    * Find specific DN as user.
+    * @param dn String defining the full DN.
+    * @return CustomUser wrapped in option.
+    */
   def findByDN(dn: String): Option[CustomUser] = {
     ldapinterface match{
       case Some(interface) => {
@@ -251,6 +270,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     val user: Option[CustomUser] = ldapinterface match{
       case Some(interface) => {
         val entry: SearchResultEntry = interface.getEntry("cn=" + email + ",dc=users," + dit)
+
         LdapUtil.entryToUser(entry)
       }
       case None => None

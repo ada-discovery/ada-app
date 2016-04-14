@@ -62,7 +62,7 @@ object LdapUtil {
     *
     * @return String representation of all server entries.
     */
-  def getEntryList(interface: LDAPInterface, baseDN: String="dc=ncer"): List[String] = {
+  def getEntryList(interface: LDAPInterface, baseDN: String="dc=ncer", startTLS: Boolean = false): List[String] = {
     val searchRequest: SearchRequest = new SearchRequest(baseDN, SearchScope.SUB, Filter.create("(objectClass=*)"))
     var userStringList = List[String]()
     try{

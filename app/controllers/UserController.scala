@@ -3,21 +3,27 @@ package controllers
 import javax.inject.Inject
 
 import models.security.{SecurityRoleCache, SecurityPermissionCache, CustomUser}
+import persistence.MailClientProvider
 
 import persistence.RepoTypes.UserRepo
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, seq, email, text}
 import models.Page
+import play.api.libs.mailer.{Email, SMTPConfiguration, SMTPMailer, MailerClient}
 import reactivemongo.bson.BSONObjectID
 import views.html
 import play.api.i18n.Messages
 import play.api.mvc.RequestHeader
+import play.api.Configuration
 
 import util.SecurityUtil
 
+import scala.concurrent.Future
+
 
 class UserController @Inject() (
-    userRepo: UserRepo
+    userRepo: UserRepo,
+    mailClientProvider: MailClientProvider
   ) extends CrudController[CustomUser, BSONObjectID](userRepo) {
 
   override protected val form = Form(
@@ -45,6 +51,19 @@ class UserController @Inject() (
 
   override protected def listView(currentPage: Page[CustomUser])(implicit msg: Messages, request: RequestHeader) =
     html.user.list(currentPage)
+
+
+  override protected def saveCall(item: CustomUser): Future[BSONObjectID] = {
+    val mailer = mailClientProvider.createClient()
+    val mail = mailClientProvider.createTemplate(
+      "Ucer Created",
+      Seq(item.email),
+      bodyText = Some("A new user account has been created." + System.lineSeparator() +
+        "You can now log into the Ada Reporting System with this mail address.")
+    )
+    mailer.send(mail)
+    repo.save(item)
+  }
 
   //@Deprecated
   override protected val defaultCreateEntity = new CustomUser(None, "", "", "", "", Seq(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)

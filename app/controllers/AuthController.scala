@@ -2,14 +2,14 @@ package controllers
 
 import javax.inject.Inject
 
+import persistence.MailClientProvider
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json.{JsNull, JsString, JsObject}
 import play.api.mvc.{Action, Controller}
 import play.api.data.Forms._
 import play.api.data._
-import play.api.libs.mailer._
-import play.api.{Configuration, Logger}
+import play.api.Logger
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
@@ -25,27 +25,11 @@ import util.SecurityUtil
 
 class AuthController @Inject() (
     myUserManager: UserManager,
-    configuration: Configuration
+    mailClientProvider: MailClientProvider
   ) extends Controller with LoginLogout with AdaAuthConfig {
 
   // a hook need by auth config
   override val userManager = myUserManager
-
-  // define custom mailer
-  def mailer: MailerClient = new SMTPMailer(
-    new SMTPConfiguration(
-      host = configuration.getString("play.mailer.host").getOrElse("smtp-1.uni.lu"),
-      port = configuration.getInt("play.mailer.port").getOrElse(587),
-      ssl = configuration.getBoolean("play.mailer.ssl").getOrElse(false),
-      tls = configuration.getBoolean("play.mailer.tls").getOrElse(false),
-      user = configuration.getString("play.mailer.user"),
-      password = configuration.getString("play.mailer.password"),
-      debugMode = configuration.getBoolean("play.mailer.host").getOrElse(false),
-      timeout = configuration.getInt("play.mailer.host"),
-      connectionTimeout = configuration.getInt("play.mailer.host"),
-      mock = configuration.getBoolean("play.mailer.host").getOrElse(true)
-    )
-  )
 
   /**
     * Login form definition.
@@ -161,17 +145,14 @@ class AuthController @Inject() (
         val newPassword: String = SecurityUtil.randomString(9)
         val userOpFuture: Future[Option[CustomUser]] = userManager.findByEmail(emailDst)
         userOpFuture.map{ userOp: Option[CustomUser] =>
+          val mailer = mailClientProvider.createClient()
           val user: CustomUser = userOp.get
-          val mail = Email(
-            "[Ada Reporting System] Password Reset",
-            "Jan MARTENS FROM <jan.martens@uni.lu>",
+          val mail = mailClientProvider.createTemplate("Password Reset",
             Seq(emailDst),
-            attachments = Seq(),
-            bodyText = Some("This message has been sent to you due to a password reset request to the Ada Reporting System." + System.lineSeparator() +
-                            "If you did not request the password change, ignore this mail." + System.lineSeparator() +
-                            "Your newly generated password is: " + newPassword + System.lineSeparator() +
-                            "Use this password to login at Ada's login page."),
-            bodyHtml = None
+            Some("This message has been sent to you due to a password reset request to the Ada Reporting System." + System.lineSeparator() +
+              "If you did not request the password change, ignore this mail." + System.lineSeparator() +
+              "Your newly generated password is: " + newPassword + System.lineSeparator() +
+              "Use this password to login at Ada's login page.")
           )
           mailer.send(mail)
           Logger.info("Password reset for user [" + emailDst + "] requested")
