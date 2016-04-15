@@ -1,13 +1,13 @@
 @import views.html.layout
-@import views.html.dataset.{filterChartPanel, datasetSubNav}
+@import views.html.dataset.{filterChartPanel, datasetSubNav, datasetActions}
 @import views.html.table.paginatedJsonTable
-@import views.html.dataset.exportDropdown
 @import play.api.libs.json.JsObject
 @import play.modules.reactivemongo.json._
 @import reactivemongo.bson.BSONObjectID
 @import util.FieldChartSpec
 
 @import controllers.dataset.DataSetRouter
+
 @(
     domainName : String,
     page: Page[JsObject],
@@ -20,15 +20,11 @@
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@actions = {
-    <div class="row">
-        <div class="col-md-10">
-            @filter(page.filter, router.plainOverviewList, Right(router.fieldNames))
-        </div>
-        <div class="col-md-2">
-            @exportDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
-        </div>
-    </div>
+@actions = @{
+    datasetActions(
+        router,
+        page
+    )
 }
 
 @table = @{

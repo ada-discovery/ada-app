@@ -1,13 +1,13 @@
 package ldap
 
 
-import javax.net.ssl.SSLSocketFactory
+import javax.net.ssl.{SSLContext, SSLSocketFactory}
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.unboundid.ldap.listener.{InMemoryListenerConfig, InMemoryDirectoryServer, InMemoryDirectoryServerConfig}
 import com.unboundid.ldap.sdk._
-import com.unboundid.util.ssl.{TrustAllTrustManager, SSLUtil}
-import com.unboundid.util.{SynchronizedSocketFactory, SynchronizedSSLSocketFactory}
+import com.unboundid.ldap.sdk.extensions.StartTLSExtendedRequest
+import com.unboundid.util.ssl.{TrustStoreTrustManager, TrustAllTrustManager, SSLUtil}
 
 import persistence.RepoTypes._
 
@@ -25,9 +25,9 @@ import play.api.Configuration
 
 
 /**
-  * Create Ldap user server or use an established connection..
-  * If no LDAPInterface is used, an InMemoryDirectoryServer based is created.
-  * Users from the current user repo are sued.
+  * Create Ldap user server or use an established connection.
+  * See options in ldap.conf for settings.
+  * Users from the current user repo can be imported.
   */
 @ImplementedBy(classOf[AdaLdapUserServerImpl])
 trait AdaLdapUserServer extends UserManager{
@@ -57,7 +57,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   // use "local" to set up local in-memory server
   // use "remote" to set up connection to remote server
   // this flag defaults to "local", if no option is given
-  val mode: String = configuration.getString("ldap.mode").getOrElse("local")
+  val mode: String = configuration.getString("ldap.mode").getOrElse("local").toLowerCase()
 
   // local server options
   // port for listener
@@ -71,10 +71,11 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   // configuration for authorized binding
   val bindDn: String = configuration.getString("ldap.bindDN").getOrElse("cn=" + adminUser.email + ",dc=users," + dit)
   val bindPassword: String = configuration.getString("ldap.bindPassword").getOrElse(adminUser.password)
-  val encryption: String = configuration.getString("ldap.encryption").getOrElse("none")
-
+  val encryption: String = configuration.getString("ldap.encryption").getOrElse("none").toLowerCase()
+  val trustStorePath: Option[String] = configuration.getString("ldap.trustStore")
 
   override val ldapinterface: Option[LDAPInterface] = setupInterface
+
 
   /**
     * Creates either a server or a connection, depending on the configuration.
@@ -83,7 +84,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   override def setupInterface(): Option[LDAPInterface] = {
     val interface = mode match{
       case "local" => Some(createServer)
-      case "remote" => Some(createConnection)
+      case "remote" => createConnection
       case _ => None
     }
     // hook interface in lifecycle for proper cleanup
@@ -107,6 +108,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat permission tree.
+    * @param interface LDAPInterface to operate on.
     */
   def addPermissions(interface: LDAPInterface): Unit = {
     val dc : String = "dc=permissions," + dit
@@ -118,6 +120,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat role tree.
+    * @param interface LDAPInterface to operate on.
     */
   def addRoles(interface: LDAPInterface): Unit = {
     val dc : String = "dc=roles," + dit
@@ -130,6 +133,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
   /**
     * Fetches users from database and inserts them into ldap object
+    * @param interface LDAPInterface to operate on.
     * @param userRepo rep from which users are to be extr4acted and added
     */
   override def addUsersFromRepo(interface: LDAPInterface, userRepo: UserRepo): Unit = {
@@ -166,8 +170,8 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     addRoles(server)
 
     // add default dummy users
-    server.add(LdapUtil.userToEntry(basicUser))
-    server.add(LdapUtil.userToEntry(adminUser))
+    server.add(LdapUtil.userToEntry(basicUser, dit))
+    server.add(LdapUtil.userToEntry(adminUser, dit))
     server
   }
 
@@ -175,21 +179,64 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * Creates a connection to an existing LDAP server instance.
     * Uses the options defined in the configuation.
     * Used options from configuration are ldap.encryption, ldap.host, ldap.prt, ldap.bindDN, ldap.bindPassword
-    * @return LDAPConnection object pointing with specified credentials.
+    * @return LDAPConnection object  with specified credentials. None, if no connection could be established.
     */
-  def createConnection(): LDAPConnection = {
-    val connection = encryption match{
-      case "SSL" => {
-        val sslUtil: SSLUtil = new SSLUtil(new TrustAllTrustManager());
-        val sslSocketFactory: SSLSocketFactory = sslUtil.createSSLSocketFactory();
-        new LDAPConnection(sslSocketFactory, defaultHost, defaultPort, bindDn, bindPassword)
+  def createConnection(): Option[LDAPConnectionPool] = {
+    val sslUtil: SSLUtil = setupSSLUtil
+    encryption match{
+      case "ssl" => {
+        // connect to server with ssl encryption
+        val sslSocketFactory: SSLSocketFactory = sslUtil.createSSLSocketFactory()
+        val connection: LDAPConnection = new LDAPConnection(sslSocketFactory, defaultHost, defaultPort)
+        val result: ResultCode = try{
+          connection.bind(bindDn, bindPassword).getResultCode
+        }catch{case _ => ResultCode.NO_SUCH_OBJECT}
+        if(result == ResultCode.SUCCESS)
+          Some(new LDAPConnectionPool(connection, 1, 10))
+        else
+          None
       }
-      case "none" =>
-        new LDAPConnection(defaultHost, defaultPort, bindDn, bindPassword)
+      case "starttls" => {
+        // connect to server with starttls connection
+        val connection: LDAPConnection = new LDAPConnection(defaultHost, defaultPort)
+        val result: ResultCode = try{
+          connection.bind(bindDn, bindPassword).getResultCode
+        }catch{case _ => ResultCode.NO_SUCH_OBJECT}
+        val sslContext: SSLContext = sslUtil.createSSLContext()
+        connection.processExtendedOperation(new StartTLSExtendedRequest(sslContext))
+        val processor: StartTLSPostConnectProcessor = new StartTLSPostConnectProcessor(sslContext)
+        if(result == ResultCode.SUCCESS)
+          Some(new LDAPConnectionPool(connection, 1, 10, processor))
+        else
+          None
+      }
+      case _ =>{
+        // create unsecured connection
+        val connection: LDAPConnection = new LDAPConnection(defaultHost, defaultPort)
+        val result: ResultCode = try{
+          connection.bind(bindDn, bindPassword).getResultCode
+        }catch{case _ => ResultCode.NO_SUCH_OBJECT}
+        if(result == ResultCode.SUCCESS)
+          Some(new LDAPConnectionPool(connection, 1, 10))
+        else
+          None
+      }
     }
-
-    connection
   }
+
+  /**
+    * Setup SSL context (e.g) for use with startTLS.
+    * If a truststore file has been defined in the config, it will be loaded.
+    * Otherwise, server certificates will be blindly trusted.
+    * @return Created SSLContext.
+    */
+  protected def setupSSLUtil(): SSLUtil = {
+    trustStorePath match{
+      case Some(path) => new SSLUtil(new TrustStoreTrustManager(path))
+      case None => new SSLUtil(new TrustAllTrustManager())
+    }
+  }
+
 
   /**
     * Closes LDAPConnection or shuts down InMemoryDirectoryServer.
@@ -201,6 +248,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
       interface.get match{
         case server: InMemoryDirectoryServer => server.shutDown(true)
         case connection: LDAPConnection => connection.close()
+        case connectionPool: LDAPConnectionPool => connectionPool.close()
         case _ => Unit
       }
     }
@@ -213,7 +261,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   override def getUsers(interface: LDAPInterface): Seq[CustomUser] = {
     val baseDN ="dc=users," + dit
     val scope = SearchScope.SUB
-    val filter = Filter.createEqualityFilter("objectClass", "person")
+    val filter = Filter.createEqualityFilter("cn", "users")
     val request: SearchRequest = new SearchRequest(baseDN, scope, filter)
 
     val result: SearchResult = interface.search(request)
@@ -221,6 +269,22 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     val userOps: List[Option[CustomUser]] = entries.map{LdapUtil.entryToUser}
     userOps.filter{ user => user.isDefined}.map{ user => user.get}
   }
+
+  /**
+    * Find specific DN as user.
+    * @param dn String defining the full DN.
+    * @return CustomUser wrapped in option.
+    */
+  def findByDN(dn: String): Option[CustomUser] = {
+    ldapinterface match{
+      case Some(interface) => {
+        val entry: SearchResultEntry = interface.getEntry(dn)
+        LdapUtil.entryToUser(entry)
+      }
+      case None => None
+    }
+  }
+
 
   // forward to findByEmail
   override def findById(id: String): Future[Option[CustomUser]] = {
@@ -237,6 +301,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     val user: Option[CustomUser] = ldapinterface match{
       case Some(interface) => {
         val entry: SearchResultEntry = interface.getEntry("cn=" + email + ",dc=users," + dit)
+
         LdapUtil.entryToUser(entry)
       }
       case None => None

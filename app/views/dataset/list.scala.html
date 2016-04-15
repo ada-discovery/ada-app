@@ -1,4 +1,3 @@
-@import views.html.layout
 @import views.html.table.paginatedJsonTable
 @import views.html.dataset.exportDropdown
 @import play.api.libs.json.JsObject
@@ -6,6 +5,7 @@
 @import reactivemongo.bson.BSONObjectID
 
 @import controllers.dataset.DataSetRouter
+
 @(
     domainName : String,
     page: Page[JsObject],
