@@ -6,6 +6,7 @@ import javax.net.ssl.{SSLContext, SSLSocketFactory}
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.unboundid.ldap.listener.{InMemoryListenerConfig, InMemoryDirectoryServer, InMemoryDirectoryServerConfig}
 import com.unboundid.ldap.sdk._
+import com.unboundid.ldap.sdk.extensions.StartTLSExtendedRequest
 import com.unboundid.util.ssl.{TrustStoreTrustManager, TrustAllTrustManager, SSLUtil}
 
 import persistence.RepoTypes._
@@ -24,9 +25,9 @@ import play.api.Configuration
 
 
 /**
-  * Create Ldap user server or use an established connection..
-  * If no LDAPInterface is used, an InMemoryDirectoryServer based is created.
-  * Users from the current user repo are sued.
+  * Create Ldap user server or use an established connection.
+  * See options in ldap.conf for settings.
+  * Users from the current user repo can be imported.
   */
 @ImplementedBy(classOf[AdaLdapUserServerImpl])
 trait AdaLdapUserServer extends UserManager{
@@ -56,7 +57,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   // use "local" to set up local in-memory server
   // use "remote" to set up connection to remote server
   // this flag defaults to "local", if no option is given
-  val mode: String = configuration.getString("ldap.mode").getOrElse("local")
+  val mode: String = configuration.getString("ldap.mode").getOrElse("local").toLowerCase()
 
   // local server options
   // port for listener
@@ -70,8 +71,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   // configuration for authorized binding
   val bindDn: String = configuration.getString("ldap.bindDN").getOrElse("cn=" + adminUser.email + ",dc=users," + dit)
   val bindPassword: String = configuration.getString("ldap.bindPassword").getOrElse(adminUser.password)
-  val SSLenabled: String = configuration.getString("ldap.SSL").getOrElse("no")
-  val StartTLSenabled: String = configuration.getString("ldap.StartTLS").getOrElse("no")
+  val encryption: String = configuration.getString("ldap.encryption").getOrElse("none").toLowerCase()
   val trustStorePath: Option[String] = configuration.getString("ldap.trustStore")
 
   override val ldapinterface: Option[LDAPInterface] = setupInterface
@@ -84,7 +84,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   override def setupInterface(): Option[LDAPInterface] = {
     val interface = mode match{
       case "local" => Some(createServer)
-      case "remote" => Some(createConnection)
+      case "remote" => createConnection
       case _ => None
     }
     // hook interface in lifecycle for proper cleanup
@@ -179,19 +179,49 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * Creates a connection to an existing LDAP server instance.
     * Uses the options defined in the configuation.
     * Used options from configuration are ldap.encryption, ldap.host, ldap.prt, ldap.bindDN, ldap.bindPassword
-    * @return LDAPConnection object pointing with specified credentials.
+    * @return LDAPConnection object  with specified credentials. None, if no connection could be established.
     */
-  def createConnection(): LDAPConnection = {
+  def createConnection(): Option[LDAPConnectionPool] = {
     val sslUtil: SSLUtil = setupSSLUtil
-    val connection = SSLenabled match{
-      case "yes" => {
+    encryption match{
+      case "ssl" => {
+        // connect to server with ssl encryption
         val sslSocketFactory: SSLSocketFactory = sslUtil.createSSLSocketFactory()
-        new LDAPConnection(sslSocketFactory, defaultHost, defaultPort, bindDn, bindPassword)
+        val connection: LDAPConnection = new LDAPConnection(sslSocketFactory, defaultHost, defaultPort)
+        val result: ResultCode = try{
+          connection.bind(bindDn, bindPassword).getResultCode
+        }catch{case _ => ResultCode.NO_SUCH_OBJECT}
+        if(result == ResultCode.SUCCESS)
+          Some(new LDAPConnectionPool(connection, 1, 10))
+        else
+          None
       }
-      case _ =>
-        new LDAPConnection(defaultHost, defaultPort, bindDn, bindPassword)
+      case "starttls" => {
+        // connect to server with starttls connection
+        val connection: LDAPConnection = new LDAPConnection(defaultHost, defaultPort)
+        val result: ResultCode = try{
+          connection.bind(bindDn, bindPassword).getResultCode
+        }catch{case _ => ResultCode.NO_SUCH_OBJECT}
+        val sslContext: SSLContext = sslUtil.createSSLContext()
+        connection.processExtendedOperation(new StartTLSExtendedRequest(sslContext))
+        val processor: StartTLSPostConnectProcessor = new StartTLSPostConnectProcessor(sslContext)
+        if(result == ResultCode.SUCCESS)
+          Some(new LDAPConnectionPool(connection, 1, 10, processor))
+        else
+          None
+      }
+      case _ =>{
+        // create unsecured connection
+        val connection: LDAPConnection = new LDAPConnection(defaultHost, defaultPort)
+        val result: ResultCode = try{
+          connection.bind(bindDn, bindPassword).getResultCode
+        }catch{case _ => ResultCode.NO_SUCH_OBJECT}
+        if(result == ResultCode.SUCCESS)
+          Some(new LDAPConnectionPool(connection, 1, 10))
+        else
+          None
+      }
     }
-    connection
   }
 
   /**
@@ -200,7 +230,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * Otherwise, server certificates will be blindly trusted.
     * @return Created SSLContext.
     */
-  def setupSSLUtil(): SSLUtil = {
+  protected def setupSSLUtil(): SSLUtil = {
     trustStorePath match{
       case Some(path) => new SSLUtil(new TrustStoreTrustManager(path))
       case None => new SSLUtil(new TrustAllTrustManager())
@@ -218,6 +248,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
       interface.get match{
         case server: InMemoryDirectoryServer => server.shutDown(true)
         case connection: LDAPConnection => connection.close()
+        case connectionPool: LDAPConnectionPool => connectionPool.close()
         case _ => Unit
       }
     }
