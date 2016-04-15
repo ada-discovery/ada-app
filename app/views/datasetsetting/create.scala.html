@@ -1,0 +1,15 @@
+@import views.html.layout
+@import views.html.datasetsetting.elements
+@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+
+@(
+    form: Form[DataSetSetting]
+)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+
+@layout.create(
+    "Data Set Setting",
+	form = form,
+	elements = elements(form),
+	saveCall = dataSetSettingRoutes.save(),
+	listCall = dataSetSettingRoutes.listAll()
+)

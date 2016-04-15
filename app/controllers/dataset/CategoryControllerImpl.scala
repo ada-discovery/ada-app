@@ -28,7 +28,7 @@ trait CategoryControllerFactory {
 protected[controllers] class CategoryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
-    dataSetMetaInfoRepo: DataSetMetaInfoRepo
+    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
   ) extends CrudController[Category, BSONObjectID](dsaf(dataSetId).get.categoryRepo) with CategoryController {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
@@ -72,7 +72,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   }
 
   override protected def listView(page: Page[Category])(implicit msg: Messages, request: RequestHeader) = {
-    val futureMetaInfos = dataSetMetaInfoRepo.find()
+    val futureMetaInfos = dataSpaceMetaInfoRepo.find()
 
     category.list(
       dataSetName + " Category",

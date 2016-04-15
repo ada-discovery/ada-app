@@ -14,6 +14,6 @@
 	errors = form.errors,
     elements = editableUserForm("user", form),
 	updateCall = routes.UserController.update(id),
-	listCall = routes.UserController.listAll(),
+	cancelCall = routes.UserController.listAll(),
     deleteCall = Some(routes.UserController.delete(id))
 )

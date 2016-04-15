@@ -7,6 +7,7 @@ import play.api.Configuration
 import runnables.{ImportDataSet, GuiceBuilderRunnable}
 
 class ImportDeNoPaFirstVisit @Inject() (configuration: Configuration) extends ImportDataSet(
+  "DeNoPa",
   denopa_firstvisit,
   "DeNoPa First Visit",
   Some(DeNoPaDataSetSetting.FirstVisit),

@@ -12,14 +12,15 @@ import play.api.libs.functional.syntax._
 case class DataSpaceMetaInfo(
   _id: Option[BSONObjectID],
   name: String,
-  timeCreated: Date = new Date()
+  timeCreated: Date = new Date(),
+  dataSetMetaInfos: Seq[DataSetMetaInfo] = Seq[DataSetMetaInfo]()
 )
 
 case class DataSetMetaInfo(
   _id: Option[BSONObjectID],
   id: String,
   name: String,
-  dataSpaceId: Option[BSONObjectID],
+  dataSpaceId: Option[BSONObjectID] = None,
   timeCreated: Date = new Date(),
   sourceDataSetId: Option[BSONObjectID] = None
 )
@@ -29,7 +30,7 @@ case class DataSetSetting(
   dataSetId: String,
   keyFieldName: String,
   exportOrderByFieldName: String,
-  listViewTableColumnName: Seq[String],
+  listViewTableColumnNames: Seq[String],
   overviewChartFieldNames: Seq[String],
   defaultScatterXFieldName: String,
   defaultScatterYFieldName: String,

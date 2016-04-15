@@ -1,0 +1,38 @@
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+
+@(
+    dataSetName: String,
+    page: Page[DataSetSetting]
+)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@actions = {
+    <div class="row">
+        <div class="col-md-8">
+            @filter(page.filter, dataSetSettingRoutes.find(), Left(Seq("dataSetId")))
+        </div>
+        <div class="col-md-4">
+            <a class="btn btn-success btn-sm pull-right" id="add" href="@dataSetSettingRoutes.create()">Add a new data set setting</a>
+        </div>
+    </div>
+}
+
+@table = @{
+    paginatedTable(
+        page,
+        dataSetSettingRoutes.find(_, _, page.filter),
+        Seq(
+            ("dataSetId", "Data Set Id", {item : Any => Html(item.asInstanceOf[DataSetSetting].dataSetId)})
+        ),
+        Some({ item : Any => dataSetSettingRoutes.get(item.asInstanceOf[DataSetSetting]._id.get)})
+    )
+}
+
+@layout.list(
+    dataSetName + "Data Set Setting",
+    page.total,
+    actions,
+    table,
+    None
+)

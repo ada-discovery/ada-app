@@ -15,7 +15,7 @@
     fieldsToShow : Seq[String],
     fieldChartSpecs : Iterable[FieldChartSpec],
     router : DataSetRouter,
-    dataSetMetaInfos: Traversable[DataSetMetaInfo]
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
@@ -47,6 +47,6 @@
     actions,
     table,
     Some(filterChartPanel(fieldChartSpecs)),
-    Some(datasetMenu(dataSetMetaInfos)),
+    Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )

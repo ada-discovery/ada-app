@@ -14,10 +14,10 @@ trait DictionaryFieldRepoFactory {
   def apply(dataSetId: String): DictionaryFieldRepo
 }
 
-protected[persistence] class DictionaryFieldMongoAsyncCrudRepo @Inject() (
+protected[persistence] class DictionaryFieldSubordinateMongoAsyncCrudRepo @Inject()(
     @Assisted dataSetId : String,
     dictionaryRepo: DictionaryRootRepo
-  ) extends DictionarySubordinateMongoAsyncCrudRepo[Field, String]("fields", dataSetId, dictionaryRepo) with DictionaryFieldRepo
+  ) extends DictionarySubordinateMongoAsyncCrudRepo[Field, String]("fields", dataSetId, dictionaryRepo)
 
 object DictionaryFieldRepo {
 

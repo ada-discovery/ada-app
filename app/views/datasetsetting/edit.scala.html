@@ -1,0 +1,18 @@
+@import views.html.layout
+@import views.html.datasetsetting.elements
+
+@(
+    dataSetName: String,
+    form: Form[DataSetSetting],
+    updateCall: Call,
+    cancelCall: Call
+)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+
+@layout.edit(
+    dataSetName + "Data Set Setting",
+	errors = form.errors,
+    elements = elements(form),
+	updateCall = updateCall,
+    cancelCall = cancelCall,
+    deleteCall = None
+)

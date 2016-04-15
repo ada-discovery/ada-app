@@ -10,7 +10,7 @@
     page: Page[Field],
     fieldChartSpecs : Iterable[FieldChartSpec],
     router : DictionaryRouter,
-    dataSetMetaInfos: Traversable[DataSetMetaInfo],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
     chartGridWidth: Int = 3
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
@@ -42,6 +42,6 @@
     actions,
     table,
     Some(filterChartPanel(fieldChartSpecs, chartGridWidth)),
-    Some(datasetMenu(dataSetMetaInfos)),
+    Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )

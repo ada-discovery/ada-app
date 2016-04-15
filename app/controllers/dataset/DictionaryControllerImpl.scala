@@ -32,7 +32,7 @@ trait DictionaryControllerFactory {
 protected[controllers] class DictionaryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
-    dataSetMetaInfoRepo: DataSetMetaInfoRepo
+    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
   ) extends CrudController[Field, String](dsaf(dataSetId).get.fieldRepo) with DictionaryController {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
@@ -78,7 +78,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   // TODO: Remove
   override protected def listView(page: Page[Field])(implicit msg: Messages, request: RequestHeader) =
-    throw new IllegalAccessException("List not implemented... use overviewList instead.")
+    throw new IllegalStateException("List not implemented... use overviewList instead.")
 
   // TODO: change to an async call
   protected def allCategories = {
@@ -101,14 +101,14 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   private def overviewListView(
     page: Page[Field],
     fieldChartSpecs : Iterable[FieldChartSpec],
-    dataSetMetaInfos: Traversable[DataSetMetaInfo]
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
   )(implicit msg: Messages, request: RequestHeader) =
     dictionary.list(
       dataSetName + " Field",
       page,
       fieldChartSpecs,
       router,
-      dataSetMetaInfos,
+      dataSpaceMetaInfos,
       6
     )
 
@@ -123,7 +123,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       getDictionaryChartSpec(title, filter.toJsonCriteria, fieldName, fieldExtractor).map(chartSpec => FieldChartSpec(fieldName, chartSpec))
     }
     val fieldChartSpecsFuture = Future.sequence(futureFieldChartSpecs)
-    val futureMetaInfos = dataSetMetaInfoRepo.find()
+    val futureMetaInfos = dataSpaceMetaInfoRepo.find()
     val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
 
     {

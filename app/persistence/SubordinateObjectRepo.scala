@@ -1,65 +1,56 @@
-package persistence.dataset
+package persistence
 
-import models.DataSetFormattersAndIds._
-import models.{Identity, Dictionary, Field, Category}
-import persistence.{DescSort, AscSort, Sort, AsyncCrudRepo}
-import persistence.RepoTypes.DictionaryRootRepo
+import models.Identity
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import play.modules.reactivemongo.json.BSONObjectIDFormat
 import play.modules.reactivemongo.json.commands.JSONAggregationFramework.Push
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-trait DictionarySubordinateRepo[E, ID] extends AsyncCrudRepo[E, ID] {
+trait SubordinateObjectRepo[E, ID] extends AsyncCrudRepo[E, ID] {
+  // TODO: Do we need an init method?
   def initIfNeeded: Future[Boolean]
 }
 
-protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, ID: Format](
+protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E: Format,  ROOT_ID: Format](
     listName: String,
-    dataSetId: String,
-    dictionaryRepo: DictionaryRootRepo)(
-    implicit identity: Identity[E, ID]
-  ) extends DictionarySubordinateRepo[E, ID] {
+    aggregateIdGroupFieldName: String,
+    rootRepo: MongoAsyncCrudExtraRepo[ROOT_E, ROOT_ID])(
+    implicit identity: Identity[E, ID], rootIdentity: Identity[ROOT_E, ROOT_ID]
+  ) extends SubordinateObjectRepo[E, ID] {
+
+  protected def getDefaultRoot: ROOT_E
+
+  protected def getRootObject: Future[Option[ROOT_E]]
 
   /**
-    * Initialize dictionary if it does not exist.
+    * Initialize if root object does not exist.
     *
     * @return true, if initialization was required.
     */
   override def initIfNeeded: Future[Boolean] = synchronized {
-    val responseFuture = getByDataSetId.flatMap(dictionaries =>
-      if (dictionaries.isEmpty)
-        dictionaryRepo.save(Dictionary(None, dataSetId, Seq[Field](), Seq[Category]())).map(_ => true)
+    val responseFuture = getRootObject.flatMap(rootObject =>
+      if (rootObject.isEmpty)
+        rootRepo.save(getDefaultRoot).map(_ => true)
       else
         Future(false)
     )
 
-    // init dictionary id: TODO: move after dictionaryrepo injection
+    // init root id
     responseFuture.map { response =>
-      dictionaryId;
+      rootId;
       response
     }
   }
 
-  /**
-    * Internally used to search the dictionary with current data set name.
-    *
-    * @return Traversable with all dictionaries matching the current data set name.
-    */
-  private def getByDataSetId: Future[Traversable[Dictionary]] =
-    dictionaryRepo.find(Some(Json.obj("dataSetId" -> dataSetId)))
 
-  private lazy val dictionaryId: BSONObjectID = synchronized {
-    val futureId = dictionaryRepo.find(
-      Some(Json.obj("dataSetId" -> dataSetId)), None, None
-    ).map(_.head._id.get)
+  private lazy val rootId: ROOT_ID = synchronized {
+    val futureId = getRootObject.map(rootObject => rootIdentity.of(rootObject.get).get)
     Await.result(futureId, 120000 millis)
   }
 
-  protected lazy val dictionaryIdSelector = Json.obj(DictionaryIdentity.name -> dictionaryId)
+  protected lazy val rootIdSelector = Json.obj(rootIdentity.name -> rootId)
 
   /**
    * Converts the given subordinateListName into Json format and calls updateCustom() to update/ save it in the repo.
@@ -75,7 +66,7 @@ protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, 
       }
     }
 
-    dictionaryRepo.updateCustom(dictionaryIdSelector, modifier) map { _ =>
+    rootRepo.updateCustom(rootIdSelector, modifier) map { _ =>
       identity.of(entity).get
     }
   }
@@ -94,7 +85,7 @@ protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, 
         }
       }
     }
-    dictionaryRepo.updateCustom(dictionaryIdSelector, modifier)
+    rootRepo.updateCustom(rootIdSelector, modifier)
   }
 
   /**
@@ -107,14 +98,14 @@ protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, 
   override def update(entity: E): Future[ID] = {
     val id = identity.of(entity)
     val selector =
-      dictionaryIdSelector + ((listName + "." + identity.name) -> Json.toJson(id))
+      rootIdSelector + ((listName + "." + identity.name) -> Json.toJson(id))
 
     val modifier = Json.obj {
       "$set" -> Json.obj {
         listName + ".$" -> Json.toJson(entity)
       }
     }
-    dictionaryRepo.updateCustom(selector, modifier) map { _ =>
+    rootRepo.updateCustom(selector, modifier) map { _ =>
       id.get
     }
   }
@@ -131,7 +122,7 @@ protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, 
         listName -> List[E]()
       }
     }
-    dictionaryRepo.updateCustom(dictionaryIdSelector, modifier)
+    rootRepo.updateCustom(rootIdSelector, modifier)
   }
 
   /**
@@ -177,9 +168,9 @@ protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, 
     val fullCriteria =
       if (criteria.isDefined) {
         val extSubCriteria = criteria.get.fields.map { case (name, value) => (listName + "." + name, value) }
-        JsObject(extSubCriteria) + ("dataSetId" -> Json.toJson(dataSetId))
+        JsObject(extSubCriteria) + (rootIdentity.name -> Json.toJson(rootId))
       } else
-        Json.obj("dataSetId" -> dataSetId)
+        Json.obj(rootIdentity.name -> Json.toJson(rootId))
 
     val fullOrderBy =
       orderBy.map(_.map(
@@ -197,11 +188,11 @@ protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, 
 
     // TODO: projection can not be passed here since subordinateListName JSON formatter expects ALL attributes to be returned.
     // It could be solved either by making all subordinateListName attributes optional (Option[..]) or introducing a special JSON formatter with default values for each attribute
-    val result = dictionaryRepo.findAggregate(
+    val result = rootRepo.findAggregate(
       criteria = Some(fullCriteria),
       orderBy = fullOrderBy,
       projection = None, //fullProjection,
-      idGroup = Some(JsString("$dataSetName")),
+      idGroup = Some(JsString("$" + aggregateIdGroupFieldName)),
       groups = Some(Seq(listName -> Push(listName))),
       unwindFieldName = Some(listName),
       limit = limit,

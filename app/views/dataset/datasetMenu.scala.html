@@ -1,8 +1,8 @@
 @import controllers.dataset.DataSetRouter
-@import models.DataSetMetaInfo
+@import models.DataSpaceMetaInfo
 @import util.getParamValue
 
-@(dataSetMetaInfos: Traversable[DataSetMetaInfo])(implicit request: RequestHeader)
+@(dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo])(implicit request: RequestHeader)
 
 @listItem(call: Call, dataSetId: String, text: String) = {
     @defining(getParamValue(request.uri, "dataSet")) { reqDataSetId =>
@@ -12,9 +12,15 @@
     }
 }
 
-<h3 class="text-muted">Studies</h3>
+<!--
+<h3 class="text-muted" align="center">Studies</h3>
+<hr/>
+-->
 <ul class="sidebar-nav nav nav-pills nav-stacked">
-    @dataSetMetaInfos.map { metaInfo =>
-        @listItem(new DataSetRouter(metaInfo.id).plainOverviewList, metaInfo.id, metaInfo.name)
+    @dataSpaceMetaInfos.map { spaceMetaInfo =>
+        <li><h3>@spaceMetaInfo.name</h3></li>
+        @spaceMetaInfo.dataSetMetaInfos.map { setMetaInfo =>
+            @listItem(new DataSetRouter(setMetaInfo.id).plainOverviewList, setMetaInfo.id, setMetaInfo.name)
+        }
     }
 </ul>

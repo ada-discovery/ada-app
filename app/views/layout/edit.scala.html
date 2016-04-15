@@ -3,7 +3,7 @@
     errors : Seq[FormError],
     elements : Html,
     updateCall : Call,
-    listCall : Call,
+    cancelCall : Call,
     deleteCall : Option[Call]
 )(
     implicit msg: play.api.i18n.Messages, request: RequestHeader
@@ -30,8 +30,9 @@
             </fieldset>
 
             <div class="actions">
+                <hr/>
                 <input type="submit" value="Update" class="btn btn-primary">
-                <a href="@listCall" class="btn btn-default">Cancel</a>
+                <a href="@cancelCall" class="btn btn-default">Cancel</a>
             </div>
         }
         </div>

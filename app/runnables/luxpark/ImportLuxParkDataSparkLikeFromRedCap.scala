@@ -3,12 +3,13 @@ package runnables.luxpark
 import javax.inject.{Named, Inject}
 
 import models.DataSetId._
-import models.DataSetMetaInfo
+import models.{DataSetSetting, DataSetMetaInfo}
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable
 import services.RedCapService
+import scala.concurrent.Await._
 import scala.concurrent.duration._
 
 import scala.concurrent.Await
@@ -21,15 +22,24 @@ class ImportLuxParkDataSparkLikeFromRedCap @Inject() (
 
   private val timeout = 120000 millis
 
-  val metaInfo = DataSetMetaInfo(None, luxpark.toString, "Lux Park", None)
+  val setting = DataSetSetting(
+    None,
+    luxpark,
+    "cdisc_dm_usubjd",
+    "cdisc_dm_usubjd",
+    Seq("cdisc_dm_usubjd", "redcap_event_name", "cdisc_dm_subjid_2", "dm_site", "cdisc_dm_brthdtc", "cdisc_dm_sex", "cdisc_sc_sctestcd_maritstat"),
+    Seq("cdisc_dm_sex", "control_q1", "cdisc_sc_sctestcd_maritstat", "sv_age"),
+    "digitsf_score",
+    "bentons_score",
+    "digitsf_score" ,
+    Some("redcap_event_name"),
+    Map(("\r", " "), ("\n", " "))
+  )
 
-  val dataSetAccessor = {
-    val futureAccessor = dsaf.register(metaInfo)
-    Await.result(futureAccessor, timeout)
-  }
+  lazy val dataSetAccessor =
+    result(dsaf.register("Lux Park", luxpark, "Lux Park", Some(setting)), timeout)
 
   private val syncDataRepo = RepoSynchronizer(dataSetAccessor.dataSetRepo, timeout)
-
 
   override def run = {
     // delete all the records

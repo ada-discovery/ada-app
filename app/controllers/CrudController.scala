@@ -98,27 +98,29 @@ protected abstract class CrudController[E: Format, ID](
 
   protected def saveCall(item: E): Future[ID] = repo.save(item)
 
-  def update(id: ID) = Action.async { implicit request =>
+  def update(id: ID): Action[AnyContent] = update(id, home)
+
+  protected def update(id: ID, redirect: Result): Action[AnyContent] = Action.async { implicit request =>
     form.bindFromRequest.fold(
-    { formWithErrors =>
-      implicit val msg = messagesApi.preferred(request)
-      Future.successful(BadRequest(editView(id, formWithErrors)))
-    },
-    item => {
-      updateCall(identity.set(item, id)).map { _ =>
-        render {
-          case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been updated")
-          case Accepts.Json() => Ok(Json.obj("message" -> "Item successly updated", "id" -> id.toString))
+      { formWithErrors =>
+        implicit val msg = messagesApi.preferred(request)
+        Future.successful(BadRequest(editView(id, formWithErrors)))
+      },
+      item => {
+        updateCall(identity.set(item, id)).map { _ =>
+          render {
+            case Accepts.Html() => redirect.flashing("success" -> s"Item ${id} has been updated")
+            case Accepts.Json() => Ok(Json.obj("message" -> "Item successly updated", "id" -> id.toString))
+          }
+        }.recover {
+          case t: TimeoutException =>
+            Logger.error("Problem found in the update process")
+            InternalServerError(t.getMessage)
+          case i: RepoException =>
+            Logger.error("Problem found in the update process")
+            InternalServerError(i.getMessage)
         }
-      }.recover {
-        case t: TimeoutException =>
-          Logger.error("Problem found in the update process")
-          InternalServerError(t.getMessage)
-        case i: RepoException =>
-          Logger.error("Problem found in the update process")
-          InternalServerError(i.getMessage)
-      }
-    })
+      })
   }
 
   protected def updateCall(item: E): Future[ID] = repo.update(item)

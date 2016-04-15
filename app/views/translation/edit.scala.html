@@ -8,6 +8,6 @@
 	errors = form.errors,
     elements = editableTextElements("translation", form),
 	updateCall = routes.TranslationController.update(id),
-	listCall = routes.TranslationController.listAll(),
+	cancelCall = routes.TranslationController.listAll(),
     deleteCall = Some(routes.TranslationController.delete(id))
 )

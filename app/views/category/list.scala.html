@@ -9,7 +9,7 @@
     domainName : String,
     page: Page[Category],
     router : CategoryRouter,
-    dataSetMetaInfos: Traversable[DataSetMetaInfo]
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
@@ -57,6 +57,6 @@
     actions,
     table,
     Some(treeChart(router)),
-    Some(datasetMenu(dataSetMetaInfos)),
+    Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )

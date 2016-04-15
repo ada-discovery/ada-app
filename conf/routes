@@ -106,6 +106,17 @@ GET         /studies/categories/getCategoryD3Root                               
 GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
 GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
 
+GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "original", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: Int ?= 2)
+GET         /studies/setting/new                                                    controllers.dataset.DataSetSettingController.create
+POST        /studies/setting/save                                                   controllers.dataset.DataSetSettingController.save
+GET         /studies/setting/:id/get                                                controllers.dataset.DataSetSettingController.get(id: BSONObjectID)
+GET         /studies/setting/:id                                                    controllers.dataset.DataSetSettingController.edit(id: BSONObjectID)
+GET         /studies/setting/edit/                                                  controllers.dataset.DataSetSettingController.editForDataSet(dataSetId: String)
+POST        /studies/setting/:id                                                    controllers.dataset.DataSetSettingController.update(id: BSONObjectID)
+POST        /studies/setting/update/:id                                             controllers.dataset.DataSetSettingController.updateForDataSet(id: BSONObjectID)
+POST        /studies/setting/:id/delete                                             controllers.dataset.DataSetSettingController.delete(id: BSONObjectID)
+
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                                                           controllers.Assets.at(path="/public", file)
 

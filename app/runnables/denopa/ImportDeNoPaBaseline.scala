@@ -7,6 +7,7 @@ import play.api.Configuration
 import runnables.{ImportDataSet, GuiceBuilderRunnable}
 
 class ImportDeNoPaBaseline @Inject() (configuration: Configuration) extends ImportDataSet(
+  "DeNoPa",
   denopa_baseline,
   "DeNoPa Baseline",
   Some(DeNoPaDataSetSetting.BaseLine),

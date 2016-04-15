@@ -1,5 +1,6 @@
 @import util.{matchesPath, getParamValue}
 @import controllers.dataset.{DataSetRouter, DictionaryRouter, CategoryRouter}
+@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 
 @()(implicit request: RequestHeader)
 
@@ -19,6 +20,7 @@
             @listItem(dataSetRouter.plainOverviewList, "Overview")
             @listItem(dictionaryRouter.plainList, "Dictionary")
             @listItem(categoryRouter.plainList, "Category Tree")
+            @listItem(dataSetSettingRoutes.editForDataSet(dataSetId), "Setting")
             <li class="dropdown">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#">Statistics<span class="caret"></span></a>
                 <ul class="dropdown-menu">

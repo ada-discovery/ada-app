@@ -39,8 +39,11 @@ object RepoDef extends Enumeration {
   val DictionaryRootRepo = Repo[DictionaryRootRepo](
     new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
 
-  val DataSetMetaInfoRepo = Repo[DataSetMetaInfoRepo](
-    new MongoAsyncCrudRepo[DataSetMetaInfo, BSONObjectID]("dataset_meta_infos"))
+  val DataSpaceMetaInfoRepo = Repo[DataSpaceMetaInfoRepo](
+    new MongoAsyncCrudRepo[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos"))
+
+//  val DataSetMetaInfoRepo = Repo[DataSetMetaInfoRepo](
+//    new MongoAsyncCrudRepo[DataSetMetaInfo, BSONObjectID]("dataset_meta_infos"))
 
   val DataSetSettingRepo = Repo[DataSetSettingRepo](
     new MongoAsyncCrudRepo[DataSetSetting, BSONObjectID]("dataset_setting"))
@@ -61,6 +64,11 @@ class RepoModule extends ScalaModule {
     // bind repos defined above
     RepoDef.values.foreach(bindRepo(_))
 
+    // install data set meta info repo factory
+    install(new FactoryModuleBuilder()
+      .implement(new TypeLiteral[DataSetMetaInfoRepo]{}, classOf[DataSetMetaInfoSubordinateMongoAsyncCrudRepo])
+      .build(classOf[DataSetMetaInfoRepoFactory]))
+
     // install JsObject repo factory
     install(new FactoryModuleBuilder()
       .implement(new TypeLiteral[JsObjectCrudRepo]{}, classOf[JsObjectMongoCrudRepo])
@@ -68,12 +76,12 @@ class RepoModule extends ScalaModule {
 
     // install dictionary field repo factory
     install(new FactoryModuleBuilder()
-      .implement(new TypeLiteral[DictionaryFieldRepo]{}, classOf[DictionaryFieldMongoAsyncCrudRepo])
+      .implement(new TypeLiteral[DictionaryFieldRepo]{}, classOf[DictionaryFieldSubordinateMongoAsyncCrudRepo])
       .build(classOf[DictionaryFieldRepoFactory]))
 
     // install dictionary category repo factory
     install(new FactoryModuleBuilder()
-      .implement(new TypeLiteral[DictionaryCategoryRepo]{}, classOf[DictionaryCategoryMongoAsyncCrudRepo])
+      .implement(new TypeLiteral[DictionaryCategoryRepo]{}, classOf[DictionaryCategorySubordinateMongoAsyncCrudRepo])
       .build(classOf[DictionaryCategoryRepoFactory]))
 
 //    bind[DataSetAccessorFactory].to(classOf[DataSetAccessorMongoFactory]).asEagerSingleton

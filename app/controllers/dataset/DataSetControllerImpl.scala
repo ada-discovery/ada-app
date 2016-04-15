@@ -14,7 +14,6 @@ import persistence.AscSort
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
-import play.api.Play._
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, RequestHeader}
@@ -22,12 +21,10 @@ import reactivemongo.bson.BSONObjectID
 import services.TranSMARTService
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.json.BSONObjectIDFormat
-import scala.concurrent.duration._
 import views.html.dataset
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
-import scala.concurrent.Await.result
 
 trait GenericDataSetControllerFactory {
   def apply(dataSetId: String): DataSetController
@@ -36,7 +33,7 @@ trait GenericDataSetControllerFactory {
 protected[controllers] class DataSetControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
-    dataSetMetaInfoRepo: DataSetMetaInfoRepo
+    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
   ) extends ReadonlyController[JsObject, BSONObjectID](dsaf(dataSetId).get.dataSetRepo) with DataSetController with ExportableAction[JsObject] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
@@ -69,7 +66,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   // router for requests; to be passed to views as helper.
   protected lazy val router: DataSetRouter = new DataSetRouter(dataSetId)
 
-  override protected lazy val listViewColumns = Some(setting.listViewTableColumnName)
+  override protected def listViewColumns = Some(setting.listViewTableColumnNames)
 
   private val jsonNumericTypes = Json.arr(FieldType.Double.toString, FieldType.Integer.toString)
 
@@ -413,8 +410,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   // TODO: keep as async
-  private def getMetaInfos: Traversable[DataSetMetaInfo] =
-    result(dataSetMetaInfoRepo.find())
+  private def getMetaInfos: Traversable[DataSpaceMetaInfo] =
+    result(dataSpaceMetaInfoRepo.find())
 
   //////////////////////
   // Export Functions //

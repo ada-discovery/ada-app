@@ -8,6 +8,7 @@ import javax.inject.Inject
 import models.{DataSetSetting, DataSetMetaInfo, FieldType}
 import persistence.AscSort
 import persistence.RepoTypes._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import persistence.dataset.{DataSetAccessorFactory, DataSetAccessor}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
@@ -28,7 +29,11 @@ abstract class CleanupDataSet (
 
   lazy val originalDsa = dsaf(originalDataSetId).get
   lazy val newDsa = {
-    val futureAccessor = dsaf.register(newDataSetMetaInfo, newDataSetSetting)
+    val futureAccessor = for {
+      originalDataSetInfo <- originalDsa.metaInfo
+      accessor <- dsaf.register(newDataSetMetaInfo.copy(dataSpaceId = originalDataSetInfo.dataSpaceId), newDataSetSetting)
+    } yield
+      accessor
     Await.result(futureAccessor, timeout)
   }
 

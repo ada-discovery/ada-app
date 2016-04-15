@@ -1,0 +1,14 @@
+@import views.html.elements.inputText
+
+@(form: Form[DataSetSetting])(implicit msg: play.api.i18n.Messages)
+
+@inputText("dataSetSetting", "dataSetId", form, 'readonly -> "readonly")
+@inputText("dataSetSetting", "keyFieldName", form)
+@inputText("dataSetSetting", "exportOrderByFieldName", form)
+@inputText("dataSetSetting", "listViewTableColumnNames", form)
+@inputText("dataSetSetting", "overviewChartFieldNames", form)
+@inputText("dataSetSetting", "defaultScatterXFieldName", form)
+@inputText("dataSetSetting", "defaultScatterYFieldName", form)
+@inputText("dataSetSetting", "defaultDistributionFieldName", form)
+@inputText("dataSetSetting", "tranSMARTVisitFieldName", form)
+@inputText("dataSetSetting", "tranSMARTReplacements", form)

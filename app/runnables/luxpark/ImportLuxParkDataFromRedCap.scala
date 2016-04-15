@@ -2,24 +2,26 @@ package runnables.luxpark
 
 import javax.inject.Inject
 
-import models.{DataSetSetting, DataSetMetaInfo}
+import models.DataSetSetting
 import persistence.RepoSynchronizer
 import models.DataSetId._
+import persistence.RepoTypes.DataSpaceMetaInfoRepo
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable
 import services.RedCapService
 
-import scala.concurrent.Await
+import scala.concurrent.Await._
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 
 class ImportLuxParkDataFromRedCap @Inject() (
     dsaf: DataSetAccessorFactory,
+    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     redCapService: RedCapService
   ) extends Runnable {
 
   private val timeout = 120000 millis
 
-  val metaInfo = DataSetMetaInfo(None, luxpark, "Lux Park", None)
   val setting = DataSetSetting(
     None,
     luxpark,
@@ -34,10 +36,9 @@ class ImportLuxParkDataFromRedCap @Inject() (
     Map(("\r", " "), ("\n", " "))
   )
 
-  val dataSetAccessor = {
-    val futureAccessor = dsaf.register(metaInfo, Some(setting))
-    Await.result(futureAccessor, timeout)
-  }
+  lazy val dataSetAccessor =
+    result(dsaf.register("Lux Park", luxpark, "Lux Park", Some(setting)), timeout)
+
   private val syncDataRepo = RepoSynchronizer(dataSetAccessor.dataSetRepo, timeout)
 
   override def run = {

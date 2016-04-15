@@ -1,0 +1,15 @@
+@import views.html.datasetsetting.edit
+@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+
+@(
+    id: reactivemongo.bson.BSONObjectID,
+    dataSetName: String,
+    form: Form[DataSetSetting]
+)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+
+@edit(
+    dataSetName,
+	form,
+	updateCall = dataSetSettingRoutes.update(id),
+    cancelCall = dataSetSettingRoutes.listAll()
+)

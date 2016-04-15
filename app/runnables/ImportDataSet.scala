@@ -2,10 +2,11 @@ package runnables
 
 import javax.inject.Inject
 
-import models.{DataSetSetting, DataSetMetaInfo}
+import models.DataSetSetting
 import persistence.RepoSynchronizer
+import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
-import play.api.libs.json.{JsNull, JsObject, JsString}
+import play.api.libs.json.{Json, JsNull, JsObject, JsString}
 import util.JsonUtil.escapeKey
 
 import scala.concurrent.Await.result
@@ -13,6 +14,7 @@ import scala.concurrent.duration._
 import scala.io.Source
 
 class ImportDataSet(
+    dataSpaceName: String,
     dataSetId: String,
     dataSetName: String,
     setting: Option[DataSetSetting],
@@ -22,15 +24,13 @@ class ImportDataSet(
     eol: Option[String] = None
   ) extends Runnable {
 
+  @Inject protected var dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo = _
   @Inject protected var dsaf: DataSetAccessorFactory = _
 
   protected val timeout = 120000 millis
-  protected val metaInfo = DataSetMetaInfo(None, dataSetId, dataSetName, None)
 
-  lazy val dataSetAccessor = {
-    val futureAccessor = dsaf.register(metaInfo, setting)
-    result(futureAccessor, timeout)
-  }
+  lazy val dataSetAccessor =
+    result(dsaf.register(dataSpaceName, dataSetId, dataSetName, setting), timeout)
 
   override def run = {
     val dataRepo = dataSetAccessor.dataSetRepo

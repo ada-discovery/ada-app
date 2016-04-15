@@ -1,7 +1,6 @@
 package controllers.dataset
 
 import com.google.inject.ImplementedBy
-import persistence.RepoTypes.DataSetMetaInfoRepo
 import persistence.dataset.DataSetAccessorFactory
 import util.ReflectionUtil.findClasses
 import util.{RefreshableCache, toCamel}
@@ -21,7 +20,6 @@ trait DataSetControllerFactory {
 protected class DataSetControllerFactoryImpl @Inject()(
     dsaf: DataSetAccessorFactory,
     genericFactory: GenericDataSetControllerFactory,
-    dataSetMetaInfoRepo: DataSetMetaInfoRepo,
     injector : Injector
   ) extends DataSetControllerFactory {
 
@@ -48,7 +46,7 @@ protected class DataSetControllerFactoryImpl @Inject()(
       injector.instanceOf(controllerClass.get)
     else {
       println(s"Controller class for the data set id '$dataSetId' not found. Creating a generic one...")
-      genericFactory.apply(dataSetId)
+      genericFactory(dataSetId)
     }
   }
 

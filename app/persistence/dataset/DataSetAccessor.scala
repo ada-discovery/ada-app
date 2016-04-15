@@ -1,6 +1,7 @@
 package persistence.dataset
 
-import models.{DataSetSetting, DataSetMetaInfo}
+import models.DataSetId._
+import models.{DataSpaceMetaInfo, DataSetSetting, DataSetMetaInfo}
 import play.api.libs.json._
 import persistence.RepoTypes._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -30,7 +31,7 @@ protected class DataSetAccessorImpl(
     val metaInfosFuture = dataSetMetaInfoRepo.find(Some(Json.obj("id" -> dataSetId)))
     metaInfosFuture.map {
       _.headOption.getOrElse(
-        throw new IllegalAccessError("Meta info not available for data set '" + dataSetId + "'.")
+        throw new IllegalStateException("Meta info not available for data set '" + dataSetId + "'.")
       )
     }
   }
@@ -39,7 +40,7 @@ protected class DataSetAccessorImpl(
     val settingsFuture = dataSetSettingRepo.find(Some(Json.obj("dataSetId" -> dataSetId)))
     settingsFuture.map {
       _.headOption.getOrElse {
-        throw new IllegalAccessError("Setting not available for data set '" + dataSetId + "'.")
+        throw new IllegalStateException("Setting not available for data set '" + dataSetId + "'.")
       }
     }
   }

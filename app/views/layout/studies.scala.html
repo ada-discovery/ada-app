@@ -1,8 +1,8 @@
 @import views.html.dataset.datasetMenu
 
-@(dataSetMetaInfos: Traversable[DataSetMetaInfo])(implicit request: RequestHeader)
+@(dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo])(implicit request: RequestHeader)
 
-@main("NCER-PD Studies", Some(datasetMenu(dataSetMetaInfos))) {
+@main("NCER-PD Studies", Some(datasetMenu(dataSpaceMetaInfos))) {
 
     <div class="page-header">
         <h1>Studies</h1>

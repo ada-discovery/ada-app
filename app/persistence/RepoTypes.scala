@@ -3,7 +3,6 @@ package persistence
 import models._
 import models.security.CustomUser
 import models.workspace.Workspace
-import persistence.dataset.DictionarySubordinateRepo
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 
@@ -16,10 +15,13 @@ object RepoTypes {
   type UserRepo = AsyncCrudRepo[CustomUser, BSONObjectID]
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
   type WorkspaceRepo = AsyncCrudRepo[Workspace, BSONObjectID]
+
   type DictionaryRootRepo = MongoAsyncCrudExtraRepo[Dictionary, BSONObjectID]
-  type DictionaryFieldRepo = DictionarySubordinateRepo[Field, String]
-  type DictionaryCategoryRepo = DictionarySubordinateRepo[Category, BSONObjectID]
-  type DataSetMetaInfoRepo = AsyncCrudRepo[DataSetMetaInfo, BSONObjectID]
+  type DictionaryFieldRepo = SubordinateObjectRepo[Field, String]
+  type DictionaryCategoryRepo = SubordinateObjectRepo[Category, BSONObjectID]
+
+  type DataSpaceMetaInfoRepo = MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]
+  type DataSetMetaInfoRepo = SubordinateObjectRepo[DataSetMetaInfo, BSONObjectID]
   type DataSetSettingRepo = AsyncCrudRepo[DataSetSetting, BSONObjectID]
 
   // experimental

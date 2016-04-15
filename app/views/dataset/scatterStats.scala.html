@@ -14,7 +14,7 @@
     dataSetId: String,
     numericFields: Seq[(String, Option[String])],
     stats: Seq[(Any, Any)],
-    dataSetMetaInfos: Traversable[DataSetMetaInfo]
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
@@ -80,7 +80,7 @@
     }
 }
 
-@main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSetMetaInfos)), Some(datasetSubNav())) {
+@main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav())) {
 
     <div class="page-header">
         <h3>
