@@ -2,7 +2,7 @@ package runnables
 
 import javax.inject.Inject
 
-import models.DataSetSetting
+import com.google.inject.assistedinject.Assisted
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
@@ -13,16 +13,11 @@ import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import scala.io.Source
 
-class ImportDataSet(
-    dataSpaceName: String,
-    dataSetId: String,
-    dataSetName: String,
-    setting: Option[DataSetSetting],
-    folder: String,
-    filename: String,
-    separator: String,
-    eol: Option[String] = None
-  ) extends Runnable {
+trait ImportDataSetFactory {
+  def apply(importInfo: DataSetImportInfo): Runnable
+}
+
+class ImportDataSet @Inject() (@Assisted importInfo: DataSetImportInfo) extends Runnable {
 
   @Inject protected var dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo = _
   @Inject protected var dsaf: DataSetAccessorFactory = _
@@ -30,7 +25,7 @@ class ImportDataSet(
   protected val timeout = 120000 millis
 
   lazy val dataSetAccessor =
-    result(dsaf.register(dataSpaceName, dataSetId, dataSetName, setting), timeout)
+    result(dsaf.register(importInfo.dataSpaceName, importInfo.dataSetId, importInfo.dataSetName, importInfo.setting), timeout)
 
   override def run = {
     val dataRepo = dataSetAccessor.dataSetRepo
@@ -48,7 +43,7 @@ class ImportDataSet(
     var bufferedLine = ""
 
     // for each line create a JSON record and insert to the database
-    val contentLines = if (eol.isDefined) lines.drop(1) else lines
+    val contentLines = if (importInfo.eol.isDefined) lines.drop(1) else lines
     contentLines.zipWithIndex.foreach { case (line, index) =>
       // parse the line
       bufferedLine += line
@@ -78,22 +73,22 @@ class ImportDataSet(
   }
 
   protected def getLineIterator = {
-    val source = Source.fromFile(folder + filename)
-    if (eol.isDefined)
-      source.mkString.split(eol.get).iterator
+    val source = Source.fromFile(importInfo.path)
+    if (importInfo.eol.isDefined)
+      source.mkString.split(importInfo.eol.get).iterator
     else
       source.getLines
   }
 
   protected def getColumnNames(lineIterator: Iterator[String]) =
     lineIterator.take(1).map {
-    _.split(separator).map(columnName =>
+    _.split(importInfo.delimiter).map(columnName =>
       escapeKey(columnName.replaceAll("\"", "").trim)
     )}.flatten.toList
 
   // parse the lines, returns the parsed items
   private def parseLine(line: String) =
-    line.split(separator).map { l =>
+    line.split(importInfo.delimiter).map { l =>
       val start = if (l.startsWith("\"")) 1 else 0
       val end = if (l.endsWith("\"")) l.size - 1 else l.size
       l.substring(start, end).trim.replaceAll("\\\\\"", "\"")

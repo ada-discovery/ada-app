@@ -17,26 +17,12 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 import views.html
 import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+import play.api.data.Mapping
+import controllers.dataset.DataSetSettingController.dataSetSettingMapping
 
 class DataSetSettingController @Inject() (repo: DataSetSettingRepo) extends CrudController[DataSetSetting, BSONObjectID](repo) {
 
-  implicit val mapFormatter = MapJsonFormatter.apply
-  implicit val seqFormatter = SeqFormatter.apply
-
-  override protected val form = Form(
-    mapping(
-      "id" -> ignored(Option.empty[BSONObjectID]),
-      "dataSetId" -> nonEmptyText,
-      "keyFieldName" -> nonEmptyText,
-      "exportOrderByFieldName" -> nonEmptyText,
-      "listViewTableColumnNames" -> of[Seq[String]],
-      "overviewChartFieldNames" -> of[Seq[String]],
-      "defaultScatterXFieldName" -> nonEmptyText,
-      "defaultScatterYFieldName" -> nonEmptyText,
-      "defaultDistributionFieldName" -> nonEmptyText,
-      "tranSMARTVisitFieldName" -> optional(nonEmptyText),
-      "tranSMARTReplacements" -> of[Map[String, String]]
-    ) (DataSetSetting.apply)(DataSetSetting.unapply))
+  override protected val form = Form(dataSetSettingMapping)
 
   override protected val home =
     Redirect(routes.DataSetSettingController.listAll())
@@ -87,4 +73,23 @@ class DataSetSettingController @Inject() (repo: DataSetSettingRepo) extends Crud
 
   //@Deprecated
   override protected val defaultCreateEntity = new DataSetSetting("")
+}
+
+object DataSetSettingController {
+  implicit val seqFormatter = SeqFormatter.apply
+  implicit val mapFormatter = MapJsonFormatter.apply
+
+  val dataSetSettingMapping: Mapping[DataSetSetting] = mapping(
+    "id" -> ignored(Option.empty[BSONObjectID]),
+    "dataSetId" -> nonEmptyText,
+    "keyFieldName" -> nonEmptyText,
+    "exportOrderByFieldName" -> nonEmptyText,
+    "listViewTableColumnNames" -> of[Seq[String]],
+    "overviewChartFieldNames" -> of[Seq[String]],
+    "defaultScatterXFieldName" -> nonEmptyText,
+    "defaultScatterYFieldName" -> nonEmptyText,
+    "defaultDistributionFieldName" -> nonEmptyText,
+    "tranSMARTVisitFieldName" -> optional(nonEmptyText),
+    "tranSMARTReplacements" -> of[Map[String, String]]
+  ) (DataSetSetting.apply)(DataSetSetting.unapply)
 }

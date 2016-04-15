@@ -4,26 +4,25 @@ import javax.inject.Inject
 
 import models.{FieldType, Field}
 import persistence.RepoSynchronizer
-import persistence.dataset.{DataSetAccessorFactory, DictionaryFieldRepo}
-import play.api.libs.json.{JsObject, Json, JsNull, JsString}
+import persistence.dataset.DataSetAccessorFactory
+import play.api.libs.json.{Json, JsNull, JsString}
 import util.TypeInferenceProvider
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 
-abstract class InferDictionary(dataSetId: String) extends Runnable {
+class InferDictionary(
+    dataSetId: String,
+    typeInferenceProvider: TypeInferenceProvider
+  ) extends Runnable {
 
   @Inject protected var dsaf: DataSetAccessorFactory = _
   protected lazy val dsa = dsaf(dataSetId).get
   protected lazy val dataRepo = dsa.dataSetRepo
   protected lazy val fieldRepo = dsa.fieldRepo
   protected lazy val categoryRepo = dsa.categoryRepo
-
   protected val timeout = 120000 millis
-
-  protected def typeInferenceProvider : TypeInferenceProvider
-  protected def uniqueCriteria : JsObject
 
   def run = {
     val fieldSyncRepo = RepoSynchronizer(fieldRepo, timeout)
@@ -60,9 +59,9 @@ abstract class InferDictionary(dataSetId: String) extends Runnable {
 
   protected def getFieldNames = {
     val syncDataRepo = RepoSynchronizer(dataRepo, timeout)
-    val uniqueRecords = syncDataRepo.find(Some(uniqueCriteria))
-    if (uniqueRecords.isEmpty)
-      throw new IllegalStateException(s"No records found for $uniqueCriteria. The associated data set might be empty.")
-    uniqueRecords.head.keys
+    val records = syncDataRepo.find(None, None, None, Some(1))
+    if (records.isEmpty)
+      throw new IllegalStateException(s"No records found. Unable to infer a dictionary. The associated data set might be empty.")
+    records.head.keys
   }
 }

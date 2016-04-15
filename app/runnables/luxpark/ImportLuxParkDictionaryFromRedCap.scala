@@ -15,13 +15,10 @@ import util.JsonUtil
 import scala.concurrent.{Await, Future}
 import scala.concurrent.Await.result
 
+// TODO: Introduce a proper type inference setting for LuxPark Data
 class ImportLuxParkDictionaryFromRedCap @Inject() (
     redCapService: RedCapService
-  ) extends InferDictionary(luxpark) {
-
-  // TODO: Introduce a proper type inference setting for LuxPark Data
-  override protected val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider
-  override protected val uniqueCriteria = Json.obj("cdisc_dm_usubjd" -> "ND0001")
+  ) extends InferDictionary(luxpark, DeNoPaSetting.typeInferenceProvider) {
 
   private val choicesDelimeter = "\\|"
   private val choiceKeyValueDelimeter = ","

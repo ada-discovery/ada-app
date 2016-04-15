@@ -28,3 +28,13 @@ dataSetSetting.defaultScatterYFieldName.label = Scatter Y Field
 dataSetSetting.defaultDistributionFieldName.label = Distribution Field
 dataSetSetting.tranSMARTVisitFieldName.label = TranSMART Visit Field
 dataSetSetting.tranSMARTReplacements.label = TranSMART Export Char Replacements
+
+dataSetImportInfo.setting.keyFieldName.label = Key Field
+dataSetImportInfo.setting.exportOrderByFieldName.label = Export OrderBy Field
+dataSetImportInfo.setting.listViewTableColumnNames.label = Overview Columns
+dataSetImportInfo.setting.overviewChartFieldNames.label = Overview Chart Fields
+dataSetImportInfo.setting.defaultScatterXFieldName.label = Scatter X Field
+dataSetImportInfo.setting.defaultScatterYFieldName.label = Scatter Y Field
+dataSetImportInfo.setting.defaultDistributionFieldName.label = Distribution Field
+dataSetImportInfo.setting.tranSMARTVisitFieldName.label = TranSMART Visit Field
+dataSetImportInfo.setting.tranSMARTReplacements.label = TranSMART Export Char Replacements

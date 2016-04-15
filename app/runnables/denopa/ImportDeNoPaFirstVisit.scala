@@ -4,16 +4,18 @@ import javax.inject.Inject
 
 import models.DataSetId._
 import play.api.Configuration
-import runnables.{ImportDataSet, GuiceBuilderRunnable}
+import runnables.{DataSetImportInfo, ImportDataSet, GuiceBuilderRunnable}
 
 class ImportDeNoPaFirstVisit @Inject() (configuration: Configuration) extends ImportDataSet(
-  "DeNoPa",
-  denopa_firstvisit,
-  "DeNoPa First Visit",
-  Some(DeNoPaDataSetSetting.FirstVisit),
-  configuration.getString("denopa.import.folder").get,
-  "Denopa-V2-FU1-Datensatz-final.csv",
-  "§§"
+  DataSetImportInfo(
+    "DeNoPa",
+    denopa_firstvisit,
+    "DeNoPa First Visit",
+    configuration.getString("denopa.import.folder").get + "Denopa-V2-FU1-Datensatz-final.csv",
+    "§§",
+    None,
+    Some(DeNoPaDataSetSetting.FirstVisit)
+  )
 ) {
   override protected def getColumnNames(lineIterator: Iterator[String]) =
     "Line_Nr" :: super.getColumnNames(lineIterator)

@@ -14,9 +14,7 @@ import util.JsonUtil.escapeKey
 import scala.concurrent.Await.result
 import scala.concurrent.Future
 
-protected abstract class InferDeNoPaDictionary(dataSetId: String) extends InferDictionary(dataSetId) {
-  override protected val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider
-  override protected val uniqueCriteria = Json.obj("Line_Nr" -> "1")
+protected abstract class InferDeNoPaDictionary(dataSetId: String) extends InferDictionary(dataSetId, DeNoPaSetting.typeInferenceProvider) {
 
   override def run = {
     result(categoryRepo.initIfNeeded, timeout)
@@ -70,16 +68,9 @@ protected abstract class InferDeNoPaDictionary(dataSetId: String) extends InferD
 class InferDeNoPaBaselineDictionary extends InferDeNoPaDictionary(denopa_baseline)
 class InferDeNoPaFirstVisitDictionary extends InferDeNoPaDictionary(denopa_firstvisit)
 class InferDeNoPaSecondVisitDictionary extends InferDeNoPaDictionary(denopa_secondvisit)
-
-class InferDeNoPaCuratedBaselineDictionary extends InferDeNoPaDictionary(denopa_curated_baseline) {
-  override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
-}
-class InferDeNoPaCuratedFirstVisitDictionary extends InferDeNoPaDictionary(denopa_curated_firstvisit) {
-  override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
-}
-class InferDeNoPaCuratedSecondVisitDictionary extends InferDeNoPaDictionary(denopa_curated_secondvisit) {
-  override protected val uniqueCriteria = Json.obj("Line_Nr" -> 1)
-}
+class InferDeNoPaCuratedBaselineDictionary extends InferDeNoPaDictionary(denopa_curated_baseline)
+class InferDeNoPaCuratedFirstVisitDictionary extends InferDeNoPaDictionary(denopa_curated_firstvisit)
+class InferDeNoPaCuratedSecondVisitDictionary extends InferDeNoPaDictionary(denopa_curated_secondvisit)
 
 // app main launchers
 object InferDeNoPaBaselineDictionary extends GuiceBuilderRunnable[InferDeNoPaBaselineDictionary] with App { run }

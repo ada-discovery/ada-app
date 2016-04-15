@@ -77,7 +77,6 @@ case class TypeInferenceProvider(
 
   def getType(values : Set[String]) = {
     val valuesWoNull = values.filterNot(value => nullAliases.contains(value.toLowerCase))
-
     if (isNull(values))
       FieldType.Null
     else if (isBoolean(valuesWoNull))

@@ -69,33 +69,34 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     val settingsFuture = dataSetSettingRepo.find(Some(Json.obj("dataSetId" -> metaInfo.id)))
 
     metaInfosFuture.zip(settingsFuture).flatMap { case (metaInfos, settings) =>
-      val futureId = if (metaInfos.isEmpty)
 
-        // register meta info and setting
-        for {
-          _ <- dataSetSettingRepo.save(setting.getOrElse(new DataSetSetting(metaInfo.id)))
-          id <- dataSetMetaInfoRepo.save(metaInfo)
-        } yield id
-
-      else {
-        // otherwise update
-
-        val settingUpdateFuture = setting.map( setting =>
+      // register setting
+      val settingFuture = setting.map( setting =>
+        if (settings.isEmpty)
+          dataSetSettingRepo.save(setting)
+        else
           dataSetSettingRepo.update(setting.copy(_id = settings.head._id))
-        ).getOrElse(
-          // if no setting provided do nothing
+      ).getOrElse(
+        // if no setting provided either create a dummy one if needed or do nothing
+        if (metaInfos.isEmpty)
+          dataSetSettingRepo.save(new DataSetSetting(metaInfo.id))
+        else
           Future(())
-        )
+      )
 
-        for {
-          _ <- settingUpdateFuture
-          id <- dataSetMetaInfoRepo.update(metaInfos.head.copy(name = metaInfo.name))
-        } yield id
-      }
+      // register meta info
+      val metaInfoFuture = if (metaInfos.isEmpty)
+        dataSetMetaInfoRepo.save(metaInfo)
+      else
+        // if already exists update the name
+        dataSetMetaInfoRepo.update(metaInfos.head.copy(name = metaInfo.name))
 
-      futureId.map { _ =>
+      for {
+        // don't care about the output of futures, just let them execute
+        _ <- settingFuture
+        _ <- metaInfoFuture
+      } yield
         cache.getOrElseUpdate(metaInfo.id, createInstance(metaInfo.id))
-      }
     }
   }
 

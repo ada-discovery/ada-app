@@ -38,8 +38,10 @@ GET         /loginBasic                                                         
 GET         /loginAdmin                                                             controllers.AuthController.loginAdmin
 
 # Admin
-GET         /runnables                                                              controllers.AdminController.listRunnables
-GET         /runScript                                                              controllers.AdminController.runScript(className : String)
+GET         /admin/runnables                                                        controllers.AdminController.listRunnables
+GET         /admin/runScript                                                        controllers.AdminController.runScript(className : String)
+GET         /admin/dataSetUpload/new                                                controllers.dataset.DataSetUploadController.create
+POST        /admin/dataSetUpload/upload                                             controllers.dataset.DataSetUploadController.upload
 
 # Users management
 GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())

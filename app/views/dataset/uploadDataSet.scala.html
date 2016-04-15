@@ -1,0 +1,54 @@
+@import runnables.DataSetImportInfo
+@import views.html.layout
+@import views.html.elements._
+
+@(form: Form[DataSetImportInfo])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+
+@elements = {
+    <div class="panel panel-default">
+        <div class="panel-heading">Data Set Info</div>
+        <div class="panel-body">
+            @inputText("dataSetImportInfo", "dataSpaceName", form)
+            @inputText("dataSetImportInfo", "dataSetId", form)
+            @inputText("dataSetImportInfo", "dataSetName", form)
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">File</div>
+        <div class="panel-body">
+            @inputText("dataSetImportInfo", "path", form)
+            @inputText("dataSetImportInfo", "delimiter", form)
+            @inputText("dataSetImportInfo", "eol", form)
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">Setting</div>
+        <div class="panel-body">
+            <input type="hidden" id="settingDataSetId" name="setting.dataSetId" value="XX">
+            @inputText("dataSetImportInfo", "setting.keyFieldName", form)
+            @inputText("dataSetImportInfo", "setting.exportOrderByFieldName", form)
+            @inputText("dataSetImportInfo", "setting.listViewTableColumnNames", form)
+            @inputText("dataSetImportInfo", "setting.overviewChartFieldNames", form)
+            @inputText("dataSetImportInfo", "setting.defaultScatterXFieldName", form)
+            @inputText("dataSetImportInfo", "setting.defaultScatterYFieldName", form)
+            @inputText("dataSetImportInfo", "setting.defaultDistributionFieldName", form)
+            @inputText("dataSetImportInfo", "setting.tranSMARTVisitFieldName", form)
+            @inputText("dataSetImportInfo", "setting.tranSMARTReplacements", form)
+        </div>
+    </div>
+    <script>
+        $('form').submit(function(ev) {
+            ev.preventDefault();
+            $('#settingDataSetId').val($('#dataSetId').val())
+            this.submit();
+        });
+    </script>
+}
+
+@layout.create(
+    "Data Set Import",
+    form,
+    elements,
+    controllers.dataset.routes.DataSetUploadController.upload,
+    routes.AppController.index
+)
