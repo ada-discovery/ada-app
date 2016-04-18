@@ -19,8 +19,8 @@
         <ul class="nav nav-tabs">
             @listItem(dataSetRouter.plainOverviewList, "Overview")
             @listItem(dictionaryRouter.plainList, "Dictionary")
-            @listItem(categoryRouter.plainList, "Category Tree")
-            @listItem(dataSetSettingRoutes.editForDataSet(dataSetId), "Setting")
+            @listItem(categoryRouter.plainList, "Category Tree", Some(2))
+            @listItem(dataSetSettingRoutes.editForDataSet(dataSetId), "Setting", Some(2))
             <li class="dropdown">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#">Statistics<span class="caret"></span></a>
                 <ul class="dropdown-menu">

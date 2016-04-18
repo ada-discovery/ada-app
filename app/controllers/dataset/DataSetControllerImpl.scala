@@ -258,13 +258,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     showLegend: Boolean = true
   ): Future[ChartSpec] =
     for {
-      Some(foundField) <- fieldRepo.get(fieldName)
+      foundField <- fieldRepo.get(fieldName)
       items <- repo.find(criteria, None, Some(Json.obj(fieldName -> 1)))
     } yield {
-      val chartTitle = foundField.label.getOrElse(fieldName)
-      val enumMap = foundField.numValues
+      val (chartTitle, enumMap, fieldType) = foundField.map( field =>
+        (
+          field.label.getOrElse(fieldName),
+          field.numValues,
+          field.fieldType
+        )
+      ).getOrElse(
+        // failover... no corresponding field found in the dictionary, providing default values
+        (
+          fieldName,
+          None,
+          FieldType.String
+        )
+      )
 
-      foundField.fieldType match {
+      fieldType match {
         case FieldType.String => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
         case FieldType.Enum => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
         case FieldType.Boolean => ChartSpec.pie(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)

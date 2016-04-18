@@ -68,19 +68,25 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   override protected def editView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: RequestHeader) = {
     val fieldsFuture = fieldRepo.find(Some(Json.obj("categoryId" -> id)), Some(Seq(AscSort("name"))))
     val fields = result(fieldsFuture)
-    category.edit(dataSetName + " Category", id, f, allCategories, fields, router, fieldRouter.get)
+    category.edit(
+      dataSetName + " Category",
+      id,
+      f,
+      allCategories,
+      fields,
+      router,
+      fieldRouter.get,
+      result(dataSpaceMetaInfoRepo.find())
+    )
   }
 
-  override protected def listView(page: Page[Category])(implicit msg: Messages, request: RequestHeader) = {
-    val futureMetaInfos = dataSpaceMetaInfoRepo.find()
-
+  override protected def listView(page: Page[Category])(implicit msg: Messages, request: RequestHeader) =
     category.list(
       dataSetName + " Category",
       page,
       router,
-      result(futureMetaInfos)
+      result(dataSpaceMetaInfoRepo.find())
     )
-  }
 
   override protected def deleteCall(id: BSONObjectID): Future[Unit] = {
     // relocate the children to a new parent

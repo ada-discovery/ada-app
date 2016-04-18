@@ -4,12 +4,14 @@
     elements : Html,
     updateCall : Call,
     cancelCall : Call,
-    deleteCall : Option[Call]
+    deleteCall : Option[Call],
+    sideBar: Option[Html] = None,
+    topContentBar: Option[Html] = None
 )(
     implicit msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@main(Messages("edit.title", domainName)) {
+@main(Messages("edit.title", domainName), sideBar, topContentBar) {
 
     <div class="page-header">
         <h1>@Messages("edit.title", domainName)</h1>

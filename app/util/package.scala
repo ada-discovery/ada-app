@@ -9,8 +9,12 @@ package object util {
         for (i <- 1 to prefixDepth) {
           slashPos = coreUrl.indexOf('/', slashPos + 1)
         }
-        if (slashPos == -1)
-          slashPos = coreUrl.length
+        if (slashPos == -1) {
+          slashPos = coreUrl.indexOf('?')
+          if (slashPos == -1)
+            slashPos = coreUrl.length
+        }
+        val subString = coreUrl.substring(0, slashPos)
         url.startsWith(coreUrl.substring(0, slashPos))
       }
       case None => url.startsWith(coreUrl)

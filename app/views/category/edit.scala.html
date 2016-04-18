@@ -1,5 +1,6 @@
 @import views.html.layout
 @import views.html.table.displayTable
+@import views.html.dataset.{datasetSubNav, datasetMenu}
 @import views.html.elements._
 @import models.{Category, Field}
 @import controllers.dataset.CategoryRouter
@@ -12,7 +13,8 @@
     categories: Traversable[Category],
     fields: Traversable[Field],
     router: CategoryRouter,
-    getField: String => Call
+    getField: String => Call,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit msg: play.api.i18n.Messages, request: RequestHeader
 )
@@ -40,5 +42,7 @@
     elements,
     router.update(id),
     router.plainList,
-    Some(router.delete(id))
+    Some(router.delete(id)),
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNav())
 )

@@ -1,11 +1,13 @@
 @import views.html.layout
 @import views.html.datasetsetting.elements
+@import views.html.dataset.{datasetSubNav, datasetMenu}
 
 @(
     dataSetName: String,
     form: Form[DataSetSetting],
     updateCall: Call,
-    cancelCall: Call
+    cancelCall: Call,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(implicit msg: play.api.i18n.Messages, request: RequestHeader)
 
 @layout.edit(
@@ -14,5 +16,7 @@
     elements = elements(form),
 	updateCall = updateCall,
     cancelCall = cancelCall,
-    deleteCall = None
+    deleteCall = None,
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNav())
 )

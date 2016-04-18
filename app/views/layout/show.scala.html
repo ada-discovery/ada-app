@@ -3,12 +3,14 @@
 	errors : Seq[FormError],
 	elements : Html,
 	listCall : Call,
-	deleteCall : Option[Call]
+	deleteCall : Option[Call],
+	sideBar: Option[Html] = None,
+	topContentBar: Option[Html] = None
 )(
 	implicit msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@main(Messages("show.title", domainName)) {
+@main(Messages("show.title", domainName), sideBar, topContentBar) {
 
 	<div class="page-header">
 		<h1>@Messages("edit.title", domainName)</h1>

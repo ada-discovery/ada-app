@@ -8,12 +8,13 @@ import play.api.data.Forms._
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 import play.api.mvc.{Action, Controller}
-import runnables.{DataSetImportInfo, ImportDataSetFactory}
+import runnables.DataSetImportInfo
 import controllers.dataset.DataSetSettingController.dataSetSettingMapping
+import services.DataSetService
 
 class DataSetUploadController @Inject() (
     repo: DataSetSettingRepo,
-    importDataSetFactory: ImportDataSetFactory,
+    dataSetService: DataSetService,
     messagesApi: MessagesApi
   ) extends Controller {
 
@@ -22,11 +23,15 @@ class DataSetUploadController @Inject() (
       "dataSpaceName" -> nonEmptyText,
       "dataSetId" -> nonEmptyText,
       "dataSetName" -> nonEmptyText,
-      "path" -> nonEmptyText,
+      "path" -> optional(nonEmptyText),
       "delimiter" -> nonEmptyText,
       "eol" -> optional(nonEmptyText),
       "setting" -> optional(dataSetSettingMapping)
-    ) (DataSetImportInfo.apply)(DataSetImportInfo.unapply))
+    ) (new DataSetImportInfo(_, _, _, _, _, _, _))
+      { importInfo: DataSetImportInfo =>
+        Some(importInfo.dataSpaceName, importInfo.dataSetId, importInfo.dataSpaceName, importInfo.path, importInfo.delimiter, importInfo.eol, importInfo.setting)
+      }
+  )
 
   def create = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
@@ -40,12 +45,16 @@ class DataSetUploadController @Inject() (
         BadRequest(views.html.dataset.uploadDataSet(formWithErrors))
       },
       importInfo => {
-        println(importInfo.setting.get.dataSetId)
-        if (importInfo.setting.isDefined) {
-          // if the setting is defined use a given data set id
-          importInfo.copy(setting = Some(importInfo.setting.get.copy(dataSetId = importInfo.dataSetId)))
-        }
-        importDataSetFactory(importInfo).run()
+        val importFile = request.body.asMultipartFormData.get.file("importFile")
+        val importInfoExt = if (importFile.isDefined) {
+          val fileName = importFile.get.filename
+          val contentType = importFile.get.contentType
+          val file = importFile.get.ref.file
+          importInfo.copy(file = Some(file))
+        } else
+          importInfo
+
+        dataSetService.importDataSet(importInfoExt)
         render {
           case Accepts.Html() => Redirect(controllers.routes.AppController.index).flashing("success" -> s"Data set ${importInfo.dataSetName} has been uploaded")
           case Accepts.Json() => Created(Json.obj("message" -> "Data set has been uploaded", "name" -> importInfo.dataSetName))

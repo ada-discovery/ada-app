@@ -3,7 +3,8 @@
 	form: Form[_],
 	elements : Html,
 	saveCall : Call,
-	listCall : Call
+	listCall : Call,
+	formArgs: (Symbol,String)*
 )(
 	implicit msg: play.api.i18n.Messages, request: RequestHeader
 )
@@ -23,7 +24,7 @@
 
 	<div class="row">
 		<div class="col-md-8">
-		@helper.form(saveCall) {
+		@helper.form(action = saveCall, formArgs: _*) {
 			<fieldset>
 				@elements
 			</fieldset>

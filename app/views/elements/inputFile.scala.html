@@ -1,0 +1,14 @@
+@import helper.FieldConstructor
+@import play.api.data.Field
+
+@(
+        domainName: String,
+        field: Field,
+        args: (Symbol,Any)*
+)(
+        implicit msg: play.api.i18n.Messages
+)
+
+@implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapInput.f) }
+
+@helper.inputFile(field, List('_label -> attributeLabel(domainName, field.name), 'class -> "form-control") ++ args.toList : _*)

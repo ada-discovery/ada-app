@@ -114,7 +114,7 @@ GET         /studies/setting/new                                                
 POST        /studies/setting/save                                                   controllers.dataset.DataSetSettingController.save
 GET         /studies/setting/:id/get                                                controllers.dataset.DataSetSettingController.get(id: BSONObjectID)
 GET         /studies/setting/:id                                                    controllers.dataset.DataSetSettingController.edit(id: BSONObjectID)
-GET         /studies/setting/edit/                                                  controllers.dataset.DataSetSettingController.editForDataSet(dataSetId: String)
+GET         /studies/setting/edit/                                                  controllers.dataset.DataSetSettingController.editForDataSet(dataSet: String)
 POST        /studies/setting/:id                                                    controllers.dataset.DataSetSettingController.update(id: BSONObjectID)
 POST        /studies/setting/update/:id                                             controllers.dataset.DataSetSettingController.updateForDataSet(id: BSONObjectID)
 POST        /studies/setting/:id/delete                                             controllers.dataset.DataSetSettingController.delete(id: BSONObjectID)

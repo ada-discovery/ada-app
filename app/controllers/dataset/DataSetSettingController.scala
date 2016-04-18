@@ -20,7 +20,10 @@ import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRou
 import play.api.data.Mapping
 import controllers.dataset.DataSetSettingController.dataSetSettingMapping
 
-class DataSetSettingController @Inject() (repo: DataSetSettingRepo) extends CrudController[DataSetSetting, BSONObjectID](repo) {
+class DataSetSettingController @Inject() (
+    repo: DataSetSettingRepo,
+    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
+  ) extends CrudController[DataSetSetting, BSONObjectID](repo) {
 
   override protected val form = Form(dataSetSettingMapping)
 
@@ -40,19 +43,19 @@ class DataSetSettingController @Inject() (repo: DataSetSettingRepo) extends Crud
   override protected def listView(currentPage: Page[DataSetSetting])(implicit msg: Messages, request: RequestHeader) =
     html.datasetsetting.list("", currentPage)
 
-  def editForDataSet(dataSetId: String) = Action.async { implicit request =>
-    val foundSettingFuture = repo.find(Some(Json.obj("dataSetId" -> dataSetId))).map(_.headOption)
+  def editForDataSet(dataSet: String) = Action.async { implicit request =>
+    val foundSettingFuture = repo.find(Some(Json.obj("dataSetId" -> dataSet))).map(_.headOption)
     foundSettingFuture.map { setting =>
       setting.fold(
-        NotFound(s"Setting for the data set '#$dataSetId' not found")
+        NotFound(s"Setting for the data set '#$dataSet' not found")
       ) { entity =>
         implicit val msg = messagesApi.preferred(request)
 
         render {
           case Accepts.Html() => {
             val updateCall = dataSetSettingRoutes.updateForDataSet(entity._id.get)
-            val cancelCall = new DataSetRouter(dataSetId).plainOverviewList
-            Ok(html.datasetsetting.edit("", form.fill(entity), updateCall, cancelCall))
+            val cancelCall = new DataSetRouter(dataSet).plainOverviewList
+            Ok(html.datasetsetting.edit("", form.fill(entity), updateCall, cancelCall, result(dataSpaceMetaInfoRepo.find())))
           }
           case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
         }
