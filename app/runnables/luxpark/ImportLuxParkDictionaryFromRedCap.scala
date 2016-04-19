@@ -7,23 +7,33 @@ import models.{FieldType, Field, Category}
 import models.redcap.{FieldType => RCFieldType}
 import persistence.RepoSynchronizer
 import models.DataSetId._
-import play.api.libs.json.Json
-import runnables.{GuiceBuilderRunnable, InferDictionary}
-import services.{DeNoPaSetting, RedCapService}
+import persistence.RepoTypes._
+import persistence.dataset.DataSetAccessorFactory
+import runnables.GuiceBuilderRunnable
+import services.{DataSetService, DeNoPaSetting, RedCapService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import util.JsonUtil
+import scala.collection.Set
 import scala.concurrent.{Await, Future}
 import scala.concurrent.Await.result
+import scala.concurrent.duration._
 
-// TODO: Introduce a proper type inference setting for LuxPark Data
 class ImportLuxParkDictionaryFromRedCap @Inject() (
-    redCapService: RedCapService
-  ) extends InferDictionary(luxpark, DeNoPaSetting.typeInferenceProvider) {
+    dsaf: DataSetAccessorFactory,
+    redCapService: RedCapService,
+    dataSetService: DataSetService
+  ) extends Runnable {
 
   private val choicesDelimeter = "\\|"
   private val choiceKeyValueDelimeter = ","
+  private val timeout = 120000 millis
 
   override def run = {
+    val dsa = dsaf(luxpark).get
+    val dataSetRepo = dsa.dataSetRepo
+    val fieldRepo = dsa.fieldRepo
+    val categoryRepo = dsa.categoryRepo
+
     val dictionarySyncRepo = RepoSynchronizer(fieldRepo, timeout)
     // init dictionary if needed
     result(fieldRepo.initIfNeeded, timeout)
@@ -43,13 +53,14 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
 
     val nameCategoryIdMap = result(Future.sequence(nameCategoryIdFutures), timeout).toMap
 
-    val fieldNames = getFieldNames
+    val fieldNames = result(getFieldNames(dataSetRepo), timeout)
 
     val futures = metadatas.par.map{ metadata =>
       val fieldName = metadata.field_name
       if (fieldNames.contains(fieldName)) {
         println(fieldName + " " + metadata.field_type)
-        val inferredType = result(inferType(fieldName), timeout)
+        val fieldTypeFuture = dataSetService.inferFieldType(dataSetRepo, DeNoPaSetting.typeInferenceProvider, fieldName)
+        val inferredType = result(fieldTypeFuture, timeout)
 
         val (fieldType, numValues) = metadata.field_type match {
           case RCFieldType.radio => (FieldType.Enum, getEnumValues(metadata))
@@ -74,6 +85,14 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
     // to be safe, wait for each save call to finish
     futures.toList.foreach(result(_, timeout))
   }
+
+  private def getFieldNames(dataRepo: JsObjectCrudRepo): Future[Set[String]] =
+    for {
+      records <- dataRepo.find(None, None, None, Some(1))
+    } yield
+      records.headOption.map(_.keys).getOrElse(
+        throw new IllegalStateException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
+      )
 
   private def getEnumValues(metadata: Metadata) : Option[Map[String, String]] = {
     val choices = metadata.select_choices_or_calculations.trim

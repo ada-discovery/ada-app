@@ -1,6 +1,7 @@
 @import views.html.layout
 @import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu}
 @import views.html.table.paginatedTable
+@import views.html.modal
 @import models.Field
 @import util.FieldChartSpec
 
@@ -18,8 +19,18 @@
 
 @actions = {
     <div class="row">
-        @filter(page.filter, router.plainList, Left(Seq("name", "fieldType", "label", "isArray")))
+        <div class="col-md-11">
+            @filter(page.filter, router.plainList, Left(Seq("name", "fieldType", "label", "isArray")))
+        </div>
+        <div class="col-md-1">
+            <a class="btn btn-info btn-sm" href="@router.inferDictionary">
+                @if(page.total.equals(0l)) {Infer} else {(Re)Infer}
+            </a>
+        </div>
     </div>
+    @if(page.total.equals(0l)) {
+        @modal("inferModal", "No Dictionary Found", Html("Do you want to infer one?"), router.inferDictionary)
+    }
 }
 
 @table = @{
@@ -45,3 +56,9 @@
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )
+
+<script type="text/javascript">
+    $(function () {
+        $("#inferModal").modal()
+    })
+</script>

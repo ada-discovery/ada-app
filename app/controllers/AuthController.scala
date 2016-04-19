@@ -21,8 +21,6 @@ import models.security._
 import security.AdaAuthConfig
 import util.SecurityUtil
 
-
-
 class AuthController @Inject() (
     myUserManager: UserManager,
     mailClientProvider: MailClientProvider

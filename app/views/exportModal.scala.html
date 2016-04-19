@@ -1,33 +1,18 @@
-@(modalName : String, title : String, delimiter : String, exportCall : Call)
+@(
+    modalName: String,
+    title: String,
+    delimiter: String,
+    exportCall: Call
+)
 
-<div class="modal fade" id="@modalName" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title">@title</h4>
-            </div>
-            <form id="@{modalName}Form" action="@exportCall">
-                <div class="modal-body">
-                    <p>Delimeter</p>
-                    <input id="delimiter" name="delimiter" value="@delimiter">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                    <button type="submit" id="exportButton" class="btn btn-primary">Export</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-<script type="text/javascript">
-   $(function () {
-      // params passed to the form's action as a call (url) are ignored... need to add them manually
-      var params = getQueryParams('@exportCall')
-      addParams($("#@{modalName}Form"), params)
+@modalBody = {
+    <p>Delimeter</p>
+    <input id="delimiter" name="delimiter" value="@delimiter">
+}
 
-      $('#@{modalName}').find('#exportButton').first().click(function(){
-          $('#@{modalName}').modal('hide');
-      });
-   })
-</script>
+@buttons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="submit" id="exportButton" class="btn btn-primary">Export</button>
+}
+
+@modal(modalName, title, modalBody, exportCall, Some(buttons))

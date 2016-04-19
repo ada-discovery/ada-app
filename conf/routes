@@ -97,6 +97,7 @@ GET         /studies/dictionary/get/:name                                       
 POST        /studies/dictionary/save                                                controllers.dataset.DictionaryDispatcher.save
 GET         /studies/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.edit(name: String)
 POST        /studies/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.update(name: String)
+GET         /studies/dictionary/infer/                                              controllers.dataset.DictionaryDispatcher.inferDictionary
 
 GET         /studies/categories                                                     controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/categories/get/:id                                             controllers.dataset.CategoryDispatcher.get(id: BSONObjectID)

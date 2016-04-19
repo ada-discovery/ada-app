@@ -7,7 +7,8 @@ import play.api.Configuration
 import runnables.{DataSetImportInfo, GuiceBuilderRunnable}
 import services.DataSetService
 
-class ImportDeNoPaBaseline @Inject()  (configuration: Configuration, dataSetService: DataSetService) extends Runnable {
+class ImportDeNoPaBaseline @Inject() (configuration: Configuration, dataSetService: DataSetService) extends Runnable {
+
   override def run = dataSetService.importDataSet(
     DataSetImportInfo(
       "DeNoPa",

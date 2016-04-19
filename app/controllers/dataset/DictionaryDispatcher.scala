@@ -30,5 +30,7 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
 
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.overviewList(page, orderBy, filter))
 
+  override def inferDictionary = dispatch(_.inferDictionary)
+
   override def dataSetId = ???
 }

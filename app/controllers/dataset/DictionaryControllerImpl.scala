@@ -18,6 +18,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, RequestHeader}
 import reactivemongo.bson.BSONObjectID
+import services.{DeNoPaSetting, DataSetService}
 import util.{ChartSpec, FieldChartSpec, FilterSpec}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import views.html.dictionary
@@ -32,6 +33,7 @@ trait DictionaryControllerFactory {
 protected[controllers] class DictionaryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
+    dataSetService: DataSetService,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
   ) extends CrudController[Field, String](dsaf(dataSetId).get.fieldRepo) with DictionaryController {
 
@@ -140,6 +142,13 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
         Logger.error("Problem found in the dictionary list process")
         InternalServerError(t.getMessage)
     }
+  }
+
+  def inferDictionary = Action.async { implicit request =>
+    // TODO: introduce type inference setting for each data set
+    dataSetService.inferDictionary(dataSetId, DeNoPaSetting.typeInferenceProvider).map( _ =>
+      home.flashing("success" -> s"Dictionary for '${dataSetId}'  was successfully inferred.")
+    )
   }
 
   private def getDictionaryChartSpec(

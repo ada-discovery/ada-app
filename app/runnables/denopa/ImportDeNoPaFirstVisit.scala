@@ -8,6 +8,7 @@ import runnables.{DataSetImportInfo, GuiceBuilderRunnable}
 import services.DataSetService
 
 class ImportDeNoPaFirstVisit @Inject()  (configuration: Configuration, dataSetService: DataSetService) extends Runnable {
+
   override def run = dataSetService.importDataSet(
     DataSetImportInfo(
       "DeNoPa",

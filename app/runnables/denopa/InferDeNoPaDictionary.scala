@@ -1,22 +1,35 @@
 package runnables.denopa
 
+import javax.inject.Inject
+
+import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import services.DeNoPaSetting
+import services.{DataSetService, DeNoPaSetting}
 import DeNoPaTranSMARTMapping._
 import models.Category
 import models.DataSetId._
-import runnables.{InferDictionary, GuiceBuilderRunnable}
+import runnables.GuiceBuilderRunnable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import persistence.dataset.DictionaryCategoryRepo.saveRecursively
 import util.JsonUtil.escapeKey
+import scala.concurrent.duration._
 
 import scala.concurrent.Await.result
 import scala.concurrent.Future
 
-protected abstract class InferDeNoPaDictionary(dataSetId: String) extends InferDictionary(dataSetId, DeNoPaSetting.typeInferenceProvider) {
+protected abstract class InferDeNoPaDictionary(dataSetId: String) extends Runnable {
+
+  @Inject() protected var dataSetService: DataSetService = _
+  @Inject() protected var dsaf: DataSetAccessorFactory = _
+  private val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider
+  private val timeout = 120000 millis
 
   override def run = {
+    val dsa = dsaf(dataSetId).get
+    val categoryRepo = dsa.categoryRepo
+    val fieldRepo = dsa.fieldRepo
+
     result(categoryRepo.initIfNeeded, timeout)
     result(categoryRepo.deleteAll, timeout)
 
@@ -26,7 +39,8 @@ protected abstract class InferDeNoPaDictionary(dataSetId: String) extends InferD
     val categoryIdMap: Map[Category, BSONObjectID] =
       (result(categoryIdsFuture1, timeout) ++ result(categoryIdsFuture2, timeout)).toMap
 
-    super.run
+    val inferDictionaryFuture = dataSetService.inferDictionary(dataSetId, typeInferenceProvider)
+    result(inferDictionaryFuture, timeout)
 
     val fieldNames = (fieldCategoryMap.keys ++ fieldLabelMap.keys).toSet
 

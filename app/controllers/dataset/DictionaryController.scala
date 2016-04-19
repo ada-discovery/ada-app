@@ -24,4 +24,6 @@ trait DictionaryController {
   def delete(id: String): Action[AnyContent]
 
   def overviewList(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
+
+  def inferDictionary: Action[AnyContent]
 }
