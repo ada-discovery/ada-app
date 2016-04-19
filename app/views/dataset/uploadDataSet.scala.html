@@ -2,7 +2,7 @@
 @import views.html.layout
 @import views.html.elements._
 
-@(form: Form[DataSetImportInfo])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(form: Form[DataSetImportInfo])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @elements = {
     <div class="panel panel-default">
@@ -20,6 +20,7 @@
             @inputFile("dataSetImportInfo", form("importFile"))
             @inputText("dataSetImportInfo", "delimiter", form)
             @inputText("dataSetImportInfo", "eol", form)
+            @inputText("dataSetImportInfo", "charsetName", form)
         </div>
     </div>
     <div class="panel panel-default">

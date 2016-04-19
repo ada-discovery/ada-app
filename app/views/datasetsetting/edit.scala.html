@@ -8,7 +8,9 @@
     updateCall: Call,
     cancelCall: Call,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
-)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
 
 @layout.edit(
     dataSetName + "Data Set Setting",

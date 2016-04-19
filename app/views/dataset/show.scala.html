@@ -1,16 +1,20 @@
-@import views.html.jsonShow
+@import views.html.layout.jsonShow
 @import play.api.libs.json.JsObject
+@import views.html.dataset.{datasetSubNav, datasetMenu}
 
-@(title : String, item: JsObject, listCall : Call, nonNullOnly : Boolean = true)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
-
-@{
-    // To be extended in future
-    // Currently just redirects to the generic JSON show view, which displays all the items
-}
+@(
+    title : String,
+    item: JsObject,
+    listCall : Call,
+    nonNullOnly : Boolean,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @jsonShow(
     title,
     item,
     listCall,
-    nonNullOnly
+    nonNullOnly,
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNav())
 )

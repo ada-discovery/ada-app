@@ -2,7 +2,7 @@
 @import views.html.elements.editableUserForm
 @import models.security.CustomUser
 
-@(form: Form[CustomUser])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(form: Form[CustomUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @layout.create(
     "user",

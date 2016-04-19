@@ -13,12 +13,13 @@ class ImportDeNoPaSecondVisit @Inject() (configuration: Configuration, dataSetSe
     DataSetImportInfo (
     "DeNoPa",
     denopa_secondvisit,
-    "DeNoPa Second Visit",
+    "Clinical Second Visit",
     Some (configuration.getString ("denopa.import.folder").get + "DeNoPa-v3_with_§§_and_§%w.csv"),
     None,
     "§§",
-    Some ("§%w"),
-    Some (DeNoPaDataSetSetting.SecondVisit)
+    Some("§%w"),
+    None,
+    Some(DeNoPaDataSetSetting.SecondVisit)
   ))
 }
 

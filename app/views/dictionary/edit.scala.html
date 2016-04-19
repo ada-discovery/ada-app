@@ -1,5 +1,6 @@
 @import views.html.layout
 @import views.html.elements.{inputText, select}
+@import views.html.dataset.{datasetSubNav, datasetMenu}
 @import models.{Field, Category}
 @import controllers.dataset.DictionaryRouter
 
@@ -8,9 +9,10 @@
     fieldName : String,
     form: Form[Field],
     categories: Traversable[Category],
-    router : DictionaryRouter
+    router : DictionaryRouter,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit msg: play.api.i18n.Messages, request: RequestHeader
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
 @elements = {
@@ -29,5 +31,7 @@
     elements,
     router.update(fieldName),
     router.plainList,
-    deleteCall = None
+    deleteCall = None,
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNav())
 )

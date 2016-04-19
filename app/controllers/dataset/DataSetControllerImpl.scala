@@ -119,7 +119,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dataset.show(
       dataSetName + " Item",
       item,
-      router.plainList
+      router.plainOverviewList,
+      true,
+      getMetaInfos
     )
 
   /**
@@ -268,7 +270,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           field.fieldType
         )
       ).getOrElse(
-        // failover... no corresponding field found in the dictionary, providing default values
+        // failover... no corresponding field found in the dictionary, providing default values instead
         (
           fieldName,
           None,

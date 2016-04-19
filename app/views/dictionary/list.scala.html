@@ -6,6 +6,7 @@
 @import util.FieldChartSpec
 
 @import controllers.dataset.DictionaryRouter
+
 @(
     domainName : String,
     page: Page[Field],
@@ -24,11 +25,11 @@
         </div>
         <div class="col-md-1">
             <a class="btn btn-info btn-sm" href="@router.inferDictionary">
-                @if(page.total.equals(0l)) {Infer} else {(Re)Infer}
+                @if(page.total.equals(0l) && page.filter.conditions.isEmpty) {Infer} else {(Re)Infer}
             </a>
         </div>
     </div>
-    @if(page.total.equals(0l)) {
+    @if(page.total.equals(0l) && page.filter.conditions.isEmpty) {
         @modal("inferModal", "No Dictionary Found", Html("Do you want to infer one?"), router.inferDictionary)
     }
 }

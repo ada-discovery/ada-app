@@ -24,7 +24,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import views.html.dictionary
 import scala.concurrent.duration._
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
+import scala.concurrent.Await.result
 
 trait DictionaryControllerFactory {
   def apply(dataSetId: String): DictionaryController
@@ -39,8 +40,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
   protected val categoryRepo: DictionaryCategoryRepo = dsa.categoryRepo
-
-  protected lazy val dataSetName = Await.result(dsa.metaInfo, 120000 millis).name
+  protected lazy val dataSetName = result(dsa.metaInfo).name
 
   protected override val listViewColumns = Some(Seq("name", "fieldType", "label", "category"))
 
@@ -76,7 +76,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     editView(name, f)
 
   override protected def editView(name: String, f : Form[Field])(implicit msg: Messages, request: RequestHeader) =
-    dictionary.edit(dataSetName + " Field", name, f, allCategories, router)
+    dictionary.edit(dataSetName + " Field", name, f, allCategories, router, result(dataSpaceMetaInfoRepo.find()))
 
   // TODO: Remove
   override protected def listView(page: Page[Field])(implicit msg: Messages, request: RequestHeader) =
@@ -85,7 +85,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   // TODO: change to an async call
   protected def allCategories = {
     val categoriesFuture = categoryRepo.find(None, Some(Seq(AscSort("name"))))
-    Await.result(categoriesFuture, 120000 millis)
+    result(categoriesFuture)
   }
 
 //  override protected  def getCall(name: String) =

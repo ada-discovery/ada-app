@@ -85,9 +85,10 @@ GET         /studies/records/exportAsCsv                                        
 GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(filter: util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
 GET         /studies/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
-GET         /studies/fieldTypes                                                     controllers.dataset.DataSetDispatcher.overviewFieldTypes
-GET         /studies/overview                                                       controllers.dataset.DataSetDispatcher.overview
-GET         /studies/overviewList                                                   controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/records/fieldTypes                                             controllers.dataset.DataSetDispatcher.overviewFieldTypes
+GET         /studies/records/overview                                               controllers.dataset.DataSetDispatcher.overview
+GET         /studies/records/overviewList                                           controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: util.FilterSpec ?= new util.FilterSpec())
+
 GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None, filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames

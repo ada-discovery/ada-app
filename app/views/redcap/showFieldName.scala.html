@@ -1,7 +1,9 @@
 @import play.api.libs.json.JsObject
-@(item: JsObject)(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@import views.html.layout.jsonShow
 
-@views.html.jsonShow(
+@(item: JsObject)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@jsonShow(
 	"Field",
 	item,
 	routes.RedCapController.listExportFields(),

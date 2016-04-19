@@ -8,25 +8,28 @@
 	item: JsObject,
 	listCall : Call,
 	nonNullOnly : Boolean = true,
-	sideBar : Option[Html] = None
+    sideBar: Option[Html] = None,
+    topContentBar: Option[Html] = None
 )(
-	implicit msg: play.api.i18n.Messages, request: RequestHeader
+	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@main(Messages("show.title", domainName), sideBar) {
+@main(Messages("show.title", domainName), sideBar, topContentBar) {
 
 	<div class="page-header">
 		<h1>@Messages("show.title", domainName)</h1>
 	</div>
 
+	@flashMessages()
+
 	<div class="row">
 		<div class="col-md-9">
 			<fieldset>
-			@item.fields.map { case (key, value) =>
-				@if(!nonNullOnly || value != JsNull) {
-					@elementValue(key, attributeLabel(domainName, unescapeKey(key).take(35)), value.asOpt[String].getOrElse(value.toString()), false)
+				@item.fields.map { case (key, value) =>
+					@if(!nonNullOnly || value != JsNull) {
+						@elementValue(key, attributeLabel(domainName, unescapeKey(key).take(35)), value.asOpt[String].getOrElse(value.toString()), false)
+					}
 				}
-			}
 			</fieldset>
 
 			<div class="actions" align="center">

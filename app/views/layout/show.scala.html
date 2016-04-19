@@ -1,3 +1,5 @@
+@import views.html.layout.formErrors
+
 @(
 	domainName : String,
 	errors : Seq[FormError],
@@ -7,26 +9,22 @@
 	sideBar: Option[Html] = None,
 	topContentBar: Option[Html] = None
 )(
-	implicit msg: play.api.i18n.Messages, request: RequestHeader
+	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
 @main(Messages("show.title", domainName), sideBar, topContentBar) {
 
 	<div class="page-header">
-		<h1>@Messages("edit.title", domainName)</h1>
+		<h1>@Messages("show.title", domainName)</h1>
 	</div>
 
-	@errors.map{ error =>
-		<div class="alert alert-dismissable alert-danger">
-			<button type="button" class="close" data-dismiss="alert">×</button>
-			@Messages(error.message, Messages(domainName + "." + error.key))
-		</div>
-	}
+	@flashMessages()
+    @formErrors(domainName, errors)
 
 	<div class="row">
 		<div class="col-md-8">
 			<fieldset>
-			@elements
+			    @elements
 			</fieldset>
 
 			<div class="actions">
@@ -34,7 +32,7 @@
 			</div>
 		</div>
 		<div class="col-md-4">
-		@info()
+		    @info()
 		</div>
 	</div>
 

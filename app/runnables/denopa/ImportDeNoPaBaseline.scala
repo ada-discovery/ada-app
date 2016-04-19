@@ -13,10 +13,11 @@ class ImportDeNoPaBaseline @Inject() (configuration: Configuration, dataSetServi
     DataSetImportInfo(
       "DeNoPa",
       denopa_baseline,
-      "DeNoPa Baseline",
+      "Clinical Baseline",
       Some(configuration.getString("denopa.import.folder").get + "DeNoPa-v1_with_§§.csv"),
       None,
       "§§",
+      None,
       None,
       Some(DeNoPaDataSetSetting.BaseLine)
     )

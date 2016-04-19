@@ -1,9 +1,10 @@
 package services
 
+import java.nio.charset.{MalformedInputException, Charset}
 import javax.inject.Inject
 
 import com.google.inject.ImplementedBy
-import models.{FieldType, Field}
+import models.{AdaException, AdaParseException, FieldType, Field}
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
@@ -11,6 +12,7 @@ import play.api.libs.json.{Json, JsString, JsNull, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import runnables.DataSetImportInfo
 import util.TypeInferenceProvider
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
@@ -42,6 +44,7 @@ class DataSetServiceImpl @Inject()(
   ) extends DataSetService{
 
   private val timeout = 120000 millis
+  private val defaultCharset = "UTF-8"
 
   override def importDataSet(importInfo: DataSetImportInfo) = {
     val dataSetAccessor =
@@ -62,32 +65,37 @@ class DataSetServiceImpl @Inject()(
 
     // for each line create a JSON record and insert to the database
     val contentLines = if (importInfo.eol.isDefined) lines.drop(1) else lines
-    contentLines.zipWithIndex.foreach { case (line, index) =>
-      // parse the line
-      bufferedLine += line
-      val values = parseLine(importInfo.delimiter, bufferedLine)
 
-      if (values.size < columnCount) {
-        println(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
-      } else if (values.size > columnCount) {
-        val message = s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Terminating..."
-        println(message)
-        throw new IllegalArgumentException(message)
-      } else {
-        // create a JSON record
-        val jsonRecord = JsObject(
-          (columnNames, values).zipped.map {
-            case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
-          })
+    try {
+      contentLines.zipWithIndex.foreach { case (line, index) =>
+        // parse the line
+        bufferedLine += line
+        val values = parseLine(importInfo.delimiter, bufferedLine)
 
-        // TODO: Could we stay async here? Do we care about the order of insertion?
-        // insert the record to the database
-        syncDataRepo.save(jsonRecord)
-        println(s"Record $index imported.")
+        if (values.size < columnCount) {
+          println(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
+        } else if (values.size > columnCount) {
+          val message = s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated."
+          println(message)
+          throw new AdaParseException(message)
+        } else {
+          // create a JSON record
+          val jsonRecord = JsObject(
+            (columnNames, values).zipped.map {
+              case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
+            })
 
-        // reset buffer
-        bufferedLine = ""
+          // TODO: Could we stay async here? Do we care about the order of insertion?
+          // insert the record to the database
+          syncDataRepo.save(jsonRecord)
+          println(s"Record $index imported.")
+
+          // reset buffer
+          bufferedLine = ""
+        }
       }
+    } catch {
+      case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
     }
   }
 
@@ -98,7 +106,6 @@ class DataSetServiceImpl @Inject()(
     val dsa = dsaf(dataSetId).get
     val dataRepo = dsa.dataSetRepo
     val fieldRepo = dsa.fieldRepo
-    val categoryRepo = dsa.categoryRepo
     val fieldSyncRepo = RepoSynchronizer(fieldRepo, timeout)
     // init dictionary if needed
     result(fieldRepo.initIfNeeded, timeout)
@@ -139,15 +146,17 @@ class DataSetServiceImpl @Inject()(
       records <- dataRepo.find(None, None, None, Some(1))
     } yield
       records.headOption.map(_.keys).getOrElse(
-        throw new IllegalStateException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
+        throw new AdaException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
       )
 
   protected def getLineIterator(importInfo: DataSetImportInfo) = {
+    val charsetName = importInfo.charsetName.getOrElse(defaultCharset)
+    val charset = Charset.forName(charsetName)
     val source =
       if (importInfo.path.isDefined)
-        Source.fromFile(importInfo.path.get)
+        Source.fromFile(importInfo.path.get)(charset)
       else
-        Source.fromFile(importInfo.file.get)
+        Source.fromFile(importInfo.file.get)(charset)
 
     if (importInfo.eol.isDefined)
       source.mkString.split(importInfo.eol.get).iterator
@@ -162,10 +171,49 @@ class DataSetServiceImpl @Inject()(
       )}.flatten.toList
 
   // parse the lines, returns the parsed items
-  private def parseLine(delimiter: String, line: String) =
-    line.split(delimiter).map { l =>
+  private def parseLine(delimiter: String, line: String): Seq[String] = {
+    val itemsWithStartEndFlag = line.split(delimiter).map { l =>
       val start = if (l.startsWith("\"")) 1 else 0
       val end = if (l.endsWith("\"")) l.size - 1 else l.size
-      l.substring(start, end).trim.replaceAll("\\\\\"", "\"")
+      val item = if (start <= end)
+        l.substring(start, end).trim.replaceAll("\\\\\"", "\"")
+      else
+        ""
+      (item, l.startsWith("\""), l.endsWith("\""))
     }
+
+    fixImproperQuotes(itemsWithStartEndFlag)
+  }
+
+  // fix the items that have been improperly split because the delimiter was located inside the quotes
+  private def fixImproperQuotes(itemsWithStartEndFlag: Array[(String, Boolean, Boolean)]) = {
+    val fixedItems = ListBuffer.empty[String]
+    var startQuoteWithoutEnd = false
+    var bufferedItem = ""
+    itemsWithStartEndFlag.foreach{ case (item, startFlag, endFlag) =>
+      if (!startQuoteWithoutEnd) {
+        if ((startFlag && endFlag) || (!startFlag && !endFlag)) {
+          // if we have both or no quotes, everything is fine
+          fixedItems += item
+        } else if (startFlag && !endFlag) {
+          // starting quote and no ending quote indicated an improper split, buffer
+          startQuoteWithoutEnd = true
+          bufferedItem += item
+        } else
+          throw new AdaParseException(s"Parsing failed. The item '$item' ends with a quote but there is no preceding quote to match with.")
+      } else {
+        if (!startFlag && !endFlag) {
+          // continue buffering
+          bufferedItem += item
+        } else if (!startFlag && endFlag) {
+          // end buffering
+          bufferedItem += item
+          startQuoteWithoutEnd = false
+          fixedItems += bufferedItem
+        } else
+          throw new AdaParseException(s"Parsing failed. The item '$item' starts with a quote but a preceding item needs an ending quote.")
+      }
+    }
+    fixedItems
+  }
 }

@@ -1,3 +1,5 @@
+@import views.html.layout.formErrors
+
 @(
 	domainName : String,
 	form: Form[_],
@@ -6,7 +8,7 @@
 	listCall : Call,
 	formArgs: (Symbol,String)*
 )(
-	implicit msg: play.api.i18n.Messages, request: RequestHeader
+	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
 @main(Messages("create.title", domainName)) {
@@ -15,27 +17,24 @@
 		<h1>@Messages("create.title", domainName)</h1>
 	</div>
 
-	@form.errors.map{ error =>
-		<div class="alert alert-dismissable alert-danger">
-			<button type="button" class="close" data-dismiss="alert">×</button>
-			@Messages(error.message, Messages(domainName + "." + error.key))
-		</div>
-	}
+    @flashMessages()
+    @formErrors(domainName, form.errors)
 
 	<div class="row">
 		<div class="col-md-8">
-		@helper.form(action = saveCall, formArgs: _*) {
-			<fieldset>
-				@elements
-			</fieldset>
+		    @helper.form(action = saveCall, formArgs: _*) {
+			    <fieldset>
+				    @elements
+			    </fieldset>
 
-			<div class="actions">
-				<input type="submit" value="Create" class="btn btn-primary">
-				<a href="@listCall" class="btn btn-default">Cancel</a>
-			</div>
-		}
+			    <div class="actions">
+				    <input type="submit" value="Create" class="btn btn-primary">
+				    <a href="@listCall" class="btn btn-default">Cancel</a>
+			    </div>
+		    }
 		</div>
 		<div class="col-md-4">
 			@info()
 		</div>
-	</div>}
+	</div>
+}
