@@ -39,7 +39,7 @@ class JansDataSetController @Inject()(
     }
   }
 
-  def ldapmail(mail:String) = Action.async { implicit request =>
+  def ldapmail(mail: String) = Action.async { implicit request =>
     val usropfuture: Future[Option[CustomUser]] = ldapserver.findByEmail(mail)
     usropfuture.map{userop =>
       userop match{
@@ -48,6 +48,17 @@ class JansDataSetController @Inject()(
       }
     }
   }
+
+  def ldapid(id: String) = Action.async { implicit request =>
+    val usropfuture: Future[Option[CustomUser]] = ldapserver.findById(id)
+    usropfuture.map{userop =>
+      userop match{
+        case Some(usr) => Ok("found: " + usr)
+        case None => Ok("not found")
+      }
+    }
+  }
+
 
   def listLDAP = Action { implicit request =>
     val entries: List[String] = ldapserver.getEntryList

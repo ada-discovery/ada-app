@@ -1,6 +1,7 @@
 package ldap
 
 
+import java.util
 import javax.net.ssl.{SSLContext, SSLSocketFactory}
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
@@ -84,7 +85,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   override def setupInterface(): Option[LDAPInterface] = {
     val interface = mode match{
       case "local" => Some(createServer)
-      case "remote" => createConnection
+      case "remote" => createConnection()
       case _ => None
     }
     // hook interface in lifecycle for proper cleanup
@@ -129,6 +130,33 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
       val cn: String = "cn=" + r + ","
       interface.add("dn: "+cn+dc, "objectClass: group", "objectClass: top", "dc: "+r)
     }
+  }
+
+
+  def addUser(interface: LDAPInterface, user: CustomUser): Unit = {
+    interface.add(LdapUtil.userToEntry(user))
+  }
+
+
+  /**
+    * Establish connection and check if bind possible.
+    * Close connection afterwards.
+    * @param userDN
+    * @param password
+    * @return
+    */
+  def canBind(userDN: String, password: String): Boolean ={
+    val conn: Option[LDAPConnectionPool] = createConnection(userDN, password)
+    if(conn.isDefined){
+      conn.get.close()
+      true
+    }else{
+      false
+    }
+  }
+
+  override def authenticate(email: String, password: String): Future[Boolean] = {
+    Future(true)
   }
 
   /**
@@ -181,7 +209,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * Used options from configuration are ldap.encryption, ldap.host, ldap.prt, ldap.bindDN, ldap.bindPassword
     * @return LDAPConnection object  with specified credentials. None, if no connection could be established.
     */
-  def createConnection(): Option[LDAPConnectionPool] = {
+  def createConnection(bind: String = bindDn, pw: String = bindPassword): Option[LDAPConnectionPool] = {
     val sslUtil: SSLUtil = setupSSLUtil
     encryption match{
       case "ssl" => {
@@ -189,7 +217,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
         val sslSocketFactory: SSLSocketFactory = sslUtil.createSSLSocketFactory()
         val connection: LDAPConnection = new LDAPConnection(sslSocketFactory, defaultHost, defaultPort)
         val result: ResultCode = try{
-          connection.bind(bindDn, bindPassword).getResultCode
+          connection.bind(bind, pw).getResultCode
         }catch{case _ => ResultCode.NO_SUCH_OBJECT}
         if(result == ResultCode.SUCCESS)
           Some(new LDAPConnectionPool(connection, 1, 10))
@@ -200,7 +228,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
         // connect to server with starttls connection
         val connection: LDAPConnection = new LDAPConnection(defaultHost, defaultPort)
         val result: ResultCode = try{
-          connection.bind(bindDn, bindPassword).getResultCode
+          connection.bind(bind, pw).getResultCode
         }catch{case _ => ResultCode.NO_SUCH_OBJECT}
         val sslContext: SSLContext = sslUtil.createSSLContext()
         connection.processExtendedOperation(new StartTLSExtendedRequest(sslContext))
@@ -214,7 +242,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
         // create unsecured connection
         val connection: LDAPConnection = new LDAPConnection(defaultHost, defaultPort)
         val result: ResultCode = try{
-          connection.bind(bindDn, bindPassword).getResultCode
+          connection.bind(bind, pw).getResultCode
         }catch{case _ => ResultCode.NO_SUCH_OBJECT}
         if(result == ResultCode.SUCCESS)
           Some(new LDAPConnectionPool(connection, 1, 10))
@@ -225,7 +253,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   }
 
   /**
-    * Setup SSL context (e.g) for use with startTLS.
+    * Setup SSL context (e.g for use with startTLS).
     * If a truststore file has been defined in the config, it will be loaded.
     * Otherwise, server certificates will be blindly trusted.
     * @return Created SSLContext.
@@ -285,24 +313,40 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     }
   }
 
-
-  // forward to findByEmail
+  /**
+    * Find first user matching specified uuid. Checks branch given by dit.
+    * @param id uuid of user.
+    * @return Future(None), if no user found; CustomUser wrappend in Option and Future else.
+    */
   override def findById(id: String): Future[Option[CustomUser]] = {
-    findByEmail(id)
+    val user: Option[CustomUser] = ldapinterface match{
+      case Some(interface) => {
+        val entry: SearchResultEntry = interface.getEntry("uid=" + id + "," +  dit)
+        LdapUtil.entryToUser(entry)
+      }
+      case None => None
+    }
+    Future(user)
   }
 
   /**
-    * Find user with designated mail in InMemoryServer.
-    * Construct CustomUser object from result if possible.
-    * @param email String of associated user mail
+    * Find user with designated mail. Returns first valid match, if multiple ones exist.
+    * Constructs CustomUser object from result.
+    * @param email String of associated user mail.
     * @return CustomUser, if found, None else
     */
   override def findByEmail(email: String): Future[Option[CustomUser]] = {
     val user: Option[CustomUser] = ldapinterface match{
       case Some(interface) => {
-        val entry: SearchResultEntry = interface.getEntry("cn=" + email + ",dc=users," + dit)
-
-        LdapUtil.entryToUser(entry)
+        //val entry: SearchResultEntry = interface.getEntry(dit, "email="+email)
+        val request: SearchRequest = new SearchRequest(dit, SearchScope.SUB, Filter.createEqualityFilter("mail", email))
+        val result: SearchResult = interface.search(request)
+        if(result.getEntryCount == 0){
+          None
+        }else{
+          val entry: Entry = result.getSearchEntries.get(0)
+          LdapUtil.entryToUser(entry)
+        }
       }
       case None => None
     }
@@ -374,7 +418,6 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
       }
       case None => Future(true)
     }
-
   }
 
 }

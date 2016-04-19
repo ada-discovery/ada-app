@@ -29,6 +29,8 @@ POST        /recoverPassword                                                    
 GET         /ldaplist                                                               controllers.JansDataSetController.listLDAP
 GET         /ldapauth                                                               controllers.JansDataSetController.ldapAuth
 GET         /ldapmail/:mail                                                         controllers.JansDataSetController.ldapmail(mail:String)
+GET         /ldapid/:id                                                             controllers.JansDataSetController.ldapid(id:String)
+
 
 GET         /loggedout                                                              controllers.AuthController.loggedOut
 GET         /unauthorized                                                           controllers.AuthController.unauthorized
