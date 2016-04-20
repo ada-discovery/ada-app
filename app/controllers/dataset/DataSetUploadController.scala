@@ -8,12 +8,15 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
-import play.api.mvc.{RequestHeader, Action, Controller}
+import play.api.mvc.{RequestHeader, Action, Controller, Result}
 import runnables.DataSetImportInfo
 import controllers.dataset.DataSetSettingController.dataSetSettingMapping
 import services.DataSetService
 import play.api.Logger
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import controllers.dataset.DataSetRouter
+
+import scala.concurrent.Future
 
 class DataSetUploadController @Inject() (
     repo: DataSetSettingRepo,
@@ -48,11 +51,11 @@ class DataSetUploadController @Inject() (
     Ok(views.html.dataset.uploadDataSet(form))
   }
 
-  def upload = Action { implicit request =>
+  def upload = Action.async { implicit request =>
     val filledForm = form.bindFromRequest
     filledForm.fold(
       { formWithErrors =>
-        createBadRequest(formWithErrors)
+        Future.successful(createBadRequest(formWithErrors))
       },
       importInfo => {
         val dataSetName = importInfo.dataSetName
@@ -66,17 +69,16 @@ class DataSetUploadController @Inject() (
           importInfo
 
         if (importInfoExt.path.isEmpty && importInfoExt.file.isEmpty)
-          createBadRequest(filledForm.withError("path", "No path or import file specified."))
+          Future.successful(createBadRequest(filledForm.withError("path", "No path or import file specified.")))
         else {
           val errorRedirect = handleError(filledForm, dataSetName) _
           val successRedirect = Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
-          try {
-            dataSetService.importDataSet(importInfoExt)
+          dataSetService.importDataSet(importInfoExt).map { _ =>
             render {
               case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '$dataSetName' has been uploaded.")
               case Accepts.Json() => Created(Json.obj("message" -> "Data set has been uploaded", "name" -> importInfo.dataSetName))
             }
-          } catch {
+          }.recover{
             case e: AdaParseException => errorRedirect(s"Parsing problem occured: '${e.getMessage}'")
             case e: AdaException => errorRedirect(e.getMessage)
             case e: Exception => errorRedirect(s"Fatal problem detected: '${e.getMessage}'. Contact your admin.")
@@ -90,7 +92,7 @@ class DataSetUploadController @Inject() (
     filledForm: Form[DataSetImportInfo],
     dataSetName: String)(
     message: String
-  )(implicit request: RequestHeader) = {
+  )(implicit request: RequestHeader): Result = {
     logger.error(message)
     createBadRequest(filledForm.withGlobalError(s"Data set '${dataSetName}' upload failed. $message"))
   }

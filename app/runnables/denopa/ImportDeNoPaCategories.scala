@@ -18,18 +18,19 @@ import scala.concurrent.duration._
 import scala.concurrent.Await.result
 import scala.concurrent.Future
 
-protected abstract class InferDeNoPaDictionary(dataSetId: String) extends Runnable {
+protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runnable {
 
   @Inject() protected var dataSetService: DataSetService = _
   @Inject() protected var dsaf: DataSetAccessorFactory = _
   private val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider
   private val timeout = 120000 millis
 
-  override def run = {
+  def run = {
     val dsa = dsaf(dataSetId).get
     val categoryRepo = dsa.categoryRepo
     val fieldRepo = dsa.fieldRepo
 
+    // delete all categories
     result(categoryRepo.initIfNeeded, timeout)
     result(categoryRepo.deleteAll, timeout)
 
@@ -39,12 +40,9 @@ protected abstract class InferDeNoPaDictionary(dataSetId: String) extends Runnab
     val categoryIdMap: Map[Category, BSONObjectID] =
       (result(categoryIdsFuture1, timeout) ++ result(categoryIdsFuture2, timeout)).toMap
 
-    val inferDictionaryFuture = dataSetService.inferDictionary(dataSetId, typeInferenceProvider)
-    result(inferDictionaryFuture, timeout)
+    val refFieldNames = (fieldCategoryMap.keys ++ fieldLabelMap.keys).toSet
 
-    val fieldNames = (fieldCategoryMap.keys ++ fieldLabelMap.keys).toSet
-
-    val updateFieldFutures = fieldNames.map{ fieldName =>
+    val updateFieldFutures = refFieldNames.map{ fieldName =>
       val escapedFieldName = escapeKey(fieldName)
 
       fieldRepo.find(Some(Json.obj("name" -> escapedFieldName))).map { fields =>
@@ -79,18 +77,18 @@ protected abstract class InferDeNoPaDictionary(dataSetId: String) extends Runnab
   }
 }
 
-class InferDeNoPaBaselineDictionary extends InferDeNoPaDictionary(denopa_baseline)
-class InferDeNoPaFirstVisitDictionary extends InferDeNoPaDictionary(denopa_firstvisit)
-class InferDeNoPaSecondVisitDictionary extends InferDeNoPaDictionary(denopa_secondvisit)
-class InferDeNoPaCuratedBaselineDictionary extends InferDeNoPaDictionary(denopa_curated_baseline)
-class InferDeNoPaCuratedFirstVisitDictionary extends InferDeNoPaDictionary(denopa_curated_firstvisit)
-class InferDeNoPaCuratedSecondVisitDictionary extends InferDeNoPaDictionary(denopa_curated_secondvisit)
+class ImportDeNoPaBaselineCategories extends ImportDeNoPaCategories(denopa_baseline)
+class ImportDeNoPaFirstVisitCategories extends ImportDeNoPaCategories(denopa_firstvisit)
+class ImportDeNoPaSecondVisitCategories extends ImportDeNoPaCategories(denopa_secondvisit)
+class ImportDeNoPaCuratedBaselineCategories extends ImportDeNoPaCategories(denopa_curated_baseline)
+class ImportDeNoPaCuratedFirstVisitCategories extends ImportDeNoPaCategories(denopa_curated_firstvisit)
+class ImportDeNoPaCuratedSecondVisitCategories extends ImportDeNoPaCategories(denopa_curated_secondvisit)
 
 // app main launchers
-object InferDeNoPaBaselineDictionary extends GuiceBuilderRunnable[InferDeNoPaBaselineDictionary] with App { run }
-object InferDeNoPaFirstVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaFirstVisitDictionary] with App { run }
-object InferDeNoPaSecondVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaSecondVisitDictionary] with App { run }
+object ImportDeNoPaBaselineCategories extends GuiceBuilderRunnable[ImportDeNoPaBaselineCategories] with App { run }
+object ImportDeNoPaFirstVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaFirstVisitCategories] with App { run }
+object ImportDeNoPaSecondVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaSecondVisitCategories] with App { run }
 
-object InferDeNoPaCuratedBaselineDictionary extends GuiceBuilderRunnable[InferDeNoPaCuratedBaselineDictionary] with App { run }
-object InferDeNoPaCuratedFirstVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaCuratedFirstVisitDictionary] with App { run }
-object InferDeNoPaCuratedSecondVisitDictionary extends GuiceBuilderRunnable[InferDeNoPaCuratedSecondVisitDictionary] with App { run }
+object ImportDeNoPaCuratedBaselineCategories extends GuiceBuilderRunnable[ImportDeNoPaCuratedBaselineCategories] with App { run }
+object ImportDeNoPaCuratedFirstVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaCuratedFirstVisitCategories] with App { run }
+object ImportDeNoPaCuratedSecondVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaCuratedSecondVisitCategories] with App { run }

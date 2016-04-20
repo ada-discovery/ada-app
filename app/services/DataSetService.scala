@@ -4,11 +4,13 @@ import java.nio.charset.{MalformedInputException, Charset}
 import javax.inject.Inject
 
 import com.google.inject.ImplementedBy
+import com.twitter.chill.TraversableSerializer
 import models.{AdaException, AdaParseException, FieldType, Field}
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
+import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{Json, JsString, JsNull, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import runnables.DataSetImportInfo
@@ -25,11 +27,14 @@ import scala.collection.Set
 @ImplementedBy(classOf[DataSetServiceImpl])
 trait DataSetService {
 
-  def importDataSet(importInfo: DataSetImportInfo): Unit
+  def importDataSet(
+    importInfo: DataSetImportInfo
+  ): Future[Unit]
 
   def inferDictionary(
     dataSetId: String,
-    typeInferenceProvider: TypeInferenceProvider
+    typeInferenceProvider: TypeInferenceProvider,
+    fieldGroupSize: Int = 150
   ): Future[Unit]
 
   def inferFieldType(
@@ -51,6 +56,7 @@ class DataSetServiceImpl @Inject()(
 
   override def importDataSet(importInfo: DataSetImportInfo) = {
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
+
     val dataSetAccessor =
       result(dsaf.register(importInfo.dataSpaceName, importInfo.dataSetId, importInfo.dataSetName, importInfo.setting), timeout)
     val dataRepo = dataSetAccessor.dataSetRepo
@@ -59,73 +65,108 @@ class DataSetServiceImpl @Inject()(
     // remove the records from the collection
     syncDataRepo.deleteAll
 
-    // read all the lines
-    val (lines, lineCount) = getLineIteratorAndCount(importInfo)
+    val future = {
+      try {
+        val (lines, lineCount) = getLineIteratorAndCount(importInfo)
 
-    // collect the column names
-    val columnNames =  getColumnNames(importInfo.delimiter, lines)
-    val columnCount = columnNames.size
-    var bufferedLine = ""
+        // collect the column names
+        val columnNames =  getColumnNames(importInfo.delimiter, lines)
+        val columnCount = columnNames.size
 
-    // for each line create a JSON record and insert to the database
-    val contentLines = if (importInfo.eol.isDefined) lines.drop(1) else lines
-    val reportLineSize = (lineCount - 1) * reportLineFreq
+        // for each line create a JSON record and insert to the database
+        val contentLines = if (importInfo.eol.isDefined) lines.drop(1) else lines
+        val reportLineSize = (lineCount - 1) * reportLineFreq
 
-    try {
-      contentLines.zipWithIndex.foreach { case (line, index) =>
-        // parse the line
-        bufferedLine += line
-        val values = parseLine(importInfo.delimiter, bufferedLine)
+        var bufferedLine = ""
 
-        if (values.size < columnCount) {
-          logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
-        } else if (values.size > columnCount) {
-          val message = s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated."
-          throw new AdaParseException(message)
-        } else {
-          // create a JSON record
-          val jsonRecord = JsObject(
-            (columnNames, values).zipped.map {
-              case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
-            })
+        // read all the lines
+        val lineFutures = contentLines.zipWithIndex.map { case (line, index) =>
+          // parse the line
+          bufferedLine += line
+          val values = parseLine(importInfo.delimiter, bufferedLine)
 
-          // TODO: Could we stay async here? Do we care about the order of insertion?
-          // insert the record to the database
-          syncDataRepo.save(jsonRecord)
-          logProgress((index + 1), reportLineSize, lineCount - 1)
+          if (values.size < columnCount) {
+            logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
+            Future(())
+          } else if (values.size > columnCount) {
+            throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated.")
+          } else {
+            // reset buffer
+            bufferedLine = ""
 
-          // reset buffer
-          bufferedLine = ""
+            // create a JSON record
+            val jsonRecord = JsObject(
+              (columnNames, values).zipped.map {
+                case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
+              })
+
+            // insert the record to the database
+            dataRepo.save(jsonRecord).map(_ =>
+              logProgress((index + 1), reportLineSize, lineCount - 1)
+            )
+          }
         }
+
+        Future.sequence(lineFutures)
+      } catch {
+        case e: Exception => Future.failed(e)
       }
-      logger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
-    } catch {
-      case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
     }
+
+    future.map( _ =>
+      logger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
+    )
   }
 
   override def inferDictionary(
     dataSetId: String,
-    typeInferenceProvider: TypeInferenceProvider
+    typeInferenceProvider: TypeInferenceProvider,
+    fieldGroupSize: Int
   ): Future[Unit] = {
     logger.info(s"Dictionary inference for data set '${dataSetId}' initiated.")
+
     val dsa = dsaf(dataSetId).get
     val dataRepo = dsa.dataSetRepo
     val fieldRepo = dsa.fieldRepo
     val fieldSyncRepo = RepoSynchronizer(fieldRepo, timeout)
+
     // init dictionary if needed
     result(fieldRepo.initIfNeeded, timeout)
     fieldSyncRepo.deleteAll
 
     val fieldNames = result(getFieldNames(dataRepo), timeout)
-    val futures = fieldNames.filter(_ != "_id").par.map { fieldName =>
-      val fieldType = result(inferFieldType(dataRepo, typeInferenceProvider, fieldName), timeout)
-      fieldRepo.save(Field(fieldName, fieldType, false))
+    val groupedFieldNames = fieldNames.filter(_ != "_id").grouped(fieldGroupSize).toSeq
+    val futures = groupedFieldNames.par.map { fieldNames =>
+      // Don't care about the result here, that's why we ignore ids and return Unit
+      for {
+        fieldNameAndTypes <- inferFieldTypes(dataRepo, typeInferenceProvider, fieldNames)
+        ids = for ((fieldName, fieldType) <- fieldNameAndTypes) yield
+          fieldRepo.save(Field(fieldName, fieldType, false))
+        _ <- Future.sequence(ids)
+      } yield
+        ()
     }
 
     Future.sequence(futures.toList).map( _ =>
       logger.info(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
     )
+  }
+
+  def inferFieldTypes(
+    dataRepo: JsObjectCrudRepo,
+    typeInferenceProvider: TypeInferenceProvider,
+    fieldNames: Traversable[String]
+  ): Future[Traversable[(String, FieldType.Value)]] = {
+    val projection =
+      JsObject(fieldNames.map( fieldName => (fieldName, Json.toJson(1))).toSeq)
+
+    // get all the values for a given field and infer
+    dataRepo.find(None, None, Some(projection)).map { jsons =>
+      fieldNames.map { fieldName =>
+        val fieldType = inferFieldType(typeInferenceProvider, fieldName)(jsons)
+        (fieldName, fieldType)
+      }
+    }
   }
 
   override def inferFieldType(
@@ -134,18 +175,26 @@ class DataSetServiceImpl @Inject()(
     fieldName : String
   ): Future[FieldType.Value] =
     // get all the values for a given field and infer
-    dataRepo.find(None, None, Some(Json.obj(fieldName -> 1))).map { items =>
-      val values = items.map { item =>
-        val jsValue = (item \ fieldName).get
-          jsValue match {
-             case JsNull => None
-            case x: JsString => Some(jsValue.as[String])
-            case _ => Some(jsValue.toString)
-          }
-      }.flatten.toSet
+    dataRepo.find(None, None, Some(Json.obj(fieldName -> 1))).map(
+      inferFieldType(typeInferenceProvider, fieldName)
+    )
 
-      typeInferenceProvider.getType(values)
-    }
+  private def inferFieldType(
+    typeInferenceProvider: TypeInferenceProvider,
+    fieldName: String)(
+    jsons: Traversable[JsObject]
+  ): FieldType.Value = {
+    val values = jsons.map { item =>
+      val jsValue = (item \ fieldName).get
+      jsValue match {
+        case JsNull => None
+        case x: JsString => Some(jsValue.as[String])
+        case _ => Some(jsValue.toString)
+      }
+    }.flatten.toSet
+
+    typeInferenceProvider.getType(values)
+  }
 
   protected def getFieldNames(dataRepo: JsObjectCrudRepo): Future[Set[String]] =
     for {
@@ -155,19 +204,22 @@ class DataSetServiceImpl @Inject()(
         throw new AdaException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
       )
 
-  protected def getLineIteratorAndCount(importInfo: DataSetImportInfo): (Iterator[String], Int) = {
-    importInfo.eol match {
-      case Some(eol) => {
-        // TODO: not effective... if a custom eol is used we need to read the whole file into memory and split again. It'd be better to use a custom BufferedReader
-        val lines = createSource(importInfo).mkString.split(eol)
-        (lines.iterator, lines.length)
+  protected def getLineIteratorAndCount(importInfo: DataSetImportInfo): (Iterator[String], Int) =
+    try {
+      importInfo.eol match {
+        case Some(eol) => {
+          // TODO: not effective... if a custom eol is used we need to read the whole file into memory and split again. It'd be better to use a custom BufferedReader
+          val lines = createSource(importInfo).mkString.split(eol)
+          (lines.iterator, lines.length)
+        }
+        case None => {
+          // TODO: not effective... To count the lines, need to recreate the source and parse the file again
+          (createSource(importInfo).getLines, createSource(importInfo).getLines.size)
+        }
       }
-      case None => {
-        // TODO: not effective... To count the lines, need to recreate the source and parse the file again
-        (createSource(importInfo).getLines, createSource(importInfo).getLines.size)
-      }
+    } catch {
+      case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
     }
-  }
 
   private def createSource(importInfo: DataSetImportInfo) = {
     val charsetName = importInfo.charsetName.getOrElse(defaultCharset)
