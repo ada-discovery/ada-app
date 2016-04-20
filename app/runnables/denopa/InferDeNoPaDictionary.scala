@@ -8,7 +8,7 @@ import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DeNoPaSetting}
 import DeNoPaTranSMARTMapping._
 import models.Category
-import models.DataSetId._
+import runnables.DataSetId._
 import runnables.GuiceBuilderRunnable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import persistence.dataset.DictionaryCategoryRepo.saveRecursively

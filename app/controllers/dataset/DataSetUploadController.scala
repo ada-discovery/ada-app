@@ -12,6 +12,7 @@ import play.api.mvc.{RequestHeader, Action, Controller}
 import runnables.DataSetImportInfo
 import controllers.dataset.DataSetSettingController.dataSetSettingMapping
 import services.DataSetService
+import play.api.Logger
 import controllers.dataset.DataSetRouter
 
 class DataSetUploadController @Inject() (
@@ -19,6 +20,8 @@ class DataSetUploadController @Inject() (
     dataSetService: DataSetService,
     messagesApi: MessagesApi
   ) extends Controller {
+
+  private val logger = Logger // (this.getClass)
 
   protected val form = Form(
     mapping(
@@ -87,8 +90,10 @@ class DataSetUploadController @Inject() (
     filledForm: Form[DataSetImportInfo],
     dataSetName: String)(
     message: String
-  )(implicit request: RequestHeader) =
+  )(implicit request: RequestHeader) = {
+    logger.error(message)
     createBadRequest(filledForm.withGlobalError(s"Data set '${dataSetName}' upload failed. $message"))
+  }
 
   private def createBadRequest(
     filledForm: Form[DataSetImportInfo]

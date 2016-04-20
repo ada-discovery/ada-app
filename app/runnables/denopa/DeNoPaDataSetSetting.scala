@@ -1,7 +1,7 @@
 package runnables.denopa
 
 import models.DataSetSetting
-import models.DataSetId._
+import runnables.DataSetId._
 
 // just temporary, these settings should be provided through the data upload ui
 object DeNoPaDataSetSetting {

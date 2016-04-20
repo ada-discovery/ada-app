@@ -2,8 +2,7 @@ package runnables.luxpark
 
 import javax.inject.{Named, Inject}
 
-import models.DataSetId._
-import models.{DataSetSetting, DataSetMetaInfo}
+import runnables.DataSetId.luxpark
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory

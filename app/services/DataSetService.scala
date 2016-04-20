@@ -8,6 +8,7 @@ import models.{AdaException, AdaParseException, FieldType, Field}
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
+import play.api.Logger
 import play.api.libs.json.{Json, JsString, JsNull, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import runnables.DataSetImportInfo
@@ -43,10 +44,13 @@ class DataSetServiceImpl @Inject()(
     dsaf: DataSetAccessorFactory
   ) extends DataSetService{
 
+  private val logger = Logger
   private val timeout = 120000 millis
   private val defaultCharset = "UTF-8"
+  private val reportLineFreq = 0.1
 
   override def importDataSet(importInfo: DataSetImportInfo) = {
+    logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
     val dataSetAccessor =
       result(dsaf.register(importInfo.dataSpaceName, importInfo.dataSetId, importInfo.dataSetName, importInfo.setting), timeout)
     val dataRepo = dataSetAccessor.dataSetRepo
@@ -56,7 +60,7 @@ class DataSetServiceImpl @Inject()(
     syncDataRepo.deleteAll
 
     // read all the lines
-    val lines = getLineIterator(importInfo)
+    val (lines, lineCount) = getLineIteratorAndCount(importInfo)
 
     // collect the column names
     val columnNames =  getColumnNames(importInfo.delimiter, lines)
@@ -65,6 +69,7 @@ class DataSetServiceImpl @Inject()(
 
     // for each line create a JSON record and insert to the database
     val contentLines = if (importInfo.eol.isDefined) lines.drop(1) else lines
+    val reportLineSize = (lineCount - 1) * reportLineFreq
 
     try {
       contentLines.zipWithIndex.foreach { case (line, index) =>
@@ -73,10 +78,9 @@ class DataSetServiceImpl @Inject()(
         val values = parseLine(importInfo.delimiter, bufferedLine)
 
         if (values.size < columnCount) {
-          println(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
+          logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
         } else if (values.size > columnCount) {
           val message = s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated."
-          println(message)
           throw new AdaParseException(message)
         } else {
           // create a JSON record
@@ -88,12 +92,13 @@ class DataSetServiceImpl @Inject()(
           // TODO: Could we stay async here? Do we care about the order of insertion?
           // insert the record to the database
           syncDataRepo.save(jsonRecord)
-          println(s"Record $index imported.")
+          logProgress((index + 1), reportLineSize, lineCount - 1)
 
           // reset buffer
           bufferedLine = ""
         }
       }
+      logger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
     } catch {
       case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
     }
@@ -103,6 +108,7 @@ class DataSetServiceImpl @Inject()(
     dataSetId: String,
     typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit] = {
+    logger.info(s"Dictionary inference for data set '${dataSetId}' initiated.")
     val dsa = dsaf(dataSetId).get
     val dataRepo = dsa.dataSetRepo
     val fieldRepo = dsa.fieldRepo
@@ -113,13 +119,13 @@ class DataSetServiceImpl @Inject()(
 
     val fieldNames = result(getFieldNames(dataRepo), timeout)
     val futures = fieldNames.filter(_ != "_id").par.map { fieldName =>
-      println(fieldName)
       val fieldType = result(inferFieldType(dataRepo, typeInferenceProvider, fieldName), timeout)
-
       fieldRepo.save(Field(fieldName, fieldType, false))
     }
 
-    Future.sequence(futures.toList).map( _ => ())
+    Future.sequence(futures.toList).map( _ =>
+      logger.info(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
+    )
   }
 
   override def inferFieldType(
@@ -149,19 +155,28 @@ class DataSetServiceImpl @Inject()(
         throw new AdaException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
       )
 
-  protected def getLineIterator(importInfo: DataSetImportInfo) = {
+  protected def getLineIteratorAndCount(importInfo: DataSetImportInfo): (Iterator[String], Int) = {
+    importInfo.eol match {
+      case Some(eol) => {
+        // TODO: not effective... if a custom eol is used we need to read the whole file into memory and split again. It'd be better to use a custom BufferedReader
+        val lines = createSource(importInfo).mkString.split(eol)
+        (lines.iterator, lines.length)
+      }
+      case None => {
+        // TODO: not effective... To count the lines, need to recreate the source and parse the file again
+        (createSource(importInfo).getLines, createSource(importInfo).getLines.size)
+      }
+    }
+  }
+
+  private def createSource(importInfo: DataSetImportInfo) = {
     val charsetName = importInfo.charsetName.getOrElse(defaultCharset)
     val charset = Charset.forName(charsetName)
-    val source =
-      if (importInfo.path.isDefined)
-        Source.fromFile(importInfo.path.get)(charset)
-      else
-        Source.fromFile(importInfo.file.get)(charset)
 
-    if (importInfo.eol.isDefined)
-      source.mkString.split(importInfo.eol.get).iterator
+    if (importInfo.path.isDefined)
+      Source.fromFile(importInfo.path.get)(charset)
     else
-      source.getLines
+      Source.fromFile(importInfo.file.get)(charset)
   }
 
   protected def getColumnNames(delimiter: String, lineIterator: Iterator[String]) =
@@ -201,6 +216,7 @@ class DataSetServiceImpl @Inject()(
           bufferedItem += item
         } else
           throw new AdaParseException(s"Parsing failed. The item '$item' ends with a quote but there is no preceding quote to match with.")
+
       } else {
         if (!startFlag && !endFlag) {
           // continue buffering
@@ -216,4 +232,17 @@ class DataSetServiceImpl @Inject()(
     }
     fixedItems
   }
+
+  private def logProgress(index: Int, granularity: Double, total: Int) =
+    if (index == total || (index % granularity) < ((index - 1) % granularity)) {
+      val progress = (index * 100) / total
+      val sb = new StringBuilder
+      sb.append("Progress: [")
+      for (_ <- 1 to progress)
+        sb.append("*")
+      for (_ <- 1 to 100 - progress)
+        sb.append(" ")
+      sb.append("]")
+      logger.info(sb.toString)
+    }
 }

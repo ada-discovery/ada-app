@@ -6,7 +6,7 @@ import models.redcap.Metadata
 import models.{FieldType, Field, Category}
 import models.redcap.{FieldType => RCFieldType}
 import persistence.RepoSynchronizer
-import models.DataSetId._
+import runnables.DataSetId.luxpark
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable

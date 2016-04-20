@@ -3,7 +3,6 @@ package persistence.dataset
 import javax.inject.{Inject, Singleton}
 
 import com.google.inject.ImplementedBy
-import models.DataSetId._
 import models.{DataSpaceMetaInfo, DataSetSetting, DataSetMetaInfo}
 import persistence.JsObjectCrudRepoFactory
 import persistence.RepoTypes._

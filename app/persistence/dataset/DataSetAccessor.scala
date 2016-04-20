@@ -1,7 +1,6 @@
 package persistence.dataset
 
-import models.DataSetId._
-import models.{DataSpaceMetaInfo, DataSetSetting, DataSetMetaInfo}
+import models.{DataSetSetting, DataSetMetaInfo}
 import play.api.libs.json._
 import persistence.RepoTypes._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

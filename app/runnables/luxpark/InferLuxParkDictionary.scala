@@ -1,6 +1,6 @@
 package runnables.luxpark
 
-import models.DataSetId._
+import runnables.DataSetId.luxpark
 import runnables.GuiceBuilderRunnable
 import services.{DataSetService, DeNoPaSetting}
 import javax.inject.Inject

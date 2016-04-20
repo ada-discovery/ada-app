@@ -3,7 +3,7 @@ package runnables.luxpark
 import javax.inject.Inject
 
 import persistence.RepoSynchronizer
-import models.DataSetId._
+import runnables.DataSetId.luxpark
 import persistence.RepoTypes.DataSpaceMetaInfoRepo
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable

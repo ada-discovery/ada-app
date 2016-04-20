@@ -3,10 +3,11 @@ package controllers.dataset
 import com.google.inject.ImplementedBy
 import persistence.dataset.DataSetAccessorFactory
 import util.ReflectionUtil.findClasses
-import util.{RefreshableCache, toCamel}
+import util.toCamel
 import play.api.inject.Injector
 import javax.inject.{Inject, Singleton}
 import collection.mutable.{Map => MMap}
+import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.reflect.ClassTag
@@ -23,6 +24,7 @@ protected class DataSetControllerFactoryImpl @Inject()(
     injector : Injector
   ) extends DataSetControllerFactory {
 
+  private val logger = Logger  // (this.getClass())
   protected val cache = MMap[String, DataSetController]()
 
   private val libPrefix = "ncer-pd"
@@ -45,7 +47,7 @@ protected class DataSetControllerFactoryImpl @Inject()(
     if (controllerClass.isDefined)
       injector.instanceOf(controllerClass.get)
     else {
-      println(s"Controller class for the data set id '$dataSetId' not found. Creating a generic one...")
+      logger.info(s"Controller class for the data set id '$dataSetId' not found. Creating a generic one...")
       genericFactory(dataSetId)
     }
   }

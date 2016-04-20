@@ -2,7 +2,7 @@ package runnables.luxpark
 
 import javax.inject.Inject
 
-import models.DataSetId._
+import runnables.DataSetId.ibbl
 import play.api.Configuration
 import runnables.{DataSetImportInfo, GuiceBuilderRunnable}
 import services.DataSetService

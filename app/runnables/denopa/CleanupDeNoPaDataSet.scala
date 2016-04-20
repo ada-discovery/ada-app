@@ -4,9 +4,8 @@ import javax.inject.Inject
 
 import models.DataSetMetaInfo
 import persistence.RepoTypes._
-import persistence.dataset.DataSetAccessorFactory
 import runnables.{CleanupDataSet, GuiceBuilderRunnable}
-import models.DataSetId._
+import runnables.DataSetId._
 
 class CleanupDeNoPaBaseline @Inject()(
     translationRepo : TranslationRepo

@@ -1,6 +1,6 @@
 package runnables.luxpark
 
-import models.DataSetId._
+import runnables.DataSetId._
 import models.DataSetSetting
 
 // just temporary, these settings should be provided through the data upload ui

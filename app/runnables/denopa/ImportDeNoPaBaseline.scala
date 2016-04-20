@@ -2,7 +2,7 @@ package runnables.denopa
 
 import javax.inject.Inject
 
-import models.DataSetId._
+import runnables.DataSetId._
 import play.api.Configuration
 import runnables.{DataSetImportInfo, GuiceBuilderRunnable}
 import services.DataSetService
