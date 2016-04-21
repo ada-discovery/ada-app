@@ -108,6 +108,7 @@ trait AdaAuthConfig extends AuthConfig {
   }
 
   /**
+    * Unused.
     * This is only used, if play2-auth authorization is required.
     * However, Play2-auth authorization is never used.
     *

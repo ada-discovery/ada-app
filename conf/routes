@@ -30,6 +30,8 @@ GET         /ldaplist                                                           
 GET         /ldapauth                                                               controllers.JansDataSetController.ldapAuth
 GET         /ldapmail/:mail                                                         controllers.JansDataSetController.ldapmail(mail:String)
 GET         /ldapid/:id                                                             controllers.JansDataSetController.ldapid(id:String)
+GET         /ldapgroups                                                             controllers.JansDataSetController.ldapgroups
+GET         /ldapusers                                                              controllers.JansDataSetController.ldapusers
 
 
 GET         /loggedout                                                              controllers.AuthController.loggedOut

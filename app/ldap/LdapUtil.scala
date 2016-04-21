@@ -7,6 +7,9 @@ import com.unboundid.ldap.sdk._
 import com.unboundid.ldap.sdk.LDAPSearchException
 
 import models.security.CustomUser
+import models.workspace.UserGroup
+
+import scala.Predef
 
 
 object LdapUtil {
@@ -49,47 +52,78 @@ object LdapUtil {
     * @return CustomUser, if Entry is not null, None else.
     */
   def entryToUser(entry: Entry): Option[CustomUser] = {
-    if (entry != null) {
+    if(entry != null){
       //val name: String = entry.getAttributeValue("uid")
       val name: String = entry.getAttributeValue("cn")
       val email: String = entry.getAttributeValue("mail")
       val password: String = entry.getAttributeValue("userPassword")
-      val affiliation: String = entry.getAttributeValue("ou")
-      val permissions: Array[String] = entry.getAttributeValues("memberof")
+      val affiliation: String = nullToDefault(entry.getAttributeValue("ou"), "")
+      val permissions: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array())
       //val roles: Array[String] = entry.getAttributeValues("memberof")
       val roles: Array[String] = Array()
-      Some(CustomUser(None, name, email, password, affiliation, permissions.toSeq, roles.toSeq))
-    } else {
+      Some(CustomUser(None, name, email, "", affiliation, permissions.toSeq, roles.toSeq))
+    }else{
       None
     }
   }
 
 
-  //def entryToJSON(entry: Entry): JsonEntry = {}
+  /**
+    * Convert entry to UserGroup object if possible
+    * @return UserGroup, if conversion possible, None else.
+    */
+  def entryToUserGroup(entry: Entry): Option[UserGroup] = {
+    if(entry != null){
+      val name: String = entry.getAttributeValue("cn")
+      val members: Array[String] = nullToDefault(entry.getAttributeValues("member"), Array())
+      val description: Option[String] = asOption(entry.getAttributeValue("description"))
+      Some(UserGroup(None, name, description, members.toSeq))
+    }else{
+      None
+    }
+  }
+
 
   /**
     * For Debugging
     * Retrieves server entries and converts them to string.
     * @return String representation of all server entries.
     */
-  def getEntryList(interface: LDAPInterface, baseDN: String="dc=ncer"): List[String] = {
+  def getEntryList(interface: LDAPInterface, baseDN: String = "dc=ncer"): List[String] = {
     val searchRequest: SearchRequest = new SearchRequest(baseDN, SearchScope.SUB, Filter.create("(objectClass=*)"))
     var userStringList = List[String]()
-    try{
+    try {
       val searchResult: SearchResult = interface.search(searchRequest)
-      val entries: util.List[SearchResultEntry] =  searchResult.getSearchEntries()
+      val entries: util.List[SearchResultEntry] = searchResult.getSearchEntries()
       val it: util.Iterator[SearchResultEntry] = entries.iterator()
-      while(it.hasNext){
+      while (it.hasNext) {
         val entry: SearchResultEntry = it.next
         userStringList = entry.toString() :: userStringList
       }
-    }catch{case _ => Unit}
+    } catch {
+      case _: Throwable => Unit
+    }
     userStringList
   }
 
-  // helper: convert value to default if null.
+  /**
+    * Convert entries with conversion function and filter out unconvertable results.
+    * @param entries List of entries to convert.
+    * @param conv Conversion function. Should either return the converted value or None if conversion not possible.
+    * @tparam T Type to convert Entries to.
+    * @return Converted entries.
+    */
+  def convertAndFilter[T](entries: Traversable[Entry], conv: (Entry => Option[T])): Traversable[T] = {
+    val entryOps: Traversable[Option[T]] = entries.map {
+      conv
+    }
+    entryOps.filter { entry => entry.isDefined }.map { e => e.get }
+  }
+
+
+  // helper: convert input value to default if null.
   def nullToDefault[T](value: T, default: T): T = {
-    if(value == null)
+    if (value == null)
       default
     else
       value
@@ -97,9 +131,10 @@ object LdapUtil {
 
   // helper convert value to option if defined, or convert to none if null given.
   def asOption[T](value: T): Option[T] = {
-    if(value == null)
+    if (value == null)
       None
     else
       Some(value)
   }
+
 }

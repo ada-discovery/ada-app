@@ -1,7 +1,5 @@
 package ldap
 
-
-import java.util
 import javax.net.ssl.{SSLContext, SSLSocketFactory}
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
@@ -9,6 +7,7 @@ import com.unboundid.ldap.listener.{InMemoryListenerConfig, InMemoryDirectorySer
 import com.unboundid.ldap.sdk._
 import com.unboundid.ldap.sdk.extensions.StartTLSExtendedRequest
 import com.unboundid.util.ssl.{TrustStoreTrustManager, TrustAllTrustManager, SSLUtil}
+import models.workspace.UserGroup
 
 import persistence.RepoTypes._
 
@@ -36,12 +35,17 @@ trait AdaLdapUserServer extends UserManager{
   val ldapinterface: Option[LDAPInterface]
 
   def addUsersFromRepo(interface: LDAPInterface, userRepo: UserRepo): Unit
-  def getUsers(interface: LDAPInterface): Seq[CustomUser]
+
+  def getUserGroups(interface: LDAPInterface): Traversable[UserGroup]
+  def getUsers(interface: LDAPInterface): Traversable[CustomUser]
 
   def setupInterface(): Option[LDAPInterface]
   def terminateInterface(interface: Option[LDAPInterface]): Unit
 
-  def getEntryList: List[String]
+  def getEntryList: Traversable[String]
+  def getUserList: Traversable[CustomUser]
+  def getUserGroupList: Traversable[UserGroup]
+
 }
 
 
@@ -57,6 +61,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   // switch for local ldap server or connection to remote server
   // use "local" to set up local in-memory server
   // use "remote" to set up connection to remote server
+  // use "none" to disable this module completely
   // this flag defaults to "local", if no option is given
   val mode: String = configuration.getString("ldap.mode").getOrElse("local").toLowerCase()
 
@@ -75,6 +80,10 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   val encryption: String = configuration.getString("ldap.encryption").getOrElse("none").toLowerCase()
   val trustStorePath: Option[String] = configuration.getString("ldap.trustStore")
 
+  // list of groups to be used
+  val groups: Seq[String] = configuration.getStringSeq("ldap.groups").getOrElse(Seq())
+
+  // interface to be used; can be an InMemoryDirectoryServer or a connection
   override val ldapinterface: Option[LDAPInterface] = setupInterface
 
 
@@ -155,8 +164,18 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     }
   }
 
+  /**
+    * Authenticate by checking if mail exists, then trying bind operation.
+    * @param email Mail for matching.
+    * @param password Password which should match the password associated to the mail.
+    * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
+    */
   override def authenticate(email: String, password: String): Future[Boolean] = {
-    Future(true)
+    findByEmail(email).map{ usrOp:Option[CustomUser] => usrOp match{
+        case Some(usr) => canBind(usr.name, password)
+        case None => false
+      }
+    }
   }
 
   /**
@@ -207,6 +226,8 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * Creates a connection to an existing LDAP server instance.
     * Uses the options defined in the configuation.
     * Used options from configuration are ldap.encryption, ldap.host, ldap.prt, ldap.bindDN, ldap.bindPassword
+    * @param bind custom bindDn; loaded from config if not defined.
+    * @param pw custom password; loaded from config if not defined.
     * @return LDAPConnection object  with specified credentials. None, if no connection could be established.
     */
   def createConnection(bind: String = bindDn, pw: String = bindPassword): Option[LDAPConnectionPool] = {
@@ -218,7 +239,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
         val connection: LDAPConnection = new LDAPConnection(sslSocketFactory, defaultHost, defaultPort)
         val result: ResultCode = try{
           connection.bind(bind, pw).getResultCode
-        }catch{case _ => ResultCode.NO_SUCH_OBJECT}
+        }catch{case _: Throwable => ResultCode.NO_SUCH_OBJECT}
         if(result == ResultCode.SUCCESS)
           Some(new LDAPConnectionPool(connection, 1, 10))
         else
@@ -229,7 +250,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
         val connection: LDAPConnection = new LDAPConnection(defaultHost, defaultPort)
         val result: ResultCode = try{
           connection.bind(bind, pw).getResultCode
-        }catch{case _ => ResultCode.NO_SUCH_OBJECT}
+        }catch{case _: Throwable => ResultCode.NO_SUCH_OBJECT}
         val sslContext: SSLContext = sslUtil.createSSLContext()
         connection.processExtendedOperation(new StartTLSExtendedRequest(sslContext))
         val processor: StartTLSPostConnectProcessor = new StartTLSPostConnectProcessor(sslContext)
@@ -243,7 +264,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
         val connection: LDAPConnection = new LDAPConnection(defaultHost, defaultPort)
         val result: ResultCode = try{
           connection.bind(bind, pw).getResultCode
-        }catch{case _ => ResultCode.NO_SUCH_OBJECT}
+        }catch{case _: Throwable => ResultCode.NO_SUCH_OBJECT}
         if(result == ResultCode.SUCCESS)
           Some(new LDAPConnectionPool(connection, 1, 10))
         else
@@ -286,17 +307,27 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * Reconstruct a sequence of customUsers from users registered in ldap server.
     * @return Seq[CustomUser] for use in other modules.
     */
-  override def getUsers(interface: LDAPInterface): Seq[CustomUser] = {
-    val baseDN ="dc=users," + dit
+  override def getUsers(interface: LDAPInterface): Traversable[CustomUser] = {
+    val baseDN ="cn=users," + dit
     val scope = SearchScope.SUB
-    val filter = Filter.createEqualityFilter("cn", "users")
+    val filter = Filter.createEqualityFilter("objectClass", "top")
     val request: SearchRequest = new SearchRequest(baseDN, scope, filter)
 
-    val result: SearchResult = interface.search(request)
-    val entries: List[Entry] = result.getSearchEntries.toList
-    val userOps: List[Option[CustomUser]] = entries.map{LdapUtil.entryToUser}
-    userOps.filter{ user => user.isDefined}.map{ user => user.get}
+    val entries: Traversable[Entry] = dipatchSearchRequest(request)
+    LdapUtil.convertAndFilter(entries, LdapUtil.entryToUser)
   }
+
+
+  override def getUserGroups(interface: LDAPInterface): Traversable[UserGroup] = {
+    val baseDN ="cn=groups," + dit
+    val scope = SearchScope.SUB
+    val filter = Filter.createEqualityFilter("objectClass", "groupofnames")
+    val request: SearchRequest = new SearchRequest(baseDN, scope, filter)
+
+    val entries: Traversable[Entry] = dipatchSearchRequest(request)
+    LdapUtil.convertAndFilter(entries, LdapUtil.entryToUserGroup)
+  }
+
 
   /**
     * Find specific DN as user.
@@ -358,10 +389,54 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * Gets list of all entries.
     * @return
     */
-  override def getEntryList: List[String] = {
+  override def getEntryList: Traversable[String] = {
     ldapinterface match{
       case Some(interface) => LdapUtil.getEntryList(interface, dit)
-      case None => List()
+      case None => Traversable()
+    }
+  }
+
+  /**
+    *
+    * @return
+    */
+  override def getUserGroupList: Traversable[UserGroup] = {
+    ldapinterface match{
+      case Some(interface) => getUserGroups(interface)
+      case None => Traversable()
+    }
+  }
+
+  /**
+    *
+    * @return
+    */
+  override def getUserList: Traversable[CustomUser] = {
+    ldapinterface match{
+      case Some(interface) => getUsers(interface)
+      case None => Traversable()
+    }
+  }
+
+
+  /**
+    * Secure, crash-safe search method.
+    * @param request SearchRequest to be executed.
+    * @return List of search results. Empty, if request failed.
+    */
+  def dipatchSearchRequest(request: SearchRequest): Traversable[Entry] = {
+    try {
+      ldapinterface match{
+        case Some(interface) => {
+          val result: SearchResult = interface.search(request)
+          result.getSearchEntries
+        }
+        case None => Traversable[Entry]()
+      }
+    }catch{
+      case e: Throwable =>
+        //println(e)
+        Traversable[Entry]()
     }
   }
 

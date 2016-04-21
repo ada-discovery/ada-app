@@ -12,7 +12,7 @@ import play.modules.reactivemongo.json.BSONFormats._
 case class Workspace(_id: Option[BSONObjectID], userId: String, collaborators: UserGroup, filters: Seq[FilterSpec], treeProjections: Seq[JsObject])
 
 object Workspace {
-  val emptyUserGroup = UserGroup(None, "empty", Seq())
+  val emptyUserGroup = UserGroup(None, "empty", None, Seq())
 
   implicit val WorkspaceFormat = Json.format[Workspace]
 

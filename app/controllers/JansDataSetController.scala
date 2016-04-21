@@ -61,9 +61,20 @@ class JansDataSetController @Inject()(
 
 
   def listLDAP = Action { implicit request =>
-    val entries: List[String] = ldapserver.getEntryList
+    val entries: Traversable[String] = ldapserver.getEntryList
     val content = "ldap entry list (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
     Ok(content)
   }
 
+  def ldapgroups = Action { implicit request =>
+    val entries = ldapserver.getUserGroupList
+    val content = "user groups (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
+    Ok(content)
+  }
+
+  def ldapusers = Action { implicit request =>
+    val entries = ldapserver.getUserList
+    val content = "users (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
+    Ok(content)
+  }
 }
