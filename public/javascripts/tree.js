@@ -52,6 +52,8 @@
                     that._dragend(node, this)
                 })
 
+            that.collapseAll()
+            that._expand(that.root)
             that._update(that.root);
 
             d3.select(self.frameElement).style("height", this.options.height + "px");
