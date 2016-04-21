@@ -291,7 +291,7 @@ class DataSetServiceImpl @Inject()(
       val sb = new StringBuilder
       sb.append("Progress: [")
       for (_ <- 1 to progress)
-        sb.append("*")
+        sb.append("=")
       for (_ <- 1 to 100 - progress)
         sb.append(" ")
       sb.append("]")

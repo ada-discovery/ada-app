@@ -1,12 +1,12 @@
 @import views.html.layout.formErrors
 
 @(
-    domainName : String,
-    errors : Seq[FormError],
-    elements : Html,
-    updateCall : Call,
-    cancelCall : Call,
-    deleteCall : Option[Call],
+    domainName: String,
+    errors: Seq[FormError],
+    elements: Html,
+    updateCall: Call,
+    cancelCall: Call,
+    deleteCall: Option[Call],
     sideBar: Option[Html] = None,
     topContentBar: Option[Html] = None
 )(
@@ -23,21 +23,18 @@
     @formErrors(domainName, errors)
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-12">
         @helper.form(updateCall) {
             <fieldset>
                 @elements
             </fieldset>
 
-            <div class="actions">
+            <div class="actions pull-right">
                 <hr/>
                 <input type="submit" value="Update" class="btn btn-primary">
                 <a href="@cancelCall" class="btn btn-default">Cancel</a>
             </div>
         }
-        </div>
-        <div class="col-md-4">
-            @info()
         </div>
     </div>
 

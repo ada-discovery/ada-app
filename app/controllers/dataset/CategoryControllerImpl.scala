@@ -14,7 +14,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc.{Action, RequestHeader}
+import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONObjectIDFormat
@@ -88,7 +88,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       result(dataSpaceMetaInfoRepo.find())
     )
 
-  override protected def deleteCall(id: BSONObjectID): Future[Unit] = {
+  override protected def deleteCall(id: BSONObjectID)(implicit request: Request[AnyContent]): Future[Unit] = {
     // relocate the children to a new parent
     val updateChildrenFutures =
       for {

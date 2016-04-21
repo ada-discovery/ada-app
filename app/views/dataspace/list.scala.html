@@ -1,0 +1,38 @@
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
+
+@(
+    page: Page[DataSpaceMetaInfo]
+)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@actions = {
+    <div class="row">
+        <div class="col-md-8">
+            @filter(page.filter, dataSpaceMetaInfoRoutes.find(), Left(Seq("name")))
+        </div>
+        <div class="col-md-4">
+            <a class="btn btn-success btn-sm pull-right" id="add" href="@dataSpaceMetaInfoRoutes.create()">Add a new data space</a>
+        </div>
+    </div>
+}
+
+@table = @{
+    paginatedTable(
+        page,
+        dataSpaceMetaInfoRoutes.find(_, _, page.filter),
+        Seq(
+            ("name", "Name", {item : Any => Html(item.asInstanceOf[DataSpaceMetaInfo].name)}),
+            ("timeCreated", "Time Created", {item : Any => Html(item.asInstanceOf[DataSpaceMetaInfo].timeCreated.toString)})
+        ),
+        Some({ item : Any => dataSpaceMetaInfoRoutes.edit(item.asInstanceOf[DataSpaceMetaInfo]._id.get)})
+    )
+}
+
+@layout.list(
+    "Data Space",
+    page.total,
+    actions,
+    table,
+    None
+)

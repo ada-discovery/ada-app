@@ -2,12 +2,12 @@
 @import views.html.helper.FieldElements
 
 @(
-    domainName : String,
-    attribute : String,
-    form: Form[_],
-    args: (Symbol,Any)*
+        domainName : String,
+        attribute : String,
+        form: Form[_],
+        args: (Symbol,Any)*
 )(
-    implicit msg: play.api.i18n.Messages
+        implicit msg: play.api.i18n.Messages
 )
 
 @implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapValue.f) }

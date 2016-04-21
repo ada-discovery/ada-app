@@ -23,7 +23,8 @@
         page,
         dataSetSettingRoutes.find(_, _, page.filter),
         Seq(
-            ("dataSetId", "Data Set Id", {item : Any => Html(item.asInstanceOf[DataSetSetting].dataSetId)})
+            ("dataSetId", "Data Set Id", {item : Any => Html(item.asInstanceOf[DataSetSetting].dataSetId)}),
+            ("keyField", "Key Field", {item : Any => Html(item.asInstanceOf[DataSetSetting].keyFieldName)})
         ),
         Some({ item : Any => dataSetSettingRoutes.get(item.asInstanceOf[DataSetSetting]._id.get)})
     )

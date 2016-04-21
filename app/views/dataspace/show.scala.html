@@ -1,0 +1,43 @@
+@import views.html.layout
+@import views.html.elements.{labelValue, value}
+@import views.html.dataset.datasetMenu
+@import views.html.table.displayTable
+@import controllers.dataset.DataSetRouter
+@import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
+
+@(
+    dataSpaceMetaInfo: DataSpaceMetaInfo,
+    dataSetIdSizeMap: Map[String, Int],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@table = {
+    @displayTable(
+        dataSpaceMetaInfo.dataSetMetaInfos,
+        Seq(
+            ("name", "Name", {item : Any => Html(item.asInstanceOf[DataSetMetaInfo].name)}),
+            ("size", "# Items/Patients", {item : Any => Html(dataSetIdSizeMap.get(item.asInstanceOf[DataSetMetaInfo].id).get.toString)})
+        ),
+        None,
+        Some({ item : Any => new DataSetRouter(item.asInstanceOf[DataSetMetaInfo].id).plainOverviewList})
+    )
+}
+
+@elements = {
+    @value("dataSpaceMetaInfo", "Name", dataSpaceMetaInfo.name)
+    @value("dataSpaceMetaInfo", "Time Created", dataSpaceMetaInfo.timeCreated.toString)
+    <hr/>
+    @labelValue("dataSetMetaInfos", "Data Sets"){@table}
+}
+
+@layout.show(
+    "Study",
+    elements,
+    None,
+    Some(dataSpaceMetaInfoRoutes.edit(dataSpaceMetaInfo._id.get)),
+    None,
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    None
+)

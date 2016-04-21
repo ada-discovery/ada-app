@@ -1,23 +1,33 @@
 @import play.api.libs.json.{JsObject, JsNull}
 
 @(
-    items : Traversable[_],
-    header : (String, String) => Html,
-    columns : Traversable[(String, String, Any => Html)],
-    rowClickCall : Option[Any => Call] = None
+    items: Traversable[_],
+    columns: Traversable[(String, String, Any => Html)],
+    header: Option[(String, String) => Html] = None,
+    rowClickCall: Option[Any => Call] = None,
+    hiddenId: Option[(String, Any => String)] = None
 )
+
+@defaultHeader(fieldName: String, fieldLabel: String) = {
+	<th class="col header">
+	    @fieldLabel
+	</th>
+}
 
 <table class="table table-striped">
 	<thead>
 		<tr>
             @columns.map { case (fieldName, fieldLabel, _) =>
-                @header(fieldName, fieldLabel)
+                @header.getOrElse(defaultHeader(_, _))(fieldName, fieldLabel)
             }
 		</tr>
 	</thead>
 	<tbody>
     	@items.map { item =>
 	    	<tr class='@if(rowClickCall.isDefined) {clickable-row}' data-href='@if(rowClickCall.isDefined){@rowClickCall.get(item)}'>
+                @if(hiddenId.isDefined) {
+                    <input type="hidden" id="@hiddenId.get._1" name="@hiddenId.get._1" value="@hiddenId.get._2(item)"/>
+                }
 		    	@columns.map { case (_, _, content) =>
                     <td>
                         @content(item)

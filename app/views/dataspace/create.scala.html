@@ -1,0 +1,17 @@
+@import views.html.layout
+@import views.html.dataspace.elements
+@import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
+
+@(
+    form: Form[DataSpaceMetaInfo]
+)(
+	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@layout.create(
+    "Data Space Meta Info",
+	form = form,
+	elements = elements(form, Map[String, Int]()),
+	saveCall = dataSpaceMetaInfoRoutes.save(),
+	listCall = dataSpaceMetaInfoRoutes.listAll()
+)

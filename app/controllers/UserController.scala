@@ -9,17 +9,14 @@ import persistence.RepoTypes.UserRepo
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, seq, email, text}
 import models.Page
-import play.api.libs.mailer.{Email, SMTPConfiguration, SMTPMailer, MailerClient}
 import reactivemongo.bson.BSONObjectID
 import views.html
 import play.api.i18n.Messages
-import play.api.mvc.RequestHeader
-import play.api.Configuration
+import play.api.mvc.{AnyContent, RequestHeader, Request}
 
 import util.SecurityUtil
 
 import scala.concurrent.Future
-
 
 class UserController @Inject() (
     userRepo: UserRepo,
@@ -53,7 +50,7 @@ class UserController @Inject() (
     html.user.list(currentPage)
 
 
-  override protected def saveCall(item: CustomUser): Future[BSONObjectID] = {
+  override protected def saveCall(item: CustomUser)(implicit request: Request[AnyContent]): Future[BSONObjectID] = {
     val mailer = mailClientProvider.createClient()
     val mail = mailClientProvider.createTemplate(
       "Ucer Created",

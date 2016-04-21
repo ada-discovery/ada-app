@@ -19,4 +19,4 @@
     }.getOrElse(currentOrderBy))
 }
 
-@displayTable(items, header(currentOrderBy, listCallAux)(_, _), columns, rowClickCall)
+@displayTable(items, columns, Some(header(currentOrderBy, listCallAux)), rowClickCall)

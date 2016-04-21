@@ -110,7 +110,7 @@ GET         /studies/categories/getCategoryD3Root                               
 GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
 GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
 
-GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "original", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: Int ?= 2)
 GET         /studies/setting/new                                                    controllers.dataset.DataSetSettingController.create
 POST        /studies/setting/save                                                   controllers.dataset.DataSetSettingController.save
@@ -120,6 +120,15 @@ GET         /studies/setting/edit/                                              
 POST        /studies/setting/:id                                                    controllers.dataset.DataSetSettingController.update(id: BSONObjectID)
 POST        /studies/setting/update/:id                                             controllers.dataset.DataSetSettingController.updateForDataSet(id: BSONObjectID)
 POST        /studies/setting/:id/delete                                             controllers.dataset.DataSetSettingController.delete(id: BSONObjectID)
+
+GET         /studies/metainfo                                                        controllers.dataset.DataSpaceMetaInfoController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /studies/metainfo/all                                                    controllers.dataset.DataSpaceMetaInfoController.listAll(s: Int ?= 2)
+GET         /studies/metainfo/new                                                    controllers.dataset.DataSpaceMetaInfoController.create
+POST        /studies/metainfo/save                                                   controllers.dataset.DataSpaceMetaInfoController.save
+GET         /studies/metainfo/:id/get                                                controllers.dataset.DataSpaceMetaInfoController.get(id: BSONObjectID)
+GET         /studies/metainfo/:id                                                    controllers.dataset.DataSpaceMetaInfoController.edit(id: BSONObjectID)
+POST        /studies/metainfo/:id                                                    controllers.dataset.DataSpaceMetaInfoController.update(id: BSONObjectID)
+POST        /studies/metainfo/:id/delete                                             controllers.dataset.DataSpaceMetaInfoController.delete(id: BSONObjectID)
 
 # Map static resources from the /public folder to the /assets URL path
 GET         /assets/*file                                                           controllers.Assets.at(path="/public", file)

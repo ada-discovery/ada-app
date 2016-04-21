@@ -26,7 +26,7 @@ protected[persistence] class DataSetMetaInfoSubordinateMongoAsyncCrudRepo @Injec
   ) extends SubordinateObjectMongoAsyncCrudRepo[DataSetMetaInfo, BSONObjectID, DataSpaceMetaInfo, BSONObjectID]("dataSetMetaInfos", "name", dataSpaceMetaInfoRepo) {
 
   override protected def getDefaultRoot =
-    DataSpaceMetaInfo(Some(dataSpaceId), "", new java.util.Date(), Seq[DataSetMetaInfo]())
+    DataSpaceMetaInfo(Some(dataSpaceId), "", 0, new java.util.Date(), Seq[DataSetMetaInfo]())
 
   override protected def getRootObject =
     dataSpaceMetaInfoRepo.find(Some(Json.obj(DataSpaceMetaInfoIdentity.name -> dataSpaceId))).map(_.headOption)

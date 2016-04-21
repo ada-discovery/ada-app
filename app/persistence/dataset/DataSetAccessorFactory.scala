@@ -109,11 +109,11 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
       spaces <- dataSpaceMetaInfoRepo.find(Some(Json.obj("name" -> dataSpaceName)))
       // get an id from an existing data space or create a new one
       spaceId <- spaces.headOption.map(space => Future(space._id.get)).getOrElse(
-        dataSpaceMetaInfoRepo.save(DataSpaceMetaInfo(None, dataSpaceName))
+        dataSpaceMetaInfoRepo.save(DataSpaceMetaInfo(None, dataSpaceName, 0))
       )
       // register data set meta info and setting, and obtain an accessor
       accessor <- {
-        val metaInfo = DataSetMetaInfo(None, dataSetId, dataSetName, Some(spaceId))
+        val metaInfo = DataSetMetaInfo(None, dataSetId, dataSetName, 0, Some(spaceId))
         register(metaInfo, setting)
       }
     } yield

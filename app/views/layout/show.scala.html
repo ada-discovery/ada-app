@@ -1,11 +1,11 @@
 @import views.html.layout.formErrors
 
 @(
-	domainName : String,
-	errors : Seq[FormError],
-	elements : Html,
-	listCall : Call,
-	deleteCall : Option[Call],
+	domainName: String,
+	elements: Html,
+    cancelCall: Option[Call] = None,
+    editCall: Option[Call] = None,
+	deleteCall: Option[Call] = None,
 	sideBar: Option[Html] = None,
 	topContentBar: Option[Html] = None
 )(
@@ -19,20 +19,25 @@
 	</div>
 
 	@flashMessages()
-    @formErrors(domainName, errors)
 
 	<div class="row">
-		<div class="col-md-8">
+		<div class="col-md-12">
 			<fieldset>
 			    @elements
 			</fieldset>
 
-			<div class="actions">
-				<a href="@listCall" class="btn btn-default">Cancel</a>
-			</div>
-		</div>
-		<div class="col-md-4">
-		    @info()
+
+            @if(editCall.isDefined || cancelCall.isDefined) {
+                <div class="actions pull-right">
+                    <hr/>
+                    @if(editCall.isDefined) {
+                        <a href="@editCall.get" class="btn btn-primary">Edit</a>
+                    }
+                    @if(cancelCall.isDefined) {
+                        <a href="@cancelCall.get" class="btn btn-default">Cancel</a>
+                    }
+                </div>
+            }
 		</div>
 	</div>
 

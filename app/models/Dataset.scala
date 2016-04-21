@@ -12,6 +12,7 @@ import play.api.libs.functional.syntax._
 case class DataSpaceMetaInfo(
   _id: Option[BSONObjectID],
   name: String,
+  sortOrder: Int,
   timeCreated: Date = new Date(),
   dataSetMetaInfos: Seq[DataSetMetaInfo] = Seq[DataSetMetaInfo]()
 )
@@ -20,6 +21,7 @@ case class DataSetMetaInfo(
   _id: Option[BSONObjectID],
   id: String,
   name: String,
+  sortOrder: Int,
   dataSpaceId: Option[BSONObjectID] = None,
   timeCreated: Date = new Date(),
   sourceDataSetId: Option[BSONObjectID] = None

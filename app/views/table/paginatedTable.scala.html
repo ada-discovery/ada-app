@@ -18,7 +18,7 @@
 }
 
 @if(page.items.nonEmpty) {
-    @displayTable(page.items, header(page.orderBy, listCallAux)(_, _), columns, rowClickCall)
+    @displayTable(page.items, columns, Some(header(page.orderBy, listCallAux)), rowClickCall)
     <hr/>
     @pagination(page, listCallAux)
 }

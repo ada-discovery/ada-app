@@ -1,0 +1,24 @@
+@import views.html.layout
+@import views.html.dataspace.elements
+@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
+
+@(
+    id: reactivemongo.bson.BSONObjectID,
+    form: Form[DataSpaceMetaInfo],
+    dataSetIdSizeMap: Map[String, Int],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+@layout.edit(
+    "Study",
+	form.errors,
+    elements(form, dataSetIdSizeMap),
+    dataSpaceMetaInfoRoutes.update(id),
+    dataSpaceMetaInfoRoutes.get(id),
+    None,
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    None
+)

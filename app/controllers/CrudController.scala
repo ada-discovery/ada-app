@@ -71,7 +71,7 @@ protected abstract class CrudController[E: Format, ID](
     }
   }
 
-  protected def editCall(id: ID): Future[Option[E]] = repo.get(id)
+  protected def editCall(id: ID)(implicit request: Request[AnyContent]): Future[Option[E]] = repo.get(id)
 
   def save = Action.async { implicit request =>
     form.bindFromRequest.fold(
@@ -96,7 +96,7 @@ protected abstract class CrudController[E: Format, ID](
     })
   }
 
-  protected def saveCall(item: E): Future[ID] = repo.save(item)
+  protected def saveCall(item: E)(implicit request: Request[AnyContent]): Future[ID] = repo.save(item)
 
   def update(id: ID): Action[AnyContent] = update(id, home)
 
@@ -123,7 +123,7 @@ protected abstract class CrudController[E: Format, ID](
       })
   }
 
-  protected def updateCall(item: E): Future[ID] = repo.update(item)
+  protected def updateCall(item: E)(implicit request: Request[AnyContent]): Future[ID] = repo.update(item)
 
   def delete(id: ID) = Action.async { implicit request =>
     deleteCall(id).map { _ =>
@@ -141,7 +141,7 @@ protected abstract class CrudController[E: Format, ID](
     }
   }
 
-  protected def deleteCall(id: ID): Future[Unit] = repo.delete(id)
+  protected def deleteCall(id: ID)(implicit request: Request[AnyContent]): Future[Unit] = repo.delete(id)
 
   private def parseValidateAndProcess[T: Reads](t: T => Future[Result])(implicit request: Request[JsValue]) = {
     request.body.validate[T].map(t) match {

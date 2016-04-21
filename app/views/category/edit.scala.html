@@ -22,10 +22,10 @@
 @table = @{
     displayTable(
         fields,
-        { (fieldName: String, fieldLabel: String)  => Html(fieldLabel)},
         Seq(
             ("name", "Name", {item : Any => Html(item.asInstanceOf[Field].name)})
         ),
+        None,
         Some({ item : Any => getField(item.asInstanceOf[Field].name)})
     )
 }
