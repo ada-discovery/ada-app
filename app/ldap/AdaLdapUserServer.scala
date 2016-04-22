@@ -37,25 +37,17 @@ trait AdaLdapUserServer extends UserManager{
 
   def addUsersFromRepo(interface: LDAPInterface, userRepo: UserRepo): Unit
 
-  def getUserGroups(interface: LDAPInterface): Traversable[UserGroup]
-  def getUsers(interface: LDAPInterface): Traversable[CustomUser]
-
   def setupInterface(): Option[LDAPInterface]
   def terminateInterface(interface: Option[LDAPInterface]): Unit
 
   // debug
   def getEntryList: Traversable[String]
-  def getUserList: Traversable[CustomUser]
-  def getUserGroupList: Traversable[UserGroup]
-
-
-
 
   def getUsers: Traversable[CustomUser]
   def getUserGroups: Traversable[UserGroup]
 
   // used for lazy updating
-  def update: Boolean
+  def updateCache: Boolean
   def needsUpdate: Boolean
 }
 
@@ -101,45 +93,55 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   override val ldapinterface: Option[LDAPInterface] = setupInterface
 
 
-
-
   var userCache: Traversable[CustomUser] = Traversable()
   var userGroupCache: Traversable[UserGroup] = Traversable()
-  var lastUpdate: Long = 0//currentTime
-  def currentTime: Long = (Calendar.getInstance().getTimeInMillis() / 1000)         // current time in seconds
+  var lastUpdate: Long = 0
 
 
-  def needsUpdate: Boolean = {
-    ((currentTime - lastUpdate) > updateInterval)
-  }
+  // current time im seconds
+  protected def currentTime: Long = (Calendar.getInstance().getTimeInMillis() / 1000)
+  // check if update required
+  protected def needsUpdate: Boolean = ((currentTime - lastUpdate) > updateInterval)
+
 
   override def getUsers: Traversable[CustomUser] = {
     if(needsUpdate)
-      update
-
+      updateCache
     userCache
   }
 
+  /**
+    * Return
+    * @return
+    */
   override def getUserGroups: Traversable[UserGroup] = {
     if(needsUpdate)
-      update
-
+      updateCache
     userGroupCache
   }
 
 
-  override def update: Boolean = {
-    val newUserCache: Traversable[CustomUser] = getUserList
-    val newUserGroupCache: Traversable[UserGroup] = getUserGroupList
-    if(!(newUserCache.isEmpty || newUserGroupCache.isEmpty)){
-      lastUpdate = currentTime
-      userCache = newUserCache
-      userGroupCache = newUserGroupCache
-      Logger.info("ldap cache updated")
-      true
-    }else{
-      Logger.warn("ldap cache update failed")
-      false
+  /**
+    * Updates cached users and usergroups.
+    * @return true, if update successful.
+    */
+  override def updateCache: Boolean = {
+    ldapinterface match{
+      case Some(interface) => {
+        val newUserCache = requestUserList(interface)
+        val newUserGroupCache = requestUserGroupList(interface)
+        if(!(newUserCache.isEmpty || newUserGroupCache.isEmpty)){
+          lastUpdate = currentTime
+          userCache = newUserCache
+          userGroupCache = newUserGroupCache
+          Logger.info("ldap cache updated")
+          true
+        }else{
+          Logger.warn("ldap cache update failed")
+          false
+        }
+      }
+      case None => true
     }
   }
 
@@ -369,24 +371,29 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * Reconstruct a sequence of customUsers from users registered in ldap server.
     * @return Seq[CustomUser] for use in other modules.
     */
-  override def getUsers(interface: LDAPInterface): Traversable[CustomUser] = {
+  def requestUserList(interface: LDAPInterface): Traversable[CustomUser] = {
     val baseDN ="cn=users," + dit
     val scope = SearchScope.SUB
-    val filter = Filter.createEqualityFilter("objectClass", "top")
+    val filter = Filter.createEqualityFilter("objectClass", "person")
     val request: SearchRequest = new SearchRequest(baseDN, scope, filter)
 
-    val entries: Traversable[Entry] = dipatchSearchRequest(request)
+    val entries: Traversable[Entry] = LdapUtil.dipatchSearchRequest(interface, request)
     LdapUtil.convertAndFilter(entries, LdapUtil.entryToUser)
   }
 
 
-  override def getUserGroups(interface: LDAPInterface): Traversable[UserGroup] = {
+  /**
+    *
+    * @param interface
+    * @return
+    */
+  def requestUserGroupList(interface: LDAPInterface): Traversable[UserGroup] = {
     val baseDN ="cn=groups," + dit
     val scope = SearchScope.SUB
     val filter = Filter.createEqualityFilter("objectClass", "groupofnames")
     val request: SearchRequest = new SearchRequest(baseDN, scope, filter)
 
-    val entries: Traversable[Entry] = dipatchSearchRequest(request)
+    val entries: Traversable[Entry] = LdapUtil.dipatchSearchRequest(interface, request)
     LdapUtil.convertAndFilter(entries, LdapUtil.entryToUserGroup)
   }
 
@@ -458,39 +465,34 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     }
   }
 
-  /**
-    *
-    * @return
-    */
-  override def getUserGroupList: Traversable[UserGroup] = {
+
+  /*override def getUserGroupList: Traversable[UserGroup] = {
     ldapinterface match{
-      case Some(interface) => getUserGroups(interface)
+      case Some(interface) => requestUserGroupList(interface)
       case None => Traversable()
     }
   }
 
-  /**
-    *
-    * @return
-    */
   override def getUserList: Traversable[CustomUser] = {
     ldapinterface match{
-      case Some(interface) => getUsers(interface)
+      case Some(interface) => requestUserList(interface)
       case None => Traversable()
     }
-  }
+  }*/
 
   /**
     * Secure, crash-safe ldap search method.
+    * @param ldapinterface interface to perform search request on.
     * @param request SearchRequest to be executed.
     * @return List of search results. Empty, if request failed.
     */
-  def dipatchSearchRequest(request: SearchRequest): Traversable[Entry] = {
+  def dipatchSearchRequest(ldapinterface: Option[LDAPInterface], request: SearchRequest): Traversable[Entry] = {
     try {
       ldapinterface match{
         case Some(interface) => {
           val result: SearchResult = interface.search(request)
-          result.getSearchEntries
+          val a = result.getSearchEntries
+          a
         }
         case None => Traversable[Entry]()
       }

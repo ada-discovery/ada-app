@@ -2,10 +2,13 @@ package ldap
 
 import java.util
 
+import scala.collection.JavaConversions._
+
 import com.unboundid.ldap.sdk._
 
 import models.security.CustomUser
 import models.workspace.UserGroup
+
 
 
 object LdapUtil {
@@ -100,6 +103,21 @@ object LdapUtil {
     }
     userStringList
   }
+
+
+  /**
+    * Secure, crash-safe ldap search method.
+    * @param interface interface to perform search request on.
+    * @param request SearchRequest to be executed.
+    * @return List of search results. Empty, if request failed.
+    */
+  def dipatchSearchRequest(interface: LDAPInterface, request: SearchRequest): Traversable[Entry] = {
+    try {
+      val result: SearchResult = interface.search(request)
+      result.getSearchEntries
+    }catch{case e: Throwable => Traversable[Entry]()}
+  }
+
 
   /**
     * Convert entries with conversion function and filter out unconvertable results.
