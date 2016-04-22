@@ -92,7 +92,7 @@ object DataSetSettingController {
     "defaultScatterXFieldName" -> nonEmptyText,
     "defaultScatterYFieldName" -> nonEmptyText,
     "defaultDistributionFieldName" -> nonEmptyText,
-    "tranSMARTVisitFieldName" -> optional(nonEmptyText),
-    "tranSMARTReplacements" -> of[Map[String, String]]
+    "tranSMARTVisitFieldName" -> optional(text),
+    "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " "))
   ) (DataSetSetting.apply)(DataSetSetting.unapply)
 }

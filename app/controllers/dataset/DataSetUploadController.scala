@@ -2,7 +2,7 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import models.{AdaException, AdaParseException}
+import models.{DataSetSetting, AdaException, AdaParseException}
 import persistence.RepoTypes._
 import play.api.data.Form
 import play.api.data.Forms._
@@ -31,10 +31,10 @@ class DataSetUploadController @Inject() (
       "dataSpaceName" -> nonEmptyText,
       "dataSetId" -> nonEmptyText.verifying("Data Set Id should contain no spaces", dataSetId => !dataSetId.contains(" ")),
       "dataSetName" -> nonEmptyText,
-      "path" -> optional(nonEmptyText),
+      "path" -> optional(text),
       "delimiter" -> nonEmptyText,
-      "eol" -> optional(nonEmptyText),
-      "charsetName" -> optional(nonEmptyText),
+      "eol" -> optional(text),
+      "charsetName" -> optional(text),
       "setting" -> optional(dataSetSettingMapping)
     ) (new DataSetImportInfo(_, _, _, _, _, _, _, _))
       { importInfo: DataSetImportInfo =>
@@ -46,9 +46,12 @@ class DataSetUploadController @Inject() (
       }
   )
 
+  private val defaultImportInfo =
+    new DataSetImportInfo("", "", "", None, ",", None, None, None)
+
   def create = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
-    Ok(views.html.dataset.uploadDataSet(form))
+    Ok(views.html.dataset.uploadDataSet(form.fill(defaultImportInfo)))
   }
 
   def upload = Action.async { implicit request =>

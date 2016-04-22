@@ -1,4 +1,4 @@
-@(key : String, label : Any,  hasError : Boolean = false)(valueElement : Any)
+@(key: String, label: Any, hasError: Boolean = false, helpText: Option[String] = None)(valueElement : Any)
 
 @**************************************************
 * Generate input according twitter bootsrap rules *
@@ -7,5 +7,6 @@
   <label for="@key" class="col-sm-2 control-label">@label</label>
   <div class="col-sm-10">
     @valueElement
+    <span class="help-block">@helpText.getOrElse("")</span>
   </div>
 </div>

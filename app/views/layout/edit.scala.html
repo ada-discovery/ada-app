@@ -29,18 +29,16 @@
                 @elements
             </fieldset>
 
+            <hr/>
+
             <div class="actions pull-right">
-                <hr/>
                 <input type="submit" value="Update" class="btn btn-primary">
                 <a href="@cancelCall" class="btn btn-default">Cancel</a>
+                @if(deleteCall.isDefined) {
+                    <a href="#" class="btn btn-danger" onclick='submit("post", "@deleteCall.get")'>Delete</a>
+                }
             </div>
         }
         </div>
     </div>
-
-    @if(deleteCall.isDefined) {
-        @helper.form(deleteCall.get, 'class -> "topRight") {
-            <input type="submit" value="Delete" class="btn btn-danger">
-        }
-    }
 }

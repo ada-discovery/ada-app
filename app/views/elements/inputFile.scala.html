@@ -11,4 +11,4 @@
 
 @implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapInput.f) }
 
-@helper.inputFile(field, List('_label -> attributeLabel(domainName, field.name), 'class -> "form-control") ++ args.toList : _*)
+@helper.inputFile(field, List('_label -> attributeLabel(domainName, field.name)) ++ args.toList : _*)

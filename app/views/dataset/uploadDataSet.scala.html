@@ -9,41 +9,120 @@
         <div class="panel-heading">Data Set Info</div>
         <div class="panel-body">
             @inputText("dataSetImportInfo", "dataSpaceName", form)
-            @inputText("dataSetImportInfo", "dataSetId", form)
             @inputText("dataSetImportInfo", "dataSetName", form)
+            @inputText("dataSetImportInfo", "dataSetId", form)
         </div>
     </div>
     <div class="panel panel-default">
         <div class="panel-heading">File</div>
         <div class="panel-body">
-            @inputText("dataSetImportInfo", "path", form)
-            @inputFile("dataSetImportInfo", form("importFile"))
+            @labelValue("sourceChoice", "Source"){
+                <label class="radio-inline"><input type="radio" name="sourceChoice" value="1" checked="checked">Local file</label>
+                <label class="radio-inline"><input type="radio" name="sourceChoice" value="2">Server-side path</label>
+            }
+            <div id="importFileDiv">
+                @inputFile("dataSetImportInfo", form("importFile"), '_label -> "")
+            </div>
+            <div id="pathDiv">
+                @inputText("dataSetImportInfo", "path", form, '_label -> "", 'style -> "display:none")
+            </div>
             @inputText("dataSetImportInfo", "delimiter", form)
             @inputText("dataSetImportInfo", "eol", form)
             @inputText("dataSetImportInfo", "charsetName", form)
         </div>
     </div>
+    <div>
     <div class="panel panel-default">
         <div class="panel-heading">Setting</div>
         <div class="panel-body">
-            <input type="hidden" id="settingDataSetId" name="setting.dataSetId" value="XX">
-            @inputText("dataSetImportInfo", "setting.keyFieldName", form)
-            @inputText("dataSetImportInfo", "setting.exportOrderByFieldName", form)
-            @inputText("dataSetImportInfo", "setting.listViewTableColumnNames", form)
-            @inputText("dataSetImportInfo", "setting.overviewChartFieldNames", form)
-            @inputText("dataSetImportInfo", "setting.defaultScatterXFieldName", form)
-            @inputText("dataSetImportInfo", "setting.defaultScatterYFieldName", form)
-            @inputText("dataSetImportInfo", "setting.defaultDistributionFieldName", form)
-            @inputText("dataSetImportInfo", "setting.tranSMARTVisitFieldName", form)
-            @inputText("dataSetImportInfo", "setting.tranSMARTReplacements", form)
+            @labelValue("includeSetting", "Included?", false, Some("Do you want to specify a setting now?")){
+                <label class="radio-inline"><input type="radio" name="includeSetting" value="true">Yes</label>
+                <label class="radio-inline"><input type="radio" name="includeSetting" value="false" checked="checked">No</label>
+            }
+            <div id="settingDiv" style="display:none">
+                <input type="hidden" id="setting_dataSetId" name="setting.dataSetId" value="">
+                <hr/>
+                @inputText("dataSetImportInfo", "setting.keyFieldName", form)
+                @inputText("dataSetImportInfo", "setting.exportOrderByFieldName", form)
+                @inputText("dataSetImportInfo", "setting.listViewTableColumnNames", form)
+                @inputText("dataSetImportInfo", "setting.overviewChartFieldNames", form)
+                @inputText("dataSetImportInfo", "setting.defaultScatterXFieldName", form)
+                @inputText("dataSetImportInfo", "setting.defaultScatterYFieldName", form)
+                @inputText("dataSetImportInfo", "setting.defaultDistributionFieldName", form)
+                @inputText("dataSetImportInfo", "setting.tranSMARTVisitFieldName", form)
+                @inputText("dataSetImportInfo", "setting.tranSMARTReplacements", form)
+            </div>
         </div>
     </div>
-    <script>
+    <script type="text/javascript">
+        $(function() {
+            if ($('#path').val()) {
+                $('input[name="sourceChoice"][value="1"]').attr('checked', '')
+                $('input[name="sourceChoice"][value="2"]').attr('checked', 'checked')
+                $('#importFile').hide()
+                $('#path').show()
+            }
+
+            var settingValueFound = false;
+            $.each( $("input[name^='setting.']"), function () {
+                if ($(this).val()) {
+                    settingValueFound = true;
+                    return false;
+                }
+            });
+
+            if (settingValueFound) {
+                $('input[name="includeSetting"][value="true"]').attr('checked', 'checked')
+                $('input[name="includeSetting"][value="false"]').attr('checked', '')
+                $('#settingDiv').show()
+            }
+        });
+
         $('form').submit(function(ev) {
             ev.preventDefault();
-            $('#settingDataSetId').val($('#dataSetId').val())
+            var includeSetting = $('input[name="includeSetting"]:checked').val() == "true"
+            if (includeSetting)
+                $('#setting_dataSetId').val($('#dataSetId').val())
+            else {
+                // if setting should not be included remove all setting fields from the form by erasing their names before submit
+                $.each( $("input[name^='setting.']"), function () {
+                    $(this).attr("name", '');
+                });
+            }
+
+            var importLocalFile = $('input[name="sourceChoice"]:checked').val() == "1"
+            if (importLocalFile)
+                // if local file provided remove the path field by erasing its name
+                $('#path').attr("name", '');
+            else
+                // otherwise remove the import file field
+                $('#importFile').attr("name", '');
+
             this.submit();
         });
+
+        $('#dataSetName').on('change keyup paste', function() {
+            $('#dataSetId').val($('#dataSetName').val().trim().replace(/ /g, "_").toLowerCase())
+        })
+
+        $('input[name="includeSetting"]').change(function() {
+            var includeSetting = $('input[name="includeSetting"]:checked').val() == "true"
+            if (includeSetting)
+                $('#settingDiv').show()
+            else
+                $('#settingDiv').hide()
+        })
+
+        $('input[name="sourceChoice"]').change(function() {
+            var importLocalFile = $('input[name="sourceChoice"]:checked').val() == "1"
+            if (importLocalFile) {
+                $('#importFile').show()
+                $('#path').hide()
+            } else {
+                $('#importFile').hide()
+                $('#path').show()
+            }
+        })
     </script>
 }
 

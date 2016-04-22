@@ -28,22 +28,19 @@
 
 
             @if(editCall.isDefined || cancelCall.isDefined) {
+				<hr/>
                 <div class="actions pull-right">
-                    <hr/>
                     @if(editCall.isDefined) {
                         <a href="@editCall.get" class="btn btn-primary">Edit</a>
                     }
                     @if(cancelCall.isDefined) {
                         <a href="@cancelCall.get" class="btn btn-default">Cancel</a>
                     }
+					@if(deleteCall.isDefined) {
+						<a href="#" class="btn btn-danger" onclick='submit("post", "@deleteCall.get")'>Delete</a>
+					}
                 </div>
             }
 		</div>
 	</div>
-
-	@if(deleteCall.isDefined) {
-		@helper.form(deleteCall.get, 'class -> "topRight") {
-			<input type="submit" value="Delete" class="btn btn-danger">
-		}
-	}
 }

@@ -38,3 +38,7 @@ dataSetImportInfo.setting.defaultScatterYFieldName.label = Scatter Y Field
 dataSetImportInfo.setting.defaultDistributionFieldName.label = Distribution Field
 dataSetImportInfo.setting.tranSMARTVisitFieldName.label = TranSMART Visit Field
 dataSetImportInfo.setting.tranSMARTReplacements.label = TranSMART Export Char Replacements
+
+dataSetImportInfo.dataSpaceName.label = Study Name
+dataSetImportInfo.eol.label = Specific EOL
+dataSetImportInfo.path.label = Server-side Path
