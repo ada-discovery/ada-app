@@ -35,7 +35,7 @@ class JansDataSetController @Inject()(
 
   def ldapAuth = deadbolt.SubjectPresent(handlerCache.ldapHandler){
     Action { implicit request =>
-      Ok("authotized")
+      Ok("authorized")
     }
   }
 
@@ -59,7 +59,6 @@ class JansDataSetController @Inject()(
     }
   }
 
-
   def listLDAP = Action { implicit request =>
     val entries: Traversable[String] = ldapserver.getEntryList
     val content = "ldap entry list (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
@@ -67,13 +66,13 @@ class JansDataSetController @Inject()(
   }
 
   def ldapgroups = Action { implicit request =>
-    val entries = ldapserver.getUserGroupList
+    val entries = ldapserver.getUserGroups
     val content = "user groups (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
     Ok(content)
   }
 
   def ldapusers = Action { implicit request =>
-    val entries = ldapserver.getUserList
+    val entries = ldapserver.getUsers
     val content = "users (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
     Ok(content)
   }

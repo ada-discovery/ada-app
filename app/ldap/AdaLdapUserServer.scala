@@ -1,5 +1,6 @@
 package ldap
 
+import java.util.Calendar
 import javax.net.ssl.{SSLContext, SSLSocketFactory}
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
@@ -21,7 +22,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConversions._
 
 import play.api.inject.ApplicationLifecycle
-import play.api.Configuration
+import play.api.{Logger, Configuration}
 
 
 /**
@@ -42,10 +43,20 @@ trait AdaLdapUserServer extends UserManager{
   def setupInterface(): Option[LDAPInterface]
   def terminateInterface(interface: Option[LDAPInterface]): Unit
 
+  // debug
   def getEntryList: Traversable[String]
   def getUserList: Traversable[CustomUser]
   def getUserGroupList: Traversable[UserGroup]
 
+
+
+
+  def getUsers: Traversable[CustomUser]
+  def getUserGroups: Traversable[UserGroup]
+
+  // used for lazy updating
+  def update: Boolean
+  def needsUpdate: Boolean
 }
 
 
@@ -83,8 +94,54 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   // list of groups to be used
   val groups: Seq[String] = configuration.getStringSeq("ldap.groups").getOrElse(Seq())
 
-  // interface to be used; can be an InMemoryDirectoryServer or a connection
+  // interval for lazy updates
+  val updateInterval: Int = configuration.getInt("ldap.updateinterval").getOrElse(1800)
+
+  // interface to be used; can be an InMemoryDirectoryServer or a Connection/ConnectionPool
   override val ldapinterface: Option[LDAPInterface] = setupInterface
+
+
+
+
+  var userCache: Traversable[CustomUser] = Traversable()
+  var userGroupCache: Traversable[UserGroup] = Traversable()
+  var lastUpdate: Long = 0//currentTime
+  def currentTime: Long = (Calendar.getInstance().getTimeInMillis() / 1000)         // current time in seconds
+
+
+  def needsUpdate: Boolean = {
+    ((currentTime - lastUpdate) > updateInterval)
+  }
+
+  override def getUsers: Traversable[CustomUser] = {
+    if(needsUpdate)
+      update
+
+    userCache
+  }
+
+  override def getUserGroups: Traversable[UserGroup] = {
+    if(needsUpdate)
+      update
+
+    userGroupCache
+  }
+
+
+  override def update: Boolean = {
+    val newUserCache: Traversable[CustomUser] = getUserList
+    val newUserGroupCache: Traversable[UserGroup] = getUserGroupList
+    if(!(newUserCache.isEmpty || newUserGroupCache.isEmpty)){
+      lastUpdate = currentTime
+      userCache = newUserCache
+      userGroupCache = newUserGroupCache
+      Logger.info("ldap cache updated")
+      true
+    }else{
+      Logger.warn("ldap cache update failed")
+      false
+    }
+  }
 
 
   /**
@@ -109,11 +166,11 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     */
   def createTree(interface: LDAPInterface): Unit = {
     // add root
-    interface.add("dn: " + dit, "objectClass: top", "objectClass: domain", dit.replace("=",":"))
+    interface.add("dn: " + dit, "objectClass:top", "objectClass:domain", dit.replace("=",":"))
     // add subtrees: roles, permissions, people
-    interface.add("dn: dc=roles," + dit, "objectClass: top", "objectClass: domain", "dc: roles")
-    interface.add("dn: dc=permissions," + dit, "objectClass: top", "objectClass: domain", "dc: permissions")
-    interface.add("dn: dc=users," + dit, "objectClass: top", "objectClass: domain", "dc: users")
+    interface.add("dn:dc=roles," + dit, "objectClass:top", "objectClass:domain", "dc:roles")
+    interface.add("dn:dc=permissions," + dit, "objectClass:top", "objectClass:domain", "dc:permissions")
+    interface.add("dn:dc=users," + dit, "objectClass:top", "objectClass:domain", "dc:users")
   }
 
   /**
@@ -142,7 +199,12 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   }
 
 
-  def addUser(interface: LDAPInterface, user: CustomUser): Unit = {
+  /**
+    * Utility method for adding users.
+    * @param interface
+    * @param user
+    */
+  protected def addUser(interface: LDAPInterface, user: CustomUser): Unit = {
     interface.add(LdapUtil.userToEntry(user))
   }
 
@@ -154,7 +216,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * @param password
     * @return
     */
-  def canBind(userDN: String, password: String): Boolean ={
+  protected def canBind(userDN: String, password: String): Boolean ={
     val conn: Option[LDAPConnectionPool] = createConnection(userDN, password)
     if(conn.isDefined){
       conn.get.close()
@@ -418,9 +480,8 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     }
   }
 
-
   /**
-    * Secure, crash-safe search method.
+    * Secure, crash-safe ldap search method.
     * @param request SearchRequest to be executed.
     * @return List of search results. Empty, if request failed.
     */
@@ -433,11 +494,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
         }
         case None => Traversable[Entry]()
       }
-    }catch{
-      case e: Throwable =>
-        //println(e)
-        Traversable[Entry]()
-    }
+    }catch{case e: Throwable => Traversable[Entry]()}
   }
 
   /**

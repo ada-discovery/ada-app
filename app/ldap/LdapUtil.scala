@@ -2,14 +2,10 @@ package ldap
 
 import java.util
 
-import com.unboundid.ldap.listener.{InMemoryDirectoryServerSnapshot, InMemoryDirectoryServer}
 import com.unboundid.ldap.sdk._
-import com.unboundid.ldap.sdk.LDAPSearchException
 
 import models.security.CustomUser
 import models.workspace.UserGroup
-
-import scala.Predef
 
 
 object LdapUtil {
@@ -40,7 +36,6 @@ object LdapUtil {
     } else {
       "memberOf:" + user.roles.head
     }
-
     new Entry(dn, sn, cn, password, email, affiliation, objectClass, permissions, roles)
   }
 
@@ -56,7 +51,7 @@ object LdapUtil {
       //val name: String = entry.getAttributeValue("uid")
       val name: String = entry.getAttributeValue("cn")
       val email: String = entry.getAttributeValue("mail")
-      val password: String = entry.getAttributeValue("userPassword")
+      val password: String = entry.getAttributeValue("userPassword")                     // not used
       val affiliation: String = nullToDefault(entry.getAttributeValue("ou"), "")
       val permissions: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array())
       //val roles: Array[String] = entry.getAttributeValues("memberof")

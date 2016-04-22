@@ -29,15 +29,16 @@ class CustomHandlerCacheImpl @Inject() (myUserManager: UserManager, myAdaLdapUse
 
   /**
     * Resolve user from currently held token and access ldap for authorization.
-    * @param request
-    * @return User idetified by held token, if found in ldap server.
+    * @param request Request header with cookie.
+    * @return User identified by held token, if found in ldap server.
     */
   def currentUserLdap(request: Request[_]): Future[Option[CustomUser]] ={
     val timeout = 120000 millis
     val idOpFuture: Future[Option[Id]] = getUserFromToken(request)
     val idOp: Option[String] = Await.result(idOpFuture, timeout)
+
     idOp match{
-      case Some(id) => Future(Some(userManager.adminUser))
+      case Some(id) => resolveUserLdap(id)
       case None => Future(None)
     }
   }
