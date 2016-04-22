@@ -47,8 +47,8 @@ trait AdaLdapUserServer extends UserManager{
   def getUserGroups: Traversable[UserGroup]
 
   // used for lazy updating
-  def updateCache: Boolean
-  def needsUpdate: Boolean
+  def updateCache(eager: Boolean = false): Boolean
+  protected def needsUpdate: Boolean
 }
 
 
@@ -105,8 +105,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
 
   override def getUsers: Traversable[CustomUser] = {
-    if(needsUpdate)
-      updateCache
+    updateCache()
     userCache
   }
 
@@ -115,33 +114,37 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * @return
     */
   override def getUserGroups: Traversable[UserGroup] = {
-    if(needsUpdate)
-      updateCache
+    updateCache()
     userGroupCache
   }
 
 
   /**
     * Updates cached users and usergroups.
-    * @return true, if update successful.
+    * @param eager Set to true to enforce update; lazy updating is used otherwise.
+    * @return true, if update successful or no update required.
     */
-  override def updateCache: Boolean = {
-    ldapinterface match{
-      case Some(interface) => {
-        val newUserCache = requestUserList(interface)
-        val newUserGroupCache = requestUserGroupList(interface)
-        if(!(newUserCache.isEmpty || newUserGroupCache.isEmpty)){
-          lastUpdate = currentTime
-          userCache = newUserCache
-          userGroupCache = newUserGroupCache
-          Logger.info("ldap cache updated")
-          true
-        }else{
-          Logger.warn("ldap cache update failed")
-          false
+  override def updateCache(eager: Boolean): Boolean = {
+    if(eager || needsUpdate){
+      ldapinterface match{
+        case Some(interface) => {
+          val newUserCache = requestUserList(interface)
+          val newUserGroupCache = requestUserGroupList(interface)
+          if(!(newUserCache.isEmpty || newUserGroupCache.isEmpty)){
+            lastUpdate = currentTime
+            userCache = newUserCache
+            userGroupCache = newUserGroupCache
+            Logger.info("ldap cache updated")
+            true
+          }else{
+            Logger.warn("ldap cache update failed")
+            false
+          }
         }
+        case None => true
       }
-      case None => true
+    }else{
+      true
     }
   }
 
@@ -419,14 +422,8 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * @return Future(None), if no user found; CustomUser wrappend in Option and Future else.
     */
   override def findById(id: String): Future[Option[CustomUser]] = {
-    val user: Option[CustomUser] = ldapinterface match{
-      case Some(interface) => {
-        val entry: SearchResultEntry = interface.getEntry("uid=" + id + "," +  dit)
-        LdapUtil.entryToUser(entry)
-      }
-      case None => None
-    }
-    Future(user)
+    updateCache()
+    Future(userCache.find((user: CustomUser) => user.getIdentifier == id))
   }
 
   /**
@@ -436,21 +433,8 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * @return CustomUser, if found, None else
     */
   override def findByEmail(email: String): Future[Option[CustomUser]] = {
-    val user: Option[CustomUser] = ldapinterface match{
-      case Some(interface) => {
-        //val entry: SearchResultEntry = interface.getEntry(dit, "email="+email)
-        val request: SearchRequest = new SearchRequest(dit, SearchScope.SUB, Filter.createEqualityFilter("mail", email))
-        val result: SearchResult = interface.search(request)
-        if(result.getEntryCount == 0){
-          None
-        }else{
-          val entry: Entry = result.getSearchEntries.get(0)
-          LdapUtil.entryToUser(entry)
-        }
-      }
-      case None => None
-    }
-    Future(user)
+    updateCache()
+    Future(userCache.find((user: CustomUser) => user.email == email))
   }
 
   /**
@@ -464,21 +448,6 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
       case None => Traversable()
     }
   }
-
-
-  /*override def getUserGroupList: Traversable[UserGroup] = {
-    ldapinterface match{
-      case Some(interface) => requestUserGroupList(interface)
-      case None => Traversable()
-    }
-  }
-
-  override def getUserList: Traversable[CustomUser] = {
-    ldapinterface match{
-      case Some(interface) => requestUserList(interface)
-      case None => Traversable()
-    }
-  }*/
 
   /**
     * Secure, crash-safe ldap search method.
