@@ -88,3 +88,14 @@ code {
 tr.clickable-row {
   cursor: pointer;
 }
+
+.typeahead-large.tt-input,
+.typeahead-large.tt-hint{
+    font-size: 18px;
+    height: 54px;
+    width: 300px;
+}
+
+.top-padded {
+    padding-top: 15px;
+}

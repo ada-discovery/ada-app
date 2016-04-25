@@ -49,23 +49,38 @@ function getQueryParams(qs) {
   return params;
 }
 
+// TODO: Extend to key-value pairs
 function populateTypeahead(element, values) {
-  var list = new Bloodhound({
+  var listSearch = new Bloodhound({
     datumTokenizer: Bloodhound.tokenizers.whitespace,
     queryTokenizer: Bloodhound.tokenizers.whitespace,
     local: values
   });
 
+  // Setting of minlength to 0 does not work. To sho ALL items if nothing entered this function needs to be introduced
+  function listSearchWithAll(q, sync) {
+    if (q == '')
+        sync(listSearch.all());
+     else
+        listSearch.search(q, sync);
+  }
+
   element.typeahead({
         hint: true,
         highlight: true,
-        minLength: 0,  // TODO: minlength 0 does not work. Should show ALL items if nothing entered.
-        limit: 100,
-      },{
-        name: 'list',
-        source: list
-      }
+        minLength: 0
+    },{
+        source: listSearchWithAll,
+        limit: 25
+    }
   );
+
+  element.on("focus", function () {
+    var value = element.val();
+    element.typeahead('val', '_');
+    element.typeahead('val', value);
+    return true
+  });
 }
 
 function showMessage(text) {
