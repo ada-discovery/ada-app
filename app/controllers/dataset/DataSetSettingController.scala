@@ -14,15 +14,20 @@ import play.api.i18n.Messages
 import play.api.mvc.{AnyContent, Action, RequestHeader}
 import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
+import services.DataSetService
 import views.html
 import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+import controllers.dataset.routes.javascript.{DataSetSettingController => dataSetSettingJsRoutes}
 import play.api.data.Mapping
 import controllers.dataset.DataSetSettingController.dataSetSettingMapping
+import scala.concurrent.Future
 
 class DataSetSettingController @Inject() (
     repo: DataSetSettingRepo,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
+    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
+    dataSetService: DataSetService
   ) extends CrudController[DataSetSetting, BSONObjectID](repo) {
 
   override protected val form = Form(dataSetSettingMapping)
@@ -72,6 +77,26 @@ class DataSetSettingController @Inject() (
     dataSetIdFuture.flatMap( dataSetId =>
       update(id, Redirect(new DataSetRouter(dataSetId).plainOverviewList)).apply(request)
     )
+  }
+
+  def addToChartOverview(dataSet: String, fieldName: String) = Action.async { implicit request =>
+    val foundSettingFuture = repo.find(Some(Json.obj("dataSetId" -> dataSet))).map(_.headOption)
+    foundSettingFuture.flatMap {
+      _.fold(
+        Future(NotFound(s"Setting for the data set '#$dataSet' not found"))
+      ) { setting =>
+        val newSetting = setting.copy(overviewChartFieldNames = setting.overviewChartFieldNames ++ Seq(fieldName))
+        repo.update(newSetting).map(_ => Ok("Done"))
+      }
+    }
+  }
+
+  def jsRoutes = Action { implicit request =>
+    Ok(
+      JavaScriptReverseRouter("jsRoutes")(
+        dataSetSettingJsRoutes.addToChartOverview
+      )
+    ).as("text/javascript")
   }
 
   //@Deprecated

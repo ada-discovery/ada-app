@@ -1,6 +1,6 @@
 package controllers.dataset
 
-import controllers.GenericRouter
+import controllers.{GenericJsRouter, GenericRouter}
 
 import scalaz.Scalaz._
 

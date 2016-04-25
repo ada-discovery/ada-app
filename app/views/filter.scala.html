@@ -4,8 +4,10 @@
 
 @(filter: FilterSpec, submitCall: Call, fieldNamesOrCall: Either[Traversable[String], Call], saveCall: Option[Call]=None)
 
+<!-- need to import css and js first -->
 <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/typeahead.css")">
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("typeahead.bundle.min.js"))"></script>
+
 <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -91,14 +93,16 @@
         null
     }
 
+    if (fieldNames) {
+        populateTypeahead($('#fieldName'), fieldNames);
+    }
+
     $('#addEditConditionModal').on('shown.bs.modal', function () {
         if ($(this).find("#conditionIndex:first").val())
             $('#condition').focus();
         else
             $('#fieldName').focus();
     })
-
-    populateFieldNames();
 
     $(".condition-full").hover(null, function() {
         var buttons = $(this).find(".condition-buttons").first();
@@ -197,21 +201,11 @@
                     url: '@getFieldNamesUrl',
                     success: function (data) {
                         fieldNames = data;
-                        populateFieldNames();
+                        populateTypeahead($('#fieldName'), fieldNames);
                     },
                     async: false
                 });
             }
-        }
-    }
-
-    function populateFieldNames() {
-        if (fieldNames) {
-//            $('#fieldName').html("");
-//            $.each(fieldNames, function(key, val) {
-//                $('#fieldName').append($('<option>', { value : val }).text(val));
-//            });
-            populateTypeahead($('#fieldName'), fieldNames);
         }
     }
 </script>

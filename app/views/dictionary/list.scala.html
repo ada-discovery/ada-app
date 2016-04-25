@@ -21,7 +21,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-11">
-            @filter(page.filter, router.plainList, Left(Seq("name", "fieldType", "label", "isArray")))
+            @filter(page.filter, router.plainList, Left(Seq("fieldType", "isArray", "label", "name")))
         </div>
         <div class="col-md-1">
             <a class="btn btn-info btn-sm" href="@router.inferDictionary">

@@ -19,16 +19,8 @@
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@label(key: String, value: Option[String]) = {
-    @shorten(value.map(_ + " : " + key).getOrElse(key), 80)
-}
-
-@optionX(key : String, value : Option[String]) = {
-    <option value="@key" @if(xField == key){selected="selected"}>@label(key, value)</option>
-}
-
-@optionY(key : String, value : Option[String]) = {
-    <option value="@key" @if(yField == key){selected="selected"}>@label(key, value)</option>
+@fieldNamesAsString = @{
+    Html(numericFields.map(s => "\"" + s._1 + "\"").mkString(","))
 }
 
 @actions = {
@@ -38,45 +30,39 @@
         </div>
     </div>
     <hr/>
-    @helper.form(action=router.plainGetScatterStats, 'role -> "search", 'id -> "myForm") {
+    @helper.form(action=router.plainGetScatterStats, 'role -> "search", 'id -> "fieldForm") {
         <div class="row">
             <div class="col-md-8">
                 <!-- hacky solution to pass data set param since it's ignored when passed as a part of call in form action -->
                 <input type="hidden" name="dataSet" value="@dataSetId"/>
                 <input type="hidden" name="filter" value="@Json.toJson(filterSpec)"/>
                 <div class="row">
-                    <select name="xField" id="xField" class="input-lg">
-                        @numericFields.map( field => optionX(field._1, field._2) )
-                    </select>
-                </div>
-                <div class="row" align="center">
-                    vs.
-                </div>
-                <div class="row">
-                    <select name="yField" id="yField" class="input-lg">
-                        @numericFields.map( field => optionY(field._1, field._2) )
-                    </select>
+                    <div class="col-md-5">
+                        <input id="xField" name="xField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@xField">
+                    </div>
+                    <div class="col-md-2" align="center">
+                        <label class="top-padded">vs.</label>
+                    </div>
+                    <div class="col-md-5">
+                        <input id="yField" name="yField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@yField">
+                    </div>
                 </div>
             </div>
 
-            <div class="col-md-4" align="right">
-                <div class="well">
-                    Mean: @(BasicStats.mean(stats.map(x => x._1)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
+            <div class="well col-md-4" align="right">
+                <div class="row">
+                    <div class="col-md-12">
+                        @xField Mean: @(BasicStats.mean(stats.map(x => x._1)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
+                    </div>
                 </div>
-                <div class="well">
-                    Mean: @(BasicStats.mean(stats.map(x => x._2)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
+                <div class="row">
+                    <div class="col-md-12">
+                        @yField Mean: @(BasicStats.mean(stats.map(x => x._2)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
+                    </div>
                 </div>
             </div>
         </div>
         <hr/>
-        <script>
-            $('#xField').change(function() {
-                $('#myForm').submit();
-            });
-            $('#yField').change(function() {
-                $('#myForm').submit();
-            });
-        </script>
     }
 }
 
@@ -104,3 +90,20 @@
         )
     )
 }
+
+<script type="text/javascript">
+    $(function () {
+        populateTypeahead($('#fieldForm #xField'), [@fieldNamesAsString]);
+        populateTypeahead($('#fieldForm #yField'), [@fieldNamesAsString]);
+
+        $('#fieldForm #xField').focus();
+
+        $('#fieldForm #xField').on('typeahead:selected', function(e, data) {
+            $('#fieldForm').submit();
+        });
+
+        $('#fieldForm #yField').on('typeahead:selected', function(e, data) {
+            $('#fieldForm').submit();
+        });
+    });
+</script>

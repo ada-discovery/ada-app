@@ -24,8 +24,8 @@
             <li class="dropdown">
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#">Statistics<span class="caret"></span></a>
                 <ul class="dropdown-menu">
-                    @listItem(dataSetRouter.plainGetDistribution, "Distribution")
-                    @listItem(dataSetRouter.plainGetScatterStats, "Scatter Analysis")
+                    @listItem(dataSetRouter.plainGetDistribution, "Distribution", Some(2))
+                    @listItem(dataSetRouter.plainGetScatterStats, "Scatter Analysis", Some(2))
                 </ul>
             </li>
         </ul>
