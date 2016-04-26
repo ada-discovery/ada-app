@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
+import ldap.AdaLdapUserServer
 import persistence.MailClientProvider
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
@@ -19,26 +20,26 @@ import scala.concurrent.duration._
 import jp.t2v.lab.play2.auth.LoginLogout
 import models.security._
 import security.AdaAuthConfig
-import util.SecurityUtil
+
 
 class AuthController @Inject() (
-    myUserManager: UserManager,
+    myLdapUserServer: AdaLdapUserServer,
     mailClientProvider: MailClientProvider
   ) extends Controller with LoginLogout with AdaAuthConfig {
 
   // a hook need by auth config
-  override val userManager = myUserManager
+  override val userManager = myLdapUserServer
 
   /**
     * Login form definition.
     */
   val loginForm = Form {
     tuple(
-      "email" -> email,
+      "id" -> text,
       "password" -> text
     ).verifying(
-      "Invalid email or password",
-      emailPassword => Await.result(userManager.authenticate(emailPassword._1, emailPassword._2), 120000 millis)
+      "Invalid LUMS ID or password",
+      idPassword => Await.result(userManager.authenticate(idPassword._1, idPassword._2), 120000 millis)
     )
   }
 
@@ -47,7 +48,7 @@ class AuthController @Inject() (
     */
   val recoveryForm = Form {
     single(
-      "email" -> email
+      "email" -> text
     ).verifying(
       "Invalid or unknown email",
       email => Await.result(userManager.findByEmail(email), 120000 millis).isDefined
@@ -86,10 +87,10 @@ class AuthController @Inject() (
   def loginREST = Action.async { implicit request =>
     loginForm.bindFromRequest().fold(
       formWithErrors => Future.successful(BadRequest(loginForm.errorsAsJson)),
-      emailPassword => {
-        val usrOpFuture: Future[Option[CustomUser]] = myUserManager.findByEmail(emailPassword._1)
+      idPassword => {
+        val usrOpFuture: Future[Option[CustomUser]] = userManager.findById(idPassword._1)
         usrOpFuture.flatMap{usrOp =>
-          val usrJs = JsObject("user" -> JsString(usrOp.get.name) :: Nil)
+          val usrJs = JsObject("user" -> JsString(usrOp.get.getIdentifier) :: Nil)
           gotoLoginSucceeded(usrOp.get.name, Future.successful((Ok(usrJs))))}
       }
     )
@@ -111,7 +112,7 @@ class AuthController @Inject() (
   def authenticate = Action.async { implicit request =>
     loginForm.bindFromRequest.fold(
       formWithErrors => Future.successful(BadRequest(views.html.auth.login(formWithErrors))),
-      emailPassword => myUserManager.findByEmail(emailPassword._1).flatMap(user => gotoLoginSucceeded(user.get.name))
+      idPassword => userManager.findById(idPassword._1).flatMap(user => gotoLoginSucceeded(user.get.getIdentifier))
     )
   }
 
@@ -139,12 +140,13 @@ class AuthController @Inject() (
   def resetPassword = Action.async { implicit request =>
     recoveryForm.bindFromRequest.fold(
       formWithErrors => Future.successful(BadRequest(views.html.auth.recoverPassword(formWithErrors))),
-      emailDst => {
-        val newPassword: String = SecurityUtil.randomString(9)
-        val userOpFuture: Future[Option[CustomUser]] = userManager.findByEmail(emailDst)
+      idDst => {
+        val newPassword: String = ""//SecurityUtil.randomString(9)
+        val userOpFuture: Future[Option[CustomUser]] = userManager.findById(idDst)
         userOpFuture.map{ userOp: Option[CustomUser] =>
           val mailer = mailClientProvider.createClient()
           val user: CustomUser = userOp.get
+          val emailDst: String = user.email
           val mail = mailClientProvider.createTemplate("Password Reset",
             Seq(emailDst),
             Some("This message has been sent to you due to a password reset request to the Ada Reporting System." + System.lineSeparator() +
@@ -153,8 +155,8 @@ class AuthController @Inject() (
               "Use this password to login at Ada's login page.")
           )
           mailer.send(mail)
-          Logger.info("Password reset for user [" + emailDst + "] requested")
-          userManager.updateUser(CustomUser(user._id, user.name, user.email, SecurityUtil.md5(newPassword), user.affiliation, user.roles, user.permissions))
+          Logger.info("Password reset request by user [" + idDst + "]")
+          //userManager.updateUser(CustomUser(user._id, user.name, user.email, SecurityUtil.md5(newPassword), user.affiliation, user.roles, user.permissions))
           Ok(views.html.auth.passwordChange(emailDst))
         }
       }

@@ -51,13 +51,12 @@ object LdapUtil {
     */
   def entryToUser(entry: Entry): Option[CustomUser] = {
     if(entry != null){
-      //val name: String = entry.getAttributeValue("uid")
-      val name: String = entry.getAttributeValue("cn")
+      val name: String = entry.getAttributeValue("uid")
+      //val name: String = entry.getAttributeValue("cn")
       val email: String = entry.getAttributeValue("mail")
-      val password: String = entry.getAttributeValue("userPassword")                     // not used
+      val password: String = entry.getAttributeValue("userPassword")
       val affiliation: String = nullToDefault(entry.getAttributeValue("ou"), "")
       val permissions: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array())
-      //val roles: Array[String] = entry.getAttributeValues("memberof")
       val roles: Array[String] = Array()
       Some(CustomUser(None, name, email, "", affiliation, permissions.toSeq, roles.toSeq))
     }else{
@@ -75,7 +74,8 @@ object LdapUtil {
       val name: String = entry.getAttributeValue("cn")
       val members: Array[String] = nullToDefault(entry.getAttributeValues("member"), Array())
       val description: Option[String] = asOption(entry.getAttributeValue("description"))
-      Some(UserGroup(None, name, description, members.toSeq))
+      val nested: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array())
+      Some(UserGroup(None, name, description, members.toSeq, nested.toSeq))
     }else{
       None
     }
@@ -111,7 +111,7 @@ object LdapUtil {
     * @param request SearchRequest to be executed.
     * @return List of search results. Empty, if request failed.
     */
-  def dipatchSearchRequest(interface: LDAPInterface, request: SearchRequest): Traversable[Entry] = {
+  def dispatchSearchRequest(interface: LDAPInterface, request: SearchRequest): Traversable[Entry] = {
     try {
       val result: SearchResult = interface.search(request)
       result.getSearchEntries

@@ -15,7 +15,7 @@ import play.modules.reactivemongo.json.BSONFormats._
   * @param description More detailed description of the group.
   * @param members List of group members
   */
-case class UserGroup (_id: Option[BSONObjectID], groupName: String, description: Option[String], members: Seq[String])
+case class UserGroup (_id: Option[BSONObjectID], groupName: String, description: Option[String], members: Seq[String], nested: Seq[String]=Seq[String]())
 
 object UserGroup {
   implicit val UserGroupFormat = Json.format[UserGroup]

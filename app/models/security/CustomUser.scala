@@ -14,7 +14,6 @@ import play.modules.reactivemongo.json.BSONFormats._
   * Mainly a container for user-specific information.
   * Extends Subject class by a handful of helpful methods for authentification.
   * For simplicity, Subject.getIdentifier is represented by a String.
-  *
   */
 case class CustomUser(_id: Option[BSONObjectID], name: String, email: String, password: String, affiliation: String, roles: Seq[String], permissions: Seq[String]) extends Subject{
 

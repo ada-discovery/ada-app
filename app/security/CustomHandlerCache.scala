@@ -24,8 +24,10 @@ class CustomHandlerCacheImpl @Inject() (myUserManager: UserManager, myAdaLdapUse
   // a hook need by auth config
   override val userManager = myUserManager
 
-  override def defaultHandler = new AdaDeadboltHandler(currentUser, Some(new AdaDynamicResourceHandler))
+  //override def defaultHandler = new AdaDeadboltHandler(currentUser, Some(new AdaDynamicResourceHandler))
   override def ldapHandler = new AdaDeadboltHandler(currentUserLdap, Some(new AdaDynamicResourceHandler))
+  override def defaultHandler = ldapHandler
+
 
   /**
     * Resolve user from currently held token and access ldap for authorization.
@@ -49,7 +51,7 @@ class CustomHandlerCacheImpl @Inject() (myUserManager: UserManager, myAdaLdapUse
     * @return User, if found in ldap server.
     */
   def resolveUserLdap(id: Id): Future[Option[User]] = {
-    myAdaLdapUserServer.findByEmail(id)
+    myAdaLdapUserServer.findById(id)
   }
 }
 

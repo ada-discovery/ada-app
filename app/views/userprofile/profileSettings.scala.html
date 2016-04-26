@@ -3,24 +3,11 @@
 @import models.security.CustomUser
 
 @(
-        id: reactivemongo.bson.BSONObjectID,
         form: Form[CustomUser]
 )(
         implicit request: Request[Any],
         msg: play.api.i18n.Messages
 )
-
-@{/*
-@layout.edit(
-    "user",
-    errors = form.errors,
-    elements = editableUserForm("user", form),
-    updateCall = routes.UserProfileController.updateSettings(),
-    listCall = routes.UserProfileController.profile()
-    deleteCall = None
-)
-*/}
-
 
 @layout.main("NCER-PD Home") {
     <div class="container" style="padding-bottom: 190px;" xmlns="http://www.w3.org/1999/html">
