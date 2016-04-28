@@ -147,7 +147,7 @@ protected abstract class ReadonlyController[E: Format, ID](protected val repo: A
   protected def toSort(fieldName : String): Option[Seq[Sort]] =
     if (fieldName.nonEmpty) {
       val sort = if (fieldName.startsWith("-"))
-        DescSort(fieldName)
+        DescSort(fieldName.substring(1, fieldName.length))
       else
         AscSort(fieldName)
       Some(Seq(sort))
