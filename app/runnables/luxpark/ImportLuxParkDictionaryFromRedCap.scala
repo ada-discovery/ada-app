@@ -27,6 +27,7 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
   private val choicesDelimeter = "\\|"
   private val choiceKeyValueDelimeter = ","
   private val timeout = 120000 millis
+  private val visitField = "redcap_event_name"
 
   override def run = {
     val dsa = dsaf(luxpark).get
@@ -82,8 +83,11 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
         Future(Unit)
     }
 
+    // also add redcap_event_name
+    val visitFieldFuture = fieldRepo.save(Field(visitField, FieldType.Enum))
+
     // to be safe, wait for each save call to finish
-    futures.toList.foreach(result(_, timeout))
+    result(Future.sequence(futures.toList ++ Seq(visitFieldFuture)), timeout)
   }
 
   private def getFieldNames(dataRepo: JsObjectCrudRepo): Future[Set[String]] =

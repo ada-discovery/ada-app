@@ -1,8 +1,30 @@
 package runnables.luxpark
 
-/**
-  * Created by peter on 27.04.16.
-  */
-class AddRedCapEventNameToLuxParkDictionary {
+import javax.inject.Inject
 
+import models.{FieldType, Field}
+import runnables.DataSetId.luxpark
+import persistence.dataset.DataSetAccessorFactory
+import runnables.GuiceBuilderRunnable
+import scala.concurrent.Await.result
+import scala.concurrent.duration._
+
+class AddRedCapEventNameToLuxParkDictionary @Inject() (
+    dsaf: DataSetAccessorFactory
+  ) extends Runnable {
+
+  private val timeout = 120000 millis
+  private val visitField = "redcap_event_name"
+
+  override def run = {
+    val dsa = dsaf(luxpark).get
+    val fieldRepo = dsa.fieldRepo
+
+    val saveFuture = fieldRepo.save(Field(visitField, FieldType.Enum))
+
+    // to be safe, wait
+    result(saveFuture, timeout)
+  }
 }
+
+object AddRedCapEventNameToLuxParkDictionary extends GuiceBuilderRunnable[AddRedCapEventNameToLuxParkDictionary] with App { run }

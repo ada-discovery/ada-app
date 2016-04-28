@@ -47,7 +47,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   // hooks
 
-  protected lazy val dataSetName = result(dsa.metaInfo).name
+  protected def dataSetName = result(dsa.metaInfo).name
 
   // auto-generated filename for csv files
   protected def csvFileName: String = dataSetId.replace(" ", "-") + ".csv"
@@ -228,21 +228,58 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val fieldChartSpecsFuture = Future.sequence(futureFieldChartSpecs)
     val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
 
+    val fieldNameFuture: Traversable[Future[Option[(String, Field)]]] =
+      listViewColumns.get.map{ fieldName =>
+        fieldRepo.get(fieldName).map(_.map(
+          field => (fieldName, field)
+        ))
+      }
+
     {
       for {
         items <- futureItems
         count <- futureCount
         fieldChartSpecs <- fieldChartSpecsFuture
-      } yield
+        fieldNames <- Future.sequence(fieldNameFuture)
+      } yield {
+        val fieldNameMap: Map[String, Field] = fieldNames.flatten.toMap
+        val renamedItems = items.map(renameValues(fieldNameMap, _))
         render {
-          case Accepts.Html() => Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), fieldChartSpecs))
-          case Accepts.Json() => Ok(Json.toJson(items))
+          case Accepts.Html() => Ok(overviewListView(Page(renamedItems, page, page * limit, count, orderBy, filter), fieldChartSpecs))
+          case Accepts.Json() => Ok(Json.toJson(renamedItems))
         }
+      }
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the overviewList process")
         InternalServerError(t.getMessage)
     }
+  }
+
+  // TODO just temporary
+  private def renameValues(
+    fieldNameMap: Map[String, Field],
+    item: JsObject
+  ): JsObject = {
+    val newValueFutures: Traversable[(String, JsValue)] = item.fields.map { case (fieldName, value) =>
+      val stringValue = JsonUtil.toString(value)
+
+      val newValue: JsValue = if (stringValue.isDefined) {
+        fieldNameMap.get(fieldName).map { field =>
+          val enumValues = field.numValues
+
+          if (enumValues.isDefined) {
+            enumValues.get.get(stringValue.get).map(JsString(_)).getOrElse(value)
+          } else
+            value
+        }.getOrElse(value)
+      } else
+       value
+
+      (fieldName, newValue)
+    }
+
+    JsObject(newValueFutures.toSeq)
   }
 
   /**

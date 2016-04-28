@@ -28,8 +28,16 @@
 	<tbody>
     	@items.map { item =>
 	    	<tr class='@if(rowClickCall.isDefined) {clickable-row}' data-href='@if(rowClickCall.isDefined){@rowClickCall.get(item)}'>
-		    	@item.fields.map { field =>
-                    @if(!fieldsToShow.isDefined || fieldsToShow.get.contains(field._1)) {
+                @if(fieldsToShow.isDefined) {
+                    @fieldsToShow.get.map { fieldName =>
+                        <td>
+                            @if((item \ fieldName).get != JsNull) {
+                                @{(item \ fieldName).get.asOpt[String].getOrElse((item \ fieldName).get)}
+                            }
+                        </td>
+                    }
+                } else {
+                    @item.fields.map { field =>
                         <td>
                             @if(field._2 != JsNull) {@field._2.asOpt[String].getOrElse(field._2)}
                         </td>
