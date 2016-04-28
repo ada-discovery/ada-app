@@ -1,7 +1,5 @@
 package ldap
 
-import java.util
-
 import scala.collection.JavaConversions._
 
 import com.unboundid.ldap.sdk._
@@ -12,6 +10,8 @@ import models.workspace.UserGroup
 
 
 object LdapUtil {
+  // type definition for conversion methods
+  type LdapConverter[T] = (Entry => Option[T])
 
   /**
     * TODO: add permissiosns and roles to users
@@ -87,21 +87,10 @@ object LdapUtil {
     * Retrieves server entries and converts them to string.
     * @return String representation of all server entries.
     */
-  def getEntryList(interface: LDAPInterface, baseDN: String = "dc=ncer"): List[String] = {
+  def getEntryList(interface: LDAPInterface, baseDN: String = "dc=ncer"): Traversable[String] = {
     val searchRequest: SearchRequest = new SearchRequest(baseDN, SearchScope.SUB, Filter.create("(objectClass=*)"))
-    var userStringList = List[String]()
-    try {
-      val searchResult: SearchResult = interface.search(searchRequest)
-      val entries: util.List[SearchResultEntry] = searchResult.getSearchEntries()
-      val it: util.Iterator[SearchResultEntry] = entries.iterator()
-      while (it.hasNext) {
-        val entry: SearchResultEntry = it.next
-        userStringList = entry.toString() :: userStringList
-      }
-    } catch {
-      case _: Throwable => Unit
-    }
-    userStringList
+    val entries: Traversable[Entry] = dispatchSearchRequest(interface, searchRequest)
+    convertAndFilter(entries, ((e) => Some(e.toString())))
   }
 
 
@@ -120,16 +109,27 @@ object LdapUtil {
 
 
   /**
-    * Convert entries with conversion function and filter out unconvertable results.
+    * Convert entries with conversion function and filter out inconvertible results.
     * @param entries List of entries to convert.
     * @param conv Conversion function. Should either return the converted value or None if conversion not possible.
     * @tparam T Type to convert Entries to.
     * @return Converted entries.
     */
-  def convertAndFilter[T](entries: Traversable[Entry], conv: (Entry => Option[T])): Traversable[T] = {
-    val entryOps: Traversable[Option[T]] = entries.map {
-      conv
-    }
+  def convertAndFilter[T](entries: Traversable[Entry], conv: LdapConverter[T]): Traversable[T] = {
+    val entryOps: Traversable[Option[T]] = entries.map(conv)
+    entryOps.filter { entry => entry.isDefined }.map { e => e.get }
+  }
+
+
+  /**
+    * Convert entries with conversion function and filter out inconvertible results.
+    * @param entries List of entries to convert.
+    * @param conv Conversion function. Should either return the converted value or None if conversion not possible.
+    * @tparam T Type to convert Entries to.
+    * @return Converted entries.
+    */
+  def convertAndFilterImplicit[T](entries: Traversable[Entry]) (implicit conv: LdapConverter[T]): Traversable[T] = {
+    val entryOps: Traversable[Option[T]] = entries.map(conv)
     entryOps.filter { entry => entry.isDefined }.map { e => e.get }
   }
 

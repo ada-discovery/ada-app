@@ -38,6 +38,7 @@ trait UserManager {
   }
 
   /**
+    * TODO: unused
     * Match userid with permission.
     * @param userid usrid, most commonly mail
     * @param permission permission to be checked.

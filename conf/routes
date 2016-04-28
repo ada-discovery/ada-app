@@ -26,12 +26,10 @@ GET         /recoverPassword                                                    
 POST        /recoverPassword                                                        controllers.AuthController.resetPassword
 
 # ldap debugging
-GET         /ldaplist                                                               controllers.JansDataSetController.listLDAP
-GET         /ldapauth                                                               controllers.JansDataSetController.ldapAuth
-GET         /ldapmail/:mail                                                         controllers.JansDataSetController.ldapmail(mail:String)
-GET         /ldapid/:id                                                             controllers.JansDataSetController.ldapid(id:String)
-GET         /ldapgroups                                                             controllers.JansDataSetController.ldapgroups
-GET         /ldapusers                                                              controllers.JansDataSetController.ldapusers
+GET         /ldaplist                                                               controllers.LdapController.ldapList
+GET         /ldapgroups                                                             controllers.LdapController.ldapGroups
+GET         /ldapusers                                                              controllers.LdapController.ldapUsers
+GET         /ldapsettings                                                           controllers.LdapController.settings
 
 
 GET         /loggedout                                                              controllers.AuthController.loggedOut
