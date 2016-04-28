@@ -25,6 +25,20 @@ import play.api.inject.ApplicationLifecycle
 import play.api.{Logger, Configuration}
 
 
+@ImplementedBy(classOf[AdaLdapUserServerImpl])
+trait UserCache {
+  // update interval in seconds
+  protected val updateInterval: Int
+  // time of last update
+  protected var lastUpdate: Long = 0
+  // current time in seconds
+  protected def currentTime: Long = (Calendar.getInstance().getTimeInMillis() / 1000)
+  // check if update required
+  protected def needsUpdate: Boolean = ((currentTime - lastUpdate) > updateInterval)
+  // lazy updating
+  def updateCache(eager: Boolean = false): Boolean
+}
+
 /**
   * Create Ldap user server or use an established connection.
   * See options in ldap.conf for settings.
@@ -45,15 +59,11 @@ trait AdaLdapUserServer extends UserManager{
 
   def getUsers: Traversable[CustomUser]
   def getUserGroups: Traversable[UserGroup]
-
-  // used for lazy updating
-  def updateCache(eager: Boolean = false): Boolean
-  protected def needsUpdate: Boolean
 }
 
 
 @Singleton
-class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle, configuration: Configuration) extends AdaLdapUserServer{
+class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle, configuration: Configuration) extends AdaLdapUserServer with UserCache{
 
   // be aware that by default, client certificates are disabled and server certificates are always trusted!
   // do not use remote mode unless you know the server you connect to!
@@ -87,30 +97,31 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   val groups: Seq[String] = configuration.getStringSeq("ldap.groups").getOrElse(Seq())
 
   // interval for lazy updates
-  val updateInterval: Int = configuration.getInt("ldap.updateinterval").getOrElse(1800)
+  // use 0 for eager updates
+  override val updateInterval: Int = configuration.getInt("ldap.updateinterval").getOrElse(1800)
+
+  // switch for using debugusers "adminUser" and "basicUser"
+  val addDebugUsers: Boolean = configuration.getBoolean("ldap.debugusers").getOrElse(false)
+
+
 
   // interface to be used; can be an InMemoryDirectoryServer or a Connection/ConnectionPool
   override val ldapinterface: Option[LDAPInterface] = setupInterface
 
-
   var userCache: Traversable[CustomUser] = Traversable()
   var userGroupCache: Traversable[UserGroup] = Traversable()
-  var lastUpdate: Long = 0
 
-
-  // current time im seconds
-  protected def currentTime: Long = (Calendar.getInstance().getTimeInMillis() / 1000)
-  // check if update required
-  protected def needsUpdate: Boolean = ((currentTime - lastUpdate) > updateInterval)
-
-
+  /**
+    * Return cached users.
+    * @return
+    */
   override def getUsers: Traversable[CustomUser] = {
     updateCache()
     userCache
   }
 
   /**
-    * Return
+    * Return cached user groups.
     * @return
     */
   override def getUserGroups: Traversable[UserGroup] = {
@@ -120,7 +131,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
 
   /**
-    * Updates cached users and usergroups.
+    * Updates cached users and usergroups if necessary.
     * @param eager Set to true to enforce update; lazy updating is used otherwise.
     * @return true, if update successful or no update required.
     */
@@ -128,13 +139,19 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     if(eager || needsUpdate){
       ldapinterface match{
         case Some(interface) => {
-          val newUserCache = requestUserList(interface)
+          val newUserCache =
+            if(addDebugUsers)
+              requestUserList(interface)++debugUsers
+            else
+              requestUserList(interface)
+
           val newUserGroupCache = requestUserGroupList(interface)
           if(!(newUserCache.isEmpty || newUserGroupCache.isEmpty)){
             lastUpdate = currentTime
             userCache = newUserCache
             userGroupCache = newUserGroupCache
-            Logger.info("ldap cache updated")
+            if(!eager)
+              Logger.info("ldap cache updated")
             true
           }else{
             Logger.warn("ldap cache update failed")
@@ -180,7 +197,6 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat permission tree.
-    * @param interface LDAPInterface to operate on.
     */
   def addPermissions(interface: LDAPInterface): Unit = {
     val dc : String = "dc=permissions," + dit
@@ -192,7 +208,6 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat role tree.
-    * @param interface LDAPInterface to operate on.
     */
   def addRoles(interface: LDAPInterface): Unit = {
     val dc : String = "dc=roles," + dit
@@ -203,23 +218,13 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     }
   }
 
-
-  /**
-    * Utility method for adding users.
-    * @param interface
-    * @param user
-    */
-  protected def addUser(interface: LDAPInterface, user: CustomUser): Unit = {
-    interface.add(LdapUtil.userToEntry(user))
-  }
-
-
   /**
     * Establish connection and check if bind possible.
     * Close connection afterwards.
-    * @param userDN
-    * @param password
-    * @return
+    * Useful for authentification.
+    * @param userDN DN for binding.
+    * @param password password for binding.
+    * @return true, if bind successful.
     */
   protected def canBind(userDN: String, password: String): Boolean ={
     val conn: Option[LDAPConnectionPool] = createConnection(userDN, password)
@@ -238,15 +243,23 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
     */
   override def authenticate(email: String, password: String): Future[Boolean] = {
-    findByEmail(email).map{ usrOp:Option[CustomUser] => usrOp match{
-        case Some(usr) => canBind(usr.name, password)
-        case None => false
+    findById(email).map{ usrOp:Option[CustomUser] => usrOp match{
+        case Some(usr) =>
+          if(debugUsers.find(u => u==usr).isDefined){
+            true
+          }else{
+            val dn = "uid=" + usr.name + ",cn=users," + dit
+            canBind(dn, password)
+          }
+        case None =>
+          false
       }
     }
   }
 
   /**
-    * Fetches users from database and inserts them into ldap object
+    * Unused.
+    * Fetches users from database and inserts them into ldap object.
     * @param interface LDAPInterface to operate on.
     * @param userRepo rep from which users are to be extr4acted and added
     */
@@ -291,6 +304,7 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
 
   /**
     * Creates a connection to an existing LDAP server instance.
+    * We use ConnectionPools for better performance.
     * Uses the options defined in the configuation.
     * Used options from configuration are ldap.encryption, ldap.host, ldap.prt, ldap.bindDN, ldap.bindPassword
     * @param bind custom bindDn; loaded from config if not defined.
@@ -377,16 +391,24 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   def requestUserList(interface: LDAPInterface): Traversable[CustomUser] = {
     val baseDN ="cn=users," + dit
     val scope = SearchScope.SUB
-    val filter = Filter.createEqualityFilter("objectClass", "person")
+    val personFilter = Filter.createEqualityFilter("objectClass", "person")
+
+    val filter = if(!groups.isEmpty){
+      val memberFilter = groups.map{ groupname =>
+        Filter.createEqualityFilter("memberof", groupname)
+      }
+      Filter.createANDFilter(Filter.createORFilter(memberFilter), personFilter)
+    }else{
+      personFilter
+    }
     val request: SearchRequest = new SearchRequest(baseDN, scope, filter)
 
-    val entries: Traversable[Entry] = LdapUtil.dipatchSearchRequest(interface, request)
+    val entries: Traversable[Entry] = LdapUtil.dispatchSearchRequest(interface, request)
     LdapUtil.convertAndFilter(entries, LdapUtil.entryToUser)
   }
 
-
   /**
-    *
+    * Reconstruct a sequence of usergroups from users registered in ldap server.
     * @param interface
     * @return
     */
@@ -396,15 +418,16 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
     val filter = Filter.createEqualityFilter("objectClass", "groupofnames")
     val request: SearchRequest = new SearchRequest(baseDN, scope, filter)
 
-    val entries: Traversable[Entry] = LdapUtil.dipatchSearchRequest(interface, request)
+    val entries: Traversable[Entry] = LdapUtil.dispatchSearchRequest(interface, request)
     LdapUtil.convertAndFilter(entries, LdapUtil.entryToUserGroup)
   }
 
 
   /**
+    * Unused.
     * Find specific DN as user.
     * @param dn String defining the full DN.
-    * @return CustomUser wrapped in option.
+    * @return CustomUser wrapped in option. None, if user not found.
     */
   def findByDN(dn: String): Option[CustomUser] = {
     ldapinterface match{
@@ -440,32 +463,13 @@ class AdaLdapUserServerImpl @Inject()(applicationLifecycle: ApplicationLifecycle
   /**
     * For debugging purposes.
     * Gets list of all entries.
-    * @return
+    * @return List of ldap entries.
     */
   override def getEntryList: Traversable[String] = {
     ldapinterface match{
       case Some(interface) => LdapUtil.getEntryList(interface, dit)
       case None => Traversable()
     }
-  }
-
-  /**
-    * Secure, crash-safe ldap search method.
-    * @param ldapinterface interface to perform search request on.
-    * @param request SearchRequest to be executed.
-    * @return List of search results. Empty, if request failed.
-    */
-  def dipatchSearchRequest(ldapinterface: Option[LDAPInterface], request: SearchRequest): Traversable[Entry] = {
-    try {
-      ldapinterface match{
-        case Some(interface) => {
-          val result: SearchResult = interface.search(request)
-          val a = result.getSearchEntries
-          a
-        }
-        case None => Traversable[Entry]()
-      }
-    }catch{case e: Throwable => Traversable[Entry]()}
   }
 
   /**

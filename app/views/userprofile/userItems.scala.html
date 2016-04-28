@@ -1,4 +1,4 @@
-@(title: String, elements: Iterable[String], editCall: Option[Call]=None, deleteCall:Option[Call]=None, createCall:Option[Call]=None)
+@(title: String, elements: Traversable[String], editCall: Option[Call]=None, deleteCall:Option[Call]=None, createCall:Option[Call]=None)
 
 @**
  * Generate collapsable list of items.
@@ -13,20 +13,18 @@
             </h4>
         </div>
         <div id="@{"collapse-"+title.replace(" ","-")}" class="panel-collapse collapse">
-            <ul class="list-group">
+            <div class="list-group">
             @elements.map{ e =>
-                <li class="list-group-item">
-                    @e.toString()
+                <a class="list-group-item">
+                    @e
                     @if(deleteCall.isDefined){<button type="submit" class="btn btn-info btn-sm pull-right" onclick="deleteCall.get()(e);">delete</button>}
                     @if(editCall.isDefined){<button type="submit" class="btn btn-info btn-sm pull-right" onclick="editCall.get()(e);">edit</button>}
-                </li>
+                </a>
             }
-                @if(editCall.isDefined){
-                    <li class="list-group-item-success">
-                        <button type="submit" class="btn btn-info" onclick="createCall.get();">create</button>
-                    </li>
-                }
-            </ul>
+            @if(createCall.isDefined){
+                <a href="@createCall.get" class="list-group-item">create</a>
+            }
+            </div>
         </div>
     </div>
 </div>

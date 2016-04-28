@@ -2,6 +2,7 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
+import ldap.AdaLdapUserServer
 import models.workspace.Workspace
 import persistence.RepoTypes.WorkspaceRepo
 import play.api.Logger
@@ -29,7 +30,7 @@ import reactivemongo.bson.BSONObjectID
 
 
 class UserProfileController @Inject() (
-    myUserManager: UserManager,
+    ldapUserServer: AdaLdapUserServer,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
     workspaceRepo: WorkspaceRepo
@@ -41,14 +42,14 @@ class UserProfileController @Inject() (
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> text,
       "email" -> ignored("placeholder"),
-      "password" -> text,
+      "password" -> ignored("placeholder"),
       "affiliation" -> text,
       "roles" -> ignored(Seq[String]()),
       "permissions" -> ignored(Seq[String]())
-    )(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))
+    )(CustomUser.apply)(CustomUser.unapply))
 
   // a hook need by auth config
-  override val userManager = myUserManager
+  override val userManager = ldapUserServer
 
   /**
     * Leads to profile page which shows some basic user information.
@@ -88,7 +89,7 @@ class UserProfileController @Inject() (
       val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
       usrFutureOp.map { (usrOp: Option[CustomUser]) =>
         usrOp match {
-          case Some(usr) => Ok(views.html.userprofile.profileSettings(usr._id.get, userUpdateForm.fill(usr)))
+          case Some(usr) => Ok(views.html.userprofile.profileSettings(userUpdateForm.fill(usr)))
           case None => Ok("error")  // not supposed to ever occur due to deadbolt
         }
       }

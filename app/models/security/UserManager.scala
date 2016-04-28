@@ -5,6 +5,7 @@ package models.security
 import javax.inject.{Singleton, Inject}
 
 import com.google.inject.ImplementedBy
+import ldap.AdaLdapUserServer
 import persistence.CustomUserRepo
 import persistence.RepoTypes.UserRepo
 import play.api.libs.json.Json
@@ -57,9 +58,9 @@ trait UserManager {
   def findById(id: String): Future[Option[CustomUser]]
   def findByEmail(email: String): Future[Option[CustomUser]]
 
-  // TODO: dummy user profiles. eventually remove them.
-  def adminUser: CustomUser = CustomUser(None, "admin user", "admin@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  def basicUser: CustomUser = CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", "123456", "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
+  def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", "123456", "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  val debugUsers: Traversable[CustomUser] = Traversable(adminUser, basicUser)
 }
 
 /**

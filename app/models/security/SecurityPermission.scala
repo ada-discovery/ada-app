@@ -11,6 +11,11 @@ import scala.collection.immutable.SortedSet
   */
 case class SecurityPermission(val value: String) extends Permission {
   def getValue: String = value
+
+  override def toString() = {
+    println("called")
+    value.substring(value.indexOf('=')+1, value.indexOf(','))
+  }
 }
 
 /**
