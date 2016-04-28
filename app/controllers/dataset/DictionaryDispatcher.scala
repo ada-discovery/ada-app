@@ -1,16 +1,22 @@
 package controllers.dataset
 
-import controllers.ControllerDispatcher
+import controllers.{SecureControllerDispatcher, ControllerDispatcher}
 import util.FilterSpec
 import javax.inject.Inject
 
 class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: DictionaryControllerFactory)
-  extends ControllerDispatcher[DictionaryController]("dataSet") with DictionaryController {
+  extends SecureControllerDispatcher[DictionaryController]("dataSet") with DictionaryController {
 
   override protected def getController(id: String) =
     dscf(id).map(_ => dcf(id)).getOrElse(
       throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
     )
+
+  // TODO: here we need to determine what role groups are allowed to access given controller and action
+  override protected def getAllowedRoleGroups(
+    controllerId: String,
+    actionName: String
+  ) = List(Array("biocore"))
 
   override def get(id: String) = dispatch(_.get(id))
 

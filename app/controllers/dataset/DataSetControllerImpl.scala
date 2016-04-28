@@ -17,7 +17,6 @@ import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, RequestHeader}
-import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

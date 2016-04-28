@@ -57,8 +57,8 @@ object LdapUtil {
       val password: String = entry.getAttributeValue("userPassword")
       val affiliation: String = nullToDefault(entry.getAttributeValue("ou"), "")
       val permissions: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array())
-      val roles: Array[String] = Array()
-      Some(CustomUser(None, name, email, "", affiliation, permissions.toSeq, roles.toSeq))
+      val roles: Array[String] = Array("biocore") // just for testing
+      Some(CustomUser(None, name, email, "", affiliation, roles.toSeq, permissions.toSeq))
     }else{
       None
     }

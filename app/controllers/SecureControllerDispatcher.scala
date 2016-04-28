@@ -3,18 +3,35 @@ package controllers
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
+import models.security.SecurityRoleCache
 import play.api.mvc.{Action, AnyContent}
+import play.api.routing.Router.Tags._
 
-abstract class SecureControllerDispatcher[C](controllerParamId: String, controllers: Iterable[(String, C, Array[String])])
-  extends StaticControllerDispatcher[C](controllerParamId, controllers.map(x => (x._1, x._2))) {
+abstract class SecureControllerDispatcher[C](controllerParamId: String)
+  extends ControllerDispatcher[C](controllerParamId) {
 
   @Inject protected var deadbolt: DeadboltActions = _
-  private val idRolesMap = controllers.map(x => (x._1, x._3)).toMap
+  protected def getAllowedRoleGroups(controllerId: String, actionName: String): List[Array[String]]
 
   override protected def dispatch(action: C => Action[AnyContent]) = Action.async { implicit request =>
     val controllerId = getControllerId(request)
-    val roles = idRolesMap.get(controllerId).get
 
-    deadbolt.Restrict(List(roles))(super.dispatch(action)).apply(request)
+//    println(request.tags.get(RouteController).get)
+
+    val actionName = request.tags.get(RouteActionMethod).get
+    val roleGroups = getAllowedRoleGroups(controllerId, actionName)
+
+    deadbolt.Restrict(roleGroups)(super.dispatch(action)).apply(request)
   }
+}
+
+abstract class StaticSecureControllerDispatcher[C](controllerParamId: String, controllers : Iterable[(String, C)]) extends SecureControllerDispatcher[C](controllerParamId) {
+
+  private val idControllerMap = controllers.toMap
+
+  override protected def getController(controllerId: String): C =
+    idControllerMap.getOrElse(
+      controllerId,
+      throw new IllegalArgumentException(s"Controller id '${controllerId}' not recognized.")
+    )
 }

@@ -2,17 +2,23 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.ControllerDispatcher
+import controllers.{SecureControllerDispatcher, ControllerDispatcher}
 import reactivemongo.bson.BSONObjectID
 import util.FilterSpec
 
 class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: CategoryControllerFactory)
-  extends ControllerDispatcher[CategoryController]("dataSet") with CategoryController {
+  extends SecureControllerDispatcher[CategoryController]("dataSet") with CategoryController {
 
   override protected def getController(id: String) =
     dscf(id).map(_ => ccf(id)).getOrElse(
       throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
     )
+
+  // TODO: here we need to determine what role groups are allowed to access given controller and action
+  override protected def getAllowedRoleGroups(
+    controllerId: String,
+    actionName: String
+  ) = List(Array("biocore"))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 
