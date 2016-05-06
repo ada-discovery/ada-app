@@ -19,8 +19,8 @@ trait ObjectCache[T] {
   // use this instead of accessing elements directly
   def getCache(forceUpdate: Boolean = false): Traversable[T] = {
     if(forceUpdate || needsUpdate){
-      val newCache = updateCall()
-      if(newCache.isEmpty){
+      val newCache: Traversable[T] = updateCall()
+      if(!newCache.isEmpty){
         lastUpdate = currentTime
         cached = newCache
         Logger.info("cache updated")

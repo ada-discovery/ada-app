@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 import play.api.mvc.{Action, Controller}
 
-import models.security.{CustomUser, UserManager, SecurityRoleCache}
+import models.security.CustomUser
 
 import be.objectify.deadbolt.scala.DeadboltActions
 

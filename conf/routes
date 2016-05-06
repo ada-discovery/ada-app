@@ -27,7 +27,6 @@ POST        /recoverPassword                                                    
 
 # ldap debugging
 GET         /ldaplist                                                               controllers.LdapController.ldapList
-GET         /ldapgroups                                                             controllers.LdapController.ldapGroups
 GET         /ldapusers                                                              controllers.LdapController.ldapUsers
 GET         /ldapsettings                                                           controllers.LdapController.settings
 

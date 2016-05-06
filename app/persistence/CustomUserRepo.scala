@@ -20,7 +20,7 @@ class CustomUserRepo(collectionName: String) extends MongoAsyncCrudRepo[CustomUs
 
   // TODO: dummy user profiles. eventually remove them.
   override val adminUser = new CustomUser(None, "admin user", "admin@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  override val basicUser = new CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  override val basicUser = new CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), Seq())
 
   // add admin and basic users
   addUserIfNotPresent(adminUser)

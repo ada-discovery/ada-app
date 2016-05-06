@@ -3,11 +3,10 @@ package controllers
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import ldap.RepoTypes.LdapUserRepo
+//import ldap.RepoTypes.LdapUserRepo
 import models.Page
-import models.security.CustomUser
+import models.security.{LdapUser, CustomUser}
 import models.workspace.UserGroup
-import play.api.Logger
 import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, Controller, RequestHeader, Request}
@@ -19,40 +18,41 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import ldap.{LdapConnector, AdaLdapUserServer, LdapSettings}
+import ldap.{LdapUserRepo, LdapConnector, AdaLdapUserServer, LdapSettings}
+
 
 
 /**
-  * Controller for inspecting the current ldap settings.
+  * Controller for inspecting active ldap settings.
   *
   */
 class LdapController @Inject() (
-   ldapserver: AdaLdapUserServer,
    ldapConnector: LdapConnector,
-   ldapSettings: LdapSettings
- ) extends Controller{
+   ldapSettings: LdapSettings,
+   ldapRepo: LdapUserRepo
+ ) /*extends ReadonlyController(repo: LdapUserRepo)*/ extends Controller{
+
 
   def settings = Action{ implicit request =>
-    val values = ldapSettings.values
-    Ok("")
+    Ok(views.html.ldapviews.viewSettings(ldapSettings))
+    //Ok("")
   }
 
 
-
   def ldapList = Action { implicit request =>
-    val entries: Traversable[String] = ldapserver.getEntryList
+    val entries: Traversable[String] = ldapConnector.getEntryList
     val content = "ldap entry list (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
     Ok(content)
   }
 
-  def ldapGroups = Action { implicit request =>
+  /*def ldapGroups = Action { implicit request =>
     val entries: Traversable[UserGroup] = ldapserver.getUserGroups
     val content = "user groups (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
     Ok(content)
-  }
+  }*/
 
   def ldapUsers = Action { implicit request =>
-    val entries: Traversable[CustomUser] = ldapserver.getUsers
+    val entries: Traversable[LdapUser] = ldapRepo.find()
     val content = "users (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
     Ok(content)
   }

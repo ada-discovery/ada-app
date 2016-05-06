@@ -63,5 +63,5 @@ class UserController @Inject() (
   }
 
   //@Deprecated
-  override protected val defaultCreateEntity = new CustomUser(None, "", "", "", "", Seq(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  override protected val defaultCreateEntity = new CustomUser(None, "", "", "", "", Seq(SecurityRoleCache.basicRole), Seq())
 }

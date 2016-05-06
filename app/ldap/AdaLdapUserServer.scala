@@ -20,7 +20,7 @@ import scala.collection.JavaConversions._
 import play.api.{Logger, Configuration}
 
 
-// TODO refac
+// TODO deprecated
 @ImplementedBy(classOf[AdaLdapUserServerImpl])
 trait UserCache {
   // update interval in seconds
@@ -107,7 +107,7 @@ class AdaLdapUserServerImpl @Inject()(connector: LdapConnector, configuration: C
     // build user request
     val personFilter = Filter.createEqualityFilter("objectClass", "person")
     val filterUsers = if(!groups.isEmpty){
-      val memberFilter = groups.map{ groupname =>
+      val memberFilter: Seq[Filter] = groups.map{ groupname =>
         Filter.createEqualityFilter("memberof", groupname)
       }
       Filter.createANDFilter(Filter.createORFilter(memberFilter), personFilter)
@@ -115,6 +115,7 @@ class AdaLdapUserServerImpl @Inject()(connector: LdapConnector, configuration: C
       personFilter
     }
     val userRequest: SearchRequest = new SearchRequest("cn=users," + dit, SearchScope.SUB, filterUsers)
+
 
     // update caches
     if(eager || needsUpdate){

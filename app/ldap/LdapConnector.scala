@@ -20,6 +20,7 @@ import scala.concurrent.Future
 @ImplementedBy(classOf[LdapConnectorImpl])
 trait LdapConnector {
   val ldapinterface: Option[LDAPInterface]
+  val ldapsettings: LdapSettings
   //def addUsersFromRepo(interface: LDAPInterface, userRepo: UserRepo): Unit
 
   def setupInterface(): Option[LDAPInterface]
@@ -36,6 +37,7 @@ trait LdapConnector {
 class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, settings: LdapSettings) extends LdapConnector {
   // interface for use
   val ldapinterface: Option[LDAPInterface] = setupInterface()
+  val ldapsettings: LdapSettings = settings
 
   /**
     * Creates either a server or a connection, depending on the configuration.
@@ -100,8 +102,12 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     addGroups(server)
 
     // add default dummy users
-    //server.add(LdapUtil.userToEntry(basicUser, dit))
-    //server.add(LdapUtil.userToEntry(adminUser, dit))
+    /*
+    if(settings.addDebugUsers){
+      server.add(LdapUtil.userToEntry(basicUser, dit))
+      server.add(LdapUtil.userToEntry(adminUser, dit))
+    }
+      */
     server
   }
 

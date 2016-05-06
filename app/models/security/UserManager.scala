@@ -60,7 +60,7 @@ trait UserManager {
   def findByEmail(email: String): Future[Option[CustomUser]]
 
   def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", "123456", "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", "123456", "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", "123456", "None", List(SecurityRoleCache.basicRole), Seq())
   val debugUsers: Traversable[CustomUser] = Traversable(adminUser, basicUser)
 }
 
