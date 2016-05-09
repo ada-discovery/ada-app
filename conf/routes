@@ -28,7 +28,10 @@ POST        /recoverPassword                                                    
 # ldap debugging
 GET         /ldaplist                                                               controllers.LdapController.ldapList
 GET         /ldapusers                                                              controllers.LdapController.ldapUsers
-GET         /ldapsettings                                                           controllers.LdapController.settings
+GET         /ldap/settings                                                          controllers.LdapController.settings
+GET         /ldap/userlist                                                          controllers.LdapUserController.listAll(s: Int ?= 2)
+GET         /ldap/userfind                                                          controllers.LdapUserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /ldap/:id/get                                                           controllers.LdapUserController.get(id: String)
 
 
 GET         /loggedout                                                              controllers.AuthController.loggedOut

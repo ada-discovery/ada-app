@@ -18,7 +18,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import ldap.{LdapUserRepo, LdapConnector, AdaLdapUserServer, LdapSettings}
+import ldap.{LdapUserRepo, LdapConnector, LdapSettings}
 
 
 
@@ -51,10 +51,15 @@ class LdapController @Inject() (
     Ok(content)
   }*/
 
-  def ldapUsers = Action { implicit request =>
-    val entries: Traversable[LdapUser] = ldapRepo.find()
-    val content = "users (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
-    Ok(content)
+  def ldapUsers = Action.async { implicit request =>
+    //val entries: Future[Traversable[LdapUser]] = ldapRepo.find()
+
+
+    ldapRepo.find().map{ entries: Traversable[LdapUser] =>
+      val content = "users (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
+      Ok(content)
+    }
+
   }
 
 }

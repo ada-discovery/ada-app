@@ -5,8 +5,9 @@ import javax.inject.Inject
 
 import com.unboundid.ldap.sdk._
 import ldap.LdapUtil.LdapConverter
+import models.security.{CustomUser, UserManager}
 
-import persistence.{SyncReadonlyRepo, Sort}
+import persistence.{AsyncReadonlyRepo, SyncReadonlyRepo, Sort}
 import play.api.libs.json.JsObject
 
 import scala.concurrent.Future
@@ -15,7 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 /**
   *
   */
-trait LdapRepo[T <: LdapDN] extends SyncReadonlyRepo[T, String] with ObjectCache[T]{
+trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCache[T]{
 
   def converter: LdapConverter[T] = ???
   def connector: LdapConnector = ???
@@ -25,8 +26,8 @@ trait LdapRepo[T <: LdapDN] extends SyncReadonlyRepo[T, String] with ObjectCache
   override val updateInterval: Int = settings.updateInterval
   override val updateCall: (() => Traversable[T]) = requestList
 
-  def get(id: String): Option[T] = {
-    getCache(false).find{entry => (entry.getDN == id)}
+  def get(id: String): Future[Option[T]] = {
+    Future(getCache(false).find{entry => (entry.getDN == id)})
   }
 
   // TODO argument and criteria conversion
@@ -37,12 +38,13 @@ trait LdapRepo[T <: LdapDN] extends SyncReadonlyRepo[T, String] with ObjectCache
     projection : Option[JsObject] = None,
     limit: Option[Int] = None,
     page: Option[Int] = None
-  ): Traversable[T] = {
-    getCache(false)
+  ): Future[Traversable[T]] = {
+    Future(getCache(false))
   }
 
-  def count(criteria: Option[JsObject] = None): Int = {
-    find(criteria).size
+  def count(criteria: Option[JsObject] = None): Future[Int] = {
+    val res = find(criteria)
+    res.map(t => t.size)
   }
 
   // override for more specific behaviour

@@ -2,7 +2,7 @@ package ldap
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.unboundid.ldap.sdk.{Entry, SearchRequest, Filter, SearchScope}
-import models.security.LdapUser
+import models.security.{UserManager, LdapUser}
 import scala.collection.JavaConversions._
 
 
@@ -12,7 +12,7 @@ trait LdapUserRepo extends LdapRepo[LdapUser]
 
 
 @Singleton
-class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector, ldapSettings: LdapSettings) extends LdapUserRepo{
+class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector, ldapSettings: LdapSettings) extends LdapUserRepo/* with UserManager*/{
   override def converter = LdapUtil.entryToLdapUser
   override def connector: LdapConnector = ldapConnector
   override def settings: LdapSettings = ldapSettings
@@ -34,5 +34,12 @@ class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector, ldapSettings: Lda
     val entries: Traversable[Entry] = connector.dispatchRequest(request)
     LdapUtil.convertAndFilter(entries, converter)
   }
+
+
+
+  /*def updateUser(user: CustomUser): Future[Boolean] = Future(true)
+
+  def findById(id: String): Future[Option[CustomUser]]
+  def findByEmail(email: String): Future[Option[CustomUser]]*/
 
 }
