@@ -10,6 +10,7 @@ import models.security.CustomUser
 import models.security.LdapUser
 import models.workspace.UserGroup
 
+import scala.concurrent.Future
 
 
 object LdapUtil {
@@ -45,17 +46,17 @@ object LdapUtil {
     */
   def userToEntry(user: CustomUser, dit: String = "dc=ncer"): Entry = {
     val dn = "dn: cn=" + user.email + ",dc=users," + dit
-    val sn = "sn:" + user.name
-    val cn = "cn:" + user.name
+    val sn = "sn:" + user.ldapDn
+    val cn = "cn:" + user.ldapDn
     val email = "mail:" + user.email
     val objectClass = "objectClass:person"
-    val affiliation = "o:" + user.affiliation
+    //val affiliation = "o:" + user.affiliation
 
     if (!user.permissions.isEmpty) {
       val permissions: String = "memberOf:" + user.permissions.head
-      new Entry(dn, sn, cn, email, affiliation, objectClass, permissions)
+      new Entry(dn, sn, cn, email, objectClass, permissions)
     }else{
-      new Entry(dn, sn, cn, email, affiliation, objectClass)
+      new Entry(dn, sn, cn, email, objectClass)
     }
   }
 
@@ -75,7 +76,8 @@ object LdapUtil {
       val affiliation: String = nullToDefault(entry.getAttributeValue("ou"), "")
       val roles: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array())
       val permissions: Array[String] = Array("biocore") // just for testing
-      Some(CustomUser(None, name, email, "", affiliation, roles.toSeq, permissions.toSeq))
+      //Some(CustomUser(None, name, email, "", affiliation, roles.toSeq, permissions.toSeq))
+      Some(CustomUser(None, name, email, permissions.toSeq))
     }else{
       None
     }

@@ -16,22 +16,7 @@
 
     <div class="row">
     @helper.form(routes.AuthController.authenticate){
-        <div class="login well well-lg col-md-6">
 
-            <div class="form-group row">
-                <label form="user"> LUMS ID: <br></label>
-                <input type="text" class="form-control" id="id" name="id" value="" placeholder="LUMS login">
-            </div>
-
-            <div class="form-group row">
-                <label form="password"> Password: <br></label>
-                <input type="password" class="form-control" id="password" name="password" value="" placeholder="Password">
-            </div>
-            <div class="col-md-12 row">
-                <input type="submit" id="submit" value="Login" class="btn btn-primary btn-sm btn-block">
-            </div>
-            <div class="pull-right"><a href="@routes.AuthController.passwordRecovery">Forgot password</a></div>
-        </div>
     }
     </div>
 }

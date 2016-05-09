@@ -161,7 +161,7 @@ class AdaLdapUserServerImpl @Inject()(connector: LdapConnector, configuration: C
           if(debugUsers.find(u => u==usr).isDefined){
             true
           }else{
-            val dn = "uid=" + usr.name + ",cn=users," + dit
+            val dn = "uid=" + usr.ldapDn + ",cn=users," + dit
             connector.canBind(dn, password)
           }
         case None =>

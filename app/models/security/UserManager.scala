@@ -5,8 +5,6 @@ package models.security
 import javax.inject.{Singleton, Inject}
 
 import com.google.inject.ImplementedBy
-import ldap.AdaLdapUserServer
-import persistence.CustomUserRepo
 import persistence.RepoTypes.UserRepo
 import play.api.libs.json.Json
 
@@ -27,11 +25,12 @@ trait UserManager {
     * @param password Password which should match the password associated to the mail.
     * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
     */
+  // TODO fix this part: user models have changed!
   def authenticate(email: String, password: String): Future[Boolean] = {
     val pwHash = SecurityUtil.md5(password)
     findByEmail(email).map(userOp =>
       userOp match{
-        case Some(usr) => (usr.password == pwHash)
+        case Some(usr) => true//(usr.password == pwHash)
         case None => false
       }
     )
@@ -59,8 +58,10 @@ trait UserManager {
   def findById(id: String): Future[Option[CustomUser]]
   def findByEmail(email: String): Future[Option[CustomUser]]
 
-  def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", "123456", "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", "123456", "None", List(SecurityRoleCache.basicRole), Seq())
+  //def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", "123456", "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
+  ///def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", "123456", "None", List(SecurityRoleCache.basicRole), Seq())
+  def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", SecurityPermissionCache.adminPermissions)
+  def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", Seq())
   val debugUsers: Traversable[CustomUser] = Traversable(adminUser, basicUser)
 }
 
@@ -75,7 +76,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager 
   addUserIfNotPresent(basicUser)
 
   private def addUserIfNotPresent(user: CustomUser) =
-    userRepo.find(Some(Json.obj("name" -> user.name))).map{ users =>
+    userRepo.find(Some(Json.obj("name" -> user.ldapDn))).map{ users =>
       if (users.isEmpty)
         userRepo.save(user)
     }

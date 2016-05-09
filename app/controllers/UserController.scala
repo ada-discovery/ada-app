@@ -28,11 +28,11 @@ class UserController @Inject() (
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
       "email" -> email,
-      "password" -> nonEmptyText,
-      "affiliation" -> text,
-      "roles" -> seq(text),
+      //"password" -> nonEmptyText,
+      //"affiliation" -> text,
+      //"roles" -> seq(text),
       "permissions" -> seq(text)
-      )(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))
+      )(CustomUser.apply)(CustomUser.unapply))//(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))
 
   override protected val home =
     Redirect(routes.UserController.listAll())
@@ -63,5 +63,6 @@ class UserController @Inject() (
   }
 
   //@Deprecated
-  override protected val defaultCreateEntity = new CustomUser(None, "", "", "", "", Seq(SecurityRoleCache.basicRole), Seq())
+  override protected val defaultCreateEntity = new CustomUser(None, "", "", Seq[String]())
+  //override protected val defaultCreateEntity = new CustomUser(None, "", "", "", "", Seq(SecurityRoleCache.basicRole), Seq())
 }

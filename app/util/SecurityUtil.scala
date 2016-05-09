@@ -60,7 +60,7 @@ object SecurityUtil {
     * Create CustomUser object, with password hashed.
     * @return CusotmUser with hashed password.
     */
-  def secureUserApply(_id: Option[BSONObjectID], name: String, email: String, password: String, affiliation: String, roles: Seq[String], permissions: Seq[String]): CustomUser = {
+  /*def secureUserApply(_id: Option[BSONObjectID], name: String, email: String, password: String, affiliation: String, roles: Seq[String], permissions: Seq[String]): CustomUser = {
     CustomUser(_id, name, email, md5(password), affiliation, roles, permissions)
   }
 
@@ -69,8 +69,12 @@ object SecurityUtil {
     * @param user CustomUser for extraction.
     * @return Tuple with extracted user properties, password is hashed.
     */
+  // TODO fix this part: user models have changed!
   def secureUserUnapply(user: CustomUser): Option[(Option[BSONObjectID], String, String, String, String, Seq[String], Seq[String])] = {
-    val hidden: String = user.password.map(_ => '*')
-    Some((user._id, user.name, user.email, hidden, user.affiliation, user.roles, user.permissions))
-  }
+    //val hidden: String = user.password.map(_ => '*')
+    //Some((user._id, user.name, user.email, hidden, user.affiliation, user.roles, user.permissions))
+    Some((user._id, user.ldapDn, user.email, user.permissions))
+  }*/
+
+
 }

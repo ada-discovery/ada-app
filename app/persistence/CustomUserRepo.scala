@@ -15,6 +15,7 @@ import scala.concurrent.Future
   * Merge of former UserManagerImpl with UserRepo
   *
   */
+/*
 @Singleton
 class CustomUserRepo(collectionName: String) extends MongoAsyncCrudRepo[CustomUser, BSONObjectID](collectionName) with UserManager{
 
@@ -64,4 +65,4 @@ class CustomUserRepo(collectionName: String) extends MongoAsyncCrudRepo[CustomUs
     Future(true)
   }
 
-}
+}*/

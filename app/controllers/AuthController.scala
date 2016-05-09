@@ -91,7 +91,7 @@ class AuthController @Inject() (
         val usrOpFuture: Future[Option[CustomUser]] = userManager.findById(idPassword._1)
         usrOpFuture.flatMap{usrOp =>
           val usrJs = JsObject("user" -> JsString(usrOp.get.getIdentifier) :: Nil)
-          gotoLoginSucceeded(usrOp.get.name, Future.successful((Ok(usrJs))))}
+          gotoLoginSucceeded(usrOp.get.ldapDn, Future.successful((Ok(usrJs))))}
       }
     )
   }

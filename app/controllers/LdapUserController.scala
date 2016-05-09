@@ -35,7 +35,7 @@ class LdapUserController @Inject() (userRepo: LdapUserRepo)
   override def showView(
     id : String,
     item : LdapUser
-  )(implicit msg: Messages, request: RequestHeader) : Html = html.ldapviews.usershow(id)
+  )(implicit msg: Messages, request: RequestHeader) : Html = html.ldapviews.usershow(id, form)
 
   override def listView(
     currentPage: Page[LdapUser]

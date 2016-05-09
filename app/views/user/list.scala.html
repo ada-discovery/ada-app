@@ -20,7 +20,7 @@
     paginatedTable(
         page,
         routes.UserController.find(_, _, page.filter),
-        Seq(("name", "Name", {item : Any => Html(item.asInstanceOf[CustomUser].name)})),
+        Seq(("name", "Name", {item : Any => Html(item.asInstanceOf[CustomUser].ldapDn)})),
         Some({ item : Any => routes.UserController.get(item.asInstanceOf[CustomUser]._id.get)})
     )
 }
