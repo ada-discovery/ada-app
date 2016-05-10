@@ -35,7 +35,6 @@ class LdapController @Inject() (
 
   def settings = Action{ implicit request =>
     Ok(views.html.ldapviews.viewSettings(ldapSettings))
-    //Ok("")
   }
 
 

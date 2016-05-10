@@ -7,7 +7,6 @@ import be.objectify.deadbolt.core.models.{Role, Permission, Subject}
 import reactivemongo.bson.BSONObjectID
 
 import play.modules.reactivemongo.json.BSONFormats._
-import com.unboundid.ldap.sdk._
 
 import ldap.LdapDN
 
@@ -36,8 +35,8 @@ class GenericUser[T](_id: Option[T], name: String, email: String, password: Stri
 /*case class CustomUser(_id: Option[BSONObjectID], name: String, email: String, ldapid: String, affiliation: String, roles: Seq[String], permissions: Seq[String])
   extends GenericUser[BSONObjectID](_id, name, email, "", affiliation, roles, permissions){
 }*/
-
 // TODO refactor: trim down to only hold permission information
+// This now actually hold only permissions associated to the ldapDn
 case class CustomUser(_id: Option[BSONObjectID], ldapDn: String, email: String, permissions: Seq[String])
   extends GenericUser[BSONObjectID](_id, ldapDn, email, "", "", Seq[String](), permissions)
 
