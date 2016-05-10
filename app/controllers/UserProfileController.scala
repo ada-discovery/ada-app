@@ -2,7 +2,6 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
-import ldap.AdaLdapUserServer
 import models.workspace.Workspace
 import persistence.RepoTypes.WorkspaceRepo
 import play.api.Logger
@@ -23,14 +22,13 @@ import persistence.RepoException
 
 import models.security.{UserManager, CustomUser}
 import security.AdaAuthConfig
-import util.SecurityUtil
 
 import be.objectify.deadbolt.scala.DeadboltActions
 import reactivemongo.bson.BSONObjectID
 
 
 class UserProfileController @Inject() (
-    ldapUserServer: AdaLdapUserServer,
+    usrmmanager: UserManager,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
     workspaceRepo: WorkspaceRepo
@@ -49,7 +47,7 @@ class UserProfileController @Inject() (
     )(CustomUser.apply)(CustomUser.unapply))
 
   // a hook need by auth config
-  override val userManager = ldapUserServer
+  override val userManager = usrmmanager
 
   /**
     * Leads to profile page which shows some basic user information.

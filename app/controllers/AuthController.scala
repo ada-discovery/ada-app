@@ -2,7 +2,6 @@ package controllers
 
 import javax.inject.Inject
 
-import ldap.AdaLdapUserServer
 import persistence.MailClientProvider
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
@@ -23,12 +22,12 @@ import security.AdaAuthConfig
 
 
 class AuthController @Inject() (
-    myLdapUserServer: AdaLdapUserServer,
+    usrmmanager: UserManager,
     mailClientProvider: MailClientProvider
   ) extends Controller with LoginLogout with AdaAuthConfig {
 
   // a hook need by auth config
-  override val userManager = myLdapUserServer
+  override val userManager = usrmmanager
 
   /**
     * Login form definition.
@@ -54,7 +53,6 @@ class AuthController @Inject() (
       email => Await.result(userManager.findByEmail(email), 120000 millis).isDefined
     )
   }
-
 
   /**
     * Redirect to login page.

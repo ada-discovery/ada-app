@@ -36,5 +36,7 @@ object SecurityPermissionCache {
   }
 
   // sequence of all roles
-  lazy val getPermissions: Seq[String] = (List("admin") ++ createRepoPermissions)
+  lazy val getPermissions: Seq[String] = (Seq("admin") ++ createRepoPermissions)
+  //lazy val adminPermission: String = "admin"
+  lazy val adminPermission = Array("admin")
 }

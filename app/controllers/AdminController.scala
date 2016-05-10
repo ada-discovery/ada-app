@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import models.security.SecurityRoleCache
+import models.security.{SecurityPermissionCache, SecurityRoleCache}
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller}
 import play.api.Play.current
@@ -24,7 +24,7 @@ class AdminController @Inject() (
     *
     * @return View listing all runnables in directory "runnables".
     */
-  def listRunnables = deadbolt.Restrict(List(Array(SecurityRoleCache.adminRole))) {
+  def listRunnables = deadbolt.Restrict(List(SecurityPermissionCache.adminPermission)) {
     Action { implicit request =>
       val classes = findClasses[Runnable](libPrefix, Some("runnables."), None)
       val runnableNames = classes.map(_.getName).sorted

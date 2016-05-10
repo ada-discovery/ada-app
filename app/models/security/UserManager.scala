@@ -5,6 +5,7 @@ package models.security
 import javax.inject.{Singleton, Inject}
 
 import com.google.inject.ImplementedBy
+import ldap.LdapConnector
 import persistence.RepoTypes.UserRepo
 import play.api.libs.json.Json
 
@@ -69,11 +70,16 @@ trait UserManager {
   * Class for managing and accessing Users.
   */
 @Singleton
-private class UserManagerImpl @Inject()(userRepo: UserRepo) extends UserManager {
+private class UserManagerImpl @Inject()(userRepo: UserRepo, connector: LdapConnector) extends UserManager {
 
   // add admin and basic users
   addUserIfNotPresent(adminUser)
   addUserIfNotPresent(basicUser)
+
+  /*override def authenticate(email: String, password: String): Future[Boolean] = {
+    Future(connector.canBind(email, password))
+  )*/
+
 
   private def addUserIfNotPresent(user: CustomUser) =
     userRepo.find(Some(Json.obj("name" -> user.ldapDn))).map{ users =>

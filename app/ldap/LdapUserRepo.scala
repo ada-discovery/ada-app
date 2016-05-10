@@ -12,7 +12,7 @@ trait LdapUserRepo extends LdapRepo[LdapUser]
 
 
 @Singleton
-class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector, ldapSettings: LdapSettings) extends LdapUserRepo/* with UserManager*/{
+class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector, ldapSettings: LdapSettings) extends LdapUserRepo()/* with UserManager*/{
   override def converter = LdapUtil.entryToLdapUser
   override def connector: LdapConnector = ldapConnector
   override def settings: LdapSettings = ldapSettings

@@ -5,8 +5,7 @@ import javax.inject.{Inject, Singleton}
 import be.objectify.deadbolt.scala.{HandlerKey, DeadboltHandler}
 import be.objectify.deadbolt.scala.cache.HandlerCache
 
-import models.security.CustomUser
-import ldap.AdaLdapUserServer
+import models.security.{UserManager, CustomUser}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
@@ -19,10 +18,10 @@ import scala.concurrent.duration._
   * Container and hook for deadbolt handlers
   */
 @Singleton
-class CustomHandlerCacheImpl @Inject() (myAdaLdapUserServer: AdaLdapUserServer) extends CustomHandlerCache with AdaAuthConfig {
+class CustomHandlerCacheImpl @Inject() (usrmmanager: UserManager) extends CustomHandlerCache with AdaAuthConfig {
 
   // a hook need by auth config
-  override val userManager = myAdaLdapUserServer
+  override val userManager = usrmmanager
 
   //override def defaultHandler = new AdaDeadboltHandler(currentUser, Some(new AdaDynamicResourceHandler))
   override def ldapHandler = new AdaDeadboltHandler(currentUserLdap, Some(new AdaDynamicResourceHandler))
@@ -51,7 +50,7 @@ class CustomHandlerCacheImpl @Inject() (myAdaLdapUserServer: AdaLdapUserServer) 
     * @return User, if found in ldap server.
     */
   def resolveUserLdap(id: Id): Future[Option[User]] = {
-    myAdaLdapUserServer.findById(id)
+    usrmmanager.findById(id)
   }
 }
 
