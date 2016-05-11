@@ -9,7 +9,6 @@ import play.api.libs.json.{JsNull, JsString, JsObject}
 import play.api.mvc.{Action, Controller}
 import play.api.data.Forms._
 import play.api.data._
-import play.api.Logger
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
@@ -39,18 +38,6 @@ class AuthController @Inject() (
     ).verifying(
       "Invalid LUMS ID or password",
       idPassword => Await.result(userManager.authenticate(idPassword._1, idPassword._2), 120000 millis)
-    )
-  }
-
-  /**
-    * Form for resetting password.
-    */
-  val recoveryForm = Form {
-    single(
-      "email" -> text
-    ).verifying(
-      "Invalid or unknown email",
-      email => Await.result(userManager.findByEmail(email), 120000 millis).isDefined
     )
   }
 
@@ -123,53 +110,21 @@ class AuthController @Inject() (
     Ok(views.html.auth.login(loginForm, Some(message)))
   }
 
-
-  /**
-    * Leads to page for password recovery.
-    */
-  def passwordRecovery() = Action{ implicit reqeust =>
-    Ok(views.html.auth.recoverPassword(recoveryForm))
-  }
-
-  /**
-    *
-    * @return
-    */
-  def resetPassword = Action.async { implicit request =>
-    recoveryForm.bindFromRequest.fold(
-      formWithErrors => Future.successful(BadRequest(views.html.auth.recoverPassword(formWithErrors))),
-      idDst => {
-        val newPassword: String = ""//SecurityUtil.randomString(9)
-        val userOpFuture: Future[Option[CustomUser]] = userManager.findById(idDst)
-        userOpFuture.map{ userOp: Option[CustomUser] =>
-          val mailer = mailClientProvider.createClient()
-          val user: CustomUser = userOp.get
-          val emailDst: String = user.email
-          val mail = mailClientProvider.createTemplate("Password Reset",
-            Seq(emailDst),
-            Some("This message has been sent to you due to a password reset request to the Ada Reporting System." + System.lineSeparator() +
-              "If you did not request the password change, ignore this mail." + System.lineSeparator() +
-              "Your newly generated password is: " + newPassword + System.lineSeparator() +
-              "Use this password to login at Ada's login page.")
-          )
-          mailer.send(mail)
-          Logger.info("Password reset request by user [" + idDst + "]")
-          //userManager.updateUser(CustomUser(user._id, user.name, user.email, SecurityUtil.md5(newPassword), user.affiliation, user.roles, user.permissions))
-          Ok(views.html.auth.passwordChange(emailDst))
-        }
-      }
-    )
-  }
-
-  // TODO: debug login. remove later!
+  // TODO make configurable
   // immediately login as basic user
   def loginBasic = Action.async{ implicit request =>
-    gotoLoginSucceeded(userManager.basicUser.getIdentifier)
+    if(true)
+      gotoLoginSucceeded(userManager.basicUser.getIdentifier)
+    else
+      Future(Redirect(routes.AppController.index))
   }
 
-  // TODO: debug login. remove later!
+  // TODO make configurable
   // immediately login as admin user
   def loginAdmin = Action.async{ implicit request =>
-    gotoLoginSucceeded(userManager.adminUser.getIdentifier)
+    if(true)
+      gotoLoginSucceeded(userManager.adminUser.getIdentifier)
+    else
+      Future(Redirect(routes.AppController.index))
   }
 }

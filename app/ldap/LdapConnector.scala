@@ -23,8 +23,8 @@ trait LdapConnector {
   val ldapsettings: LdapSettings
   //def addUsersFromRepo(interface: LDAPInterface, userRepo: UserRepo): Unit
 
-  def setupInterface(): Option[LDAPInterface]
-  def terminateInterface(interface: Option[LDAPInterface]): Unit
+  protected def setupInterface(): Option[LDAPInterface]
+  protected def terminateInterface(interface: Option[LDAPInterface]): Unit
 
   def getEntryList: Traversable[String]
   def findByDN(dn: String): Option[Entry]
@@ -43,7 +43,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * Creates either a server or a connection, depending on the configuration.
     * @return LDAPInterface, either of type InMemoryDirectoryServer or LDAPConnection.
     */
-  override def setupInterface(): Option[LDAPInterface] = {
+  protected override def setupInterface(): Option[LDAPInterface] = {
     val interface = settings.mode match{
       case "local" => Some(createServer)
       case "remote" => createConnection()
@@ -59,7 +59,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
   /**
     * Creates branches for users, permissions and roles in ldap tree.
     */
-  def createTree(interface: LDAPInterface): Unit = {
+  protected def createTree(interface: LDAPInterface): Unit = {
     // add root
     interface.add("dn: " + settings.dit, "objectClass:top", "objectClass:domain", settings.dit.replace("=",":"))
     // add subtrees: roles, permissions, people
@@ -70,7 +70,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat permission tree.
     */
-  def addGroups(interface: LDAPInterface): Unit = {
+  protected def addGroups(interface: LDAPInterface): Unit = {
     val dc : String = "dc=groups," + settings.dit
     val permissions: Seq[String] = SecurityPermissionCache.getPermissions
     permissions.foreach{p: String =>
@@ -84,7 +84,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * Feed users from user database into server.
     * @return dummy server
     */
-  def createServer(): InMemoryDirectoryServer = {
+  protected def createServer(): InMemoryDirectoryServer = {
     // setup configuration
     val config = new InMemoryDirectoryServerConfig(settings.dit);
     config.setSchema(null); // do not check (attribute) schema
@@ -120,7 +120,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * @param pw custom password; loaded from config if not defined.
     * @return LDAPConnection object  with specified credentials. None, if no connection could be established.
     */
-  def createConnection(bind: String = settings.bindDN, pw: String = settings.bindPassword): Option[LDAPConnectionPool] = {
+  protected def createConnection(bind: String = settings.bindDN, pw: String = settings.bindPassword): Option[LDAPConnectionPool] = {
     val sslUtil: SSLUtil = setupSSLUtil
     settings.encryption match{
       case "ssl" => {
@@ -190,7 +190,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * Ensures that application releases ports.
     * @param interface Interface to be disconnected or shut down.
     */
-  override def terminateInterface(interface: Option[LDAPInterface]): Unit = {
+  protected override def terminateInterface(interface: Option[LDAPInterface]): Unit = {
     if(interface.isDefined){
       interface.get match{
         case server: InMemoryDirectoryServer => server.shutDown(true)

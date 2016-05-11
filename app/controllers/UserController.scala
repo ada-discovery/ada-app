@@ -28,9 +28,7 @@ class UserController @Inject() (
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
       "email" -> email,
-      //"password" -> nonEmptyText,
-      //"affiliation" -> text,
-      //"roles" -> seq(text),
+      "roles" -> seq(text),
       "permissions" -> seq(text)
       )(CustomUser.apply)(CustomUser.unapply))//(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))
 
@@ -63,6 +61,6 @@ class UserController @Inject() (
   }
 
   //@Deprecated
-  override protected val defaultCreateEntity = new CustomUser(None, "", "", Seq[String]())
+  override protected val defaultCreateEntity = new CustomUser(None, "", "", Seq[String](), Seq[String]())
   //override protected val defaultCreateEntity = new CustomUser(None, "", "", "", "", Seq(SecurityRoleCache.basicRole), Seq())
 }

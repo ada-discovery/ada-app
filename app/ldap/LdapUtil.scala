@@ -74,10 +74,9 @@ object LdapUtil {
       val email: String = entry.getAttributeValue("mail")
       val password: String = entry.getAttributeValue("userPassword")
       val affiliation: String = nullToDefault(entry.getAttributeValue("ou"), "")
-      val roles: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array())
-      val permissions: Array[String] = Array("biocore") // just for testing
-      //Some(CustomUser(None, name, email, "", affiliation, roles.toSeq, permissions.toSeq))
-      Some(CustomUser(None, name, email, permissions.toSeq))
+      val roles: Array[String] = Array[String]()
+      val permissions: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array[String]())
+      Some(CustomUser(None, name, email, roles, permissions))
     }else{
       None
     }
@@ -98,9 +97,8 @@ object LdapUtil {
       val email: String = entry.getAttributeValue("mail")
       val password: String = entry.getAttributeValue("userPassword")
       val affiliation: String = nullToDefault(entry.getAttributeValue("ou"), "")
-      val roles: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array())
-      val permissions: Array[String] = Array("biocore") // just for testing
-      Some(LdapUser(name, name, email, affiliation, permissions.toSeq))
+      val permissions: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array[String]())
+      Some(LdapUser(name, name, email, affiliation, permissions))
     }else{
       None
     }

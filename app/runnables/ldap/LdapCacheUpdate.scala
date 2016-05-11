@@ -12,9 +12,8 @@ import runnables.GuiceBuilderRunnable
   */
 class LdapCacheUpdate @Inject() (ldaprepo: LdapUserRepo) extends Runnable {
   override def run() {
-    //adaLdapUserServer.updateCache(true)
     ldaprepo.getCache(true)
-    println("LDAP cache manually updated")
+    println("LDAP user cache manually updated")
   }
 }
 

@@ -17,7 +17,7 @@
     paginatedTable(
         page,
         routes.LdapUserController.find(_, _, page.filter),
-        Seq(("name", "Name", {item : Any => Html(item.asInstanceOf[LdapUser].name)})),
+        Seq(("_id", "LDAP DN", {item : Any => Html(item.asInstanceOf[LdapUser].name)})),
         Some({ item : Any => routes.LdapUserController.get(item.asInstanceOf[LdapUser]._id)})
     )
 }

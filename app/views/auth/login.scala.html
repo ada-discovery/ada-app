@@ -1,6 +1,6 @@
 @(form: Form[(String, String)], message: Option[String] = None)(implicit request: RequestHeader, flash: Flash)
 
-@layout.main("NCER-PD Home") {
+@layout.main("Ada Login") {
 
     <div class="page-header">
         <h1>Login</h1>
@@ -39,7 +39,7 @@
                     <div class="col-md-12 row">
                         <input type="submit" id="submit" value="Login" class="btn btn-primary btn-sm btn-block">
                     </div>
-                <div class="pull-right"><a href="@routes.AuthController.passwordRecovery">Forgot password</a></div>
+                    @{/*<div class="pull-right"><a href="@routes.AuthController.passwordRecovery">Forgot password</a></div>*/}
             </div>
         }
     </div>

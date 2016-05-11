@@ -6,16 +6,14 @@ import models.security.{UserManager, LdapUser}
 import scala.collection.JavaConversions._
 
 
-
 @ImplementedBy(classOf[LdapUserRepoImpl])
 trait LdapUserRepo extends LdapRepo[LdapUser]
 
 
 @Singleton
-class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector, ldapSettings: LdapSettings) extends LdapUserRepo()/* with UserManager*/{
+class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector) extends LdapUserRepo()/* with UserManager*/{
   override def converter = LdapUtil.entryToLdapUser
   override def connector: LdapConnector = ldapConnector
-  override def settings: LdapSettings = ldapSettings
 
   val groups: Seq[String] = settings.groups
 
@@ -35,11 +33,8 @@ class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector, ldapSettings: Lda
     LdapUtil.convertAndFilter(entries, converter)
   }
 
-
-
   /*def updateUser(user: CustomUser): Future[Boolean] = Future(true)
 
   def findById(id: String): Future[Option[CustomUser]]
   def findByEmail(email: String): Future[Option[CustomUser]]*/
-
 }

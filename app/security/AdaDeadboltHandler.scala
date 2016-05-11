@@ -60,7 +60,6 @@ class AdaDeadboltHandler(
     */
   def onAuthFailure[A](request: Request[A]): Future[Result] = {
     val subjOpFuture: Future[Option[Subject]] = getSubject(request)
-
     subjOpFuture.map { subjOp: Option[Subject] =>
       if(subjOp.isDefined){
         val username = subjOp.get.getIdentifier

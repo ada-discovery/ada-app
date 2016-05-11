@@ -42,7 +42,7 @@ class UserProfileController @Inject() (
       "email" -> ignored("placeholder"),
       //"LDAP DN" -> ignored("placeholder"),
       //"affiliation" -> text,
-      //"roles" -> ignored(Seq[String]()),
+      "roles" -> ignored(Seq[String]()),
       "permissions" -> ignored(Seq[String]())
     )(CustomUser.apply)(CustomUser.unapply))
 
@@ -146,8 +146,7 @@ class UserProfileController @Inject() (
     * @return Future(true), if user successfully found and updated in database/ usermanager.
     */
   protected def updateUserCall(refData: CustomUser, newData: CustomUser): Future[Boolean] = {
-    //userManager.updateUser(new CustomUser(refData._id, newData.name, refData.email, newData.ldapid, newData.affiliation, refData.roles, refData.permissions))
-    userManager.updateUser(new CustomUser(refData._id, newData.ldapDn, refData.email, refData.permissions))
+    userManager.updateUser(newData)
   }
 
   protected def updateWorkspace() = {

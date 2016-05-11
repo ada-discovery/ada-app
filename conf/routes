@@ -22,8 +22,6 @@ GET         /logout                                                             
 POST        /loginRest                                                              controllers.AuthController.loginREST
 GET         /logoutRest                                                             controllers.AuthController.logoutREST
 
-GET         /recoverPassword                                                        controllers.AuthController.passwordRecovery()
-POST        /recoverPassword                                                        controllers.AuthController.resetPassword
 
 # ldap debugging
 GET         /ldaplist                                                               controllers.LdapController.ldapList

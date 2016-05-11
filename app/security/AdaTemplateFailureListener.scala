@@ -12,8 +12,6 @@ import play.api.Logger
   */
 @Singleton
 class AdaTemplateFailureListener extends TemplateFailureListener {
-
   val logger: Logger = Logger("deadbolt.template")
-
-   override def failure(message: String, timeout: Long): Unit = logger.error(s"Unauthorized access. Message [$message]  timeout [$timeout]ms")
- }
+  override def failure(message: String, timeout: Long): Unit = logger.error(s"Unauthorized access. Message [$message]  timeout [$timeout]ms")
+}
