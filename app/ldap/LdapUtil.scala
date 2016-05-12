@@ -92,13 +92,12 @@ object LdapUtil {
     */
   def entryToLdapUser(entry: Entry): Option[LdapUser] = {
     if(entry != null){
-      val name: String = entry.getAttributeValue("uid")
-      //val name: String = entry.getAttributeValue("cn")
+      val uid: String = entry.getAttributeValue("uid")
+      val name: String = entry.getAttributeValue("cn")
       val email: String = entry.getAttributeValue("mail")
-      val password: String = entry.getAttributeValue("userPassword")
-      val affiliation: String = nullToDefault(entry.getAttributeValue("ou"), "")
+      val ou: String = entry.getAttributeValue("ou")
       val permissions: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array[String]())
-      Some(LdapUser(name, name, email, affiliation, permissions))
+      Some(LdapUser(uid, name, email, ou, permissions))
     }else{
       None
     }

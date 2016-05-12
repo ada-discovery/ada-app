@@ -2,6 +2,8 @@ package models.security
 
 import models.BSONObjectIdentity
 import play.api.libs.json._
+import play.api.libs.json.Json
+import play.api.libs.functional.syntax._
 import play.libs.Scala
 import be.objectify.deadbolt.core.models.{Role, Permission, Subject}
 import reactivemongo.bson.BSONObjectID
@@ -58,13 +60,15 @@ object CustomUser{
   * @param _id LDAP DN
   * @param name  common name (cn)
   * @param email email address
-  * @param affiliation organisatorical unit (ou)
+  * @param ou organisatorical unit (ou)
   * @param permissions LDAP groups (memberof)
   */
-case class LdapUser(_id: String, name: String, email: String, affiliation: String, permissions: Seq[String])
-  extends GenericUser[String](Some(_id), name, email, "", affiliation, Seq[String](), permissions) with LdapDN {
+case class LdapUser(_id: String, name: String, email: String, ou: String, permissions: Seq[String])
+  extends GenericUser[String](Some(_id), name, email, "", ou, Seq[String](), permissions) with LdapDN {
   override def getIdentifier: String = _id
-  override def getProperties: Seq[String] = Seq[String](_id, name, email, affiliation, permissions.toString)
+  override def getProperties: Seq[String] = Seq[String](_id, name, email, ou, permissions.toString)
+
+  def toJson: JsValue = Json.toJson(this)
   def getDN = _id
 }
 

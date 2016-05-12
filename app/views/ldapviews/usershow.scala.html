@@ -25,7 +25,7 @@
             @elementValue("", "LDAP DN", item._id)
             @elementValue("", "Name", item.name)
             @elementValue("", "Email", item.email)
-            @elementValue("", "Organisatorical Unit", item.affiliation)
+            @elementValue("", "Organisatorical Unit", item.ou)
             @elementValue("", "Groups", item.permissions.fold("")((s,a)=> a+", "+s))
             </fieldset>
 

@@ -1,23 +1,22 @@
 package ldap
 
 
-import javax.inject.Inject
-
 import com.unboundid.ldap.sdk._
 import ldap.LdapUtil.LdapConverter
-import models.security.{CustomUser, UserManager}
 
-import persistence.{AsyncReadonlyRepo, SyncReadonlyRepo, Sort}
-import play.api.libs.json.JsObject
-import util.ObjectCache
+import persistence._
+import play.api.libs.json._
+import _root_.util.ObjectCache
 
+
+import scala.collection.Set
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
   * Trait for creating Ldap repos.
   * Ldap repos implement ObjectCache to limit the number of actual Ldap operations.
-  * The template class must override LdapDN to provide a DN.
+  * The template class must override LdapDN to provide a DN and json formatter.
   * Make sure to provide/ inject a LdapConnector and a conversion method for LdapEntries.
   * Extends AsyncReadOnnlyRepo and can thus be used in ReadOnlyControllers.
   */
@@ -35,8 +34,9 @@ trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCach
     Future(getCache(false).find{entry => (entry.getDN == id)})
   }
 
-  // TODO argument and criteria conversion
-  // TODO add filtering
+
+  // TODO projection
+  // TODO fix filtering
   def find(
     criteria: Option[JsObject] = None,
     orderBy: Option[Seq[Sort]] = None,
@@ -44,7 +44,49 @@ trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCach
     limit: Option[Int] = None,
     page: Option[Int] = None
   ): Future[Traversable[T]] = {
-    Future(getCache(false))
+
+    val entries = getCache(false)
+    val entriesFiltered = criteria match{
+      case Some(crit) =>{
+        val jsonFilterKeys: Set[String] = crit.keys
+        val jsonFilter = { (entry: T) =>
+          val entryJson: JsValue = entry.toJson
+          jsonFilterKeys.exists{ key: String =>
+            (entryJson \ key) == (crit \ key)
+          }
+        }
+        entries.filter(jsonFilter)
+      }
+      case None => entries
+    }
+
+    val entriesOrdered: Seq[T] = {
+      orderBy match{
+        case Some(orderSeq) => {
+          orderSeq.headOption match{
+            case Some(sort) => {
+              sort match{
+                case AscSort(_) => entriesFiltered.toSeq.sortWith{(a: T, b: T) => a.getDN < b.getDN}
+                case DescSort(_) => entriesFiltered.toSeq.sortWith{(a: T, b: T) => a.getDN > b.getDN}
+              }
+            }
+            case None => entriesFiltered.toSeq
+          }
+        }
+        case None => entriesFiltered.toSeq
+      }
+    }
+
+    val entryLimit: Int = limit match {
+      case Some(limit) => limit
+      case None => entriesOrdered.size
+    }
+
+    val entryPage: Traversable[T] = page match {
+      case Some(page) => entriesOrdered.slice(page*entryLimit , (page+1)*entryLimit)
+      case None => entries
+    }
+    Future(entryPage)
   }
 
   /**

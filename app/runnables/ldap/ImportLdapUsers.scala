@@ -15,7 +15,7 @@ import scala.concurrent.Future
 /**
   * Synchronize user entries of LDAP server and local database.
   * Imports all users accessible to the LdapModule into the local database.
-  * Imported users have no permissions or roles (they must be assigned manually).
+  * Imported users have no permissions and only "basic" role (they must be assigned manually).
   */
 class ImportLdapUsers @Inject() (userManager: UserManager) extends Runnable {
   override def run() {

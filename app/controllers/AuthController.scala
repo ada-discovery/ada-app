@@ -97,7 +97,12 @@ class AuthController @Inject() (
   def authenticate = Action.async { implicit request =>
     loginForm.bindFromRequest.fold(
       formWithErrors => Future.successful(BadRequest(views.html.auth.login(formWithErrors))),
-      idPassword => userManager.findById(idPassword._1).flatMap(user => gotoLoginSucceeded(user.get.getIdentifier))
+      idPassword => userManager.findById(idPassword._1).flatMap((user: Option[CustomUser]) =>
+        user match {
+          case Some(u) => gotoLoginSucceeded(u.getIdentifier)
+          case None => Future(Redirect(routes.AuthController.unauthorized()))
+        }
+      )
     )
   }
 
@@ -110,21 +115,19 @@ class AuthController @Inject() (
     Ok(views.html.auth.login(loginForm, Some(message)))
   }
 
-  // TODO make configurable
   // immediately login as basic user
   def loginBasic = Action.async{ implicit request =>
-    if(true)
+    if(!userManager.debugUsers.isEmpty)
       gotoLoginSucceeded(userManager.basicUser.getIdentifier)
     else
-      Future(Redirect(routes.AppController.index))
+      Future(Redirect(routes.AuthController.unauthorized()))
   }
 
-  // TODO make configurable
   // immediately login as admin user
   def loginAdmin = Action.async{ implicit request =>
-    if(true)
+    if(!userManager.debugUsers.isEmpty)
       gotoLoginSucceeded(userManager.adminUser.getIdentifier)
     else
-      Future(Redirect(routes.AppController.index))
+      Future(Redirect(routes.AuthController.unauthorized()))
   }
 }

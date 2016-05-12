@@ -2,8 +2,10 @@ package ldap
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.unboundid.ldap.sdk.{Entry, SearchRequest, Filter, SearchScope}
-import models.security.{UserManager, LdapUser}
+import models.security.LdapUser
 import scala.collection.JavaConversions._
+
+import play.api.libs.json.Json
 
 
 @ImplementedBy(classOf[LdapUserRepoImpl])
@@ -11,7 +13,7 @@ trait LdapUserRepo extends LdapRepo[LdapUser]
 
 
 @Singleton
-class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector) extends LdapUserRepo()/* with UserManager*/{
+class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector) extends LdapUserRepo{
   override def converter = LdapUtil.entryToLdapUser
   override def connector: LdapConnector = ldapConnector
 
@@ -28,13 +30,9 @@ class LdapUserRepoImpl @Inject()(ldapConnector: LdapConnector) extends LdapUserR
     }else{
       personFilter
     }
+
     val request: SearchRequest = new SearchRequest(baseDN, SearchScope.SUB, filterUsers)
     val entries: Traversable[Entry] = connector.dispatchRequest(request)
     LdapUtil.convertAndFilter(entries, converter)
   }
-
-  /*def updateUser(user: CustomUser): Future[Boolean] = Future(true)
-
-  def findById(id: String): Future[Option[CustomUser]]
-  def findByEmail(email: String): Future[Option[CustomUser]]*/
 }

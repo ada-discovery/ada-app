@@ -4,8 +4,9 @@ import javax.inject.{Singleton, Inject}
 
 import com.google.inject.ImplementedBy
 import ldap.{LdapUserRepo, LdapConnector}
+import persistence.AsyncReadonlyRepo
 import persistence.RepoTypes.UserRepo
-import play.api.libs.json.Json
+import play.api.libs.json.{JsString, JsValue, JsObject, Json}
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{Await, Future}
@@ -24,8 +25,8 @@ trait UserManager {
     */
   def authenticate(id: String, password: String): Future[Boolean] = {
     findByEmail(id).map(userOp =>
-      userOp match{
-        case Some(usr) => true//(usr.password == password)
+      userOp match {
+        case Some(usr) => true //(usr.password == password)
         case None => false
       }
     )
@@ -40,8 +41,8 @@ trait UserManager {
     */
   def authorize(userid: String, permission: String): Future[Boolean] = {
     val userOpFuture: Future[Option[CustomUser]] = findByEmail(userid)
-    userOpFuture.map{ (userOp: Option[CustomUser]) =>
-      userOp match{
+    userOpFuture.map { (userOp: Option[CustomUser]) =>
+      userOp match {
         case Some(usr) => usr.permissions.contains(permission)
         case None => false
       }
@@ -52,15 +53,17 @@ trait UserManager {
 
   //
   def synchronizeRepos(): Unit
+
   def purgeMissing(): Unit
 
   def findById(id: String): Future[Option[CustomUser]]
+
   def findByEmail(email: String): Future[Option[CustomUser]]
 
   def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", Seq(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
   def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", Seq(SecurityRoleCache.basicRole), Seq())
-  val debugUsers: Traversable[CustomUser] = Traversable(adminUser, basicUser)
-  val debugPassword: String = "123456"
+
+  def debugUsers: Traversable[CustomUser] = ???
 }
 
 /**
@@ -72,6 +75,13 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
 
   val connector = ldapRepo.connector
 
+  override def debugUsers: Traversable[CustomUser] = {
+    if(connector.ldapsettings.addDebugUsers)
+      Traversable(adminUser, basicUser)
+    else
+      Traversable()
+  }
+
   // add admin and basic users
   addUserIfNotPresent(adminUser)
   addUserIfNotPresent(basicUser)
@@ -80,15 +90,16 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
     * Synchronize user entries of LDAP server and local database.
     * Users present in LDAP server but not present in database will be added.
     * Users present in LDAP server and database are synchronized by taking credentials from LDAP and keeping roles and permissions from local database.
+    * TODO change to pass arbitrary user repo
     */
   override def synchronizeRepos(): Unit = {
     val ldapusers: Traversable[LdapUser] = ldapRepo.getCache(true)
-    ldapusers.map{ ldapusr: LdapUser =>
+    ldapusers.map { ldapusr: LdapUser =>
       val foundFuture: Future[Traversable[CustomUser]] = userRepo.find(Some(Json.obj("ldapDn" -> ldapusr.getDN)))
-        foundFuture.map{ found =>
-        found.headOption match{
+      foundFuture.map { found =>
+        found.headOption match {
           case Some(usr) => userRepo.update(CustomUser(usr._id, ldapusr.getDN, ldapusr.email, usr.roles, usr.permissions))
-          case None => userRepo.save(CustomUser(None, ldapusr.getDN, ldapusr.email, Seq(), Seq()))
+          case None => userRepo.save(CustomUser(None, ldapusr.getDN, ldapusr.email, Seq(SecurityRoleCache.basicRole), Seq()))
         }
       }
     }
@@ -102,74 +113,84 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
   override def purgeMissing(): Unit = {
     val localusersFuture: Future[Traversable[CustomUser]] = userRepo.find()
     val ldapusers: Traversable[LdapUser] = ldapRepo.getCache(true)
-    localusersFuture.map{ localusers =>
+    localusersFuture.map { localusers =>
       localusers.foreach { localusr =>
-        val exists: Boolean = ldapusers.exists( ldapusr => ldapusr.getDN == localusr.ldapDn)
-        if(!exists){
+        val exists: Boolean = ldapusers.exists(ldapusr => ldapusr.getDN == localusr.ldapDn)
+        if (!exists) {
           userRepo.delete(localusr._id.get)
         }
       }
     }
   }
 
-/**
-* Authenticate user and add user to database, if it does not exist.
-* @param id ID (e.g. mail) for matching.
-* @param password Password which should match the password associated to the mail.
-* @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
-*/
-override def authenticate(id: String, password: String): Future[Boolean] = {
-val dn = "uid=" + id + ",cn=users," + connector.ldapsettings.dit
-val auth = connector.canBind(dn, password)
-if(auth){
-  val usr = new CustomUser(None, id, "", Seq(), Seq())
-  addUserIfNotPresent(usr)
-}
-Future(auth)
-}
+  /**
+    * Authenticate user and add user to database, if it does not exist.
+    * @param id ID (e.g. mail) for matching.
+    * @param password Password which should match the password associated to the mail.
+    * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
+    */
+  override def authenticate(id: String, password: String): Future[Boolean] = {
+    val dn = "uid=" + id + ",cn=users," + connector.ldapsettings.dit
+
+    val existCrit: JsObject = JsObject("_id" -> JsString(id)::Nil)
+    val existsFuture: Future[Traversable[LdapUser]] = ldapRepo.find(Some(existCrit))
+    val auth = existsFuture.map{ exists: Traversable[LdapUser] =>
+      !exists.isEmpty && connector.canBind(dn, password)
+    }
+
+    auth
+
+    /*val auth = connector.canBind(dn, password)
+    if (auth) {
+      val usr = new CustomUser(None, id, "", Seq(), Seq())
+      addUserIfNotPresent(usr)
+    }
+    Future(auth)*/
+  }
 
 
-private def addUserIfNotPresent(user: CustomUser) =
-userRepo.find(Some(Json.obj("ldapDn" -> user.ldapDn))).map{ users =>
-  if (users.isEmpty)
-    userRepo.save(user)
-}
+  private def addUserIfNotPresent(user: CustomUser) = {
+    userRepo.find(Some(Json.obj("ldapDn" -> user.ldapDn))).map { users =>
+      if (users.isEmpty)
+        userRepo.save(user)
+    }
+  }
 
 
-/**
-* Given a mail, find the corresponding account.
-*
-* @param email mail to be matched.
-* @return Option containing Account with matching mail; None otherwise
-*/
-override def findByEmail(email: String): Future[Option[CustomUser]] = {
-val usersFuture = userRepo.find(Some(Json.obj("email" -> email)))
-usersFuture.map { users =>
-  users.headOption
-}
-}
+  /**
+    * Given a mail, find the corresponding account.
+    *
+    * @param email mail to be matched.
+    * @return Option containing Account with matching mail; None otherwise
+    */
+  override def findByEmail(email: String): Future[Option[CustomUser]] = {
+    val usersFuture = userRepo.find(Some(Json.obj("email" -> email)))
+    usersFuture.map { users =>
+      users.headOption
+    }
+  }
 
-/**
-* Given an id, find the corresponding account.
-*
-* @param id ID to be matched.
-* @return Option containing Account with matching ID; None otherwise
-*/
-override def findById(id: String): Future[Option[CustomUser]] = {
-val usersFuture = userRepo.find(Some(Json.obj("ldapDn" -> id)))
-usersFuture.map { users =>
-  users.headOption
-}
-}
+  /**
+    * Given an id, find the corresponding account.
+    *
+    * @param id ID to be matched.
+    * @return Option containing Account with matching ID; None otherwise
+    */
+  override def findById(id: String): Future[Option[CustomUser]] = {
+    val usersFuture = userRepo.find(Some(Json.obj("ldapDn" -> id)))
+    usersFuture.map { users =>
+      users.headOption
+    }
+  }
 
-/**
-* Update the user by looking up the username in the database and changing the other fields.
-* @param user
-* @return
-*/
-override def updateUser(user: CustomUser): Future[Boolean] = {
-userRepo.update(user)
-Future(true)
-}
+  /**
+    * Update the user by looking up the username in the database and changing the other fields.
+    * @param user
+    * @return
+    */
+  override def updateUser(user: CustomUser): Future[Boolean] = {
+    userRepo.update(user)
+    Future(true)
+  }
 }
 
