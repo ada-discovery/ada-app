@@ -1,0 +1,41 @@
+@import models.security.LdapUser
+@import views.html.elements.{value => elementValue}
+
+
+@import play.api.libs.json
+@(
+        id: String,
+        item: LdapUser
+)(
+        implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+)
+
+
+@layout.main("View LDAP User") {
+
+    <div class="page-header">
+        <h3>@Messages("NCER-PD Home", "LDAP user")</h3>
+    </div>
+
+    @flashMessages()
+
+    <div class="row">
+        <div class="col-md-9">
+            <fieldset>
+            @elementValue("", "LDAP DN", item._id)
+            @elementValue("", "Name", item.name)
+            @elementValue("", "Email", item.email)
+            @elementValue("", "Organisatorical Unit", item.ou)
+            @elementValue("", "Groups", item.permissions.fold("")((s,a)=> a+", "+s))
+            </fieldset>
+
+            <div class="actions" align="center">
+                <a href="@routes.LdapUserController.listAll()" class="btn btn-default">Go Back</a>
+            </div>
+        </div>
+        <div class="col-md-3">
+        @info()
+        </div>
+    </div>
+}
+

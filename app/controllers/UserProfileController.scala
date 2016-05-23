@@ -2,7 +2,6 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
-import ldap.AdaLdapUserServer
 import models.workspace.Workspace
 import persistence.RepoTypes.WorkspaceRepo
 import play.api.Logger
@@ -23,14 +22,13 @@ import persistence.RepoException
 
 import models.security.{UserManager, CustomUser}
 import security.AdaAuthConfig
-import util.SecurityUtil
 
 import be.objectify.deadbolt.scala.DeadboltActions
 import reactivemongo.bson.BSONObjectID
 
 
 class UserProfileController @Inject() (
-    ldapUserServer: AdaLdapUserServer,
+    usrmmanager: UserManager,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
     workspaceRepo: WorkspaceRepo
@@ -42,14 +40,14 @@ class UserProfileController @Inject() (
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> text,
       "email" -> ignored("placeholder"),
-      "password" -> ignored("placeholder"),
-      "affiliation" -> text,
+      //"LDAP DN" -> ignored("placeholder"),
+      //"affiliation" -> text,
       "roles" -> ignored(Seq[String]()),
       "permissions" -> ignored(Seq[String]())
     )(CustomUser.apply)(CustomUser.unapply))
 
   // a hook need by auth config
-  override val userManager = ldapUserServer
+  override val userManager = usrmmanager
 
   /**
     * Leads to profile page which shows some basic user information.
@@ -148,7 +146,7 @@ class UserProfileController @Inject() (
     * @return Future(true), if user successfully found and updated in database/ usermanager.
     */
   protected def updateUserCall(refData: CustomUser, newData: CustomUser): Future[Boolean] = {
-    userManager.updateUser(new CustomUser(refData._id, newData.name, refData.email, newData.password, newData.affiliation, refData.roles, refData.permissions))
+    userManager.updateUser(newData)
   }
 
   protected def updateWorkspace() = {

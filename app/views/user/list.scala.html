@@ -8,7 +8,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-8">
-            @filter(page.filter, routes.UserController.find(),  Left(Seq("firstName", "lastName", "email", "affiliation")))
+            @filter(page.filter, routes.UserController.find(),  Left(Seq("_id", "email")))
         </div>
         <div class="col-md-4">
             <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.UserController.create()">Add a new user</a>
@@ -20,7 +20,8 @@
     paginatedTable(
         page,
         routes.UserController.find(_, _, page.filter),
-        Seq(("name", "Name", {item : Any => Html(item.asInstanceOf[CustomUser].name)})),
+        Seq(("", "_id", {item : Any => Html(item.asInstanceOf[CustomUser].ldapDn)}),
+            ("", "email", {item : Any => Html(item.asInstanceOf[CustomUser].email)})),
         Some({ item : Any => routes.UserController.get(item.asInstanceOf[CustomUser]._id.get)})
     )
 }

@@ -15,12 +15,13 @@ import scala.concurrent.Future
   * Merge of former UserManagerImpl with UserRepo
   *
   */
+/*
 @Singleton
 class CustomUserRepo(collectionName: String) extends MongoAsyncCrudRepo[CustomUser, BSONObjectID](collectionName) with UserManager{
 
   // TODO: dummy user profiles. eventually remove them.
   override val adminUser = new CustomUser(None, "admin user", "admin@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  override val basicUser = new CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), SecurityPermissionCache.basicPermissions)
+  override val basicUser = new CustomUser(None, "basic user", "basic@mail", SecurityUtil.md5("123456"), "None", List(SecurityRoleCache.basicRole), Seq())
 
   // add admin and basic users
   addUserIfNotPresent(adminUser)
@@ -64,4 +65,4 @@ class CustomUserRepo(collectionName: String) extends MongoAsyncCrudRepo[CustomUs
     Future(true)
   }
 
-}
+}*/

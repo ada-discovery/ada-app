@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import models.security.SecurityRoleCache
+import models.security.{SecurityPermissionCache, SecurityRoleCache}
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller}
 import play.api.Play.current

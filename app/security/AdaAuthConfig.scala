@@ -62,8 +62,11 @@ trait AdaAuthConfig extends AuthConfig {
     val timeout = 120000 millis
     val userIdFuture: Future[Option[Id]] = getUserFromToken(request)
     val userId: Option[Id] = Await.result(userIdFuture, timeout)
+
     userId match {
-      case Some(id) => resolveUser(id)
+      case Some(id) => {
+        resolveUser(id)
+      }
       case None => Future(None)
     }
   }

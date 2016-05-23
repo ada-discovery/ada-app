@@ -1,0 +1,34 @@
+@import views.html.layout
+@import views.html.table.paginatedTable
+
+@import models.security.LdapUser
+
+@(page: Page[LdapUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@actions = {
+    <div class="row">
+        <div class="col-md-8">
+        @filter(page.filter, routes.LdapUserController.find(),  Left(Seq("_id", "name", "email", "ou")))
+        </div>
+    </div>
+}
+
+@table = @{
+    paginatedTable(
+        page,
+        routes.LdapUserController.find(_, _, page.filter),
+        Seq(("_id", "LDAP DN", {item : Any => Html(item.asInstanceOf[LdapUser]._id)}),
+            ("name", "name", {item : Any => Html(item.asInstanceOf[LdapUser].name)}),
+            ("email", "email", {item : Any => Html(item.asInstanceOf[LdapUser].email)}),
+            ("ou", "ou", {item : Any => Html(item.asInstanceOf[LdapUser].ou)})),
+        Some({ item : Any => routes.LdapUserController.get(item.asInstanceOf[LdapUser]._id)})
+    )
+}
+
+@layout.list(
+    "LDAP user",
+    page.total,
+    actions,
+    table,
+    None
+)@()

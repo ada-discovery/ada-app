@@ -13,7 +13,6 @@ case class SecurityPermission(val value: String) extends Permission {
   def getValue: String = value
 
   override def toString() = {
-    println("called")
     value.substring(value.indexOf('=')+1, value.indexOf(','))
   }
 }
@@ -24,7 +23,6 @@ case class SecurityPermission(val value: String) extends Permission {
   */
 object SecurityPermissionCache {
   lazy val adminPermissions: Seq[String] = getPermissions
-  lazy val basicPermissions: Seq[String] = Seq("view.data.basic")
 
   // create permissions fo repo data based on registered repos
   def createRepoPermissions: List[String] = {
@@ -38,5 +36,7 @@ object SecurityPermissionCache {
   }
 
   // sequence of all roles
-  lazy val getPermissions: Seq[String] = (List("view.admin") ++ createRepoPermissions)
+  lazy val getPermissions: Seq[String] = createRepoPermissions
+  //lazy val adminPermission: String = "admin"
+  lazy val adminPermission = Array("admin")
 }

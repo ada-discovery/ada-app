@@ -22,16 +22,13 @@ GET         /logout                                                             
 POST        /loginRest                                                              controllers.AuthController.loginREST
 GET         /logoutRest                                                             controllers.AuthController.logoutREST
 
-GET         /recoverPassword                                                        controllers.AuthController.passwordRecovery()
-POST        /recoverPassword                                                        controllers.AuthController.resetPassword
 
 # ldap debugging
-GET         /ldaplist                                                               controllers.JansDataSetController.listLDAP
-GET         /ldapauth                                                               controllers.JansDataSetController.ldapAuth
-GET         /ldapmail/:mail                                                         controllers.JansDataSetController.ldapmail(mail:String)
-GET         /ldapid/:id                                                             controllers.JansDataSetController.ldapid(id:String)
-GET         /ldapgroups                                                             controllers.JansDataSetController.ldapgroups
-GET         /ldapusers                                                              controllers.JansDataSetController.ldapusers
+GET         /ldaplist                                                               controllers.LdapController.ldapList
+GET         /ldap/settings                                                          controllers.LdapController.settings
+GET         /ldap/users                                                             controllers.LdapUserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /ldap/users/all                                                         controllers.LdapUserController.listAll(s: Int ?= 2)
+GET         /ldap/:id/get                                                           controllers.LdapUserController.get(id: String)
 
 
 GET         /loggedout                                                              controllers.AuthController.loggedOut
