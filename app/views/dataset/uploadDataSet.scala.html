@@ -1,8 +1,8 @@
-@import runnables.DataSetImportInfo
+@import models.CsvDataSetImportInfo
 @import views.html.layout
 @import views.html.elements._
 
-@(form: Form[DataSetImportInfo])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(form: Form[CsvDataSetImportInfo])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @elements = {
     <div class="panel panel-default">
@@ -130,7 +130,7 @@
     "Data Set Import",
     form,
     elements,
-    controllers.dataset.routes.DataSetUploadController.upload,
+    controllers.dataset.routes.CsvDataSetImportController.upload,
     routes.AppController.index,
     'enctype -> "multipart/form-data"
 )

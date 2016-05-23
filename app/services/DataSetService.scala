@@ -6,7 +6,7 @@ import javax.inject.Inject
 
 import com.google.inject.ImplementedBy
 import com.twitter.chill.TraversableSerializer
-import models.{AdaException, AdaParseException, FieldType, Field}
+import models._
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
@@ -16,7 +16,6 @@ import play.api.libs.json.{Json, JsString, JsNull, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Action
 import reactivemongo.bson.BSONObjectID
-import runnables.DataSetImportInfo
 import util.TypeInferenceProvider
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
@@ -31,8 +30,12 @@ import scala.collection.Set
 trait DataSetService {
 
   def importDataSet(
-    importInfo: DataSetImportInfo
+    importInfo: CsvDataSetImportInfo
   ): Future[Unit]
+
+//  def importDataSet(
+//    importInfo: TranSmartImportInfo
+//  ): Future[Unit]
 
   def inferDictionary(
     dataSetId: String,
@@ -57,8 +60,9 @@ class DataSetServiceImpl @Inject()(
   private val timeout = 120000 millis
   private val defaultCharset = "UTF-8"
   private val reportLineFreq = 0.1
+  private val tranSmartDelimeter = '\t'
 
-  override def importDataSet(importInfo: DataSetImportInfo) = {
+  override def importDataSet(importInfo: CsvDataSetImportInfo) = {
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
     val dataSetAccessor =
@@ -121,6 +125,70 @@ class DataSetServiceImpl @Inject()(
       logger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
     )
   }
+
+//  override def importDataSet(importInfo: TranSmartImportInfo) = {
+//    logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
+//
+//    val dataSetAccessor =
+//      result(dsaf.register(importInfo.dataSpaceName, importInfo.dataSetId, importInfo.dataSetName, importInfo.setting), timeout)
+//    val dataRepo = dataSetAccessor.dataSetRepo
+//    val syncDataRepo = RepoSynchronizer(dataRepo, timeout)
+//
+//    // remove the records from the collection
+//    syncDataRepo.deleteAll
+//
+//    val future = {
+//      try {
+//        val (lines, lineCount) = getLineIteratorAndCount(importInfo)
+//
+//        // collect the column names
+//        val columnNames =  getColumnNames(tranSmartDelimeter, lines)
+//        val columnCount = columnNames.size
+//
+//        // for each line create a JSON record and insert to the database
+//        val contentLines = lines
+//        val reportLineSize = (lineCount - 1) * reportLineFreq
+//
+//        var bufferedLine = ""
+//
+//        // read all the lines
+//        val lineFutures = contentLines.zipWithIndex.map { case (line, index) =>
+//          // parse the line
+//          bufferedLine += line
+//          val values = parseLine(tranSmartDelimeter, bufferedLine)
+//
+//          if (values.size < columnCount) {
+//            logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
+//            Future(())
+//          } else if (values.size > columnCount) {
+//            throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated.")
+//          } else {
+//            // reset buffer
+//            bufferedLine = ""
+//
+//            // create a JSON record
+//            val jsonRecord = JsObject(
+//              (columnNames, values).zipped.map {
+//                case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
+//              })
+//
+//            // insert the record to the database
+//            dataRepo.save(jsonRecord).map(_ =>
+//              logProgress((index + 1), reportLineSize, lineCount - 1)
+//            )
+//          }
+//        }
+//
+//        Future.sequence(lineFutures)
+//      } catch {
+//        case e: Exception => Future.failed(e)
+//      }
+//    }
+//
+//    future.map( _ =>
+//      logger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
+//    )
+//  }
 
   override def inferDictionary(
     dataSetId: String,
@@ -208,7 +276,7 @@ class DataSetServiceImpl @Inject()(
         throw new AdaException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
       )
 
-  protected def getLineIteratorAndCount(importInfo: DataSetImportInfo): (Iterator[String], Int) =
+  protected def getLineIteratorAndCount(importInfo: CsvDataSetImportInfo): (Iterator[String], Int) =
     try {
       importInfo.eol match {
         case Some(eol) => {
@@ -225,7 +293,7 @@ class DataSetServiceImpl @Inject()(
       case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
     }
 
-  private def createSource(importInfo: DataSetImportInfo) = {
+  private def createSource(importInfo: CsvDataSetImportInfo) = {
     val charsetName = importInfo.charsetName.getOrElse(defaultCharset)
     val charset = Charset.forName(charsetName)
 

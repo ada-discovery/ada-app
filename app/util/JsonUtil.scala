@@ -87,6 +87,7 @@ object JsonUtil {
 
   /**
     * Find items in field exactly matching input value.
+    *
     * @param items Input items.
     * @param value Value for matching.
     * @param filterFieldName Field to be queried for value.
@@ -100,6 +101,7 @@ object JsonUtil {
 
   /**
     * Retrieve all items of specified field.
+    *
     * @param items Input items.
     * @param fieldName Field of interest.
     * @return Items in specified field.

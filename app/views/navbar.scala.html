@@ -41,7 +41,7 @@
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Admin<span class="caret"></span></a>
                     <ul class="dropdown-menu">
                         @listItem(routes.AdminController.listRunnables(), "Runnables")
-                        @listItem(controllers.dataset.routes.DataSetUploadController.create(), "Upload Data Set")
+                        @listItem(controllers.dataset.routes.CsvDataSetImportController.create(), "Upload Data Set")
                         @listItem(controllers.dataset.routes.DataSetSettingController.find(), "Data Set Settings")
                         @listItem(routes.UserController.listAll(), "Users")
                     </ul>

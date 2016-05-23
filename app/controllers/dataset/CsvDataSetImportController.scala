@@ -2,14 +2,13 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import models.{DataSetSetting, AdaException, AdaParseException}
+import models.{CsvDataSetImportInfo, DataSetSetting, AdaException, AdaParseException}
 import persistence.RepoTypes._
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.{RequestHeader, Action, Controller, Result}
-import runnables.CsvDataSetImportInfo
 import controllers.dataset.DataSetSettingController.dataSetSettingMapping
 import services.DataSetService
 import play.api.Logger

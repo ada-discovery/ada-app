@@ -2,15 +2,16 @@ package runnables.denopa
 
 import javax.inject.Inject
 
+import models.CsvDataSetImportInfo
 import runnables.DataSetId._
 import play.api.Configuration
-import runnables.{DataSetImportInfo, GuiceBuilderRunnable}
+import runnables.GuiceBuilderRunnable
 import services.DataSetService
 
 class ImportDeNoPaBaseline @Inject() (configuration: Configuration, dataSetService: DataSetService) extends Runnable {
 
   override def run = dataSetService.importDataSet(
-    DataSetImportInfo(
+    CsvDataSetImportInfo(
       "DeNoPa",
       denopa_baseline,
       "Clinical Baseline",

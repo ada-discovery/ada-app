@@ -2,15 +2,16 @@ package runnables.luxpark
 
 import javax.inject.Inject
 
+import models.CsvDataSetImportInfo
 import runnables.DataSetId.ibbl_test
 import play.api.Configuration
-import runnables.{DataSetImportInfo, GuiceBuilderRunnable}
+import runnables.GuiceBuilderRunnable
 import services.DataSetService
 
 class ImportIBBLTest @Inject() (configuration: Configuration, dataSetService: DataSetService) extends Runnable {
 
   override def run = dataSetService.importDataSet(
-    DataSetImportInfo(
+    CsvDataSetImportInfo(
       "Lux Park",
       ibbl_test,
       "IBBL (Test) BioSamples",
