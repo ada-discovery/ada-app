@@ -9,7 +9,7 @@ import play.api.data.Forms._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.{RequestHeader, Action, Controller, Result}
-import runnables.DataSetImportInfo
+import runnables.CsvDataSetImportInfo
 import controllers.dataset.DataSetSettingController.dataSetSettingMapping
 import services.DataSetService
 import play.api.Logger
@@ -18,7 +18,7 @@ import controllers.dataset.DataSetRouter
 
 import scala.concurrent.Future
 
-class DataSetUploadController @Inject() (
+class CsvDataSetImportController @Inject()(
     repo: DataSetSettingRepo,
     dataSetService: DataSetService,
     messagesApi: MessagesApi
@@ -29,15 +29,15 @@ class DataSetUploadController @Inject() (
   protected val form = Form(
     mapping(
       "dataSpaceName" -> nonEmptyText,
-      "dataSetId" -> nonEmptyText.verifying("Data Set Id should contain no spaces", dataSetId => !dataSetId.contains(" ")),
+      "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
       "dataSetName" -> nonEmptyText,
       "path" -> optional(text),
       "delimiter" -> nonEmptyText,
       "eol" -> optional(text),
       "charsetName" -> optional(text),
       "setting" -> optional(dataSetSettingMapping)
-    ) (new DataSetImportInfo(_, _, _, _, _, _, _, _))
-      { importInfo: DataSetImportInfo =>
+    ) (CsvDataSetImportInfo.apply)
+      { importInfo: CsvDataSetImportInfo =>
         Some(
           importInfo.dataSpaceName, importInfo.dataSetId,
           importInfo.dataSpaceName, importInfo.path, importInfo.delimiter,
@@ -47,7 +47,7 @@ class DataSetUploadController @Inject() (
   )
 
   private val defaultImportInfo =
-    new DataSetImportInfo("", "", "", None, ",", None, None, None)
+    CsvDataSetImportInfo("", "", "", None, ",", None, None, None)
 
   def create = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
@@ -92,7 +92,7 @@ class DataSetUploadController @Inject() (
   }
 
   private def handleError(
-    filledForm: Form[DataSetImportInfo],
+    filledForm: Form[CsvDataSetImportInfo],
     dataSetName: String)(
     message: String
   )(implicit request: RequestHeader): Result = {
@@ -101,7 +101,7 @@ class DataSetUploadController @Inject() (
   }
 
   private def createBadRequest(
-    filledForm: Form[DataSetImportInfo]
+    filledForm: Form[CsvDataSetImportInfo]
   )(implicit request: RequestHeader) = {
     implicit val msg = messagesApi.preferred(request)
     BadRequest(views.html.dataset.uploadDataSet(filledForm))
