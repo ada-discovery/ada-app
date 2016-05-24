@@ -4,6 +4,7 @@
 @import views.html.category.treeChart
 @import models.Category
 @import controllers.dataset.CategoryRouter
+@import util.typeColumns
 
 @(
     domainName : String,
@@ -44,8 +45,8 @@
     paginatedTable(
         page,
         router.list(_, _, page.filter),
-        Seq(
-            ("name", "Name", {item : Any => Html(item.asInstanceOf[Category].name)})
+        typeColumns[Category](
+            ("name", "Name", _.name)
         ),
         Some({ item : Any => router.get(item.asInstanceOf[Category]._id.get)})
     )

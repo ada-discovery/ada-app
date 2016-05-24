@@ -3,6 +3,7 @@
 @import views.html.dataset.datasetMenu
 @import views.html.table.displayTable
 @import controllers.dataset.DataSetRouter
+@import util.typeColumns
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 
 @(
@@ -16,9 +17,9 @@
 @table = {
     @displayTable(
         dataSpaceMetaInfo.dataSetMetaInfos,
-        Seq(
-            ("name", "Name", {item : Any => Html(item.asInstanceOf[DataSetMetaInfo].name)}),
-            ("size", "# Items/Patients", {item : Any => Html(dataSetIdSizeMap.get(item.asInstanceOf[DataSetMetaInfo].id).get.toString)})
+        typeColumns[DataSetMetaInfo](
+            ("name", "Name", _.name),
+            ("size", "# Items/Patients", {info: DataSetMetaInfo => dataSetIdSizeMap.get(info.id).get.toString})
         ),
         None,
         Some({ item : Any => new DataSetRouter(item.asInstanceOf[DataSetMetaInfo].id).plainOverviewList})

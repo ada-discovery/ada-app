@@ -1,3 +1,5 @@
+import play.twirl.api.Html
+
 package object util {
 
 //  def getDomainName(form: Form[_]) = form.get.getClass.getSimpleName.toLowerCase
@@ -47,4 +49,19 @@ package object util {
     fieldLabelMap.map(_.getOrElse(fieldName, toCamel(fieldName))).getOrElse(toCamel(fieldName))
 
   def chartElementName(title: String) = title.hashCode + "Chart"
+
+  // retyping of column items needed because play templates do not support generics
+  def typeColumn[T](column: (String, String, T => Any)): (String, String, Any  => Html) =
+    (column._1, column._2, {item: Any =>
+      val value = column._3(item.asInstanceOf[T])
+      if (value.isInstanceOf[Html])
+        value.asInstanceOf[Html]
+      else if (value == null)
+        Html("")
+      else
+        Html(value.toString)
+    })
+
+  def typeColumns[T](columns: (String, String, T => Any)*): Traversable[(String, String, Any => Html)] =
+    columns.map(typeColumn[T])
 }

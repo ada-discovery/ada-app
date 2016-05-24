@@ -1,11 +1,10 @@
 package controllers
 
 import javax.inject.Inject
+import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller}
 
 import ldap.{LdapConnector, LdapSettings}
-
-
 
 /**
   * Controller for inspecting active ldap settings.
@@ -13,10 +12,12 @@ import ldap.{LdapConnector, LdapSettings}
   */
 class LdapController @Inject() (
    ldapConnector: LdapConnector,
-   ldapSettings: LdapSettings
+   ldapSettings: LdapSettings,
+   messagesApi: MessagesApi
  ) extends Controller{
 
   def settings = Action{ implicit request =>
+    implicit val msg = messagesApi.preferred(request)
     Ok(views.html.ldapviews.viewSettings(ldapSettings))
   }
 

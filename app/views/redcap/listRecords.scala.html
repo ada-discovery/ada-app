@@ -2,6 +2,7 @@
 @import play.api.libs.json.JsObject
 @import util.FilterSpec
 @import views.html.table.paginatedJsonTable
+@import util.typeColumns
 
 @(currentPage: Page[JsObject], filterSpec: FilterSpec)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 

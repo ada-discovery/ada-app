@@ -1,6 +1,7 @@
 @import views.html.layout.list
 @import views.html.table._
 @import models.redcap.ExportField
+@import util.typeColumns
 
 @(currentPage: Page[ExportField])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
@@ -15,10 +16,10 @@
     paginatedTable(
         currentPage,
         routes.RedCapController.listExportFields(_, _, ""),
-        Seq(
-            ("original_field_name", "Original Name", {item : Any => Html(item.asInstanceOf[ExportField].original_field_name)}),
-            ("choice_value", "Choice Value", {item : Any => Html(item.asInstanceOf[ExportField].choice_value)}),
-            ("export_field_name", "Export Name", {item : Any => Html(item.asInstanceOf[ExportField].export_field_name)})
+        typeColumns[ExportField](
+            ("original_field_name", "Original Name", _.original_field_name),
+            ("choice_value", "Choice Value", _.choice_value),
+            ("export_field_name", "Export Name", _.export_field_name)
         ),
         Some({ item : Any => routes.RedCapController.showExportField(item.asInstanceOf[ExportField].export_field_name)})
     )

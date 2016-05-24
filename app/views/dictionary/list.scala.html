@@ -4,6 +4,7 @@
 @import views.html.modal
 @import models.Field
 @import util.FieldChartSpec
+@import util.typeColumns
 
 @import controllers.dataset.DictionaryRouter
 
@@ -38,11 +39,11 @@
     paginatedTable(
         page,
         router.list(_, _, page.filter),
-        Seq(
-            ("name", "Name", {item : Any => Html(item.asInstanceOf[Field].name)}),
-            ("fieldType", "Type", {item : Any => Html(item.asInstanceOf[Field].fieldType.toString)}),
-            ("label", "Label", {item : Any => Html(item.asInstanceOf[Field].label.getOrElse(""))}),
-            ("category.name", "Category", {item : Any => Html(item.asInstanceOf[Field].category.map(_.name).getOrElse(""))})
+        typeColumns[Field](
+            ("name", "Name", _.name),
+            ("fieldType", "Type", _.fieldType),
+            ("label", "Label", _.label.getOrElse("")),
+            ("category.name", "Category", _.category.map(_.name).getOrElse(""))
         ),
         Some({ item : Any => router.get(item.asInstanceOf[Field].name)})
     )

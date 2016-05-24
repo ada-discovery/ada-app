@@ -1,5 +1,6 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
+@import util.typeColumns
 
 @import models.security.LdapUser
 
@@ -17,10 +18,12 @@
     paginatedTable(
         page,
         routes.LdapUserController.find(_, _, page.filter),
-        Seq(("_id", "LDAP DN", {item : Any => Html(item.asInstanceOf[LdapUser]._id)}),
-            ("name", "name", {item : Any => Html(item.asInstanceOf[LdapUser].name)}),
-            ("email", "email", {item : Any => Html(item.asInstanceOf[LdapUser].email)}),
-            ("ou", "ou", {item : Any => Html(item.asInstanceOf[LdapUser].ou)})),
+        typeColumns[LdapUser](
+            ("_id", "LDAP DN", _._id),
+            ("name", "Name", _.name),
+            ("email", "Email", _.email),
+            ("ou", "OU", _.ou)
+        ),
         Some({ item : Any => routes.LdapUserController.get(item.asInstanceOf[LdapUser]._id)})
     )
 }
@@ -31,4 +34,4 @@
     actions,
     table,
     None
-)@()
+)

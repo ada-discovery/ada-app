@@ -1,5 +1,6 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
+@import util.typeColumns
 
 @import models.security.CustomUser
 
@@ -20,8 +21,10 @@
     paginatedTable(
         page,
         routes.UserController.find(_, _, page.filter),
-        Seq(("", "_id", {item : Any => Html(item.asInstanceOf[CustomUser].ldapDn)}),
-            ("", "email", {item : Any => Html(item.asInstanceOf[CustomUser].email)})),
+        typeColumns[CustomUser](
+            ("id", "Id", _.ldapDn),
+            ("email", "Email", _.email)
+        ),
         Some({ item : Any => routes.UserController.get(item.asInstanceOf[CustomUser]._id.get)})
     )
 }
@@ -30,6 +33,5 @@
     "user",
     page.total,
     actions,
-    table,
-    None
+    table
 )

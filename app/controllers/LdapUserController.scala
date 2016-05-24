@@ -22,7 +22,7 @@ class LdapUserController @Inject() (userRepo: LdapUserRepo)
     id : String,
     item : LdapUser
   )(implicit msg: Messages, request: RequestHeader) : Html = {
-    html.ldapviews.usershow(id, item)
+    html.ldapviews.usershow(item)
   }
 
   override def listView(

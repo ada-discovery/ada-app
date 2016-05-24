@@ -1,6 +1,7 @@
 @import views.html.elements.inputText
 @import views.html.elements.{labelValue, value}
 @import views.html.table.displayTable
+@import util.typeColumns
 
 @(
     form: Form[DataSpaceMetaInfo],
@@ -14,10 +15,10 @@
 @table = {
     @displayTable(
         form.value.get.dataSetMetaInfos,
-        Seq(
-            ("name", "Name", { item: Any => editableInput("dataSetMetaInfos.name", item.asInstanceOf[DataSetMetaInfo].name) }),
-            ("sortOrder", "Sort Order", { item: Any => editableInput("dataSetMetaInfos.sortOrder", item.asInstanceOf[DataSetMetaInfo].sortOrder) }),
-            ("size", "# Items/Patients", { item: Any => Html(dataSetIdSizeMap.get(item.asInstanceOf[DataSetMetaInfo].id).get.toString) })
+        typeColumns[DataSetMetaInfo](
+            ("name", "Name", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.name", item.name) }),
+            ("sortOrder", "Sort Order", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.sortOrder", item.sortOrder) }),
+            ("size", "# Items/Patients", { item: DataSetMetaInfo => dataSetIdSizeMap.get(item.id).get.toString })
         ),
         None,
         None,
@@ -28,5 +29,4 @@
 @inputText("dataSpaceMetaInfo", "name", form)
 @inputText("dataSpaceMetaInfo", "sortOrder", form)
 @value("dataSetMetaInfos", "Time Created", form.value.get.timeCreated.toString)
-
 @labelValue("dataSetMetaInfos", "Data Sets"){@table}

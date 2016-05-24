@@ -1,37 +1,17 @@
 @import ldap.LdapSettings
 @import com.typesafe.config.ConfigValue
-@import views.html.layout.main
+@import views.html.table.displayTable
+@import util.typeColumns
 
-@(settings: LdapSettings)(implicit request: RequestHeader)
+@(settings: LdapSettings)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
-@main("LDAP Settings") {
-    <div class="row">
-        <h1>LDAP Settings</h1>
-        <div class="col-md-8">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <td>
-                            <h4>Configuration Key</h4>
-                        </td>
-                        <td>
-                            <h4>Value</h4>
-                        </td>
-                    </tr>
-                </thead>
-                <tbody>
-                @settings.toList.map { s: (String, ConfigValue) =>
-                    <tr>
-                        <td>
-                            @s._1.toString
-                        </td>
-                        <td>
-                            @s._2.unwrapped().toString
-                        </td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-        </div>
-    </div>
-}
+@layout.show(
+    "LDAP Settings",
+    displayTable(
+        settings.toList,
+        typeColumns[(String, ConfigValue)](
+            ("key", "Configuration Key", _._1),
+            ("value", "Value", _._2.unwrapped)
+        )
+    )
+)

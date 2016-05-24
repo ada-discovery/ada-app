@@ -1,6 +1,7 @@
 @import views.html.layout.list
 @import views.html.table.paginatedTable
 @import models.redcap.Metadata
+@import util.typeColumns
 
 @(page: Page[Metadata])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
@@ -15,13 +16,13 @@
     paginatedTable(
         page,
         routes.RedCapController.listMetadatas(_, _, ""),
-        Seq(
-            ("field_name", "Name", {item : Any => Html(item.asInstanceOf[Metadata].field_name)}),
-            ("form_name", "Form", {item : Any => Html(item.asInstanceOf[Metadata].form_name)}),
-            ("section_header", "Section", {item : Any => Html(item.asInstanceOf[Metadata].section_header)}),
-            ("field_type", "Type", {item : Any => Html(item.asInstanceOf[Metadata].field_type.toString)}),
-            ("field_label", "Label", {item : Any => Html(item.asInstanceOf[Metadata].field_label)}),
-            ("select_choices_or_calculations", "Select Choices or Calculations", {item : Any => Html(item.asInstanceOf[Metadata].select_choices_or_calculations)})
+        typeColumns[Metadata](
+            ("field_name", "Name", _.field_name),
+            ("form_name", "Form", _.form_name),
+            ("section_header", "Section", _.section_header),
+            ("field_type", "Type", _.field_type),
+            ("field_label", "Label", _.field_label),
+            ("select_choices_or_calculations", "Select Choices or Calculations", _.select_choices_or_calculations)
         ),
         Some({ item : Any => routes.RedCapController.showMetadata(item.asInstanceOf[Metadata].field_name)})
     )
