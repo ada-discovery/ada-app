@@ -130,3 +130,26 @@ function hideErrors() {
   $('#errorDiv').fadeOut('2000');
   $('#errorDiv').html('');
 }
+
+function getCheckedTableIds(tableId, objectIdName) {
+  var ids = []
+  $('#' + tableId + ' tbody tr').each(function() {
+    var id = $(this).find('#' + objectIdName).text().trim();
+    var checked = $(this).find("td input[type=checkbox]").is(':checked');
+    if (checked) {
+      ids.push(id)
+    }
+  });
+  return ids
+};
+
+// remove this
+function doTableSelectionAction(tableName, actionName) {
+  var ids = getCheckedIds(tableName)
+  if (ids.length == 0) {
+    showError("No rows selected!")
+  } else {
+    var controller = $('#' + tableName).find('#domainName').val();
+    post('/' + controller + '/' + actionName, {ids: ids})
+  }
+}
