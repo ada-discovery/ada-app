@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.elements.editableUserForm
+@import views.html.user.elements
 @import models.security.CustomUser
 
 @(
@@ -11,9 +11,9 @@
 
 @layout.edit(
     "user",
-	errors = form.errors,
-    elements = editableUserForm("user", form),
-	updateCall = routes.UserController.update(id),
-	cancelCall = routes.UserController.listAll(),
-    deleteCall = Some(routes.UserController.delete(id))
+	form.errors,
+    elements(form),
+	routes.UserController.update(id),
+	routes.UserController.listAll(),
+    Some(routes.UserController.delete(id))
 )

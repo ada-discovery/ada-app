@@ -1,11 +1,10 @@
-@import play.api.libs.json.{JsObject, JsNull}
-
 @(
     items: Traversable[_],
     columns: Traversable[(String, String, Any => Html)],
     header: Option[(String, String) => Html] = None,
     rowClickCall: Option[Any => Call] = None,
-    hiddenId: Option[(String, Any => String)] = None
+    hiddenRowId: Option[(String, Any => String)] = None,
+	tableId: Option[String] = None
 )
 
 @defaultHeader(fieldName: String, fieldLabel: String) = {
@@ -14,7 +13,7 @@
 	</th>
 }
 
-<table class="table table-striped">
+<table @if(tableId.isDefined) {id="@tableId.get"} class="table table-striped">
 	<thead>
 		<tr>
             @columns.map { case (fieldName, fieldLabel, _) =>
@@ -25,11 +24,11 @@
 	<tbody>
     	@items.map { item =>
 	    	<tr class='@if(rowClickCall.isDefined) {clickable-row}' data-href='@if(rowClickCall.isDefined){@rowClickCall.get(item)}'>
-                @if(hiddenId.isDefined) {
-                    <input type="hidden" id="@hiddenId.get._1" name="@hiddenId.get._1" value="@hiddenId.get._2(item)"/>
+                @if(hiddenRowId.isDefined) {
+                    <input type="hidden" id="@hiddenRowId.get._1" name="@hiddenRowId.get._1" value="@hiddenRowId.get._2(item)"/>
                 }
-		    	@columns.map { case (_, _, content) =>
-                    <td>
+		    	@columns.map { case (fieldName, _, content) =>
+                    <td id="@fieldName">
                         @content(item)
                     </td>
                 }

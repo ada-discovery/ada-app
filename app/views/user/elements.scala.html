@@ -1,0 +1,17 @@
+@import models.security.CustomUser
+@import views.html.elements.{inputText, labelValue}
+@import views.html.table.addRemoveStringTable
+
+@(form: Form[CustomUser])(implicit msg: play.api.i18n.Messages)
+
+@inputText("user", "name", form)
+@inputText("user", "email", form)
+@labelValue("user", "Roles"){@addRemoveStringTable("role", form.value.get.roles)}
+@labelValue("user", "Permissions"){@addRemoveStringTable("permission", form.value.get.permissions)}
+
+<script type="text/javascript">
+    $(function () {
+        registerTableAddModalHandler('role')
+        registerTableAddModalHandler('permission')
+    })
+</script>

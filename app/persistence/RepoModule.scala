@@ -15,7 +15,7 @@ import persistence.RepoDef.Repo
 import models.security.CustomUser
 import models.workspace.Workspace
 
-object RepoDef extends Enumeration {
+private object RepoDef extends Enumeration {
   case class Repo[T : Manifest](
     repo : T,
     named : Boolean = false

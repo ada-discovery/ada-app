@@ -1,13 +1,13 @@
 @import views.html.layout
-@import views.html.elements.editableUserForm
+@import views.html.user.elements
 @import models.security.CustomUser
 
 @(form: Form[CustomUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @layout.create(
     "user",
-	form = form,
-	elements = editableUserForm("user", form),
-	saveCall = routes.UserController.save(),
-	listCall = routes.UserController.listAll()
+	form,
+	elements(form),
+	routes.UserController.save(),
+	routes.UserController.listAll()
 )

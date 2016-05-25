@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import models.security.{SecurityRoleCache, SecurityPermissionCache, CustomUser}
+import models.security.CustomUser
 import persistence.MailClientProvider
 
 import persistence.RepoTypes.UserRepo
@@ -12,9 +12,7 @@ import models.Page
 import reactivemongo.bson.BSONObjectID
 import views.html
 import play.api.i18n.Messages
-import play.api.mvc.{AnyContent, RequestHeader, Request}
-
-import util.SecurityUtil
+import play.api.mvc.{AnyContent, RequestHeader, Request, Action}
 
 import scala.concurrent.Future
 

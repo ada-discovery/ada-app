@@ -31,7 +31,7 @@
         </div>
     </div>
     @if(page.total.equals(0l) && page.filter.conditions.isEmpty) {
-        @modal("inferModal", "No Dictionary Found", Html("Do you want to infer one?"), router.inferDictionary)
+        @modal("inferModal", "No Dictionary Found", Html("Do you want to infer one?"), Some(router.inferDictionary))
     }
 }
 

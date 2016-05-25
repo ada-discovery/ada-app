@@ -1,0 +1,98 @@
+@import views.html.table.displayTable
+@import util.typeColumns
+
+@(domainName: String, items: Traversable[String])
+
+@modalInner = {
+    <input text="text" id="newItems" value="">
+}
+
+@modalButtons(domainName: String) = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" id="@{domainName}SubmitButton" data-dismiss="modal">OK</button>
+}
+
+
+<div id="@{domainName}Div" class="row col-sm-3">
+    <a class="btn btn-info btn-sm" href="#" onclick="openAddModal('@{domainName}');return false;" data-toggle="tooltip" title="Add New @{domainName.capitalize}">
+        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+    </a>
+    @if(items.nonEmpty) {
+        <a class="btn btn-info btn-sm" href="#" onclick="removeItems('@{domainName}');return false;" data-toggle="tooltip" title="Delete @{domainName.capitalize}">
+            <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+        </a>
+    }
+    <div>
+    @displayTable(
+        items,
+        typeColumns[String](
+            ("check", "", _ => {<input type="checkbox"/>}),
+            ("name", "Name", identity)
+        ),
+        None, None, None, Some(domainName + "Table")
+    )
+    </div>
+    @modal("add_" + domainName + "Modal", "Add " + domainName.capitalize + "(s)", modalInner, None, Some(modalButtons(domainName)))
+    @items.map{ item =>
+        <input type="hidden" name="@{domainName}s[]" value='@item'>
+    }
+</div>
+
+
+<script type="text/javascript">
+    function registerTableAddModalHandler(domainName) {
+        var modalName = 'add_' + domainName + 'Modal'
+        var submitButtonName = domainName + 'SubmitButton'
+
+        $("#" + modalName).keypress(function(e) {
+            if (e.keyCode == 13) {
+                e.preventDefault();
+                addItems(domainName)
+                $("#" + modalName).modal("hide")
+            }
+        });
+
+        $("#" + submitButtonName).click(function() {addItems(domainName)});
+    }
+
+    function openAddModal(domainName) {
+        var modalName = 'add_' + domainName + 'Modal'
+
+        $('#' + modalName + ' #newItems').val("")
+        $('#' + modalName).modal()
+    }
+
+    function addItems(domainName) {
+        var modalName = 'add_' + domainName + 'Modal'
+        var itemsName = domainName + 's[]'
+        var tableId = domainName + 'Table'
+        var tableDiv = domainName + 'Div'
+
+        $.each($('#' + modalName + ' #newItems').val().split(","), function(index, item) {
+            var trimmedItem = item.trim();
+            console.log(trimmedItem);
+            if (trimmedItem) {
+                var map = {};
+                map[itemsName] = trimmedItem;
+                addParams($('#' + tableDiv), map)
+                $('#' + tableId + ' tbody').append("<tr><td><input type='checkbox'></input></td><td id='name'>" + trimmedItem + "</td></tr>")
+            }
+        })
+    }
+
+    function removeItems(domainName) {
+        var itemsName = domainName + 's[]'
+        var tableId = domainName + 'Table'
+        var tableDiv = domainName + 'Div'
+
+        $('#' + tableId + ' tbody tr').each(function() {
+            var id = $(this).find('#name').text().trim();
+            var checked = $(this).find("td input[type=checkbox]").is(':checked');
+            if (checked) {
+                var valueEl = $('#' + tableDiv).find("input[name='" + itemsName + "'][value='" + id +"']")
+                valueEl.remove()
+                $(this).remove()
+            }
+        });
+    }
+</script>

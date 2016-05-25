@@ -8,7 +8,7 @@
     @value("ldapUser", "Name", item.name)
     @value("ldapUser", "Email", item.email)
     @value("ldapUser", "Organisatorical Unit", item.ou)
-    @value("ldapUser", "Groups", item.permissions.fold("")((s,a)=> a+", "+s))
+    @value("ldapUser", "Groups", item.permissions.mkString(", "))
 }
 
 @layout.show(

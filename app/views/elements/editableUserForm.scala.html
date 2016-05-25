@@ -1,9 +1,0 @@
-@import models.security.SecurityPermissionCache
-@import models.security.SecurityRoleCache
-
-@(domainName: String, form: Form[_])(implicit msg: play.api.i18n.Messages)
-
-@inputText(domainName, "name", form)
-@inputText(domainName, "email", form)
-@checkboxGroup(domainName, "roles", form, SecurityRoleCache.getRoles.map{x=>(x,x)})
-@checkboxGroup(domainName, "permissions", form, SecurityPermissionCache.getPermissions.map{x=>(x,x)})
