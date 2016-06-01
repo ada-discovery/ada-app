@@ -2,12 +2,12 @@ package models
 
 import java.io.File
 
-abstract class DataSetImportInfo(
-  dataSpaceName: String,
-  dataSetId: String,
-  dataSetName: String,
-  setting: Option[DataSetSetting]
-)
+abstract class DataSetImportInfo {
+  val dataSpaceName: String
+  val dataSetId: String
+  val dataSetName: String
+  val setting: Option[DataSetSetting]
+}
 
 case class CsvDataSetImportInfo(
   dataSpaceName: String,
@@ -19,7 +19,15 @@ case class CsvDataSetImportInfo(
   eol: Option[String],
   charsetName: Option[String],
   setting: Option[DataSetSetting]
-) extends DataSetImportInfo(dataSpaceName, dataSetId, dataSetName, setting)
+) extends DataSetImportInfo
+
+case class SynapseDataSetImportInfo(
+  dataSpaceName: String,
+  dataSetId: String,
+  dataSetName: String,
+  tableId: String,
+  setting: Option[DataSetSetting]
+) extends DataSetImportInfo
 
 case class TranSmartImportInfo(
   dataSpaceName: String,
@@ -31,7 +39,7 @@ case class TranSmartImportInfo(
   mappingFile: Option[File],
   charsetName: Option[String],
   setting: Option[DataSetSetting]
-) extends DataSetImportInfo(dataSpaceName, dataSetId, dataSetName, setting)
+) extends DataSetImportInfo
 
 case class RedCapImportInfo(
   dataSpaceName: String,
@@ -40,7 +48,7 @@ case class RedCapImportInfo(
   url: String,
   token: String,
   setting: Option[DataSetSetting]
-) extends DataSetImportInfo(dataSpaceName, dataSetId, dataSetName, setting)
+) extends DataSetImportInfo
 
 
 // handy constructors... could be moved to data upload controller

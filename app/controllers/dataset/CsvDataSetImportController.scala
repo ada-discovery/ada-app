@@ -50,7 +50,7 @@ class CsvDataSetImportController @Inject()(
 
   def create = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
-    Ok(views.html.dataset.uploadDataSet(form.fill(defaultImportInfo)))
+    Ok(views.html.dataset.importCsvDataSet(form.fill(defaultImportInfo)))
   }
 
   def upload = Action.async { implicit request =>
@@ -103,6 +103,6 @@ class CsvDataSetImportController @Inject()(
     filledForm: Form[CsvDataSetImportInfo]
   )(implicit request: RequestHeader) = {
     implicit val msg = messagesApi.preferred(request)
-    BadRequest(views.html.dataset.uploadDataSet(filledForm))
+    BadRequest(views.html.dataset.importCsvDataSet(filledForm))
   }
 }

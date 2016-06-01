@@ -5,6 +5,9 @@ import com.google.inject.assistedinject.FactoryModuleBuilder
 
 class ServiceModule extends AbstractModule {
 
-  override def configure() {
+  override def configure() = {
+    install(new FactoryModuleBuilder()
+      .implement(classOf[SynapseService], classOf[SynapseServiceWSImpl])
+      .build(classOf[SynapseServiceFactory]))
   }
 }

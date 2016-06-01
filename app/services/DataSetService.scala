@@ -1,25 +1,21 @@
 package services
 
 import java.nio.charset.{MalformedInputException, Charset}
-import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import com.google.inject.ImplementedBy
-import com.twitter.chill.TraversableSerializer
 import models._
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
-import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{Json, JsString, JsNull, JsObject}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.Action
-import reactivemongo.bson.BSONObjectID
 import util.TypeInferenceProvider
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.concurrent.Await.result
+import play.api.Configuration
 import scala.concurrent.duration._
 import util.JsonUtil._
 
@@ -29,9 +25,9 @@ import scala.collection.Set
 @ImplementedBy(classOf[DataSetServiceImpl])
 trait DataSetService {
 
-  def importDataSet(
-    importInfo: CsvDataSetImportInfo
-  ): Future[Unit]
+  def importDataSet(importInfo: CsvDataSetImportInfo): Future[Unit]
+
+  def importDataSet(importInfo: SynapseDataSetImportInfo): Future[Unit]
 
 //  def importDataSet(
 //    importInfo: TranSmartImportInfo
@@ -53,7 +49,9 @@ trait DataSetService {
 class DataSetServiceImpl @Inject()(
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dsaf: DataSetAccessorFactory,
-    dataSetSettingRepo: DataSetSettingRepo
+    dataSetSettingRepo: DataSetSettingRepo,
+    synapseServiceFactory: SynapseServiceFactory,
+    configuration: Configuration
   ) extends DataSetService{
 
   private val logger = Logger
@@ -61,12 +59,76 @@ class DataSetServiceImpl @Inject()(
   private val defaultCharset = "UTF-8"
   private val reportLineFreq = 0.1
   private val tranSmartDelimeter = '\t'
+  private val synapseDelimiter = ","
+  private val synapseEol = "\n"
+  private val synapseUsername = configuration.getString("synapse.api.username").get
+  private val synapsePassword = configuration.getString("synapse.api.password").get
 
-  override def importDataSet(importInfo: CsvDataSetImportInfo) = {
+  override def importDataSet(importInfo: CsvDataSetImportInfo) =
+    importLineParsableDataSet(
+      importInfo,
+      importInfo.delimiter,
+      importInfo.eol.isDefined,
+      createCsvFileLineIteratorAndCount(importInfo)
+    )
+
+  private def createCsvFileLineIteratorAndCount(importInfo: CsvDataSetImportInfo): (Iterator[String], Int) = {
+    def createSource = {
+      val charsetName = importInfo.charsetName.getOrElse(defaultCharset)
+      val charset = Charset.forName(charsetName)
+
+      if (importInfo.path.isDefined)
+        Source.fromFile(importInfo.path.get)(charset)
+      else
+        Source.fromFile(importInfo.file.get)(charset)
+    }
+
+    try {
+      importInfo.eol match {
+        case Some(eol) => {
+          // TODO: not effective... if a custom eol is used we need to read the whole file into memory and split again. It'd be better to use a custom BufferedReader
+          val lines = createSource.mkString.split(eol)
+          (lines.iterator, lines.length)
+        }
+        case None => {
+          // TODO: not effective... To count the lines, need to recreate the source and parse the file again
+          (createSource.getLines, createSource.getLines.size)
+        }
+      }
+    } catch {
+      case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
+    }
+  }
+
+  override def importDataSet(importInfo: SynapseDataSetImportInfo) =
+    importLineParsableDataSet(
+      importInfo,
+      synapseDelimiter,
+      true,
+      {
+        val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
+        val csvFuture = synapseService.getTableAsCsv(importInfo.tableId)
+        val lines = result(csvFuture, timeout).split(synapseEol)
+        (lines.iterator, lines.length)
+      }
+    )
+
+  protected def importLineParsableDataSet(
+    importInfo: DataSetImportInfo,
+    delimiter: String,
+    skipFirstLine: Boolean,
+    createLineIteratorAndCount: => (Iterator[String], Int)
+  ) = {
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
     val dataSetAccessor =
-      result(dsaf.register(importInfo.dataSpaceName, importInfo.dataSetId, importInfo.dataSetName, importInfo.setting), timeout)
+      result(dsaf.register(
+        importInfo.dataSpaceName,
+        importInfo.dataSetId,
+        importInfo.dataSetName,
+        importInfo.setting
+      ), timeout)
+
     val dataRepo = dataSetAccessor.dataSetRepo
     val syncDataRepo = RepoSynchronizer(dataRepo, timeout)
 
@@ -75,14 +137,14 @@ class DataSetServiceImpl @Inject()(
 
     val future = {
       try {
-        val (lines, lineCount) = getLineIteratorAndCount(importInfo)
+        val (lines, lineCount) = createLineIteratorAndCount
 
         // collect the column names
-        val columnNames =  getColumnNames(importInfo.delimiter, lines)
+        val columnNames =  getColumnNames(delimiter, lines)
         val columnCount = columnNames.size
 
         // for each line create a JSON record and insert to the database
-        val contentLines = if (importInfo.eol.isDefined) lines.drop(1) else lines
+        val contentLines = if (skipFirstLine) lines.drop(1) else lines
         val reportLineSize = (lineCount - 1) * reportLineFreq
 
         var bufferedLine = ""
@@ -91,7 +153,7 @@ class DataSetServiceImpl @Inject()(
         val lineFutures = contentLines.zipWithIndex.map { case (line, index) =>
           // parse the line
           bufferedLine += line
-          val values = parseLine(importInfo.delimiter, bufferedLine)
+          val values = parseLine(delimiter, bufferedLine)
 
           if (values.size < columnCount) {
             logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
@@ -276,33 +338,6 @@ class DataSetServiceImpl @Inject()(
         throw new AdaException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
       )
 
-  protected def getLineIteratorAndCount(importInfo: CsvDataSetImportInfo): (Iterator[String], Int) =
-    try {
-      importInfo.eol match {
-        case Some(eol) => {
-          // TODO: not effective... if a custom eol is used we need to read the whole file into memory and split again. It'd be better to use a custom BufferedReader
-          val lines = createSource(importInfo).mkString.split(eol)
-          (lines.iterator, lines.length)
-        }
-        case None => {
-          // TODO: not effective... To count the lines, need to recreate the source and parse the file again
-          (createSource(importInfo).getLines, createSource(importInfo).getLines.size)
-        }
-      }
-    } catch {
-      case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
-    }
-
-  private def createSource(importInfo: CsvDataSetImportInfo) = {
-    val charsetName = importInfo.charsetName.getOrElse(defaultCharset)
-    val charset = Charset.forName(charsetName)
-
-    if (importInfo.path.isDefined)
-      Source.fromFile(importInfo.path.get)(charset)
-    else
-      Source.fromFile(importInfo.file.get)(charset)
-  }
-
   protected def getColumnNames(delimiter: String, lineIterator: Iterator[String]) =
     lineIterator.take(1).map {
       _.split(delimiter).map(columnName =>
@@ -311,7 +346,7 @@ class DataSetServiceImpl @Inject()(
 
   // parse the lines, returns the parsed items
   private def parseLine(delimiter: String, line: String): Seq[String] = {
-    val itemsWithStartEndFlag = line.split(delimiter).map { l =>
+    val itemsWithStartEndFlag = line.split(delimiter, -1).map { l =>
       val start = if (l.startsWith("\"")) 1 else 0
       val end = if (l.endsWith("\"")) l.size - 1 else l.size
       val item = if (start <= end)
@@ -321,11 +356,14 @@ class DataSetServiceImpl @Inject()(
       (item, l.startsWith("\""), l.endsWith("\""))
     }
 
-    fixImproperQuotes(itemsWithStartEndFlag)
+    fixImproperQuotes(delimiter, itemsWithStartEndFlag)
   }
 
   // fix the items that have been improperly split because the delimiter was located inside the quotes
-  private def fixImproperQuotes(itemsWithStartEndFlag: Array[(String, Boolean, Boolean)]) = {
+  private def fixImproperQuotes(
+    delimiter: String,
+    itemsWithStartEndFlag: Array[(String, Boolean, Boolean)]
+  ) = {
     val fixedItems = ListBuffer.empty[String]
     var startQuoteWithoutEnd = false
     var bufferedItem = ""
@@ -337,14 +375,14 @@ class DataSetServiceImpl @Inject()(
         } else if (startFlag && !endFlag) {
           // starting quote and no ending quote indicated an improper split, buffer
           startQuoteWithoutEnd = true
-          bufferedItem += item
+          bufferedItem += item + delimiter
         } else
           throw new AdaParseException(s"Parsing failed. The item '$item' ends with a quote but there is no preceding quote to match with.")
 
       } else {
         if (!startFlag && !endFlag) {
           // continue buffering
-          bufferedItem += item
+          bufferedItem += item + delimiter
         } else if (!startFlag && endFlag) {
           // end buffering
           bufferedItem += item

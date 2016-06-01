@@ -41,8 +41,10 @@ GET         /loginAdmin                                                         
 # Admin
 GET         /admin/runnables                                                        controllers.AdminController.listRunnables
 GET         /admin/runScript                                                        controllers.AdminController.runScript(className : String)
-GET         /admin/dataSetUpload/new                                                controllers.dataset.CsvDataSetImportController.create
-POST        /admin/dataSetUpload/upload                                             controllers.dataset.CsvDataSetImportController.upload
+GET         /admin/csvDataSetUpload/new                                             controllers.dataset.CsvDataSetImportController.create
+POST        /admin/csvDataSetUpload/upload                                          controllers.dataset.CsvDataSetImportController.upload
+GET         /admin/synapseDataSetUpload/new                                         controllers.dataset.SynapseDataSetImportController.create
+POST        /admin/synapseDataSetUpload/upload                                      controllers.dataset.SynapseDataSetImportController.upload
 
 # Users management
 GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())

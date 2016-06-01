@@ -18,7 +18,7 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("biocore"))
+  ) = List(Array("basic"))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

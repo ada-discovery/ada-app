@@ -8,9 +8,9 @@
     <div class="panel panel-default">
         <div class="panel-heading">Data Set Info</div>
         <div class="panel-body">
-            @inputText("dataSetImportInfo", "dataSpaceName", form)
-            @inputText("dataSetImportInfo", "dataSetName", form)
-            @inputText("dataSetImportInfo", "dataSetId", form)
+            @inputText("csvDataSetImportInfo", "dataSpaceName", form)
+            @inputText("csvDataSetImportInfo", "dataSetName", form)
+            @inputText("csvDataSetImportInfo", "dataSetId", form)
         </div>
     </div>
     <div class="panel panel-default">
@@ -101,10 +101,6 @@
             this.submit();
         });
 
-        $('#dataSetName').on('change keyup paste', function() {
-            $('#dataSetId').val($('#dataSetName').val().trim().replace(/ /g, "_").toLowerCase())
-        })
-
         $('input[name="includeSetting"]').change(function() {
             var includeSetting = $('input[name="includeSetting"]:checked').val() == "true"
             if (includeSetting)
@@ -123,11 +119,20 @@
                 $('#path').show()
             }
         })
+
+        $('#dataSpaceName').on('change keyup paste', updateDataSetId)
+        $('#dataSetName').on('change keyup paste', updateDataSetId)
+
+        function updateDataSetId() {
+            var dataSpaceNamePart = $('#dataSpaceName').val().trim().replace(/ /g, "_").toLowerCase()
+            var dataSetNamePart = $('#dataSetName').val().trim().replace(/ /g, "_").toLowerCase()
+            $('#dataSetId').val(dataSpaceNamePart + "." + dataSetNamePart)
+        }
     </script>
 }
 
 @layout.create(
-    "Data Set Import",
+    "Data Set From CSV",
     form,
     elements,
     controllers.dataset.routes.CsvDataSetImportController.upload,

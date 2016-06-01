@@ -16,7 +16,7 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("biocore"))
+  ) = List(Array("basic"))
 
   override def get(id: String) = dispatch(_.get(id))
 

@@ -1,0 +1,34 @@
+@import models.SynapseDataSetImportInfo
+@import views.html.layout
+@import views.html.elements.inputText
+
+@(form: Form[SynapseDataSetImportInfo])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+
+@elements = {
+    @inputText("synapseDataSetImportInfo", "dataSpaceName", form)
+    @inputText("synapseDataSetImportInfo", "dataSetName", form)
+    @inputText("synapseDataSetImportInfo", "dataSetId", form)
+    @inputText("synapseDataSetImportInfo", "tableId", form)
+}
+
+@layout.create(
+    "Data Set From Synapse",
+    form,
+    elements,
+    controllers.dataset.routes.SynapseDataSetImportController.upload,
+    routes.AppController.index
+)
+
+<script type="text/javascript">
+    $(function() {
+
+        $('#dataSpaceName').on('change keyup paste', updateDataSetId)
+        $('#dataSetName').on('change keyup paste', updateDataSetId)
+
+        function updateDataSetId() {
+            var dataSpaceNamePart = $('#dataSpaceName').val().trim().replace(/ /g, "_").toLowerCase()
+            var dataSetNamePart = $('#dataSetName').val().trim().replace(/ /g, "_").toLowerCase()
+            $('#dataSetId').val(dataSpaceNamePart + "." + dataSetNamePart)
+        }
+    })
+</script>
