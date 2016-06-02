@@ -1,6 +1,6 @@
 @import controllers.dataset.DataSetRouter
 @import util.{BasicStats, FilterSpec}
-@import util.shorten
+@import views.html.chart.highcharts.highchartsJsImport
 @import views.html.layout.main
 @import views.html.dataset.datasetSubNav
 @import play.api.libs.json.Json
@@ -66,7 +66,20 @@
     }
 }
 
-@main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav())) {
+@bottomResources =  {
+    @highchartsJsImport()
+    @views.html.chart.highcharts.scatterChart(
+        "Comparison",
+        "scatterChart",
+        xField.capitalize,
+        yField.capitalize,
+        Seq(
+            ("All", "rgba(223, 83, 83, .5)", stats.map(pair => Seq(pair._1, pair._2)))
+        )
+    )
+}
+
+@main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
 
     <div class="page-header">
         <h3>
@@ -80,15 +93,7 @@
         @actions
     </div>
 
-    @views.html.chart.highcharts.scatterChart(
-        "Comparison",
-        "scatterChart",
-        xField.capitalize,
-        yField.capitalize,
-        Seq(
-            ("All", "rgba(223, 83, 83, .5)", stats.map(pair => Seq(pair._1, pair._2)))
-        )
-    )
+    <div id="scatterChart" class="chart-holder"></div>
 }
 
 <script type="text/javascript">

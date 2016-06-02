@@ -2,58 +2,9 @@
 @import util.DataPoint
 
 @(title : String, chartElementName : String, showLabels: Boolean, showLegend: Boolean, elements : Seq[DataPoint])
-    <div id="@chartElementName" class="chart-holder"></div>
-    <script type="text/javascript">
-        $(function () {
-            $('#@{chartElementName}').highcharts({
-                chart: {
-                    plotBackgroundColor: null,
-                    plotBorderWidth: null,
-                    plotShadow: false,
-                    type: 'pie'
-                },
-                title: {
-                    text: "@title"
-                },
-                tooltip: {
-                    pointFormat: 'Count: <b>{point.y}</b>'
-                },
-                plotOptions: {
-                    pie: {
-                        allowPointSelect: true,
-                        cursor: 'pointer',
-                        dataLabels: {
-                            enabled: @showLabels,
-                            format: '<b>{point.name}</b>: {point.percentage:.1f}%',
-                            style: {
-                                color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
-                            }
-                        },
-                        showInLegend: @showLegend,
-                        point: {
-                            events: {
-                                click: function () {
-                                    $('#@{chartElementName}').trigger("pointClick", this);
-                                }
-                            }
-                        }
-                    }
-                },
-                legend: {
-                    maxHeight: 70,
-                },
-                credits: {
-                    enabled: false
-                },
-                series: [{
-                    name: "@title",
-                    colorByPoint: true,
-                    data: [
-                        @elements.map { case DataPoint(key, label, value) =>
-                            {name : '@shorten(label)', y : @value, key: '@key'},
-                        }
-                    ]
-                }]
-            });
-        });
-    </script>
+
+<script type="text/javascript">
+    pieChart('@title', '@{chartElementName}', @showLabels, @showLegend,
+        [ @elements.map { case DataPoint(key, label, value) => {name : '@shorten(label)', y : @value, key: '@key'},}]
+    )
+</script>

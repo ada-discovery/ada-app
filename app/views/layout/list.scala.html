@@ -1,5 +1,3 @@
-@import views.html.layout.genList
-
 @(
     domainName: String,
     count: Long,
@@ -7,14 +5,35 @@
     table: Html,
     charts: Option[Html] = None,
     sideBar: Option[Html] = None,
-    topContentBar: Option[Html] = None
+    topContentBar: Option[Html] = None,
+    topResources: Option[Html] = None,
+    bottomResources: Option[Html] = None
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
+@main(Messages("overviewList.title", domainName), sideBar, topContentBar, topResources, bottomResources) {
 
-@if(charts.isDefined) {
-    @genList(domainName, count, actions, table, charts, sideBar, topContentBar)
-} else {
-    @genList(domainName, count, actions, table, None, sideBar, topContentBar)
+    <div class="page-header">
+        <h3>
+            @Messages("list.count.title", count, domainName)
+        </h3>
+    </div>
+
+    @flashMessages()
+
+    <div id="actions">
+        @actions
+    </div>
+    <hr/>
+
+    @if(charts.isDefined){
+        @charts.get
+
+        @if(count > 0) {
+            @collapsibleElement(table)
+        }
+    } else {
+        @table
+    }
 }

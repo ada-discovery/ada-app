@@ -6,36 +6,33 @@
         <ul class="list-inline">
             <li>
                 <a href="@current.configuration.getString("fnr.url").get">
-                    <img src="@routes.Assets.at("images/logos/fnr.png")" />
+                    <img src="@routes.Assets.versioned("images/logos/fnr.png")" />
                 </a>
             </li>
             <li>
                 <a href="@current.configuration.getString("chl.url").get">
-                    <img src="@routes.Assets.at("images/logos/chl.png")" />
+                    <img src="@routes.Assets.versioned("images/logos/chl.png")" />
                 </a>
             </li>
             <li>
                 <a href="@current.configuration.getString("lih.url").get">
-                    <img src="@routes.Assets.at("images/logos/lih.png")" />
+                    <img src="@routes.Assets.versioned("images/logos/lih.png")" />
                 </a>
             </li>
             <li>
                 <a href="@current.configuration.getString("ibbl.url").get">
-                    <img src="@routes.Assets.at("images/logos/ibbl.png")" />
+                    <img src="@routes.Assets.versioned("images/logos/ibbl.png")" />
                 </a>
             <li>
             <li>
                 <a href="@current.configuration.getString("lcsb.url").get">
-                    <img src="@routes.Assets.at("images/logos/unilu-lcsb.png")" />
+                    <img src="@routes.Assets.versioned("images/logos/unilu-lcsb.png")" />
                 </a>
             </li>
         </ul>
         <hr/>
         <p class="text-muted" align="center">
             NCER-PD Reporting System (Ada), Version @current.configuration.getString("app.version").get
-            <!--
-                <img style="float: right;" src="@routes.Assets.at("images/LCSB_logo.png")" />
-            -->
         </p>
         <p class="text-muted" align="center">
             &copy; LCSB, Uni Lux @(new java.util.Date().format("yyyy"))

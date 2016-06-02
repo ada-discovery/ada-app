@@ -1,0 +1,13 @@
+@import util.{ChartSpec, PieChartSpec, ColumnChartSpec}
+@import views.html.chart._
+@import util.chartElementName
+
+@(chartSpecs : Traversable[ChartSpec])
+
+@chartSpecs.map { chartSpec =>
+    @{chartSpec match {
+        case PieChartSpec(title, showLabels, showLegend, data) => highcharts.pieChart(title, chartElementName(title), showLabels, showLegend, data)
+        case ColumnChartSpec(title, data) => highcharts.columnChart(title, chartElementName(title), Some(title), Some("Count"), data)
+        case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
+    }}
+}

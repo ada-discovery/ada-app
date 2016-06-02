@@ -1,16 +1,18 @@
 @(
-        domainName:  String,
-        count: Long,
-        actions: Html,
-        table: Html,
-        charts: Option[Html] = None,
-        sideBar: Option[Html] = None,
-        topContentBar: Option[Html] = None
+    domainName:  String,
+    count: Long,
+    actions: Html,
+    table: Html,
+    charts: Option[Html] = None,
+    sideBar: Option[Html] = None,
+    topContentBar: Option[Html] = None,
+    topResources: Option[Html] = None,
+    bottomResources: Option[Html] = None
 )(
-        implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
 
-@main(Messages("overviewList.title", domainName), sideBar, topContentBar) {
+@main(Messages("overviewList.title", domainName), sideBar, topContentBar, topResources, bottomResources) {
 
     <div class="page-header">
         <h3>
@@ -31,7 +33,7 @@
         @if(count > 0) {
             @collapsibleElement(table)
         }
-    }else{
+    } else {
         @table
     }
 }

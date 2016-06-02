@@ -1,8 +1,8 @@
 @import util.{PieChartSpec, FieldChartSpec}
-@import views.html.dataset.chartPanel
+@import views.html.chart.chartPanel
 @import util.chartElementName
 
-@(fieldChartSpecs : Iterable[FieldChartSpec], gridWidth: Int = 3)
+@(fieldChartSpecs : Traversable[FieldChartSpec], gridWidth: Int = 3)
 
 @chartPanel(fieldChartSpecs.map(_.chartSpec), gridWidth)
 

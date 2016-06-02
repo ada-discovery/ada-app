@@ -1,5 +1,7 @@
 @import views.html.layout
 @import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu, datasetActions}
+@import views.html.chart.chartPanelJs
+@import views.html.chart.highcharts.highchartsJsImport
 @import views.html.table.paginatedJsonTable
 @import play.api.libs.json.JsObject
 @import play.modules.reactivemongo.json._
@@ -13,7 +15,7 @@
     page: Page[JsObject],
     fieldLabelMap: Map[String, String],
     fieldsToShow: Seq[String],
-    fieldChartSpecs: Iterable[FieldChartSpec],
+    fieldChartSpecs: Traversable[FieldChartSpec],
     router: DataSetRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -37,6 +39,11 @@
     )
 }
 
+@bottomResources = {
+    @highchartsJsImport()
+    @chartPanelJs(fieldChartSpecs.map(_.chartSpec))
+}
+
 @layout.list(
     domainName,
     page.total,
@@ -44,5 +51,7 @@
     table,
     Some(filterChartPanel(fieldChartSpecs)),
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNav())
+    Some(datasetSubNav()),
+    None,
+    Some(bottomResources)
 )

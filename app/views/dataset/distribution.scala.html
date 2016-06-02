@@ -1,8 +1,9 @@
 @import controllers.dataset.DataSetRouter
 @import util.FilterSpec
-@import util.shorten
 @import views.html.layout.main
-@import views.html.dataset.{chartPanel, datasetSubNav}
+@import views.html.chart.highcharts.highchartsJsImport
+@import views.html.chart.{chartPanel, chartPanelJs}
+@import views.html.dataset.datasetSubNav
 @import util.ChartSpec
 @import play.api.libs.json.Json
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
@@ -46,7 +47,12 @@
     </div>
 }
 
-@main(Messages("distribution.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav())) {
+@bottomResources = {
+    @highchartsJsImport()
+    @chartPanelJs(Seq(chartSpec))
+}
+
+@main(Messages("distribution.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
 
     <div class="page-header">
         <h3>

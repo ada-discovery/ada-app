@@ -1,7 +1,9 @@
 @(
     title: String,
     sideBar: Option[Html] = None,
-    topContentBar: Option[Html] = None
+    topContentBar: Option[Html] = None,
+    topResources: Option[Html] = None,
+    bottomResources: Option[Html] = None
 )(content: Html)(implicit request: RequestHeader)
 
 <!DOCTYPE html>
@@ -11,15 +13,18 @@
         <title>@title</title>
         <!-- Latest compiled and minified CSS -->
         <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootswatch-united", "bootstrap.min.css"))">
-        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/main.css")">
+        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/main.min.css")">
 
         @* Optional theme *@
 		@* <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootstrap", "bootstrap-theme.min.css"))"> *@
         
-        <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+        <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
         <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery.min.js"))"></script>
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/main.js")"></script>
+        <script type="text/javascript" src="@routes.Assets.versioned("javascripts/main.min.js")"></script>
 
+        @if(topResources.isDefined) {
+            @topResources.get
+        }
 
         <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
 	    <!--[if lt IE 9]>
@@ -56,11 +61,10 @@
 	    <!-- Latest compiled and minified JavaScript -->
 		<script src="@routes.WebJarAssets.at(WebJarAssets.locate("bootswatch-united", "bootstrap.min.js"))"></script>
 
-        <!-- HighCharts -->
-        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "highcharts.js"))"></script>
-        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "exporting.js"))"></script>
-        <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "highcharts-more.js"))"></script>
+        @if(bottomResources.isDefined) {
+            @bottomResources.get
+        }
 
-        <script type="text/javascript" src="@routes.Assets.at("javascripts/rowClickable.js")"></script>
+        <script type="text/javascript" src="@routes.Assets.versioned("javascripts/rowClickable.min.js")"></script>
     </body>
 </html>

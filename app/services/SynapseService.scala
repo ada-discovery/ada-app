@@ -184,7 +184,7 @@ protected[services] class SynapseServiceWSImpl @Inject() (
 
   private def getSessionToken = synchronized {
     if (sessionToken.isEmpty) result(login, timeout)
-      sessionToken.get
+    sessionToken.get
   }
 
   override def getTableAsCsv(tableId: String): Future[String] =

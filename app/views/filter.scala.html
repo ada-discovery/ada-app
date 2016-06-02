@@ -5,7 +5,7 @@
 @(filter: FilterSpec, submitCall: Call, fieldNamesOrCall: Either[Traversable[String], Call], saveCall: Option[Call]=None)
 
 <!-- need to import css and js first -->
-<link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("stylesheets/typeahead.css")">
+<link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/typeahead.min.css")">
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("typeahead.bundle.min.js"))"></script>
 
 <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">

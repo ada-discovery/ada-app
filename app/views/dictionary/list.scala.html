@@ -1,6 +1,8 @@
 @import views.html.layout
 @import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu}
 @import views.html.table.paginatedTable
+@import views.html.chart.highcharts.highchartsJsImport
+@import views.html.chart.chartPanelJs
 @import views.html.modal
 @import models.Field
 @import util.FieldChartSpec
@@ -49,6 +51,11 @@
     )
 }
 
+@bottomResources = {
+    @highchartsJsImport()
+    @chartPanelJs(fieldChartSpecs.map(_.chartSpec))
+}
+
 @layout.list(
     domainName,
     page.total,
@@ -56,7 +63,9 @@
     table,
     Some(filterChartPanel(fieldChartSpecs, chartGridWidth)),
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNav())
+    Some(datasetSubNav()),
+    None,
+    Some(bottomResources)
 )
 
 <script type="text/javascript">

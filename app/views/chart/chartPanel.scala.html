@@ -1,0 +1,12 @@
+@import util.ChartSpec
+@import util.chartElementName
+
+@(chartSpecs : Traversable[ChartSpec], gridWidth: Int = 3)
+
+<div class="row">
+    @chartSpecs.map { chartSpec =>
+        <div class="col-md-@gridWidth">
+            <div id="@chartElementName(chartSpec.title)" class="chart-holder"></div>
+        </div>
+    }
+</div>

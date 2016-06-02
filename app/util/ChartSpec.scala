@@ -6,12 +6,13 @@ import play.api.libs.json._
 import collection.mutable.{Map => MMap}
 import _root_.util.JsonUtil._
 
-abstract class ChartSpec(title: String)
+abstract class ChartSpec{val title: String}
 
-case class PieChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[DataPoint]) extends ChartSpec(title)
-case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec(title)
-case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec(title)
-case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec(title)
+case class PieChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[DataPoint]) extends ChartSpec
+case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec
+case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec
+case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec
+
 case class FieldChartSpec(fieldName : String, chartSpec : ChartSpec)
 
 case class DataPoint(key: String, label : String, value : Int)

@@ -5,67 +5,9 @@
     yAxisCaption: Option[String],
     elements : Seq[(String, Any)]
 )
-    <div id="@chartElementName" class="chart-holder"></div>
-    <script type="text/javascript">
-        $(function () {
-            $('#@{chartElementName}').highcharts({
-                chart: {
-                    type: 'column'
-                },
-                title: {
-                    text: "@title"
-                },
-                xAxis: {
-                    @if(xAxisCaption.isDefined) {
-                        title: {
-                            text: '@xAxisCaption.get'
-                        },
-                    }
-                    categories: [
-                        @elements.map { case (x, y) =>
-                            '@x',
-                        }
-                    ],
-                    crosshair: true
-                },
-                yAxis: {
-                    @if(yAxisCaption.isDefined) {
-                        title: {
-                            text: '@yAxisCaption.get'
-                        }
-                    }
-                },
-                legend: {
-                    enabled: false
-                },
-                credits: {
-                    enabled: false
-                },
-                plotOptions: {
-                    series: {
-                        borderWidth: 0,
-                        dataLabels: {
-                            enabled: true,
-                            format: '{point.y:.1f}'
-                        }
-                    }
-                },
 
-                tooltip: {
-                    headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
-                    pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}</b><br/>'
-                },
-
-                series: [{
-                    name: "@title",
-                    colorByPoint: true,
-                    colorByPoint: true,
-                    data: [
-                        @elements.map { case (x, y) =>
-                            @y,
-                        }
-                    ]
-                }]
-            });
-        });
-    </script>
+<script type="text/javascript">
+    columnChart('@title', '@{chartElementName}', '@{xAxisCaption.getOrElse("")}', '@{yAxisCaption.getOrElse("")}',
+            [ @elements.map { case (x, y) => '@x',}], [ @elements.map { case (x, y) => @y,}]
+    )
+</script>
