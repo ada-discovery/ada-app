@@ -7,7 +7,7 @@
             duration: 750,
             width: 960,
             height: 800,
-            maxTextLength: 20,
+            maxTextLength: 20
         },
 
         // the constructor
@@ -305,5 +305,5 @@
 
         _transitionCircle: function(element) {
             return d3.select(element).select("circle").transition()
-        },
+        }
     });

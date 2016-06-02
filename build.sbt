@@ -10,7 +10,7 @@ Play2WarPlugin.play2WarSettings
 
 Play2WarKeys.servletVersion := "3.0"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
+lazy val root = (project in file(".")).enablePlugins(PlayScala,SbtWeb)
 
 scalaVersion := "2.11.7"
 
@@ -64,4 +64,15 @@ routesGenerator := InjectedRoutesGenerator
 
 // RequireJS
 // pipelineStages := Seq(rjs)
+// pipelineStages := Seq(rjs, uglify, digest, gzip)
+// pipelineStages in Assets := Seq(uglify, digest,gzip)
+pipelineStages in Assets := Seq(closure, cssCompress, digest, gzip)
+
+excludeFilter in gzip := (excludeFilter in gzip).value || new SimpleFileFilter(file => new File(file.getAbsolutePath + ".gz").exists)
+
+includeFilter in closure := (includeFilter in closure).value && new SimpleFileFilter(f => f.getPath.contains("javascripts"))
+
+includeFilter in cssCompress := (includeFilter in cssCompress).value && new SimpleFileFilter(f => f.getPath.contains("stylesheets"))
+
+//includeFilter in uglify := GlobFilter("javascripts/*.js")
 
