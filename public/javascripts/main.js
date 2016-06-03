@@ -153,3 +153,15 @@ function doTableSelectionAction(tableName, actionName) {
     post('/' + controller + '/' + actionName, {ids: ids})
   }
 }
+
+function handleModalButtonEnterPressed(modalName, submitButtonName, action) {
+  $("#" + modalName).keypress(function (e) {
+    if (e.keyCode == 13) {
+      e.preventDefault();
+      action()
+      $("#" + modalName).modal("hide")
+    }
+  });
+
+  $("#" + submitButtonName).click(action);
+}

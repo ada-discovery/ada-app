@@ -49,8 +49,15 @@ body {
     color: darkgray;
 }
 
+.sidebar-nav > li.dataspace > a {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
 .sidebar-nav > li.dataset > a {
-    padding-left: 30px
+    padding-left: 30px;
+    padding-top: 2px;
+    padding-bottom: 2px;
 }
 
 .navbar-brand {
