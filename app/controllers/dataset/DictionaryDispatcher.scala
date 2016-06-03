@@ -4,6 +4,8 @@ import controllers.{SecureControllerDispatcher, ControllerDispatcher}
 import util.FilterSpec
 import javax.inject.Inject
 
+import util.SecurityUtil._
+
 class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: DictionaryControllerFactory)
   extends SecureControllerDispatcher[DictionaryController]("dataSet") with DictionaryController {
 
@@ -12,11 +14,15 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
       throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
     )
 
-  // TODO: here we need to determine what role groups are allowed to access given controller and action
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("basic"))
+  ) = List(Array("admin"))
+
+  override protected def getPermission(
+    controllerId: String,
+    actionName: String
+  ) = Some(createDataSetPermission(controllerId, "field", actionName))
 
   override def get(id: String) = dispatch(_.get(id))
 
@@ -37,6 +43,4 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.overviewList(page, orderBy, filter))
 
   override def inferDictionary = dispatch(_.inferDictionary)
-
-  override def dataSetId = ???
 }

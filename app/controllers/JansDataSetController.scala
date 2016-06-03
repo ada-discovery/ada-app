@@ -1,25 +1,16 @@
 package controllers
 
 import javax.inject.Inject
+import be.objectify.deadbolt.java.cache.HandlerCache
 import play.api.mvc.{Action, Controller}
 
-import models.security.CustomUser
-
 import be.objectify.deadbolt.scala.DeadboltActions
-
-import ldap._
-import security.CustomHandlerCache
-
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits._
-
-
 
 /**
  * Class for testing and debugging
  */
 class JansDataSetController @Inject()(
-  handlerCache: CustomHandlerCache,
+  handlerCache: HandlerCache,
   deadbolt: DeadboltActions) extends Controller{
 
   // debug: show session

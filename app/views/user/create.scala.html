@@ -2,12 +2,18 @@
 @import views.html.user.elements
 @import models.security.CustomUser
 
-@(form: Form[CustomUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(
+	form: Form[CustomUser],
+	metaInfos: Traversable[DataSpaceMetaInfo],
+	dataSetActionNames: Array[String],
+	fieldActionNames: Array[String],
+	categoryActionNames: Array[String]
+)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
 
 @layout.create(
     "user",
 	form,
-	elements(form),
+	elements(form, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames),
 	routes.UserController.save(),
 	routes.UserController.listAll()
 )

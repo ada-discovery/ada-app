@@ -14,7 +14,53 @@ import be.objectify.deadbolt.core.models.Subject
 /**
   * Hooks for deadbolt
   */
-class AdaDeadboltHandler(
+class AdaOnFailureRedirectDeadboltHandler(
+    getCurrentUser: Request[_] => Future[Option[Subject]],
+    dynamicResourceHandler: Option[DynamicResourceHandler] = None
+  ) extends AdaDeadboltHandler(getCurrentUser, dynamicResourceHandler) {
+
+  /**
+    * TODO: execute more meaningful action.
+    * Action if user is not authorized.
+    * Redirects user to login form if not authorized.
+    *
+    * @param request request leading to failure.
+    * @return Redirect to login form.
+    */
+  override def onAuthFailure[A](request: Request[A]): Future[Result] = {
+    val subjOpFuture: Future[Option[Subject]] = getSubject(request)
+    subjOpFuture.map { subjOp: Option[Subject] =>
+      if(subjOp.isDefined){
+        val username = subjOp.get.getIdentifier
+        Logger.error(s"Unauthorized access by [$username].")
+      }else{
+        Logger.error("Unauthorized access by unregistered user.")
+      }
+      Results.Redirect(routes.AuthController.unauthorized)
+    }
+  }
+}
+
+class AdaOnFailureUnauthorizedStatusDeadboltHandler(
+    getCurrentUser: Request[_] => Future[Option[Subject]],
+    dynamicResourceHandler: Option[DynamicResourceHandler] = None
+  ) extends AdaDeadboltHandler(getCurrentUser, dynamicResourceHandler) {
+
+  override def onAuthFailure[A](request: Request[A]): Future[Result] =
+    Future(Results.Unauthorized)
+}
+
+//class AdaOnFailureDelegateDeadboltHandler(
+//    getCurrentUser: Request[_] => Future[Option[Subject]],
+//    dynamicResourceHandler: Option[DynamicResourceHandler] = None,
+//    onFailureDelegate: =>
+//  ) extends AdaDeadboltHandler(getCurrentUser, dynamicResourceHandler) {
+//
+//  override def onAuthFailure[A](request: Request[A]): Future[Result] =
+//    delegate.onAuthFailure(request)
+//}
+
+protected abstract class AdaDeadboltHandler(
     getCurrentUser: Request[_] => Future[Option[Subject]],
     dynamicResourceHandler: Option[DynamicResourceHandler] = None
   ) extends DeadboltHandler {
@@ -48,27 +94,5 @@ class AdaDeadboltHandler(
     */
   override def getSubject[A](request: Request[A]): Future[Option[Subject]] = {
     getCurrentUser(request)
-  }
-
-  /**
-    * TODO: execute more meaningful action.
-    * Action if user is not authorized.
-    * Redirects user to login form if not authorized.
-    *
-    * @param request request leading to failure.
-    * @return Redirect to login form.
-    */
-  def onAuthFailure[A](request: Request[A]): Future[Result] = {
-    val subjOpFuture: Future[Option[Subject]] = getSubject(request)
-    subjOpFuture.map { subjOp: Option[Subject] =>
-      if(subjOp.isDefined){
-        val username = subjOp.get.getIdentifier
-        Logger.error(s"Unauthorized access by [$username].")
-      }else{
-        Logger.error("Unauthorized access by unregistered user.")
-      }
-    }
-
-    Future(Results.Redirect(routes.AuthController.unauthorized))
   }
 }

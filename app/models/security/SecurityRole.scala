@@ -8,7 +8,7 @@ import be.objectify.deadbolt.core.models.Role
   *
   */
 case class SecurityRole(val roleName: String) extends Role {
-  def getName: String = roleName
+  override def getName: String = roleName
 }
 
 /**
@@ -16,10 +16,7 @@ case class SecurityRole(val roleName: String) extends Role {
   * Use these for convenience.
   *
   */
-object SecurityRoleCache {
-  lazy val adminRole: String = "admin"
-  lazy val basicRole: String = "basic"
-
-  // sequence of all roles
-  def getRoles: Seq[String] = Seq(basicRole, adminRole)
+object SecurityRoles {
+  val adminRole = "admin"
+  val basicRole = "basic"
 }

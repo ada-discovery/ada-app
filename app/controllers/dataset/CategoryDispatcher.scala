@@ -5,6 +5,7 @@ import javax.inject.Inject
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
 import reactivemongo.bson.BSONObjectID
 import util.FilterSpec
+import util.SecurityUtil.createDataSetPermission
 
 class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: CategoryControllerFactory)
   extends SecureControllerDispatcher[CategoryController]("dataSet") with CategoryController {
@@ -14,11 +15,15 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
       throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
     )
 
-  // TODO: here we need to determine what role groups are allowed to access given controller and action
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("basic"))
+  ) = List(Array("admin"))
+
+  override protected def getPermission(
+    controllerId: String,
+    actionName: String
+  ) = Some(createDataSetPermission(controllerId, "category", actionName))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 
@@ -39,6 +44,4 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
   override def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]) = dispatch(_.relocateToParent(id, parentId))
 
   override def jsRoutes = dispatch(_.jsRoutes)
-
-  override def dataSetId = ???
 }

@@ -2,16 +2,125 @@
 @import views.html.elements.{inputText, labelValue}
 @import views.html.table.addRemoveStringTable
 
-@(form: Form[CustomUser])(implicit msg: play.api.i18n.Messages)
+@(
+    form: Form[CustomUser],
+    metaInfos: Traversable[DataSpaceMetaInfo],
+    dataSetActionNames: Array[String],
+    fieldActionNames: Array[String],
+    categoryActionNames: Array[String]
+)(implicit msg: play.api.i18n.Messages)
+
+@addDataSetPermissionModalBody = {
+    <div class="row">
+        @labelValue("dataSetPermission", "DS Id") {
+            <select id="permission-dataSetId" name="permission-dataSetId" class="form-control">
+            @metaInfos.map { metaInfo =>
+                @metaInfo.dataSetMetaInfos.map { dataSet =>
+                    <option value="@{dataSet.id}">@{dataSet.id}</option>
+                }
+            }
+            </select>
+        }
+
+        @labelValue("dataSetPermission", "Controller") {
+            <select id="permission-controller" name="permission-controller" class="form-control" onchange="updateActionItems()">
+                <option value="" selected>ALL</option>
+                <option value="dataSet">dataSet</option>
+                <option value="field">field</option>
+                <option value="category">category</option>
+            </select>
+        }
+
+        <div id="permission-actionDiv" style="display:none">
+            @labelValue("dataSetPermission", "Action") {
+                <select id="permission-action" name="permission-action" class="form-control">
+                    <option value=""></option>
+                </select>
+            }
+        </div>
+    </div>
+}
+
+@addDataSetPermissionModalButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" class="btn btn-primary" id="addDataSetPermissionSubmitButton" data-dismiss="modal">OK</button>
+}
+
+@addDataSetPermissionButton = {
+    <a class="btn btn-info btn-sm" href="#" onclick="$('#addDataSetPermissionModal').modal();return false;" title="Add Data Set Permission">
+        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+        DS
+    </a>
+    @modal("addDataSetPermissionModal", "Add Data Set Permission", addDataSetPermissionModalBody, None, Some(addDataSetPermissionModalButtons))
+}
 
 @inputText("user", "name", form)
 @inputText("user", "email", form)
 @labelValue("user", "Roles"){@addRemoveStringTable("role", form.value.get.roles)}
-@labelValue("user", "Permissions"){@addRemoveStringTable("permission", form.value.get.permissions)}
+@labelValue("user", "Permissions"){@addRemoveStringTable("permission", form.value.get.permissions, Some(addDataSetPermissionButton))}
+
+@dataSetActionNamesAsString = @{
+    Html(dataSetActionNames.map(s => "\"" + s + "\"").mkString(","))
+}
+
+@fieldActionNamesAsString = @{
+    Html(fieldActionNames.map(s => "\"" + s + "\"").mkString(","))
+}
+
+@categoryActionNamesAsString = @{
+    Html(categoryActionNames.map(s => "\"" + s + "\"").mkString(","))
+}
 
 <script type="text/javascript">
     $(function () {
         registerTableAddModalHandler('role')
         registerTableAddModalHandler('permission')
+        handleModalButtonEnterPressed("addDataSetPermissionModal", "addDataSetPermissionSubmitButton", addDataSetPermission)
+        $("#permission-controller").val("")
     })
+
+    var dataSetActionNames = [@dataSetActionNamesAsString]
+    var fieldActionNames = [@fieldActionNamesAsString]
+    var categoryActionNames = [@categoryActionNamesAsString]
+
+    function updateActionItems() {
+        var permission_controller = $('#permission-controller').val()
+        var actions = []
+        if (permission_controller == "dataSet")
+            actions = dataSetActionNames
+        else if (permission_controller == "field")
+            actions = fieldActionNames
+        else if (permission_controller == "category")
+            actions = categoryActionNames
+
+        if (actions.length == 0)
+            $('#permission-actionDiv').hide()
+        else
+            $('#permission-actionDiv').show()
+
+        populateActions(actions)
+    }
+
+    function addDataSetPermission() {
+        var dataSetId = $('#permission-dataSetId').val()
+        var controller = $('#permission-controller').val()
+        var action = $('#permission-action').val()
+
+        var dsPermission = "DS:" + dataSetId
+        if (controller) {
+            dsPermission = dsPermission + "." + controller
+            if (action)
+                dsPermission = dsPermission + "." + action
+        }
+
+        addTableRow("permission", dsPermission)
+    }
+
+    function populateActions(values) {
+        $('#permission-action').html("");
+        $('#permission-action').append($('<option>', { value : '' }).text('ALL'));
+        $.each(values, function(i, val) {
+            $('#permission-action').append($('<option>', { value : val }).text(val));
+        });
+    }
 </script>

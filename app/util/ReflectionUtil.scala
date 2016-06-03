@@ -46,4 +46,7 @@ object ReflectionUtil {
     }
     filteredClassInfos.map{ classInfo => Class.forName(classInfo.name).asInstanceOf[Class[T]] }
   }
+
+  def getMethodNames[T](implicit tag: ClassTag[T]) =
+    tag.runtimeClass.getMethods.map(_.getName)
 }

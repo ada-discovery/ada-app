@@ -1,7 +1,7 @@
 package persistence
 
 import com.google.inject.Singleton
-import models.security.{UserManager, SecurityPermissionCache, SecurityRoleCache, CustomUser}
+import models.security.{UserManager, SecurityPermissionCache, SecurityRoles, CustomUser}
 import play.api.libs.json.{Format, Json}
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil

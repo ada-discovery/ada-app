@@ -5,8 +5,6 @@ import util.FilterSpec
 
 trait DictionaryController {
 
-  def dataSetId: String
-
   def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
 
   def listAll(orderBy: Int): Action[AnyContent]

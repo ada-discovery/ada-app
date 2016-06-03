@@ -4,7 +4,11 @@
 
 @(
     id: reactivemongo.bson.BSONObjectID,
-    form: Form[CustomUser]
+    form: Form[CustomUser],
+    metaInfos: Traversable[DataSpaceMetaInfo],
+    dataSetActionNames: Array[String],
+    fieldActionNames: Array[String],
+    categoryActionNames: Array[String]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
 )
@@ -12,7 +16,7 @@
 @layout.edit(
     "user",
 	form.errors,
-    elements(form),
+    elements(form, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames),
 	routes.UserController.update(id),
 	routes.UserController.listAll(),
     Some(routes.UserController.delete(id))

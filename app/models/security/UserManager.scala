@@ -19,6 +19,7 @@ trait UserManager {
   /**
     * Matches email and password for authentification.
     * Returns an Account, if successful.
+ *
     * @param id ID (e.g. mail) for matching.
     * @param password Password which should match the password associated to the mail.
     * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
@@ -35,6 +36,7 @@ trait UserManager {
   /**
     * TODO: unused
     * Match userid with permission.
+ *
     * @param userid usrid, most commonly mail
     * @param permission permission to be checked.
     * @return
@@ -60,8 +62,8 @@ trait UserManager {
 
   def findByEmail(email: String): Future[Option[CustomUser]]
 
-  def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", Seq(SecurityRoleCache.adminRole), SecurityPermissionCache.adminPermissions)
-  def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", Seq(SecurityRoleCache.basicRole), Seq())
+  def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", Seq(SecurityRoles.adminRole), SecurityPermissionCache.adminPermissions)
+  def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", Seq(SecurityRoles.basicRole), Seq())
 
   def debugUsers: Traversable[CustomUser] = ???
 }
@@ -99,7 +101,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
       foundFuture.map { found =>
         found.headOption match {
           case Some(usr) => userRepo.update(CustomUser(usr._id, ldapusr.getDN, ldapusr.email, usr.roles, usr.permissions))
-          case None => userRepo.save(CustomUser(None, ldapusr.getDN, ldapusr.email, Seq(SecurityRoleCache.basicRole), Seq()))
+          case None => userRepo.save(CustomUser(None, ldapusr.getDN, ldapusr.email, Seq(SecurityRoles.basicRole), Seq()))
         }
       }
     }
@@ -125,6 +127,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
 
   /**
     * Authenticate user and add user to database, if it does not exist.
+ *
     * @param id ID (e.g. mail) for matching.
     * @param password Password which should match the password associated to the mail.
     * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
@@ -185,6 +188,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
 
   /**
     * Update the user by looking up the username in the database and changing the other fields.
+ *
     * @param user
     * @return
     */

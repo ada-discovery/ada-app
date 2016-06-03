@@ -6,8 +6,6 @@ import util.FilterSpec
 
 trait DataSetController {
 
-  def dataSetId: String
-
   def get(id: BSONObjectID): Action[AnyContent]
 
   def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]

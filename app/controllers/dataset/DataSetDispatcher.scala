@@ -2,9 +2,11 @@ package controllers.dataset
 
 import javax.inject.Inject
 
+import be.objectify.deadbolt.scala.cache.HandlerCache
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
 import reactivemongo.bson.BSONObjectID
 import util.FilterSpec
+import util.SecurityUtil._
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
 
@@ -13,11 +15,15 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
       throw new IllegalArgumentException(s"Controller id '${id}' not recognized.")
     )
 
-  // TODO: here we need to determine what role groups are allowed to access given controller and action
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("basic"))
+  ) = List(Array("admin"))
+
+  override protected def getPermission(
+    controllerId: String,
+    actionName: String
+  ) = Some(createDataSetPermission(controllerId, "dataSet", actionName))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 
@@ -48,6 +54,4 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override def exportTranSMARTMappingFile(delimiter : String) = dispatch(_.exportTranSMARTMappingFile(delimiter))
 
   override def getFieldNames = dispatch(_.getFieldNames)
-
-  override def dataSetId = ???
 }
