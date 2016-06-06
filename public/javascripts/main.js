@@ -93,6 +93,9 @@ function showMessage(text) {
   messageBlock.append(text)
   $('#messageDiv').html(messageBlock);
   $('#messageDiv').fadeIn('2000');
+
+  addMessageDividerIfNeeded();
+  registerMessageDividerRemoval();
 }
 
 function showError(message) {
@@ -104,6 +107,8 @@ function showError(message) {
   innerDiv.append(message);
   $('#errorDiv').html(innerDiv);
   $('#errorDiv').fadeIn('2000');
+  addMessageDividerIfNeeded();
+  registerMessageDividerRemoval();
 }
 
 function hideMessages() {
@@ -123,7 +128,25 @@ function showErrors(errors) {
       $('#errorDiv').append(innerDiv);
     });
     $('#errorDiv').fadeIn('2000');
+    addMessageDividerIfNeeded();
+    registerMessageDividerRemoval();
   }
+}
+
+function addMessageDividerIfNeeded() {
+    var messagesCount = $('#messageContainer').find('.alert-dismissable').length
+    if ($('#messageContainer .messageDivider').length == 0 && messagesCount > 0) {
+        $('#messageContainer').append('<hr class="messageDivider"/>')
+    }
+}
+
+function registerMessageDividerRemoval() {
+    $('#messageContainer .alert-dismissable .close').click(function () {
+        var messagesCount = $('#messageContainer').find('.alert-dismissable').length
+        if (messagesCount == 1) {
+            $('#messageContainer .messageDivider').remove();
+        }
+    });
 }
 
 function hideErrors() {

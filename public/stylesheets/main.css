@@ -12,13 +12,18 @@ body {
 
 .content {
     background-color: #fff;
-    padding: 20px 50px 20px 50px;
+    padding: 20px 40px 20px 40px;
     -webkit-border-radius: 0 0 6px 6px;
     -moz-border-radius: 0 0 6px 6px;
     border-radius: 0 0 6px 6px;
     -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.15);
     -moz-box-shadow: 0 1px 2px rgba(0,0,0,.15);
     box-shadow: 0 1px 2px rgba(0,0,0,.15);
+}
+
+.inner-content {
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 .navbar-custom {
@@ -101,6 +106,10 @@ tr.clickable-row {
     font-size: 18px;
     height: 54px;
     width: 300px;
+}
+
+.messageDivider {
+    border-top: 3px dotted #eeeeee !important;
 }
 
 .top-padded {
