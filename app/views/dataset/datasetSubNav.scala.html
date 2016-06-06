@@ -2,7 +2,7 @@
 @import controllers.dataset.{DataSetRouter, DictionaryRouter, CategoryRouter}
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 
-@()(implicit request: RequestHeader)
+@()(implicit request: Request[_])
 
 @listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
     <li @if(matchesPath(call.url, request.uri, matchPrefixDepth)) {class="active"}>

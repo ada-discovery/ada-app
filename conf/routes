@@ -17,11 +17,17 @@ GET         /adminpanel                                                         
 GET         /login                                                                  controllers.AuthController.login
 POST        /login                                                                  controllers.AuthController.authenticate
 GET         /logout                                                                 controllers.AuthController.logout
+GET         /loggedout                                                              controllers.AuthController.loggedOut
+GET         /unauthorized                                                           controllers.AuthController.unauthorized
+
+
+# for testing
+GET         /loginBasic                                                             controllers.AuthController.loginBasic
+GET         /loginAdmin                                                             controllers.AuthController.loginAdmin
 
 # login/logout for REST interface
 POST        /loginRest                                                              controllers.AuthController.loginREST
 GET         /logoutRest                                                             controllers.AuthController.logoutREST
-
 
 # ldap debugging
 GET         /ldaplist                                                               controllers.LdapController.ldapList
@@ -29,14 +35,6 @@ GET         /ldap/settings                                                      
 GET         /ldap/users                                                             controllers.LdapUserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /ldap/users/all                                                         controllers.LdapUserController.listAll(s: Int ?= 2)
 GET         /ldap/:id/get                                                           controllers.LdapUserController.get(id: String)
-
-
-GET         /loggedout                                                              controllers.AuthController.loggedOut
-GET         /unauthorized                                                           controllers.AuthController.unauthorized
-
-# for testing
-GET         /loginBasic                                                             controllers.AuthController.loginBasic
-GET         /loginAdmin                                                             controllers.AuthController.loginAdmin
 
 # Admin
 GET         /admin/runnables                                                        controllers.AdminController.listRunnables

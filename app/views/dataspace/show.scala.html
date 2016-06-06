@@ -11,7 +11,7 @@
     dataSetIdSizeMap: Map[String, Int],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
 
 @table = {

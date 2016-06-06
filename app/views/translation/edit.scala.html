@@ -1,7 +1,7 @@
 @import views.html.layout
 @import views.html.elements.editableTextElements
 
-@(id: reactivemongo.bson.BSONObjectID, form: Form[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(id: reactivemongo.bson.BSONObjectID, form: Form[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @layout.edit(
     "translation",

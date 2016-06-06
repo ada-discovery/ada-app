@@ -6,6 +6,8 @@
 @import views.html.dataset.datasetSubNav
 @import util.ChartSpec
 @import play.api.libs.json.Json
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 
 @(
@@ -18,7 +20,7 @@
     fields: Seq[(String, Option[String])],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+    implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
 @fieldNamesAsString = @{
@@ -59,8 +61,6 @@
             @Messages("distribution.title", domainName)
         </h3>
     </div>
-
-    @flashMessages()
 
     <div id="actions">
         @actions

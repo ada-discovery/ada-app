@@ -8,7 +8,7 @@ import _root_.util.JsonUtil._
 import _root_.util.WebExportUtil._
 import _root_.util.{ChartSpec, FieldChartSpec, FilterSpec, JsonUtil}
 import com.google.inject.assistedinject.Assisted
-import controllers.{ExportableAction, ReadonlyController}
+import controllers.{ExportableAction, ReadonlyControllerImpl}
 import models.DataSetFormattersAndIds.FieldIdentity
 import models._
 import org.apache.commons.lang3.StringEscapeUtils
@@ -19,7 +19,7 @@ import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, RequestHeader}
+import play.api.mvc.{Action, AnyContent, RequestHeader, Request}
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -38,7 +38,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends ReadonlyController[JsObject, BSONObjectID](dsaf(dataSetId).get.dataSetRepo) with DataSetController with ExportableAction[JsObject] {
+  ) extends ReadonlyControllerImpl[JsObject, BSONObjectID](dsaf(dataSetId).get.dataSetRepo) with DataSetController with ExportableAction[JsObject] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
   protected val fieldRepo = dsa.fieldRepo
@@ -82,7 +82,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param request Header of original request.
     * @return View for all available fields.
     */
-  override protected def listView(page: Page[JsObject])(implicit msg: Messages, request: RequestHeader) =
+  override protected def listView(page: Page[JsObject])(implicit msg: Messages, request: Request[_]) =
     dataset.list(
       dataSetName + " Item",
       page,
@@ -99,7 +99,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param request Header of original request.
     * @return View for all available fields.
     */
-  private def overviewListView(page: Page[JsObject], fieldChartSpecs : Traversable[FieldChartSpec], fieldLabelMap: Map[String, String])(implicit msg: Messages, request: RequestHeader) =
+  private def overviewListView(page: Page[JsObject], fieldChartSpecs : Traversable[FieldChartSpec], fieldLabelMap: Map[String, String])(implicit msg: Messages, request: Request[_]) =
     dataset.overviewList(
       dataSetName + " Item",
       page,
@@ -119,7 +119,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param request Header of original request.
     * @return View for subject entries.
     */
-  override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: RequestHeader) =
+  override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: Request[_]) =
     dataset.show(
       dataSetName + " Item",
       item,

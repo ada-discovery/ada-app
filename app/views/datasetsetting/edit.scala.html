@@ -1,6 +1,8 @@
 @import views.html.layout
 @import views.html.datasetsetting.elements
 @import views.html.dataset.{datasetSubNav, datasetMenu}
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 
 @(
     dataSetName: String,
@@ -9,7 +11,7 @@
     cancelCall: Call,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+    implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
 @layout.edit(

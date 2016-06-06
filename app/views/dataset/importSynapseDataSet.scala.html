@@ -1,8 +1,10 @@
 @import models.SynapseDataSetImportInfo
 @import views.html.layout
 @import views.html.elements.inputText
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 
-@(form: Form[SynapseDataSetImportInfo])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(form: Form[SynapseDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @elements = {
     @inputText("synapseDataSetImportInfo", "dataSpaceName", form)

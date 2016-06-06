@@ -62,10 +62,10 @@ trait UserManager {
 
   def findByEmail(email: String): Future[Option[CustomUser]]
 
-  def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", Seq(SecurityRoles.adminRole), SecurityPermissionCache.adminPermissions)
+  def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", Seq(SecurityRoles.adminRole), Seq())
   def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", Seq(SecurityRoles.basicRole), Seq())
 
-  def debugUsers: Traversable[CustomUser] = ???
+  def debugUsers: Traversable[CustomUser]
 }
 
 /**

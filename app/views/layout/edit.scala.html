@@ -10,17 +10,14 @@
     sideBar: Option[Html] = None,
     topContentBar: Option[Html] = None
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
 
-@main(Messages("edit.title", domainName), sideBar, topContentBar) {
+@main(Messages("edit.title", domainName), sideBar, topContentBar, None, None, Some(formErrors(domainName, errors))) {
 
     <div class="page-header">
         <h2>@Messages("edit.title", domainName)</h2>
     </div>
-
-    @flashMessages()
-    @formErrors(domainName, errors)
 
     <div class="row">
         <div class="col-md-12">

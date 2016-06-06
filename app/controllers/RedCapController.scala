@@ -1,5 +1,6 @@
 package controllers
 
+import be.objectify.deadbolt.scala.DeadboltActions
 import org.apache.commons.lang3.StringEscapeUtils
 import util.{ConditionType, FilterCondition, FilterSpec}
 
@@ -17,12 +18,14 @@ import play.api.mvc.{ResponseHeader, Action, Controller, Result}
 import collection.mutable.{Map => MMap}
 import models.Category
 import util.JsonUtil.jsonObjectsToCsv
+import util.SecurityUtil.restrictAdmin
 
 import scala.concurrent.Await
 
 class RedCapController @Inject() (
     redCapService: RedCapService,
     tranSMARTService: TranSMARTService,
+    deadbolt: DeadboltActions,
     messagesApi: MessagesApi
   ) extends Controller {
 
@@ -41,67 +44,82 @@ class RedCapController @Inject() (
   private val visitField = Some("redcap_event_name")
 
 
-  def index = Action { Redirect(routes.RedCapController.listExportFields()) }
-
-  def listRecords(page: Int, orderBy: String, f: String, filter: FilterSpec) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
-
-    redCapService.listRecords(orderBy, f).map( items =>
-      Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, filter), filter))
-    )
+  def index = restrictAdmin(deadbolt) {
+    Action { Redirect(routes.RedCapController.listExportFields()) }
   }
 
-  def listMetadatas(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
+  def listRecords(page: Int, orderBy: String, f: String, filter: FilterSpec) = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      implicit val msg = messagesApi.preferred(request)
 
-    redCapService.listMetadatas(orderBy, filter).map( items =>
-      Ok(html.redcap.listMetadatas(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, new FilterSpec())))
-    )
+      redCapService.listRecords(orderBy, f).map( items =>
+        Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, filter), filter))
+      )
+    }
   }
 
-  def listExportFields(page: Int, orderBy: String, filter: String) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
+  def listMetadatas(page: Int, orderBy: String, filter: String) = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      implicit val msg = messagesApi.preferred(request)
 
-    redCapService.listExportFields(orderBy, filter).map(items =>
-      Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, new FilterSpec())))
-    )
+      redCapService.listMetadatas(orderBy, filter).map( items =>
+        Ok(html.redcap.listMetadatas(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, new FilterSpec())))
+      )
+    }
   }
 
-  def showRecord(id: String) = Action.async { implicit request =>
-    redCapService.getRecord(id).map { foundItems =>
-      if (foundItems.isEmpty) {
-        NotFound(s"Entity #$id not found")
-      } else {
-        implicit val msg = messagesApi.preferred(request)
-        Ok(html.redcap.showRecord(foundItems.head))
+  def listExportFields(page: Int, orderBy: String, filter: String) = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      implicit val msg = messagesApi.preferred(request)
+
+      redCapService.listExportFields(orderBy, filter).map(items =>
+        Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, new FilterSpec())))
+      )
+    }
+  }
+
+  def showRecord(id: String) = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      redCapService.getRecord(id).map { foundItems =>
+        if (foundItems.isEmpty) {
+          NotFound(s"Entity #$id not found")
+        } else {
+          implicit val msg = messagesApi.preferred(request)
+          Ok(html.redcap.showRecord(foundItems.head))
+        }
       }
     }
   }
 
-  def showMetadata(id: String) = Action.async { implicit request =>
-    redCapService.getMetadata(id).map { foundItems =>
-      if (foundItems.isEmpty) {
-        NotFound(s"Entity #$id not found")
-      } else {
-        implicit val msg = messagesApi.preferred(request)
-        Ok(html.redcap.showMetadata(foundItems.head))
+  def showMetadata(id: String) = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      redCapService.getMetadata(id).map { foundItems =>
+        if (foundItems.isEmpty) {
+          NotFound(s"Entity #$id not found")
+        } else {
+          implicit val msg = messagesApi.preferred(request)
+          Ok(html.redcap.showMetadata(foundItems.head))
+        }
       }
     }
   }
 
-  def showExportField(id: String) = Action.async { implicit request =>
-    redCapService.getExportField(id).map { foundItems =>
-      if (foundItems.isEmpty) {
-        NotFound(s"Entity #$id not found")
-      } else {
-        implicit val msg = messagesApi.preferred(request)
-        Ok(html.redcap.showFieldName(foundItems.head))
+  def showExportField(id: String) = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      redCapService.getExportField(id).map { foundItems =>
+        if (foundItems.isEmpty) {
+          NotFound(s"Entity #$id not found")
+        } else {
+          implicit val msg = messagesApi.preferred(request)
+          Ok(html.redcap.showFieldName(foundItems.head))
+        }
       }
     }
   }
 
-  def overview = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
+  def overview = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      implicit val msg = messagesApi.preferred(request)
 
       redCapService.listRecords(keyField, "").map { items =>
 
@@ -109,6 +127,7 @@ class RedCapController @Inject() (
           (name, createValueCountMap(items, key))
         }
         Ok(html.redcap.overviewRecords("LuxPark REDCap Overview", valueCounts))
+      }
     }
   }
 
@@ -127,99 +146,105 @@ class RedCapController @Inject() (
   }
 
 
-  def exportRecordsAsCsv(delimiter : String) = Action { implicit request =>
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+  def exportRecordsAsCsv(delimiter : String) = restrictAdmin(deadbolt) {
+    Action { implicit request =>
+      val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
-    val recordsFuture = redCapService.listRecords(keyField, "")
-    val records = Await.result(recordsFuture, timeout)
+      val recordsFuture = redCapService.listRecords(keyField, "")
+      val records = Await.result(recordsFuture, timeout)
 
-    val content = jsonObjectsToCsv(unescapedDelimiter, "\n", replacements)(records)
+      val content = jsonObjectsToCsv(unescapedDelimiter, "\n", replacements)(records)
 
-    val fileContent: Enumerator[Array[Byte]] = Enumerator(content.getBytes(exportCharset))
+      val fileContent: Enumerator[Array[Byte]] = Enumerator(content.getBytes(exportCharset))
 
-    Result(
-      header = ResponseHeader(200, Map(CONTENT_TYPE->"application/x-download", CONTENT_LENGTH -> content.length.toString, CONTENT_DISPOSITION->s"attachment; filename=${csvFileName}")),
-      body = fileContent
-    )
+      Result(
+        header = ResponseHeader(200, Map(CONTENT_TYPE->"application/x-download", CONTENT_LENGTH -> content.length.toString, CONTENT_DISPOSITION->s"attachment; filename=${csvFileName}")),
+        body = fileContent
+      )
+    }
   }
 
-  def exportTranSMARTDataFile(delimiter: String) = Action { implicit request =>
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+  def exportTranSMARTDataFile(delimiter: String) = restrictAdmin(deadbolt) {
+    Action { implicit request =>
+      val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
-    val recordsFuture = redCapService.listRecords(keyField, "")
-    val records = Await.result(recordsFuture, timeout)
+      val recordsFuture = redCapService.listRecords(keyField, "")
+      val records = Await.result(recordsFuture, timeout)
 
-    val metadataFuture = redCapService.listMetadatas("field_name", "")
-    val metadatas = Await.result(metadataFuture, timeout)
+      val metadataFuture = redCapService.listMetadatas("field_name", "")
+      val metadatas = Await.result(metadataFuture, timeout)
 
-    // categories
-    val rootCategory = new Category("")
-    val categories = metadatas.map(_.form_name).toSet.map { formName : String =>
-      new Category(formName)
-    }.toList
+      // categories
+      val rootCategory = new Category("")
+      val categories = metadatas.map(_.form_name).toSet.map { formName : String =>
+        new Category(formName)
+      }.toList
 
-    rootCategory.setChildren(categories)
-    val nameCategoryMap = categories.map(category => (category.name, category)).toMap
+      rootCategory.setChildren(categories)
+      val nameCategoryMap = categories.map(category => (category.name, category)).toMap
 
-    // field category map
-    val fieldCategoryMap = metadatas.map{metadata =>
-      (metadata.field_name, nameCategoryMap.get(metadata.form_name).get)
-    }.toMap
+      // field category map
+      val fieldCategoryMap = metadatas.map{metadata =>
+        (metadata.field_name, nameCategoryMap.get(metadata.form_name).get)
+      }.toMap
 
-    // field label map
-    val fieldLabelMap = metadatas.map{metadata =>
-      (metadata.field_name, metadata.field_label)
-    }.toMap
+      // field label map
+      val fieldLabelMap = metadatas.map{metadata =>
+        (metadata.field_name, metadata.field_label)
+      }.toMap
 
-    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
+      val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
 
-    val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._1.getBytes(exportCharset))
+      val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._1.getBytes(exportCharset))
 
-    Result(
-      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_LENGTH -> fileContents._1.length.toString, CONTENT_DISPOSITION -> s"attachment; filename=${tranSMARTDataFileName}")),
-      body = fileContent
-    )
+      Result(
+        header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_LENGTH -> fileContents._1.length.toString, CONTENT_DISPOSITION -> s"attachment; filename=${tranSMARTDataFileName}")),
+        body = fileContent
+      )
+    }
   }
 
-  def exportTranSMARTMappingFile(delimiter: String) = Action { implicit request =>
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+  def exportTranSMARTMappingFile(delimiter: String) = restrictAdmin(deadbolt) {
+    Action { implicit request =>
+      val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
-    val recordsFuture = redCapService.listRecords(keyField, "")
-    val records = Await.result(recordsFuture, timeout)
+      val recordsFuture = redCapService.listRecords(keyField, "")
+      val records = Await.result(recordsFuture, timeout)
 
-    val metadataFuture = redCapService.listMetadatas("field_name", "")
-    val metadatas = Await.result(metadataFuture, timeout)
+      val metadataFuture = redCapService.listMetadatas("field_name", "")
+      val metadatas = Await.result(metadataFuture, timeout)
 
-    // categories
-    val rootCategory = new Category("")
-    val categories = metadatas.map(_.form_name).toSet.map { formName : String =>
-      new Category(formName)
-    }.toList
+      // categories
+      val rootCategory = new Category("")
+      val categories = metadatas.map(_.form_name).toSet.map { formName : String =>
+        new Category(formName)
+      }.toList
 
-    rootCategory.setChildren(categories)
-    val nameCategoryMap = categories.map(category => (category.name, category)).toMap
+      rootCategory.setChildren(categories)
+      val nameCategoryMap = categories.map(category => (category.name, category)).toMap
 
-    // field category map
-    val fieldCategoryMap = metadatas.map{metadata =>
-      (metadata.field_name, nameCategoryMap.get(metadata.form_name).get)
-    }.toMap
+      // field category map
+      val fieldCategoryMap = metadatas.map{metadata =>
+        (metadata.field_name, nameCategoryMap.get(metadata.form_name).get)
+      }.toMap
 
-    // field label map
-    val fieldLabelMap = metadatas.map{metadata =>
-      (metadata.field_name, metadata.field_label)
-    }.toMap
+      // field label map
+      val fieldLabelMap = metadatas.map{metadata =>
+        (metadata.field_name, metadata.field_label)
+      }.toMap
 
-    val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(
-      records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
+      val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(
+        records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
 
-    val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._2.getBytes(exportCharset))
+      val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._2.getBytes(exportCharset))
 
-    // TODO
-    // CONTENT_LENGTH -> fileContents._2.length.toString,
+      // TODO
+      // CONTENT_LENGTH -> fileContents._2.length.toString,
 
-    Result(
-      header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_DISPOSITION -> s"attachment; filename=${tranSMARTMappingFileName}")),
-      body = fileContent
-    )
+      Result(
+        header = ResponseHeader(200, Map(CONTENT_TYPE -> "application/x-download", CONTENT_DISPOSITION -> s"attachment; filename=${tranSMARTMappingFileName}")),
+        body = fileContent
+      )
+    }
   }
 }

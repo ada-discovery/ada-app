@@ -3,16 +3,13 @@ package controllers
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import models.security.SecurityRoles
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller}
 import play.api.Play.current
 import util.ReflectionUtil._
 import util.SecurityUtil.restrictAdmin
 
-class AdminController @Inject() (
-    deadbolt: DeadboltActions
-  ) extends Controller {
+class AdminController @Inject() (deadbolt: DeadboltActions) extends Controller {
 
   @Inject var messagesApi: MessagesApi = _
 

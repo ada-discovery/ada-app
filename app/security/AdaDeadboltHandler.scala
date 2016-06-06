@@ -7,6 +7,7 @@ import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import Results._
 
 import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
 import be.objectify.deadbolt.core.models.Subject
@@ -27,18 +28,19 @@ class AdaOnFailureRedirectDeadboltHandler(
     * @param request request leading to failure.
     * @return Redirect to login form.
     */
-  override def onAuthFailure[A](request: Request[A]): Future[Result] = {
-    val subjOpFuture: Future[Option[Subject]] = getSubject(request)
-    subjOpFuture.map { subjOp: Option[Subject] =>
-      if(subjOp.isDefined){
-        val username = subjOp.get.getIdentifier
-        Logger.error(s"Unauthorized access by [$username].")
-      }else{
-        Logger.error("Unauthorized access by unregistered user.")
+  override def onAuthFailure[A](request: Request[A]): Future[Result] =
+    getSubject(request).map {
+      _ match {
+        case Some(subject) => {
+          val username = subject.getIdentifier
+          Logger.error(s"Unauthorized access by [$username].")
+          val refererUrl = request.headers("referer")
+          Redirect(refererUrl).flashing("errors" -> "Access denied! We're sorry, but you are not authorized to perform the requested operation.")
+        }
+
+        case None => Redirect(routes.AuthController.login)
       }
-      Results.Redirect(routes.AuthController.unauthorized)
     }
-  }
 }
 
 class AdaOnFailureUnauthorizedStatusDeadboltHandler(
@@ -47,7 +49,7 @@ class AdaOnFailureUnauthorizedStatusDeadboltHandler(
   ) extends AdaDeadboltHandler(getCurrentUser, dynamicResourceHandler) {
 
   override def onAuthFailure[A](request: Request[A]): Future[Result] =
-    Future(Results.Unauthorized)
+    Future(Unauthorized)
 }
 
 //class AdaOnFailureDelegateDeadboltHandler(

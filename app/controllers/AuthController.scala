@@ -21,20 +21,17 @@ import security.AdaAuthConfig
 
 
 class AuthController @Inject() (
-    usrmmanager: UserManager,
+    val userManager: UserManager,
     mailClientProvider: MailClientProvider
   ) extends Controller with LoginLogout with AdaAuthConfig {
-
-  // a hook need by auth config
-  override val userManager = usrmmanager
 
   /**
     * Login form definition.
     */
   val loginForm = Form {
     tuple(
-      "id" -> text,
-      "password" -> text
+      "id" -> nonEmptyText,
+      "password" -> nonEmptyText
     ).verifying(
       "Invalid LUMS ID or password",
       idPassword => Await.result(userManager.authenticate(idPassword._1, idPassword._2), 120000 millis)
@@ -99,7 +96,11 @@ class AuthController @Inject() (
       formWithErrors => Future.successful(BadRequest(views.html.auth.login(formWithErrors))),
       idPassword => userManager.findById(idPassword._1).flatMap((user: Option[CustomUser]) =>
         user match {
-          case Some(u) => gotoLoginSucceeded(u.getIdentifier)
+          case Some(u) => {
+            val refererUrl = request.headers("referer")
+            println(refererUrl)
+            gotoLoginSucceeded(u.getIdentifier)
+          }
           case None => Future(Redirect(routes.AuthController.unauthorized()))
         }
       )
@@ -112,7 +113,7 @@ class AuthController @Inject() (
     */
   def unauthorized = Action { implicit request =>
     val message = "It appears that you don't have sufficient rights for access. Please login to proceed."
-    Ok(views.html.auth.login(loginForm, Some(message)))
+    Ok(views.html.auth.login(loginForm)).flashing("errors" -> message)
   }
 
   // immediately login as basic user

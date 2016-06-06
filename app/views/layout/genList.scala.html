@@ -9,7 +9,7 @@
     topResources: Option[Html] = None,
     bottomResources: Option[Html] = None
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
 
 @main(Messages("overviewList.title", domainName), sideBar, topContentBar, topResources, bottomResources) {
@@ -19,8 +19,6 @@
             @Messages("list.count.title", count, domainName)
         </h3>
     </div>
-
-    @flashMessages()
 
     <div id="actions">
         @actions

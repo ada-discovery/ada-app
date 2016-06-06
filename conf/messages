@@ -42,3 +42,6 @@ dataSetImportInfo.setting.tranSMARTReplacements.label = TranSMART Export Char Re
 dataSetImportInfo.dataSpaceName.label = Study Name
 dataSetImportInfo.eol.label = Specific EOL
 dataSetImportInfo.path.label = Server-side Path
+
+login.id = User Id
+login.password= Password

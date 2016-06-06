@@ -22,7 +22,7 @@ class UserController @Inject() (
     userRepo: UserRepo,
     mailClientProvider: MailClientProvider,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends CrudController[CustomUser, BSONObjectID](userRepo) {
+  ) extends CrudControllerImpl[CustomUser, BSONObjectID](userRepo) with AdminRestrictedCrudController[BSONObjectID] {
 
   override protected val form = Form(
     mapping(
@@ -36,7 +36,7 @@ class UserController @Inject() (
   override protected val home =
     Redirect(routes.UserController.listAll())
 
-  override protected def createView(f : Form[CustomUser])(implicit msg: Messages, request: RequestHeader) = {
+  override protected def createView(f : Form[CustomUser])(implicit msg: Messages, request: Request[_]) = {
     val metaInfos = result(dataSpaceMetaInfoRepo.find())
     val dataSetActionNames = getMethodNames[DataSetController]
     val fieldActionNames = getMethodNames[DictionaryController]
@@ -45,10 +45,10 @@ class UserController @Inject() (
     html.user.create(f, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames)
   }
 
-  override protected def showView(id: BSONObjectID, f : Form[CustomUser])(implicit msg: Messages, request: RequestHeader) =
+  override protected def showView(id: BSONObjectID, f : Form[CustomUser])(implicit msg: Messages, request: Request[_]) =
     editView(id, f)
 
-  override protected def editView(id: BSONObjectID, f : Form[CustomUser])(implicit msg: Messages, request: RequestHeader) = {
+  override protected def editView(id: BSONObjectID, f : Form[CustomUser])(implicit msg: Messages, request: Request[_]) = {
     // TODO: move to admin
     val metaInfos = result(dataSpaceMetaInfoRepo.find())
     val dataSetActionNames = getMethodNames[DataSetController]
@@ -58,7 +58,7 @@ class UserController @Inject() (
     html.user.edit(id, f, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames)
   }
 
-  override protected def listView(currentPage: Page[CustomUser])(implicit msg: Messages, request: RequestHeader) =
+  override protected def listView(currentPage: Page[CustomUser])(implicit msg: Messages, request: Request[_]) =
     html.user.list(currentPage)
 
 

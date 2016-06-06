@@ -2,6 +2,8 @@
 @import views.html.layout
 @import views.html.elements._
 @import models.Category
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 
 @(
     domainName : String,
@@ -9,7 +11,7 @@
     categories: Traversable[Category],
 	router : CategoryRouter
 )(
-	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+	implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
 @elements = {

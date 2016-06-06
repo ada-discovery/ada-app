@@ -1,6 +1,8 @@
 @import views.html.layout.main
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 
-@(runnableNames : Iterable[String])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(runnableNames : Iterable[String])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @main("Runnables") {
 
@@ -9,8 +11,6 @@
             @Messages("Runnables")
         </h3>
     </div>
-
-    @flashMessages()
 
     <div class="row">
         <div class="col-md-8">

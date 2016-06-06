@@ -2,6 +2,7 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
+import _root_.util.FilterSpec
 import models.Identity
 import persistence.{RepoException, AsyncCrudRepo}
 import play.api.Logger
@@ -14,35 +15,49 @@ import play.api.data.Form
 import scala.concurrent.Future
 import play.twirl.api.Html
 
+trait CrudController[ID] extends ReadonlyController[ID] {
+
+  def create: Action[AnyContent]
+
+  def edit(id: ID): Action[AnyContent]
+
+  def save: Action[AnyContent]
+
+  def update(id: ID): Action[AnyContent]
+
+  def delete(id: ID): Action[AnyContent]
+}
+
 /**
  * Generic async entity CRUD controller
+ *
  * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
-protected abstract class CrudController[E: Format, ID](
+protected abstract class CrudControllerImpl[E: Format, ID](
     override val repo: AsyncCrudRepo[E, ID]
-  )(implicit identity: Identity[E, ID]) extends ReadonlyController[E, ID](repo) {
+  )(implicit identity: Identity[E, ID]) extends ReadonlyControllerImpl[E, ID](repo) with CrudController[ID] {
 
   protected def form : Form[E]
 
   protected def createView(
     form : Form[E]
-  )(implicit msg: Messages, request: RequestHeader) : Html
+  )(implicit msg: Messages, request: Request[_]) : Html
 
   protected def editView(
     id : ID,
     form : Form[E]
-  )(implicit msg: Messages, request: RequestHeader) : Html
+  )(implicit msg: Messages, request: Request[_]) : Html
 
   protected def showView(
      id : ID,
      form : Form[E]
-  )(implicit msg: Messages, request: RequestHeader) : Html
+  )(implicit msg: Messages, request: Request[_]) : Html
 
   override protected def showView(
     id : ID,
     entity : E
-  )(implicit msg: Messages, request: RequestHeader) =
+  )(implicit msg: Messages, request: Request[_]) =
     showView(id, form.fill(entity))
 
   protected def home : Result

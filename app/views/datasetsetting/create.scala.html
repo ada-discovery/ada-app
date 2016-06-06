@@ -1,11 +1,13 @@
 @import views.html.layout
 @import views.html.datasetsetting.elements
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 
 @(
     form: Form[DataSetSetting]
 )(
-	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+	implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
 @layout.create(

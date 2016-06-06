@@ -1,7 +1,7 @@
 @import play.api.libs.json.JsObject
 @import views.html.layout.jsonShow
 
-@(item: JsObject)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(item: JsObject)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @jsonShow(
 	"Record",

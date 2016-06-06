@@ -4,7 +4,7 @@
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 
 
-@(dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo])(implicit request: RequestHeader)
+@(dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo])(implicit request: Request[_])
 
 @listItem(call: Call, dataSetId: String, text: String) = {
     @defining(getParamValue(request.uri, "dataSet")) { reqDataSetId =>

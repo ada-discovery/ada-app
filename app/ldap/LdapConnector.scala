@@ -8,7 +8,6 @@ import com.unboundid.ldap.listener.{InMemoryListenerConfig, InMemoryDirectorySer
 import com.unboundid.ldap.sdk._
 import com.unboundid.ldap.sdk.extensions.StartTLSExtendedRequest
 import com.unboundid.util.ssl.{TrustStoreTrustManager, TrustAllTrustManager, SSLUtil}
-import models.security.SecurityPermissionCache
 
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
@@ -70,13 +69,13 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
   /**
     * Add cached roles to InMemoryDirectoryServer and build flat permission tree.
     */
-  protected def addGroups(interface: LDAPInterface): Unit = {
-    val dc : String = "dc=groups," + settings.dit
-    val permissions: Seq[String] = SecurityPermissionCache.getPermissions
-    permissions.foreach{p: String =>
-      interface.add("dn: dc=" + p + "," + dc, "objectClass:top", "objectClass:groupofnames", "dc: "+ p)
-    }
-  }
+//  protected def addGroups(interface: LDAPInterface): Unit = {
+//    val dc : String = "dc=groups," + settings.dit
+//    val permissions: Seq[String] = SecurityPermissionCache.getPermissions
+//    permissions.foreach{p: String =>
+//      interface.add("dn: dc=" + p + "," + dc, "objectClass:top", "objectClass:groupofnames", "dc: "+ p)
+//    }
+//  }
 
   /**
     * Creates an LDAP inmemory server for testing.
@@ -99,7 +98,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
 
     // initialize ldap structures
     createTree(server)
-    addGroups(server)
+//    addGroups(server)
 
     // add default dummy users
     /*

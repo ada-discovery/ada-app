@@ -11,7 +11,7 @@
     sideBar: Option[Html] = None,
     topContentBar: Option[Html] = None
 )(
-	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
 
 @main(Messages("show.title", domainName), sideBar, topContentBar) {
@@ -19,8 +19,6 @@
 	<div class="page-header">
 		<h3>@Messages("show.title", domainName)</h3>
 	</div>
-
-	@flashMessages()
 
 	<div class="row">
 		<div class="col-md-9">

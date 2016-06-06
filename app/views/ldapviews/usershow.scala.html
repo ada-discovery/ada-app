@@ -1,7 +1,7 @@
 @import models.security.LdapUser
 @import views.html.elements.value
 
-@(item: LdapUser)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(item: LdapUser)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @elements = {
     @value("ldapUser", "LDAP DN", item._id)

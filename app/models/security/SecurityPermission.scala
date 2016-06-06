@@ -16,28 +16,3 @@ case class SecurityPermission(val value: String) extends Permission {
     value.substring(value.indexOf('=')+1, value.indexOf(','))
   }
 }
-
-/**
-  * Cached definitions of predefined security permissions.
-  * Use these for convenience.
-  */
-object SecurityPermissionCache {
-  lazy val adminPermissions: Seq[String] = getPermissions
-
-  // create permissions fo repo data based on registered repos
-  def createRepoPermissions: List[String] = List[String]()
-//    {
-//    val repos: List[String] = RepoDef.values.map{ (r: RepoDef.Value) => r.toString}.toList
-//    repos.flatMap{r: String => (
-//      "view."+r+".data" ::
-//      "view."+r+".metadata" ::
-//      "edit."+r+".data" ::
-//      "edit."+r+".metadata" ::
-//      Nil)}
-//  }
-
-  // sequence of all roles
-  lazy val getPermissions: Seq[String] = createRepoPermissions
-  //lazy val adminPermission: String = "admin"
-  lazy val adminPermission = Array("admin")
-}

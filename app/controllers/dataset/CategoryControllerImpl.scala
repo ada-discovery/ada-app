@@ -3,7 +3,7 @@ package controllers.dataset
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
-import controllers.CrudController
+import controllers.CrudControllerImpl
 import models.DataSetFormattersAndIds._
 import models.{D3Node, Page, Category}
 import persistence.AscSort
@@ -29,7 +29,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends CrudController[Category, BSONObjectID](dsaf(dataSetId).get.categoryRepo) with CategoryController {
+  ) extends CrudControllerImpl[Category, BSONObjectID](dsaf(dataSetId).get.categoryRepo) with CategoryController {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
@@ -59,13 +59,13 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   override protected lazy val home =
     Redirect(router.plainList)
 
-  override protected def createView(f : Form[Category])(implicit msg: Messages, request: RequestHeader) =
+  override protected def createView(f : Form[Category])(implicit msg: Messages, request: Request[_]) =
     category.create(dataSetName + " Category", f, allCategories, router)
 
-  override protected def showView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: RequestHeader) =
+  override protected def showView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: Request[_]) =
     editView(id, f)
 
-  override protected def editView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: RequestHeader) = {
+  override protected def editView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: Request[_]) = {
     val fieldsFuture = fieldRepo.find(Some(Json.obj("categoryId" -> id)), Some(Seq(AscSort("name"))))
     val fields = result(fieldsFuture)
     category.edit(
@@ -80,7 +80,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     )
   }
 
-  override protected def listView(page: Page[Category])(implicit msg: Messages, request: RequestHeader) =
+  override protected def listView(page: Page[Category])(implicit msg: Messages, request: Request[_]) =
     category.list(
       dataSetName + " Category",
       page,

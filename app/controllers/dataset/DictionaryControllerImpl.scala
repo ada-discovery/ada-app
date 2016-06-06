@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
-import controllers.{CrudController, EnumFormatter, MapJsonFormatter}
+import controllers.{CrudControllerImpl, EnumFormatter, MapJsonFormatter}
 import models._
 import models.DataSetFormattersAndIds._
 import persistence.AscSort
@@ -16,7 +16,7 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.{Action, RequestHeader}
+import play.api.mvc.{Action, RequestHeader, Request}
 import reactivemongo.bson.BSONObjectID
 import services.{DeNoPaSetting, DataSetService}
 import util.{ChartSpec, FieldChartSpec, FilterSpec}
@@ -36,7 +36,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends CrudController[Field, String](dsaf(dataSetId).get.fieldRepo) with DictionaryController {
+  ) extends CrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo) with DictionaryController {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
   protected val categoryRepo: DictionaryCategoryRepo = dsa.categoryRepo
@@ -69,17 +69,17 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   override protected lazy val home =
     Redirect(router.plainList)
 
-  override protected def createView(f : Form[Field])(implicit msg: Messages, request: RequestHeader) =
+  override protected def createView(f : Form[Field])(implicit msg: Messages, request: Request[_]) =
     dictionary.create(dataSetName + " Field", f, allCategories, router)
 
-  override protected def showView(name: String, f : Form[Field])(implicit msg: Messages, request: RequestHeader) =
+  override protected def showView(name: String, f : Form[Field])(implicit msg: Messages, request: Request[_]) =
     editView(name, f)
 
-  override protected def editView(name: String, f : Form[Field])(implicit msg: Messages, request: RequestHeader) =
+  override protected def editView(name: String, f : Form[Field])(implicit msg: Messages, request: Request[_]) =
     dictionary.edit(dataSetName + " Field", name, f, allCategories, router, result(dataSpaceMetaInfoRepo.find()))
 
   // TODO: Remove
-  override protected def listView(page: Page[Field])(implicit msg: Messages, request: RequestHeader) =
+  override protected def listView(page: Page[Field])(implicit msg: Messages, request: Request[_]) =
     throw new IllegalStateException("List not implemented... use overviewList instead.")
 
   // TODO: change to an async call
@@ -104,7 +104,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     page: Page[Field],
     fieldChartSpecs : Iterable[FieldChartSpec],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
-  )(implicit msg: Messages, request: RequestHeader) =
+  )(implicit msg: Messages, request: Request[_]) =
     dictionary.list(
       dataSetName + " Field",
       page,

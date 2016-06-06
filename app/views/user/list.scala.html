@@ -4,7 +4,7 @@
 
 @import models.security.CustomUser
 
-@(page: Page[CustomUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(page: Page[CustomUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @actions = {
     <div class="row">

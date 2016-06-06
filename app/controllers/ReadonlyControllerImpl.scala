@@ -4,6 +4,7 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import _root_.util.FilterSpec
+import be.objectify.deadbolt.scala.DeadboltActions
 import models.Page
 import persistence._
 import play.api.Logger
@@ -17,15 +18,25 @@ import scala.concurrent.duration._
 
 import scala.concurrent.{Await, Future}
 
+trait ReadonlyController[ID] {
+
+  def get(id: ID): Action[AnyContent]
+
+  def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
+
+  def listAll(orderBy: Int): Action[AnyContent]
+}
+
 /**
  * Generic async readonly controller
-  *
-  * @param E type of entity
+ *
+ * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
-protected abstract class ReadonlyController[E: Format, ID](protected val repo: AsyncReadonlyRepo[E, ID]) extends Controller {
+protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val repo: AsyncReadonlyRepo[E, ID]) extends Controller with ReadonlyController[ID] {
 
   @Inject var messagesApi: MessagesApi = _
+  @Inject var deadbolt: DeadboltActions = _
 
   protected val limit = 20
 
@@ -38,11 +49,11 @@ protected abstract class ReadonlyController[E: Format, ID](protected val repo: A
   protected def showView(
     id : ID,
     item : E
-  )(implicit msg: Messages, request: RequestHeader) : Html
+  )(implicit msg: Messages, request: Request[_]) : Html
 
   protected def listView(
     currentPage: Page[E]
-  )(implicit msg: Messages, request: RequestHeader) : Html
+  )(implicit msg: Messages, request: Request[_]) : Html
 
   /**
    * Retrieve single object by its Id.

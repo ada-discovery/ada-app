@@ -12,7 +12,7 @@ case class SecurityRole(val roleName: String) extends Role {
 }
 
 /**
-  * Cached defintions of predefined security roles.
+  * Definitions of predefined security roles.
   * Use these for convenience.
   *
   */

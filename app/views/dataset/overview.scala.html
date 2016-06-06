@@ -1,8 +1,9 @@
 @import util.ChartSpec
 @import views.html.chart.{chartPanel, chartPanelJs}
 @import views.html.layout.main
+@import play.api.i18n.Messages
 
-@(title: String, chartDatas : Traversable[ChartSpec])(implicit msg: play.api.i18n.Messages, request: RequestHeader)
+@(title: String, chartDatas : Traversable[ChartSpec])(implicit msg: Messages, flash: Flash, request: Request[_])
 
 @main(title) {
     <div class="page-header">

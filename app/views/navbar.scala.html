@@ -1,7 +1,8 @@
 @import play.api.Play.current
 @import util.matchesPath
+@import be.objectify.deadbolt.scala.views.html.subjectPresent
 
-@(implicit request: RequestHeader)
+@(implicit request: Request[_])
 
 @listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
 
@@ -26,31 +27,35 @@
         <div id="navigation" class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
                 @listItem(routes.AppController.studies(), "Studies", Some(1))
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Extras<span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        @listItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
-                        <li role="separator" class="divider"></li>
-                        @listItem(routes.RedCapController.listRecords(), "LuxPark REDCap Records")
-                        @listItem(routes.RedCapController.listMetadatas(), "LuxPark REDCap Metadata")
-                        @listItem(routes.RedCapController.listExportFields(), "LuxPark REDCap Export Fields")
-                        @listItem(routes.RedCapController.overview(), "LuxPark REDCap Overview")
-                    </ul>
-                </li>
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Admin<span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        @listItem(routes.AdminController.listRunnables(), "Runnables")
-                        <li role="separator" class="divider"></li>
-                        @listItem(controllers.dataset.routes.CsvDataSetImportController.create(), "Import CSV Data Set")
-                        @listItem(controllers.dataset.routes.SynapseDataSetImportController.create(), "Import Synapse Data Set")
-                        @listItem(controllers.dataset.routes.DataSetSettingController.find(), "Data Set Settings")
-                        <li role="separator" class="divider"></li>
-                        @listItem(routes.UserController.listAll(), "Users")
-                        @listItem(routes.LdapUserController.listAll(), "LDAP User")
-                        @listItem(routes.LdapController.settings(), "LDAP Settings")
-                    </ul>
-                </li>
+                @subjectPresent() {
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Extras<span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            @listItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
+                            <li role="separator" class="divider"></li>
+                            @listItem(routes.RedCapController.listRecords(), "LuxPark REDCap Records")
+                            @listItem(routes.RedCapController.listMetadatas(), "LuxPark REDCap Metadata")
+                            @listItem(routes.RedCapController.listExportFields(), "LuxPark REDCap Export Fields")
+                            @listItem(routes.RedCapController.overview(), "LuxPark REDCap Overview")
+                        </ul>
+                    </li>
+
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                            Admin<span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            @listItem(routes.AdminController.listRunnables(), "Runnables")
+                            <li role="separator" class="divider"></li>
+                            @listItem(controllers.dataset.routes.CsvDataSetImportController.create(), "Import CSV Data Set")
+                            @listItem(controllers.dataset.routes.SynapseDataSetImportController.create(), "Import Synapse Data Set")
+                            @listItem(controllers.dataset.routes.DataSetSettingController.find(), "Data Set Settings")
+                            <li role="separator" class="divider"></li>
+                            @listItem(routes.UserController.listAll(), "Users")
+                            @listItem(routes.LdapUserController.listAll(), "LDAP User")
+                            @listItem(routes.LdapController.settings(), "LDAP Settings")
+                        </ul>
+                    </li>
+                }
             </ul>
 
             <ul class="nav navbar-nav navbar-right">

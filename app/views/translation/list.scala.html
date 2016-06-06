@@ -2,7 +2,7 @@
 @import views.html.table.paginatedTable
 @import util.typeColumns
 
-@(page: Page[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(page: Page[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @actions = {
     <div class="row">

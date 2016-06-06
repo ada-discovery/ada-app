@@ -5,6 +5,8 @@
 @import models.Category
 @import controllers.dataset.CategoryRouter
 @import util.typeColumns
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 
 @(
     domainName : String,
@@ -12,7 +14,7 @@
     router : CategoryRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+    implicit flash:Flash, msg: Messages, request: Request[_]
 )
 
 @actions = {

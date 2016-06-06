@@ -8,17 +8,14 @@
 	listCall : Call,
 	formArgs: (Symbol,String)*
 )(
-	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
 
-@main(Messages("create.title", domainName)) {
+@main(Messages("create.title", domainName), None, None, None, None, Some(formErrors(domainName, form.errors))) {
 
 	<div class="page-header">
 		<h2>@Messages("create.title", domainName)</h2>
 	</div>
-
-    @flashMessages()
-    @formErrors(domainName, form.errors)
 
 	<div class="row">
 		<div class="col-md-12">

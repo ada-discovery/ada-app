@@ -2,11 +2,13 @@
 @import views.html.table.paginatedTable
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import util.typeColumns
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 
 @(
     dataSetName: String,
     page: Page[DataSetSetting]
-)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+)(implicit flash:Flash, msg: Messages, request: Request[_])
 
 @actions = {
     <div class="row">

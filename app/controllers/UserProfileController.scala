@@ -98,36 +98,38 @@ class UserProfileController @Inject() (
     * Save changes made in user settings page to database.
     * Extracts current user from token for information match.
     */
-  def updateSettings() = Action.async { implicit request =>
-    val loggedUserFutureOp: Future[Option[CustomUser]] = currentUser(request)
+  def updateSettings() = deadbolt.SubjectPresent() {
+    Action.async { implicit request =>
+      val loggedUserFutureOp: Future[Option[CustomUser]] = currentUser(request)
 
-    // integrity check
-    loggedUserFutureOp.map{loggedUserOp: Option[CustomUser] =>
-      if(loggedUserOp.isEmpty){
-        Logger.error("Possible user data tempering by unregistered user.")
-      }
-    }
-
-    val loggedUser: CustomUser = Await.result(loggedUserFutureOp, 120000 millis).get
-    userUpdateForm.bindFromRequest.fold(
-      { formWithErrors =>
-        Future.successful(BadRequest(formWithErrors.errors.toString).flashing("failure" -> "An unexpected error occured"))
-      },
-      (newUserData: CustomUser) => {
-        updateUserCall(loggedUser, newUserData).map { _ =>
-          render {
-            case Accepts.Html() => Redirect(routes.UserProfileController.profile()).flashing("success" -> "Profile has been updated")
-            case Accepts.Json() => Ok(Json.obj("message" -> "Profile successfully updated"))
-          }
-        }.recover {
-          case t: TimeoutException =>
-            Logger.error("Problem found in the update process")
-            InternalServerError(t.getMessage)
-          case i: RepoException =>
-            Logger.error("Problem found in the update process")
-            InternalServerError(i.getMessage)
+      // integrity check
+      loggedUserFutureOp.map{loggedUserOp: Option[CustomUser] =>
+        if(loggedUserOp.isEmpty){
+          Logger.error("Possible user data tempering by unregistered user.")
         }
-      })
+      }
+
+      val loggedUser: CustomUser = Await.result(loggedUserFutureOp, 120000 millis).get
+      userUpdateForm.bindFromRequest.fold(
+        { formWithErrors =>
+          Future.successful(BadRequest(formWithErrors.errors.toString).flashing("failure" -> "An unexpected error occured"))
+        },
+        (newUserData: CustomUser) => {
+          updateUserCall(loggedUser, newUserData).map { _ =>
+            render {
+              case Accepts.Html() => Redirect(routes.UserProfileController.profile()).flashing("success" -> "Profile has been updated")
+              case Accepts.Json() => Ok(Json.obj("message" -> "Profile successfully updated"))
+            }
+          }.recover {
+            case t: TimeoutException =>
+              Logger.error("Problem found in the update process")
+              InternalServerError(t.getMessage)
+            case i: RepoException =>
+              Logger.error("Problem found in the update process")
+              InternalServerError(i.getMessage)
+          }
+        })
+    }
   }
 
 
@@ -135,9 +137,9 @@ class UserProfileController @Inject() (
     * Advanced options only visible to admin user.
     * Simple redirect to runnables in AdminController by now.
     */
-  def adminPanel() = Action{
+  def adminPanel() = Action(
     Redirect(routes.AdminController.listRunnables())
-  }
+  )
 
   /**
     * Updates user data by setting unprotected fields to new values.
@@ -147,9 +149,5 @@ class UserProfileController @Inject() (
     */
   protected def updateUserCall(refData: CustomUser, newData: CustomUser): Future[Boolean] = {
     userManager.updateUser(newData)
-  }
-
-  protected def updateWorkspace() = {
-    Ok("")
   }
 }

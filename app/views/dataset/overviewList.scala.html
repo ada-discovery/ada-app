@@ -7,6 +7,8 @@
 @import play.modules.reactivemongo.json._
 @import reactivemongo.bson.BSONObjectID
 @import util.FieldChartSpec
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 
 @import controllers.dataset.DataSetRouter
 
@@ -19,7 +21,7 @@
     router: DataSetRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+    implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
 @actions = @{

@@ -1,11 +1,7 @@
 @import models.security.CustomUser
-@import be.objectify.deadbolt.scala.views.html.restrict
-@import models.security.SecurityRoles
 @import models.workspace.Workspace
 
-
-@import play.api.libs.json.JsObject
-@(user: CustomUser, workspace: Workspace)(implicit request: Request[Any])
+@(user: CustomUser, workspace: Workspace)(implicit request: Request[_], flash: Flash)
 
 @layout.main("NCER-PD Home") {
     <!-- user profile header; move to designated template -->

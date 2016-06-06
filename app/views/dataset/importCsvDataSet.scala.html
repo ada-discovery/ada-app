@@ -1,8 +1,10 @@
 @import models.CsvDataSetImportInfo
 @import views.html.layout
 @import views.html.elements._
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 
-@(form: Form[CsvDataSetImportInfo])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(form: Form[CsvDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @elements = {
     <div class="panel panel-default">

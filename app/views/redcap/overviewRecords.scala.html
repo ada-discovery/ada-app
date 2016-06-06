@@ -4,7 +4,7 @@
     title: String,
     valueCounts : Seq[(String, Seq[(String, Any)])]
 )(
-    implicit msg: play.api.i18n.Messages, request: RequestHeader
+    implicit msg: Messages, request: Request[_], flash: Flash
 )
 
 @layout.main(title) {

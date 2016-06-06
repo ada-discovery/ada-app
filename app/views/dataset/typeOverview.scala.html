@@ -1,12 +1,14 @@
 @import views.html.layout.main
 @import views.html.chart._
 @import util.DataPoint
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 
 @(
     domainName: String,
     fieldTypeCounts : Traversable[(FieldType.Value, Int)]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader
+    implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
 @main(Messages("typeOverview.title", domainName)) {

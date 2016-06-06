@@ -1,16 +1,11 @@
 package controllers.dataset
 
+import controllers.{ReadonlyController, CrudController}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import util.FilterSpec
 
-trait DataSetController {
-
-  def get(id: BSONObjectID): Action[AnyContent]
-
-  def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
-
-  def listAll(orderBy: Int): Action[AnyContent]
+trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def exportAllRecordsAsCsv(delimiter : String): Action[AnyContent]
 

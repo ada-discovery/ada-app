@@ -3,7 +3,7 @@
 @import views.html.table.displayTable
 @import util.typeColumns
 
-@(settings: LdapSettings)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: RequestHeader)
+@(settings: LdapSettings)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @layout.show(
     "LDAP Settings",

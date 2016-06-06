@@ -2,7 +2,7 @@
 @import be.objectify.deadbolt.scala.views.html.restrict
 @import models.security.SecurityRoles
 
-@(user: CustomUser)(implicit request: Request[Any])
+@(user: CustomUser)(implicit request: Request[Any], flash: Flash)
 
 @layout.main("NCER-PD Home") {
     <!-- Begin page content -->

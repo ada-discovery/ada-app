@@ -1,6 +1,6 @@
 @(page: Page[_], listCall : (Int, Option[String]) => Call)
 
-<ul class="pager" style="padding-bottom: 120px;">
+<ul class="pager">
     @page.prev.map { page =>
     <li class="previous">
         <a href="@listCall(page, None)">&larr; Previous</a>

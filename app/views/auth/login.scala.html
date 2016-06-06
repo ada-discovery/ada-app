@@ -1,6 +1,8 @@
-@(form: Form[(String, String)], message: Option[String] = None)(implicit request: RequestHeader, flash: Flash)
+@import views.html.layout.formErrors
 
-@layout.main("Ada Login") {
+@(form: Form[(String, String)])(implicit request: Request[_], flash: Flash, messages: Messages)
+
+@layout.main("Ada Login", None, None, None, None, Some(formErrors("login", form.errors))) {
 
     <div class="page-header">
         <h1>Login</h1>
@@ -10,35 +12,18 @@
         @helper.form(routes.AuthController.authenticate){
             <div class="login well well-lg col-md-6">
 
-                    <!-- show login error -->
-                    @form.globalError.map { error =>
-                        <div class="alert alert-dismissable alert-danger">
-                            <button type="button" class="close" data-dismiss="alert">×</button>
-                            @error.message
-                        </div>
-                    }
+                <div class="form-group">
+                    <label form="user"> LUMS ID: <br></label>
+                    <input type="text" class="form-control" id="id" name="id" value="" placeholder="LUMS login">
+                </div>
 
-                    <!-- optional message -->
-                    @if(message.isDefined){
-                        <div class="alert alert-dismissable alert-danger">
-                            <button type="button" class="close" data-dismiss="alert">×</button>
-                            <span class="sr-only">Error:</span>
-                            @message.get
-                        </div>
-                    }
-
-                    <div class="form-group row">
-                        <label form="user"> LUMS ID: <br></label>
-                        <input type="text" class="form-control" id="id" name="id" value="" placeholder="LUMS login">
-                    </div>
-
-                    <div class="form-group row">
-                        <label form="password"> Password: <br></label>
-                        <input type="password" class="form-control" id="password" name="password" value="" placeholder="Password">
-                    </div>
-                    <div class="col-md-12 row">
-                        <input type="submit" id="submit" value="Login" class="btn btn-primary btn-sm btn-block">
-                    </div>
+                <div class="form-group">
+                    <label form="password"> Password: <br></label>
+                    <input type="password" class="form-control" id="password" name="password" value="" placeholder="Password">
+                </div>
+                <div class="col-md-12 row">
+                    <input type="submit" id="submit" value="Login" class="btn btn-primary btn-sm btn-block">
+                </div>
                     @{/*<div class="pull-right"><a href="@routes.AuthController.passwordRecovery">Forgot password</a></div>*/}
             </div>
         }
