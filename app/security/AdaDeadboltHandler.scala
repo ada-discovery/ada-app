@@ -38,7 +38,8 @@ class AdaOnFailureRedirectDeadboltHandler(
           Redirect(refererUrl).flashing("errors" -> "Access denied! We're sorry, but you are not authorized to perform the requested operation.")
         }
 
-        case None => Redirect(routes.AuthController.login)
+        case None =>
+          Redirect(routes.AuthController.login).withSession("successfulLoginUrl" -> request.uri)
       }
     }
 }
@@ -51,16 +52,6 @@ class AdaOnFailureUnauthorizedStatusDeadboltHandler(
   override def onAuthFailure[A](request: Request[A]): Future[Result] =
     Future(Unauthorized)
 }
-
-//class AdaOnFailureDelegateDeadboltHandler(
-//    getCurrentUser: Request[_] => Future[Option[Subject]],
-//    dynamicResourceHandler: Option[DynamicResourceHandler] = None,
-//    onFailureDelegate: =>
-//  ) extends AdaDeadboltHandler(getCurrentUser, dynamicResourceHandler) {
-//
-//  override def onAuthFailure[A](request: Request[A]): Future[Result] =
-//    delegate.onAuthFailure(request)
-//}
 
 protected abstract class AdaDeadboltHandler(
     getCurrentUser: Request[_] => Future[Option[Subject]],

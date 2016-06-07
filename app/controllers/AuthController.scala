@@ -97,8 +97,6 @@ class AuthController @Inject() (
       idPassword => userManager.findById(idPassword._1).flatMap((user: Option[CustomUser]) =>
         user match {
           case Some(u) => {
-            val refererUrl = request.headers("referer")
-            println(refererUrl)
             gotoLoginSucceeded(u.getIdentifier)
           }
           case None => Future(Redirect(routes.AuthController.unauthorized()))

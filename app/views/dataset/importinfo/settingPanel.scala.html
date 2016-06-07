@@ -1,0 +1,26 @@
+@import views.html.elements._
+
+@(domainName: String, form: Form[_])
+
+<div class="panel panel-default">
+    <div class="panel-heading">Setting</div>
+    <div class="panel-body">
+        @labelValue("includeSetting", "Included?", false, Some("Do you want to specify a setting now?")){
+            <label class="radio-inline"><input type="radio" name="includeSetting" value="true">Yes</label>
+            <label class="radio-inline"><input type="radio" name="includeSetting" value="false" checked="checked">No</label>
+        }
+    <div id="settingDiv" style="display:none">
+        <input type="hidden" id="setting_dataSetId" name="setting.dataSetId" value="">
+        <hr/>
+        @inputText(domainName, "setting.keyFieldName", form)
+        @inputText(domainName, "setting.exportOrderByFieldName", form)
+        @inputText(domainName, "setting.listViewTableColumnNames", form)
+        @inputText(domainName, "setting.overviewChartFieldNames", form)
+        @inputText(domainName, "setting.defaultScatterXFieldName", form)
+        @inputText(domainName, "setting.defaultScatterYFieldName", form)
+        @inputText(domainName, "setting.defaultDistributionFieldName", form)
+        @inputText(domainName, "setting.tranSMARTVisitFieldName", form)
+        @inputText(domainName, "setting.tranSMARTReplacements", form)
+    </div>
+    </div>
+</div>

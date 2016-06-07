@@ -1,18 +1,18 @@
-@import models.CsvDataSetImportInfo
+@import models.TranSmartDataSetImportInfo
 @import views.html.layout
 @import views.html.elements._
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 
-@(form: Form[CsvDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+@(form: Form[TranSmartDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @elements = {
     <div class="panel panel-default">
         <div class="panel-heading">Data Set Info</div>
         <div class="panel-body">
-            @inputText("csvDataSetImportInfo", "dataSpaceName", form)
-            @inputText("csvDataSetImportInfo", "dataSetName", form)
-            @inputText("csvDataSetImportInfo", "dataSetId", form)
+            @inputText("dataSetImportInfo", "dataSpaceName", form)
+            @inputText("dataSetImportInfo", "dataSetName", form)
+            @inputText("dataSetImportInfo", "dataSetId", form)
         </div>
     </div>
     <div class="panel panel-default">
@@ -26,36 +26,13 @@
                 @inputFile("dataSetImportInfo", form("importFile"), '_label -> "")
             </div>
             <div id="pathDiv">
-                @inputText("dataSetImportInfo", "path", form, '_label -> "", 'style -> "display:none")
+                @inputText("dataSetImportInfo", "dataPath", form, '_label -> "", 'style -> "display:none")
             </div>
-            @inputText("dataSetImportInfo", "delimiter", form)
-            @inputText("dataSetImportInfo", "eol", form)
             @inputText("dataSetImportInfo", "charsetName", form)
         </div>
     </div>
-    <div>
-    <div class="panel panel-default">
-        <div class="panel-heading">Setting</div>
-        <div class="panel-body">
-            @labelValue("includeSetting", "Included?", false, Some("Do you want to specify a setting now?")){
-                <label class="radio-inline"><input type="radio" name="includeSetting" value="true">Yes</label>
-                <label class="radio-inline"><input type="radio" name="includeSetting" value="false" checked="checked">No</label>
-            }
-            <div id="settingDiv" style="display:none">
-                <input type="hidden" id="setting_dataSetId" name="setting.dataSetId" value="">
-                <hr/>
-                @inputText("dataSetImportInfo", "setting.keyFieldName", form)
-                @inputText("dataSetImportInfo", "setting.exportOrderByFieldName", form)
-                @inputText("dataSetImportInfo", "setting.listViewTableColumnNames", form)
-                @inputText("dataSetImportInfo", "setting.overviewChartFieldNames", form)
-                @inputText("dataSetImportInfo", "setting.defaultScatterXFieldName", form)
-                @inputText("dataSetImportInfo", "setting.defaultScatterYFieldName", form)
-                @inputText("dataSetImportInfo", "setting.defaultDistributionFieldName", form)
-                @inputText("dataSetImportInfo", "setting.tranSMARTVisitFieldName", form)
-                @inputText("dataSetImportInfo", "setting.tranSMARTReplacements", form)
-            </div>
-        </div>
-    </div>
+    @settingPanel("csvDataSetImportInfo", form)
+
     <script type="text/javascript">
         $(function() {
             if ($('#path').val()) {

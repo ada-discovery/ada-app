@@ -3,7 +3,7 @@ package util
 import java.security.MessageDigest
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import models.security.{SecurityRoles, CustomUser}
+import models.security.{SecurityRole, CustomUser}
 import play.api.mvc.Action
 import scala.util.Random
 
@@ -61,5 +61,5 @@ object SecurityUtil {
   ) = "\\bDS:" + dataSetId.replaceAll("\\.","\\\\.") + "(\\." + controllerName + "(\\." + actionName + ")?)?\\b"
 
   def restrictAdmin[A](deadbolt: DeadboltActions)(action: Action[A]): Action[A] =
-    deadbolt.Restrict[A](List(Array(SecurityRoles.adminRole)))(action)
+    deadbolt.Restrict[A](List(Array(SecurityRole.admin)))(action)
 }

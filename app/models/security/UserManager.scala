@@ -62,8 +62,8 @@ trait UserManager {
 
   def findByEmail(email: String): Future[Option[CustomUser]]
 
-  def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", Seq(SecurityRoles.adminRole), Seq())
-  def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", Seq(SecurityRoles.basicRole), Seq())
+  def adminUser: CustomUser = CustomUser(None, "admin.user", "admin@mail", Seq(SecurityRole.admin), Seq())
+  def basicUser: CustomUser = CustomUser(None, "basic.user", "basic@mail", Seq(SecurityRole.basic), Seq())
 
   def debugUsers: Traversable[CustomUser]
 }
@@ -101,7 +101,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
       foundFuture.map { found =>
         found.headOption match {
           case Some(usr) => userRepo.update(CustomUser(usr._id, ldapusr.getDN, ldapusr.email, usr.roles, usr.permissions))
-          case None => userRepo.save(CustomUser(None, ldapusr.getDN, ldapusr.email, Seq(SecurityRoles.basicRole), Seq()))
+          case None => userRepo.save(CustomUser(None, ldapusr.getDN, ldapusr.email, Seq(SecurityRole.basic), Seq()))
         }
       }
     }

@@ -16,7 +16,7 @@ case class SecurityRole(val roleName: String) extends Role {
   * Use these for convenience.
   *
   */
-object SecurityRoles {
-  val adminRole = "admin"
-  val basicRole = "basic"
+object SecurityRole {
+  val admin = "admin"
+  val basic = "basic"
 }

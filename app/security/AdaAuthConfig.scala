@@ -83,22 +83,26 @@ trait AdaAuthConfig extends AuthConfig {
     * Where to redirect the user after a successful login.
     */
   def loginSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
-    Future.successful(Redirect(routes.UserProfileController.profile()))
+    val successfulLoginUrl = request.session.get("successfulLoginUrl")
+    Future.successful(
+      if (successfulLoginUrl.isDefined && successfulLoginUrl.get.nonEmpty)
+        Redirect(successfulLoginUrl.get).withSession("successfulLoginUrl" -> "")
+      else
+        Redirect(routes.UserProfileController.profile())
+    )
   }
 
   /**
     * Where to redirect the user after logging out
     */
-  def logoutSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
+  def logoutSucceeded(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] =
     Future.successful(Redirect(routes.AuthController.loggedOut))
-  }
 
   /**
     * If the user is not logged in and tries to access a protected resource, redirect to login page
     */
-  def authenticationFailed(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] = {
+  def authenticationFailed(request: RequestHeader)(implicit ctx: ExecutionContext): Future[Result] =
     Future.successful(Redirect(routes.AuthController.login))
-  }
 
   /**
     * Only used, if play2-auth authorization is required.
