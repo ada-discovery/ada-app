@@ -15,6 +15,7 @@ import services.DataSetService
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import util.SecurityUtil.restrictAdmin
+import views.html.dataset.importinfo.{importCsvDataSet => importView}
 
 import scala.concurrent.Future
 
@@ -53,7 +54,7 @@ class CsvDataSetImportController @Inject()(
   def create = restrictAdmin(deadbolt) {
     Action { implicit request =>
       implicit val msg = messagesApi.preferred(request)
-      Ok(views.html.dataset.importCsvDataSet(form.fill(defaultImportInfo)))
+      Ok(importView(form.fill(defaultImportInfo)))
     }
   }
 
@@ -109,6 +110,6 @@ class CsvDataSetImportController @Inject()(
     filledForm: Form[CsvDataSetImportInfo]
   )(implicit request: Request[_]) = {
     implicit val msg = messagesApi.preferred(request)
-    BadRequest(views.html.dataset.importCsvDataSet(filledForm))
+    BadRequest(importView(filledForm))
   }
 }

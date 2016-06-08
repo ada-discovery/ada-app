@@ -3,71 +3,28 @@
 @import views.html.elements._
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import views.html.dataset.importinfo.{settingPanel, fileOrPathInput, dataSetInfoPanel}
 
 @(form: Form[TranSmartDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @elements = {
-    <div class="panel panel-default">
-        <div class="panel-heading">Data Set Info</div>
-        <div class="panel-body">
-            @inputText("dataSetImportInfo", "dataSpaceName", form)
-            @inputText("dataSetImportInfo", "dataSetName", form)
-            @inputText("dataSetImportInfo", "dataSetId", form)
-        </div>
-    </div>
+    @dataSetInfoPanel("tranSmartDataSetImportInfo", form)
+
     <div class="panel panel-default">
         <div class="panel-heading">File</div>
         <div class="panel-body">
-            @labelValue("sourceChoice", "Source"){
-                <label class="radio-inline"><input type="radio" name="sourceChoice" value="1" checked="checked">Local file</label>
-                <label class="radio-inline"><input type="radio" name="sourceChoice" value="2">Server-side path</label>
-            }
-            <div id="importFileDiv">
-                @inputFile("dataSetImportInfo", form("importFile"), '_label -> "")
-            </div>
-            <div id="pathDiv">
-                @inputText("dataSetImportInfo", "dataPath", form, '_label -> "", 'style -> "display:none")
-            </div>
-            @inputText("dataSetImportInfo", "charsetName", form)
+            @fileOrPathInput("tranSmartDataSetImportInfo", "dataSourceChoice", "Data Source", "dataFile", "dataPath", form)
+            @fileOrPathInput("tranSmartDataSetImportInfo", "mappingSourceChoice", "Mapping Source", "mappingFile", "mappingPath", form)
+            @inputText("tranSmartDataSetImportInfo", "charsetName", form)
         </div>
     </div>
-    @settingPanel("csvDataSetImportInfo", form)
+
+    @settingPanel(form)
 
     <script type="text/javascript">
-        $(function() {
-            if ($('#path').val()) {
-                $('input[name="sourceChoice"][value="1"]').attr('checked', '')
-                $('input[name="sourceChoice"][value="2"]').attr('checked', 'checked')
-                $('#importFile').hide()
-                $('#path').show()
-            }
-
-            var settingValueFound = false;
-            $.each( $("input[name^='setting.']"), function () {
-                if ($(this).val()) {
-                    settingValueFound = true;
-                    return false;
-                }
-            });
-
-            if (settingValueFound) {
-                $('input[name="includeSetting"][value="true"]').attr('checked', 'checked')
-                $('input[name="includeSetting"][value="false"]').attr('checked', '')
-                $('#settingDiv').show()
-            }
-        });
-
         $('form').submit(function(ev) {
             ev.preventDefault();
-            var includeSetting = $('input[name="includeSetting"]:checked').val() == "true"
-            if (includeSetting)
-                $('#setting_dataSetId').val($('#dataSetId').val())
-            else {
-                // if setting should not be included remove all setting fields from the form by erasing their names before submit
-                $.each( $("input[name^='setting.']"), function () {
-                    $(this).attr("name", '');
-                });
-            }
+            handleSettingSubmission();
 
             var importLocalFile = $('input[name="sourceChoice"]:checked').val() == "1"
             if (importLocalFile)
@@ -79,42 +36,14 @@
 
             this.submit();
         });
-
-        $('input[name="includeSetting"]').change(function() {
-            var includeSetting = $('input[name="includeSetting"]:checked').val() == "true"
-            if (includeSetting)
-                $('#settingDiv').show()
-            else
-                $('#settingDiv').hide()
-        })
-
-        $('input[name="sourceChoice"]').change(function() {
-            var importLocalFile = $('input[name="sourceChoice"]:checked').val() == "1"
-            if (importLocalFile) {
-                $('#importFile').show()
-                $('#path').hide()
-            } else {
-                $('#importFile').hide()
-                $('#path').show()
-            }
-        })
-
-        $('#dataSpaceName').on('change keyup paste', updateDataSetId)
-        $('#dataSetName').on('change keyup paste', updateDataSetId)
-
-        function updateDataSetId() {
-            var dataSpaceNamePart = $('#dataSpaceName').val().trim().replace(/ /g, "_").toLowerCase()
-            var dataSetNamePart = $('#dataSetName').val().trim().replace(/ /g, "_").toLowerCase()
-            $('#dataSetId').val(dataSpaceNamePart + "." + dataSetNamePart)
-        }
     </script>
 }
 
 @layout.create(
-    "Data Set From CSV",
+    "Data Set (and Dictionary) from TranSMART",
     form,
     elements,
-    controllers.dataset.routes.CsvDataSetImportController.upload,
+    controllers.dataset.routes.TranSmartDataSetImportController.upload,
     routes.AppController.index,
     'enctype -> "multipart/form-data"
 )

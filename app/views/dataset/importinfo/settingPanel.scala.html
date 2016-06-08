@@ -1,6 +1,6 @@
 @import views.html.elements._
 
-@(domainName: String, form: Form[_])
+@(form: Form[_])(implicit msg: Messages)
 
 <div class="panel panel-default">
     <div class="panel-heading">Setting</div>
@@ -12,15 +12,53 @@
     <div id="settingDiv" style="display:none">
         <input type="hidden" id="setting_dataSetId" name="setting.dataSetId" value="">
         <hr/>
-        @inputText(domainName, "setting.keyFieldName", form)
-        @inputText(domainName, "setting.exportOrderByFieldName", form)
-        @inputText(domainName, "setting.listViewTableColumnNames", form)
-        @inputText(domainName, "setting.overviewChartFieldNames", form)
-        @inputText(domainName, "setting.defaultScatterXFieldName", form)
-        @inputText(domainName, "setting.defaultScatterYFieldName", form)
-        @inputText(domainName, "setting.defaultDistributionFieldName", form)
-        @inputText(domainName, "setting.tranSMARTVisitFieldName", form)
-        @inputText(domainName, "setting.tranSMARTReplacements", form)
+        @inputText("dataSetImportInfo", "setting.keyFieldName", form)
+        @inputText("dataSetImportInfo", "setting.exportOrderByFieldName", form)
+        @inputText("dataSetImportInfo", "setting.listViewTableColumnNames", form)
+        @inputText("dataSetImportInfo", "setting.overviewChartFieldNames", form)
+        @inputText("dataSetImportInfo", "setting.defaultScatterXFieldName", form)
+        @inputText("dataSetImportInfo", "setting.defaultScatterYFieldName", form)
+        @inputText("dataSetImportInfo", "setting.defaultDistributionFieldName", form)
+        @inputText("dataSetImportInfo", "setting.tranSMARTVisitFieldName", form)
+        @inputText("dataSetImportInfo", "setting.tranSMARTReplacements", form)
     </div>
     </div>
 </div>
+
+<script type="text/javascript">
+    $(function() {
+        var settingValueFound = false;
+        $.each( $("input[name^='setting.']"), function () {
+            if ($(this).val()) {
+                settingValueFound = true;
+                return false;
+            }
+        });
+
+        if (settingValueFound) {
+            $('input[name="includeSetting"][value="true"]').attr('checked', 'checked')
+            $('input[name="includeSetting"][value="false"]').attr('checked', '')
+            $('#settingDiv').show()
+        }
+    });
+
+    $('input[name="includeSetting"]').change(function() {
+        var includeSetting = $('input[name="includeSetting"]:checked').val() == "true"
+        if (includeSetting)
+            $('#settingDiv').show()
+        else
+            $('#settingDiv').hide()
+    })
+
+    function handleSettingSubmission() {
+        var includeSetting = $('input[name="includeSetting"]:checked').val() == "true"
+        if (includeSetting)
+            $('#setting_dataSetId').val($('#dataSetId').val())
+        else {
+            // if setting should not be included remove all setting fields from the form by erasing their names before submit
+            $.each( $("input[name^='setting.']"), function () {
+                $(this).attr("name", '');
+            });
+        }
+    }
+</script>

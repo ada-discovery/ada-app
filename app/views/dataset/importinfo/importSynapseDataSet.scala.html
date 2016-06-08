@@ -3,34 +3,35 @@
 @import views.html.elements.inputText
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import views.html.dataset.importinfo.{settingPanel, fileOrPathInput, dataSetInfoPanel}
 
 @(form: Form[SynapseDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @elements = {
-    @inputText("synapseDataSetImportInfo", "dataSpaceName", form)
-    @inputText("synapseDataSetImportInfo", "dataSetName", form)
-    @inputText("synapseDataSetImportInfo", "dataSetId", form)
-    @inputText("synapseDataSetImportInfo", "tableId", form)
+    @dataSetInfoPanel("synapseDataSetImportInfo", form)
+
+    <div class="panel panel-default">
+        <div class="panel-heading">Synapse</div>
+        <div class="panel-body">
+            @inputText("synapseDataSetImportInfo", "tableId", form)
+        </div>
+    </div>
+
+    @settingPanel(form)
+
+    <script type="text/javascript">
+        $('form').submit(function(ev) {
+            ev.preventDefault();
+            handleSettingSubmission();
+            this.submit();
+        });
+    </script>
 }
 
 @layout.create(
-    "Data Set From Synapse",
+    "Data Set from Synapse",
     form,
     elements,
     controllers.dataset.routes.SynapseDataSetImportController.upload,
     routes.AppController.index
 )
-
-<script type="text/javascript">
-    $(function() {
-
-        $('#dataSpaceName').on('change keyup paste', updateDataSetId)
-        $('#dataSetName').on('change keyup paste', updateDataSetId)
-
-        function updateDataSetId() {
-            var dataSpaceNamePart = $('#dataSpaceName').val().trim().replace(/ /g, "_").toLowerCase()
-            var dataSetNamePart = $('#dataSetName').val().trim().replace(/ /g, "_").toLowerCase()
-            $('#dataSetId').val(dataSpaceNamePart + "." + dataSetNamePart)
-        }
-    })
-</script>

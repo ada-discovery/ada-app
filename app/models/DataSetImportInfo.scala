@@ -29,7 +29,7 @@ case class SynapseDataSetImportInfo(
   setting: Option[DataSetSetting]
 ) extends DataSetImportInfo
 
-case class TranSmartImportInfo(
+case class TranSmartDataSetImportInfo(
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
@@ -67,7 +67,7 @@ object CsvDataSetImportInfo {
   ) = new CsvDataSetImportInfo(dataSpaceName, dataSetId, dataSetName, path, None, delimiter, eol, charsetName, setting)
 }
 
-object TranSmartImportInfo {
+object TranSmartDataSetImportInfo {
   def apply(
     dataSpaceName: String,
     dataSetId: String,
@@ -76,5 +76,5 @@ object TranSmartImportInfo {
     mappingPath: Option[String],
     charsetName: Option[String],
     setting: Option[DataSetSetting]
-  ) = new TranSmartImportInfo(dataSpaceName, dataSetId, dataSetName, dataPath, None, mappingPath, None, charsetName, setting)
+  ) = new TranSmartDataSetImportInfo(dataSpaceName, dataSetId, dataSetName, dataPath, None, mappingPath, None, charsetName, setting)
 }

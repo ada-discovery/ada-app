@@ -29,10 +29,10 @@
 
 @actions = {
     <div class="row">
-        <div class="col-md-11">
+        <div class="col-md-10">
             @filter(filterSpec, router.getDistribution(Some(fieldName), filterSpec), Left(fields.map(_._1)))
         </div>
-        <div class="col-md-1">
+        <div class="col-md-2">
             <a class="btn btn-info btn-sm" href="#" onclick="addToOverview();return false;">Add to Overview</a>
         </div>
     </div>

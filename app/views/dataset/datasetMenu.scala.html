@@ -10,7 +10,14 @@
     @defining(getParamValue(request.uri, "dataSet")) { reqDataSetId =>
         <li @if(reqDataSetId.isDefined && reqDataSetId.get.equals(dataSetId)) {class="active dataset"} else {class="dataset"}>
             <a href="@call">
-                <h5>@text</h5>
+                <ul class="list-inline">
+                    <li>
+                        <span class="glyphicon glyphicon-chevron-right"></span>
+                    </li>
+                    <li>
+                        <h5>@text</h5>
+                    </li>
+                </ul>
             </a>
         </li>
     }

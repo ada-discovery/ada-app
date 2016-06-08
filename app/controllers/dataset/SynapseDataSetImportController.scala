@@ -15,6 +15,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import services.DataSetService
 import util.SecurityUtil.restrictAdmin
+import views.html.dataset.importinfo.{importSynapseDataSet => importView}
 
 import scala.concurrent.Future
 
@@ -43,7 +44,7 @@ class SynapseDataSetImportController @Inject()(
   def create = restrictAdmin(deadbolt) {
     Action { implicit request =>
       implicit val msg = messagesApi.preferred(request)
-      Ok(views.html.dataset.importSynapseDataSet(form.fill(defaultImportInfo)))
+      Ok(importView(form.fill(defaultImportInfo)))
     }
   }
 
@@ -86,6 +87,6 @@ class SynapseDataSetImportController @Inject()(
     filledForm: Form[SynapseDataSetImportInfo]
   )(implicit request: Request[_]) = {
     implicit val msg = messagesApi.preferred(request)
-    BadRequest(views.html.dataset.importSynapseDataSet(filledForm))
+    BadRequest(importView(filledForm))
   }
 }
