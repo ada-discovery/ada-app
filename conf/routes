@@ -125,7 +125,8 @@ GET         /studies/setting/edit/                                              
 POST        /studies/setting/:id                                                    controllers.dataset.DataSetSettingController.update(id: BSONObjectID)
 POST        /studies/setting/update/:id                                             controllers.dataset.DataSetSettingController.updateForDataSet(id: BSONObjectID)
 POST        /studies/setting/:id/delete                                             controllers.dataset.DataSetSettingController.delete(id: BSONObjectID)
-GET         /studies/setting/addToChartOverview/                                    controllers.dataset.DataSetSettingController.addToChartOverview(dataSet: String, fieldName: String)
+GET         /studies/setting/addToChartOverview/                                    controllers.dataset.DataSetSettingController.addFieldsToChartOverview(dataSet: String, fieldNames: Seq[String])
+GET         /studies/setting/addToOverviewTable/                                    controllers.dataset.DataSetSettingController.addFieldsToOverviewTable(dataSet: String, fieldNames: Seq[String])
 GET         /studies/setting/jsRoutes/                                              controllers.dataset.DataSetSettingController.jsRoutes
 
 GET         /studies/metainfo                                                       controllers.dataset.DataSpaceMetaInfoController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())

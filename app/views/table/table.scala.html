@@ -5,7 +5,7 @@
    items : Traversable[_],
    currentOrderBy: String,
    listCall : (Int, String) => Call,
-   columns : Traversable[(String, String, (Any => Html))],
+   columns : Traversable[(Option[String], String, (Any => Html))],
    rowClickCall : Option[Any => Call] = None
 )
 

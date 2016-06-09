@@ -16,10 +16,10 @@
 
 @table = {
     @displayTable(
-        dataSpaceMetaInfo.dataSetMetaInfos,
+        dataSpaceMetaInfo.dataSetMetaInfos.sortBy(_.sortOrder),
         typeColumns[DataSetMetaInfo](
-            ("name", "Name", _.name),
-            ("size", "# Items/Patients", {info: DataSetMetaInfo => dataSetIdSizeMap.get(info.id).get.toString})
+            (None, "Name", _.name),
+            (None, "# Items/Patients", {info: DataSetMetaInfo => dataSetIdSizeMap.get(info.id).get.toString})
         ),
         None,
         Some({ item : Any => new DataSetRouter(item.asInstanceOf[DataSetMetaInfo].id).plainOverviewList})

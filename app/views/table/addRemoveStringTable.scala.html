@@ -29,8 +29,8 @@
     @displayTable(
         items,
         typeColumns[String](
-            ("check", "", _ => {<input type="checkbox"/>}),
-            ("name", "Name", identity)
+            (None, "", _ => {<input type="checkbox"/>}),
+            (Some("name"), "Name", identity)
         ),
         None, None, None, Some(domainName + "Table")
     )

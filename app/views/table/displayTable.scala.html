@@ -1,13 +1,13 @@
 @(
     items: Traversable[_],
-    columns: Traversable[(String, String, Any => Html)],
-    header: Option[(String, String) => Html] = None,
+    columns: Traversable[(Option[String], String, Any => Html)],
+    header: Option[(Option[String], String) => Html] = None,
     rowClickCall: Option[Any => Call] = None,
     hiddenRowId: Option[(String, Any => String)] = None,
 	tableId: Option[String] = None
 )
 
-@defaultHeader(fieldName: String, fieldLabel: String) = {
+@defaultHeader(fieldName: Option[String], fieldLabel: String) = {
 	<th class="col header">
 	    @fieldLabel
 	</th>
@@ -28,7 +28,7 @@
                     <input type="hidden" id="@hiddenRowId.get._1" name="@hiddenRowId.get._1" value="@hiddenRowId.get._2(item)"/>
                 }
 		    	@columns.map { case (fieldName, _, content) =>
-                    <td id="@fieldName">
+                    <td @if(fieldName.isDefined) {id="@fieldName.get"}>
                         @content(item)
                     </td>
                 }

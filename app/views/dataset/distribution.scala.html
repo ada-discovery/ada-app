@@ -32,8 +32,13 @@
         <div class="col-md-10">
             @filter(filterSpec, router.getDistribution(Some(fieldName), filterSpec), Left(fields.map(_._1)))
         </div>
-        <div class="col-md-2">
-            <a class="btn btn-info btn-sm" href="#" onclick="addToOverview();return false;">Add to Overview</a>
+        <div class="pull-right">
+            <a class="btn btn-info btn-sm" href="#" onclick="addToChartOverview();return false" data-toggle="tooltip" title="Add To Chart Overview">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Chart Overview
+            </a>
+            <a class="btn btn-info btn-sm" href="#" onclick="addToOverviewTable();return false" data-toggle="tooltip" title="Add To Overview Table">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Overview Table
+            </a>
         </div>
     </div>
     <hr/>
@@ -83,12 +88,26 @@
 
     });
 
-    function addToOverview() {
+    function addToChartOverview() {
         var fieldName = $('#fieldForm #fieldName').val()
         if (fieldName) {
-            jsRoutes.controllers.dataset.DataSetSettingController.addToChartOverview('@dataSetId', fieldName).ajax( {
+            jsRoutes.controllers.dataset.DataSetSettingController.addFieldsToChartOverview('@dataSetId', [fieldName]).ajax( {
                 success: function() {
-                    showMessage("Field '" + fieldName + "' has been successfully added to the overview page.");
+                    showMessage("Field '" + fieldName + "' has been successfully added to the chart overview.");
+                },
+                error: function(data){
+                    showError( data.responseText );
+                }
+            });
+        }
+    }
+
+    function addToOverviewTable() {
+        var fieldName = $('#fieldForm #fieldName').val()
+        if (fieldName) {
+            jsRoutes.controllers.dataset.DataSetSettingController.addFieldsToOverviewTable('@dataSetId', [fieldName]).ajax( {
+                success: function() {
+                    showMessage("Field '" + fieldName + "' has been successfully added to the overview table.");
                 },
                 error: function(data){
                     showError( data.responseText );

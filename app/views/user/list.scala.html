@@ -22,8 +22,8 @@
         page,
         routes.UserController.find(_, _, page.filter),
         typeColumns[CustomUser](
-            ("id", "Id", _.ldapDn),
-            ("email", "Email", _.email)
+            (Some("id"), "Id", _.ldapDn),
+            (Some("email"), "Email", _.email)
         ),
         Some({ item : Any => routes.UserController.get(item.asInstanceOf[CustomUser]._id.get)})
     )

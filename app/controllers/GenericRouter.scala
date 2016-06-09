@@ -3,7 +3,7 @@ package controllers
 import play.api.mvc.Call
 import play.api.routing.JavaScriptReverseRoute
 
-protected class GenericRouter[T](protected val routes: T, paramName: String, id: String) {
+protected class GenericRouter[T](protected val routes: T, paramName: String, val id: String) {
 
   def routeFun(callFun: T => Call): Call =
     route(callFun(routes))

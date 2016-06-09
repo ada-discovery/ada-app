@@ -10,8 +10,8 @@
     displayTable(
         settings.toList,
         typeColumns[(String, ConfigValue)](
-            ("key", "Configuration Key", _._1),
-            ("value", "Value", _._2.unwrapped)
+            (None, "Configuration Key", _._1),
+            (None, "Value", _._2.unwrapped)
         )
     )
 )

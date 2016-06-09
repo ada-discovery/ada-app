@@ -17,12 +17,12 @@
         page,
         routes.RedCapController.listMetadatas(_, _, ""),
         typeColumns[Metadata](
-            ("field_name", "Name", _.field_name),
-            ("form_name", "Form", _.form_name),
-            ("section_header", "Section", _.section_header),
-            ("field_type", "Type", _.field_type),
-            ("field_label", "Label", _.field_label),
-            ("select_choices_or_calculations", "Select Choices or Calculations", _.select_choices_or_calculations)
+            (Some("field_name"), "Name", _.field_name),
+            (Some("form_name"), "Form", _.form_name),
+            (Some("section_header"), "Section", _.section_header),
+            (Some("field_type"), "Type", _.field_type),
+            (Some("field_label"), "Label", _.field_label),
+            (Some("select_choices_or_calculations"), "Select Choices or Calculations", _.select_choices_or_calculations)
         ),
         Some({ item : Any => routes.RedCapController.showMetadata(item.asInstanceOf[Metadata].field_name)})
     )

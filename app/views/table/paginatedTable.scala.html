@@ -3,8 +3,10 @@
 @(
     page: Page[_],
     listCall : (Int, String) => Call,
-    columns : Traversable[(String, String, (Any => Html))],
-    rowClickCall : Option[Any => Call] = None
+    columns : Traversable[(Option[String], String, (Any => Html))],
+    rowClickCall : Option[Any => Call] = None,
+    hiddenRowId: Option[(String, Any => String)] = None,
+    tableId: Option[String] = None
 )
 
 @listCallAux(newPage : Int, newOrderBy : Option[String]) = @{
@@ -18,7 +20,7 @@
 }
 
 @if(page.items.nonEmpty) {
-    @displayTable(page.items, columns, Some(header(page.orderBy, listCallAux)), rowClickCall)
+    @displayTable(page.items, columns, Some(header(page.orderBy, listCallAux)), rowClickCall, hiddenRowId, tableId)
     <hr/>
     @pagination(page, listCallAux)
 }

@@ -3,7 +3,7 @@
 
 @(
     items : Traversable[JsObject],
-    headerFun : (String, String) => Html,
+    headerFun : (Option[String], String) => Html,
     fieldLabelMap : Option[Map[String, String]] = None,
     fieldsToShow : Option[Seq[String]] = None,
     rowClickCall : Option[JsObject => Call] = None
@@ -14,12 +14,12 @@
 		<tr>
             @if(fieldsToShow.isDefined) {
                 @fieldsToShow.get.map { field =>
-                    @headerFun(field, fieldLabel(field, fieldLabelMap))
+                    @headerFun(Some(field), fieldLabel(field, fieldLabelMap))
                 }
             } else {
                 @items.headOption.map { item =>
                     @item.fields.map { field =>
-                        @headerFun(field._1, fieldLabel(field._1, fieldLabelMap))
+                        @headerFun(Some(field._1), fieldLabel(field._1, fieldLabelMap))
                     }
                 }
             }

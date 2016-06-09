@@ -84,25 +84,49 @@ class DataSetSettingController @Inject() (
     }
   }
 
-  def addToChartOverview(dataSet: String, fieldName: String) = restrict {
+  def addFieldsToChartOverview(dataSet: String, fieldNames: Seq[String]) = restrict {
+    processSetting({ setting =>
+      val existingFieldNames = setting.overviewChartFieldNames
+      val filteredFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
+      if (filteredFieldNames.nonEmpty) {
+        val newSetting = setting.copy(overviewChartFieldNames = existingFieldNames ++ filteredFieldNames)
+        repo.update(newSetting)
+      } else
+        Future(())
+    }, dataSet)
+  }
+
+  def addFieldsToOverviewTable(dataSet: String, fieldNames: Seq[String]) = restrict {
+    processSetting({ setting =>
+      val existingFieldNames = setting.listViewTableColumnNames
+      val filteredFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
+      if (filteredFieldNames.nonEmpty) {
+        val newSetting = setting.copy(listViewTableColumnNames = existingFieldNames ++ filteredFieldNames)
+        repo.update(newSetting)
+      } else {
+        Future(())
+      }
+    }, dataSet)
+  }
+
+  protected def processSetting(fun: DataSetSetting => Future[_], dataSet: String) =
     Action.async { implicit request =>
       val foundSettingFuture = repo.find(Some(Json.obj("dataSetId" -> dataSet))).map(_.headOption)
       foundSettingFuture.flatMap {
         _.fold(
           Future(NotFound(s"Setting for the data set '#$dataSet' not found"))
         ) { setting =>
-          val newSetting = setting.copy(overviewChartFieldNames = setting.overviewChartFieldNames ++ Seq(fieldName))
-          repo.update(newSetting).map(_ => Ok("Done"))
+          fun(setting).map(_ => Ok("Done"))
         }
       }
     }
-  }
 
   def jsRoutes = restrict{
     Action { implicit request =>
       Ok(
         JavaScriptReverseRouter("jsRoutes")(
-          dataSetSettingJsRoutes.addToChartOverview
+          dataSetSettingJsRoutes.addFieldsToChartOverview,
+          dataSetSettingJsRoutes.addFieldsToOverviewTable
         )
       ).as("text/javascript")
     }

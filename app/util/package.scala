@@ -51,7 +51,7 @@ package object util {
   def chartElementName(title: String) = title.hashCode + "Chart"
 
   // retyping of column items needed because play templates do not support generics
-  def typeColumn[T](column: (String, String, T => Any)): (String, String, Any  => Html) =
+  def typeColumn[T](column: (Option[String], String, T => Any)): (Option[String], String, Any  => Html) =
     (column._1, column._2, {item: Any =>
       val value = column._3(item.asInstanceOf[T])
       if (value.isInstanceOf[Html])
@@ -62,6 +62,6 @@ package object util {
         Html(value.toString)
     })
 
-  def typeColumns[T](columns: (String, String, T => Any)*): Traversable[(String, String, Any => Html)] =
+  def typeColumns[T](columns: (Option[String], String, T => Any)*): Traversable[(Option[String], String, Any => Html)] =
     columns.map(typeColumn[T])
 }

@@ -14,11 +14,11 @@
 
 @table = {
     @displayTable(
-        form.value.get.dataSetMetaInfos,
+        form.value.get.dataSetMetaInfos.sortBy(_.sortOrder),
         typeColumns[DataSetMetaInfo](
-            ("name", "Name", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.name", item.name) }),
-            ("sortOrder", "Sort Order", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.sortOrder", item.sortOrder) }),
-            ("size", "# Items/Patients", { item: DataSetMetaInfo => dataSetIdSizeMap.get(item.id).get.toString })
+            (None, "Name", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.name", item.name) }),
+            (None, "Sort Order", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.sortOrder", item.sortOrder) }),
+            (None, "# Items/Patients", { item: DataSetMetaInfo => dataSetIdSizeMap.get(item.id).get.toString })
         ),
         None,
         None,

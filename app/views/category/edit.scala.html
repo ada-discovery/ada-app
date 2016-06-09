@@ -25,7 +25,7 @@
     displayTable(
         fields,
         Seq(
-            ("name", "Name", {item : Any => Html(item.asInstanceOf[Field].name)})
+            (None, "Name", {item : Any => Html(item.asInstanceOf[Field].name)})
         ),
         None,
         Some({ item : Any => getField(item.asInstanceOf[Field].name)})

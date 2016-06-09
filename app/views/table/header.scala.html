@@ -1,5 +1,11 @@
-@(orderByFieldName: String, listCall : (Int, Option[String]) => Call)(fieldName: String, label: String)
+@(orderByFieldName: String, listCall : (Int, Option[String]) => Call)(fieldName: Option[String], label: String)
 
-<th class="col header @if(orderByFieldName == fieldName){glyphicon glyphicon-chevron-down} @if(orderByFieldName == "-" + fieldName){glyphicon glyphicon-chevron-up}">
-    <a href="@listCall(0, Some(fieldName))">@label</a>
-</th>
+@if(fieldName.isDefined) {
+    <th class="col header @if(orderByFieldName == fieldName.get) {glyphicon glyphicon-chevron-down} @if(orderByFieldName == "-" + fieldName.get) {glyphicon glyphicon-chevron-up}">
+        <a href="@listCall(0, fieldName)">@label</a>
+    </th>
+} else {
+    <th class="col header">
+        @label
+    </th>
+}

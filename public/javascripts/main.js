@@ -156,8 +156,13 @@ function hideErrors() {
 
 function getCheckedTableIds(tableId, objectIdName) {
   var ids = []
+  console.log(objectIdName)
   $('#' + tableId + ' tbody tr').each(function() {
-    var id = $(this).find('#' + objectIdName).text().trim();
+    var idElement = $(this).find('#' + objectIdName)
+    var id = idElement.text().trim();
+    if (!id) {
+        id = idElement.val().trim();
+    }
     var checked = $(this).find("td input[type=checkbox]").is(':checked');
     if (checked) {
       ids.push(id)
@@ -165,17 +170,6 @@ function getCheckedTableIds(tableId, objectIdName) {
   });
   return ids
 };
-
-// remove this
-function doTableSelectionAction(tableName, actionName) {
-  var ids = getCheckedIds(tableName)
-  if (ids.length == 0) {
-    showError("No rows selected!")
-  } else {
-    var controller = $('#' + tableName).find('#domainName').val();
-    post('/' + controller + '/' + actionName, {ids: ids})
-  }
-}
 
 function handleModalButtonEnterPressed(modalName, submitButtonName, action) {
   $("#" + modalName).keypress(function (e) {

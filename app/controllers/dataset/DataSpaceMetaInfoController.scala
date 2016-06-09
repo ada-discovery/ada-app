@@ -79,7 +79,7 @@ class DataSpaceMetaInfoController @Inject() (
     } yield
       id
 
-  // if update succesful redirect to get/show instead of list
+  // if update successful redirect to get/show instead of list
   override def update(id: BSONObjectID) = restrictAdmin(deadbolt) (
     update(id, Redirect(routes.DataSpaceMetaInfoController.get(id)))
   )
@@ -91,6 +91,9 @@ class DataSpaceMetaInfoController @Inject() (
     }
     Future.sequence(futures).map(_.toMap)
   }
+
+  // get is allowed for all logged users
+  override def get(id: BSONObjectID) = deadbolt.SubjectPresent()(super.get(id))
 
   //@Deprecated
   override protected val defaultCreateEntity = DataSpaceMetaInfo(None, "", 0)

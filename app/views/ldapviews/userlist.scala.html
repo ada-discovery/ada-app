@@ -19,10 +19,10 @@
         page,
         routes.LdapUserController.find(_, _, page.filter),
         typeColumns[LdapUser](
-            ("_id", "LDAP DN", _._id),
-            ("name", "Name", _.name),
-            ("email", "Email", _.email),
-            ("ou", "OU", _.ou)
+            (Some("_id"), "LDAP DN", _._id),
+            (Some("name"), "Name", _.name),
+            (Some("email"), "Email", _.email),
+            (Some("ou"), "OU", _.ou)
         ),
         Some({ item : Any => routes.LdapUserController.get(item.asInstanceOf[LdapUser]._id)})
     )

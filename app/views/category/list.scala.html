@@ -48,7 +48,7 @@
         page,
         router.list(_, _, page.filter),
         typeColumns[Category](
-            ("name", "Name", _.name)
+            (Some("name"), "Name", _.name)
         ),
         Some({ item : Any => router.get(item.asInstanceOf[Category]._id.get)})
     )

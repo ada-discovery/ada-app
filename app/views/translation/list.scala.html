@@ -20,8 +20,8 @@
         page,
         routes.TranslationController.find(_, _, page.filter),
         typeColumns[Translation](
-            ("original", "Original", _.original),
-            ("translated", "Translated", _.translated)
+            (Some("original"), "Original", _.original),
+            (Some("translated"), "Translated", _.translated)
         ),
         Some({ item : Any => routes.TranslationController.get(item.asInstanceOf[Translation]._id.get)})
     )

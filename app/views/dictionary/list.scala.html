@@ -9,12 +9,13 @@
 @import util.typeColumns
 @import util.JsonUtil.unescapeKey
 @import controllers.dataset.DictionaryRouter
+@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 
 @(
     domainName : String,
     page: Page[Field],
-    fieldChartSpecs : Iterable[FieldChartSpec],
-    router : DictionaryRouter,
+    fieldChartSpecs: Iterable[FieldChartSpec],
+    router: DictionaryRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
     chartGridWidth: Int = 3
 )(
@@ -37,22 +38,28 @@
     }
 }
 
-@table = @{
-    paginatedTable(
+@table = {
+    <div class="pull-right">
+        <a class="btn btn-info btn-sm" href="#" onclick="addFieldsToChartOverview();return false" data-toggle="tooltip" title="Add To Chart Overview">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Chart Overview
+        </a>
+        <a class="btn btn-info btn-sm" href="#" onclick="addFieldsToOverviewTable();return false" data-toggle="tooltip" title="Add To Overview Table">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Overview Table
+        </a>
+    </div>
+    @paginatedTable(
         page,
         router.list(_, _, page.filter),
         typeColumns[Field](
-            ("name", "Name", {field:Field => util.JsonUtil.unescapeKey(field.name)}),
-            ("fieldType", "Type", _.fieldType),
-            ("label", "Label", _.label.getOrElse("")),
-            ("category.name", "Category", _.category.map(_.name).getOrElse(""))
-//            ("", "Add", {field =>
-//                <button id="addToOverviewButton" type="button" class="btn btn-sm btn-default">
-//                    <span class="glyphicon glyphicon-plus"></span>
-//                </button>
-//            })
+            (None, "", _ => {<input type="checkbox" class="no-rowClicked"/>}),
+            (Some("name"), "Name", {field => util.JsonUtil.unescapeKey(field.name)}),
+            (Some("fieldType"), "Type", _.fieldType),
+            (Some("label"), "Label", _.label.getOrElse("")),
+            (Some("category.name"), "Category", _.category.map(_.name).getOrElse(""))
         ),
-        Some({ item : Any => router.get(item.asInstanceOf[Field].name)})
+        Some({ item : Any => router.get(item.asInstanceOf[Field].name)}),
+        Some("id", {any:Any => any.asInstanceOf[Field].name}),
+        Some("dictionaryTable")
     )
 }
 
@@ -73,12 +80,36 @@
     Some(bottomResources)
 )
 
+<script type="text/javascript" src="@dataSetSettingRoutes.jsRoutes"></script>
 <script type="text/javascript">
     $(function () {
         $("#inferModal").modal()
     })
-//    $("#addToOverviewButton").click(function( event ) {
-//        event.stopPropagation();
-//        console.log("Hooaray");
-//    });
+    $(".no-rowClicked").click(function( event ) {
+        event.stopPropagation();
+    });
+
+    function addFieldsToChartOverview() {
+        var fieldNames = getCheckedTableIds("dictionaryTable", "id")
+        jsRoutes.controllers.dataset.DataSetSettingController.addFieldsToChartOverview('@{router.id}', fieldNames).ajax( {
+            success: function() {
+                showMessage("Field(s) '" + fieldNames + "' have been successfully added to the chart overview.");
+            },
+            error: function(data){
+                showError( data.responseText );
+            }
+        });
+    }
+
+    function addFieldsToOverviewTable() {
+        var fieldNames = getCheckedTableIds("dictionaryTable", "id")
+        jsRoutes.controllers.dataset.DataSetSettingController.addFieldsToOverviewTable('@{router.id}', fieldNames).ajax( {
+            success: function() {
+                showMessage("Field(s) '" + fieldNames + "' have been successfully added to the overview table.");
+            },
+            error: function(data){
+                showError( data.responseText );
+            }
+        });
+    }
 </script>
