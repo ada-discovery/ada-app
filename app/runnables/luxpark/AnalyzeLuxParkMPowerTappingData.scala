@@ -45,21 +45,15 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
     val tappingsFuture = mPowerTappingDataRepo.find(filter, None, Some(JsObject(fields.map( field => (field, Json.toJson(1))))))
     val scoresFuture = tappingsFuture.map{ tappings =>
       tappings.map { tapping =>
-        val leftTappingSamplesFileId = (tapping \ leftTappingSamplesField).get.as[String]
-        val rightTappingSamplesFileId = (tapping \ rightTappingSamplesField).get.as[String]
-        val leftTappingAccelerationFileId = (tapping \ leftTappingAccelerationField).get.as[String]
-        val rightTappingAccelerationFileId = (tapping \ rightTappingAccelerationField).get.as[String]
         val medsValue = (tapping \ medsFields).get.as[String]
+        val leftTappingSamplesJson = readSubFieldJsonArray(tapping, leftTappingSamplesField)
+        val rightTappingSamplesJson = readSubFieldJsonArray(tapping, rightTappingSamplesField)
+        val leftTappingAccelerationJson = readSubFieldJsonArray(tapping, leftTappingAccelerationField)
+        val rightTappingAccelerationJson = readSubFieldJsonArray(tapping, rightTappingAccelerationField)
 
-        val leftTappingSamplesJson = fileToJson(leftTappingSamplesFileId)
-        val rightTappingSamplesJson = fileToJson(rightTappingSamplesFileId)
-        val leftTappingAccelerationJson = fileToJson(leftTappingAccelerationFileId)
-        val rightTappingAccelerationJson = fileToJson(rightTappingAccelerationFileId)
+        val leftScore = leftTappingSamplesJson.map(value => value.toString()).size
+        val rightScore = rightTappingSamplesJson.map(value => value.toString()).size
 
-        val leftScore = leftTappingSamplesJson.value.asInstanceOf[Seq[JsValue]].map(value => value.toString()).size
-        val rightScore = rightTappingSamplesJson.value.asInstanceOf[Seq[JsValue]].map(value => value.toString()).size
-//        println(leftTappingAccelerationJson.value.asInstanceOf[Seq[JsValue]].map(value => value.toString()).size)
-//        println(rightTappingAccelerationJson.value.asInstanceOf[Seq[JsValue]].map(value => value.toString()).size)
         (medsValue, leftScore, rightScore)
       }
     }
@@ -78,9 +72,10 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
     result(future, timeout)
   }
 
-  private def fileToJson(fileName: String): JsArray = {
+  private def readSubFieldJsonArray(tapping: JsObject, fieldName: String): Seq[JsValue] = {
+    val fileName = (tapping \ fieldName).get.as[String]
     val string = Source.fromFile(synapseDataFolder + fileName).mkString
-    Json.parse(string).asInstanceOf[JsArray]
+    Json.parse(string).asInstanceOf[JsArray].value
   }
 }
 
