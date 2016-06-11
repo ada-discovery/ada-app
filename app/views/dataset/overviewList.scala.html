@@ -1,22 +1,22 @@
 @import views.html.layout
-@import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu, datasetActions}
+@import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu, datasetActions, displayJsonModal}
 @import views.html.chart.chartPanelJs
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.table.paginatedJsonTable
-@import play.api.libs.json.JsObject
 @import play.modules.reactivemongo.json._
 @import reactivemongo.bson.BSONObjectID
 @import util.FieldChartSpec
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
-
+@import play.api.libs.json.{JsValue, JsArray, JsObject}
 @import controllers.dataset.DataSetRouter
+@import models.Field
 
 @(
     domainName : String,
     page: Page[JsObject],
-    fieldLabelMap: Map[String, String],
-    fieldsToShow: Seq[String],
+    displayedFields: Traversable[Field],
+    displayedFieldNames: Traversable[String], // could differ from displayed fields since the dictionary doesn't have to contain all the fields... although it's rare
     fieldChartSpecs: Traversable[FieldChartSpec],
     router: DataSetRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -31,19 +31,72 @@
     )
 }
 
+@jsonRender(jsValue: JsValue) = {
+    @defining(scala.util.Random.nextLong()) { modalId =>
+        <a href="#" data-modalid="@{modalId}" class="jsonModalLink">
+            <b>Json</b>
+        </a>
+        @displayJsonModal(modalId + "Modal", jsValue)
+    }
+}
+
+@arrayRender(jsValue: JsValue) = {
+    @defining(scala.util.Random.nextLong()) { modalId =>
+        <a href="#" data-modalid="@{modalId}" class="jsonModalLink">
+            <b>Array (size @{
+                jsValue.asInstanceOf[JsArray].value.size
+            })</b>
+        </a>
+        @displayJsonModal(modalId + "Modal", jsValue)
+    }
+}
+
+@jsonArrayRender(jsValue: JsValue) = {
+    @defining(scala.util.Random.nextLong()) { modalId =>
+        <a href="#" data-modalid="@{modalId}" class="jsonModalLink">
+            <b>Json Array (size @{
+                jsValue.asInstanceOf[JsArray].value.size
+            })</b>
+        </a>
+        @displayJsonModal(modalId + "Modal", jsValue)
+    }
+}
+
 @table = @{
     paginatedJsonTable(
         page,
         router.overviewList(_, _, page.filter),
-        Some(fieldLabelMap),
-        Some(fieldsToShow),
-        Some({ item : JsObject => router.get((item \ "_id").as[BSONObjectID])})
+        Some(displayedFields.map{ field =>
+            field.label.map( fieldLabel => (field.name, fieldLabel))
+        }.flatten.toMap),
+        Some(displayedFieldNames.toSeq),
+        Some({ item : JsObject => router.get((item \ "_id").as[BSONObjectID])}),
+        Some(displayedFields.map{ field =>
+            if (field.isArray) {
+                if(field.fieldType == FieldType.Json)
+                    Some(field.name, jsonArrayRender(_))
+                else
+                    Some(field.name, arrayRender(_))
+            } else
+                if (field.fieldType == FieldType.Json)
+                    Some(field.name, jsonRender(_))
+                else None
+        }.flatten.toMap)
     )
 }
 
 @bottomResources = {
     @highchartsJsImport()
     @chartPanelJs(fieldChartSpecs.map(_.chartSpec))
+    <script type="text/javascript">
+        $(function () {
+            $(".jsonModalLink").click(function(event) {
+                event.stopPropagation();
+                var modalId = $(this).data("modalid");
+                $('#' + modalId + 'Modal').modal();
+            })
+        })
+    </script>
 }
 
 @layout.list(

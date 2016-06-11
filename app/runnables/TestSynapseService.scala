@@ -2,10 +2,13 @@ package runnables
 
 import javax.inject.Inject
 
+import models.synapse.{RowReference, ColumnType, RowReferenceSet}
 import services.SynapseServiceFactory
 import scala.concurrent.Await.result
+import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Configuration
+import play.api.libs.json.Json
 import scala.concurrent.duration._
 
 class TestSynapseService @Inject() (
@@ -25,7 +28,10 @@ class TestSynapseService @Inject() (
     val future = for {
       jobToken <- synapseService.runCsvTableQuery(tableId1, s"SELECT * FROM $tableId1")
       result <- synapseService.getCsvTableResultWait(tableId1, jobToken)
-      fileHandle <- synapseService.getFileHandle(result.resultsFileHandleId)
+      fileHandle <- {
+        println(result.resultsFileHandleId)
+        synapseService.getFileHandle(result.resultsFileHandleId)
+      }
       content <- synapseService.downloadFile(result.resultsFileHandleId)
     } yield {
       println(fileHandle)
@@ -37,6 +43,35 @@ class TestSynapseService @Inject() (
 
     val csvFuture = synapseService.getTableAsCsv(tableId2)
     println(result(csvFuture, timeout))
+
+    val jsonsFuture =
+      for {
+        fileHandleColumns <-
+          synapseService.getTableColumnModels(tableId2).map { columnModels =>
+            println(columnModels.results.map(_.columnType).mkString(","))
+            columnModels.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(_.toSelectColumn)
+          }
+        tableFileHandleResults <- {
+          val rows = Seq(RowReference(0,0), RowReference(1,1), RowReference(2,2), RowReference(3,3))
+          val rowReferenceSet = RowReferenceSet(fileHandleColumns,  None, tableId2, rows)
+          synapseService.getTableColumnFileHandles(rowReferenceSet)
+        }
+        fileContents <- {
+          val columnId = fileHandleColumns.map(_.id).head
+          val rows = Seq(RowReference(0,0), RowReference(1,1), RowReference(2,2), RowReference(3,3))
+
+          val futures = rows.map { row =>
+            synapseService.downloadColumnFile(tableId2, columnId, row.rowId, row.versionNumber)
+          }
+          Future.sequence(futures)
+        }
+      } yield
+        fileContents.map { fileContent =>
+          Json.prettyPrint(Json.parse(fileContent))
+        }
+
+    println(result(jsonsFuture, timeout).mkString("\n\n"))
+//    synapseService.getTableColumnFileHandles()
   }
 }
 

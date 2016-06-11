@@ -2,24 +2,25 @@ package services
 
 import java.nio.charset.{MalformedInputException, Charset}
 import javax.inject.Inject
-
+import util.ExecutionContexts
 import com.google.inject.ImplementedBy
 import models._
+import models.synapse.{SelectColumn, ColumnType}
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
 import persistence.dataset.DictionaryCategoryRepo.saveRecursively
 import play.api.Logger
-import play.api.libs.json.{Json, JsString, JsNull, JsObject}
+import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
-import util.TypeInferenceProvider
+import _root_.util.TypeInferenceProvider
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.concurrent.Await.result
 import play.api.Configuration
 import scala.concurrent.duration._
-import util.JsonUtil._
+import _root_.util.JsonUtil._
 import scala.io.Source
 import scala.collection.{mutable, Set}
 import collection.mutable.{Map => MMap}
@@ -50,7 +51,7 @@ trait DataSetService {
     dataSetRepo: JsObjectCrudRepo,
     typeInferenceProvider: TypeInferenceProvider,
     fieldName : String
-  ): Future[FieldType.Value]
+  ): Future[(Boolean, FieldType.Value)]
 }
 
 class DataSetServiceImpl @Inject()(
@@ -65,10 +66,14 @@ class DataSetServiceImpl @Inject()(
   private val timeout = 120000 millis
   private val defaultCharset = "UTF-8"
   private val reportLineFreq = 0.1
+
   private val tranSmartDelimeter = '\t'
   private val tranSmartFieldGroupSize = 100
+
   private val synapseDelimiter = ','
   private val synapseEol = "\n"
+  private val synapseRowIdFieldName = "ROW_ID"
+  private val synapseRowVersionFieldName = "ROW_VERSION"
   private val synapseUsername = configuration.getString("synapse.api.username").get
   private val synapsePassword = configuration.getString("synapse.api.password").get
 
@@ -100,9 +105,9 @@ class DataSetServiceImpl @Inject()(
       )
     )
 
+    // then import a dictionary from a tranSMART mapping file
     columnNamesFuture.flatMap { columnNames =>
       if (importInfo.mappingPath.isDefined || importInfo.mappingFile.isDefined) {
-        // then import a dictionary from a tranSMART mapping file
         importAndInferTranSMARTDictionary(
           importInfo.dataSetId,
           typeInferenceProvider,
@@ -120,18 +125,56 @@ class DataSetServiceImpl @Inject()(
     }
   }
 
-  override def importDataSet(importInfo: SynapseDataSetImportInfo) =
-    importLineParsableDataSet(
-      importInfo,
-      synapseDelimiter.toString,
-      true,
-      {
-        val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
-        val csvFuture = synapseService.getTableAsCsv(importInfo.tableId)
-        val lines = result(csvFuture, timeout).split(synapseEol)
-        (lines.iterator, lines.length)
-      }
-    ).map(_ => ())
+  override def importDataSet(importInfo: SynapseDataSetImportInfo) = {
+    val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
+
+    // get the columns of the "file" type
+    val fileColumnsFuture = synapseService.getTableColumnModels(importInfo.tableId).map(
+      _.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(_.toSelectColumn)
+    )
+
+    fileColumnsFuture.flatMap { fileColumns =>
+      def transformJson = updateFileJsonFields(synapseService, fileColumns, importInfo.tableId)_
+      importLineParsableDataSet(
+        importInfo,
+        synapseDelimiter.toString,
+        true, {
+          val csvFuture = synapseService.getTableAsCsv(importInfo.tableId)
+          val lines = result(csvFuture, timeout).split(synapseEol)
+          (lines.iterator, lines.length)
+        },
+        Some(transformJson)
+      ).map(_ => ())
+    }
+  }
+
+  private def updateFileJsonFields(
+    synapseService: SynapseService, // unused
+    fileColumns: Seq[SelectColumn],
+    tableId: String)(
+    json: JsObject
+  ): Future[JsObject] = {
+    // TODO: we can't use synapseService here because Synapse responses with "Too many concurrent requests"
+    // using a new synapseService delays the execution and prevents too many concurrent requests
+    // should be able to fix this by using a custom execution context (ExecutionContexts.SynapseExecutionContext) with a restrictive thread limit
+    val synapseServiceAux = synapseServiceFactory(synapseUsername, synapsePassword)
+
+    val rowId = (json \ synapseRowIdFieldName).get.as[String].trim.toInt
+    val rowVersion = (json \ synapseRowVersionFieldName).as[String].trim.toInt
+    val columnNameJsonFutures: Seq[Future[(String, JsValue)]] = fileColumns.map { fileColumn =>
+      val fileStringFuture = synapseServiceAux.downloadColumnFile(tableId, fileColumn.id, rowId, rowVersion)
+      fileStringFuture.map { fileString =>
+        val fieldName = escapeKey(fileColumn.name.replaceAll("\"", "").trim)
+        (fieldName, Json.parse(fileString))
+      }(ExecutionContexts.SynapseExecutionContext).recover {
+        case e: RestException =>
+          throw new AdaException(s"File for the row '$rowId', version '$rowVersion', column '${fileColumn.name}' couldn't be downloaded from Synapse due to '${e.getMessage}.'", e)
+      }(ExecutionContexts.SynapseExecutionContext)
+    }
+    Future.sequence(columnNameJsonFutures).map(columnNameJsons =>
+      json ++ JsObject(columnNameJsons)
+    )(ExecutionContexts.SynapseExecutionContext)
+  }
 
   private def createCsvFileLineIteratorAndCount(
     pathOrFile: Either[String, java.io.File],
@@ -177,7 +220,8 @@ class DataSetServiceImpl @Inject()(
     importInfo: DataSetImportInfo,
     delimiter: String,
     skipFirstLine: Boolean,
-    createLineIteratorAndCount: => (Iterator[String], Int)
+    createLineIteratorAndCount: => (Iterator[String], Int),
+    transformJson: Option[JsObject => Future[JsObject]] = None
   ): Future[Seq[String]] = {
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
@@ -221,7 +265,7 @@ class DataSetServiceImpl @Inject()(
           } else if (values.size > columnCount) {
             throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated.")
           } else {
-            // reset buffer
+            // reset the buffer
             bufferedLine = ""
 
             // create a JSON record
@@ -230,9 +274,18 @@ class DataSetServiceImpl @Inject()(
                 case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
               })
 
-            // insert the record to the database
-            dataRepo.save(jsonRecord).map(_ =>
-              logProgress((index + 1), reportLineSize, lineCount - 1)
+            // transform the JSON record if specified
+            val transformedJsonRecordFuture =
+              if (transformJson.isDefined)
+                transformJson.get(jsonRecord)
+              else
+                Future(jsonRecord)
+
+            transformedJsonRecordFuture.flatMap( transformedJsonRecord =>
+              // insert the record to the database
+              dataRepo.save(transformedJsonRecord).map(_ =>
+                logProgress((index + 1), reportLineSize, lineCount - 1)
+              )
             )
           }
         }
@@ -271,8 +324,8 @@ class DataSetServiceImpl @Inject()(
       // Don't care about the result here, that's why we ignore ids and return Unit
       for {
         fieldNameAndTypes <- inferFieldTypes(dataRepo, typeInferenceProvider, fieldNames)
-        ids = for ((fieldName, fieldType) <- fieldNameAndTypes) yield
-          fieldRepo.save(Field(fieldName, fieldType, false))
+        ids = for ((fieldName, isArray, fieldType) <- fieldNameAndTypes) yield
+          fieldRepo.save(Field(fieldName, fieldType, isArray))
         _ <- Future.sequence(ids)
       } yield
         ()
@@ -368,10 +421,10 @@ class DataSetServiceImpl @Inject()(
         // Don't care about the result here, that's why we ignore ids and return Unit
         for {
           fieldNameAndTypes <- inferFieldTypes(dataRepo, typeInferenceProvider, fieldNames)
-          ids = for ((fieldName, fieldType) <- fieldNameAndTypes) yield {
+          ids = for ((fieldName, isArray, fieldType) <- fieldNameAndTypes) yield {
             val (fieldLabel, categoryName) = fieldNameLabelCategoryNameMap.getOrElse(fieldName, ("", None))
             val categoryId = categoryName.map(categoryNameIdMap.get(_).get)
-            fieldRepo.save(Field(fieldName, fieldType, false, None, Seq[String](), Some(fieldLabel), categoryId))
+            fieldRepo.save(Field(fieldName, fieldType, isArray, None, Seq[String](), Some(fieldLabel), categoryId))
           }
           _ <- Future.sequence(ids)
         } yield
@@ -389,15 +442,15 @@ class DataSetServiceImpl @Inject()(
     dataRepo: JsObjectCrudRepo,
     typeInferenceProvider: TypeInferenceProvider,
     fieldNames: Traversable[String]
-  ): Future[Traversable[(String, FieldType.Value)]] = {
+  ): Future[Traversable[(String, Boolean, FieldType.Value)]] = {
     val projection =
       JsObject(fieldNames.map( fieldName => (fieldName, Json.toJson(1))).toSeq)
 
     // get all the values for a given field and infer
     dataRepo.find(None, None, Some(projection)).map { jsons =>
       fieldNames.map { fieldName =>
-        val fieldType = inferFieldType(typeInferenceProvider, fieldName)(jsons)
-        (fieldName, fieldType)
+        val (isArray, fieldType) = inferFieldType(typeInferenceProvider, fieldName)(jsons)
+        (fieldName, isArray, fieldType)
       }
     }
   }
@@ -406,7 +459,7 @@ class DataSetServiceImpl @Inject()(
     dataRepo: JsObjectCrudRepo,
     typeInferenceProvider: TypeInferenceProvider,
     fieldName : String
-  ): Future[FieldType.Value] =
+  ): Future[(Boolean, FieldType.Value)] =
     // get all the values for a given field and infer
     dataRepo.find(None, None, Some(Json.obj(fieldName -> 1))).map(
       inferFieldType(typeInferenceProvider, fieldName)
@@ -416,18 +469,27 @@ class DataSetServiceImpl @Inject()(
     typeInferenceProvider: TypeInferenceProvider,
     fieldName: String)(
     jsons: Traversable[JsObject]
-  ): FieldType.Value = {
-    val values = jsons.map { item =>
+  ): (Boolean, FieldType.Value) = {
+    val arrayFlagWithValues = jsons.map { item =>
       val jsValue = (item \ fieldName).get
       jsValue match {
-        case JsNull => None
-        case x: JsString => Some(jsValue.as[String])
-        case _ => Some(jsValue.toString)
+        case x: JsArray => (true, x.value.map(jsonToString(_)))
+        case _ => (false, Seq(jsonToString(jsValue)))
       }
-    }.flatten.toSet
+    }
 
-    typeInferenceProvider.getType(values)
+    val isArray = arrayFlagWithValues.map(_._1).forall(identity)
+    val values = arrayFlagWithValues.map(_._2).flatten.flatten.toSet
+
+    (isArray, typeInferenceProvider.getType(values))
   }
+
+  private def jsonToString(jsValue: JsValue): Option[String] =
+    jsValue match {
+      case JsNull => None
+      case x: JsString => Some(jsValue.as[String])
+      case _ => Some(jsValue.toString)
+    }
 
   protected def getFieldNames(dataRepo: JsObjectCrudRepo): Future[Set[String]] =
     for {

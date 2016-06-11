@@ -85,9 +85,6 @@
     $(function () {
         $("#inferModal").modal()
     })
-    $(".no-rowClicked").click(function( event ) {
-        event.stopPropagation();
-    });
 
     function addFieldsToChartOverview() {
         var fieldNames = getCheckedTableIds("dictionaryTable", "id")

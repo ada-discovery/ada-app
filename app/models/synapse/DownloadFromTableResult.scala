@@ -40,6 +40,18 @@ case class SelectColumn(
   name: String
 )
 
+// http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/org/sagebionetworks/repo/model/table/ColumnModel.html
+case class ColumnModel(
+  id: String,
+  columnType: ColumnType.Value,
+  name: String,
+  maximumSize: Option[Int],
+  enumValues: Option[Seq[String]],
+  defaultValue: Option[String]
+) {
+  def toSelectColumn = SelectColumn(id, columnType, name)
+}
+
 // http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/org/sagebionetworks/repo/model/table/DownloadFromTableResult.html
 case class DownloadFromTableResult(
   headers: Seq[SelectColumn],
@@ -67,12 +79,46 @@ case class Session(
   acceptsTermsOfUse: Boolean
 )
 
+case class RowReference(
+  rowId: Int,
+  versionNumber: Int
+)
+
+case class RowReferenceSet(
+  headers: Seq[SelectColumn],
+  etag: Option[String],
+  tableId: String,
+  rows: Seq[RowReference]
+)
+
+case class FileHandleResults(
+  list: Seq[FileHandle]
+)
+
+case class TableFileHandleResults(
+  headers: Seq[SelectColumn],
+  tableId: String,
+  rows: Seq[FileHandleResults]
+)
+
+// http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/org/sagebionetworks/repo/model/table/PaginatedColumnModels.html
+case class PaginatedColumnModels(
+  totalNumberOfResults: Int,
+  results: Seq[ColumnModel]
+)
+
 object JsonFormat {
   implicit val AsyncJobStateFormat = EnumFormat.enumFormat(AsyncJobState)
   implicit val AsynchronousJobStatusFormat = Json.format[AsynchronousJobStatus]
   implicit val ColumnTypeFormat = EnumFormat.enumFormat(ColumnType)
   implicit val SelectColumnFormat = Json.format[SelectColumn]
+  implicit val ColumnModelFormat = Json.format[ColumnModel]
   implicit val DownloadFromTableResultFormat = Json.format[DownloadFromTableResult]
   implicit val FileHandleFormat = Json.format[FileHandle]
   implicit val SessionFormat = Json.format[Session]
+  implicit val RowReferenceFormat = Json.format[RowReference]
+  implicit val RowReferenceSetFormat = Json.format[RowReferenceSet]
+  implicit val FileHandleResultsFormat = Json.format[FileHandleResults]
+  implicit val TableFileHandleResultsFormat = Json.format[TableFileHandleResults]
+  implicit val PaginatedColumnModelsFormat = Json.format[PaginatedColumnModels]
 }

@@ -1,4 +1,4 @@
-@import play.api.libs.json.{JsObject, JsNull}
+@import play.api.libs.json.{JsObject, JsNull, JsValue}
 @import util.fieldLabel
 
 @(
@@ -6,7 +6,8 @@
     headerFun : (Option[String], String) => Html,
     fieldLabelMap : Option[Map[String, String]] = None,
     fieldsToShow : Option[Seq[String]] = None,
-    rowClickCall : Option[JsObject => Call] = None
+    rowClickCall : Option[JsObject => Call] = None,
+    fieldNameRenderMap: Option[Map[String, JsValue => Html]] = None
 )
 
 <table class="table table-striped">
@@ -31,8 +32,14 @@
                 @if(fieldsToShow.isDefined) {
                     @fieldsToShow.get.map { fieldName =>
                         <td>
-                            @if((item \ fieldName).get != JsNull) {
-                                @{(item \ fieldName).get.asOpt[String].getOrElse((item \ fieldName).get)}
+                            @if(fieldNameRenderMap.isDefined && fieldNameRenderMap.get.contains(fieldName)) {
+                                @fieldNameRenderMap.get.get(fieldName).get((item \ fieldName).get)
+                            } else {
+                                @if((item \ fieldName).get != JsNull) {
+                                    @{
+                                        (item \ fieldName).get.asOpt[String].getOrElse((item \ fieldName).get)
+                                    }
+                                }
                             }
                         </td>
                     }

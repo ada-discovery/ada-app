@@ -1,7 +1,10 @@
 package util
 
 import java.text.{ParseException, SimpleDateFormat}
+import com.fasterxml.jackson.core.JsonParseException
+
 import collection.mutable.{Map => MMap}
+import play.api.libs.json.Json
 
 import models.FieldType
 
@@ -14,19 +17,19 @@ case class TypeInferenceProvider(
     enumFrequencyThreshold : Double
   ) {
 
-  def isNull(values : Set[String]) =
+  def isNull(values : Traversable[String]) =
     values.forall(s => nullAliases.contains(s.toLowerCase))
 
-  def isBoolean(valuesWoNA : Set[String]) =
+  def isBoolean(valuesWoNA : Traversable[String]) =
     isTextBoolean(valuesWoNA) || isNumberBoolean(valuesWoNA)
 
-  def isTextBoolean(valuesWoNA : Set[String]) =
+  def isTextBoolean(valuesWoNA : Traversable[String]) =
     valuesWoNA.forall(s => textBooleanValues.contains(s.toLowerCase))
 
-  def isNumberBoolean(valuesWoNA : Set[String]) =
+  def isNumberBoolean(valuesWoNA : Traversable[String]) =
     valuesWoNA.forall(s => numBooleanValues.contains(s)) //    isNumber(valuesWoNA) && valuesWoNA.size <= 2
 
-  def isEnum(valuesWoNull : Set[String]) : Boolean = {
+  def isEnum(valuesWoNull : Traversable[String]): Boolean = {
     val countMap = MMap[String, Int]()
     valuesWoNull.foreach{value =>
       val count = countMap.getOrElse(value, 0)
@@ -35,28 +38,28 @@ case class TypeInferenceProvider(
 
     val sum = countMap.values.sum
     val freqsWoNa = countMap.values.map(count => count.toDouble / sum)
-    isEnum(freqsWoNa)
+    isEnumForFreq(freqsWoNa)
   }
 
-  def isEnum(freqsWoNa : Iterable[Double]) =
+  def isEnumForFreq(freqsWoNa : Traversable[Double]): Boolean =
     freqsWoNa.size < enumValuesThreshold && (freqsWoNa.sum / freqsWoNa.size) > enumFrequencyThreshold
 
-  def isNumberEnum(valuesWoNA : Set[String], freqsWoNa : Seq[Double]) =
-    isNumber(valuesWoNA) && isEnum(freqsWoNa)
+  def isNumberEnum(valuesWoNA : Traversable[String], freqsWoNa : Traversable[Double]) =
+    isNumber(valuesWoNA) && isEnumForFreq(freqsWoNa)
 
-  def isTextEnum(valuesWoNA : Set[String], freqsWoNa : Seq[Double]) =
-    isEnum(freqsWoNa) && valuesWoNA.exists(_.exists(_.isLetter))
+  def isTextEnum(valuesWoNA : Traversable[String], freqsWoNa : Traversable[Double]) =
+    isEnumForFreq(freqsWoNa) && valuesWoNA.exists(_.exists(_.isLetter))
 
-  def isNumber(valuesWoNA : Set[String]) =
+  def isNumber(valuesWoNA : Traversable[String]) =
     valuesWoNA.forall(s => s.forall(c => c.isDigit || c == '.') && s.count(_ == '.') <= 1)
 
-  def isDouble(valuesWoNA : Set[String]) : Boolean =
+  def isDouble(valuesWoNA : Traversable[String]) : Boolean =
     valuesWoNA.forall(isDouble)
 
-  def isInt(valuesWoNA : Set[String]) : Boolean =
+  def isInt(valuesWoNA : Traversable[String]) : Boolean =
     valuesWoNA.forall(isInt)
 
-  def isDate(valuesWoNA : Set[String]) =
+  def isDate(valuesWoNA : Traversable[String]) =
     valuesWoNA.forall(s => dateFormats.exists { format =>
       try {
         val date = new SimpleDateFormat(format).parse(s)
@@ -75,8 +78,18 @@ case class TypeInferenceProvider(
     }
    )
 
-  def getType(values : Set[String]) = {
+  def isJson(values : Traversable[String]) =
+    values.forall(s => try {
+      Json.parse(s)
+      true
+    } catch {
+      case e: JsonParseException => false
+    })
+
+  def getType(values : Traversable[String]) = {
     val valuesWoNull = values.filterNot(value => nullAliases.contains(value.toLowerCase))
+//    val uniqueValuesWoNull = values.toSet.filterNot(value => nullAliases.contains(value.toLowerCase))
+
     if (isNull(values))
       FieldType.Null
     else if (isBoolean(valuesWoNull))
@@ -89,6 +102,8 @@ case class TypeInferenceProvider(
       FieldType.Double
     else if (isEnum(valuesWoNull))
       FieldType.Enum
+    else if (isJson(valuesWoNull))
+      FieldType.Json
     else
       FieldType.String
   }

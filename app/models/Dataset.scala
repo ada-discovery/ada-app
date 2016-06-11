@@ -65,7 +65,7 @@ case class Field(
 case class NumFieldStats(min : Double, max : Double, mean : Double, variance : Double)
 
 object FieldType extends Enumeration {
-  val Null, Boolean, Double, Integer, Enum, String, Date = Value
+  val Null, Boolean, Double, Integer, Enum, String, Date, Json = Value
 }
 
 case class Category(

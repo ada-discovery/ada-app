@@ -99,11 +99,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param request Header of original request.
     * @return View for all available fields.
     */
-  private def overviewListView(page: Page[JsObject], fieldChartSpecs : Traversable[FieldChartSpec], fieldLabelMap: Map[String, String])(implicit msg: Messages, request: Request[_]) =
+  private def overviewListView(
+    page: Page[JsObject],
+    fieldChartSpecs: Traversable[FieldChartSpec],
+    tableFields: Traversable[Field]
+  )(implicit msg: Messages, request: Request[_]) =
     dataset.overviewList(
       dataSetName + " Item",
       page,
-      fieldLabelMap,
+      tableFields,
       listViewColumns.get,
       fieldChartSpecs,
       router,
@@ -248,6 +252,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             (fieldName, field)
           )
         ).flatten.toMap
+        val tableFields = tableFieldNames.map(fieldNameMap.get).flatten
 
         val renamedItems = items.map(renameValues(tableFieldNameMap, _))
 
@@ -255,12 +260,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val chartSpecs = createChartSpecs(chartFieldNames, chartFields, chartItems)
         val fieldChartSpecs = chartSpecs.map(chartSpec => FieldChartSpec(chartSpec._1, chartSpec._2))
 
-        val fieldLabelMap = tableFieldNames.map{ fieldName =>
-            fieldNameMap.get(fieldName).flatMap{_.label}.map{ label => (fieldName, label)}
-        }.flatten.toMap
 
         render {
-          case Accepts.Html() => Ok(overviewListView(Page(renamedItems, page, page * limit, count, orderBy, filter), fieldChartSpecs, fieldLabelMap))
+          case Accepts.Html() => Ok(overviewListView(Page(renamedItems, page, page * limit, count, orderBy, filter), fieldChartSpecs, tableFields))
           case Accepts.Json() => Ok(Json.toJson(renamedItems))
         }
       }

@@ -1,4 +1,4 @@
-@import play.api.libs.json.{JsObject, JsNull}
+@import play.api.libs.json.{JsObject, JsNull, JsValue}
 @import views.html.table.{header, displayJsonTable, pagination}
 
 @(
@@ -6,7 +6,8 @@
     listCall : (Int, String) => Call,
     fieldLabelMap : Option[Map[String, String]] = None,
     fieldsToShow : Option[Seq[String]] = None,
-    rowClickCall : Option[JsObject => Call] = None
+    rowClickCall : Option[JsObject => Call] = None,
+    fieldNameRenderMap: Option[Map[String, JsValue => Html]] = None
 )
 
 @listCallAux(newPage : Int, newOrderBy : Option[String]) = @{
@@ -20,7 +21,7 @@
 }
 
 @if(page.items.nonEmpty) {
-    @displayJsonTable(page.items, header(page.orderBy, listCallAux)(_, _), fieldLabelMap, fieldsToShow, rowClickCall)
+    @displayJsonTable(page.items, header(page.orderBy, listCallAux)(_, _), fieldLabelMap, fieldsToShow, rowClickCall, fieldNameRenderMap)
     <hr/>
     @pagination(page, listCallAux)
 }

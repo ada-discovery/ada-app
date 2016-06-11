@@ -61,7 +61,7 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
       if (fieldNames.contains(fieldName)) {
         println(fieldName + " " + metadata.field_type)
         val fieldTypeFuture = dataSetService.inferFieldType(dataSetRepo, DeNoPaSetting.typeInferenceProvider, fieldName)
-        val inferredType = result(fieldTypeFuture, timeout)
+        val (isArray, inferredType) = result(fieldTypeFuture, timeout)
 
         val (fieldType, numValues) = metadata.field_type match {
           case RCFieldType.radio => (FieldType.Enum, getEnumValues(metadata))
@@ -77,7 +77,7 @@ class ImportLuxParkDictionaryFromRedCap @Inject() (
         }
 
         val categoryId = nameCategoryIdMap.get(metadata.form_name)
-        val field = Field(metadata.field_name, fieldType, false, numValues, Seq[String](), Some(metadata.field_label), categoryId)
+        val field = Field(metadata.field_name, fieldType, isArray, numValues, Seq[String](), Some(metadata.field_label), categoryId)
         fieldRepo.save(field)
       } else
         Future(Unit)
