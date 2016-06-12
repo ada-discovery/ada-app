@@ -1,10 +1,10 @@
 package controllers.dataset
 
-import java.util.Date
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import _root_.util.JsonUtil._
+import _root_.util.fieldLabel
 import _root_.util.WebExportUtil._
 import _root_.util.{ChartSpec, FieldChartSpec, FilterSpec, JsonUtil}
 import com.google.inject.assistedinject.Assisted
@@ -27,7 +27,6 @@ import play.modules.reactivemongo.json.BSONObjectIDFormat
 import views.html.dataset
 
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.parallel.ParSeq
 import scala.concurrent.Future
 
 trait GenericDataSetControllerFactory {
@@ -354,14 +353,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val (fieldName, chartTitle, enumMap, fieldType) = fieldOrName match {
       case Left(field) => (
         field.name,
-        field.label.getOrElse(field.name),
+        field.label.getOrElse(fieldLabel(field.name)),
         field.numValues,
         field.fieldType
       )
       // failover... no corresponding field, providing default values instead
       case Right(fieldName) => (
         fieldName,
-        fieldName,
+        fieldLabel(fieldName),
         None,
         FieldType.String
       )

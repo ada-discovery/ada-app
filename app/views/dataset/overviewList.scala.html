@@ -16,7 +16,7 @@
     domainName : String,
     page: Page[JsObject],
     displayedFields: Traversable[Field],
-    displayedFieldNames: Traversable[String], // could differ from displayed fields since the dictionary doesn't have to contain all the fields... although it's rare
+    displayedFieldNames: Traversable[String], // could differ from the displayed fields since the dictionary doesn't have to contain all the fields... although it's more likely to happen only when a fresh data set is imported
     fieldChartSpecs: Traversable[FieldChartSpec],
     router: DataSetRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -31,34 +31,34 @@
     )
 }
 
-@jsonRender(jsValue: JsValue) = {
+@genJsonRender(jsValue: JsValue)(linkTitle: Html) = {
     @defining(scala.util.Random.nextLong()) { modalId =>
         <a href="#" data-modalid="@{modalId}" class="jsonModalLink">
-            <b>Json</b>
+            @linkTitle
         </a>
         @displayJsonModal(modalId + "Modal", jsValue)
+    }
+}
+
+@jsonRender(jsValue: JsValue) = {
+    @genJsonRender(jsValue) {
+        <b>Json</b>
     }
 }
 
 @arrayRender(jsValue: JsValue) = {
-    @defining(scala.util.Random.nextLong()) { modalId =>
-        <a href="#" data-modalid="@{modalId}" class="jsonModalLink">
-            <b>Array (size @{
-                jsValue.asInstanceOf[JsArray].value.size
-            })</b>
-        </a>
-        @displayJsonModal(modalId + "Modal", jsValue)
+    @genJsonRender(jsValue) {
+        <b>Array (size @{
+            jsValue.asInstanceOf[JsArray].value.size
+        })</b>
     }
 }
 
 @jsonArrayRender(jsValue: JsValue) = {
-    @defining(scala.util.Random.nextLong()) { modalId =>
-        <a href="#" data-modalid="@{modalId}" class="jsonModalLink">
-            <b>Json Array (size @{
-                jsValue.asInstanceOf[JsArray].value.size
-            })</b>
-        </a>
-        @displayJsonModal(modalId + "Modal", jsValue)
+    @genJsonRender(jsValue) {
+        <b>Json Array (size @{
+            jsValue.asInstanceOf[JsArray].value.size
+        })</b>
     }
 }
 

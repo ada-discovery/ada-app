@@ -3,7 +3,7 @@ package services
 import javax.inject.{Inject, Singleton}
 
 import _root_.util.JsonUtil.{jsonObjectsToCsv, escapeKey, unescapeKey}
-import _root_.util.toCamel
+import _root_.util.toHumanReadableCamel
 import com.google.inject.ImplementedBy
 import play.api.libs.json._
 import models.Category
@@ -191,7 +191,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
       else if (visitField.isDefined && visitField.get.equals(fieldName))
         (JsString("VISIT_ID"), None)
       else {
-        val label = JsString(toCamel(fieldLabelMap.getOrElse(fieldName, fieldName)))
+        val label = JsString(toHumanReadableCamel(fieldLabelMap.getOrElse(fieldName, fieldName)))
         val path = fieldCategoryMap.get(fieldName).map(_.getPath.mkString("+").replaceAll(" ", "_"))
         (label, path)
       }

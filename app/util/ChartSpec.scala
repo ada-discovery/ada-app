@@ -13,7 +13,7 @@ case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends Char
 case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec
 case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec
 
-case class FieldChartSpec(fieldName : String, chartSpec : ChartSpec)
+case class FieldChartSpec(fieldName: String, chartSpec : ChartSpec)
 
 case class DataPoint(key: String, label : String, value : Int)
 

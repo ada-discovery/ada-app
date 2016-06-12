@@ -1,6 +1,7 @@
 package controllers.dataset
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
+import play.api.mvc.{AnyContent, Action}
 import util.FilterSpec
 import javax.inject.Inject
 
@@ -43,4 +44,8 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.overviewList(page, orderBy, filter))
 
   override def inferDictionary = dispatch(_.inferDictionary)
+
+  override def updateLabel(id: String, label: String) = dispatch(_.updateLabel(id, label))
+
+  override def jsRoutes = dispatch(_.jsRoutes)
 }

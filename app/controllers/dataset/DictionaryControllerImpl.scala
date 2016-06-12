@@ -16,7 +16,8 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.{Action, RequestHeader, Request}
+import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
+import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.{DeNoPaSetting, DataSetService}
 import util.{ChartSpec, FieldChartSpec, FilterSpec}
@@ -65,6 +66,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   // router for requests; to be passed to views as helper.
   protected lazy val router: DictionaryRouter = new DictionaryRouter(dataSetId)
+  protected lazy val jsRouter: DictionaryJsRouter = new DictionaryJsRouter(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)
@@ -149,6 +151,22 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     dataSetService.inferDictionary(dataSetId, DeNoPaSetting.typeInferenceProvider).map( _ =>
       home.flashing("success" -> s"Dictionary for '${dataSetId}'  was successfully inferred.")
     )
+  }
+
+  override def updateLabel(id: String, label: String) = Action.async { implicit request =>
+    repo.get(id).flatMap(_.fold(
+      Future(NotFound(s"Field '$id' not found"))
+    ){ field =>
+      updateCall(field).map(_ => Ok("Done"))
+    })
+  }
+
+  override def jsRoutes = Action { implicit request =>
+    Ok(
+      JavaScriptReverseRouter("dictionaryJsRoutes")(
+        jsRouter.updateLabel
+      )
+    ).as("text/javascript")
   }
 
   private def getDictionaryChartSpec(

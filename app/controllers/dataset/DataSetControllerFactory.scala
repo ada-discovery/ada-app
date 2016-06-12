@@ -3,7 +3,7 @@ package controllers.dataset
 import com.google.inject.ImplementedBy
 import persistence.dataset.DataSetAccessorFactory
 import util.ReflectionUtil.findClasses
-import util.toCamel
+import util.toHumanReadableCamel
 import play.api.inject.Injector
 import javax.inject.{Inject, Singleton}
 import collection.mutable.{Map => MMap}
@@ -52,7 +52,7 @@ protected class DataSetControllerFactoryImpl @Inject()(
     }
   }
 
-  private def controllerClassName(dataSetId: String) = toCamel(dataSetId).replace(" ", "") + "Controller"
+  private def controllerClassName(dataSetId: String) = toHumanReadableCamel(dataSetId).replace(" ", "") + "Controller"
 
   private def findControllerClass[T : ClassTag](dataSetId: String): Option[Class[T]] = {
     val className = controllerClassName(dataSetId)

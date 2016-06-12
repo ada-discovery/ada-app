@@ -1,3 +1,4 @@
+import org.apache.commons.lang.StringUtils
 import play.twirl.api.Html
 
 package object util {
@@ -40,13 +41,21 @@ package object util {
    * @param s Input string.
    * @return String converted to camel case.
    */
-  def toCamel(s: String): String = {
-    val split = s.split("_")
-    split.map { x => x.capitalize}.mkString(" ")
+  def toHumanReadableCamel(s: String): String = {
+    StringUtils.splitByCharacterTypeCamelCase(s.replaceAll("[_|\\.]", " ")).map(
+      _.toLowerCase.capitalize
+    ).mkString(" ")
+//    val split = s.split("_")
+//    split.map { x => x.capitalize}.mkString(" ")
   }
 
-  def fieldLabel(fieldName : String, fieldLabelMap : Option[Map[String, String]]) =
-    fieldLabelMap.map(_.getOrElse(fieldName, toCamel(fieldName))).getOrElse(toCamel(fieldName))
+  def fieldLabel(fieldName : String) =
+    toHumanReadableCamel(JsonUtil.unescapeKey(fieldName))
+
+  def fieldLabel(fieldName : String, fieldLabelMap : Option[Map[String, String]]) = {
+    val defaultLabel = toHumanReadableCamel(JsonUtil.unescapeKey(fieldName))
+    fieldLabelMap.map(_.getOrElse(fieldName, defaultLabel)).getOrElse(defaultLabel)
+  }
 
   def chartElementName(title: String) = title.hashCode + "Chart"
 

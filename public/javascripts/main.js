@@ -156,13 +156,8 @@ function hideErrors() {
 
 function getCheckedTableIds(tableId, objectIdName) {
   var ids = []
-  console.log(objectIdName)
   $('#' + tableId + ' tbody tr').each(function() {
-    var idElement = $(this).find('#' + objectIdName)
-    var id = idElement.text().trim();
-    if (!id) {
-        id = idElement.val().trim();
-    }
+    var id = getRowId($(this), objectIdName)
     var checked = $(this).find("td input[type=checkbox]").is(':checked');
     if (checked) {
       ids.push(id)
@@ -170,6 +165,20 @@ function getCheckedTableIds(tableId, objectIdName) {
   });
   return ids
 };
+
+function getNearestRowId(element, objectIdName) {
+  var row = element.closest('tr');
+  return getRowId(row, objectIdName)
+}
+
+function getRowId(rowElement, objectIdName) {
+  var idElement = rowElement.find('#' + objectIdName)
+  var id = idElement.text().trim();
+  if (!id) {
+    id = idElement.val().trim();
+  }
+  return id
+}
 
 function handleModalButtonEnterPressed(modalName, submitButtonName, action) {
   $("#" + modalName).keypress(function (e) {

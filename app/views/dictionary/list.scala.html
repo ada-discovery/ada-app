@@ -7,8 +7,7 @@
 @import models.Field
 @import util.FieldChartSpec
 @import util.typeColumns
-@import util.JsonUtil.unescapeKey
-@import controllers.dataset.DictionaryRouter
+@import controllers.dataset.{DictionaryRouter, DictionaryJsRouter}
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 
 @(
@@ -38,14 +37,28 @@
     }
 }
 
+@editableFieldLabelInput(field: Field) = {
+    <input type="text" class="no-rowClicked fieldLabel" value='@{field.label.getOrElse("")}'/>
+}
+
 @table = {
-    <div class="pull-right">
-        <a class="btn btn-info btn-sm" href="#" onclick="addFieldsToChartOverview();return false" data-toggle="tooltip" title="Add To Chart Overview">
-            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Chart Overview
-        </a>
-        <a class="btn btn-info btn-sm" href="#" onclick="addFieldsToOverviewTable();return false" data-toggle="tooltip" title="Add To Overview Table">
-            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Overview Table
-        </a>
+    <div class="pull-right dropdown">
+        <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu">
+            <li>
+                <a href="#" onclick="addFieldsToChartOverview();return false" data-toggle="tooltip" title="Add To Chart Overview">
+                    Chart Overview
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="addFieldsToOverviewTable();return false" data-toggle="tooltip" title="Add To Overview Table">
+                    Overview Table
+                </a>
+            </li>
+        </ul>
     </div>
     @paginatedTable(
         page,
@@ -54,7 +67,7 @@
             (None, "", _ => {<input type="checkbox" class="no-rowClicked"/>}),
             (Some("name"), "Name", {field => util.JsonUtil.unescapeKey(field.name)}),
             (Some("fieldType"), "Type", _.fieldType),
-            (Some("label"), "Label", _.label.getOrElse("")),
+            (Some("label"), "Label", editableFieldLabelInput),
             (Some("category.name"), "Category", _.category.map(_.name).getOrElse(""))
         ),
         Some({ item : Any => router.get(item.asInstanceOf[Field].name)}),
@@ -81,9 +94,27 @@
 )
 
 <script type="text/javascript" src="@dataSetSettingRoutes.jsRoutes"></script>
+<script type="text/javascript" src="@router.jsRoutes"></script>
 <script type="text/javascript">
     $(function () {
         $("#inferModal").modal()
+        $(".fieldLabel").on("keydown",function(e) {
+            if(e.keyCode == 13) {
+                var id = getNearestRowId($(this), "id");
+                var label = $(this).val();
+                var that = $(this)
+                dictionaryJsRoutes.controllers.dataset.DictionaryDispatcher.updateLabel(id, label).ajax( {
+                    success: function() {
+                        showMessage("The field '" + id + "' has been successfully relabeled to '" + label + "'.");
+                        var inputs = that.closest('tbody').find('.fieldLabel');
+                        inputs.eq( inputs.index(that)+ 1 ).focus();
+                    },
+                    error: function(data){
+                        showError( data.responseText );
+                    }
+                });
+            }
+        });
     })
 
     function addFieldsToChartOverview() {

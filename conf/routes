@@ -101,9 +101,11 @@ GET         /studies/fieldNames                                                 
 GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)
 POST        /studies/dictionary/save                                                controllers.dataset.DictionaryDispatcher.save
-GET         /studies/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.edit(name: String)
+GET         /studies/dictionary/edit/:name                                          controllers.dataset.DictionaryDispatcher.edit(name: String)
 POST        /studies/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.update(name: String)
 GET         /studies/dictionary/infer/                                              controllers.dataset.DictionaryDispatcher.inferDictionary
+POST        /studies/dictionary/updateLabel/:id/:label                              controllers.dataset.DictionaryDispatcher.updateLabel(id: String, label: String)
+GET         /studies/dictionary/jsRoutes                                            controllers.dataset.DictionaryDispatcher.jsRoutes
 
 GET         /studies/categories                                                     controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/categories/get/:id                                             controllers.dataset.CategoryDispatcher.get(id: BSONObjectID)
