@@ -12,16 +12,17 @@ class ImportDeNoPaSecondVisit @Inject() (configuration: Configuration, dataSetSe
 
   override def run = dataSetService.importDataSet(
     CsvDataSetImportInfo (
-    "DeNoPa",
-    denopa_secondvisit,
-    "Clinical Second Visit",
-    Some (configuration.getString ("denopa.import.folder").get + "DeNoPa-v3_with_§§_and_§%w.csv"),
-    None,
-    "§§",
-    Some("§%w"),
-    None,
-    Some(DeNoPaDataSetSetting.SecondVisit)
-  ))
+      None,
+      "DeNoPa",
+      denopa_secondvisit,
+      "Clinical Second Visit",
+      Some (configuration.getString ("denopa.import.folder").get + "DeNoPa-v3_with_§§_and_§%w.csv"),
+      "§§",
+      Some("§%w"),
+      None,
+      Some(DeNoPaDataSetSetting.SecondVisit)
+    ), None
+  )
 }
 
 object ImportDeNoPaSecondVisit extends GuiceBuilderRunnable[ImportDeNoPaSecondVisit] with App { run }

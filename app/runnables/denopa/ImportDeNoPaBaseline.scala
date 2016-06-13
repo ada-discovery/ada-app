@@ -12,16 +12,16 @@ class ImportDeNoPaBaseline @Inject() (configuration: Configuration, dataSetServi
 
   override def run = dataSetService.importDataSet(
     CsvDataSetImportInfo(
+      None,
       "DeNoPa",
       denopa_baseline,
       "Clinical Baseline",
       Some(configuration.getString("denopa.import.folder").get + "DeNoPa-v1_with_§§.csv"),
-      None,
       "§§",
       None,
       None,
       Some(DeNoPaDataSetSetting.BaseLine)
-    )
+    ), None
   )
 }
 

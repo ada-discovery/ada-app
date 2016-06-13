@@ -23,6 +23,7 @@ object RepoTypes {
   type DataSpaceMetaInfoRepo = MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]
   type DataSetMetaInfoRepo = SubordinateObjectRepo[DataSetMetaInfo, BSONObjectID]
   type DataSetSettingRepo = AsyncCrudRepo[DataSetSetting, BSONObjectID]
+  type DataSetImportInfoRepo = AsyncCrudRepo[DataSetImportInfo, BSONObjectID]
 
   // experimental
   type StudentDistRepo = DistributedRepo[Student, BSONObjectID]

@@ -42,9 +42,8 @@ class DataSetSettingController @Inject() (
   override protected def showView(id: BSONObjectID, f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
     editView(id, f)
 
-  override protected def editView(id: BSONObjectID, f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) = {
+  override protected def editView(id: BSONObjectID, f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
     html.datasetsetting.editNormal(id, "", f)
-  }
 
   override protected def listView(currentPage: Page[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
     html.datasetsetting.list("", currentPage)

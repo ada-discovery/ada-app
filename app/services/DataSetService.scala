@@ -1,5 +1,6 @@
 package services
 
+import java.io.File
 import java.nio.charset.{MalformedInputException, Charset}
 import javax.inject.Inject
 import util.ExecutionContexts
@@ -29,7 +30,8 @@ import collection.mutable.{Map => MMap}
 trait DataSetService {
 
   def importDataSet(
-    importInfo: CsvDataSetImportInfo
+    importInfo: CsvDataSetImportInfo,
+    file: Option[File]
   ): Future[Unit]
 
   def importDataSet(
@@ -38,6 +40,8 @@ trait DataSetService {
 
   def importDataSetAndDictionary(
     importInfo: TranSmartDataSetImportInfo,
+    dataFile: Option[File],
+    mappingFile: Option[File],
     typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit]
 
@@ -77,13 +81,13 @@ class DataSetServiceImpl @Inject()(
   private val synapseUsername = configuration.getString("synapse.api.username").get
   private val synapsePassword = configuration.getString("synapse.api.password").get
 
-  override def importDataSet(importInfo: CsvDataSetImportInfo) =
+  override def importDataSet(importInfo: CsvDataSetImportInfo, file: Option[File]) =
     importLineParsableDataSet(
       importInfo,
       importInfo.delimiter,
       importInfo.eol.isDefined,
       createCsvFileLineIteratorAndCount(
-        importInfo.path.map(Left(_)).getOrElse(Right(importInfo.file.get)),
+        importInfo.path.map(Left(_)).getOrElse(Right(file.get)),
         importInfo.charsetName,
         importInfo.eol
       )
@@ -91,6 +95,8 @@ class DataSetServiceImpl @Inject()(
 
   override def importDataSetAndDictionary(
     importInfo: TranSmartDataSetImportInfo,
+    dataFile: Option[File],
+    mappingFile: Option[File],
     typeInferenceProvider: TypeInferenceProvider
   ) = {
     // import a data set first
@@ -99,7 +105,7 @@ class DataSetServiceImpl @Inject()(
       tranSmartDelimeter.toString,
       false,
       createCsvFileLineIteratorAndCount(
-        importInfo.dataPath.map(Left(_)).getOrElse(Right(importInfo.dataFile.get)),
+        importInfo.dataPath.map(Left(_)).getOrElse(Right(dataFile.get)),
         importInfo.charsetName,
         None
       )
@@ -107,14 +113,14 @@ class DataSetServiceImpl @Inject()(
 
     // then import a dictionary from a tranSMART mapping file
     columnNamesFuture.flatMap { columnNames =>
-      if (importInfo.mappingPath.isDefined || importInfo.mappingFile.isDefined) {
+      if (importInfo.mappingPath.isDefined || mappingFile.isDefined) {
         importAndInferTranSMARTDictionary(
           importInfo.dataSetId,
           typeInferenceProvider,
           tranSmartFieldGroupSize,
           tranSmartDelimeter.toString,
           createCsvFileLineIteratorAndCount(
-            importInfo.mappingPath.map(Left(_)).getOrElse(Right(importInfo.mappingFile.get)),
+            importInfo.mappingPath.map(Left(_)).getOrElse(Right(mappingFile.get)),
             importInfo.charsetName,
             None
           ),

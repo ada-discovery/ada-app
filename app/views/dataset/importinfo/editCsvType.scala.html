@@ -4,8 +4,9 @@
 @import views.html.elements._
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import reactivemongo.bson.BSONObjectID
 
-@(form: Form[CsvDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+@(id : BSONObjectID, form: Form[CsvDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @elements = {
     @dataSetInfoPanel("csvDataSetImportInfo", form)
@@ -40,11 +41,11 @@
     </script>
 }
 
-@layout.create(
+@layout.edit(
     "Data Set from CSV",
-    form,
+    form.errors,
     elements,
-    controllers.dataset.routes.CsvDataSetImportController.upload,
-    routes.AppController.index,
-    'enctype -> "multipart/form-data"
+    controllers.dataset.routes.CsvDataSetImportController.update(id),
+    controllers.dataset.routes.CsvDataSetImportController.listAll(),
+    Some(controllers.dataset.routes.CsvDataSetImportController.delete(id))
 )

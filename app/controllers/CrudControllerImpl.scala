@@ -38,7 +38,7 @@ protected abstract class CrudControllerImpl[E: Format, ID](
     override val repo: AsyncCrudRepo[E, ID]
   )(implicit identity: Identity[E, ID]) extends ReadonlyControllerImpl[E, ID](repo) with CrudController[ID] {
 
-  protected def form : Form[E]
+  protected def form: Form[E]
 
   protected def createView(
     form : Form[E]

@@ -1,0 +1,51 @@
+@import models.CsvDataSetImportInfo
+@import views.html.layout
+@import views.html.dataset.importinfo.{settingPanel, fileOrPathInput, dataSetInfoPanel}
+@import views.html.elements._
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
+
+@(form: Form[CsvDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+
+@elements = {
+    @dataSetInfoPanel("csvDataSetImportInfo", form)
+
+    <div class="panel panel-default">
+        <div class="panel-heading">File</div>
+        <div class="panel-body">
+            @fileOrPathInput("csvDataSetImportInfo", "sourceChoice", "Source", "importFile", "path", form)
+            @inputText("csvDataSetImportInfo", "delimiter", form)
+            @inputText("csvDataSetImportInfo", "eol", form)
+            @inputText("csvDataSetImportInfo", "charsetName", form)
+        </div>
+    </div>
+
+    @settingPanel(form)
+
+    <script type="text/javascript">
+        $('form').submit(function(ev) {
+            ev.preventDefault();
+            handleSettingSubmission();
+
+            var importLocalFile = $('input[name="sourceChoice"]:checked').val() == "1"
+            if (importLocalFile)
+                // if local file provided remove the path field by erasing its name
+                $('#path').attr("name", '');
+            else
+                // otherwise remove the import file field
+                $('#importFile').attr("name", '');
+
+            this.submit();
+        });
+    </script>
+}
+
+@layout.create(
+    "Data Set from CSV",
+    form,
+    elements,
+//    controllers.dataset.routes.CsvDataSetImportController.upload,
+    controllers.dataset.routes.CsvDataSetImportController.save,
+    routes.AppController.index,
+    'enctype -> "multipart/form-data"
+)

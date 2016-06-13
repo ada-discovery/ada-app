@@ -48,6 +48,15 @@ POST        /admin/tranSmartDataSetUpload/upload                                
 GET         /admin/synapseDataSetUpload/new                                         controllers.dataset.SynapseDataSetImportController.create
 POST        /admin/synapseDataSetUpload/upload                                      controllers.dataset.SynapseDataSetImportController.upload
 
+GET         /admin/dataSetImport                                                    controllers.dataset.CsvDataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /admin/dataSetImport/all                                                controllers.dataset.CsvDataSetImportController.listAll(s: Int ?= 2)
+GET         /admin/dataSetImport/new                                                controllers.dataset.CsvDataSetImportController.create
+POST        /admin/dataSetImport/save                                               controllers.dataset.CsvDataSetImportController.save
+GET         /admin/dataSetImport/:id/get                                            controllers.dataset.CsvDataSetImportController.get(id: BSONObjectID)
+GET         /admin/dataSetImport/:id                                                controllers.dataset.CsvDataSetImportController.edit(id: BSONObjectID)
+POST        /admin/dataSetImport/:id                                                controllers.dataset.CsvDataSetImportController.update(id: BSONObjectID)
+POST        /admin/dataSetImport/:id/delete                                         controllers.dataset.CsvDataSetImportController.delete(id: BSONObjectID)
+
 # Users management
 GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /users/all                                                              controllers.UserController.listAll(s: Int ?= 2)

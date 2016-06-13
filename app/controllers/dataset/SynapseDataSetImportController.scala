@@ -13,10 +13,10 @@ import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.mvc._
+import reactivemongo.bson.BSONObjectID
 import services.DataSetService
 import util.SecurityUtil.restrictAdmin
-import views.html.dataset.importinfo.{importSynapseDataSet => importView}
-
+import views.html.dataset.importinfo._
 import scala.concurrent.Future
 
 class SynapseDataSetImportController @Inject()(
@@ -30,6 +30,7 @@ class SynapseDataSetImportController @Inject()(
 
   protected val form = Form(
     mapping(
+      "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
       "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
       "dataSetName" -> nonEmptyText,
@@ -39,12 +40,12 @@ class SynapseDataSetImportController @Inject()(
   )
 
   private val defaultImportInfo =
-    SynapseDataSetImportInfo("", "", "", "", None)
+    SynapseDataSetImportInfo(None, "", "", "", "", None)
 
   def create = restrictAdmin(deadbolt) {
     Action { implicit request =>
       implicit val msg = messagesApi.preferred(request)
-      Ok(importView(form.fill(defaultImportInfo)))
+      Ok(createSynapseType(form.fill(defaultImportInfo)))
     }
   }
 
@@ -87,6 +88,6 @@ class SynapseDataSetImportController @Inject()(
     filledForm: Form[SynapseDataSetImportInfo]
   )(implicit request: Request[_]) = {
     implicit val msg = messagesApi.preferred(request)
-    BadRequest(importView(filledForm))
+    BadRequest(createSynapseType(filledForm))
   }
 }

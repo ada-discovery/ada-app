@@ -2,7 +2,13 @@ package models
 
 import java.io.File
 
+import play.api.libs.json._
+import reactivemongo.bson.BSONObjectID
+import play.modules.reactivemongo.json.BSONFormats._
+import play.api.libs.json._
+
 abstract class DataSetImportInfo {
+  val _id: Option[BSONObjectID]
   val dataSpaceName: String
   val dataSetId: String
   val dataSetName: String
@@ -10,11 +16,11 @@ abstract class DataSetImportInfo {
 }
 
 case class CsvDataSetImportInfo(
+  _id: Option[BSONObjectID],
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
   path: Option[String],
-  file: Option[File],
   delimiter: String,
   eol: Option[String],
   charsetName: Option[String],
@@ -22,6 +28,7 @@ case class CsvDataSetImportInfo(
 ) extends DataSetImportInfo
 
 case class SynapseDataSetImportInfo(
+  _id: Option[BSONObjectID],
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
@@ -30,18 +37,18 @@ case class SynapseDataSetImportInfo(
 ) extends DataSetImportInfo
 
 case class TranSmartDataSetImportInfo(
+  _id: Option[BSONObjectID],
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
   dataPath: Option[String],
-  dataFile: Option[File],
   mappingPath: Option[String],
-  mappingFile: Option[File],
   charsetName: Option[String],
   setting: Option[DataSetSetting]
 ) extends DataSetImportInfo
 
 case class RedCapImportInfo(
+  _id: Option[BSONObjectID],
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
@@ -50,31 +57,47 @@ case class RedCapImportInfo(
   setting: Option[DataSetSetting]
 ) extends DataSetImportInfo
 
+object DataSetImportInfoFormattersAndIds {
+  implicit val dataSetSettingFormat = DataSetFormattersAndIds.dataSetSettingFormat
 
-// handy constructors... could be moved to data upload controller
+  val csvDataSetImportInfoFormat = Json.format[CsvDataSetImportInfo]
+  val synapseDataSetImportInfoFormat = Json.format[SynapseDataSetImportInfo]
+  val tranSmartDataSetImportInfoFormat = Json.format[TranSmartDataSetImportInfo]
+  val redCapImportInfoFormat = Json.format[RedCapImportInfo]
 
+  implicit val dataSetImportInfoFormat: Format[DataSetImportInfo] = new Format[DataSetImportInfo] {
+    override def reads(json: JsValue): JsResult[DataSetImportInfo] = {
+      val concreteType = (json \ "concreteType").get.as[String]
+      if (concreteType == classOf[CsvDataSetImportInfo].getName) {
+        csvDataSetImportInfoFormat.reads(json)
+      } else if (concreteType == classOf[SynapseDataSetImportInfo].getName) {
+        synapseDataSetImportInfoFormat.reads(json)
+      } else if (concreteType == classOf[TranSmartDataSetImportInfo].getName) {
+        tranSmartDataSetImportInfoFormat.reads(json)
+      } else if (concreteType == classOf[RedCapImportInfo].getName) {
+        redCapImportInfoFormat.reads(json)
+      } else
+        throw new AdaException(s"DataSetImportInfo  type '$concreteType' not recognized.")
+    }
 
-object CsvDataSetImportInfo {
-  def apply(
-    dataSpaceName: String,
-    dataSetId: String,
-    dataSetName: String,
-    path: Option[String],
-    delimiter: String,
-    eol: Option[String],
-    charsetName: Option[String],
-    setting: Option[DataSetSetting]
-  ) = new CsvDataSetImportInfo(dataSpaceName, dataSetId, dataSetName, path, None, delimiter, eol, charsetName, setting)
-}
+    override def writes(o: DataSetImportInfo): JsValue = {
+      o match {
+        case x: CsvDataSetImportInfo => csvDataSetImportInfoFormat.writes(x).asInstanceOf[JsObject] + ("concreteType", JsString(classOf[CsvDataSetImportInfo].getName))
+        case x: SynapseDataSetImportInfo => synapseDataSetImportInfoFormat.writes(x).asInstanceOf[JsObject] + ("concreteType", JsString(classOf[CsvDataSetImportInfo].getName))
+        case x: TranSmartDataSetImportInfo => tranSmartDataSetImportInfoFormat.writes(x).asInstanceOf[JsObject] + ("concreteType", JsString(classOf[CsvDataSetImportInfo].getName))
+        case x: RedCapImportInfo => redCapImportInfoFormat.writes(x).asInstanceOf[JsObject] + ("concreteType", JsString(classOf[CsvDataSetImportInfo].getName))
+      }
+    }
+  }
 
-object TranSmartDataSetImportInfo {
-  def apply(
-    dataSpaceName: String,
-    dataSetId: String,
-    dataSetName: String,
-    dataPath: Option[String],
-    mappingPath: Option[String],
-    charsetName: Option[String],
-    setting: Option[DataSetSetting]
-  ) = new TranSmartDataSetImportInfo(dataSpaceName, dataSetId, dataSetName, dataPath, None, mappingPath, None, charsetName, setting)
+  implicit object DataSetImportInfoIdentity extends BSONObjectIdentity[DataSetImportInfo] {
+    def of(entity: DataSetImportInfo): Option[BSONObjectID] = entity._id
+    protected def set(entity: DataSetImportInfo, id: Option[BSONObjectID]) =
+      entity match {
+        case x: CsvDataSetImportInfo => x.copy(_id = id)
+        case x: SynapseDataSetImportInfo => x.copy(_id = id)
+        case x: TranSmartDataSetImportInfo => x.copy(_id = id)
+        case x: RedCapImportInfo => x.copy(_id = id)
+      }
+  }
 }

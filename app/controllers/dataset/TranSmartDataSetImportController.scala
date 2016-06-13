@@ -14,10 +14,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.mvc._
 import play.mvc.Http
+import reactivemongo.bson.BSONObjectID
 import services.{DeNoPaSetting, DataSetService}
 import util.SecurityUtil.restrictAdmin
-import views.html.dataset.importinfo.{importTranSmartDataSet => importView}
-
+import views.html.dataset.importinfo._
 import scala.concurrent.Future
 
 class TranSmartDataSetImportController @Inject()(
@@ -31,6 +31,7 @@ class TranSmartDataSetImportController @Inject()(
 
   protected val form = Form(
     mapping(
+      "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
       "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
       "dataSetName" -> nonEmptyText,
@@ -38,23 +39,16 @@ class TranSmartDataSetImportController @Inject()(
       "mappingPath" -> optional(text),
       "charsetName" -> optional(text),
       "setting" -> optional(dataSetSettingMapping)
-    ) (TranSmartDataSetImportInfo.apply)
-      { importInfo: TranSmartDataSetImportInfo =>
-        Some(
-          importInfo.dataSpaceName, importInfo.dataSetId,
-          importInfo.dataSpaceName, importInfo.dataPath, importInfo.mappingPath,
-          importInfo.charsetName, importInfo.setting
-        )
-      }
+    ) (TranSmartDataSetImportInfo.apply)(TranSmartDataSetImportInfo.unapply)
   )
 
   private val defaultImportInfo =
-    TranSmartDataSetImportInfo("", "", "", None, None, None, None)
+    TranSmartDataSetImportInfo(None, "", "", "", None, None, None, None)
 
   def create = restrictAdmin(deadbolt) {
     Action { implicit request =>
       implicit val msg = messagesApi.preferred(request)
-      Ok(importView(form.fill(defaultImportInfo)))
+      Ok(createTranSmartType(form.fill(defaultImportInfo)))
     }
   }
 
@@ -69,14 +63,13 @@ class TranSmartDataSetImportController @Inject()(
           val dataSetName = importInfo.dataSetName
           val dataFile = getFile("dataFile", request)
           val mappingFile = getFile("mappingFile", request)
-          val importInfoExt = importInfo.copy(dataFile = dataFile, mappingFile = mappingFile)
 
-          if (importInfoExt.dataPath.isEmpty && importInfoExt.dataFile.isEmpty)
-            Future.successful(createBadRequest(filledForm.withError("path", "No path or import file specified.")))
+          if (importInfo.dataPath.isEmpty && dataFile.isEmpty)
+            Future.successful(createBadRequest(filledForm.withError("path", "No data path or import file specified.")))
           else {
             val errorRedirect = handleError(filledForm, dataSetName) _
             val successRedirect = Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
-            dataSetService.importDataSetAndDictionary(importInfoExt, DeNoPaSetting.typeInferenceProvider).map { _ =>
+            dataSetService.importDataSetAndDictionary(importInfo, dataFile, mappingFile, DeNoPaSetting.typeInferenceProvider).map { _ =>
               render {
                 case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '$dataSetName' has been uploaded.")
                 case Accepts.Json() => Created(Json.obj("message" -> "Data set has been uploaded", "name" -> importInfo.dataSetName))
@@ -114,6 +107,6 @@ class TranSmartDataSetImportController @Inject()(
     filledForm: Form[TranSmartDataSetImportInfo]
   )(implicit request: Request[_]) = {
     implicit val msg = messagesApi.preferred(request)
-    BadRequest(importView(filledForm))
+    BadRequest(createTranSmartType(filledForm))
   }
 }

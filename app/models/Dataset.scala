@@ -52,14 +52,14 @@ case class Dictionary(
 )
 
 case class Field(
-  name : String,
-  fieldType : FieldType.Value,
-  isArray : Boolean = false,
-  numValues : Option[Map[String, String]] = None,
-  aliases : Seq[String] = Seq[String](),
-  label : Option[String] = None,
+  name: String,
+  fieldType: FieldType.Value,
+  isArray: Boolean = false,
+  numValues: Option[Map[String, String]] = None,
+  aliases: Seq[String] = Seq[String](),
+  label: Option[String] = None,
   var categoryId: Option[BSONObjectID] = None,
-  var category : Option[Category] = None
+  var category: Option[Category] = None
 )
 
 case class NumFieldStats(min : Double, max : Double, mean : Double, variance : Double)
@@ -69,11 +69,11 @@ object FieldType extends Enumeration {
 }
 
 case class Category(
-  _id : Option[BSONObjectID],
-  name : String,
-  var parentId : Option[BSONObjectID] = None,
-  var parent : Option[Category] = None,
-  var children : Seq[Category] = Seq[Category]()
+  _id: Option[BSONObjectID],
+  name: String,
+  var parentId: Option[BSONObjectID] = None,
+  var parent: Option[Category] = None,
+  var children: Seq[Category] = Seq[Category]()
 ) {
   def this(name : String) = this(None, name)
 

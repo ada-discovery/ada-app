@@ -3,7 +3,9 @@ package controllers.dataset
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import models.{CsvDataSetImportInfo, DataSetSetting, AdaException, AdaParseException}
+import controllers.{AdminRestrictedCrudController, CrudControllerImpl}
+import models._
+import models.DataSetImportInfoFormattersAndIds.{dataSetImportInfoFormat, DataSetImportInfoIdentity}
 import persistence.RepoTypes._
 import play.api.data.Form
 import play.api.data.Forms._
@@ -11,25 +13,31 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.{RequestHeader, Action, Controller, Result, Request}
 import controllers.dataset.DataSetSettingController.dataSetSettingMapping
+import play.twirl.api.Html
+import reactivemongo.bson.BSONObjectID
 import services.DataSetService
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import util.SecurityUtil.restrictAdmin
-import views.html.dataset.importinfo.{importCsvDataSet => importView}
+import views.html.dataset.{importinfo => importinfoViews}
 
 import scala.concurrent.Future
 
 class CsvDataSetImportController @Inject()(
-    repo: DataSetSettingRepo,
+    repo: DataSetImportInfoRepo,
     dataSetService: DataSetService,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi
-  ) extends Controller {
+  ) extends CrudControllerImpl[DataSetImportInfo, BSONObjectID](repo) with AdminRestrictedCrudController[BSONObjectID] {
 
   private val logger = Logger // (this.getClass)
 
-  protected val form = Form(
+  // TODO
+  protected def form = csvForm.asInstanceOf[Form[DataSetImportInfo]]
+
+  protected val csvForm = Form(
     mapping(
+      "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSpaceName" -> nonEmptyText,
       "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
       "dataSetName" -> nonEmptyText,
@@ -38,50 +46,45 @@ class CsvDataSetImportController @Inject()(
       "eol" -> optional(text),
       "charsetName" -> optional(text),
       "setting" -> optional(dataSetSettingMapping)
-    ) (CsvDataSetImportInfo.apply)
-      { importInfo: CsvDataSetImportInfo =>
-        Some(
-          importInfo.dataSpaceName, importInfo.dataSetId,
-          importInfo.dataSpaceName, importInfo.path, importInfo.delimiter,
-          importInfo.eol, importInfo.charsetName, importInfo.setting
-        )
-      }
+    ) (CsvDataSetImportInfo.apply)(CsvDataSetImportInfo.unapply)
   )
 
-  private val defaultImportInfo =
-    CsvDataSetImportInfo("", "", "", None, ",", None, None, None)
+  override protected val home =
+    Redirect(routes.CsvDataSetImportController.listAll())
 
-  def create = restrictAdmin(deadbolt) {
-    Action { implicit request =>
-      implicit val msg = messagesApi.preferred(request)
-      Ok(importView(form.fill(defaultImportInfo)))
-    }
-  }
+  override protected def defaultCreateEntity: DataSetImportInfo =
+    CsvDataSetImportInfo(None, "", "", "", None, ",", None, None, None)
+
+  override protected def createView(form: Form[DataSetImportInfo])(implicit msg: Messages, request: Request[_]) =
+    importinfoViews.createCsvType(form.asInstanceOf[Form[CsvDataSetImportInfo]])
+
+  override protected def showView(id: BSONObjectID, form: Form[DataSetImportInfo])(implicit msg: Messages, request: Request[_]) =
+    editView(id, form)
+
+  override protected def editView(id: BSONObjectID, form: Form[DataSetImportInfo])(implicit msg: Messages, request: Request[_]) =
+    importinfoViews.editCsvType(id, form.asInstanceOf[Form[CsvDataSetImportInfo]])
+
+  override protected def listView(page: Page[DataSetImportInfo])(implicit msg: Messages, request: Request[_]): Html =
+    importinfoViews.list(page)
 
   def upload = restrictAdmin(deadbolt) {
     Action.async { implicit request =>
-      val filledForm = form.bindFromRequest
+      val filledForm = csvForm.bindFromRequest
       filledForm.fold(
         { formWithErrors =>
           Future.successful(createBadRequest(formWithErrors))
         },
         importInfo => {
           val dataSetName = importInfo.dataSetName
-          val importFile = request.body.asMultipartFormData.get.file("importFile")
-          val importInfoExt = if (importFile.isDefined) {
-            val fileName = importFile.get.filename
-            val contentType = importFile.get.contentType
-            val file = importFile.get.ref.file
-            importInfo.copy(file = Some(file))
-          } else
-            importInfo
+          val importFileOption = request.body.asMultipartFormData.get.file("importFile")
+          val file = importFileOption.map(_.ref.file)
 
-          if (importInfoExt.path.isEmpty && importInfoExt.file.isEmpty)
+          if (importInfo.path.isEmpty && file.isEmpty)
             Future.successful(createBadRequest(filledForm.withError("path", "No path or import file specified.")))
           else {
             val errorRedirect = handleError(filledForm, dataSetName) _
             val successRedirect = Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
-            dataSetService.importDataSet(importInfoExt).map { _ =>
+            dataSetService.importDataSet(importInfo, file).map { _ =>
               render {
                 case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '$dataSetName' has been uploaded.")
                 case Accepts.Json() => Created(Json.obj("message" -> "Data set has been uploaded", "name" -> importInfo.dataSetName))
@@ -110,6 +113,6 @@ class CsvDataSetImportController @Inject()(
     filledForm: Form[CsvDataSetImportInfo]
   )(implicit request: Request[_]) = {
     implicit val msg = messagesApi.preferred(request)
-    BadRequest(importView(filledForm))
+    BadRequest(importinfoViews.createCsvType(filledForm))
   }
 }

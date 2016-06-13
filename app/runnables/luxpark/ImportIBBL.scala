@@ -12,16 +12,16 @@ class ImportIBBL @Inject() (configuration: Configuration, dataSetService: DataSe
 
   override def run = dataSetService.importDataSet(
     CsvDataSetImportInfo(
+      None,
       "Lux Park",
       ibbl,
       "IBBL BioSamples",
       Some(configuration.getString("ibbl.import.folder").get + "140174_ND_STOCK_LCSB_20160404.csv"),
-      None,
       ",",
       None,
       None,
       Some(LuxParkDataSetSetting.IBBL)
-    )
+    ), None
   )
 }
 
