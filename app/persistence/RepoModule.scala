@@ -17,7 +17,7 @@ import models.security.CustomUser
 import models.workspace.Workspace
 
 private object RepoDef extends Enumeration {
-  case class Repo[T : Manifest](
+  case class Repo[T: Manifest](
     repo : T,
     named : Boolean = false
   ) extends super.Val {

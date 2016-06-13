@@ -2,6 +2,7 @@ package models
 
 import java.io.File
 
+import controllers.{ManifestedFormat, SubTypeFormat}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
@@ -60,35 +61,14 @@ case class RedCapImportInfo(
 object DataSetImportInfoFormattersAndIds {
   implicit val dataSetSettingFormat = DataSetFormattersAndIds.dataSetSettingFormat
 
-  val csvDataSetImportInfoFormat = Json.format[CsvDataSetImportInfo]
-  val synapseDataSetImportInfoFormat = Json.format[SynapseDataSetImportInfo]
-  val tranSmartDataSetImportInfoFormat = Json.format[TranSmartDataSetImportInfo]
-  val redCapImportInfoFormat = Json.format[RedCapImportInfo]
-
-  implicit val dataSetImportInfoFormat: Format[DataSetImportInfo] = new Format[DataSetImportInfo] {
-    override def reads(json: JsValue): JsResult[DataSetImportInfo] = {
-      val concreteType = (json \ "concreteType").get.as[String]
-      if (concreteType == classOf[CsvDataSetImportInfo].getName) {
-        csvDataSetImportInfoFormat.reads(json)
-      } else if (concreteType == classOf[SynapseDataSetImportInfo].getName) {
-        synapseDataSetImportInfoFormat.reads(json)
-      } else if (concreteType == classOf[TranSmartDataSetImportInfo].getName) {
-        tranSmartDataSetImportInfoFormat.reads(json)
-      } else if (concreteType == classOf[RedCapImportInfo].getName) {
-        redCapImportInfoFormat.reads(json)
-      } else
-        throw new AdaException(s"DataSetImportInfo  type '$concreteType' not recognized.")
-    }
-
-    override def writes(o: DataSetImportInfo): JsValue = {
-      o match {
-        case x: CsvDataSetImportInfo => csvDataSetImportInfoFormat.writes(x).asInstanceOf[JsObject] + ("concreteType", JsString(classOf[CsvDataSetImportInfo].getName))
-        case x: SynapseDataSetImportInfo => synapseDataSetImportInfoFormat.writes(x).asInstanceOf[JsObject] + ("concreteType", JsString(classOf[CsvDataSetImportInfo].getName))
-        case x: TranSmartDataSetImportInfo => tranSmartDataSetImportInfoFormat.writes(x).asInstanceOf[JsObject] + ("concreteType", JsString(classOf[CsvDataSetImportInfo].getName))
-        case x: RedCapImportInfo => redCapImportInfoFormat.writes(x).asInstanceOf[JsObject] + ("concreteType", JsString(classOf[CsvDataSetImportInfo].getName))
-      }
-    }
-  }
+  implicit val dataSetImportInfoFormat: Format[DataSetImportInfo] = new SubTypeFormat[DataSetImportInfo](
+    Seq(
+      ManifestedFormat(Json.format[CsvDataSetImportInfo]),
+      ManifestedFormat(Json.format[SynapseDataSetImportInfo]),
+      ManifestedFormat(Json.format[TranSmartDataSetImportInfo]),
+      ManifestedFormat(Json.format[RedCapImportInfo])
+    )
+  )
 
   implicit object DataSetImportInfoIdentity extends BSONObjectIdentity[DataSetImportInfo] {
     def of(entity: DataSetImportInfo): Option[BSONObjectID] = entity._id

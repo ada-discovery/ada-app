@@ -47,10 +47,10 @@
                         <ul class="dropdown-menu">
                             @listItem(routes.AdminController.listRunnables(), "Runnables")
                             <li role="separator" class="divider"></li>
-                            @listItem(controllers.dataset.routes.CsvDataSetImportController.create(), "Import CSV Data Set")
-                            @listItem(controllers.dataset.routes.TranSmartDataSetImportController.create(), "Import TranSMART Data Set and Dictionary")
-                            @listItem(controllers.dataset.routes.SynapseDataSetImportController.create(), "Import Synapse Data Set")
-                            @listItem(controllers.dataset.routes.CsvDataSetImportController.find(), "Data Set Imports")
+                            @listItem(controllers.dataset.importinfo.routes.CsvDataSetImportController.create(), "Import CSV Data Set")
+                            @listItem(controllers.dataset.importinfo.routes.TranSmartDataSetImportController.create(), "Import TranSMART Data Set and Dictionary")
+                            @listItem(controllers.dataset.importinfo.routes.SynapseDataSetImportController.create(), "Import Synapse Data Set")
+                            @listItem(controllers.dataset.importinfo.routes.CsvDataSetImportController.find(), "Data Set Imports")
                             <li role="separator" class="divider"></li>
                             @listItem(controllers.dataset.routes.DataSetSettingController.find(), "Data Set Settings")
                             <li role="separator" class="divider"></li>

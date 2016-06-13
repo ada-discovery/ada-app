@@ -45,7 +45,7 @@
     "Data Set from CSV",
     form.errors,
     elements,
-    controllers.dataset.routes.CsvDataSetImportController.update(id),
-    controllers.dataset.routes.CsvDataSetImportController.listAll(),
-    Some(controllers.dataset.routes.CsvDataSetImportController.delete(id))
+    controllers.dataset.importinfo.routes.CsvDataSetImportController.update(id),
+    controllers.dataset.importinfo.routes.CsvDataSetImportController.listAll(),
+    Some(controllers.dataset.importinfo.routes.CsvDataSetImportController.delete(id))
 )

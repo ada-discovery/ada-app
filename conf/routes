@@ -41,21 +41,21 @@ GET         /admin/runnables                                                    
 GET         /admin/runScript                                                        controllers.AdminController.runScript(className : String)
 
 # Data Set Import
-GET         /admin/csvDataSetUpload/new                                             controllers.dataset.CsvDataSetImportController.create
-POST        /admin/csvDataSetUpload/upload                                          controllers.dataset.CsvDataSetImportController.upload
-GET         /admin/tranSmartDataSetUpload/new                                       controllers.dataset.TranSmartDataSetImportController.create
-POST        /admin/tranSmartDataSetUpload/upload                                    controllers.dataset.TranSmartDataSetImportController.upload
-GET         /admin/synapseDataSetUpload/new                                         controllers.dataset.SynapseDataSetImportController.create
-POST        /admin/synapseDataSetUpload/upload                                      controllers.dataset.SynapseDataSetImportController.upload
+GET         /admin/csvDataSetUpload/new                                             controllers.dataset.importinfo.CsvDataSetImportController.create
+POST        /admin/csvDataSetUpload/upload                                          controllers.dataset.importinfo.CsvDataSetImportController.upload
+GET         /admin/tranSmartDataSetUpload/new                                       controllers.dataset.importinfo.TranSmartDataSetImportController.create
+POST        /admin/tranSmartDataSetUpload/upload                                    controllers.dataset.importinfo.TranSmartDataSetImportController.upload
+GET         /admin/synapseDataSetUpload/new                                         controllers.dataset.importinfo.SynapseDataSetImportController.create
+POST        /admin/synapseDataSetUpload/upload                                      controllers.dataset.importinfo.SynapseDataSetImportController.upload
 
-GET         /admin/dataSetImport                                                    controllers.dataset.CsvDataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /admin/dataSetImport/all                                                controllers.dataset.CsvDataSetImportController.listAll(s: Int ?= 2)
-GET         /admin/dataSetImport/new                                                controllers.dataset.CsvDataSetImportController.create
-POST        /admin/dataSetImport/save                                               controllers.dataset.CsvDataSetImportController.save
-GET         /admin/dataSetImport/:id/get                                            controllers.dataset.CsvDataSetImportController.get(id: BSONObjectID)
-GET         /admin/dataSetImport/:id                                                controllers.dataset.CsvDataSetImportController.edit(id: BSONObjectID)
-POST        /admin/dataSetImport/:id                                                controllers.dataset.CsvDataSetImportController.update(id: BSONObjectID)
-POST        /admin/dataSetImport/:id/delete                                         controllers.dataset.CsvDataSetImportController.delete(id: BSONObjectID)
+GET         /admin/dataSetImport                                                    controllers.dataset.importinfo.CsvDataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /admin/dataSetImport/all                                                controllers.dataset.importinfo.CsvDataSetImportController.listAll(s: Int ?= 2)
+GET         /admin/dataSetImport/new                                                controllers.dataset.importinfo.CsvDataSetImportController.create
+POST        /admin/dataSetImport/save                                               controllers.dataset.importinfo.CsvDataSetImportController.save
+GET         /admin/dataSetImport/:id/get                                            controllers.dataset.importinfo.CsvDataSetImportController.get(id: BSONObjectID)
+GET         /admin/dataSetImport/:id                                                controllers.dataset.importinfo.CsvDataSetImportController.edit(id: BSONObjectID)
+POST        /admin/dataSetImport/:id                                                controllers.dataset.importinfo.CsvDataSetImportController.update(id: BSONObjectID)
+POST        /admin/dataSetImport/:id/delete                                         controllers.dataset.importinfo.CsvDataSetImportController.delete(id: BSONObjectID)
 
 # Users management
 GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
