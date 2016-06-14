@@ -32,7 +32,7 @@ class DataSpaceMetaInfoController @Inject() (
   ) (DataSpaceMetaInfo.apply)(DataSpaceMetaInfo.unapply))
 
   override protected val home =
-    Redirect(routes.DataSpaceMetaInfoController.listAll())
+    Redirect(routes.DataSpaceMetaInfoController.find())
 
   override protected def createView(f : Form[DataSpaceMetaInfo])(implicit msg: Messages, request: Request[_]) =
     html.dataspace.create(f)
@@ -94,7 +94,4 @@ class DataSpaceMetaInfoController @Inject() (
 
   // get is allowed for all logged users
   override def get(id: BSONObjectID) = deadbolt.SubjectPresent()(super.get(id))
-
-  //@Deprecated
-  override protected val defaultCreateEntity = DataSpaceMetaInfo(None, "", 0)
 }

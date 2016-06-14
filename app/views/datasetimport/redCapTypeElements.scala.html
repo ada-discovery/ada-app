@@ -1,0 +1,28 @@
+@import models.RedCapDataSetImportInfo
+@import views.html.elements.inputText
+@import play.api.i18n.Messages
+@import views.html.datasetimport.{settingPanel, dataSetInfoPanel}
+
+@(form: Form[RedCapDataSetImportInfo])(implicit msg: Messages)
+
+@dataSetInfoPanel("redCapDataSetImportInfo", form)
+
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[RedCapDataSetImportInfo].getName}">
+
+<div class="panel panel-default">
+    <div class="panel-heading">RedCap</div>
+    <div class="panel-body">
+        @inputText("redCapDataSetImportInfo", "url", form)
+        @inputText("redCapDataSetImportInfo", "token", form)
+    </div>
+</div>
+
+@settingPanel(form)
+
+<script type="text/javascript">
+    $('form').submit(function(ev) {
+        ev.preventDefault();
+        handleSettingSubmission();
+        this.submit();
+    });
+</script>

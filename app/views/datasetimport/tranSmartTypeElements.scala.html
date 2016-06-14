@@ -1,0 +1,46 @@
+@import models.TranSmartDataSetImportInfo
+@import views.html.elements._
+@import play.api.i18n.Messages
+@import views.html.datasetimport.{settingPanel, fileOrPathInput, dataSetInfoPanel}
+
+@(form: Form[TranSmartDataSetImportInfo])(implicit msg: Messages)
+
+@dataSetInfoPanel("tranSmartDataSetImportInfo", form)
+
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[TranSmartDataSetImportInfo].getName}">
+
+<div class="panel panel-default">
+    <div class="panel-heading">File</div>
+    <div class="panel-body">
+        @fileOrPathInput("tranSmartDataSetImportInfo", "dataSourceChoice", "Data Source", "dataFile", "dataPath", form)
+        @fileOrPathInput("tranSmartDataSetImportInfo", "mappingSourceChoice", "Mapping Source", "mappingFile", "mappingPath", form)
+        @inputText("tranSmartDataSetImportInfo", "charsetName", form)
+    </div>
+</div>
+
+@settingPanel(form)
+
+<script type="text/javascript">
+    $('form').submit(function(ev) {
+        ev.preventDefault();
+        handleSettingSubmission();
+
+        var localDataFile = $('input[name="dataSourceChoice"]:checked').val() == "1"
+        if (localDataFile)
+            // if local file provided remove the path field by erasing its name
+            $('#dataPath').attr("name", '');
+        else
+            // otherwise remove the import file field
+            $('#dataFile').attr("name", '');
+
+        var locaMappingFile = $('input[name="mappingSourceChoice"]:checked').val() == "1"
+        if (locaMappingFile)
+            // if local file provided remove the path field by erasing its name
+            $('#mappingPath').attr("name", '');
+        else
+            // otherwise remove the import file field
+            $('#mappingFile').attr("name", '');
+
+        this.submit();
+    });
+</script>

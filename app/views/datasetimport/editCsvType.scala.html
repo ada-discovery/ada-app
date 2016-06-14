@@ -1,0 +1,17 @@
+@import models.CsvDataSetImportInfo
+@import views.html.layout
+@import views.html.datasetimport.csvTypeElements
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
+@import reactivemongo.bson.BSONObjectID
+
+@(id: BSONObjectID, form: Form[CsvDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+
+@layout.edit(
+    "CSV Data Set Import",
+    form.errors,
+    csvTypeElements(form),
+    controllers.dataset.routes.DataSetImportController.update(id),
+    controllers.dataset.routes.DataSetImportController.listAll(),
+    Some(controllers.dataset.routes.DataSetImportController.delete(id))
+)

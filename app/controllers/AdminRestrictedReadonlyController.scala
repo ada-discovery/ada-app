@@ -15,7 +15,7 @@ trait AdminRestrictedReadonlyController[ID] extends ReadonlyController[ID] {
   abstract override def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent] =
     restrict(super.find(page, orderBy, filter))
 
-  abstract override def listAll(orderBy: Int): Action[AnyContent] =
+  abstract override def listAll(orderBy: String): Action[AnyContent] =
     restrict(super.listAll(orderBy))
 
   protected def restrict[A] = restrictAdmin[A](deadbolt)_

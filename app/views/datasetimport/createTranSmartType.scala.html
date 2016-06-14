@@ -1,0 +1,16 @@
+@import models.TranSmartDataSetImportInfo
+@import views.html.layout
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
+@import views.html.datasetimport.tranSmartTypeElements
+
+@(form: Form[TranSmartDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+
+@layout.create(
+    "TranSMART Data Set (and Dictionary) Import",
+    form,
+    tranSmartTypeElements(form),
+    controllers.dataset.routes.DataSetImportController.save,
+    routes.AppController.index,
+    'enctype -> "multipart/form-data"
+)

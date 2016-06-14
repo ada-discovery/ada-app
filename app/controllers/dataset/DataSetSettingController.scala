@@ -34,7 +34,7 @@ class DataSetSettingController @Inject() (
   override protected val form = Form(dataSetSettingMapping)
 
   override protected val home =
-    Redirect(routes.DataSetSettingController.listAll())
+    Redirect(routes.DataSetSettingController.find())
 
   override protected def createView(f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
     html.datasetsetting.create(f)
@@ -61,7 +61,7 @@ class DataSetSettingController @Inject() (
             case Accepts.Html() => {
               val updateCall = dataSetSettingRoutes.updateForDataSet(entity._id.get)
               val cancelCall = new DataSetRouter(dataSet).plainOverviewList
-              Ok(html.datasetsetting.edit("", form.fill(entity), updateCall, cancelCall, result(dataSpaceMetaInfoRepo.find())))
+              Ok(html.datasetsetting.edit("", fillForm(entity), updateCall, cancelCall, result(dataSpaceMetaInfoRepo.find())))
             }
             case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
           }
@@ -130,8 +130,6 @@ class DataSetSettingController @Inject() (
       ).as("text/javascript")
     }
   }
-
-  override protected val defaultCreateEntity = new DataSetSetting("")
 }
 
 object DataSetSettingController {

@@ -29,7 +29,7 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def find(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.find(page, orderBy, filter))
 
-  override def listAll(orderBy: Int) = dispatch(_.listAll(orderBy))
+  override def listAll(orderBy: String) = dispatch(_.listAll(orderBy))
 
   override def exportAllRecordsAsCsv(delimiter : String) = dispatch(_.exportAllRecordsAsCsv(delimiter))
 

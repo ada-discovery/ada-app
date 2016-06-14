@@ -24,7 +24,7 @@ class TranslationController @Inject() (
     )(Translation.apply)(Translation.unapply))
 
   override protected val home =
-    Redirect(routes.TranslationController.listAll())
+    Redirect(routes.TranslationController.find())
 
   override protected def createView(f : Form[Translation])(implicit msg: Messages, request: Request[_]) =
     html.translation.create(f)
@@ -37,7 +37,4 @@ class TranslationController @Inject() (
 
   override protected def listView(currentPage: Page[Translation])(implicit msg: Messages, request: Request[_]) =
     html.translation.list(currentPage)
-
-  override protected val defaultCreateEntity =
-    new Translation(None, null, null)
 }

@@ -138,7 +138,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
         fieldChartSpecs <- fieldChartSpecsFuture
         _ <- setCategoriesById(categoryRepo, items)
       } yield
-        Ok(overviewListView(Page(items, page, page * limit, count, orderBy, filter), fieldChartSpecs, metaInfos))
+        Ok(overviewListView(Page(items, page, page * pageLimit, count, orderBy, filter), fieldChartSpecs, metaInfos))
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the dictionary list process")
@@ -179,7 +179,4 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       val values = fields.map(field => Some(fieldExtractor(field).toString))
       ChartSpec.pie(values, None, chartTitle, false, true)
     }
-
-  override protected val defaultCreateEntity =
-    new Field("", FieldType.Null)
 }

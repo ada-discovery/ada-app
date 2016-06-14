@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import _root_.util.FilterSpec
 import be.objectify.deadbolt.scala.DeadboltActions
-import models.Page
+import models.{AdaException, Page}
 import persistence._
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
@@ -24,7 +24,7 @@ trait ReadonlyController[ID] {
 
   def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
 
-  def listAll(orderBy: Int): Action[AnyContent]
+  def listAll(orderBy: String): Action[AnyContent]
 }
 
 /**
@@ -38,7 +38,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
   @Inject var messagesApi: MessagesApi = _
   @Inject var deadbolt: DeadboltActions = _
 
-  protected val limit = 20
+  protected val pageLimit = 20
 
   protected val timeout = 120000 millis
 
@@ -93,7 +93,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
       implicit val msg = messagesApi.preferred(request)
 
       render {
-        case Accepts.Html() => Ok(listView(Page(items, page, page * limit, count, orderBy, filter)))
+        case Accepts.Html() => Ok(listView(Page(items, page, page * pageLimit, count, orderBy, filter)))
         case Accepts.Json() => Ok(Json.toJson(items))
       }
     }.recover {
@@ -108,13 +108,13 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
    *
    * @param orderBy Column to be sorted
    */
-  def listAll(orderBy: Int) = Action.async { implicit request =>
-    val (futureItems, futureCount) = getFutureItemsAndCount(0 ,"", new FilterSpec())
+  def listAll(orderBy: String) = Action.async { implicit request =>
+    val (futureItems, futureCount) = getFutureItemsAndCount(repo)(None, orderBy, new FilterSpec(), None, None)
     futureItems.zip(futureCount).map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
       render {
-        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, "", new FilterSpec())))
+        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, orderBy, new FilterSpec())))
         case Accepts.Json() => Ok(Json.toJson(items))
       }
     }.recover {
@@ -129,21 +129,22 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     orderBy: String,
     filter : FilterSpec
   ): (Future[Traversable[E]], Future[Int]) =
-    getFutureItemsAndCount(repo)(page, orderBy, filter, listViewColumns)
+    getFutureItemsAndCount(repo)(Some(page), orderBy, filter, listViewColumns, Some(pageLimit))
 
   protected def getFutureItemsAndCount[T](
     repox : AsyncReadonlyRepo[T, _]
   )(
-    page: Int,
+    page: Option[Int],
     orderBy: String,
-    filter : FilterSpec,
-    projectedFieldNames : Option[Seq[String]]
+    filter: FilterSpec,
+    projectedFieldNames: Option[Seq[String]],
+    limit: Option[Int]
   ): (Future[Traversable[T]], Future[Int]) = {
     val criteria = filter.toJsonCriteria
     val sort = toSort(orderBy)
     val projection = toJsonProjection(projectedFieldNames)
 
-    val futureItems = repox.find(criteria, sort, projection, Some(limit), Some(page))
+    val futureItems = repox.find(criteria, sort, projection, limit, page)
     val futureCount = repox.count(criteria)
     (futureItems, futureCount)
   }
@@ -168,6 +169,18 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
   protected def toJsonProjection(fieldNames : Option[Seq[String]]): Option[JsObject] =
     fieldNames.map(fieldNames =>
       JsObject(fieldNames.map(fieldName => (fieldName, Json.toJson(1)))))
+
+  protected def getParamValue(paramKey: String)(implicit request: Request[AnyContent]) = {
+    val body = request.body
+    val paramMap = if (body.asFormUrlEncoded.isDefined)
+      body.asFormUrlEncoded.get
+    else if (body.asMultipartFormData.isDefined)
+      body.asMultipartFormData.get.asFormUrlEncoded
+    else
+      throw new AdaException("FormUrlEncoded or MultipartFormData request expected.")
+
+    paramMap.get(paramKey).get.head
+  }
 
   protected def result[T](future: Future[T]): T =
     Await.result(future, timeout)

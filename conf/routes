@@ -33,7 +33,7 @@ GET         /logoutRest                                                         
 GET         /ldaplist                                                               controllers.LdapController.ldapList
 GET         /ldap/settings                                                          controllers.LdapController.settings
 GET         /ldap/users                                                             controllers.LdapUserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /ldap/users/all                                                         controllers.LdapUserController.listAll(s: Int ?= 2)
+GET         /ldap/users/all                                                         controllers.LdapUserController.listAll(s: String ?= "name")
 GET         /ldap/:id/get                                                           controllers.LdapUserController.get(id: String)
 
 # Admin
@@ -41,25 +41,24 @@ GET         /admin/runnables                                                    
 GET         /admin/runScript                                                        controllers.AdminController.runScript(className : String)
 
 # Data Set Import
-GET         /admin/csvDataSetUpload/new                                             controllers.dataset.importinfo.CsvDataSetImportController.create
-POST        /admin/csvDataSetUpload/upload                                          controllers.dataset.importinfo.CsvDataSetImportController.upload
-GET         /admin/tranSmartDataSetUpload/new                                       controllers.dataset.importinfo.TranSmartDataSetImportController.create
-POST        /admin/tranSmartDataSetUpload/upload                                    controllers.dataset.importinfo.TranSmartDataSetImportController.upload
-GET         /admin/synapseDataSetUpload/new                                         controllers.dataset.importinfo.SynapseDataSetImportController.create
-POST        /admin/synapseDataSetUpload/upload                                      controllers.dataset.importinfo.SynapseDataSetImportController.upload
+GET         /admin/dataSetImport                                                    controllers.dataset.DataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter : util.FilterSpec ?= new util.FilterSpec())
+GET         /admin/dataSetImport/all                                                controllers.dataset.DataSetImportController.listAll(s: String ?= "dataSpaceName")
+GET         /admin/dataSetImport/new                                                controllers.dataset.DataSetImportController.create(concreteClassName: String)
+GET         /admin/dataSetImport/execute/:id                                        controllers.dataset.DataSetImportController.execute(id: BSONObjectID)
 
-GET         /admin/dataSetImport                                                    controllers.dataset.importinfo.CsvDataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /admin/dataSetImport/all                                                controllers.dataset.importinfo.CsvDataSetImportController.listAll(s: Int ?= 2)
-GET         /admin/dataSetImport/new                                                controllers.dataset.importinfo.CsvDataSetImportController.create
-POST        /admin/dataSetImport/save                                               controllers.dataset.importinfo.CsvDataSetImportController.save
-GET         /admin/dataSetImport/:id/get                                            controllers.dataset.importinfo.CsvDataSetImportController.get(id: BSONObjectID)
-GET         /admin/dataSetImport/:id                                                controllers.dataset.importinfo.CsvDataSetImportController.edit(id: BSONObjectID)
-POST        /admin/dataSetImport/:id                                                controllers.dataset.importinfo.CsvDataSetImportController.update(id: BSONObjectID)
-POST        /admin/dataSetImport/:id/delete                                         controllers.dataset.importinfo.CsvDataSetImportController.delete(id: BSONObjectID)
+POST        /admin/dataSetImport/upload/csv                                         controllers.dataset.DataSetImportController.uploadCsv
+POST        /admin/dataSetImport/upload/tranSmart                                   controllers.dataset.DataSetImportController.uploadTranSmart
+POST        /admin/dataSetImport/upload/synapse                                     controllers.dataset.DataSetImportController.uploadSynapse
+
+POST        /admin/dataSetImport/save                                               controllers.dataset.DataSetImportController.save
+GET         /admin/dataSetImport/:id/get                                            controllers.dataset.DataSetImportController.get(id: BSONObjectID)
+GET         /admin/dataSetImport/:id                                                controllers.dataset.DataSetImportController.edit(id: BSONObjectID)
+POST        /admin/dataSetImport/:id                                                controllers.dataset.DataSetImportController.update(id: BSONObjectID)
+POST        /admin/dataSetImport/:id/delete                                         controllers.dataset.DataSetImportController.delete(id: BSONObjectID)
 
 # Users management
 GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /users/all                                                              controllers.UserController.listAll(s: Int ?= 2)
+GET         /users/all                                                              controllers.UserController.listAll(s: String ?= "name")
 GET         /users/new                                                              controllers.UserController.create
 POST        /users/save                                                             controllers.UserController.save
 GET         /users/:id/get                                                          controllers.UserController.get(id: BSONObjectID)
@@ -69,7 +68,7 @@ POST        /users/:id/delete                                                   
 
 # Translations
 GET         /translations                                                           controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /translations/all                                                       controllers.TranslationController.listAll(s: Int ?= 2)
+GET         /translations/all                                                       controllers.TranslationController.listAll(s: String ?= "original")
 GET         /translations/new                                                       controllers.TranslationController.create
 POST        /translations/save                                                      controllers.TranslationController.save
 GET         /translations/:id/get                                                   controllers.TranslationController.get(id: BSONObjectID)
@@ -127,7 +126,7 @@ GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>           
 GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
 
 GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /studies/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: Int ?= 2)
+GET         /studies/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: String ?= "dataSetId")
 GET         /studies/setting/new                                                    controllers.dataset.DataSetSettingController.create
 POST        /studies/setting/save                                                   controllers.dataset.DataSetSettingController.save
 GET         /studies/setting/:id/get                                                controllers.dataset.DataSetSettingController.get(id: BSONObjectID)
@@ -141,7 +140,7 @@ GET         /studies/setting/addToOverviewTable/                                
 GET         /studies/setting/jsRoutes/                                              controllers.dataset.DataSetSettingController.jsRoutes
 
 GET         /studies/metainfo                                                       controllers.dataset.DataSpaceMetaInfoController.find(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
-GET         /studies/metainfo/all                                                   controllers.dataset.DataSpaceMetaInfoController.listAll(s: Int ?= 2)
+GET         /studies/metainfo/all                                                   controllers.dataset.DataSpaceMetaInfoController.listAll(s: String ?= "name")
 GET         /studies/metainfo/new                                                   controllers.dataset.DataSpaceMetaInfoController.create
 POST        /studies/metainfo/save                                                  controllers.dataset.DataSpaceMetaInfoController.save
 GET         /studies/metainfo/:id/get                                               controllers.dataset.DataSpaceMetaInfoController.get(id: BSONObjectID)

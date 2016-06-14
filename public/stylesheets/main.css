@@ -115,3 +115,11 @@ tr.clickable-row {
 .top-padded {
     padding-top: 15px;
 }
+
+.green {
+    color: green;
+}
+
+.btn-clean {
+    background-color: transparent;
+}

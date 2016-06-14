@@ -261,7 +261,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
 
         render {
-          case Accepts.Html() => Ok(overviewListView(Page(renamedItems, page, page * limit, count, orderBy, filter), fieldChartSpecs, tableFields))
+          case Accepts.Html() => Ok(overviewListView(Page(renamedItems, page, page * pageLimit, count, orderBy, filter), fieldChartSpecs, tableFields))
           case Accepts.Json() => Ok(Json.toJson(renamedItems))
         }
       }

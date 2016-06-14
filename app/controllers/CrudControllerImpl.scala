@@ -40,33 +40,37 @@ protected abstract class CrudControllerImpl[E: Format, ID](
 
   protected def form: Form[E]
 
+  protected def fillForm(entity: E): Form[E] =
+    form.fill(entity)
+
+  protected def formFromRequest(implicit request: Request[AnyContent]): Form[E] =
+    form.bindFromRequest
+
   protected def createView(
     form : Form[E]
-  )(implicit msg: Messages, request: Request[_]) : Html
+  )(implicit msg: Messages, request: Request[_]): Html
 
   protected def editView(
     id : ID,
     form : Form[E]
-  )(implicit msg: Messages, request: Request[_]) : Html
+  )(implicit msg: Messages, request: Request[_]): Html
 
   protected def showView(
      id : ID,
      form : Form[E]
-  )(implicit msg: Messages, request: Request[_]) : Html
+  )(implicit msg: Messages, request: Request[_]): Html
 
   override protected def showView(
     id : ID,
     entity : E
   )(implicit msg: Messages, request: Request[_]) =
-    showView(id, form.fill(entity))
+    showView(id, fillForm(entity))
 
-  protected def home : Result
-
-  protected def defaultCreateEntity : E
+  protected def home: Result
 
   def create = Action { implicit request =>
     implicit val msg = messagesApi.preferred(request)
-    Ok(createView(form.fill(defaultCreateEntity)))
+    Ok(createView(form))
   }
 
   def edit(id: ID) = Action.async { implicit request =>
@@ -76,7 +80,7 @@ protected abstract class CrudControllerImpl[E: Format, ID](
       implicit val msg = messagesApi.preferred(request)
 
       render {
-        case Accepts.Html() => Ok(editView(id, form.fill(entity)))
+        case Accepts.Html() => Ok(editView(id, fillForm(entity)))
         case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
       }
     }).recover {
@@ -89,26 +93,27 @@ protected abstract class CrudControllerImpl[E: Format, ID](
   protected def editCall(id: ID)(implicit request: Request[AnyContent]): Future[Option[E]] = repo.get(id)
 
   def save = Action.async { implicit request =>
-    form.bindFromRequest.fold(
-    { formWithErrors =>
-      implicit val msg = messagesApi.preferred(request)
-      Future.successful(BadRequest(createView(formWithErrors)))
-    },
-    item => {
-      saveCall(item).map { id =>
-        render {
-          case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been created")
-          case Accepts.Json() => Created(Json.obj("message" -> "Item successly created", "id" -> id.toString))
+    formFromRequest.fold(
+      { formWithErrors =>
+        implicit val msg = messagesApi.preferred(request)
+        Future.successful(BadRequest(createView(formWithErrors)))
+      },
+      item => {
+        saveCall(item).map { id =>
+          render {
+            case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been created")
+            case Accepts.Json() => Created(Json.obj("message" -> "Item successfully created", "id" -> id.toString))
+          }
+        }.recover {
+          case t: TimeoutException =>
+            Logger.error("Problem found in the update process")
+            InternalServerError(t.getMessage)
+          case i: RepoException =>
+            Logger.error("Problem found in the update process")
+            InternalServerError(i.getMessage)
         }
-      }.recover {
-        case t: TimeoutException =>
-          Logger.error("Problem found in the update process")
-          InternalServerError(t.getMessage)
-        case i: RepoException =>
-          Logger.error("Problem found in the update process")
-          InternalServerError(i.getMessage)
       }
-    })
+    )
   }
 
   protected def saveCall(item: E)(implicit request: Request[AnyContent]): Future[ID] = repo.save(item)
@@ -116,7 +121,7 @@ protected abstract class CrudControllerImpl[E: Format, ID](
   def update(id: ID): Action[AnyContent] = update(id, home)
 
   protected def update(id: ID, redirect: Result): Action[AnyContent] = Action.async { implicit request =>
-    form.bindFromRequest.fold(
+    formFromRequest.fold(
       { formWithErrors =>
         implicit val msg = messagesApi.preferred(request)
         Future.successful(BadRequest(editView(id, formWithErrors)))

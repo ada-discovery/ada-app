@@ -1,0 +1,17 @@
+@import models.SynapseDataSetImportInfo
+@import views.html.layout
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
+@import views.html.datasetimport.synapseTypeElements
+@import reactivemongo.bson.BSONObjectID
+
+@(id: BSONObjectID, form: Form[SynapseDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+
+@layout.edit(
+    "Synapse Data Set Import",
+    form.errors,
+    synapseTypeElements(form),
+    controllers.dataset.routes.DataSetImportController.update(id),
+    controllers.dataset.routes.DataSetImportController.listAll(),
+    Some(controllers.dataset.routes.DataSetImportController.delete(id))
+)

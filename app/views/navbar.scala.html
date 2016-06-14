@@ -45,18 +45,14 @@
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                             Admin<span class="caret"></span></a>
                         <ul class="dropdown-menu">
-                            @listItem(routes.AdminController.listRunnables(), "Runnables")
-                            <li role="separator" class="divider"></li>
-                            @listItem(controllers.dataset.importinfo.routes.CsvDataSetImportController.create(), "Import CSV Data Set")
-                            @listItem(controllers.dataset.importinfo.routes.TranSmartDataSetImportController.create(), "Import TranSMART Data Set and Dictionary")
-                            @listItem(controllers.dataset.importinfo.routes.SynapseDataSetImportController.create(), "Import Synapse Data Set")
-                            @listItem(controllers.dataset.importinfo.routes.CsvDataSetImportController.find(), "Data Set Imports")
-                            <li role="separator" class="divider"></li>
+                            @listItem(controllers.dataset.routes.DataSetImportController.find(), "Data Set Imports")
                             @listItem(controllers.dataset.routes.DataSetSettingController.find(), "Data Set Settings")
                             <li role="separator" class="divider"></li>
                             @listItem(routes.UserController.listAll(), "Users")
                             @listItem(routes.LdapUserController.listAll(), "LDAP User")
                             @listItem(routes.LdapController.settings(), "LDAP Settings")
+                            <li role="separator" class="divider"></li>
+                            @listItem(routes.AdminController.listRunnables(), "Runnables")
                         </ul>
                     </li>
                 }

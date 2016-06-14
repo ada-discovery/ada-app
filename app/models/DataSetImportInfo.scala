@@ -48,7 +48,7 @@ case class TranSmartDataSetImportInfo(
   setting: Option[DataSetSetting]
 ) extends DataSetImportInfo
 
-case class RedCapImportInfo(
+case class RedCapDataSetImportInfo(
   _id: Option[BSONObjectID],
   dataSpaceName: String,
   dataSetId: String,
@@ -66,7 +66,7 @@ object DataSetImportInfoFormattersAndIds {
       ManifestedFormat(Json.format[CsvDataSetImportInfo]),
       ManifestedFormat(Json.format[SynapseDataSetImportInfo]),
       ManifestedFormat(Json.format[TranSmartDataSetImportInfo]),
-      ManifestedFormat(Json.format[RedCapImportInfo])
+      ManifestedFormat(Json.format[RedCapDataSetImportInfo])
     )
   )
 
@@ -77,7 +77,7 @@ object DataSetImportInfoFormattersAndIds {
         case x: CsvDataSetImportInfo => x.copy(_id = id)
         case x: SynapseDataSetImportInfo => x.copy(_id = id)
         case x: TranSmartDataSetImportInfo => x.copy(_id = id)
-        case x: RedCapImportInfo => x.copy(_id = id)
+        case x: RedCapDataSetImportInfo => x.copy(_id = id)
       }
   }
 }

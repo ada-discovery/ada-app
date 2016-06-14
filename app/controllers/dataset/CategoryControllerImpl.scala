@@ -177,7 +177,4 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     val categoriesFuture = repo.find(None, Some(Seq(AscSort("name"))))
     result(categoriesFuture)
   }
-
-  override protected val defaultCreateEntity =
-    Category(None, "")
 }

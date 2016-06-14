@@ -1,0 +1,69 @@
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import controllers.dataset.routes.{DataSetImportController => dataSetImportRoutes}
+@import util.{typeColumns, toHumanReadableCamel}
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
+
+@(
+    page: Page[DataSetImportInfo],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(implicit flash:Flash, msg: Messages, request: Request[_])
+
+@importLink(clazz: Class[_], title: String) = {
+    <li>
+        <a href="@dataSetImportRoutes.create(clazz.getName)">
+            @title
+        </a>
+    </li>
+}
+
+@actions = {
+    <div class="row">
+        <div class="col-md-10">
+            @filter(page.filter, dataSetImportRoutes.find(), Left(Seq("dataSpaceName", "dataSetName")))
+        </div>
+        <div class="dropdown pull-right">
+            <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-toggle="tooltip" title="Add Data Set Import">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                @importLink(classOf[CsvDataSetImportInfo], "Csv Import")
+                @importLink(classOf[TranSmartDataSetImportInfo], "TranSmart Import")
+                @importLink(classOf[RedCapDataSetImportInfo], "Red Cap Import")
+                @importLink(classOf[SynapseDataSetImportInfo], "Synapse Import")
+            </ul>
+        </div>
+    </div>
+}
+
+@executeLink(dataSetImport: DataSetImportInfo) = {
+    <a class="btn btn-default btn-xs btn-clean no-rowClicked" href="@dataSetImportRoutes.execute(dataSetImport._id.get)">
+        <span class="glyphicon glyphicon-play green" aria-hidden="true"></span>
+    </a>
+}
+
+@table = @{
+    paginatedTable(
+        page,
+        dataSetImportRoutes.find(_, _, page.filter),
+        typeColumns[DataSetImportInfo](
+            (Some("dataSpaceName"), "Data Space Name", _.dataSpaceName),
+            (Some("dataSetName"), "Data Set Name", _.dataSetName),
+            (Some("concreteClass"), "Type", {importInfo => toHumanReadableCamel(importInfo.getClass.getSimpleName)}),
+            (None, "Execute", executeLink)
+        ),
+        Some({ item : Any => dataSetImportRoutes.get(item.asInstanceOf[DataSetImportInfo]._id.get)})
+    )
+}
+
+@layout.list(
+    "Data Set Import",
+    page.total,
+    actions,
+    table,
+    None,
+    Some(datasetMenu(dataSpaceMetaInfos))
+)

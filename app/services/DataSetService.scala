@@ -1,7 +1,7 @@
 package services
 
 import java.io.File
-import java.nio.charset.{MalformedInputException, Charset}
+import java.nio.charset.{UnsupportedCharsetException, MalformedInputException, Charset}
 import javax.inject.Inject
 import util.ExecutionContexts
 import com.google.inject.ImplementedBy
@@ -31,7 +31,7 @@ trait DataSetService {
 
   def importDataSet(
     importInfo: CsvDataSetImportInfo,
-    file: Option[File]
+    file: Option[File] = None
   ): Future[Unit]
 
   def importDataSet(
@@ -40,9 +40,9 @@ trait DataSetService {
 
   def importDataSetAndDictionary(
     importInfo: TranSmartDataSetImportInfo,
-    dataFile: Option[File],
-    mappingFile: Option[File],
-    typeInferenceProvider: TypeInferenceProvider
+    dataFile: Option[File] = None,
+    mappingFile: Option[File] = None,
+    typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
   ): Future[Unit]
 
   def inferDictionary(
@@ -209,6 +209,7 @@ class DataSetServiceImpl @Inject()(
         }
       }
     } catch {
+      case e: UnsupportedCharsetException => throw AdaParseException(s"Unsupported charset '${charsetName.get}' detected.", e)
       case e: MalformedInputException => throw AdaParseException("Malformed input detected. It's most likely due to some special characters. Try a different chartset.", e)
     }
   }

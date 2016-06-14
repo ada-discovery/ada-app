@@ -34,7 +34,7 @@ class UserController @Inject() (
       )(CustomUser.apply)(CustomUser.unapply))//(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))
 
   override protected val home =
-    Redirect(routes.UserController.listAll())
+    Redirect(routes.UserController.find())
 
   override protected def createView(f : Form[CustomUser])(implicit msg: Messages, request: Request[_]) = {
     val metaInfos = result(dataSpaceMetaInfoRepo.find())
@@ -73,8 +73,4 @@ class UserController @Inject() (
     mailer.send(mail)
     repo.save(item)
   }
-
-  //@Deprecated
-  override protected val defaultCreateEntity = new CustomUser(None, "", "", Seq[String](), Seq[String]())
-  //override protected val defaultCreateEntity = new CustomUser(None, "", "", "", "", Seq(SecurityRoleCache.basicRole), Seq())
 }
