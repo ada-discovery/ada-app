@@ -3,22 +3,29 @@ package services
 import javax.inject.{Inject, Singleton}
 
 import com.fasterxml.jackson.core.JsonParseException
-import com.google.inject.ImplementedBy
+import com.google.inject.assistedinject.Assisted
 import play.api.libs.json.{JsObject, JsArray}
 import play.api.libs.ws.{WSRequest, WSClient}
 import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import util.JsonUtil._
 
-import models.Dictionary
-import models.Field
 import models.redcap.JsonFormat._
 import models.redcap._
 
-import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-@ImplementedBy(classOf[RedCapServiceWSImpl])
+trait RedCapServiceFactory {
+  def apply(@Assisted("url") url: String, @Assisted("token") token: String): RedCapService
+}
+
+object RedCapServiceFactory {
+  def defaultRedCapService(redCapServiceFactory: RedCapServiceFactory, configuration: Configuration): RedCapService = {
+    val url = configuration.getString("redcap.prodserver.api.url").get
+    val token = configuration.getString("redcap.prodserver.token").get
+    redCapServiceFactory(url, token)
+  }
+}
 trait RedCapService {
 
   /**
@@ -81,20 +88,17 @@ trait RedCapService {
   def getExportField(id: String) : Future[Seq[JsObject]]
 }
 
-@Singleton
-protected class RedCapServiceWSImpl @Inject() (
+protected[services] class RedCapServiceWSImpl @Inject() (
+    @Assisted("url") private val url: String,
+    @Assisted("token") private val token: String,
     ws: WSClient,
     configuration: Configuration
   ) extends RedCapService {
 
-//  implicit val sslClient = NingWSClient()
-
-//  val req: WSRequest = sslClient.url(current.configuration.getString("redcap.prodserver.api.url").get)
-
-  val req: WSRequest = ws.url(configuration.getString("redcap.prodserver.api.url").get)
+  val req: WSRequest = ws.url(url) // configuration.getString("redcap.prodserver.api.url").get
 
   val baseRequestData = Map(
-    "token" -> configuration.getString("redcap.prodserver.token").get,
+    "token" -> token,   // configuration.getString("redcap.prodserver.token").get
     "format" -> "json"
   )
 

@@ -6,11 +6,13 @@ import models.redcap.Metadata
 import models.{FieldType, Field, Category}
 import models.redcap.{FieldType => RCFieldType}
 import persistence.RepoSynchronizer
+import play.api.Configuration
 import runnables.DataSetId.luxpark
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable
-import services.{DataSetService, DeNoPaSetting, RedCapService}
+import services.RedCapServiceFactory._
+import services.{RedCapServiceFactory, DataSetService, DeNoPaSetting, RedCapService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import util.JsonUtil
 import scala.collection.Set
@@ -20,10 +22,12 @@ import scala.concurrent.duration._
 
 class ImportLuxParkDictionaryFromRedCap @Inject() (
     dsaf: DataSetAccessorFactory,
-    redCapService: RedCapService,
-    dataSetService: DataSetService
+    redCapServiceFactory: RedCapServiceFactory,
+    dataSetService: DataSetService,
+    configuration: Configuration
   ) extends Runnable {
 
+  private val redCapService = defaultRedCapService(redCapServiceFactory, configuration)
   private val choicesDelimeter = "\\|"
   private val choiceKeyValueDelimeter = ","
   private val timeout = 120000 millis

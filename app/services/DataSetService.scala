@@ -3,19 +3,19 @@ package services
 import java.io.File
 import java.nio.charset.{UnsupportedCharsetException, MalformedInputException, Charset}
 import javax.inject.Inject
-import util.ExecutionContexts
+import models.redcap.{Metadata, FieldType => RCFieldType}
+import _root_.util.{JsonUtil, ExecutionContexts, TypeInferenceProvider}
 import com.google.inject.ImplementedBy
 import models._
 import models.synapse.{SelectColumn, ColumnType}
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
-import persistence.dataset.DataSetAccessorFactory
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import persistence.dataset.DictionaryCategoryRepo.saveRecursively
 import play.api.Logger
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
-import _root_.util.TypeInferenceProvider
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import scala.concurrent.Await.result
@@ -45,6 +45,11 @@ trait DataSetService {
     typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
   ): Future[Unit]
 
+  def importDataSetAndDictionary(
+    importInfo: RedCapDataSetImportInfo,
+    typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
+  ): Future[Unit]
+
   def inferDictionary(
     dataSetId: String,
     typeInferenceProvider: TypeInferenceProvider,
@@ -62,6 +67,7 @@ class DataSetServiceImpl @Inject()(
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dsaf: DataSetAccessorFactory,
     dataSetSettingRepo: DataSetSettingRepo,
+    redCapServiceFactory: RedCapServiceFactory,
     synapseServiceFactory: SynapseServiceFactory,
     configuration: Configuration
   ) extends DataSetService{
@@ -73,6 +79,10 @@ class DataSetServiceImpl @Inject()(
 
   private val tranSmartDelimeter = '\t'
   private val tranSmartFieldGroupSize = 100
+
+  private val redCapChoicesDelimeter = "\\|"
+  private val redCapChoiceKeyValueDelimeter = ","
+  private val redCapVisitField = "redcap_event_name"
 
   private val synapseDelimiter = ','
   private val synapseEol = "\n"
@@ -182,6 +192,32 @@ class DataSetServiceImpl @Inject()(
     )(ExecutionContexts.SynapseExecutionContext)
   }
 
+  override def importDataSetAndDictionary(
+    importInfo: RedCapDataSetImportInfo,
+    typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
+  ) = {
+    // Red cap service to pull the data from
+    val redCapService = redCapServiceFactory(importInfo.url, importInfo.token)
+
+    // Data repo to store the data to
+    val dataSetAccessor = createDataSetAccessor(importInfo)
+    val dataRepo = dataSetAccessor.dataSetRepo
+
+    for {
+      // delete all records
+      _ <- dataRepo.deleteAll
+      // get the data from a given red cap service
+      records <- redCapService.listRecords("cdisc_dm_usubjd", "")
+      // save the records (...ignore the results)
+      _ <- Future.sequence(records.map(dataRepo.save))
+      // import dictionary (if needed)
+      _ <- if (importInfo.importDictionaryFlag)
+        importAndInferRedCapDictionary(redCapService, dataSetAccessor)
+      else
+        Future(())
+    } yield ()
+  }
+
   private def createCsvFileLineIteratorAndCount(
     pathOrFile: Either[String, java.io.File],
     charsetName: Option[String],
@@ -216,7 +252,7 @@ class DataSetServiceImpl @Inject()(
 
   /**
     * Parses and imports data set using a provided line iterator
- *
+    *
     * @param importInfo
     * @param delimiter
     * @param skipFirstLine
@@ -232,14 +268,7 @@ class DataSetServiceImpl @Inject()(
   ): Future[Seq[String]] = {
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
-    val dataSetAccessor =
-      result(dsaf.register(
-        importInfo.dataSpaceName,
-        importInfo.dataSetId,
-        importInfo.dataSetName,
-        importInfo.setting
-      ), timeout)
-
+    val dataSetAccessor = createDataSetAccessor(importInfo)
     val dataRepo = dataSetAccessor.dataSetRepo
     val syncDataRepo = RepoSynchronizer(dataRepo, timeout)
 
@@ -308,6 +337,14 @@ class DataSetServiceImpl @Inject()(
       columnNames
     }
   }
+
+  private def createDataSetAccessor(importInfo: DataSetImportInfo): DataSetAccessor =
+    result(dsaf.register(
+      importInfo.dataSpaceName,
+      importInfo.dataSetId,
+      importInfo.dataSetName,
+      importInfo.setting
+    ), timeout)
 
   override def inferDictionary(
     dataSetId: String,
@@ -445,6 +482,92 @@ class DataSetServiceImpl @Inject()(
     )
   }
 
+  protected def importAndInferRedCapDictionary(
+    redCapService: RedCapService,
+    dsa: DataSetAccessor,
+    typeInferenceProvider: TypeInferenceProvider
+  ): Future[Unit] = {
+    val dataSetRepo = dsa.dataSetRepo
+    val fieldRepo = dsa.fieldRepo
+    val categoryRepo = dsa.categoryRepo
+
+    val dictionarySyncRepo = RepoSynchronizer(fieldRepo, timeout)
+    // init dictionary if needed
+    result(fieldRepo.initIfNeeded, timeout)
+    // delete all fields
+    dictionarySyncRepo.deleteAll
+    // delete all categories
+    result(categoryRepo.deleteAll, timeout)
+
+    // TODO: stay async.... avoid result(..)
+    val metadatas = result(redCapService.listMetadatas("field_name", ""), timeout)
+    val nameCategoryIdFutures = metadatas.map(_.form_name).toSet.map { formName : String =>
+      val category = new Category(formName)
+      categoryRepo.save(category).map(id => (category.name, id))
+    }
+
+    // categories
+
+    val nameCategoryIdMap = result(Future.sequence(nameCategoryIdFutures), timeout).toMap
+
+    val fieldNames = result(getFieldNames(dataSetRepo), timeout)
+
+    // TODO: optimize this... introduce field groups to speed up inference
+    val futures = metadatas.filter(metadata => fieldNames.contains(metadata.field_name)).par.map{ metadata =>
+      val fieldName = metadata.field_name
+      println(fieldName + " " + metadata.field_type)
+      val fieldTypeFuture = inferFieldType(dataSetRepo, typeInferenceProvider, fieldName)
+      val (isArray, inferredType) = result(fieldTypeFuture, timeout)
+
+      val (fieldType, numValues) = metadata.field_type match {
+        case RCFieldType.radio => (FieldType.Enum, getEnumValues(metadata))
+        case RCFieldType.checkbox => (FieldType.Enum, getEnumValues(metadata))
+        case RCFieldType.dropdown => (FieldType.Enum, getEnumValues(metadata))
+
+        case RCFieldType.calc => (inferredType, None)
+        case RCFieldType.text => (inferredType, None)
+        case RCFieldType.descriptive => (inferredType, None)
+        case RCFieldType.yesno => (inferredType, None)
+        case RCFieldType.notes => (inferredType, None)
+        case RCFieldType.file => (inferredType, None)
+      }
+
+      val categoryId = nameCategoryIdMap.get(metadata.form_name)
+      val field = Field(metadata.field_name, fieldType, isArray, numValues, Seq[String](), Some(metadata.field_label), categoryId)
+      fieldRepo.save(field)
+    }
+
+    // also add redcap_event_name
+    val visitFieldFuture = fieldRepo.save(Field(redCapVisitField, FieldType.Enum))
+
+    Future.sequence(futures.toList ++ Seq(visitFieldFuture)).map(_ => ())
+  }
+
+  private def getFieldNames(dataRepo: JsObjectCrudRepo): Future[Set[String]] =
+    for {
+      records <- dataRepo.find(None, None, None, Some(1))
+    } yield
+      records.headOption.map(_.keys).getOrElse(
+        throw new AdaException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
+      )
+
+  private def getEnumValues(metadata: Metadata) : Option[Map[String, String]] = {
+    val choices = metadata.select_choices_or_calculations.trim
+
+    if (choices.nonEmpty) {
+      try {
+        val keyValueMap = choices.split(redCapChoicesDelimeter).map { choice =>
+          val keyValueString = choice.split(redCapChoiceKeyValueDelimeter, 2)
+          (JsonUtil.escapeKey(keyValueString(0).trim), keyValueString(1).trim)
+        }.toMap
+        Some(keyValueMap)
+      } catch {
+        case e: Exception => throw new IllegalArgumentException(s"RedCap Metadata '${metadata.field_name}' has non-parseable choices '${metadata.select_choices_or_calculations}'.")
+      }
+    } else
+      None
+  }
+
   def inferFieldTypes(
     dataRepo: JsObjectCrudRepo,
     typeInferenceProvider: TypeInferenceProvider,
@@ -497,14 +620,6 @@ class DataSetServiceImpl @Inject()(
       case x: JsString => Some(jsValue.as[String])
       case _ => Some(jsValue.toString)
     }
-
-  protected def getFieldNames(dataRepo: JsObjectCrudRepo): Future[Set[String]] =
-    for {
-      records <- dataRepo.find(None, None, None, Some(1))
-    } yield
-      records.headOption.map(_.keys).getOrElse(
-        throw new AdaException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
-      )
 
   protected def getColumnNames(delimiter: String, lineIterator: Iterator[String]) =
     lineIterator.take(1).map {

@@ -3,11 +3,13 @@ package runnables.luxpark
 import javax.inject.Inject
 
 import persistence.RepoSynchronizer
+import play.api.Configuration
 import runnables.DataSetId.luxpark
 import persistence.RepoTypes.DataSpaceMetaInfoRepo
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable
-import services.RedCapService
+import services.RedCapServiceFactory._
+import services.{RedCapServiceFactory, RedCapService}
 
 import scala.concurrent.Await._
 import scala.concurrent.{Future, Await}
@@ -16,9 +18,11 @@ import scala.concurrent.duration._
 class ImportLuxParkDataFromRedCap @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
-    redCapService: RedCapService
+    redCapServiceFactory: RedCapServiceFactory,
+    configuration: Configuration
   ) extends Runnable {
 
+  private val redCapService = defaultRedCapService(redCapServiceFactory, configuration)
   private val timeout = 120000 millis
 
   lazy val dataSetAccessor =

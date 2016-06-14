@@ -1,5 +1,5 @@
 @import models.RedCapDataSetImportInfo
-@import views.html.elements.inputText
+@import views.html.elements.{inputText, checkbox}
 @import play.api.i18n.Messages
 @import views.html.datasetimport.{settingPanel, dataSetInfoPanel}
 
@@ -14,6 +14,7 @@
     <div class="panel-body">
         @inputText("redCapDataSetImportInfo", "url", form)
         @inputText("redCapDataSetImportInfo", "token", form)
+        @checkbox("redCapDataSetImportInfo", "importDictionaryFlag", form)
     </div>
 </div>
 

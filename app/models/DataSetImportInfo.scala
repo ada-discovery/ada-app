@@ -55,6 +55,7 @@ case class RedCapDataSetImportInfo(
   dataSetName: String,
   url: String,
   token: String,
+  importDictionaryFlag: Boolean,
   setting: Option[DataSetSetting]
 ) extends DataSetImportInfo
 

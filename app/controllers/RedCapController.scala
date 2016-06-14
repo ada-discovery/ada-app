@@ -2,6 +2,7 @@ package controllers
 
 import be.objectify.deadbolt.scala.DeadboltActions
 import org.apache.commons.lang3.StringEscapeUtils
+import play.api.Configuration
 import util.{ConditionType, FilterCondition, FilterSpec}
 
 import scala.concurrent.duration._
@@ -12,7 +13,8 @@ import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{Json, JsObject, JsString, JsNull}
-import services.{TranSMARTService, RedCapService}
+import services.{RedCapServiceFactory, TranSMARTService, RedCapService}
+import services.RedCapServiceFactory.defaultRedCapService
 import views.html
 import play.api.mvc.{ResponseHeader, Action, Controller, Result}
 import collection.mutable.{Map => MMap}
@@ -23,12 +25,14 @@ import util.SecurityUtil.restrictAdmin
 import scala.concurrent.Await
 
 class RedCapController @Inject() (
-    redCapService: RedCapService,
+    redCapServiceFactory: RedCapServiceFactory,
     tranSMARTService: TranSMARTService,
     deadbolt: DeadboltActions,
-    messagesApi: MessagesApi
+    messagesApi: MessagesApi,
+    configuration: Configuration
   ) extends Controller {
 
+  private val redCapService = defaultRedCapService(redCapServiceFactory, configuration)
   private val limit = 20
   private val timeout = 120000 millis
   private val exportCharset = "UTF-8"

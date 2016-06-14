@@ -82,6 +82,7 @@ class DataSetImportController @Inject()(
       "dataSetName" -> nonEmptyText,
       "url" -> nonEmptyText,
       "token" -> nonEmptyText,
+      "importDictionaryFlag" -> boolean,
       "setting" -> optional(dataSetSettingMapping)
     ) (RedCapDataSetImportInfo.apply)(RedCapDataSetImportInfo.unapply)
   )

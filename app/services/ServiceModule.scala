@@ -9,5 +9,9 @@ class ServiceModule extends AbstractModule {
     install(new FactoryModuleBuilder()
       .implement(classOf[SynapseService], classOf[SynapseServiceWSImpl])
       .build(classOf[SynapseServiceFactory]))
+
+    install(new FactoryModuleBuilder()
+      .implement(classOf[RedCapService], classOf[RedCapServiceWSImpl])
+      .build(classOf[RedCapServiceFactory]))
   }
 }
