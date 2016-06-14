@@ -43,5 +43,7 @@ dataSetImportInfo.dataSpaceName.label = Study Name
 dataSetImportInfo.eol.label = Specific EOL
 dataSetImportInfo.path.label = Server-side Path
 
+redCapDataSetImportInfo.importDictionaryFlag.label = Import Dictionary?
+
 login.id = User Id
 login.password= Password

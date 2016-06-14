@@ -5,7 +5,7 @@ import javax.inject.{Inject, Singleton}
 import com.fasterxml.jackson.core.JsonParseException
 import com.google.inject.assistedinject.Assisted
 import play.api.libs.json.{JsObject, JsArray}
-import play.api.libs.ws.{WSRequest, WSClient}
+import play.api.libs.ws.{WSResponse, WSRequest, WSClient}
 import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import util.JsonUtil._
@@ -160,12 +160,19 @@ protected[services] class RedCapServiceWSImpl @Inject() (
   private def runRedCapQuery(requestData : Map[String, String]) =
     req.post(requestData.map { case (a, b) => (a, Seq(b)) }).map { response =>
       try {
+        handleErrorResponse(response)
         response.json.as[JsArray].value.asInstanceOf[Seq[JsObject]]
       } catch {
         case e: JsonParseException => {
-          println(response.toString())
-          List[JsObject]()
+          throw new AdaRestException("Couldn't parse Red Cap JSON response.")
         }
       }
+    }
+
+  private def handleErrorResponse(response: WSResponse): Unit =
+    response.status match {
+      case x if x >= 200 && x<= 299 => ()
+      case 401 | 403 => throw new AdaUnauthorizedAccessRestException(response.status + ": Unauthorized access.")
+      case _ => throw new AdaRestException(response.status + ": " + response.statusText + "; " + response.body)
     }
 }

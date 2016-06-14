@@ -117,9 +117,9 @@ class DataSetImportController @Inject()(
   def executeTyped(dataSetImport: DataSetImportInfo): Future[Unit] =
     dataSetImport match {
       case x: CsvDataSetImportInfo => dataSetService.importDataSet(x)
-      case x: TranSmartDataSetImportInfo => dataSetService.importDataSetAndDictionary(x)
+      case x: TranSmartDataSetImportInfo => dataSetService.importDataSetAndDictionary(x, None, None, DeNoPaSetting.typeInferenceProvider)
       case x: SynapseDataSetImportInfo => dataSetService.importDataSet(x)
-//      case x: RedCapDataSetImportInfo => dataSetService.importDataSet(x) //TODO
+      case x: RedCapDataSetImportInfo => dataSetService.importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
     }
 
   // default form... unused

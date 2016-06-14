@@ -40,14 +40,14 @@ trait DataSetService {
 
   def importDataSetAndDictionary(
     importInfo: TranSmartDataSetImportInfo,
-    dataFile: Option[File] = None,
-    mappingFile: Option[File] = None,
-    typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
+    dataFile: Option[File],
+    mappingFile: Option[File],
+    typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit]
 
   def importDataSetAndDictionary(
     importInfo: RedCapDataSetImportInfo,
-    typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
+    typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit]
 
   def inferDictionary(
@@ -183,7 +183,7 @@ class DataSetServiceImpl @Inject()(
         val fieldName = escapeKey(fileColumn.name.replaceAll("\"", "").trim)
         (fieldName, Json.parse(fileString))
       }(ExecutionContexts.SynapseExecutionContext).recover {
-        case e: RestException =>
+        case e: AdaRestException =>
           throw new AdaException(s"File for the row '$rowId', version '$rowVersion', column '${fileColumn.name}' couldn't be downloaded from Synapse due to '${e.getMessage}.'", e)
       }(ExecutionContexts.SynapseExecutionContext)
     }
@@ -212,7 +212,7 @@ class DataSetServiceImpl @Inject()(
       _ <- Future.sequence(records.map(dataRepo.save))
       // import dictionary (if needed)
       _ <- if (importInfo.importDictionaryFlag)
-        importAndInferRedCapDictionary(redCapService, dataSetAccessor)
+        importAndInferRedCapDictionary(redCapService, dataSetAccessor, typeInferenceProvider)
       else
         Future(())
     } yield ()

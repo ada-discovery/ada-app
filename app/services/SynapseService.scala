@@ -244,8 +244,8 @@ protected[services] class SynapseServiceWSImpl @Inject() (
   private def handleErrorResponse(response: WSResponse): Unit =
     response.status match {
       case x if x >= 200 && x<= 299 => ()
-      case 401 => throw new UnauthorizedAccessRestException(response.statusText)
-      case _ => throw new RestException(response.status + ": " + response.statusText + "; " + response.body)
+      case 401 => throw new AdaUnauthorizedAccessRestException(response.statusText)
+      case _ => throw new AdaRestException(response.status + ": " + response.statusText + "; " + response.body)
     }
 
   // could be used to automatically reauthorize...
@@ -253,7 +253,7 @@ protected[services] class SynapseServiceWSImpl @Inject() (
     try {
       action
     } catch {
-      case e: UnauthorizedAccessRestException => { login; action }
+      case e: AdaUnauthorizedAccessRestException => { login; action }
     }
 
   private def getSessionToken = synchronized {
