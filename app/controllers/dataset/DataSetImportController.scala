@@ -1,6 +1,8 @@
 package controllers.dataset
 
-import java.util.concurrent.TimeoutException
+import java.util.Date
+
+import scala.concurrent.duration._
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
@@ -11,7 +13,7 @@ import models.DataSetImportInfoFormattersAndIds.{DataSetImportInfoIdentity, data
 import models._
 import persistence.RepoTypes._
 import play.api.Logger
-import play.api.data.Form
+import play.api.data.{Mapping, Form}
 import play.api.data.Forms._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -19,15 +21,16 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, DeNoPaSetting}
+import services.{DataSetImportScheduler, DataSetService, DeNoPaSetting}
 import util.SecurityUtil.restrictAdmin
 import views.html.{datasetimport => importViews}
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 
 class DataSetImportController @Inject()(
     repo: DataSetImportInfoRepo,
     dataSetService: DataSetService,
+    dataSetImportScheduler: DataSetImportScheduler,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi
@@ -36,6 +39,13 @@ class DataSetImportController @Inject()(
   private val logger = Logger // (this.getClass)
 
   // Forms
+
+  protected val scheduledTimeMapping: Mapping[ScheduledTime] = mapping(
+    "hour" -> optional(number(min=0, max=23)),
+    "minute" -> optional(number(min=0, max=59)),
+    "second" -> optional(number(min=0, max=59))
+  ) (ScheduledTime.apply)(ScheduledTime.unapply)
+
   protected val csvForm = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
@@ -46,8 +56,16 @@ class DataSetImportController @Inject()(
       "delimiter" -> nonEmptyText,
       "eol" -> optional(text),
       "charsetName" -> optional(text),
-      "setting" -> optional(dataSetSettingMapping)
+      "scheduled" -> boolean,
+      "scheduledTime" -> optional(scheduledTimeMapping),
+      "setting" -> optional(dataSetSettingMapping),
+      "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
+      "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
     ) (CsvDataSetImportInfo.apply)(CsvDataSetImportInfo.unapply)
+      .verifying(
+        "Import is marked as 'scheduled' but no time provided",
+        importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
+      )
   )
 
   protected val synapseForm = Form(
@@ -57,8 +75,16 @@ class DataSetImportController @Inject()(
       "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
       "dataSetName" -> nonEmptyText,
       "tableId" -> nonEmptyText,
-      "setting" -> optional(dataSetSettingMapping)
+      "scheduled" -> boolean,
+      "scheduledTime" -> optional(scheduledTimeMapping),
+      "setting" -> optional(dataSetSettingMapping),
+      "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
+      "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
     ) (SynapseDataSetImportInfo.apply)(SynapseDataSetImportInfo.unapply)
+      .verifying(
+        "Import is marked as 'scheduled' but no time provided",
+        importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
+      )
   )
 
   protected val tranSmartForm = Form(
@@ -70,8 +96,16 @@ class DataSetImportController @Inject()(
       "dataPath" -> optional(text),
       "mappingPath" -> optional(text),
       "charsetName" -> optional(text),
-      "setting" -> optional(dataSetSettingMapping)
+      "scheduled" -> boolean,
+      "scheduledTime" -> optional(scheduledTimeMapping),
+      "setting" -> optional(dataSetSettingMapping),
+      "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
+      "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
     ) (TranSmartDataSetImportInfo.apply)(TranSmartDataSetImportInfo.unapply)
+      .verifying(
+        "Import is marked as 'scheduled' but no time provided",
+        importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
+      )
   )
 
   protected val redCapForm = Form(
@@ -83,8 +117,16 @@ class DataSetImportController @Inject()(
       "url" -> nonEmptyText,
       "token" -> nonEmptyText,
       "importDictionaryFlag" -> boolean,
-      "setting" -> optional(dataSetSettingMapping)
+      "scheduled" -> boolean,
+      "scheduledTime" -> optional(scheduledTimeMapping),
+      "setting" -> optional(dataSetSettingMapping),
+      "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
+      "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
     ) (RedCapDataSetImportInfo.apply)(RedCapDataSetImportInfo.unapply)
+      .verifying(
+        "Import is marked as 'scheduled' but no time provided",
+        importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
+      )
   )
 
   private val classNameFormViewsMap = FormWithViews.toMap[DataSetImportInfo](
@@ -113,14 +155,6 @@ class DataSetImportController @Inject()(
         importViews.editRedCapType(_, _)(_, _, _)
       )
     ))
-
-  def executeTyped(dataSetImport: DataSetImportInfo): Future[Unit] =
-    dataSetImport match {
-      case x: CsvDataSetImportInfo => dataSetService.importDataSet(x)
-      case x: TranSmartDataSetImportInfo => dataSetService.importDataSetAndDictionary(x, None, None, DeNoPaSetting.typeInferenceProvider)
-      case x: SynapseDataSetImportInfo => dataSetService.importDataSet(x)
-      case x: RedCapDataSetImportInfo => dataSetService.importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
-    }
 
   // default form... unused
   override protected val form = csvForm.asInstanceOf[Form[DataSetImportInfo]]
@@ -186,7 +220,7 @@ class DataSetImportController @Inject()(
           implicit val msg = messagesApi.preferred(request)
           def errorRedirect(errorMessage: String) = home.flashing("errors" -> s"Data set '${importInfo.dataSetName}' import failed. $errorMessage")
           val successRedirect = home// Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
-          executeTyped(importInfo).map { _ =>
+          dataSetService.importDataSetUntyped(importInfo).map { _ =>
             render {
               case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '${importInfo.dataSetName}' has been imported.")
               case Accepts.Json() => Created(Json.obj("message" -> "Data set has been imported", "name" -> importInfo.dataSetName))
@@ -199,6 +233,60 @@ class DataSetImportController @Inject()(
         }
       )
     }
+  }
+
+//  def schedule(id: BSONObjectID) = restrictAdmin(deadbolt) {
+//    Action.async { implicit request =>
+//      repo.get(id).map(_.fold(
+//        NotFound(s"Data set import #$id not found")
+//      ) { importInfo =>
+//          implicit val msg = messagesApi.preferred(request)
+//          dataSetImportScheduler.schedule(importInfo.scheduledTime)(id)
+//            render {
+//              case Accepts.Html() => home.flashing("success" -> s"Data set '${importInfo.dataSetName}' import has been scheduled.")
+//              case Accepts.Json() => Created(Json.obj("message" -> "Data set import has been scheduled", "name" -> importInfo.dataSetName))
+//            }
+//        }
+//      )
+//    }
+//  }
+//
+//  def cancel(id: BSONObjectID) = restrictAdmin(deadbolt) {
+//    Action.async { implicit request =>
+//      repo.get(id).map(_.fold(
+//        NotFound(s"Data set import #$id not found")
+//      ) { importInfo =>
+//        implicit val msg = messagesApi.preferred(request)
+//        dataSetImportScheduler.cancel(id)
+//        render {
+//          case Accepts.Html() => home.flashing("success" -> s"Data set '${importInfo.dataSetName}' import has been scheduled.")
+//          case Accepts.Json() => Created(Json.obj("message" -> "Data set import has been scheduled", "name" -> importInfo.dataSetName))
+//        }
+//      }
+//      )
+//    }
+//  }
+
+  override protected def saveCall(importInfo: DataSetImportInfo)(implicit request: Request[AnyContent]): Future[BSONObjectID] =
+    super.saveCall(importInfo).map { id =>
+      scheduleOrCancel(id, importInfo); id
+    }
+
+  override protected def updateCall(importInfo: DataSetImportInfo)(implicit request: Request[AnyContent]): Future[BSONObjectID] =
+    super.updateCall(importInfo).map { id =>
+      scheduleOrCancel(id, importInfo); id
+    }
+
+  override protected def deleteCall(id: BSONObjectID)(implicit request: Request[AnyContent]): Future[Unit] =
+    super.deleteCall(id).map { _ =>
+      dataSetImportScheduler.cancel(id); ()
+    }
+
+  private def scheduleOrCancel(id: BSONObjectID, importInfo: DataSetImportInfo): Unit = {
+    if (importInfo.scheduled)
+      dataSetImportScheduler.schedule(importInfo.scheduledTime.get)(id)
+    else
+      dataSetImportScheduler.cancel(id)
   }
 
   def uploadCsv = restrictAdmin(deadbolt) {

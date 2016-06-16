@@ -5,6 +5,7 @@
 @import util.{typeColumns, toHumanReadableCamel}
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import play.data.format.Formats.DateTime
 
 @(
     page: Page[DataSetImportInfo],
@@ -39,6 +40,10 @@
     </div>
 }
 
+@scheduleCheckbox(dataSetImport: DataSetImportInfo) = {
+    <input type="checkbox" class="no-rowClicked" @if(dataSetImport.scheduled) { checked="checked" } disabled="disabled"/>
+}
+
 @executeLink(dataSetImport: DataSetImportInfo) = {
     <a class="btn btn-default btn-xs btn-clean no-rowClicked" href="@dataSetImportRoutes.execute(dataSetImport._id.get)">
         <span class="glyphicon glyphicon-play green" aria-hidden="true"></span>
@@ -53,7 +58,10 @@
             (Some("dataSpaceName"), "Data Space Name", _.dataSpaceName),
             (Some("dataSetName"), "Data Set Name", _.dataSetName),
             (Some("concreteClass"), "Type", {importInfo => toHumanReadableCamel(importInfo.getClass.getSimpleName)}),
-            (None, "Execute", executeLink)
+            (Some("timeCreated"), "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
+            (Some("timeLastExecuted"), "Time Last Executed", _.timeLastExecuted.map(_.format("yyyy-MM-dd HH:mm:ss")).getOrElse("")),
+            (Some("scheduled"), "Scheduled?", scheduleCheckbox),
+            (None, "Execute Now", executeLink)
         ),
         Some({ item : Any => dataSetImportRoutes.get(item.asInstanceOf[DataSetImportInfo]._id.get)})
     )

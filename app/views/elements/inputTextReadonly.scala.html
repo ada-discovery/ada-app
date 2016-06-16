@@ -1,0 +1,17 @@
+@import helper.{inputText, FieldConstructor}
+@import views.html.elements.inputFieldText
+
+@(
+    domainName : String,
+    fieldName : String,
+    form: Form[_],
+    args: (Symbol,Any)*
+)(
+    implicit msg: play.api.i18n.Messages
+)
+
+@inputFieldText(
+    domainName,
+    form(fieldName),
+    List('readonly -> "readonly", '_help -> " Read-only") ++ args :_*
+)

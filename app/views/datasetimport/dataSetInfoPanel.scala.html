@@ -8,6 +8,12 @@
         @inputText(domainName, "dataSpaceName", form)
         @inputText(domainName, "dataSetName", form)
         @inputText(domainName, "dataSetId", form)
+        @if(form("timeCreated").value.isDefined) {
+            @inputTextReadonly(domainName, "timeCreated", form)
+        }
+        @if(form("timeLastExecuted").value.isDefined) {
+            @inputTextReadonly(domainName, "timeLastExecuted", form)
+        }
     </div>
 </div>
 

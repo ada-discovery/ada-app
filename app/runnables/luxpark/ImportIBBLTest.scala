@@ -20,6 +20,8 @@ class ImportIBBLTest @Inject() (configuration: Configuration, dataSetService: Da
       ",",
       None,
       Some("ISO-8859-1"),
+      false,
+      None,
       Some(LuxParkDataSetSetting.IBBLTest)
     ), None
   )

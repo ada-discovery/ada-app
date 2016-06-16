@@ -43,6 +43,11 @@ dataSetImportInfo.dataSpaceName.label = Study Name
 dataSetImportInfo.eol.label = Specific EOL
 dataSetImportInfo.path.label = Server-side Path
 
+dataSetImportInfo.scheduled.label = Schedule?
+dataSetImportInfo.scheduledTime.hour.label = Hour
+dataSetImportInfo.scheduledTime.minute.label = Minute
+dataSetImportInfo.scheduledTime.second.label = Second
+
 redCapDataSetImportInfo.importDictionaryFlag.label = Import Dictionary?
 
 login.id = User Id

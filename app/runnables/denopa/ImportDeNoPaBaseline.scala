@@ -20,6 +20,8 @@ class ImportDeNoPaBaseline @Inject() (configuration: Configuration, dataSetServi
       "§§",
       None,
       None,
+      false,
+      None,
       Some(DeNoPaDataSetSetting.BaseLine)
     ), None
   )

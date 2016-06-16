@@ -45,6 +45,7 @@ GET         /admin/dataSetImport                                                
 GET         /admin/dataSetImport/all                                                controllers.dataset.DataSetImportController.listAll(s: String ?= "dataSpaceName")
 GET         /admin/dataSetImport/new                                                controllers.dataset.DataSetImportController.create(concreteClassName: String)
 GET         /admin/dataSetImport/execute/:id                                        controllers.dataset.DataSetImportController.execute(id: BSONObjectID)
+#GET         /admin/dataSetImport/schedule/:id                                       controllers.dataset.DataSetImportController.schedule(id: BSONObjectID)
 
 POST        /admin/dataSetImport/upload/csv                                         controllers.dataset.DataSetImportController.uploadCsv
 POST        /admin/dataSetImport/upload/tranSmart                                   controllers.dataset.DataSetImportController.uploadTranSmart

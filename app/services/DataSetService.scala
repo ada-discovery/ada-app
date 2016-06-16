@@ -1,6 +1,7 @@
 package services
 
 import java.io.File
+import java.util.Date
 import java.nio.charset.{UnsupportedCharsetException, MalformedInputException, Charset}
 import javax.inject.Inject
 import models.redcap.{Metadata, FieldType => RCFieldType}
@@ -28,6 +29,10 @@ import collection.mutable.{Map => MMap}
 
 @ImplementedBy(classOf[DataSetServiceImpl])
 trait DataSetService {
+
+  def importDataSetUntyped(
+    dataSetImport: DataSetImportInfo
+  ): Future[Unit]
 
   def importDataSet(
     importInfo: CsvDataSetImportInfo,
@@ -66,6 +71,7 @@ trait DataSetService {
 class DataSetServiceImpl @Inject()(
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dsaf: DataSetAccessorFactory,
+    dataSetImportInfoRepo: DataSetImportInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo,
     redCapServiceFactory: RedCapServiceFactory,
     synapseServiceFactory: SynapseServiceFactory,
@@ -90,6 +96,20 @@ class DataSetServiceImpl @Inject()(
   private val synapseRowVersionFieldName = "ROW_VERSION"
   private val synapseUsername = configuration.getString("synapse.api.username").get
   private val synapsePassword = configuration.getString("synapse.api.password").get
+
+  override def importDataSetUntyped(dataSetImport: DataSetImportInfo): Future[Unit] =
+    for {
+      _ <- dataSetImport match {
+        case x: CsvDataSetImportInfo => importDataSet(x)
+        case x: TranSmartDataSetImportInfo => importDataSetAndDictionary(x, None, None, DeNoPaSetting.typeInferenceProvider)
+        case x: SynapseDataSetImportInfo => importDataSet(x)
+        case x: RedCapDataSetImportInfo => importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
+      }
+      _ <- {
+        dataSetImport.timeLastExecuted = Some(new Date())
+        dataSetImportInfoRepo.update(dataSetImport)
+      }
+    } yield ()
 
   override def importDataSet(importInfo: CsvDataSetImportInfo, file: Option[File]) =
     importLineParsableDataSet(
@@ -196,6 +216,12 @@ class DataSetServiceImpl @Inject()(
     importInfo: RedCapDataSetImportInfo,
     typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
   ) = {
+    logger.info(new Date().toString)
+    if (importInfo.importDictionaryFlag)
+      logger.info(s"Import of data set and dictionary '${importInfo.dataSetName}' initiated.")
+    else
+      logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
+
     // Red cap service to pull the data from
     val redCapService = redCapServiceFactory(importInfo.url, importInfo.token)
 
@@ -212,10 +238,14 @@ class DataSetServiceImpl @Inject()(
       _ <- Future.sequence(records.map(dataRepo.save))
       // import dictionary (if needed)
       _ <- if (importInfo.importDictionaryFlag)
-        importAndInferRedCapDictionary(redCapService, dataSetAccessor, typeInferenceProvider)
+        importAndInferRedCapDictionary(importInfo.dataSetId, redCapService, dataSetAccessor, typeInferenceProvider)
       else
         Future(())
-    } yield ()
+    } yield
+      if (importInfo.importDictionaryFlag)
+        logger.info(s"Import of data set and dictionary '${importInfo.dataSetName}' successfully finished.")
+      else
+        logger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
   }
 
   private def createCsvFileLineIteratorAndCount(
@@ -266,6 +296,7 @@ class DataSetServiceImpl @Inject()(
     createLineIteratorAndCount: => (Iterator[String], Int),
     transformJson: Option[JsObject => Future[JsObject]] = None
   ): Future[Seq[String]] = {
+    logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
     val dataSetAccessor = createDataSetAccessor(importInfo)
@@ -388,7 +419,7 @@ class DataSetServiceImpl @Inject()(
     createMappingFileLineIteratorAndCount: => (Iterator[String], Int),
     fieldNamesInOrder: Seq[String]
   ): Future[Unit] = {
-    logger.info(s"Dictionary inference and TranSMART import for data set '${dataSetId}' initiated.")
+    logger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' initiated.")
 
     val dsa = dsaf(dataSetId).get
     val dataRepo = dsa.dataSetRepo
@@ -478,15 +509,18 @@ class DataSetServiceImpl @Inject()(
     }
 
     finalFuture.map( _ =>
-      logger.info(s"Dictionary inference and TranSMART import for data set '${dataSetId}' successfully finished.")
+      logger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' successfully finished.")
     )
   }
 
   protected def importAndInferRedCapDictionary(
+    dataSetId: String,
     redCapService: RedCapService,
     dsa: DataSetAccessor,
     typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit] = {
+    logger.info(s"RedCap dictionary inference and import for data set '${dataSetId}' initiated.")
+
     val dataSetRepo = dsa.dataSetRepo
     val fieldRepo = dsa.fieldRepo
     val categoryRepo = dsa.categoryRepo
@@ -515,7 +549,6 @@ class DataSetServiceImpl @Inject()(
     // TODO: optimize this... introduce field groups to speed up inference
     val futures = metadatas.filter(metadata => fieldNames.contains(metadata.field_name)).par.map{ metadata =>
       val fieldName = metadata.field_name
-      println(fieldName + " " + metadata.field_type)
       val fieldTypeFuture = inferFieldType(dataSetRepo, typeInferenceProvider, fieldName)
       val (isArray, inferredType) = result(fieldTypeFuture, timeout)
 
@@ -540,7 +573,9 @@ class DataSetServiceImpl @Inject()(
     // also add redcap_event_name
     val visitFieldFuture = fieldRepo.save(Field(redCapVisitField, FieldType.Enum))
 
-    Future.sequence(futures.toList ++ Seq(visitFieldFuture)).map(_ => ())
+    Future.sequence(futures.toList ++ Seq(visitFieldFuture)).map(_ =>
+      logger.info(s"RedCap dictionary inference and import for data set '${dataSetId}' successfully finished.")
+    )
   }
 
   private def getFieldNames(dataRepo: JsObjectCrudRepo): Future[Set[String]] =

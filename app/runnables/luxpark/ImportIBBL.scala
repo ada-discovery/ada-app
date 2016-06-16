@@ -20,6 +20,8 @@ class ImportIBBL @Inject() (configuration: Configuration, dataSetService: DataSe
       ",",
       None,
       None,
+      false,
+      None,
       Some(LuxParkDataSetSetting.IBBL)
     ), None
   )

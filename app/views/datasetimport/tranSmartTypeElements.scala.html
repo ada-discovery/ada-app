@@ -1,7 +1,7 @@
 @import models.TranSmartDataSetImportInfo
 @import views.html.elements._
 @import play.api.i18n.Messages
-@import views.html.datasetimport.{settingPanel, fileOrPathInput, dataSetInfoPanel}
+@import views.html.datasetimport.{settingPanel, fileOrPathInput, dataSetInfoPanel, schedulePanel}
 
 @(form: Form[TranSmartDataSetImportInfo])(implicit msg: Messages)
 
@@ -19,6 +19,7 @@
 </div>
 
 @settingPanel(form)
+@schedulePanel(form)
 
 <script type="text/javascript">
     $('form').submit(function(ev) {

@@ -1,8 +1,8 @@
-@import views.html.elements.inputText
+@import views.html.elements.{inputText, inputTextReadonly}
 
 @(form: Form[DataSetSetting])(implicit msg: play.api.i18n.Messages)
 
-@inputText("dataSetSetting", "dataSetId", form, 'readonly -> "readonly")
+@inputTextReadonly("dataSetSetting", "dataSetId", form)
 @inputText("dataSetSetting", "keyFieldName", form)
 @inputText("dataSetSetting", "exportOrderByFieldName", form)
 @inputText("dataSetSetting", "listViewTableColumnNames", form)

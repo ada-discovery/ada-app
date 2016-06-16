@@ -1,7 +1,7 @@
 @import models.RedCapDataSetImportInfo
 @import views.html.elements.{inputText, checkbox}
 @import play.api.i18n.Messages
-@import views.html.datasetimport.{settingPanel, dataSetInfoPanel}
+@import views.html.datasetimport.{settingPanel, dataSetInfoPanel, schedulePanel}
 
 @(form: Form[RedCapDataSetImportInfo])(implicit msg: Messages)
 
@@ -19,6 +19,7 @@
 </div>
 
 @settingPanel(form)
+@schedulePanel(form)
 
 <script type="text/javascript">
     $('form').submit(function(ev) {

@@ -1,5 +1,5 @@
 @import models.CsvDataSetImportInfo
-@import views.html.datasetimport.{settingPanel, fileOrPathInput, dataSetInfoPanel}
+@import views.html.datasetimport.{settingPanel, fileOrPathInput, dataSetInfoPanel, schedulePanel}
 @import views.html.elements._
 @import play.api.i18n.Messages
 
@@ -20,6 +20,7 @@
 </div>
 
 @settingPanel(form)
+@schedulePanel(form)
 
 <script type="text/javascript">
     $('form').submit(function(ev) {

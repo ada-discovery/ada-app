@@ -1,20 +1,24 @@
 package models
 
-import java.io.File
-
 import controllers.{ManifestedFormat, SubTypeFormat}
-import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
+import java.util.Date
 import play.modules.reactivemongo.json.BSONFormats._
 import play.api.libs.json._
 
 abstract class DataSetImportInfo {
   val _id: Option[BSONObjectID]
+  val timeCreated: Date
+  var timeLastExecuted: Option[Date]
   val dataSpaceName: String
   val dataSetId: String
   val dataSetName: String
+  val scheduled: Boolean
+  val scheduledTime: Option[ScheduledTime]
   val setting: Option[DataSetSetting]
 }
+
+case class ScheduledTime(hour: Option[Int], minute: Option[Int], second: Option[Int])
 
 case class CsvDataSetImportInfo(
   _id: Option[BSONObjectID],
@@ -25,7 +29,11 @@ case class CsvDataSetImportInfo(
   delimiter: String,
   eol: Option[String],
   charsetName: Option[String],
-  setting: Option[DataSetSetting]
+  scheduled: Boolean,
+  scheduledTime: Option[ScheduledTime],
+  setting: Option[DataSetSetting],
+  timeCreated: Date = new Date(),
+  var timeLastExecuted: Option[Date] = None
 ) extends DataSetImportInfo
 
 case class SynapseDataSetImportInfo(
@@ -34,7 +42,11 @@ case class SynapseDataSetImportInfo(
   dataSetId: String,
   dataSetName: String,
   tableId: String,
-  setting: Option[DataSetSetting]
+  scheduled: Boolean,
+  scheduledTime: Option[ScheduledTime],
+  setting: Option[DataSetSetting],
+  timeCreated: Date = new Date(),
+  var timeLastExecuted: Option[Date] = None
 ) extends DataSetImportInfo
 
 case class TranSmartDataSetImportInfo(
@@ -45,7 +57,11 @@ case class TranSmartDataSetImportInfo(
   dataPath: Option[String],
   mappingPath: Option[String],
   charsetName: Option[String],
-  setting: Option[DataSetSetting]
+  scheduled: Boolean,
+  scheduledTime: Option[ScheduledTime],
+  setting: Option[DataSetSetting],
+  timeCreated: Date = new Date(),
+  var timeLastExecuted: Option[Date] = None
 ) extends DataSetImportInfo
 
 case class RedCapDataSetImportInfo(
@@ -56,10 +72,15 @@ case class RedCapDataSetImportInfo(
   url: String,
   token: String,
   importDictionaryFlag: Boolean,
-  setting: Option[DataSetSetting]
+  scheduled: Boolean,
+  scheduledTime: Option[ScheduledTime],
+  setting: Option[DataSetSetting],
+  timeCreated: Date = new Date(),
+  var timeLastExecuted: Option[Date] = None
 ) extends DataSetImportInfo
 
 object DataSetImportInfoFormattersAndIds {
+  implicit val scheduleTimeFormat = Json.format[ScheduledTime]
   implicit val dataSetSettingFormat = DataSetFormattersAndIds.dataSetSettingFormat
 
   implicit val dataSetImportInfoFormat: Format[DataSetImportInfo] = new SubTypeFormat[DataSetImportInfo](
@@ -73,6 +94,7 @@ object DataSetImportInfoFormattersAndIds {
 
   implicit object DataSetImportInfoIdentity extends BSONObjectIdentity[DataSetImportInfo] {
     def of(entity: DataSetImportInfo): Option[BSONObjectID] = entity._id
+
     protected def set(entity: DataSetImportInfo, id: Option[BSONObjectID]) =
       entity match {
         case x: CsvDataSetImportInfo => x.copy(_id = id)

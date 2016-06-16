@@ -20,6 +20,8 @@ class ImportDeNoPaFirstVisit @Inject()  (configuration: Configuration, dataSetSe
       "§§",
       None,
       None,
+      false,
+      None,
       Some(DeNoPaDataSetSetting.FirstVisit)
     ), None
   )
