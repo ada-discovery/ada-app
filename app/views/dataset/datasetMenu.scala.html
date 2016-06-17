@@ -39,7 +39,7 @@
 <ul class="sidebar-nav nav nav-pills nav-stacked">
     @dataSpaceMetaInfos.toSeq.sortBy(_.sortOrder).map { spaceMetaInfo =>
         @spaceItem(dataSpaceMetaInfoRoutes.get(spaceMetaInfo._id.get), spaceMetaInfo.name)
-        @spaceMetaInfo.dataSetMetaInfos.sortBy(_.sortOrder).map { setMetaInfo =>
+        @spaceMetaInfo.dataSetMetaInfos.filter(!_.hide).sortBy(_.sortOrder).map { setMetaInfo =>
             @listItem(new DataSetRouter(setMetaInfo.id).plainOverviewList, setMetaInfo.id, setMetaInfo.name)
         }
     }

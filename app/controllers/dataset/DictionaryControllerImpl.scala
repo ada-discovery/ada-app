@@ -157,7 +157,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     repo.get(id).flatMap(_.fold(
       Future(NotFound(s"Field '$id' not found"))
     ){ field =>
-      updateCall(field).map(_ => Ok("Done"))
+      updateCall(field.copy(label = Some(label))).map(_ => Ok("Done"))
     })
   }
 

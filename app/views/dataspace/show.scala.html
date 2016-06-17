@@ -14,12 +14,18 @@
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
 
+@hideCheckbox(dataSetInfo: DataSetMetaInfo) = {
+    <input type="checkbox" class="no-rowClicked" @if(dataSetInfo.hide) { checked="checked" } disabled="disabled">
+}
+
 @table = {
     @displayTable(
         dataSpaceMetaInfo.dataSetMetaInfos.sortBy(_.sortOrder),
         typeColumns[DataSetMetaInfo](
             (None, "Name", _.name),
-            (None, "# Items/Patients", {info: DataSetMetaInfo => dataSetIdSizeMap.get(info.id).get.toString})
+            (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
+            (None, "# Items/Patients", {info: DataSetMetaInfo => dataSetIdSizeMap.get(info.id).get.toString}),
+            (None, "Hide?", hideCheckbox)
         ),
         None,
         Some({ item : Any => new DataSetRouter(item.asInstanceOf[DataSetMetaInfo].id).plainOverviewList})

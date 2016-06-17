@@ -22,6 +22,7 @@ case class DataSetMetaInfo(
   id: String,
   name: String,
   sortOrder: Int,
+  hide: Boolean,
   dataSpaceId: Option[BSONObjectID] = None,
   timeCreated: Date = new Date(),
   sourceDataSetId: Option[BSONObjectID] = None

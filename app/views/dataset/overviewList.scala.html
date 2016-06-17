@@ -54,6 +54,10 @@
     }
 }
 
+@dateRender(jsValue: JsValue) = {
+    @jsValue.asOpt[java.util.Date].get.toString
+}
+
 @jsonArrayRender(jsValue: JsValue) = {
     @genJsonRender(jsValue) {
         <b>Json Array (size @{
@@ -80,6 +84,8 @@
             } else
                 if (field.fieldType == FieldType.Json)
                     Some(field.name, jsonRender(_))
+                else if (field.fieldType == FieldType.Json)
+                    Some(field.name, dateRender(_))
                 else None
         }.flatten.toMap)
     )

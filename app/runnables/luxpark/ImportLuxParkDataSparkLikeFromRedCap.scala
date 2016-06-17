@@ -3,7 +3,7 @@ package runnables.luxpark
 import javax.inject.{Named, Inject}
 
 import play.api.Configuration
-import runnables.DataSetId.luxpark
+import runnables.DataSetId.lux_park_clinical
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
@@ -26,7 +26,7 @@ class ImportLuxParkDataSparkLikeFromRedCap @Inject() (
   private val timeout = 120000 millis
 
   lazy val dataSetAccessor =
-    result(dsaf.register("Lux Park", luxpark, "Lux Park", Some(LuxParkDataSetSetting.Luxpark)), timeout)
+    result(dsaf.register("Lux Park", lux_park_clinical, "Lux Park", Some(LuxParkDataSetSettings.Clinical)), timeout)
 
   private val syncDataRepo = RepoSynchronizer(dataSetAccessor.dataSetRepo, timeout)
 

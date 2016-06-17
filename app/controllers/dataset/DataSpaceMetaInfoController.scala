@@ -57,11 +57,12 @@ class DataSpaceMetaInfoController @Inject() (
         val ids = requestMap.get("dataSetMetaInfos.id").get
         val newDataSetNames = requestMap.get("dataSetMetaInfos.name").get
         val newDataSetSortOrders = requestMap.get("dataSetMetaInfos.sortOrder").get
+        val newHides = requestMap.get("dataSetMetaInfos.hide").get
 
         val existingDataSetMetaInfos = existingItem.dataSetMetaInfos
         val dataSetMetaInfoIdMap = existingDataSetMetaInfos.map( info => (info._id.get, info)).toMap
 
-        val newDataSetMetaInfos = (ids, newDataSetNames, newDataSetSortOrders).zipped.map{ case (id, newDataSetName, newDataSetSortOrder) =>
+        val newDataSetMetaInfos = ((ids, newDataSetNames, newDataSetSortOrders).zipped, newHides).zipped.map{ case ((id, newDataSetName, newDataSetSortOrder), newHide) =>
           val existingDataSetMetaInfo = dataSetMetaInfoIdMap(BSONObjectID(id))
 
           val newSortOrder = try {
@@ -71,10 +72,10 @@ class DataSpaceMetaInfoController @Inject() (
             case e: NumberFormatException => existingDataSetMetaInfo.sortOrder
           }
 
-          existingDataSetMetaInfo.copy(name = newDataSetName, sortOrder = newSortOrder)
+          existingDataSetMetaInfo.copy(name = newDataSetName, sortOrder = newSortOrder, hide = newHide.equals("true"))
         }
 
-        repo.update(item.copy(dataSetMetaInfos = newDataSetMetaInfos, timeCreated = existingItem.timeCreated))
+        repo.update(item.copy(dataSetMetaInfos = newDataSetMetaInfos.toSeq, timeCreated = existingItem.timeCreated))
       }
     } yield
       id

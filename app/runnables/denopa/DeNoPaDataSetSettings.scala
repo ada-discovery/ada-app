@@ -3,12 +3,11 @@ package runnables.denopa
 import models.DataSetSetting
 import runnables.DataSetId._
 
-// just temporary, these settings should be provided through the data upload ui
-object DeNoPaDataSetSetting {
+object DeNoPaDataSetSettings {
 
-  val BaseLine = DataSetSetting(
+  val RawClinicalBaseline = DataSetSetting(
     None,
-    denopa_baseline,
+    denopa_raw_clinical_baseline,
     "Probanden_Nr",
     "Line_Nr",
     Seq("Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe"),
@@ -20,9 +19,9 @@ object DeNoPaDataSetSetting {
     Map(("\r", " "), ("\n", " "))
   )
 
-  val FirstVisit = DataSetSetting(
+  val RawClinicalFirstVisit = DataSetSetting(
     None,
-    denopa_firstvisit,
+    denopa_raw_clinical_first_visit,
     "Probanden_Nr",
     "Line_Nr",
     Seq("Probanden_Nr", "Geb_Datum", "b_Gruppe"),
@@ -34,9 +33,9 @@ object DeNoPaDataSetSetting {
     Map(("\r", " "), ("\n", " "))
   )
 
-  val SecondVisit = DataSetSetting(
+  val RawClinicalSecondVisit = DataSetSetting(
     None,
-    denopa_secondvisit,
+    denopa_raw_clinical_second_visit,
     "Probanden_Nr",
     "cdisc_dm_usubjd",
     Seq("Probanden_Nr", "Geburtsdatum", "c_group"),
@@ -48,9 +47,9 @@ object DeNoPaDataSetSetting {
     Map(("\r", " "), ("\n", " "))
   )
 
-  val CuratedBaseLine = DataSetSetting(
+  val ClinicalBaseline = DataSetSetting(
     None,
-    denopa_curated_baseline,
+    denopa_clinical_baseline,
     "Probanden_Nr",
     "Line_Nr",
     Seq("Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe"),
@@ -62,9 +61,9 @@ object DeNoPaDataSetSetting {
     Map(("\r", " "), ("\n", " "))
   )
 
-  val CuratedFirstVisit = DataSetSetting(
+  val ClinicalFirstVisit = DataSetSetting(
     None,
-    denopa_curated_firstvisit,
+    denopa_clinical_first_visit,
     "Probanden_Nr",
     "Line_Nr",
     Seq("Probanden_Nr", "Geb_Datum", "b_Gruppe"),
@@ -76,9 +75,9 @@ object DeNoPaDataSetSetting {
     Map(("\r", " "), ("\n", " "))
   )
 
-  val CuratedSecondVisit = DataSetSetting(
+  val ClinicalSecondVisit = DataSetSetting(
     None,
-    denopa_curated_secondvisit,
+    denopa_clinical_second_visit,
     "Probanden_Nr",
     "Line_Nr",
     Seq("Probanden_Nr", "Geburtsdatum", "c_group"),

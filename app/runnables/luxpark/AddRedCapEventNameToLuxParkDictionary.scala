@@ -3,7 +3,7 @@ package runnables.luxpark
 import javax.inject.Inject
 
 import models.{FieldType, Field}
-import runnables.DataSetId.luxpark
+import runnables.DataSetId.lux_park_clinical
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable
 import scala.concurrent.Await.result
@@ -17,7 +17,7 @@ class AddRedCapEventNameToLuxParkDictionary @Inject() (
   private val visitField = "redcap_event_name"
 
   override def run = {
-    val dsa = dsaf(luxpark).get
+    val dsa = dsaf(lux_park_clinical).get
     val fieldRepo = dsa.fieldRepo
 
     val saveFuture = fieldRepo.save(Field(visitField, FieldType.Enum))

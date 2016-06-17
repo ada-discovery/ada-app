@@ -113,7 +113,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
       )
       // register data set meta info and setting, and obtain an accessor
       accessor <- {
-        val metaInfo = DataSetMetaInfo(None, dataSetId, dataSetName, 0, Some(spaceId))
+        val metaInfo = DataSetMetaInfo(None, dataSetId, dataSetName, 0, false, Some(spaceId))
         register(metaInfo, setting)
       }
     } yield

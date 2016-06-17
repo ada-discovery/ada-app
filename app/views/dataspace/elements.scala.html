@@ -12,13 +12,20 @@
     <input type="text" class="form-control" id="@key" name="@key" value="@value">
 }
 
+@editableHideCheckbox(dataSetInfo: DataSetMetaInfo) = {
+    <input type="checkbox" class="form-control hideCheckbox" @if(dataSetInfo.hide) { checked="checked" }>
+    <input type="hidden" id="dataSetMetaInfos.hide" name="dataSetMetaInfos.hide" value="@dataSetInfo.hide">
+}
+
 @table = {
     @displayTable(
         form.value.get.dataSetMetaInfos.sortBy(_.sortOrder),
         typeColumns[DataSetMetaInfo](
             (None, "Name", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.name", item.name) }),
+            (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
             (None, "Sort Order", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.sortOrder", item.sortOrder) }),
-            (None, "# Items/Patients", { item: DataSetMetaInfo => dataSetIdSizeMap.get(item.id).get.toString })
+            (None, "# Items/Patients", { item: DataSetMetaInfo => dataSetIdSizeMap.get(item.id).get.toString }),
+            (None, "Hide?", editableHideCheckbox)
         ),
         None,
         None,
@@ -30,3 +37,12 @@
 @inputText("dataSpaceMetaInfo", "sortOrder", form)
 @value("dataSetMetaInfos", "Time Created", form.value.get.timeCreated.toString)
 @labelValue("dataSetMetaInfos", "Data Sets"){@table}
+
+<script type="text/javascript">
+    $(function () {
+        $(".hideCheckbox").change( function(e) {
+            var checked = $(this).is(":checked")
+            $(this).parent().find('#dataSetMetaInfos\\.hide').val(checked)
+        })
+    })
+</script>
