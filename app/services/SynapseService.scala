@@ -1,9 +1,12 @@
 package services
 
+import java.io._
+import java.util.zip.{ZipEntry, ZipFile, ZipInputStream}
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
 import models.synapse._
+import org.apache.commons.io.IOUtils
 import play.api.libs.ws.{WSRequest, WSResponse, WSClient}
 import play.api.Configuration
 import util.ExecutionContexts
@@ -30,9 +33,9 @@ trait SynapseService {
   def prolongSession: Future[Unit]
 
   /**
-    * .Runs a table query and return a token
+    * .Runs a table query and returns a token
     */
-  def runCsvTableQuery(tableId: String, sql: String): Future[String]
+  def startCsvTableQuery(tableId: String, sql: String): Future[String]
 
   /**
     * Gets results or a job status if still running
@@ -59,6 +62,14 @@ trait SynapseService {
   def downloadFile(fileHandleId: String): Future[String]
 
   /**
+    * Same as <code>downloadFile<code> but returns a byte array
+    *
+    * @param fileHandleId
+    * @return
+    */
+  def downloadFileAsBytes(fileHandleId: String): Future[Array[Byte]]
+
+  /**
     * Gets a table as csv by combining runCsvTableQuery, getCsvTableResults, and downloadFile
     */
   def getTableAsCsv(tableId: String): Future[String]
@@ -77,6 +88,34 @@ trait SynapseService {
     * Downloads a file associated with given column and row.
     */
   def downloadColumnFile(tableId: String, columnId: String, rowId: Int, versionNumber: Int): Future[String]
+
+  /**
+    * Initiates a downlaod of multiple filed... returns a token for polling
+    *
+    * @see http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/POST/file/bulk/async/start.html
+    */
+  def startBulkDownload(data: BulkFileDownloadRequest): Future[String]
+
+  /**
+    * Returns a file handle of the resulting bulk download zip file
+    *
+    * @see http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/GET/file/bulk/async/get/asyncToken.html
+    */
+  def getBulkDownloadResult(jobToken: String): Future[Either[BulkFileDownloadResponse, AsynchronousJobStatus]]
+
+  /**
+    * Gets the bulk results... wait till it's done by polling
+    */
+  def getBulkDownloadResultWait(jobToken: String): Future[BulkFileDownloadResponse]
+
+  /**
+    * Downloads table files for given handle ids in a bulk by combining startBulkDownload, getBulkDownloadResultWait, and downloadFileAsBytes
+    *
+    * @param fileHandleIds
+    * @param tableId
+    * @return
+    */
+  def downloadTableFilesInBulk(fileHandleIds: Traversable[String], tableId: String): Future[Iterator[(String, String)]]
 }
 
 protected[services] class SynapseServiceWSImpl @Inject() (
@@ -105,94 +144,52 @@ protected[services] class SynapseServiceWSImpl @Inject() (
   private val fileColumnDownloadSubUrl3 = configuration.getString("synapse.api.file_column_download.url.part3").get
   private val fileColumnDownloadSubUrl4 = configuration.getString("synapse.api.file_column_download.url.part4").get
   private val fileColumnDownloadSubUrl5 = configuration.getString("synapse.api.file_column_download.url.part5").get
+  private val bulkDownloadStartUrl = configuration.getString("synapse.api.bulk_download_start.url").get
+  private val bulkDownloadResultUrl = configuration.getString("synapse.api.bulk_download_result.url").get
 
-  private val timeout = 120000 millis
+  private val timeout = 2 minutes
   private val tableCsvResultPollingFreq = 200
+  private val bulkDownloadResultPollingFreq = 400
 
   private implicit val executionContext = ExecutionContexts.SynapseExecutionContext
 
   private var sessionToken: Option[String] = None
 
-  /**
-    * Requests
-    */
-  val loginReq =
-    withJsonContent(
-      ws.url(baseUrl + loginSubUrl)
-    )
-
-  def prolongSessionReq =
-    ws.url(baseUrl + prolongSessionUrl)
-
-  def startTableCsvDownloadReq(tableId: String) =
-    withJsonContent(
-      withSessionToken(
-        ws.url(baseUrl + tableCsvDownloadStartSubUrl1 + tableId + tableCsvDownloadStartSubUrl2)
-      )
-    )
-
-  def getTableCsvDownloadResultReq(tableId: String, jobToken: String) =
-    withSessionToken(
-      ws.url(baseUrl + tableCsvDownloadResultSubUrl1 + tableId + tableCsvDownloadResultSubUrl2 + jobToken)
-    )
-
-  def getFileHandleReq(fileHandleId: String) =
-    withSessionToken(
-      ws.url(baseUrl + fileHandleSubUrl + fileHandleId)
-    )
-
-  def downloadFileReq(fileHandleId: String) =
-    withSessionToken(
-      ws.url(baseUrl + fileDownloadSubUrl1 + fileHandleId + fileDownloadSubUrl2)
-    )
-
-  def getColumnModelsReq(tableId: String) =
-    withSessionToken(
-      ws.url(baseUrl + columnModelsSubUrl1 + tableId + columnModelsSubUrl2)
-    )
-
-  def getColumnFileHandlesReq(tableId: String) =
-    withJsonContent(
-      withSessionToken(
-        ws.url(baseUrl + columnFileHandleSubUrl1 + tableId + columnFileHandleSubUrl2)
-      )
-    )
-
-  def downloadColumnFileReq(tableId: String, columnId: String, rowId: Int, versionNumber: Int) =
-    withSessionToken(
-      ws.url(baseUrl + fileColumnDownloadSubUrl1 + tableId + fileColumnDownloadSubUrl2 + columnId +
-        fileColumnDownloadSubUrl3 + rowId + fileColumnDownloadSubUrl4 + versionNumber + fileColumnDownloadSubUrl5)
-    )
-
-  def withSessionToken(request: WSRequest): WSRequest =
-    request.withHeaders("sessionToken" -> getSessionToken)
-
-  def withJsonContent(request: WSRequest): WSRequest =
-    request.withHeaders("Content-Type" -> "application/json")
-
   override def login: Future[Unit] = {
+    val request = withJsonContent(
+        ws.url(baseUrl + loginSubUrl))
+
     val data = Json.obj("username" -> username, "password" -> password)
-    loginReq.post(data).map { response =>
+    request.post(data).map { response =>
       val newSessionToken = (response.json.as[JsObject] \ "sessionToken").get.as[String]
       sessionToken = Some(newSessionToken)
     }
   }
 
-  override def prolongSession: Future[Unit] =
-    prolongSessionReq.put(SessionFormat.writes(Session(getSessionToken, true))).map { response =>
+  override def prolongSession: Future[Unit] = {
+    val request = ws.url(baseUrl + prolongSessionUrl)
+
+    request.put(SessionFormat.writes(Session(getSessionToken, true))).map { response =>
       handleErrorResponse(response)
     }
+  }
 
-  override def runCsvTableQuery(tableId: String, sql: String): Future[String] = {
+  override def startCsvTableQuery(tableId: String, sql: String): Future[String] = {
+    val request = withJsonContent(withSessionToken(
+        ws.url(baseUrl + tableCsvDownloadStartSubUrl1 + tableId + tableCsvDownloadStartSubUrl2)))
+
     val data = Json.obj("sql" -> sql)
-    startTableCsvDownloadReq(tableId).post(data).map { response =>
+    request.post(data).map { response =>
       handleErrorResponse(response)
       (response.json.as[JsObject] \ "token").get.as[String]
     }
   }
 
-  override def getCsvTableResult(tableId: String, jobToken: String): Future[Either[DownloadFromTableResult, AsynchronousJobStatus]] =
-    getTableCsvDownloadResultReq(tableId, jobToken).get.map { response =>
+  override def getCsvTableResult(tableId: String, jobToken: String): Future[Either[DownloadFromTableResult, AsynchronousJobStatus]] = {
+    val request = withSessionToken(
+        ws.url(baseUrl + tableCsvDownloadResultSubUrl1 + tableId + tableCsvDownloadResultSubUrl2 + jobToken))
+
+    request.get.map { response =>
       handleErrorResponse(response)
       val json = response.json
       response.status match {
@@ -200,6 +197,7 @@ protected[services] class SynapseServiceWSImpl @Inject() (
         case 202 => Right(json.as[AsynchronousJobStatus])
       }
     }
+  }
 
   override def getCsvTableResultWait(tableId: String, jobToken: String): Future[DownloadFromTableResult] = Future {
     var res: Either[DownloadFromTableResult, AsynchronousJobStatus] = null
@@ -209,37 +207,64 @@ protected[services] class SynapseServiceWSImpl @Inject() (
     res.left.get
   }
 
-  override def getFileHandle(fileHandleId: String): Future[FileHandle] =
-    getFileHandleReq(fileHandleId).get.map { response =>
+  override def getFileHandle(fileHandleId: String): Future[FileHandle] = {
+    val request = withSessionToken(
+        ws.url(baseUrl + fileHandleSubUrl + fileHandleId))
+
+    request.get.map { response =>
       handleErrorResponse(response)
       response.json.as[FileHandle]
     }
+  }
 
-  override def downloadFile(fileHandleId: String): Future[String] =
-    downloadFileReq(fileHandleId).withFollowRedirects(true).get.map { response =>
+  override def downloadFile(fileHandleId: String): Future[String] = {
+    val request = withSessionToken(
+        ws.url(baseUrl + fileDownloadSubUrl1 + fileHandleId + fileDownloadSubUrl2)).withFollowRedirects(true)
+
+    request.get.map { response =>
       handleErrorResponse(response)
       response.body
     }
+  }
+
+  override def downloadFileAsBytes(fileHandleId: String): Future[Array[Byte]] = {
+    val request = withSessionToken(
+      ws.url(baseUrl + fileDownloadSubUrl1 + fileHandleId + fileDownloadSubUrl2)).withFollowRedirects(true)
+
+    request.get.map { response =>
+      handleErrorResponse(response)
+      response.bodyAsBytes
+    }
+  }
 
   override def getTableAsCsv(tableId: String): Future[String] =
     for {
-      jobToken <- runCsvTableQuery(tableId, s"SELECT * FROM $tableId")
+      jobToken <- startCsvTableQuery(tableId, s"SELECT * FROM $tableId")
       result <- getCsvTableResultWait(tableId, jobToken)
       content <- downloadFile(result.resultsFileHandleId)
     } yield
       content
 
-  override def getTableColumnFileHandles(rowReferenceSet: RowReferenceSet): Future[TableFileHandleResults] =
-    getColumnFileHandlesReq(rowReferenceSet.tableId).post(Json.toJson(rowReferenceSet)).map { response =>
+  override def getTableColumnFileHandles(rowReferenceSet: RowReferenceSet): Future[TableFileHandleResults] = {
+    val request = withJsonContent(withSessionToken(
+        ws.url(baseUrl + columnFileHandleSubUrl1 + rowReferenceSet.tableId + columnFileHandleSubUrl2)))
+
+    request.post(Json.toJson(rowReferenceSet)).map { response =>
       handleErrorResponse(response)
       response.json.as[TableFileHandleResults]
     }
+  }
 
-  override def downloadColumnFile(tableId: String, columnId: String, rowId: Int, versionNumber: Int): Future[String] =
-    downloadColumnFileReq(tableId, columnId, rowId, versionNumber).withFollowRedirects(true).get.map { response =>
+  override def downloadColumnFile(tableId: String, columnId: String, rowId: Int, versionNumber: Int): Future[String] = {
+    val request = withSessionToken(
+        ws.url(baseUrl + fileColumnDownloadSubUrl1 + tableId + fileColumnDownloadSubUrl2 + columnId +
+          fileColumnDownloadSubUrl3 + rowId + fileColumnDownloadSubUrl4 + versionNumber + fileColumnDownloadSubUrl5))
+
+    request.withFollowRedirects(true).get.map { response =>
       handleErrorResponse(response)
       response.body
     }
+  }
 
   private def handleErrorResponse(response: WSResponse): Unit =
     response.status match {
@@ -261,9 +286,98 @@ protected[services] class SynapseServiceWSImpl @Inject() (
     sessionToken.get
   }
 
-  override def getTableColumnModels(tableId: String): Future[PaginatedColumnModels] =
-    getColumnModelsReq(tableId).get.map { response =>
+  override def getTableColumnModels(tableId: String): Future[PaginatedColumnModels] = {
+    val getColumnModelsReq = withSessionToken(
+        ws.url(baseUrl + columnModelsSubUrl1 + tableId + columnModelsSubUrl2)
+      )
+
+    getColumnModelsReq.get.map { response =>
       handleErrorResponse(response)
       response.json.as[PaginatedColumnModels]
     }
+  }
+
+  override def startBulkDownload(data: BulkFileDownloadRequest): Future[String] = {
+    val request = withJsonContent(withSessionToken(
+      ws.url(baseUrl + bulkDownloadStartUrl)))
+
+    request.post(Json.toJson(data)).map { response =>
+      handleErrorResponse(response)
+      (response.json.as[JsObject] \ "token").get.as[String]
+    }
+  }
+
+  override def getBulkDownloadResult(jobToken: String): Future[Either[BulkFileDownloadResponse, AsynchronousJobStatus]] = {
+    val request = withSessionToken(
+      ws.url(baseUrl + bulkDownloadResultUrl + jobToken))
+
+    request.get.map { response =>
+      handleErrorResponse(response)
+      val json = response.json
+      response.status match {
+        case 201 => Left(json.as[BulkFileDownloadResponse])
+        case 202 => Right(json.as[AsynchronousJobStatus])
+      }
+    }
+  }
+
+  override def getBulkDownloadResultWait(jobToken: String): Future[BulkFileDownloadResponse] = Future {
+    var res: Either[BulkFileDownloadResponse, AsynchronousJobStatus] = null
+    while ({res = result(getBulkDownloadResult(jobToken), timeout); res.isRight}) {
+      Thread.sleep(bulkDownloadResultPollingFreq)
+    }
+    res.left.get
+  }
+
+  override def downloadTableFilesInBulk(fileHandleIds: Traversable[String], tableId: String): Future[Iterator[(String, String)]] =
+    for {
+      bulkDownloadToken <- {
+        val requestedFiles = fileHandleIds.map(FileHandleAssociation(FileHandleAssociateType.TableEntity, _, tableId))
+        startBulkDownload(BulkFileDownloadRequest(requestedFiles.toSeq))
+      }
+      bulkDownloadResponse <- getBulkDownloadResultWait(bulkDownloadToken)
+      bulkDownloadContentBytes <- downloadFileAsBytes(bulkDownloadResponse.resultZipFileHandleId)
+    } yield {
+      val fileNameHandleIdMap = bulkDownloadResponse.fileSummary.map { fileSummary =>
+        (fileSummary.zipEntryName.get, fileSummary.fileHandleId)
+      }.toMap
+      ZipFileIterator(bulkDownloadContentBytes).map( pair => (fileNameHandleIdMap.get(pair._1).get, pair._2))
+    }
+
+  def withSessionToken(request: WSRequest): WSRequest =
+    request.withHeaders("sessionToken" -> getSessionToken)
+
+  def withJsonContent(request: WSRequest): WSRequest =
+    request.withHeaders("Content-Type" -> "application/json")
+}
+
+object ZipFileIterator {
+
+  protected class ZipStreamIterator(zin: ZipInputStream) extends Iterator[(String, String)] {
+
+    private var ze = zin.getNextEntry
+
+    override def hasNext() = {
+      val isNext = ze != null
+      if (!isNext)
+        zin.close
+      isNext
+    }
+
+    override def next() = {
+      val baos = new ByteArrayOutputStream(2048)
+      IOUtils.copy(zin, baos)
+      val string = baos.toString("UTF-8")
+      baos.close
+      zin.closeEntry
+      val result = (ze.getName, string)
+      ze = zin.getNextEntry
+      result
+    }
+  }
+
+  def apply(bytes: Array[Byte]): Iterator[(String, String)] =
+    new ZipStreamIterator(
+      new ZipInputStream(
+        new ByteArrayInputStream(bytes)))
 }

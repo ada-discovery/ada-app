@@ -170,7 +170,7 @@ class DataSetServiceImpl @Inject()(
     )
 
     fileColumnsFuture.flatMap { fileColumns =>
-      def transformJson = updateFileJsonFields(synapseService, fileColumns, importInfo.tableId)_
+      def transformJson = updateJsonsFileFields(synapseService, fileColumns, importInfo.tableId)_
       importLineParsableDataSet(
         importInfo,
         synapseDelimiter.toString,
@@ -184,7 +184,7 @@ class DataSetServiceImpl @Inject()(
     }
   }
 
-  private def updateFileJsonFields(
+  private def updateJsonFileFields(
     synapseService: SynapseService, // unused
     fileColumns: Seq[SelectColumn],
     tableId: String)(
@@ -197,19 +197,55 @@ class DataSetServiceImpl @Inject()(
 
     val rowId = (json \ synapseRowIdFieldName).get.as[String].trim.toInt
     val rowVersion = (json \ synapseRowVersionFieldName).as[String].trim.toInt
-    val columnNameJsonFutures: Seq[Future[(String, JsValue)]] = fileColumns.map { fileColumn =>
-      val fileStringFuture = synapseServiceAux.downloadColumnFile(tableId, fileColumn.id, rowId, rowVersion)
-      fileStringFuture.map { fileString =>
-        val fieldName = escapeKey(fileColumn.name.replaceAll("\"", "").trim)
-        (fieldName, Json.parse(fileString))
-      }(ExecutionContexts.SynapseExecutionContext).recover {
-        case e: AdaRestException =>
-          throw new AdaException(s"File for the row '$rowId', version '$rowVersion', column '${fileColumn.name}' couldn't be downloaded from Synapse due to '${e.getMessage}.'", e)
-      }(ExecutionContexts.SynapseExecutionContext)
+
+    val columnNameJsonFutures: Seq[Future[Option[(String, JsValue)]]] = fileColumns.map { fileColumn =>
+      val fieldName = escapeKey(fileColumn.name.replaceAll("\"", "").trim)
+
+      if ((json \ fieldName).get != JsNull) {
+        val fileStringFuture = synapseServiceAux.downloadColumnFile(tableId, fileColumn.id, rowId, rowVersion)
+        fileStringFuture.map { fileString =>
+          Some(fieldName, Json.parse(fileString))
+        }(ExecutionContexts.SynapseExecutionContext).recover {
+          case e: AdaRestException =>
+            throw new AdaException(s"File for the row '$rowId', version '$rowVersion', column '${fileColumn.name}' couldn't be downloaded from Synapse due to '${e.getMessage}.'", e)
+        }(ExecutionContexts.SynapseExecutionContext)
+      } else
+        Future(None)
     }
     Future.sequence(columnNameJsonFutures).map(columnNameJsons =>
-      json ++ JsObject(columnNameJsons)
+      json ++ JsObject(columnNameJsons.flatten)
     )(ExecutionContexts.SynapseExecutionContext)
+  }
+
+  private def updateJsonsFileFields(
+    synapseService: SynapseService,
+    fileColumns: Seq[SelectColumn],
+    tableId: String)(
+    jsons: Seq[JsObject]
+  ): Future[Seq[JsObject]] = {
+    val fieldNames = fileColumns.map { fileColumn =>
+      escapeKey(fileColumn.name.replaceAll("\"", "").trim)
+    }
+
+    val fileHandleIds = fieldNames.map { fieldName =>
+      jsons.map(json =>
+        (json \ fieldName).get.asOpt[String]
+      )
+    }.flatten.flatten
+
+    val fileHandleIdContentsFuture = synapseService.downloadTableFilesInBulk(fileHandleIds, tableId)
+
+    fileHandleIdContentsFuture.map { fileHandleIdContents =>
+      val fileHandleIdContentMap = fileHandleIdContents.toMap
+      jsons.map { json =>
+        val fieldNameJsons = fieldNames.map { fieldName =>
+          (json \ fieldName).get.asOpt[String].map( fileHandleId =>
+            (fieldName, Json.parse(fileHandleIdContentMap.get(fileHandleId).get))
+          )
+        }.flatten
+        json ++ JsObject(fieldNameJsons)
+      }
+    }
   }
 
   override def importDataSetAndDictionary(
@@ -294,7 +330,7 @@ class DataSetServiceImpl @Inject()(
     delimiter: String,
     skipFirstLine: Boolean,
     createLineIteratorAndCount: => (Iterator[String], Int),
-    transformJson: Option[JsObject => Future[JsObject]] = None
+    transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]] = None
   ): Future[Seq[String]] = {
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
@@ -321,14 +357,14 @@ class DataSetServiceImpl @Inject()(
         var bufferedLine = ""
 
         // read all the lines
-        val lineFutures = contentLines.zipWithIndex.map { case (line, index) =>
+        val jsons: Seq[JsObject] = contentLines.zipWithIndex.map { case (line, index) =>
           // parse the line
           bufferedLine += line
           val values = parseLine(delimiter, bufferedLine)
 
           if (values.size < columnCount) {
             logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
-            Future(())
+            Option.empty[JsObject]
           } else if (values.size > columnCount) {
             throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated.")
           } else {
@@ -336,28 +372,33 @@ class DataSetServiceImpl @Inject()(
             bufferedLine = ""
 
             // create a JSON record
-            val jsonRecord = JsObject(
+            Some(
+              JsObject(
               (columnNames, values).zipped.map {
                 case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
               })
-
-            // transform the JSON record if specified
-            val transformedJsonRecordFuture =
-              if (transformJson.isDefined)
-                transformJson.get(jsonRecord)
-              else
-                Future(jsonRecord)
-
-            transformedJsonRecordFuture.flatMap( transformedJsonRecord =>
-              // insert the record to the database
-              dataRepo.save(transformedJsonRecord).map(_ =>
-                logProgress((index + 1), reportLineSize, lineCount - 1)
-              )
             )
           }
-        }
+        }.toSeq.flatten
 
-        Future.sequence(lineFutures).map(_ => columnNames)
+        for {
+          // transform the JSON records if specified
+          jsons <- {
+            if (transformJsons.isDefined)
+              transformJsons.get(jsons)
+            else
+              Future(jsons)
+          }
+          lines <- Future.sequence(
+            jsons.zipWithIndex.map{ case (jsonRecord, index) =>
+              // insert the record to the database
+              dataRepo.save(jsonRecord).map(_ =>
+                logProgress((index + 1), reportLineSize, lineCount - 1)
+              )
+            }
+          )
+        } yield
+          columnNames
       } catch {
         case e: Exception => Future.failed(e)
       }

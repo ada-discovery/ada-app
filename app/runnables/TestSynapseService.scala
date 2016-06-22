@@ -1,14 +1,18 @@
 package runnables
 
+import java.io.{ByteArrayOutputStream, BufferedReader, InputStreamReader}
+import java.util.zip.ZipEntry
 import javax.inject.Inject
 
-import models.synapse.{RowReference, ColumnType, RowReferenceSet}
-import services.SynapseServiceFactory
+import models.synapse._
+import org.apache.commons.io.IOUtils
+import services.{ZipFileIterator, SynapseServiceFactory}
 import scala.concurrent.Await.result
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Configuration
 import play.api.libs.json.Json
+import models.synapse.JsonFormat._
 import scala.concurrent.duration._
 
 class TestSynapseService @Inject() (
@@ -26,7 +30,7 @@ class TestSynapseService @Inject() (
     val synapseService = synapseServiceFactory(username, password)
 
     val future = for {
-      jobToken <- synapseService.runCsvTableQuery(tableId1, s"SELECT * FROM $tableId1")
+      jobToken <- synapseService.startCsvTableQuery(tableId1, s"SELECT * FROM $tableId1")
       result <- synapseService.getCsvTableResultWait(tableId1, jobToken)
       fileHandle <- {
         println(result.resultsFileHandleId)
@@ -65,13 +69,22 @@ class TestSynapseService @Inject() (
           }
           Future.sequence(futures)
         }
-      } yield
+        fileHandleIdContents <- {
+          val fileHandleIds = tableFileHandleResults.rows.map(_.list).flatten.map(_.id)
+          synapseService.downloadTableFilesInBulk(fileHandleIds, tableId2)
+        }
+      } yield {
+        fileHandleIdContents.foreach{ case (fileName, content) =>
+          println(fileName)
+          println(content)
+        }
         fileContents.map { fileContent =>
           Json.prettyPrint(Json.parse(fileContent))
         }
+      }
 
-    println(result(jsonsFuture, timeout).mkString("\n\n"))
-//    synapseService.getTableColumnFileHandles()
+    result(jsonsFuture, timeout)
+
   }
 }
 

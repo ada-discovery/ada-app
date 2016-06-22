@@ -107,6 +107,43 @@ case class PaginatedColumnModels(
   results: Seq[ColumnModel]
 )
 
+// http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/org/sagebionetworks/repo/model/file/FileHandleAssociateType.html
+object FileHandleAssociateType extends Enumeration {
+  val FileEntity, TableEntity, WikiAttachment, UserProfileAttachment, MessageAttachment, TeamAttachment, SubmissionAttachment, VerificationSubmission = Value
+}
+
+// http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/org/sagebionetworks/repo/model/file/FileHandleAssociation.html
+case class FileHandleAssociation(
+  associateObjectType: FileHandleAssociateType.Value,
+  fileHandleId: String,
+  associateObjectId: String
+)
+
+// http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/org/sagebionetworks/repo/model/file/BulkFileDownloadRequest.html
+case class BulkFileDownloadRequest(
+  requestedFiles: Seq[FileHandleAssociation],
+  concreteType: Option[String] = None
+)
+
+// http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/org/sagebionetworks/repo/model/file/FileDownloadSummary.html
+case class FileDownloadSummary(
+  zipEntryName: Option[String],
+  status: String,
+  failureMessage: Option[String],
+  failureCode: Option[String],
+  associateObjectType: FileHandleAssociateType.Value,
+  fileHandleId: String,
+  associateObjectId: String
+)
+
+// http://hud.rel.rest.doc.sagebase.org.s3-website-us-east-1.amazonaws.com/org/sagebionetworks/repo/model/file/BulkFileDownloadResponse.html
+case class BulkFileDownloadResponse(
+  fileSummary: Seq[FileDownloadSummary],
+  concreteType: String,
+  userId: String,
+  resultZipFileHandleId: String
+)
+
 object JsonFormat {
   implicit val AsyncJobStateFormat = EnumFormat.enumFormat(AsyncJobState)
   implicit val AsynchronousJobStatusFormat = Json.format[AsynchronousJobStatus]
@@ -121,4 +158,9 @@ object JsonFormat {
   implicit val FileHandleResultsFormat = Json.format[FileHandleResults]
   implicit val TableFileHandleResultsFormat = Json.format[TableFileHandleResults]
   implicit val PaginatedColumnModelsFormat = Json.format[PaginatedColumnModels]
+  implicit val FileHandleAssociateTypeFormat = EnumFormat.enumFormat(FileHandleAssociateType)
+  implicit val FileHandleAssociationFormat = Json.format[FileHandleAssociation]
+  implicit val BulkFileDownloadRequestFormat = Json.format[BulkFileDownloadRequest]
+  implicit val FileDownloadSummaryFormat = Json.format[FileDownloadSummary]
+  implicit val BulkFileDownloadResponseFormat = Json.format[BulkFileDownloadResponse]
 }
