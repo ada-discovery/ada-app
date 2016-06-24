@@ -42,13 +42,18 @@ trait AsyncReadonlyRepo[E, ID] {
 }
 
 trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
+
+  import play.api.libs.concurrent.Execution.Implicits.defaultContext
+
   def save(entity: E): Future[ID]
+  def save(entities: Traversable[E]): Future[Traversable[ID]] =
+    Future.sequence(entities.map(save))
 }
 
 trait AsyncCrudRepo[E, ID] extends AsyncRepo[E, ID] {
   def update(entity: E): Future[ID]
   def delete(id: ID): Future[Unit]
-  def deleteAll : Future[Unit]
+  def deleteAll: Future[Unit]
 }
 
 trait AsyncStreamRepo[E, ID] extends AsyncRepo[E, ID] {

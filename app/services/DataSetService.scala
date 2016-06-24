@@ -376,7 +376,7 @@ class DataSetServiceImpl @Inject()(
             // reset the buffer
             bufferedLine = ""
 
-            logProgress((index + 1), reportLineSize, lineCount - 1)
+//            logProgress((index + 1), reportLineSize, lineCount - 1)
 
             // create a JSON record
             Some(

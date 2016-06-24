@@ -15,12 +15,26 @@ protected class JsObjectMongoCrudRepo @Inject() (
   ) extends MongoAsyncReadonlyRepo[JsObject, BSONObjectID](collectionName, "_id") with JsObjectCrudRepo {
 
   override def save(entity: JsObject): Future[BSONObjectID] = {
-    val id = BSONObjectID.generate
-    entity ++ Json.obj(identityName -> id)
+    val (doc, id) = addId(entity)
+
     collection.insert(entity).map {
       case le if le.ok => id
       case le => throw new RepoException(le.message)
     }
+  }
+
+  override def save(entities: Traversable[JsObject]): Future[Traversable[BSONObjectID]] = {
+    val docAndIds = entities.map(addId)
+
+    collection.bulkInsert(docAndIds.map(_._1).toStream, ordered = false).map {
+      case le if le.ok => docAndIds.map(_._2)
+      case le => throw new RepoException(le.errmsg.getOrElse(""))
+    }
+  }
+
+  private def addId(entity: JsObject): (JsObject, BSONObjectID) = {
+    val id = BSONObjectID.generate
+    (entity ++ Json.obj(identityName -> id), id)
   }
 
   override def update(entity: JsObject): Future[BSONObjectID] = {

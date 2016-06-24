@@ -41,7 +41,7 @@ protected class DataSetImportSchedulerImpl @Inject() (
 
   private val scheduledImports = MMap[BSONObjectID, Cancellable]()
   private val logger = Logger
-  private val timeout = 12000 millis
+  private val timeout = 120000 millis
 
   // initialize when created
   init()

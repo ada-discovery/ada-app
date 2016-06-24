@@ -11,7 +11,7 @@ import reactivemongo.api.indexes.{ IndexType, Index }
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
 import reactivemongo.core.commands.Sort
-
+import scala.concurrent.duration._
 import scala.concurrent.Future
 import models.{Field, Identity}
 import play.api.libs.json._
@@ -28,8 +28,15 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
   @Inject var reactiveMongoApi : ReactiveMongoApi = _
 
-  /** Mongo collection deserializable to [E] */
-  protected lazy val collection: JSONCollection = reactiveMongoApi.db.collection(collectionName)
+  private val failoverStrategy =
+    FailoverStrategy(
+      initialDelay = 5 seconds,
+      retries = 5,
+      delayFactor =
+        attemptNumber => 1 + attemptNumber * 0.5
+    )
+
+  protected lazy val collection: JSONCollection = reactiveMongoApi.db.collection(collectionName, failoverStrategy)
 
   override def get(id: ID): Future[Option[E]] =
     collection.find(Json.obj(identityName -> id)).one[E]
@@ -98,19 +105,33 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
   import play.modules.reactivemongo.json._
 
   override def save(entity: E): Future[ID] = {
+    val (doc, id) = toJsonAndId(entity)
+
+    collection.insert(doc).map {
+      case le if le.ok => id
+      case le => throw new RepoException(le.message)
+    }
+  }
+
+  override def save(entities: Traversable[E]): Future[Traversable[ID]] = {
+    println("SAving in bulk mongo...")
+    val docAndIds = entities.map(toJsonAndId)
+
+    collection.bulkInsert(docAndIds.map(_._1).toStream, ordered = false).map { // bulkSize = 100, bulkByteSize = 16793600
+      case le if le.ok => docAndIds.map(_._2)
+      case le => throw new RepoException(le.errmsg.getOrElse(""))
+    }
+  }
+
+  private def toJsonAndId(entity: E): (JsObject, ID) = {
     val givenId = identity.of(entity)
-    val (doc, id) = if (givenId.isDefined) {
+    if (givenId.isDefined) {
       val doc = Json.toJson(entity).as[JsObject]
       (doc, givenId.get)
     } else {
       val id = identity.next
       val doc = Json.toJson(identity.set(entity, id)).as[JsObject]
       (doc, id)
-    }
-
-    collection.insert(doc).map {
-      case le if le.ok => id
-      case le => throw new RepoException(le.message)
     }
   }
 }

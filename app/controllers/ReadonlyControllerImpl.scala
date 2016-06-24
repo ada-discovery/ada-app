@@ -40,7 +40,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
 
   protected val pageLimit = 20
 
-  protected val timeout = 120000 millis
+  protected val timeout = 200000 millis
 
   protected def repoHook = repo
 

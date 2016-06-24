@@ -217,13 +217,15 @@ class DataSetImportController @Inject()(
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Data set import #$id not found"))
       ) { importInfo =>
+          val start = new Date()
           implicit val msg = messagesApi.preferred(request)
           def errorRedirect(errorMessage: String) = home.flashing("errors" -> s"Data set '${importInfo.dataSetName}' import failed. $errorMessage")
           val successRedirect = home// Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
           dataSetService.importDataSetUntyped(importInfo).map { _ =>
+            val execTimeSec = (new Date().getTime - start.getTime) / 1000
             render {
-              case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '${importInfo.dataSetName}' has been imported.")
-              case Accepts.Json() => Created(Json.obj("message" -> "Data set has been imported", "name" -> importInfo.dataSetName))
+              case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '${importInfo.dataSetName}' has been imported in $execTimeSec sec(s).")
+              case Accepts.Json() => Created(Json.obj("message" -> s"Data set has been imported in $execTimeSec sec(s)", "name" -> importInfo.dataSetName))
             }
           }.recover {
             case e: AdaParseException => errorRedirect(s"Parsing problem occurred. ${e.getMessage}")
