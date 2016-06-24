@@ -233,9 +233,12 @@ class DataSetServiceImpl @Inject()(
       )
     }.flatten.flatten
 
+    logger.info(s"Downloading Synapse column data for ${fileHandleIds.size} file handles initiated.")
+
     val fileHandleIdContentsFuture = synapseService.downloadTableFilesInBulk(fileHandleIds, tableId)
 
     fileHandleIdContentsFuture.map { fileHandleIdContents =>
+      logger.info("Downloading of Synapse column data finished. Updating JSONs with Synapse column data...")
       val fileHandleIdContentMap = fileHandleIdContents.toMap
       jsons.map { json =>
         val fieldNameJsons = fieldNames.map { fieldName =>
@@ -356,6 +359,8 @@ class DataSetServiceImpl @Inject()(
 
         var bufferedLine = ""
 
+        logger.info(s"Parsing lines...")
+
         // read all the lines
         val jsons: Seq[JsObject] = contentLines.zipWithIndex.map { case (line, index) =>
           // parse the line
@@ -370,6 +375,8 @@ class DataSetServiceImpl @Inject()(
           } else {
             // reset the buffer
             bufferedLine = ""
+
+            logProgress((index + 1), reportLineSize, lineCount - 1)
 
             // create a JSON record
             Some(
@@ -389,14 +396,17 @@ class DataSetServiceImpl @Inject()(
             else
               Future(jsons)
           }
-          lines <- Future.sequence(
-            jsons.zipWithIndex.map{ case (jsonRecord, index) =>
-              // insert the record to the database
-              dataRepo.save(jsonRecord).map(_ =>
-                logProgress((index + 1), reportLineSize, lineCount - 1)
-              )
-            }
-          )
+          lines <- {
+            logger.info(s"Saving JSONs...")
+            Future.sequence(
+              jsons.zipWithIndex.map{ case (jsonRecord, index) =>
+                // insert the record to the database
+                dataRepo.save(jsonRecord).map(_ =>
+                  logProgress((index + 1), reportLineSize, lineCount - 1)
+                )
+              }
+            )
+          }
         } yield
           columnNames
       } catch {
