@@ -116,7 +116,7 @@ class DataSetServiceImpl @Inject()(
       importInfo,
       importInfo.delimiter,
       importInfo.eol.isDefined,
-      createCsvFileLineIteratorAndCount(
+      createCsvFileLineIterator(
         importInfo.path.map(Left(_)).getOrElse(Right(file.get)),
         importInfo.charsetName,
         importInfo.eol
@@ -134,7 +134,7 @@ class DataSetServiceImpl @Inject()(
       importInfo,
       tranSmartDelimeter.toString,
       false,
-      createCsvFileLineIteratorAndCount(
+      createCsvFileLineIterator(
         importInfo.dataPath.map(Left(_)).getOrElse(Right(dataFile.get)),
         importInfo.charsetName,
         None
@@ -149,7 +149,7 @@ class DataSetServiceImpl @Inject()(
           typeInferenceProvider,
           tranSmartFieldGroupSize,
           tranSmartDelimeter.toString,
-          createCsvFileLineIteratorAndCount(
+          createCsvFileLineIterator(
             importInfo.mappingPath.map(Left(_)).getOrElse(Right(mappingFile.get)),
             importInfo.charsetName,
             None
@@ -177,7 +177,7 @@ class DataSetServiceImpl @Inject()(
         true, {
           val csvFuture = synapseService.getTableAsCsv(importInfo.tableId)
           val lines = result(csvFuture, timeout).split(synapseEol)
-          (lines.iterator, lines.length)
+          lines.iterator
         },
         Some(transformJson)
       ).map(_ => ())
@@ -287,11 +287,11 @@ class DataSetServiceImpl @Inject()(
         logger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
   }
 
-  private def createCsvFileLineIteratorAndCount(
+  private def createCsvFileLineIterator(
     pathOrFile: Either[String, java.io.File],
     charsetName: Option[String],
     eol: Option[String]
-  ): (Iterator[String], Int) = {
+  ): Iterator[String] = {
     def createSource = {
       val charset = Charset.forName(charsetName.getOrElse(defaultCharset))
 
@@ -305,13 +305,10 @@ class DataSetServiceImpl @Inject()(
       eol match {
         case Some(eol) => {
           // TODO: not effective... if a custom eol is used we need to read the whole file into memory and split again. It'd be better to use a custom BufferedReader
-          val lines = createSource.mkString.split(eol)
-          (lines.iterator, lines.length)
+          createSource.mkString.split(eol).iterator
         }
-        case None => {
-          // TODO: not effective... To count the lines, need to recreate the source and parse the file again
-          (createSource.getLines, createSource.getLines.size)
-        }
+        case None =>
+          createSource.getLines
       }
     } catch {
       case e: UnsupportedCharsetException => throw AdaParseException(s"Unsupported charset '${charsetName.get}' detected.", e)
@@ -325,14 +322,14 @@ class DataSetServiceImpl @Inject()(
     * @param importInfo
     * @param delimiter
     * @param skipFirstLine
-    * @param createLineIteratorAndCount
+    * @param createLineIterator
     * @return The column names (future)
     */
   protected def importLineParsableDataSet(
     importInfo: DataSetImportInfo,
     delimiter: String,
     skipFirstLine: Boolean,
-    createLineIteratorAndCount: => (Iterator[String], Int),
+    createLineIterator: => Iterator[String],
     transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]] = None
   ): Future[Seq[String]] = {
     logger.info(new Date().toString)
@@ -347,7 +344,7 @@ class DataSetServiceImpl @Inject()(
 
     val columnNamesFuture = {
       try {
-        val (lines, lineCount) = createLineIteratorAndCount
+        val lines = createLineIterator
 
         // collect the column names
         val columnNames =  getColumnNames(delimiter, lines)
@@ -355,7 +352,6 @@ class DataSetServiceImpl @Inject()(
 
         // for each line create a JSON record and insert to the database
         val contentLines = if (skipFirstLine) lines.drop(1) else lines
-        val reportLineSize = (lineCount - 1) * reportLineFreq
 
         var bufferedLine = ""
 
@@ -398,11 +394,14 @@ class DataSetServiceImpl @Inject()(
           }
           lines <- {
             logger.info(s"Saving JSONs...")
+            val size = jsons.size
+            val reportLineSize = size * reportLineFreq
+
             Future.sequence(
               jsons.zipWithIndex.map{ case (jsonRecord, index) =>
                 // insert the record to the database
                 dataRepo.save(jsonRecord).map(_ =>
-                  logProgress((index + 1), reportLineSize, lineCount - 1)
+                  logProgress((index + 1), reportLineSize, size)
                 )
               }
             )
@@ -467,7 +466,7 @@ class DataSetServiceImpl @Inject()(
     typeInferenceProvider: TypeInferenceProvider,
     fieldGroupSize: Int,
     delimiter: String,
-    createMappingFileLineIteratorAndCount: => (Iterator[String], Int),
+    createMappingFileLineIterator: => Iterator[String],
     fieldNamesInOrder: Seq[String]
   ): Future[Unit] = {
     logger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' initiated.")
@@ -490,7 +489,7 @@ class DataSetServiceImpl @Inject()(
     val indexFieldNameMap = fieldNamesInOrder.zipWithIndex.map(_.swap).toMap
     val nameCategoryMap = MMap[String, Category]()
 
-    val (lines, lineCount) = createMappingFileLineIteratorAndCount
+    val lines = createMappingFileLineIterator
 
     // read the mapping file to obtain tupples: field name, field label, and category name
     val fieldNameLabelCategoryNameMap = lines.drop(1).zipWithIndex.map { case (line, index) =>

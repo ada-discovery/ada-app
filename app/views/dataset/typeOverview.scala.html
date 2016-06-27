@@ -25,7 +25,7 @@
         "typeChart",
         true,
         false,
-        fieldTypeCounts.map{case (fieldType, count) => DataPoint(fieldType.toString, fieldType.toString, count) }.toSeq
+        fieldTypeCounts.map{case (fieldType, count) => DataPoint(fieldType.toString, count, None) }.toSeq
     )
     </div>
 }

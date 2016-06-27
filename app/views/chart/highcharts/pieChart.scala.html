@@ -1,10 +1,41 @@
 @import util.shorten
 @import util.DataPoint
 
-@(title : String, chartElementName : String, showLabels: Boolean, showLegend: Boolean, elements : Seq[DataPoint])
+@(title: String, chartElementName: String, showLabels: Boolean, showLegend: Boolean, elements: Seq[DataPoint])
 
 <script type="text/javascript">
-    pieChart('@title', '@{chartElementName}', @showLabels, @showLegend,
-        [ @elements.map { case DataPoint(key, label, value) => {name : '@shorten(label)', y : @value, key: '@key'},}]
-    )
+    $(document).ready(function() {
+        var categories = [ @elements.map { case DataPoint(label, value, key) => '@label',}];
+        var data = [ @elements.map { case DataPoint(label, value, key) => {
+            name : '@shorten(label)',
+            y : @value,
+            key: '@key'
+        },}];
+
+        pieChart('@title', '@{chartElementName}', @showLabels, @showLegend, data, true, true);
+
+        $('#@chartElementName').on('chartTypeChanged', function(event, chartType) {
+            changeChartType(chartType);
+        });
+
+        function changeChartType(chartType) {
+            switch (chartType) {
+                case "pie":
+                    pieChart('@title', '@{chartElementName}', @showLabels, @showLegend, data, true, true);
+                    break;
+                case "column":
+                    columnChart('@title', '@{chartElementName}', '', 'Count', false, categories, data, true, true);
+                    break;
+                case "bar":
+                    columnChart('@title', '@{chartElementName}', '', 'Count', true, categories, data, true, true);
+                    break;
+                case "line":
+                    lineChart('@title', '@{chartElementName}', '', 'Count', categories, data, true, true);
+                    break;
+                case "polar":
+                    polarChart('@title', '@{chartElementName}', categories, data, true, true);
+                    break;
+            }
+        }
+    });
 </script>

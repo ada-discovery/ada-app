@@ -24,14 +24,14 @@ resolvers ++= Seq(
 routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._", "util.FilterSpec.FilterSpecQueryStringBinder")
 
 libraryDependencies ++= Seq(
-  "org.reactivemongo" %% "play2-reactivemongo" % "0.11.13-play24", //"org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24",
+  "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.11.13-play24",
   "org.webjars" %% "webjars-play" % "2.4.0",
   "org.webjars" % "bootstrap" % "3.3.5",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
   "org.webjars" % "typeaheadjs" % "0.11.1",
   "org.webjars" % "html5shiv" % "3.7.0",
   "org.webjars" % "respond" % "1.4.2",
-  "org.webjars" % "highcharts" % "4.2.2",
+  "org.webjars" % "highcharts" % "4.2.5",
   "org.webjars.bower" % "plotly.js" % "1.5.1",
   "org.webjars.bower" % "d3" % "3.5.16",
   "org.webjars" % "jquery-ui" % "1.11.1",
@@ -42,12 +42,10 @@ libraryDependencies ++= Seq(
   "org.apache.spark" % "spark-sql_2.11" % "1.6.0" exclude("asm", "asm"),
   "org.apache.spark" % "spark-mllib_2.11" % "1.6.0",
   "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.0" exclude("asm", "asm"),
+  "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",
   "be.objectify" % "deadbolt-scala_2.11" % "2.4.3",
-  "be.objectify" % "deadbolt-java_2.11" % "2.4.3",
   "jp.t2v" %% "play2-auth"        % "0.14.1",
-  "jp.t2v" %% "play2-auth-social" % "0.14.1",
-  "jp.t2v" %% "play2-auth-test"   % "0.14.1" % "test",
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
   "com.typesafe.play" %% "play-mailer" % "4.0.0"
 )

@@ -6,16 +6,21 @@ import play.api.libs.json._
 import collection.mutable.{Map => MMap}
 import _root_.util.JsonUtil._
 
+object ChartType extends Enumeration {
+  val pie, column, bar, line, polar = Value
+}
+
 abstract class ChartSpec{val title: String}
 
 case class PieChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[DataPoint]) extends ChartSpec
 case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec
+
 case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec
 case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec
 
 case class FieldChartSpec(fieldName: String, chartSpec : ChartSpec)
 
-case class DataPoint(key: String, label : String, value : Int)
+case class DataPoint(label: String, value: Int, key: Option[String])
 
 object ChartSpec {
 
@@ -42,7 +47,7 @@ object ChartSpec {
     val data = countMap.toSeq.sortBy(_._2).map{
       case (key, count) => {
         val keyOrEmpty = key.getOrElse("")
-        DataPoint(keyOrEmpty, keyLabelMap.map(_.getOrElse(keyOrEmpty, keyOrEmpty)).getOrElse(keyOrEmpty), count)
+        DataPoint(keyLabelMap.map(_.getOrElse(keyOrEmpty, keyOrEmpty)).getOrElse(keyOrEmpty), count, key)
       }
     }
     new PieChartSpec(title, showLabels, showLegend, data)

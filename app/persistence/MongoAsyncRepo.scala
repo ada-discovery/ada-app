@@ -28,15 +28,15 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
   @Inject var reactiveMongoApi : ReactiveMongoApi = _
 
-  private val failoverStrategy =
-    FailoverStrategy(
-      initialDelay = 5 seconds,
-      retries = 5,
-      delayFactor =
-        attemptNumber => 1 + attemptNumber * 0.5
-    )
+//  private val failoverStrategy =
+//    FailoverStrategy(
+//      initialDelay = 5 seconds,
+//      retries = 5,
+//      delayFactor =
+//        attemptNumber => 1 + attemptNumber * 0.5
+//    )
 
-  protected lazy val collection: JSONCollection = reactiveMongoApi.db.collection(collectionName, failoverStrategy)
+  protected lazy val collection: JSONCollection = reactiveMongoApi.db.collection(collectionName)
 
   override def get(id: ID): Future[Option[E]] =
     collection.find(Json.obj(identityName -> id)).one[E]
@@ -114,7 +114,6 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
   }
 
   override def save(entities: Traversable[E]): Future[Traversable[ID]] = {
-    println("SAving in bulk mongo...")
     val docAndIds = entities.map(toJsonAndId)
 
     collection.bulkInsert(docAndIds.map(_._1).toStream, ordered = false).map { // bulkSize = 100, bulkByteSize = 16793600
