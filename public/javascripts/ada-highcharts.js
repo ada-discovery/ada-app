@@ -1,4 +1,13 @@
-    function pieChart(title, chartElementName, showLabels, showLegend, data) {
+    function pieChart(title, chartElementName, showLabels, showLegend, data, allowPointClick, allowChartTypeChange) {
+        var chartTypes = ["pie", "column", "bar", "line", "polar"];
+        var exporting = {};
+        if (allowChartTypeChange)
+            exporting = chartTypeMenu(chartElementName, chartTypes)
+
+        var cursor = '';
+        if (allowPointClick)
+            cursor = 'pointer';
+
         $('#' + chartElementName).highcharts({
             chart: {
                 plotBackgroundColor: null,
@@ -14,8 +23,8 @@
             },
             plotOptions: {
                 pie: {
-                    allowPointSelect: true,
-                    cursor: 'pointer',
+                    allowPointSelect: allowPointClick,
+                    cursor: cursor,
                     dataLabels: {
                         enabled: showLabels,
                         format: '<b>{point.name}</b>: {point.percentage:.1f}%',
@@ -27,7 +36,8 @@
                     point: {
                         events: {
                             click: function () {
-                                $('#' + chartElementName).trigger("pointClick", this);
+                                if (allowPointClick)
+                                    $('#' + chartElementName).trigger("pointClick", this);
                             }
                         }
                     }
@@ -39,6 +49,7 @@
             credits: {
                 enabled: false
             },
+            exporting: exporting,
             series: [{
                 name: title,
                 colorByPoint: true,
@@ -47,15 +58,28 @@
         });
     }
 
-    function columnChart(title, chartElementName, xAxisCaption, yAxisCaption, categories, data) {
+    function columnChart(title, chartElementName, xAxisCaption, yAxisCaption, inverted, categories, data, allowPointClick, allowChartTypeChange) {
+        var chartTypes = ["pie", "column", "bar", "line", "polar"];
+        var exporting = {};
+        if (allowChartTypeChange)
+            exporting = chartTypeMenu(chartElementName, chartTypes)
+
+        var cursor = '';
+        if (allowPointClick)
+            cursor = 'pointer';
+
+        var chartType = 'column'
+        if (inverted)
+            chartType = 'bar'
         $('#' + chartElementName).highcharts({
             chart: {
-                type: 'column'
+                type: chartType
             },
             title: {
                 text: title
             },
             xAxis: {
+//                type: 'category',
                 title: {
                     text: xAxisCaption
                 },
@@ -73,28 +97,181 @@
             credits: {
                 enabled: false
             },
+            exporting: exporting,
             plotOptions: {
                 series: {
                     borderWidth: 0,
                     dataLabels: {
                         enabled: true,
                         format: '{point.y:.1f}'
+                    },
+                    allowPointSelect: allowPointClick,
+                    cursor: cursor,
+                    point: {
+                        events: {
+                            click: function () {
+                                if (allowPointClick)
+                                    $('#' + chartElementName).trigger("pointClick", this);
+                            }
+                        }
                     }
                 }
             },
 
             tooltip: {
                 headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
-                pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}</b><br/>'
+                pointFormat: '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.2f}</b><br/>'
             },
 
             series: [{
                 name: title,
                 colorByPoint: true,
-                colorByPoint: true,
                 data: data
             }]
         })
+    }
+
+    function lineChart(title, chartElementName, xAxisCaption, yAxisCaption, categories, data, allowPointClick, allowChartTypeChange) {
+        var chartTypes = ["pie", "column", "bar", "line", "polar"];
+        var exporting = {};
+        if (allowChartTypeChange)
+            exporting = chartTypeMenu(chartElementName, chartTypes)
+
+        var cursor = '';
+        if (allowPointClick)
+            cursor = 'pointer';
+
+        $('#' + chartElementName).highcharts({
+            title: {
+                text: title
+            },
+            xAxis: {
+                title: {
+                    text: xAxisCaption
+                },
+                categories: categories
+            },
+            yAxis: {
+                title: {
+                    text: yAxisCaption
+                }
+            },
+            legend: {
+                enabled: false
+            },
+            credits: {
+                enabled: false
+            },
+            exporting: exporting,
+            plotOptions: {
+                series: {
+                    marker: {
+                        enabled: true,
+                        states: {
+                            hover: {
+                                enabled: true
+                            }
+                        }
+                    },
+                    allowPointSelect: allowPointClick,
+                    cursor: cursor,
+                    point: {
+                        events: {
+                            click: function () {
+                                if (allowPointClick)
+                                    $('#' + chartElementName).trigger("pointClick", this);
+                            }
+                        }
+                    }
+                }
+            },
+
+            tooltip: {
+                headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+                pointFormat: '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.2f}</b><br/>'
+            },
+
+            series: [{
+                name: title,
+                data: data
+            }]
+        })
+    }
+
+    function polarChart(title, chartElementName, categories, data, allowPointClick, allowChartTypeChange) {
+        var chartTypes = ["pie", "column", "bar", "line", "polar"];
+        var exporting = {};
+        if (allowChartTypeChange)
+            exporting = chartTypeMenu(chartElementName, chartTypes)
+
+        var cursor = '';
+        if (allowPointClick)
+            cursor = 'pointer';
+
+        $('#' + chartElementName).highcharts({
+            chart: {
+                polar: true
+            },
+
+            title: {
+                text: title
+            },
+            pane: {
+                center: ['50%', '52%'],
+                size: '100%',
+                startAngle: 0,
+                endAngle: 360
+            },
+            legend: {
+                //align: 'center',
+                //verticalAlign: 'bottom',
+                //layout: 'vertical',
+                enabled: false
+            },
+            xAxis: {
+                categories: categories,
+                tickmarkPlacement: 'on',
+                lineWidth: 0
+            },
+
+            yAxis: {
+                gridLineInterpolation: 'polygon',
+                labels: {
+                    enabled: true
+                }
+            },
+            plotOptions: {
+                series: {
+                    dataLabels: {
+                        enabled: false
+                    },
+                    allowPointSelect: allowPointClick,
+                    cursor: cursor,
+                    point: {
+                        events: {
+                            click: function () {
+                                if (allowPointClick)
+                                    $('#' + chartElementName).trigger("pointClick", this);
+                            }
+                        }
+                    }
+                }
+            },
+            tooltip: {
+                pointFormat: 'Count: <b>{point.y}</b>'
+            },
+            exporting: exporting,
+            credits: {
+                enabled: false
+            },
+            series: [{
+                name: title,
+                type: 'area',
+                pointPlacement: 'on',
+                data: data
+            }]
+
+        });
     }
 
     function scatterChart(title, chartElementName, xAxisCaption, yAxisCaption, height, series) {
@@ -156,4 +333,31 @@
             },
             series: series
         });
+    }
+
+    function chartTypeMenu(chartElementName, chartTypes) {
+        Highcharts.setOptions({
+            lang: {
+                chartTypeButtonTitle: "Chart Type"
+            }
+        });
+
+        return {
+            buttons: {
+                chartTypeButton: {
+                    symbol: 'circle',
+                    x: '0%',
+                    _titleKey: "chartTypeButtonTitle",
+                    menuItems:
+                        chartTypes.map(function(name) {
+                            return {
+                                text: name,
+                                onclick: function () {
+                                    $('#' + chartElementName).trigger("chartTypeChanged", name);
+                                }
+                            }
+                        })
+                }
+            }
+        };
     }
