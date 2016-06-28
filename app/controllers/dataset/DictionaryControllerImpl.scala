@@ -20,7 +20,7 @@ import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.{DeNoPaSetting, DataSetService}
-import util.{ChartSpec, FieldChartSpec, FilterSpec}
+import util.FilterSpec
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import views.html.dictionary
 import scala.concurrent.duration._
@@ -177,6 +177,6 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   ) : Future[ChartSpec] =
     repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { fields =>
       val values = fields.map(field => Some(fieldExtractor(field).toString))
-      ChartSpec.pie(values, None, chartTitle, false, true)
+      ChartSpec.categorical(values, None, chartTitle, false, true)
     }
 }

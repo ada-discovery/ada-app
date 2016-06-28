@@ -1,12 +1,23 @@
-@import views.html.elements.{inputText, inputTextReadonly}
+@import views.html.elements.{inputText, inputTextReadonly, labelValue}
+@import views.html.attributeLabel
+@import views.html.table.dynamicStringTable
+@import views.html.datasetsetting.overviewFieldChartTypeTable
 
 @(form: Form[DataSetSetting])(implicit msg: play.api.i18n.Messages)
+
+<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
+<script type="text/javascript" src="@routes.Assets.versioned("javascripts/dynamicTable.min.js")"></script>
 
 @inputTextReadonly("dataSetSetting", "dataSetId", form)
 @inputText("dataSetSetting", "keyFieldName", form)
 @inputText("dataSetSetting", "exportOrderByFieldName", form)
-@inputText("dataSetSetting", "listViewTableColumnNames", form)
-@inputText("dataSetSetting", "overviewChartFieldNames", form)
+@labelValue("listViewTableColumnNames", attributeLabel("dataSetSetting", "listViewTableColumnNames")){
+    @dynamicStringTable("listViewTableColumnName", form.value.get.listViewTableColumnNames, true)
+}
+@labelValue("overviewFieldChartTypes", attributeLabel("dataSetSetting", "overviewFieldChartTypes")){
+    @overviewFieldChartTypeTable(form.value.get.overviewFieldChartTypes)
+}
+@inputText("dataSetSetting", "overviewChartElementGridWidth", form)
 @inputText("dataSetSetting", "defaultScatterXFieldName", form)
 @inputText("dataSetSetting", "defaultScatterYFieldName", form)
 @inputText("dataSetSetting", "defaultDistributionFieldName", form)

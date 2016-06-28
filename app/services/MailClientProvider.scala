@@ -1,6 +1,7 @@
-package persistence
+package services
 
 import javax.inject.{Inject, Singleton}
+
 import com.google.inject.ImplementedBy
 import play.api.Configuration
 import play.api.libs.mailer._

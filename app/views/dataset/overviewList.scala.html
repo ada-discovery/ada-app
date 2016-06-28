@@ -5,7 +5,7 @@
 @import views.html.table.paginatedJsonTable
 @import play.modules.reactivemongo.json._
 @import reactivemongo.bson.BSONObjectID
-@import util.FieldChartSpec
+@import models.FieldChartSpec
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import play.api.libs.json.{JsValue, JsArray, JsObject}
@@ -16,8 +16,9 @@
     domainName : String,
     page: Page[JsObject],
     displayedFields: Traversable[Field],
-    displayedFieldNames: Traversable[String], // could differ from the displayed fields since the dictionary doesn't have to contain all the fields... although it's more likely to happen only when a fresh data set is imported
+    displayedFieldNames: Traversable[String], // could differ from the displayed fields since the dictionary doesn't have to contain all the fields... this, however, could happen only when a fresh data set (without dictionary) is imported
     fieldChartSpecs: Traversable[FieldChartSpec],
+    chartGridElementWidth: Int,
     router: DataSetRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -110,7 +111,7 @@
     page.total,
     actions,
     table,
-    Some(filterChartPanel(fieldChartSpecs)),
+    Some(filterChartPanel(fieldChartSpecs, chartGridElementWidth)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav()),
     None,

@@ -1,0 +1,44 @@
+@import views.html.table.{displayTable, dynamicTable}
+@import util.typeColumns
+@import models.{FieldChartType, ChartType}
+
+@(items: Traversable[FieldChartType])
+
+@editableChartType(chartType: Option[ChartType.Value]) = {
+    <select id="chartType" name="chartType">
+        <option value="" @if(chartType.isEmpty) {selected="selected"}></option>
+        @ChartType.values.map { _chartType =>
+            <option value="@{_chartType}" @if(chartType.isDefined && chartType.get == _chartType) {selected="selected"}>@{_chartType}</option>
+        }
+    </select>
+}
+
+@table = {
+    @displayTable(
+        items,
+        typeColumns[FieldChartType](
+            (None, "", _ => {<input type="checkbox"/>}),
+            (Some("fieldName"), "Field", _.fieldName),
+            (None, "Chart Type", {x => editableChartType(x.chartType)})
+        )
+    )
+}
+
+@rowToModelJsFun = {
+    function(row) {
+        var fieldName = row.find('#fieldName').text().trim();
+        var chartType = row.find('#chartType').val().trim();
+        if (chartType)
+            return '{"fieldName": "' + fieldName + '", "chartType": "' + chartType + '"}';
+        else
+            return '{"fieldName": "' + fieldName + '"}';
+    }
+}
+
+@itemToRowJsFun = {
+    function(item) {
+        return "<tr><td><input type='checkbox'></input></td><td id='fieldName'>" + item + `</td><td>@editableChartType(None)</td></tr>`;
+    }
+}
+
+@dynamicTable("overviewFieldChartType", table, true, rowToModelJsFun, itemToRowJsFun)

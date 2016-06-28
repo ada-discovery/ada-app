@@ -17,8 +17,6 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def overviewFieldTypes: Action[AnyContent]
 
-  def overview: Action[AnyContent]
-
   def overviewList(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
 
   def getScatterStats(xFieldName: Option[String], yFieldName: Option[String], filter: FilterSpec): Action[AnyContent]

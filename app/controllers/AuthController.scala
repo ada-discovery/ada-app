@@ -1,14 +1,13 @@
 package controllers
 
 import javax.inject.Inject
-
-import persistence.MailClientProvider
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json.{JsNull, JsString, JsObject}
 import play.api.mvc.{Action, Controller}
 import play.api.data.Forms._
 import play.api.data._
+import services.MailClientProvider
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
@@ -64,6 +63,7 @@ class AuthController @Inject() (
   /**
     * Login for restful api.
     * Gives restful response for form errors and login success.
+ *
     * @return
     */
   def loginREST = Action.async { implicit request =>
@@ -80,6 +80,7 @@ class AuthController @Inject() (
 
   /**
     * Logout for restful api.
+ *
     * @return
     */
   def logoutREST = Action { implicit request =>

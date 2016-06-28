@@ -1,5 +1,5 @@
     function pieChart(title, chartElementName, showLabels, showLegend, data, allowPointClick, allowChartTypeChange) {
-        var chartTypes = ["pie", "column", "bar", "line", "polar"];
+        var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
             exporting = chartTypeMenu(chartElementName, chartTypes)
@@ -59,7 +59,7 @@
     }
 
     function columnChart(title, chartElementName, xAxisCaption, yAxisCaption, inverted, categories, data, allowPointClick, allowChartTypeChange) {
-        var chartTypes = ["pie", "column", "bar", "line", "polar"];
+        var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
             exporting = chartTypeMenu(chartElementName, chartTypes)
@@ -132,7 +132,7 @@
     }
 
     function lineChart(title, chartElementName, xAxisCaption, yAxisCaption, categories, data, allowPointClick, allowChartTypeChange) {
-        var chartTypes = ["pie", "column", "bar", "line", "polar"];
+        var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
             exporting = chartTypeMenu(chartElementName, chartTypes)
@@ -199,7 +199,7 @@
     }
 
     function polarChart(title, chartElementName, categories, data, allowPointClick, allowChartTypeChange) {
-        var chartTypes = ["pie", "column", "bar", "line", "polar"];
+        var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
             exporting = chartTypeMenu(chartElementName, chartTypes)
@@ -218,7 +218,7 @@
             },
             pane: {
                 center: ['50%', '52%'],
-                size: '100%',
+                size: '90%',
                 startAngle: 0,
                 endAngle: 360
             },

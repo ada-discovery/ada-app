@@ -4,13 +4,13 @@ import javax.inject.Inject
 
 import controllers.dataset.{CategoryController, DataSetController, DictionaryController}
 import models.security.CustomUser
-import persistence.MailClientProvider
 
 import persistence.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, seq, email, text}
 import models.{DataSpaceMetaInfo, Page}
 import reactivemongo.bson.BSONObjectID
+import services.MailClientProvider
 import views.html
 import play.api.i18n.Messages
 import play.api.mvc.{AnyContent, RequestHeader, Request, Action}

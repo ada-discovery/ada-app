@@ -7,8 +7,7 @@ import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
 import controllers.ViewTypes.{EditView, CreateView}
-import controllers.dataset.DataSetSettingController.dataSetSettingMapping
-import controllers.{FormWithViews, AdminRestrictedCrudController, CrudControllerImpl}
+import controllers._
 import models.DataSetImportInfoFormattersAndIds.{DataSetImportInfoIdentity, dataSetImportInfoFormat}
 import models._
 import persistence.RepoTypes._
@@ -45,6 +44,28 @@ class DataSetImportController @Inject()(
     "minute" -> optional(number(min=0, max=59)),
     "second" -> optional(number(min=0, max=59))
   ) (ScheduledTime.apply)(ScheduledTime.unapply)
+
+  private implicit val seqFormatter = SeqFormatter.apply
+  private implicit val mapFormatter = MapJsonFormatter.apply
+
+  private val dataSetSettingMapping: Mapping[DataSetSetting] = mapping(
+    "id" -> ignored(Option.empty[BSONObjectID]),
+    "dataSetId" -> nonEmptyText,
+    "keyFieldName" -> nonEmptyText,
+    "exportOrderByFieldName" -> nonEmptyText,
+    "listViewTableColumnNames" -> of[Seq[String]],
+    "overviewChartFieldNames" -> of[Seq[String]],
+    "overviewChartElementGridWidth" -> number(min = 1, max = 12),
+    "defaultScatterXFieldName" -> nonEmptyText,
+    "defaultScatterYFieldName" -> nonEmptyText,
+    "defaultDistributionFieldName" -> nonEmptyText,
+    "tranSMARTVisitFieldName" -> optional(text),
+    "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " "))
+  ) (DataSetSetting.apply2){
+    DataSetSetting.unapply(_).map( v =>
+      (v._1, v._2, v._3, v._4 ,v._5, v._6.map(_.fieldName), v._7, v._8, v._9, v._10, v._11, v._12)
+    )
+  }
 
   protected val csvForm = Form(
     mapping(

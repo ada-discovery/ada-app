@@ -1,9 +1,6 @@
 package models
 
-import play.api.data.format.Formatter
-
 import play.api.libs.json._
-import play.api.data.FormError
 
 object EnumFormat  {
 
@@ -28,3 +25,27 @@ object EnumFormat  {
     Format(EnumFormat.enumReads(enum), EnumFormat.enumWrites)
   }
 }
+
+//object Tupple2ArrayFormat  {
+//
+//  def enumReads[A,B](implicit a: Reads[A], b: Reads[B]): Reads[Tuple2[A, B]] = new Reads[Tuple2[A, B]] {
+//    def reads(json: JsValue): JsResult[Tuple2[A, B]] = json match {
+//      case JsAaray(s) => {
+//        try {
+//          JsSuccess(enum.withName(s))
+//        } catch {
+//          case _: NoSuchElementException => JsError(s"Enumeration expected of type: '${enum.getClass}', but it does not appear to contain the value: '$s'")
+//        }
+//      }
+//      case _ => JsError("String value expected")
+//    }
+//  }
+//
+//  implicit def enumWrites[A,B](implicit a: Writes[A], b: Writes[B]): Writes[Tuple2[A, B]] = new Writes[Tuple2[A, B]] {
+//    def writes(tuple: Tuple2[A, B]) = JsObject(Seq(a.writes(tuple._1), b.writes(tuple._2)))
+//  }
+//
+//  implicit def enumFormat[E <: Enumeration](enum: E): Format[E#Value] = {
+//    Format(EnumFormat.enumReads(enum), EnumFormat.enumWrites)
+//  }
+//}

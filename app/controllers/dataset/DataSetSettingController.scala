@@ -3,9 +3,9 @@ package controllers.dataset
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import controllers.{AdminRestrictedCrudController, SeqFormatter, MapJsonFormatter, CrudControllerImpl}
+import controllers._
 import models.DataSetFormattersAndIds._
-import models.{DataSetSetting, Page}
+import models._
 import persistence.RepoTypes._
 import play.api.Logger
 import play.api.data.Form
@@ -21,7 +21,6 @@ import views.html
 import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 import controllers.dataset.routes.javascript.{DataSetSettingController => dataSetSettingJsRoutes}
 import play.api.data.Mapping
-import controllers.dataset.DataSetSettingController.dataSetSettingMapping
 
 import scala.concurrent.Future
 
@@ -31,7 +30,32 @@ class DataSetSettingController @Inject() (
     dataSetService: DataSetService
   ) extends CrudControllerImpl[DataSetSetting, BSONObjectID](repo) with AdminRestrictedCrudController[BSONObjectID] {
 
-  override protected val form = Form(dataSetSettingMapping)
+  private implicit val chartTypeFormatter = EnumFormatter(ChartType)
+
+//  private val fieldChartMapping: Mapping[FieldChartType] = mapping(
+//    "fieldName" -> nonEmptyText,
+//    "chartType" -> optional(of[ChartType.Value])
+//  ) (FieldChartType.apply)(FieldChartType.unapply)
+
+  private implicit val mapFormatter = MapJsonFormatter.apply
+  private implicit val fieldChartTypeFormatter = JsonFormatter[FieldChartType]
+
+  override protected val form = Form(
+    mapping(
+      "id" -> ignored(Option.empty[BSONObjectID]),
+      "dataSetId" -> nonEmptyText,
+      "keyFieldName" -> nonEmptyText,
+      "exportOrderByFieldName" -> nonEmptyText,
+      "listViewTableColumnNames" -> seq(text),
+      "overviewFieldChartTypes" -> seq(of[FieldChartType]), // fieldChartMapping
+      "overviewChartElementGridWidth" -> number(min = 1, max = 12),
+      "defaultScatterXFieldName" -> nonEmptyText,
+      "defaultScatterYFieldName" -> nonEmptyText,
+      "defaultDistributionFieldName" -> nonEmptyText,
+      "tranSMARTVisitFieldName" -> optional(text),
+      "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " "))
+    ) (DataSetSetting.apply)(DataSetSetting.unapply)
+  )
 
   override protected val home =
     Redirect(routes.DataSetSettingController.find())
@@ -85,10 +109,11 @@ class DataSetSettingController @Inject() (
 
   def addFieldsToChartOverview(dataSet: String, fieldNames: Seq[String]) = restrict {
     processSetting({ setting =>
-      val existingFieldNames = setting.overviewChartFieldNames
+      val existingFieldCharts = setting.overviewFieldChartTypes
+      val existingFieldNames = existingFieldCharts.map(_.fieldName)
       val filteredFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
       if (filteredFieldNames.nonEmpty) {
-        val newSetting = setting.copy(overviewChartFieldNames = existingFieldNames ++ filteredFieldNames)
+        val newSetting = setting.copy(overviewFieldChartTypes = existingFieldCharts ++ filteredFieldNames.map(FieldChartType(_, None)))
         repo.update(newSetting)
       } else
         Future(())
@@ -130,23 +155,4 @@ class DataSetSettingController @Inject() (
       ).as("text/javascript")
     }
   }
-}
-
-object DataSetSettingController {
-  implicit val seqFormatter = SeqFormatter.apply
-  implicit val mapFormatter = MapJsonFormatter.apply
-
-  val dataSetSettingMapping: Mapping[DataSetSetting] = mapping(
-    "id" -> ignored(Option.empty[BSONObjectID]),
-    "dataSetId" -> nonEmptyText,
-    "keyFieldName" -> nonEmptyText,
-    "exportOrderByFieldName" -> nonEmptyText,
-    "listViewTableColumnNames" -> of[Seq[String]],
-    "overviewChartFieldNames" -> of[Seq[String]],
-    "defaultScatterXFieldName" -> nonEmptyText,
-    "defaultScatterYFieldName" -> nonEmptyText,
-    "defaultDistributionFieldName" -> nonEmptyText,
-    "tranSMARTVisitFieldName" -> optional(text),
-    "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " "))
-  ) (DataSetSetting.apply)(DataSetSetting.unapply)
 }

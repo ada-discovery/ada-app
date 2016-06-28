@@ -16,7 +16,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       "Clinical",
       configuration.getString("redcap.prodserver.api.url").get,
       configuration.getString("redcap.prodserver.token").get,
-      false,
+      true,
       false,
       None,
       Some(LuxParkDataSetSettings.Clinical)

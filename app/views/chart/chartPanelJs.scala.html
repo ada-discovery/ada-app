@@ -1,4 +1,4 @@
-@import util.{ChartSpec, PieChartSpec, ColumnChartSpec}
+@import models.ColumnChartSpec
 @import views.html.chart._
 @import util.chartElementName
 
@@ -6,8 +6,9 @@
 
 @chartSpecs.map { chartSpec =>
     @{chartSpec match {
-        case PieChartSpec(title, showLabels, showLegend, data) => highcharts.pieChart(title, chartElementName(title), showLabels, showLegend, data)
-        case ColumnChartSpec(title, data) => highcharts.columnChart(title, chartElementName(title), Some(title), Some("Count"), data)
+        case CategoricalChartSpec(title, showLabels, showLegend, data, chartType) => highcharts.categoricalChart(title, chartElementName(title), showLabels, showLegend, data, chartType)
+//        case NumericalChartSpec(title, data, chartType) => highcharts.columnChart(title, chartElementName(title), Some(title), Some("Count"), data)
+        case NumericalChartSpec(title, data, chartType) => highcharts.numericalChart(title, chartElementName(title), data, chartType)
         case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
     }}
 }

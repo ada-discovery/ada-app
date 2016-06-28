@@ -1,6 +1,6 @@
 @import models.security.CustomUser
 @import views.html.elements.{inputText, labelValue}
-@import views.html.table.addRemoveStringTable
+@import views.html.table.dynamicStringTable
 
 @(
     form: Form[CustomUser],
@@ -9,6 +9,9 @@
     fieldActionNames: Array[String],
     categoryActionNames: Array[String]
 )(implicit msg: play.api.i18n.Messages)
+
+<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
+<script type="text/javascript" src="@routes.Assets.versioned("javascripts/dynamicTable.min.js")"></script>
 
 @addDataSetPermissionModalBody = {
     <div class="row">
@@ -56,8 +59,12 @@
 
 @inputText("user", "name", form)
 @inputText("user", "email", form)
-@labelValue("user", "Roles"){@addRemoveStringTable("role", form.value.get.roles)}
-@labelValue("user", "Permissions"){@addRemoveStringTable("permission", form.value.get.permissions, Some(addDataSetPermissionButton))}
+@labelValue("user", "Roles"){
+    @dynamicStringTable("role", form.value.get.roles)
+}
+@labelValue("user", "Permissions"){
+    @dynamicStringTable("permission", form.value.get.permissions, false, Some(addDataSetPermissionButton))
+}
 
 @dataSetActionNamesAsString = @{
     Html(dataSetActionNames.map(s => "\"" + s + "\"").mkString(","))
@@ -73,8 +80,6 @@
 
 <script type="text/javascript">
     $(function () {
-        registerTableAddModalHandler('role')
-        registerTableAddModalHandler('permission')
         handleModalButtonEnterPressed("addDataSetPermissionModal", "addDataSetPermissionSubmitButton", addDataSetPermission)
         $("#permission-controller").val("")
     })
@@ -113,7 +118,7 @@
                 dsPermission = dsPermission + "." + action
         }
 
-        addTableRow("permission", dsPermission)
+        $('#permissionDiv').dynamicTable('addTableRow', dsPermission)
     }
 
     function populateActions(values) {

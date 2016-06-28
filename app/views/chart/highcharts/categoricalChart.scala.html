@@ -1,0 +1,48 @@
+@import util.shorten
+@import models.DataPoint
+
+@(
+    title: String,
+    chartElementName: String,
+    showLabels: Boolean,
+    showLegend: Boolean,
+    elements: Seq[DataPoint],
+    chartType: ChartType.Value
+)
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        var categories = [ @elements.map { case DataPoint(label, value, key) => '@label',}];
+        var data = [ @elements.map { case DataPoint(label, value, key) => {
+            name : '@shorten(label)',
+            y : @value,
+            key: '@key'
+        },}];
+
+        $('#@chartElementName').on('chartTypeChanged', function(event, chartType) {
+            changeChartType(chartType);
+        });
+
+        changeChartType('@chartType');
+
+        function changeChartType(chartType) {
+            switch (chartType) {
+                case '@ChartType.Pie':
+                    pieChart('@title', '@{chartElementName}', @showLabels, @showLegend, data, true, true);
+                    break;
+                case '@ChartType.Column':
+                    columnChart('@title', '@{chartElementName}', '', 'Count', false, categories, data, true, true);
+                    break;
+                case '@ChartType.Bar':
+                    columnChart('@title', '@{chartElementName}', '', 'Count', true, categories, data, true, true);
+                    break;
+                case '@ChartType.Line':
+                    lineChart('@title', '@{chartElementName}', '', 'Count', categories, data, true, true);
+                    break;
+                case '@ChartType.Polar':
+                    polarChart('@title', '@{chartElementName}', categories, data, true, true);
+                    break;
+            }
+        }
+    });
+</script>

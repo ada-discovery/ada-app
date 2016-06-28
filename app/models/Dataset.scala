@@ -3,7 +3,7 @@ package models
 import java.util.UUID
 import java.util.Date
 
-import com.fasterxml.jackson.annotation.JsonIgnore
+import models.ChartType
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
@@ -34,15 +34,42 @@ case class DataSetSetting(
   keyFieldName: String,
   exportOrderByFieldName: String,
   listViewTableColumnNames: Seq[String],
-  overviewChartFieldNames: Seq[String],
+  overviewFieldChartTypes: Seq[FieldChartType],
+  overviewChartElementGridWidth: Int,
   defaultScatterXFieldName: String,
   defaultScatterYFieldName: String,
   defaultDistributionFieldName: String,
   tranSMARTVisitFieldName: Option[String],
   tranSMARTReplacements: Map[String, String]
 ) {
-  def this(dataSetId: String) = this(None, dataSetId, "", "", Seq[String](), Seq[String](), "", "", "", None, Map[String, String]())
+  def this(dataSetId: String) = this(None, dataSetId, "", "", Seq[String](), Seq[FieldChartType](), 3, "", "", "", None, Map[String, String]())
 }
+
+object DataSetSetting {
+  def apply2(
+    _id: Option[BSONObjectID],
+    dataSetId: String,
+    keyFieldName: String,
+    exportOrderByFieldName: String,
+    listViewTableColumnNames: Seq[String],
+    overviewChartFieldNames: Seq[String],
+    overviewChartElementGridWidth: Int,
+    defaultScatterXFieldName: String,
+    defaultScatterYFieldName: String,
+    defaultDistributionFieldName: String,
+    tranSMARTVisitFieldName: Option[String],
+    tranSMARTReplacements: Map[String, String]
+  ) = DataSetSetting(
+    _id, dataSetId, keyFieldName, exportOrderByFieldName,
+    listViewTableColumnNames, overviewChartFieldNames.map(FieldChartType(_, None)), overviewChartElementGridWidth,
+    defaultScatterXFieldName, defaultScatterYFieldName, defaultDistributionFieldName, tranSMARTVisitFieldName, tranSMARTReplacements
+  )
+}
+
+case class FieldChartType(
+  fieldName: String,
+  chartType: Option[ChartType.Value]
+)
 
 case class Dictionary(
   _id: Option[BSONObjectID],
@@ -123,6 +150,8 @@ object DataSetFormattersAndIds {
   implicit val dictionaryFormat = Json.format[Dictionary]
   implicit val dataSetMetaInfoFormat = Json.format[DataSetMetaInfo]
   implicit val dataSpaceMetaInfoFormat = Json.format[DataSpaceMetaInfo]
+  implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
+  implicit val fieldChartTypeFormat = Json.format[FieldChartType]
   implicit val dataSetSettingFormat = Json.format[DataSetSetting]
 
   implicit object DictionaryIdentity extends BSONObjectIdentity[Dictionary] {

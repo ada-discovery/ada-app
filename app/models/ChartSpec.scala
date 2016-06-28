@@ -1,26 +1,26 @@
-package util
+package models
 
+import _root_.util.JsonUtil._
+import play.api.libs.json._
+
+import scala.collection.mutable.{Map => MMap}
 import scala.math.BigDecimal.RoundingMode
 
-import play.api.libs.json._
-import collection.mutable.{Map => MMap}
-import _root_.util.JsonUtil._
-
 object ChartType extends Enumeration {
-  val pie, column, bar, line, polar = Value
+  val Pie, Column, Bar, Line, Polar = Value
 }
 
 abstract class ChartSpec{val title: String}
 
-case class PieChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[DataPoint]) extends ChartSpec
-case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec
+case class CategoricalChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[DataPoint], chartType: ChartType.Value) extends ChartSpec
+case class NumericalChartSpec(title: String, data: Seq[(String, Int)], chartType: ChartType.Value) extends ChartSpec
 
+case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec
 case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec
 case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec
 
-case class FieldChartSpec(fieldName: String, chartSpec : ChartSpec)
-
 case class DataPoint(label: String, value: Int, key: Option[String])
+case class FieldChartSpec(fieldName: String, chartSpec : ChartSpec)
 
 object ChartSpec {
 
@@ -30,15 +30,16 @@ object ChartSpec {
     * Calculated fraction of a field is used as pie chart slice sizes.
     *
     * @param values Raw values.
-    * @return PieChartSpec object for use in view.
+    * @return CategoricalChartSpec object for use in view.
     */
-  def pie(
+  def categorical(
     values: Traversable[Option[String]],
     keyLabelMap: Option[Map[String, String]] = None,
     title: String,
     showLabels: Boolean,
-    showLegend: Boolean
-  ) : PieChartSpec = {
+    showLegend: Boolean,
+    chartType: Option[ChartType.Value] = None
+  ): CategoricalChartSpec = {
     val countMap = MMap[Option[String], Int]()
     values.foreach{ value =>
       val count = countMap.getOrElse(value, 0)
@@ -50,7 +51,7 @@ object ChartSpec {
         DataPoint(keyLabelMap.map(_.getOrElse(keyOrEmpty, keyOrEmpty)).getOrElse(keyOrEmpty), count, key)
       }
     }
-    new PieChartSpec(title, showLabels, showLegend, data)
+    new CategoricalChartSpec(title, showLabels, showLegend, data, chartType.getOrElse(ChartType.Pie))
   }
 
   /**
@@ -64,15 +65,16 @@ object ChartSpec {
     * @param explMax Optional min value for scaling of the columns.
     * @return ColumnChartSpec for us in view.
     */
-  def column(
+  def numerical(
     items: Traversable[JsObject],
     fieldName: String,
     title: String,
     columnCount: Int,
     xAxisScale: Option[Int] = None,
     explMin: Option[Double] = None,
-    explMax: Option[Double] = None
-  ) : ColumnChartSpec = {
+    explMax: Option[Double] = None,
+    chartType: Option[ChartType.Value] = None
+  ): NumericalChartSpec = {
     val values = project(items.toList, fieldName).map(toDouble).flatten
     val data = if (values.nonEmpty) {
       val min: BigDecimal = if (explMin.isDefined) explMin.get else values.min
@@ -96,7 +98,7 @@ object ChartSpec {
       }
     } else
       Seq[(String, Int)]()
-    ColumnChartSpec(title, data)
+    NumericalChartSpec(title, data, chartType.getOrElse(ChartType.Column))
   }
 
   /**

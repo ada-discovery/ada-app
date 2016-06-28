@@ -1,0 +1,28 @@
+@import views.html.table.{displayTable, dynamicTable}
+@import util.typeColumns
+
+@(domainName: String, items: Traversable[String], sortable: Boolean = false, extraActions: Option[Html] = None)
+
+@table = {
+    @displayTable(
+        items,
+        typeColumns[String](
+            (None, "", _ => {<input type="checkbox"/>}),
+            (Some("name"), "Name", identity)
+        )
+    )
+}
+
+@rowToModelJsFun = {
+    function(row) {
+        return row.find('#name').text().trim();
+    }
+}
+
+@itemToRowJsFun = {
+    function(item) {
+        return "<tr><td><input type='checkbox'></input></td><td id='name'>" + item + "</td></tr>";
+    }
+}
+
+@dynamicTable(domainName, table, sortable, rowToModelJsFun, itemToRowJsFun, extraActions)

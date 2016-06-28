@@ -41,8 +41,6 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def overviewFieldTypes = dispatch(_.overviewFieldTypes())
 
-  override def overview = dispatch(_.overview())
-
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.overviewList(page, orderBy, filter))
 
   override def getScatterStats(xFieldName: Option[String], yFieldName: Option[String], filter: FilterSpec) = dispatch(_.getScatterStats(xFieldName, yFieldName, filter))
