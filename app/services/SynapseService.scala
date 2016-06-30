@@ -330,7 +330,9 @@ protected[services] class SynapseServiceWSImpl @Inject() (
   }
 
   override def downloadTableFilesInBulk(fileHandleIds: Traversable[String], tableId: String): Future[Iterator[(String, String)]] =
-    for {
+    if(fileHandleIds.isEmpty) {
+      Future(Iterator[(String, String)]())
+    } else for {
       bulkDownloadToken <- {
         val requestedFiles = fileHandleIds.map(FileHandleAssociation(FileHandleAssociateType.TableEntity, _, tableId))
         startBulkDownload(BulkFileDownloadRequest(requestedFiles.toSeq))

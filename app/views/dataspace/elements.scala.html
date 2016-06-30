@@ -1,11 +1,14 @@
 @import views.html.elements.inputText
 @import views.html.elements.{labelValue, value}
 @import views.html.table.displayTable
+@import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import util.typeColumns
+@import reactivemongo.bson.BSONObjectID
 
 @(
     form: Form[DataSpaceMetaInfo],
-    dataSetIdSizeMap: Map[String, Int]
+    dataSetIdSizeMap: Map[String, Int],
+    id: Option[BSONObjectID]
 )(implicit msg: play.api.i18n.Messages)
 
 @editableInput(key: String, value: Any) = {
@@ -17,6 +20,34 @@
     <input type="hidden" id="dataSetMetaInfos.hide" name="dataSetMetaInfos.hide" value="@dataSetInfo.hide">
 }
 
+@buttons(dataSetId: String) = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" id="submitButton" class="btn btn-primary" onclick="deleteDataSetAction(this, '@dataSetId'); return false;">OK</button>
+}
+
+@modalDeleteChoice(value: String, text: String, checked: Boolean = false) = {
+    <li>
+        <label class="radio-inline"><input type="radio" name="actionChoice" value="@value" @if(checked) {checked="checked"}><h5>@text</h5></label>
+    </li>
+}
+
+@deleteModalInner = {
+    <ul class="list-unstyled">
+        @modalDeleteChoice("1", "Unregister data set (no delete)")
+        @modalDeleteChoice("2", "Delete data (but keep metadata)", true)
+        @modalDeleteChoice("3", "Delete data and metadata (dictionary, category tree, and setting)")
+    </ul>
+}
+
+@deleteButton(dataSetInfo: DataSetMetaInfo) = {
+    <a class="btn btn-sm btn-default"  data-toggle="modal" data-target="#deleteModal@{dataSetInfo._id.get.stringify}">
+        <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
+    </a>
+    @if(id.isDefined) {
+        @modal("deleteModal" + dataSetInfo._id.get.stringify, "What do you want to do?", deleteModalInner, None, Some(buttons(dataSetInfo.id)))
+    }
+}
+
 @table = {
     @displayTable(
         form.value.get.dataSetMetaInfos.sortBy(_.sortOrder),
@@ -25,7 +56,8 @@
             (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
             (None, "Sort Order", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.sortOrder", item.sortOrder) }),
             (None, "# Items/Patients", { item: DataSetMetaInfo => dataSetIdSizeMap.get(item.id).get.toString }),
-            (None, "Hide?", editableHideCheckbox)
+            (None, "Hide?", editableHideCheckbox),
+            (None, "Delete?", deleteButton)
         ),
         None,
         None,
@@ -44,5 +76,17 @@
             var checked = $(this).is(":checked")
             $(this).parent().find('#dataSetMetaInfos\\.hide').val(checked)
         })
+
+        $("#submitButton").click(function(e) {
+            console.log("lalal")
+            e.preventDefault();
+        })
     })
+    function deleteDataSetAction(button, dataSetId) {
+        var actionChoice = $(button).closest(".modal-content").find("input[name='actionChoice']:checked").val()
+        var params = {};
+        params['dataSetId'] = dataSetId;
+        params['actionChoice'] = actionChoice;
+        submit('post', '@{dataSpaceMetaInfoRoutes.deleteDataSet(id.get)}', params)
+    }
 </script>

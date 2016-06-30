@@ -233,12 +233,12 @@ class DataSetServiceImpl @Inject()(
       )
     }.flatten.flatten
 
-    logger.info(s"Downloading Synapse column data for ${fileHandleIds.size} file handles initiated.")
+    logger.info(s"Download of Synapse column data for ${fileHandleIds.size} file handles initiated.")
 
     val fileHandleIdContentsFuture = synapseService.downloadTableFilesInBulk(fileHandleIds, tableId)
 
     fileHandleIdContentsFuture.map { fileHandleIdContents =>
-      logger.info("Downloading of Synapse column data finished. Updating JSONs with Synapse column data...")
+      logger.info("Download of Synapse column data finished. Updating JSONs with Synapse column data...")
       val fileHandleIdContentMap = fileHandleIdContents.toMap
       jsons.map { json =>
         val fieldNameJsons = fieldNames.map { fieldName =>

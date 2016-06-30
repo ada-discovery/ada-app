@@ -1,5 +1,6 @@
 package controllers.dataset
 
+import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import controllers.{AdminRestrictedCrudController, CrudControllerImpl}
@@ -7,19 +8,24 @@ import models.DataSetFormattersAndIds._
 import models.{DataSetMetaInfo, DataSpaceMetaInfo, Page}
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
+import play.api.Logger
+import play.api.mvc.{Action, Controller}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, RequestHeader, Request}
+import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil._
 import views.html
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import controllers.dataset.routes.javascript.{DataSpaceMetaInfoController => dataSpaceMetaInfoJsRoutes}
 
 class DataSpaceMetaInfoController @Inject() (
     repo: DataSpaceMetaInfoRepo,
-    dsaf: DataSetAccessorFactory
+    dsaf: DataSetAccessorFactory,
+    dataSetSettingRepo: DataSetSettingRepo
   ) extends CrudControllerImpl[DataSpaceMetaInfo, BSONObjectID](repo) with AdminRestrictedCrudController[BSONObjectID] {
 
   override protected val form = Form(
@@ -84,6 +90,49 @@ class DataSpaceMetaInfoController @Inject() (
   override def update(id: BSONObjectID) = restrictAdmin(deadbolt) (
     update(id, Redirect(routes.DataSpaceMetaInfoController.get(id)))
   )
+
+  def deleteDataSet(id: BSONObjectID) = restrictAdmin(deadbolt) {
+    Action.async{ implicit request =>
+      implicit val msg = messagesApi.preferred(request)
+      repo.get(id).flatMap(_.fold(
+        Future(NotFound(s"Entity #$id not found"))
+      ) { dataSpaceInfo =>
+        val requestMap = request.body.asFormUrlEncoded.get
+        val dataSetId = requestMap.get("dataSetId").get.head
+        val actionChoice = requestMap.get("actionChoice").get.head
+
+        val dsa = dsaf(dataSetId).get
+
+        def unregisterDataSet: Future[_] = {
+          val filteredDataSetInfos = dataSpaceInfo.dataSetMetaInfos.filter(!_.id.equals(dataSetId))
+          repo.update(dataSpaceInfo.copy(dataSetMetaInfos = filteredDataSetInfos))
+        }
+
+        // maybe dropping the entire table/collection would be more appropriate than deleting all the records
+        def deleteDataSet: Future[_] =
+          dsa.dataSetRepo.deleteAll
+
+        def deleteMetaData: Future[_] =
+          for {
+            _ <- dsa.fieldRepo.deleteAll
+            _ <- dsa.categoryRepo.deleteAll
+            setting <- dsa.setting
+            _ <- dataSetSettingRepo.delete(setting._id.get)
+          } yield
+            ()
+
+        val future = actionChoice match {
+          case "1" => unregisterDataSet
+          case "2" => unregisterDataSet.flatMap(_ => deleteDataSet)
+          case "3" => unregisterDataSet.flatMap(_ => deleteDataSet).flatMap(_ => deleteMetaData)
+        }
+
+        future.map(_ =>
+          Redirect(routes.DataSpaceMetaInfoController.edit(id))
+        )
+      })
+    }
+  }
 
   private def getDataSetSizes(spaceMetaInfo: DataSpaceMetaInfo): Future[Map[String, Int]] = {
     val futures = spaceMetaInfo.dataSetMetaInfos.map { setMetaInfo =>

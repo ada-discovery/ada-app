@@ -147,6 +147,7 @@ GET         /studies/metainfo/:id/get                                           
 GET         /studies/metainfo/:id                                                   controllers.dataset.DataSpaceMetaInfoController.edit(id: BSONObjectID)
 POST        /studies/metainfo/:id                                                   controllers.dataset.DataSpaceMetaInfoController.update(id: BSONObjectID)
 POST        /studies/metainfo/:id/delete                                            controllers.dataset.DataSpaceMetaInfoController.delete(id: BSONObjectID)
+POST        /studies/metainfo/deleteDataSet/:id                                     controllers.dataset.DataSpaceMetaInfoController.deleteDataSet(id: BSONObjectID)
 
 # Map static resources from the /public folder to the /assets URL path
 #GET         /assets/*file                                                           controllers.Assets.at(path="/public", file)

@@ -2,9 +2,10 @@
 @import views.html.dataspace.elements
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
+@import reactivemongo.bson.BSONObjectID
 
 @(
-    id: reactivemongo.bson.BSONObjectID,
+    id: BSONObjectID,
     form: Form[DataSpaceMetaInfo],
     dataSetIdSizeMap: Map[String, Int],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -15,7 +16,7 @@
 @layout.edit(
     "Study",
 	form.errors,
-    elements(form, dataSetIdSizeMap),
+    elements(form, dataSetIdSizeMap, Some(id)),
     dataSpaceMetaInfoRoutes.update(id),
     dataSpaceMetaInfoRoutes.get(id),
     None,

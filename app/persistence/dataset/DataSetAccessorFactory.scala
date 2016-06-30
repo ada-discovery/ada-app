@@ -74,7 +74,8 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         if (settings.isEmpty)
           dataSetSettingRepo.save(setting)
         else
-          dataSetSettingRepo.update(setting.copy(_id = settings.head._id))
+          Future(())
+          // dataSetSettingRepo.update(setting.copy(_id = settings.head._id))
       ).getOrElse(
         // if no setting provided either create a dummy one if needed or do nothing
         if (metaInfos.isEmpty)

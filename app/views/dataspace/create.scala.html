@@ -11,7 +11,7 @@
 @layout.create(
     "Data Space Meta Info",
 	form = form,
-	elements = elements(form, Map[String, Int]()),
+	elements = elements(form, Map[String, Int](), None),
 	saveCall = dataSpaceMetaInfoRoutes.save(),
 	listCall = dataSpaceMetaInfoRoutes.listAll()
 )
