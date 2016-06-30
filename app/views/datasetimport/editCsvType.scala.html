@@ -1,11 +1,11 @@
-@import models.CsvDataSetImportInfo
+@import models.CsvDataSetImport
 @import views.html.layout
 @import views.html.datasetimport.csvTypeElements
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import reactivemongo.bson.BSONObjectID
 
-@(id: BSONObjectID, form: Form[CsvDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+@(id: BSONObjectID, form: Form[CsvDataSetImport])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @layout.edit(
     "CSV Data Set Import",

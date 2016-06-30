@@ -1,10 +1,10 @@
-@import models.RedCapDataSetImportInfo
+@import models.RedCapDataSetImport
 @import views.html.layout
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import views.html.datasetimport.redCapTypeElements
 
-@(form: Form[RedCapDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+@(form: Form[RedCapDataSetImport])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @layout.create(
     "RedCap Data Set Import",

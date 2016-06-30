@@ -1,21 +1,21 @@
-@import models.CsvDataSetImportInfo
+@import models.CsvDataSetImport
 @import views.html.datasetimport.{settingPanel, fileOrPathInput, dataSetInfoPanel, schedulePanel}
 @import views.html.elements._
 @import play.api.i18n.Messages
 
-@(form: Form[CsvDataSetImportInfo])(implicit msg: Messages)
+@(form: Form[CsvDataSetImport])(implicit msg: Messages)
 
-@dataSetInfoPanel("csvDataSetImportInfo", form)
+@dataSetInfoPanel("csvDataSetImport", form)
 
-<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[CsvDataSetImportInfo].getName}">
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[CsvDataSetImport].getName}">
 
 <div class="panel panel-default">
     <div class="panel-heading">File</div>
     <div class="panel-body">
-        @fileOrPathInput("csvDataSetImportInfo", "sourceChoice", "Source", "importFile", "path", form)
-        @inputText("csvDataSetImportInfo", "delimiter", form)
-        @inputText("csvDataSetImportInfo", "eol", form)
-        @inputText("csvDataSetImportInfo", "charsetName", form)
+        @fileOrPathInput("csvDataSetImport", "sourceChoice", "Source", "importFile", "path", form)
+        @inputText("csvDataSetImport", "delimiter", form)
+        @inputText("csvDataSetImport", "eol", form)
+        @inputText("csvDataSetImport", "charsetName", form)
     </div>
 </div>
 

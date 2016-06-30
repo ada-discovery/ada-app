@@ -8,7 +8,7 @@
 @import play.data.format.Formats.DateTime
 
 @(
-    page: Page[DataSetImportInfo],
+    page: Page[DataSetImport],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(implicit flash:Flash, msg: Messages, request: Request[_])
 
@@ -31,20 +31,20 @@
                 <span class="caret"></span>
             </button>
             <ul class="dropdown-menu">
-                @importLink(classOf[CsvDataSetImportInfo], "Csv Import")
-                @importLink(classOf[TranSmartDataSetImportInfo], "TranSmart Import")
-                @importLink(classOf[RedCapDataSetImportInfo], "Red Cap Import")
-                @importLink(classOf[SynapseDataSetImportInfo], "Synapse Import")
+                @importLink(classOf[CsvDataSetImport], "Csv Import")
+                @importLink(classOf[TranSmartDataSetImport], "TranSmart Import")
+                @importLink(classOf[RedCapDataSetImport], "Red Cap Import")
+                @importLink(classOf[SynapseDataSetImport], "Synapse Import")
             </ul>
         </div>
     </div>
 }
 
-@scheduleCheckbox(dataSetImport: DataSetImportInfo) = {
+@scheduleCheckbox(dataSetImport: DataSetImport) = {
     <input type="checkbox" class="no-rowClicked" @if(dataSetImport.scheduled) { checked="checked" } disabled="disabled"/>
 }
 
-@executeLink(dataSetImport: DataSetImportInfo) = {
+@executeLink(dataSetImport: DataSetImport) = {
     <a class="btn btn-default btn-xs btn-clean no-rowClicked" href="@dataSetImportRoutes.execute(dataSetImport._id.get)">
         <span class="glyphicon glyphicon-play green" aria-hidden="true"></span>
     </a>
@@ -54,7 +54,7 @@
     paginatedTable(
         page,
         dataSetImportRoutes.find(_, _, page.filter),
-        typeColumns[DataSetImportInfo](
+        typeColumns[DataSetImport](
             (Some("dataSpaceName"), "Data Space Name", _.dataSpaceName),
             (Some("dataSetName"), "Data Set Name", _.dataSetName),
             (Some("concreteClass"), "Type", {importInfo => toHumanReadableCamel(importInfo.getClass.getSimpleName)}),
@@ -63,7 +63,7 @@
             (Some("scheduled"), "Scheduled?", scheduleCheckbox),
             (None, "Execute Now", executeLink)
         ),
-        Some({ item : Any => dataSetImportRoutes.get(item.asInstanceOf[DataSetImportInfo]._id.get)})
+        Some({ item : Any => dataSetImportRoutes.get(item.asInstanceOf[DataSetImport]._id.get)})
     )
 }
 

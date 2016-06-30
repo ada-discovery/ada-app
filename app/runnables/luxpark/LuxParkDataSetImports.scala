@@ -9,7 +9,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
 
   val list = Seq(
 
-    RedCapDataSetImportInfo(
+    RedCapDataSetImport(
       None,
       "Lux Park",
       lux_park_clinical,
@@ -22,7 +22,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.Clinical)
     ),
 
-    CsvDataSetImportInfo(
+    CsvDataSetImport(
       None,
       "Lux Park",
       lux_park_ibbl_biosamples,
@@ -36,7 +36,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.IBBLBiosamples)
     ),
 
-    CsvDataSetImportInfo(
+    CsvDataSetImport(
       None,
       "Lux Park",
       lux_park_ibbl_biosample_tests,
@@ -50,7 +50,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.IBBLBiosampleTests)
     ),
 
-    SynapseDataSetImportInfo(
+    SynapseDataSetImport(
       None,
       "Lux Park",
       lux_park_mpower_my_thoughts,
@@ -61,7 +61,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.MPowerMyThoughts)
     ),
 
-    SynapseDataSetImportInfo(
+    SynapseDataSetImport(
       None,
       "Lux Park",
       lux_park_mpower_demographics,
@@ -72,7 +72,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.MPowerDemographics)
     ),
 
-    SynapseDataSetImportInfo(
+    SynapseDataSetImport(
       None,
       "Lux Park",
       lux_park_mpower_enrollment_survey,
@@ -83,7 +83,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.MPowerEnrollmentSurvey)
     ),
 
-    SynapseDataSetImportInfo(
+    SynapseDataSetImport(
       None,
       "Lux Park",
       lux_park_mpower_pd_enrollment_survey,
@@ -94,7 +94,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.MPowerPDEnrollmentSurvey)
     ),
 
-    SynapseDataSetImportInfo(
+    SynapseDataSetImport(
       None,
       "Lux Park",
       lux_park_mpower_tremor_activity,
@@ -105,7 +105,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.MPowerTremorActivity)
     ),
 
-    SynapseDataSetImportInfo(
+    SynapseDataSetImport(
       None,
       "Lux Park",
       lux_park_mpower_walking_activity,
@@ -116,7 +116,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.MPowerWalkingActivity)
     ),
 
-    SynapseDataSetImportInfo(
+    SynapseDataSetImport(
       None,
       "Lux Park",
       lux_park_mpower_tapping_activity,
@@ -127,7 +127,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.MPowerTappingActivity)
     ),
 
-    SynapseDataSetImportInfo(
+    SynapseDataSetImport(
       None,
       "Lux Park",
       lux_park_mpower_voice_activity,
@@ -138,7 +138,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       Some(LuxParkDataSetSettings.MPowerVoiceActivity)
     ),
 
-    SynapseDataSetImportInfo(
+    SynapseDataSetImport(
       None,
       "Lux Park",
       lux_park_mpower_memory_activity,

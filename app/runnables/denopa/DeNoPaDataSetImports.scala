@@ -1,14 +1,14 @@
 package runnables.denopa
 
 import javax.inject.Inject
-import models.{CsvDataSetImportInfo, DataSetSetting}
+import models.{CsvDataSetImport, DataSetSetting}
 import play.api.Configuration
 import runnables.DataSetId._
 
 class DeNoPaDataSetImports @Inject() (configuration: Configuration) {
 
   val list = Seq(
-    CsvDataSetImportInfo(
+    CsvDataSetImport(
       None,
       "DeNoPa",
       denopa_raw_clinical_baseline,
@@ -22,7 +22,7 @@ class DeNoPaDataSetImports @Inject() (configuration: Configuration) {
       Some(DeNoPaDataSetSettings.RawClinicalBaseline)
     ),
 
-    CsvDataSetImportInfo(
+    CsvDataSetImport(
       None,
       "DeNoPa",
       denopa_raw_clinical_first_visit,
@@ -36,7 +36,7 @@ class DeNoPaDataSetImports @Inject() (configuration: Configuration) {
       Some(DeNoPaDataSetSettings.RawClinicalFirstVisit)
     ),
 
-    CsvDataSetImportInfo (
+    CsvDataSetImport (
       None,
       "DeNoPa",
       denopa_raw_clinical_second_visit,

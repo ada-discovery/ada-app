@@ -8,7 +8,7 @@ import javax.inject.Inject
 import be.objectify.deadbolt.scala.DeadboltActions
 import controllers.ViewTypes.{EditView, CreateView}
 import controllers._
-import models.DataSetImportInfoFormattersAndIds.{DataSetImportInfoIdentity, dataSetImportInfoFormat}
+import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
 import models._
 import persistence.RepoTypes._
 import play.api.Logger
@@ -27,13 +27,13 @@ import views.html.{datasetimport => importViews}
 import scala.concurrent.{Await, Future}
 
 class DataSetImportController @Inject()(
-    repo: DataSetImportInfoRepo,
+    repo: DataSetImportRepo,
     dataSetService: DataSetService,
     dataSetImportScheduler: DataSetImportScheduler,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi
-  ) extends CrudControllerImpl[DataSetImportInfo, BSONObjectID](repo) with AdminRestrictedCrudController[BSONObjectID] {
+  ) extends CrudControllerImpl[DataSetImport, BSONObjectID](repo) with AdminRestrictedCrudController[BSONObjectID] {
 
   private val logger = Logger // (this.getClass)
 
@@ -82,7 +82,7 @@ class DataSetImportController @Inject()(
       "setting" -> optional(dataSetSettingMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
-    ) (CsvDataSetImportInfo.apply)(CsvDataSetImportInfo.unapply)
+    ) (CsvDataSetImport.apply)(CsvDataSetImport.unapply)
       .verifying(
         "Import is marked as 'scheduled' but no time provided",
         importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
@@ -101,7 +101,7 @@ class DataSetImportController @Inject()(
       "setting" -> optional(dataSetSettingMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
-    ) (SynapseDataSetImportInfo.apply)(SynapseDataSetImportInfo.unapply)
+    ) (SynapseDataSetImport.apply)(SynapseDataSetImport.unapply)
       .verifying(
         "Import is marked as 'scheduled' but no time provided",
         importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
@@ -122,7 +122,7 @@ class DataSetImportController @Inject()(
       "setting" -> optional(dataSetSettingMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
-    ) (TranSmartDataSetImportInfo.apply)(TranSmartDataSetImportInfo.unapply)
+    ) (TranSmartDataSetImport.apply)(TranSmartDataSetImport.unapply)
       .verifying(
         "Import is marked as 'scheduled' but no time provided",
         importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
@@ -143,34 +143,34 @@ class DataSetImportController @Inject()(
       "setting" -> optional(dataSetSettingMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
-    ) (RedCapDataSetImportInfo.apply)(RedCapDataSetImportInfo.unapply)
+    ) (RedCapDataSetImport.apply)(RedCapDataSetImport.unapply)
       .verifying(
         "Import is marked as 'scheduled' but no time provided",
         importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
       )
   )
 
-  private val classNameFormViewsMap = FormWithViews.toMap[DataSetImportInfo](
+  private val classNameFormViewsMap = FormWithViews.toMap[DataSetImport](
     Seq(
-      FormWithViews[CsvDataSetImportInfo](
+      FormWithViews[CsvDataSetImport](
         csvForm,
         importViews.createCsvType(_)(_, _, _),
         importViews.editCsvType(_, _)(_, _, _)
       ),
 
-      FormWithViews[SynapseDataSetImportInfo](
+      FormWithViews[SynapseDataSetImport](
         synapseForm,
         importViews.createSynapseType(_)(_, _, _),
         importViews.editSynapseType(_, _)(_, _, _)
       ),
 
-      FormWithViews[TranSmartDataSetImportInfo](
+      FormWithViews[TranSmartDataSetImport](
         tranSmartForm,
         importViews.createTranSmartType(_)(_, _, _),
         importViews.editTranSmartType(_, _)(_, _, _)
       ),
 
-      FormWithViews[RedCapDataSetImportInfo](
+      FormWithViews[RedCapDataSetImport](
         redCapForm,
         importViews.createRedCapType(_)(_, _, _),
         importViews.editRedCapType(_, _)(_, _, _)
@@ -178,29 +178,29 @@ class DataSetImportController @Inject()(
     ))
 
   // default form... unused
-  override protected val form = csvForm.asInstanceOf[Form[DataSetImportInfo]]
+  override protected val form = csvForm.asInstanceOf[Form[DataSetImport]]
 
   private val concreteClassFieldName = "concreteClass"
 
   override protected val home =
     Redirect(routes.DataSetImportController.find())
 
-  override protected def fillForm(entity: DataSetImportInfo): Form[DataSetImportInfo] = {
+  override protected def fillForm(entity: DataSetImport): Form[DataSetImport] = {
     val concreteClassName = entity.getClass.getName
     getForm(concreteClassName).fill(entity)
   }
 
-  override protected def formFromRequest(implicit request: Request[AnyContent]): Form[DataSetImportInfo] = {
+  override protected def formFromRequest(implicit request: Request[AnyContent]): Form[DataSetImport] = {
     val concreteClassName = getParamValue(concreteClassFieldName)
     getForm(concreteClassName).bindFromRequest
   }
 
-  override protected def createView(form: Form[DataSetImportInfo])(implicit msg: Messages, request: Request[_]) = {
+  override protected def createView(form: Form[DataSetImport])(implicit msg: Messages, request: Request[_]) = {
     val subCreateView = getViews(form)._1
     subCreateView(form, request.flash, msg, request)
   }
 
-  override protected def editView(id: BSONObjectID, form: Form[DataSetImportInfo])(implicit msg: Messages, request: Request[_]) = {
+  override protected def editView(id: BSONObjectID, form: Form[DataSetImport])(implicit msg: Messages, request: Request[_]) = {
     val subEditView = getViews(form)._2
     subEditView(id, form, request.flash, msg, request)
   }
@@ -212,17 +212,17 @@ class DataSetImportController @Inject()(
   private def getForm(concreteClassName: String) =
     getFormWithViews(concreteClassName)._1
 
-  private def getViews(form: Form[DataSetImportInfo]): (CreateView[DataSetImportInfo], EditView[DataSetImportInfo]) = {
+  private def getViews(form: Form[DataSetImport]): (CreateView[DataSetImport], EditView[DataSetImport]) = {
     val concreteClassName = form.value.map(_.getClass.getName).getOrElse(form(concreteClassFieldName).value.get)
     val formWithViews = classNameFormViewsMap.get(concreteClassName).getOrElse(
       throw new AdaException(s"Form and views for a sub type '$concreteClassName' not found."))
     (formWithViews._2, formWithViews._3)
   }
 
-  override protected def showView(id: BSONObjectID, form: Form[DataSetImportInfo])(implicit msg: Messages, request: Request[_]) =
+  override protected def showView(id: BSONObjectID, form: Form[DataSetImport])(implicit msg: Messages, request: Request[_]) =
     editView(id, form)
 
-  override protected def listView(page: Page[DataSetImportInfo])(implicit msg: Messages, request: Request[_]): Html =
+  override protected def listView(page: Page[DataSetImport])(implicit msg: Messages, request: Request[_]): Html =
     importViews.list(page, result(dataSpaceMetaInfoRepo.find()))
 
   def create(concreteClassName: String) = restrictAdmin(deadbolt) {
@@ -290,12 +290,12 @@ class DataSetImportController @Inject()(
 //    }
 //  }
 
-  override protected def saveCall(importInfo: DataSetImportInfo)(implicit request: Request[AnyContent]): Future[BSONObjectID] =
+  override protected def saveCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] =
     super.saveCall(importInfo).map { id =>
       scheduleOrCancel(id, importInfo); id
     }
 
-  override protected def updateCall(importInfo: DataSetImportInfo)(implicit request: Request[AnyContent]): Future[BSONObjectID] =
+  override protected def updateCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] =
     super.updateCall(importInfo).map { id =>
       scheduleOrCancel(id, importInfo); id
     }
@@ -305,7 +305,7 @@ class DataSetImportController @Inject()(
       dataSetImportScheduler.cancel(id); ()
     }
 
-  private def scheduleOrCancel(id: BSONObjectID, importInfo: DataSetImportInfo): Unit = {
+  private def scheduleOrCancel(id: BSONObjectID, importInfo: DataSetImport): Unit = {
     if (importInfo.scheduled)
       dataSetImportScheduler.schedule(importInfo.scheduledTime.get)(id)
     else
@@ -346,8 +346,8 @@ class DataSetImportController @Inject()(
   }
 
   private def handleErrorCsv(
-    filledForm: Form[CsvDataSetImportInfo],
-    dataSetName: String)(
+                              filledForm: Form[CsvDataSetImport],
+                              dataSetName: String)(
     message: String
   )(implicit request: Request[_]): Result = {
     logger.error(message)
@@ -355,7 +355,7 @@ class DataSetImportController @Inject()(
   }
 
   private def createBadRequestCsv(
-    filledForm: Form[CsvDataSetImportInfo]
+    filledForm: Form[CsvDataSetImport]
   )(implicit request: Request[_]) = {
     implicit val msg = messagesApi.preferred(request)
     BadRequest(importViews.createCsvType(filledForm))
@@ -388,8 +388,8 @@ class DataSetImportController @Inject()(
   }
 
   private def handleErrorSynapse(
-    filledForm: Form[SynapseDataSetImportInfo],
-    dataSetName: String)(
+                                  filledForm: Form[SynapseDataSetImport],
+                                  dataSetName: String)(
     message: String
   )(implicit request: Request[_]): Result = {
     logger.error(message)
@@ -397,7 +397,7 @@ class DataSetImportController @Inject()(
   }
 
   private def createBadRequestSynapse(
-    filledForm: Form[SynapseDataSetImportInfo]
+    filledForm: Form[SynapseDataSetImport]
   )(implicit request: Request[_]) = {
     implicit val msg = messagesApi.preferred(request)
     BadRequest(importViews.createSynapseType(filledForm))
@@ -446,8 +446,8 @@ class DataSetImportController @Inject()(
   }
 
   private def handleErrorTranSmart(
-    filledForm: Form[TranSmartDataSetImportInfo],
-    dataSetName: String)(
+                                    filledForm: Form[TranSmartDataSetImport],
+                                    dataSetName: String)(
     message: String
   )(implicit request: Request[_]): Result = {
     logger.error(message)
@@ -455,7 +455,7 @@ class DataSetImportController @Inject()(
   }
 
   private def createBadRequestTranSmart(
-    filledForm: Form[TranSmartDataSetImportInfo]
+    filledForm: Form[TranSmartDataSetImport]
   )(implicit request: Request[_]) = {
     implicit val msg = messagesApi.preferred(request)
     BadRequest(importViews.createTranSmartType(filledForm))

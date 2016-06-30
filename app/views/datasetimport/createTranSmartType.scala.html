@@ -1,10 +1,10 @@
-@import models.TranSmartDataSetImportInfo
+@import models.TranSmartDataSetImport
 @import views.html.layout
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import views.html.datasetimport.tranSmartTypeElements
 
-@(form: Form[TranSmartDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+@(form: Form[TranSmartDataSetImport])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @layout.create(
     "TranSMART Data Set (and Dictionary) Import",

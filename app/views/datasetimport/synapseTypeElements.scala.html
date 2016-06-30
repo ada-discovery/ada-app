@@ -1,18 +1,18 @@
-@import models.SynapseDataSetImportInfo
+@import models.SynapseDataSetImport
 @import views.html.elements.inputText
 @import play.api.i18n.Messages
 @import views.html.datasetimport.{settingPanel, dataSetInfoPanel, schedulePanel}
 
-@(form: Form[SynapseDataSetImportInfo])(implicit msg: Messages)
+@(form: Form[SynapseDataSetImport])(implicit msg: Messages)
 
-@dataSetInfoPanel("synapseDataSetImportInfo", form)
+@dataSetInfoPanel("synapseDataSetImport", form)
 
-<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[SynapseDataSetImportInfo].getName}">
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[SynapseDataSetImport].getName}">
 
 <div class="panel panel-default">
     <div class="panel-heading">Synapse</div>
     <div class="panel-body">
-        @inputText("synapseDataSetImportInfo", "tableId", form)
+        @inputText("synapseDataSetImport", "tableId", form)
     </div>
 </div>
 

@@ -3,7 +3,7 @@ package persistence
 import com.google.inject.TypeLiteral
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import models.DataSetFormattersAndIds._
-import models.DataSetImportInfoFormattersAndIds.{dataSetImportInfoFormat, DataSetImportInfoIdentity}
+import models.DataSetImportFormattersAndIds.{dataSetImportFormat, DataSetImportIdentity}
 import models._
 import net.codingwell.scalaguice.ScalaModule
 import persistence.RepoTypes._
@@ -46,8 +46,8 @@ private object RepoDef extends Enumeration {
   val DataSetSettingRepo = Repo[DataSetSettingRepo](
     new MongoAsyncCrudRepo[DataSetSetting, BSONObjectID]("dataset_setting"))    // TODO: rename to plural: "dataset_settings"
 
-  val DataSetImportInfoRepo = Repo[DataSetImportInfoRepo](
-    new MongoAsyncCrudRepo[DataSetImportInfo, BSONObjectID]("dataset_import_infos"))
+  val DataSetImportRepo = Repo[DataSetImportRepo](
+    new MongoAsyncCrudRepo[DataSetImport, BSONObjectID]("dataset_import_infos"))
 
   // experimental distributed repos
   val StudentDistRepo = Repo[StudentDistRepo](
@@ -62,7 +62,7 @@ class RepoModule extends ScalaModule {
 
   def configure = {
 
-    // bind repos defined above
+    // bind the repos defined above
     RepoDef.values.foreach(bindRepo(_))
 
     // install data set meta info repo factory

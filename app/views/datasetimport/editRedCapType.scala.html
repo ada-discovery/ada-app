@@ -1,11 +1,11 @@
-@import models.RedCapDataSetImportInfo
+@import models.RedCapDataSetImport
 @import views.html.layout
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import views.html.datasetimport.redCapTypeElements
 @import reactivemongo.bson.BSONObjectID
 
-@(id: BSONObjectID, form: Form[RedCapDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+@(id: BSONObjectID, form: Form[RedCapDataSetImport])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @layout.edit(
     "RedCap Data Set Import",

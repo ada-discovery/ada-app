@@ -1,10 +1,10 @@
-@import models.SynapseDataSetImportInfo
+@import models.SynapseDataSetImport
 @import views.html.layout
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import views.html.datasetimport.synapseTypeElements
 
-@(form: Form[SynapseDataSetImportInfo])(implicit flash: Flash, msg: Messages, request: Request[_])
+@(form: Form[SynapseDataSetImport])(implicit flash: Flash, msg: Messages, request: Request[_])
 
 @layout.create(
     "Synapse Data Set Import",

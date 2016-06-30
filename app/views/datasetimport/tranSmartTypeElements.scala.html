@@ -1,20 +1,20 @@
-@import models.TranSmartDataSetImportInfo
+@import models.TranSmartDataSetImport
 @import views.html.elements._
 @import play.api.i18n.Messages
 @import views.html.datasetimport.{settingPanel, fileOrPathInput, dataSetInfoPanel, schedulePanel}
 
-@(form: Form[TranSmartDataSetImportInfo])(implicit msg: Messages)
+@(form: Form[TranSmartDataSetImport])(implicit msg: Messages)
 
-@dataSetInfoPanel("tranSmartDataSetImportInfo", form)
+@dataSetInfoPanel("tranSmartDataSetImport", form)
 
-<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[TranSmartDataSetImportInfo].getName}">
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[TranSmartDataSetImport].getName}">
 
 <div class="panel panel-default">
     <div class="panel-heading">File</div>
     <div class="panel-body">
-        @fileOrPathInput("tranSmartDataSetImportInfo", "dataSourceChoice", "Data Source", "dataFile", "dataPath", form)
-        @fileOrPathInput("tranSmartDataSetImportInfo", "mappingSourceChoice", "Mapping Source", "mappingFile", "mappingPath", form)
-        @inputText("tranSmartDataSetImportInfo", "charsetName", form)
+        @fileOrPathInput("tranSmartDataSetImport", "dataSourceChoice", "Data Source", "dataFile", "dataPath", form)
+        @fileOrPathInput("tranSmartDataSetImport", "mappingSourceChoice", "Mapping Source", "mappingFile", "mappingPath", form)
+        @inputText("tranSmartDataSetImport", "charsetName", form)
     </div>
 </div>
 

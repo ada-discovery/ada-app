@@ -31,28 +31,28 @@ import collection.mutable.{Map => MMap}
 trait DataSetService {
 
   def importDataSetUntyped(
-    dataSetImport: DataSetImportInfo
+    dataSetImport: DataSetImport
   ): Future[Unit]
 
   def importDataSet(
-    importInfo: CsvDataSetImportInfo,
-    file: Option[File] = None
+                     importInfo: CsvDataSetImport,
+                     file: Option[File] = None
   ): Future[Unit]
 
   def importDataSet(
-    importInfo: SynapseDataSetImportInfo
+    importInfo: SynapseDataSetImport
   ): Future[Unit]
 
   def importDataSetAndDictionary(
-    importInfo: TranSmartDataSetImportInfo,
-    dataFile: Option[File],
-    mappingFile: Option[File],
-    typeInferenceProvider: TypeInferenceProvider
+                                  importInfo: TranSmartDataSetImport,
+                                  dataFile: Option[File],
+                                  mappingFile: Option[File],
+                                  typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit]
 
   def importDataSetAndDictionary(
-    importInfo: RedCapDataSetImportInfo,
-    typeInferenceProvider: TypeInferenceProvider
+                                  importInfo: RedCapDataSetImport,
+                                  typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit]
 
   def inferDictionary(
@@ -71,7 +71,7 @@ trait DataSetService {
 class DataSetServiceImpl @Inject()(
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dsaf: DataSetAccessorFactory,
-    dataSetImportInfoRepo: DataSetImportInfoRepo,
+    dataSetImportRepo: DataSetImportRepo,
     dataSetSettingRepo: DataSetSettingRepo,
     redCapServiceFactory: RedCapServiceFactory,
     synapseServiceFactory: SynapseServiceFactory,
@@ -97,21 +97,21 @@ class DataSetServiceImpl @Inject()(
   private val synapseUsername = configuration.getString("synapse.api.username").get
   private val synapsePassword = configuration.getString("synapse.api.password").get
 
-  override def importDataSetUntyped(dataSetImport: DataSetImportInfo): Future[Unit] =
+  override def importDataSetUntyped(dataSetImport: DataSetImport): Future[Unit] =
     for {
       _ <- dataSetImport match {
-        case x: CsvDataSetImportInfo => importDataSet(x)
-        case x: TranSmartDataSetImportInfo => importDataSetAndDictionary(x, None, None, DeNoPaSetting.typeInferenceProvider)
-        case x: SynapseDataSetImportInfo => importDataSet(x)
-        case x: RedCapDataSetImportInfo => importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
+        case x: CsvDataSetImport => importDataSet(x)
+        case x: TranSmartDataSetImport => importDataSetAndDictionary(x, None, None, DeNoPaSetting.typeInferenceProvider)
+        case x: SynapseDataSetImport => importDataSet(x)
+        case x: RedCapDataSetImport => importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
       }
       _ <- {
         dataSetImport.timeLastExecuted = Some(new Date())
-        dataSetImportInfoRepo.update(dataSetImport)
+        dataSetImportRepo.update(dataSetImport)
       }
     } yield ()
 
-  override def importDataSet(importInfo: CsvDataSetImportInfo, file: Option[File]) =
+  override def importDataSet(importInfo: CsvDataSetImport, file: Option[File]) =
     importLineParsableDataSet(
       importInfo,
       importInfo.delimiter,
@@ -124,10 +124,10 @@ class DataSetServiceImpl @Inject()(
     ).map(_ => ())
 
   override def importDataSetAndDictionary(
-    importInfo: TranSmartDataSetImportInfo,
-    dataFile: Option[File],
-    mappingFile: Option[File],
-    typeInferenceProvider: TypeInferenceProvider
+                                           importInfo: TranSmartDataSetImport,
+                                           dataFile: Option[File],
+                                           mappingFile: Option[File],
+                                           typeInferenceProvider: TypeInferenceProvider
   ) = {
     // import a data set first
     val columnNamesFuture = importLineParsableDataSet(
@@ -161,7 +161,7 @@ class DataSetServiceImpl @Inject()(
     }
   }
 
-  override def importDataSet(importInfo: SynapseDataSetImportInfo) = {
+  override def importDataSet(importInfo: SynapseDataSetImport) = {
     val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
 
     // get the columns of the "file" type
@@ -252,8 +252,8 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def importDataSetAndDictionary(
-    importInfo: RedCapDataSetImportInfo,
-    typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
+                                           importInfo: RedCapDataSetImport,
+                                           typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
   ) = {
     logger.info(new Date().toString)
     if (importInfo.importDictionaryFlag)
@@ -326,11 +326,11 @@ class DataSetServiceImpl @Inject()(
     * @return The column names (future)
     */
   protected def importLineParsableDataSet(
-    importInfo: DataSetImportInfo,
-    delimiter: String,
-    skipFirstLine: Boolean,
-    createLineIterator: => Iterator[String],
-    transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]] = None
+                                           importInfo: DataSetImport,
+                                           delimiter: String,
+                                           skipFirstLine: Boolean,
+                                           createLineIterator: => Iterator[String],
+                                           transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]] = None
   ): Future[Seq[String]] = {
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
@@ -419,7 +419,7 @@ class DataSetServiceImpl @Inject()(
     }
   }
 
-  private def createDataSetAccessor(importInfo: DataSetImportInfo): DataSetAccessor =
+  private def createDataSetAccessor(importInfo: DataSetImport): DataSetAccessor =
     result(dsaf.register(
       importInfo.dataSpaceName,
       importInfo.dataSetId,

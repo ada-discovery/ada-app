@@ -5,7 +5,7 @@ import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Named, Singleton}
 import com.google.inject.ImplementedBy
 import models._
-import persistence.RepoTypes.DataSetImportInfoRepo
+import persistence.RepoTypes.DataSetImportRepo
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import collection.mutable.{Map => MMap}
@@ -34,7 +34,7 @@ trait DataSetImportScheduler {
 @Singleton
 protected class DataSetImportSchedulerImpl @Inject() (
     val system: ActorSystem,
-    dataSetImportInfoRepo: DataSetImportInfoRepo,
+    dataSetImportRepo: DataSetImportRepo,
     dataSetService: DataSetService)(
     implicit ec: ExecutionContext
   ) extends DataSetImportScheduler {
@@ -47,7 +47,7 @@ protected class DataSetImportSchedulerImpl @Inject() (
   init()
 
   protected def init() {
-    val initScheduleFuture = dataSetImportInfoRepo.find().map( _.map{ importInfo =>
+    val initScheduleFuture = dataSetImportRepo.find().map( _.map{ importInfo =>
       if (importInfo.scheduled && importInfo.scheduledTime.isDefined)
         schedule(importInfo.scheduledTime.get)(importInfo._id.get)
     })
@@ -81,7 +81,7 @@ protected class DataSetImportSchedulerImpl @Inject() (
 
   def executeDataSetImport(id: BSONObjectID): Future[Unit] = {
     for {
-      dataSetImportOption <- dataSetImportInfoRepo.get(id)
+      dataSetImportOption <- dataSetImportRepo.get(id)
       _ <- dataSetImportOption.map(dataSetService.importDataSetUntyped).getOrElse(Future(()))
     } yield ()
   }
