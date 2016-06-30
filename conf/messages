@@ -29,26 +29,26 @@ dataSetSetting.defaultDistributionFieldName.label = Distribution Field
 dataSetSetting.tranSMARTVisitFieldName.label = TranSMART Visit Field
 dataSetSetting.tranSMARTReplacements.label = TranSMART Export Char Replacements
 
-dataSetImportInfo.setting.keyFieldName.label = Key Field
-dataSetImportInfo.setting.exportOrderByFieldName.label = Export OrderBy Field
-dataSetImportInfo.setting.listViewTableColumnNames.label = Overview Columns
-dataSetImportInfo.setting.overviewChartFieldNames.label = Overview Chart Fields
-dataSetImportInfo.setting.defaultScatterXFieldName.label = Scatter X Field
-dataSetImportInfo.setting.defaultScatterYFieldName.label = Scatter Y Field
-dataSetImportInfo.setting.defaultDistributionFieldName.label = Distribution Field
-dataSetImportInfo.setting.tranSMARTVisitFieldName.label = TranSMART Visit Field
-dataSetImportInfo.setting.tranSMARTReplacements.label = TranSMART Export Char Replacements
+dataSetImport.setting.keyFieldName.label = Key Field
+dataSetImport.setting.exportOrderByFieldName.label = Export OrderBy Field
+dataSetImport.setting.listViewTableColumnNames.label = Overview Columns
+dataSetImport.setting.overviewChartFieldNames.label = Overview Chart Fields
+dataSetImport.setting.defaultScatterXFieldName.label = Scatter X Field
+dataSetImport.setting.defaultScatterYFieldName.label = Scatter Y Field
+dataSetImport.setting.defaultDistributionFieldName.label = Distribution Field
+dataSetImport.setting.tranSMARTVisitFieldName.label = TranSMART Visit Field
+dataSetImport.setting.tranSMARTReplacements.label = TranSMART Export Char Replacements
 
-dataSetImportInfo.dataSpaceName.label = Study Name
-dataSetImportInfo.eol.label = Specific EOL
-dataSetImportInfo.path.label = Server-side Path
+dataSetImport.dataSpaceName.label = Study Name
+dataSetImport.eol.label = Specific EOL
+dataSetImport.path.label = Server-side Path
 
-dataSetImportInfo.scheduled.label = Schedule?
-dataSetImportInfo.scheduledTime.hour.label = Hour
-dataSetImportInfo.scheduledTime.minute.label = Minute
-dataSetImportInfo.scheduledTime.second.label = Second
+dataSetImport.scheduled.label = Schedule?
+dataSetImport.scheduledTime.hour.label = Hour
+dataSetImport.scheduledTime.minute.label = Minute
+dataSetImport.scheduledTime.second.label = Second
 
-redCapDataSetImportInfo.importDictionaryFlag.label = Import Dictionary?
+redCapDataSetImport.importDictionaryFlag.label = Import Dictionary?
 
 login.id = User Id
 login.password= Password
