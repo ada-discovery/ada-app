@@ -19,7 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
-import scala.concurrent.Await.result
+import scala.concurrent.Await._
 import play.api.Configuration
 import scala.concurrent.duration._
 import _root_.util.JsonUtil._
@@ -59,6 +59,10 @@ trait DataSetService {
     dataSetId: String,
     typeInferenceProvider: TypeInferenceProvider,
     fieldGroupSize: Int = 150
+  ): Future[Unit]
+
+  def createDummyDictionary(
+    dataSetId: String
   ): Future[Unit]
 
   def inferFieldType(
@@ -106,6 +110,10 @@ class DataSetServiceImpl @Inject()(
         case x: SynapseDataSetImport => importDataSet(x)
         case x: RedCapDataSetImport => importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
       }
+      _ <- if (dataSetImport.createDummyDictionary)
+          createDummyDictionary(dataSetImport.dataSetId)
+        else
+          Future(())
       _ <- {
         dataSetImport.timeLastExecuted = Some(new Date())
         dataSetImportRepo.update(dataSetImport)
@@ -165,13 +173,7 @@ class DataSetServiceImpl @Inject()(
   override def importDataSet(importInfo: SynapseDataSetImport) = {
     val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
 
-    // get the columns of the "file" type
-    val fileColumnsFuture = synapseService.getTableColumnModels(importInfo.tableId).map(
-      _.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(_.toSelectColumn)
-    )
-
-    fileColumnsFuture.flatMap { fileColumns =>
-      def transformJson = updateJsonsFileFields(synapseService, fileColumns, importInfo.tableId)_
+    def importDataSetAux(transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]]) =
       importLineParsableDataSet(
         importInfo,
         synapseDelimiter.toString,
@@ -180,9 +182,23 @@ class DataSetServiceImpl @Inject()(
           val lines = result(csvFuture, timeout).split(synapseEol)
           lines.iterator
         },
-        Some(transformJson)
-      ).map(_ => ())
-    }
+        transformJsons
+      )
+
+    if (importInfo.downloadColumnFiles)
+      for {
+        // get the columns of the "file" type
+        fileColumns <- synapseService.getTableColumnModels(importInfo.tableId).map(
+          _.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(_.toSelectColumn)
+        )
+        _ <- {
+          val fun = updateJsonsFileFields(synapseService, fileColumns, importInfo.tableId)_
+          importDataSetAux(Some(fun))
+        }
+      } yield
+        ()
+    else
+      importDataSetAux(None).map(_ => ())
   }
 
   @Deprecated
@@ -704,6 +720,25 @@ class DataSetServiceImpl @Inject()(
     val values = arrayFlagWithValues.map(_._2).flatten.flatten.toSet
 
     (isArray, typeInferenceProvider.getType(values))
+  }
+
+  override def createDummyDictionary(dataSetId: String): Future[Unit] = {
+    logger.info(s"Create of dummy dictionary for data set '${dataSetId}' initiated.")
+
+    val dsa = dsaf(dataSetId).get
+    val dataSetRepo = dsa.dataSetRepo
+    val fieldRepo = dsa.fieldRepo
+
+    for {
+      _ <- fieldRepo.initIfNeeded
+      _ <- fieldRepo.deleteAll
+      fieldNames <- getFieldNames(dataSetRepo)
+      _ <- {
+        val fields = fieldNames.map(Field(_, FieldType.String, false))
+        fieldRepo.save(fields)
+      }
+    } yield
+      logInfoAndSendMessage(s"Dummy dictionary for data set '${dataSetId}' successfully created.")
   }
 
   private def jsonToString(jsValue: JsValue): Option[String] =

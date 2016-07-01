@@ -18,6 +18,7 @@ class DeNoPaDataSetImports @Inject() (configuration: Configuration) {
       None,
       None,
       false,
+      false,
       None,
       Some(DeNoPaDataSetSettings.RawClinicalBaseline)
     ),
@@ -32,6 +33,7 @@ class DeNoPaDataSetImports @Inject() (configuration: Configuration) {
       None,
       None,
       false,
+      false,
       None,
       Some(DeNoPaDataSetSettings.RawClinicalFirstVisit)
     ),
@@ -45,6 +47,7 @@ class DeNoPaDataSetImports @Inject() (configuration: Configuration) {
       "§§",
       Some("§%w"),
       None,
+      false,
       false,
       None,
       Some(DeNoPaDataSetSettings.RawClinicalSecondVisit)

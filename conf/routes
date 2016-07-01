@@ -47,9 +47,9 @@ GET         /admin/dataSetImport/new                                            
 GET         /admin/dataSetImport/execute/:id                                        controllers.dataset.DataSetImportController.execute(id: BSONObjectID)
 #GET         /admin/dataSetImport/schedule/:id                                       controllers.dataset.DataSetImportController.schedule(id: BSONObjectID)
 
-POST        /admin/dataSetImport/upload/csv                                         controllers.dataset.DataSetImportController.uploadCsv
-POST        /admin/dataSetImport/upload/tranSmart                                   controllers.dataset.DataSetImportController.uploadTranSmart
-POST        /admin/dataSetImport/upload/synapse                                     controllers.dataset.DataSetImportController.uploadSynapse
+#POST        /admin/dataSetImport/upload/csv                                         controllers.dataset.DataSetImportController.uploadCsv
+#POST        /admin/dataSetImport/upload/tranSmart                                   controllers.dataset.DataSetImportController.uploadTranSmart
+#POST        /admin/dataSetImport/upload/synapse                                     controllers.dataset.DataSetImportController.uploadSynapse
 
 POST        /admin/dataSetImport/save                                               controllers.dataset.DataSetImportController.save
 GET         /admin/dataSetImport/:id/get                                            controllers.dataset.DataSetImportController.get(id: BSONObjectID)

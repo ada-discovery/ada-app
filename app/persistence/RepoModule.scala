@@ -44,10 +44,10 @@ private object RepoDef extends Enumeration {
     new MongoAsyncCrudRepo[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos"))
 
   val DataSetSettingRepo = Repo[DataSetSettingRepo](
-    new MongoAsyncCrudRepo[DataSetSetting, BSONObjectID]("dataset_setting"))    // TODO: rename to plural: "dataset_settings"
+    new MongoAsyncCrudRepo[DataSetSetting, BSONObjectID]("dataset_settings"))
 
   val DataSetImportRepo = Repo[DataSetImportRepo](
-    new MongoAsyncCrudRepo[DataSetImport, BSONObjectID]("dataset_import_infos"))
+    new MongoAsyncCrudRepo[DataSetImport, BSONObjectID]("dataset_imports"))
 
   // experimental distributed repos
   val StudentDistRepo = Repo[StudentDistRepo](

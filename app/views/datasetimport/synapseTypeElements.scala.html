@@ -1,5 +1,5 @@
 @import models.SynapseDataSetImport
-@import views.html.elements.inputText
+@import views.html.elements.{inputText, checkbox}
 @import play.api.i18n.Messages
 @import views.html.datasetimport.{settingPanel, dataSetInfoPanel, schedulePanel}
 
@@ -13,6 +13,8 @@
     <div class="panel-heading">Synapse</div>
     <div class="panel-body">
         @inputText("synapseDataSetImport", "tableId", form)
+        @checkbox("synapseDataSetImport", "downloadColumnFiles", form)
+        @checkbox("dataSetImport", "createDummyDictionary", form)
     </div>
 </div>
 

@@ -48,6 +48,9 @@ dataSetImport.scheduledTime.hour.label = Hour
 dataSetImport.scheduledTime.minute.label = Minute
 dataSetImport.scheduledTime.second.label = Second
 
+dataSetImport.createDummyDictionary.label = Create Dummy Dictionary?
+
+synapseDataSetImport.downloadColumnFiles.label = Download Column Files?
 redCapDataSetImport.importDictionaryFlag.label = Import Dictionary?
 
 login.id = User Id

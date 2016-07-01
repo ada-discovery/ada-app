@@ -77,6 +77,7 @@ class DataSetImportController @Inject()(
       "delimiter" -> nonEmptyText,
       "eol" -> optional(text),
       "charsetName" -> optional(text),
+      "createDummyDictionary" -> boolean,
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),
@@ -96,6 +97,8 @@ class DataSetImportController @Inject()(
       "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
       "dataSetName" -> nonEmptyText,
       "tableId" -> nonEmptyText,
+      "downloadColumnFiles" -> boolean,
+      "createDummyDictionary" -> boolean,
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),
@@ -117,6 +120,7 @@ class DataSetImportController @Inject()(
       "dataPath" -> optional(text),
       "mappingPath" -> optional(text),
       "charsetName" -> optional(text),
+      "createDummyDictionary" -> boolean,
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),
@@ -138,6 +142,7 @@ class DataSetImportController @Inject()(
       "url" -> nonEmptyText,
       "token" -> nonEmptyText,
       "importDictionaryFlag" -> boolean,
+      "createDummyDictionary" -> boolean,
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),
@@ -258,38 +263,6 @@ class DataSetImportController @Inject()(
     }
   }
 
-//  def schedule(id: BSONObjectID) = restrictAdmin(deadbolt) {
-//    Action.async { implicit request =>
-//      repo.get(id).map(_.fold(
-//        NotFound(s"Data set import #$id not found")
-//      ) { importInfo =>
-//          implicit val msg = messagesApi.preferred(request)
-//          dataSetImportScheduler.schedule(importInfo.scheduledTime)(id)
-//            render {
-//              case Accepts.Html() => home.flashing("success" -> s"Data set '${importInfo.dataSetName}' import has been scheduled.")
-//              case Accepts.Json() => Created(Json.obj("message" -> "Data set import has been scheduled", "name" -> importInfo.dataSetName))
-//            }
-//        }
-//      )
-//    }
-//  }
-//
-//  def cancel(id: BSONObjectID) = restrictAdmin(deadbolt) {
-//    Action.async { implicit request =>
-//      repo.get(id).map(_.fold(
-//        NotFound(s"Data set import #$id not found")
-//      ) { importInfo =>
-//        implicit val msg = messagesApi.preferred(request)
-//        dataSetImportScheduler.cancel(id)
-//        render {
-//          case Accepts.Html() => home.flashing("success" -> s"Data set '${importInfo.dataSetName}' import has been scheduled.")
-//          case Accepts.Json() => Created(Json.obj("message" -> "Data set import has been scheduled", "name" -> importInfo.dataSetName))
-//        }
-//      }
-//      )
-//    }
-//  }
-
   override protected def saveCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] =
     super.saveCall(importInfo).map { id =>
       scheduleOrCancel(id, importInfo); id
@@ -310,97 +283,6 @@ class DataSetImportController @Inject()(
       dataSetImportScheduler.schedule(importInfo.scheduledTime.get)(id)
     else
       dataSetImportScheduler.cancel(id)
-  }
-
-  def uploadCsv = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
-      val filledForm = csvForm.bindFromRequest
-      filledForm.fold(
-        { formWithErrors =>
-          Future.successful(createBadRequestCsv(formWithErrors))
-        },
-        importInfo => {
-          val dataSetName = importInfo.dataSetName
-          val importFileOption = request.body.asMultipartFormData.get.file("importFile")
-          val file = importFileOption.map(_.ref.file)
-
-          if (importInfo.path.isEmpty && file.isEmpty)
-            Future.successful(createBadRequestCsv(filledForm.withError("path", "No path or import file specified.")))
-          else {
-            val errorRedirect = handleErrorCsv(filledForm, dataSetName) _
-            val successRedirect = Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
-            dataSetService.importDataSet(importInfo, file).map { _ =>
-              render {
-                case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '$dataSetName' has been uploaded.")
-                case Accepts.Json() => Created(Json.obj("message" -> "Data set has been uploaded", "name" -> importInfo.dataSetName))
-              }
-            }.recover{
-              case e: AdaParseException => errorRedirect(s"Parsing problem occured: '${e.getMessage}'")
-              case e: AdaException => errorRedirect(e.getMessage)
-              case e: Exception => errorRedirect(s"Fatal problem detected: '${e.getMessage}'. Contact your admin.")
-            }
-          }
-        }
-      )
-    }
-  }
-
-  private def handleErrorCsv(
-                              filledForm: Form[CsvDataSetImport],
-                              dataSetName: String)(
-    message: String
-  )(implicit request: Request[_]): Result = {
-    logger.error(message)
-    createBadRequestCsv(filledForm.withGlobalError(s"Data set '${dataSetName}' upload failed. $message"))
-  }
-
-  private def createBadRequestCsv(
-    filledForm: Form[CsvDataSetImport]
-  )(implicit request: Request[_]) = {
-    implicit val msg = messagesApi.preferred(request)
-    BadRequest(importViews.createCsvType(filledForm))
-  }
-
-  def uploadSynapse = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
-      val filledForm = synapseForm.bindFromRequest
-      filledForm.fold(
-        { formWithErrors =>
-          Future.successful(createBadRequestSynapse(formWithErrors))
-        },
-        importInfo => {
-          val dataSetName = importInfo.dataSetName
-          val errorRedirect = handleErrorSynapse(filledForm, dataSetName) _
-          val successRedirect = Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
-          dataSetService.importDataSet(importInfo).map { _ =>
-            render {
-              case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '$dataSetName' has been uploaded.")
-              case Accepts.Json() => Created(Json.obj("message" -> "Data set has been uploaded", "name" -> importInfo.dataSetName))
-            }
-          }.recover {
-            case e: AdaParseException => errorRedirect(s"Parsing problem occured: '${e.getMessage}'")
-            case e: AdaException => errorRedirect(e.getMessage)
-            case e: Exception => errorRedirect(s"Fatal problem detected: '${e.getMessage}'. Contact your admin.")
-          }
-        }
-      )
-    }
-  }
-
-  private def handleErrorSynapse(
-                                  filledForm: Form[SynapseDataSetImport],
-                                  dataSetName: String)(
-    message: String
-  )(implicit request: Request[_]): Result = {
-    logger.error(message)
-    createBadRequestSynapse(filledForm.withGlobalError(s"Data set '${dataSetName}' upload failed. $message"))
-  }
-
-  private def createBadRequestSynapse(
-    filledForm: Form[SynapseDataSetImport]
-  )(implicit request: Request[_]) = {
-    implicit val msg = messagesApi.preferred(request)
-    BadRequest(importViews.createSynapseType(filledForm))
   }
 
   def uploadTranSmart = restrictAdmin(deadbolt) {
@@ -446,8 +328,8 @@ class DataSetImportController @Inject()(
   }
 
   private def handleErrorTranSmart(
-                                    filledForm: Form[TranSmartDataSetImport],
-                                    dataSetName: String)(
+    filledForm: Form[TranSmartDataSetImport],
+    dataSetName: String)(
     message: String
   )(implicit request: Request[_]): Result = {
     logger.error(message)

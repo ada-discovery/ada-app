@@ -18,6 +18,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       configuration.getString("redcap.prodserver.token").get,
       true,
       false,
+      false,
       None,
       Some(LuxParkDataSetSettings.Clinical)
     ),
@@ -31,6 +32,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       ",",
       None,
       None,
+      false,
       false,
       None,
       Some(LuxParkDataSetSettings.IBBLBiosamples)
@@ -46,6 +48,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       None,
       Some("ISO-8859-1"),
       false,
+      false,
       None,
       Some(LuxParkDataSetSettings.IBBLBiosampleTests)
     ),
@@ -56,6 +59,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       lux_park_mpower_my_thoughts,
       "mPower My Thoughts",
       "syn6130514",
+      true,
+      false,
       false,
       None,
       Some(LuxParkDataSetSettings.MPowerMyThoughts)
@@ -67,6 +72,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       lux_park_mpower_demographics,
       "mPower Demographics",
       "syn6130512",
+      true,
+      false,
       false,
       None,
       Some(LuxParkDataSetSettings.MPowerDemographics)
@@ -78,6 +85,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       lux_park_mpower_enrollment_survey,
       "mPower Enrollment Survey",
       "syn6128276",
+      true,
+      false,
       false,
       None,
       Some(LuxParkDataSetSettings.MPowerEnrollmentSurvey)
@@ -89,6 +98,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       lux_park_mpower_pd_enrollment_survey,
       "mPower PD Enrollment Survey",
       "syn6130511",
+      true,
+      false,
       false,
       None,
       Some(LuxParkDataSetSettings.MPowerPDEnrollmentSurvey)
@@ -100,6 +111,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       lux_park_mpower_tremor_activity,
       "mPower Tremor Activity",
       "syn6128278",
+      true,
+      false,
       false,
       None,
       Some(LuxParkDataSetSettings.MPowerTremorActivity)
@@ -111,6 +124,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       lux_park_mpower_walking_activity,
       "mPower Walking Activity",
       "syn6128279",
+      true,
+      false,
       false,
       None,
       Some(LuxParkDataSetSettings.MPowerWalkingActivity)
@@ -122,6 +137,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       lux_park_mpower_tapping_activity,
       "mPower Tapping Activity",
       "syn6130513",
+      true,
+      false,
       false,
       None,
       Some(LuxParkDataSetSettings.MPowerTappingActivity)
@@ -134,6 +151,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       "mPower Voice Activity",
       "syn6128277",
       false,
+      true,
+      false,
       None,
       Some(LuxParkDataSetSettings.MPowerVoiceActivity)
     ),
@@ -144,6 +163,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       lux_park_mpower_memory_activity,
       "mPower Memory Activity",
       "syn6126230",
+      true,
+      false,
       false,
       None,
       Some(LuxParkDataSetSettings.MPowerMemoryActivity)
