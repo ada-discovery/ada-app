@@ -3,11 +3,13 @@
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import views.html.datasetsetting.activateTypeahead
 
 @(
     id: reactivemongo.bson.BSONObjectID,
     dataSetName: String,
-    form: Form[DataSetSetting]
+    form: Form[DataSetSetting],
+    fieldNamesCall: Call
 )(
     implicit flash: Flash, msg: Messages, request: Request[_]
 )
@@ -20,3 +22,5 @@
     cancelCall = dataSetSettingRoutes.listAll(),
     deleteCall = None
 )
+
+@activateTypeahead(fieldNamesCall)

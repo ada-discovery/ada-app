@@ -20,6 +20,7 @@ import services.DataSetService
 import views.html
 import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 import controllers.dataset.routes.javascript.{DataSetSettingController => dataSetSettingJsRoutes}
+import controllers.dataset.DataSetRouter
 import play.api.data.Mapping
 
 import scala.concurrent.Future
@@ -66,8 +67,10 @@ class DataSetSettingController @Inject() (
   override protected def showView(id: BSONObjectID, f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
     editView(id, f)
 
-  override protected def editView(id: BSONObjectID, f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
-    html.datasetsetting.editNormal(id, "", f)
+  override protected def editView(id: BSONObjectID, f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) = {
+    val fieldNamesCall = new DataSetRouter(f.value.get.dataSetId).fieldNames
+    html.datasetsetting.editNormal(id, "", f, fieldNamesCall)
+  }
 
   override protected def listView(currentPage: Page[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
     html.datasetsetting.list("", currentPage)
@@ -80,12 +83,13 @@ class DataSetSettingController @Inject() (
           NotFound(s"Setting for the data set '#$dataSet' not found")
         ) { entity =>
           implicit val msg = messagesApi.preferred(request)
+          val fieldNamesCall = new DataSetRouter(dataSet).fieldNames
 
           render {
             case Accepts.Html() => {
               val updateCall = dataSetSettingRoutes.updateForDataSet(entity._id.get)
               val cancelCall = new DataSetRouter(dataSet).plainOverviewList
-              Ok(html.datasetsetting.edit("", fillForm(entity), updateCall, cancelCall, result(dataSpaceMetaInfoRepo.find())))
+              Ok(html.datasetsetting.edit("", fillForm(entity), updateCall, cancelCall, fieldNamesCall, result(dataSpaceMetaInfoRepo.find())))
             }
             case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
           }

@@ -1,7 +1,7 @@
 @import views.html.table.{displayTable, dynamicTable}
 @import util.typeColumns
 
-@(domainName: String, items: Traversable[String], sortable: Boolean = false, extraActions: Option[Html] = None)
+@(domainName: String, items: Traversable[String], sortable: Boolean = false, addModalInner: Option[Html] = None, extraActions: Option[Html] = None)
 
 @table = {
     @displayTable(
@@ -25,4 +25,4 @@
     }
 }
 
-@dynamicTable(domainName, table, sortable, rowToModelJsFun, itemToRowJsFun, extraActions)
+@dynamicTable(domainName, table, sortable, rowToModelJsFun, itemToRowJsFun, addModalInner, extraActions)

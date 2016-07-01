@@ -3,12 +3,14 @@
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import views.html.datasetsetting.activateTypeahead
 
 @(
     dataSetName: String,
     form: Form[DataSetSetting],
     updateCall: Call,
     cancelCall: Call,
+    fieldNamesCall: Call,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit flash: Flash, msg: Messages, request: Request[_]
@@ -24,3 +26,5 @@
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )
+
+@activateTypeahead(fieldNamesCall)

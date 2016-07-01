@@ -41,4 +41,8 @@
     }
 }
 
-@dynamicTable("overviewFieldChartType", table, true, rowToModelJsFun, itemToRowJsFun)
+@addModalInner = {
+    <input type="text" id="newItems" class="typeahead">
+}
+
+@dynamicTable("overviewFieldChartType", table, true, rowToModelJsFun, itemToRowJsFun, Some(addModalInner))

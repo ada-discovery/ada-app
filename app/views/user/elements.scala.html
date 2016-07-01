@@ -63,7 +63,7 @@
     @dynamicStringTable("role", form.value.get.roles)
 }
 @labelValue("user", "Permissions"){
-    @dynamicStringTable("permission", form.value.get.permissions, false, Some(addDataSetPermissionButton))
+    @dynamicStringTable("permission", form.value.get.permissions, false, None, Some(addDataSetPermissionButton))
 }
 
 @dataSetActionNamesAsString = @{

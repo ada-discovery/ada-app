@@ -1,0 +1,17 @@
+@(fieldNamesCall: Call)
+
+<!-- autocompletion -->
+<link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/typeahead.min.css")">
+<script src="@routes.WebJarAssets.at(WebJarAssets.locate("typeahead.bundle.min.js"))"></script>
+
+<script type="text/javascript">
+    $(function () {
+        $.ajax({
+            url: '@fieldNamesCall',
+            success: function (data) {
+                populateTypeahead($('#add_listViewTableColumnNameModal #newItems'), data);
+                populateTypeahead($('#add_overviewFieldChartTypeModal #newItems'), data);
+            }
+        });
+    });
+</script>

@@ -5,14 +5,19 @@
 
 @(form: Form[DataSetSetting])(implicit msg: play.api.i18n.Messages)
 
+<!-- dynamic (add, remove) table -->
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
 <script type="text/javascript" src="@routes.Assets.versioned("javascripts/dynamicTable.min.js")"></script>
+
+@addModalInner = {
+    <input type="text" id="newItems" class="typeahead">
+}
 
 @inputTextReadonly("dataSetSetting", "dataSetId", form)
 @inputText("dataSetSetting", "keyFieldName", form)
 @inputText("dataSetSetting", "exportOrderByFieldName", form)
 @labelValue("listViewTableColumnNames", attributeLabel("dataSetSetting", "listViewTableColumnNames")){
-    @dynamicStringTable("listViewTableColumnName", form.value.get.listViewTableColumnNames, true)
+    @dynamicStringTable("listViewTableColumnName", form.value.get.listViewTableColumnNames, true, Some(addModalInner))
 }
 @labelValue("overviewFieldChartTypes", attributeLabel("dataSetSetting", "overviewFieldChartTypes")){
     @overviewFieldChartTypeTable(form.value.get.overviewFieldChartTypes)

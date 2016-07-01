@@ -1,8 +1,8 @@
 @import util.toHumanReadableCamel
 
-@(domainName: String, table: Html, sortable: Boolean = false, rowToModelJsFun: Html, itemToRowJsFun: Html, extraActions: Option[Html] = None)
+@(domainName: String, table: Html, sortable: Boolean = false, rowToModelJsFun: Html, itemToRowJsFun: Html, addModalInner: Option[Html] = None, extraActions: Option[Html] = None)
 
-@modalInner = {
+@defaultAddModalInner = {
     <input text="text" id="newItems" value="">
 }
 
@@ -24,7 +24,7 @@
     <div>
         @table
     </div>
-    @modal("add_" + domainName + "Modal", "Add " + toHumanReadableCamel(domainName) + "(s)", modalInner, None, Some(modalButtons(domainName)))
+    @modal("add_" + domainName + "Modal", "Add " + toHumanReadableCamel(domainName) + "(s)", addModalInner.getOrElse(defaultAddModalInner), None, Some(modalButtons(domainName)))
 </div>
 
 <script>
