@@ -123,3 +123,40 @@ tr.clickable-row {
 .btn-clean {
     background-color: transparent;
 }
+
+.trollbox {
+    background-color: #fff;
+    padding: 15px 15px 30px 15px;
+    margin-right: 15px;
+    margin-top: 15px;
+    -webkit-border-radius: 6px 6px 6px 6px;
+    -moz-border-radius: 6px 6px 6px 6px;
+    border-radius: 6px 6px 6px 6px;
+    -webkit-box-shadow: 0 1px 2px rgba(0,0,0,.15);
+    -moz-box-shadow: 0 1px 2px rgba(0,0,0,.15);
+    box-shadow: 0 1px 2px rgba(0,0,0,.15);
+    position: fixed;
+}
+
+.trollmessagebox {
+    max-height:900px;
+    overflow-y:auto;
+}
+
+.trollbox .tooltip-inner {
+    font-size: 16px;
+    max-width:300px;
+}
+
+.trollbox .alert {
+    padding: 2px 10px 2px 10px;
+    margin-top: 0px;
+    margin-bottom: 0px
+}
+
+.trollbox .alert-success,
+.trollbox .alert-info {
+    padding: 10px 10px 10px 10px;
+    margin-top: 5px;
+    margin-bottom: 5px
+}
