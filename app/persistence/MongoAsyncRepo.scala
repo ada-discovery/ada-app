@@ -66,7 +66,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
           throw new IllegalArgumentException("Limit is expected when page is provided.")
         )
 
-      case None => queryBuilder.cursor[E]()
+      case None => queryBuilder2.cursor[E]()
     }
     // TODO: What about cursor[E](readPreference = ReadPreference.primary)
 

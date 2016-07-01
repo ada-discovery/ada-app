@@ -1,0 +1,63 @@
+<div id="trollbox" class="trollbox">
+    <div id="trollmessagebox" class="trollmessagebox">
+    </div>
+
+    <hr/>
+
+    <input type="text" class="form-control" id="shoutmessage" name="shoutmessage" placeholder="Say what you want" value="">
+</div>
+
+<script src="@routes.WebJarAssets.at(WebJarAssets.locate("Autolinker.js", "Autolinker.min.js"))"></script>
+<script type="text/javascript" src="@routes.MessageController.jsRoutes"></script>
+<script type="text/javascript">
+    $(window).load(function() {
+        $('.trollmessagebox').css('max-height',$(window).height() - 220);
+
+        setTimeout(function() {
+            jsMessageRoutes.controllers.MessageController.listMostRecent(15).ajax( {
+                success: function(data) {
+                    $.each(data.reverse(), function(index, json) {
+                        prependTrollboxJsonMessage(json, false);
+                    });
+                    $("#trollmessagebox").scrollTop($(document).height());
+                },
+                error: function(data){
+                    console.log(data);
+                }
+            })
+
+            if (!!window.EventSource) {
+                var source = new EventSource('@routes.MessageController.eventStream');
+                source.addEventListener('message', function(e) {
+                    var json = $.parseJSON(e.data);
+                    prependTrollboxJsonMessage(json, true);
+                    $("#trollmessagebox").scrollTop($(document).height());
+                }, false);
+
+                source.addEventListener('error', function(e) {
+                    if (e.eventPhase == EventSource.CLOSED) {
+                        console.log("Connection was closed on error: " + e);
+                    } else {
+                        console.log("Error occurred while streaming: " + e);
+                    }
+                }, false);
+            } else {
+                prependTrollboxMessage("", "", "Sorry. This browser doesn't seem to support HTML5-based messaging. Check <a href='http://html5test.com/compare/feature/communication-eventSource.html'>html5test</a> for browser compatibility.");
+            }
+        }, 0);
+    });
+
+    $("#shoutmessage").keydown(function(event) {
+        if (event.keyCode == 13) {
+            var message = $("#shoutmessage").val();
+            jsMessageRoutes.controllers.MessageController.saveUserMessage(message).ajax( {
+                success: function() {
+                    $("#shoutmessage").val("");
+                },
+                error: function(data){
+                    $("#shoutmessage").val(data.responseText);
+                }
+            });
+        }
+    });
+</script>

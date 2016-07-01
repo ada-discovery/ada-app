@@ -6,7 +6,7 @@ import reactivemongo.bson.BSONObjectID
 import java.util.{UUID, Date}
 import play.modules.reactivemongo.json.BSONFormats._
 
-case class Message(_id: Option[BSONObjectID], content: String)
+case class Message(_id: Option[BSONObjectID], content: String, createdByUser: Option[String] = None, isUserAdmin: Boolean = false, timeCreated: Date = new Date()) // no user means a system message
 
 object Message {
   implicit val MessageFormat = Json.format[Message]

@@ -35,8 +35,8 @@ trait DataSetService {
   ): Future[Unit]
 
   def importDataSet(
-                     importInfo: CsvDataSetImport,
-                     file: Option[File] = None
+    importInfo: CsvDataSetImport,
+    file: Option[File] = None
   ): Future[Unit]
 
   def importDataSet(
@@ -44,15 +44,15 @@ trait DataSetService {
   ): Future[Unit]
 
   def importDataSetAndDictionary(
-                                  importInfo: TranSmartDataSetImport,
-                                  dataFile: Option[File],
-                                  mappingFile: Option[File],
-                                  typeInferenceProvider: TypeInferenceProvider
+    importInfo: TranSmartDataSetImport,
+    dataFile: Option[File],
+    mappingFile: Option[File],
+    typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit]
 
   def importDataSetAndDictionary(
-                                  importInfo: RedCapDataSetImport,
-                                  typeInferenceProvider: TypeInferenceProvider
+    importInfo: RedCapDataSetImport,
+    typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit]
 
   def inferDictionary(
@@ -75,6 +75,7 @@ class DataSetServiceImpl @Inject()(
     dataSetSettingRepo: DataSetSettingRepo,
     redCapServiceFactory: RedCapServiceFactory,
     synapseServiceFactory: SynapseServiceFactory,
+    messageRepo: MessageRepo,
     configuration: Configuration
   ) extends DataSetService{
 
@@ -124,10 +125,10 @@ class DataSetServiceImpl @Inject()(
     ).map(_ => ())
 
   override def importDataSetAndDictionary(
-                                           importInfo: TranSmartDataSetImport,
-                                           dataFile: Option[File],
-                                           mappingFile: Option[File],
-                                           typeInferenceProvider: TypeInferenceProvider
+    importInfo: TranSmartDataSetImport,
+    dataFile: Option[File],
+    mappingFile: Option[File],
+    typeInferenceProvider: TypeInferenceProvider
   ) = {
     // import a data set first
     val columnNamesFuture = importLineParsableDataSet(
@@ -184,6 +185,7 @@ class DataSetServiceImpl @Inject()(
     }
   }
 
+  @Deprecated
   private def updateJsonFileFields(
     synapseService: SynapseService, // unused
     fileColumns: Seq[SelectColumn],
@@ -252,8 +254,8 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def importDataSetAndDictionary(
-                                           importInfo: RedCapDataSetImport,
-                                           typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
+    importInfo: RedCapDataSetImport,
+    typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
   ) = {
     logger.info(new Date().toString)
     if (importInfo.importDictionaryFlag)
@@ -282,9 +284,14 @@ class DataSetServiceImpl @Inject()(
         Future(())
     } yield
       if (importInfo.importDictionaryFlag)
-        logger.info(s"Import of data set and dictionary '${importInfo.dataSetName}' successfully finished.")
+        logInfoAndSendMessage(s"Import of data set and dictionary '${importInfo.dataSetName}' successfully finished.")
       else
-        logger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
+        logInfoAndSendMessage(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
+  }
+
+  private def logInfoAndSendMessage(message: String) = {
+    logger.info(message)
+    messageRepo.save(Message(None, message))
   }
 
   private def createCsvFileLineIterator(
@@ -326,11 +333,11 @@ class DataSetServiceImpl @Inject()(
     * @return The column names (future)
     */
   protected def importLineParsableDataSet(
-                                           importInfo: DataSetImport,
-                                           delimiter: String,
-                                           skipFirstLine: Boolean,
-                                           createLineIterator: => Iterator[String],
-                                           transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]] = None
+    importInfo: DataSetImport,
+    delimiter: String,
+    skipFirstLine: Boolean,
+    createLineIterator: => Iterator[String],
+    transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]] = None
   ): Future[Seq[String]] = {
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
@@ -414,7 +421,7 @@ class DataSetServiceImpl @Inject()(
     }
 
     columnNamesFuture.map { columnNames =>
-      logger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
+      logInfoAndSendMessage(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
       columnNames
     }
   }
@@ -457,7 +464,7 @@ class DataSetServiceImpl @Inject()(
     }
 
     Future.sequence(futures.toList).map( _ =>
-      logger.info(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
+      logInfoAndSendMessage(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
     )
   }
 
@@ -559,7 +566,7 @@ class DataSetServiceImpl @Inject()(
     }
 
     finalFuture.map( _ =>
-      logger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' successfully finished.")
+      logInfoAndSendMessage(s"TranSMART dictionary inference and import for data set '${dataSetId}' successfully finished.")
     )
   }
 
@@ -624,7 +631,7 @@ class DataSetServiceImpl @Inject()(
     val visitFieldFuture = fieldRepo.save(Field(redCapVisitField, FieldType.Enum))
 
     Future.sequence(futures.toList ++ Seq(visitFieldFuture)).map(_ =>
-      logger.info(s"RedCap dictionary inference and import for data set '${dataSetId}' successfully finished.")
+      logInfoAndSendMessage(s"RedCap dictionary inference and import for data set '${dataSetId}' successfully finished.")
     )
   }
 

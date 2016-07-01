@@ -28,7 +28,7 @@ import reactivemongo.bson.BSONObjectID
 
 
 class UserProfileController @Inject() (
-    usrmmanager: UserManager,
+    val userManager: UserManager,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
     workspaceRepo: WorkspaceRepo
@@ -46,18 +46,14 @@ class UserProfileController @Inject() (
       "permissions" -> ignored(Seq[String]())
     )(CustomUser.apply)(CustomUser.unapply))
 
-  // a hook need by auth config
-  override val userManager = usrmmanager
-
   /**
     * Leads to profile page which shows some basic user information.
     */
   def profile() = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
-      val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
-      usrFutureOp.map { usrOp =>
-        Ok(views.html.userprofile.profile(usrOp.get))
-      }
+        currentUser(request).map { usrOp =>
+          Ok(views.html.userprofile.profile(usrOp.get))
+        }
     }
   }
 

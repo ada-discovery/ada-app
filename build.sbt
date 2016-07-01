@@ -34,6 +34,7 @@ libraryDependencies ++= Seq(
   "org.webjars" % "highcharts" % "4.2.5",
   "org.webjars.bower" % "plotly.js" % "1.5.1",
   "org.webjars.bower" % "d3" % "3.5.16",
+  "org.webjars.bower" % "Autolinker.js" % "0.25.0", // to convert links to a-href elements
   "org.webjars" % "jquery-ui" % "1.11.1",
   "net.codingwell" %% "scala-guice" % "4.0.1",
   "org.clapper" % "classutil_2.11" % "1.0.6",
