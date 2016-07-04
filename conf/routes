@@ -119,6 +119,7 @@ GET         /studies/categories                                                 
 GET         /studies/categories/get/:id                                             controllers.dataset.CategoryDispatcher.get(id: BSONObjectID)
 GET         /studies/categories/new                                                 controllers.dataset.CategoryDispatcher.create
 POST        /studies/categories/save                                                controllers.dataset.CategoryDispatcher.save
+POST        /studies/categories/save/:name                                          controllers.dataset.CategoryDispatcher.saveForName(name: String)
 POST        /studies/categories/:id                                                 controllers.dataset.CategoryDispatcher.update(id: BSONObjectID)
 POST        /studies/categories/:id/delete                                          controllers.dataset.CategoryDispatcher.delete(id: BSONObjectID)
 GET         /studies/categories/getCategoryD3Root                                   controllers.dataset.CategoryDispatcher.getCategoryD3Root

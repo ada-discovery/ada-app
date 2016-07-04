@@ -160,3 +160,8 @@ tr.clickable-row {
     margin-top: 5px;
     margin-bottom: 5px
 }
+
+.treeDiv {
+    max-height:600px;
+    overflow-y:auto;
+}

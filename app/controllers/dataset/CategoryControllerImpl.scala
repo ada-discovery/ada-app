@@ -160,6 +160,10 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     }
   }
 
+  override def saveForName(name: String) = Action.async{ implicit request =>
+    repo.save(Category(None, name)).map( id => Ok(Json.toJson(id)))
+  }
+
   private def notFoundCategory(id: BSONObjectID) =
     NotFound(s"Category with id #${id.stringify} not found. It has been probably deleted (by a different user). It's highly recommended to refresh your screen.")
 
@@ -167,7 +171,8 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     Ok(
       JavaScriptReverseRouter("jsRoutes")(
         jsRouter.get,
-        jsRouter.relocateToParent
+        jsRouter.relocateToParent,
+        jsRouter.saveForName
       )
     ).as("text/javascript")
   }

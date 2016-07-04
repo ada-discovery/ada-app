@@ -17,6 +17,14 @@
     implicit flash:Flash, msg: Messages, request: Request[_]
 )
 
+@modalBody = {
+    <input id="categoryName" name="categoryName" value="" title="Category Name">
+}
+@buttons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" id="submitButton" onclick="addCategory();" data-dismiss="modal" class="btn btn-primary">OK</button>
+}
+
 @actions = {
     <div class="row">
         <div class="col-md-9">
@@ -29,16 +37,42 @@
             <a class="btn btn-info btn-sm" id="collapseAll" href="#" data-toggle="tooltip" title="Collapse All" onclick="$('#treeDiv').tree('collapseAll');return false;">
                 <span class="glyphicon glyphicon-resize-small" aria-hidden="true"></span>
             </a>
-            <a class="btn btn-info btn-sm" id="add" href="@router.create" data-toggle="tooltip" title="Add New">
+            <a class="btn btn-info btn-sm" data-toggle="modal" data-target="#addCategoryModal" title="Add New">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
             </a>
         </div>
+        @modal("addCategoryModal", "Add New Category", modalBody, None, Some(buttons))
     </div>
     <script type="text/javascript">
+        function addCategory() {
+            var name = $('#categoryName').val();
+            $('#categoryName').val("");
+            jsRoutes.controllers.dataset.CategoryDispatcher.saveForName(name).ajax( {
+                success: function(id) {
+                    $('#treeDiv').tree('addToRoot', id, name);
+                    showMessage("The category '" + name + "' successfully created.");
+                },
+                error: function(data){
+                    showError( data.responseText );
+                }
+            });
+        }
+
         $(document).ready(function(){
             $('[data-toggle="tooltip"]').tooltip({
                 placement : 'bottom'
             });
+
+            $("#categoryName").keydown(function(event) {
+                if (event.keyCode == 13) {
+                    $('#addCategoryModal').modal('hide');
+                    addCategory();
+                }
+            });
+
+            $('#addCategoryModal').on('shown.bs.modal', function () {
+                $('#categoryName').focus();
+            })
         });
     </script>
 }

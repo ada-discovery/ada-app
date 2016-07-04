@@ -41,6 +41,8 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
 
   override def save = dispatch(_.save)
 
+  override def saveForName(name: String) = dispatch(_.saveForName(name))
+
   override def getCategoryD3Root = dispatch(_.getCategoryD3Root)
 
   override def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]) = dispatch(_.relocateToParent(id, parentId))

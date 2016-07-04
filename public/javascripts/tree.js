@@ -73,6 +73,23 @@
             this._update(this.root);
         },
 
+        addToRoot: function(id, name) {
+            var node = {}
+            node.name = name;
+            node._id = id;
+            node.parent = this.root;
+
+            this._expand(this.root);
+
+            if (this.root.children)
+                this.root.children.push(node)
+            else
+                this.root.children = [node];
+
+            node.depth = this.root.depth + 1
+            this._update(this.root);
+        },
+
         _dragstart: function (node, uiNode) {
             node.dragstartx = node.x
             node.dragstarty = node.y
