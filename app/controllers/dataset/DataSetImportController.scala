@@ -1,6 +1,9 @@
 package controllers.dataset
 
 import java.util.Date
+import java.util.concurrent.TimeoutException
+
+import persistence.RepoException
 
 import scala.concurrent.duration._
 import javax.inject.Inject
@@ -11,7 +14,7 @@ import controllers._
 import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
 import models._
 import persistence.RepoTypes._
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.data.{Mapping, Form}
 import play.api.data.Forms._
 import play.api.i18n.{Messages, MessagesApi}
@@ -20,6 +23,7 @@ import play.api.libs.json.Json
 import play.api.mvc._
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
+import java.io.{File, FileInputStream, FileOutputStream}
 import services.{DataSetImportScheduler, DataSetService, DeNoPaSetting}
 import util.SecurityUtil.restrictAdmin
 import views.html.{datasetimport => importViews}
@@ -32,10 +36,12 @@ class DataSetImportController @Inject()(
     dataSetImportScheduler: DataSetImportScheduler,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     deadbolt: DeadboltActions,
-    messagesApi: MessagesApi
+    messagesApi: MessagesApi,
+    configuration: Configuration
   ) extends CrudControllerImpl[DataSetImport, BSONObjectID](repo) with AdminRestrictedCrudController[BSONObjectID] {
 
   private val logger = Logger // (this.getClass)
+  private val importFolder = configuration.getString("datasetimport.import.folder").get
 
   // Forms
 
@@ -269,15 +275,59 @@ class DataSetImportController @Inject()(
     }
   }
 
-  override protected def saveCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] =
-    super.saveCall(importInfo).map { id =>
+  override protected def saveCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] = {
+    val id = BSONObjectID.generate
+    val modifiedImportInfo = handleImportFiles(DataSetImportIdentity.set(importInfo, id))
+
+    super.saveCall(modifiedImportInfo).map { id =>
       scheduleOrCancel(id, importInfo); id
+    }
+  }
+
+  override protected def updateCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] = {
+    val modifiedImportInfo = handleImportFiles(importInfo)
+
+    //TODO: remove old files if any
+    super.updateCall(modifiedImportInfo).map { id =>
+      scheduleOrCancel(id, modifiedImportInfo); id
+    }
+  }
+
+  private def handleImportFiles(importInfo: DataSetImport)(implicit request: Request[AnyContent]): DataSetImport = {
+    val id = importInfo._id.get
+
+    def copyImportFile(name: String, file: File): String = {
+      val path = importFolder + id.stringify + "/" + name
+      copyFile(file, path)
+      path
     }
 
-  override protected def updateCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] =
-    super.updateCall(importInfo).map { id =>
-      scheduleOrCancel(id, importInfo); id
+    importInfo match {
+      case importInfo: CsvDataSetImport => {
+        val path =
+          getFile("dataFile", request).map(dataFile =>
+            copyImportFile(dataFile._1, dataFile._2)
+          ).getOrElse(
+            getParamValue("path"))
+        importInfo.copy(path = Some(path))
+      }
+      case importInfo: TranSmartDataSetImport => {
+        val dataPath =
+          getFile("dataFile", request).map(dataFile =>
+            copyImportFile(dataFile._1, dataFile._2)
+          ).getOrElse(
+            getParamValue("dataPath"))
+
+        val mappingPath = getFile("mappingFile", request).map(mappingFile =>
+          copyImportFile(mappingFile._1, mappingFile._2)
+        ).getOrElse(
+          getParamValue("mappingPath"))
+
+        importInfo.copy(dataPath = Some(dataPath), mappingPath = Some(mappingPath))
+      }
+      case _ => importInfo
     }
+  }
 
   override protected def deleteCall(id: BSONObjectID)(implicit request: Request[AnyContent]): Future[Unit] =
     super.deleteCall(id).map { _ =>
@@ -300,8 +350,8 @@ class DataSetImportController @Inject()(
         },
         importInfo => {
           val dataSetName = importInfo.dataSetName
-          val dataFile = getFile("dataFile", request)
-          val mappingFile = getFile("mappingFile", request)
+          val dataFile = getFile("dataFile", request).map(_._2)
+          val mappingFile = getFile("mappingFile", request).map(_._2)
 
           if (importInfo.dataPath.isEmpty && dataFile.isEmpty)
             Future.successful(createBadRequestTranSmart(filledForm.withError("path", "No data path or import file specified.")))
@@ -324,12 +374,12 @@ class DataSetImportController @Inject()(
     }
   }
 
-  private def getFile(fileParamKey: String, request: Request[AnyContent]): Option[java.io.File] = {
+  private def getFile(fileParamKey: String, request: Request[AnyContent]): Option[(String, java.io.File)] = {
     val dataFileOption = request.body.asMultipartFormData.get.file(fileParamKey)
     dataFileOption.map { dataFile =>
-//      val fileName = dataFile.filename
+     val fileName = dataFile.filename
 //      val contentType = dataFile.contentType
-      dataFile.ref.file
+      (fileName, dataFile.ref.file)
     }
   }
 
@@ -347,5 +397,15 @@ class DataSetImportController @Inject()(
   )(implicit request: Request[_]) = {
     implicit val msg = messagesApi.preferred(request)
     BadRequest(importViews.createTranSmartType(filledForm))
+  }
+
+  private def copyFile(src: File, location: String): Unit = {
+    val dest = new File(location)
+    val destFolder = dest.getCanonicalFile.getParentFile
+    if (!destFolder.exists()) {
+      destFolder.mkdirs()
+    }
+    new FileOutputStream(dest) getChannel() transferFrom(
+      new FileInputStream(src) getChannel, 0, Long.MaxValue )
   }
 }

@@ -13,5 +13,8 @@
     tranSmartTypeElements(form),
     controllers.dataset.routes.DataSetImportController.update(id),
     controllers.dataset.routes.DataSetImportController.listAll(),
-    Some(controllers.dataset.routes.DataSetImportController.delete(id))
+    Some(controllers.dataset.routes.DataSetImportController.delete(id)),
+    None,
+    None,
+    'enctype -> "multipart/form-data"
 )
