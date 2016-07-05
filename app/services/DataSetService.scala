@@ -81,7 +81,7 @@ class DataSetServiceImpl @Inject()(
     synapseServiceFactory: SynapseServiceFactory,
     messageRepo: MessageRepo,
     configuration: Configuration
-  ) extends DataSetService{
+  ) extends DataSetService {
 
   private val logger = Logger
   private val messageLogger = MessageLogger(logger, messageRepo)
@@ -113,9 +113,9 @@ class DataSetServiceImpl @Inject()(
         case x: RedCapDataSetImport => importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
       }
       _ <- if (dataSetImport.createDummyDictionary)
-          createDummyDictionary(dataSetImport.dataSetId)
-        else
-          Future(())
+        createDummyDictionary(dataSetImport.dataSetId)
+      else
+        Future(())
       _ <- {
         dataSetImport.timeLastExecuted = Some(new Date())
         dataSetImportRepo.update(dataSetImport)
@@ -189,52 +189,18 @@ class DataSetServiceImpl @Inject()(
 
     if (importInfo.downloadColumnFiles)
       for {
-        // get the columns of the "file" type
+      // get the columns of the "file" type
         fileColumns <- synapseService.getTableColumnModels(importInfo.tableId).map(
           _.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(_.toSelectColumn)
         )
         _ <- {
-          val fun = updateJsonsFileFields(synapseService, fileColumns, importInfo.tableId)_
+          val fun = updateJsonsFileFields(synapseService, fileColumns, importInfo.tableId) _
           importDataSetAux(Some(fun))
         }
       } yield
         ()
     else
       importDataSetAux(None).map(_ => ())
-  }
-
-  @Deprecated
-  private def updateJsonFileFields(
-    synapseService: SynapseService, // unused
-    fileColumns: Seq[SelectColumn],
-    tableId: String)(
-    json: JsObject
-  ): Future[JsObject] = {
-    // TODO: we can't use synapseService here because Synapse responses with "Too many concurrent requests"
-    // using a new synapseService delays the execution and prevents too many concurrent requests
-    // should be able to fix this by using a custom execution context (ExecutionContexts.SynapseExecutionContext) with a restrictive thread limit
-    val synapseServiceAux = synapseServiceFactory(synapseUsername, synapsePassword)
-
-    val rowId = (json \ synapseRowIdFieldName).get.as[String].trim.toInt
-    val rowVersion = (json \ synapseRowVersionFieldName).as[String].trim.toInt
-
-    val columnNameJsonFutures: Seq[Future[Option[(String, JsValue)]]] = fileColumns.map { fileColumn =>
-      val fieldName = escapeKey(fileColumn.name.replaceAll("\"", "").trim)
-
-      if ((json \ fieldName).get != JsNull) {
-        val fileStringFuture = synapseServiceAux.downloadColumnFile(tableId, fileColumn.id, rowId, rowVersion)
-        fileStringFuture.map { fileString =>
-          Some(fieldName, Json.parse(fileString))
-        }(ExecutionContexts.SynapseExecutionContext).recover {
-          case e: AdaRestException =>
-            throw new AdaException(s"File for the row '$rowId', version '$rowVersion', column '${fileColumn.name}' couldn't be downloaded from Synapse due to '${e.getMessage}.'", e)
-        }(ExecutionContexts.SynapseExecutionContext)
-      } else
-        Future(None)
-    }
-    Future.sequence(columnNameJsonFutures).map(columnNameJsons =>
-      json ++ JsObject(columnNameJsons.flatten)
-    )(ExecutionContexts.SynapseExecutionContext)
   }
 
   private def updateJsonsFileFields(
@@ -253,36 +219,35 @@ class DataSetServiceImpl @Inject()(
       )
     }.flatten.flatten
 
-    val groupSize = Math.max(fileHandleIds.size / synapseBulkDownloadGroupNumber, 1)
-    val groups = {
-      val groups = fileHandleIds.grouped(groupSize)
-      // we tolerate 'synapseBulkDownloadGroupNumber + 1' groups but not more
-      if (groups.size > (synapseBulkDownloadGroupNumber + 1))
-        fileHandleIds.grouped(groupSize + 1)
-      else
-        groups
-    }.toSeq
+    if (fileHandleIds.nonEmpty) {
+      val groupSize = Math.max(fileHandleIds.size / synapseBulkDownloadGroupNumber, 1)
+      val groups = {
+        if (fileHandleIds.size.toDouble / groupSize > synapseBulkDownloadGroupNumber)
+          fileHandleIds.grouped(groupSize + 1)
+        else
+          fileHandleIds.grouped(groupSize)
+      }.toSeq
 
-    logger.info(s"Bulk download of Synapse column data for ${fileHandleIds.size} file handles initiated. Splitting into ${groups.size} groups.")
+      logger.info(s"Bulk download of Synapse column data for ${fileHandleIds.size} file handles initiated. Splitting into ${groups.size} groups.")
 
-    val fileHandleIdContentsFutures = groups.par.map { groupFileHandleIds =>
-      synapseService.downloadTableFilesInBulk(groupFileHandleIds, tableId)
-    }
-
-//    val fileHandleIdContentsFuture = synapseService.downloadTableFilesInBulk(fileHandleIds, tableId)
-
-    Future.sequence(fileHandleIdContentsFutures.toList).map(_.flatten).map { fileHandleIdContents =>
-      logger.info(s"Download of ${fileHandleIdContents.size} Synapse column data finished. Updating JSONs with Synapse column data...")
-      val fileHandleIdContentMap = fileHandleIdContents.toMap
-      jsons.map { json =>
-        val fieldNameJsons = fieldNames.map { fieldName =>
-          (json \ fieldName).get.asOpt[String].map( fileHandleId =>
-            (fieldName, Json.parse(fileHandleIdContentMap.get(fileHandleId).get))
-          )
-        }.flatten
-        json ++ JsObject(fieldNameJsons)
+      val fileHandleIdContentsFutures = groups.par.map { groupFileHandleIds =>
+        synapseService.downloadTableFilesInBulk(groupFileHandleIds, tableId)
       }
-    }
+
+      Future.sequence(fileHandleIdContentsFutures.toList).map(_.flatten).map { fileHandleIdContents =>
+        logger.info(s"Download of ${fileHandleIdContents.size} Synapse column data finished. Updating JSONs with Synapse column data...")
+        val fileHandleIdContentMap = fileHandleIdContents.toMap
+        jsons.map { json =>
+          val fieldNameJsons = fieldNames.map { fieldName =>
+            (json \ fieldName).get.asOpt[String].map(fileHandleId =>
+              (fieldName, Json.parse(fileHandleIdContentMap.get(fileHandleId).get))
+            )
+          }.flatten
+          json ++ JsObject(fieldNameJsons)
+        }
+      }
+    } else
+      Future(Seq[JsObject]())
   }
 
   override def importDataSetAndDictionary(
@@ -303,10 +268,10 @@ class DataSetServiceImpl @Inject()(
     val dataRepo = dataSetAccessor.dataSetRepo
 
     for {
-      // delete all records
-      _ <- dataRepo.deleteAll
       // get the data from a given red cap service
       records <- redCapService.listRecords("cdisc_dm_usubjd", "")
+      // delete all records
+      _ <- dataRepo.deleteAll
       // save the records (...ignore the results)
       _ <- Future.sequence(records.map(dataRepo.save))
       // import dictionary (if needed)
@@ -371,10 +336,6 @@ class DataSetServiceImpl @Inject()(
 
     val dataSetAccessor = createDataSetAccessor(importInfo)
     val dataRepo = dataSetAccessor.dataSetRepo
-    val syncDataRepo = RepoSynchronizer(dataRepo, timeout)
-
-    // remove the records from the collection
-    syncDataRepo.deleteAll
 
     val columnNamesFuture = {
       try {
@@ -425,6 +386,11 @@ class DataSetServiceImpl @Inject()(
               transformJsons.get(jsons)
             else
               Future(jsons)
+          }
+          // remove the records from the collection
+          _ <- {
+            logger.info(s"Deleting the old data set...")
+            dataRepo.deleteAll
           }
           lines <- {
             logger.info(s"Saving JSONs...")

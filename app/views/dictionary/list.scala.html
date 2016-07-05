@@ -102,8 +102,8 @@
             if(e.keyCode == 13) {
                 var id = getNearestRowId($(this), "id");
                 var label = $(this).val();
+                var that = $(this)
                 if (label) {
-                    var that = $(this)
                     dictionaryJsRoutes.controllers.dataset.DictionaryDispatcher.updateLabel(id, label).ajax( {
                         success: function() {
                             showMessage("The field '" + id + "' has been successfully relabeled to '" + label + "'.");

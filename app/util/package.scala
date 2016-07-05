@@ -73,4 +73,15 @@ package object util {
 
   def typeColumns[T](columns: (Option[String], String, T => Any)*): Traversable[(Option[String], String, Any => Html)] =
     columns.map(typeColumn[T])
+
+  def formatTimeElement(i: Option[Int], addDelimiter: Boolean, noneValue: String) =
+    i.map( value => (
+      if (value < 10)
+        "0" + value
+      else
+        value.toString) + (
+      if(addDelimiter)
+        ":"
+      else "")
+    ).getOrElse(noneValue)
 }

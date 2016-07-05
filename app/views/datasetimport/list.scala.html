@@ -2,7 +2,7 @@
 @import views.html.table.paginatedTable
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import controllers.dataset.routes.{DataSetImportController => dataSetImportRoutes}
-@import util.{typeColumns, toHumanReadableCamel}
+@import util.{typeColumns, toHumanReadableCamel, formatTimeElement}
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import play.data.format.Formats.DateTime
@@ -40,8 +40,21 @@
     </div>
 }
 
+@scheduleTime(scheduledTime: ScheduledTime) = {
+    @Html(formatTimeElement(scheduledTime.hour, true, "&nbsp;&nbsp;&nbsp;&nbsp;") + formatTimeElement(scheduledTime.minute, true, "&nbsp;&nbsp;&nbsp;&nbsp;") + formatTimeElement(scheduledTime.second, false, "&nbsp;&nbsp;&nbsp;&nbsp;"))
+}
+
 @scheduleCheckbox(dataSetImport: DataSetImport) = {
-    <input type="checkbox" class="no-rowClicked" @if(dataSetImport.scheduled) { checked="checked" } disabled="disabled"/>
+    <ul class="list-inline">
+        <li>
+            <input type="checkbox" class="no-rowClicked" @if(dataSetImport.scheduled) { checked="checked" } disabled="disabled"/>
+        </li>
+        @if(dataSetImport.scheduled) {
+            <li class="topVerticalAlign">
+                @scheduleTime(dataSetImport.scheduledTime.get)
+            </li>
+        }
+    </ul>
 }
 
 @executeLink(dataSetImport: DataSetImport) = {
