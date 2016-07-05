@@ -165,3 +165,7 @@ tr.clickable-row {
     max-height:600px;
     overflow-y:auto;
 }
+
+.topVerticalAlign {
+    vertical-align:top
+}
