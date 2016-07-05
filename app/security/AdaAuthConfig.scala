@@ -58,18 +58,13 @@ trait AdaAuthConfig extends AuthConfig {
   }
 
   // we can't call restoreUser, so we must retrieve the user manually
-  def currentUser(request: Request[_]): Future[Option[CustomUser]] = {
-    val timeout = 120000 millis
-    val userIdFuture: Future[Option[Id]] = getUserFromToken(request)
-    val userId: Option[Id] = Await.result(userIdFuture, timeout)
-
-    userId match {
-      case Some(id) => {
-        resolveUser(id)
+  def currentUser(request: Request[_]): Future[Option[CustomUser]] =
+     getUserFromToken(request).flatMap {
+      _ match {
+        case Some(id) => resolveUser(id)
+        case None => Future(None)
       }
-      case None => Future(None)
     }
-  }
 
   /**
     * A function that returns a `User` object from an `Id`.

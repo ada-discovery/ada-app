@@ -147,7 +147,7 @@ protected[services] class SynapseServiceWSImpl @Inject() (
   private val bulkDownloadStartUrl = configuration.getString("synapse.api.bulk_download_start.url").get
   private val bulkDownloadResultUrl = configuration.getString("synapse.api.bulk_download_result.url").get
 
-  private val timeout = 2 minutes
+  private val timeout = 10 minutes
   private val tableCsvResultPollingFreq = 200
   private val bulkDownloadResultPollingFreq = 400
 
@@ -308,8 +308,10 @@ protected[services] class SynapseServiceWSImpl @Inject() (
   }
 
   override def getBulkDownloadResult(jobToken: String): Future[Either[BulkFileDownloadResponse, AsynchronousJobStatus]] = {
-    val request = withSessionToken(
-      ws.url(baseUrl + bulkDownloadResultUrl + jobToken))
+    val request =
+      withRequestTimeout(timeout)(
+        withSessionToken(
+          ws.url(baseUrl + bulkDownloadResultUrl + jobToken)))
 
     request.get.map { response =>
       handleErrorResponse(response)
@@ -351,6 +353,9 @@ protected[services] class SynapseServiceWSImpl @Inject() (
 
   def withJsonContent(request: WSRequest): WSRequest =
     request.withHeaders("Content-Type" -> "application/json")
+
+  def withRequestTimeout(timeout: Duration)(request: WSRequest): WSRequest =
+    request.withRequestTimeout(timeout.toMillis)
 }
 
 object ZipFileIterator {

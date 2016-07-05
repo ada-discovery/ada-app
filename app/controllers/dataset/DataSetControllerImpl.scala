@@ -218,6 +218,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
+    val start = new java.util.Date()
     val fieldCharts = setting.overviewFieldChartTypes
     val chartFieldNames = fieldCharts.map(_.fieldName)
     val tableFieldNames = listViewColumns.get
@@ -252,7 +253,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val chartSpecs = createChartSpecs(fieldCharts, chartFields, chartItems)
         val fieldChartSpecs = chartSpecs.map(chartSpec => FieldChartSpec(chartSpec._1, chartSpec._2))
 
+        val end = new java.util.Date()
 
+        Logger.debug(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
         render {
           case Accepts.Html() => Ok(overviewListView(Page(renamedItems, page, page * pageLimit, count, orderBy, filter), fieldChartSpecs, tableFields))
           case Accepts.Json() => Ok(Json.toJson(renamedItems))

@@ -83,7 +83,7 @@ case class Field(
   name: String,
   fieldType: FieldType.Value,
   isArray: Boolean = false,
-  numValues: Option[Map[String, String]] = None,
+  numValues: Option[Map[String, String]] = None,  // TODO: rename to enumValues
   aliases: Seq[String] = Seq[String](),
   label: Option[String] = None,
   var categoryId: Option[BSONObjectID] = None,

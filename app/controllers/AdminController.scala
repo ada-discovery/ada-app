@@ -3,13 +3,19 @@ package controllers
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
+import persistence.RepoTypes.MessageRepo
+import play.api.Logger
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller}
 import play.api.Play.current
+import util.MessageLogger
 import util.ReflectionUtil._
 import util.SecurityUtil.restrictAdmin
 
-class AdminController @Inject() (deadbolt: DeadboltActions) extends Controller {
+class AdminController @Inject() (deadbolt: DeadboltActions, messageRepo: MessageRepo) extends Controller {
+
+  private val logger = Logger
+  private val messageLogger = MessageLogger(logger, messageRepo)
 
   @Inject var messagesApi: MessagesApi = _
 
@@ -49,7 +55,9 @@ class AdminController @Inject() (deadbolt: DeadboltActions) extends Controller {
         val start = new java.util.Date()
         runnable.run()
         val execTimeSec = (new java.util.Date().getTime - start.getTime) / 1000
-        runnablesRedirect.flashing("success" -> s"Script ${className} was successfully executed in ${execTimeSec} sec.")
+        val message = s"Script ${className} was successfully executed in ${execTimeSec} sec."
+        messageLogger.info(message)
+        runnablesRedirect.flashing("success" -> message)
       } catch {
         case e: ClassNotFoundException => {
           e.printStackTrace

@@ -19,7 +19,7 @@
     @inputText(domainName, "name", form)
     @inputText(domainName, "fieldType", form)
     @inputText(domainName, "isArray", form)
-    @inputText(domainName, "numValues", form)
+    @inputText(domainName, "numValues", form, '_label -> "Enum Values")
     @inputText(domainName, "aliases", form)
     @inputText(domainName, "label", form)
     @select(domainName, "categoryId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)

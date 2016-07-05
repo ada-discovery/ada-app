@@ -5,7 +5,7 @@ import java.util.Date
 import java.nio.charset.{UnsupportedCharsetException, MalformedInputException, Charset}
 import javax.inject.Inject
 import models.redcap.{Metadata, FieldType => RCFieldType}
-import _root_.util.{JsonUtil, ExecutionContexts, TypeInferenceProvider}
+import _root_.util.{MessageLogger, JsonUtil, ExecutionContexts, TypeInferenceProvider}
 import com.google.inject.ImplementedBy
 import models._
 import models.synapse.{SelectColumn, ColumnType}
@@ -84,7 +84,8 @@ class DataSetServiceImpl @Inject()(
   ) extends DataSetService{
 
   private val logger = Logger
-  private val timeout = 120000 millis
+  private val messageLogger = MessageLogger(logger, messageRepo)
+  private val timeout = 20 minutes
   private val defaultCharset = "UTF-8"
   private val reportLineFreq = 0.1
 
@@ -101,6 +102,7 @@ class DataSetServiceImpl @Inject()(
   private val synapseRowVersionFieldName = "ROW_VERSION"
   private val synapseUsername = configuration.getString("synapse.api.username").get
   private val synapsePassword = configuration.getString("synapse.api.password").get
+  private val synapseBulkDownloadGroupNumber = 6
 
   override def importDataSetUntyped(dataSetImport: DataSetImport): Future[Unit] =
     for {
@@ -251,12 +253,26 @@ class DataSetServiceImpl @Inject()(
       )
     }.flatten.flatten
 
-    logger.info(s"Download of Synapse column data for ${fileHandleIds.size} file handles initiated.")
+    val groupSize = Math.max(fileHandleIds.size / synapseBulkDownloadGroupNumber, 1)
+    val groups = {
+      val groups = fileHandleIds.grouped(groupSize)
+      // we tolerate 'synapseBulkDownloadGroupNumber + 1' groups but not more
+      if (groups.size > (synapseBulkDownloadGroupNumber + 1))
+        fileHandleIds.grouped(groupSize + 1)
+      else
+        groups
+    }.toSeq
 
-    val fileHandleIdContentsFuture = synapseService.downloadTableFilesInBulk(fileHandleIds, tableId)
+    logger.info(s"Bulk download of Synapse column data for ${fileHandleIds.size} file handles initiated. Splitting into ${groups.size} groups.")
 
-    fileHandleIdContentsFuture.map { fileHandleIdContents =>
-      logger.info("Download of Synapse column data finished. Updating JSONs with Synapse column data...")
+    val fileHandleIdContentsFutures = groups.par.map { groupFileHandleIds =>
+      synapseService.downloadTableFilesInBulk(groupFileHandleIds, tableId)
+    }
+
+//    val fileHandleIdContentsFuture = synapseService.downloadTableFilesInBulk(fileHandleIds, tableId)
+
+    Future.sequence(fileHandleIdContentsFutures.toList).map(_.flatten).map { fileHandleIdContents =>
+      logger.info(s"Download of ${fileHandleIdContents.size} Synapse column data finished. Updating JSONs with Synapse column data...")
       val fileHandleIdContentMap = fileHandleIdContents.toMap
       jsons.map { json =>
         val fieldNameJsons = fieldNames.map { fieldName =>
@@ -300,14 +316,9 @@ class DataSetServiceImpl @Inject()(
         Future(())
     } yield
       if (importInfo.importDictionaryFlag)
-        logInfoAndSendMessage(s"Import of data set and dictionary '${importInfo.dataSetName}' successfully finished.")
+        messageLogger.info(s"Import of data set and dictionary '${importInfo.dataSetName}' successfully finished.")
       else
-        logInfoAndSendMessage(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
-  }
-
-  private def logInfoAndSendMessage(message: String) = {
-    logger.info(message)
-    messageRepo.save(Message(None, message))
+        messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
   }
 
   private def createCsvFileLineIterator(
@@ -437,7 +448,7 @@ class DataSetServiceImpl @Inject()(
     }
 
     columnNamesFuture.map { columnNames =>
-      logInfoAndSendMessage(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
+      messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
       columnNames
     }
   }
@@ -480,7 +491,7 @@ class DataSetServiceImpl @Inject()(
     }
 
     Future.sequence(futures.toList).map( _ =>
-      logInfoAndSendMessage(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
+      messageLogger.info(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
     )
   }
 
@@ -582,7 +593,7 @@ class DataSetServiceImpl @Inject()(
     }
 
     finalFuture.map( _ =>
-      logInfoAndSendMessage(s"TranSMART dictionary inference and import for data set '${dataSetId}' successfully finished.")
+      messageLogger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' successfully finished.")
     )
   }
 
@@ -647,7 +658,7 @@ class DataSetServiceImpl @Inject()(
     val visitFieldFuture = fieldRepo.save(Field(redCapVisitField, FieldType.Enum))
 
     Future.sequence(futures.toList ++ Seq(visitFieldFuture)).map(_ =>
-      logInfoAndSendMessage(s"RedCap dictionary inference and import for data set '${dataSetId}' successfully finished.")
+      messageLogger.info(s"RedCap dictionary inference and import for data set '${dataSetId}' successfully finished.")
     )
   }
 
@@ -738,7 +749,7 @@ class DataSetServiceImpl @Inject()(
         fieldRepo.save(fields)
       }
     } yield
-      logInfoAndSendMessage(s"Dummy dictionary for data set '${dataSetId}' successfully created.")
+      messageLogger.info(s"Dummy dictionary for data set '${dataSetId}' successfully created.")
   }
 
   private def jsonToString(jsValue: JsValue): Option[String] =

@@ -24,7 +24,7 @@ class TestSynapseService @Inject() (
   private val password = configuration.getString("synapse.api.password").get
   private val tableId1 = "syn6126231"
   private val tableId2 = "syn6126230"
-  private val timeout = 120000 millis
+  private val timeout = 10 minutes
 
   override def run = {
     val synapseService = synapseServiceFactory(username, password)

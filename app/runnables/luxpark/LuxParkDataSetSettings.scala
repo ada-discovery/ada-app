@@ -23,14 +23,14 @@ object LuxParkDataSetSettings{
   val IBBLBiosamples = DataSetSetting.apply2(
     None,
     lux_park_ibbl_biosamples,
-    "SAMPLEID",
-    "SAMPLEID",
-    Seq("SAMPLEID", "SAMPLETYPEID", "KITTYPE", "STORAGESTATUS", "QTYCURRENT"),
-    Seq("SAMPLETYPEID", "KITTYPE", "STORAGESTATUS", "QTYCURRENT"),
+    "sampleid",
+    "sampleid",
+    Seq("sampleid", "sampletypeid", "kittype", "storagestatus", "qtycurrent"),
+    Seq("sampletypeid", "kittype", "storagestatus", "qtycurrent"),
     3,
-    "KITTYPEVERSION",
-    "QTYCURRENT",
-    "SAMPLETYPEID" ,
+    "kittypeversion",
+    "qtycurrent",
+    "sampletypeid" ,
     None,
     Map(("\r", " "), ("\n", " "))
   )
@@ -38,14 +38,14 @@ object LuxParkDataSetSettings{
   val IBBLBiosampleTests = DataSetSetting.apply2(
     None,
     lux_park_ibbl_biosample_tests,
-    "SAMPLEID",
-    "SAMPLEID",
-    Seq("SAMPLEID", "SSTUDYID", "TESTAPPROVAL", "PARAMDESC", "TESTDESC"),
-    Seq("TESTAPPROVAL", "TESTSTATUS", "PARAMDESC", "PARAMLISTDESC"),
+    "sampleid",
+    "sampleid",
+    Seq("sampleid", "sstudyid", "testapproval", "paramdesc", "testdesc"),
+    Seq("testapproval", "teststatus", "paramdesc", "paramlistdesc"),
     3,
-    "DATASET",
-    "PARAMLISTVERSIONID",
-    "TESTAPPROVAL" ,
+    "dataset",
+    "paramlistversionid",
+    "testapproval" ,
     None,
     Map(("\r", " "), ("\n", " "))
   )

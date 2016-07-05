@@ -102,17 +102,19 @@
             if(e.keyCode == 13) {
                 var id = getNearestRowId($(this), "id");
                 var label = $(this).val();
-                var that = $(this)
-                dictionaryJsRoutes.controllers.dataset.DictionaryDispatcher.updateLabel(id, label).ajax( {
-                    success: function() {
-                        showMessage("The field '" + id + "' has been successfully relabeled to '" + label + "'.");
-                        var inputs = that.closest('tbody').find('.fieldLabel');
-                        inputs.eq( inputs.index(that)+ 1 ).focus();
-                    },
-                    error: function(data){
-                        showError( data.responseText );
-                    }
-                });
+                if (label) {
+                    var that = $(this)
+                    dictionaryJsRoutes.controllers.dataset.DictionaryDispatcher.updateLabel(id, label).ajax( {
+                        success: function() {
+                            showMessage("The field '" + id + "' has been successfully relabeled to '" + label + "'.");
+                        },
+                        error: function(data){
+                            showError( data.responseText );
+                        }
+                    });
+                }
+                var inputs = that.closest('tbody').find('.fieldLabel');
+                inputs.eq( inputs.index(that)+ 1 ).focus();
             }
         });
     })

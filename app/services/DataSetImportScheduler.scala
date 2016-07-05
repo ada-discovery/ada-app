@@ -84,6 +84,8 @@ protected class DataSetImportSchedulerImpl @Inject() (
       dataSetImportOption <- dataSetImportRepo.get(id)
       _ <- dataSetImportOption.map(dataSetService.importDataSetUntyped).getOrElse(Future(()))
     } yield ()
+  }.recover {
+    case e: Exception => logger.error(s"Import of data set '${id}' failed due to: ${e.getMessage}.")
   }
 
   private def toDelayAndInterval(scheduledTime: ScheduledTime): (FiniteDuration, FiniteDuration) = {

@@ -245,7 +245,11 @@ class DataSetImportController @Inject()(
       ) { importInfo =>
           val start = new Date()
           implicit val msg = messagesApi.preferred(request)
-          def errorRedirect(errorMessage: String) = home.flashing("errors" -> s"Data set '${importInfo.dataSetName}' import failed. $errorMessage")
+          def errorRedirect(errorMessage: String) = {
+            val fullMessage = s"Data set '${importInfo.dataSetName}' import failed. $errorMessage"
+            logger.error(fullMessage)
+            home.flashing("errors" -> fullMessage)
+          }
           val successRedirect = home// Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
           dataSetService.importDataSetUntyped(importInfo).map { _ =>
             val execTimeSec = (new Date().getTime - start.getTime) / 1000
@@ -256,7 +260,9 @@ class DataSetImportController @Inject()(
           }.recover {
             case e: AdaParseException => errorRedirect(s"Parsing problem occurred. ${e.getMessage}")
             case e: AdaException => errorRedirect(e.getMessage)
-            case e: Exception => errorRedirect(s"Fatal problem detected. ${e.getMessage}. Contact your admin.")
+            case e: Exception => {
+              errorRedirect(s"Fatal problem detected. ${e.getMessage}. Contact your admin.")
+            }
           }
         }
       )
