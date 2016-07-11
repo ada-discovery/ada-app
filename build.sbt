@@ -24,7 +24,7 @@ resolvers ++= Seq(
 routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._", "util.FilterSpec.FilterSpecQueryStringBinder")
 
 libraryDependencies ++= Seq(
-  "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.11.13-play24",
+   "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.webjars" %% "webjars-play" % "2.4.0",
   "org.webjars" % "bootstrap" % "3.3.5",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
@@ -46,7 +46,7 @@ libraryDependencies ++= Seq(
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",
   "be.objectify" % "deadbolt-scala_2.11" % "2.4.3",
-  "jp.t2v" %% "play2-auth"        % "0.14.1",
+  "jp.t2v" %% "play2-auth" % "0.14.1",
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
   "com.typesafe.play" %% "play-mailer" % "4.0.0"
 )

@@ -41,6 +41,11 @@
                             }
                         }
                     }
+                },
+                series: {
+                    animation: {
+                        duration: 700
+                    }
                 }
             },
             legend: {
@@ -114,6 +119,9 @@
                                     $('#' + chartElementName).trigger("pointClick", this);
                             }
                         }
+                    },
+                    animation: {
+                        duration: 700
                     }
                 }
             },
@@ -182,6 +190,9 @@
                                     $('#' + chartElementName).trigger("pointClick", this);
                             }
                         }
+                    },
+                    animation: {
+                        duration: 700
                     }
                 }
             },
@@ -254,6 +265,9 @@
                                     $('#' + chartElementName).trigger("pointClick", this);
                             }
                         }
+                    },
+                    animation: {
+                        duration: 700
                     }
                 }
             },

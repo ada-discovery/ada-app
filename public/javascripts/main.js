@@ -105,7 +105,7 @@ function prependTrollboxMessage(author, timeCreated, text, isAdmin, fadeIn) {
   } else {
     messageBlock = $('<div class="alert alert-dismissable alert-info" data-toggle="tooltip" title="Published at: ' + timeCreated + '">')
     messageBlock.append('<span class="glyphicon glyphicon-king"></span>&nbsp;')
-    messageBlock.append('<strong>system:</strong> &nbsp;')
+    messageBlock.append('<strong>Ada:</strong> &nbsp;')
   }
   messageBlock.append(text)
   if(fadeIn) {
