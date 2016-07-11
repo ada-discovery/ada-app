@@ -164,13 +164,8 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
     limit: Option[Int] = None,
     page: Option[Int] = None
   ): Future[Traversable[E]] = {
-
-    val fullCriteria =
-      if (criteria.isDefined) {
-        val extSubCriteria = criteria.get.fields.map { case (name, value) => (listName + "." + name, value) }
-        JsObject(extSubCriteria) + (rootIdentity.name -> Json.toJson(rootId))
-      } else
-        Json.obj(rootIdentity.name -> Json.toJson(rootId))
+    val rootCriteria = Some(Json.obj(rootIdentity.name -> Json.toJson(rootId)))
+    val subCriteria = criteria.map(criteria =>  JsObject(criteria.fields.map { case (name, value) => (listName + "." + name, value) } ))
 
     val fullOrderBy =
       orderBy.map(_.map(
@@ -189,7 +184,8 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
     // TODO: projection can not be passed here since subordinateListName JSON formatter expects ALL attributes to be returned.
     // It could be solved either by making all subordinateListName attributes optional (Option[..]) or introducing a special JSON formatter with default values for each attribute
     val result = rootRepo.findAggregate(
-      criteria = Some(fullCriteria),
+      rootCriteria = rootCriteria,
+      subCriteria = subCriteria,
       orderBy = fullOrderBy,
       projection = None, //fullProjection,
       idGroup = Some(JsString("$" + aggregateIdGroupFieldName)),

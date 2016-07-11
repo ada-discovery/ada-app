@@ -27,7 +27,7 @@ import play.modules.reactivemongo.json.BSONObjectIDFormat
 import views.html.dataset
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 
 trait GenericDataSetControllerFactory {
   def apply(dataSetId: String): DataSetController
@@ -228,17 +228,30 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val fieldNameMapFuture: Future[Map[String, Field]] =
       getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
 
-    val projection = JsObject(chartFieldNames.map( fieldName => (fieldName, Json.toJson(1))).toSeq)
+    val projection = JsObject(chartFieldNames.map( fieldName => (fieldName, Json.toJson(1))))
     val chartItemsFuture = repo.find(filter.toJsonCriteria, None, Some(projection))
 
-    val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
+    val (futureTableItems, futureTableCount) = getFutureItemsAndCount(page, orderBy, filter)
+
+//    Thread.sleep(20)
+//    val startx = new java.util.Date()
+//    Await.result(fieldNameMapFuture, timeout)
+//    val endx = new java.util.Date()
+//
+//    Logger.info(s"Loading of '${dataSetId}' fields finished in ${endx.getTime - startx.getTime} ms")
 
     {
       for {
-        items <- futureItems
-        count <- futureCount
+        items <- futureTableItems
+        count <- futureTableCount
         chartItems <- chartItemsFuture
+//        {
+//          repo.find(filter.toJsonCriteria, None, Some(projection))
+//        }
         fieldNameMap <- fieldNameMapFuture
+//        {
+//          getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
+//        }
       } yield {
         val tableFieldNameMap = tableFieldNames.map(fieldName =>
           fieldNameMap.get(fieldName).map(field =>
@@ -255,7 +268,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         val end = new java.util.Date()
 
-        Logger.debug(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
+        Logger.info(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
         render {
           case Accepts.Html() => Ok(overviewListView(Page(renamedItems, page, page * pageLimit, count, orderBy, filter), fieldChartSpecs, tableFields))
           case Accepts.Json() => Ok(Json.toJson(renamedItems))
@@ -378,7 +391,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val jsonFieldNames = fieldNames.map(fieldName => Json.toJson(fieldName) : JsValueWrapper).toSeq
     val fieldCriteria = Json.obj(FieldIdentity.name -> Json.obj("$in" -> Json.arr(jsonFieldNames : _*)))
 
-    fieldRepo.find(Some(fieldCriteria))
+    fieldRepo.find(Some(fieldCriteria)) // , Some(Seq(AscSort("name"))
   }
 
   private def getStringValues(

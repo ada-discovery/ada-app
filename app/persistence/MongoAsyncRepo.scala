@@ -36,7 +36,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 //        attemptNumber => 1 + attemptNumber * 0.5
 //    )
 
-  protected lazy val collection: JSONCollection = reactiveMongoApi.db.collection(collectionName)
+  protected lazy val collection: JSONCollection = reactiveMongoApi.db.collection[JSONCollection](collectionName)
 
   override def get(id: ID): Future[Option[E]] =
     collection.find(Json.obj(identityName -> id)).one[E]
@@ -142,7 +142,7 @@ protected class MongoAsyncCrudRepo[E: Format, ID: Format](
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
-  import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Match, Group, GroupFunction, Unwind, Sort => AggSort, Limit, Skip, Project, SumField, Push, SortOrder, Ascending, Descending}
+  import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Match, Group, GroupFunction, Unwind, Sort => AggSort, Cursor => AggCursor, Limit, Skip, Project, SumField, Push, SortOrder, Ascending, Descending}
 
   override def update(entity: E): Future[ID] = {
     val doc = Json.toJson(entity).as[JsObject]
@@ -171,7 +171,8 @@ protected class MongoAsyncCrudRepo[E: Format, ID: Format](
     collection.update(selector, modifier) map handleResult
 
   override protected[persistence] def findAggregate(
-    criteria: Option[JsObject],
+    rootCriteria: Option[JsObject],
+    subCriteria: Option[JsObject],
     orderBy: Option[Seq[Sort]],
     projection : Option[JsObject],
     idGroup : Option[JsValue],
@@ -182,8 +183,9 @@ protected class MongoAsyncCrudRepo[E: Format, ID: Format](
   ): Future[Traversable[JsObject]] = {
 
     val params = List(
+      rootCriteria.map(Match(_)),                                // $match
       unwindFieldName.map(Unwind(_)),                            // $unwind
-      criteria.map(Match(_)),                                    // $match
+      subCriteria.map(Match(_)),                                 // $match
       projection.map(Project(_)),                                // $project
       orderBy.map(sort => AggSort(toAggregateSort(sort): _ *)),  // $sort
       page.map(page  => Skip(page * limit.getOrElse(0))),        // $skip
@@ -191,9 +193,14 @@ protected class MongoAsyncCrudRepo[E: Format, ID: Format](
       idGroup.map(id => Group(id)(groups.get: _*))               // $group
     ).flatten
 
-    val result = collection.aggregate(params.head, params.tail, false, true)
-
+    val result = collection.aggregate(params.head, params.tail, false, false)
     result.map(_.documents)
+
+    // TODO: once "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24" is release use the following aggregate call, which uses cursor and should be more optimal
+//    val cursor = AggCursor(batchSize = 1)
+//
+//    val result = collection.aggregate1[JsObject](params.head, params.tail, cursor)
+//    result.flatMap(_.collect[List]())
   }
 
   private def toAggregateSort(sorts: Seq[Sort]) =
@@ -213,7 +220,8 @@ trait MongoAsyncCrudExtraRepo[E, ID] extends AsyncCrudRepo[E, ID] {
    * Should be used only for special cases (only within the persistence layer)!
    */
   protected[persistence] def findAggregate(
-    criteria: Option[JsObject],
+    rootCriteria: Option[JsObject],
+    subCriteria: Option[JsObject],
     orderBy: Option[Seq[Sort]],
     projection : Option[JsObject],
     idGroup : Option[JsValue],

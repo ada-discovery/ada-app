@@ -4,8 +4,8 @@ package runnables
 object DataSetId {
   val lux_park_clinical = "lux_park.clinical"
   val lux_park_ibbl_biosamples = "lux_park.ibbl_biosamples"
-  val lux_park_ibbl_biosample_tests = "luxpark.ibbl_biosample_tests"
-  val lux_park_mpower_my_thoughts = "luxpark.mpower_my_thoughts"
+  val lux_park_ibbl_biosample_tests = "lux_park.ibbl_biosample_tests"
+  val lux_park_mpower_my_thoughts = "lux_park.mpower_my_thoughts"
   val lux_park_mpower_demographics = "lux_park.mpower_demographics"
   val lux_park_mpower_enrollment_survey = "lux_park.mpower_enrollment_survey"
   val lux_park_mpower_pd_enrollment_survey = "lux_park.mpower_pd_enrollment_survey"

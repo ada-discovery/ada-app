@@ -151,7 +151,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       "mPower Voice Activity",
       "syn6128277",
       false,
-      true,
+      false,
       false,
       None,
       Some(LuxParkDataSetSettings.MPowerVoiceActivity)

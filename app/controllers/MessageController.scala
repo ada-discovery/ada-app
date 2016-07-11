@@ -54,11 +54,11 @@ class MessageController @Inject() (
 
   def eventStream = deadbolt.SubjectPresent() {
     Action { implicit request =>
-      Ok.feed(repo.stream.map(message => Json.toJson(message)) &> EventSource()).as("text/event-stream")
+      Ok.chunked(repo.stream.map(message => Json.toJson(message)) &> EventSource()).as("text/event-stream")
     }
   }
 
-  def jsRoutes = deadbolt.SubjectPresent() {
+  val jsRoutes = deadbolt.SubjectPresent() {
     Action { implicit request =>
       Ok(
         JavaScriptReverseRouter("jsMessageRoutes")(

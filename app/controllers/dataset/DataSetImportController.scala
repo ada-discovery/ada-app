@@ -341,39 +341,6 @@ class DataSetImportController @Inject()(
       dataSetImportScheduler.cancel(id)
   }
 
-  def uploadTranSmart = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
-      val filledForm = tranSmartForm.bindFromRequest
-      filledForm.fold(
-        { formWithErrors =>
-          Future.successful(createBadRequestTranSmart(formWithErrors))
-        },
-        importInfo => {
-          val dataSetName = importInfo.dataSetName
-          val dataFile = getFile("dataFile", request).map(_._2)
-          val mappingFile = getFile("mappingFile", request).map(_._2)
-
-          if (importInfo.dataPath.isEmpty && dataFile.isEmpty)
-            Future.successful(createBadRequestTranSmart(filledForm.withError("path", "No data path or import file specified.")))
-          else {
-            val errorRedirect = handleErrorTranSmart(filledForm, dataSetName) _
-            val successRedirect = Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
-            dataSetService.importDataSetAndDictionary(importInfo, dataFile, mappingFile, DeNoPaSetting.typeInferenceProvider).map { _ =>
-              render {
-                case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '$dataSetName' has been uploaded.")
-                case Accepts.Json() => Created(Json.obj("message" -> "Data set has been uploaded", "name" -> importInfo.dataSetName))
-              }
-            }.recover{
-              case e: AdaParseException => errorRedirect(s"Parsing problem occured: '${e.getMessage}'")
-              case e: AdaException => errorRedirect(e.getMessage)
-              case e: Exception => errorRedirect(s"Fatal problem detected: '${e.getMessage}'. Contact your admin.")
-            }
-          }
-        }
-      )
-    }
-  }
-
   private def getFile(fileParamKey: String, request: Request[AnyContent]): Option[(String, java.io.File)] = {
     val dataFileOption = request.body.asMultipartFormData.get.file(fileParamKey)
     dataFileOption.map { dataFile =>
@@ -381,22 +348,6 @@ class DataSetImportController @Inject()(
 //      val contentType = dataFile.contentType
       (fileName, dataFile.ref.file)
     }
-  }
-
-  private def handleErrorTranSmart(
-    filledForm: Form[TranSmartDataSetImport],
-    dataSetName: String)(
-    message: String
-  )(implicit request: Request[_]): Result = {
-    logger.error(message)
-    createBadRequestTranSmart(filledForm.withGlobalError(s"Data set '${dataSetName}' upload failed. $message"))
-  }
-
-  private def createBadRequestTranSmart(
-    filledForm: Form[TranSmartDataSetImport]
-  )(implicit request: Request[_]) = {
-    implicit val msg = messagesApi.preferred(request)
-    BadRequest(importViews.createTranSmartType(filledForm))
   }
 
   private def copyFile(src: File, location: String): Unit = {

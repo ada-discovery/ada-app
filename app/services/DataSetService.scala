@@ -247,7 +247,8 @@ class DataSetServiceImpl @Inject()(
         }
       }
     } else
-      Future(Seq[JsObject]())
+    // no update
+      Future(jsons)
   }
 
   override def importDataSetAndDictionary(
@@ -700,7 +701,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def createDummyDictionary(dataSetId: String): Future[Unit] = {
-    logger.info(s"Create of dummy dictionary for data set '${dataSetId}' initiated.")
+    logger.info(s"Creation of dummy dictionary for data set '${dataSetId}' initiated.")
 
     val dsa = dsaf(dataSetId).get
     val dataSetRepo = dsa.dataSetRepo
