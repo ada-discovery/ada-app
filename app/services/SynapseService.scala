@@ -9,9 +9,9 @@ import models.synapse._
 import org.apache.commons.io.IOUtils
 import play.api.libs.ws.{WSRequest, WSResponse, WSClient}
 import play.api.Configuration
-import util.ExecutionContexts
 import play.api.libs.json.{Json, JsObject}
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import models.synapse.JsonFormat._
@@ -150,8 +150,6 @@ protected[services] class SynapseServiceWSImpl @Inject() (
   private val timeout = 10 minutes
   private val tableCsvResultPollingFreq = 200
   private val bulkDownloadResultPollingFreq = 400
-
-  private implicit val executionContext = ExecutionContexts.SynapseExecutionContext
 
   private var sessionToken: Option[String] = None
 

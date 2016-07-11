@@ -5,7 +5,7 @@ import java.util.Date
 import java.nio.charset.{UnsupportedCharsetException, MalformedInputException, Charset}
 import javax.inject.Inject
 import models.redcap.{Metadata, FieldType => RCFieldType}
-import _root_.util.{MessageLogger, JsonUtil, ExecutionContexts, TypeInferenceProvider}
+import _root_.util.{MessageLogger, JsonUtil, TypeInferenceProvider}
 import com.google.inject.ImplementedBy
 import models._
 import models.synapse.{SelectColumn, ColumnType}
