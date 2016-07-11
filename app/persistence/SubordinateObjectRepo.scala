@@ -3,7 +3,7 @@ package persistence
 import models.Identity
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import play.modules.reactivemongo.json.commands.JSONAggregationFramework.Push
+import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Push, SumValue}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -15,7 +15,6 @@ trait SubordinateObjectRepo[E, ID] extends AsyncCrudRepo[E, ID] {
 
 protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E: Format,  ROOT_ID: Format](
     listName: String,
-    aggregateIdGroupFieldName: String,
     rootRepo: MongoAsyncCrudExtraRepo[ROOT_E, ROOT_ID])(
     implicit identity: Identity[E, ID], rootIdentity: Identity[ROOT_E, ROOT_ID]
   ) extends SubordinateObjectRepo[E, ID] {
@@ -53,12 +52,12 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
   protected lazy val rootIdSelector = Json.obj(rootIdentity.name -> rootId)
 
   /**
-   * Converts the given subordinateListName into Json format and calls updateCustom() to update/ save it in the repo.
+    * Converts the given subordinateListName into Json format and calls updateCustom() to update/ save it in the repo.
     *
     * @see updateCustom()
     * @param entity to be updated/ saved
-   * @return subordinateListName name as a confirmation of success.
-   */
+    * @return subordinateListName name as a confirmation of success.
+    */
   override def save(entity: E): Future[ID] = {
     val modifier = Json.obj {
       "$push" -> Json.obj {
@@ -72,11 +71,11 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
   }
 
   /**
-   * Delete single entry identified by its id (name).
-   *
-   * @param id Id of the subordinate to be deleted.
-   * @return Nothing (Unit)
-   */
+    * Delete single entry identified by its id (name).
+    *
+    * @param id Id of the subordinate to be deleted.
+    * @return Nothing (Unit)
+    */
   override def delete(id: ID): Future[Unit] = {
     val modifier = Json.obj {
       "$pull" -> Json.obj {
@@ -131,9 +130,29 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
     * @param criteria Filtering criteria object. Use a JsObject to filter according to value of reference column. Use None for no filtering.
     * @return Number of matching elements.
     */
-  override def count(criteria: Option[JsObject]): Future[Int] =
-    // TODO: optimize me using aggregate count projection
-    find(criteria).map(_.size)
+  override def count(criteria: Option[JsObject]): Future[Int] = {
+    val rootCriteria = Some(Json.obj(rootIdentity.name -> Json.toJson(rootId)))
+    val subCriteria = criteria.map(criteria =>  JsObject(criteria.fields.map { case (name, value) => (listName + "." + name, value) } ))
+
+    val result = rootRepo.findAggregate(
+      rootCriteria = rootCriteria,
+      subCriteria = subCriteria,
+      orderBy = None,
+      projection = None,
+      idGroup = Some(JsNull),
+      groups = Some(Seq("count" -> SumValue(1))),
+      unwindFieldName = Some(listName),
+      limit = None,
+      page = None
+    )
+
+    result.map { result =>
+      if (result.nonEmpty) {
+        (result.head \ "count").as[Int]
+      } else
+        0
+    }
+  }
 
   /**
     * Retrieve subordinate(s) from the repo.
@@ -188,7 +207,7 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
       subCriteria = subCriteria,
       orderBy = fullOrderBy,
       projection = None, //fullProjection,
-      idGroup = Some(JsString("$" + aggregateIdGroupFieldName)),
+      idGroup = Some(JsNull),
       groups = Some(Seq(listName -> Push(listName))),
       unwindFieldName = Some(listName),
       limit = limit,

@@ -23,7 +23,7 @@ trait DataSetMetaInfoRepoFactory {
 protected[persistence] class DataSetMetaInfoSubordinateMongoAsyncCrudRepo @Inject()(
     @Assisted dataSpaceId: BSONObjectID,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends SubordinateObjectMongoAsyncCrudRepo[DataSetMetaInfo, BSONObjectID, DataSpaceMetaInfo, BSONObjectID]("dataSetMetaInfos", "name", dataSpaceMetaInfoRepo) {
+  ) extends SubordinateObjectMongoAsyncCrudRepo[DataSetMetaInfo, BSONObjectID, DataSpaceMetaInfo, BSONObjectID]("dataSetMetaInfos", dataSpaceMetaInfoRepo) {
 
   override protected def getDefaultRoot =
     DataSpaceMetaInfo(Some(dataSpaceId), "", 0, new java.util.Date(), Seq[DataSetMetaInfo]())

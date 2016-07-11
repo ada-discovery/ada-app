@@ -14,7 +14,7 @@ protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, 
     dataSetId: String,
     dictionaryRepo: DictionaryRootRepo)(
     implicit identity: Identity[E, ID]
-  ) extends SubordinateObjectMongoAsyncCrudRepo[E, ID, Dictionary, BSONObjectID](listName, "dataSetName", dictionaryRepo) {
+  ) extends SubordinateObjectMongoAsyncCrudRepo[E, ID, Dictionary, BSONObjectID](listName, dictionaryRepo) {
 
     override protected def getDefaultRoot =
       Dictionary(None, dataSetId, Seq[Field](), Seq[Category]())
