@@ -35,23 +35,20 @@ trait DataSetService {
   ): Future[Unit]
 
   def importDataSet(
-    importInfo: CsvDataSetImport,
-    file: Option[File] = None
+    dataSetImport: CsvDataSetImport
   ): Future[Unit]
 
   def importDataSet(
-    importInfo: SynapseDataSetImport
+    dataSetImport: SynapseDataSetImport
   ): Future[Unit]
 
   def importDataSetAndDictionary(
-    importInfo: TranSmartDataSetImport,
-    dataFile: Option[File],
-    mappingFile: Option[File],
+    dataSetImport: TranSmartDataSetImport,
     typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit]
 
   def importDataSetAndDictionary(
-    importInfo: RedCapDataSetImport,
+    dataSetImport: RedCapDataSetImport,
     typeInferenceProvider: TypeInferenceProvider
   ): Future[Unit]
 
@@ -98,8 +95,6 @@ class DataSetServiceImpl @Inject()(
 
   private val synapseDelimiter = ','
   private val synapseEol = "\n"
-  private val synapseRowIdFieldName = "ROW_ID"
-  private val synapseRowVersionFieldName = "ROW_VERSION"
   private val synapseUsername = configuration.getString("synapse.api.username").get
   private val synapsePassword = configuration.getString("synapse.api.password").get
   private val synapseBulkDownloadGroupNumber = 6
@@ -108,7 +103,7 @@ class DataSetServiceImpl @Inject()(
     for {
       _ <- dataSetImport match {
         case x: CsvDataSetImport => importDataSet(x)
-        case x: TranSmartDataSetImport => importDataSetAndDictionary(x, None, None, DeNoPaSetting.typeInferenceProvider)
+        case x: TranSmartDataSetImport => importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
         case x: SynapseDataSetImport => importDataSet(x)
         case x: RedCapDataSetImport => importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
       }
@@ -122,13 +117,13 @@ class DataSetServiceImpl @Inject()(
       }
     } yield ()
 
-  override def importDataSet(importInfo: CsvDataSetImport, file: Option[File]) =
+  override def importDataSet(importInfo: CsvDataSetImport) =
     importLineParsableDataSet(
       importInfo,
       importInfo.delimiter,
       importInfo.eol.isDefined,
       createCsvFileLineIterator(
-        importInfo.path.map(Left(_)).getOrElse(Right(file.get)),
+        importInfo.path.get,
         importInfo.charsetName,
         importInfo.eol
       )
@@ -136,8 +131,6 @@ class DataSetServiceImpl @Inject()(
 
   override def importDataSetAndDictionary(
     importInfo: TranSmartDataSetImport,
-    dataFile: Option[File],
-    mappingFile: Option[File],
     typeInferenceProvider: TypeInferenceProvider
   ) = {
     // import a data set first
@@ -146,7 +139,7 @@ class DataSetServiceImpl @Inject()(
       tranSmartDelimeter.toString,
       false,
       createCsvFileLineIterator(
-        importInfo.dataPath.map(Left(_)).getOrElse(Right(dataFile.get)),
+        importInfo.dataPath.get,
         importInfo.charsetName,
         None
       )
@@ -154,14 +147,14 @@ class DataSetServiceImpl @Inject()(
 
     // then import a dictionary from a tranSMART mapping file
     columnNamesFuture.flatMap { columnNames =>
-      if (importInfo.mappingPath.isDefined || mappingFile.isDefined) {
+      if (importInfo.mappingPath.isDefined) {
         importAndInferTranSMARTDictionary(
           importInfo.dataSetId,
           typeInferenceProvider,
           tranSmartFieldGroupSize,
           tranSmartDelimeter.toString,
           createCsvFileLineIterator(
-            importInfo.mappingPath.map(Left(_)).getOrElse(Right(mappingFile.get)),
+            importInfo.mappingPath.get,
             importInfo.charsetName,
             None
           ),
@@ -175,44 +168,48 @@ class DataSetServiceImpl @Inject()(
   override def importDataSet(importInfo: SynapseDataSetImport) = {
     val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
 
-    def importDataSetAux(transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]]) =
+    def importDataSetAux(
+      transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]],
+      transformBatchSize: Option[Int]
+    ) =
       importLineParsableDataSet(
         importInfo,
         synapseDelimiter.toString,
         true, {
+          logger.info("Downloading CSV table from Synapse...")
           val csvFuture = synapseService.getTableAsCsv(importInfo.tableId)
           val lines = result(csvFuture, timeout).split(synapseEol)
           lines.iterator
         },
-        transformJsons
+        transformJsons,
+        transformBatchSize
       )
 
     if (importInfo.downloadColumnFiles)
       for {
-      // get the columns of the "file" type
+        // get the columns of the "file" type
         fileColumns <- synapseService.getTableColumnModels(importInfo.tableId).map(
-          _.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(_.toSelectColumn)
+            _.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(_.toSelectColumn)
         )
         _ <- {
-          val fun = updateJsonsFileFields(synapseService, fileColumns, importInfo.tableId) _
-          importDataSetAux(Some(fun))
+          val fieldNames = fileColumns.map { fileColumn =>
+            escapeKey(fileColumn.name.replaceAll("\"", "").trim)
+          }
+          val fun = updateJsonsFileFields(synapseService, fieldNames, importInfo.tableId) _
+          importDataSetAux(Some(fun), importInfo.downloadRecordBatchSize)
         }
       } yield
         ()
     else
-      importDataSetAux(None).map(_ => ())
+      importDataSetAux(None, None).map(_ => ())
   }
 
   private def updateJsonsFileFields(
     synapseService: SynapseService,
-    fileColumns: Seq[SelectColumn],
+    fieldNames: Seq[String],
     tableId: String)(
     jsons: Seq[JsObject]
   ): Future[Seq[JsObject]] = {
-    val fieldNames = fileColumns.map { fileColumn =>
-      escapeKey(fileColumn.name.replaceAll("\"", "").trim)
-    }
-
     val fileHandleIds = fieldNames.map { fieldName =>
       jsons.map(json =>
         (json \ fieldName).get.asOpt[String]
@@ -228,7 +225,7 @@ class DataSetServiceImpl @Inject()(
           fileHandleIds.grouped(groupSize)
       }.toSeq
 
-      logger.info(s"Bulk download of Synapse column data for ${fileHandleIds.size} file handles initiated. Splitting into ${groups.size} groups.")
+      logger.info(s"Bulk download of Synapse column data for ${fileHandleIds.size} file handles (split into ${groups.size} groups) initiated.")
 
       val fileHandleIdContentsFutures = groups.par.map { groupFileHandleIds =>
         synapseService.downloadTableFilesInBulk(groupFileHandleIds, tableId)
@@ -247,7 +244,7 @@ class DataSetServiceImpl @Inject()(
         }
       }
     } else
-    // no update
+      // no update
       Future(jsons)
   }
 
@@ -270,11 +267,20 @@ class DataSetServiceImpl @Inject()(
 
     for {
       // get the data from a given red cap service
-      records <- redCapService.listRecords("cdisc_dm_usubjd", "")
+      records <- {
+        logger.info("Downloading records from REDCap...")
+        redCapService.listRecords("cdisc_dm_usubjd", "")
+      }
       // delete all records
-      _ <- dataRepo.deleteAll
+      _ <- {
+        logger.info(s"Deleting the old data set...")
+        dataRepo.deleteAll
+      }
       // save the records (...ignore the results)
-      _ <- Future.sequence(records.map(dataRepo.save))
+      _ <- {
+        logger.info(s"Saving JSONs...")
+        Future.sequence(records.map(dataRepo.save))
+      }
       // import dictionary (if needed)
       _ <- if (importInfo.importDictionaryFlag)
         importAndInferRedCapDictionary(importInfo.dataSetId, redCapService, dataSetAccessor, typeInferenceProvider)
@@ -288,17 +294,13 @@ class DataSetServiceImpl @Inject()(
   }
 
   private def createCsvFileLineIterator(
-    pathOrFile: Either[String, java.io.File],
+    path: String,
     charsetName: Option[String],
     eol: Option[String]
   ): Iterator[String] = {
     def createSource = {
       val charset = Charset.forName(charsetName.getOrElse(defaultCharset))
-
-      if (pathOrFile.isLeft)
-        Source.fromFile(pathOrFile.left.get)(charset)
-      else
-        Source.fromFile(pathOrFile.right.get)(charset)
+      Source.fromFile(path)(charset)
     }
 
     try {
@@ -323,6 +325,8 @@ class DataSetServiceImpl @Inject()(
     * @param delimiter
     * @param skipFirstLine
     * @param createLineIterator
+    * @param transformJsonsFun
+    * @param transformBatchSize
     * @return The column names (future)
     */
   protected def importLineParsableDataSet(
@@ -330,94 +334,120 @@ class DataSetServiceImpl @Inject()(
     delimiter: String,
     skipFirstLine: Boolean,
     createLineIterator: => Iterator[String],
-    transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]] = None
+    transformJsonsFun: Option[Seq[JsObject] => Future[Seq[JsObject]]] = None,
+    transformBatchSize: Option[Int] = None
   ): Future[Seq[String]] = {
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
-    val dataSetAccessor = createDataSetAccessor(importInfo)
-    val dataRepo = dataSetAccessor.dataSetRepo
+    val dataRepo = createDataSetAccessor(importInfo).dataSetRepo
 
-    val columnNamesFuture = {
-      try {
-        val lines = createLineIterator
+    try {
+      val lines = createLineIterator
+      // collect the column names
+      val columnNames =  getColumnNames(delimiter, lines)
+      // parse lines and create jsons
+      logger.info(s"Parsing lines...")
+      val jsons = createJsonsFromLines(columnNames, lines, delimiter, skipFirstLine)
 
-        // collect the column names
-        val columnNames =  getColumnNames(delimiter, lines)
-        val columnCount = columnNames.size
-
-        // for each line create a JSON record and insert to the database
-        val contentLines = if (skipFirstLine) lines.drop(1) else lines
-
-        var bufferedLine = ""
-
-        logger.info(s"Parsing lines...")
-
-        // read all the lines
-        val jsons: Seq[JsObject] = contentLines.zipWithIndex.map { case (line, index) =>
-          // parse the line
-          bufferedLine += line
-          val values = parseLine(delimiter, bufferedLine)
-
-          if (values.size < columnCount) {
-            logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
-            Option.empty[JsObject]
-          } else if (values.size > columnCount) {
-            throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated.")
-          } else {
-            // reset the buffer
-            bufferedLine = ""
-
-//            logProgress((index + 1), reportLineSize, lineCount - 1)
-
-            // create a JSON record
-            Some(
-              JsObject(
-              (columnNames, values).zipped.map {
-                case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
-              })
-            )
-          }
-        }.toSeq.flatten
-
-        for {
-          // transform the JSON records if specified
-          jsons <- {
-            if (transformJsons.isDefined)
-              transformJsons.get(jsons)
-            else
-              Future(jsons)
-          }
-          // remove the records from the collection
-          _ <- {
-            logger.info(s"Deleting the old data set...")
-            dataRepo.deleteAll
-          }
-          lines <- {
+      for {
+        // remove the records from the collection
+        _ <- {
+          logger.info(s"Deleting the old data set...")
+          dataRepo.deleteAll
+        }
+        // transform jsons (if needed) and save the jsons
+        _ <- {
+          if (transformJsonsFun.isDefined)
+            logger.info(s"Saving and transforming JSONs...")
+          else
             logger.info(s"Saving JSONs...")
-            val size = jsons.size
-            val reportLineSize = size * reportLineFreq
 
-            Future.sequence(
-              jsons.zipWithIndex.map{ case (jsonRecord, index) =>
-                // insert the record to the database
-                dataRepo.save(jsonRecord).map(_ =>
-                  logProgress((index + 1), reportLineSize, size)
-                )
-              }
+          saveAndTransformJsons(dataRepo, transformJsonsFun, transformBatchSize, jsons)
+        }
+      } yield {
+        messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
+        columnNames
+      }
+    } catch {
+      case e: Exception => Future.failed(e)
+    }
+  }
+
+  private def saveAndTransformJsons(
+    dataRepo: JsObjectCrudRepo,
+    transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]],
+    transformBatchSize: Option[Int],
+    jsons: Seq[JsObject]
+  ): Future[Seq[Unit]] = {
+    val size = jsons.size
+    val reportLineSize = size * reportLineFreq
+
+    def saveJsonsAux(startIndex: Int)(jsonsx: Seq[JsObject]): Future[Seq[Unit]] = {
+      logger.info(s"Saving JSONs...")
+      Future.sequence(
+        jsonsx.zipWithIndex.map { case (jsonRecord, index) =>
+          // insert the record to the database
+          dataRepo.save(jsonRecord).map(_ =>
+            logProgress(startIndex + index + 1, reportLineSize, size)
+          )
+        }
+      )
+    }
+
+    if (transformJsons.isDefined) {
+      val indexedGroups = if (transformBatchSize.isDefined)
+        jsons.grouped(transformBatchSize.get).zipWithIndex
+      else
+        Iterator((jsons, 0))
+
+      indexedGroups.foldLeft(Future(Seq[Unit]())){
+        case (x, (groupedJsons, groupIndex)) =>
+          x.flatMap {_ =>
+            transformJsons.get(groupedJsons).flatMap(
+              saveJsonsAux(groupIndex * transformBatchSize.getOrElse(0))
             )
           }
-        } yield
-          columnNames
-      } catch {
-        case e: Exception => Future.failed(e)
-      }
-    }
+        }
+    } else
+      // save the records (without transformation)
+      saveJsonsAux(0)(jsons)
+  }
 
-    columnNamesFuture.map { columnNames =>
-      messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
-      columnNames
-    }
+  private def createJsonsFromLines(
+    columnNames: Seq[String],
+    lines: Iterator[String],
+    delimiter: String,
+    skipFirstLine: Boolean
+  ): Seq[JsObject] = {
+    val columnCount = columnNames.size
+
+    val contentLines = if (skipFirstLine) lines.drop(1) else lines
+    var bufferedLine = ""
+
+    // read all the lines
+    contentLines.zipWithIndex.map { case (line, index) =>
+      // parse the line
+      bufferedLine += line
+      val values = parseLine(delimiter, bufferedLine)
+
+      if (values.size < columnCount) {
+        logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
+        Option.empty[JsObject]
+      } else if (values.size > columnCount) {
+        throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated.")
+      } else {
+        // reset the buffer
+        bufferedLine = ""
+
+        // create a JSON record
+        Some(JsObject(
+          (columnNames, values).zipped.map {
+            case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
+          })
+        )
+      }
+    }.toSeq.flatten
   }
 
   private def createDataSetAccessor(importInfo: DataSetImport): DataSetAccessor =

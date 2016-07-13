@@ -104,6 +104,7 @@ class DataSetImportController @Inject()(
       "dataSetName" -> nonEmptyText,
       "tableId" -> nonEmptyText,
       "downloadColumnFiles" -> boolean,
+      "downloadRecordBatchSize" -> optional(number(min=1)),
       "createDummyDictionary" -> boolean,
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
@@ -287,7 +288,7 @@ class DataSetImportController @Inject()(
   override protected def updateCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] = {
     val modifiedImportInfo = handleImportFiles(importInfo)
 
-    //TODO: remove old files if any
+    //TODO: remove the old files if any
     super.updateCall(modifiedImportInfo).map { id =>
       scheduleOrCancel(id, modifiedImportInfo); id
     }
@@ -344,9 +345,7 @@ class DataSetImportController @Inject()(
   private def getFile(fileParamKey: String, request: Request[AnyContent]): Option[(String, java.io.File)] = {
     val dataFileOption = request.body.asMultipartFormData.get.file(fileParamKey)
     dataFileOption.map { dataFile =>
-     val fileName = dataFile.filename
-//      val contentType = dataFile.contentType
-      (fileName, dataFile.ref.file)
+      (dataFile.filename, dataFile.ref.file)
     }
   }
 

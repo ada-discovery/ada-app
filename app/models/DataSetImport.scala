@@ -45,6 +45,7 @@ case class SynapseDataSetImport(
   dataSetName: String,
   tableId: String,
   downloadColumnFiles: Boolean,
+  downloadRecordBatchSize: Option[Int],
   createDummyDictionary: Boolean,
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],
