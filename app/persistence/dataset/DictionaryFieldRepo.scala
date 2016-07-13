@@ -8,7 +8,9 @@ import models.Field
 import persistence.RepoTypes._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
+import play.api.libs.json.Json.JsValueWrapper
 import scala.concurrent.Future
+import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 
 trait DictionaryFieldRepoFactory {
   def apply(dataSetId: String): DictionaryFieldRepo
@@ -25,8 +27,17 @@ object DictionaryFieldRepo {
     categoryRepo: DictionaryCategoryRepo,
     fields: Traversable[Field]
   ): Future[Unit] = {
-    val futureUnits = fields.map(setCategoryById(categoryRepo, _))
-    Future.sequence(futureUnits).map(_ => ())
+    val categoryIds = fields.map(_.categoryId.map(id => Json.toJson(id): JsValueWrapper)).flatten.toSeq
+    val categoryCriteria = Json.obj(CategoryIdentity.name -> Json.obj("$in" -> Json.arr(categoryIds : _*)))
+
+    categoryRepo.find(Some(categoryCriteria)).map { categories =>
+      val categoryIdMap = categories.map( c => (c._id.get, c)).toMap
+      fields.foreach( field =>
+        if (field.categoryId.isDefined) {
+          field.category = categoryIdMap.get(field.categoryId.get)
+        }
+      )
+    }
   }
 
   def setCategoryById(

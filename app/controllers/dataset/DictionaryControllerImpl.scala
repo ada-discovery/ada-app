@@ -65,8 +65,8 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   )
 
   // router for requests; to be passed to views as helper.
-  protected lazy val router: DictionaryRouter = new DictionaryRouter(dataSetId)
-  protected lazy val jsRouter: DictionaryJsRouter = new DictionaryJsRouter(dataSetId)
+  protected val router: DictionaryRouter = new DictionaryRouter(dataSetId)
+  protected val jsRouter: DictionaryJsRouter = new DictionaryJsRouter(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)

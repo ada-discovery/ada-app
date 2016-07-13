@@ -97,7 +97,7 @@ class DataSetServiceImpl @Inject()(
   private val synapseEol = "\n"
   private val synapseUsername = configuration.getString("synapse.api.username").get
   private val synapsePassword = configuration.getString("synapse.api.password").get
-  private val synapseBulkDownloadGroupNumber = 6
+  private val synapseBulkDownloadGroupNumber = 5
 
   override def importDataSetUntyped(dataSetImport: DataSetImport): Future[Unit] =
     for {

@@ -391,7 +391,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val jsonFieldNames = fieldNames.map(fieldName => Json.toJson(fieldName) : JsValueWrapper).toSeq
     val fieldCriteria = Json.obj(FieldIdentity.name -> Json.obj("$in" -> Json.arr(jsonFieldNames : _*)))
 
-    fieldRepo.find(Some(fieldCriteria)) // , Some(Seq(AscSort("name"))
+    fieldRepo.find(Some(fieldCriteria))
   }
 
   private def getStringValues(

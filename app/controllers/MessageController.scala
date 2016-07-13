@@ -58,14 +58,12 @@ class MessageController @Inject() (
     }
   }
 
-  val jsRoutes = deadbolt.SubjectPresent() {
-    Action { implicit request =>
-      Ok(
-        JavaScriptReverseRouter("jsMessageRoutes")(
-          messageJsRoutes.saveUserMessage,
-          messageJsRoutes.listMostRecent
-        )
-      ).as("text/javascript")
-    }
+  val jsRoutes = Action { implicit request =>
+    Ok(
+      JavaScriptReverseRouter("jsMessageRoutes")(
+        messageJsRoutes.saveUserMessage,
+        messageJsRoutes.listMostRecent
+      )
+    ).as("text/javascript")
   }
 }
