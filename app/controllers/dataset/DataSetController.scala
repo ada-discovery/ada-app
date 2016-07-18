@@ -28,4 +28,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent]
 
   def getFieldNames: Action[AnyContent]
+
+  def getFieldValue(id: BSONObjectID, fieldName: String): Action[AnyContent]
+
+  def jsRoutes: Action[AnyContent]
 }

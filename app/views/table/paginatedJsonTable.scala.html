@@ -1,5 +1,6 @@
 @import play.api.libs.json.{JsObject, JsNull, JsValue}
 @import views.html.table.{header, displayJsonTable, pagination}
+@import reactivemongo.bson.BSONObjectID
 
 @(
     page: Page[JsObject],
@@ -7,7 +8,7 @@
     fieldLabelMap : Option[Map[String, String]] = None,
     fieldsToShow : Option[Seq[String]] = None,
     rowClickCall : Option[JsObject => Call] = None,
-    fieldNameRenderMap: Option[Map[String, JsValue => Html]] = None
+    fieldNameRenderMap: Option[Map[String, (BSONObjectID, String, Option[JsValue]) => Html]] = None
 )
 
 @listCallAux(newPage : Int, newOrderBy : Option[String]) = @{

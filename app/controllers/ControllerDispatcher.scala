@@ -9,10 +9,11 @@ abstract class ControllerDispatcher[C](controllerParamId: String) extends Contro
 
   protected def getController(controllerId: String): C
 
-  protected def dispatch(action: C => Action[AnyContent]) = Action.async { implicit request =>
-    val controllerId = getControllerId(request)
-    action(getController(controllerId)).apply(request)
-  }
+  protected def dispatch(action: C => Action[AnyContent]): Action[AnyContent] =
+    Action.async { implicit request =>
+      val controllerId = getControllerId(request)
+      action(getController(controllerId)).apply(request)
+    }
 
   // a helper function
   protected def getControllerId(request: Request[AnyContent]) = {

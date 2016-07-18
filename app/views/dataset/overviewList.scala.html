@@ -1,8 +1,9 @@
 @import views.html.layout
-@import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu, datasetActions, displayJsonModal}
+@import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu, displayJsonModal}
 @import views.html.chart.chartPanelJs
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.table.paginatedJsonTable
+@import views.html.dataset.exportDropdown
 @import play.modules.reactivemongo.json._
 @import reactivemongo.bson.BSONObjectID
 @import models.FieldChartSpec
@@ -25,46 +26,44 @@
     implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
-@actions = @{
-    datasetActions(
-        router,
-        page
-    )
+@actions = {
+    <div class="row">
+        <div class="col-md-10">
+            @filter(page.filter, router.plainOverviewList, Right(router.fieldNames))
+        </div>
+        <div class="col-md-2">
+            @exportDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
+        </div>
+    </div>
+
 }
 
-@genJsonRender(jsValue: JsValue)(linkTitle: Html) = {
-    @defining(scala.util.Random.nextLong()) { modalId =>
-        <a href="#" data-modalid="@{modalId}" class="jsonModalLink">
-            @linkTitle
-        </a>
-        @displayJsonModal(modalId + "Modal", jsValue)
-    }
+@genJsonRender(id: BSONObjectID, fieldName: String)(linkTitle: Html) = {
+    <a href="#" onclick="showFieldValue('@id.stringify', '@fieldName');" class="jsonModalLink">
+    @linkTitle
+    </a>
 }
 
-@jsonRender(jsValue: JsValue) = {
-    @genJsonRender(jsValue) {
+@jsonRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @genJsonRender(id, fieldName) {
         <b>Json</b>
     }
 }
 
-@arrayRender(jsValue: JsValue) = {
-    @genJsonRender(jsValue) {
-        <b>Array (size @{
-            jsValue.asInstanceOf[JsArray].value.size
-        })</b>
+@arrayRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @genJsonRender(id, fieldName) {
+        <b>Array</b>
     }
 }
 
-@dateRender(jsValue: JsValue) = {
-    @jsValue.asOpt[java.util.Date].get.toString
+@jsonArrayRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @genJsonRender(id, fieldName) {
+        <b>Json Array</b>
+    }
 }
 
-@jsonArrayRender(jsValue: JsValue) = {
-    @genJsonRender(jsValue) {
-        <b>Json Array (size @{
-            jsValue.asInstanceOf[JsArray].value.size
-        })</b>
-    }
+@dateRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @jsValue.map(_.asOpt[java.util.Date].get.toString)
 }
 
 @table = @{
@@ -79,30 +78,49 @@
         Some(displayedFields.map{ field =>
             if (field.isArray) {
                 if(field.fieldType == FieldType.Json)
-                    Some(field.name, jsonArrayRender(_))
+                    Some(field.name, jsonArrayRender(_, _, _))
                 else
-                    Some(field.name, arrayRender(_))
+                    Some(field.name, arrayRender(_, _, _))
             } else
                 if (field.fieldType == FieldType.Json)
-                    Some(field.name, jsonRender(_))
+                    Some(field.name, jsonRender(_, _, _))
                 else if (field.fieldType == FieldType.Json)
-                    Some(field.name, dateRender(_))
+                    Some(field.name, dateRender(_, _, _))
                 else None
         }.flatten.toMap)
     )
 }
 
 @bottomResources = {
+    <script type="text/javascript" src="@router.jsRoutes"></script>
+    @displayJsonModal("jsonModal", None)
     @highchartsJsImport()
     @chartPanelJs(fieldChartSpecs.map(_.chartSpec))
     <script type="text/javascript">
         $(function () {
             $(".jsonModalLink").click(function(event) {
                 event.stopPropagation();
-                var modalId = $(this).data("modalid");
-                $('#' + modalId + 'Modal').modal();
             })
         })
+
+        function showFieldValue(id, fieldName) {
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
+                success: function(data) {
+                    var json = JSON.stringify(data, null, "\t").replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;').replace(/\n/g, '</br>')
+                    var size = data.length
+                    var title = "JSON Browser"
+                    if (size)
+                        title = title + ": Array (Size " + size + ")"
+
+                    $('#jsonModal #jsonModalBody').html(json)
+                    $('#jsonModal .modal-title').html(title)
+                    $('#jsonModal').modal();
+                },
+                error: function(data){
+                    showError(data.responseText);
+                }
+            });
+        }
     </script>
 }
 

@@ -20,6 +20,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, RequestHeader, Request}
+import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -67,7 +68,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected def setting = result(dsa.setting)
 
   // router for requests; to be passed to views as helper.
-  protected lazy val router: DataSetRouter = new DataSetRouter(dataSetId)
+  protected val router = new DataSetRouter(dataSetId)
+  protected val jsRouter = new DataSetJsRouter(dataSetId)
 
   override protected def listViewColumns = Some(setting.listViewTableColumnNames)
 
@@ -231,27 +233,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val projection = JsObject(chartFieldNames.map( fieldName => (fieldName, Json.toJson(1))))
     val chartItemsFuture = repo.find(filter.toJsonCriteria, None, Some(projection))
 
-    val (futureTableItems, futureTableCount) = getFutureItemsAndCount(page, orderBy, filter)
-
-//    Thread.sleep(20)
-//    val startx = new java.util.Date()
-//    Await.result(fieldNameMapFuture, timeout)
-//    val endx = new java.util.Date()
-//
-//    Logger.info(s"Loading of '${dataSetId}' fields finished in ${endx.getTime - startx.getTime} ms")
+    val futureTableCount = getFutureCount(filter)
 
     {
       for {
-        items <- futureTableItems
         count <- futureTableCount
-        chartItems <- chartItemsFuture
-//        {
-//          repo.find(filter.toJsonCriteria, None, Some(projection))
-//        }
         fieldNameMap <- fieldNameMapFuture
-//        {
-//          getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
-//        }
+        items <- {
+          val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
+            fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldType.Json).getOrElse(false)
+          }
+          getFutureItems(Some(page), orderBy, filter, Some(tableFieldNamesToLoad), Some(pageLimit))
+        }
+        chartItems <- chartItemsFuture
       } yield {
         val tableFieldNameMap = tableFieldNames.map(fieldName =>
           fieldNameMap.get(fieldName).map(field =>
@@ -507,6 +501,24 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       Ok(Json.toJson(fieldNames))
   }
 
+  override def getFieldValue(id: BSONObjectID, fieldName: String) = Action.async { implicit request =>
+    for {
+      items <- repo.find(Some(Json.obj("_id" -> id)), None, Some(Json.obj(fieldName -> 1)))
+    } yield
+      items.headOption match {
+        case Some(item) => Ok((item \ fieldName).get)
+        case None => BadRequest(s"Item '${id.stringify}' not found.")
+      }
+  }
+
+  override def jsRoutes = Action { implicit request =>
+    Ok(
+      JavaScriptReverseRouter("dataSetJsRoutes")(
+        jsRouter.getFieldValue
+      )
+    ).as("text/javascript")
+  }
+
   /**
     * TODO: implement. what is it supposed to return?
     *
@@ -528,7 +540,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     Future.sequence(futureFieldLabelPairs).map{ _.flatten.toMap }
   }
 
-  // TODO: keep as async
+  // TODO: keep async
   private def getMetaInfos: Traversable[DataSpaceMetaInfo] =
     result(dataSpaceMetaInfoRepo.find())
 

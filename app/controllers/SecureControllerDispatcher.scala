@@ -5,10 +5,13 @@ import javax.inject.Inject
 import be.objectify.deadbolt.core.PatternType
 import be.objectify.deadbolt.scala.DeadboltActions
 import be.objectify.deadbolt.scala.cache.HandlerCache
+import models.security.SecurityRole
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.mvc.{Action, AnyContent, Result}
 import play.api.routing.Router.Tags._
 import security.HandlerKeys
+import util.SecurityUtil
+import collection.mutable.{Map => MMap}
 
 import scala.concurrent.Future
 import play.api.http.{Status => HttpStatus}
@@ -17,6 +20,8 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
 
   @Inject protected var deadbolt: DeadboltActions = _
   @Inject protected var deadboltHandlerCache: HandlerCache = _
+
+  private val actionNameMap = MMap[(String, String), (C => Action[AnyContent]) => Action[AnyContent]]()
 
   protected def getAllowedRoleGroups(
     controllerId:
@@ -30,8 +35,20 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
 
   override protected def dispatch(action: C => Action[AnyContent]) = Action.async { implicit request =>
     val controllerId = getControllerId(request)
-//    println(request.tags.get(RouteController).get)
     val actionName = request.tags.get(RouteActionMethod).get
+
+    val restrictedAction = actionNameMap.getOrElseUpdate(
+      (controllerId, actionName),
+      createRestrictedAction(controllerId, actionName)_
+    )
+    restrictedAction(action).apply(request)
+  }
+
+  private def createRestrictedAction(
+    controllerId: String,
+    actionName: String)(
+    action: C => Action[AnyContent]
+  ): Action[AnyContent] = {
     val roleGroups = getAllowedRoleGroups(controllerId, actionName)
     val permission = getPermission(controllerId, actionName)
 
@@ -39,11 +56,32 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
 
     val actionTransform: Action[AnyContent] => Action[AnyContent] =
       if (roleGroups.nonEmpty && permission.isDefined)
-        RestrictOrPattern(roleGroups, permission.get)_
+        RestrictOrPattern[AnyContent](roleGroups, permission.get)_
       else if (roleGroups.nonEmpty)
-        deadbolt.Restrict(roleGroups)_
+        deadbolt.Restrict[AnyContent](roleGroups)_
       else if (permission.isDefined)
-        deadbolt.Pattern(permission.get, PatternType.REGEX)_
+        deadbolt.Pattern[AnyContent](permission.get, PatternType.REGEX)_
+      else
+        // no deadbolt action needed
+        identity[Action[AnyContent]]_
+
+    actionTransform(super.dispatch(action))
+  }
+
+  protected def dispatchx(action: C => Action[AnyContent]) = Action.async { implicit request =>
+    val controllerId = getControllerId(request)
+//    println(request.tags.get(RouteController).get)
+    val actionName = request.tags.get(RouteActionMethod).get
+    val roleGroups = getAllowedRoleGroups(controllerId, actionName)
+    val permission = getPermission(controllerId, actionName)
+
+    val actionTransform: Action[AnyContent] => Action[AnyContent] =
+      if (roleGroups.nonEmpty && permission.isDefined)
+        RestrictOrPattern[AnyContent](roleGroups, permission.get)_
+      else if (roleGroups.nonEmpty)
+        deadbolt.Restrict[AnyContent](roleGroups)_
+      else if (permission.isDefined)
+        deadbolt.Pattern[AnyContent](permission.get, PatternType.REGEX)_
       else
       // no deadbolt action needed
         identity[Action[AnyContent]]_

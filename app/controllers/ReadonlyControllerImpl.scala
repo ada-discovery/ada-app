@@ -109,7 +109,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
    * @param orderBy Column to be sorted
    */
   def listAll(orderBy: String) = Action.async { implicit request =>
-    val (futureItems, futureCount) = getFutureItemsAndCount(repo)(None, orderBy, new FilterSpec(), None, None)
+    val (futureItems, futureCount) = getFutureItemsAndCount(None, orderBy, new FilterSpec(), None, None)
     futureItems.zip(futureCount).map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
@@ -129,24 +129,42 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     orderBy: String,
     filter : FilterSpec
   ): (Future[Traversable[E]], Future[Int]) =
-    getFutureItemsAndCount(repo)(Some(page), orderBy, filter, listViewColumns, Some(pageLimit))
+    getFutureItemsAndCount(Some(page), orderBy, filter, listViewColumns, Some(pageLimit))
 
-  protected def getFutureItemsAndCount[T](
-    repox : AsyncReadonlyRepo[T, _]
-  )(
+  protected def getFutureItemsAndCount(
     page: Option[Int],
     orderBy: String,
     filter: FilterSpec,
     projectedFieldNames: Option[Seq[String]],
     limit: Option[Int]
-  ): (Future[Traversable[T]], Future[Int]) = {
+  ): (Future[Traversable[E]], Future[Int]) = {
     val criteria = filter.toJsonCriteria
     val sort = toSort(orderBy)
     val projection = toJsonProjection(projectedFieldNames)
 
-    val futureItems = repox.find(criteria, sort, projection, limit, page)
-    val futureCount = repox.count(criteria)
+    val futureItems = repo.find(criteria, sort, projection, limit, page)
+    val futureCount = repo.count(criteria)
     (futureItems, futureCount)
+  }
+
+  protected def getFutureItems(
+    page: Option[Int],
+    orderBy: String,
+    filter: FilterSpec,
+    projectedFieldNames: Option[Seq[String]],
+    limit: Option[Int]
+  ): Future[Traversable[E]] = {
+    val criteria = filter.toJsonCriteria
+    val sort = toSort(orderBy)
+    val projection = toJsonProjection(projectedFieldNames)
+
+    repo.find(criteria, sort, projection, limit, page)
+  }
+
+  protected def getFutureCount(filter: FilterSpec): Future[Int] = {
+    val criteria = filter.toJsonCriteria
+
+    repo.count(criteria)
   }
 
   /**

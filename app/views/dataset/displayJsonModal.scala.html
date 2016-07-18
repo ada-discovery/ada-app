@@ -1,6 +1,6 @@
 @import play.api.libs.json.{JsNull, JsValue, JsArray, JsObject, Json}
 
-@(modalId: String, json: JsValue)
+@(modalId: String, json: Option[JsValue])
 
 @****************************************************************
 * Unused... should be extended to allow tree-like json browsing *
@@ -22,23 +22,13 @@
 }
 
 @modalBody = {
-    <div class="no-rowClicked">
-        @Html(Json.prettyPrint(json).replaceAll("\n", "<br/>"))
+    <div id="jsonModalBody" class="no-rowClicked">
+        @json.map( value => Html(Json.prettyPrint(value).replaceAll("\n", "<br/>")))
     </div>
 }
 
 @buttons = {
-    <button type="button" class="btn btn-default">Close</button>
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
 }
 
 @modal(modalId, "Json Browser", modalBody, None, Some(buttons))
-
-<script type="text/javascript">
-    $(function () {
-        // extra precaution to prevent the table row click, which originated this modal from being executed
-        $('#@{modalId}').find('button').click(function(event){
-            event.stopPropagation();
-            $('#@{modalId}').modal('hide');
-        });
-    })
-</script>

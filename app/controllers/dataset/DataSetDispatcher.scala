@@ -2,8 +2,8 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.cache.HandlerCache
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
+import play.api.mvc.{AnyContent, Action}
 import reactivemongo.bson.BSONObjectID
 import util.FilterSpec
 import util.SecurityUtil._
@@ -52,4 +52,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override def exportTranSMARTMappingFile(delimiter : String) = dispatch(_.exportTranSMARTMappingFile(delimiter))
 
   override def getFieldNames = dispatch(_.getFieldNames)
+
+  override def getFieldValue(id: BSONObjectID, fieldName: String) = dispatch(_.getFieldValue(id, fieldName))
+
+  override def jsRoutes: Action[AnyContent] = dispatch(_.jsRoutes)
 }
