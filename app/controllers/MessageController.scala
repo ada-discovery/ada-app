@@ -8,15 +8,18 @@ import models.security.{SecurityRole, UserManager}
 import persistence.{DescSort, AscSort}
 import persistence.RepoTypes.MessageRepo
 import play.api.libs.Comet
-import play.api.libs.json.Json
+import play.api.libs.EventSource.EventIdExtractor
+import play.api.libs.json.{JsValue, JsObject, Json}
 import play.api.mvc.{Action, Results, Controller}
 import models.Message.MessageFormat
 import play.api.libs.EventSource
 import play.api.routing.JavaScriptReverseRouter
+import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
 import controllers.routes.javascript.{MessageController => messageJsRoutes}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
 class MessageController @Inject() (
     val userManager: UserManager,
@@ -52,18 +55,12 @@ class MessageController @Inject() (
     }
   }
 
+  def eventId(jsObject: JsValue) = Some(((jsObject \ "_id").get.as[BSONObjectID]).stringify)
+  implicit val idExtractor = new EventIdExtractor[JsValue](eventId)
+
   def eventStream = deadbolt.SubjectPresent() {
     Action { implicit request =>
-      Ok.chunked(repo.stream.map(message => Json.toJson(message)) &> EventSource()).as("text/event-stream")
+      Ok.chunked(repo.stream.map(message => Json.toJson(message)) &> EventSource[JsValue]()) //.as("text/event-stream")
     }
-  }
-
-  val jsRoutes = Action { implicit request =>
-    Ok(
-      JavaScriptReverseRouter("jsMessageRoutes")(
-        messageJsRoutes.saveUserMessage,
-        messageJsRoutes.listMostRecent
-      )
-    ).as("text/javascript")
   }
 }

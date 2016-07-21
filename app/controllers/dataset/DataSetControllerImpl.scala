@@ -24,7 +24,7 @@ import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.reactivemongo.json.BSONObjectIDFormat
+import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import views.html.dataset
 
 import scala.collection.mutable.ArrayBuffer
@@ -113,6 +113,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       fieldChartSpecs,
       setting.overviewChartElementGridWidth,
       router,
+      jsRouter,
       getMetaInfos
     )
 
@@ -509,14 +510,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Some(item) => Ok((item \ fieldName).get)
         case None => BadRequest(s"Item '${id.stringify}' not found.")
       }
-  }
-
-  override def jsRoutes = Action { implicit request =>
-    Ok(
-      JavaScriptReverseRouter("dataSetJsRoutes")(
-        jsRouter.getFieldValue
-      )
-    ).as("text/javascript")
   }
 
   /**

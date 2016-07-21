@@ -11,7 +11,7 @@ import com.google.inject.name.Names
 import persistence.dataset._
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import persistence.RepoDef.Repo
 import models.security.CustomUser
 import models.workspace.Workspace
@@ -53,8 +53,8 @@ private object RepoDef extends Enumeration {
   val StudentDistRepo = Repo[StudentDistRepo](
     new SparkMongoDistributedRepo[Student, BSONObjectID]("students"))
 
-  val LuxDistParkRepo = Repo[JsObjectDistRepo](
-    new SparkMongoDistributedRepo[JsObject, BSONObjectID]("luxpark"), true)
+//  val LuxDistParkRepo = Repo[JsObjectDistRepo](
+//    new SparkMongoDistributedRepo[JsObject, BSONObjectID]("luxpark"), true)
 }
 
 // repo module used to bind repo types/instances withing Guice IoC container

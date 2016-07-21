@@ -10,7 +10,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import play.api.libs.json.Json.JsValueWrapper
 import scala.concurrent.Future
-import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
+import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
 trait DictionaryFieldRepoFactory {
   def apply(dataSetId: String): DictionaryFieldRepo

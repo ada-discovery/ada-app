@@ -105,6 +105,7 @@ class DataSetImportController @Inject()(
       "tableId" -> nonEmptyText,
       "downloadColumnFiles" -> boolean,
       "downloadRecordBatchSize" -> optional(number(min=1)),
+      "bulkDownloadGroupNumber" -> optional(number(min=1)),
       "createDummyDictionary" -> boolean,
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),

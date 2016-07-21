@@ -26,7 +26,6 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getDistribution = routes.getDistribution _ map route
   val fieldNames = routeFun(_.getFieldNames)
   val getFieldValue = routes.getFieldValue _ map route
-  val jsRoutes = routeFun(_.jsRoutes)
 }
 
 final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.DataSetDispatcher, "dataSet", dataSetId) {

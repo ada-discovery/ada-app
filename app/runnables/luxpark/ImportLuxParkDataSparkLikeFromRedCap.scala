@@ -17,7 +17,7 @@ import scala.concurrent.Await
 
 class ImportLuxParkDataSparkLikeFromRedCap @Inject() (
     dsaf: DataSetAccessorFactory,
-    @Named("LuxDistParkRepo") dataDistRepo: JsObjectDistRepo,
+//    @Named("LuxDistParkRepo") dataDistRepo: JsObjectDistRepo,
     redCapServiceFactory: RedCapServiceFactory,
     configuration: Configuration
   ) extends Runnable {
@@ -38,7 +38,7 @@ class ImportLuxParkDataSparkLikeFromRedCap @Inject() (
     val futureRecords = redCapService.listRecords("cdisc_dm_usubjd", "")
     val records = Await.result(futureRecords, timeout)
 
-    dataDistRepo.saveJson(records)
+//    dataDistRepo.saveJson(records)
   }
 }
 

@@ -71,7 +71,7 @@ class TestSynapseService @Inject() (
         }
         fileHandleIdContents <- {
           val fileHandleIds = tableFileHandleResults.rows.map(_.list).flatten.map(_.id)
-          synapseService.downloadTableFilesInBulk(fileHandleIds, tableId2)
+          synapseService.downloadTableFilesInBulk(fileHandleIds, tableId2, None)
         }
       } yield {
         fileHandleIdContents.foreach{ case (fileName, content) =>

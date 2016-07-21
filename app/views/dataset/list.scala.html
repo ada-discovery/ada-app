@@ -1,7 +1,7 @@
 @import views.html.table.paginatedJsonTable
 @import views.html.dataset.exportDropdown
 @import play.api.libs.json.JsObject
-@import play.modules.reactivemongo.json._
+@import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 @import reactivemongo.bson.BSONObjectID
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages

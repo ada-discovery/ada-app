@@ -1,6 +1,5 @@
 package services
 
-import java.io.File
 import java.util.Date
 import java.nio.charset.{UnsupportedCharsetException, MalformedInputException, Charset}
 import javax.inject.Inject
@@ -14,6 +13,7 @@ import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import persistence.dataset.DictionaryCategoryRepo.saveRecursively
 import play.api.Logger
+import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
@@ -26,6 +26,7 @@ import _root_.util.JsonUtil._
 import scala.io.Source
 import scala.collection.{mutable, Set}
 import collection.mutable.{Map => MMap}
+import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
 @ImplementedBy(classOf[DataSetServiceImpl])
 trait DataSetService {
@@ -97,7 +98,8 @@ class DataSetServiceImpl @Inject()(
   private val synapseEol = "\n"
   private val synapseUsername = configuration.getString("synapse.api.username").get
   private val synapsePassword = configuration.getString("synapse.api.password").get
-  private val synapseBulkDownloadGroupNumber = 5
+  private val synapseBulkDownloadAttemptNumber = 4
+  private val synapseDefaultBulkDownloadGroupNumber = 5
 
   override def importDataSetUntyped(dataSetImport: DataSetImport): Future[Unit] =
     for {
@@ -181,6 +183,8 @@ class DataSetServiceImpl @Inject()(
           val lines = result(csvFuture, timeout).split(synapseEol)
           lines.iterator
         },
+        Some("ROW_ID"),
+        false,
         transformJsons,
         transformBatchSize
       )
@@ -195,7 +199,7 @@ class DataSetServiceImpl @Inject()(
           val fieldNames = fileColumns.map { fileColumn =>
             escapeKey(fileColumn.name.replaceAll("\"", "").trim)
           }
-          val fun = updateJsonsFileFields(synapseService, fieldNames, importInfo.tableId) _
+          val fun = updateJsonsFileFields(synapseService, fieldNames, importInfo.tableId, importInfo.bulkDownloadGroupNumber) _
           importDataSetAux(Some(fun), importInfo.downloadRecordBatchSize)
         }
       } yield
@@ -207,7 +211,8 @@ class DataSetServiceImpl @Inject()(
   private def updateJsonsFileFields(
     synapseService: SynapseService,
     fieldNames: Seq[String],
-    tableId: String)(
+    tableId: String,
+    bulkDownloadGroupNumber: Option[Int])(
     jsons: Seq[JsObject]
   ): Future[Seq[JsObject]] = {
     val fileHandleIds = fieldNames.map { fieldName =>
@@ -216,10 +221,11 @@ class DataSetServiceImpl @Inject()(
       )
     }.flatten.flatten
 
+    val groupNumber = bulkDownloadGroupNumber.getOrElse(synapseDefaultBulkDownloadGroupNumber)
     if (fileHandleIds.nonEmpty) {
-      val groupSize = Math.max(fileHandleIds.size / synapseBulkDownloadGroupNumber, 1)
+      val groupSize = Math.max(fileHandleIds.size / groupNumber, 1)
       val groups = {
-        if (fileHandleIds.size.toDouble / groupSize > synapseBulkDownloadGroupNumber)
+        if (fileHandleIds.size.toDouble / groupSize > groupNumber)
           fileHandleIds.grouped(groupSize + 1)
         else
           fileHandleIds.grouped(groupSize)
@@ -228,7 +234,7 @@ class DataSetServiceImpl @Inject()(
       logger.info(s"Bulk download of Synapse column data for ${fileHandleIds.size} file handles (split into ${groups.size} groups) initiated.")
 
       val fileHandleIdContentsFutures = groups.par.map { groupFileHandleIds =>
-        synapseService.downloadTableFilesInBulk(groupFileHandleIds, tableId)
+        synapseService.downloadTableFilesInBulk(groupFileHandleIds, tableId, Some(synapseBulkDownloadAttemptNumber))
       }
 
       Future.sequence(fileHandleIdContentsFutures.toList).map(_.flatten).map { fileHandleIdContents =>
@@ -334,6 +340,8 @@ class DataSetServiceImpl @Inject()(
     delimiter: String,
     skipFirstLine: Boolean,
     createLineIterator: => Iterator[String],
+    keyField: Option[String] = None,
+    updateExisting: Boolean = false,
     transformJsonsFun: Option[Seq[JsObject] => Future[Seq[JsObject]]] = None,
     transformBatchSize: Option[Int] = None
   ): Future[Seq[String]] = {
@@ -351,20 +359,37 @@ class DataSetServiceImpl @Inject()(
       val jsons = createJsonsFromLines(columnNames, lines, delimiter, skipFirstLine)
 
       for {
-        // remove the records from the collection
-        _ <- {
+        // remove ALL the records from the collection if no key field defined
+        _ <- if (keyField.isEmpty) {
           logger.info(s"Deleting the old data set...")
           dataRepo.deleteAll
-        }
-        // transform jsons (if needed) and save the jsons
+        } else
+          Future(())
+        // transform jsons (if needed) and save (and update) the jsons
         _ <- {
           if (transformJsonsFun.isDefined)
             logger.info(s"Saving and transforming JSONs...")
           else
             logger.info(s"Saving JSONs...")
 
-          saveAndTransformJsons(dataRepo, transformJsonsFun, transformBatchSize, jsons)
+          saveAndTransformJsons(dataRepo, keyField, updateExisting, transformJsonsFun, transformBatchSize, jsons)
         }
+        // remove the old records if key field defined
+        _ <- if (keyField.isDefined) {
+          val newKeys = jsons.map { json => (json \ keyField.get).toOption.map(x => x: JsValueWrapper)}.flatten
+          val recordsToRemoveFuture = dataRepo.find(Some(Json.obj(keyField.get -> Json.obj("$nin" -> Json.arr(newKeys : _*)))), None, Some(Json.obj("_id" -> 1)))
+
+          recordsToRemoveFuture.flatMap { recordsToRemove =>
+            logger.info(s"Deleting ${recordsToRemove.size} (old) records not contained in the new data set import.")
+            Future.sequence(
+              recordsToRemove.map( recordToRemove =>
+                dataRepo.delete((recordToRemove \ "_id").get.as[BSONObjectID])
+              )
+            )
+          }
+        } else
+          Future(())
+
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
         columnNames
@@ -376,42 +401,137 @@ class DataSetServiceImpl @Inject()(
 
   private def saveAndTransformJsons(
     dataRepo: JsObjectCrudRepo,
+    keyField: Option[String],
+    updateExisting: Boolean,
     transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]],
     transformBatchSize: Option[Int],
     jsons: Seq[JsObject]
-  ): Future[Seq[Unit]] = {
+  ): Future[Unit] = {
     val size = jsons.size
     val reportLineSize = size * reportLineFreq
 
-    def saveJsonsAux(startIndex: Int)(jsonsx: Seq[JsObject]): Future[Seq[Unit]] = {
-      logger.info(s"Saving JSONs...")
-      Future.sequence(
-        jsonsx.zipWithIndex.map { case (jsonRecord, index) =>
-          // insert the record to the database
-          dataRepo.save(jsonRecord).map(_ =>
-            logProgress(startIndex + index + 1, reportLineSize, size)
-          )
+    // helper function to transform and save given json records
+    def transformAndSaveAux(startIndex: Int)(jsonRecords: Seq[JsObject]): Future[Unit] = {
+      val transformedJsonsFuture =
+        if (transformJsons.isDefined)
+          transformJsons.get(jsonRecords)
+        else
+          // if no transformation provided do nothing
+          Future(jsonRecords)
+
+      transformedJsonsFuture.flatMap { transformedJsons =>
+        if (transformedJsons.nonEmpty) {
+          logger.info(s"Saving ${transformedJsons.size} records...")
         }
-      )
+        Future.sequence(
+          transformedJsons.zipWithIndex.map { case (json, index) =>
+            dataRepo.save(json).map(_ =>
+              logProgress(startIndex + index + 1, reportLineSize, size)
+            )
+          }
+        ).map(_ => ())
+      }
     }
 
-    if (transformJsons.isDefined) {
-      val indexedGroups = if (transformBatchSize.isDefined)
-        jsons.grouped(transformBatchSize.get).zipWithIndex
-      else
-        Iterator((jsons, 0))
+    // helper function to transform and update given json records with key-matched existing records
+    def transformAndUpdateAux(startIndex: Int)(jsonWithExistingRecords: Seq[(JsObject, Traversable[JsObject])]): Future[Unit] = {
+      val transformedJsonWithExistingRecordsFuture = if (transformJsons.isDefined) {
+        for {
+          transformedJsons <- transformJsons.get(jsonWithExistingRecords.map(_._1))
+        } yield
+          transformedJsons.zip(jsonWithExistingRecords).map { case (transformedJson, (_, existingRecords)) =>
+            (transformedJson, existingRecords)
+          }
+      } else
+        // if no transformation provided do nothing
+        Future(jsonWithExistingRecords)
 
-      indexedGroups.foldLeft(Future(Seq[Unit]())){
+      transformedJsonWithExistingRecordsFuture.flatMap { transformedJsonWithExistingRecords =>
+        Future.sequence(
+          transformedJsonWithExistingRecords.zipWithIndex.map { case ((json, existingRecords), index) =>
+            Future.sequence(
+              existingRecords.map { existingJson =>
+                dataRepo.update(json.+("_id", (existingJson \ "_id").get)).map(_ =>
+                  logProgress(startIndex + index + 1, reportLineSize, size)
+                )
+              }
+            )
+          }
+        ).map(_ => ())
+      }
+    }
+
+    // helper function to transform and save or update given json records
+    def transformAndSaveOrUdateAux(startIndex: Int)(jsonRecords: Seq[(JsObject, JsValue)]): Future[Unit] = {
+      val jsonsToSaveOrUpdateFuture =
+        Future.sequence(
+          jsonRecords.map { case (json, key) =>
+            for {
+              existingRecords <- dataRepo.find(Some(Json.obj(keyField.get -> key)), None, Some(Json.obj("_id" -> 1)))
+            } yield
+              if (existingRecords.isEmpty)
+                Left(json)
+              else
+                Right(json, existingRecords)
+          }
+        )
+
+      jsonsToSaveOrUpdateFuture.flatMap { jsonsToSaveOrUpdate =>
+        val jsonsToSave = jsonsToSaveOrUpdate.map(_.left.toOption).flatten
+        val jsonsToUpdate = jsonsToSaveOrUpdate.map(_.right.toOption).flatten
+
+        for {
+          // save the new records
+          _ <- transformAndSaveAux(startIndex)(jsonsToSave)
+          _ <- if (updateExisting) {
+            // update the existing records (if requested)
+            if (jsonsToUpdate.nonEmpty) {
+              logger.info(s"Updating ${jsonsToUpdate.size} records... ")
+              transformAndUpdateAux(startIndex + jsonsToSave.size)(jsonsToUpdate)
+            } else
+              Future(())
+          } else {
+            // otherwise do nothing... the source records are expected to be readonly
+            if (jsonsToUpdate.nonEmpty) {
+              logger.info(s"Skipping ${jsonsToUpdate.size} records that already exist... ")
+              logProgress(startIndex + jsonRecords.size + 1, reportLineSize, size)
+            }
+            Future(())
+          }
+        } yield
+          ()
+      }
+    }
+
+    // helper function to transform and save or update given json records
+    def transformAndSaveOrUdateMainAux(startIndex: Int)(jsonRecords: Seq[JsObject]): Future[Unit] =
+      if (keyField.isDefined) {
+        val jsonKeyPairs = jsonRecords.map(json => (json, (json \ keyField.get).toOption))
+        val jsonsWithKeys: Seq[(JsObject, JsValue)] = jsonKeyPairs.filter(_._2.isDefined).map(x => (x._1, x._2.get))
+        val jsonsWoKeys: Seq[JsObject] = jsonKeyPairs.filter(_._2.isEmpty).map(_._1)
+
+        // if no key found transform and save
+        transformAndSaveAux(startIndex)(jsonsWoKeys)
+
+        // if key is found update or save
+        transformAndSaveOrUdateAux(startIndex + jsonsWoKeys.size)(jsonsWithKeys)
+      } else {
+        // no key field defined, perform pure save
+        transformAndSaveAux(startIndex)(jsonRecords)
+      }
+
+    if (transformBatchSize.isDefined) {
+      val indexedGroups = jsons.grouped(transformBatchSize.get).zipWithIndex
+
+      indexedGroups.foldLeft(Future(())){
         case (x, (groupedJsons, groupIndex)) =>
           x.flatMap {_ =>
-            transformJsons.get(groupedJsons).flatMap(
-              saveJsonsAux(groupIndex * transformBatchSize.getOrElse(0))
-            )
+            transformAndSaveOrUdateMainAux(groupIndex * transformBatchSize.get)(groupedJsons)
           }
         }
     } else
-      // save the records (without transformation)
-      saveJsonsAux(0)(jsons)
+      // save all the records
+      transformAndSaveOrUdateMainAux(0)(jsons)
   }
 
   private def createJsonsFromLines(

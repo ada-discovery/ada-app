@@ -3,7 +3,7 @@ package runnables
 import javax.inject.Inject
 
 import models.Student
-import persistence.{SparkHelper, DistributedRepo}
+import persistence.DistributedRepo
 import reactivemongo.bson.BSONObjectID
 
 class SparkMongoPlayground @Inject() (studentDistRepo: DistributedRepo[Student, BSONObjectID]) extends Runnable {
@@ -11,15 +11,17 @@ class SparkMongoPlayground @Inject() (studentDistRepo: DistributedRepo[Student, 
   override def run() {
     val students = List(Student("James", 29), Student("Caroline", 45))
 
+    println("Saving")
     studentDistRepo.save(students)
 
-    val studentsDataFrame = studentDistRepo.findJson() // Some("age > 40"),(Some(Seq("name", "age"))), Some(Seq("age")))
+    println("Finding all")
+    val studentsDataset = studentDistRepo.find() // Some("age > 40"),(Some(Seq("name", "age"))), Some(Seq("age")))
 
-    val studentsDataFrame2 = SparkHelper.toFormatted(studentsDataFrame, Student.StudentFormat.reads)
+//    val studentsDataset2 = SparkHelper.toFormatted(studentsDataset, Student.StudentFormat.reads)
 
-    println(studentsDataFrame2.count())
+//    println(studentsDataset2.count())
 
-    println(studentsDataFrame.collect.mkString(",\n"))
+    println(studentsDataset.collect.mkString(",\n"))
 
     //     println(studentsDataFrame2.collect.mkString(",\n"))
   }

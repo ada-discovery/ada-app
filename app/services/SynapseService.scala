@@ -8,7 +8,7 @@ import com.google.inject.assistedinject.Assisted
 import models.synapse._
 import org.apache.commons.io.IOUtils
 import play.api.libs.ws.{WSRequest, WSResponse, WSClient}
-import play.api.Configuration
+import play.api.{Logger, Configuration}
 import play.api.libs.json.{Json, JsObject}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -115,7 +115,7 @@ trait SynapseService {
     * @param tableId
     * @return
     */
-  def downloadTableFilesInBulk(fileHandleIds: Traversable[String], tableId: String): Future[Iterator[(String, String)]]
+  def downloadTableFilesInBulk(fileHandleIds: Traversable[String], tableId: String, attemptNum: Option[Int] = None): Future[Iterator[(String, String)]]
 }
 
 protected[services] class SynapseServiceWSImpl @Inject() (
@@ -147,10 +147,11 @@ protected[services] class SynapseServiceWSImpl @Inject() (
   private val bulkDownloadStartUrl = configuration.getString("synapse.api.bulk_download_start.url").get
   private val bulkDownloadResultUrl = configuration.getString("synapse.api.bulk_download_result.url").get
 
+  private val logger = Logger
+
   private val timeout = 10 minutes
   private val tableCsvResultPollingFreq = 200
   private val bulkDownloadResultPollingFreq = 400
-
   private var sessionToken: Option[String] = None
 
   override def login: Future[Unit] = {
@@ -329,22 +330,44 @@ protected[services] class SynapseServiceWSImpl @Inject() (
     res.left.get
   }
 
-  override def downloadTableFilesInBulk(fileHandleIds: Traversable[String], tableId: String): Future[Iterator[(String, String)]] =
-    if(fileHandleIds.isEmpty) {
+  override def downloadTableFilesInBulk(fileHandleIds: Traversable[String], tableId: String, attemptNum: Option[Int] = None): Future[Iterator[(String, String)]] =
+    if (fileHandleIds.isEmpty) {
       Future(Iterator[(String, String)]())
-    } else for {
-      bulkDownloadToken <- {
-        val requestedFiles = fileHandleIds.map(FileHandleAssociation(FileHandleAssociateType.TableEntity, _, tableId))
-        startBulkDownload(BulkFileDownloadRequest(requestedFiles.toSeq))
+    } else {
+      def downloadAux = for {
+        bulkDownloadToken <- {
+          val requestedFiles = fileHandleIds.map(FileHandleAssociation(FileHandleAssociateType.TableEntity, _, tableId))
+          startBulkDownload(BulkFileDownloadRequest(requestedFiles.toSeq))
+        }
+        bulkDownloadResponse <- getBulkDownloadResultWait(bulkDownloadToken)
+        bulkDownloadContentBytes <- downloadFileAsBytes(bulkDownloadResponse.resultZipFileHandleId)
+      } yield {
+        val fileNameHandleIdMap = bulkDownloadResponse.fileSummary.map { fileSummary =>
+          (fileSummary.zipEntryName.get, fileSummary.fileHandleId)
+        }.toMap
+        ZipFileIterator(bulkDownloadContentBytes).map(pair => (fileNameHandleIdMap.get(pair._1).get, pair._2))
       }
-      bulkDownloadResponse <- getBulkDownloadResultWait(bulkDownloadToken)
-      bulkDownloadContentBytes <- downloadFileAsBytes(bulkDownloadResponse.resultZipFileHandleId)
-    } yield {
-      val fileNameHandleIdMap = bulkDownloadResponse.fileSummary.map { fileSummary =>
-        (fileSummary.zipEntryName.get, fileSummary.fileHandleId)
-      }.toMap
-      ZipFileIterator(bulkDownloadContentBytes).map( pair => (fileNameHandleIdMap.get(pair._1).get, pair._2))
+
+      attemptNum match {
+        case Some(attemptNum) => retry("Synapse bulk download failed:", attemptNum)(downloadAux)
+        case None => downloadAux
+      }
     }
+
+  def retry[T](failureMessage: String, maxAttemptNum: Int)(f: => Future[T]): Future[T] = {
+    def retryAux(attempt: Int): Future[T] =
+      f.recoverWith {
+        case e: Exception => {
+          if (attempt < maxAttemptNum) {
+            logger.warn(s"${failureMessage}. ${e.getMessage}. Attempt ${attempt}. Retrying...")
+            retryAux(attempt + 1)
+          } else
+            throw e
+        }
+      }
+
+    retryAux(1)
+  }
 
   def withSessionToken(request: WSRequest): WSRequest =
     request.withHeaders("sessionToken" -> getSessionToken)

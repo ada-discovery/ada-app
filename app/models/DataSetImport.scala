@@ -3,7 +3,7 @@ package models
 import controllers.{ManifestedFormat, SubTypeFormat}
 import reactivemongo.bson.BSONObjectID
 import java.util.Date
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
 
 abstract class DataSetImport {
@@ -46,6 +46,7 @@ case class SynapseDataSetImport(
   tableId: String,
   downloadColumnFiles: Boolean,
   downloadRecordBatchSize: Option[Int],
+  bulkDownloadGroupNumber: Option[Int],
   createDummyDictionary: Boolean,
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],

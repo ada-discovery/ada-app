@@ -7,7 +7,7 @@ import models.DataSetFormattersAndIds.{categoryFormat, CategoryIdentity => ident
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import models.Category
 import persistence.RepoTypes._
-import play.modules.reactivemongo.json.BSONObjectIDFormat
+import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future

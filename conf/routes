@@ -99,7 +99,6 @@ GET         /studies/scatterStats                                               
 GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 GET         /studies/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
-GET         /studies/records/jsRoutes                                               controllers.dataset.DataSetDispatcher.jsRoutes
 
 GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.FilterSpec ?= new util.FilterSpec())
 GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)
@@ -149,7 +148,6 @@ POST        /studies/metainfo/deleteDataSet/:id                                 
 GET         /messages/stream                                                        controllers.MessageController.stream
 GET         /messages/eventStream                                                   controllers.MessageController.eventStream
 POST        /messages/saveUserMessage                                               controllers.MessageController.saveUserMessage(message: String)
-GET         /messages/jsRoutes/                                                     controllers.MessageController.jsRoutes
 GET         /message/listMostRecent                                                 controllers.MessageController.listMostRecent(limit: Int)
 
 # Map static resources from the /public folder to the /assets URL path

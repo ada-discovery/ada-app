@@ -30,6 +30,4 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def getFieldNames: Action[AnyContent]
 
   def getFieldValue(id: BSONObjectID, fieldName: String): Action[AnyContent]
-
-  def jsRoutes: Action[AnyContent]
 }

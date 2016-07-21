@@ -54,6 +54,4 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override def getFieldNames = dispatch(_.getFieldNames)
 
   override def getFieldValue(id: BSONObjectID, fieldName: String) = dispatch(_.getFieldValue(id, fieldName))
-
-  override def jsRoutes: Action[AnyContent] = dispatch(_.jsRoutes)
 }

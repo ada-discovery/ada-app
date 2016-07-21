@@ -11,7 +11,7 @@ import persistence.RepoTypes._
 import persistence._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import play.modules.reactivemongo.json.BSONObjectIDFormat
+import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
