@@ -83,6 +83,33 @@ function populateTypeahead(element, values) {
   });
 }
 
+function registerMessageEventSource(url) {
+//  if (!!window.EventSource) {
+ if (!window.messageSource)
+    window.messageSource = new self.EventSource(url);
+    window.messageSource.onmessage = function (e) {
+      var json = $.parseJSON(e.data);
+      prependTrollboxJsonMessage(json, true);
+      $("#trollmessagebox").scrollTop($(document).height());
+    };
+
+    window.messageSource.addEventListener('error', function (e) {
+      if (e.eventPhase == EventSource.CLOSED) {
+        console.log("Connection was closed on error: " + e);
+      } else {
+        console.log("Error occurred while streaming: " + e);
+      }
+    }, false);
+    //setTimeout(function() {
+    //    console.log("Closing source");
+    //    source.close()
+    //}, 3000)
+  //} else {
+  //  console.log("No support for HTML-5 Event Source")
+  //  prependTrollboxMessage("", "", "Sorry. This browser doesn't seem to support HTML5-based messaging. Check <a href='http://html5test.com/compare/feature/communication-eventSource.html'>html5test</a> for browser compatibility.");
+  //}
+}
+
 function prependTrollboxJsonMessage(jsonMessage, isAdmin, fadeIn) {
     var createdBy = jsonMessage.createdByUser
     var isUserAdmin = jsonMessage.isUserAdmin

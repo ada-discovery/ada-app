@@ -24,7 +24,7 @@ resolvers ++= Seq(
 routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._", "util.FilterSpec.FilterSpecQueryStringBinder")
 
 libraryDependencies ++= Seq(
-   "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
+  "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.webjars" %% "webjars-play" % "2.4.0",
   "org.webjars" % "bootstrap" % "3.3.5",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
@@ -39,10 +39,10 @@ libraryDependencies ++= Seq(
   "net.codingwell" %% "scala-guice" % "4.0.1",
   "org.clapper" % "classutil_2.11" % "1.0.6",
   "org.scalaz" % "scalaz-core_2.11" % "7.2.1",
-  "org.apache.spark" % "spark-core_2.11" % "1.6.0" exclude("asm", "asm"),
-  "org.apache.spark" % "spark-sql_2.11" % "1.6.0" exclude("asm", "asm"),
-  "org.apache.spark" % "spark-mllib_2.11" % "1.6.0",
-  "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.0" exclude("asm", "asm"),
+  "org.apache.spark" % "spark-core_2.11" % "2.0.0-preview", // exclude("asm", "asm")
+  "org.apache.spark" % "spark-sql_2.11" % "2.0.0-preview", // exclude("asm", "asm")
+  "org.apache.spark" % "spark-mllib_2.11" % "2.0.0-preview",
+  "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.2", // exclude("asm", "asm")
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",
   "be.objectify" % "deadbolt-scala_2.11" % "2.4.3",
@@ -53,11 +53,11 @@ libraryDependencies ++= Seq(
 
 // Following overrides are needed since Spark 1.6 uses jackson-databind 2.4.4
 // Note that deadbolt's dependency jackson-datatype-jsr310 has to be overriden as well because of transitivity
-dependencyOverrides ++= Set(
-  "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.4",
-  "com.fasterxml.jackson.core" % "jackson-annotations" % "2.4.4",
-  "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.4.4"
-)
+// dependencyOverrides ++= Set(
+//  "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.4",
+//  "com.fasterxml.jackson.core" % "jackson-annotations" % "2.4.4",
+// "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.4.4"
+// )
 
 routesGenerator := InjectedRoutesGenerator
 
