@@ -380,7 +380,9 @@ class DataSetServiceImpl @Inject()(
           val recordsToRemoveFuture = dataRepo.find(Some(Json.obj(keyField.get -> Json.obj("$nin" -> Json.arr(newKeys : _*)))), None, Some(Json.obj("_id" -> 1)))
 
           recordsToRemoveFuture.flatMap { recordsToRemove =>
-            logger.info(s"Deleting ${recordsToRemove.size} (old) records not contained in the new data set import.")
+            if (recordsToRemove.nonEmpty) {
+              logger.info(s"Deleting ${recordsToRemove.size} (old) records not contained in the new data set import.")
+            }
             Future.sequence(
               recordsToRemove.map( recordToRemove =>
                 dataRepo.delete((recordToRemove \ "_id").get.as[BSONObjectID])
@@ -411,7 +413,7 @@ class DataSetServiceImpl @Inject()(
     val reportLineSize = size * reportLineFreq
 
     // helper function to transform and save given json records
-    def transformAndSaveAux(startIndex: Int)(jsonRecords: Seq[JsObject]): Future[Unit] = {
+    def transformAndSaveAux(startIndex: Int)(jsonRecords: Seq[JsObject]): Future[Seq[Unit]] = {
       val transformedJsonsFuture =
         if (transformJsons.isDefined)
           transformJsons.get(jsonRecords)
@@ -429,12 +431,12 @@ class DataSetServiceImpl @Inject()(
               logProgress(startIndex + index + 1, reportLineSize, size)
             )
           }
-        ).map(_ => ())
+        )
       }
     }
 
     // helper function to transform and update given json records with key-matched existing records
-    def transformAndUpdateAux(startIndex: Int)(jsonWithExistingRecords: Seq[(JsObject, Traversable[JsObject])]): Future[Unit] = {
+    def transformAndUpdateAux(startIndex: Int)(jsonWithExistingRecords: Seq[(JsObject, Traversable[JsObject])]): Future[Seq[Unit]] = {
       val transformedJsonWithExistingRecordsFuture = if (transformJsons.isDefined) {
         for {
           transformedJsons <- transformJsons.get(jsonWithExistingRecords.map(_._1))
@@ -447,6 +449,9 @@ class DataSetServiceImpl @Inject()(
         Future(jsonWithExistingRecords)
 
       transformedJsonWithExistingRecordsFuture.flatMap { transformedJsonWithExistingRecords =>
+        if (transformedJsonWithExistingRecords.nonEmpty) {
+          logger.info(s"Updating ${transformedJsonWithExistingRecords.size} records...")
+        }
         Future.sequence(
           transformedJsonWithExistingRecords.zipWithIndex.map { case ((json, existingRecords), index) =>
             Future.sequence(
@@ -457,47 +462,41 @@ class DataSetServiceImpl @Inject()(
               }
             )
           }
-        ).map(_ => ())
+        ).map(_.flatten)
       }
     }
 
     // helper function to transform and save or update given json records
     def transformAndSaveOrUdateAux(startIndex: Int)(jsonRecords: Seq[(JsObject, JsValue)]): Future[Unit] = {
-      val jsonsToSaveOrUpdateFuture =
+      // logger.info(s"Processing ${jsonRecords.size} records... ")
+      val jsonsToSaveOrUpdateFuture: Future[Seq[(JsObject, Traversable[JsObject])]] =
         Future.sequence(
           jsonRecords.map { case (json, key) =>
             for {
               existingRecords <- dataRepo.find(Some(Json.obj(keyField.get -> key)), None, Some(Json.obj("_id" -> 1)))
             } yield
-              if (existingRecords.isEmpty)
-                Left(json)
-              else
-                Right(json, existingRecords)
+              (json, existingRecords)
           }
         )
 
       jsonsToSaveOrUpdateFuture.flatMap { jsonsToSaveOrUpdate =>
-        val jsonsToSave = jsonsToSaveOrUpdate.map(_.left.toOption).flatten
-        val jsonsToUpdate = jsonsToSaveOrUpdate.map(_.right.toOption).flatten
+        val jsonsToSave = jsonsToSaveOrUpdate.filter(_._2.isEmpty).map(_._1)
+        val jsonsToUpdate = jsonsToSaveOrUpdate.filter(_._2.nonEmpty)
 
         for {
-          // save the new records
-          _ <- transformAndSaveAux(startIndex)(jsonsToSave)
           _ <- if (updateExisting) {
             // update the existing records (if requested)
-            if (jsonsToUpdate.nonEmpty) {
-              logger.info(s"Updating ${jsonsToUpdate.size} records... ")
-              transformAndUpdateAux(startIndex + jsonsToSave.size)(jsonsToUpdate)
-            } else
-              Future(())
+            transformAndUpdateAux(startIndex + jsonsToSave.size)(jsonsToUpdate).map(_ => ())
           } else {
+            logger.info(s"Records already exist. Skipping...")
             // otherwise do nothing... the source records are expected to be readonly
-            if (jsonsToUpdate.nonEmpty) {
-              logger.info(s"Skipping ${jsonsToUpdate.size} records that already exist... ")
-              logProgress(startIndex + jsonRecords.size + 1, reportLineSize, size)
+            for (index <- 0 until jsonsToUpdate.size) {
+              logProgress(startIndex + jsonsToSave.size + index + 1, reportLineSize, size)
             }
             Future(())
           }
+          // save the new records
+          _ <- transformAndSaveAux(startIndex)(jsonsToSave)
         } yield
           ()
       }
@@ -517,7 +516,7 @@ class DataSetServiceImpl @Inject()(
         transformAndSaveOrUdateAux(startIndex + jsonsWoKeys.size)(jsonsWithKeys)
       } else {
         // no key field defined, perform pure save
-        transformAndSaveAux(startIndex)(jsonRecords)
+        transformAndSaveAux(startIndex)(jsonRecords).map(_ => ())
       }
 
     if (transformBatchSize.isDefined) {
