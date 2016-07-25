@@ -46,7 +46,7 @@ case class CustomUser(_id: Option[BSONObjectID], ldapDn: String, email: String, 
 }
 
 object CustomUser{
-  implicit val format: Format[CustomUser] = Json.format[CustomUser]
+  implicit val UserFormat: Format[CustomUser] = Json.format[CustomUser]
 
   implicit object UserIdentity extends BSONObjectIdentity[CustomUser] {
     def of(entity: CustomUser): Option[BSONObjectID] = entity._id

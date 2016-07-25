@@ -1,4 +1,5 @@
 import org.apache.commons.lang.StringUtils
+import play.api.libs.json.{Format, JsResult, JsValue}
 import play.twirl.api.Html
 
 package object util {
@@ -84,4 +85,15 @@ package object util {
         ":"
       else "")
     ).getOrElse(noneValue)
+
+  def serializeFormat[E](format: Format[E]): Format[E] = serializeFormat(format.reads, format.writes)
+
+  def serializeFormat[E](readsX: JsValue => JsResult[E], writesX: E => JsValue): Format[E] =
+    new SerializableFormat[E](readsX, writesX)
+
+  class SerializableFormat[E](readsX: JsValue => JsResult[E], writesX: E => JsValue) extends Format[E] with Serializable {
+    override def writes(o: E) = writesX(o)
+
+    override def reads(json: JsValue): JsResult[E] = readsX(json)
+  }
 }

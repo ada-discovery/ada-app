@@ -22,7 +22,7 @@ trait UUIDIdentity[E] extends Identity[E, UUID] {
   def next = UUID.randomUUID()
 }
 
-trait BSONObjectIdentity[E] extends Identity[E, BSONObjectID] {
+trait BSONObjectIdentity[E] extends Identity[E, BSONObjectID] with Serializable {
   val name = "_id" // must be like that!
   def next = BSONObjectID.generate
 }

@@ -135,7 +135,7 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
   }
 }
 
-protected class MongoAsyncCrudRepo[E: Format, ID: Format](
+class MongoAsyncCrudRepo[E: Format, ID: Format](
     collectionName : String)(
     implicit identity: Identity[E, ID]
   ) extends MongoAsyncRepo[E, ID](collectionName) with MongoAsyncCrudExtraRepo[E, ID] {

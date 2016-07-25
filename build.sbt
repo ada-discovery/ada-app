@@ -43,6 +43,9 @@ libraryDependencies ++= Seq(
   "org.apache.spark" % "spark-sql_2.11" % "2.0.0-preview", // exclude("asm", "asm")
   "org.apache.spark" % "spark-mllib_2.11" % "2.0.0-preview",
   "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.2", // exclude("asm", "asm")
+  "org.apache.ignite" % "ignite-core" % "1.6.0",
+  "org.apache.ignite" % "ignite-spring" % "1.6.0",
+  "org.apache.ignite" % "ignite-indexing" % "1.6.0",
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",
   "be.objectify" % "deadbolt-scala_2.11" % "2.4.3",

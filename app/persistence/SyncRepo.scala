@@ -1,7 +1,5 @@
 package persistence
 
-import java.util.concurrent.Future
-
 import play.api.libs.iteratee.{ Enumerator }
 import play.api.libs.json.JsObject
 
@@ -81,7 +79,7 @@ private class SyncRepoAdapter[E, ID](
 private class SyncCrudRepoAdapter[E, ID](
    asyncRepo : AsyncCrudRepo[E, ID],
    timeout : Duration
-  ) extends SyncRepoAdapter[E, ID](asyncRepo, timeout) with SyncCrudRepo[E, ID] {
+  ) extends SyncRepoAdapter[E, ID](asyncRepo, timeout) with SyncCrudRepo[E, ID] with Serializable {
 
   override def update(entity: E) =
     wait(asyncRepo.update(entity))
@@ -103,15 +101,15 @@ private class SyncStreamRepoAdapter[E, ID](
 
 object RepoSynchronizer {
 
-  def apply[E, ID](asyncRepo : AsyncReadonlyRepo[E, ID], timeout : Duration) : SyncReadonlyRepo[E, ID] =
+  def apply[E, ID](asyncRepo : AsyncReadonlyRepo[E, ID], timeout: Duration) : SyncReadonlyRepo[E, ID] =
     new SyncReadonlyRepoAdapter(asyncRepo, timeout)
 
-  def apply[E, ID](asyncRepo : AsyncRepo[E, ID], timeout : Duration) : SyncRepo[E, ID] =
+  def apply[E, ID](asyncRepo : AsyncRepo[E, ID], timeout: Duration) : SyncRepo[E, ID] =
     new SyncRepoAdapter(asyncRepo, timeout)
 
-  def apply[E, ID](asyncRepo : AsyncCrudRepo[E, ID], timeout : Duration) : SyncCrudRepo[E, ID] =
+  def apply[E, ID](asyncRepo : AsyncCrudRepo[E, ID], timeout: Duration) : SyncCrudRepo[E, ID] =
     new SyncCrudRepoAdapter(asyncRepo, timeout)
 
-  def apply[E, ID](asyncRepo : AsyncStreamRepo[E, ID], timeout : Duration) : SyncStreamRepo[E, ID] =
+  def apply[E, ID](asyncRepo : AsyncStreamRepo[E, ID], timeout: Duration) : SyncStreamRepo[E, ID] =
     new SyncStreamRepoAdapter(asyncRepo, timeout)
 }
