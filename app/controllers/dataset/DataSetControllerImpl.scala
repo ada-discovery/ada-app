@@ -6,10 +6,10 @@ import javax.inject.Inject
 import _root_.util.JsonUtil._
 import _root_.util.{FilterCondition, fieldLabel, JsonUtil}
 import _root_.util.WebExportUtil._
-import com.google.inject.assistedinject.Assisted
-import controllers.{ExportableAction, ReadonlyControllerImpl}
-import models.DataSetFormattersAndIds.FieldIdentity
 import models._
+import com.google.inject.assistedinject.Assisted
+import controllers.{ExportableAction, ReadonlyControllerImpl, OptionFormat}
+import models.DataSetFormattersAndIds.FieldIdentity
 import models.Criterion.CriterionInfix
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.AscSort
@@ -23,8 +23,7 @@ import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.TranSMARTService
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.reactivemongo.json.BSONFormats._
-import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
 
 import scala.collection.mutable.ArrayBuffer
@@ -623,15 +622,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       (category._id.get, category)
     })
 
-    implicit val format: Format[Option[BSONObjectID]] = new Format[Option[BSONObjectID]] {
-      override def reads(json: JsValue): JsResult[Option[BSONObjectID]] = json match {
-        case JsNull => JsSuccess(None)
-        case _ => BSONObjectIDFormat.reads(json).map(Some(_))
-      }
-
-      override def writes(o: Option[BSONObjectID]): JsValue = o.map(BSONObjectIDFormat.writes(_)).getOrElse(JsNull)
-    }
-
+    implicit val optionalKeyFormat = new OptionFormat[BSONObjectID]
     val fieldsWithCategoryFuture = fieldRepo.find(Seq("categoryId" #!= Option.empty[BSONObjectID]))
 
     for {
