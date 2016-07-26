@@ -16,8 +16,8 @@ trait SyncReadonlyRepo[E, ID] {
 
   def find(
     criteria: Option[JsObject] = None,
-    orderBy: Option[Seq[Sort]] = None,
-    projection : Option[JsObject] = None,
+    orderBy: Seq[Sort] = Nil,
+    projection : Traversable[String] = Nil,
     limit: Option[Int] = None,
     page: Option[Int] = None
   ): Traversable[E]
@@ -53,8 +53,8 @@ protected class SyncReadonlyRepoAdapter[E, ID](
 
   override def find(
     criteria: Option[JsObject] = None,
-    orderBy: Option[Seq[Sort]] = None,
-    projection : Option[JsObject] = None,
+    orderBy: Seq[Sort] = Nil,
+    projection : Traversable[String] = Nil,
     limit: Option[Int] = None,
     page: Option[Int] = None
   ) =

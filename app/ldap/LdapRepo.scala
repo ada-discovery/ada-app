@@ -34,13 +34,12 @@ trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCach
     Future(getCache(false).find{entry => (entry.getDN == id)})
   }
 
-
   // TODO projection
   // TODO fix filtering
-  def find(
+  override def find(
     criteria: Option[JsObject] = None,
-    orderBy: Option[Seq[Sort]] = None,
-    projection : Option[JsObject] = None,
+    orderBy: Seq[Sort] = Nil,
+    projection : Traversable[String] = Nil,
     limit: Option[Int] = None,
     page: Option[Int] = None
   ): Future[Traversable[T]] = {
@@ -60,22 +59,16 @@ trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCach
       case None => entries
     }
 
-    val entriesOrdered: Seq[T] = {
-      orderBy match{
-        case Some(orderSeq) => {
-          orderSeq.headOption match{
-            case Some(sort) => {
-              sort match{
-                case AscSort(_) => entriesFiltered.toSeq.sortWith{(a: T, b: T) => a.getDN < b.getDN}
-                case DescSort(_) => entriesFiltered.toSeq.sortWith{(a: T, b: T) => a.getDN > b.getDN}
-              }
+    val entriesOrdered: Seq[T] =
+      orderBy.headOption match {
+        case Some(sort) => {
+            sort match{
+              case AscSort(_) => entriesFiltered.toSeq.sortWith{(a: T, b: T) => a.getDN < b.getDN}
+              case DescSort(_) => entriesFiltered.toSeq.sortWith{(a: T, b: T) => a.getDN > b.getDN}
             }
-            case None => entriesFiltered.toSeq
           }
-        }
         case None => entriesFiltered.toSeq
       }
-    }
 
     val entryLimit: Int = limit match {
       case Some(limit) => limit
@@ -113,6 +106,3 @@ trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCach
     LdapUtil.convertAndFilter(entries, converter)
   }
 }
-
-
-

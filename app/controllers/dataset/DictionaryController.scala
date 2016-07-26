@@ -2,11 +2,11 @@ package controllers.dataset
 
 import controllers.CrudController
 import play.api.mvc.{Action, AnyContent}
-import util.FilterSpec
+import util.Criteria
 
 trait DictionaryController extends CrudController[String] {
 
-  def overviewList(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
+  def overviewList(page: Int, orderBy: String, filter: Criteria): Action[AnyContent]
 
   def inferDictionary: Action[AnyContent]
 

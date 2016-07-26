@@ -3,7 +3,7 @@ package controllers
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import _root_.util.FilterSpec
+import _root_.util.Criteria
 import be.objectify.deadbolt.scala.DeadboltActions
 import models.{AdaException, Page}
 import persistence._
@@ -22,7 +22,7 @@ trait ReadonlyController[ID] {
 
   def get(id: ID): Action[AnyContent]
 
-  def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent]
+  def find(page: Int, orderBy: String, filter: Criteria): Action[AnyContent]
 
   def listAll(orderBy: String): Action[AnyContent]
 }
@@ -87,7 +87,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     * @param orderBy Column to be sorted
     * @param filter Filter applied on items
     */
-  def find(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+  def find(page: Int, orderBy: String, filter: Criteria) = Action.async { implicit request =>
     val (futureItems, futureCount) = getFutureItemsAndCount(page ,orderBy, filter)
     futureItems.zip(futureCount).map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
@@ -109,12 +109,12 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
    * @param orderBy Column to be sorted
    */
   def listAll(orderBy: String) = Action.async { implicit request =>
-    val (futureItems, futureCount) = getFutureItemsAndCount(None, orderBy, new FilterSpec(), None, None)
+    val (futureItems, futureCount) = getFutureItemsAndCount(None, orderBy, new Criteria(), Nil, None)
     futureItems.zip(futureCount).map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
       render {
-        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, orderBy, new FilterSpec())))
+        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, orderBy, new Criteria())))
         case Accepts.Json() => Ok(Json.toJson(items))
       }
     }.recover {
@@ -127,20 +127,19 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
   protected def getFutureItemsAndCount(
     page: Int,
     orderBy: String,
-    filter : FilterSpec
+    filter : Criteria
   ): (Future[Traversable[E]], Future[Int]) =
-    getFutureItemsAndCount(Some(page), orderBy, filter, listViewColumns, Some(pageLimit))
+    getFutureItemsAndCount(Some(page), orderBy, filter, listViewColumns.getOrElse(Nil), Some(pageLimit))
 
   protected def getFutureItemsAndCount(
     page: Option[Int],
     orderBy: String,
-    filter: FilterSpec,
-    projectedFieldNames: Option[Seq[String]],
+    filter: Criteria,
+    projection: Seq[String],
     limit: Option[Int]
   ): (Future[Traversable[E]], Future[Int]) = {
     val criteria = filter.toJsonCriteria
     val sort = toSort(orderBy)
-    val projection = toJsonProjection(projectedFieldNames)
 
     val futureItems = repo.find(criteria, sort, projection, limit, page)
     val futureCount = repo.count(criteria)
@@ -150,18 +149,17 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
   protected def getFutureItems(
     page: Option[Int],
     orderBy: String,
-    filter: FilterSpec,
-    projectedFieldNames: Option[Seq[String]],
+    filter: Criteria,
+    projection: Seq[String],
     limit: Option[Int]
   ): Future[Traversable[E]] = {
     val criteria = filter.toJsonCriteria
     val sort = toSort(orderBy)
-    val projection = toJsonProjection(projectedFieldNames)
 
     repo.find(criteria, sort, projection, limit, page)
   }
 
-  protected def getFutureCount(filter: FilterSpec): Future[Int] = {
+  protected def getFutureCount(filter: Criteria): Future[Int] = {
     val criteria = filter.toJsonCriteria
 
     repo.count(criteria)
@@ -174,19 +172,15 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     * @param fieldName Reference column sorting.
     * @return Option with Sort class indicating an order (asc/desc). None, if string is empty.
     */
-  protected def toSort(fieldName : String): Option[Seq[Sort]] =
+  protected def toSort(fieldName : String): Seq[Sort] =
     if (fieldName.nonEmpty) {
       val sort = if (fieldName.startsWith("-"))
         DescSort(fieldName.substring(1, fieldName.length))
       else
         AscSort(fieldName)
-      Some(Seq(sort))
+      Seq(sort)
     } else
-      None
-
-  protected def toJsonProjection(fieldNames : Option[Seq[String]]): Option[JsObject] =
-    fieldNames.map(fieldNames =>
-      JsObject(fieldNames.map(fieldName => (fieldName, Json.toJson(1)))))
+      Nil
 
   protected def getParamMap(implicit request: Request[AnyContent]): Map[String, Seq[String]] = {
     val body = request.body

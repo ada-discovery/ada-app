@@ -5,7 +5,7 @@ import javax.inject.Inject
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
 import play.api.mvc.{AnyContent, Action}
 import reactivemongo.bson.BSONObjectID
-import util.FilterSpec
+import util.Criteria
 import util.SecurityUtil._
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
@@ -27,7 +27,7 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 
-  override def find(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.find(page, orderBy, filter))
+  override def find(page: Int, orderBy: String, filter: Criteria) = dispatch(_.find(page, orderBy, filter))
 
   override def listAll(orderBy: String) = dispatch(_.listAll(orderBy))
 
@@ -35,17 +35,17 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def exportAllRecordsAsJson = dispatch(_.exportAllRecordsAsJson())
 
-  override def exportRecordsAsCsv(delimiter : String, filter: FilterSpec) = dispatch(_.exportRecordsAsCsv(delimiter, filter))
+  override def exportRecordsAsCsv(delimiter : String, filter: Criteria) = dispatch(_.exportRecordsAsCsv(delimiter, filter))
 
-  override def exportRecordsAsJson(filter: FilterSpec) = dispatch(_.exportRecordsAsJson(filter))
+  override def exportRecordsAsJson(filter: Criteria) = dispatch(_.exportRecordsAsJson(filter))
 
   override def overviewFieldTypes = dispatch(_.overviewFieldTypes())
 
-  override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = dispatch(_.overviewList(page, orderBy, filter))
+  override def overviewList(page: Int, orderBy: String, filter: Criteria) = dispatch(_.overviewList(page, orderBy, filter))
 
-  override def getScatterStats(xFieldName: Option[String], yFieldName: Option[String], filter: FilterSpec) = dispatch(_.getScatterStats(xFieldName, yFieldName, filter))
+  override def getScatterStats(xFieldName: Option[String], yFieldName: Option[String], filter: Criteria) = dispatch(_.getScatterStats(xFieldName, yFieldName, filter))
 
-  override def getDistribution(fieldName: Option[String], filter: FilterSpec) = dispatch(_.getDistribution(fieldName, filter))
+  override def getDistribution(fieldName: Option[String], filter: Criteria) = dispatch(_.getDistribution(fieldName, filter))
 
   override def exportTranSMARTDataFile(delimiter : String) = dispatch(_.exportTranSMARTDataFile(delimiter))
 

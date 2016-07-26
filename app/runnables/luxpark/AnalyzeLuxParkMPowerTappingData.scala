@@ -42,7 +42,7 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
 
   override def run = {
     val filter = Some(Json.obj("externalId" -> subjectMPowerId))
-    val tappingsFuture = mPowerTappingDataRepo.find(filter, None, Some(JsObject(fields.map( field => (field, Json.toJson(1))))))
+    val tappingsFuture = mPowerTappingDataRepo.find(filter, Nil, fields)
     val scoresFuture = tappingsFuture.map{ tappings =>
       tappings.map { tapping =>
         val medsValue = (tapping \ medsFields).get.as[String]

@@ -3,7 +3,7 @@ package persistence
 import javax.inject.Inject
 
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
-import play.api.libs.json.JsObject
+import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoApi
 import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.commands.WriteResult
@@ -14,7 +14,6 @@ import reactivemongo.core.commands.Sort
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import models.{Field, Identity}
-import play.api.libs.json._
 import reactivemongo.api._
 
 protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
@@ -43,19 +42,20 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
   override def find(
     criteria: Option[JsObject],
-    orderBy: Option[Seq[Sort]],
-    projection : Option[JsObject],
+    orderBy: Seq[Sort],
+    projection: Traversable[String],
     limit: Option[Int],
     page: Option[Int]
   ): Future[Traversable[E]] = {
+    val jsonProjection = JsObject(projection.map(fieldName => (fieldName, Json.toJson(1))).toSeq)
 
     // handle criteria and projection (if any)
-    val queryBuilder: GenericQueryBuilder[collection.pack.type] = collection.find(criteria.getOrElse(Json.obj()), projection.getOrElse(Json.obj()))
+    val queryBuilder: GenericQueryBuilder[collection.pack.type] = collection.find(criteria.getOrElse(Json.obj()), jsonProjection)
 
     // handle sort (if any)
     val queryBuilder2: GenericQueryBuilder[collection.pack.type] = orderBy match {
-      case Some(orderBy) => queryBuilder.sort(toJsonSort(orderBy))
-      case None => queryBuilder
+      case Nil => queryBuilder
+      case _ => queryBuilder.sort(toJsonSort(orderBy))
     }
 
     // handle pagination (if requested)
@@ -173,7 +173,7 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
   override protected[persistence] def findAggregate(
     rootCriteria: Option[JsObject],
     subCriteria: Option[JsObject],
-    orderBy: Option[Seq[Sort]],
+    orderBy: Seq[Sort],
     projection : Option[JsObject],
     idGroup : Option[JsValue],
     groups : Option[Seq[(String, GroupFunction)]],
@@ -183,14 +183,14 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
   ): Future[Traversable[JsObject]] = {
 
     val params = List(
-      rootCriteria.map(Match(_)),                                // $match
-      unwindFieldName.map(Unwind(_)),                            // $unwind
-      subCriteria.map(Match(_)),                                 // $match
-      projection.map(Project(_)),                                // $project
-      orderBy.map(sort => AggSort(toAggregateSort(sort): _ *)),  // $sort
-      page.map(page  => Skip(page * limit.getOrElse(0))),        // $skip
-      limit.map(Limit(_)),                                       // $limit
-      idGroup.map(id => Group(id)(groups.get: _*))               // $group
+      rootCriteria.map(Match(_)),                                           // $match
+      unwindFieldName.map(Unwind(_)),                                       // $unwind
+      subCriteria.map(Match(_)),                                            // $match
+      projection.map(Project(_)),                                           // $project
+      orderBy.headOption.map(_ => AggSort(toAggregateSort(orderBy): _ *)),  // $sort
+      page.map(page  => Skip(page * limit.getOrElse(0))),                   // $skip
+      limit.map(Limit(_)),                                                  // $limit
+      idGroup.map(id => Group(id)(groups.get: _*))                          // $group
     ).flatten
 
     val result = collection.aggregate(params.head, params.tail, false, false)
@@ -222,7 +222,7 @@ trait MongoAsyncCrudExtraRepo[E, ID] extends AsyncCrudRepo[E, ID] {
   protected[persistence] def findAggregate(
     rootCriteria: Option[JsObject],
     subCriteria: Option[JsObject],
-    orderBy: Option[Seq[Sort]],
+    orderBy: Seq[Sort],
     projection : Option[JsObject],
     idGroup : Option[JsValue],
     groups : Option[Seq[(String, GroupFunction)]],

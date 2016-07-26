@@ -20,7 +20,7 @@ import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.{DeNoPaSetting, DataSetService}
-import util.FilterSpec
+import util.Criteria
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import views.html.dictionary
 import scala.concurrent.duration._
@@ -86,7 +86,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   // TODO: change to an async call
   protected def allCategories = {
-    val categoriesFuture = categoryRepo.find(None, Some(Seq(AscSort("name"))))
+    val categoriesFuture = categoryRepo.find(None, Seq(AscSort("name")))
     result(categoriesFuture)
   }
 
@@ -116,7 +116,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       6
     )
 
-  override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+  override def overviewList(page: Int, orderBy: String, filter: Criteria) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     val fieldNameExtractors = Seq(
@@ -175,7 +175,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     fieldName : String,
     fieldExtractor : Field => Any
   ) : Future[ChartSpec] =
-    repo.find(criteria, None, Some(Json.obj(fieldName -> 1))).map { fields =>
+    repo.find(criteria, Nil, Seq(fieldName)).map { fields =>
       val values = fields.map(field => Some(fieldExtractor(field).toString))
       ChartSpec.categorical(values, None, chartTitle, false, true)
     }

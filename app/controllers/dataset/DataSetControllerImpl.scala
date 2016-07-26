@@ -6,7 +6,7 @@ import javax.inject.Inject
 import _root_.util.JsonUtil._
 import _root_.util.fieldLabel
 import _root_.util.WebExportUtil._
-import _root_.util.{FilterSpec, JsonUtil}
+import _root_.util.{Criteria, JsonUtil}
 import com.google.inject.assistedinject.Assisted
 import controllers.{ExportableAction, ReadonlyControllerImpl}
 import models.DataSetFormattersAndIds.FieldIdentity
@@ -158,7 +158,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param delimiter Delimiter for csv output file.
     * @return View for download.
     */
-  override def exportRecordsAsCsv(delimiter : String, filter: FilterSpec) =
+  override def exportRecordsAsCsv(delimiter : String, filter: Criteria) =
     exportToCsv(csvFileName, delimiter, filter.toJsonCriteria, setting.exportOrderByFieldName)
 
   /**
@@ -166,7 +166,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     *
     * @return View for download.
     */
-  override def exportRecordsAsJson(filter: FilterSpec) =
+  override def exportRecordsAsJson(filter: Criteria) =
     exportToJson(jsonFileName, filter.toJsonCriteria, setting.exportOrderByFieldName)
 
   /**
@@ -179,7 +179,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] = {
     for {
       field <- fieldRepo.get(fieldName)
-      values <- repo.find(None, None, Some(Json.obj(fieldName -> 1)))
+      values <- repo.find(None, Nil, Seq(fieldName))
     } yield {
       values.map { item =>
         val jsValue: JsValue = (item \ fieldName).get
@@ -218,7 +218,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def overviewList(page: Int, orderBy: String, filter: FilterSpec) = Action.async { implicit request =>
+  override def overviewList(page: Int, orderBy: String, filter: Criteria) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     val start = new java.util.Date()
@@ -231,8 +231,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val fieldNameMapFuture: Future[Map[String, Field]] =
       getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
 
-    val projection = JsObject(chartFieldNames.map( fieldName => (fieldName, Json.toJson(1))))
-    val chartItemsFuture = repo.find(filter.toJsonCriteria, None, Some(projection))
+    val chartItemsFuture = repo.find(filter.toJsonCriteria, Nil, chartFieldNames)
 
     val futureTableCount = getFutureCount(filter)
 
@@ -244,7 +243,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
             fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldType.Json).getOrElse(false)
           }
-          getFutureItems(Some(page), orderBy, filter, Some(tableFieldNamesToLoad), Some(pageLimit))
+          getFutureItems(Some(page), orderBy, filter, tableFieldNamesToLoad, Some(pageLimit))
         }
         chartItems <- chartItemsFuture
       } yield {
@@ -320,8 +319,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val fieldNames = fieldChartTypes.map(_.fieldName)
     val fieldsFuture = getFields(fieldNames)
 
-    val projection = JsObject(fieldNames.map( fieldName => (fieldName, Json.toJson(1))).toSeq)
-    val itemsFuture = repo.find(criteria, None, Some(projection))
+    val itemsFuture = repo.find(criteria, Nil, fieldNames)
 
     for {
       foundFields <- fieldsFuture
@@ -420,7 +418,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getScatterStats(
     xFieldNameOption : Option[String],
     yFieldNameOption: Option[String],
-    filter: FilterSpec
+    filter: Criteria
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
@@ -436,7 +434,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val valuesFuture : Future[Seq[(Any, Any)]] = if (xField.isDefined && yField.isDefined) {
         val criteria = filter.toJsonCriteria
 
-        val futureXYItems = repo.find(criteria, None, Some(Json.obj(xFieldName -> 1, yFieldName -> 1)))
+        val futureXYItems = repo.find(criteria, Nil, Seq(xFieldName, yFieldName))
 
         futureXYItems.map{ xyItems =>
           val xySeq = xyItems.toSeq
@@ -468,12 +466,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getDistribution(
     fieldNameOption: Option[String],
-    filter: FilterSpec
+    filter: Criteria
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     val fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
-    val fieldsFuture = fieldRepo.find(None, Some(Seq(AscSort("name"))))
+    val fieldsFuture = fieldRepo.find(None, Seq(AscSort("name")))
     val fieldNameLabelsFuture = fieldsFuture.map(_.map(field => (field.name, field.label)).toSeq)
     val chartSpecsFuture = getDataChartSpecs(filter.toJsonCriteria, Seq(FieldChartType(fieldName, None)), true, false)
 
@@ -497,14 +495,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getFieldNames = Action.async { implicit request =>
     for {
-      fieldNames <- fieldRepo.find(None, Some(Seq(AscSort("name")))).map(_.map(_.name))
+      fieldNames <- fieldRepo.find(None, Seq(AscSort("name"))).map(_.map(_.name))
     } yield
       Ok(Json.toJson(fieldNames))
   }
 
   override def getFieldValue(id: BSONObjectID, fieldName: String) = Action.async { implicit request =>
     for {
-      items <- repo.find(Some(Json.obj("_id" -> id)), None, Some(Json.obj(fieldName -> 1)))
+      items <- repo.find(Some(Json.obj("_id" -> id)), Nil, Seq(fieldName))
     } yield
       items.headOption match {
         case Some(item) => Ok((item \ fieldName).get)

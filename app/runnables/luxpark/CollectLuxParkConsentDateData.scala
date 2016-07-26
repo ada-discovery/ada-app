@@ -35,7 +35,7 @@ class CollectLuxParkConsentDateData @Inject()(
     override def run = {
 //      val filter = Some(Json.obj(consentDateField -> Json.obj("$ne" -> ""), isControlField -> Json.obj("$ne" -> ""), genderField -> Json.obj("$ne" -> "")))
       val filter = Some(Json.obj(consentDateField -> Json.obj("$ne" -> ""), isControlField -> Json.obj("$ne" -> ""), genderField -> "2")) // 1 is male, 2 is female
-      val itemsRecords = dataRepo.find(filter, Some(Seq(AscSort(consentDateField))), Some(JsObject(fields.map( field => (field, Json.toJson(1))))))
+      val itemsRecords = dataRepo.find(filter, Seq(AscSort(consentDateField)), fields)
       val consentDateRecordsFuture = itemsRecords.map{ records =>
         records.map { record =>
           val isControl = (record \ isControlField).get.as[String]

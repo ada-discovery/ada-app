@@ -10,7 +10,7 @@ protected trait ExportableAction[E] {
 
   protected def repoHook: AsyncReadonlyRepo[E, _]
 
-  protected def toSort(string : String) : Option[Seq[Sort]]
+  protected def toSort(string : String): Seq[Sort]
 
   def exportAllToCsv(
     filename: String,

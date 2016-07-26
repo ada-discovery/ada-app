@@ -377,7 +377,7 @@ class DataSetServiceImpl @Inject()(
         // remove the old records if key field defined
         _ <- if (keyField.isDefined) {
           val newKeys = jsons.map { json => (json \ keyField.get).toOption.map(x => x: JsValueWrapper)}.flatten
-          val recordsToRemoveFuture = dataRepo.find(Some(Json.obj(keyField.get -> Json.obj("$nin" -> Json.arr(newKeys : _*)))), None, Some(Json.obj("_id" -> 1)))
+          val recordsToRemoveFuture = dataRepo.find(Some(Json.obj(keyField.get -> Json.obj("$nin" -> Json.arr(newKeys : _*)))), Nil, Seq("_id"))
 
           recordsToRemoveFuture.flatMap { recordsToRemove =>
             if (recordsToRemove.nonEmpty) {
@@ -473,7 +473,7 @@ class DataSetServiceImpl @Inject()(
         Future.sequence(
           jsonRecords.map { case (json, key) =>
             for {
-              existingRecords <- dataRepo.find(Some(Json.obj(keyField.get -> key)), None, Some(Json.obj("_id" -> 1)))
+              existingRecords <- dataRepo.find(Some(Json.obj(keyField.get -> key)), Nil, Seq("_id"))
             } yield
               (json, existingRecords)
           }
@@ -780,7 +780,7 @@ class DataSetServiceImpl @Inject()(
 
   private def getFieldNames(dataRepo: JsObjectCrudRepo): Future[Set[String]] =
     for {
-      records <- dataRepo.find(None, None, None, Some(1))
+      records <- dataRepo.find(None, Nil, None, Some(1))
     } yield
       records.headOption.map(_.keys).getOrElse(
         throw new AdaException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
@@ -808,11 +808,8 @@ class DataSetServiceImpl @Inject()(
     typeInferenceProvider: TypeInferenceProvider,
     fieldNames: Traversable[String]
   ): Future[Traversable[(String, Boolean, FieldType.Value)]] = {
-    val projection =
-      JsObject(fieldNames.map( fieldName => (fieldName, Json.toJson(1))).toSeq)
-
     // get all the values for a given field and infer
-    dataRepo.find(None, None, Some(projection)).map { jsons =>
+    dataRepo.find(None, Nil, fieldNames).map { jsons =>
       fieldNames.map { fieldName =>
         val (isArray, fieldType) = inferFieldType(typeInferenceProvider, fieldName)(jsons)
         (fieldName, isArray, fieldType)
@@ -826,7 +823,7 @@ class DataSetServiceImpl @Inject()(
     fieldName : String
   ): Future[(Boolean, FieldType.Value)] =
     // get all the values for a given field and infer
-    dataRepo.find(None, None, Some(Json.obj(fieldName -> 1))).map(
+    dataRepo.find(None, Nil, Seq(fieldName)).map(
       inferFieldType(typeInferenceProvider, fieldName)
     )
 

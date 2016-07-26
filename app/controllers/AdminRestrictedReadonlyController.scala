@@ -2,7 +2,7 @@ package controllers
 
 import be.objectify.deadbolt.scala.DeadboltActions
 import play.api.mvc.{AnyContent, Action}
-import util.FilterSpec
+import util.Criteria
 import util.SecurityUtil._
 
 trait AdminRestrictedReadonlyController[ID] extends ReadonlyController[ID] {
@@ -12,7 +12,7 @@ trait AdminRestrictedReadonlyController[ID] extends ReadonlyController[ID] {
   abstract override def get(id: ID): Action[AnyContent] =
     restrict(super.get(id))
 
-  abstract override def find(page: Int, orderBy: String, filter: FilterSpec): Action[AnyContent] =
+  abstract override def find(page: Int, orderBy: String, filter: Criteria): Action[AnyContent] =
     restrict(super.find(page, orderBy, filter))
 
   abstract override def listAll(orderBy: String): Action[AnyContent] =

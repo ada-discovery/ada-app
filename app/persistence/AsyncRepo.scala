@@ -1,5 +1,6 @@
 package persistence
 
+import models.Criterion
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsObject
 
@@ -7,7 +8,8 @@ import scala.concurrent.Future
 
 /**
  * Generic async repo trait
- * @param E type of entity
+  *
+  * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
 trait AsyncReadonlyRepo[E, ID] {
@@ -26,8 +28,8 @@ trait AsyncReadonlyRepo[E, ID] {
     */
   def find(
     criteria: Option[JsObject] = None,
-    orderBy: Option[Seq[Sort]] = None,
-    projection : Option[JsObject] = None,
+    orderBy: Seq[Sort] = Nil,
+    projection: Traversable[String] = Nil,
     limit: Option[Int] = None,
     page: Option[Int] = None
   ): Future[Traversable[E]]

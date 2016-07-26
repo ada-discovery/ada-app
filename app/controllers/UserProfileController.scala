@@ -2,7 +2,9 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
+import models.{ConditionType, Criterion}
 import models.workspace.Workspace
+import models.Criterion.CriterionInfix
 import persistence.RepoTypes.WorkspaceRepo
 import play.api.Logger
 import play.api.data.Form
@@ -65,7 +67,8 @@ class UserProfileController @Inject() (
       val timeout = 12000 millis
       val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
       usrFutureOp.map { (usrOp: Option[CustomUser]) =>
-        val workspaceFutureTrav: Future[Traversable[Workspace]] = workspaceRepo.find(Some(Json.obj("email" -> usrOp.get.email)))
+        val criterion: Criterion = "email" #= usrOp.get.email
+        val workspaceFutureTrav: Future[Traversable[Workspace]] = workspaceRepo.find(None)
         val workspaceTrav = Await.result(workspaceFutureTrav, timeout)
         if(workspaceTrav.isEmpty) // TODO: workspace will not be empty in final version!
           Ok(views.html.userprofile.workspace(usrOp.get, new Workspace(None, "dummy", Workspace.emptyUserGroup, Seq(), Seq())))
@@ -139,6 +142,7 @@ class UserProfileController @Inject() (
 
   /**
     * Updates user data by setting unprotected fields to new values.
+    *
     * @param refData Reference to fill in for protected fields.
     * @param newData New values, with _id, email, password, roles, permissions being ignored.
     * @return Future(true), if user successfully found and updated in database/ usermanager.

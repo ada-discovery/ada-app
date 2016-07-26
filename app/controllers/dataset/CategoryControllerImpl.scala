@@ -17,7 +17,7 @@ import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONObjectIDFormat
+import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import views.html.category
 import scala.concurrent.Future
 
@@ -66,7 +66,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     editView(id, f)
 
   override protected def editView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: Request[_]) = {
-    val fieldsFuture = fieldRepo.find(Some(Json.obj("categoryId" -> id)), Some(Seq(AscSort("name"))))
+    val fieldsFuture = fieldRepo.find(Some(Json.obj("categoryId" -> id)), Seq(AscSort("name")))
     val fields = result(fieldsFuture)
     category.edit(
       dataSetName + " Category",
@@ -179,7 +179,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   // TODO: change to an async call
   protected def allCategories = {
-    val categoriesFuture = repo.find(None, Some(Seq(AscSort("name"))))
+    val categoriesFuture = repo.find(None, Seq(AscSort("name")))
     result(categoriesFuture)
   }
 }

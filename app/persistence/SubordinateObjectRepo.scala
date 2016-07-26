@@ -137,7 +137,7 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
     val result = rootRepo.findAggregate(
       rootCriteria = rootCriteria,
       subCriteria = subCriteria,
-      orderBy = None,
+      orderBy = Nil,
       projection = None,
       idGroup = Some(JsNull),
       groups = Some(Seq("count" -> SumValue(1))),
@@ -178,8 +178,8 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
     */
   override def find(
     criteria: Option[JsObject] = None,
-    orderBy: Option[Seq[Sort]] = None,
-    projection: Option[JsObject] = None,
+    orderBy: Seq[Sort] = Nil,
+    projection: Traversable[String] = Nil,
     limit: Option[Int] = None,
     page: Option[Int] = None
   ): Future[Traversable[E]] = {
@@ -187,18 +187,14 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
     val subCriteria = criteria.map(criteria =>  JsObject(criteria.fields.map { case (name, value) => (listName + "." + name, value) } ))
 
     val fullOrderBy =
-      orderBy.map(_.map(
+      orderBy.map(
         _ match {
           case AscSort(fieldName) => AscSort(listName + "." + fieldName)
           case DescSort(fieldName) => DescSort(listName + "." + fieldName)
         }
-      ))
+      )
 
-    val fullProjection =
-      projection.map{ proj =>
-        val extsubordinateListNames = proj.fields.map { case (name, value) => (listName + "." + name, value) }
-        JsObject(extsubordinateListNames)
-      }
+    val fullProjection = projection.map(listName + "." + _)
 
     // TODO: projection can not be passed here since subordinateListName JSON formatter expects ALL attributes to be returned.
     // It could be solved either by making all subordinateListName attributes optional (Option[..]) or introducing a special JSON formatter with default values for each attribute

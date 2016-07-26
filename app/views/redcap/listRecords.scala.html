@@ -1,10 +1,10 @@
 @import views.html.layout.list
 @import play.api.libs.json.JsObject
-@import util.FilterSpec
+@import util.Criteria
 @import views.html.table.paginatedJsonTable
 @import util.typeColumns
 
-@(currentPage: Page[JsObject], filterSpec: FilterSpec)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(currentPage: Page[JsObject], filterSpec: Criteria)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @actions = {
     @helper.form(action=routes.RedCapController.listRecords(), 'role -> "search") {

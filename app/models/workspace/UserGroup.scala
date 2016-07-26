@@ -1,6 +1,6 @@
 package models.workspace
 
-import _root_.util.FilterSpec
+import _root_.util.Criteria
 import models.BSONObjectIdentity
 import play.api.libs.json._
 import play.api.libs.json.JsObject

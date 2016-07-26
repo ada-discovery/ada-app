@@ -28,11 +28,11 @@
         </div>
         <div class="col-md-1">
             <a class="btn btn-info btn-sm" href="@router.inferDictionary">
-                @if(page.total.equals(0l) && page.filter.conditions.isEmpty) {Infer} else {(Re)Infer}
+                @if(page.total.equals(0l) && page.filter.criteria.isEmpty) {Infer} else {(Re)Infer}
             </a>
         </div>
     </div>
-    @if(page.total.equals(0l) && page.filter.conditions.isEmpty) {
+    @if(page.total.equals(0l) && page.filter.criteria.isEmpty) {
         @modal("inferModal", "No Dictionary Found", Html("Do you want to infer one?"), Some(router.inferDictionary))
     }
 }

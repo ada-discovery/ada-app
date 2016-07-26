@@ -3,7 +3,7 @@ package controllers
 import be.objectify.deadbolt.scala.DeadboltActions
 import org.apache.commons.lang3.StringEscapeUtils
 import play.api.Configuration
-import util.{ConditionType, FilterCondition, FilterSpec}
+import util.{FilterCriterion, Criteria}
 
 import scala.concurrent.duration._
 import javax.inject.Inject
@@ -52,7 +52,7 @@ class RedCapController @Inject() (
     Action { Redirect(routes.RedCapController.listExportFields()) }
   }
 
-  def listRecords(page: Int, orderBy: String, f: String, filter: FilterSpec) = restrictAdmin(deadbolt) {
+  def listRecords(page: Int, orderBy: String, f: String, filter: Criteria) = restrictAdmin(deadbolt) {
     Action.async { implicit request =>
       implicit val msg = messagesApi.preferred(request)
 
@@ -67,7 +67,7 @@ class RedCapController @Inject() (
       implicit val msg = messagesApi.preferred(request)
 
       redCapService.listMetadatas(orderBy, filter).map( items =>
-        Ok(html.redcap.listMetadatas(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, new FilterSpec())))
+        Ok(html.redcap.listMetadatas(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, new Criteria())))
       )
     }
   }
@@ -77,7 +77,7 @@ class RedCapController @Inject() (
       implicit val msg = messagesApi.preferred(request)
 
       redCapService.listExportFields(orderBy, filter).map(items =>
-        Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, new FilterSpec())))
+        Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, new Criteria())))
       )
     }
   }
