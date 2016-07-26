@@ -1,5 +1,5 @@
 @import controllers.dataset.DataSetRouter
-@import util.{BasicStats, Criteria}
+@import util.{BasicStats, FilterCondition}
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.layout.main
 @import views.html.dataset.datasetSubNav
@@ -11,7 +11,7 @@
     domainName: String,
     xField: String,
     yField: String,
-    filterSpec: Criteria,
+    filterSpec: Seq[FilterCondition],
     router: DataSetRouter,
     dataSetId: String,
     numericFields: Seq[(String, Option[String])],

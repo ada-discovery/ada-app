@@ -3,7 +3,7 @@ package controllers.dataset
 import controllers.{ReadonlyController, CrudController}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
-import util.Criteria
+import util.FilterCondition
 
 trait DataSetController extends ReadonlyController[BSONObjectID] {
 
@@ -11,17 +11,17 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def exportAllRecordsAsJson: Action[AnyContent]
 
-  def exportRecordsAsCsv(delimiter : String, filter: Criteria): Action[AnyContent]
+  def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]): Action[AnyContent]
 
-  def exportRecordsAsJson(filter: Criteria): Action[AnyContent]
+  def exportRecordsAsJson(filter: Seq[FilterCondition]): Action[AnyContent]
 
   def overviewFieldTypes: Action[AnyContent]
 
-  def overviewList(page: Int, orderBy: String, filter: Criteria): Action[AnyContent]
+  def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent]
 
-  def getScatterStats(xFieldName: Option[String], yFieldName: Option[String], filter: Criteria): Action[AnyContent]
+  def getScatterStats(xFieldName: Option[String], yFieldName: Option[String], filter: Seq[FilterCondition]): Action[AnyContent]
 
-  def getDistribution(fieldName: Option[String], filter: Criteria): Action[AnyContent]
+  def getDistribution(fieldName: Option[String], filter: Seq[FilterCondition]): Action[AnyContent]
 
   def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
 

@@ -2,7 +2,6 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
-import _root_.util.Criteria
 import models.Identity
 import persistence.{RepoException, AsyncCrudRepo}
 import play.api.Logger

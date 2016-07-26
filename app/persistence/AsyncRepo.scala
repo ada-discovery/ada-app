@@ -20,15 +20,15 @@ trait AsyncReadonlyRepo[E, ID] {
     * Returned values are chunked according to the arguments for pagination.
     *
     * @param criteria Filtering criteria object. Use a String to filter according to value of reference column. Use None for no filtering.
-    * @param orderBy Column used as reference for sorting. Leave at None to use default.
+    * @param sort Column used as reference for sorting. Leave at None to use default.
     * @param projection Defines which columns are supposed to be returned. Leave at None to use default.
     * @param limit Page limit. Use to define chunk sizes. Leave at None to use default.
     * @param page Page to be returned. Specifies which chunk is returned.
     * @return Traversable object for iteration.
     */
   def find(
-    criteria: Option[JsObject] = None,
-    orderBy: Seq[Sort] = Nil,
+    criteria: Seq[Criterion[Any]] = Nil,
+    sort: Seq[Sort] = Nil,
     projection: Traversable[String] = Nil,
     limit: Option[Int] = None,
     page: Option[Int] = None
@@ -40,7 +40,7 @@ trait AsyncReadonlyRepo[E, ID] {
     * @param criteria Filtering criteria object. Use a String to filter according to value of reference column. Use None for no filtering.
     * @return Number of maching elements.
     */
-  def count(criteria: Option[JsObject] = None): Future[Int]
+  def count(criteria: Seq[Criterion[Any]] = Nil): Future[Int]
 }
 
 trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {

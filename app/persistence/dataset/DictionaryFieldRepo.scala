@@ -5,10 +5,10 @@ import javax.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import models.DataSetFormattersAndIds._
 import models.Field
+import models.Criterion.CriterionInfix
 import persistence.RepoTypes._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import play.api.libs.json.Json.JsValueWrapper
 import scala.concurrent.Future
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
@@ -27,10 +27,9 @@ object DictionaryFieldRepo {
     categoryRepo: DictionaryCategoryRepo,
     fields: Traversable[Field]
   ): Future[Unit] = {
-    val categoryIds = fields.map(_.categoryId.map(id => Json.toJson(id): JsValueWrapper)).flatten.toSeq
-    val categoryCriteria = Json.obj(CategoryIdentity.name -> Json.obj("$in" -> Json.arr(categoryIds : _*)))
+    val categoryIds = fields.map(_.categoryId).flatten.toSeq
 
-    categoryRepo.find(Some(categoryCriteria)).map { categories =>
+    categoryRepo.find(Seq(CategoryIdentity.name #=> categoryIds)).map { categories =>
       val categoryIdMap = categories.map( c => (c._id.get, c)).toMap
       fields.foreach( field =>
         if (field.categoryId.isDefined) {
@@ -59,7 +58,7 @@ object DictionaryFieldRepo {
   ): Future[Unit] =
     field.category match {
       case Some(category) =>
-        categoryRepo.find(Some(Json.obj("name" -> category.name))).map(categories =>
+        categoryRepo.find(Seq("name" #= category.name)).map(categories =>
           if (categories.nonEmpty) {
             val loadedCategory = categories.head
             field.category = Some(loadedCategory)

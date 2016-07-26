@@ -2,7 +2,7 @@ package models
 
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
+import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
 case class D3Node(_id: Option[BSONObjectID], name: String, size: Option[Int] = None, var children: Seq[D3Node] = Seq())
 

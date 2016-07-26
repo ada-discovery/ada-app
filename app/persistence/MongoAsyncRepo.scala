@@ -2,7 +2,9 @@ package persistence
 
 import javax.inject.Inject
 
+import _root_.util.JsonUtil._
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
+import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoApi
 import reactivemongo.api.collections.GenericQueryBuilder
@@ -10,10 +12,9 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{ IndexType, Index }
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
-import reactivemongo.core.commands.Sort
 import scala.concurrent.duration._
 import scala.concurrent.Future
-import models.{Field, Identity}
+import models._
 import reactivemongo.api._
 
 protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
@@ -41,21 +42,22 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     collection.find(Json.obj(identityName -> id)).one[E]
 
   override def find(
-    criteria: Option[JsObject],
-    orderBy: Seq[Sort],
+    criteria: Seq[Criterion[Any]],
+    sort: Seq[Sort],
     projection: Traversable[String],
     limit: Option[Int],
     page: Option[Int]
   ): Future[Traversable[E]] = {
     val jsonProjection = JsObject(projection.map(fieldName => (fieldName, Json.toJson(1))).toSeq)
+    val jsonCriteria = JsObject(criteria.map(toJsonCriterion(_)))
 
     // handle criteria and projection (if any)
-    val queryBuilder: GenericQueryBuilder[collection.pack.type] = collection.find(criteria.getOrElse(Json.obj()), jsonProjection)
+    val queryBuilder: GenericQueryBuilder[collection.pack.type] = collection.find(jsonCriteria, jsonProjection)
 
     // handle sort (if any)
-    val queryBuilder2: GenericQueryBuilder[collection.pack.type] = orderBy match {
+    val queryBuilder2: GenericQueryBuilder[collection.pack.type] = sort match {
       case Nil => queryBuilder
-      case _ => queryBuilder.sort(toJsonSort(orderBy))
+      case _ => queryBuilder.sort(toJsonSort(sort))
     }
 
     // handle pagination (if requested)
@@ -86,10 +88,34 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     JsObject(jsonSorts)
   }
 
-  override def count(criteria: Option[JsObject]): Future[Int] =
+  protected def toJsonCriterion[T, V](criterion: Criterion[T]): (String, JsValue) = {
+    val fieldName = criterion.fieldName
+
+    val mongoCondition = criterion match {
+      case c: EqualsCriterion[T] => Json.toJson(c.value)(c.valueFormat)
+      case RegexEqualsCriterion(_, value) => Json.obj("$regex" -> value, "$options" -> "i")
+      case c: NotEqualsCriterion[T] => Json.obj("$ne" -> Json.toJson(c.value)(c.valueFormat))
+      case c: InCriterion[V] => {
+        val inValues = c.value.map(Json.toJson(_)(c.elementFormat): JsValueWrapper)
+        Json.obj("$in" -> Json.arr(inValues: _*))
+      }
+      case c: NotInCriterion[V] => {
+        val inValues = c.value.map(Json.toJson(_)(c.elementFormat): JsValueWrapper)
+        Json.obj("$nin" -> Json.arr(inValues: _*))
+      }
+      case GreaterCriterion(_, value) => Json.obj("$gt" -> value)
+      case LessCriterion(_, value) => Json.obj("$lt" -> value)
+    }
+    (fieldName, mongoCondition)
+  }
+
+  override def count(criteria: Seq[Criterion[Any]]): Future[Int] =
     criteria match {
-      case Some(criteria) => collection.runCommand(Count(criteria)).map(_.value)
-      case None => collection.count()
+      case Nil => collection.count()
+      case _ => {
+        val jsonCriteria = JsObject(criteria.map(toJsonCriterion(_)))
+        collection.runCommand(Count(jsonCriteria)).map(_.value)
+      }
     }
 
   protected def handleResult(result : WriteResult) =
@@ -171,9 +197,9 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
     collection.update(selector, modifier) map handleResult
 
   override protected[persistence] def findAggregate(
-    rootCriteria: Option[JsObject],
-    subCriteria: Option[JsObject],
-    orderBy: Seq[Sort],
+    rootCriteria: Seq[Criterion[Any]],
+    subCriteria: Seq[Criterion[Any]],
+    sort: Seq[Sort],
     projection : Option[JsObject],
     idGroup : Option[JsValue],
     groups : Option[Seq[(String, GroupFunction)]],
@@ -181,16 +207,18 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
     limit: Option[Int],
     page: Option[Int]
   ): Future[Traversable[JsObject]] = {
+    val jsonRootCriteria = rootCriteria.headOption.map(_ => JsObject(rootCriteria.map(toJsonCriterion(_))))
+    val jsonSubCriteria = subCriteria.headOption.map(_ => JsObject(subCriteria.map(toJsonCriterion(_))))
 
     val params = List(
-      rootCriteria.map(Match(_)),                                           // $match
-      unwindFieldName.map(Unwind(_)),                                       // $unwind
-      subCriteria.map(Match(_)),                                            // $match
-      projection.map(Project(_)),                                           // $project
-      orderBy.headOption.map(_ => AggSort(toAggregateSort(orderBy): _ *)),  // $sort
-      page.map(page  => Skip(page * limit.getOrElse(0))),                   // $skip
-      limit.map(Limit(_)),                                                  // $limit
-      idGroup.map(id => Group(id)(groups.get: _*))                          // $group
+      jsonRootCriteria.map(Match(_)),                                 // $match
+      unwindFieldName.map(Unwind(_)),                                 // $unwind
+      jsonSubCriteria.map(Match(_)),                                  // $match
+      projection.map(Project(_)),                                     // $project
+      sort.headOption.map(_ => AggSort(toAggregateSort(sort): _ *)),  // $sort
+      page.map(page  => Skip(page * limit.getOrElse(0))),             // $skip
+      limit.map(Limit(_)),                                            // $limit
+      idGroup.map(id => Group(id)(groups.get: _*))                    // $group
     ).flatten
 
     val result = collection.aggregate(params.head, params.tail, false, false)
@@ -220,9 +248,9 @@ trait MongoAsyncCrudExtraRepo[E, ID] extends AsyncCrudRepo[E, ID] {
    * Should be used only for special cases (only within the persistence layer)!
    */
   protected[persistence] def findAggregate(
-    rootCriteria: Option[JsObject],
-    subCriteria: Option[JsObject],
-    orderBy: Seq[Sort],
+    rootCriteria: Seq[Criterion[Any]],
+    subCriteria: Seq[Criterion[Any]],
+    sort: Seq[Sort],
     projection : Option[JsObject],
     idGroup : Option[JsValue],
     groups : Option[Seq[(String, GroupFunction)]],

@@ -2,7 +2,7 @@ package controllers.dataset
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
 import play.api.mvc.{AnyContent, Action}
-import util.Criteria
+import util.FilterCondition
 import javax.inject.Inject
 
 import util.SecurityUtil._
@@ -27,7 +27,7 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
 
   override def get(id: String) = dispatch(_.get(id))
 
-  override def find(page: Int, orderBy: String, filter: Criteria) = dispatch(_.find(page, orderBy, filter))
+  override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) = dispatch(_.find(page, orderBy, filter))
 
   override def listAll(orderBy: String) = dispatch(_.listAll(orderBy))
 
@@ -41,7 +41,7 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
 
   override def save = dispatch(_.save)
 
-  override def overviewList(page: Int, orderBy: String, filter: Criteria) = dispatch(_.overviewList(page, orderBy, filter))
+  override def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]) = dispatch(_.overviewList(page, orderBy, filter))
 
   override def inferDictionary = dispatch(_.inferDictionary)
 

@@ -1,6 +1,7 @@
 package models.workspace
 
-import _root_.util.Criteria
+import _root_.util.FilterCondition
+import _root_.util.FilterCondition.FilterConditionFormat
 import models.BSONObjectIdentity
 import play.api.libs.json._
 import play.api.libs.json.JsObject
@@ -9,7 +10,7 @@ import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.BSONFormats._
 
 
-case class Workspace(_id: Option[BSONObjectID], userId: String, collaborators: UserGroup, filters: Seq[Criteria], treeProjections: Seq[JsObject])
+case class Workspace(_id: Option[BSONObjectID], userId: String, collaborators: UserGroup, filters: Seq[FilterCondition], treeProjections: Seq[JsObject])
 
 object Workspace {
   val emptyUserGroup = UserGroup(None, "empty", None, Seq())

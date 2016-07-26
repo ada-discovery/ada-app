@@ -6,6 +6,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import runnables.DataSetId._
 import runnables.GuiceBuilderRunnable
+import models.Criterion.CriterionInfix
 import scala.concurrent.duration._
 import scala.concurrent.Await._
 import play.api.libs.json.{JsValue, JsArray, JsObject, Json}
@@ -41,8 +42,11 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
   private val mPowerTappingDataRepo = mPowerTappingDsa.dataSetRepo
 
   override def run = {
-    val filter = Some(Json.obj("externalId" -> subjectMPowerId))
-    val tappingsFuture = mPowerTappingDataRepo.find(filter, Nil, fields)
+    val tappingsFuture = mPowerTappingDataRepo.find(
+      criteria = Seq("externalId" #= subjectMPowerId),
+      projection = fields
+    )
+
     val scoresFuture = tappingsFuture.map{ tappings =>
       tappings.map { tapping =>
         val medsValue = (tapping \ medsFields).get.as[String]

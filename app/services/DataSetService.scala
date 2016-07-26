@@ -8,6 +8,7 @@ import _root_.util.{MessageLogger, JsonUtil, TypeInferenceProvider}
 import com.google.inject.ImplementedBy
 import models._
 import models.synapse.{SelectColumn, ColumnType}
+import models.Criterion.CriterionInfix
 import persistence.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -376,8 +377,8 @@ class DataSetServiceImpl @Inject()(
         }
         // remove the old records if key field defined
         _ <- if (keyField.isDefined) {
-          val newKeys = jsons.map { json => (json \ keyField.get).toOption.map(x => x: JsValueWrapper)}.flatten
-          val recordsToRemoveFuture = dataRepo.find(Some(Json.obj(keyField.get -> Json.obj("$nin" -> Json.arr(newKeys : _*)))), Nil, Seq("_id"))
+          val newKeys = jsons.map{json => (json \ keyField.get).asOpt[String]}.flatten
+          val recordsToRemoveFuture = dataRepo.find(criteria = Seq(keyField.get #!-> newKeys), projection = Seq("_id"))
 
           recordsToRemoveFuture.flatMap { recordsToRemove =>
             if (recordsToRemove.nonEmpty) {
@@ -473,7 +474,7 @@ class DataSetServiceImpl @Inject()(
         Future.sequence(
           jsonRecords.map { case (json, key) =>
             for {
-              existingRecords <- dataRepo.find(Some(Json.obj(keyField.get -> key)), Nil, Seq("_id"))
+              existingRecords <- dataRepo.find(criteria = Seq(keyField.get #= key), projection = Seq("_id"))
             } yield
               (json, existingRecords)
           }
@@ -780,7 +781,7 @@ class DataSetServiceImpl @Inject()(
 
   private def getFieldNames(dataRepo: JsObjectCrudRepo): Future[Set[String]] =
     for {
-      records <- dataRepo.find(None, Nil, None, Some(1))
+      records <- dataRepo.find(limit = Some(1))
     } yield
       records.headOption.map(_.keys).getOrElse(
         throw new AdaException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
@@ -809,7 +810,7 @@ class DataSetServiceImpl @Inject()(
     fieldNames: Traversable[String]
   ): Future[Traversable[(String, Boolean, FieldType.Value)]] = {
     // get all the values for a given field and infer
-    dataRepo.find(None, Nil, fieldNames).map { jsons =>
+    dataRepo.find(projection = fieldNames).map { jsons =>
       fieldNames.map { fieldName =>
         val (isArray, fieldType) = inferFieldType(typeInferenceProvider, fieldName)(jsons)
         (fieldName, isArray, fieldType)
@@ -823,7 +824,7 @@ class DataSetServiceImpl @Inject()(
     fieldName : String
   ): Future[(Boolean, FieldType.Value)] =
     // get all the values for a given field and infer
-    dataRepo.find(None, Nil, Seq(fieldName)).map(
+    dataRepo.find(projection = Seq(fieldName)).map(
       inferFieldType(typeInferenceProvider, fieldName)
     )
 

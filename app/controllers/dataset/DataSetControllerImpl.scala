@@ -4,26 +4,26 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import _root_.util.JsonUtil._
-import _root_.util.fieldLabel
+import _root_.util.{FilterCondition, fieldLabel, JsonUtil}
 import _root_.util.WebExportUtil._
-import _root_.util.{Criteria, JsonUtil}
 import com.google.inject.assistedinject.Assisted
 import controllers.{ExportableAction, ReadonlyControllerImpl}
 import models.DataSetFormattersAndIds.FieldIdentity
 import models._
+import models.Criterion.CriterionInfix
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.AscSort
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.i18n.Messages
-import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, RequestHeader, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, TranSMARTService}
+import services.TranSMARTService
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.modules.reactivemongo.json.BSONFormats._
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import views.html.dataset
 
@@ -73,7 +73,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override protected def listViewColumns = Some(setting.listViewTableColumnNames)
 
-  private val jsonNumericTypes = Json.arr(FieldType.Double.toString, FieldType.Integer.toString)
+  private val numericTypes = Seq(FieldType.Double.toString, FieldType.Integer.toString)
 
   /**
     * Table displaying given paginated content. Generally used to display fields of the datasets.
@@ -158,16 +158,16 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param delimiter Delimiter for csv output file.
     * @return View for download.
     */
-  override def exportRecordsAsCsv(delimiter : String, filter: Criteria) =
-    exportToCsv(csvFileName, delimiter, filter.toJsonCriteria, setting.exportOrderByFieldName)
+  override def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]) =
+    exportToCsv(csvFileName, delimiter, filter, setting.exportOrderByFieldName)
 
   /**
     * Generate content of Json export file and create donwload.
     *
     * @return View for download.
     */
-  override def exportRecordsAsJson(filter: Criteria) =
-    exportToJson(jsonFileName, filter.toJsonCriteria, setting.exportOrderByFieldName)
+  override def exportRecordsAsJson(filter: Seq[FilterCondition]) =
+    exportToJson(jsonFileName, filter, setting.exportOrderByFieldName)
 
   /**
     * Fetch specified field (column) entries from repo and wrap them in a Traversable object.
@@ -179,7 +179,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] = {
     for {
       field <- fieldRepo.get(fieldName)
-      values <- repo.find(None, Nil, Seq(fieldName))
+      values <- repo.find(projection = Seq(fieldName))
     } yield {
       values.map { item =>
         val jsValue: JsValue = (item \ fieldName).get
@@ -218,7 +218,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def overviewList(page: Int, orderBy: String, filter: Criteria) = Action.async { implicit request =>
+  override def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     val start = new java.util.Date()
@@ -231,7 +231,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val fieldNameMapFuture: Future[Map[String, Field]] =
       getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
 
-    val chartItemsFuture = repo.find(filter.toJsonCriteria, Nil, chartFieldNames)
+    val chartItemsFuture = repo.find(toCriteria(filter), Nil, chartFieldNames)
 
     val futureTableCount = getFutureCount(filter)
 
@@ -311,7 +311,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @return Chart specs.
     */
   private def getDataChartSpecs(
-    criteria: Option[JsObject],
+    criteria: Seq[Criterion[Any]],
     fieldChartTypes: Traversable[FieldChartType],
     showLabels: Boolean = false,
     showLegend: Boolean = true
@@ -381,10 +381,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def getFields(fieldNames: Traversable[String]): Future[Traversable[Field]] = {
-    val jsonFieldNames = fieldNames.map(fieldName => Json.toJson(fieldName) : JsValueWrapper).toSeq
-    val fieldCriteria = Json.obj(FieldIdentity.name -> Json.obj("$in" -> Json.arr(jsonFieldNames : _*)))
-
-    fieldRepo.find(Some(fieldCriteria))
+    fieldRepo.find(Seq(FieldIdentity.name #=> fieldNames.toSeq))
   }
 
   private def getStringValues(
@@ -418,21 +415,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getScatterStats(
     xFieldNameOption : Option[String],
     yFieldNameOption: Option[String],
-    filter: Criteria
+    filter: Seq[FilterCondition]
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     val xFieldName = xFieldNameOption.getOrElse(setting.defaultScatterXFieldName)
     val yFieldName = yFieldNameOption.getOrElse(setting.defaultScatterYFieldName)
 
-    val numericFieldsFuture = fieldRepo.find(Some(Json.obj("fieldType" -> Json.obj("$in" -> jsonNumericTypes))))
+    val numericFieldsFuture = fieldRepo.find(Seq("fieldType" #=> numericTypes))
     val xFieldFuture = fieldRepo.get(xFieldName)
     val yFieldFuture = fieldRepo.get(yFieldName)
 
     numericFieldsFuture.zip(xFieldFuture).zip(yFieldFuture).flatMap{ case ((numericFields, xField), yField) =>
       val numericFieldNameLabels = numericFields.map(field => (field.name, field.label)).toSeq.sorted
       val valuesFuture : Future[Seq[(Any, Any)]] = if (xField.isDefined && yField.isDefined) {
-        val criteria = filter.toJsonCriteria
+        val criteria = toCriteria(filter)
 
         val futureXYItems = repo.find(criteria, Nil, Seq(xFieldName, yFieldName))
 
@@ -466,14 +463,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getDistribution(
     fieldNameOption: Option[String],
-    filter: Criteria
+    filter: Seq[FilterCondition]
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     val fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
-    val fieldsFuture = fieldRepo.find(None, Seq(AscSort("name")))
+    val fieldsFuture = fieldRepo.find(sort = Seq(AscSort("name")))
     val fieldNameLabelsFuture = fieldsFuture.map(_.map(field => (field.name, field.label)).toSeq)
-    val chartSpecsFuture = getDataChartSpecs(filter.toJsonCriteria, Seq(FieldChartType(fieldName, None)), true, false)
+    val chartSpecsFuture = getDataChartSpecs(toCriteria(filter), Seq(FieldChartType(fieldName, None)), true, false)
 
     {
       for {
@@ -495,14 +492,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getFieldNames = Action.async { implicit request =>
     for {
-      fieldNames <- fieldRepo.find(None, Seq(AscSort("name"))).map(_.map(_.name))
+      fieldNames <- fieldRepo.find(sort = Seq(AscSort("name"))).map(_.map(_.name))
     } yield
       Ok(Json.toJson(fieldNames))
   }
 
   override def getFieldValue(id: BSONObjectID, fieldName: String) = Action.async { implicit request =>
     for {
-      items <- repo.find(Some(Json.obj("_id" -> id)), Nil, Seq(fieldName))
+      items <- repo.find(criteria = Seq("_id" #= id), projection = Seq(fieldName))
     } yield
       items.headOption match {
         case Some(item) => Ok((item \ fieldName).get)
@@ -577,7 +574,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     delimiter: String,
     orderBy : String
   ): String = {
-    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
+    val recordsFuture = repo.find(sort = toSort(orderBy))
     val records = result(recordsFuture)
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()
@@ -603,7 +600,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     delimiter: String,
     orderBy : String
   ): String = {
-    val recordsFuture = repo.find(None, toSort(orderBy), None, None, None)
+    val recordsFuture = repo.find(sort = toSort(orderBy))
     val records = result(recordsFuture)
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()
@@ -626,9 +623,16 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       (category._id.get, category)
     })
 
-    val fieldsWithCategoryFuture = fieldRepo.find(Some(
-      Json.obj("categoryId" -> Json.obj("$ne" -> Option.empty[BSONObjectID]))
-    ))
+    implicit val format: Format[Option[BSONObjectID]] = new Format[Option[BSONObjectID]] {
+      override def reads(json: JsValue): JsResult[Option[BSONObjectID]] = json match {
+        case JsNull => JsSuccess(None)
+        case _ => BSONObjectIDFormat.reads(json).map(Some(_))
+      }
+
+      override def writes(o: Option[BSONObjectID]): JsValue = o.map(BSONObjectIDFormat.writes(_)).getOrElse(JsNull)
+    }
+
+    val fieldsWithCategoryFuture = fieldRepo.find(Seq("categoryId" #!= Option.empty[BSONObjectID]))
 
     for {
       idCategories <- idCategoriesFuture

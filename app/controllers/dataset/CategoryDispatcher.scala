@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
 import reactivemongo.bson.BSONObjectID
-import util.Criteria
+import util.FilterCondition
 import util.SecurityUtil.createDataSetPermission
 
 class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: CategoryControllerFactory)
@@ -27,7 +27,7 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 
-  override def find(page: Int, orderBy: String, filter: Criteria) = dispatch(_.find(page, orderBy, filter))
+  override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) = dispatch(_.find(page, orderBy, filter))
 
   override def listAll(orderBy: String) = dispatch(_.listAll(orderBy))
 

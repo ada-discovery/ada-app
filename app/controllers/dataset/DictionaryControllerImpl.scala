@@ -20,7 +20,7 @@ import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.{DeNoPaSetting, DataSetService}
-import util.Criteria
+import util.FilterCondition
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import views.html.dictionary
 import scala.concurrent.duration._
@@ -86,7 +86,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   // TODO: change to an async call
   protected def allCategories = {
-    val categoriesFuture = categoryRepo.find(None, Seq(AscSort("name")))
+    val categoriesFuture = categoryRepo.find(sort = Seq(AscSort("name")))
     result(categoriesFuture)
   }
 
@@ -116,7 +116,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       6
     )
 
-  override def overviewList(page: Int, orderBy: String, filter: Criteria) = Action.async { implicit request =>
+  override def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     val fieldNameExtractors = Seq(
@@ -124,7 +124,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 //      ("Enum", "isEnum", (field : Field) => field.isEnum)
     )
     val futureFieldChartSpecs = fieldNameExtractors.map { case (title, fieldName, fieldExtractor) =>
-      getDictionaryChartSpec(title, filter.toJsonCriteria, fieldName, fieldExtractor).map(chartSpec => FieldChartSpec(fieldName, chartSpec))
+      getDictionaryChartSpec(title, filter, fieldName, fieldExtractor).map(chartSpec => FieldChartSpec(fieldName, chartSpec))
     }
     val fieldChartSpecsFuture = Future.sequence(futureFieldChartSpecs)
     val futureMetaInfos = dataSpaceMetaInfoRepo.find()
@@ -171,11 +171,11 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   private def getDictionaryChartSpec(
     chartTitle : String,
-    criteria : Option[JsObject],
+    filter: Seq[FilterCondition],
     fieldName : String,
     fieldExtractor : Field => Any
   ) : Future[ChartSpec] =
-    repo.find(criteria, Nil, Seq(fieldName)).map { fields =>
+    repo.find(toCriteria(filter), Nil, Seq(fieldName)).map { fields =>
       val values = fields.map(field => Some(fieldExtractor(field).toString))
       ChartSpec.categorical(values, None, chartTitle, false, true)
     }

@@ -6,6 +6,7 @@ import javax.inject.Inject
 import controllers._
 import models.DataSetFormattersAndIds._
 import models._
+import models.Criterion.CriterionInfix
 import persistence.RepoTypes._
 import play.api.Logger
 import play.api.data.Form
@@ -77,7 +78,7 @@ class DataSetSettingController @Inject() (
 
   def editForDataSet(dataSet: String) = restrict {
     Action.async { implicit request =>
-      val foundSettingFuture = repo.find(Some(Json.obj("dataSetId" -> dataSet))).map(_.headOption)
+      val foundSettingFuture = repo.find(Seq("dataSetId" #= dataSet)).map(_.headOption)
       foundSettingFuture.map { setting =>
         setting.fold(
           NotFound(s"Setting for the data set '#$dataSet' not found")
@@ -139,7 +140,7 @@ class DataSetSettingController @Inject() (
 
   protected def processSetting(fun: DataSetSetting => Future[_], dataSet: String) =
     Action.async { implicit request =>
-      val foundSettingFuture = repo.find(Some(Json.obj("dataSetId" -> dataSet))).map(_.headOption)
+      val foundSettingFuture = repo.find(Seq("dataSetId" #= dataSet)).map(_.headOption)
       foundSettingFuture.flatMap {
         _.fold(
           Future(NotFound(s"Setting for the data set '#$dataSet' not found"))

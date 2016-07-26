@@ -3,6 +3,7 @@ package runnables.luxpark
 import java.text.SimpleDateFormat
 import javax.inject.Inject
 
+import models.Criterion.CriterionInfix
 import persistence.AscSort
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
@@ -33,9 +34,9 @@ class CollectLuxParkConsentDateData @Inject()(
     private val dataRepo = dsa.dataSetRepo
 
     override def run = {
-//      val filter = Some(Json.obj(consentDateField -> Json.obj("$ne" -> ""), isControlField -> Json.obj("$ne" -> ""), genderField -> Json.obj("$ne" -> "")))
-      val filter = Some(Json.obj(consentDateField -> Json.obj("$ne" -> ""), isControlField -> Json.obj("$ne" -> ""), genderField -> "2")) // 1 is male, 2 is female
-      val itemsRecords = dataRepo.find(filter, Seq(AscSort(consentDateField)), fields)
+//      val criteria = Seq(consentDateField #!= "", isControlField #!= "", genderField #!= "")
+      val criteria = Seq(consentDateField #!= "", isControlField #!= "", genderField #= "2") // 1 is male, 2 is female
+      val itemsRecords = dataRepo.find(criteria, Seq(AscSort(consentDateField)), fields)
       val consentDateRecordsFuture = itemsRecords.map{ records =>
         records.map { record =>
           val isControl = (record \ isControlField).get.as[String]

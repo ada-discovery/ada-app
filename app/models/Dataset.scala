@@ -3,10 +3,9 @@ package models
 import java.util.UUID
 import java.util.Date
 
-import models.ChartType
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 import play.api.libs.functional.syntax._
 
 case class DataSpaceMetaInfo(

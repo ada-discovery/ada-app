@@ -1,6 +1,7 @@
 package persistence
 
-import models.Identity
+import models.{Criterion, Identity}
+import models.Criterion.CriterionInfix
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Push, SumValue}
@@ -130,14 +131,14 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
     * @param criteria Filtering criteria object. Use a JsObject to filter according to value of reference column. Use None for no filtering.
     * @return Number of matching elements.
     */
-  override def count(criteria: Option[JsObject]): Future[Int] = {
-    val rootCriteria = Some(Json.obj(rootIdentity.name -> Json.toJson(rootId)))
-    val subCriteria = criteria.map(criteria =>  JsObject(criteria.fields.map { case (name, value) => (listName + "." + name, value) } ))
+  override def count(criteria: Seq[Criterion[Any]]): Future[Int] = {
+    val rootCriteria = Seq(rootIdentity.name #= rootId)
+    val subCriteria = criteria.map(criterion => criterion.copyWithFieldName(listName + "." + criterion.fieldName))
 
     val result = rootRepo.findAggregate(
       rootCriteria = rootCriteria,
       subCriteria = subCriteria,
-      orderBy = Nil,
+      sort = Nil,
       projection = None,
       idGroup = Some(JsNull),
       groups = Some(Seq("count" -> SumValue(1))),
@@ -146,11 +147,8 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
       page = None
     )
 
-    result.map { result =>
-      if (result.nonEmpty) {
-        (result.head \ "count").as[Int]
-      } else
-        0
+    result.map {
+      _.headOption.map(head => (head \ "count").as[Int]).getOrElse(0)
     }
   }
 
@@ -160,34 +158,32 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
     * @param id Name of object.
     * @return subordinateListNames in the dictionary with exact name match.
     */
-  override def get(id: ID): Future[Option[E]] = {
-    val futureSubordinates = find(Some(Json.obj(identity.name -> id)))
-    futureSubordinates.map(_.headOption)
-  }
+  override def get(id: ID): Future[Option[E]] =
+    find(Seq(identity.name #= id)).map(_.headOption)
 
   /**
     * Find object matching the filtering criteria. subordinateListNames may be ordered and only a subset of them used.
     * Pagination options for page limit and page number are available to limit number of returned results.
     *
     * @param criteria Filtering criteria object. Use a String to filter according to value of reference column. Use None for no filtering.
-    * @param orderBy Column used as reference for sorting. Leave at None to use default.
+    * @param sort Column used as reference for sorting. Leave at None to use default.
     * @param projection Defines which columns are supposed to be returned. Leave at None to use default.
     * @param limit Page limit. Use to define chunk sizes for pagination. Leave at None to use default.
     * @param page Page to be returned. Specifies which chunk is returned.
     * @return Traversable subordinateListNames for iteration.
     */
   override def find(
-    criteria: Option[JsObject] = None,
-    orderBy: Seq[Sort] = Nil,
+    criteria: Seq[Criterion[Any]] = Nil,
+    sort: Seq[Sort] = Nil,
     projection: Traversable[String] = Nil,
     limit: Option[Int] = None,
     page: Option[Int] = None
   ): Future[Traversable[E]] = {
-    val rootCriteria = Some(Json.obj(rootIdentity.name -> Json.toJson(rootId)))
-    val subCriteria = criteria.map(criteria =>  JsObject(criteria.fields.map { case (name, value) => (listName + "." + name, value) } ))
+    val rootCriteria = Seq(rootIdentity.name #= rootId)
+    val subCriteria = criteria.map(criterion => criterion.copyWithFieldName(listName + "." + criterion.fieldName))
 
-    val fullOrderBy =
-      orderBy.map(
+    val fullSort =
+      sort.map(
         _ match {
           case AscSort(fieldName) => AscSort(listName + "." + fieldName)
           case DescSort(fieldName) => DescSort(listName + "." + fieldName)
@@ -201,7 +197,7 @@ protected[persistence] abstract class SubordinateObjectMongoAsyncCrudRepo[E: For
     val result = rootRepo.findAggregate(
       rootCriteria = rootCriteria,
       subCriteria = subCriteria,
-      orderBy = fullOrderBy,
+      sort = fullSort,
       projection = None, //fullProjection,
       idGroup = Some(JsNull),
       groups = Some(Seq(listName -> Push(listName))),

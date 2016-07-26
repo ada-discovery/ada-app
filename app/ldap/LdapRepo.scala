@@ -3,6 +3,7 @@ package ldap
 
 import com.unboundid.ldap.sdk._
 import ldap.LdapUtil.LdapConverter
+import models.Criterion
 
 import persistence._
 import play.api.libs.json._
@@ -37,27 +38,30 @@ trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCach
   // TODO projection
   // TODO fix filtering
   override def find(
-    criteria: Option[JsObject] = None,
-    orderBy: Seq[Sort] = Nil,
-    projection : Traversable[String] = Nil,
+    criteria: Seq[Criterion[Any]],
+    orderBy: Seq[Sort],
+    projection : Traversable[String],
     limit: Option[Int] = None,
     page: Option[Int] = None
   ): Future[Traversable[T]] = {
 
     val entries = getCache(false)
-    val entriesFiltered = criteria match{
-      case Some(crit) =>{
-        val jsonFilterKeys: Set[String] = crit.keys
-        val jsonFilter = { (entry: T) =>
-          val entryJson: JsValue = entry.toJson
-          jsonFilterKeys.exists{ key: String =>
-            (entryJson \ key) == (crit \ key)
+    val entriesFiltered =
+      criteria match {
+        case Nil => entries
+        case _ => {
+          val jsonFilterKeys = criteria.map(_.fieldName)
+          val jsonFilter = { (entry: T) =>
+            val entryJson: JsValue = entry.toJson
+            jsonFilterKeys.exists { key: String =>
+              (entryJson \ key).toOption.map(value =>
+                criteria.exists(c => c.fieldName.equals(key) && c.value.equals(value))
+              ).getOrElse(false)
+            }
           }
+          entries.filter(jsonFilter)
         }
-        entries.filter(jsonFilter)
       }
-      case None => entries
-    }
 
     val entriesOrdered: Seq[T] =
       orderBy.headOption match {
@@ -84,10 +88,11 @@ trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCach
 
   /**
     * Count all Objects mathcing the given criteria.
+    *
     * @param criteria Filtering criteria object. Use a String to filter according to value of reference column. Use None for no filtering.
     * @return Number of matching elements.
     */
-  def count(criteria: Option[JsObject] = None): Future[Int] = {
+  def count(criteria: Seq[Criterion[Any]]): Future[Int] = {
     val res = find(criteria)
     res.map(t => t.size)
   }
@@ -95,6 +100,7 @@ trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCach
   /**
     * Request a new Traversable of objects.
     * Override this to be specific about the LdapEntries you want to retrieve.
+    *
     * @return Converted LdapEntries.
     */
   def requestList(): Traversable[T] = {

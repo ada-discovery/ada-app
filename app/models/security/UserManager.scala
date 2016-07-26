@@ -2,6 +2,7 @@ package models.security
 
 import javax.inject.{Singleton, Inject}
 
+import models.Criterion.CriterionInfix
 import com.google.inject.ImplementedBy
 import ldap.{LdapUserRepo, LdapConnector}
 import persistence.AsyncReadonlyRepo
@@ -11,7 +12,6 @@ import play.api.libs.json.{JsString, JsValue, JsObject, Json}
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-
 
 @ImplementedBy(classOf[UserManagerImpl])
 trait UserManager {
@@ -97,7 +97,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
   override def synchronizeRepos(): Unit = {
     val ldapusers: Traversable[LdapUser] = ldapRepo.getCache(true)
     ldapusers.map { ldapusr: LdapUser =>
-      val foundFuture: Future[Traversable[CustomUser]] = userRepo.find(Some(Json.obj("ldapDn" -> ldapusr.getDN)))
+      val foundFuture: Future[Traversable[CustomUser]] = userRepo.find(Seq("ldapDn" #= ldapusr.getDN))
       foundFuture.map { found =>
         found.headOption match {
           case Some(usr) => userRepo.update(CustomUser(usr._id, ldapusr.getDN, ldapusr.email, usr.roles, usr.permissions))
@@ -135,8 +135,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
   override def authenticate(id: String, password: String): Future[Boolean] = {
     val dn = "uid=" + id + ",cn=users," + connector.ldapsettings.dit
 
-    val existCrit: JsObject = JsObject("_id" -> JsString(id)::Nil)
-    val existsFuture: Future[Traversable[LdapUser]] = ldapRepo.find(Some(existCrit))
+    val existsFuture: Future[Traversable[LdapUser]] = ldapRepo.find(Seq("_id" #= id))
     val auth = existsFuture.map{ exists: Traversable[LdapUser] =>
       !exists.isEmpty && connector.canBind(dn, password)
     }
@@ -153,7 +152,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
 
 
   private def addUserIfNotPresent(user: CustomUser) = {
-    userRepo.find(Some(Json.obj("ldapDn" -> user.ldapDn))).map { users =>
+    userRepo.find(Seq("ldapDn" #= user.ldapDn)).map { users =>
       if (users.isEmpty)
         userRepo.save(user)
     }
@@ -167,7 +166,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
     * @return Option containing Account with matching mail; None otherwise
     */
   override def findByEmail(email: String): Future[Option[CustomUser]] = {
-    val usersFuture = userRepo.find(Some(Json.obj("email" -> email)))
+    val usersFuture = userRepo.find(Seq("email" #= email))
     usersFuture.map { users =>
       users.headOption
     }
@@ -180,7 +179,7 @@ private class UserManagerImpl @Inject()(userRepo: UserRepo, ldapRepo: LdapUserRe
     * @return Option containing Account with matching ID; None otherwise
     */
   override def findById(id: String): Future[Option[CustomUser]] = {
-    val usersFuture = userRepo.find(Some(Json.obj("ldapDn" -> id)))
+    val usersFuture = userRepo.find(Seq("ldapDn" #= id))
     usersFuture.map { users =>
       users.headOption
     }

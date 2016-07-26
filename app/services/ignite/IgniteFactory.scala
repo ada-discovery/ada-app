@@ -13,7 +13,7 @@ object IgniteFactory {
 
   def apply: Ignite = {
     // Create new configuration.
-//    val cfg = new IgniteConfiguration();
+    val cfg = new IgniteConfiguration();
 
     // Provide lifecycle bean to configuration.
     //  cfg.setLifecycleBeans(new MyLifecycleBean());

@@ -62,7 +62,7 @@ abstract class CleanupDataSet (
     fieldTypeMap : Map[String, FieldType.Value],
     translationMap : Map[String, String]
   ) = {
-    val itemsFuture = originalDataRepo.find(None, Seq(AscSort("_id")))
+    val itemsFuture = originalDataRepo.find(sort = Seq(AscSort("_id")))
 
     val convertedJsItems = Await.result(itemsFuture, timeout).map { item =>
       val newFieldValues: Seq[(String, JsValue)] = item.fields.filter{case (attribute, value) =>
@@ -109,7 +109,7 @@ abstract class CleanupDataSet (
   }
 
   protected def fieldTypeMap : Map[String, FieldType.Value] = {
-    val fieldsFuture = originalDictionaryRepo.find(None, Seq(AscSort("name")))
+    val fieldsFuture = originalDictionaryRepo.find(sort = Seq(AscSort("name")))
 
     Await.result(fieldsFuture, timeout).map{
       field => (field.name, field.fieldType)

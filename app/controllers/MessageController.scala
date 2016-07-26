@@ -42,7 +42,7 @@ class MessageController @Inject() (
   def listMostRecent(limit: Int) = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
       for {
-        messages <- repo.find(None, Seq(DescSort("_id")), None, Some(limit))  // ome(0)
+        messages <- repo.find(sort = Seq(DescSort("_id")), limit = Some(limit))  // ome(0)
       } yield
         Ok(Json.toJson(messages))
     }

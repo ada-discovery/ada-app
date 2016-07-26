@@ -2,6 +2,7 @@ package runnables.denopa
 
 import javax.inject.Inject
 
+import models.Criterion.CriterionInfix
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
@@ -45,7 +46,7 @@ protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runna
     val updateFieldFutures = refFieldNames.map{ fieldName =>
       val escapedFieldName = escapeKey(fieldName)
 
-      fieldRepo.find(Some(Json.obj("name" -> escapedFieldName))).map { fields =>
+      fieldRepo.find(Seq("name" #= escapedFieldName)).map { fields =>
         if (fields.nonEmpty) {
           val field = fields.head
 

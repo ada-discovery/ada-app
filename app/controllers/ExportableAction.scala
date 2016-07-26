@@ -1,7 +1,9 @@
 package controllers
 
+import models.Criterion
 import persistence.{Sort, AsyncReadonlyRepo}
 import play.api.libs.json.{Json, Format, JsObject}
+import util.FilterCondition
 import util.WebExportUtil.{jsonsToCsvFile, jsonsToJsonFile}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc._
@@ -10,7 +12,9 @@ protected trait ExportableAction[E] {
 
   protected def repoHook: AsyncReadonlyRepo[E, _]
 
-  protected def toSort(string : String): Seq[Sort]
+  protected def toSort(string: String): Seq[Sort]
+
+  protected def toCriteria(filter: Seq[FilterCondition]): Seq[Criterion[Any]]
 
   def exportAllToCsv(
     filename: String,
@@ -18,7 +22,7 @@ protected trait ExportableAction[E] {
     orderBy: String)(
     implicit ev: Format[E]
   ) = Action.async { implicit request =>
-    getJsons(None, orderBy).map(
+    getJsons(Nil, orderBy).map(
       jsonsToCsvFile(filename, delimiter)(_)
     )
   }
@@ -28,7 +32,7 @@ protected trait ExportableAction[E] {
     orderBy: String)(
     implicit ev: Format[E]
   ) = Action.async { implicit request =>
-    getJsons(None, orderBy).map(
+    getJsons(Nil, orderBy).map(
       jsonsToJsonFile(filename)(_)
     )
   }
@@ -36,29 +40,29 @@ protected trait ExportableAction[E] {
   def exportToCsv(
      filename: String,
      delimiter: String,
-     criteria : Option[JsObject],
+     filter: Seq[FilterCondition],
      orderBy: String)(
      implicit ev: Format[E]
   ) = Action.async { implicit request =>
-    getJsons(criteria, orderBy).map(
+    getJsons(filter, orderBy).map(
       jsonsToCsvFile(filename, delimiter)(_)
     )
   }
 
   def exportToJson(
     filename: String,
-    criteria : Option[JsObject],
+    filter: Seq[FilterCondition],
     orderBy: String)(
     implicit ev: Format[E]
   ) = Action.async { implicit request =>
-    getJsons(criteria, orderBy).map(
+    getJsons(filter, orderBy).map(
       jsonsToJsonFile(filename)(_)
     )
   }
 
-  private def getJsons(criteria : Option[JsObject], orderBy: String)(implicit ev: Format[E]) =
+  private def getJsons(filter: Seq[FilterCondition], orderBy: String)(implicit ev: Format[E]) =
     for {
-      records <- repoHook.find(criteria, toSort(orderBy))
+      records <- repoHook.find(toCriteria(filter), toSort(orderBy))
     } yield {
       if (!records.isEmpty && records.head.isInstanceOf[JsObject]) {
         // if jsobject no need to convert

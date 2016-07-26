@@ -3,9 +3,9 @@ package controllers
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import _root_.util.Criteria
+import _root_.util.{ConditionType, FilterCondition}
 import be.objectify.deadbolt.scala.DeadboltActions
-import models.{AdaException, Page}
+import models._
 import persistence._
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
@@ -22,7 +22,7 @@ trait ReadonlyController[ID] {
 
   def get(id: ID): Action[AnyContent]
 
-  def find(page: Int, orderBy: String, filter: Criteria): Action[AnyContent]
+  def find(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent]
 
   def listAll(orderBy: String): Action[AnyContent]
 }
@@ -87,8 +87,8 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     * @param orderBy Column to be sorted
     * @param filter Filter applied on items
     */
-  def find(page: Int, orderBy: String, filter: Criteria) = Action.async { implicit request =>
-    val (futureItems, futureCount) = getFutureItemsAndCount(page ,orderBy, filter)
+  def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) = Action.async { implicit request =>
+    val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
     futureItems.zip(futureCount).map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
@@ -109,12 +109,12 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
    * @param orderBy Column to be sorted
    */
   def listAll(orderBy: String) = Action.async { implicit request =>
-    val (futureItems, futureCount) = getFutureItemsAndCount(None, orderBy, new Criteria(), Nil, None)
+    val (futureItems, futureCount) = getFutureItemsAndCount(None, orderBy, Nil, Nil, None)
     futureItems.zip(futureCount).map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
       render {
-        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, orderBy, new Criteria())))
+        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, orderBy, Nil)))
         case Accepts.Json() => Ok(Json.toJson(items))
       }
     }.recover {
@@ -127,19 +127,19 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
   protected def getFutureItemsAndCount(
     page: Int,
     orderBy: String,
-    filter : Criteria
+    filter: Seq[FilterCondition]
   ): (Future[Traversable[E]], Future[Int]) =
     getFutureItemsAndCount(Some(page), orderBy, filter, listViewColumns.getOrElse(Nil), Some(pageLimit))
 
   protected def getFutureItemsAndCount(
     page: Option[Int],
     orderBy: String,
-    filter: Criteria,
+    filter: Seq[FilterCondition],
     projection: Seq[String],
     limit: Option[Int]
   ): (Future[Traversable[E]], Future[Int]) = {
-    val criteria = filter.toJsonCriteria
     val sort = toSort(orderBy)
+    val criteria = toCriteria(filter)
 
     val futureItems = repo.find(criteria, sort, projection, limit, page)
     val futureCount = repo.count(criteria)
@@ -149,20 +149,38 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
   protected def getFutureItems(
     page: Option[Int],
     orderBy: String,
-    filter: Criteria,
+    filter: Seq[FilterCondition],
     projection: Seq[String],
     limit: Option[Int]
   ): Future[Traversable[E]] = {
-    val criteria = filter.toJsonCriteria
     val sort = toSort(orderBy)
+    val criteria = toCriteria(filter)
 
     repo.find(criteria, sort, projection, limit, page)
   }
 
-  protected def getFutureCount(filter: Criteria): Future[Int] = {
-    val criteria = filter.toJsonCriteria
+  protected def getFutureCount(filter: Seq[FilterCondition]): Future[Int] = {
+    val criteria = toCriteria(filter)
 
     repo.count(criteria)
+  }
+
+  import _root_.util.ConditionType._
+
+  protected def toCriteria(filter: Seq[FilterCondition]): Seq[Criterion[Any]] = {
+    filter.map{ filterCondition =>
+      val fieldName = filterCondition.fieldName
+      val value =  filterCondition.value
+      filterCondition.conditionType match {
+        case Equals => EqualsCriterion(fieldName, value)
+        case RegexEquals => RegexEqualsCriterion(fieldName, value)
+        case NotEquals => NotEqualsCriterion(fieldName, value)
+        case In => InCriterion(fieldName, value.split(",").map(_.trim))
+        case NotIn => NotInCriterion(fieldName, value.split(",").map(_.trim))
+        case Greater => GreaterCriterion(fieldName, value.toDouble)
+        case Less => LessCriterion(fieldName, value.toDouble)
+      }
+    }
   }
 
   /**

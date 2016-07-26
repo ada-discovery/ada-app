@@ -2,7 +2,7 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
-import models.{ConditionType, Criterion}
+import models.Criterion
 import models.workspace.Workspace
 import models.Criterion.CriterionInfix
 import persistence.RepoTypes.WorkspaceRepo
@@ -67,8 +67,7 @@ class UserProfileController @Inject() (
       val timeout = 12000 millis
       val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
       usrFutureOp.map { (usrOp: Option[CustomUser]) =>
-        val criterion: Criterion = "email" #= usrOp.get.email
-        val workspaceFutureTrav: Future[Traversable[Workspace]] = workspaceRepo.find(None)
+        val workspaceFutureTrav: Future[Traversable[Workspace]] = workspaceRepo.find(Seq("email" #= usrOp.get.email))
         val workspaceTrav = Await.result(workspaceFutureTrav, timeout)
         if(workspaceTrav.isEmpty) // TODO: workspace will not be empty in final version!
           Ok(views.html.userprofile.workspace(usrOp.get, new Workspace(None, "dummy", Workspace.emptyUserGroup, Seq(), Seq())))

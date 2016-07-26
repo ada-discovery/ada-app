@@ -1,28 +1,30 @@
 package persistence
 
+import models.Criterion
 import play.api.libs.iteratee.{ Enumerator }
 import play.api.libs.json.JsObject
 
-import scala.concurrent.{Future, Await, Awaitable}
+import scala.concurrent.{Await, Awaitable}
 import scala.concurrent.duration.Duration
 
 /**
  * Generic sync repo trait
- * @param E type of entity
+  *
+  * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
 trait SyncReadonlyRepo[E, ID] {
   def get(id: ID): Option[E]
 
   def find(
-    criteria: Option[JsObject] = None,
-    orderBy: Seq[Sort] = Nil,
+    criteria: Seq[Criterion[Any]] = Nil,
+    sort: Seq[Sort] = Nil,
     projection : Traversable[String] = Nil,
     limit: Option[Int] = None,
     page: Option[Int] = None
   ): Traversable[E]
 
-  def count(criteria: Option[JsObject]) : Int
+  def count(criteria: Seq[Criterion[Any]]) : Int
 }
 
 trait SyncRepo[E, ID] extends SyncReadonlyRepo[E, ID] {
@@ -52,15 +54,15 @@ protected class SyncReadonlyRepoAdapter[E, ID](
     wait(asyncRepo.get(id))
 
   override def find(
-    criteria: Option[JsObject] = None,
-    orderBy: Seq[Sort] = Nil,
+    criteria: Seq[Criterion[Any]] = Nil,
+    sort: Seq[Sort] = Nil,
     projection : Traversable[String] = Nil,
     limit: Option[Int] = None,
     page: Option[Int] = None
   ) =
-    wait(asyncRepo.find(criteria, orderBy, projection, limit, page))
+    wait(asyncRepo.find(criteria, sort, projection, limit, page))
 
-  override def count(criteria: Option[JsObject]) =
+  override def count(criteria: Seq[Criterion[Any]]) =
     wait(asyncRepo.count(criteria))
 
   protected def wait[T](future : Awaitable[T]): T =

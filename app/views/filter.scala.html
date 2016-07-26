@@ -1,8 +1,7 @@
-@import util.Criteria
-@import models.ConditionType
+@import util.{FilterCondition, ConditionType}
 @import play.api.libs.json.Json
 
-@(filter: Criteria, submitCall: Call, fieldNamesOrCall: Either[Traversable[String], Call], saveCall: Option[Call]=None)
+@(filter: Seq[FilterCondition], submitCall: Call, fieldNamesOrCall: Either[Traversable[String], Call], saveCall: Option[Call]=None)
 
 <!-- need to import css and js first -->
 <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/typeahead.min.css")">
@@ -27,7 +26,7 @@
                                 <option value="@conditionType">@conditionType</option>
                             }
                         </select>
-                        <input id="condition" class="col-md-6" placeholder="Condition"/>
+                        <input id="value" class="col-md-6" placeholder="Condition"/>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -42,7 +41,7 @@
     <li>
          Filter:
     </li>
-    @filter.criteria.zipWithIndex.map { case (condition, index) =>
+    @filter.zipWithIndex.map { case (condition, index) =>
         <li id="condition-full@index" class="condition-full">
             <h4>
                 <span class="condition">
@@ -86,7 +85,8 @@
 
 <script type="text/javascript" defer="defer">
     var jsFilter = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}');
-    var conditionFields = ["fieldName", "conditionType", "condition"];
+    console.log(jsFilter)
+    var conditionFields = ["fieldName", "conditionType", "value"];
     var fieldNames = @if(fieldNamesOrCall.isLeft) {
         [@fieldNamesAsString]
     } else {
@@ -128,7 +128,7 @@
         loadFieldNames();
         $("#addEditConditionModal").find("#conditionIndex").first().val(index);
 
-        var condition = jsFilter.conditions[index]
+        var condition = jsFilter[index]
         updateModalFromModel(condition, conditionFields);
 
         $("#addEditConditionModal").modal('show');
@@ -151,7 +151,7 @@
     }
 
     function editAndSubmitConditionFromModal(index) {
-        var condition = jsFilter.conditions[index];
+        var condition = jsFilter[index];
 
         updateModelFromModal(condition, conditionFields);
         updateFilterFromModel(index, condition, conditionFields);
@@ -160,12 +160,12 @@
     }
 
     function addAndSubmitCondition(condition) {
-        jsFilter.conditions.push(condition);
+        jsFilter.push(condition);
         submitFilter();
     }
 
     function deleteCondition(index) {
-        jsFilter.conditions.splice(index, 1);
+        jsFilter.splice(index, 1);
         submitFilter();
     }
 

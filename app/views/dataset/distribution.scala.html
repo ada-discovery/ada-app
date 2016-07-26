@@ -1,6 +1,6 @@
 @import controllers.dataset.DataSetRouter
 @import models.ChartSpec
-@import util.Criteria
+@import util.FilterCondition
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.chart.{chartPanel, chartPanelJs}
@@ -14,7 +14,7 @@
     domainName: String,
     fieldName : String,
     chartSpec: ChartSpec,
-    filterSpec: Criteria,
+    filterSpec: Seq[FilterCondition],
     router: DataSetRouter,
     dataSetId: String,
     fields: Seq[(String, Option[String])],

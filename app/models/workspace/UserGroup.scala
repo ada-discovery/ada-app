@@ -1,12 +1,11 @@
 package models.workspace
 
-import _root_.util.Criteria
 import models.BSONObjectIdentity
 import play.api.libs.json._
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats._
 
 /**
   * Container for group information.

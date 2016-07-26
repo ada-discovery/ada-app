@@ -2,6 +2,7 @@ package persistence.dataset
 
 import javax.inject.{Inject, Singleton}
 
+import models.Criterion.CriterionInfix
 import com.google.inject.ImplementedBy
 import models.{DataSpaceMetaInfo, DataSetSetting, DataSetMetaInfo}
 import persistence.JsObjectCrudRepoFactory
@@ -47,7 +48,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     val categoryRepo = categoryRepoFactory(dataSetId)
 
     val futureDataSpaceId = dataSpaceMetaInfoRepo.find(
-      Some(Json.obj("dataSetMetaInfos.id" -> dataSetId))
+      Seq("dataSetMetaInfos.id" #= dataSetId)
     ).map(_.headOption.map(_._id.get))
 
     val timeout = 120000 millis
@@ -64,8 +65,8 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
   ) = {
     val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(metaInfo.dataSpaceId.get)
     dataSetMetaInfoRepo.initIfNeeded
-    val metaInfosFuture = dataSetMetaInfoRepo.find(Some(Json.obj("id" -> metaInfo.id)))
-    val settingsFuture = dataSetSettingRepo.find(Some(Json.obj("dataSetId" -> metaInfo.id)))
+    val metaInfosFuture = dataSetMetaInfoRepo.find(Seq("id" #= metaInfo.id))
+    val settingsFuture = dataSetSettingRepo.find(Seq("dataSetId" #= metaInfo.id))
 
     metaInfosFuture.zip(settingsFuture).flatMap { case (metaInfos, settings) =>
 
@@ -107,7 +108,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     setting: Option[DataSetSetting]
   ) = for {
       // search for data spaces with a given name
-      spaces <- dataSpaceMetaInfoRepo.find(Some(Json.obj("name" -> dataSpaceName)))
+      spaces <- dataSpaceMetaInfoRepo.find(Seq("name" #= dataSpaceName))
       // get an id from an existing data space or create a new one
       spaceId <- spaces.headOption.map(space => Future(space._id.get)).getOrElse(
         dataSpaceMetaInfoRepo.save(DataSpaceMetaInfo(None, dataSpaceName, 0))

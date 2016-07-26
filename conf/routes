@@ -32,7 +32,7 @@ GET         /logoutRest                                                         
 # ldap debugging
 GET         /ldaplist                                                               controllers.LdapController.ldapList
 GET         /ldap/settings                                                          controllers.LdapController.settings
-GET         /ldap/users                                                             controllers.LdapUserController.find(p: Int ?= 0, s: String ?= "name", filter : util.Criteria ?= new util.Criteria())
+GET         /ldap/users                                                             controllers.LdapUserController.find(p: Int ?= 0, s: String ?= "name", filter: Seq[util.FilterCondition] ?= Nil)
 GET         /ldap/users/all                                                         controllers.LdapUserController.listAll(s: String ?= "name")
 GET         /ldap/:id/get                                                           controllers.LdapUserController.get(id: String)
 
@@ -41,7 +41,7 @@ GET         /admin/runnables                                                    
 GET         /admin/runScript                                                        controllers.AdminController.runScript(className : String)
 
 # Data Set Import
-GET         /admin/dataSetImport                                                    controllers.dataset.DataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter : util.Criteria ?= new util.Criteria())
+GET         /admin/dataSetImport                                                    controllers.dataset.DataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter: Seq[util.FilterCondition] ?= Nil)
 GET         /admin/dataSetImport/all                                                controllers.dataset.DataSetImportController.listAll(s: String ?= "dataSpaceName")
 GET         /admin/dataSetImport/new                                                controllers.dataset.DataSetImportController.create(concreteClassName: String)
 GET         /admin/dataSetImport/execute/:id                                        controllers.dataset.DataSetImportController.execute(id: BSONObjectID)
@@ -52,7 +52,7 @@ POST        /admin/dataSetImport/:id                                            
 POST        /admin/dataSetImport/:id/delete                                         controllers.dataset.DataSetImportController.delete(id: BSONObjectID)
 
 # Users management
-GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "name", filter : util.Criteria ?= new util.Criteria())
+GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "name", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /users/all                                                              controllers.UserController.listAll(s: String ?= "name")
 GET         /users/new                                                              controllers.UserController.create
 POST        /users/save                                                             controllers.UserController.save
@@ -62,7 +62,7 @@ POST        /users/:id                                                          
 POST        /users/:id/delete                                                       controllers.UserController.delete(id: BSONObjectID)
 
 # Translations
-GET         /translations                                                           controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", filter : util.Criteria ?= new util.Criteria())
+GET         /translations                                                           controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /translations/all                                                       controllers.TranslationController.listAll(s: String ?= "original")
 GET         /translations/new                                                       controllers.TranslationController.create
 POST        /translations/save                                                      controllers.TranslationController.save
@@ -72,7 +72,7 @@ POST        /translations/:id                                                   
 POST        /translations/:id/delete                                                controllers.TranslationController.delete(id: BSONObjectID)
 
 # RedCap
-GET         /redcap/records                                                         controllers.RedCapController.listRecords(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f: String ?= "", filter : util.Criteria ?= new util.Criteria())
+GET         /redcap/records                                                         controllers.RedCapController.listRecords(p: Int ?= 0, s: String ?= "cdisc_dm_usubjd", f: String ?= "", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /redcap/overview                                                        controllers.RedCapController.overview
 GET         /redcap/metadatas                                                       controllers.RedCapController.listMetadatas(p: Int ?= 0, s: String ?= "field_name", f: String ?= "")
 GET         /redcap/fieldNames                                                      controllers.RedCapController.listExportFields(p: Int ?= 0, s: String ?= "original_field_name", f: String ?= "")
@@ -85,22 +85,22 @@ GET         /redcap/records/exportTranSMARTMapping                              
 
 
 #Generic study routes using DataSetDispatcher and DictionaryDispatcher
-GET         /studies/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter : util.Criteria ?= new util.Criteria())
+GET         /studies/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
 GET         /studies/records/exportAllAsCsv                                         controllers.dataset.DataSetDispatcher.exportAllRecordsAsCsv(delimiter : String ?= ",")
 GET         /studies/records/exportAllAsJson                                        controllers.dataset.DataSetDispatcher.exportAllRecordsAsJson
-GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(delimiter: String ?= ",", filter: util.Criteria ?= new util.Criteria())
-GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(filter: util.Criteria ?= new util.Criteria())
+GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(delimiter: String ?= ",", filter: Seq[util.FilterCondition] ?= Nil)
+GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(filter: Seq[util.FilterCondition] ?= Nil)
 GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
 GET         /studies/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
 GET         /studies/records/fieldTypes                                             controllers.dataset.DataSetDispatcher.overviewFieldTypes
-GET         /studies/records/overviewList                                           controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: util.Criteria ?= new util.Criteria())
-GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None, filter : util.Criteria ?= new util.Criteria())
-GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filter : util.Criteria ?= new util.Criteria())
+GET         /studies/records/overviewList                                           controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: Seq[util.FilterCondition] ?= Nil)
+GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
+GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 GET         /studies/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
 
-GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : util.Criteria ?= new util.Criteria())
+GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)
 POST        /studies/dictionary/save                                                controllers.dataset.DictionaryDispatcher.save
 GET         /studies/dictionary/edit/:name                                          controllers.dataset.DictionaryDispatcher.edit(name: String)
@@ -109,7 +109,7 @@ GET         /studies/dictionary/infer/                                          
 POST        /studies/dictionary/updateLabel/:id/:label                              controllers.dataset.DictionaryDispatcher.updateLabel(id: String, label: String)
 GET         /studies/dictionary/jsRoutes                                            controllers.dataset.DictionaryDispatcher.jsRoutes
 
-GET         /studies/categories                                                     controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : util.Criteria ?= new util.Criteria())
+GET         /studies/categories                                                     controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/categories/get/:id                                             controllers.dataset.CategoryDispatcher.get(id: BSONObjectID)
 GET         /studies/categories/new                                                 controllers.dataset.CategoryDispatcher.create
 POST        /studies/categories/save                                                controllers.dataset.CategoryDispatcher.save
@@ -120,7 +120,7 @@ GET         /studies/categories/getCategoryD3Root                               
 GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
 GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
 
-GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : util.Criteria ?= new util.Criteria())
+GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: String ?= "dataSetId")
 GET         /studies/setting/new                                                    controllers.dataset.DataSetSettingController.create
 POST        /studies/setting/save                                                   controllers.dataset.DataSetSettingController.save
@@ -134,7 +134,7 @@ GET         /studies/setting/addToChartOverview/                                
 GET         /studies/setting/addToOverviewTable/                                    controllers.dataset.DataSetSettingController.addFieldsToOverviewTable(dataSet: String, fieldNames: Seq[String])
 GET         /studies/setting/jsRoutes/                                              controllers.dataset.DataSetSettingController.jsRoutes
 
-GET         /studies/metainfo                                                       controllers.dataset.DataSpaceMetaInfoController.find(p: Int ?= 0, s: String ?= "name", filter : util.Criteria ?= new util.Criteria())
+GET         /studies/metainfo                                                       controllers.dataset.DataSpaceMetaInfoController.find(p: Int ?= 0, s: String ?= "name", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/metainfo/all                                                   controllers.dataset.DataSpaceMetaInfoController.listAll(s: String ?= "name")
 GET         /studies/metainfo/new                                                   controllers.dataset.DataSpaceMetaInfoController.create
 POST        /studies/metainfo/save                                                  controllers.dataset.DataSpaceMetaInfoController.save

@@ -2,6 +2,7 @@ package persistence.dataset
 
 import models.DataSetFormattersAndIds._
 import models.{Identity, Dictionary, Field, Category}
+import models.Criterion.CriterionInfix
 import persistence._
 import persistence.RepoTypes.DictionaryRootRepo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -20,5 +21,5 @@ protected[persistence] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, 
       Dictionary(None, dataSetId, Seq[Field](), Seq[Category]())
 
     override protected def getRootObject =
-      dictionaryRepo.find(Some(Json.obj("dataSetId" -> dataSetId))).map(_.headOption)
+      dictionaryRepo.find(Seq("dataSetId" #= dataSetId)).map(_.headOption)
 }
