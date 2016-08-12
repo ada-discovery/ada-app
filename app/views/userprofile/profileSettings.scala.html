@@ -1,8 +1,8 @@
 @import views.html.layout
 @import views.html.userprofile.editableUserProfileForm
-@import models.security.CustomUser
+@import dataaccess.User
 
-@(form: Form[CustomUser])(implicit request: Request[Any], flash: Flash, msg: Messages)
+@(form: Form[User])(implicit request: Request[Any], flash: Flash, msg: Messages)
 
 @layout.main("NCER-PD Home") {
     <div class="container" style="padding-bottom: 190px;" xmlns="http://www.w3.org/1999/html">

@@ -1,7 +1,7 @@
 package runnables.denopa
 
 import javax.inject.Inject
-import models.{CsvDataSetImport, DataSetSetting}
+import models.CsvDataSetImport
 import play.api.Configuration
 import runnables.DataSetId._
 

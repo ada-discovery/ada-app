@@ -5,7 +5,6 @@ import javax.inject.Inject
 import ldap.LdapUserRepo
 import runnables.GuiceBuilderRunnable
 
-
 /**
   * Manually launch LDAP cache update.
   * @param ldaprepo

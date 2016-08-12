@@ -2,18 +2,19 @@
 @import views.html.table.displayTable
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import views.html.elements._
-@import models.{Category, Field}
 @import controllers.dataset.CategoryRouter
 @import reactivemongo.bson.BSONObjectID
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import dataaccess.DataSpaceMetaInfo
+@import dataaccess.Category
 
 @(
     domainName : String,
     id : BSONObjectID,
     form: Form[Category],
     categories: Traversable[Category],
-    fields: Traversable[Field],
+    fields: Traversable[dataaccess.Field],
     router: CategoryRouter,
     getField: String => Call,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -25,10 +26,10 @@
     displayTable(
         fields,
         Seq(
-            (None, "Name", {item : Any => Html(item.asInstanceOf[Field].name)})
+            (None, "Name", {item : Any => Html(item.asInstanceOf[dataaccess.Field].name)})
         ),
         None,
-        Some({ item : Any => getField(item.asInstanceOf[Field].name)})
+        Some({ item : Any => getField(item.asInstanceOf[dataaccess.Field].name)})
     )
 }
 

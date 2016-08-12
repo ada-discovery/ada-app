@@ -1,6 +1,6 @@
 package util
 
-import models.EnumFormat
+import dataaccess.EnumFormat
 import play.api.libs.json.Json
 
 case class FilterCondition(fieldName: String, conditionType: ConditionType.Value, value: String)

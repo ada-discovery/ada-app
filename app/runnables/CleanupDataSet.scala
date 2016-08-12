@@ -5,8 +5,7 @@ import java.util.Date
 
 import javax.inject.Inject
 
-import models.{DataSetSetting, DataSetMetaInfo, FieldType}
-import persistence.AscSort
+import dataaccess.{FieldType, DataSetSetting, DataSetMetaInfo, AscSort}
 import persistence.RepoTypes._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import persistence.dataset.{DataSetAccessorFactory, DataSetAccessor}

@@ -1,13 +1,13 @@
 package persistence.dataset
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{Named, Inject}
 
-import models.Criterion.CriterionInfix
-import com.google.inject.ImplementedBy
-import models.{DataSpaceMetaInfo, DataSetSetting, DataSetMetaInfo}
-import persistence.JsObjectCrudRepoFactory
+import dataaccess.FieldType._
+import dataaccess._
+import dataaccess.RepoTypes.DataSetSettingRepo
+import Criterion.CriterionInfix
 import persistence.RepoTypes._
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.JsObject
 import util.RefreshableCache
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
@@ -15,7 +15,6 @@ import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.concurrent.Await._
 
-@ImplementedBy(classOf[DataSetAccessorFactoryImpl])
 trait DataSetAccessorFactory {
   def register(
     dataSpaceName: String,
@@ -28,12 +27,13 @@ trait DataSetAccessorFactory {
     metaInfo: DataSetMetaInfo,
     setting: Option[DataSetSetting]
   ): Future[DataSetAccessor]
+
   def apply(dataSetId: String): Option[DataSetAccessor]
 }
 
-@Singleton
 protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
-    dataSetRepoFactory: JsObjectCrudRepoFactory,
+    @Named("JsonCrudRepoFactory") dataSetRepoFactory: JsonCrudRepoFactory,
+    @Named("CachedJsonCrudRepoFactory") cachedDataSetRepoFactory: JsonCrudRepoFactory,
     fieldRepoFactory: DictionaryFieldRepoFactory,
     categoryRepoFactory: DictionaryCategoryRepoFactory,
     dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory,
@@ -41,22 +41,42 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     dataSetSettingRepo: DataSetSettingRepo
   ) extends RefreshableCache[String, DataSetAccessor] with DataSetAccessorFactory {
 
-  override def createInstance(dataSetId: String): DataSetAccessor = {
-    val collectionName = dataCollectionName(dataSetId)
-    val dataSetRepo = dataSetRepoFactory(collectionName)
+  override protected def createInstance(dataSetId: String): DataSetAccessor = {
     val fieldRepo = fieldRepoFactory(dataSetId)
     val categoryRepo = categoryRepoFactory(dataSetId)
+    val collectionName = dataCollectionName(dataSetId)
 
-    val futureDataSpaceId = dataSpaceMetaInfoRepo.find(
-      Seq("dataSetMetaInfos.id" #= dataSetId)
-    ).map(_.headOption.map(_._id.get))
+    val dataSetAccessorFuture = for {
+      cacheDataSet <-
+        dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId)).map(
+          _.headOption.map(_.cacheDataSet).getOrElse(false))
 
-    val timeout = 120000 millis
-    val dataSetMetaInfoRepo = result(futureDataSpaceId, timeout).map(dataSetMetaInfoRepoFactory(_)).getOrElse(
-      throw new IllegalArgumentException(s"No data set with id '${dataSetId}' found.")
-    )
+      fieldNamesAndTypes <-
+        fieldRepo.find().map(_.map( field =>
+          (field.name, field.fieldType)
+        ).toSeq)
 
-    new DataSetAccessorImpl(dataSetId, dataSetRepo, fieldRepo, categoryRepo, dataSetMetaInfoRepo, dataSetSettingRepo)
+      dataSpaceId <-
+        dataSpaceMetaInfoRepo.find(
+          Seq("dataSetMetaInfos.id" #== dataSetId)
+        ).map(_.headOption.map(_._id.get))
+
+    } yield {
+      val dataSetRepo =
+        if (cacheDataSet)
+          cachedDataSetRepoFactory.applyWithDictionary(collectionName, fieldNamesAndTypes)
+        else
+          dataSetRepoFactory.applyWithDictionary(collectionName, fieldNamesAndTypes)
+
+      val dataSetMetaInfoRepo =
+        dataSpaceId.map(dataSetMetaInfoRepoFactory(_)).getOrElse(
+          throw new IllegalArgumentException(s"No data set with id '${dataSetId}' found.")
+        )
+
+      new DataSetAccessorImpl(dataSetId, dataSetRepo, fieldRepo, categoryRepo, dataSetMetaInfoRepo, dataSetSettingRepo)
+    }
+
+    result(dataSetAccessorFuture, 2 minutes)
   }
 
   override def register(
@@ -64,9 +84,8 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     setting: Option[DataSetSetting]
   ) = {
     val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(metaInfo.dataSpaceId.get)
-    dataSetMetaInfoRepo.initIfNeeded
-    val metaInfosFuture = dataSetMetaInfoRepo.find(Seq("id" #= metaInfo.id))
-    val settingsFuture = dataSetSettingRepo.find(Seq("dataSetId" #= metaInfo.id))
+    val metaInfosFuture = dataSetMetaInfoRepo.find(Seq("id" #== metaInfo.id))
+    val settingsFuture = dataSetSettingRepo.find(Seq("dataSetId" #== metaInfo.id))
 
     metaInfosFuture.zip(settingsFuture).flatMap { case (metaInfos, settings) =>
 
@@ -108,7 +127,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     setting: Option[DataSetSetting]
   ) = for {
       // search for data spaces with a given name
-      spaces <- dataSpaceMetaInfoRepo.find(Seq("name" #= dataSpaceName))
+      spaces <- dataSpaceMetaInfoRepo.find(Seq("name" #== dataSpaceName))
       // get an id from an existing data space or create a new one
       spaceId <- spaces.headOption.map(space => Future(space._id.get)).getOrElse(
         dataSpaceMetaInfoRepo.save(DataSpaceMetaInfo(None, dataSpaceName, 0))

@@ -1,12 +1,13 @@
+@import dataaccess.{Category, DataSpaceMetaInfo}
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import views.html.category.treeChart
-@import models.Category
 @import controllers.dataset.CategoryRouter
 @import util.typeColumns
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import models.Page
 
 @(
     domainName : String,

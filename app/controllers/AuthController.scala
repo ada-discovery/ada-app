@@ -5,6 +5,7 @@ import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json.{JsNull, JsString, JsObject}
 import play.api.mvc.{Action, Controller}
+import play.api.libs.json.Json
 import play.api.data.Forms._
 import play.api.data._
 import services.MailClientProvider
@@ -16,6 +17,7 @@ import scala.concurrent.duration._
 // authentification
 import jp.t2v.lab.play2.auth.LoginLogout
 import models.security._
+import dataaccess.{User => AdaUser}
 import security.AdaAuthConfig
 
 
@@ -70,9 +72,9 @@ class AuthController @Inject() (
     loginForm.bindFromRequest().fold(
       formWithErrors => Future.successful(BadRequest(loginForm.errorsAsJson)),
       idPassword => {
-        val usrOpFuture: Future[Option[CustomUser]] = userManager.findById(idPassword._1)
-        usrOpFuture.flatMap{usrOp =>
-          val usrJs = JsObject("user" -> JsString(usrOp.get.getIdentifier) :: Nil)
+        val usrOpFuture = userManager.findById(idPassword._1)
+        usrOpFuture.flatMap{ usrOp =>
+          val usrJs = Json.obj("user" -> JsString(usrOp.get.ldapDn))
           gotoLoginSucceeded(usrOp.get.ldapDn, Future.successful((Ok(usrJs))))}
       }
     )
@@ -95,10 +97,10 @@ class AuthController @Inject() (
   def authenticate = Action.async { implicit request =>
     loginForm.bindFromRequest.fold(
       formWithErrors => Future.successful(BadRequest(views.html.auth.login(formWithErrors))),
-      idPassword => userManager.findById(idPassword._1).flatMap((user: Option[CustomUser]) =>
+      idPassword => userManager.findById(idPassword._1).flatMap((user: Option[AdaUser]) =>
         user match {
           case Some(u) => {
-            gotoLoginSucceeded(u.getIdentifier)
+            gotoLoginSucceeded(u.ldapDn)
           }
           case None => Future(Redirect(routes.AuthController.unauthorized()))
         }
@@ -118,7 +120,7 @@ class AuthController @Inject() (
   // immediately login as basic user
   def loginBasic = Action.async{ implicit request =>
     if(!userManager.debugUsers.isEmpty)
-      gotoLoginSucceeded(userManager.basicUser.getIdentifier)
+      gotoLoginSucceeded(userManager.basicUser.ldapDn)
     else
       Future(Redirect(routes.AuthController.unauthorized()))
   }
@@ -126,7 +128,7 @@ class AuthController @Inject() (
   // immediately login as admin user
   def loginAdmin = Action.async{ implicit request =>
     if(!userManager.debugUsers.isEmpty)
-      gotoLoginSucceeded(userManager.adminUser.getIdentifier)
+      gotoLoginSucceeded(userManager.adminUser.ldapDn)
     else
       Future(Redirect(routes.AuthController.unauthorized()))
   }

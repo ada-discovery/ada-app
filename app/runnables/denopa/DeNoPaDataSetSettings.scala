@@ -1,6 +1,6 @@
 package runnables.denopa
 
-import models.DataSetSetting
+import dataaccess.DataSetSetting
 import runnables.DataSetId._
 
 object DeNoPaDataSetSettings {
@@ -9,7 +9,7 @@ object DeNoPaDataSetSettings {
     None,
     denopa_raw_clinical_baseline,
     "Probanden_Nr",
-    "Line_Nr",
+    "_id",
     Seq("Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe"),
     Seq("Geschlecht", "a_Gruppe", "b_Gruppe", "a_Alter"),
     3,
@@ -17,14 +17,15 @@ object DeNoPaDataSetSettings {
     "a_AESD_I_mean",
     "a_Alter",
     None,
-    Map(("\r", " "), ("\n", " "))
+    Map(("\r", " "), ("\n", " ")),
+    false
   )
 
   val RawClinicalFirstVisit = DataSetSetting.apply2(
     None,
     denopa_raw_clinical_first_visit,
     "Probanden_Nr",
-    "Line_Nr",
+    "_id",
     Seq("Probanden_Nr", "Geb_Datum", "b_Gruppe"),
     Seq("Geschlecht", "b_Gruppe", "a_Alter"),
     3,
@@ -32,14 +33,15 @@ object DeNoPaDataSetSettings {
     "b_AESD_I_mean",
     "a_Alter",
     None,
-    Map(("\r", " "), ("\n", " "))
+    Map(("\r", " "), ("\n", " ")),
+    false
   )
 
   val RawClinicalSecondVisit = DataSetSetting.apply2(
     None,
     denopa_raw_clinical_second_visit,
     "Probanden_Nr",
-    "cdisc_dm_usubjd",
+    "_id",
     Seq("Probanden_Nr", "Geburtsdatum", "c_group"),
     Seq("Geschlecht", "c_group", "c_Alter"),
     3,
@@ -47,14 +49,15 @@ object DeNoPaDataSetSettings {
     "c_AESD_I_mean",
     "c_Alter",
     None,
-    Map(("\r", " "), ("\n", " "))
+    Map(("\r", " "), ("\n", " ")),
+    false
   )
 
   val ClinicalBaseline = DataSetSetting.apply2(
     None,
     denopa_clinical_baseline,
     "Probanden_Nr",
-    "Line_Nr",
+    "_id",
     Seq("Probanden_Nr", "Geb_Datum", "a_Gruppe", "b_Gruppe"),
     Seq("Geschlecht", "a_Gruppe", "b_Gruppe", "a_Alter"),
     3,
@@ -62,14 +65,15 @@ object DeNoPaDataSetSettings {
     "a_AESD_I_mean",
     "a_Alter",
     None,
-    Map(("\r", " "), ("\n", " "))
+    Map(("\r", " "), ("\n", " ")),
+    false
   )
 
   val ClinicalFirstVisit = DataSetSetting.apply2(
     None,
     denopa_clinical_first_visit,
     "Probanden_Nr",
-    "Line_Nr",
+    "_id",
     Seq("Probanden_Nr", "Geb_Datum", "b_Gruppe"),
     Seq("Geschlecht", "b_Gruppe", "a_Alter"),
     3,
@@ -77,14 +81,15 @@ object DeNoPaDataSetSettings {
     "b_AESD_I_mean",
     "a_Alter",
     None,
-    Map(("\r", " "), ("\n", " "))
+    Map(("\r", " "), ("\n", " ")),
+    false
   )
 
   val ClinicalSecondVisit = DataSetSetting.apply2(
     None,
     denopa_clinical_second_visit,
     "Probanden_Nr",
-    "Line_Nr",
+    "_id",
     Seq("Probanden_Nr", "Geburtsdatum", "c_group"),
     Seq("Geschlecht", "c_group", "c_Alter"),
     3,
@@ -92,6 +97,7 @@ object DeNoPaDataSetSettings {
     "c_AESD_I_mean",
     "c_Alter",
     None,
-    Map(("\r", " "), ("\n", " "))
+    Map(("\r", " "), ("\n", " ")),
+    false
   )
 }

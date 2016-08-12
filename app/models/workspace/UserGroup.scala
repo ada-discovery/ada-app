@@ -1,6 +1,6 @@
 package models.workspace
 
-import models.BSONObjectIdentity
+import dataaccess.BSONObjectIdentity
 import play.api.libs.json._
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
@@ -9,6 +9,7 @@ import reactivemongo.play.json.BSONFormats._
 
 /**
   * Container for group information.
+ *
   * @param _id BSON id, if group loaded from database.
   * @param groupName Short name of group.
   * @param description More detailed description of the group.

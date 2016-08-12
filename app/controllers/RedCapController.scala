@@ -1,6 +1,7 @@
 package controllers
 
 import be.objectify.deadbolt.scala.DeadboltActions
+import dataaccess.Category
 import org.apache.commons.lang3.StringEscapeUtils
 import play.api.Configuration
 import util.FilterCondition
@@ -18,7 +19,6 @@ import services.RedCapServiceFactory.defaultRedCapService
 import views.html
 import play.api.mvc.{ResponseHeader, Action, Controller, Result}
 import collection.mutable.{Map => MMap}
-import models.Category
 import util.JsonUtil.jsonObjectsToCsv
 import util.SecurityUtil.restrictAdmin
 
@@ -157,7 +157,7 @@ class RedCapController @Inject() (
       val recordsFuture = redCapService.listRecords(keyField, "")
       val records = Await.result(recordsFuture, timeout)
 
-      val content = jsonObjectsToCsv(unescapedDelimiter, "\n", replacements)(records)
+      val content = jsonObjectsToCsv(unescapedDelimiter, "\n", None, replacements)(records)
 
       val fileContent: Enumerator[Array[Byte]] = Enumerator(content.getBytes(exportCharset))
 

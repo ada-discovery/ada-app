@@ -4,26 +4,32 @@ import com.github.play2war.plugin._
 
 name := "ncer-pd"
 
-version := "0.3.0-alpha"
+version := "0.3.0-beta"
+
+scalaVersion := "2.11.7"
+
 
 Play2WarPlugin.play2WarSettings
 
 Play2WarKeys.servletVersion := "3.0"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala,SbtWeb)
+lazy val dataaccess = project in file("data-access")
 
-scalaVersion := "2.11.7"
+lazy val root = (project in file(".")).enablePlugins(PlayScala,SbtWeb)  // . // .aggregate(dataaccess).dependsOn(dataaccess)
 
 libraryDependencies ++= Seq(cache, ws)
 
 resolvers ++= Seq(
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
-  "JCenter" at "http://jcenter.bintray.com/"
+  "JCenter" at "http://jcenter.bintray.com/",
+  Resolver.mavenLocal
+//  "Ivylocal" at "file://home/peter/.ivy2/local/" // " + Path.userHome.absolutePath + "
 )
 
 routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._", "util.FilterCondition.FilterSpecQueryStringBinder")
 
 libraryDependencies ++= Seq(
+  "ada" % "ada-dataaccess_2.11" % "0.3.0-beta",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.webjars" %% "webjars-play" % "2.4.0",
   "org.webjars" % "bootstrap" % "3.3.5",
@@ -43,9 +49,6 @@ libraryDependencies ++= Seq(
   "org.apache.spark" % "spark-sql_2.11" % "2.0.0-preview", // exclude("asm", "asm")
   "org.apache.spark" % "spark-mllib_2.11" % "2.0.0-preview",
   "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.2", // exclude("asm", "asm")
-  "org.apache.ignite" % "ignite-core" % "1.6.0",
-  "org.apache.ignite" % "ignite-spring" % "1.6.0",
-  "org.apache.ignite" % "ignite-indexing" % "1.6.0",
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",
   "be.objectify" % "deadbolt-scala_2.11" % "2.4.3",

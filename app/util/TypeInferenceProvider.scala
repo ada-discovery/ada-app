@@ -2,11 +2,10 @@ package util
 
 import java.text.{ParseException, SimpleDateFormat}
 import com.fasterxml.jackson.core.JsonParseException
+import dataaccess.FieldType
 
 import collection.mutable.{Map => MMap}
 import play.api.libs.json.Json
-
-import models.FieldType
 
 case class TypeInferenceProvider(
     nullAliases : List[String],

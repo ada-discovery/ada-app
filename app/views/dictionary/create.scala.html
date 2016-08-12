@@ -1,12 +1,11 @@
 @import controllers.dataset.DictionaryRouter
 @import views.html.layout
 @import views.html.elements._
-
-@import models.{Field, Category}
+@import dataaccess.Category
 
 @(
     domainName : String,
-	form: Form[Field],
+	form: Form[dataaccess.Field],
 	categories: Traversable[Category],
 	router : DictionaryRouter
 )(

@@ -1,12 +1,13 @@
 package controllers.dataset
 
-import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import controllers.{AdminRestrictedCrudController, CrudControllerImpl}
-import models.DataSetFormattersAndIds._
-import models.{DataSetMetaInfo, DataSpaceMetaInfo, Page}
+import dataaccess.{DataSetMetaInfo, DataSpaceMetaInfo, DataSetFormattersAndIds}
+import DataSetFormattersAndIds._
+import models.Page
 import persistence.RepoTypes._
+import dataaccess.RepoTypes.DataSetSettingRepo
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.mvc.{Action, Controller}

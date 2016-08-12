@@ -10,6 +10,7 @@ import play.api.Logger
   * Use getCache to access cached objects.
   * @tparam T Class type to use.
   */
+@Deprecated
 trait ObjectCache[T] {
   // time of last update
   protected var lastUpdate: Long = 0

@@ -5,8 +5,8 @@ import javax.inject.{Inject, Singleton}
 import _root_.util.JsonUtil.{jsonObjectsToCsv, escapeKey, unescapeKey}
 import _root_.util.toHumanReadableCamel
 import com.google.inject.ImplementedBy
+import dataaccess.Category
 import play.api.libs.json._
-import models.Category
 
 @ImplementedBy(classOf[TranSMARTServiceImpl])
 trait TranSMARTService {
@@ -55,7 +55,6 @@ trait TranSMARTService {
     *
     * @see createClinicalData()
     * @see createClinicalMapping()
-    *
     * @param delimiter String to use as entry delimiter.
     * @param newLine String to use as line delimiter.
     * @param replacements List of pairs for replacing strings and symbols of format: (input string, replacement).
@@ -228,8 +227,8 @@ class TranSMARTServiceImpl extends TranSMARTService {
       val fieldsInOrder = clinicalData.head.fields.map(_._1).filter(fieldsToInclude.contains)
       val mappingData = createClinicalMapping(dataFileName, keyField, visitField, fieldsInOrder, fieldCategoryMap, rootCategory, fieldLabelMap)
 
-      val dataContent = jsonObjectsToCsv(delimiter, newLine, replacements)(clinicalData)
-      val mappingContent = jsonObjectsToCsv(delimiter, newLine, replacements)(mappingData)
+      val dataContent = jsonObjectsToCsv(delimiter, newLine, None, replacements)(clinicalData)
+      val mappingContent = jsonObjectsToCsv(delimiter, newLine, None, replacements)(mappingData)
       (dataContent, mappingContent)
     } else
       ("" , "")
@@ -251,7 +250,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
 
     val clinicalData = createClinicalData(items, Some(fieldsToInclude), None)
     if (clinicalData.nonEmpty) {
-      val dataContent = jsonObjectsToCsv(delimiter, newLine, replacements)(clinicalData)
+      val dataContent = jsonObjectsToCsv(delimiter, newLine, None, replacements)(clinicalData)
       dataContent
     } else
       ""
@@ -279,7 +278,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
       val fieldsInOrder = clinicalData.head.fields.map(_._1).filter(fieldsToInclude.contains)
       val mappingData = createClinicalMapping(dataFileName, keyField, visitField, fieldsInOrder, fieldCategoryMap, rootCategory, fieldLabelMap)
 
-      val mappingContent = jsonObjectsToCsv(delimiter, newLine, replacements)(mappingData)
+      val mappingContent = jsonObjectsToCsv(delimiter, newLine, None, replacements)(mappingData)
       mappingContent
     } else
       ""

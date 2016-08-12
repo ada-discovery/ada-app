@@ -32,8 +32,7 @@ GET         /logoutRest                                                         
 # ldap debugging
 GET         /ldaplist                                                               controllers.LdapController.ldapList
 GET         /ldap/settings                                                          controllers.LdapController.settings
-GET         /ldap/users                                                             controllers.LdapUserController.find(p: Int ?= 0, s: String ?= "name", filter: Seq[util.FilterCondition] ?= Nil)
-GET         /ldap/users/all                                                         controllers.LdapUserController.listAll(s: String ?= "name")
+GET         /ldap/users/all                                                         controllers.LdapUserController.listAll
 GET         /ldap/:id/get                                                           controllers.LdapUserController.get(id: String)
 
 # Admin
@@ -87,18 +86,18 @@ GET         /redcap/records/exportTranSMARTMapping                              
 #Generic study routes using DataSetDispatcher and DictionaryDispatcher
 GET         /studies/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
-GET         /studies/records/exportAllAsCsv                                         controllers.dataset.DataSetDispatcher.exportAllRecordsAsCsv(delimiter : String ?= ",")
-GET         /studies/records/exportAllAsJson                                        controllers.dataset.DataSetDispatcher.exportAllRecordsAsJson
-GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(delimiter: String ?= ",", filter: Seq[util.FilterCondition] ?= Nil)
-GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(filter: Seq[util.FilterCondition] ?= Nil)
-GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
-GET         /studies/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
 GET         /studies/records/fieldTypes                                             controllers.dataset.DataSetDispatcher.overviewFieldTypes
 GET         /studies/records/overviewList                                           controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: Seq[util.FilterCondition] ?= Nil)
 GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 GET         /studies/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
+GET         /studies/records/exportAllAsCsv                                         controllers.dataset.DataSetDispatcher.exportAllRecordsAsCsv(delimiter : String ?= ",")
+GET         /studies/records/exportAllAsJson                                        controllers.dataset.DataSetDispatcher.exportAllRecordsAsJson
+GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(delimiter: String ?= ",", filter: Seq[util.FilterCondition] ?= Nil)
+GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(filter: Seq[util.FilterCondition] ?= Nil)
+GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
+GET         /studies/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
 
 GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)
@@ -108,6 +107,10 @@ POST        /studies/dictionary/:name                                           
 GET         /studies/dictionary/infer/                                              controllers.dataset.DictionaryDispatcher.inferDictionary
 POST        /studies/dictionary/updateLabel/:id/:label                              controllers.dataset.DictionaryDispatcher.updateLabel(id: String, label: String)
 GET         /studies/dictionary/jsRoutes                                            controllers.dataset.DictionaryDispatcher.jsRoutes
+GET         /studies/dictionary/exportAllAsCsv                                      controllers.dataset.DictionaryDispatcher.exportAllRecordsAsCsv(delimiter : String ?= ",")
+GET         /studies/dictionary/exportAllAsJson                                     controllers.dataset.DictionaryDispatcher.exportAllRecordsAsJson
+GET         /studies/dictionary/exportAsCsv                                         controllers.dataset.DictionaryDispatcher.exportRecordsAsCsv(delimiter: String ?= ",", filter: Seq[util.FilterCondition] ?= Nil)
+GET         /studies/dictionary/exportAsJson                                        controllers.dataset.DictionaryDispatcher.exportRecordsAsJson(filter: Seq[util.FilterCondition] ?= Nil)
 
 GET         /studies/categories                                                     controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/categories/get/:id                                             controllers.dataset.CategoryDispatcher.get(id: BSONObjectID)

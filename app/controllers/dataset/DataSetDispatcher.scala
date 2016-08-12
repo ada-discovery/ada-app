@@ -30,14 +30,6 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def listAll(orderBy: String) = dispatch(_.listAll(orderBy))
 
-  override def exportAllRecordsAsCsv(delimiter : String) = dispatch(_.exportAllRecordsAsCsv(delimiter))
-
-  override def exportAllRecordsAsJson = dispatch(_.exportAllRecordsAsJson())
-
-  override def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]) = dispatch(_.exportRecordsAsCsv(delimiter, filter))
-
-  override def exportRecordsAsJson(filter: Seq[FilterCondition]) = dispatch(_.exportRecordsAsJson(filter))
-
   override def overviewFieldTypes = dispatch(_.overviewFieldTypes())
 
   override def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]) = dispatch(_.overviewList(page, orderBy, filter))
@@ -46,11 +38,19 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getDistribution(fieldName: Option[String], filter: Seq[FilterCondition]) = dispatch(_.getDistribution(fieldName, filter))
 
-  override def exportTranSMARTDataFile(delimiter : String) = dispatch(_.exportTranSMARTDataFile(delimiter))
-
-  override def exportTranSMARTMappingFile(delimiter : String) = dispatch(_.exportTranSMARTMappingFile(delimiter))
-
   override def getFieldNames = dispatch(_.getFieldNames)
 
   override def getFieldValue(id: BSONObjectID, fieldName: String) = dispatch(_.getFieldValue(id, fieldName))
+
+  override def exportAllRecordsAsCsv(delimiter : String) = dispatch(_.exportAllRecordsAsCsv(delimiter))
+
+  override def exportAllRecordsAsJson = dispatch(_.exportAllRecordsAsJson())
+
+  override def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]) = dispatch(_.exportRecordsAsCsv(delimiter, filter))
+
+  override def exportRecordsAsJson(filter: Seq[FilterCondition]) = dispatch(_.exportRecordsAsJson(filter))
+
+  override def exportTranSMARTDataFile(delimiter : String) = dispatch(_.exportTranSMARTDataFile(delimiter))
+
+  override def exportTranSMARTMappingFile(delimiter : String) = dispatch(_.exportTranSMARTMappingFile(delimiter))
 }

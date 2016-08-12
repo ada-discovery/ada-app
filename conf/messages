@@ -38,6 +38,7 @@ dataSetImport.setting.defaultScatterYFieldName.label = Scatter Y Field
 dataSetImport.setting.defaultDistributionFieldName.label = Distribution Field
 dataSetImport.setting.tranSMARTVisitFieldName.label = TranSMART Visit Field
 dataSetImport.setting.tranSMARTReplacements.label = TranSMART Export Char Replacements
+dataSetImport.setting.cacheDataSet.label = Cache Data Set
 
 dataSetImport.dataSpaceName.label = Study Name
 dataSetImport.eol.label = Specific EOL

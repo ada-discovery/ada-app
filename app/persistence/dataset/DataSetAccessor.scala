@@ -1,16 +1,18 @@
 package persistence.dataset
 
-import models.{DataSetSetting, DataSetMetaInfo}
-import models.Criterion.CriterionInfix
+import dataaccess.{DataSetSetting, DataSetMetaInfo, Criterion}
+import dataaccess.RepoTypes.JsonCrudRepo
+import Criterion.CriterionInfix
 import play.api.libs.json._
 import persistence.RepoTypes._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
+import dataaccess.RepoTypes._
 
 trait DataSetAccessor{
   def dataSetId: String
-  def dataSetRepo: JsObjectCrudRepo
+  def dataSetRepo: JsonCrudRepo
   def fieldRepo: DictionaryFieldRepo
   def categoryRepo: DictionaryCategoryRepo
   def metaInfo: Future[DataSetMetaInfo]
@@ -20,7 +22,7 @@ trait DataSetAccessor{
 
 protected class DataSetAccessorImpl(
   val dataSetId: String,
-  val dataSetRepo: JsObjectCrudRepo,
+  val dataSetRepo: JsonCrudRepo,
   val fieldRepo: DictionaryFieldRepo,
   val categoryRepo: DictionaryCategoryRepo,
   dataSetMetaInfoRepo: DataSetMetaInfoRepo,
@@ -28,7 +30,7 @@ protected class DataSetAccessorImpl(
   ) extends DataSetAccessor{
 
   override def metaInfo = {
-    val metaInfosFuture = dataSetMetaInfoRepo.find(Seq("id" #= dataSetId))
+    val metaInfosFuture = dataSetMetaInfoRepo.find(Seq("id" #== dataSetId))
     metaInfosFuture.map {
       _.headOption.getOrElse(
         throw new IllegalStateException("Meta info not available for data set '" + dataSetId + "'.")
@@ -37,7 +39,7 @@ protected class DataSetAccessorImpl(
   }
 
   override def setting = {
-    val settingsFuture = dataSetSettingRepo.find(Seq("dataSetId" #= dataSetId))
+    val settingsFuture = dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId))
     settingsFuture.map {
       _.headOption.getOrElse {
         throw new IllegalStateException("Setting not available for data set '" + dataSetId + "'.")

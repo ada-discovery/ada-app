@@ -1,6 +1,7 @@
 @import play.api.mvc.Flash
 @import views.html.dataset.datasetMenu
 
+@import dataaccess.DataSpaceMetaInfo
 @(dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo])(implicit flash: Flash, request: Request[_])
 
 @main("NCER-PD Studies", Some(datasetMenu(dataSpaceMetaInfos))) {

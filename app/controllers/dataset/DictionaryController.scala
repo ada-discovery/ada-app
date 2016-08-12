@@ -13,4 +13,12 @@ trait DictionaryController extends CrudController[String] {
   def updateLabel(id: String, label: String): Action[AnyContent]
 
   def jsRoutes: Action[AnyContent]
+
+  def exportAllRecordsAsCsv(delimiter : String): Action[AnyContent]
+
+  def exportAllRecordsAsJson: Action[AnyContent]
+
+  def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]): Action[AnyContent]
+
+  def exportRecordsAsJson(filter: Seq[FilterCondition]): Action[AnyContent]
 }

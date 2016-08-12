@@ -48,4 +48,12 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
   override def updateLabel(id: String, label: String) = dispatch(_.updateLabel(id, label))
 
   override def jsRoutes = dispatch(_.jsRoutes)
+
+  override def exportAllRecordsAsCsv(delimiter : String) = dispatch(_.exportAllRecordsAsCsv(delimiter))
+
+  override def exportAllRecordsAsJson = dispatch(_.exportAllRecordsAsJson())
+
+  override def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]) = dispatch(_.exportRecordsAsCsv(delimiter, filter))
+
+  override def exportRecordsAsJson(filter: Seq[FilterCondition]) = dispatch(_.exportRecordsAsJson(filter))
 }

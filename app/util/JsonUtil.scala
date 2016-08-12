@@ -1,7 +1,9 @@
 package util
 
+import org.apache.ignite.binary.BinaryObject
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
+import reactivemongo.bson.BSONObjectID
 
 object JsonUtil {
 
@@ -34,6 +36,7 @@ object JsonUtil {
   def jsonObjectsToCsv(
     delimiter : String,
     newLine : String = "\n",
+    fieldNames: Option[Seq[String]] = None,
     replacements : Iterable[(String, String)]
   )(items : Traversable[JsObject]) = {
     val sb = new StringBuilder(10000)
@@ -41,16 +44,24 @@ object JsonUtil {
     val replaceAllAux = replaceAll(replacements)_
 
     if (!items.isEmpty) {
-      val header = items.head.fields.map{ case (field, value) => unescapeKey(replaceAllAux(field))}.mkString(delimiter)
+      val headerFieldNames = fieldNames.getOrElse(items.head.fields.map(_._1))
+      val header = headerFieldNames.map(fieldName =>
+        unescapeKey(replaceAllAux(fieldName))
+      ).mkString(delimiter)
+
       sb.append(header + newLine)
 
       items.foreach { item =>
-        val row = item.fields.map { case (field, value) =>
-          value match {
-            case JsNull => ""
-            case _: JsString => replaceAllAux(value.as[String])
-            case _ => value.toString()
-          }
+        val itemFieldNameValueMap = item.fields.toMap
+        val row = headerFieldNames.map{ fieldName =>
+          itemFieldNameValueMap.get(fieldName).fold("")
+            { value =>
+              value match {
+                case JsNull => ""
+                case _: JsString => replaceAllAux(value.as[String])
+                case _ => value.toString()
+              }
+            }
         }.mkString(delimiter)
         sb.append(row + newLine)
       }
@@ -181,5 +192,4 @@ object JsonUtil {
     }
     filteredItems.length
   }
-
 }

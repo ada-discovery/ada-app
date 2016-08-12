@@ -4,7 +4,7 @@ import javax.inject.{Named, Inject}
 
 import play.api.Configuration
 import runnables.DataSetId.lux_park_clinical
-import persistence.RepoSynchronizer
+import dataaccess.RepoSynchronizer
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable

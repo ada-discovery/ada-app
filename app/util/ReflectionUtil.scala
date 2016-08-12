@@ -5,6 +5,7 @@ import java.io.File
 import org.clapper.classutil.{ClassFinder, ClassInfo}
 
 import scala.reflect.ClassTag
+import scala.reflect.runtime.universe._
 
 object ReflectionUtil {
 
@@ -47,6 +48,11 @@ object ReflectionUtil {
     filteredClassInfos.map{ classInfo => Class.forName(classInfo.name).asInstanceOf[Class[T]] }
   }
 
-  def getMethodNames[T](implicit tag: ClassTag[T]) =
+  def getMethodNames[T](implicit tag: ClassTag[T]): Array[String] =
     tag.runtimeClass.getMethods.map(_.getName)
+
+  def getCaseMethodNames[T: TypeTag]: Traversable[String] =
+    typeOf[T].members.collect {
+      case m: MethodSymbol if m.isCaseAccessor => m.fullName
+    }.toList
 }

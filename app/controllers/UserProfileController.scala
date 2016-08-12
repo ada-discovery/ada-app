@@ -1,10 +1,9 @@
 package controllers
 
 import java.util.concurrent.TimeoutException
-
-import models.Criterion
+import dataaccess.{RepoException, Criterion}
 import models.workspace.Workspace
-import models.Criterion.CriterionInfix
+import Criterion.CriterionInfix
 import persistence.RepoTypes.WorkspaceRepo
 import play.api.Logger
 import play.api.data.Form
@@ -20,9 +19,8 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import javax.inject.Inject
 
-import persistence.RepoException
-
-import models.security.{UserManager, CustomUser}
+import models.security.UserManager
+import dataaccess.{User => AdaUser}
 import security.AdaAuthConfig
 
 import be.objectify.deadbolt.scala.DeadboltActions
@@ -36,7 +34,6 @@ class UserProfileController @Inject() (
     workspaceRepo: WorkspaceRepo
   ) extends Controller with AdaAuthConfig {
 
-
   protected val userUpdateForm = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
@@ -46,7 +43,7 @@ class UserProfileController @Inject() (
       //"affiliation" -> text,
       "roles" -> ignored(Seq[String]()),
       "permissions" -> ignored(Seq[String]())
-    )(CustomUser.apply)(CustomUser.unapply))
+    )(AdaUser.apply)(AdaUser.unapply))
 
   /**
     * Leads to profile page which shows some basic user information.
@@ -65,9 +62,9 @@ class UserProfileController @Inject() (
   def workspace() = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
       val timeout = 12000 millis
-      val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
-      usrFutureOp.map { (usrOp: Option[CustomUser]) =>
-        val workspaceFutureTrav: Future[Traversable[Workspace]] = workspaceRepo.find(Seq("email" #= usrOp.get.email))
+      val usrFutureOp: Future[Option[User]] = currentUser(request)
+      usrFutureOp.map { (usrOp: Option[User]) =>
+        val workspaceFutureTrav: Future[Traversable[Workspace]] = workspaceRepo.find(Seq("email" #== usrOp.get.email))
         val workspaceTrav = Await.result(workspaceFutureTrav, timeout)
         if(workspaceTrav.isEmpty) // TODO: workspace will not be empty in final version!
           Ok(views.html.userprofile.workspace(usrOp.get, new Workspace(None, "dummy", Workspace.emptyUserGroup, Seq(), Seq())))
@@ -82,8 +79,8 @@ class UserProfileController @Inject() (
     */
   def settings() = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
-      val usrFutureOp: Future[Option[CustomUser]] = currentUser(request)
-      usrFutureOp.map { (usrOp: Option[CustomUser]) =>
+      val usrFutureOp: Future[Option[User]] = currentUser(request)
+      usrFutureOp.map { (usrOp: Option[User]) =>
         usrOp match {
           case Some(usr) => Ok(views.html.userprofile.profileSettings(userUpdateForm.fill(usr)))
           case None => Ok("error")  // not supposed to ever occur due to deadbolt
@@ -98,21 +95,21 @@ class UserProfileController @Inject() (
     */
   def updateSettings() = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
-      val loggedUserFutureOp: Future[Option[CustomUser]] = currentUser(request)
+      val loggedUserFutureOp: Future[Option[User]] = currentUser(request)
 
       // integrity check
-      loggedUserFutureOp.map{loggedUserOp: Option[CustomUser] =>
+      loggedUserFutureOp.map{loggedUserOp: Option[User] =>
         if(loggedUserOp.isEmpty){
           Logger.error("Possible user data tempering by unregistered user.")
         }
       }
 
-      val loggedUser: CustomUser = Await.result(loggedUserFutureOp, 120000 millis).get
+      val loggedUser: User = Await.result(loggedUserFutureOp, 120000 millis).get
       userUpdateForm.bindFromRequest.fold(
         { formWithErrors =>
           Future.successful(BadRequest(formWithErrors.errors.toString).flashing("failure" -> "An unexpected error occured"))
         },
-        (newUserData: CustomUser) => {
+        (newUserData: User) => {
           updateUserCall(loggedUser, newUserData).map { _ =>
             render {
               case Accepts.Html() => Redirect(routes.UserProfileController.profile()).flashing("success" -> "Profile has been updated")
@@ -146,7 +143,7 @@ class UserProfileController @Inject() (
     * @param newData New values, with _id, email, password, roles, permissions being ignored.
     * @return Future(true), if user successfully found and updated in database/ usermanager.
     */
-  protected def updateUserCall(refData: CustomUser, newData: CustomUser): Future[Boolean] = {
+  protected def updateUserCall(refData: User, newData: User): Future[Boolean] = {
     userManager.updateUser(newData)
   }
 }

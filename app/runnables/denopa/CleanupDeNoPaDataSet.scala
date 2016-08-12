@@ -1,8 +1,7 @@
 package runnables.denopa
 
 import javax.inject.Inject
-
-import models.DataSetMetaInfo
+import dataaccess.DataSetMetaInfo
 import persistence.RepoTypes._
 import runnables.{CleanupDataSet, GuiceBuilderRunnable}
 import runnables.DataSetId._

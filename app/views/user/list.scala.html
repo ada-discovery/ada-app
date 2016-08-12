@@ -1,10 +1,9 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import util.typeColumns
+@import dataaccess.User
 
-@import models.security.CustomUser
-
-@(page: Page[CustomUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(page: Page[User])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @actions = {
     <div class="row">
@@ -21,11 +20,11 @@
     paginatedTable(
         page,
         routes.UserController.find(_, _, page.filter),
-        typeColumns[CustomUser](
+        typeColumns[User](
             (Some("id"), "Id", _.ldapDn),
             (Some("email"), "Email", _.email)
         ),
-        Some({ item : Any => routes.UserController.get(item.asInstanceOf[CustomUser]._id.get)})
+        Some({ item : Any => routes.UserController.get(item.asInstanceOf[User]._id.get)})
     )
 }
 

@@ -2,24 +2,42 @@ package controllers
 
 import javax.inject.Inject
 
-import ldap.LdapUserRepo
+import be.objectify.deadbolt.scala.DeadboltActions
+import ldap.LdapUserService
 import models.Page
-import models.security.LdapUser
-import play.api.i18n.Messages
-import play.api.mvc.{Flash, RequestHeader, Request}
+import play.api.i18n.{MessagesApi, Messages}
+import play.api.mvc._
+import util.SecurityUtil._
 
 import views.html
 
-class LdapUserController @Inject() (userRepo: LdapUserRepo) extends ReadonlyControllerImpl[LdapUser, String](userRepo) with AdminRestrictedReadonlyController[String] {
+import scala.concurrent.Future
 
-  override def showView(
-    id : String,
-    item : LdapUser
-  )(implicit msg: Messages, request: Request[_]) =
-    html.ldapviews.usershow(item)
+class LdapUserController @Inject() (
+    deadbolt: DeadboltActions,
+    messagesApi: MessagesApi,
+    ldapUserService: LdapUserService
+  ) extends Controller {
 
-  override def listView(
-    currentPage: Page[LdapUser]
-  )(implicit msg: Messages, request: Request[_]) =
-    html.ldapviews.userlist(currentPage)
+  def listAll = restrictAdmin(deadbolt) {
+    Action { implicit request =>
+      implicit val msg = messagesApi.preferred(request)
+
+      val all = ldapUserService.getAll
+      Ok(html.ldapviews.userlist(Page(all, 0, 0, all.size, "", Nil)))
+    }
+  }
+
+  def get(id: String) = restrictAdmin(deadbolt) {
+    Action { implicit request =>
+      implicit val msg = messagesApi.preferred(request)
+
+      val userOption = ldapUserService.getAll.find{entry => (entry.getDN == id)}
+      userOption.fold(
+        BadRequest(s"LDAP user with id '$id' not found.")
+      ) {
+        user => Ok(html.ldapviews.usershow(user))
+      }
+    }
+  }
 }

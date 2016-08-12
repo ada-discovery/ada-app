@@ -5,6 +5,7 @@ import javax.inject.Inject
 
 import _root_.util.{ConditionType, FilterCondition}
 import be.objectify.deadbolt.scala.DeadboltActions
+import dataaccess._
 import models._
 import persistence._
 import play.api.Logger

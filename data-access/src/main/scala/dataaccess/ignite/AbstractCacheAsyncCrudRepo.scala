@@ -1,0 +1,239 @@
+package dataaccess.ignite
+
+import dataaccess._
+import org.apache.ignite.cache.query.SqlFieldsQuery
+import org.apache.ignite.IgniteCache
+import org.apache.ignite.configuration.CacheConfiguration
+import org.h2.value.DataType
+import dataaccess.ignite.BinaryJsonUtil.escapeIgniteFieldName
+import org.h2.value.Value
+import play.api.Logger
+
+import scala.collection.JavaConversions._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
+    cache: IgniteCache[CACHE_ID, CACHE_E],
+    entityName: String,
+    identity: Identity[E, ID]
+  ) extends AsyncCrudRepo[E, ID] {
+
+  private val logger = Logger
+
+  // hooks
+  def toCacheId(id: ID): CACHE_ID
+
+  def toItem(cacheItem: CACHE_E): E
+
+  def toCacheItem(item: E): CACHE_E
+
+  def queryResultToItem(result: Seq[(String, Any)]): E
+
+  protected val fieldNameAndTypeNames: Traversable[(String, String)] = {
+    val queryEntity = cache.getConfiguration(classOf[CacheConfiguration[CACHE_ID, CACHE_E]]).getQueryEntities.head
+    queryEntity.getFields
+  }
+
+  protected val fieldNameAndClasses: Traversable[(String, Class[Any])] =
+    fieldNameAndTypeNames.map{ case (fieldName, typeName) =>
+      (fieldName, if (typeName.equals("scala.Enumeration.Value"))
+        classOf[String].asInstanceOf[Class[Any]]
+      else if (typeName.equals("boolean"))
+        classOf[Boolean].asInstanceOf[Class[Any]]
+      else if (typeName.equals("double"))
+        classOf[Double].asInstanceOf[Class[Any]]
+      else if (typeName.equals("int"))
+        classOf[Integer].asInstanceOf[Class[Any]]
+      else
+        Class.forName(typeName).asInstanceOf[Class[Any]])
+    }
+
+  protected val fieldNameTypeMap: Map[String, String] =
+    fieldNameAndTypeNames.toMap
+
+  protected val fieldNameClassMap: Map[String, Class[Any]] =
+    fieldNameAndClasses.toMap
+
+  override def get(id: ID): Future[Option[E]] =
+    Future {
+      val cacheItem = cache.get(toCacheId(id))
+      Some(toItem(cacheItem))
+    }
+
+  override def count(criteria: Seq[Criterion[Any]]): Future[Int] = {
+    val whereClauseAndArgs = toSqlWhereClauseAndArgs(criteria)
+
+    val sql = s"select count(*) from $entityName ${whereClauseAndArgs._1}"
+    logger.debug("Running SQL on Ignite cache: " + sql)
+    var query = new SqlFieldsQuery(sql)
+
+    if (whereClauseAndArgs._2.nonEmpty)
+      query = query.setArgs(whereClauseAndArgs._2.asInstanceOf[Seq[Object]]:_*)
+
+    Future {
+      val cursor = cache.query(query)
+      cursor.head.head.asInstanceOf[Long].toInt
+    }
+  }
+
+  override def find(
+    criteria: Seq[Criterion[Any]],
+    sort: Seq[Sort],
+    projection: Traversable[String],
+    limit: Option[Int],
+    page: Option[Int]
+  ): Future[Traversable[E]] = {
+    // projection
+    val projectionSeq = (
+      projection.toSeq ++ (
+        if (!projection.toSet.contains(identity.name))
+          Seq(identity.name)
+        else
+          Seq()
+      )
+    ).map(escapeIgniteFieldName)
+
+    val projectionPart = projection match {
+      case Nil => "_val"
+      case _ => projectionSeq.mkString(", ")
+    }
+
+    val whereClauseAndArgs = toSqlWhereClauseAndArgs(criteria)
+
+    // limit + offset
+    val limitPart = limit.map{ limit =>
+      "limit " + limit +
+        page.map(page => " offset " + (page * limit)).getOrElse("")
+    }.getOrElse("")
+
+    val orderByPart = sort match {
+      case Nil => ""
+      case _ => "order by " + sort.map{ singleSort =>
+        escapeIgniteFieldName(singleSort.fieldName) + {
+          singleSort match {
+            case AscSort(fieldName) => " asc"
+            case DescSort(fieldName) => " desc"
+          }
+        }
+      }.mkString(", ")
+    }
+
+    val sql = s"select $projectionPart from $entityName ${whereClauseAndArgs._1} $orderByPart $limitPart"
+    logger.debug("Running SQL on Ignite cache: " + sql)
+    var query = new SqlFieldsQuery(sql)
+
+    if (whereClauseAndArgs._2.nonEmpty)
+      query = query.setArgs(whereClauseAndArgs._2.asInstanceOf[Seq[Object]]:_*)
+
+    Future {
+      val cursor = cache.query(query)
+      cursor.getAll.map { values =>
+        projection match {
+          case Nil => toItem(values.get(0).asInstanceOf[CACHE_E])
+          case _ => queryResultToItem(projectionSeq.zip(values))
+        }
+      }
+    }
+  }
+
+  protected def toSqlWhereClauseAndArgs(criteria: Seq[Criterion[Any]]) =
+    criteria match {
+      case Nil => ("", Nil)
+      case _ => {
+        val sqlCriteriaWithArgs = criteria.map(toSqlCriterionAndArgs)
+        val whereClause = sqlCriteriaWithArgs.map(_._1).mkString(" and ")
+        val args = sqlCriteriaWithArgs.map(_._2).flatten
+        (s"where $whereClause", args)
+      }
+    }
+
+  protected def toSqlCriterionAndArgs(criterion: Criterion[_]): (String, Seq[Any]) = {
+    val fieldName = escapeIgniteFieldName(criterion.fieldName)
+    val fieldType = fieldNameTypeMap(fieldName)
+    val nonNativeFieldTypeFlag = isNonNativeFieldDBType(fieldType)
+
+    criterion match {
+      case EqualsCriterion(_, value) =>
+        if (isJavaDBType(value))
+          (s"binEquals($fieldName, ?)", Seq(value))
+        else if (value.isInstanceOf[String] && nonNativeFieldTypeFlag)
+          (s"binStringEquals($fieldName, ?)", Seq(value))
+        else
+          (s"$fieldName = ?", Seq(value))
+
+      // TODO: we need to properly translate client's regex to an SQL version... we can perhaps drop '%' around
+      case RegexEqualsCriterion(_, regexString) =>
+        (s"$fieldName like ?", Seq(s"%$regexString%"))
+
+      case NotEqualsCriterion(_, value) =>
+        if (isJavaDBType(value))
+          (s"binNotEquals($fieldName, ?)", Seq(value))
+        else if (value.isInstanceOf[String] && nonNativeFieldTypeFlag)
+          (s"binStringNotEquals($fieldName, ?)", Seq(value))
+        else
+          (s"$fieldName != ?", Seq(value))
+
+      case InCriterion(_, values) => {
+        val placeholders = values.map(_ => "?").mkString(",")
+        if (values.nonEmpty && isJavaDBType(values.get(0)))
+          (s"binIn($fieldName, $placeholders)", values)
+        else if (values.nonEmpty && values.get(0).isInstanceOf[String] && nonNativeFieldTypeFlag)
+          (s"binStringIn($fieldName, $placeholders)", values)
+        else
+          (s"$fieldName in ($placeholders)", values)
+      }
+      case NotInCriterion(_, values) => {
+        val placeholders = values.map(_ => "?").mkString(",")
+        if (values.nonEmpty && isJavaDBType(values.get(0)))
+          (s"binNotIn($fieldName, $placeholders)", values)
+        else if (values.nonEmpty && values.get(0).isInstanceOf[String] && nonNativeFieldTypeFlag)
+          (s"binStringNotIn($fieldName, $placeholders)", values)
+        else
+          (s"$fieldName not in ($placeholders)", values)
+      }
+
+      case GreaterCriterion(_, value) =>
+        (s"$fieldName > ?", Seq(value))
+
+      case LessCriterion(_, value) =>
+        (s"$fieldName < ?", Seq(value))
+    }
+  }
+
+  private def isJavaDBType(value: Any): Boolean =
+    DataType.getTypeFromClass(value.getClass) == Value.JAVA_OBJECT
+
+  // TODO: Finish the list or obtain it another way... see H2 DataType
+  private val nativeDBFieldTypes = Seq(classOf[String], classOf[Integer], classOf[Double], classOf[Long], classOf[Boolean], classOf[java.util.Date])
+  private val nativeDBFieldTypeNames = nativeDBFieldTypes.map(_.getName).toSet
+
+  private def isNonNativeFieldDBType(columnType: String): Boolean =
+    !nativeDBFieldTypeNames.contains(columnType)
+
+  override def update(entity: E): Future[ID] =
+    Future{
+      val id = identity.of(entity).get
+//      val cacheEntry = cache.getEntry(toCacheId(id))
+      cache.replace(toCacheId(id), toCacheItem(entity))
+      id
+    }
+
+  override def deleteAll: Future[Unit] =
+    Future(cache.removeAll())
+
+  override def delete(id: ID): Future[Unit] =
+    Future(cache.remove(toCacheId(id)))
+
+  override def save(entity: E): Future[ID] =
+    Future{
+      // TODO: perhaps we could get an id from the underlying db before saving the item
+      val (id, entityWithId) = identity.of(entity).map((_, entity)).getOrElse {
+        val newId = identity.next
+        (newId, identity.set(entity, newId))
+      }
+      cache.put(toCacheId(id), toCacheItem(entityWithId))
+      id
+      // throw new IllegalArgumentException(s"If cache is used in order to save an item of type '${entity.getClass.getName}' ID must already be set.")
+    }
+}

@@ -1,9 +1,11 @@
 @import views.html.layout
 @import views.html.user.elements
-@import models.security.CustomUser
+
+@import dataaccess.DataSpaceMetaInfo
+@import dataaccess.User
 
 @(
-	form: Form[CustomUser],
+	form: Form[User],
 	metaInfos: Traversable[DataSpaceMetaInfo],
 	dataSetActionNames: Array[String],
 	fieldActionNames: Array[String],

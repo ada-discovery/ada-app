@@ -4,13 +4,14 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
-import controllers.{CrudControllerImpl, EnumFormatter, MapJsonFormatter}
+import controllers.{ExportableAction, CrudControllerImpl, EnumFormatter, MapJsonFormatter}
+import dataaccess.RepoTypes.DictionaryCategoryRepo
+import dataaccess._
 import models._
-import models.DataSetFormattersAndIds._
-import persistence.AscSort
+import dataaccess.DataSetFormattersAndIds._
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import persistence.dataset.DictionaryFieldRepo._
+import DictionaryFieldRepo._
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
@@ -37,13 +38,18 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends CrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo) with DictionaryController {
+  ) extends CrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo) with DictionaryController with ExportableAction[Field] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
   protected val categoryRepo: DictionaryCategoryRepo = dsa.categoryRepo
   protected lazy val dataSetName = result(dsa.metaInfo).name
 
-  protected override val listViewColumns = Some(Seq("name", "fieldType", "label", "category"))
+  protected override val listViewColumns = Some(Seq("name", "fieldType", "isArray", "label", "categoryId"))
+
+  private val exportOrderByFieldName = "name"
+  private val csvFileName = "dictionary_" + dataSetId.replace(" ", "-") + ".csv"
+  private val jsonFileName = "dictionary_" + dataSetId.replace(" ", "-") + ".json"
+  private val csvExportFieldNames = Seq("name", "fieldType", "numValues", "isArray", "label", "categoryId")
 
   implicit val fieldTypeFormatter = EnumFormatter(FieldType)
   implicit val mapFormatter = MapJsonFormatter.apply
@@ -153,6 +159,40 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     )
   }
 
+  /**
+    * Generate content of csv export file and create download.
+    *
+    * @param delimiter Delimiter for csv output file.
+    * @return View for download.
+    */
+  override def exportAllRecordsAsCsv(delimiter : String) =
+    exportAllToCsv(csvFileName, delimiter, exportOrderByFieldName, Some(csvExportFieldNames))
+
+  /**
+    * Generate content of Json export file and create donwload.
+    *
+    * @return View for download.
+    */
+  override def exportAllRecordsAsJson =
+    exportAllToJson(jsonFileName, exportOrderByFieldName)
+
+  /**
+    * Generate content of csv export file and create download.
+    *
+    * @param delimiter Delimiter for csv output file.
+    * @return View for download.
+    */
+  override def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]) =
+    exportToCsv(csvFileName, delimiter, filter, exportOrderByFieldName, Some(csvExportFieldNames))
+
+  /**
+    * Generate content of Json export file and create donwload.
+    *
+    * @return View for download.
+    */
+  override def exportRecordsAsJson(filter: Seq[FilterCondition]) =
+    exportToJson(jsonFileName, filter, exportOrderByFieldName)
+
   override def updateLabel(id: String, label: String) = Action.async { implicit request =>
     repo.get(id).flatMap(_.fold(
       Future(NotFound(s"Field '$id' not found"))
@@ -175,7 +215,10 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     fieldName : String,
     fieldExtractor : Field => Any
   ) : Future[ChartSpec] =
-    repo.find(toCriteria(filter), Nil, Seq(fieldName)).map { fields =>
+    repo.find(
+      criteria = toCriteria(filter),
+      projection = Seq(fieldName)
+    ).map { fields =>
       val values = fields.map(field => Some(fieldExtractor(field).toString))
       ChartSpec.categorical(values, None, chartTitle, false, true)
     }

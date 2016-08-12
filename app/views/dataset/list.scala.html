@@ -1,5 +1,5 @@
 @import views.html.table.paginatedJsonTable
-@import views.html.dataset.exportDropdown
+@import views.html.dataset.exportDataSetDropdown
 @import play.api.libs.json.JsObject
 @import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 @import reactivemongo.bson.BSONObjectID
@@ -25,7 +25,7 @@
             @filter(page.filter, router.plainList, Right(router.fieldNames))
         </div>
         <div class="col-md-2">
-            @exportDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
+            @exportDataSetDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
         </div>
     </div>
 }

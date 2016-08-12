@@ -6,13 +6,13 @@ import javax.inject.Inject
 import _root_.util.JsonUtil._
 import _root_.util.{FilterCondition, fieldLabel, JsonUtil}
 import _root_.util.WebExportUtil._
+import dataaccess._
 import models._
 import com.google.inject.assistedinject.Assisted
-import controllers.{ExportableAction, ReadonlyControllerImpl, OptionFormat}
-import models.DataSetFormattersAndIds.FieldIdentity
-import models.Criterion.CriterionInfix
+import controllers.{ExportableAction, ReadonlyControllerImpl}
+import DataSetFormattersAndIds.FieldIdentity
+import Criterion.CriterionInfix
 import org.apache.commons.lang3.StringEscapeUtils
-import persistence.AscSort
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -41,8 +41,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
   protected val fieldRepo = dsa.fieldRepo
-  fieldRepo.initIfNeeded
-
   protected val categoryRepo = dsa.categoryRepo
 
   @Inject protected var tranSMARTService: TranSMARTService = _
@@ -498,7 +496,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getFieldValue(id: BSONObjectID, fieldName: String) = Action.async { implicit request =>
     for {
-      items <- repo.find(criteria = Seq("_id" #= id), projection = Seq(fieldName))
+      items <- repo.find(criteria = Seq("_id" #== id), projection = Seq(fieldName))
     } yield
       items.headOption match {
         case Some(item) => Ok((item \ fieldName).get)
@@ -599,16 +597,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     delimiter: String,
     orderBy : String
   ): String = {
+    val dataSetSetting = setting
     val recordsFuture = repo.find(sort = toSort(orderBy))
     val records = result(recordsFuture)
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()
 
-    tranSMARTService.createMappingFile(unescapedDelimiter , "\n", setting.tranSMARTReplacements)(
+    tranSMARTService.createMappingFile(unescapedDelimiter , "\n", dataSetSetting.tranSMARTReplacements)(
       records,
       dataFilename,
-      setting.keyFieldName,
-      setting.tranSMARTVisitFieldName,
+      dataSetSetting.keyFieldName,
+      dataSetSetting.tranSMARTVisitFieldName,
       result(fieldNameCategoryMap(categoriesFuture)),
       result(rootCategoryTree(categoriesFuture)),
       result(fieldLabelMap)
@@ -622,8 +621,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       (category._id.get, category)
     })
 
-    implicit val optionalKeyFormat = new OptionFormat[BSONObjectID]
-    val fieldsWithCategoryFuture = fieldRepo.find(Seq("categoryId" #!= Option.empty[BSONObjectID]))
+    val fieldsWithCategoryFuture = fieldRepo.find(
+      criteria = Seq("categoryId" #!= None),
+      projection = Seq("name", "categoryId", "fieldType")
+    )
 
     for {
       idCategories <- idCategoriesFuture
@@ -638,7 +639,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   protected def fieldLabelMap: Future[Map[String, String]] =
     for {
-      fields <- fieldRepo.find()
+      fields <- fieldRepo.find(projection = Seq("name", "label", "fieldType"))
     } yield
       fields.map{ field =>
         (field.name, field.label.getOrElse(field.name))

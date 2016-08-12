@@ -14,18 +14,18 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val overviewList = routes.overviewList _ map route
   val plainOverviewList = routeFun(_.overviewList())
   val get = routes.get _ map route
-  val exportAllCsv = routeFun(_.exportAllRecordsAsCsv())
-  val exportAllJson = routeFun(_.exportAllRecordsAsJson)
-  val exportCsv = routeFun(_.exportRecordsAsCsv())
-  val exportJson  = routeFun(_.exportRecordsAsJson())
-  val exportTranSMARTData = routeFun(_.exportTranSMARTDataFile())
-  val exportTranSMARTMapping = routeFun(_.exportTranSMARTMappingFile())
   val plainGetScatterStats = routeFun(_.getScatterStats())
   val getScatterStats = routes.getScatterStats _ map route
   val plainGetDistribution = routeFun(_.getDistribution())
   val getDistribution = routes.getDistribution _ map route
   val fieldNames = routeFun(_.getFieldNames)
   val getFieldValue = routes.getFieldValue _ map route
+  val exportAllCsv = routeFun(_.exportAllRecordsAsCsv())
+  val exportAllJson = routeFun(_.exportAllRecordsAsJson)
+  val exportCsv = routeFun(_.exportRecordsAsCsv())
+  val exportJson  = routeFun(_.exportRecordsAsJson())
+  val exportTranSMARTData = routeFun(_.exportTranSMARTDataFile())
+  val exportTranSMARTMapping = routeFun(_.exportTranSMARTMappingFile())
 }
 
 final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.DataSetDispatcher, "dataSet", dataSetId) {

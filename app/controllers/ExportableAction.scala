@@ -1,7 +1,6 @@
 package controllers
 
-import models.Criterion
-import persistence.{Sort, AsyncReadonlyRepo}
+import dataaccess.{Sort, AsyncReadonlyRepo, Criterion}
 import play.api.libs.json.{Json, Format, JsObject}
 import util.FilterCondition
 import util.WebExportUtil.{jsonsToCsvFile, jsonsToJsonFile}
@@ -19,11 +18,12 @@ protected trait ExportableAction[E] {
   def exportAllToCsv(
     filename: String,
     delimiter: String,
-    orderBy: String)(
+    orderBy: String,
+    fieldNames: Option[Seq[String]] = None)(
     implicit ev: Format[E]
   ) = Action.async { implicit request =>
     getJsons(Nil, orderBy).map(
-      jsonsToCsvFile(filename, delimiter)(_)
+      jsonsToCsvFile(filename, delimiter, fieldNames)(_)
     )
   }
 
@@ -41,11 +41,12 @@ protected trait ExportableAction[E] {
      filename: String,
      delimiter: String,
      filter: Seq[FilterCondition],
-     orderBy: String)(
+     orderBy: String,
+     fieldNames: Option[Seq[String]] = None)(
      implicit ev: Format[E]
   ) = Action.async { implicit request =>
     getJsons(filter, orderBy).map(
-      jsonsToCsvFile(filename, delimiter)(_)
+      jsonsToCsvFile(filename, delimiter, fieldNames)(_)
     )
   }
 

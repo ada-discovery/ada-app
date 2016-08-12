@@ -4,10 +4,10 @@ import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
 import controllers.CrudControllerImpl
-import models.DataSetFormattersAndIds._
-import models.{D3Node, Page, Category}
-import models.Criterion.CriterionInfix
-import persistence.AscSort
+import dataaccess.{Category, DataSetFormattersAndIds, AscSort, Criterion}
+import DataSetFormattersAndIds._
+import models.{D3Node, Page}
+import Criterion.CriterionInfix
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -68,7 +68,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   override protected def editView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: Request[_]) = {
     val fieldsFuture = fieldRepo.find(
-      criteria = Seq("categoryId" #= id),
+      criteria = Seq("categoryId" #== id),
       sort = Seq(AscSort("name"))
     )
 
@@ -98,7 +98,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     val updateChildrenFutures =
       for {
         Some(category) <- repo.get(id)
-        children <- repo.find(Seq("parentId" #= id))
+        children <- repo.find(Seq("parentId" #== id))
       } yield
         children.map{ child =>
           child.parentId = category.parentId
@@ -108,7 +108,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     // remove the field category refs
     val updateFieldFutures =
       for {
-        fields <- fieldRepo.find(Seq("categoryId" #= id))
+        fields <- fieldRepo.find(Seq("categoryId" #== id))
       } yield
         fields.map { field =>
           field.categoryId = None

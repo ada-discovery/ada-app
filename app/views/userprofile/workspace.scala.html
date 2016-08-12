@@ -1,7 +1,7 @@
-@import models.security.CustomUser
+@import dataaccess.User
 @import models.workspace.Workspace
 
-@(user: CustomUser, workspace: Workspace)(implicit request: Request[_], flash: Flash)
+@(user: User, workspace: Workspace)(implicit request: Request[_], flash: Flash)
 
 @layout.main("NCER-PD Home") {
     <!-- user profile header; move to designated template -->

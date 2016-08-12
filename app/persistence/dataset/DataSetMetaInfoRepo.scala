@@ -3,11 +3,13 @@ package persistence.dataset
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
+import dataaccess.{DataSetMetaInfo, DataSpaceMetaInfo, DataSetFormattersAndIds, Criterion}
+import dataaccess.mongo.SubordinateObjectMongoAsyncCrudRepo
 
 
-import models.DataSetFormattersAndIds._
+import DataSetFormattersAndIds._
 import models._
-import models.Criterion.CriterionInfix
+import Criterion.CriterionInfix
 import persistence.RepoTypes._
 import persistence._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -30,7 +32,7 @@ protected[persistence] class DataSetMetaInfoSubordinateMongoAsyncCrudRepo @Injec
     DataSpaceMetaInfo(Some(dataSpaceId), "", 0, new java.util.Date(), Seq[DataSetMetaInfo]())
 
   override protected def getRootObject =
-    dataSpaceMetaInfoRepo.find(Seq(DataSpaceMetaInfoIdentity.name #= dataSpaceId)).map(_.headOption)
+    dataSpaceMetaInfoRepo.find(Seq(DataSpaceMetaInfoIdentity.name #== dataSpaceId)).map(_.headOption)
 
   override def save(entity: DataSetMetaInfo): Future[BSONObjectID] = {
     val identity = DataSetMetaInfoIdentity

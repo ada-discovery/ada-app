@@ -3,7 +3,8 @@ package security
 import be.objectify.deadbolt.core.models.Role
 import controllers.routes
 import jp.t2v.lab.play2.auth.{AuthConfig, _}
-import models.security.{CustomUser, UserManager}
+import models.security.UserManager
+import dataaccess.{User => AdaUser}
 import play.api.mvc.Results._
 import play.api.mvc.{Request, RequestHeader, Result}
 
@@ -28,7 +29,7 @@ trait AdaAuthConfig extends AuthConfig {
     * Type defintion for User object.
     * Set to AbstractUser, a class extending deadbolt's Subject.
     */
-  type User = CustomUser
+  type User = AdaUser
 
   /**
     * Play2-auth specific.
@@ -49,30 +50,35 @@ trait AdaAuthConfig extends AuthConfig {
   val sessionTimeoutInSeconds: Int = 3600
 
   // useful helper for user extraction from current token
-  def getUserFromToken(request: Request[_]): Future[Option[Id]] = {
-    val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
-    currentToken match {
-      case Some(token) => idContainer.get(token)
-      case None => Future(None)
-    }
+  private def getUserFromToken(request: Request[_]): Future[Option[Id]] = {
+//    val userId = request.session.get("userid").getOrElse {
+      val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
+      val userIdFuture = currentToken match {
+        case Some(token) => idContainer.get(token)
+        case None => Future(None)
+      }
+      val newUserId = Await.result(userIdFuture, 10 seconds)
+      Future(newUserId)
+//      val newUserId = Await.result(userIdFuture, 10 seconds)
+//      request.session.+("userid", newUserId)
+//    }
   }
 
   // we can't call restoreUser, so we must retrieve the user manually
-  def currentUser(request: Request[_]): Future[Option[CustomUser]] =
-     getUserFromToken(request).flatMap {
-      _ match {
-        case Some(id) => resolveUser(id)
-        case None => Future(None)
-      }
+  def currentUser(request: Request[_]): Future[Option[User]] =
+    getUserFromToken(request).flatMap{
+        _ match {
+          case Some(id) => resolveUser(id)
+          case None => Future(None)
+        }
     }
 
   /**
     * A function that returns a `User` object from an `Id`.
     * Retrieves user from Account class.
     */
-  def resolveUser(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] = {
+  def resolveUser(id: Id)(implicit ctx: ExecutionContext): Future[Option[User]] =
     userManager.findById(id)
-  }
 
   /**
     * Where to redirect the user after a successful login.
@@ -117,7 +123,7 @@ trait AdaAuthConfig extends AuthConfig {
     * Maps users to permissions.
     */
   def authorize(user: User, authority: Authority)(implicit ctx: ExecutionContext): Future[Boolean] = Future.successful {
-    user.getRoles.contains(authority)
+    user.roles.contains(authority.getName)
   }
 
   /**

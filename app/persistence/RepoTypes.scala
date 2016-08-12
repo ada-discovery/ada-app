@@ -1,28 +1,25 @@
 package persistence
 
+import dataaccess._
 import models._
-import models.security.CustomUser
+import dataaccess.User
 import models.workspace.Workspace
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
+import dataaccess.mongo.MongoAsyncCrudExtraRepo
 
 /**
  * Common repo type shortcuts
  */
 object RepoTypes {
-  type JsObjectCrudRepo = AsyncCrudRepo[JsObject, BSONObjectID]
+//  type JsObjectCrudRepo = AsyncCrudRepo[JsObject, BSONObjectID]
   type TranslationRepo = AsyncCrudRepo[Translation, BSONObjectID]
-  type UserRepo = AsyncCrudRepo[CustomUser, BSONObjectID]
+  type UserRepo = AsyncCrudRepo[User, BSONObjectID]
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
   type WorkspaceRepo = AsyncCrudRepo[Workspace, BSONObjectID]
 
-  type DictionaryRootRepo = MongoAsyncCrudExtraRepo[Dictionary, BSONObjectID]
-  type DictionaryFieldRepo = SubordinateObjectRepo[Field, String]
-  type DictionaryCategoryRepo = SubordinateObjectRepo[Category, BSONObjectID]
-
   type DataSpaceMetaInfoRepo = MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]
-  type DataSetMetaInfoRepo = SubordinateObjectRepo[DataSetMetaInfo, BSONObjectID]
-  type DataSetSettingRepo = AsyncCrudRepo[DataSetSetting, BSONObjectID]
+  type DataSetMetaInfoRepo = AsyncCrudRepo[DataSetMetaInfo, BSONObjectID]
   type DataSetImportRepo = AsyncCrudRepo[DataSetImport, BSONObjectID]
 
   // experimental

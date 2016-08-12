@@ -1,12 +1,11 @@
 package ldap
 
+import dataaccess.User
 import persistence.RepoTypes.UserRepo
 
 import scala.collection.JavaConversions._
 
 import com.unboundid.ldap.sdk._
-
-import models.security.CustomUser
 import models.security.LdapUser
 import models.workspace.UserGroup
 
@@ -19,6 +18,7 @@ object LdapUtil {
 
   /**
     * Synchronize UserRepo with users from ldap server.
+ *
     * @param connector
     * @param repo
     * @return
@@ -29,8 +29,8 @@ object LdapUtil {
 
     if(connector.ldapinterface.isDefined){
       val entries: Traversable[Entry] = connector.dispatchRequest(searchRequest)
-      val users: Traversable[CustomUser] = convertAndFilter(entries, entryToUser)
-      users.map{ usr: CustomUser => repo.update(usr) }
+      val users: Traversable[User] = convertAndFilter(entries, entryToUser)
+      users.map{ usr: User => repo.update(usr) }
       true
     }else{
       false
@@ -41,10 +41,11 @@ object LdapUtil {
     * TODO: add permissiosns and roles to users
     * Convert CustomUser class to Ldap entry.
     * Make sure the directory tree contains the necessary groups.
+ *
     * @param user CustomUser to convert.
     * @return Converted user.
     */
-  def userToEntry(user: CustomUser, dit: String = "dc=ncer"): Entry = {
+  def userToEntry(user: User, dit: String = "dc=ncer"): Entry = {
     val dn = "dn: cn=" + user.email + ",dc=users," + dit
     val sn = "sn:" + user.ldapDn
     val cn = "cn:" + user.ldapDn
@@ -64,10 +65,11 @@ object LdapUtil {
     * Reconstruct CustomUser from ldap entry.
     * Use this convert SearchResultEntry or others to CustomUser.
     * If the entry does not point to a user, a CustomUser with null fields will be created.
+ *
     * @param entry Entry as input for reconstruction.
     * @return CustomUser, if Entry is not null, None else.
     */
-  def entryToUser(entry: Entry): Option[CustomUser] = {
+  def entryToUser(entry: Entry): Option[User] = {
     if(entry != null){
       val name: String = entry.getAttributeValue("uid")
       //val name: String = entry.getAttributeValue("cn")
@@ -76,7 +78,7 @@ object LdapUtil {
       val affiliation: String = nullToDefault(entry.getAttributeValue("ou"), "")
       val roles: Array[String] = Array[String]()
       val permissions: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array[String]())
-      Some(CustomUser(None, name, email, roles, permissions))
+      Some(User(None, name, email, roles, permissions))
     }else{
       None
     }
@@ -87,6 +89,7 @@ object LdapUtil {
     * Reconstruct CustomUser from ldap entry.
     * Use this convert SearchResultEntry or others to CustomUser.
     * If the entry does not point to a user, a CustomUser with null fields will be created.
+ *
     * @param entry Entry as input for reconstruction.
     * @return CustomUser, if Entry is not null, None else.
     */
@@ -106,6 +109,7 @@ object LdapUtil {
 
   /**
     * Convert entry to UserGroup object if possible.
+ *
     * @param entry Ldap entry to be converted.
     * @return UserGroup, if conversion possible, None else.
     */
@@ -124,6 +128,7 @@ object LdapUtil {
   /**
     * For Debugging
     * Retrieves server entries and converts them to string.
+ *
     * @return String representation of all server entries.
     */
   def getEntryList(interface: LDAPInterface, baseDN: String = "dc=ncer"): Traversable[String] = {
@@ -134,6 +139,7 @@ object LdapUtil {
 
   /**
     * Secure, crash-safe ldap search method.
+ *
     * @param interface interface to perform search request on.
     * @param request SearchRequest to be executed.
     * @return List of search results. Empty, if request failed.
@@ -147,6 +153,7 @@ object LdapUtil {
 
   /**
     * Convert entries with conversion function and filter out inconvertible results.
+ *
     * @param entries List of entries to convert.
     * @param conv Conversion function. Should either return the converted value or None if conversion not possible.
     * @tparam T Type to convert Entries to.
@@ -159,6 +166,7 @@ object LdapUtil {
 
   /**
     * Convert entries with conversion function and filter out inconvertible results.
+ *
     * @param entries List of entries to convert.
     * @param conv Conversion function. Should either return the converted value or None if conversion not possible.
     * @tparam T Type to convert Entries to.

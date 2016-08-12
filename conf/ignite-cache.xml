@@ -38,6 +38,27 @@
         http://www.springframework.org/schema/beans/spring-beans.xsd">
     <bean id="ignite.cfg" class="org.apache.ignite.configuration.IgniteConfiguration">
 
+        <property name="binaryConfiguration">
+            <bean class="org.apache.ignite.configuration.BinaryConfiguration">
+                <property name="typeConfigurations">
+                    <list>
+                        <bean class="org.apache.ignite.binary.BinaryTypeConfiguration">
+                            <property name="typeName" value="reactivemongo.bson.BSONObjectID" />
+                            <property name="serializer">
+                                <bean class="dataaccess.ignite.BSONObjectIDBinarySerializer"/>
+                            </property>
+                        </bean>
+                    </list>
+                </property>
+            </bean>
+        </property>
+
+        <property name="lifecycleBeans">
+            <list>
+                <bean class="dataaccess.ignite.IgniteLifecycleBean"/>
+            </list>
+        </property>
+
         <!--
         <property name="marshaller">
             <bean class="org.apache.ignite.marshaller.optimized.OptimizedMarshaller">
@@ -46,15 +67,18 @@
         </property>
         -->
 
+        <!--
+        <property name="peerClassLoadingEnabled" value="true"/>
+
         <property name="cacheConfiguration">
             <list>
-                <!-- Partitioned cache example configuration (Atomic mode). -->
                 <bean class="org.apache.ignite.configuration.CacheConfiguration">
                     <property name="atomicityMode" value="ATOMIC"/>
                     <property name="backups" value="1"/>
                 </bean>
             </list>
         </property>
+        -->
 
         <!-- Explicitly configure TCP discovery SPI to provide list of initial nodes. -->
         <property name="discoverySpi">

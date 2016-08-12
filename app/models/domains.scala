@@ -1,5 +1,6 @@
 package models
 
+import dataaccess.BSONObjectIdentity
 import models.security.{SecurityPermission, SecurityRole}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID

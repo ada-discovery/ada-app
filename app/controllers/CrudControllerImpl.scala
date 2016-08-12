@@ -1,9 +1,7 @@
 package controllers
 
 import java.util.concurrent.TimeoutException
-
-import models.Identity
-import persistence.{RepoException, AsyncCrudRepo}
+import dataaccess.{Identity, RepoException, AsyncCrudRepo}
 import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

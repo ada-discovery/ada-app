@@ -1,18 +1,16 @@
 package runnables.denopa
 
 import javax.inject.Inject
-
-import models.Criterion.CriterionInfix
+import dataaccess.{Category, Criterion, DictionaryCategoryRepo}
+import Criterion.CriterionInfix
 import persistence.dataset.DataSetAccessorFactory
-import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DeNoPaSetting}
 import DeNoPaTranSMARTMapping._
-import models.Category
 import runnables.DataSetId._
 import runnables.GuiceBuilderRunnable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import persistence.dataset.DictionaryCategoryRepo.saveRecursively
+import DictionaryCategoryRepo.saveRecursively
 import util.JsonUtil.escapeKey
 import scala.concurrent.duration._
 
@@ -32,7 +30,6 @@ protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runna
     val fieldRepo = dsa.fieldRepo
 
     // delete all categories
-    result(categoryRepo.initIfNeeded, timeout)
     result(categoryRepo.deleteAll, timeout)
 
     val categoryIdsFuture1 = saveRecursively(categoryRepo, subjectsData)
@@ -46,7 +43,7 @@ protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runna
     val updateFieldFutures = refFieldNames.map{ fieldName =>
       val escapedFieldName = escapeKey(fieldName)
 
-      fieldRepo.find(Seq("name" #= escapedFieldName)).map { fields =>
+      fieldRepo.find(Seq("name" #== escapedFieldName)).map { fields =>
         if (fields.nonEmpty) {
           val field = fields.head
 

@@ -1,9 +1,11 @@
-@import models.security.CustomUser
 @import views.html.elements.{inputText, labelValue}
 @import views.html.table.dynamicStringTable
 
+@import dataaccess.DataSpaceMetaInfo
+@import dataaccess.User
+
 @(
-    form: Form[CustomUser],
+    form: Form[User],
     metaInfos: Traversable[DataSpaceMetaInfo],
     dataSetActionNames: Array[String],
     fieldActionNames: Array[String],

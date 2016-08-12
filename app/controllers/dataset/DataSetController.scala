@@ -7,14 +7,6 @@ import util.FilterCondition
 
 trait DataSetController extends ReadonlyController[BSONObjectID] {
 
-  def exportAllRecordsAsCsv(delimiter : String): Action[AnyContent]
-
-  def exportAllRecordsAsJson: Action[AnyContent]
-
-  def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]): Action[AnyContent]
-
-  def exportRecordsAsJson(filter: Seq[FilterCondition]): Action[AnyContent]
-
   def overviewFieldTypes: Action[AnyContent]
 
   def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent]
@@ -23,11 +15,19 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getDistribution(fieldName: Option[String], filter: Seq[FilterCondition]): Action[AnyContent]
 
-  def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
-
-  def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent]
-
   def getFieldNames: Action[AnyContent]
 
   def getFieldValue(id: BSONObjectID, fieldName: String): Action[AnyContent]
+
+  def exportAllRecordsAsCsv(delimiter : String): Action[AnyContent]
+
+  def exportAllRecordsAsJson: Action[AnyContent]
+
+  def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]): Action[AnyContent]
+
+  def exportRecordsAsJson(filter: Seq[FilterCondition]): Action[AnyContent]
+
+  def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
+
+  def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent]
 }

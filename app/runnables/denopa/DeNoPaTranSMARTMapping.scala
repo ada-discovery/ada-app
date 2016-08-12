@@ -1,6 +1,6 @@
 package runnables.denopa
 
-import models.Category
+import dataaccess.Category
 
 @Deprecated
 object DeNoPaTranSMARTMapping {

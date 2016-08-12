@@ -7,17 +7,12 @@
 @(page: Page[LdapUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @actions = {
-    <div class="row">
-        <div class="col-md-8">
-        @filter(page.filter, routes.LdapUserController.find(),  Left(Seq("_id", "name", "email", "ou")))
-        </div>
-    </div>
 }
 
 @table = @{
     paginatedTable(
         page,
-        routes.LdapUserController.find(_, _, page.filter),
+        { (_: Int, _: String) => routes.LdapUserController.listAll()},
         typeColumns[LdapUser](
             (Some("_id"), "LDAP DN", _._id),
             (Some("name"), "Name", _.name),

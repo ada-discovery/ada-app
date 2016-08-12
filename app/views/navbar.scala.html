@@ -49,7 +49,7 @@
                             @listItem(controllers.dataset.routes.DataSetSettingController.find(), "Data Set Settings")
                             <li role="separator" class="divider"></li>
                             @listItem(routes.UserController.listAll(), "Users")
-                            @listItem(routes.LdapUserController.listAll(), "LDAP User")
+                            @listItem(routes.LdapUserController.listAll, "LDAP User")
                             @listItem(routes.LdapController.settings(), "LDAP Settings")
                             <li role="separator" class="divider"></li>
                             @listItem(routes.AdminController.listRunnables(), "Runnables")

@@ -2,15 +2,10 @@ package runnables.ldap
 
 import javax.inject.Inject
 
-import ldap.LdapUserRepo
-import models.security.{UserManager, CustomUser, LdapUser}
-import play.api.libs.json.JsObject
+import models.security.UserManager
 import runnables.GuiceBuilderRunnable
-import persistence.RepoTypes.UserRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
 
 /**
   * Synchronize user entries of LDAP server and local database.

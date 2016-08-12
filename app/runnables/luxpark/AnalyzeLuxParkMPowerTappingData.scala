@@ -2,11 +2,12 @@ package runnables.luxpark
 
 import javax.inject.Inject
 
+import dataaccess.Criterion
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import runnables.DataSetId._
 import runnables.GuiceBuilderRunnable
-import models.Criterion.CriterionInfix
+import Criterion.CriterionInfix
 import scala.concurrent.duration._
 import scala.concurrent.Await._
 import play.api.libs.json.{JsValue, JsArray, JsObject, Json}
@@ -43,7 +44,7 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
 
   override def run = {
     val tappingsFuture = mPowerTappingDataRepo.find(
-      criteria = Seq("externalId" #= subjectMPowerId),
+      criteria = Seq("externalId" #== subjectMPowerId),
       projection = fields
     )
 

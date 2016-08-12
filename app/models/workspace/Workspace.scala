@@ -2,7 +2,7 @@ package models.workspace
 
 import _root_.util.FilterCondition
 import _root_.util.FilterCondition.FilterConditionFormat
-import models.BSONObjectIdentity
+import dataaccess.BSONObjectIdentity
 import play.api.libs.json._
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID

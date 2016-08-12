@@ -1,14 +1,18 @@
+@import dataaccess.Field
 @import views.html.layout
 @import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu}
 @import views.html.table.paginatedTable
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.chart.chartPanelJs
 @import views.html.modal
-@import models.Field
+@import views.html.exportDropdown
 @import models.FieldChartSpec
 @import util.typeColumns
 @import controllers.dataset.{DictionaryRouter, DictionaryJsRouter}
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+@import dataaccess.DataSpaceMetaInfo
+@import be.objectify.deadbolt.scala.views.html.restrict
+@import models.security.SecurityRole
 
 @(
     domainName : String,
@@ -23,13 +27,22 @@
 
 @actions = {
     <div class="row">
-        <div class="col-md-11">
+        <div class="col-md-10">
             @filter(page.filter, router.plainList, Left(Seq("fieldType", "isArray", "label", "name")))
         </div>
-        <div class="col-md-1">
-            <a class="btn btn-info btn-sm" href="@router.inferDictionary">
-                @if(page.total.equals(0l) && page.filter.isEmpty) {Infer} else {(Re)Infer}
-            </a>
+        <div class="pull-right">
+            <ul class="list-inline">
+                <li>
+                    @exportDropdown(router.exportAllCsv, router.exportAllJson)
+                </li>
+                <li>
+                    @restrict(roles = List(Array(SecurityRole.admin))) {
+                        <a class="btn btn-info btn-sm" href="@router.inferDictionary">
+                        @if(page.total.equals(0l) && page.filter.isEmpty) {Infer} else {(Re)Infer}
+                        </a>
+                    }
+                </li>
+            </ul>
         </div>
     </div>
     @if(page.total.equals(0l) && page.filter.isEmpty) {

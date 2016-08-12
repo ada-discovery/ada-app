@@ -5,10 +5,7 @@ import play.api.libs.json._
 
 import scala.collection.mutable.{Map => MMap}
 import scala.math.BigDecimal.RoundingMode
-
-object ChartType extends Enumeration {
-  val Pie, Column, Bar, Line, Polar = Value
-}
+import dataaccess.ChartType
 
 abstract class ChartSpec{val title: String}
 

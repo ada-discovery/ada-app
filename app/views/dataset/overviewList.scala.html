@@ -1,9 +1,10 @@
+@import dataaccess.Field
 @import views.html.layout
 @import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu, displayJsonModal}
 @import views.html.chart.chartPanelJs
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.table.paginatedJsonTable
-@import views.html.dataset.exportDropdown
+@import views.html.dataset.exportDataSetDropdown
 @import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 @import reactivemongo.bson.BSONObjectID
 @import models.FieldChartSpec
@@ -11,7 +12,9 @@
 @import play.api.i18n.Messages
 @import play.api.libs.json.{JsValue, JsArray, JsObject}
 @import controllers.dataset.{DataSetRouter, DataSetJsRouter}
-@import models.Field
+@import dataaccess.DataSpaceMetaInfo
+@import dataaccess.FieldType
+@import models.Page
 
 @(
     domainName : String,
@@ -33,10 +36,9 @@
             @filter(page.filter, router.plainOverviewList, Right(router.fieldNames))
         </div>
         <div class="col-md-2">
-            @exportDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
+            @exportDataSetDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
         </div>
     </div>
-
 }
 
 @genJsonRender(id: BSONObjectID, fieldName: String)(linkTitle: Html) = {

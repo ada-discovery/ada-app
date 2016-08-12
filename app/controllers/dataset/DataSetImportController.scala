@@ -3,7 +3,7 @@ package controllers.dataset
 import java.util.Date
 import java.util.concurrent.TimeoutException
 
-import persistence.RepoException
+import dataaccess.{DataSetSetting, RepoException}
 
 import scala.concurrent.duration._
 import javax.inject.Inject
@@ -66,10 +66,11 @@ class DataSetImportController @Inject()(
     "defaultScatterYFieldName" -> nonEmptyText,
     "defaultDistributionFieldName" -> nonEmptyText,
     "tranSMARTVisitFieldName" -> optional(text),
-    "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " "))
+    "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
+    "cacheDataSet" -> boolean
   ) (DataSetSetting.apply2){
     DataSetSetting.unapply(_).map( v =>
-      (v._1, v._2, v._3, v._4 ,v._5, v._6.map(_.fieldName), v._7, v._8, v._9, v._10, v._11, v._12)
+      (v._1, v._2, v._3, v._4 ,v._5, v._6.map(_.fieldName), v._7, v._8, v._9, v._10, v._11, v._12, v._13)
     )
   }
 

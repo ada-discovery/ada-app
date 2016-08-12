@@ -3,12 +3,12 @@ package controllers
 import javax.inject.Inject
 
 import controllers.dataset.{CategoryController, DataSetController, DictionaryController}
-import models.security.CustomUser
+import dataaccess.User
 
 import persistence.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, seq, email, text}
-import models.{DataSpaceMetaInfo, Page}
+import models.Page
 import reactivemongo.bson.BSONObjectID
 import services.MailClientProvider
 import views.html
@@ -22,7 +22,7 @@ class UserController @Inject() (
     userRepo: UserRepo,
     mailClientProvider: MailClientProvider,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends CrudControllerImpl[CustomUser, BSONObjectID](userRepo) with AdminRestrictedCrudController[BSONObjectID] {
+  ) extends CrudControllerImpl[User, BSONObjectID](userRepo) with AdminRestrictedCrudController[BSONObjectID] {
 
   override protected val form = Form(
     mapping(
@@ -31,12 +31,12 @@ class UserController @Inject() (
       "email" -> email,
       "roles" -> seq(text),
       "permissions" -> seq(text)
-      )(CustomUser.apply)(CustomUser.unapply))//(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))
+      )(User.apply)(User.unapply))//(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))
 
   override protected val home =
     Redirect(routes.UserController.find())
 
-  override protected def createView(f : Form[CustomUser])(implicit msg: Messages, request: Request[_]) = {
+  override protected def createView(f : Form[User])(implicit msg: Messages, request: Request[_]) = {
     val metaInfos = result(dataSpaceMetaInfoRepo.find())
     val dataSetActionNames = getMethodNames[DataSetController]
     val fieldActionNames = getMethodNames[DictionaryController]
@@ -45,10 +45,10 @@ class UserController @Inject() (
     html.user.create(f, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames)
   }
 
-  override protected def showView(id: BSONObjectID, f : Form[CustomUser])(implicit msg: Messages, request: Request[_]) =
+  override protected def showView(id: BSONObjectID, f : Form[User])(implicit msg: Messages, request: Request[_]) =
     editView(id, f)
 
-  override protected def editView(id: BSONObjectID, f : Form[CustomUser])(implicit msg: Messages, request: Request[_]) = {
+  override protected def editView(id: BSONObjectID, f : Form[User])(implicit msg: Messages, request: Request[_]) = {
     // TODO: move to admin
     val metaInfos = result(dataSpaceMetaInfoRepo.find())
     val dataSetActionNames = getMethodNames[DataSetController]
@@ -58,11 +58,11 @@ class UserController @Inject() (
     html.user.edit(id, f, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames)
   }
 
-  override protected def listView(currentPage: Page[CustomUser])(implicit msg: Messages, request: Request[_]) =
+  override protected def listView(currentPage: Page[User])(implicit msg: Messages, request: Request[_]) =
     html.user.list(currentPage)
 
 
-  override protected def saveCall(item: CustomUser)(implicit request: Request[AnyContent]): Future[BSONObjectID] = {
+  override protected def saveCall(item: User)(implicit request: Request[AnyContent]): Future[BSONObjectID] = {
     val mailer = mailClientProvider.createClient()
     val mail = mailClientProvider.createTemplate(
       "Ucer Created",

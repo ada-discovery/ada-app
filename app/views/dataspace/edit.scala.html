@@ -4,6 +4,7 @@
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import reactivemongo.bson.BSONObjectID
 
+@import dataaccess.DataSpaceMetaInfo
 @(
     id: BSONObjectID,
     form: Form[DataSpaceMetaInfo],

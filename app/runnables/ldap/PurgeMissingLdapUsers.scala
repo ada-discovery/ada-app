@@ -2,16 +2,8 @@ package runnables.ldap
 
 import javax.inject.Inject
 
-import ldap.LdapUserRepo
-import models.security.{UserManager, CustomUser, LdapUser}
-import play.api.libs.json.JsObject
+import models.security.UserManager
 import runnables.GuiceBuilderRunnable
-import persistence.RepoTypes.UserRepo
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
-
 
 /**
   * Removes users from local database which do not exist on the LDAP server.
@@ -19,8 +11,9 @@ import scala.concurrent.Future
   * This will also remove all debug users!
   */
 class PurgeMissingLdapUsers @Inject() (userManager: UserManager) extends Runnable {
-  override def run() {
-    userManager.purgeMissing()
+
+  override def run = {
+    userManager.purgeMissing
     println("Removed local users which do not exist on LDAP server.")
   }
 }

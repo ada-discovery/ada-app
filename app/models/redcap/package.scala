@@ -1,5 +1,6 @@
 package models
 
+import dataaccess.EnumFormat
 import play.api.libs.json.Json
 import play.modules.reactivemongo.json.BSONFormats._
 

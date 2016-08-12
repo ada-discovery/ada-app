@@ -3,7 +3,8 @@ package util
 import java.security.MessageDigest
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import models.security.{SecurityRole, CustomUser}
+import models.security.SecurityRole
+import dataaccess.User
 import play.api.mvc.Action
 import scala.util.Random
 

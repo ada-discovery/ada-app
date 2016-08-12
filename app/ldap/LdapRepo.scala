@@ -1,16 +1,11 @@
 package ldap
 
-
 import com.unboundid.ldap.sdk._
+import dataaccess.{AscSort, DescSort, Sort, AsyncReadonlyRepo, Criterion}
 import ldap.LdapUtil.LdapConverter
-import models.Criterion
-
-import persistence._
+import models.security.LdapUser.ldapUserFormat
 import play.api.libs.json._
 import _root_.util.ObjectCache
-
-
-import scala.collection.Set
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -21,6 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
   * Make sure to provide/ inject a LdapConnector and a conversion method for LdapEntries.
   * Extends AsyncReadOnnlyRepo and can thus be used in ReadOnlyControllers.
   */
+@Deprecated
 trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCache[T]{
 
   def converter: LdapConverter[T] = ???
@@ -46,22 +42,22 @@ trait LdapRepo[T <: LdapDN] extends AsyncReadonlyRepo[T, String] with ObjectCach
   ): Future[Traversable[T]] = {
 
     val entries = getCache(false)
-    val entriesFiltered =
-      criteria match {
-        case Nil => entries
-        case _ => {
-          val jsonFilterKeys = criteria.map(_.fieldName)
-          val jsonFilter = { (entry: T) =>
-            val entryJson: JsValue = entry.toJson
-            jsonFilterKeys.exists { key: String =>
-              (entryJson \ key).toOption.map(value =>
-                criteria.exists(c => c.fieldName.equals(key) && c.value.equals(value))
-              ).getOrElse(false)
-            }
-          }
-          entries.filter(jsonFilter)
-        }
-      }
+    val entriesFiltered = entries
+//      criteria match {
+//        case Nil => entries
+//        case _ => {
+//          val jsonFilterKeys = criteria.map(_.fieldName)
+//          val jsonFilter = { (entry: T) =>
+//            val entryJson: JsValue = Json.toJson(entry)
+//            jsonFilterKeys.exists { key: String =>
+//              (entryJson \ key).toOption.map(value =>
+//                criteria.exists(c => c.fieldName.equals(key) && c.value.equals(value))
+//              ).getOrElse(false)
+//            }
+//          }
+//          entries.filter(jsonFilter)
+//        }
+//      }
 
     val entriesOrdered: Seq[T] =
       orderBy.headOption match {

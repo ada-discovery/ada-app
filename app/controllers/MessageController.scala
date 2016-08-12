@@ -5,7 +5,7 @@ import javax.inject.Inject
 import be.objectify.deadbolt.scala.DeadboltActions
 import models.Message
 import models.security.{SecurityRole, UserManager}
-import persistence.{DescSort, AscSort}
+import dataaccess.DescSort
 import persistence.RepoTypes.MessageRepo
 import play.api.libs.Comet
 import play.api.libs.EventSource.EventIdExtractor

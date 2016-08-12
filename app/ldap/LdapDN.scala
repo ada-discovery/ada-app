@@ -8,5 +8,4 @@ import play.api.libs.json.JsValue
   */
 trait LdapDN {
   def getDN: String
-  def toJson: JsValue
 }

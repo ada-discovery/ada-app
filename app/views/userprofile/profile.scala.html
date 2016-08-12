@@ -1,8 +1,8 @@
-@import models.security.CustomUser
 @import be.objectify.deadbolt.scala.views.html.restrict
+@import dataaccess.User
 @import models.security.SecurityRole
 
-@(user: CustomUser)(implicit request: Request[Any], flash: Flash)
+@(user: User)(implicit request: Request[Any], flash: Flash)
 
 @layout.main("NCER-PD Home") {
     <!-- Begin page content -->
@@ -11,7 +11,7 @@
         <br>
         <div class="row">
             <div class="col-sm-3">
-                @userItems("General", user.getProperties)
+                @userItems("General", Seq(user.ldapDn, user.email))
             </div>
             <div class="col-sm-3">
                 @userItems("Roles", user.roles)

@@ -2,7 +2,7 @@ package runnables.luxpark
 
 import javax.inject.Inject
 
-import models.{FieldType, Field}
+import dataaccess.{FieldType, Field}
 import runnables.DataSetId.lux_park_clinical
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable

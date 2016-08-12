@@ -3,16 +3,18 @@ package services
 import java.util.Date
 import java.nio.charset.{UnsupportedCharsetException, MalformedInputException, Charset}
 import javax.inject.Inject
+import dataaccess._
+import dataaccess.RepoTypes.DataSetSettingRepo
 import models.redcap.{Metadata, FieldType => RCFieldType}
 import _root_.util.{MessageLogger, JsonUtil, TypeInferenceProvider}
 import com.google.inject.ImplementedBy
 import models._
 import models.synapse.{SelectColumn, ColumnType}
-import models.Criterion.CriterionInfix
-import persistence.RepoSynchronizer
+import Criterion.CriterionInfix
+import dataaccess.RepoTypes.JsonCrudRepo
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import persistence.dataset.DictionaryCategoryRepo.saveRecursively
+import DictionaryCategoryRepo.saveRecursively
 import play.api.Logger
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
@@ -65,7 +67,7 @@ trait DataSetService {
   ): Future[Unit]
 
   def inferFieldType(
-    dataSetRepo: JsObjectCrudRepo,
+    dataSetRepo: JsonCrudRepo,
     typeInferenceProvider: TypeInferenceProvider,
     fieldName : String
   ): Future[(Boolean, FieldType.Value)]
@@ -403,7 +405,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   private def saveAndTransformJsons(
-    dataRepo: JsObjectCrudRepo,
+    dataRepo: JsonCrudRepo,
     keyField: Option[String],
     updateExisting: Boolean,
     transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]],
@@ -474,7 +476,7 @@ class DataSetServiceImpl @Inject()(
         Future.sequence(
           jsonRecords.map { case (json, key) =>
             for {
-              existingRecords <- dataRepo.find(criteria = Seq(keyField.get #= key), projection = Seq("_id"))
+              existingRecords <- dataRepo.find(criteria = Seq(keyField.get #== key), projection = Seq("_id"))
             } yield
               (json, existingRecords)
           }
@@ -590,8 +592,7 @@ class DataSetServiceImpl @Inject()(
     val fieldRepo = dsa.fieldRepo
     val fieldSyncRepo = RepoSynchronizer(fieldRepo, timeout)
 
-    // init dictionary if needed
-    result(fieldRepo.initIfNeeded, timeout)
+    // delete all
     fieldSyncRepo.deleteAll
 
     val fieldNames = result(getFieldNames(dataRepo), timeout)
@@ -629,12 +630,8 @@ class DataSetServiceImpl @Inject()(
     val categoryRepo = dsa.categoryRepo
     val categorySyncRepo = RepoSynchronizer(categoryRepo, timeout)
 
-    // init field dictionary if needed
-    result(fieldRepo.initIfNeeded, timeout)
+    // delete all
     fieldSyncRepo.deleteAll
-
-    // init categories if needed
-    result(categoryRepo.initIfNeeded, timeout)
     categorySyncRepo.deleteAll
 
     val indexFieldNameMap = fieldNamesInOrder.zipWithIndex.map(_.swap).toMap
@@ -727,8 +724,6 @@ class DataSetServiceImpl @Inject()(
     val categoryRepo = dsa.categoryRepo
 
     val dictionarySyncRepo = RepoSynchronizer(fieldRepo, timeout)
-    // init dictionary if needed
-    result(fieldRepo.initIfNeeded, timeout)
     // delete all fields
     dictionarySyncRepo.deleteAll
     // delete all categories
@@ -779,7 +774,7 @@ class DataSetServiceImpl @Inject()(
     )
   }
 
-  private def getFieldNames(dataRepo: JsObjectCrudRepo): Future[Set[String]] =
+  private def getFieldNames(dataRepo: JsonCrudRepo): Future[Set[String]] =
     for {
       records <- dataRepo.find(limit = Some(1))
     } yield
@@ -805,7 +800,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   def inferFieldTypes(
-    dataRepo: JsObjectCrudRepo,
+    dataRepo: JsonCrudRepo,
     typeInferenceProvider: TypeInferenceProvider,
     fieldNames: Traversable[String]
   ): Future[Traversable[(String, Boolean, FieldType.Value)]] = {
@@ -819,7 +814,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def inferFieldType(
-    dataRepo: JsObjectCrudRepo,
+    dataRepo: JsonCrudRepo,
     typeInferenceProvider: TypeInferenceProvider,
     fieldName : String
   ): Future[(Boolean, FieldType.Value)] =
@@ -855,7 +850,6 @@ class DataSetServiceImpl @Inject()(
     val fieldRepo = dsa.fieldRepo
 
     for {
-      _ <- fieldRepo.initIfNeeded
       _ <- fieldRepo.deleteAll
       fieldNames <- getFieldNames(dataSetRepo)
       _ <- {

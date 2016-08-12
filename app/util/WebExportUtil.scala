@@ -14,12 +14,13 @@ object WebExportUtil {
   def jsonsToCsvFile(
     filename: String,
     delimiter: String,
+    fieldNames: Option[Seq[String]] = None,
     replacements : Option[List[(String, String)]] = None,
     charset : String = DEFAULT_CHARSET)(
     jsons : Traversable[JsObject]
   ) = {
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    val csvString = jsonObjectsToCsv(unescapedDelimiter, "\n", replacements.getOrElse(List[(String, String)]()))(jsons)
+    val csvString = jsonObjectsToCsv(unescapedDelimiter, "\n", fieldNames, replacements.getOrElse(List[(String, String)]()))(jsons)
     stringToFile(filename, charset)(csvString)
   }
 
@@ -28,8 +29,8 @@ object WebExportUtil {
     charset : String = DEFAULT_CHARSET)(
     jsons : Traversable[JsObject]
   ) = {
-    val content = jsons.map(_.toString()).mkString(",\n")
-    stringToFile(filename, charset)(content)
+    val content = jsons.map(_.toString).mkString(",\n")
+    stringToFile(filename, charset)(s"[$content]")
   }
 
   def stringToFile(
