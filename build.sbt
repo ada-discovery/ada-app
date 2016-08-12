@@ -21,7 +21,7 @@ libraryDependencies ++= Seq(cache, ws)
 
 resolvers ++= Seq(
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
-  "JCenter" at "http://jcenter.bintray.com/",
+  "JCenter" at "http://jcenter.bintray.com/", 
   Resolver.mavenLocal
 //  "Ivylocal" at "file://home/peter/.ivy2/local/" // " + Path.userHome.absolutePath + "
 )
