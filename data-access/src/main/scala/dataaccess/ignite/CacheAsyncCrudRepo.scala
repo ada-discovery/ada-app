@@ -11,6 +11,7 @@ import org.apache.ignite.{Ignite, IgniteCache}
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsResult, JsValue, Format}
+import scala.collection.mutable
 import scala.reflect.runtime.universe._
 import scala.reflect.runtime.{universe => ru}
 
@@ -37,9 +38,18 @@ private class CacheAsyncCrudRepo[ID, E: TypeTag](
 
   private val constructorWithInfos = ru.typeOf[E].decl(ru.termNames.CONSTRUCTOR).asTerm.alternatives.map{ ctor =>
     val constructor = cm.reflectConstructor(ctor.asMethod)
+
     val paramNameAndTypes = ctor.asMethod.paramLists.map(_.map{x => (shortName(x), x.info)}).flatten
-    (paramNameAndTypes, constructor)
-  }.sortBy(-_._1.size)
+
+    val paramNameDefaultValueMap: Map[String, Any] = paramNameAndTypes.map { case (paramName, paramType) =>
+      val defaultValueOption = defaultTypeValues.find {
+        case (defaultType, defaultValue) => paramType <:< defaultType
+      }.map(_._2)
+      defaultValueOption.map( defaultValue => (paramName, defaultValue))
+    }.flatten.toMap
+
+    (constructor, paramNameAndTypes, paramNameDefaultValueMap)
+  }.sortBy(-_._2.size)
 
   // hooks
   override def toCacheId(id: ID) =
@@ -52,23 +62,19 @@ private class CacheAsyncCrudRepo[ID, E: TypeTag](
   override def toCacheItem(item: E) =
     item
 
-  override def queryResultToItem(result: Seq[(String, Any)]) = {
+  override def queryResultToItem(result: Traversable[(String, Any)]): E = {
     val fieldNameValueMap = result.map{ case (fieldName, value) => (unescapeFieldName(fieldName), value) }.toMap
-    val multiConstructorValues = constructorWithInfos.map { case (paramNameAndTypes, ctorm) =>
+    val multiConstructorValues = constructorWithInfos.map { case (constructor, paramNameAndTypes, paramNameDefaultValueMap) =>
       try {
         val constructorValues = paramNameAndTypes.map { case (paramName, paramType) =>
           fieldNameValueMap.get(paramName).getOrElse {
             // failing over to default values
-            val defaultValue = defaultTypeValues.find {
-              case (defaultType, defaultValue) => paramType <:< defaultType
-            }.map(_._2)
-
-            defaultValue.getOrElse(
+            paramNameDefaultValueMap.get(paramName).getOrElse(
               throw new IllegalArgumentException(s"Constructor of ${reflectedClass.fullName} expects mandatory param '${paramName}' but the result set contains none.")
             )
           }
         }
-        Some(constructorValues, ctorm)
+        Some(constructorValues, constructor)
       } catch {
         case e: Exception => None
       }
@@ -81,6 +87,40 @@ private class CacheAsyncCrudRepo[ID, E: TypeTag](
       val resultFieldNames = result.map(_._1).mkString(", ")
       throw new IllegalArgumentException(s"No constructor of the class '${reflectedClass.fullName}' matches the query result fields '${resultFieldNames}'. Adjust your query or introduce an appropriate constructor.")
     }
+  }
+
+  override def queryResultsToItem(rawFieldNames: Seq[String], results: Traversable[Seq[Any]]): Traversable[E] = {
+    val fieldNames = rawFieldNames.map(unescapeFieldName).toSeq
+
+    val constructorWithInfosOption = constructorWithInfos.find { case (constructor, paramNameAndTypes, paramNameDefaultValueMap) =>
+      paramNameAndTypes.forall { case (paramName, _) =>
+        fieldNames.contains(paramName) || paramNameDefaultValueMap.contains(paramName)
+      }
+    }
+
+    constructorWithInfosOption.map { case (constructor, paramNameAndTypes, paramNameDefaultValueMap) =>
+      val paramNameIndexMap = paramNameAndTypes.map(_._1).zipWithIndex.toMap
+
+      val fieldConstructorIndeces = fieldNames.map(paramNameIndexMap.get(_).get)
+
+      val constructorValues = paramNameAndTypes.map{ case (paramName, _) =>
+        if (!fieldNames.contains(paramName)) {
+          // failover to default values (we know it exists due to the search performed above)
+          paramNameDefaultValueMap.get(paramName).get
+        } else
+          None
+      }.toSeq
+
+      results.map{ result =>
+        val values: mutable.Seq[Any] = mutable.ArraySeq(constructorValues:_*)
+        (fieldConstructorIndeces, result).zipped.map{ (index, value) =>
+          values.update(index, value)
+        }
+        constructor(values: _*).asInstanceOf[E]
+      }
+    }.getOrElse(
+      throw new IllegalArgumentException(s"No constructor of the class '${reflectedClass.fullName}' matches the query result fields '${rawFieldNames}'. Adjust your query or introduce an appropriate constructor.")
+    )
   }
 }
 
@@ -96,9 +136,9 @@ class CacheAsyncCrudRepoFactory {
     implicit identity: Identity[E, ID]
   ): AsyncCrudRepo[E, ID] = {
     val cache = cacheFactory[ID, E](
+      cacheName,
       repoFactory,
-      identity.of,
-      cacheName
+      identity.of(_)
     )
     cache.loadCache(null)
     val entityName = shortName(typeOf[E].typeSymbol)

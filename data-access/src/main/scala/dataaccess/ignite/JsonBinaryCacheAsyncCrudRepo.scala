@@ -11,6 +11,7 @@ import org.apache.ignite.{Ignite, IgniteCache}
 import org.apache.ignite.binary.BinaryObject
 import play.api.Configuration
 import play.api.libs.json.JsObject
+import reactivemongo.bson.BSONObjectID
 
 class JsonBinaryCacheAsyncCrudRepo[ID](
     cache: IgniteCache[ID, BinaryObject],
@@ -32,14 +33,13 @@ class JsonBinaryCacheAsyncCrudRepo[ID](
   override def toCacheItem(item: JsObject) =
     toBinary(item)
 
-  override def queryResultToItem(result: Seq[(String, Any)]) =
+  override def queryResultToItem(result: Traversable[(String, Any)]) =
     toJsObject(result)
 }
 
 // protected[dataaccess]
 class JsonBinaryCacheAsyncCrudRepoFactory @Inject()(
     ignite: Ignite,
-    dictionaryFieldRepoFactory: DictionaryFieldRepoFactory,
     cacheFactory: BinaryCacheFactory,
     configuration: Configuration
   ) extends JsonCrudRepoFactory {
@@ -57,12 +57,16 @@ class JsonBinaryCacheAsyncCrudRepoFactory @Inject()(
     val cacheName = collectionName.replaceAll("[\\.-]", "_")
     val identity = JsObjectIdentity
 
+    val fieldNamesAndClasses: Seq[(String, Class[_ >: Any])] =
+      (fieldNamesAndTypes.map{ case (fieldName, fieldType) =>
+        (escapeIgniteFieldName(fieldName), getClassForFieldType(fieldType))
+      } ++ Seq((identity.name, classOf[Option[BSONObjectID]].asInstanceOf[Class[_ >: Any]])))
+
     val cache = cacheFactory(
-      new JsonRepoFactory(collectionName, configuration, new SerializableApplicationLifecycle()),
-      identity.of,
-      identity.name,
       cacheName,
-      fieldNamesAndTypes
+      fieldNamesAndClasses,
+      new JsonRepoFactory(collectionName, configuration, new SerializableApplicationLifecycle()),
+      identity.of(_)
     ) // new DefaultApplicationLifecycle().addStopHook
     cache.loadCache(null)
     new JsonBinaryCacheAsyncCrudRepo(cache, cacheName, ignite, identity)

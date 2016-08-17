@@ -1,5 +1,7 @@
 package dataaccess.ignite
 
+import java.util.Date
+
 import dataaccess._
 import org.apache.ignite.cache.query.SqlFieldsQuery
 import org.apache.ignite.IgniteCache
@@ -28,7 +30,14 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
 
   def toCacheItem(item: E): CACHE_E
 
-  def queryResultToItem(result: Seq[(String, Any)]): E
+  def queryResultToItem(result: Traversable[(String, Any)]): E
+
+  // override if needed
+  def queryResultsToItem(fieldNames: Seq[String], results: Traversable[Seq[Any]]): Traversable[E] =
+    // default implementation simply iterating through and using the single item version queryResultToItem
+    results.map{ result =>
+      queryResultToItem(fieldNames.zip(result))
+    }
 
   protected val fieldNameAndTypeNames: Traversable[(String, String)] = {
     val queryEntity = cache.getConfiguration(classOf[CacheConfiguration[CACHE_ID, CACHE_E]]).getQueryEntities.head
@@ -62,10 +71,12 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     }
 
   override def count(criteria: Seq[Criterion[Any]]): Future[Int] = {
+    val start = new java.util.Date()
+
     val whereClauseAndArgs = toSqlWhereClauseAndArgs(criteria)
 
     val sql = s"select count(*) from $entityName ${whereClauseAndArgs._1}"
-    logger.debug("Running SQL on Ignite cache: " + sql)
+    logger.info("Running SQL on Ignite cache: " + sql)
     var query = new SqlFieldsQuery(sql)
 
     if (whereClauseAndArgs._2.nonEmpty)
@@ -73,7 +84,10 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
 
     Future {
       val cursor = cache.query(query)
-      cursor.head.head.asInstanceOf[Long].toInt
+      val result = cursor.head.head.asInstanceOf[Long].toInt
+      val end = new java.util.Date()
+      println(s"SQL: $sql, finished in " + (end.getTime - start.getTime))
+      result
     }
   }
 
@@ -84,6 +98,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     limit: Option[Int],
     page: Option[Int]
   ): Future[Traversable[E]] = {
+    val start = new java.util.Date()
     // projection
     val projectionSeq = (
       projection.toSeq ++ (
@@ -120,7 +135,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     }
 
     val sql = s"select $projectionPart from $entityName ${whereClauseAndArgs._1} $orderByPart $limitPart"
-    logger.debug("Running SQL on Ignite cache: " + sql)
+    logger.info("Running SQL on Ignite cache: " + sql)
     var query = new SqlFieldsQuery(sql)
 
     if (whereClauseAndArgs._2.nonEmpty)
@@ -128,12 +143,20 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
 
     Future {
       val cursor = cache.query(query)
-      cursor.getAll.map { values =>
-        projection match {
-          case Nil => toItem(values.get(0).asInstanceOf[CACHE_E])
-          case _ => queryResultToItem(projectionSeq.zip(values))
+      val all = cursor.getAll: Traversable[java.util.List[_]]
+      val result = projection match {
+        case Nil => all.map { values =>
+          toItem(values.get(0).asInstanceOf[CACHE_E])
+        }
+        case _ => {
+          val values = all.map(list => list : Seq[_])
+          queryResultsToItem(projectionSeq, values)
         }
       }
+
+      val end = new java.util.Date()
+      println(s"SQL: $sql, finished in " + (end.getTime - start.getTime))
+      result
     }
   }
 

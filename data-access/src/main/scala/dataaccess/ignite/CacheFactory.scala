@@ -1,5 +1,7 @@
 package dataaccess.ignite
 
+import org.apache.ignite.cache.store.CacheStore
+
 import scala.reflect.runtime.universe._
 import java.io.Serializable
 import javax.cache.configuration.Factory
@@ -17,12 +19,21 @@ import scala.reflect.ClassTag
 class CacheFactory @Inject()(ignite: Ignite) extends Serializable {
 
   def apply[ID, E](
+    cacheName: String,
     repoFactory: Factory[AsyncCrudRepo[E, ID]],
-    getId: E => Option[ID],
-    cacheName: String)(
+    getId: E => Option[ID])(
+    implicit tagId: ClassTag[ID], typeTagE: TypeTag[E]
+  ): IgniteCache[ID, E] =
+    apply(
+      cacheName,
+      Some(new CacheCrudRepoStoreFactory[ID, E](repoFactory, getId))
+    )
+
+  def apply[ID, E](
+    cacheName: String,
+    cacheStoreFactoryOption: Option[Factory[CacheStore[ID, E]]])(
     implicit tagId: ClassTag[ID], typeTagE: TypeTag[E]
   ): IgniteCache[ID, E] = {
-    val cacheStoreFactory = new CacheCrudRepoStoreFactory[ID, E](repoFactory, getId)
     val cacheConfig = new CacheConfiguration[ID, E]()
 
     val fieldNamesAndTypes = getCaseMethodNamesAndTypes[E]
@@ -41,10 +52,12 @@ class CacheFactory @Inject()(ignite: Ignite) extends Serializable {
     cacheConfig.setQueryEntities(Seq(queryEntity))
     cacheConfig.setCacheMode(CacheMode.PARTITIONED) //  REPLICATED
     cacheConfig.setAtomicityMode(CacheAtomicityMode.ATOMIC)
-    cacheConfig.setCacheStoreFactory(cacheStoreFactory)
-//    cacheConfig.setCacheWriterFactory(cacheStoreFactory)
-    cacheConfig.setWriteThrough(true)
-    cacheConfig.setReadThrough(true)
+
+    cacheStoreFactoryOption.foreach{ cacheStoreFactory =>
+      cacheConfig.setCacheStoreFactory(cacheStoreFactory)
+      cacheConfig.setWriteThrough(true)
+      cacheConfig.setReadThrough(true)
+    }
 
 //    val bCfg = new BinaryConfiguration()
 //    bCfg.setIdMapper(new BinaryBasicIdMapper)

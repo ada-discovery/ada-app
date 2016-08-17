@@ -1,13 +1,13 @@
 package dataaccess.ignite
 
 import java.io.Serializable
-import java.util
 import javax.cache.configuration.Factory
 import javax.inject.Inject
 
 import dataaccess.{FieldType, Field, AsyncCrudRepo}
 import dataaccess.FieldType._
 import org.apache.ignite.binary.BinaryObject
+import org.apache.ignite.cache.store.CacheStore
 import org.apache.ignite.cache.{QueryIndex, QueryEntity, CacheAtomicityMode, CacheMode}
 import org.apache.ignite.configuration.CacheConfiguration
 import org.apache.ignite.{IgniteCache, Ignite}
@@ -15,7 +15,7 @@ import play.api.Logger
 import play.api.libs.json.JsObject
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
-import dataaccess.ignite.BinaryJsonUtil.{escapeIgniteFieldName, getValueFromJson}
+import dataaccess.ignite.BinaryJsonUtil.{escapeIgniteFieldName, getValueFromJson, getClassForFieldType}
 
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
@@ -26,11 +26,25 @@ class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
   private val logger = Logger
 
   def apply[ID](
-    repoFactory: Factory[AsyncCrudRepo[JsObject, ID]],
-    getId: JsObject => Option[ID],
-    idFieldName: String,
     cacheName: String,
-    fieldNamesAndTypes: Seq[(String, FieldType.Value)])(
+    fieldNamesAndTypes: Seq[(String, Class[_ >: Any])],
+    repoFactory: Factory[AsyncCrudRepo[JsObject, ID]],
+    getId: JsObject => Option[ID])(
+    implicit tagId: ClassTag[ID]
+  ): IgniteCache[ID, BinaryObject] = {
+//    val fieldNameClassMap = createFieldNameClassMapFromDictionary(idFieldName, fieldNamesAndTypes)
+    val cacheStoreFactory = new BinaryCacheCrudRepoStoreFactory[ID](cacheName, ignite, repoFactory, getId, fieldNamesAndTypes.toMap)
+    apply(
+      cacheName,
+      fieldNamesAndTypes,
+      Some(cacheStoreFactory)
+    )
+  }
+
+  def apply[ID](
+    cacheName: String,
+    fieldNamesAndTypes: Seq[(String, Class[_])],
+    cacheStoreFactoryOption: Option[Factory[CacheStore[ID, BinaryObject]]])(
     implicit tagId: ClassTag[ID]
   ): IgniteCache[ID, BinaryObject] = {
     val cacheConfig = new CacheConfiguration[ID, BinaryObject]()
@@ -39,21 +53,18 @@ class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
     cacheConfig.setCacheMode(CacheMode.PARTITIONED)
     cacheConfig.setAtomicityMode(CacheAtomicityMode.ATOMIC)
 
-    val fieldNameTypeMap = fieldNamesAndTypes match {
-      case _ => {
-        // if no fieldRepo provided fail over to a back-up plan and obtain the field types from the first row of the provided data set... this is however not recommended
-        logger.warn(s"No dictionary (field repo) provided for the JSON data cache '$cacheName'. Going to obtain the fields and types from the first row of the data set.")
-        Await.result(
-          createFieldNameTypeMapFromDataSet(idFieldName, repoFactory.create),
-          2 minutes
-        )
-      }
+//    val fieldNameTypeMap = fieldNamesAndTypes match {
+//      case _ => {
+//        // if no fieldRepo provided fail over to a back-up plan and obtain the field types from the first row of the provided data set... this is however not recommended
+//        logger.warn(s"No dictionary (field repo) provided for the JSON data cache '$cacheName'. Going to obtain the fields and types from the first row of the data set.")
+//        Await.result(
+//          createFieldNameTypeMapFromDataSet(idFieldName, repoFactory.create),
+//          2 minutes
+//        )
+//      }
 //      case _ =>
 //        createFieldNameTypeMapFromDictionary(idFieldName, fieldNamesAndTypes)
-    }
-
-    val fieldNameClassMap = createFieldNameClassMapFromDictionary(idFieldName, fieldNamesAndTypes)
-
+//    }
 //      fieldNameTypeMap.map{ case (fieldName, typeName) =>
 //      (fieldName,
 //        if (typeName.equals("scala.Enumeration.Value"))
@@ -62,19 +73,22 @@ class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
 //          Class.forName(typeName).asInstanceOf[Class[Any]])
 //    }
 
+    val fieldNameTypeNameMap = fieldNamesAndTypes.map{ case (fieldName, clazz) => (fieldName, clazz.getName)}.toMap
+
     val queryEntity = new QueryEntity() {
       setKeyType(tagId.runtimeClass.getName)
       setValueType(cacheName)
 //      setIndexes(fieldNames.map(fieldName => new QueryIndex(fieldName)))
-      setFields(new util.LinkedHashMap[String, String](fieldNameTypeMap))
+      setFields(new java.util.LinkedHashMap[String, String](fieldNameTypeNameMap))
     }
 
     cacheConfig.setQueryEntities(Seq(queryEntity))
-    cacheConfig.setWriteThrough(true)
-    cacheConfig.setReadThrough(true)
 
-    val cacheStoreFactory = new BinaryCacheCrudRepoStoreFactory[ID](cacheName, ignite, repoFactory, getId, fieldNameClassMap)
-    cacheConfig.setCacheStoreFactory(cacheStoreFactory)
+    cacheStoreFactoryOption.foreach{ cacheStoreFactory =>
+      cacheConfig.setCacheStoreFactory(cacheStoreFactory)
+      cacheConfig.setWriteThrough(true)
+      cacheConfig.setReadThrough(true)
+    }
 
     ignite.createCache(cacheConfig).withKeepBinary()
   }
@@ -126,17 +140,4 @@ class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
       } ++
         Seq((idFieldName, tagId.runtimeClass.asInstanceOf[Class[_ >: Any]]))
      ).toMap
-
-  // TODO: move somewhere to utils
-  private def getClassForFieldType(fieldType: FieldType.Value): Class[_ >: Any] =
-    fieldType match {
-      case Null => classOf[String].asInstanceOf[Class[_ >: Any]]
-      case Boolean => classOf[Boolean].asInstanceOf[Class[_ >: Any]]
-      case Double => classOf[Double].asInstanceOf[Class[_ >: Any]]
-      case Integer => classOf[Integer].asInstanceOf[Class[_ >: Any]]
-      case Enum => classOf[String].asInstanceOf[Class[_ >: Any]]
-      case String => classOf[String].asInstanceOf[Class[_ >: Any]]
-      case Date => classOf[java.util.Date].asInstanceOf[Class[_ >: Any]]
-      case Json => classOf[JsObject].asInstanceOf[Class[_ >: Any]]
-    }
 }

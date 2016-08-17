@@ -22,14 +22,17 @@ object DictionaryFieldRepo {
   ): Future[Unit] = {
     val categoryIds = fields.map(_.categoryId).flatten.map(Some(_)).toSeq
 
-    categoryRepo.find(Seq(CategoryIdentity.name #=> categoryIds)).map { categories =>
-      val categoryIdMap = categories.map( c => (c._id.get, c)).toMap
-      fields.foreach( field =>
-        if (field.categoryId.isDefined) {
-          field.category = categoryIdMap.get(field.categoryId.get)
-        }
-      )
-    }
+    if (categoryIds.nonEmpty) {
+      categoryRepo.find(Seq(CategoryIdentity.name #=> categoryIds)).map { categories =>
+        val categoryIdMap = categories.map(c => (c._id.get, c)).toMap
+        fields.foreach(field =>
+          if (field.categoryId.isDefined) {
+            field.category = categoryIdMap.get(field.categoryId.get)
+          }
+        )
+      }
+    } else
+      Future(())
   }
 
   def setCategoryById(

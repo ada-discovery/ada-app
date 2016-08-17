@@ -1,9 +1,11 @@
 package dataaccess.ignite
 
-import dataaccess.EnumFormat
+import dataaccess.FieldType._
+import dataaccess.{FieldType, EnumFormat}
 import org.apache.ignite.IgniteBinary
 import org.apache.ignite.binary.{BinaryType, BinaryObject}
 import org.apache.ignite.internal.binary.BinaryObjectImpl
+import play.api.libs.json.Json
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
@@ -30,10 +32,10 @@ object BinaryJsonUtil {
     )
   }
 
-  def toJsObject(result: Seq[(String, Any)]): JsObject =
+  def toJsObject(result: Traversable[(String, Any)]): JsObject =
     JsObject(
       result.map { case (fieldName, value) =>
-        (unescapeFieldName(fieldName), toJson(value))}
+        (unescapeFieldName(fieldName), toJson(value))}.toSeq
     )
 
   def toJson(value: Any): JsValue =
@@ -80,5 +82,17 @@ object BinaryJsonUtil {
       case JsBoolean(value) => value
       case JsArray(value) => value
       case x: JsObject => x
+    }
+
+  def getClassForFieldType(fieldType: FieldType.Value): Class[_ >: Any] =
+    fieldType match {
+      case Null => classOf[String].asInstanceOf[Class[_ >: Any]]
+      case Boolean => classOf[Boolean].asInstanceOf[Class[_ >: Any]]
+      case Double => classOf[Double].asInstanceOf[Class[_ >: Any]]
+      case Integer => classOf[Integer].asInstanceOf[Class[_ >: Any]]
+      case Enum => classOf[String].asInstanceOf[Class[_ >: Any]]
+      case String => classOf[String].asInstanceOf[Class[_ >: Any]]
+      case Date => classOf[java.util.Date].asInstanceOf[Class[_ >: Any]]
+      case FieldType.Json => classOf[JsObject].asInstanceOf[Class[_ >: Any]]
     }
 }
