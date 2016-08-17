@@ -86,6 +86,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
       val cursor = cache.query(query)
       val result = cursor.head.head.asInstanceOf[Long].toInt
       val end = new java.util.Date()
+      cursor.close
       println(s"SQL: $sql, finished in " + (end.getTime - start.getTime))
       result
     }
@@ -143,18 +144,18 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
 
     Future {
       val cursor = cache.query(query)
-      val all = cursor.getAll: Traversable[java.util.List[_]]
       val result = projection match {
-        case Nil => all.map { values =>
+        case Nil => cursor.map { values =>
           toItem(values.get(0).asInstanceOf[CACHE_E])
         }
         case _ => {
-          val values = all.map(list => list : Seq[_])
+          val values = cursor.map(list => list : Seq[_])
           queryResultsToItem(projectionSeq, values)
         }
       }
 
       val end = new java.util.Date()
+      cursor.close
       println(s"SQL: $sql, finished in " + (end.getTime - start.getTime))
       result
     }
