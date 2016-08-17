@@ -4,7 +4,7 @@
 @(item: LdapUser)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @elements = {
-    @value("ldapUser", "LDAP DN", item._id)
+    @value("ldapUser", "LDAP DN", item.uid)
     @value("ldapUser", "Name", item.name)
     @value("ldapUser", "Email", item.email)
     @value("ldapUser", "Organisatorical Unit", item.ou)

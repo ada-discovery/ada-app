@@ -99,11 +99,11 @@ private class UserManagerImpl @Inject()(
   override def synchronizeRepos(): Unit = {
     val ldapUsers = ldapUserService.getAll
     ldapUsers.map { ldapusr: LdapUser =>
-      val foundFuture: Future[Traversable[User]] = userRepo.find(Seq("ldapDn" #== ldapusr.getDN))
+      val foundFuture: Future[Traversable[User]] = userRepo.find(Seq("ldapDn" #== ldapusr.uid))
       foundFuture.map { found =>
         found.headOption match {
-          case Some(usr) => userRepo.update(User(usr._id, ldapusr.getDN, ldapusr.email, usr.roles, usr.permissions))
-          case None => userRepo.save(User(None, ldapusr.getDN, ldapusr.email, Seq(SecurityRole.basic), Seq()))
+          case Some(usr) => userRepo.update(User(usr._id, ldapusr.name, ldapusr.email, usr.roles, usr.permissions))
+          case None => userRepo.save(User(None, ldapusr.name, ldapusr.email, Seq(SecurityRole.basic), Seq()))
         }
       }
     }
@@ -119,7 +119,7 @@ private class UserManagerImpl @Inject()(
     val ldapusers: Traversable[LdapUser] = ldapUserService.getAll
     localusersFuture.map { localusers =>
       localusers.foreach { localusr =>
-        val exists: Boolean = ldapusers.exists(ldapusr => ldapusr.getDN == localusr.ldapDn)
+        val exists: Boolean = ldapusers.exists(ldapusr => ldapusr.uid == localusr.ldapDn)
         if (!exists) {
           userRepo.delete(localusr._id.get)
         }
@@ -138,7 +138,7 @@ private class UserManagerImpl @Inject()(
     val dn = "uid=" + id + ",cn=users," + ldapSettings.dit
 
     // TODO: is exists needed?
-    val exists = ldapUserService.getAll.find(_._id == id).nonEmpty
+    val exists = ldapUserService.getAll.find(_.uid == id).nonEmpty
     val auth = exists && connector.canBind(dn, password)
     Future(auth)
   }

@@ -93,8 +93,8 @@ class DataSetServiceImpl @Inject()(
   private val tranSmartDelimeter = '\t'
   private val tranSmartFieldGroupSize = 100
 
-  private val redCapChoicesDelimeter = "\\|"
-  private val redCapChoiceKeyValueDelimeter = ","
+  private val redCapChoicesDelimiter = "\\|"
+  private val redCapChoiceKeyValueDelimiter = ","
   private val redCapVisitField = "redcap_event_name"
 
   private val synapseDelimiter = ','
@@ -787,8 +787,8 @@ class DataSetServiceImpl @Inject()(
 
     if (choices.nonEmpty) {
       try {
-        val keyValueMap = choices.split(redCapChoicesDelimeter).map { choice =>
-          val keyValueString = choice.split(redCapChoiceKeyValueDelimeter, 2)
+        val keyValueMap = choices.split(redCapChoicesDelimiter).map { choice =>
+          val keyValueString = choice.split(redCapChoiceKeyValueDelimiter, 2)
           (JsonUtil.escapeKey(keyValueString(0).trim), keyValueString(1).trim)
         }.toMap
         Some(keyValueMap)

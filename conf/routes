@@ -51,8 +51,8 @@ POST        /admin/dataSetImport/:id                                            
 POST        /admin/dataSetImport/:id/delete                                         controllers.dataset.DataSetImportController.delete(id: BSONObjectID)
 
 # Users management
-GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "name", filter : Seq[util.FilterCondition] ?= Nil)
-GET         /users/all                                                              controllers.UserController.listAll(s: String ?= "name")
+GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "ldapDn", filter : Seq[util.FilterCondition] ?= Nil)
+GET         /users/all                                                              controllers.UserController.listAll(s: String ?= "ldapDn")
 GET         /users/new                                                              controllers.UserController.create
 POST        /users/save                                                             controllers.UserController.save
 GET         /users/:id/get                                                          controllers.UserController.get(id: BSONObjectID)

@@ -1,14 +1,9 @@
 package ldap
 
-import java.util
-
 import com.google.inject.{Inject, Singleton}
 import com.typesafe.config.ConfigValue
 import play.api.Configuration
 
-/**
-  *
-  */
 @Singleton
 class LdapSettings @Inject()(configuration: Configuration) extends Enumeration{
   // general settings

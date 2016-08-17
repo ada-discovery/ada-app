@@ -2,16 +2,15 @@ package runnables.ldap
 
 import javax.inject.Inject
 
-import ldap.LdapUserRepo
 import runnables.GuiceBuilderRunnable
 
 /**
   * Manually launch LDAP cache update.
   * @param ldaprepo
   */
-class LdapCacheUpdate @Inject() (ldaprepo: LdapUserRepo) extends Runnable {
+class LdapCacheUpdate extends Runnable { //@Inject() (ldaprepo: LdapUserRepo)
   override def run() {
-    ldaprepo.getCache(true)
+//    ldaprepo.getCache(true)
     println("LDAP user cache manually updated")
   }
 }

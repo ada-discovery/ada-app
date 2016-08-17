@@ -20,10 +20,6 @@ import scala.concurrent.Future
 trait LdapConnector {
   val ldapinterface: Option[LDAPInterface]
   val ldapsettings: LdapSettings
-  //def addUsersFromRepo(interface: LDAPInterface, userRepo: UserRepo): Unit
-
-  protected def setupInterface(): Option[LDAPInterface]
-  protected def terminateInterface(interface: Option[LDAPInterface]): Unit
 
   def getEntryList: Traversable[String]
   def findByDN(dn: String): Option[Entry]
@@ -42,7 +38,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * Creates either a server or a connection, depending on the configuration.
     * @return LDAPInterface, either of type InMemoryDirectoryServer or LDAPConnection.
     */
-  protected override def setupInterface(): Option[LDAPInterface] = {
+  private def setupInterface(): Option[LDAPInterface] = {
     val interface = settings.mode match{
       case "local" => Some(createServer)
       case "remote" => createConnection()
@@ -83,7 +79,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * Feed users from user database into server.
     * @return dummy server
     */
-  protected def createServer(): InMemoryDirectoryServer = {
+  private def createServer(): InMemoryDirectoryServer = {
     // setup configuration
     val config = new InMemoryDirectoryServerConfig(settings.dit);
     config.setSchema(null); // do not check (attribute) schema
@@ -189,7 +185,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * Ensures that application releases ports.
     * @param interface Interface to be disconnected or shut down.
     */
-  protected override def terminateInterface(interface: Option[LDAPInterface]): Unit = {
+  private def terminateInterface(interface: Option[LDAPInterface]): Unit = {
     if(interface.isDefined){
       interface.get match{
         case server: InMemoryDirectoryServer => server.shutDown(true)

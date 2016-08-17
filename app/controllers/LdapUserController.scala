@@ -4,14 +4,10 @@ import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
 import ldap.LdapUserService
-import models.Page
+import views.html.ldapviews._
 import play.api.i18n.{MessagesApi, Messages}
 import play.api.mvc._
 import util.SecurityUtil._
-
-import views.html
-
-import scala.concurrent.Future
 
 class LdapUserController @Inject() (
     deadbolt: DeadboltActions,
@@ -24,7 +20,7 @@ class LdapUserController @Inject() (
       implicit val msg = messagesApi.preferred(request)
 
       val all = ldapUserService.getAll
-      Ok(html.ldapviews.userlist(Page(all, 0, 0, all.size, "", Nil)))
+      Ok(userlist(all))
     }
   }
 
@@ -32,11 +28,11 @@ class LdapUserController @Inject() (
     Action { implicit request =>
       implicit val msg = messagesApi.preferred(request)
 
-      val userOption = ldapUserService.getAll.find{entry => (entry.getDN == id)}
+      val userOption = ldapUserService.getAll.find{entry => (entry.uid == id)}
       userOption.fold(
         BadRequest(s"LDAP user with id '$id' not found.")
       ) {
-        user => Ok(html.ldapviews.usershow(user))
+        user => Ok(usershow(user))
       }
     }
   }

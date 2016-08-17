@@ -96,7 +96,9 @@ abstract class CleanupDataSet (
     }
 
     // remove all items without any content
-    convertedJsItems.filter(item => item.fields.exists{ case (attribute, value) => attribute != "Line_Nr" && attribute != "orig_id" && attribute != "_id" && value != JsNull})
+    convertedJsItems.filter(item => item.fields.exists{ case (attribute, value) =>
+      attribute != "Line_Nr" && attribute != "orig_id" && attribute != "_id" && value != JsNull
+    })
   }
 
   private def toJsonNum(string : String) = {

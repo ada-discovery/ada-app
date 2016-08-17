@@ -23,16 +23,15 @@ class TestBinaryIgnite @Inject() (ignite: Ignite, cacheFactory: BinaryCacheFacto
   override def run = {
     val identity = JsObjectIdentity
     val cache = cacheFactory(
+      cacheName,
+      Nil,
       new JsonRepoFactory(
         collectionName,
         configuration,
         new SerializableApplicationLifecycle()
       ),
-      identity.of,
-      identity.name,
-      cacheName,
-      Nil
-    ) // new DefaultApplicationLifecycle().addStopHook
+      identity.of(_)
+    )// new DefaultApplicationLifecycle().addStopHook
     val repo = new JsonBinaryCacheAsyncCrudRepo(cache, cacheName, ignite, identity)
     cache.loadCache(null)
 

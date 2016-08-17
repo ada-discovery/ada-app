@@ -93,7 +93,7 @@ object LdapUtil {
     * @param entry Entry as input for reconstruction.
     * @return CustomUser, if Entry is not null, None else.
     */
-  def entryToLdapUser(entry: Entry): Option[LdapUser] = {
+  def entryToLdapUser(entry: Entry): Option[LdapUser] =
     if(entry != null){
       val uid: String = entry.getAttributeValue("uid")
       val name: String = entry.getAttributeValue("cn")
@@ -101,11 +101,9 @@ object LdapUtil {
       val ou: String = entry.getAttributeValue("ou")
       val permissions: Array[String] = nullToDefault(entry.getAttributeValues("memberof"), Array[String]())
       Some(LdapUser(uid, name, email, ou, permissions))
-    }else{
+    } else{
       None
     }
-  }
-
 
   /**
     * Convert entry to UserGroup object if possible.

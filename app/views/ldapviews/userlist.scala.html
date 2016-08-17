@@ -1,32 +1,29 @@
 @import views.html.layout
-@import views.html.table.paginatedTable
+@import views.html.table.{paginatedTable, displayTable}
 @import util.typeColumns
 
 @import models.security.LdapUser
 
-@(page: Page[LdapUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
-
-@actions = {
-}
+@(items: Traversable[LdapUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
 @table = @{
-    paginatedTable(
-        page,
-        { (_: Int, _: String) => routes.LdapUserController.listAll()},
+    displayTable(
+        items,
         typeColumns[LdapUser](
-            (Some("_id"), "LDAP DN", _._id),
-            (Some("name"), "Name", _.name),
-            (Some("email"), "Email", _.email),
-            (Some("ou"), "OU", _.ou)
+            (None, "LDAP DN", _.uid),
+            (None, "Name", _.name),
+            (None, "Email", _.email),
+            (None, "OU", _.ou)
         ),
-        Some({ item : Any => routes.LdapUserController.get(item.asInstanceOf[LdapUser]._id)})
+        None,
+        Some({ item : Any => routes.LdapUserController.get(item.asInstanceOf[LdapUser].uid)})
     )
 }
 
 @layout.list(
     "LDAP user",
-    page.total,
-    actions,
+    items.size,
+    None,
     table,
     None
 )
