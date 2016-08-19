@@ -3,6 +3,7 @@ package services
 import java.util.Date
 import java.nio.charset.{UnsupportedCharsetException, MalformedInputException, Charset}
 import javax.inject.Inject
+import dataaccess.DataSetFormattersAndIds.JsObjectIdentity
 import dataaccess._
 import dataaccess.RepoTypes.DataSetSettingRepo
 import models.redcap.{Metadata, FieldType => RCFieldType}
@@ -86,6 +87,7 @@ class DataSetServiceImpl @Inject()(
 
   private val logger = Logger
   private val messageLogger = MessageLogger(logger, messageRepo)
+  private val dataSetIdFieldName = JsObjectIdentity.name
   private val timeout = 20 minutes
   private val defaultCharset = "UTF-8"
   private val reportLineFreq = 0.1
@@ -380,7 +382,7 @@ class DataSetServiceImpl @Inject()(
         // remove the old records if key field defined
         _ <- if (keyField.isDefined) {
           val newKeys = jsons.map{json => (json \ keyField.get).asOpt[String]}.flatten
-          val recordsToRemoveFuture = dataRepo.find(criteria = Seq(keyField.get #!-> newKeys), projection = Seq("_id"))
+          val recordsToRemoveFuture = dataRepo.find(criteria = Seq(keyField.get #!-> newKeys), projection = Seq(dataSetIdFieldName))
 
           recordsToRemoveFuture.flatMap { recordsToRemove =>
             if (recordsToRemove.nonEmpty) {
@@ -388,7 +390,7 @@ class DataSetServiceImpl @Inject()(
             }
             Future.sequence(
               recordsToRemove.map( recordToRemove =>
-                dataRepo.delete((recordToRemove \ "_id").get.as[BSONObjectID])
+                dataRepo.delete((recordToRemove \ dataSetIdFieldName).get.as[BSONObjectID])
               )
             )
           }
@@ -439,27 +441,30 @@ class DataSetServiceImpl @Inject()(
     }
 
     // helper function to transform and update given json records with key-matched existing records
-    def transformAndUpdateAux(startIndex: Int)(jsonWithExistingRecords: Seq[(JsObject, Traversable[JsObject])]): Future[Seq[Unit]] = {
-      val transformedJsonWithExistingRecordsFuture = if (transformJsons.isDefined) {
+    def transformAndUpdateAux(
+      startIndex: Int)(
+      jsonsWithIds: Seq[(JsObject, Traversable[JsValue])]
+    ): Future[Seq[Unit]] = {
+      val transformedJsonWithIdsFuture = if (transformJsons.isDefined) {
         for {
-          transformedJsons <- transformJsons.get(jsonWithExistingRecords.map(_._1))
+          transformedJsons <- transformJsons.get(jsonsWithIds.map(_._1))
         } yield
-          transformedJsons.zip(jsonWithExistingRecords).map { case (transformedJson, (_, existingRecords)) =>
-            (transformedJson, existingRecords)
+          transformedJsons.zip(jsonsWithIds).map { case (transformedJson, (_, ids)) =>
+            (transformedJson, ids)
           }
       } else
         // if no transformation provided do nothing
-        Future(jsonWithExistingRecords)
+        Future(jsonsWithIds)
 
-      transformedJsonWithExistingRecordsFuture.flatMap { transformedJsonWithExistingRecords =>
-        if (transformedJsonWithExistingRecords.nonEmpty) {
-          logger.info(s"Updating ${transformedJsonWithExistingRecords.size} records...")
+      transformedJsonWithIdsFuture.flatMap { transformedJsonWithIds =>
+        if (transformedJsonWithIds.nonEmpty) {
+          logger.info(s"Updating ${transformedJsonWithIds.size} records...")
         }
         Future.sequence(
-          transformedJsonWithExistingRecords.zipWithIndex.map { case ((json, existingRecords), index) =>
+          transformedJsonWithIds.zipWithIndex.map { case ((json, ids), index) =>
             Future.sequence(
-              existingRecords.map { existingJson =>
-                dataRepo.update(json.+("_id", (existingJson \ "_id").get)).map(_ =>
+              ids.map { id =>
+                dataRepo.update(json.+(dataSetIdFieldName, id)).map(_ =>
                   logProgress(startIndex + index + 1, reportLineSize, size)
                 )
               }
@@ -470,31 +475,46 @@ class DataSetServiceImpl @Inject()(
     }
 
     // helper function to transform and save or update given json records
-    def transformAndSaveOrUdateAux(startIndex: Int)(jsonRecords: Seq[(JsObject, JsValue)]): Future[Unit] = {
-      // logger.info(s"Processing ${jsonRecords.size} records... ")
-      val jsonsToSaveOrUpdateFuture: Future[Seq[(JsObject, Traversable[JsObject])]] =
-        Future.sequence(
-          jsonRecords.map { case (json, key) =>
-            for {
-              existingRecords <- dataRepo.find(criteria = Seq(keyField.get #== key), projection = Seq("_id"))
-            } yield
-              (json, existingRecords)
-          }
-        )
+    def transformAndSaveOrUdateAux(
+      startIndex: Int)(
+      jsonRecords: Seq[(JsObject, JsValue)]
+    ): Future[Unit] = {
+      val keys = jsonRecords.map(_._2)
 
-      jsonsToSaveOrUpdateFuture.flatMap { jsonsToSaveOrUpdate =>
-        val jsonsToSave = jsonsToSaveOrUpdate.filter(_._2.isEmpty).map(_._1)
-        val jsonsToUpdate = jsonsToSaveOrUpdate.filter(_._2.nonEmpty)
+      val jsonsWithIdsFuture: Future[Seq[(JsObject, Traversable[JsValue])]] =
+        for {
+          keyIds <- dataRepo.find(
+            criteria = Seq(keyField.get #=> keys),
+            projection = Seq(keyField.get, dataSetIdFieldName)
+          )
+        } yield {
+          // create a map of key-ids pairs
+          val keyIdMap: Map[JsValue, Traversable[JsValue]] = keyIds.map { keyIdJson =>
+            val key = (keyIdJson \ keyField.get).get
+            val id = (keyIdJson \ dataSetIdFieldName).get
+            (key, id)
+          }.groupBy(_._1).map{ case (key, keyAndIds) => (key, keyAndIds.map(_._2))}
+
+          jsonRecords.map { case (json, key) =>
+            (json, keyIdMap.get(key).getOrElse(Nil))
+          }
+        }
+
+      jsonsWithIdsFuture.flatMap { jsonsWithIds =>
+        val jsonsToSave = jsonsWithIds.filter(_._2.isEmpty).map(_._1)
+        val jsonsToUpdate = jsonsWithIds.filter(_._2.nonEmpty)
 
         for {
           _ <- if (updateExisting) {
             // update the existing records (if requested)
             transformAndUpdateAux(startIndex + jsonsToSave.size)(jsonsToUpdate).map(_ => ())
           } else {
-            logger.info(s"Records already exist. Skipping...")
-            // otherwise do nothing... the source records are expected to be readonly
-            for (index <- 0 until jsonsToUpdate.size) {
-              logProgress(startIndex + jsonsToSave.size + index + 1, reportLineSize, size)
+            if (jsonsToUpdate.nonEmpty) {
+              logger.info(s"Records already exist. Skipping...")
+              // otherwise do nothing... the source records are expected to be readonly
+              for (index <- 0 until jsonsToUpdate.size) {
+                logProgress(startIndex + jsonsToSave.size + index + 1, reportLineSize, size)
+              }
             }
             Future(())
           }
@@ -596,7 +616,7 @@ class DataSetServiceImpl @Inject()(
     fieldSyncRepo.deleteAll
 
     val fieldNames = result(getFieldNames(dataRepo), timeout)
-    val groupedFieldNames = fieldNames.filter(_ != "_id").grouped(fieldGroupSize).toSeq
+    val groupedFieldNames = fieldNames.filter(_ != dataSetIdFieldName).grouped(fieldGroupSize).toSeq
     val futures = groupedFieldNames.par.map { fieldNames =>
       // Don't care about the result here, that's why we ignore ids and return Unit
       for {
@@ -875,20 +895,72 @@ class DataSetServiceImpl @Inject()(
 
   // parse the lines, returns the parsed items
   private def parseLine(delimiter: String, line: String): Seq[String] = {
-    val itemsWithStartEndFlag = line.split(delimiter, -1).map { l =>
-      val start = if (l.startsWith("\"")) 1 else 0
-      val end = if (l.endsWith("\"")) l.size - 1 else l.size
-      val item = if (start <= end)
-        l.substring(start, end).trim.replaceAll("\\\\\"", "\"")
-      else
-        ""
-      (item, l.startsWith("\""), l.endsWith("\""))
+    val itemsWithQuotePrefixAndSuffix = line.split(delimiter, -1).map { l =>
+      val quotePrefix = getPrefix(l, '\"')
+      val quoteSuffix = getSuffix(l, '\"')
+      val item =
+        if (quotePrefix.equals(l)) { // && quoteSuffix.equals(l)
+          // the string is just quotes from the start to the end
+          ""
+        } else {
+          l.substring(quotePrefix.size, l.size - quoteSuffix.size).trim.replaceAll("\\\\\"", "\"")
+        }
+//      val start = if (l.startsWith("\"")) 1 else 0
+//      val end = if (l.endsWith("\"")) l.size - 1 else l.size
+//      val item = if (start <= end)
+//        l.substring(start, end).trim.replaceAll("\\\\\"", "\"")
+//      else
+//        ""
+      (item, quotePrefix, quoteSuffix)
     }
 
-    fixImproperQuotes(delimiter, itemsWithStartEndFlag)
+    fixImproperPrefixSuffix(delimiter, itemsWithQuotePrefixAndSuffix)
+  }
+
+  def getPrefix(string: String, char: Char) =
+    string.takeWhile(_.equals(char))
+
+  def getSuffix(string: String, char: Char) =
+    getPrefix(string.reverse, char)
+
+  private def fixImproperPrefixSuffix(
+    delimiter: String,
+    itemsWithPrefixAndSuffix: Array[(String, String, String)]
+  ) = {
+    val fixedItems = ListBuffer.empty[String]
+
+    var unmatchedPrefixOption: Option[String] = None
+
+    var bufferedItem = ""
+    itemsWithPrefixAndSuffix.foreach{ case (item, prefix, suffix) =>
+      unmatchedPrefixOption match {
+        case None =>
+          if (prefix.equals(suffix)) {
+            // if we have both, prefix and suffix matching, everything is fine
+            fixedItems += item
+          } else {
+            // prefix not matching suffix indicates an improper split, buffer
+            unmatchedPrefixOption = Some(prefix)
+            bufferedItem += item + delimiter
+          }
+        case Some(unmatchedPrefix) =>
+          if (unmatchedPrefix.equals(suffix)) {
+            // end buffering
+            bufferedItem += item
+            fixedItems += bufferedItem
+            unmatchedPrefixOption = None
+            bufferedItem = ""
+          } else {
+            // continue buffering
+            bufferedItem += item + delimiter
+          }
+      }
+    }
+    fixedItems
   }
 
   // fix the items that have been improperly split because the delimiter was located inside the quotes
+  @Deprecated
   private def fixImproperQuotes(
     delimiter: String,
     itemsWithStartEndFlag: Array[(String, Boolean, Boolean)]
