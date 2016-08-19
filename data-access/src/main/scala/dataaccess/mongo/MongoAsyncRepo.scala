@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import dataaccess._
 import dataaccess.ignite.BinaryJsonUtil.toJson
+import org.apache.commons.lang3.StringUtils
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
@@ -18,6 +19,8 @@ import scala.concurrent.Future
 import models._
 import reactivemongo.api._
 
+import scala.util.Random
+
 protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     collectionName : String,
     val identityName : String
@@ -26,6 +29,8 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
   import play.modules.reactivemongo.json._
   import play.modules.reactivemongo.json.collection.JSONCollection
+
+  private val indexNameMaxSize = 70
 
   @Inject var reactiveMongoApi : ReactiveMongoApi = _
 
@@ -61,22 +66,55 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
       case _ => queryBuilder.sort(toJsonSort(sort))
     }
 
-    // handle pagination (if requested)
-    val cursor: CursorProducer[E]#ProducedCursor = page match {
-      case Some(page) => limit.map(l =>
-        queryBuilder2.options(QueryOpts(page * l, l)).cursor[E]()
-      ).getOrElse(
-        throw new IllegalArgumentException("Limit is expected when page is provided.")
-      )
+    // use index / hint only if limit is not provided and projection is not empty
+    val finalQueryBuilderFuture =
+      if (limit.isEmpty && projection.nonEmpty) {
+        val projectionWithId = projection ++ (
+          if (!projection.toSeq.contains(identityName))
+            Seq(identityName)
+          else
+            Seq()
+          )
+        for {
+          _ <- {
+            val fullName = projectionWithId.mkString("_")
+            val name = if (fullName.size <= indexNameMaxSize)
+              fullName
+            else {
+              val num = Random.nextInt()
+              fullName.substring(0, indexNameMaxSize - 10) + Math.max(num, -num)
+            }
+            val index = Index(
+              projectionWithId.map((_, IndexType.Ascending)).toSeq,
+              Some(name)
+            )
+            collection.indexesManager.ensure(index)
+          }
+        } yield {
+          val jsonIndex = JsObject(projectionWithId.map(fieldName => (fieldName, Json.toJson(1))).toSeq)
+          queryBuilder2.hint(jsonIndex)
+        }
+      } else
+        Future(queryBuilder2)
 
-      case None => queryBuilder2.cursor[E]()
-    }
-    // TODO: What about cursor[E](readPreference = ReadPreference.primary)
+    finalQueryBuilderFuture.flatMap { finalQueryBuilder =>
+      // handle pagination (if requested)
+      val cursor: CursorProducer[E]#ProducedCursor = page match {
+        case Some(page) => limit.map(l =>
+          finalQueryBuilder.options(QueryOpts(page * l, l)).cursor[E]()
+        ).getOrElse(
+          throw new IllegalArgumentException("Limit is expected when page is provided.")
+        )
 
-    // handle the limit
-    limit match {
-      case Some(limit) => cursor.collect[List](limit)
-      case None => cursor.collect[List]()
+        case None => finalQueryBuilder.cursor[E]()
+      }
+      // TODO: What about cursor[E](readPreference = ReadPreference.primary)
+
+      // handle the limit
+      limit match {
+        case Some(limit) => cursor.collect[List](limit)
+        case None => cursor.collect[List]()
+      }
     }
   }
 
