@@ -50,9 +50,25 @@ function getQueryParams(qs) {
 }
 
 // TODO: Extend to key-value pairs
-function populateTypeahead(element, values) {
+function populateTypeahead(element, values, containsSearchFlag, nonWhitespaceDelimiter) {
   var listSearch = new Bloodhound({
-    datumTokenizer: Bloodhound.tokenizers.whitespace,
+    datumTokenizer: function(d) {
+      var dd = d
+      if (nonWhitespaceDelimiter) {
+        dd = d.split(nonWhitespaceDelimiter).join(" ")
+      }
+      var strings = Bloodhound.tokenizers.whitespace(dd);
+      if (containsSearchFlag) {
+        $.each(strings, function (k, v) {
+          var i = 1;
+          while ((i + 1) < v.length) {
+            strings.push(v.substr(i, v.length));
+            i++;
+          }
+        })
+      }
+      return strings;
+    },
     queryTokenizer: Bloodhound.tokenizers.whitespace,
     local: values
   });
