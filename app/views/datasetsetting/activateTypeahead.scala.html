@@ -9,8 +9,8 @@
         $.ajax({
             url: '@fieldNamesCall',
             success: function (data) {
-                populateTypeahead($('#add_listViewTableColumnNameModal #newItems'), data);
-                populateTypeahead($('#add_overviewFieldChartTypeModal #newItems'), data);
+                populateTypeahead($('#add_listViewTableColumnNameModal #newItems'), data, false, '_');
+                populateTypeahead($('#add_overviewFieldChartTypeModal #newItems'), data, false, '_');
             }
         });
     });

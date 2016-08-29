@@ -5,7 +5,8 @@ import javax.inject.Inject
 import models.security.UserManager
 import runnables.GuiceBuilderRunnable
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 /**
   * Synchronize user entries of LDAP server and local database.
@@ -14,7 +15,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
   */
 class ImportLdapUsers @Inject() (userManager: UserManager) extends Runnable {
   override def run() {
-    userManager.synchronizeRepos
+    Await.result(userManager.synchronizeRepos, 2 minutes)
     println("Local User database synchronized with LDAP users")
   }
 }

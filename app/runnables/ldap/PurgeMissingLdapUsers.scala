@@ -4,6 +4,8 @@ import javax.inject.Inject
 
 import models.security.UserManager
 import runnables.GuiceBuilderRunnable
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 /**
   * Removes users from local database which do not exist on the LDAP server.
@@ -13,7 +15,7 @@ import runnables.GuiceBuilderRunnable
 class PurgeMissingLdapUsers @Inject() (userManager: UserManager) extends Runnable {
 
   override def run = {
-    userManager.purgeMissing
+    Await.result(userManager.purgeMissing, 2 minutes)
     println("Removed local users which do not exist on LDAP server.")
   }
 }

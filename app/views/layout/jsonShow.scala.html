@@ -21,21 +21,21 @@
 	</div>
 
 	<div class="row">
-		<div class="col-md-9">
-			<fieldset>
-				@item.fields.map { case (key, value) =>
-					@if(!nonNullOnly || value != JsNull) {
-						@elementValue(key, attributeLabel(domainName, unescapeKey(key).take(35)), value.asOpt[String].getOrElse(value.toString()), false)
-					}
+		<fieldset>
+			@item.fields.map { case (key, value) =>
+				@if(!nonNullOnly || value != JsNull) {
+					@elementValue(key, attributeLabel(domainName, unescapeKey(key).take(35)), value.asOpt[String].getOrElse(value.toString()), false)
 				}
-			</fieldset>
+			}
+		</fieldset>
 
-			<div class="actions" align="center">
-				<a href="@listCall" class="btn btn-default">Go Back</a>
-			</div>
+		<div class="actions" align="center">
+			<a href="@listCall" class="btn btn-default">Go Back</a>
 		</div>
+	<!--
 		<div class="col-md-3">
-			@info()
+			info()
 		</div>
+	-->
 	</div>
 }

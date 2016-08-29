@@ -99,8 +99,8 @@
 
 <script type="text/javascript">
     $(function () {
-        populateTypeahead($('#fieldForm #xField'), [@fieldNamesAsString]);
-        populateTypeahead($('#fieldForm #yField'), [@fieldNamesAsString]);
+        populateTypeahead($('#fieldForm #xField'), [@fieldNamesAsString], false, '_');
+        populateTypeahead($('#fieldForm #yField'), [@fieldNamesAsString], false, '_');
 
         $('#fieldForm #xField').focus();
 

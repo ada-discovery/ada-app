@@ -12,9 +12,9 @@ import com.unboundid.util.ssl.{TrustStoreTrustManager, TrustAllTrustManager, SSL
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
 
+import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 
 @ImplementedBy(classOf[LdapConnectorImpl])
 trait LdapConnector {
@@ -219,35 +219,48 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * @param dn Distinguished name for search operation.
     * @return Entry wrappend in Option if found; None else.
     */
-  override def findByDN(dn: String): Option[Entry] = {
-    ldapinterface match{
-      case Some(interface) => LdapUtil.asOption(interface.getEntry(dn))
-      case None => None
-    }
-  }
+  override def findByDN(dn: String): Option[Entry] =
+    ldapinterface.flatMap( interface =>
+      Option(interface.getEntry(dn))
+    )
 
   /**
     * For debugging purposes.
     * Gets list of all entries.
     * @return List of ldap entries.
     */
-  override def getEntryList: Traversable[String] = {
-    ldapinterface match{
-      case Some(interface) => LdapUtil.getEntryList(interface, settings.dit)
-      case None => Traversable()
+  override def getEntryList: Traversable[String] =
+    ldapinterface match {
+      case Some(interface) => {
+        val searchRequest: SearchRequest = new SearchRequest( settings.dit, SearchScope.SUB, Filter.create("(objectClass=*)"))
+        val entries: Traversable[Entry] = dispatchSearchRequest(interface, searchRequest)
+        entries.map(_.toString)
+      }
+      case None => Nil
     }
-  }
 
   /**
     * Dispatch SearchRequest and return list of found entries.
     * @param searchRequest Request to be dipatched.
     * @return List of matching entries.
     */
-  override def dispatchRequest(searchRequest: SearchRequest): Traversable[Entry] = {
-    if(ldapinterface.isDefined){
-      LdapUtil.dispatchSearchRequest(ldapinterface.get, searchRequest)
-    }else{
-      Traversable[Entry]()
+  override def dispatchRequest(searchRequest: SearchRequest): Traversable[Entry] =
+    ldapinterface match {
+      case Some(interface) => dispatchSearchRequest(interface, searchRequest)
+      case None => Nil
     }
-  }
+
+  /**
+    * Secure, crash-safe ldap search method.
+    *
+    * @param interface interface to perform search request on.
+    * @param request SearchRequest to be executed.
+    * @return List of search results. Empty, if request failed.
+    */
+  private def dispatchSearchRequest(interface: LDAPInterface, request: SearchRequest): Traversable[Entry] =
+    try {
+      interface.search(request).getSearchEntries
+    } catch {
+      case e: Throwable => Nil
+    }
 }

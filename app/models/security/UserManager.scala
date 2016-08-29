@@ -10,6 +10,7 @@ import persistence.RepoTypes.UserRepo
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{Await, Future}
+import scala.concurrent.Future.sequence
 import scala.concurrent.duration._
 import dataaccess.User
 
@@ -33,30 +34,11 @@ trait UserManager {
     )
   }
 
-  /**
-    * TODO: unused
-    * Match userid with permission.
- *
-    * @param userid usrid, most commonly mail
-    * @param permission permission to be checked.
-    * @return
-    */
-  def authorize(userid: String, permission: String): Future[Boolean] = {
-    val userOpFuture: Future[Option[User]] = findByEmail(userid)
-    userOpFuture.map { (userOp: Option[User]) =>
-      userOp match {
-        case Some(usr) => usr.permissions.contains(permission)
-        case None => false
-      }
-    }
-  }
-
   def updateUser(user: User): Future[Boolean]
 
-  //
-  def synchronizeRepos(): Unit
+  def synchronizeRepos: Future[Unit]
 
-  def purgeMissing(): Unit
+  def purgeMissing: Future[Unit]
 
   def findById(id: String): Future[Option[User]]
 
@@ -96,17 +78,20 @@ private class UserManagerImpl @Inject()(
     * Users present in LDAP server and database are synchronized by taking credentials from LDAP and keeping roles and permissions from local database.
     * TODO change to pass arbitrary user repo
     */
-  override def synchronizeRepos(): Unit = {
-    val ldapUsers = ldapUserService.getAll
-    ldapUsers.map { ldapusr: LdapUser =>
-      val foundFuture: Future[Traversable[User]] = userRepo.find(Seq("ldapDn" #== ldapusr.uid))
-      foundFuture.map { found =>
-        found.headOption match {
-          case Some(usr) => userRepo.update(User(usr._id, ldapusr.name, ldapusr.email, usr.roles, usr.permissions))
-          case None => userRepo.save(User(None, ldapusr.name, ldapusr.email, Seq(SecurityRole.basic), Seq()))
+  override def synchronizeRepos: Future[Unit] = {
+    val futures = ldapUserService.getAll.map { ldapUser: LdapUser =>
+      for {
+        found <- userRepo.find(Seq("ldapDn" #== ldapUser.uid)).map(_.headOption)
+        _ <- found.headOption match {
+          case Some(usr) =>
+            userRepo.update(usr.copy(ldapDn = ldapUser.name, email = ldapUser.email))
+          case None =>
+            userRepo.save(User(None, ldapUser.name, ldapUser.email, Seq(SecurityRole.basic), Seq()))
         }
-      }
+      } yield
+        ()
     }
+    sequence(futures).map(_ => ())
   }
 
   /**
@@ -114,17 +99,22 @@ private class UserManagerImpl @Inject()(
     * Use this to clean the user data base or when moving from debug to production.
     * This will also remove all debug users!
     */
-  override def purgeMissing(): Unit = {
-    val localusersFuture: Future[Traversable[User]] = userRepo.find()
-    val ldapusers: Traversable[LdapUser] = ldapUserService.getAll
-    localusersFuture.map { localusers =>
-      localusers.foreach { localusr =>
-        val exists: Boolean = ldapusers.exists(ldapusr => ldapusr.uid == localusr.ldapDn)
-        if (!exists) {
-          userRepo.delete(localusr._id.get)
-        }
+  override def purgeMissing: Future[Unit] = {
+    val ldapUserUids = ldapUserService.getAll.map(_.uid).toSet
+    for {
+      localUsers <- userRepo.find()
+      _ <- {
+        val nonMatchingLocalUsers = localUsers.filterNot( user =>
+          ldapUserUids.contains(user.ldapDn)
+        )
+        sequence(
+          nonMatchingLocalUsers.map( user =>
+            userRepo.delete(user._id.get)
+          )
+        )
       }
-    }
+    } yield
+      ()
   }
 
   /**
@@ -143,13 +133,11 @@ private class UserManagerImpl @Inject()(
     Future(auth)
   }
 
-  private def addUserIfNotPresent(user: User) = {
+  private def addUserIfNotPresent(user: User) =
     userRepo.find(Seq("ldapDn" #== user.ldapDn)).map { users =>
       if (users.isEmpty)
         userRepo.save(user)
     }
-  }
-
 
   /**
     * Given a mail, find the corresponding account.

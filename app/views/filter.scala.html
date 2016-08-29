@@ -93,7 +93,7 @@
     }
 
     if (fieldNames) {
-        populateTypeahead($('#fieldName'), fieldNames);
+        populateTypeahead($('#fieldName'), fieldNames, false, '_');
     }
 
     $('#addEditConditionModal').on('shown.bs.modal', function () {
@@ -200,7 +200,7 @@
                     url: '@getFieldNamesUrl',
                     success: function (data) {
                         fieldNames = data;
-                        populateTypeahead($('#fieldName'), fieldNames);
+                        populateTypeahead($('#fieldName'), fieldNames, false, '_');
                     },
                     async: false
                 });

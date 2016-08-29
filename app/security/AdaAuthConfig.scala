@@ -51,26 +51,21 @@ trait AdaAuthConfig extends AuthConfig {
 
   // useful helper for user extraction from current token
   private def getUserFromToken(request: Request[_]): Future[Option[Id]] = {
-//    val userId = request.session.get("userid").getOrElse {
-      val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
-      val userIdFuture = currentToken match {
-        case Some(token) => idContainer.get(token)
-        case None => Future(None)
-      }
-      val newUserId = Await.result(userIdFuture, 10 seconds)
-      Future(newUserId)
-//      val newUserId = Await.result(userIdFuture, 10 seconds)
-//      request.session.+("userid", newUserId)
-//    }
+    val currentToken: Option[AuthenticityToken] = tokenAccessor.extract(request)
+    val userIdFuture = currentToken match {
+      case Some(token) => idContainer.get(token)
+      case None => Future(None)
+    }
+    userIdFuture
   }
 
   // we can't call restoreUser, so we must retrieve the user manually
   def currentUser(request: Request[_]): Future[Option[User]] =
-    getUserFromToken(request).flatMap{
-        _ match {
-          case Some(id) => resolveUser(id)
-          case None => Future(None)
-        }
+    getUserFromToken(request).flatMap {
+      _ match {
+        case Some(id) => resolveUser(id)
+        case None => Future(None)
+      }
     }
 
   /**
