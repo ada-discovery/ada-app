@@ -123,6 +123,9 @@ object JsonUtil {
   def projectDouble(items : Seq[JsObject], fieldName : String) : Seq[Option[Double]] =
     project(items, fieldName).map(toDouble)
 
+  def projectString(items : Seq[JsObject], fieldName : String) : Seq[Option[String]] =
+    project(items, fieldName).map(toString)
+
   def toDouble(jsValue : JsReadable) : Option[Double] =
     jsValue.asOpt[Double].map(Some(_)).getOrElse {
       jsValue.asOpt[String] match {
@@ -144,13 +147,14 @@ object JsonUtil {
     }
   }
 
-  def toString(value: JsValue) : Option[String] = {
+  def toString(value: JsReadable) : Option[String] =
     value match {
       case JsNull => None
-      case x : JsString => Some(value.as[String])
+      case JsString(s) => Some(s)
+      case JsNumber(n) => Some(n.toString)
+      case JsDefined(json) => toString(json)
       case _ => Some(value.toString)
     }
-  }
 
   /**
     * Get smallest value of specified field. The values are cast to double before comparison.

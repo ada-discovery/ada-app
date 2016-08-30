@@ -11,7 +11,12 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent]
 
-  def getScatterStats(xFieldName: Option[String], yFieldName: Option[String], filter: Seq[FilterCondition]): Action[AnyContent]
+  def getScatterStats(
+    xFieldName: Option[String],
+    yFieldName: Option[String],
+    zFieldName: Option[String],
+    filter: Seq[FilterCondition]
+  ): Action[AnyContent]
 
   def getDistribution(fieldName: Option[String], filter: Seq[FilterCondition]): Action[AnyContent]
 

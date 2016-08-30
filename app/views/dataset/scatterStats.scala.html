@@ -8,60 +8,68 @@
 @import play.api.i18n.Messages
 
 @import dataaccess.DataSpaceMetaInfo
+
 @(
     domainName: String,
     xField: String,
     yField: String,
+    zField: Option[String],
     filterSpec: Seq[FilterCondition],
     router: DataSetRouter,
     dataSetId: String,
     numericFields: Seq[(String, Option[String])],
-    stats: Seq[(Any, Any)],
+    categoricalFields: Seq[(String, Option[String])],
+    stats: Seq[(String, Seq[(Any, Any)])],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
-@fieldNamesAsString = @{
+@numericFieldNamesAsString = @{
     Html(numericFields.map(s => "\"" + s._1 + "\"").mkString(","))
+}
+
+@categoricalFieldNamesAsString = @{
+    Html(categoricalFields.map(s => "\"" + s._1 + "\"").mkString(","))
 }
 
 @actions = {
     <div class="row">
         <div class="col-md-12">
-            @filter(filterSpec, router.getScatterStats(Some(xField), Some(yField), filterSpec), Right(router.fieldNames))
+            @filter(filterSpec, router.getScatterStats(Some(xField), Some(yField), zField, filterSpec), Right(router.fieldNames))
         </div>
     </div>
     <hr/>
     @helper.form(action=router.plainGetScatterStats, 'role -> "search", 'id -> "fieldForm") {
+        <!-- hacky solution to pass data set param since it's ignored when passed as a part of call in form action -->
+        <input type="hidden" name="dataSet" value="@dataSetId"/>
+        <input type="hidden" name="filter" value="@Json.toJson(filterSpec)"/>
         <div class="row">
-            <div class="col-md-8">
-                <!-- hacky solution to pass data set param since it's ignored when passed as a part of call in form action -->
-                <input type="hidden" name="dataSet" value="@dataSetId"/>
-                <input type="hidden" name="filter" value="@Json.toJson(filterSpec)"/>
-                <div class="row">
-                    <div class="col-md-5">
-                        <input id="xField" name="xField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@xField">
-                    </div>
-                    <div class="col-md-2" align="center">
-                        <label class="top-padded">vs.</label>
-                    </div>
-                    <div class="col-md-5">
-                        <input id="yField" name="yField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@yField">
-                    </div>
+            <div class="col-md-3">
+                <input id="xField" name="xField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@xField">
+            </div>
+            <div class="col-md-1" align="center">
+                <label class="top-padded">vs.</label>
+            </div>
+            <div class="col-md-3">
+                <input id="yField" name="yField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@yField">
+            </div>
+            <div class="col-md-2" align="right">
+                <label class="top-padded">Groups:</label>
+            </div>
+            <div class="col-md-3">
+                <input id="zField" name="zField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@zField">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2">
+                <div class="well">
+                    Mean: @(BasicStats.mean(stats.map(x => x._2).flatten.map(_._1)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
                 </div>
             </div>
-
-            <div class="well col-md-4" align="right">
-                <div class="row">
-                    <div class="col-md-12">
-                        @xField Mean: @(BasicStats.mean(stats.map(x => x._1)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        @yField Mean: @(BasicStats.mean(stats.map(x => x._2)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
-                    </div>
+            <div class="col-md-offset-2 col-md-2">
+                <div class="well">
+                    Mean: @(BasicStats.mean(stats.map(x => x._2).flatten.map(_._2)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
                 </div>
             </div>
         </div>
@@ -76,9 +84,9 @@
         "scatterChart",
         xField.capitalize,
         yField.capitalize,
-        Seq(
-            ("All", "rgba(223, 83, 83, .5)", stats.map(pair => Seq(pair._1, pair._2)))
-        )
+        stats.map{ case (name, values) =>
+            (name, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
+        }
     )
 }
 
@@ -99,8 +107,9 @@
 
 <script type="text/javascript">
     $(function () {
-        populateTypeahead($('#fieldForm #xField'), [@fieldNamesAsString], false, '_');
-        populateTypeahead($('#fieldForm #yField'), [@fieldNamesAsString], false, '_');
+        populateTypeahead($('#fieldForm #xField'), [@numericFieldNamesAsString], true);
+        populateTypeahead($('#fieldForm #yField'), [@numericFieldNamesAsString], true);
+        populateTypeahead($('#fieldForm #zField'), [@categoricalFieldNamesAsString], true);
 
         $('#fieldForm #xField').focus();
 
@@ -109,6 +118,10 @@
         });
 
         $('#fieldForm #yField').on('typeahead:selected', function(e, data) {
+            $('#fieldForm').submit();
+        });
+
+        $('#fieldForm #zField').on('typeahead:selected', function(e, data) {
             $('#fieldForm').submit();
         });
     });

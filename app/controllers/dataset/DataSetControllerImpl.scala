@@ -71,6 +71,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override protected def listViewColumns = Some(setting.listViewTableColumnNames)
 
   private val numericTypes = Seq(FieldType.Double.toString, FieldType.Integer.toString)
+  private val categoricalTypes = Seq(FieldType.Enum.toString, FieldType.String.toString, FieldType.Boolean.toString)
 
   /**
     * Table displaying given paginated content. Generally used to display fields of the datasets.
@@ -412,50 +413,109 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getScatterStats(
     xFieldNameOption : Option[String],
     yFieldNameOption: Option[String],
+    zFieldNameOption: Option[String],
     filter: Seq[FilterCondition]
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
+    // initialize x, y, and z field names
     val xFieldName = xFieldNameOption.getOrElse(setting.defaultScatterXFieldName)
     val yFieldName = yFieldNameOption.getOrElse(setting.defaultScatterYFieldName)
+    val zFieldName: Option[String] = zFieldNameOption match {
+      case Some(zField) => {
+        val trimmed = zField.trim
+        if (trimmed.isEmpty)
+          None
+        else
+          Some(trimmed)
+      }
+      case None => None
+    }
 
-    val numericFieldsFuture = fieldRepo.find(Seq("fieldType" #=> numericTypes))
     val xFieldFuture = fieldRepo.get(xFieldName)
     val yFieldFuture = fieldRepo.get(yFieldName)
+    val zFieldFuture = zFieldName.map(fieldRepo.get).getOrElse(Future(None))
+    val numericFieldsFuture = fieldRepo.find(Seq("fieldType" #=> numericTypes))
+    val categoricalFieldsFuture = fieldRepo.find(Seq("fieldType" #=> categoricalTypes))
 
-    numericFieldsFuture.zip(xFieldFuture).zip(yFieldFuture).flatMap{ case ((numericFields, xField), yField) =>
+    for {
+      xField <- xFieldFuture
+      yField <- yFieldFuture
+      zField <- zFieldFuture
+      numericFields <- numericFieldsFuture
+      categoricalFields <- categoricalFieldsFuture
+      scattedData <- getScatterData(filter, xField, yField, zField)
+    } yield {
       val numericFieldNameLabels = numericFields.map(field => (field.name, field.label)).toSeq.sorted
-      val valuesFuture : Future[Seq[(Any, Any)]] = if (xField.isDefined && yField.isDefined) {
-        val criteria = toCriteria(filter)
+      val categoricalFieldNameLabels = categoricalFields.map(field => (field.name, field.label)).toSeq.sorted
 
-        val futureXYItems = repo.find(criteria, Nil, Seq(xFieldName, yFieldName))
-
-        futureXYItems.map{ xyItems =>
-          val xySeq = xyItems.toSeq
-          val xValues = projectDouble(xySeq, xFieldName)
-          val yValues = projectDouble(xySeq, yFieldName)
-          (xValues, yValues).zipped.map{ case (xValue, yValue) => (xValue, yValue).zipped}.flatten
-        }
-      } else
-        Future(Seq[(Any, Any)]())
-
-      valuesFuture.map( values =>
-        render {
-          case Accepts.Html() => Ok(dataset.scatterStats(
-            dataSetName,
-            xFieldName,
-            yFieldName,
-            filter,
-            router,
-            dataSetId,
-            numericFieldNameLabels,
-            values,
-            getMetaInfos
-          ))
-          case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
-        }
-      )
+      render {
+        case Accepts.Html() => Ok(dataset.scatterStats(
+          dataSetName,
+          xFieldName,
+          yFieldName,
+          zFieldName,
+          filter,
+          router,
+          dataSetId,
+          numericFieldNameLabels,
+          categoricalFieldNameLabels,
+          scattedData,
+          getMetaInfos
+        ))
+        case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
+      }
     }
+  }
+
+  private def getScatterData(
+    filter: Seq[FilterCondition],
+    xField: Option[Field],
+    yField: Option[Field],
+    zField: Option[Field]
+  ): Future[Seq[(String, Seq[(Any, Any)])]] = {
+    if (xField.isDefined && yField.isDefined) {
+      val xFieldName = xField.get.name
+      val yFieldName = yField.get.name
+
+      val criteria = toCriteria(filter)
+      val projection = Seq(xFieldName, yFieldName) ++ zField.map(_.name)
+      val futureXYZItems = repo.find(criteria, Nil, projection)
+
+      futureXYZItems.map{ xyzItems =>
+        val xyzSeq = xyzItems.toSeq
+        val xValues = projectDouble(xyzSeq, xFieldName)
+        val yValues = projectDouble(xyzSeq, yFieldName)
+
+        zField match {
+          case Some(zField) => {
+            val zValues = projectString(xyzSeq, zField.name)
+            // TODO: simplify this
+            (zValues, xValues, yValues).zipped.map { case (zValue, xValue, yValue) =>
+              (zValue, xValue, yValue).zipped
+            }.flatten.groupBy(_._1).map{ case (zValue, values) =>
+              (
+                zField.numValues.map(_.get(zValue)).flatten.getOrElse(
+                  if (zValue.trim.isEmpty)
+                    "N/A"
+                  else
+                    zValue
+                ),
+                values.map{ case (zValue, xValue, yValue) => (xValue, yValue)}
+              )
+            }.toSeq
+          }
+          case None => {
+            val xys = (xValues, yValues).zipped.map { case (xValue, yValue) =>
+              (xValue, yValue).zipped
+            }.flatten
+
+            Seq(("all", xys))
+          }
+        }
+      }
+    } else
+      Future(Seq[(String, Seq[(Any, Any)])]())
   }
 
   override def getDistribution(

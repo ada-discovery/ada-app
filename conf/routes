@@ -88,7 +88,7 @@ GET         /studies/records                                                    
 GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
 GET         /studies/records/fieldTypes                                             controllers.dataset.DataSetDispatcher.overviewFieldTypes
 GET         /studies/records/overviewList                                           controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: Seq[util.FilterCondition] ?= Nil)
-GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
+GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None, zField: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 GET         /studies/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)

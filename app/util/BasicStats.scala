@@ -1,5 +1,7 @@
 package util
 
+import scala.collection.mutable.{Map => MMap}
+
 /**
   * TODO: Rename this, the name is quite meaningless!
   * Utility functions for boxplots: median, standard deviation and etc

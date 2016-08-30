@@ -1,9 +1,18 @@
 @import util.shorten
 
-@(title : String, chartElementName : String, xAxisCaption : String, yAxisCaption : String, series : Seq[(String, String, Seq[Seq[Any]])], expHeight : Option[Int] = None)
+@(
+    title: String,
+    chartElementName: String,
+    xAxisCaption: String,
+    yAxisCaption: String,
+    series: Seq[(String, String, Seq[Seq[Any]])],
+    expHeight : Option[Int] = None
+)
 
 <script type="text/javascript">
     scatterChart('@title', '@{chartElementName}', '@{xAxisCaption}', '@{yAxisCaption}',  @{expHeight.getOrElse(500)},
-            [ @series.map { case (name, color, data) => {name : '@shorten(name)', color : '@color', data : [@data.map{ point => [@{point.mkString(",")}],}]},}]
+            [ @series.map { case (name, color, data) =>
+                {name : '@shorten(name)', data : [@data.map{ point => [@{point.mkString(",")}],}]},}
+            ] // color : 'color'
     )
 </script>
