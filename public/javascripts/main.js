@@ -53,7 +53,7 @@ function getQueryParams(qs) {
 function populateTypeahead(element, values, containsSearchFlag, nonWhitespaceDelimiter) {
   var listSearch = new Bloodhound({
     datumTokenizer: function(d) {
-      var dd = d
+      var dd = d;
       if (nonWhitespaceDelimiter) {
         dd = d.split(nonWhitespaceDelimiter).join(" ")
       }
