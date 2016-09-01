@@ -1,26 +1,85 @@
-@import views.html
+@import views.html.exportModal
+@import util.FilterCondition
+@import views.html.elements.labelValue
 
 @(
-    exportCsvCall : Call,
-    exportJsonCall : Call
+    filter: Seq[FilterCondition],
+    exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call,
+    exportJsonCall: (Seq[FilterCondition], Boolean) => Call)(
+    extraListItems: Html = Html("")
 )
 
+@csvBody(defaultDelimiter: String) = {
+    <fieldset>
+        @labelValue("delimiter", "Delimiter") {
+            <input id="delimiter" name="delimiter" value="@defaultDelimiter">
+        }
+        @labelValue("replaceEolWithSpace", "Remove \'\\r\'&\'\\n\'?", false, Some("Replace \'\\r\' and \'\\n\' with white space")) {
+            <input type="checkbox" class="replaceEolWithSpaceCheckbox" checked="checked">
+            <input type="hidden" id="replaceEolWithSpace" name="replaceEolWithSpace" value="true">
+        }
+        @labelValue("eol", "EOL", false, Some("If not specified standard '\\n' character will be used")) {
+            <input id="eol" name="eol" value="">
+        }
+    </fieldset>
+}
+
+@jsonBody = {
+    <h4>Do you want to proceed?</h4>
+}
+
 <div class="dropdown">
-    <button class="btn btn-info btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         Export
         <span class="caret"></span>
     </button>
     <ul class="dropdown-menu">
         <li>
-            <a href="#" data-toggle="modal" data-target="#exportCsvModal">
+            <a href="#" data-toggle="modal" data-target="#exportAllCsvModal">
                 Export All as CSV
             </a>
         </li>
         <li>
-            <a href="@exportJsonCall">
+            <a href="#" data-toggle="modal" data-target="#exportFilteredCsvModal">
+                Export Filtered as CSV
+            </a>
+        </li>
+        <li>
+            <a href="#" data-toggle="modal" data-target="#exportFilteredTableCsvModal">
+                Export Filtered Table as CSV
+            </a>
+        </li>
+        <li role="separator" class="divider"></li>
+        <li>
+            <a href="#" data-toggle="modal" data-target="#exportAllJsonModal">
                 Export All as JSON
             </a>
         </li>
+        <li>
+            <a href="#" data-toggle="modal" data-target="#exportFilteredJsonModal">
+                Export Filtered as JSON
+            </a>
+        </li>
+        <li>
+            <a href="#" data-toggle="modal" data-target="#exportFilteredTableJsonModal">
+                Export Filtered Table as JSON
+            </a>
+        </li>
+        @extraListItems
     </ul>
-    @html.exportModal("exportCsvModal", "CSV Export", ",", exportCsvCall)
+    @exportModal("exportAllCsvModal", "Full CSV Export", exportCsvCall(",", Nil, false), Some(csvBody(",")))
+    @exportModal("exportFilteredCsvModal", "Filtered CSV Export", exportCsvCall(",", filter, false), Some(csvBody(",")))
+    @exportModal("exportFilteredTableCsvModal", "Filtered Table CSV Export", exportCsvCall(",", filter, true), Some(csvBody(",")))
+    @exportModal("exportAllJsonModal", "Full Json Export", exportJsonCall(Nil, false), Some(jsonBody))
+    @exportModal("exportFilteredJsonModal", "Filtered Json Export", exportJsonCall(filter, false), Some(jsonBody))
+    @exportModal("exportFilteredTableJsonModal", "Filtered Table Json Export", exportJsonCall(filter, true), Some(jsonBody))
 </div>
+
+<script type="text/javascript">
+    $(function () {
+        $('.replaceEolWithSpaceCheckbox').change( function(e) {
+            var checked = $(this).is(":checked")
+            $(this).parent().find('#replaceEolWithSpace').val(checked)
+        })
+    })
+</script>

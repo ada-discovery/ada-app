@@ -19,7 +19,6 @@ import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, RequestHeader, Request}
-import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.TranSMARTService
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -68,10 +67,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected val router = new DataSetRouter(dataSetId)
   protected val jsRouter = new DataSetJsRouter(dataSetId)
 
-  override protected def listViewColumns = Some(setting.listViewTableColumnNames)
+  private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
+  private val csvEOL = "\n"
 
   private val numericTypes = Seq(FieldType.Double.toString, FieldType.Integer.toString)
   private val categoricalTypes = Seq(FieldType.Enum.toString, FieldType.String.toString, FieldType.Boolean.toString)
+
+  override protected def listViewColumns = Some(setting.listViewTableColumnNames)
 
   /**
     * Table displaying given paginated content. Generally used to display fields of the datasets.
@@ -139,33 +141,43 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param delimiter Delimiter for csv output file.
     * @return View for download.
     */
-  override def exportAllRecordsAsCsv(delimiter : String) =
-    exportAllToCsv(csvFileName, delimiter, setting.exportOrderByFieldName)
+  override def exportRecordsAsCsv(
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) = {
+    val eolToUse = eol match {
+      case Some(eol) => if (eol.trim.nonEmpty) eol.trim else csvEOL
+      case None => csvEOL
+    }
+    exportToCsv(
+      csvFileName,
+      delimiter,
+      eolToUse,
+      if (replaceEolWithSpace) csvCharReplacements else Nil)(
+      setting.exportOrderByFieldName,
+      filter,
+      if (tableColumnsOnly) listViewColumns.get else Nil
+    )
+  }
 
   /**
     * Generate content of Json export file and create donwload.
     *
     * @return View for download.
     */
-  override def exportAllRecordsAsJson =
-    exportAllToJson(jsonFileName, setting.exportOrderByFieldName)
-
-  /**
-    * Generate content of csv export file and create download.
-    *
-    * @param delimiter Delimiter for csv output file.
-    * @return View for download.
-    */
-  override def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]) =
-    exportToCsv(csvFileName, delimiter, filter, setting.exportOrderByFieldName)
-
-  /**
-    * Generate content of Json export file and create donwload.
-    *
-    * @return View for download.
-    */
-  override def exportRecordsAsJson(filter: Seq[FilterCondition]) =
-    exportToJson(jsonFileName, filter, setting.exportOrderByFieldName)
+  override def exportRecordsAsJson(
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) =
+    exportToJson(
+      jsonFileName)(
+      setting.exportOrderByFieldName,
+      filter,
+      if (tableColumnsOnly) listViewColumns.get else Nil
+    )
 
   /**
     * Fetch specified field (column) entries from repo and wrap them in a Traversable object.
@@ -636,7 +648,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()
 
-    tranSMARTService.createClinicalDataFile(unescapedDelimiter , "\n", setting.tranSMARTReplacements)(
+    tranSMARTService.createClinicalDataFile(unescapedDelimiter, csvEOL, setting.tranSMARTReplacements)(
       records,
       setting.keyFieldName,
       setting.tranSMARTVisitFieldName,
@@ -663,7 +675,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()
 
-    tranSMARTService.createMappingFile(unescapedDelimiter , "\n", dataSetSetting.tranSMARTReplacements)(
+    tranSMARTService.createMappingFile(unescapedDelimiter, csvEOL, dataSetSetting.tranSMARTReplacements)(
       records,
       dataFilename,
       dataSetSetting.keyFieldName,

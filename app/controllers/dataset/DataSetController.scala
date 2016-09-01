@@ -24,13 +24,15 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getFieldValue(id: BSONObjectID, fieldName: String): Action[AnyContent]
 
-  def exportAllRecordsAsCsv(delimiter : String): Action[AnyContent]
+  def exportRecordsAsCsv(
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ): Action[AnyContent]
 
-  def exportAllRecordsAsJson: Action[AnyContent]
-
-  def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]): Action[AnyContent]
-
-  def exportRecordsAsJson(filter: Seq[FilterCondition]): Action[AnyContent]
+  def exportRecordsAsJson(filter: Seq[FilterCondition], tableColumnsOnly: Boolean): Action[AnyContent]
 
   def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
 

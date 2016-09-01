@@ -49,7 +49,9 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   private val exportOrderByFieldName = "name"
   private val csvFileName = "dictionary_" + dataSetId.replace(" ", "-") + ".csv"
   private val jsonFileName = "dictionary_" + dataSetId.replace(" ", "-") + ".json"
-  private val csvExportFieldNames = Seq("name", "fieldType", "numValues", "isArray", "label", "categoryId")
+
+  private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
+  private val csvEOL = "\n"
 
   implicit val fieldTypeFormatter = EnumFormatter(FieldType)
   implicit val mapFormatter = MapJsonFormatter.apply
@@ -159,39 +161,43 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     )
   }
 
-  /**
-    * Generate content of csv export file and create download.
-    *
-    * @param delimiter Delimiter for csv output file.
-    * @return View for download.
-    */
-  override def exportAllRecordsAsCsv(delimiter : String) =
-    exportAllToCsv(csvFileName, delimiter, exportOrderByFieldName, Some(csvExportFieldNames))
+  override def exportRecordsAsCsv(
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) = {
+    val eolToUse = eol match {
+      case Some(eol) => if (eol.trim.nonEmpty) eol.trim else csvEOL
+      case None => csvEOL
+    }
+    exportToCsv(
+      csvFileName,
+      delimiter,
+      eolToUse,
+      if (replaceEolWithSpace) csvCharReplacements else Nil)(
+      exportOrderByFieldName,
+      filter,
+      if (tableColumnsOnly) listViewColumns.get else Nil
+    )
+  }
 
   /**
     * Generate content of Json export file and create donwload.
     *
     * @return View for download.
     */
-  override def exportAllRecordsAsJson =
-    exportAllToJson(jsonFileName, exportOrderByFieldName)
-
-  /**
-    * Generate content of csv export file and create download.
-    *
-    * @param delimiter Delimiter for csv output file.
-    * @return View for download.
-    */
-  override def exportRecordsAsCsv(delimiter : String, filter: Seq[FilterCondition]) =
-    exportToCsv(csvFileName, delimiter, filter, exportOrderByFieldName, Some(csvExportFieldNames))
-
-  /**
-    * Generate content of Json export file and create donwload.
-    *
-    * @return View for download.
-    */
-  override def exportRecordsAsJson(filter: Seq[FilterCondition]) =
-    exportToJson(jsonFileName, filter, exportOrderByFieldName)
+  override def exportRecordsAsJson(
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) =
+    exportToJson(
+      jsonFileName)(
+      exportOrderByFieldName,
+      filter,
+      if (tableColumnsOnly) listViewColumns.get else Nil
+    )
 
   override def updateLabel(id: String, label: String) = Action.async { implicit request =>
     repo.get(id).flatMap(_.fold(

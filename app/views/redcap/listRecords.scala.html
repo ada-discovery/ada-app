@@ -6,6 +6,11 @@
 
 @(currentPage: Page[JsObject], filter: Seq[FilterCondition])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
+@modalBody(defaultDelimiter: String) = {
+    <p>Delimeter</p>
+    <input id="delimiter" name="delimiter" value="@defaultDelimiter">
+}
+
 @actions = {
     @helper.form(action=routes.RedCapController.listRecords(), 'role -> "search") {
         <div class="row">
@@ -41,9 +46,9 @@
             </div>
         </div>
     }
-    @views.html.exportModal("exportCsvModal", "LuxPark REDCap CSV Export", ",", routes.RedCapController.exportRecordsAsCsv())
-    @views.html.exportModal("exportTranSMARTDataModal", "LuxPark CSV TranSMART Data Export", "\\t", routes.RedCapController.exportTranSMARTDataFile())
-    @views.html.exportModal("exportTranSMARTMappingModal", "LuxPark CSV TranSMART Mapping Export", "\\t", routes.RedCapController.exportTranSMARTMappingFile())
+    @views.html.exportModal("exportCsvModal", "LuxPark REDCap CSV Export", routes.RedCapController.exportRecordsAsCsv(), Some(modalBody(",")))
+    @views.html.exportModal("exportTranSMARTDataModal", "LuxPark CSV TranSMART Data Export", routes.RedCapController.exportTranSMARTDataFile(), Some(modalBody("\\t")))
+    @views.html.exportModal("exportTranSMARTMappingModal", "LuxPark CSV TranSMART Mapping Export", routes.RedCapController.exportTranSMARTMappingFile(), Some(modalBody("\\t")))
 }
 
 @table = @{

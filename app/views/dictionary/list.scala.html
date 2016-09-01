@@ -33,7 +33,7 @@
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
-                    @exportDropdown(router.exportAllCsv, router.exportAllJson)
+                    @exportDropdown(page.filter, router.exportCsv(_, true, None, _, _), router.exportJson)()
                 </li>
                 <li>
                     @restrict(roles = List(Array(SecurityRole.admin))) {

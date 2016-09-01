@@ -25,7 +25,13 @@
             @filter(page.filter, router.plainList, Right(router.fieldNames))
         </div>
         <div class="col-md-2">
-            @exportDataSetDropdown(router.exportAllCsv, router.exportAllJson, router.exportTranSMARTData, router.exportTranSMARTMapping)
+            @exportDataSetDropdown(
+                page.filter,
+                router.exportCsv(_, true, None, _, _),
+                router.exportJson,
+                router.exportTranSMARTData,
+                router.exportTranSMARTMapping
+            )
         </div>
     </div>
 }

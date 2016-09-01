@@ -20,10 +20,8 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getDistribution = routes.getDistribution _ map route
   val fieldNames = routeFun(_.getFieldNames)
   val getFieldValue = routes.getFieldValue _ map route
-  val exportAllCsv = routeFun(_.exportAllRecordsAsCsv())
-  val exportAllJson = routeFun(_.exportAllRecordsAsJson)
-  val exportCsv = routeFun(_.exportRecordsAsCsv())
-  val exportJson  = routeFun(_.exportRecordsAsJson())
+  val exportCsv = routes.exportRecordsAsCsv _ map route
+  val exportJson  = routes.exportRecordsAsJson _ map route
   val exportTranSMARTData = routeFun(_.exportTranSMARTDataFile())
   val exportTranSMARTMapping = routeFun(_.exportTranSMARTMappingFile())
 }

@@ -1,41 +1,35 @@
-@import views.html
+@import views.html.{exportModal, exportDropdown}
+@import util.FilterCondition
 
 @(
-    exportCsvCall : Call,
-    exportJsonCall : Call,
-    exportTranSMARTDataCall : Call,
-    exportTranSMARTMappingCall : Call
+    filter: Seq[FilterCondition],
+    exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call,
+    exportJsonCall: (Seq[FilterCondition], Boolean) => Call,
+    exportTranSMARTDataCall: Call,
+    exportTranSMARTMappingCall: Call
 )
 
-<div class="pull-right dropdown">
-    <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        Export
-        <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-        <li>
-            <a href="#" data-toggle="modal" data-target="#exportCsvModal">
-                Export All as CSV
-            </a>
-        </li>
-        <li>
-            <a href="@exportJsonCall">
-                Export All as JSON
-            </a>
-        </li>
-        <li role="separator" class="divider"></li>
-        <li>
-            <a href="#" data-toggle="modal" data-target="#exportTranSMARTDataModal">
-                Export TranSMART Data
-            </a>
-        </li>
-        <li>
-            <a href="#" data-toggle="modal" data-target="#exportTranSMARTMappingModal">
-                Export TranSMART Mapping
-            </a>
-        </li>
-    </ul>
-    @html.exportModal("exportCsvModal", "CSV Export", ",", exportCsvCall)
-    @html.exportModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", "\\t", exportTranSMARTDataCall)
-    @html.exportModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", "\\t", exportTranSMARTMappingCall)
-</div>
+@modalBody(defaultDelimiter: String) = {
+    <p>Delimeter</p>
+    <input id="delimiter" name="delimiter" value="@defaultDelimiter">
+}
+
+@exportDropdown(
+    filter,
+    exportCsvCall,
+    exportJsonCall
+) {
+    <li role="separator" class="divider"></li>
+    <li>
+        <a href="#" data-toggle="modal" data-target="#exportTranSMARTDataModal">
+            Export TranSMART Data
+        </a>
+    </li>
+    <li>
+        <a href="#" data-toggle="modal" data-target="#exportTranSMARTMappingModal">
+            Export TranSMART Mapping
+        </a>
+    </li>
+    @exportModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", exportTranSMARTDataCall, Some(modalBody("\\t")))
+    @exportModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", exportTranSMARTMappingCall, Some(modalBody("\\t")))
+}

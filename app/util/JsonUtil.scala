@@ -1,15 +1,16 @@
 package util
 
-import org.apache.ignite.binary.BinaryObject
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
-import reactivemongo.bson.BSONObjectID
 
 object JsonUtil {
 
   def createQueryStringBinder[E:Format](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[E] {
 
-    override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, E]] = {
+    override def bind(
+      key: String,
+      params: Map[String, Seq[String]]
+    ): Option[Either[String, E]] = {
       for {
         jsonString <- stringBinder.bind(key, params)
       } yield {
@@ -35,9 +36,9 @@ object JsonUtil {
 
   def jsonObjectsToCsv(
     delimiter : String,
-    newLine : String = "\n",
+    eol: String = "\n",
     fieldNames: Option[Seq[String]] = None,
-    replacements : Iterable[(String, String)]
+    replacements : Traversable[(String, String)]
   )(items : Traversable[JsObject]) = {
     val sb = new StringBuilder(10000)
 
@@ -49,7 +50,7 @@ object JsonUtil {
         unescapeKey(replaceAllAux(fieldName))
       ).mkString(delimiter)
 
-      sb.append(header + newLine)
+      sb.append(header + eol)
 
       items.foreach { item =>
         val itemFieldNameValueMap = item.fields.toMap
@@ -63,13 +64,16 @@ object JsonUtil {
               }
             }
         }.mkString(delimiter)
-        sb.append(row + newLine)
+        sb.append(row + eol)
       }
     }
     sb.toString
   }
 
-  private def replaceAll(replacements : Iterable[(String, String)])(value : String) =
+  private def replaceAll(
+    replacements: Traversable[(String, String)])(
+    value : String
+  ) =
     replacements.foldLeft(value) { case (string, (from , to)) => string.replaceAll(from, to) }
 
   def filterAndSort(items : Seq[JsObject], orderBy : String, filter : String, filterFieldName : String) = {
