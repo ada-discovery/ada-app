@@ -6,6 +6,7 @@
 ```bash
 ssh -p 8022 yourusername@10.79.2.192
 cd /home/peter.banda/apache-tomcat-7.0.64/bin
+source set_env.sh
 ./startup.sh
 ```
 
