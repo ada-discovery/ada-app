@@ -14,7 +14,7 @@ cd /home/peter.banda/apache-tomcat-7.0.64/bin
 ssh -p 8022 yourusername@10.79.2.192
 cd /home/peter.banda/apache-tomcat-7.0.64/bin
 ./shutdown.sh
-ps -A | grep java (to check if it still running, if yes do: 'kill -s kill pid')
+ps -A | grep java (to check if still running, if yes do: 'kill -s kill pid')
 ```
 
 **Config**
