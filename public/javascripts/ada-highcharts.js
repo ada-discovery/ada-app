@@ -1,4 +1,12 @@
-    function pieChart(title, chartElementName, showLabels, showLegend, data, allowPointClick, allowChartTypeChange) {
+    function pieChart(
+        title,
+        chartElementName,
+        showLabels,
+        showLegend,
+        data,
+        allowPointClick,
+        allowChartTypeChange
+    ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
@@ -63,7 +71,17 @@
         });
     }
 
-    function columnChart(title, chartElementName, xAxisCaption, yAxisCaption, inverted, categories, data, allowPointClick, allowChartTypeChange) {
+    function columnChart(
+        title,
+        chartElementName,
+        xAxisCaption,
+        yAxisCaption,
+        inverted,
+        categories,
+        data,
+        allowPointClick,
+        allowChartTypeChange
+    ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
@@ -139,7 +157,73 @@
         })
     }
 
-    function lineChart(title, chartElementName, xAxisCaption, yAxisCaption, categories, data, allowPointClick, allowChartTypeChange) {
+    function timeLineChart(
+        title,
+        chartElementName,
+        xAxisCaption,
+        yAxisCaption,
+        height,
+        series
+    ) {
+        $('#' + chartElementName).highcharts({
+            chart: {
+                type: 'line', // 'spline'
+                height: height
+            },
+            title: {
+                text: title
+            },
+            xAxis: {
+                type: 'datetime',
+                //dateTimeLabelFormats: { // don't display the dummy year
+                //    month: '%e. %b',
+                //    year: '%b'
+                //},
+                title: {
+                    text: xAxisCaption
+                }
+            },
+            yAxis: {
+                title: {
+                    text: yAxisCaption
+                }
+            },
+            legend: {
+                layout: 'vertical',
+                align: 'right',
+                verticalAlign: 'middle',
+                borderWidth: 0
+            },
+            credits: {
+                enabled: false
+            },
+            tooltip: {
+                headerFormat: '<b>{series.name}</b><br>',
+                pointFormat: '{point.x:%d.%m.%Y}: {point.y:.0f}'
+            },
+
+            plotOptions: {
+                line: {
+                    marker: {
+                        enabled: true
+                    }
+                }
+            },
+
+            series: series
+        });
+    }
+
+    function lineChart(
+        title,
+        chartElementName,
+        xAxisCaption,
+        yAxisCaption,
+        categories,
+        data,
+        allowPointClick,
+        allowChartTypeChange
+    ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
@@ -209,7 +293,14 @@
         })
     }
 
-    function polarChart(title, chartElementName, categories, data, allowPointClick, allowChartTypeChange) {
+    function polarChart(
+        title,
+        chartElementName,
+        categories,
+        data,
+        allowPointClick,
+        allowChartTypeChange
+    ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
@@ -288,7 +379,14 @@
         });
     }
 
-    function scatterChart(title, chartElementName, xAxisCaption, yAxisCaption, height, series) {
+    function scatterChart(
+        title,
+        chartElementName,
+        xAxisCaption,
+        yAxisCaption,
+        height,
+        series
+    ) {
         $('#' + chartElementName).highcharts({
             chart: {
                 type: 'scatter',
@@ -314,9 +412,9 @@
             },
             legend: {
                 layout: 'vertical',
-                    align: 'right',
-                    verticalAlign: 'middle',
-                    borderWidth: 0
+                align: 'right',
+                verticalAlign: 'middle',
+                borderWidth: 0
             },
             credits: {
                 enabled: false

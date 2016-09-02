@@ -37,11 +37,12 @@ case class DataSetSetting(
   defaultScatterXFieldName: String,
   defaultScatterYFieldName: String,
   defaultDistributionFieldName: String,
+  defaultDateCountFieldName: String,
   tranSMARTVisitFieldName: Option[String],
   tranSMARTReplacements: Map[String, String],
   cacheDataSet: Boolean = false
 ) {
-  def this(dataSetId: String) = this(None, dataSetId, "", "", Seq[String](), Seq[FieldChartType](), 3, "", "", "", None, Map[String, String]())
+  def this(dataSetId: String) = this(None, dataSetId, "", "", Seq[String](), Seq[FieldChartType](), 3, "", "", "", "", None, Map[String, String]())
 }
 
 object DataSetSetting {
@@ -56,13 +57,14 @@ object DataSetSetting {
     defaultScatterXFieldName: String,
     defaultScatterYFieldName: String,
     defaultDistributionFieldName: String,
+    defaultDateCountFieldName: String,
     tranSMARTVisitFieldName: Option[String],
     tranSMARTReplacements: Map[String, String],
     cacheDataSet: Boolean
   ) = DataSetSetting(
     _id, dataSetId, keyFieldName, exportOrderByFieldName,
     listViewTableColumnNames, overviewChartFieldNames.map(FieldChartType(_, None)), overviewChartElementGridWidth,
-    defaultScatterXFieldName, defaultScatterYFieldName, defaultDistributionFieldName,
+    defaultScatterXFieldName, defaultScatterYFieldName, defaultDistributionFieldName, defaultDateCountFieldName,
     tranSMARTVisitFieldName, tranSMARTReplacements,
     cacheDataSet
   )

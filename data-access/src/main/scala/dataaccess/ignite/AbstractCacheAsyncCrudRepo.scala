@@ -67,7 +67,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
   override def get(id: ID): Future[Option[E]] =
     Future {
       val cacheItem = cache.get(toCacheId(id))
-      Some(toItem(cacheItem))
+      Option(cacheItem).map(toItem)
     }
 
   override def count(criteria: Seq[Criterion[Any]]): Future[Int] = {
