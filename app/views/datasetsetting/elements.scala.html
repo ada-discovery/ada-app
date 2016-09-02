@@ -2,8 +2,8 @@
 @import views.html.attributeLabel
 @import views.html.table.dynamicStringTable
 @import views.html.datasetsetting.overviewFieldChartTypeTable
-
 @import dataaccess.DataSetSetting
+
 @(form: Form[DataSetSetting])(implicit msg: play.api.i18n.Messages)
 
 <!-- dynamic (add, remove) table -->
@@ -27,6 +27,7 @@
 @inputText("dataSetSetting", "defaultScatterXFieldName", form)
 @inputText("dataSetSetting", "defaultScatterYFieldName", form)
 @inputText("dataSetSetting", "defaultDistributionFieldName", form)
+@inputText("dataSetSetting", "defaultDateCountFieldName", form)
 @inputText("dataSetSetting", "tranSMARTVisitFieldName", form)
 @inputText("dataSetSetting", "tranSMARTReplacements", form)
 @checkbox("dataSetSetting", "cacheDataSet", form)

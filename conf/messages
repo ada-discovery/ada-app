@@ -17,6 +17,7 @@ overviewList.title = Overview {0}
 list.count.title = {0,choice,0#No {1}|1#One {1}|1<{0,number,integer} {1}s} found
 typeOverview.title = {0} Fields
 distribution.title = {0} Distribution
+dateCount.title = {0} Count by Date
 scatterAnalysis.title = {0} Scatter Analysis
 
 dataSetSetting.keyFieldName.label = Key Field
@@ -26,6 +27,7 @@ dataSetSetting.overviewFieldChartTypes.label = Overview Field Charts
 dataSetSetting.defaultScatterXFieldName.label = Scatter X Field
 dataSetSetting.defaultScatterYFieldName.label = Scatter Y Field
 dataSetSetting.defaultDistributionFieldName.label = Distribution Field
+dataSetSetting.defaultDateCountFieldName.label = Date Count Field
 dataSetSetting.tranSMARTVisitFieldName.label = TranSMART Visit Field
 dataSetSetting.tranSMARTReplacements.label = TranSMART Export Char Replacements
 
@@ -36,6 +38,7 @@ dataSetImport.setting.overviewChartFieldNames.label = Overview Chart Fields
 dataSetImport.setting.defaultScatterXFieldName.label = Scatter X Field
 dataSetImport.setting.defaultScatterYFieldName.label = Scatter Y Field
 dataSetImport.setting.defaultDistributionFieldName.label = Distribution Field
+dataSetImport.setting.defaultDateCountFieldName.label = Date Count Field
 dataSetImport.setting.tranSMARTVisitFieldName.label = TranSMART Visit Field
 dataSetImport.setting.tranSMARTReplacements.label = TranSMART Export Char Replacements
 dataSetImport.setting.cacheDataSet.label = Cache Data Set

@@ -1,0 +1,115 @@
+@import controllers.dataset.DataSetRouter
+@import models.ChartSpec
+@import util.FilterCondition
+@import views.html.layout.main
+@import views.html.chart.highcharts.{highchartsJsImport, timeLineChart}
+@import views.html.chart.{chartPanel, chartPanelJs}
+@import views.html.dataset.datasetSubNav
+@import play.api.libs.json.Json
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
+@import java.util.Date
+@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+
+@import dataaccess.DataSpaceMetaInfo
+
+@(
+    domainName: String,
+    dateFieldName: String,
+    groupFieldName: Option[String],
+    dateFields: Seq[(String, Option[String])],
+    categoricalFields: Seq[(String, Option[String])],
+    series: Seq[(String, Seq[(Date, Any)])],
+    filterSpec: Seq[FilterCondition],
+    router: DataSetRouter,
+    dataSetId: String,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit flash: Flash, msg: Messages, request: Request[_]
+)
+
+@dateFieldNamesAsString = @{
+    Html(dateFields.map(s => "\"" + s._1 + "\"").mkString(","))
+}
+
+@categoricalFieldNamesAsString = @{
+    Html(categoricalFields.map(s => "\"" + s._1 + "\"").mkString(","))
+}
+
+@actions = {
+    <div class="row">
+        <div class="col-md-12">
+            @filter(filterSpec, router.getDateCount(Some(dateFieldName), groupFieldName, filterSpec), Right(router.fieldNames))
+        </div>
+    </div>
+    <hr/>
+    @helper.form(action=router.getDateCount(Some(dateFieldName), groupFieldName, filterSpec), 'role -> "search", 'id -> "fieldForm") {
+        <!-- hacky solution to pass data set param since it's ignored when passed as a part of the call in the form action -->
+        <input type="hidden" name="dataSet" value="@dataSetId"/>
+        <input type="hidden" name="filter" value="@Json.toJson(filterSpec)"/>
+        <div class="row">
+            <div class="col-md-3">
+                <input id="dateField" name="dateField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@dateFieldName">
+            </div>
+            <div class="col-md-2" align="right">
+                <label class="top-padded">Group by</label>
+            </div>
+            <div class="col-md-3">
+                <input id="groupField" name="groupField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@groupFieldName">
+            </div>
+        </div>
+   }
+}
+
+
+@bottomResources = {
+    @highchartsJsImport()
+    @timeLineChart("Date Count", "dateCountChart", Some("Date"), Some("Count"), series)
+}
+
+@main(Messages("dateCount.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
+
+    <div class="page-header">
+        <h3>
+            @Messages("dateCount.title", domainName)
+        </h3>
+    </div>
+
+    <div id="actions">
+        @actions
+    </div>
+    <br/>
+    <br/>
+    <div id="dateCountChart" class="chart-holder"></div>
+}
+
+<script type="text/javascript">
+    $(function () {
+        populateTypeahead($('#fieldForm #dateField'), [@dateFieldNamesAsString], true);
+        populateTypeahead($('#fieldForm #groupField'), [@categoricalFieldNamesAsString], true);
+
+        $('#fieldForm #dateField').focus();
+
+        $('#fieldForm #dateField').on('typeahead:selected', function(e, data) {
+            $('#fieldForm').submit();
+        });
+
+        $('#fieldForm #groupField').on('typeahead:selected', function(e, data) {
+            $('#fieldForm').submit();
+        });
+
+        $('#fieldForm #dateField').keypress(function (e) {
+            if (e.which == 13) {
+                $('#fieldForm').submit();;
+                return false;
+            }
+        });
+
+        $('#fieldForm #groupField').keypress(function (e) {
+            if (e.which == 13) {
+                $('#fieldForm').submit();;
+                return false;
+            }
+        });
+    });
+</script>

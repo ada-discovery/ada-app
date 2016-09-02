@@ -3,6 +3,7 @@ package controllers.dataset
 import javax.inject.Inject
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
+import play.api.mvc.{AnyContent, Action}
 import reactivemongo.bson.BSONObjectID
 import util.FilterCondition
 import util.SecurityUtil._
@@ -37,11 +38,17 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override def getScatterStats(
     xFieldName: Option[String],
     yFieldName: Option[String],
-    zFieldName: Option[String],
+    groupFieldName: Option[String],
     filter: Seq[FilterCondition]
-  ) = dispatch(_.getScatterStats(xFieldName, yFieldName, zFieldName, filter))
+  ) = dispatch(_.getScatterStats(xFieldName, yFieldName, groupFieldName, filter))
 
   override def getDistribution(fieldName: Option[String], filter: Seq[FilterCondition]) = dispatch(_.getDistribution(fieldName, filter))
+
+  override def getDateCount(
+    dateFieldName: Option[String],
+    groupFieldName: Option[String],
+    filter: Seq[FilterCondition]
+  ) = dispatch(_.getDateCount(dateFieldName, groupFieldName, filter))
 
   override def getFieldNames = dispatch(_.getFieldNames)
 

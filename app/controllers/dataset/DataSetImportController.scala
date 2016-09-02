@@ -65,12 +65,13 @@ class DataSetImportController @Inject()(
     "defaultScatterXFieldName" -> nonEmptyText,
     "defaultScatterYFieldName" -> nonEmptyText,
     "defaultDistributionFieldName" -> nonEmptyText,
+    "defaultDateCountFieldName" -> nonEmptyText,
     "tranSMARTVisitFieldName" -> optional(text),
     "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
     "cacheDataSet" -> boolean
   ) (DataSetSetting.apply2){
     DataSetSetting.unapply(_).map( v =>
-      (v._1, v._2, v._3, v._4 ,v._5, v._6.map(_.fieldName), v._7, v._8, v._9, v._10, v._11, v._12, v._13)
+      (v._1, v._2, v._3, v._4 ,v._5, v._6.map(_.fieldName), v._7, v._8, v._9, v._10, v._11, v._12, v._13, v._14)
     )
   }
 

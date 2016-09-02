@@ -11,14 +11,15 @@
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 
 @import dataaccess.DataSpaceMetaInfo
+
 @(
     domainName: String,
     fieldName : String,
+    fields: Seq[(String, Option[String])],
     chartSpec: ChartSpec,
     filterSpec: Seq[FilterCondition],
     router: DataSetRouter,
     dataSetId: String,
-    fields: Seq[(String, Option[String])],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit flash: Flash, msg: Messages, request: Request[_]
@@ -87,6 +88,12 @@
             $('#fieldForm').submit();
         });
 
+        $('#fieldForm #fieldName').keypress(function (e) {
+            if (e.which == 13) {
+                $('#fieldForm').submit();;
+                return false;
+            }
+        });
     });
 
     function addToChartOverview() {

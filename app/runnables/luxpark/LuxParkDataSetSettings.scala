@@ -16,6 +16,7 @@ object LuxParkDataSetSettings{
     "digitsf_score",
     "bentons_score",
     "digitsf_score" ,
+    "consent_q0b",
     Some("redcap_event_name"),
     Map(("\r", " "), ("\n", " ")),
     true
@@ -31,7 +32,8 @@ object LuxParkDataSetSettings{
     3,
     "kittypeversion",
     "qtycurrent",
-    "sampletypeid" ,
+    "sampletypeid",
+    "kitcreationdate",
     None,
     Map(("\r", " "), ("\n", " ")),
     true
@@ -47,7 +49,8 @@ object LuxParkDataSetSettings{
     3,
     "dataset",
     "paramlistversionid",
-    "testapproval" ,
+    "testapproval",
+    "",
     None,
     Map(("\r", " "), ("\n", " ")),
     true
@@ -63,7 +66,8 @@ object LuxParkDataSetSettings{
     3,
     "feeling_better",
     "feeling_worse",
-    "feeling_better" ,
+    "feeling_better",
+    "createdOn",
     None,
     Map(("\r", " "), ("\n", " ")),
     true
@@ -80,6 +84,7 @@ object LuxParkDataSetSettings{
     "NonIdentifiableDemographicsu002ejsonu002epatientHeightInches",
     "NonIdentifiableDemographicsu002ejsonu002epatientWeightPounds",
     "NonIdentifiableDemographicsu002ejsonu002epatientWakeUpTime" ,
+    "createdOn",
     None,
     Map(("\r", " "), ("\n", " ")),
     true
@@ -96,6 +101,7 @@ object LuxParkDataSetSettings{
     "age",
     "years-smoking",
     "education" ,
+    "createdOn",
     None,
     Map(("\r", " "), ("\n", " ")),
     true
@@ -112,6 +118,7 @@ object LuxParkDataSetSettings{
     "ROW_ID",
     "ROW_ID",
     "medication-start-year" ,
+    "createdOn",
     None,
     Map(("\r", " "), ("\n", " ")),
     true
@@ -128,6 +135,7 @@ object LuxParkDataSetSettings{
     "ROW_ID",
     "ROW_ID",
     "phoneInfo" ,
+    "createdOn",
     None,
     Map(("\r", " "), ("\n", " ")),
     false
@@ -144,6 +152,7 @@ object LuxParkDataSetSettings{
     "ROW_ID",
     "ROW_ID",
     "momentInDayFormatu002ejsonu002echoiceAnswers" ,
+    "createdOn",
     None,
     Map(("\r", " "), ("\n", " ")),
     false
@@ -160,6 +169,7 @@ object LuxParkDataSetSettings{
     "ROW_ID",
     "ROW_ID",
     "momentInDayFormatu002ejsonu002echoiceAnswers" ,
+    "createdOn",
     None,
     Map(("\r", " "), ("\n", " ")),
     false
@@ -176,6 +186,7 @@ object LuxParkDataSetSettings{
     "ROW_ID",
     "ROW_ID",
     "appVersion" ,
+    "createdOn",
     None,
     Map(("\r", " "), ("\n", " ")),
     false
@@ -192,6 +203,7 @@ object LuxParkDataSetSettings{
     "ROW_ID",
     "ROW_ID",
     "appVersion" ,
+    "createdOn",
     None,
     Map(("\r", " "), ("\n", " ")),
     false

@@ -1,6 +1,7 @@
 @import controllers.dataset.DataSetRouter
 @import util.{BasicStats, FilterCondition}
 @import views.html.chart.highcharts.highchartsJsImport
+@import views.html.chart.highcharts.scatterChart
 @import views.html.layout.main
 @import views.html.dataset.datasetSubNav
 @import play.api.libs.json.Json
@@ -11,15 +12,15 @@
 
 @(
     domainName: String,
-    xField: String,
-    yField: String,
-    zField: Option[String],
+    xFieldName: String,
+    yFieldName: String,
+    groupFieldName: Option[String],
+    numericFields: Seq[(String, Option[String])],
+    categoricalFields: Seq[(String, Option[String])],
+    series: Seq[(String, Seq[(Any, Any)])],
     filterSpec: Seq[FilterCondition],
     router: DataSetRouter,
     dataSetId: String,
-    numericFields: Seq[(String, Option[String])],
-    categoricalFields: Seq[(String, Option[String])],
-    stats: Seq[(String, Seq[(Any, Any)])],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit flash: Flash, msg: Messages, request: Request[_]
@@ -36,7 +37,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-12">
-            @filter(filterSpec, router.getScatterStats(Some(xField), Some(yField), zField, filterSpec), Right(router.fieldNames))
+            @filter(filterSpec, router.getScatterStats(Some(xFieldName), Some(yFieldName), groupFieldName, filterSpec), Right(router.fieldNames))
         </div>
     </div>
     <hr/>
@@ -46,30 +47,30 @@
         <input type="hidden" name="filter" value="@Json.toJson(filterSpec)"/>
         <div class="row">
             <div class="col-md-3">
-                <input id="xField" name="xField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@xField">
+                <input id="xField" name="xField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@xFieldName">
             </div>
             <div class="col-md-1" align="center">
                 <label class="top-padded">vs.</label>
             </div>
             <div class="col-md-3">
-                <input id="yField" name="yField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@yField">
+                <input id="yField" name="yField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@yFieldName">
             </div>
             <div class="col-md-2" align="right">
-                <label class="top-padded">Groups:</label>
+                <label class="top-padded">Group by</label>
             </div>
             <div class="col-md-3">
-                <input id="zField" name="zField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@zField">
+                <input id="groupField" name="groupField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@groupFieldName">
             </div>
         </div>
         <div class="row">
             <div class="col-md-2">
                 <div class="well">
-                    Mean: @(BasicStats.mean(stats.map(x => x._2).flatten.map(_._1)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
+                    Mean: @(BasicStats.mean(series.map(x => x._2).flatten.map(_._1)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
                 </div>
             </div>
             <div class="col-md-offset-2 col-md-2">
                 <div class="well">
-                    Mean: @(BasicStats.mean(stats.map(x => x._2).flatten.map(_._2)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
+                    Mean: @(BasicStats.mean(series.map(x => x._2).flatten.map(_._2)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
                 </div>
             </div>
         </div>
@@ -79,12 +80,12 @@
 
 @bottomResources =  {
     @highchartsJsImport()
-    @views.html.chart.highcharts.scatterChart(
+    @scatterChart(
         "Comparison",
         "scatterChart",
-        xField.capitalize,
-        yField.capitalize,
-        stats.map{ case (name, values) =>
+        xFieldName.capitalize,
+        yFieldName.capitalize,
+        series.map{ case (name, values) =>
             (name, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
         }
     )
@@ -109,7 +110,7 @@
     $(function () {
         populateTypeahead($('#fieldForm #xField'), [@numericFieldNamesAsString], true);
         populateTypeahead($('#fieldForm #yField'), [@numericFieldNamesAsString], true);
-        populateTypeahead($('#fieldForm #zField'), [@categoricalFieldNamesAsString], true);
+        populateTypeahead($('#fieldForm #groupField'), [@categoricalFieldNamesAsString], true);
 
         $('#fieldForm #xField').focus();
 
@@ -121,8 +122,29 @@
             $('#fieldForm').submit();
         });
 
-        $('#fieldForm #zField').on('typeahead:selected', function(e, data) {
+        $('#fieldForm #groupField').on('typeahead:selected', function(e, data) {
             $('#fieldForm').submit();
+        });
+
+        $('#fieldForm xField').keypress(function (e) {
+            if (e.which == 13) {
+                $('#fieldForm').submit();;
+                return false;
+            }
+        });
+
+        $('#fieldForm #yField').keypress(function (e) {
+            if (e.which == 13) {
+                $('#fieldForm').submit();;
+                return false;
+            }
+        });
+
+        $('#fieldForm #groupField').keypress(function (e) {
+            if (e.which == 13) {
+                $('#fieldForm').submit();;
+                return false;
+            }
         });
     });
 </script>

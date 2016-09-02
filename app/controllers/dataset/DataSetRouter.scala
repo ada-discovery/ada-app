@@ -18,6 +18,7 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getScatterStats = routes.getScatterStats _ map route
   val plainGetDistribution = routeFun(_.getDistribution())
   val getDistribution = routes.getDistribution _ map route
+  val getDateCount = routes.getDateCount _ map route
   val fieldNames = routeFun(_.getFieldNames)
   val getFieldValue = routes.getFieldValue _ map route
   val exportCsv = routes.exportRecordsAsCsv _ map route

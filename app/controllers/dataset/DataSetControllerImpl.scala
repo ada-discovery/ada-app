@@ -1,6 +1,8 @@
 package controllers.dataset
 
+import java.text.SimpleDateFormat
 import java.util.concurrent.TimeoutException
+import java.util.Date
 import javax.inject.Inject
 
 import _root_.util.JsonUtil._
@@ -425,17 +427,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getScatterStats(
     xFieldNameOption : Option[String],
     yFieldNameOption: Option[String],
-    zFieldNameOption: Option[String],
+    groupFieldNameOption: Option[String],
     filter: Seq[FilterCondition]
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    // initialize x, y, and z field names
+    // initialize x, y, and group field names
     val xFieldName = xFieldNameOption.getOrElse(setting.defaultScatterXFieldName)
     val yFieldName = yFieldNameOption.getOrElse(setting.defaultScatterYFieldName)
-    val zFieldName: Option[String] = zFieldNameOption match {
-      case Some(zField) => {
-        val trimmed = zField.trim
+    val groupFieldName: Option[String] = groupFieldNameOption match {
+      case Some(fieldName) => {
+        val trimmed = fieldName.trim
         if (trimmed.isEmpty)
           None
         else
@@ -446,17 +448,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     val xFieldFuture = fieldRepo.get(xFieldName)
     val yFieldFuture = fieldRepo.get(yFieldName)
-    val zFieldFuture = zFieldName.map(fieldRepo.get).getOrElse(Future(None))
+    val groupFieldFuture = groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
     val numericFieldsFuture = fieldRepo.find(Seq("fieldType" #=> numericTypes))
     val categoricalFieldsFuture = fieldRepo.find(Seq("fieldType" #=> categoricalTypes))
 
     for {
       xField <- xFieldFuture
       yField <- yFieldFuture
-      zField <- zFieldFuture
+      groupField <- groupFieldFuture
       numericFields <- numericFieldsFuture
       categoricalFields <- categoricalFieldsFuture
-      scattedData <- getScatterData(filter, xField, yField, zField)
+      scattedData <- getScatterData(filter, xField, yField, groupField)
     } yield {
       val numericFieldNameLabels = numericFields.map(field => (field.name, field.label)).toSeq.sorted
       val categoricalFieldNameLabels = categoricalFields.map(field => (field.name, field.label)).toSeq.sorted
@@ -466,13 +468,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           dataSetName,
           xFieldName,
           yFieldName,
-          zFieldName,
-          filter,
-          router,
-          dataSetId,
+          groupFieldName,
           numericFieldNameLabels,
           categoricalFieldNameLabels,
           scattedData,
+          filter,
+          router,
+          dataSetId,
           getMetaInfos
         ))
         case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
@@ -484,26 +486,26 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filter: Seq[FilterCondition],
     xField: Option[Field],
     yField: Option[Field],
-    zField: Option[Field]
+    groupField: Option[Field]
   ): Future[Seq[(String, Seq[(Any, Any)])]] = {
     if (xField.isDefined && yField.isDefined) {
       val xFieldName = xField.get.name
       val yFieldName = yField.get.name
 
       val criteria = toCriteria(filter)
-      val projection = Seq(xFieldName, yFieldName) ++ zField.map(_.name)
-      val futureXYZItems = repo.find(criteria, Nil, projection)
+      val projection = Seq(xFieldName, yFieldName) ++ groupField.map(_.name)
+      val futureXYZItems = repo.find(criteria, Nil, projection.toSet)
 
       futureXYZItems.map{ xyzItems =>
         val xyzSeq = xyzItems.toSeq
         val xValues = projectDouble(xyzSeq, xFieldName)
         val yValues = projectDouble(xyzSeq, yFieldName)
 
-        zField match {
+        groupField match {
           case Some(zField) => {
-            val zValues = projectString(xyzSeq, zField.name)
+            val groupValues = projectString(xyzSeq, zField.name)
             // TODO: simplify this
-            (zValues, xValues, yValues).zipped.map { case (zValue, xValue, yValue) =>
+            (groupValues, xValues, yValues).zipped.map { case (zValue, xValue, yValue) =>
               (zValue, xValue, yValue).zipped
             }.flatten.groupBy(_._1).map{ case (zValue, values) =>
               (
@@ -513,7 +515,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                   else
                     zValue
                 ),
-                values.map{ case (zValue, xValue, yValue) => (xValue, yValue)}
+                values.map(tupple => (tupple._2, tupple._3))
               )
             }.toSeq
           }
@@ -537,26 +539,119 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     implicit val msg = messagesApi.preferred(request)
 
     val fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
-    val fieldsFuture = fieldRepo.find(sort = Seq(AscSort("name")))
-    val fieldNameLabelsFuture = fieldsFuture.map(_.map(field => (field.name, field.label)).toSeq)
-    val chartSpecsFuture = getDataChartSpecs(toCriteria(filter), Seq(FieldChartType(fieldName, None)), true, false)
+    val chartSpecsFuture = getDataChartSpecs(
+      toCriteria(filter),
+      Seq(FieldChartType(fieldName, None)),
+      true,
+      false
+    )
 
     {
       for {
         chartSpecs <- chartSpecsFuture
-        fieldNameLabels <- fieldNameLabelsFuture
-      } yield
+        fields <-fieldRepo.find(sort = Seq(AscSort("name")))
+      } yield {
+        val fieldNameLabels = fields.map(field => (field.name, field.label)).toSeq
+
         render {
           case Accepts.Html() => Ok(dataset.distribution(
-            dataSetName, fieldName, chartSpecs.head._2, filter, router, dataSetId, fieldNameLabels, getMetaInfos
+            dataSetName, fieldName, fieldNameLabels, chartSpecs.head._2, filter, router, dataSetId, getMetaInfos
           ))
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
         }
+      }
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the distribution process")
         InternalServerError(t.getMessage)
     }
+  }
+
+  override def getDateCount(
+    dateFieldNameOption: Option[String],
+    groupFieldName: Option[String],
+    filter: Seq[FilterCondition]
+  ) = Action.async { implicit request =>
+    implicit val msg = messagesApi.preferred(request)
+
+    val dateFieldName = dateFieldNameOption.getOrElse(setting.defaultDateCountFieldName)
+
+    val dateFieldFuture = fieldRepo.get(dateFieldName)
+    val groupFieldFuture = groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
+    val dateFieldsFuture = fieldRepo.find(Seq("fieldType" #== FieldType.Date))
+    val categoricalFieldsFuture = fieldRepo.find(Seq("fieldType" #=> categoricalTypes))
+
+    {
+      for {
+        dateField <- dateFieldFuture
+        groupField <- groupFieldFuture
+        dateFields <- dateFieldsFuture
+        categoricalFields <- categoricalFieldsFuture
+        series <- dateField match {
+          case Some(dateField) => getDateCountData(filter, dateField, groupField)
+          case None => Future(Nil)
+        }
+      } yield {
+        val dateFieldNameLabels = dateFields.map(field => (field.name, field.label)).toSeq.sorted
+        val categoricalFieldNameLabels = categoricalFields.map(field => (field.name, field.label)).toSeq.sorted
+
+        render {
+          case Accepts.Html() => Ok(dataset.dateCount(
+            dataSetName, dateFieldName, groupFieldName, dateFieldNameLabels, categoricalFieldNameLabels, series, filter, router, dataSetId, getMetaInfos
+          ))
+          case Accepts.Json() => BadRequest("GetDateCount function doesn't support JSON response.")
+        }
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the getDateCountd process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+  private def getDateCountData(
+    filter: Seq[FilterCondition],
+    dateField: Field,
+    groupField: Option[Field]
+  ): Future[Seq[(String, Seq[(Date, Any)])]] = {
+    val dateFieldName = dateField.name
+
+    val criteria = toCriteria(filter)
+    val projection = Seq(dateFieldName) ++ groupField.map(_.name)
+    val dateGroupItemsFuture = repo.find(criteria, Nil, projection.toSet)
+
+    val groupDatesFuture: Future[Seq[(String, Seq[Date])]] = dateGroupItemsFuture.map { dateGroupItems =>
+      val dateGroupSeq = dateGroupItems.toSeq
+      val dates = projectDate(dateGroupSeq, dateFieldName)
+
+      groupField match {
+        case Some(zField) => {
+          val groups = projectString(dateGroupSeq, zField.name)
+
+          // TODO: simplify this
+          (groups, dates).zipped.map { case (group, date) =>
+            (group, date).zipped
+          }.flatten.groupBy(_._1).map { case (group, values) =>
+            val groupName =
+              zField.numValues.map(_.get(group)).flatten.getOrElse(
+                if (group.trim.isEmpty)
+                  "N/A"
+                else
+                  group
+              )
+
+            (groupName, values.map(_._2))
+          }.toSeq
+        }
+        case None =>
+          Seq(("all", dates.flatten))
+      }
+    }
+
+    groupDatesFuture.map(_.map{ case (name, dates) =>
+      val count = (dates.sorted, Stream.from(1)).zipped.toSeq
+      (name, count)
+    })
   }
 
   override def getFieldNames = Action.async { implicit request =>

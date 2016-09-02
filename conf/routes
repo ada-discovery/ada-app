@@ -88,14 +88,15 @@ GET         /studies/records                                                    
 GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
 GET         /studies/records/fieldTypes                                             controllers.dataset.DataSetDispatcher.overviewFieldTypes
 GET         /studies/records/overviewList                                           controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: Seq[util.FilterCondition] ?= Nil)
-GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None, zField: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
-GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 GET         /studies/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
 GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[util.FilterCondition], tableColumnsOnly: Boolean)
 GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(filter: Seq[util.FilterCondition], tableColumnsOnly: Boolean)
 GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
 GET         /studies/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
+GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xField: Option[String] ?= None, yField: Option[String] ?= None, groupField: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
+GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filter : Seq[util.FilterCondition] ?= Nil)
+GET         /studies/dateCount                                                      controllers.dataset.DataSetDispatcher.getDateCount(dateField: Option[String] ?= None, groupField: Option[String], filter : Seq[util.FilterCondition] ?= Nil)
 
 GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : Seq[util.FilterCondition] ?= Nil)
 GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)

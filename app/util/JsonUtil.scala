@@ -1,9 +1,20 @@
 package util
 
+import java.text.{ParseException, SimpleDateFormat}
+
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
+import java.util.Date
 
 object JsonUtil {
+
+  private val dateFormats = Seq(
+    "yyyy-MM-dd",
+    "yyyy-MM-dd HH:mm",
+    "yyyy-MM-dd HH:mm:ss",
+    "dd.MM.yyyy",
+    "MM.yyyy"
+  ).map(new SimpleDateFormat(_))
 
   def createQueryStringBinder[E:Format](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[E] {
 
@@ -130,6 +141,9 @@ object JsonUtil {
   def projectString(items : Seq[JsObject], fieldName : String) : Seq[Option[String]] =
     project(items, fieldName).map(toString)
 
+  def projectDate(items : Seq[JsObject], fieldName : String) : Seq[Option[Date]] =
+    project(items, fieldName).map(toDate)
+
   def toDouble(jsValue : JsReadable) : Option[Double] =
     jsValue.asOpt[Double].map(Some(_)).getOrElse {
       jsValue.asOpt[String] match {
@@ -151,13 +165,33 @@ object JsonUtil {
     }
   }
 
-  def toString(value: JsReadable) : Option[String] =
+  def toString(value: JsReadable): Option[String] =
     value match {
       case JsNull => None
       case JsString(s) => Some(s)
       case JsNumber(n) => Some(n.toString)
       case JsDefined(json) => toString(json)
       case _ => Some(value.toString)
+    }
+
+  def toDate(value: JsReadable): Option[Date] =
+    value match {
+      case JsNull => None
+      case JsString(s) => {
+        val dateFormat = dateFormats.find{ format =>
+          try {
+            format.parse(s)
+            true
+          } catch {
+            case e: ParseException => false
+          }
+        }
+
+        dateFormat.map(_.parse(s))
+      }
+      case JsNumber(n) => Some(new Date(n.toLong))
+      case JsDefined(json) => toDate(json)
+      case _ => None
     }
 
   /**

@@ -26,6 +26,7 @@
                 <ul class="dropdown-menu">
                     @listItem(dataSetRouter.plainGetDistribution, "Distribution", Some(2))
                     @listItem(dataSetRouter.plainGetScatterStats, "Scatter Analysis", Some(2))
+                    @listItem(dataSetRouter.getDateCount(None, None, Nil), "Count by Date", Some(2))
                 </ul>
             </li>
         </ul>

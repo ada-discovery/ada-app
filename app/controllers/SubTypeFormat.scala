@@ -17,7 +17,9 @@ class SubTypeFormat[T](formats: Traversable[ManifestedFormat[_ <: T]]) extends F
   }.toMap
 
   override def reads(json: JsValue): JsResult[T] = {
-    val concreteClassName = (json \ concreteClassFieldName).get.as[String]
+    val concreteClassName = (json \ concreteClassFieldName).asOpt[String].getOrElse(
+      throw new AdaException(s"Field '$concreteClassFieldName' cannot be found in $json.")
+    )
     val format = classNameFormatMap.getOrElse(concreteClassName,
       throw new AdaException(s"Json Formatter for a sub type '$concreteClassName' not recognized."))
     format.reads(json)

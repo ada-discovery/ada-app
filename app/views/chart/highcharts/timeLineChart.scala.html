@@ -1,0 +1,20 @@
+@import java.util.Date
+
+@(
+    title: String,
+    chartElementName : String,
+    xAxisCaption: Option[String],
+    yAxisCaption: Option[String],
+    series: Seq[(String, Seq[(Date, Any)])]
+)
+
+<script type="text/javascript">
+    timeLineChart('@title', '@{chartElementName}', '@{xAxisCaption.getOrElse("")}', '@{yAxisCaption.getOrElse("")}', 500,
+        [@series.map{ oneSeries =>
+            {
+                name: '@oneSeries._1',
+                data: [ @oneSeries._2.map { case (x, y) => [@x.getTime, @y],}]
+            },
+        }]
+    )
+</script>
