@@ -5,6 +5,7 @@ import javax.inject.Inject
 import dataaccess._
 import dataaccess.ignite.BinaryJsonUtil.toJson
 import org.apache.commons.lang3.StringUtils
+import play.api.Logger
 import play.api.libs.iteratee.{ Concurrent, Enumerator }
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
@@ -14,6 +15,7 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{ IndexType, Index }
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
+import reactivemongo.core.errors.{DatabaseException, DetailedDatabaseException}
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import models._
@@ -31,6 +33,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
   import play.modules.reactivemongo.json.collection.JSONCollection
 
   private val indexNameMaxSize = 70
+  private val logger = Logger
 
   @Inject var reactiveMongoApi : ReactiveMongoApi = _
 
@@ -68,7 +71,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
     // use index / hint only if limit is not provided and projection is not empty
     val finalQueryBuilderFuture =
-      if (limit.isEmpty && projection.nonEmpty) {
+      if (limit.isEmpty && projection.size > 1) {
         val projectionWithId = projection ++ (
           if (!projection.toSeq.contains(identityName))
             Seq(identityName)
