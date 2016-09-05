@@ -82,11 +82,11 @@ private class UserManagerImpl @Inject()(
     val futures = ldapUserService.getAll.map { ldapUser: LdapUser =>
       for {
         found <- userRepo.find(Seq("ldapDn" #== ldapUser.uid)).map(_.headOption)
-        _ <- found.headOption match {
+        _ <- found match {
           case Some(usr) =>
-            userRepo.update(usr.copy(ldapDn = ldapUser.name, email = ldapUser.email))
+            userRepo.update(usr.copy(ldapDn = ldapUser.uid, email = ldapUser.email))
           case None =>
-            userRepo.save(User(None, ldapUser.name, ldapUser.email, Seq(SecurityRole.basic), Seq()))
+            userRepo.save(User(None, ldapUser.uid, ldapUser.email, Seq(SecurityRole.basic), Seq()))
         }
       } yield
         ()

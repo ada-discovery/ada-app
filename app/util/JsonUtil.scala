@@ -12,9 +12,12 @@ object JsonUtil {
     "yyyy-MM-dd",
     "yyyy-MM-dd HH:mm",
     "yyyy-MM-dd HH:mm:ss",
+    "dd-MMM-yyyy HH:mm:ss",
     "dd.MM.yyyy",
     "MM.yyyy"
   ).map(new SimpleDateFormat(_))
+
+  private val standardDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
   def createQueryStringBinder[E:Format](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[E] {
 
@@ -187,12 +190,23 @@ object JsonUtil {
           }
         }
 
-        dateFormat.map(_.parse(s))
+        dateFormat.map(_.parse(s)) match {
+          case Some(date) => Some(date)
+          case _ =>
+            try {
+              Some(new Date(s.toLong))
+            } catch {
+              case e: NumberFormatException => None
+            }
+        }
       }
       case JsNumber(n) => Some(new Date(n.toLong))
       case JsDefined(json) => toDate(json)
       case _ => None
     }
+
+  def toFormattedDate(value: JsReadable): Option[String] =
+    toDate(value).map(standardDateFormat.format)
 
   /**
     * Get smallest value of specified field. The values are cast to double before comparison.
