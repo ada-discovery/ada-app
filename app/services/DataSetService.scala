@@ -290,7 +290,14 @@ class DataSetServiceImpl @Inject()(
       // save the records (...ignore the results)
       _ <- {
         logger.info(s"Saving JSONs...")
-        Future.sequence(records.map(dataRepo.save))
+        val newRecords = records.map{ record =>
+          // TODO: replace this adhoc rounding of age with more conceptual approach
+          val newAge: JsValue = toDouble(record \ "sv_age").map(age =>
+            Json.toJson(age.floor)
+          ).getOrElse(JsNull)
+          record.+(("sv_age", newAge))
+        }
+        Future.sequence(newRecords.map(dataRepo.save))
       }
       // import dictionary (if needed)
       _ <- if (importInfo.importDictionaryFlag)
