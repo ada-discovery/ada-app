@@ -49,7 +49,7 @@ class DataSetSettingController @Inject() (
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSetId" -> nonEmptyText,
       "keyFieldName" -> nonEmptyText,
-      "exportOrderByFieldName" -> nonEmptyText,
+      "exportOrderByFieldName" -> optional(text),
       "listViewTableColumnNames" -> seq(text),
       "overviewFieldChartTypes" -> seq(of[FieldChartType]), // fieldChartMapping
       "overviewChartElementGridWidth" -> number(min = 1, max = 12),

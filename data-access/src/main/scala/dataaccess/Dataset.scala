@@ -30,7 +30,7 @@ case class DataSetSetting(
   _id: Option[BSONObjectID],
   dataSetId: String,
   keyFieldName: String,
-  exportOrderByFieldName: String,
+  exportOrderByFieldName: Option[String],
   listViewTableColumnNames: Seq[String],
   overviewFieldChartTypes: Seq[FieldChartType],
   overviewChartElementGridWidth: Int,
@@ -42,7 +42,7 @@ case class DataSetSetting(
   tranSMARTReplacements: Map[String, String],
   cacheDataSet: Boolean = false
 ) {
-  def this(dataSetId: String) = this(None, dataSetId, "", "", Seq[String](), Seq[FieldChartType](), 3, "", "", "", "", None, Map[String, String]())
+  def this(dataSetId: String) = this(None, dataSetId, "", None, Seq[String](), Seq[FieldChartType](), 3, "", "", "", "", None, Map[String, String]())
 }
 
 object DataSetSetting {
@@ -50,7 +50,7 @@ object DataSetSetting {
     _id: Option[BSONObjectID],
     dataSetId: String,
     keyFieldName: String,
-    exportOrderByFieldName: String,
+    exportOrderByFieldName: Option[String],
     listViewTableColumnNames: Seq[String],
     overviewChartFieldNames: Seq[String],
     overviewChartElementGridWidth: Int,

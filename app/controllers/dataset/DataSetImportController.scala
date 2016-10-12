@@ -58,7 +58,7 @@ class DataSetImportController @Inject()(
     "id" -> ignored(Option.empty[BSONObjectID]),
     "dataSetId" -> nonEmptyText,
     "keyFieldName" -> nonEmptyText,
-    "exportOrderByFieldName" -> nonEmptyText,
+    "exportOrderByFieldName" -> optional(text),
     "listViewTableColumnNames" -> of[Seq[String]],
     "overviewChartFieldNames" -> of[Seq[String]],
     "overviewChartElementGridWidth" -> number(min = 1, max = 12),

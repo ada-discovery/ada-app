@@ -20,7 +20,7 @@ protected trait ExportableAction[E] {
     delimiter: String,
     eol: String,
     charReplacements: Traversable[(String, String)] = Nil)(
-    orderBy: String,
+    orderBy: Option[String],
     filter: Seq[FilterCondition] = Nil,
     projection: Traversable[String] = Nil,
     fieldNames: Option[Seq[String]] = None)(
@@ -33,7 +33,7 @@ protected trait ExportableAction[E] {
 
   def exportToJson(
     filename: String)(
-    orderBy: String,
+    orderBy: Option[String],
     filter: Seq[FilterCondition] = Nil,
     projection: Traversable[String] = Nil)(
     implicit ev: Format[E]
@@ -45,13 +45,13 @@ protected trait ExportableAction[E] {
 
   private def getJsons(
     filter: Seq[FilterCondition],
-    orderBy: String,
+    orderBy: Option[String],
     projection: Traversable[String] = Nil
   )(implicit ev: Format[E]) =
     for {
       records <- repoHook.find(
         criteria = toCriteria(filter),
-        sort = toSort(orderBy),
+        sort = orderBy.fold(Seq[Sort]())(toSort),
         projection = projection
       )
     } yield {

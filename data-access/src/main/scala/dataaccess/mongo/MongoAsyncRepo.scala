@@ -57,20 +57,14 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     limit: Option[Int],
     page: Option[Int]
   ): Future[Traversable[E]] = {
-    val jsonProjection = JsObject(projection.map(fieldName => (fieldName, Json.toJson(1))).toSeq)
+    val jsonProjection = JsObject(projection.map(fieldName => (fieldName, JsNumber(1))).toSeq)
     val jsonCriteria = JsObject(criteria.map(toMongoCriterion(_)))
 
     // handle criteria and projection (if any)
-    val queryBuilder: GenericQueryBuilder[collection.pack.type] = collection.find(jsonCriteria, jsonProjection)
-
-    // handle sort (if any)
-    val queryBuilder2: GenericQueryBuilder[collection.pack.type] = sort match {
-      case Nil => queryBuilder
-      case _ => queryBuilder.sort(toJsonSort(sort))
-    }
+    val queryBuilder = collection.find(jsonCriteria, jsonProjection)
 
     // use index / hint only if limit is not provided and projection is not empty
-    val finalQueryBuilderFuture =
+    val queryBuilder2 =
       if (limit.isEmpty && projection.size > 1) {
         val projectionWithId = projection ++ (
           if (!projection.toSeq.contains(identityName))
@@ -94,11 +88,17 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
             collection.indexesManager.ensure(index)
           }
         } yield {
-          val jsonIndex = JsObject(projectionWithId.map(fieldName => (fieldName, Json.toJson(1))).toSeq)
-          queryBuilder2.hint(jsonIndex)
+          val jsonIndex = JsObject(projectionWithId.map(fieldName => (fieldName, JsNumber(1))).toSeq)
+          queryBuilder.hint(jsonIndex)
         }
       } else
-        Future(queryBuilder2)
+        Future(queryBuilder)
+
+    // handle sort (if any)
+    val finalQueryBuilderFuture = sort match {
+      case Nil => queryBuilder2
+      case _ => queryBuilder2.map(_.sort(toJsonSort(sort)))
+    }
 
     finalQueryBuilderFuture.flatMap { finalQueryBuilder =>
       // handle pagination (if requested)

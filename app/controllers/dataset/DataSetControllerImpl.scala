@@ -188,7 +188,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param fieldName Name of the field of interest.
     * @return Traversable object containing the String entries of the field.
     */
-  private def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] = {
+  private def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] =
     for {
       field <- fieldRepo.get(fieldName)
       values <- repo.find(projection = Seq(fieldName))
@@ -198,7 +198,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         JsonUtil.toString(jsValue)
       }
     }
-  }
 
   /**
     * TODO: Instead of throwing an exception, provide option to run one of the standalone scripts for dictionary generation.
@@ -736,9 +735,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected def generateTranSMARTDataFile(
     dataFilename: String,
     delimiter: String,
-    orderBy : String
+    orderBy: Option[String]
   ): String = {
-    val recordsFuture = repo.find(sort = toSort(orderBy))
+    val recordsFuture = repo.find(sort = orderBy.fold(Seq[Sort]())(toSort))
     val records = result(recordsFuture)
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()
@@ -762,10 +761,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected def generateTranSMARTMappingFile(
     dataFilename: String,
     delimiter: String,
-    orderBy : String
+    orderBy: Option[String]
   ): String = {
     val dataSetSetting = setting
-    val recordsFuture = repo.find(sort = toSort(orderBy))
+    val recordsFuture = repo.find(sort = orderBy.fold(Seq[Sort]())(toSort))
     val records = result(recordsFuture)
     val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
     val categoriesFuture = categoryRepo.find()

@@ -177,7 +177,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       delimiter,
       eolToUse,
       if (replaceEolWithSpace) csvCharReplacements else Nil)(
-      exportOrderByFieldName,
+      Some(exportOrderByFieldName),
       filter,
       if (tableColumnsOnly) listViewColumns.get else Nil
     )
@@ -194,7 +194,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   ) =
     exportToJson(
       jsonFileName)(
-      exportOrderByFieldName,
+      Some(exportOrderByFieldName),
       filter,
       if (tableColumnsOnly) listViewColumns.get else Nil
     )
