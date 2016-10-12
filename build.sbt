@@ -4,7 +4,7 @@ import com.github.play2war.plugin._
 
 name := "ncer-pd"
 
-version := "0.3.0"
+version := "0.3.1-alpha"
 
 scalaVersion := "2.11.7"
 
