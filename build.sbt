@@ -29,7 +29,7 @@ resolvers ++= Seq(
 routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._", "util.FilterCondition.FilterSpecQueryStringBinder")
 
 libraryDependencies ++= Seq(
-  "ada" % "ada-dataaccess_2.11" % "0.3.0-beta",
+  "ada" % "ada-dataaccess_2.11" % "0.3.1-alpha",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.webjars" %% "webjars-play" % "2.4.0",
   "org.webjars" % "bootstrap" % "3.3.5",

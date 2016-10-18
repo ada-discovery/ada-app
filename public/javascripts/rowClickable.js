@@ -1,8 +1,8 @@
 jQuery(document).ready(function($) {
-    $(".clickable-row").click(function() {
+    $(".clickable-row").dblclick(function() {
         window.document.location = $(this).data("href");
     });
-    $(".no-rowClicked").click(function( event ) {
+    $(".no-rowClicked").dblclick(function( event ) {
         event.stopPropagation();
     });
 });
