@@ -1,5 +1,5 @@
 @import play.api.libs.json.{JsObject, JsNull, JsValue}
-@import util.fieldLabel
+@import util.{JsonUtil, fieldLabel}
 @import reactivemongo.bson.BSONObjectID
 @import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
@@ -35,13 +35,13 @@
                     @fieldsToShow.get.map { fieldName =>
                         <td>
                             @if(fieldNameRenderMap.isDefined && fieldNameRenderMap.get.contains(fieldName)) {
-                                @fieldNameRenderMap.get.get(fieldName).get((item \ "_id").as[BSONObjectID], fieldName, (item \ fieldName).toOption)
+                                @fieldNameRenderMap.get.get(fieldName).get(
+                                    (item \ "_id").as[BSONObjectID],
+                                    fieldName,
+                                    (item \ fieldName).toOption
+                                )
                             } else {
-                                @if((item \ fieldName).get != JsNull) {
-                                    @{
-                                        (item \ fieldName).get.asOpt[String].getOrElse((item \ fieldName).get)
-                                    }
-                                }
+                                @JsonUtil.toString((item \ fieldName))
                             }
                         </td>
                     }

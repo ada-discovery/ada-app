@@ -2,8 +2,6 @@ package services
 
 import java.text.SimpleDateFormat
 
-import util.TypeInferenceProvider
-
 object DeNoPaSetting {
 
   val nullAliases = List("na", "")
@@ -17,6 +15,4 @@ object DeNoPaSetting {
 
   val enumValuesThreshold = 20
   val enumFrequencyThreshold = 0.02
-
-  val typeInferenceProvider = TypeInferenceProvider(nullAliases, textBooleanValues, numBooleanValues, dateFormats, enumValuesThreshold, enumFrequencyThreshold)
 }

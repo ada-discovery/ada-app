@@ -2,7 +2,6 @@ package persistence.dataset
 
 import javax.inject.{Named, Inject}
 
-import dataaccess.FieldType._
 import dataaccess._
 import dataaccess.RepoTypes.DataSetSettingRepo
 import Criterion.CriterionInfix

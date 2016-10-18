@@ -3,11 +3,11 @@ package services
 import java.util.Date
 import java.nio.charset.{UnsupportedCharsetException, MalformedInputException, Charset}
 import javax.inject.Inject
-import dataaccess.DataSetFormattersAndIds.JsObjectIdentity
+import dataaccess.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import dataaccess._
 import dataaccess.RepoTypes.DataSetSettingRepo
 import models.redcap.{Metadata, FieldType => RCFieldType}
-import _root_.util.{MessageLogger, JsonUtil, TypeInferenceProvider}
+import _root_.util.{MessageLogger, JsonUtil}
 import com.google.inject.ImplementedBy
 import models._
 import models.synapse.{SelectColumn, ColumnType}
@@ -17,7 +17,6 @@ import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import DictionaryCategoryRepo.saveRecursively
 import play.api.Logger
-import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
@@ -48,18 +47,15 @@ trait DataSetService {
   ): Future[Unit]
 
   def importDataSetAndDictionary(
-    dataSetImport: TranSmartDataSetImport,
-    typeInferenceProvider: TypeInferenceProvider
+    dataSetImport: TranSmartDataSetImport
   ): Future[Unit]
 
   def importDataSetAndDictionary(
-    dataSetImport: RedCapDataSetImport,
-    typeInferenceProvider: TypeInferenceProvider
+    dataSetImport: RedCapDataSetImport
   ): Future[Unit]
 
   def inferDictionary(
     dataSetId: String,
-    typeInferenceProvider: TypeInferenceProvider,
     fieldGroupSize: Int = 150
   ): Future[Unit]
 
@@ -69,9 +65,8 @@ trait DataSetService {
 
   def inferFieldType(
     dataSetRepo: JsonCrudRepo,
-    typeInferenceProvider: TypeInferenceProvider,
     fieldName : String
-  ): Future[(Boolean, FieldType.Value)]
+  ): Future[FieldTypeSpec]
 }
 
 class DataSetServiceImpl @Inject()(
@@ -106,13 +101,16 @@ class DataSetServiceImpl @Inject()(
   private val synapseBulkDownloadAttemptNumber = 4
   private val synapseDefaultBulkDownloadGroupNumber = 5
 
+  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val fti = FieldTypeHelper.fieldTypeInferrer
+
   override def importDataSetUntyped(dataSetImport: DataSetImport): Future[Unit] =
     for {
       _ <- dataSetImport match {
         case x: CsvDataSetImport => importDataSet(x)
-        case x: TranSmartDataSetImport => importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
+        case x: TranSmartDataSetImport => importDataSetAndDictionary(x)
         case x: SynapseDataSetImport => importDataSet(x)
-        case x: RedCapDataSetImport => importDataSetAndDictionary(x, DeNoPaSetting.typeInferenceProvider)
+        case x: RedCapDataSetImport => importDataSetAndDictionary(x)
       }
       _ <- if (dataSetImport.createDummyDictionary)
         createDummyDictionary(dataSetImport.dataSetId)
@@ -133,15 +131,35 @@ class DataSetServiceImpl @Inject()(
         importInfo.path.get,
         importInfo.charsetName,
         importInfo.eol
-      )
-    ).map(_ => ())
+      ),
+      Some(createJsonsWithFieldTypes)
+    ).map( fieldNameAndTypes =>
+      createOrUpdateDictionary(importInfo.dataSetId, fieldNameAndTypes)
+    )
+
+  private def createJsonsWithFieldTypes(
+    columnNames: Seq[String],
+    values: Seq[Seq[String]]
+  ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
+    val fieldTypes = values.transpose.par.map(fti.apply).toList
+
+    val jsons = values.map( vals =>
+      JsObject(
+        (columnNames, fieldTypes, vals).zipped.map {
+          case (columnName, fieldType, text) =>
+            val jsonValue = fieldType.parseToJson(text)
+            (columnName, jsonValue)
+        })
+    )
+
+    (jsons, fieldTypes.map(_.spec))
+  }
 
   override def importDataSetAndDictionary(
-    importInfo: TranSmartDataSetImport,
-    typeInferenceProvider: TypeInferenceProvider
+    importInfo: TranSmartDataSetImport
   ) = {
     // import a data set first
-    val columnNamesFuture = importLineParsableDataSet(
+    val fieldNameAndTypesFuture = importLineParsableDataSet(
       importInfo,
       tranSmartDelimeter.toString,
       false,
@@ -153,11 +171,12 @@ class DataSetServiceImpl @Inject()(
     )
 
     // then import a dictionary from a tranSMART mapping file
-    columnNamesFuture.flatMap { columnNames =>
+    fieldNameAndTypesFuture.flatMap { fieldNameAndTypes =>
+      val fieldNames =  fieldNameAndTypes.map(_._1)
+
       if (importInfo.mappingPath.isDefined) {
         importAndInferTranSMARTDictionary(
           importInfo.dataSetId,
-          typeInferenceProvider,
           tranSmartFieldGroupSize,
           tranSmartDelimeter.toString,
           createCsvFileLineIterator(
@@ -165,7 +184,7 @@ class DataSetServiceImpl @Inject()(
             importInfo.charsetName,
             None
           ),
-          columnNames
+          fieldNames
         )
       } else
         Future(())
@@ -188,6 +207,7 @@ class DataSetServiceImpl @Inject()(
           val lines = result(csvFuture, timeout).split(synapseEol)
           lines.iterator
         },
+        None,
         Some("ROW_ID"),
         false,
         transformJsons,
@@ -260,8 +280,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def importDataSetAndDictionary(
-    importInfo: RedCapDataSetImport,
-    typeInferenceProvider: TypeInferenceProvider = DeNoPaSetting.typeInferenceProvider
+    importInfo: RedCapDataSetImport
   ) = {
     logger.info(new Date().toString)
     if (importInfo.importDictionaryFlag)
@@ -301,7 +320,7 @@ class DataSetServiceImpl @Inject()(
       }
       // import dictionary (if needed)
       _ <- if (importInfo.importDictionaryFlag)
-        importAndInferRedCapDictionary(importInfo.dataSetId, redCapService, dataSetAccessor, typeInferenceProvider)
+        importAndInferRedCapDictionary(importInfo.dataSetId, redCapService, dataSetAccessor)
       else
         Future(())
     } yield
@@ -343,20 +362,21 @@ class DataSetServiceImpl @Inject()(
     * @param delimiter
     * @param skipFirstLine
     * @param createLineIterator
-    * @param transformJsonsFun
+    * @param createJsonsWithFieldTypes
     * @param transformBatchSize
-    * @return The column names (future)
+    * @return The field names and types (future)
     */
   protected def importLineParsableDataSet(
     importInfo: DataSetImport,
     delimiter: String,
     skipFirstLine: Boolean,
     createLineIterator: => Iterator[String],
+    createJsonsWithFieldTypes: Option[(Seq[String], Seq[Seq[String]]) => (Seq[JsObject], Seq[FieldTypeSpec])] = None,
     keyField: Option[String] = None,
     updateExisting: Boolean = false,
     transformJsonsFun: Option[Seq[JsObject] => Future[Seq[JsObject]]] = None,
     transformBatchSize: Option[Int] = None
-  ): Future[Seq[String]] = {
+  ): Future[Seq[(String, FieldTypeSpec)]] = {
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
@@ -368,7 +388,8 @@ class DataSetServiceImpl @Inject()(
       val columnNames =  getColumnNames(delimiter, lines)
       // parse lines and create jsons
       logger.info(s"Parsing lines...")
-      val jsons = createJsonsFromLines(columnNames, lines, delimiter, skipFirstLine)
+      val values = parseLines(columnNames, lines, delimiter, skipFirstLine)
+      val (jsons, fieldTypes) = createJsonsWithFieldTypes.getOrElse(defaultCreateJsonsWithFieldTypes(_,_))(columnNames, values)
 
       for {
         // remove ALL the records from the collection if no key field defined
@@ -384,36 +405,68 @@ class DataSetServiceImpl @Inject()(
           else
             logger.info(s"Saving JSONs...")
 
-          saveAndTransformJsons(dataRepo, keyField, updateExisting, transformJsonsFun, transformBatchSize, jsons)
+          saveAndTransformRecords(dataRepo, keyField, updateExisting, transformJsonsFun, transformBatchSize, jsons)
         }
         // remove the old records if key field defined
         _ <- if (keyField.isDefined) {
-          val newKeys = jsons.map{json => (json \ keyField.get).asOpt[String]}.flatten
-          val recordsToRemoveFuture = dataRepo.find(criteria = Seq(keyField.get #!-> newKeys), projection = Seq(dataSetIdFieldName))
-
-          recordsToRemoveFuture.flatMap { recordsToRemove =>
-            if (recordsToRemove.nonEmpty) {
-              logger.info(s"Deleting ${recordsToRemove.size} (old) records not contained in the new data set import.")
-            }
-            Future.sequence(
-              recordsToRemove.map( recordToRemove =>
-                dataRepo.delete((recordToRemove \ dataSetIdFieldName).get.as[BSONObjectID])
-              )
-            )
-          }
+          removeRecords(dataRepo, jsons, keyField.get)
         } else
           Future(())
 
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
-        columnNames
+        columnNames.zip(fieldTypes)
       }
     } catch {
       case e: Exception => Future.failed(e)
     }
   }
 
-  private def saveAndTransformJsons(
+  private def defaultCreateJsonsWithFieldTypes(
+    columnNames: Seq[String],
+    values: Seq[Seq[String]]
+  ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
+    val fieldTypeSpecs = columnNames.map(_ => FieldTypeSpec(FieldTypeId.String, false))
+
+    val jsons = values.map( vals =>
+      JsObject(
+        (columnNames, vals).zipped.map {
+          case (columnName, value) => (columnName,
+            if (value.isEmpty)
+              JsNull
+            else
+              JsString(value)
+            )
+        })
+    )
+
+    (jsons, fieldTypeSpecs)
+  }
+
+  private def removeRecords(
+    dataRepo: JsonCrudRepo,
+    jsons: Seq[JsObject],
+    keyField: String
+  ) = {
+    val newKeys = jsons.map{json => (json \ keyField).asOpt[String]}.flatten
+    val recordsToRemoveFuture = dataRepo.find(
+      criteria = Seq(keyField #!-> newKeys),
+      projection = Seq(dataSetIdFieldName)
+    )
+
+    recordsToRemoveFuture.flatMap { recordsToRemove =>
+      if (recordsToRemove.nonEmpty) {
+        logger.info(s"Deleting ${recordsToRemove.size} (old) records not contained in the new data set import.")
+      }
+      Future.sequence(
+        recordsToRemove.map( recordToRemove =>
+          dataRepo.delete((recordToRemove \ dataSetIdFieldName).get.as[BSONObjectID])
+        )
+      )
+    }
+  }
+
+  private def saveAndTransformRecords(
     dataRepo: JsonCrudRepo,
     keyField: Option[String],
     updateExisting: Boolean,
@@ -533,7 +586,7 @@ class DataSetServiceImpl @Inject()(
     }
 
     // helper function to transform and save or update given json records
-    def transformAndSaveOrUdateMainAux(startIndex: Int)(jsonRecords: Seq[JsObject]): Future[Unit] =
+    def transformAndSaveOrUpdateMainAux(startIndex: Int)(jsonRecords: Seq[JsObject]): Future[Unit] =
       if (keyField.isDefined) {
         val jsonKeyPairs = jsonRecords.map(json => (json, (json \ keyField.get).toOption))
         val jsonsWithKeys: Seq[(JsObject, JsValue)] = jsonKeyPairs.filter(_._2.isDefined).map(x => (x._1, x._2.get))
@@ -555,20 +608,20 @@ class DataSetServiceImpl @Inject()(
       indexedGroups.foldLeft(Future(())){
         case (x, (groupedJsons, groupIndex)) =>
           x.flatMap {_ =>
-            transformAndSaveOrUdateMainAux(groupIndex * transformBatchSize.get)(groupedJsons)
+            transformAndSaveOrUpdateMainAux(groupIndex * transformBatchSize.get)(groupedJsons)
           }
         }
     } else
       // save all the records
-      transformAndSaveOrUdateMainAux(0)(jsons)
+      transformAndSaveOrUpdateMainAux(0)(jsons)
   }
 
-  private def createJsonsFromLines(
+  private def parseLines(
     columnNames: Seq[String],
     lines: Iterator[String],
     delimiter: String,
     skipFirstLine: Boolean
-  ): Seq[JsObject] = {
+  ): Seq[Seq[String]] = {
     val columnCount = columnNames.size
 
     val contentLines = if (skipFirstLine) lines.drop(1) else lines
@@ -582,19 +635,13 @@ class DataSetServiceImpl @Inject()(
 
       if (values.size < columnCount) {
         logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
-        Option.empty[JsObject]
+        Option.empty[Seq[String]]
       } else if (values.size > columnCount) {
         throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated.")
       } else {
         // reset the buffer
         bufferedLine = ""
-
-        // create a JSON record
-        Some(JsObject(
-          (columnNames, values).zipped.map {
-            case (columnName, value) => (columnName, if (value.isEmpty) JsNull else JsString(value))
-          })
-        )
+        Some(values)
       }
     }.toSeq.flatten
   }
@@ -609,7 +656,6 @@ class DataSetServiceImpl @Inject()(
 
   override def inferDictionary(
     dataSetId: String,
-    typeInferenceProvider: TypeInferenceProvider,
     fieldGroupSize: Int
   ): Future[Unit] = {
     logger.info(s"Dictionary inference for data set '${dataSetId}' initiated.")
@@ -627,9 +673,9 @@ class DataSetServiceImpl @Inject()(
     val futures = groupedFieldNames.par.map { fieldNames =>
       // Don't care about the result here, that's why we ignore ids and return Unit
       for {
-        fieldNameAndTypes <- inferFieldTypes(dataRepo, typeInferenceProvider, fieldNames)
-        ids = for ((fieldName, isArray, fieldType) <- fieldNameAndTypes) yield
-          fieldRepo.save(Field(fieldName, fieldType, isArray))
+        fieldNameAndTypes <- inferFieldTypes(dataRepo, fieldNames)
+        ids = for ((fieldName, fieldTypeSpec) <- fieldNameAndTypes) yield
+          fieldRepo.save(Field(fieldName, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, fieldTypeSpec.enumValues))
         _ <- Future.sequence(ids)
       } yield
         ()
@@ -642,7 +688,6 @@ class DataSetServiceImpl @Inject()(
 
   protected def importAndInferTranSMARTDictionary(
     dataSetId: String,
-    typeInferenceProvider: TypeInferenceProvider,
     fieldGroupSize: Int,
     delimiter: String,
     createMappingFileLineIterator: => Iterator[String],
@@ -720,11 +765,11 @@ class DataSetServiceImpl @Inject()(
       val futures = groupedFieldNames.par.map { fieldNames =>
         // Don't care about the result here, that's why we ignore ids and return Unit
         for {
-          fieldNameAndTypes <- inferFieldTypes(dataRepo, typeInferenceProvider, fieldNames)
-          ids = for ((fieldName, isArray, fieldType) <- fieldNameAndTypes) yield {
+          fieldNameAndTypes <- inferFieldTypes(dataRepo, fieldNames)
+          ids = for ((fieldName, fieldTypeSpec) <- fieldNameAndTypes) yield {
             val (fieldLabel, categoryName) = fieldNameLabelCategoryNameMap.getOrElse(fieldName, ("", None))
             val categoryId = categoryName.map(categoryNameIdMap.get(_).get)
-            fieldRepo.save(Field(fieldName, fieldType, isArray, None, Seq[String](), Some(fieldLabel), categoryId))
+            fieldRepo.save(Field(fieldName, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, fieldTypeSpec.enumValues, Nil, Some(fieldLabel), categoryId))
           }
           _ <- Future.sequence(ids)
         } yield
@@ -741,8 +786,7 @@ class DataSetServiceImpl @Inject()(
   protected def importAndInferRedCapDictionary(
     dataSetId: String,
     redCapService: RedCapService,
-    dsa: DataSetAccessor,
-    typeInferenceProvider: TypeInferenceProvider
+    dsa: DataSetAccessor
   ): Future[Unit] = {
     logger.info(s"RedCap dictionary inference and import for data set '${dataSetId}' initiated.")
 
@@ -772,13 +816,13 @@ class DataSetServiceImpl @Inject()(
     // TODO: optimize this... introduce field groups to speed up inference
     val futures = metadatas.filter(metadata => fieldNames.contains(metadata.field_name)).par.map{ metadata =>
       val fieldName = metadata.field_name
-      val fieldTypeFuture = inferFieldType(dataSetRepo, typeInferenceProvider, fieldName)
-      val (isArray, inferredType) = result(fieldTypeFuture, timeout)
+      val fieldTypeFuture = inferFieldType(dataSetRepo, fieldName)
+      val inferredType = result(fieldTypeFuture, timeout)
 
       val (fieldType, numValues) = metadata.field_type match {
-        case RCFieldType.radio => (FieldType.Enum, getEnumValues(metadata))
-        case RCFieldType.checkbox => (FieldType.Enum, getEnumValues(metadata))
-        case RCFieldType.dropdown => (FieldType.Enum, getEnumValues(metadata))
+        case RCFieldType.radio => (FieldTypeId.Enum, getEnumValues(metadata))
+        case RCFieldType.checkbox => (FieldTypeId.Enum, getEnumValues(metadata))
+        case RCFieldType.dropdown => (FieldTypeId.Enum, getEnumValues(metadata))
 
         case RCFieldType.calc => (inferredType, None)
         case RCFieldType.text => (inferredType, None)
@@ -789,12 +833,12 @@ class DataSetServiceImpl @Inject()(
       }
 
       val categoryId = nameCategoryIdMap.get(metadata.form_name)
-      val field = Field(metadata.field_name, fieldType, isArray, numValues, Seq[String](), Some(metadata.field_label), categoryId)
+      val field = Field(metadata.field_name, inferredType.fieldType, inferredType.isArray, numValues, Seq[String](), Some(metadata.field_label), categoryId)
       fieldRepo.save(field)
     }
 
     // also add redcap_event_name
-    val visitFieldFuture = fieldRepo.save(Field(redCapVisitField, FieldType.Enum))
+    val visitFieldFuture = fieldRepo.save(Field(redCapVisitField, FieldTypeId.Enum))
 
     Future.sequence(futures.toList ++ Seq(visitFieldFuture)).map(_ =>
       messageLogger.info(s"RedCap dictionary inference and import for data set '${dataSetId}' successfully finished.")
@@ -828,34 +872,37 @@ class DataSetServiceImpl @Inject()(
 
   def inferFieldTypes(
     dataRepo: JsonCrudRepo,
-    typeInferenceProvider: TypeInferenceProvider,
     fieldNames: Traversable[String]
-  ): Future[Traversable[(String, Boolean, FieldType.Value)]] = {
+  ): Future[Traversable[(String, FieldTypeSpec)]] = {
     // get all the values for a given field and infer
     dataRepo.find(projection = fieldNames).map { jsons =>
       fieldNames.map { fieldName =>
-        val (isArray, fieldType) = inferFieldType(typeInferenceProvider, fieldName)(jsons)
-        (fieldName, isArray, fieldType)
+        val fieldTypeSpec = inferFieldType(fieldName)(jsons)
+        (fieldName, fieldTypeSpec)
       }
     }
   }
 
+  /**
+    *
+    * @param dataRepo
+    * @param fieldName
+    * @return Tupple future : isArray (true/false) and field type id
+    */
   override def inferFieldType(
     dataRepo: JsonCrudRepo,
-    typeInferenceProvider: TypeInferenceProvider,
     fieldName : String
-  ): Future[(Boolean, FieldType.Value)] =
+  ): Future[FieldTypeSpec] =
     // get all the values for a given field and infer
     dataRepo.find(projection = Seq(fieldName)).map(
-      inferFieldType(typeInferenceProvider, fieldName)
+      inferFieldType(fieldName)
     )
 
   private def inferFieldType(
-    typeInferenceProvider: TypeInferenceProvider,
     fieldName: String)(
-    jsons: Traversable[JsObject]
-  ): (Boolean, FieldType.Value) = {
-    val arrayFlagWithValues = jsons.map { item =>
+    items: Traversable[JsObject]
+  ): FieldTypeSpec = {
+    val arrayFlagWithValues = items.map { item =>
       val jsValue = (item \ fieldName).get
       jsValue match {
         case x: JsArray => (true, x.value.map(jsonToString(_)))
@@ -866,7 +913,43 @@ class DataSetServiceImpl @Inject()(
     val isArray = arrayFlagWithValues.map(_._1).forall(identity)
     val values = arrayFlagWithValues.map(_._2).flatten.flatten.toSet
 
-    (isArray, typeInferenceProvider.getType(values))
+    val fieldTypeSpec = fti(values).spec
+    fieldTypeSpec.copy(isArray = isArray)
+  }
+
+  private def createOrUpdateDictionary(
+    dataSetId: String,
+    fieldNameAndTypes: Seq[(String, FieldTypeSpec)]
+  ): Future[Unit] = {
+    logger.info(s"Creation of dictionary for data set '${dataSetId}' initiated.")
+
+    val dsa = dsaf(dataSetId).get
+    val fieldRepo = dsa.fieldRepo
+
+    for {
+      _ <- Future.sequence(
+        fieldNameAndTypes.map{ case (name, fieldTypeSpec) =>
+          fieldRepo.get(name).flatMap{ fieldOption =>
+            fieldOption match {
+              case None => fieldRepo.save(Field(name, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, fieldTypeSpec.enumValues))
+              case Some(field) => fieldRepo.update(field.copy(fieldType = fieldTypeSpec.fieldType, isArray = fieldTypeSpec.isArray, numValues = fieldTypeSpec.enumValues))
+            }
+          }
+        }
+      )
+      fieldsToRemove <- {
+        val fieldNames = fieldNameAndTypes.map(_._1)
+        fieldRepo.find(
+          Seq(FieldIdentity.name #!-> fieldNames)
+        )
+      }
+      _ <- Future.sequence(
+        fieldsToRemove.map( field =>
+          fieldRepo.delete(field.name)
+        )
+      )
+    } yield
+      messageLogger.info(s"Dictionary for data set '${dataSetId}' successfully created.")
   }
 
   override def createDummyDictionary(dataSetId: String): Future[Unit] = {
@@ -880,7 +963,7 @@ class DataSetServiceImpl @Inject()(
       _ <- fieldRepo.deleteAll
       fieldNames <- getFieldNames(dataSetRepo)
       _ <- {
-        val fields = fieldNames.map(Field(_, FieldType.String, false))
+        val fields = fieldNames.map(Field(_, FieldTypeId.String, false))
         fieldRepo.save(fields)
       }
     } yield

@@ -3,11 +3,11 @@
 @import models.DataPoint
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import dataaccess.FieldTypeId
 
-@import dataaccess.FieldType
 @(
     domainName: String,
-    fieldTypeCounts : Traversable[(FieldType.Value, Int)]
+    fieldTypeCounts : Traversable[(FieldTypeId.Value, Int)]
 )(
     implicit flash: Flash, msg: Messages, request: Request[_]
 )

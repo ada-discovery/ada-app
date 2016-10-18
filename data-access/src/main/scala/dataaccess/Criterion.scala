@@ -23,10 +23,10 @@ case class InCriterion[V](fieldName: String, value: Seq[V]) extends Criterion[Se
 case class NotInCriterion[V](fieldName: String, value: Seq[V]) extends Criterion[Seq[V]] {
   override def copyWithFieldName(fieldName: String) = copy(fieldName = fieldName)
 }
-case class GreaterCriterion(fieldName: String, value: Double) extends Criterion[Double] {
+case class GreaterCriterion[T](fieldName: String, value: T) extends Criterion[T] {
   override def copyWithFieldName(fieldName: String) = copy(fieldName = fieldName)
 }
-case class LessCriterion(fieldName: String, value: Double) extends Criterion[Double] {
+case class LessCriterion[T](fieldName: String, value: T) extends Criterion[T] {
   override def copyWithFieldName(fieldName: String) = copy(fieldName = fieldName)
 }
 
@@ -38,7 +38,7 @@ object Criterion {
     def #!=[T](value: T) = NotEqualsCriterion(fieldName, value)
     def #=>[V](value: Seq[V]) = InCriterion(fieldName, value)
     def #!->[V](value: Seq[V]) = NotInCriterion(fieldName, value)
-    def #>(value: Double) = GreaterCriterion(fieldName, value)
-    def #<(value: Double) = LessCriterion(fieldName, value)
+    def #>[T](value: T) = GreaterCriterion(fieldName, value)
+    def #<[T](value: T) = LessCriterion(fieldName, value)
   }
 }

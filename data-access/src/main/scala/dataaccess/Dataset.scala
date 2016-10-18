@@ -89,20 +89,26 @@ case class Dictionary(
 
 case class Field(
   name: String,
-  fieldType: FieldType.Value,
+  fieldType: FieldTypeId.Value,
   isArray: Boolean = false,
-  numValues: Option[Map[String, String]] = None,  // TODO: rename to enumValues
+  numValues: Option[Map[String, String]] = None, // TODO: rename to enumValues
   aliases: Seq[String] = Seq[String](),
   label: Option[String] = None,
   var categoryId: Option[BSONObjectID] = None,
   var category: Option[Category] = None
 )
 
-case class NumFieldStats(min : Double, max : Double, mean : Double, variance : Double)
-
-object FieldType extends Enumeration {
+object FieldTypeId extends Enumeration {
   val Null, Boolean, Double, Integer, Enum, String, Date, Json = Value
 }
+
+case class FieldTypeSpec(
+  fieldType: FieldTypeId.Value,
+  isArray: Boolean = false,
+  enumValues: Option[Map[String, String]] = None
+)
+
+case class NumFieldStats(min : Double, max : Double, mean : Double, variance : Double)
 
 case class Category(
   _id: Option[BSONObjectID],
@@ -135,7 +141,7 @@ case class Category(
 // JSON converters and identities
 
 object DataSetFormattersAndIds {
-  implicit val enumTypeFormat = EnumFormat.enumFormat(FieldType)
+  implicit val enumTypeFormat = EnumFormat.enumFormat(FieldTypeId)
   implicit val categoryFormat: Format[Category] = (
     (__ \ "_id").formatNullable[BSONObjectID] and
     (__ \ "name").format[String] and
@@ -144,7 +150,7 @@ object DataSetFormattersAndIds {
 
   implicit val fieldFormat: Format[Field] = (
     (__ \ "name").format[String] and
-    (__ \ "fieldType").format[FieldType.Value] and
+    (__ \ "fieldType").format[FieldTypeId.Value] and
     (__ \ "isArray").format[Boolean] and
     (__ \ "numValues").formatNullable[Map[String, String]] and
     (__ \ "aliases").format[Seq[String]] and

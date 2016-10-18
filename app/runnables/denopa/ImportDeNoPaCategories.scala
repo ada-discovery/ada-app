@@ -21,7 +21,6 @@ protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runna
 
   @Inject() protected var dataSetService: DataSetService = _
   @Inject() protected var dsaf: DataSetAccessorFactory = _
-  private val typeInferenceProvider = DeNoPaSetting.typeInferenceProvider
   private val timeout = 120000 millis
 
   def run = {

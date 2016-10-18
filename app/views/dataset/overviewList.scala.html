@@ -13,7 +13,7 @@
 @import play.api.libs.json.{JsValue, JsArray, JsObject}
 @import controllers.dataset.{DataSetRouter, DataSetJsRouter}
 @import dataaccess.DataSpaceMetaInfo
-@import dataaccess.FieldType
+@import dataaccess.FieldTypeId
 @import models.Page
 @import util.JsonUtil
 @import java.text.{ParseException, SimpleDateFormat}
@@ -77,6 +77,14 @@
     @jsValue.map(json => JsonUtil.toFormattedDate(json).getOrElse(JsonUtil.toString(json)))
 }
 
+@integerRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @jsValue.map(json => JsonUtil.toString(json))
+}
+
+@doubleRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @jsValue.map(json => JsonUtil.toString(json))
+}
+
 @table = @{
     paginatedJsonTable(
         page,
@@ -88,15 +96,19 @@
         Some({ item : JsObject => router.get((item \ "_id").as[BSONObjectID])}),
         Some(displayedFields.map{ field =>
             if (field.isArray) {
-                if(field.fieldType == FieldType.Json)
+                if(field.fieldType == FieldTypeId.Json)
                     Some(field.name, jsonArrayRender(_, _, _))
                 else
                     Some(field.name, arrayRender(_, _, _))
             } else
-                if (field.fieldType == FieldType.Json)
-                    Some(field.name, jsonRender(_, _, _))
-                else if (field.fieldType == FieldType.Date)
+                if (field.fieldType == FieldTypeId.Integer)
+                    Some(field.name, integerRender(_, _, _))
+                else if (field.fieldType == FieldTypeId.Double)
+                    Some(field.name, doubleRender(_, _, _))
+                else if (field.fieldType == FieldTypeId.Date)
                     Some(field.name, dateRender(_, _, _))
+                else if (field.fieldType == FieldTypeId.Json)
+                    Some(field.name, jsonRender(_, _, _))
                 else None
         }.flatten.toMap)
     )

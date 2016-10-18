@@ -174,6 +174,7 @@ object JsonUtil {
       case JsString(s) => Some(s)
       case JsNumber(n) => Some(n.toString)
       case JsDefined(json) => toString(json)
+      case _: JsUndefined => None
       case _ => Some(value.toString)
     }
 

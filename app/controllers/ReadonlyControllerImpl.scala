@@ -168,21 +168,38 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
 
   import _root_.util.ConditionType._
 
-  protected def toCriteria(filter: Seq[FilterCondition]): Seq[Criterion[Any]] = {
+  protected def toCriteria(
+    filter: Seq[FilterCondition]
+  ): Seq[Criterion[Any]] = {
+    val fieldNames = filter.seq.map(_.fieldName)
+    val valueConverters = filterValueConverters(fieldNames)
     filter.map{ filterCondition =>
       val fieldName = filterCondition.fieldName
+
+      // convert values if any converters provided
       val value =  filterCondition.value
+      def convertValue(text: String) = valueConverters.get(fieldName).map(converter =>
+        converter.apply(text.trim)
+      ).getOrElse(text.trim) // if no converter found use a provided string value
+
+      def convertedValue = convertValue(value)
+      def convertedValues = value.split(",").map(convertValue)
+
       filterCondition.conditionType match {
-        case Equals => EqualsCriterion(fieldName, value)
-        case RegexEquals => RegexEqualsCriterion(fieldName, value)
-        case NotEquals => NotEqualsCriterion(fieldName, value)
-        case In => InCriterion(fieldName, value.split(",").map(_.trim))
-        case NotIn => NotInCriterion(fieldName, value.split(",").map(_.trim))
-        case Greater => GreaterCriterion(fieldName, value.toDouble)
-        case Less => LessCriterion(fieldName, value.toDouble)
+        case Equals => EqualsCriterion(fieldName, convertedValue)
+        case RegexEquals => RegexEqualsCriterion(fieldName, value)            // string expected
+        case NotEquals => NotEqualsCriterion(fieldName, convertedValue)
+        case In => InCriterion(fieldName, convertedValues)
+        case NotIn => NotInCriterion(fieldName, convertedValues)
+        case Greater => GreaterCriterion(fieldName, convertedValue)
+        case Less => LessCriterion(fieldName, convertedValue)
       }
     }
   }
+
+  protected def filterValueConverters(
+    fieldNames: Traversable[String]
+  ): Map[String, String => Any] = Map()
 
   /**
     * TODO: Move this into utility object.

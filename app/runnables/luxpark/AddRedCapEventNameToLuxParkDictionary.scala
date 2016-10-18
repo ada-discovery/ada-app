@@ -2,7 +2,7 @@ package runnables.luxpark
 
 import javax.inject.Inject
 
-import dataaccess.{FieldType, Field}
+import dataaccess.{FieldTypeId, Field}
 import runnables.DataSetId.lux_park_clinical
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable
@@ -20,7 +20,7 @@ class AddRedCapEventNameToLuxParkDictionary @Inject() (
     val dsa = dsaf(lux_park_clinical).get
     val fieldRepo = dsa.fieldRepo
 
-    val saveFuture = fieldRepo.save(Field(visitField, FieldType.Enum))
+    val saveFuture = fieldRepo.save(Field(visitField, FieldTypeId.Enum))
 
     // to be safe, wait
     result(saveFuture, timeout)

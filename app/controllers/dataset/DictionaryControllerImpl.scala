@@ -53,13 +53,13 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
   private val csvEOL = "\n"
 
-  implicit val fieldTypeFormatter = EnumFormatter(FieldType)
+  implicit val fieldTypeFormatter = EnumFormatter(FieldTypeId)
   implicit val mapFormatter = MapJsonFormatter.apply
 
   override protected val form = Form(
     mapping(
       "name" -> nonEmptyText,
-      "fieldType" -> of[FieldType.Value],
+      "fieldType" -> of[FieldTypeId.Value],
       "isArray" -> boolean,
       "numValues" -> optional(of[Map[String, String]]),
       "aliases" ->  seq(nonEmptyText),
@@ -156,7 +156,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   def inferDictionary = Action.async { implicit request =>
     // TODO: introduce type inference setting for each data set
-    dataSetService.inferDictionary(dataSetId, DeNoPaSetting.typeInferenceProvider).map( _ =>
+    dataSetService.inferDictionary(dataSetId).map( _ =>
       home.flashing("success" -> s"Dictionary for '${dataSetId}'  was successfully inferred.")
     )
   }

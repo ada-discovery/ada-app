@@ -1,7 +1,4 @@
-import dataaccess.FieldType
-import dataaccess.FieldType._
 import org.apache.commons.lang.StringUtils
-import play.api.libs.json.{JsObject, Format, JsResult, JsValue}
 import play.twirl.api.Html
 
 package object util {

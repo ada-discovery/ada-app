@@ -4,8 +4,8 @@ import java.io.Serializable
 import javax.cache.configuration.Factory
 import javax.inject.Inject
 
-import dataaccess.{FieldType, Field, AsyncCrudRepo}
-import dataaccess.FieldType._
+import dataaccess._
+import dataaccess.FieldTypeId._
 import org.apache.ignite.binary.BinaryObject
 import org.apache.ignite.cache.store.CacheStore
 import org.apache.ignite.cache.{QueryIndex, QueryEntity, CacheAtomicityMode, CacheMode}
@@ -15,7 +15,7 @@ import play.api.Logger
 import play.api.libs.json.JsObject
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
-import dataaccess.ignite.BinaryJsonUtil.{escapeIgniteFieldName, getValueFromJson, getClassForFieldType}
+import dataaccess.ignite.BinaryJsonUtil.{escapeIgniteFieldName, getValueFromJson}
 
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
@@ -24,6 +24,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
 
   private val logger = Logger
+  private val ftu = FieldTypeFactory(Set[String](""), Seq[String](), 20)
 
   def apply[ID](
     cacheName: String,
@@ -90,7 +91,7 @@ class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
       cacheConfig.setReadThrough(true)
     }
 
-    ignite.createCache(cacheConfig).withKeepBinary()
+    ignite.getOrCreateCache(cacheConfig).withKeepBinary()
   }
 
   private def createFieldNameTypeMapFromDataSet[ID](
@@ -119,24 +120,24 @@ class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
 
   private def createFieldNameTypeMapFromDictionary[ID](
     idFieldName: String,
-    fieldNamesAndTypes: Seq[(String, FieldType.Value)])(
+    fieldNamesAndTypes: Seq[(String, FieldTypeId.Value)])(
     implicit tagId: ClassTag[ID]
   ): Map[String, String] =
     (
       fieldNamesAndTypes.map{ case (fieldName, fieldType) =>
-        (escapeIgniteFieldName(fieldName), getClassForFieldType(fieldType).getName)
+        (escapeIgniteFieldName(fieldName), ftu(FieldTypeSpec(fieldType)).valueClass.getName)
       } ++
         Seq((idFieldName, tagId.runtimeClass.getName))
     ).toMap
 
   private def createFieldNameClassMapFromDictionary[ID](
     idFieldName: String,
-    fieldNamesAndTypes: Seq[(String, FieldType.Value)])(
+    fieldNamesAndTypes: Seq[(String, FieldTypeId.Value)])(
     implicit tagId: ClassTag[ID]
-  ): Map[String, Class[_ >: Any]] =
+  ): Map[String, Class[_]] =
     (
       fieldNamesAndTypes.map{ case (fieldName, fieldType) =>
-        (escapeIgniteFieldName(fieldName), getClassForFieldType(fieldType))
+        (escapeIgniteFieldName(fieldName), ftu(FieldTypeSpec(fieldType)).valueClass.asInstanceOf[Class[_ >: Any]])
       } ++
         Seq((idFieldName, tagId.runtimeClass.asInstanceOf[Class[_ >: Any]]))
      ).toMap

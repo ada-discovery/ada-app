@@ -44,22 +44,24 @@ class JsonBinaryCacheAsyncCrudRepoFactory @Inject()(
     configuration: Configuration
   ) extends JsonCrudRepoFactory {
 
+  private val ftf = FieldTypeFactory(Set[String](""), Seq[String](), 20)
+
   override def apply(collectionName: String): JsonCrudRepo =
     applyWithDictionaryAux(collectionName, Nil)
 
-  override def applyWithDictionary(collectionName: String, fieldNamesAndTypes: Seq[(String, FieldType.Value)]) =
+  override def applyWithDictionary(collectionName: String, fieldNamesAndTypes: Seq[(String, FieldTypeId.Value)]) =
     applyWithDictionaryAux(collectionName, fieldNamesAndTypes)
 
   private def applyWithDictionaryAux(
     collectionName: String,
-    fieldNamesAndTypes: Seq[(String, FieldType.Value)]
+    fieldNamesAndTypes: Seq[(String, FieldTypeId.Value)]
   ): JsonCrudRepo = {
     val cacheName = collectionName.replaceAll("[\\.-]", "_")
     val identity = JsObjectIdentity
 
     val fieldNamesAndClasses: Seq[(String, Class[_ >: Any])] =
       (fieldNamesAndTypes.map{ case (fieldName, fieldType) =>
-        (escapeIgniteFieldName(fieldName), getClassForFieldType(fieldType))
+        (escapeIgniteFieldName(fieldName), ftf(FieldTypeSpec(fieldType)).valueClass.asInstanceOf[Class[_ >: Any]])
       } ++ Seq((identity.name, classOf[Option[BSONObjectID]].asInstanceOf[Class[_ >: Any]])))
 
     val cache = cacheFactory(

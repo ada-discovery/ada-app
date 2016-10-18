@@ -150,8 +150,8 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
         val inValues = c.value.map(toJson(_): JsValueWrapper)
         Json.obj("$nin" -> Json.arr(inValues: _*))
       }
-      case GreaterCriterion(_, value) => Json.obj("$gt" -> value)
-      case LessCriterion(_, value) => Json.obj("$lt" -> value)
+      case c: GreaterCriterion[T] => Json.obj("$gt" -> toJson(c.value))
+      case c: LessCriterion[T] => Json.obj("$lt" -> toJson(c.value))
     }
     (fieldName, mongoCondition)
   }

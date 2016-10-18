@@ -22,7 +22,7 @@ import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, RequestHeader, Request}
 import reactivemongo.bson.BSONObjectID
-import services.TranSMARTService
+import services.{FieldTypeHelper, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
@@ -72,8 +72,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
   private val csvEOL = "\n"
 
-  private val numericTypes = Seq(FieldType.Double.toString, FieldType.Integer.toString)
-  private val categoricalTypes = Seq(FieldType.Enum.toString, FieldType.String.toString, FieldType.Boolean.toString)
+  private val numericTypes = Seq(FieldTypeId.Double.toString, FieldTypeId.Integer.toString)
+  private val categoricalTypes = Seq(FieldTypeId.Enum.toString, FieldTypeId.String.toString, FieldTypeId.Boolean.toString)
 
   override protected def listViewColumns = Some(setting.listViewTableColumnNames)
 
@@ -136,6 +136,23 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       true,
       getMetaInfos
     )
+
+  override protected def filterValueConverters(
+    fieldNames: Traversable[String]
+  ): Map[String, String => Any] = result(
+    getFields(fieldNames).map(
+      _.map { field =>
+        val converterOption = field.fieldType match {
+          case FieldTypeId.Integer => Some(ConversionUtil.toInt)
+          case FieldTypeId.Double => Some(ConversionUtil.toDouble)
+          case FieldTypeId.Enum => Some(ConversionUtil.toInt)
+          case FieldTypeId.Date => Some(ConversionUtil.toDate(FieldTypeHelper.dateFormats))
+          case _ => None
+        }
+        converterOption.map(converter => (field.name, converter))
+      }.flatten.toMap
+    )
+  )
 
   /**
     * Generate content of csv export file and create download.
@@ -212,16 +229,16 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       if (fields.isEmpty)
         throw new IllegalStateException(s"Empty dictionary found. Pls. create one by running 'runnables.InferXXXDictionary' script.")
 
-      val fieldTypeCounts = ArrayBuffer.fill(FieldType.values.size)(0)
+      val fieldTypeCounts = ArrayBuffer.fill(FieldTypeId.values.size)(0)
       fields.foreach { field =>
         fieldTypeCounts(field.fieldType.id) += 1
       }
 
       implicit val msg = messagesApi.preferred(request)
       render {
-        case Accepts.Html() => Ok(dataset.typeOverview(dataSetName, (FieldType.values, fieldTypeCounts).zipped.toList))
+        case Accepts.Html() => Ok(dataset.typeOverview(dataSetName, (FieldTypeId.values, fieldTypeCounts).zipped.toList))
         case Accepts.Json() => Ok(JsObject(
-          (FieldType.values, fieldTypeCounts).zipped.map{ case (fieldType, count) =>
+          (FieldTypeId.values, fieldTypeCounts).zipped.map{ case (fieldType, count) =>
             (fieldType.toString, JsNumber(count))
           }.toSeq
         ))
@@ -252,7 +269,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         fieldNameMap <- fieldNameMapFuture
         items <- {
           val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
-            fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldType.Json).getOrElse(false)
+            fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
           }
           getFutureItems(Some(page), orderBy, filter, tableFieldNamesToLoad, Some(pageLimit))
         }
@@ -377,17 +394,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         fieldName,
         fieldLabel(fieldName),
         None,
-        FieldType.String
+        FieldTypeId.String
       )
     }
 
     fieldType match {
-      case FieldType.String | FieldType.Enum | FieldType.Boolean => ChartSpec.categorical(
+      case FieldTypeId.String | FieldTypeId.Enum | FieldTypeId.Boolean => ChartSpec.categorical(
         getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend, chartType)
 
-      case FieldType.Double | FieldType.Integer => ChartSpec.numerical(items, fieldName, chartTitle, 20, Some(1), None, None, chartType)
+      case FieldTypeId.Double | FieldTypeId.Integer => ChartSpec.numerical(items, fieldName, chartTitle, 20, Some(1), None, None, chartType)
 
-      case _ => ChartSpec.categorical(getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
+      case _ => ChartSpec.categorical(
+        getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
     }
   }
 
@@ -402,17 +420,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     toStrings(project(items.toSeq, fieldName))
 
   private def toStrings(rawValues: Traversable[JsReadable]): Traversable[Option[String]] =
-    rawValues.map{rawValue =>
-      if (rawValue == JsNull)
-        None
-      else {
-        val booleanValue = rawValue.asOpt[Boolean]
-        if (booleanValue.isDefined)
-          Some(booleanValue.get.toString)
-        else
-          rawValue.asOpt[String]
-      }
-    }
+    rawValues.map(JsonUtil.toString)
 
   /**
     * Fetches, checks and prepares the specified data fields for a scatterplot.
@@ -577,7 +585,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     val dateFieldFuture = fieldRepo.get(dateFieldName)
     val groupFieldFuture = groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
-    val dateFieldsFuture = fieldRepo.find(Seq("fieldType" #== FieldType.Date))
+    val dateFieldsFuture = fieldRepo.find(Seq("fieldType" #== FieldTypeId.Date))
     val categoricalFieldsFuture = fieldRepo.find(Seq("fieldType" #=> categoricalTypes))
 
     {
@@ -676,7 +684,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param value ???
     * @param fieldType ???
     */
-  private def readJsValueTyped(value : JsValue, fieldType : FieldType.Value) {
+  private def readJsValueTyped(value : JsValue, fieldType : FieldTypeId.Value) {
 
   }
 

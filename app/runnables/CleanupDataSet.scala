@@ -5,7 +5,7 @@ import java.util.Date
 
 import javax.inject.Inject
 
-import dataaccess.{FieldType, DataSetSetting, DataSetMetaInfo, AscSort}
+import dataaccess._
 import persistence.RepoTypes._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import persistence.dataset.{DataSetAccessorFactory, DataSetAccessor}
@@ -58,14 +58,14 @@ abstract class CleanupDataSet (
   }
 
   protected def cleanupItems(
-    fieldTypeMap : Map[String, FieldType.Value],
+    fieldTypeMap : Map[String, FieldTypeId.Value],
     translationMap : Map[String, String]
   ) = {
     val itemsFuture = originalDataRepo.find(sort = Seq(AscSort("_id")))
 
     val convertedJsItems = Await.result(itemsFuture, timeout).map { item =>
       val newFieldValues: Seq[(String, JsValue)] = item.fields.filter{case (attribute, value) =>
-        attribute == "_id" || fieldTypeMap.get(attribute).get != FieldType.Null
+        attribute == "_id" || fieldTypeMap.get(attribute).get != FieldTypeId.Null
       }.map { case (attribute, jsValue) =>
         jsValue match {
           case JsNull => (attribute, JsNull)
@@ -78,13 +78,13 @@ abstract class CleanupDataSet (
               (attribute, JsNull)
             } else {
               val convertedValue = fieldTypeMap.get(attribute).get match {
-                case FieldType.Null => JsNull
-                case FieldType.Date => Json.toJson(storeDateFormat.format(toDate(string)))
-                case FieldType.Boolean => Json.toJson(toBoolean(string))
-                case FieldType.Integer => toJsonNum(string)
-                case FieldType.Double => toJsonNum(string)
-                case FieldType.Enum => Json.toJson(translationMap.get(string).getOrElse(string))
-                case FieldType.String => Json.toJson(translationMap.get(string).getOrElse(string))
+                case FieldTypeId.Null => JsNull
+                case FieldTypeId.Date => Json.toJson(storeDateFormat.format(ConversionUtil.toDate(dateFormats)(string)))
+                case FieldTypeId.Boolean => Json.toJson(ConversionUtil.toBoolean(textBooleanMap ++ numBooleanMap)(string))
+                case FieldTypeId.Integer => toJsonNum(string)
+                case FieldTypeId.Double => toJsonNum(string)
+                case FieldTypeId.Enum => Json.toJson(translationMap.get(string).getOrElse(string))
+                case FieldTypeId.String => Json.toJson(translationMap.get(string).getOrElse(string))
               }
               (attribute, convertedValue)
             }
@@ -109,44 +109,11 @@ abstract class CleanupDataSet (
     }
   }
 
-  protected def fieldTypeMap : Map[String, FieldType.Value] = {
+  protected def fieldTypeMap : Map[String, FieldTypeId.Value] = {
     val fieldsFuture = originalDictionaryRepo.find(sort = Seq(AscSort("name")))
 
     Await.result(fieldsFuture, timeout).map{
       field => (field.name, field.fieldType)
     }.toMap
   }
-
-  def dateExpectedException(string : String) =
-    new IllegalArgumentException(s"String ${string} is expected to be date-convertible but it's not.")
-
-  def booleanExpectedException(string : String) =
-    new IllegalArgumentException(s"String ${string} is expected to be boolean-convertible but it's not.")
-
-  private def toDate(string : String) : Date = {
-    val dates = dateFormats.map{ format =>
-      try {
-        val date = new SimpleDateFormat(format).parse(string)
-        Some(date)
-      } catch {
-        case e: ParseException => None
-      }
-    }.flatten
-
-    if (dates.isEmpty)
-      try {
-        val year = string.toInt
-        if (year > 1900 && year < 2100)
-          new SimpleDateFormat("dd.MM.yyyy").parse("01.01." + string)
-        else
-          throw dateExpectedException(string)
-      } catch {
-        case t: NumberFormatException => throw dateExpectedException(string)
-      }
-    else
-      dates(0)
-  }
-
-  private def toBoolean(string : String) : Boolean =
-    (textBooleanMap ++ numBooleanMap).getOrElse(string.toLowerCase, throw booleanExpectedException(string))
 }
