@@ -21,7 +21,7 @@ import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.Await._
 import play.api.Configuration
 import scala.concurrent.duration._
@@ -59,9 +59,27 @@ trait DataSetService {
     fieldGroupSize: Int = 150
   ): Future[Unit]
 
+  def saveOrUpdateDictionary(
+    dataSetId: String,
+    fieldNameAndTypes: Seq[(String, FieldTypeSpec)]
+  ): Future[Unit]
+
   def createDummyDictionary(
     dataSetId: String
   ): Future[Unit]
+
+  def translateDataAndDictionary(
+    originalDataSetId: String,
+    newDataSetMetaInfo: DataSetMetaInfo,
+    newDataSetSetting: Option[DataSetSetting],
+    removeNullColumns: Boolean,
+    removeNullRows: Boolean
+  ): Future[Unit]
+
+  def createJsonsWithFieldTypes(
+    columnNames: Seq[String],
+    values: Seq[Seq[String]]
+  ): (Seq[JsObject], Seq[FieldTypeSpec])
 
   def inferFieldType(
     dataSetRepo: JsonCrudRepo,
@@ -76,6 +94,7 @@ class DataSetServiceImpl @Inject()(
     dataSetSettingRepo: DataSetSettingRepo,
     redCapServiceFactory: RedCapServiceFactory,
     synapseServiceFactory: SynapseServiceFactory,
+    translationRepo: TranslationRepo,
     messageRepo: MessageRepo,
     configuration: Configuration
   ) extends DataSetService {
@@ -134,10 +153,10 @@ class DataSetServiceImpl @Inject()(
       ),
       Some(createJsonsWithFieldTypes)
     ).map( fieldNameAndTypes =>
-      createOrUpdateDictionary(importInfo.dataSetId, fieldNameAndTypes)
+      saveOrUpdateDictionary(importInfo.dataSetId, fieldNameAndTypes)
     )
 
-  private def createJsonsWithFieldTypes(
+  override def createJsonsWithFieldTypes(
     columnNames: Seq[String],
     values: Seq[Seq[String]]
   ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
@@ -917,7 +936,7 @@ class DataSetServiceImpl @Inject()(
     fieldTypeSpec.copy(isArray = isArray)
   }
 
-  private def createOrUpdateDictionary(
+  override def saveOrUpdateDictionary(
     dataSetId: String,
     fieldNameAndTypes: Seq[(String, FieldTypeSpec)]
   ): Future[Unit] = {
@@ -925,26 +944,45 @@ class DataSetServiceImpl @Inject()(
 
     val dsa = dsaf(dataSetId).get
     val fieldRepo = dsa.fieldRepo
+    val newFieldNames = fieldNameAndTypes.map(_._1)
 
     for {
-      _ <- Future.sequence(
-        fieldNameAndTypes.map{ case (name, fieldTypeSpec) =>
-          fieldRepo.get(name).flatMap{ fieldOption =>
-            fieldOption match {
-              case None => fieldRepo.save(Field(name, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, fieldTypeSpec.enumValues))
-              case Some(field) => fieldRepo.update(field.copy(fieldType = fieldTypeSpec.fieldType, isArray = fieldTypeSpec.isArray, numValues = fieldTypeSpec.enumValues))
-            }
+      // get the existing fields
+      existingFields <-
+        fieldRepo.find(
+          Seq(FieldIdentity.name #=> newFieldNames)
+        )
+      existingNameFieldMap = existingFields.map(field => (field.name, field)).toMap
+
+      // fields to save or update
+      fieldsToSaveAndUpdate: Seq[Either[Field, Field]] =
+        fieldNameAndTypes.map { case (fieldName, fieldType) =>
+          existingNameFieldMap.get(fieldName) match {
+            case None => Left(Field(fieldName, fieldType.fieldType, fieldType.isArray, fieldType.enumValues))
+            case Some(field) => Right(field.copy(fieldType = fieldType.fieldType, isArray = fieldType.isArray, numValues = fieldType.enumValues))
           }
         }
-      )
-      fieldsToRemove <- {
-        val fieldNames = fieldNameAndTypes.map(_._1)
+
+      // fields to save
+      fieldsToSave = fieldsToSaveAndUpdate.map(_.left.toOption).flatten
+
+      // save the new fields
+      _ <- fieldRepo.save(fieldsToSave)
+
+      // fields to update
+      fieldsToUpdate = fieldsToSaveAndUpdate.map(_.right.toOption).flatten
+
+      // update the existing fields
+      _ <- fieldRepo.update(fieldsToUpdate)
+
+      // remove the old fields
+      nonExistingFields <-
         fieldRepo.find(
-          Seq(FieldIdentity.name #!-> fieldNames)
+          Seq(FieldIdentity.name #!-> newFieldNames)
         )
-      }
+
       _ <- Future.sequence(
-        fieldsToRemove.map( field =>
+        nonExistingFields.map( field =>
           fieldRepo.delete(field.name)
         )
       )
@@ -968,6 +1006,191 @@ class DataSetServiceImpl @Inject()(
       }
     } yield
       messageLogger.info(s"Dummy dictionary for data set '${dataSetId}' successfully created.")
+  }
+
+  override def translateDataAndDictionary(
+    originalDataSetId: String,
+    newDataSetMetaInfo: DataSetMetaInfo,
+    newDataSetSetting: Option[DataSetSetting],
+    removeNullColumns: Boolean,
+    removeNullRows: Boolean
+  ) = {
+    logger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' initiated.")
+    val originalDsa = dsaf(originalDataSetId).get
+    val originalDataRepo = originalDsa.dataSetRepo
+    val originalDictionaryRepo = originalDsa.fieldRepo
+
+    val newDsaFuture =
+      for {
+        originalDataSetInfo <- originalDsa.metaInfo
+        accessor <- dsaf.register(newDataSetMetaInfo.copy(dataSpaceId = originalDataSetInfo.dataSpaceId), newDataSetSetting)
+      } yield
+        accessor
+
+    for {
+      // get the data repo for a new data set accessor
+      newDsa <- newDsaFuture
+      newDataRepo = newDsa.dataSetRepo
+      newFieldRepo = newDsa.fieldRepo
+      // obtain translation map
+      translationMap <- translationRepo.find().map(
+        _.map(translation => (translation.original, translation.translated)).toMap
+      )
+      // get the original dictionary fields
+      originalFields <- originalDictionaryRepo.find()
+      // get the field types
+      originalFieldNameAndTypes = originalFields.map(field => (field.name, field.fieldTypeSpec)).toSeq
+      // get the items (from the data set)
+      items <- originalDataRepo.find(sort = Seq(AscSort(dataSetIdFieldName)))
+      // transform the items and dictionary
+      (newJsons, newFieldNameAndTypes) = translateDataAndDictionary(
+        items, originalFieldNameAndTypes, translationMap, true, true)
+      // delete all the data
+      _ <- newDataRepo.deleteAll
+      // save the new items
+      _ <- newDataRepo.save(newJsons)
+      // delete all the fields of the new data
+      _ <- newFieldRepo.deleteAll
+      // save the new fields
+      _ <- {
+        val originalNameFieldMap = originalFields.map(field => (field.name, field)).toMap
+        val newFields = newFieldNameAndTypes.map { case (fieldName, fieldType) =>
+          originalNameFieldMap.get(fieldName) match {
+            case Some(field) => field.copy(fieldType = fieldType.fieldType, isArray = fieldType.isArray, numValues = fieldType.enumValues)
+            case None => Field(fieldName, fieldType.fieldType, fieldType.isArray, fieldType.enumValues)
+          }
+        }
+        newFieldRepo.save(newFields)
+      }
+    } yield
+      messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")
+  }
+
+  protected def translateDataAndDictionary(
+    items: Traversable[JsObject],
+    fieldNameAndTypes: Seq[(String, FieldTypeSpec)],
+    translationMap: Map[String, String],
+    removeNullColumns: Boolean,
+    removeNullRows: Boolean
+  ): (Traversable[JsObject], Seq[(String, FieldTypeSpec)]) = {
+    val nullFieldNameSet = fieldNameAndTypes.filter(_._2.fieldType == FieldTypeId.Null).map(_._1).toSet
+    val enumFieldTypes = fieldNameAndTypes.filter(_._2.fieldType == FieldTypeId.Enum)
+    val stringFieldNames = fieldNameAndTypes.filter(_._2.fieldType == FieldTypeId.String).map(_._1)
+
+    // translate strings
+    val (stringConvertedJsons, newStringFieldTypes) = translateStringFields(
+      items, stringFieldNames, translationMap)
+
+    // translate enumns
+    val (enumConvertedJsons, newEnumFieldTypes) = translateEnumsFields(
+      items, enumFieldTypes, translationMap)
+
+    val convertedJsItems = (items, stringConvertedJsons, enumConvertedJsons).zipped.map {
+      case (json, stringJson: JsObject, enumJson) =>
+        // remove null columns
+        val nonNullValues =
+          if (removeNullColumns) {
+            json.fields.filter { case (fieldName, _) => !nullFieldNameSet.contains(fieldName) }
+          } else
+            json.fields
+
+        // merge with String-converted Jsons
+        JsObject(nonNullValues) ++ (stringJson ++ enumJson)
+    }
+
+    // remove all items without any content
+    val finalJsons = if (removeNullRows) {
+      convertedJsItems.filter(item => item.fields.exists { case (fieldName, value) =>
+        fieldName != dataSetIdFieldName && value != JsNull
+      })
+    } else
+      convertedJsItems
+
+    // remove the null columns if needed
+    val nonNullFieldNameAndTypes =
+      if (removeNullColumns) {
+        fieldNameAndTypes.filter { case (fieldName, _) => !nullFieldNameSet.contains(fieldName) }
+      } else
+        fieldNameAndTypes
+
+    // merge string and enum field name type maps
+    val stringFieldNameTypeMap = (stringFieldNames, newStringFieldTypes).zipped.toMap
+    val enumFieldNameTypeMap = (enumFieldTypes.map(_._1), newEnumFieldTypes).zipped.toMap
+    val newFieldNameTypeMap = stringFieldNameTypeMap ++ enumFieldNameTypeMap
+
+    // update the field types with the new ones
+    val finalFieldNameAndTypes = nonNullFieldNameAndTypes.map { case (fieldName, fieldType) =>
+      val newFieldType = newFieldNameTypeMap.get(fieldName).getOrElse(fieldType)
+      (fieldName, newFieldType)
+    }
+
+    (finalJsons, finalFieldNameAndTypes)
+  }
+
+  private def translateStringFields(
+    items: Traversable[JsObject],
+    stringFieldNames: Traversable[String],
+    translationMap: Map[String, String]
+  ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
+
+    def translate(json: JsObject) = stringFieldNames.map { fieldName =>
+      val valueOption = JsonUtil.toString(json \ fieldName)
+      valueOption match {
+        case Some(value) => translationMap.get(value).getOrElse(value)
+        case None => null
+      }
+    }.toSeq
+
+    val convertedStringValues = items.map(translate)
+    createJsonsWithFieldTypes(
+      stringFieldNames.toSeq,
+      convertedStringValues.toSeq
+    )
+  }
+
+  private def translateEnumsFields(
+    items: Traversable[JsObject],
+    enumFieldNameAndTypes: Seq[(String, FieldTypeSpec)],
+    translationMap: Map[String, String]
+  ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
+    val newFieldNameTypeValueMaps: Seq[(String, FieldTypeSpec, Map[String, JsValue])] =
+      enumFieldNameAndTypes.map { case (fieldName, enumFieldTypeSpec) =>
+        enumFieldTypeSpec.enumValues.map { enumMap =>
+
+          val newValueKeyGroupMap = enumMap.map { case (from, to) =>
+            (from, translationMap.get(to).getOrElse(to))
+          }.toSeq.groupBy(_._2)
+
+          val newValueOldKeys: Seq[(String, Seq[String])] =
+            newValueKeyGroupMap.map { case (value, oldKeyValues) => (value, oldKeyValues.map(_._1)) }.toSeq
+
+          val newFieldType = fti(newValueOldKeys.map(_._1))
+
+          val oldKeyNewJsonMap: Map[String, JsValue] = newValueOldKeys.map { case (newValue, oldKeys) =>
+            val newJsonValue = newFieldType.parseToJson(newValue)
+            oldKeys.map((_, newJsonValue))
+          }.flatten.toMap
+
+          (fieldName, newFieldType.spec, oldKeyNewJsonMap)
+        }
+      }.flatten
+
+    def translate(json: JsObject): JsObject = {
+      val fieldJsValues = newFieldNameTypeValueMaps.map { case (fieldName, _, jsonValueMap) =>
+        val originalJsValue = (json \ fieldName).get
+        val valueOption = JsonUtil.toString(originalJsValue)
+        val newJsonValue = valueOption match {
+          case Some(value) => jsonValueMap.get(value).getOrElse(originalJsValue)
+          case None => JsNull
+        }
+        (fieldName, newJsonValue)
+      }
+      JsObject(fieldJsValues)
+    }
+
+    val convertedEnumJsons = items.map(translate).toSeq
+    val convertedEnumFieldSpecs = newFieldNameTypeValueMaps.map(_._2)
+    (convertedEnumJsons, convertedEnumFieldSpecs)
   }
 
   private def jsonToString(jsValue: JsValue): Option[String] =

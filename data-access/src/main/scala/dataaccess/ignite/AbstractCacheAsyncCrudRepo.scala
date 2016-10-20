@@ -235,6 +235,26 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
   private def isNonNativeFieldDBType(columnType: String): Boolean =
     !nativeDBFieldTypeNames.contains(columnType)
 
+  override def save(entity: E): Future[ID] =
+    Future {
+      // TODO: perhaps we could get an id from the underlying db before saving the item
+      val (id, cacheItem) = createNewIdWithCacheItem(entity)
+      cache.put(toCacheId(id), cacheItem)
+      id
+      // throw new IllegalArgumentException(s"If cache is used in order to save an item of type '${entity.getClass.getName}' ID must already be set.")
+    }
+
+  override def save(entities: Traversable[E]): Future[Traversable[ID]] =
+    Future {
+      val idWithCacheItems = entities.map(createNewIdWithCacheItem)
+      val ids = idWithCacheItems.map(_._1)
+      val cacheIdItems = idWithCacheItems.map { case (id, cacheItem) =>
+        (toCacheId(id), cacheItem)
+      }.toMap
+      cache.putAll(cacheIdItems)
+      ids
+    }
+
   override def update(entity: E): Future[ID] =
     Future{
       val id = identity.of(entity).get
@@ -243,21 +263,21 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
       id
     }
 
-  override def deleteAll: Future[Unit] =
-    Future(cache.removeAll())
-
   override def delete(id: ID): Future[Unit] =
     Future(cache.remove(toCacheId(id)))
 
-  override def save(entity: E): Future[ID] =
-    Future{
-      // TODO: perhaps we could get an id from the underlying db before saving the item
-      val (id, entityWithId) = identity.of(entity).map((_, entity)).getOrElse {
-        val newId = identity.next
-        (newId, identity.set(entity, newId))
-      }
-      cache.put(toCacheId(id), toCacheItem(entityWithId))
-      id
-      // throw new IllegalArgumentException(s"If cache is used in order to save an item of type '${entity.getClass.getName}' ID must already be set.")
+  override def delete(ids: Traversable[ID]): Future[Unit] =
+    Future(cache.removeAll(ids.map(toCacheId).toSet[CACHE_ID]))
+
+  override def deleteAll: Future[Unit] =
+    Future(cache.removeAll())
+
+  private def createNewIdWithCacheItem(entity: E): (ID, CACHE_E) = {
+    // TODO: perhaps we could get an id from the underlying db before saving the item
+    val (id, entityWithId) = identity.of(entity).map((_, entity)).getOrElse {
+      val newId = identity.next
+      (newId, identity.set(entity, newId))
     }
+    (id, toCacheItem(entityWithId))
+  }
 }

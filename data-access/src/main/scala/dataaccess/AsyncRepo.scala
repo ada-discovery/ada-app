@@ -51,7 +51,11 @@ trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
 
 trait AsyncCrudRepo[E, ID] extends AsyncRepo[E, ID] {
   def update(entity: E): Future[ID]
+  def update(entities: Traversable[E]): Future[Traversable[ID]] =
+    Future.sequence(entities.map(update))
   def delete(id: ID): Future[Unit]
+  def delete(ids: Traversable[ID]): Future[Unit]=
+    Future.sequence(ids.map(delete)).map(_ -> ())
   def deleteAll: Future[Unit]
 }
 

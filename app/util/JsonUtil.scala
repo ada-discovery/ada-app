@@ -147,26 +147,35 @@ object JsonUtil {
   def projectDate(items : Seq[JsObject], fieldName : String) : Seq[Option[Date]] =
     project(items, fieldName).map(toDate)
 
-  def toDouble(jsValue : JsReadable) : Option[Double] =
-    jsValue.asOpt[Double].map(Some(_)).getOrElse {
-      jsValue.asOpt[String] match {
-        case Some(string) =>
-          try {
-            Some(string.toDouble)
-          } catch {
-            case e: NumberFormatException => None
-          }
-        case None => None
-      }
+  def toDouble(value : JsReadable) : Option[Double] =
+    value match {
+      case JsNull => None
+      case JsNumber(n) => Some(n.toDouble)
+      case JsString(s) =>
+        try {
+          Some(s.toDouble)
+        } catch {
+          case e: NumberFormatException => None
+        }
+      case JsDefined(json) => toDouble(json)
+      case _: JsUndefined => None
+      case _ => None
     }
 
-  def toJsonNumber(value: String) : Option[JsNumber] = {
-    try {
-      Some(JsNumber(value.toDouble))
-    } catch {
-      case e: NumberFormatException => None
+  def toInt(value : JsReadable) : Option[Int] =
+    value match {
+      case JsNull => None
+      case JsNumber(n) => Some(n.toInt)
+      case JsString(s) =>
+        try {
+          Some(s.toInt)
+        } catch {
+          case e: NumberFormatException => None
+        }
+      case JsDefined(json) => toInt(json)
+      case _: JsUndefined => None
+      case _ => None
     }
-  }
 
   def toString(value: JsReadable): Option[String] =
     value match {

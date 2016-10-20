@@ -96,7 +96,9 @@ case class Field(
   label: Option[String] = None,
   var categoryId: Option[BSONObjectID] = None,
   var category: Option[Category] = None
-)
+) {
+  def fieldTypeSpec: FieldTypeSpec = FieldTypeSpec(fieldType, isArray, numValues)
+}
 
 object FieldTypeId extends Enumeration {
   val Null, Boolean, Double, Integer, Enum, String, Date, Json = Value

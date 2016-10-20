@@ -68,11 +68,12 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   override protected def editView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: Request[_]) = {
     val fieldsFuture = fieldRepo.find(
-      criteria = Seq("categoryId" #== id),
+      criteria = Seq("categoryId" #== Some(id)),
       sort = Seq(AscSort("name"))
     )
 
     val fields = result(fieldsFuture)
+    println(fields.size)
     category.edit(
       dataSetName + " Category",
       id,
@@ -98,7 +99,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     val updateChildrenFutures =
       for {
         Some(category) <- repo.get(id)
-        children <- repo.find(Seq("parentId" #== id))
+        children <- repo.find(Seq("parentId" #== Some(id)))
       } yield
         children.map{ child =>
           child.parentId = category.parentId
@@ -108,7 +109,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     // remove the field category refs
     val updateFieldFutures =
       for {
-        fields <- fieldRepo.find(Seq("categoryId" #== id))
+        fields <- fieldRepo.find(Seq("categoryId" #== Some(id)))
       } yield
         fields.map { field =>
           field.categoryId = None

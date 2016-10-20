@@ -3,7 +3,7 @@ package dataaccess
 import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Awaitable}
+import scala.concurrent.{Future, Await, Awaitable}
 
 /**
  * Generic sync repo trait
@@ -33,7 +33,9 @@ trait SyncRepo[E, ID] extends SyncReadonlyRepo[E, ID] {
 
 trait SyncCrudRepo[E, ID] extends SyncRepo[E, ID] {
   def update(entity: E): ID
+  def update(entities: Traversable[E]): Traversable[ID]
   def delete(id: ID)
+  def delete(ids: Traversable[ID])
   def deleteAll
 }
 
@@ -74,6 +76,9 @@ private class SyncRepoAdapter[E, ID](
 
   override def save(entity: E) =
     wait(asyncRepo.save(entity))
+
+  override def save(entities: Traversable[E]) =
+    wait(asyncRepo.save(entities))
 }
 
 private class SyncCrudRepoAdapter[E, ID](
@@ -84,12 +89,19 @@ private class SyncCrudRepoAdapter[E, ID](
   override def update(entity: E) =
     wait(asyncRepo.update(entity))
 
+  override def update(entities: Traversable[E]) =
+    wait(asyncRepo.update(entities))
+
   override def delete(id: ID) =
     wait(asyncRepo.delete(id))
 
-  override def deleteAll  =
+  override def delete(ids: Traversable[ID]) =
+    wait(asyncRepo.delete(ids))
+
+  override def deleteAll =
     wait(asyncRepo.deleteAll)
 }
+
 
 private class SyncStreamRepoAdapter[E, ID](
     asyncRepo : AsyncStreamRepo[E, ID],

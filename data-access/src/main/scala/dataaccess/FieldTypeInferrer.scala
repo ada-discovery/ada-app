@@ -21,7 +21,7 @@ private case class EnumFieldTypeInferrer(
   ) {
 
   def apply(values: Traversable[String]): Option[FieldType[_]] = {
-    val valuesWoNull = values.filterNot(value => nullAliases.contains(value.toLowerCase))
+    val valuesWoNull = values.filterNot(value => value == null || nullAliases.contains(value.toLowerCase))
     val countMap = MMap[String, Int]()
     valuesWoNull.foreach{value =>
       val count = countMap.getOrElse(value, 0)

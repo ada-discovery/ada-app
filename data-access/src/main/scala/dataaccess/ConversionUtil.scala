@@ -15,11 +15,11 @@ object ConversionUtil {
 
   def toFloat = convert(_.toFloat)_
 
-  def toBoolean = convert(_.toBoolean)_
+  def toBoolean = convert(toBooleanAux)_
 
-  def toBoolean(valueMap: Map[String, Boolean]) = convert { text =>
-    valueMap.getOrElse(text.toLowerCase, typeExpectedException(text, classOf[Boolean]))
-  }_
+//  def toBoolean(valueMap: Map[String, Boolean]) = convert { text =>
+//    valueMap.getOrElse(text.toLowerCase, typeExpectedException(text, classOf[Boolean]))
+//  }_
 
   def toDate(dateFormats: Traversable[String]) = convert(toDateAux(dateFormats))_
 
@@ -43,29 +43,18 @@ object ConversionUtil {
     )
   }
 
-//  private def toDate(string : String) : Date = {
-//    val dates = dateFormats.map{ format =>
-//      try {
-//        val date = new SimpleDateFormat(format).parse(string)
-//        Some(date)
-//      } catch {
-//        case e: ParseException => None
-//      }
-//    }.flatten
-//
-//    if (dates.isEmpty)
-//      try {
-//        val year = string.toInt
-//        if (year > 1900 && year < 2100)
-//          new SimpleDateFormat("dd.MM.yyyy").parse("01.01." + string)
-//        else
-//          throw dateExpectedException(string)
-//      } catch {
-//        case t: NumberFormatException => throw dateExpectedException(string)
-//      }
-//    else
-//      dates(0)
-//  }
+  private def toBooleanAux(text: String) = {
+    try {
+      text.toBoolean
+    } catch {
+      case e: IllegalArgumentException =>
+          text match {
+            case "0" => false
+            case "1" => true
+            case _ => typeExpectedException(text, classOf[Boolean])
+          }
+    }
+  }
 
   def isDouble = isConvertible(_.toDouble)_
 
@@ -75,11 +64,11 @@ object ConversionUtil {
 
   def isFloat = isConvertible(_.toFloat)_
 
-  def isBoolean = isConvertible(_.toBoolean)_
+  def isBoolean = isConvertible(toBooleanAux)_
 
-  def isBoolean(valueMap: Map[String, Boolean]) = isConvertible { text =>
-    valueMap.getOrElse(text, typeExpectedException(text, classOf[Boolean]))
-  }_
+//  def isBoolean(valueMap: Map[String, Boolean]) = isConvertible { text =>
+//    valueMap.getOrElse(text, typeExpectedException(text, classOf[Boolean]))
+//  }_
 
   def isDate(dateFormats: Traversable[String]) = isConvertible(toDateAux(dateFormats))_
 

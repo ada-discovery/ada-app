@@ -66,21 +66,18 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
     }
   }
 
-  /**
-    * Delete single entry identified by its id (name).
-    *
-    * @param id Id of the subordinate to be deleted.
-    * @return Nothing (Unit)
-    */
-  override def delete(id: ID): Future[Unit] = {
+  override def save(entities: Traversable[E]): Future[Traversable[ID]] = {
     val modifier = Json.obj {
-      "$pull" -> Json.obj {
+      "$push" -> Json.obj {
         listName -> Json.obj {
-          identity.name -> id
+          "$each" -> entities
         }
       }
     }
-    rootRepo.updateCustom(rootIdSelector, modifier)
+
+    rootRepo.updateCustom(rootIdSelector, modifier) map { _ =>
+      entities.map(identity.of(_).get)
+    }
   }
 
   /**
@@ -103,6 +100,38 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
     rootRepo.updateCustom(selector, modifier) map { _ =>
       id.get
     }
+  }
+
+//  override def update(entities: Traversable[E]): Future[Traversable[ID]] = super.update(entities)
+
+  /**
+    * Delete single entry identified by its id (name).
+    *
+    * @param id Id of the subordinate to be deleted.
+    * @return Nothing (Unit)
+    */
+  override def delete(id: ID): Future[Unit] = {
+    val modifier = Json.obj {
+      "$pull" -> Json.obj {
+        listName -> Json.obj {
+          identity.name -> id
+        }
+      }
+    }
+    rootRepo.updateCustom(rootIdSelector, modifier)
+  }
+
+  override def delete(ids: Traversable[ID]): Future[Unit] = {
+    val modifier = Json.obj {
+      "$pull" -> Json.obj {
+        listName -> Json.obj {
+          identity.name -> Json.obj(
+            "$in" -> ids
+          )
+        }
+      }
+    }
+    rootRepo.updateCustom(rootIdSelector, modifier)
   }
 
   /**
