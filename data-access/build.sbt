@@ -21,5 +21,7 @@ libraryDependencies ++= Seq(
   "org.apache.ignite" % "ignite-core" % "1.6.0",
   "org.apache.ignite" % "ignite-spring" % "1.6.0",
   "org.apache.ignite" % "ignite-indexing" % "1.6.0",
-  "org.apache.ignite" % "ignite-scalar" % "1.6.0"
+  "org.apache.ignite" % "ignite-scalar" % "1.6.0",
+  "org.scalactic" %% "scalactic" % "3.0.0",
+  "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 )
