@@ -24,7 +24,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
 
   private val logger = Logger
-  private val ftu = FieldTypeFactory(Set[String](""), Seq[String](), 20)
+  private val ftu = FieldTypeFactory(Set[String](""), Seq[String](), "", 20)
 
   def apply[ID](
     cacheName: String,

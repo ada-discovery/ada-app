@@ -14,6 +14,7 @@ abstract class DataSetImport {
   val dataSpaceName: String
   val dataSetId: String
   val dataSetName: String
+  @Deprecated
   val createDummyDictionary: Boolean
   val scheduled: Boolean
   val scheduledTime: Option[ScheduledTime]

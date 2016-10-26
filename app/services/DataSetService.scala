@@ -5,14 +5,13 @@ import java.nio.charset.{UnsupportedCharsetException, MalformedInputException, C
 import javax.inject.Inject
 import dataaccess.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import dataaccess._
-import dataaccess.RepoTypes.DataSetSettingRepo
+import dataaccess.RepoTypes.{DictionaryCategoryRepo, DictionaryFieldRepo, DataSetSettingRepo, JsonCrudRepo}
 import models.redcap.{Metadata, FieldType => RCFieldType}
 import _root_.util.{MessageLogger, JsonUtil}
 import com.google.inject.ImplementedBy
 import models._
 import models.synapse.{SelectColumn, ColumnType}
 import Criterion.CriterionInfix
-import dataaccess.RepoTypes.JsonCrudRepo
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import DictionaryCategoryRepo.saveRecursively
@@ -21,6 +20,7 @@ import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 import scala.collection.mutable.ListBuffer
+import scala.collection.parallel.ParSeq
 import scala.concurrent.{Await, Future}
 import scala.concurrent.Await._
 import play.api.Configuration
@@ -46,11 +46,11 @@ trait DataSetService {
     dataSetImport: SynapseDataSetImport
   ): Future[Unit]
 
-  def importDataSetAndDictionary(
+  def importDataSet(
     dataSetImport: TranSmartDataSetImport
   ): Future[Unit]
 
-  def importDataSetAndDictionary(
+  def importDataSet(
     dataSetImport: RedCapDataSetImport
   ): Future[Unit]
 
@@ -75,11 +75,6 @@ trait DataSetService {
     removeNullColumns: Boolean,
     removeNullRows: Boolean
   ): Future[Unit]
-
-  def createJsonsWithFieldTypes(
-    columnNames: Seq[String],
-    values: Seq[Seq[String]]
-  ): (Seq[JsObject], Seq[FieldTypeSpec])
 
   def inferFieldType(
     dataSetRepo: JsonCrudRepo,
@@ -127,14 +122,10 @@ class DataSetServiceImpl @Inject()(
     for {
       _ <- dataSetImport match {
         case x: CsvDataSetImport => importDataSet(x)
-        case x: TranSmartDataSetImport => importDataSetAndDictionary(x)
+        case x: TranSmartDataSetImport => importDataSet(x)
         case x: SynapseDataSetImport => importDataSet(x)
-        case x: RedCapDataSetImport => importDataSetAndDictionary(x)
+        case x: RedCapDataSetImport => importDataSet(x)
       }
-      _ <- if (dataSetImport.createDummyDictionary)
-        createDummyDictionary(dataSetImport.dataSetId)
-      else
-        Future(())
       _ <- {
         dataSetImport.timeLastExecuted = Some(new Date())
         dataSetImportRepo.update(dataSetImport)
@@ -156,29 +147,9 @@ class DataSetServiceImpl @Inject()(
       saveOrUpdateDictionary(importInfo.dataSetId, fieldNameAndTypes)
     )
 
-  override def createJsonsWithFieldTypes(
-    columnNames: Seq[String],
-    values: Seq[Seq[String]]
-  ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
-    val fieldTypes = values.transpose.par.map(fti.apply).toList
-
-    val jsons = values.map( vals =>
-      JsObject(
-        (columnNames, fieldTypes, vals).zipped.map {
-          case (columnName, fieldType, text) =>
-            val jsonValue = fieldType.parseToJson(text)
-            (columnName, jsonValue)
-        })
-    )
-
-    (jsons, fieldTypes.map(_.spec))
-  }
-
-  override def importDataSetAndDictionary(
-    importInfo: TranSmartDataSetImport
-  ) = {
+  override def importDataSet(importInfo: TranSmartDataSetImport) =
     // import a data set first
-    val fieldNameAndTypesFuture = importLineParsableDataSet(
+    importLineParsableDataSet(
       importInfo,
       tranSmartDelimeter.toString,
       false,
@@ -186,15 +157,12 @@ class DataSetServiceImpl @Inject()(
         importInfo.dataPath.get,
         importInfo.charsetName,
         None
-      )
-    )
-
-    // then import a dictionary from a tranSMART mapping file
-    fieldNameAndTypesFuture.flatMap { fieldNameAndTypes =>
-      val fieldNames =  fieldNameAndTypes.map(_._1)
-
+      ),
+      Some(createJsonsWithFieldTypes)
+    ).map( fieldNameAndTypes =>
+      // then import a dictionary from a tranSMART mapping file
       if (importInfo.mappingPath.isDefined) {
-        importAndInferTranSMARTDictionary(
+        importTranSMARTDictionary(
           importInfo.dataSetId,
           tranSmartFieldGroupSize,
           tranSmartDelimeter.toString,
@@ -203,12 +171,11 @@ class DataSetServiceImpl @Inject()(
             importInfo.charsetName,
             None
           ),
-          fieldNames
+          fieldNameAndTypes
         )
       } else
-        Future(())
-    }
-  }
+        saveOrUpdateDictionary(importInfo.dataSetId, fieldNameAndTypes)
+    )
 
   override def importDataSet(importInfo: SynapseDataSetImport) = {
     val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
@@ -226,11 +193,13 @@ class DataSetServiceImpl @Inject()(
           val lines = result(csvFuture, timeout).split(synapseEol)
           lines.iterator
         },
-        None,
+        Some(createJsonsWithFieldTypes),
         Some("ROW_ID"),
         false,
         transformJsons,
         transformBatchSize
+      ).map( fieldNameAndTypes =>
+        saveOrUpdateDictionary(importInfo.dataSetId, fieldNameAndTypes)
       )
 
     if (importInfo.downloadColumnFiles)
@@ -240,10 +209,10 @@ class DataSetServiceImpl @Inject()(
             _.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(_.toSelectColumn)
         )
         _ <- {
-          val fieldNames = fileColumns.map { fileColumn =>
+          val fileFieldNames = fileColumns.map { fileColumn =>
             escapeKey(fileColumn.name.replaceAll("\"", "").trim)
           }
-          val fun = updateJsonsFileFields(synapseService, fieldNames, importInfo.tableId, importInfo.bulkDownloadGroupNumber) _
+          val fun = updateJsonsFileFields(synapseService, fileFieldNames, importInfo.tableId, importInfo.bulkDownloadGroupNumber) _
           importDataSetAux(Some(fun), importInfo.downloadRecordBatchSize)
         }
       } yield
@@ -252,16 +221,34 @@ class DataSetServiceImpl @Inject()(
       importDataSetAux(None, None).map(_ => ())
   }
 
+  protected def createJsonsWithFieldTypes(
+    columnNames: Seq[String],
+    values: Seq[Seq[String]]
+  ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
+    val fieldTypes = values.transpose.par.map(fti.apply).toList
+
+    val jsons = values.map( vals =>
+      JsObject(
+        (columnNames, fieldTypes, vals).zipped.map {
+          case (fieldName, fieldType, text) =>
+            val jsonValue = fieldType.displayStringToJson(text)
+            (fieldName, jsonValue)
+        })
+    )
+
+    (jsons, fieldTypes.map(_.spec))
+  }
+
   private def updateJsonsFileFields(
     synapseService: SynapseService,
-    fieldNames: Seq[String],
+    fileFieldNames: Seq[String],
     tableId: String,
     bulkDownloadGroupNumber: Option[Int])(
     jsons: Seq[JsObject]
   ): Future[Seq[JsObject]] = {
-    val fileHandleIds = fieldNames.map { fieldName =>
+    val fileHandleIds = fileFieldNames.map { fieldName =>
       jsons.map(json =>
-        (json \ fieldName).get.asOpt[String]
+        JsonUtil.toString(json \ fieldName)
       )
     }.flatten.flatten
 
@@ -277,6 +264,7 @@ class DataSetServiceImpl @Inject()(
 
       logger.info(s"Bulk download of Synapse column data for ${fileHandleIds.size} file handles (split into ${groups.size} groups) initiated.")
 
+      // download the files in a bulk
       val fileHandleIdContentsFutures = groups.par.map { groupFileHandleIds =>
         synapseService.downloadTableFilesInBulk(groupFileHandleIds, tableId, Some(synapseBulkDownloadAttemptNumber))
       }
@@ -284,9 +272,10 @@ class DataSetServiceImpl @Inject()(
       Future.sequence(fileHandleIdContentsFutures.toList).map(_.flatten).map { fileHandleIdContents =>
         logger.info(s"Download of ${fileHandleIdContents.size} Synapse column data finished. Updating JSONs with Synapse column data...")
         val fileHandleIdContentMap = fileHandleIdContents.toMap
+        // update jsons with new file contents
         jsons.map { json =>
-          val fieldNameJsons = fieldNames.map { fieldName =>
-            (json \ fieldName).get.asOpt[String].map(fileHandleId =>
+          val fieldNameJsons = fileFieldNames.map { fieldName =>
+            JsonUtil.toString(json \ fieldName).map(fileHandleId =>
               (fieldName, Json.parse(fileHandleIdContentMap.get(fileHandleId).get))
             )
           }.flatten
@@ -298,7 +287,7 @@ class DataSetServiceImpl @Inject()(
       Future(jsons)
   }
 
-  override def importDataSetAndDictionary(
+  override def importDataSet(
     importInfo: RedCapDataSetImport
   ) = {
     logger.info(new Date().toString)
@@ -311,42 +300,179 @@ class DataSetServiceImpl @Inject()(
     val redCapService = redCapServiceFactory(importInfo.url, importInfo.token)
 
     // Data repo to store the data to
-    val dataSetAccessor = createDataSetAccessor(importInfo)
-    val dataRepo = dataSetAccessor.dataSetRepo
+    val dsa = createDataSetAccessor(importInfo)
+    val dataRepo = dsa.dataSetRepo
+    val fieldRepo = dsa.fieldRepo
+    val categoryRepo = dsa.categoryRepo
+
+    def displayJsonToJson[T](fieldType: FieldType[T], json: JsReadable): JsValue = {
+      val value = fieldType.displayJsonToValue(json)
+      fieldType.valueToJson(value)
+    }
 
     for {
+
       // get the data from a given red cap service
       records <- {
         logger.info("Downloading records from REDCap...")
         redCapService.listRecords("cdisc_dm_usubjd", "")
       }
-      // delete all records
+
+      // delete all the records
       _ <- {
         logger.info(s"Deleting the old data set...")
         dataRepo.deleteAll
       }
+
+      // import dictionary (if needed) otherwise use an existing one (should exist)
+      dictionaryFieldNameTypeMap <-
+        if (importInfo.importDictionaryFlag) {
+          logger.info(s"RedCap dictionary inference and import for data set '${importInfo.dataSetId}' initiated.")
+
+          val dictionaryMapFuture = importAndInferRedCapDictionary(redCapService, fieldRepo, categoryRepo, records)
+
+          dictionaryMapFuture.map { dictionaryMap =>
+            messageLogger.info(s"RedCap dictionary inference and import for data set '${importInfo.dataSetId}' successfully finished.")
+            dictionaryMap
+          }
+        } else {
+          logger.info(s"RedCap dictionary import disabled using an existing dictionary.")
+          fieldRepo.find().map( fields =>
+            if (fields.nonEmpty) {
+              val fieldNameTypeMap: Map[String, FieldType[_]] = fields.map(field => (field.name, ftf(field.fieldTypeSpec) : FieldType[_])).toSeq.toMap
+              fieldNameTypeMap
+            } else {
+              val message = s"No dictionary found for the data set '${importInfo.dataSetId}'. Run the REDCap data set import again with the 'import dictionary' option."
+              messageLogger.error(message)
+              throw new AdaException(message)
+            }
+          )
+        }
+
+      // get the new records
+      newRecords: Traversable[JsObject] = records.map { record =>
+        val stringFieldType = ftf(FieldTypeSpec(FieldTypeId.String)).asInstanceOf[FieldType[String]]
+
+        val newJsValues = record.fields.map { case (fieldName, jsValue) =>
+          val newJsValue = dictionaryFieldNameTypeMap.get(fieldName) match {
+            case Some(fieldType) => fieldType.spec.fieldType match {
+              case FieldTypeId.Enum => {
+                val newEnumValue = stringFieldType.displayJsonToValue(jsValue).map(fromRedCapEnumKey)
+                newEnumValue match {
+                  case Some(intValue) => JsNumber(intValue)
+                  case None => JsNull
+                }
+              }
+              case _ => displayJsonToJson(fieldType, jsValue)
+            }
+            case None => jsValue
+          }
+          (fieldName, newJsValue)
+        }
+
+        JsObject(newJsValues)
+//        val doubleFieldType = ftf(FieldTypeSpec(FieldTypeId.Double)).asInstanceOf[FieldType[Double]]
+//          // TODO: replace this adhoc rounding of age with more conceptual approach
+//          val ageOption = doubleFieldType.displayJsonToValue(record \ "sv_age")
+//          val newAge: JsValue = ageOption.map( age =>
+//            Json.toJson(age.floor)
+//          ).getOrElse(JsNull)
+//          record.+(("sv_age", newAge))
+      }
+
       // save the records (...ignore the results)
       _ <- {
         logger.info(s"Saving JSONs...")
-        val newRecords = records.map{ record =>
-          // TODO: replace this adhoc rounding of age with more conceptual approach
-          val newAge: JsValue = toDouble(record \ "sv_age").map(age =>
-            Json.toJson(age.floor)
-          ).getOrElse(JsNull)
-          record.+(("sv_age", newAge))
-        }
-        Future.sequence(newRecords.map(dataRepo.save))
+        dataRepo.save(newRecords)
       }
-      // import dictionary (if needed)
-      _ <- if (importInfo.importDictionaryFlag)
-        importAndInferRedCapDictionary(importInfo.dataSetId, redCapService, dataSetAccessor)
-      else
-        Future(())
     } yield
       if (importInfo.importDictionaryFlag)
         messageLogger.info(s"Import of data set and dictionary '${importInfo.dataSetName}' successfully finished.")
       else
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
+  }
+
+  protected def importAndInferRedCapDictionary(
+    redCapService: RedCapService,
+    fieldRepo: DictionaryFieldRepo,
+    categoryRepo: DictionaryCategoryRepo,
+    records: Traversable[JsObject]
+  ): Future[Map[String, FieldType[_]]] = {
+
+    def displayJsonToDisplayString[T](fieldType: FieldType[T], json: JsReadable): String = {
+      val value = fieldType.displayJsonToValue(json)
+      fieldType.valueToDisplayString(value)
+    }
+
+    val fieldNames = records.map(_.keys).flatten.toSet
+    val stringFieldType = ftf(FieldTypeSpec(FieldTypeId.String))
+    val inferredFieldNameTypeMap: Map[String, FieldType[_]] =
+      fieldNames.map { fieldName =>
+        val stringValues = records.map(record =>
+          displayJsonToDisplayString(stringFieldType, (record \ fieldName))
+        )
+        (fieldName, fti(stringValues))
+      }.toMap
+
+    // TODO: optimize this... introduce field groups to speed up inference
+    def inferDictionary(
+      metadatas: Seq[Metadata],
+      nameCategoryIdMap: Map[String, BSONObjectID]
+    ): Traversable[Field] =
+      metadatas.filter(metadata => inferredFieldNameTypeMap.keySet.contains(metadata.field_name)).par.map{ metadata =>
+        val fieldName = metadata.field_name
+        val inferredFieldType: FieldType[_] = inferredFieldNameTypeMap.get(fieldName).get
+        val inferredType = inferredFieldType.spec
+
+        val fieldTypeSpec = metadata.field_type match {
+          case RCFieldType.radio => FieldTypeSpec(FieldTypeId.Enum, false, getEnumValues(metadata))
+          case RCFieldType.checkbox => FieldTypeSpec(FieldTypeId.Enum, false, getEnumValues(metadata))
+          case RCFieldType.dropdown => FieldTypeSpec(FieldTypeId.Enum, false, getEnumValues(metadata))
+          case RCFieldType.calc => inferredType
+          case RCFieldType.text => inferredType
+          case RCFieldType.descriptive => inferredType
+          case RCFieldType.yesno => inferredType
+          case RCFieldType.notes => inferredType
+          case RCFieldType.file => inferredType
+        }
+
+        val categoryId = nameCategoryIdMap.get(metadata.form_name)
+        val stringEnumValues = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to)})
+        Field(metadata.field_name, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnumValues, Seq[String](), Some(metadata.field_label), categoryId)
+      }.toList
+
+    for {
+     // delete all the fields
+      _ <- fieldRepo.deleteAll
+
+      // delete all the categories
+      _ <- categoryRepo.deleteAll
+
+      // obtain the RedCAP metadata
+      metadatas <- redCapService.listMetadatas("field_name", "")
+
+      // save the obtained categories and return a category name with ids
+      categoryNameIds <- {
+        val categories = metadatas.map(_.form_name).toSet.map { formName: String =>
+          new Category(formName)
+        }
+        categoryRepo.save(categories).map(ids =>
+          (categories, ids.toSeq).zipped.map { case (category, id) =>
+            (category.name, id)
+          }
+        )
+      }
+
+      // fields
+      newFields = inferDictionary(metadatas, categoryNameIds.toMap)
+
+      // save the fields
+      _ <- fieldRepo.save(newFields)
+
+      // also add redcap_event_name
+      _ <- fieldRepo.save(Field(redCapVisitField, FieldTypeId.Enum))
+    } yield
+      newFields.map( field => (field.name, ftf(field.fieldTypeSpec))).toMap
   }
 
   private def createCsvFileLineIterator(
@@ -405,10 +531,14 @@ class DataSetServiceImpl @Inject()(
       val lines = createLineIterator
       // collect the column names
       val columnNames =  getColumnNames(delimiter, lines)
-      // parse lines and create jsons
+
+      // parse lines
       logger.info(s"Parsing lines...")
       val values = parseLines(columnNames, lines, delimiter, skipFirstLine)
-      val (jsons, fieldTypes) = createJsonsWithFieldTypes.getOrElse(defaultCreateJsonsWithFieldTypes(_,_))(columnNames, values)
+
+      // create jsons and field types
+      val createJsonsWithFieldTypesInit = createJsonsWithFieldTypes.getOrElse(defaultCreateJsonsWithFieldTypes(_,_))
+      val (jsons, fieldTypes) = createJsonsWithFieldTypesInit(columnNames, values)
 
       for {
         // remove ALL the records from the collection if no key field defined
@@ -445,21 +575,18 @@ class DataSetServiceImpl @Inject()(
     columnNames: Seq[String],
     values: Seq[Seq[String]]
   ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
-    val fieldTypeSpecs = columnNames.map(_ => FieldTypeSpec(FieldTypeId.String, false))
+    val defaultFieldTypeSpec = FieldTypeSpec(FieldTypeId.String, false)
+    val fieldTypes = columnNames.map(_ => ftf(defaultFieldTypeSpec))
 
     val jsons = values.map( vals =>
       JsObject(
-        (columnNames, vals).zipped.map {
-          case (columnName, value) => (columnName,
-            if (value.isEmpty)
-              JsNull
-            else
-              JsString(value)
-            )
+        (columnNames, vals, fieldTypes).zipped.map {
+          case (columnName, value, fieldType) =>
+            (columnName, fieldType.displayStringToJson(value))
         })
     )
 
-    (jsons, fieldTypeSpecs)
+    (jsons, fieldTypes.map(_.spec))
   }
 
   private def removeRecords(
@@ -682,56 +809,94 @@ class DataSetServiceImpl @Inject()(
     val dsa = dsaf(dataSetId).get
     val dataRepo = dsa.dataSetRepo
     val fieldRepo = dsa.fieldRepo
-    val fieldSyncRepo = RepoSynchronizer(fieldRepo, timeout)
 
-    // delete all
-    fieldSyncRepo.deleteAll
-
-    val fieldNames = result(getFieldNames(dataRepo), timeout)
-    val groupedFieldNames = fieldNames.filter(_ != dataSetIdFieldName).grouped(fieldGroupSize).toSeq
-    val futures = groupedFieldNames.par.map { fieldNames =>
-      // Don't care about the result here, that's why we ignore ids and return Unit
-      for {
-        fieldNameAndTypes <- inferFieldTypes(dataRepo, fieldNames)
-        ids = for ((fieldName, fieldTypeSpec) <- fieldNameAndTypes) yield
-          fieldRepo.save(Field(fieldName, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, fieldTypeSpec.enumValues))
-        _ <- Future.sequence(ids)
-      } yield
-        ()
-    }
-
-    Future.sequence(futures.toList).map( _ =>
+    for {
+      // delete all the fields
+      _ <- fieldRepo.deleteAll
+      // get the field names
+      fieldNames <- getFieldNames(dataRepo)
+      _ <- {
+        val groupedFieldNames = fieldNames.filter(_ != dataSetIdFieldName).grouped(fieldGroupSize).toSeq
+        val futures = groupedFieldNames.par.map { fieldNames =>
+          // Don't care about the result here, that's why we ignore ids and return Unit
+          for {
+            fieldNameAndTypes <- inferFieldTypes(dataRepo, fieldNames)
+            fields = for ((fieldName, fieldTypeSpec) <- fieldNameAndTypes) yield {
+              val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
+              Field(fieldName, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums)
+            }
+            _ <- fieldRepo.save(fields)
+          } yield
+            ()
+        }
+        Future.sequence(futures.toList)
+      }
+    } yield
       messageLogger.info(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
-    )
   }
 
-  protected def importAndInferTranSMARTDictionary(
+  protected def importTranSMARTDictionary(
     dataSetId: String,
     fieldGroupSize: Int,
     delimiter: String,
-    createMappingFileLineIterator: => Iterator[String],
-    fieldNamesInOrder: Seq[String]
+    mappingFileLineIterator: => Iterator[String],
+    fieldNameAndTypes: Seq[(String, FieldTypeSpec)]
   ): Future[Unit] = {
     logger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' initiated.")
 
     val dsa = dsaf(dataSetId).get
-    val dataRepo = dsa.dataSetRepo
     val fieldRepo = dsa.fieldRepo
-    val fieldSyncRepo = RepoSynchronizer(fieldRepo, timeout)
     val categoryRepo = dsa.categoryRepo
-    val categorySyncRepo = RepoSynchronizer(categoryRepo, timeout)
 
-    // delete all
-    fieldSyncRepo.deleteAll
-    categorySyncRepo.deleteAll
+    // read the mapping file to obtain tupples: field name, field label, and category name; and a category name map
+    val indexFieldNameMap: Map[Int, String] = fieldNameAndTypes.map(_._1).zipWithIndex.map(_.swap).toMap
+    val (fieldNameLabelCategoryNameMap, nameCategoryMap) = createFieldNameAndCategoryNameMaps(mappingFileLineIterator, delimiter, indexFieldNameMap)
 
-    val indexFieldNameMap = fieldNamesInOrder.zipWithIndex.map(_.swap).toMap
+    for {
+      // delete all the fields
+      _ <- fieldRepo.deleteAll
+
+      // delete all the categories
+      _ <- categoryRepo.deleteAll
+
+      // save the categories
+      categoryIds: Traversable[(Category, BSONObjectID)] <- {
+        val firstLayerCategories = nameCategoryMap.values.filter(!_.parent.isDefined)
+        Future.sequence(
+          firstLayerCategories.map(
+            saveRecursively(categoryRepo, _)
+          )
+        ).map(_.flatten)
+      }
+
+      // save the fields... use a field label and a category from the mapping file provided, and infer a type
+      _ <- {
+        val categoryNameIdMap = categoryIds.map { case (category, id) => (category.name, id) }.toMap
+        val groupedFieldNameAndTypes = fieldNameAndTypes.grouped(fieldGroupSize).toSeq
+        val futures = groupedFieldNameAndTypes.par.map { fieldNameAndTypesGroup =>
+          // Don't care about the result here, that's why we ignore ids and return Unit
+          val idFutures = for ((fieldName, fieldTypeSpec) <- fieldNameAndTypesGroup) yield {
+            val (fieldLabel, categoryName) = fieldNameLabelCategoryNameMap.getOrElse(fieldName, ("", None))
+            val categoryId = categoryName.map(categoryNameIdMap.get(_).get)
+            val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to)})
+            fieldRepo.save(Field(fieldName, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums, Nil, Some(fieldLabel), categoryId))
+          }
+          Future.sequence(idFutures)
+        }
+        Future.sequence(futures.toList)
+      }
+    } yield
+      messageLogger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' successfully finished.")
+  }
+
+  private def createFieldNameAndCategoryNameMaps(
+    lineIterator: => Iterator[String],
+    delimiter: String,
+    indexFieldNameMap: Map[Int, String]
+  ): (Map[String, (String, Option[String])], Map[String, Category]) = {
     val nameCategoryMap = MMap[String, Category]()
 
-    val lines = createMappingFileLineIterator
-
-    // read the mapping file to obtain tupples: field name, field label, and category name
-    val fieldNameLabelCategoryNameMap = lines.drop(1).zipWithIndex.map { case (line, index) =>
+    val fieldNameLabelCategoryNameMap = lineIterator.drop(1).zipWithIndex.map { case (line, index) =>
       val values = parseLine(delimiter, line)
       if (values.size != 4)
         throw new AdaParseException(s"TranSMART mapping file contains a line (index '$index') with '${values.size}' items, but 4 expected (filename, category, column number, and data label). Parsing terminated.")
@@ -767,101 +932,7 @@ class DataSetServiceImpl @Inject()(
 
       (fieldName, (fieldLabel, assocCategoryName))
     }.toMap
-
-    // save categories
-    val firstLayerCategories = nameCategoryMap.values.filter(!_.parent.isDefined)
-    val categoryIdsFuture: Future[Traversable[(Category, BSONObjectID)]] = Future.sequence(
-      firstLayerCategories.map(
-        saveRecursively(categoryRepo, _)
-      )
-    ).map(_.flatten)
-
-    val categoryNameIdMapFuture = categoryIdsFuture.map(_.map{ case (category, id) => (category.name, id)}.toMap)
-
-    // save fields... use a field label and a category from the mapping file provided, and infer a type
-    val finalFuture = categoryNameIdMapFuture.flatMap{ categoryNameIdMap =>
-      val groupedFieldNames = fieldNamesInOrder.grouped(fieldGroupSize).toSeq
-      val futures = groupedFieldNames.par.map { fieldNames =>
-        // Don't care about the result here, that's why we ignore ids and return Unit
-        for {
-          fieldNameAndTypes <- inferFieldTypes(dataRepo, fieldNames)
-          ids = for ((fieldName, fieldTypeSpec) <- fieldNameAndTypes) yield {
-            val (fieldLabel, categoryName) = fieldNameLabelCategoryNameMap.getOrElse(fieldName, ("", None))
-            val categoryId = categoryName.map(categoryNameIdMap.get(_).get)
-            fieldRepo.save(Field(fieldName, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, fieldTypeSpec.enumValues, Nil, Some(fieldLabel), categoryId))
-          }
-          _ <- Future.sequence(ids)
-        } yield
-          ()
-      }
-      Future.sequence(futures.toList)
-    }
-
-    finalFuture.map( _ =>
-      messageLogger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' successfully finished.")
-    )
-  }
-
-  protected def importAndInferRedCapDictionary(
-    dataSetId: String,
-    redCapService: RedCapService,
-    dsa: DataSetAccessor
-  ): Future[Unit] = {
-    logger.info(s"RedCap dictionary inference and import for data set '${dataSetId}' initiated.")
-
-    val dataSetRepo = dsa.dataSetRepo
-    val fieldRepo = dsa.fieldRepo
-    val categoryRepo = dsa.categoryRepo
-
-    val dictionarySyncRepo = RepoSynchronizer(fieldRepo, timeout)
-    // delete all fields
-    dictionarySyncRepo.deleteAll
-    // delete all categories
-    result(categoryRepo.deleteAll, timeout)
-
-    // TODO: stay async.... avoid result(..)
-    val metadatas = result(redCapService.listMetadatas("field_name", ""), timeout)
-    val nameCategoryIdFutures = metadatas.map(_.form_name).toSet.map { formName : String =>
-      val category = new Category(formName)
-      categoryRepo.save(category).map(id => (category.name, id))
-    }
-
-    // categories
-
-    val nameCategoryIdMap = result(Future.sequence(nameCategoryIdFutures), timeout).toMap
-
-    val fieldNames = result(getFieldNames(dataSetRepo), timeout)
-
-    // TODO: optimize this... introduce field groups to speed up inference
-    val futures = metadatas.filter(metadata => fieldNames.contains(metadata.field_name)).par.map{ metadata =>
-      val fieldName = metadata.field_name
-      val fieldTypeFuture = inferFieldType(dataSetRepo, fieldName)
-      val inferredType = result(fieldTypeFuture, timeout)
-
-      val (fieldType, numValues) = metadata.field_type match {
-        case RCFieldType.radio => (FieldTypeId.Enum, getEnumValues(metadata))
-        case RCFieldType.checkbox => (FieldTypeId.Enum, getEnumValues(metadata))
-        case RCFieldType.dropdown => (FieldTypeId.Enum, getEnumValues(metadata))
-
-        case RCFieldType.calc => (inferredType, None)
-        case RCFieldType.text => (inferredType, None)
-        case RCFieldType.descriptive => (inferredType, None)
-        case RCFieldType.yesno => (inferredType, None)
-        case RCFieldType.notes => (inferredType, None)
-        case RCFieldType.file => (inferredType, None)
-      }
-
-      val categoryId = nameCategoryIdMap.get(metadata.form_name)
-      val field = Field(metadata.field_name, inferredType.fieldType, inferredType.isArray, numValues, Seq[String](), Some(metadata.field_label), categoryId)
-      fieldRepo.save(field)
-    }
-
-    // also add redcap_event_name
-    val visitFieldFuture = fieldRepo.save(Field(redCapVisitField, FieldTypeId.Enum))
-
-    Future.sequence(futures.toList ++ Seq(visitFieldFuture)).map(_ =>
-      messageLogger.info(s"RedCap dictionary inference and import for data set '${dataSetId}' successfully finished.")
-    )
+    (fieldNameLabelCategoryNameMap, nameCategoryMap.toMap)
   }
 
   private def getFieldNames(dataRepo: JsonCrudRepo): Future[Set[String]] =
@@ -872,14 +943,19 @@ class DataSetServiceImpl @Inject()(
         throw new AdaException(s"No records found. Unable to obtain field names. The associated data set might be empty.")
       )
 
-  private def getEnumValues(metadata: Metadata) : Option[Map[String, String]] = {
+  private def getEnumValues(metadata: Metadata) : Option[Map[Int, String]] = {
     val choices = metadata.select_choices_or_calculations.trim
 
     if (choices.nonEmpty) {
       try {
         val keyValueMap = choices.split(redCapChoicesDelimiter).map { choice =>
           val keyValueString = choice.split(redCapChoiceKeyValueDelimiter, 2)
-          (JsonUtil.escapeKey(keyValueString(0).trim), keyValueString(1).trim)
+
+          val stringKey = keyValueString(0).trim
+          val bigDecimalKey = BigDecimal(keyValueString(0).trim)
+          val value = keyValueString(1).trim
+
+          (fromRedCapEnumKey(stringKey), value)
         }.toMap
         Some(keyValueMap)
       } catch {
@@ -888,6 +964,15 @@ class DataSetServiceImpl @Inject()(
     } else
       None
   }
+
+  private def fromRedCapEnumKey(key: String): Int =
+    if (!key.contains(".")) {
+      // it's int
+      key.toInt
+    } else {
+      // it's double :( we need to convert it to negative integer to be stay injectivee
+      -key.replaceAll(".","").toInt
+    }
 
   def inferFieldTypes(
     dataRepo: JsonCrudRepo,
@@ -957,9 +1042,10 @@ class DataSetServiceImpl @Inject()(
       // fields to save or update
       fieldsToSaveAndUpdate: Seq[Either[Field, Field]] =
         fieldNameAndTypes.map { case (fieldName, fieldType) =>
+          val stringEnums = fieldType.enumValues.map(_.map { case (from, to) => (from.toString, to)})
           existingNameFieldMap.get(fieldName) match {
-            case None => Left(Field(fieldName, fieldType.fieldType, fieldType.isArray, fieldType.enumValues))
-            case Some(field) => Right(field.copy(fieldType = fieldType.fieldType, isArray = fieldType.isArray, numValues = fieldType.enumValues))
+            case None => Left(Field(fieldName, fieldType.fieldType, fieldType.isArray, stringEnums))
+            case Some(field) => Right(field.copy(fieldType = fieldType.fieldType, isArray = fieldType.isArray, numValues = stringEnums))
           }
         }
 
@@ -1020,46 +1106,62 @@ class DataSetServiceImpl @Inject()(
     val originalDataRepo = originalDsa.dataSetRepo
     val originalDictionaryRepo = originalDsa.fieldRepo
 
-    val newDsaFuture =
-      for {
-        originalDataSetInfo <- originalDsa.metaInfo
-        accessor <- dsaf.register(newDataSetMetaInfo.copy(dataSpaceId = originalDataSetInfo.dataSpaceId), newDataSetSetting)
-      } yield
-        accessor
-
     for {
-      // get the data repo for a new data set accessor
-      newDsa <- newDsaFuture
+      // get the accessor (data repo and field repo) for the newly registered data set
+      originalDataSetInfo <- originalDsa.metaInfo
+      newDsa <- dsaf.register(
+        newDataSetMetaInfo.copy(dataSpaceId = originalDataSetInfo.dataSpaceId), newDataSetSetting
+      )
       newDataRepo = newDsa.dataSetRepo
       newFieldRepo = newDsa.fieldRepo
-      // obtain translation map
+
+      // obtain the translation map
       translationMap <- translationRepo.find().map(
         _.map(translation => (translation.original, translation.translated)).toMap
       )
+
       // get the original dictionary fields
       originalFields <- originalDictionaryRepo.find()
+
       // get the field types
       originalFieldNameAndTypes = originalFields.map(field => (field.name, field.fieldTypeSpec)).toSeq
+
       // get the items (from the data set)
       items <- originalDataRepo.find(sort = Seq(AscSort(dataSetIdFieldName)))
+
       // transform the items and dictionary
       (newJsons, newFieldNameAndTypes) = translateDataAndDictionary(
         items, originalFieldNameAndTypes, translationMap, true, true)
+
       // delete all the data
-      _ <- newDataRepo.deleteAll
+      _ <- {
+        logger.info(s"Deleting all the data for '${newDataSetMetaInfo.id}'.")
+        newDataRepo.deleteAll
+      }
+
       // save the new items
-      _ <- newDataRepo.save(newJsons)
+      _ <- {
+        logger.info(s"Saving ${newJsons.size} new items...")
+        newDataRepo.save(newJsons)
+      }
+
       // delete all the fields of the new data
-      _ <- newFieldRepo.deleteAll
+      _ <- {
+        logger.info(s"Deleting all the fields for '${newDataSetMetaInfo.id}'.")
+        newFieldRepo.deleteAll
+      }
+
       // save the new fields
       _ <- {
         val originalNameFieldMap = originalFields.map(field => (field.name, field)).toMap
         val newFields = newFieldNameAndTypes.map { case (fieldName, fieldType) =>
+          val stringEnums = fieldType.enumValues.map(_.map { case (from, to) => (from.toString, to)})
           originalNameFieldMap.get(fieldName) match {
-            case Some(field) => field.copy(fieldType = fieldType.fieldType, isArray = fieldType.isArray, numValues = fieldType.enumValues)
-            case None => Field(fieldName, fieldType.fieldType, fieldType.isArray, fieldType.enumValues)
+            case Some(field) => field.copy(fieldType = fieldType.fieldType, isArray = fieldType.isArray, numValues = stringEnums)
+            case None => Field(fieldName, fieldType.fieldType, fieldType.isArray, stringEnums)
           }
         }
+        logger.info(s"Saving ${newFields.size} new fields...")
         newFieldRepo.save(newFields)
       }
     } yield
@@ -1162,12 +1264,12 @@ class DataSetServiceImpl @Inject()(
           }.toSeq.groupBy(_._2)
 
           val newValueOldKeys: Seq[(String, Seq[String])] =
-            newValueKeyGroupMap.map { case (value, oldKeyValues) => (value, oldKeyValues.map(_._1)) }.toSeq
+            newValueKeyGroupMap.map { case (value, oldKeyValues) => (value, oldKeyValues.map(_._1.toString)) }.toSeq
 
           val newFieldType = fti(newValueOldKeys.map(_._1))
 
           val oldKeyNewJsonMap: Map[String, JsValue] = newValueOldKeys.map { case (newValue, oldKeys) =>
-            val newJsonValue = newFieldType.parseToJson(newValue)
+            val newJsonValue = newFieldType.displayStringToJson(newValue)
             oldKeys.map((_, newJsonValue))
           }.flatten.toMap
 

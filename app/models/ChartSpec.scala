@@ -3,6 +3,7 @@ package models
 import _root_.util.JsonUtil._
 import play.api.libs.json._
 
+import scala.collection.mutable
 import scala.collection.mutable.{Map => MMap}
 import scala.math.BigDecimal.RoundingMode
 import dataaccess.ChartType
@@ -10,10 +11,13 @@ import dataaccess.ChartType
 abstract class ChartSpec{val title: String}
 
 case class CategoricalChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[DataPoint], chartType: ChartType.Value) extends ChartSpec
+
 case class NumericalChartSpec(title: String, data: Seq[(String, Int)], chartType: ChartType.Value) extends ChartSpec
 
 case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec
-case class ScatterChartSpec(title: String, data: Seq[Seq[Double]]) extends ChartSpec
+
+case class ScatterChartSpec(title: String, xAxisCaption: String, yAxisCaption: String, data: Seq[(String, String, Seq[Seq[Any]])]) extends ChartSpec
+
 case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec
 
 case class DataPoint(label: String, value: Int, key: Option[String])
@@ -38,11 +42,11 @@ object ChartSpec {
     chartType: Option[ChartType.Value] = None
   ): CategoricalChartSpec = {
     val countMap = MMap[Option[String], Int]()
-    values.foreach{ value =>
+    values.foreach { value =>
       val count = countMap.getOrElse(value, 0)
       countMap.update(value, count + 1)
     }
-    val data = countMap.toSeq.sortBy(_._2).map{
+    val data = countMap.toSeq.sortBy(_._2).map {
       case (key, count) => {
         val keyOrEmpty = key.getOrElse("")
         DataPoint(keyLabelMap.map(_.getOrElse(keyOrEmpty, keyOrEmpty)).getOrElse(keyOrEmpty), count, key)
@@ -55,70 +59,60 @@ object ChartSpec {
     * Given raw items and field names, column chart properties are generated.
     * Non-defined optional values are auto-calculated.
     *
-    * @param items Raw items.
+    * @param values Doubles.
     * @param fieldName Fields of interest.
     * @param columnCount Number of columns
     * @param explMin Optional max value for scaling of the columns.
     * @param explMax Optional min value for scaling of the columns.
     * @return ColumnChartSpec for us in view.
     */
-  def numerical(
-    items: Traversable[JsObject],
+  def numerical[T: Numeric](
+    values: Traversable[T],
     fieldName: String,
     title: String,
     columnCount: Int,
     xAxisScale: Option[Int] = None,
-    explMin: Option[Double] = None,
-    explMax: Option[Double] = None,
-    chartType: Option[ChartType.Value] = None
+    explMin: Option[T] = None,
+    explMax: Option[T] = None,
+    chartType: Option[ChartType.Value] = None,
+    xAxisLabel: Option[BigDecimal => String] = None
   ): NumericalChartSpec = {
-    val values = project(items.toList, fieldName).map(toDouble).flatten
+    val numeric = implicitly[Numeric[T]]
+
     val data = if (values.nonEmpty) {
-      val min: BigDecimal = if (explMin.isDefined) explMin.get else values.min
-      val max: BigDecimal = if (explMax.isDefined) explMax.get else values.max
+      val max = BigDecimal(
+        numeric.toDouble {
+          if (explMax.isDefined) explMax.get else values.reduce(numeric.max)
+        })
+
+      val min = BigDecimal(
+        numeric.toDouble {
+          if (explMin.isDefined) explMin.get else values.reduce(numeric.min)
+        })
+
       val stepSize: BigDecimal = (max - min) / columnCount
 
       for (step <- 0 until columnCount) yield {
         val left = min + step * stepSize
         val right = left + stepSize
         val count = if (step == columnCount - 1) {
-          values.filter(value => value >= left && value <= right).size
+          values.filter(value => numeric.toDouble(value) >= left && numeric.toDouble(value) <= right).size
         } else {
-          values.filter(value => value >= left && value < right).size
+          values.filter(value => numeric.toDouble(value) >= left && numeric.toDouble(value) < right).size
         }
 
         val xValue = if (xAxisScale.isDefined)
           left.setScale(xAxisScale.get, RoundingMode.HALF_UP)
         else
           left
-        (xValue.toString(), count)
+
+        (xAxisLabel.map(_.apply(xValue)).getOrElse(xValue.toString), count)
       }
     } else
       Seq[(String, Int)]()
+
     NumericalChartSpec(title, data, chartType.getOrElse(ChartType.Column))
   }
-
-  /**
-    * Extracts the fields of interest from the raw item lists for plotting.
-    *
-    * @param items Raw items.
-    * @param fieldName Fields of interest.
-    * @return ScatterChartSpec for use in view.
-    */
-  def scatter(
-    items: Traversable[(JsObject, JsObject)],
-    fieldName: String,
-    title: String
-  ) : ScatterChartSpec =
-    ScatterChartSpec(title,
-      items.map { case (item1, item2) =>
-        Seq(
-          toDouble(item1 \ fieldName).get,
-          toDouble(item2 \ fieldName).get
-        )
-      }.toSeq
-    )
-
 
   /**
     * Exctracts fields of interest from the raw items for boxplotting.

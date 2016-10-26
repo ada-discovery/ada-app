@@ -17,8 +17,6 @@ object JsonUtil {
     "MM.yyyy"
   ).map(new SimpleDateFormat(_))
 
-  private val standardDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-
   def createQueryStringBinder[E:Format](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[E] {
 
     override def bind(
@@ -135,47 +133,8 @@ object JsonUtil {
     * @param fieldName Field of interest.
     * @return Items in specified field.
     */
-  def project(items : Seq[JsObject], fieldName : String): Seq[JsLookupResult] =
+  def project(items : Traversable[JsObject], fieldName : String): Traversable[JsLookupResult] =
     items.map { item => (item \ fieldName) }
-
-  def projectDouble(items : Seq[JsObject], fieldName : String) : Seq[Option[Double]] =
-    project(items, fieldName).map(toDouble)
-
-  def projectString(items : Seq[JsObject], fieldName : String) : Seq[Option[String]] =
-    project(items, fieldName).map(toString)
-
-  def projectDate(items : Seq[JsObject], fieldName : String) : Seq[Option[Date]] =
-    project(items, fieldName).map(toDate)
-
-  def toDouble(value : JsReadable) : Option[Double] =
-    value match {
-      case JsNull => None
-      case JsNumber(n) => Some(n.toDouble)
-      case JsString(s) =>
-        try {
-          Some(s.toDouble)
-        } catch {
-          case e: NumberFormatException => None
-        }
-      case JsDefined(json) => toDouble(json)
-      case _: JsUndefined => None
-      case _ => None
-    }
-
-  def toInt(value : JsReadable) : Option[Int] =
-    value match {
-      case JsNull => None
-      case JsNumber(n) => Some(n.toInt)
-      case JsString(s) =>
-        try {
-          Some(s.toInt)
-        } catch {
-          case e: NumberFormatException => None
-        }
-      case JsDefined(json) => toInt(json)
-      case _: JsUndefined => None
-      case _ => None
-    }
 
   def toString(value: JsReadable): Option[String] =
     value match {
@@ -186,57 +145,6 @@ object JsonUtil {
       case _: JsUndefined => None
       case _ => Some(value.toString)
     }
-
-  def toDate(value: JsReadable): Option[Date] =
-    value match {
-      case JsNull => None
-      case JsString(s) => {
-        val dateFormat = dateFormats.find{ format =>
-          try {
-            format.parse(s)
-            true
-          } catch {
-            case e: ParseException => false
-          }
-        }
-
-        dateFormat.map(_.parse(s)) match {
-          case Some(date) => Some(date)
-          case _ =>
-            try {
-              Some(new Date(s.toLong))
-            } catch {
-              case e: NumberFormatException => None
-            }
-        }
-      }
-      case JsNumber(n) => Some(new Date(n.toLong))
-      case JsDefined(json) => toDate(json)
-      case _ => None
-    }
-
-  def toFormattedDate(value: JsReadable): Option[String] =
-    toDate(value).map(standardDateFormat.format)
-
-  /**
-    * Get smallest value of specified field. The values are cast to double before comparison.
-    *
-    * @param items Json items.
-    * @param fieldName Name of the field for finding minimum.
-    * @return Minimal value.
-    */
-  def getMin(items : Traversable[JsObject], fieldName : String): Double =
-    items.map { item => (item \ fieldName).toString.toDouble }.min
-
-  /**
-    * Get greatest value of specified field. The values are cast to double before comparison.
-    *
-    * @param items Json items.
-    * @param fieldName Name of the field for finding maximum.
-    * @return Maximal value.
-    */
-  def getMax(items : Traversable[JsObject], fieldName : String): Double =
-    items.map { item => (item \ fieldName).toString.toDouble }.max
 
   /**
     * Count objects of specified field to which the filter applies.

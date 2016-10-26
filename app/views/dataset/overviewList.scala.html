@@ -15,7 +15,7 @@
 @import dataaccess.DataSpaceMetaInfo
 @import dataaccess.FieldTypeId
 @import models.Page
-@import util.JsonUtil
+@import util.{JsonUtil, FieldTypeRenderer}
 @import java.text.{ParseException, SimpleDateFormat}
 
 @(
@@ -73,16 +73,8 @@
     }
 }
 
-@dateRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @jsValue.map(json => JsonUtil.toFormattedDate(json).getOrElse(JsonUtil.toString(json)))
-}
-
-@integerRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @jsValue.map(json => JsonUtil.toString(json))
-}
-
-@doubleRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @jsValue.map(json => JsonUtil.toString(json))
+@render(fun: Option[JsValue] => Html)(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @fun(jsValue)
 }
 
 @table = @{
@@ -101,15 +93,12 @@
                 else
                     Some(field.name, arrayRender(_, _, _))
             } else
-                if (field.fieldType == FieldTypeId.Integer)
-                    Some(field.name, integerRender(_, _, _))
-                else if (field.fieldType == FieldTypeId.Double)
-                    Some(field.name, doubleRender(_, _, _))
-                else if (field.fieldType == FieldTypeId.Date)
-                    Some(field.name, dateRender(_, _, _))
-                else if (field.fieldType == FieldTypeId.Json)
+                if (field.fieldType == FieldTypeId.Json)
                     Some(field.name, jsonRender(_, _, _))
-                else None
+                else {
+                    val renderer = FieldTypeRenderer(field)
+                    Some(field.name, { (id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) => renderer(jsValue) })
+                }
         }.flatten.toMap)
     )
 }

@@ -1,7 +1,8 @@
 package runnables.denopa
 
 import javax.inject.Inject
-import dataaccess.{Category, Criterion, DictionaryCategoryRepo}
+import dataaccess.RepoTypes.DictionaryFieldRepo
+import dataaccess.{Category, Criterion, Field, DictionaryCategoryRepo}
 import Criterion.CriterionInfix
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
@@ -28,49 +29,62 @@ protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runna
     val categoryRepo = dsa.categoryRepo
     val fieldRepo = dsa.fieldRepo
 
-    // delete all categories
-    result(categoryRepo.deleteAll, timeout)
+    val future = for {
+      // delete all the categories
+      _ <- categoryRepo.deleteAll
 
-    val categoryIdsFuture1 = saveRecursively(categoryRepo, subjectsData)
-    val categoryIdsFuture2 = saveRecursively(categoryRepo, clinicalData)
+      // save the subject categories
+      categoryIds1 <- saveRecursively(categoryRepo, subjectsData)
 
-    val categoryIdMap: Map[Category, BSONObjectID] =
-      (result(categoryIdsFuture1, timeout) ++ result(categoryIdsFuture2, timeout)).toMap
+      // save the clinical categories
+      categoryIds2 <- saveRecursively(categoryRepo, clinicalData)
 
-    val refFieldNames = (fieldCategoryMap.keys ++ fieldLabelMap.keys).toSet
+      // get the referenced fields and set the new categories and labels
+      newFields: Set[Option[Field]] <- Future.sequence {
+        val refFieldNames = (fieldCategoryMap.keys ++ fieldLabelMap.keys).toSet
+        val categoryIdMap: Map[Category, BSONObjectID] = (categoryIds1 ++ categoryIds2).toMap
 
-    val updateFieldFutures = refFieldNames.map{ fieldName =>
-      val escapedFieldName = escapeKey(fieldName)
+        refFieldNames.map{ fieldName =>
+          val escapedFieldName = escapeKey(fieldName)
 
-      fieldRepo.find(Seq("name" #== escapedFieldName)).map { fields =>
-        if (fields.nonEmpty) {
-          val field = fields.head
-
-          val category = fieldCategoryMap.get(fieldName)
-          val label = fieldLabelMap.get(fieldName)
-
-          if (category.isDefined)
-            field.categoryId = Some(categoryIdMap(category.get))
-          else {
-            println(s"No category found for the field $fieldName.")
+          fieldRepo.find(Seq("name" #== escapedFieldName)).map {
+            _.headOption.map( field =>
+              setCategoryAndLabel(field, fieldName, categoryIdMap)
+            )
           }
-
-          val newField = if (label.isDefined)
-            field.copy(label = Some(label.get))
-          else {
-            println(s"No category found for the field $fieldName.")
-            field
-          }
-
-          fieldRepo.update(newField)
-        } else {
-          println(s"$fieldName not found.")
-          Future(())
         }
       }
+
+      // save the new fields
+      _ <- fieldRepo.update(newFields.flatten)
+    } yield
+      ()
+
+    result(future, timeout)
+  }
+
+  private def setCategoryAndLabel(
+    field: Field,
+    fieldName: String,
+    categoryIdMap: Map[Category, BSONObjectID]
+  ): Field = {
+    val category = fieldCategoryMap.get(fieldName)
+    val label = fieldLabelMap.get(fieldName)
+
+    if (category.isDefined)
+      field.categoryId = Some(categoryIdMap(category.get))
+    else {
+      println(s"No category found for the field $fieldName.")
     }
 
-    result(Future.sequence(updateFieldFutures), timeout)
+    val newField = if (label.isDefined)
+      field.copy(label = Some(label.get))
+    else {
+      println(s"No category found for the field $fieldName.")
+      field
+    }
+
+    newField
   }
 }
 

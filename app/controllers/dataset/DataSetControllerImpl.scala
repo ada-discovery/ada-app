@@ -2,7 +2,7 @@ package controllers.dataset
 
 import java.text.SimpleDateFormat
 import java.util.concurrent.TimeoutException
-import java.util.Date
+import java.{util => ju}
 import javax.inject.Inject
 
 import _root_.util.JsonUtil._
@@ -22,7 +22,7 @@ import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, RequestHeader, Request}
 import reactivemongo.bson.BSONObjectID
-import services.{FieldTypeHelper, TranSMARTService}
+import services.TranSMARTService
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
@@ -74,6 +74,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private val numericTypes = Seq(FieldTypeId.Double.toString, FieldTypeId.Integer.toString)
   private val categoricalTypes = Seq(FieldTypeId.Enum.toString, FieldTypeId.String.toString, FieldTypeId.Boolean.toString)
+
+  private val ftf = FieldTypeHelper.fieldTypeFactory
 
   override protected def listViewColumns = Some(setting.listViewTableColumnNames)
 
@@ -142,15 +144,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Map[String, String => Any] = result(
     getFields(fieldNames).map(
       _.map { field =>
-        val converterOption = field.fieldType match {
-          case FieldTypeId.Integer => Some(ConversionUtil.toInt)
-          case FieldTypeId.Double => Some(ConversionUtil.toDouble)
-          case FieldTypeId.Enum => Some(ConversionUtil.toInt)
-          case FieldTypeId.Date => Some(ConversionUtil.toDate(FieldTypeHelper.dateFormats))
-          case _ => None
-        }
-        converterOption.map(converter => (field.name, converter))
-      }.flatten.toMap
+        val fieldType = ftf(field.fieldTypeSpec)
+        val converter = { text: String => fieldType.displayStringToValue(text).getOrElse("") }
+        (field.name, converter)
+      }.toMap
     )
   )
 
@@ -249,7 +246,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    val start = new java.util.Date()
+    val start = new ju.Date()
     val fieldCharts = setting.overviewFieldChartTypes
     val chartFieldNames = fieldCharts.map(_.fieldName)
     val tableFieldNames = listViewColumns.get
@@ -267,7 +264,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       for {
         count <- futureTableCount
         fieldNameMap <- fieldNameMapFuture
-        items <- {
+        tableItems <- {
           val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
             fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
           }
@@ -275,25 +272,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
         chartItems <- chartItemsFuture
       } yield {
-        val tableFieldNameMap = tableFieldNames.map(fieldName =>
-          fieldNameMap.get(fieldName).map(field =>
-            (fieldName, field)
-          )
-        ).flatten.toMap
         val tableFields = tableFieldNames.map(fieldNameMap.get).flatten
-
-        val renamedItems = items.map(renameValues(tableFieldNameMap, _))
-
         val chartFields = chartFieldNames.map(fieldNameMap.get).flatten
         val chartSpecs = createChartSpecs(fieldCharts, chartFields, chartItems)
         val fieldChartSpecs = chartSpecs.map(chartSpec => FieldChartSpec(chartSpec._1, chartSpec._2))
 
-        val end = new java.util.Date()
+        val end = new ju.Date()
 
         Logger.info(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
         render {
-          case Accepts.Html() => Ok(overviewListView(Page(renamedItems, page, page * pageLimit, count, orderBy, filter), fieldChartSpecs, tableFields))
-          case Accepts.Json() => Ok(Json.toJson(renamedItems))
+          case Accepts.Html() => Ok(overviewListView(Page(tableItems, page, page * pageLimit, count, orderBy, filter), fieldChartSpecs, tableFields))
+          case Accepts.Json() => Ok(Json.toJson(tableItems))
         }
       }
     }.recover {
@@ -301,32 +290,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         Logger.error("Problem found in the overviewList process")
         InternalServerError(t.getMessage)
     }
-  }
-
-  // TODO just temporary
-  private def renameValues(
-    fieldNameMap: Map[String, Field],
-    item: JsObject
-  ): JsObject = {
-    val newValueFutures: Traversable[(String, JsValue)] = item.fields.map { case (fieldName, value) =>
-      val stringValue = JsonUtil.toString(value)
-
-      val newValue: JsValue = if (stringValue.isDefined) {
-        fieldNameMap.get(fieldName).map { field =>
-          val enumValues = field.numValues
-
-          if (enumValues.isDefined) {
-            enumValues.get.get(stringValue.get).map(JsString(_)).getOrElse(value)
-          } else
-            value
-        }.getOrElse(value)
-      } else
-       value
-
-      (fieldName, newValue)
-    }
-
-    JsObject(newValueFutures.toSeq)
   }
 
   /**
@@ -382,30 +345,70 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldOrName: Either[Field, String],
     chartType: Option[ChartType.Value]
   ): ChartSpec = {
-    val (fieldName, chartTitle, enumMap, fieldType) = fieldOrName match {
+    val (fieldName, chartTitle, enumMap, fieldTypeSpec) = fieldOrName match {
       case Left(field) => (
         field.name,
         field.label.getOrElse(fieldLabel(field.name)),
         field.numValues,
-        field.fieldType
+        field.fieldTypeSpec
       )
       // failover... no corresponding field, providing default values instead
       case Right(fieldName) => (
         fieldName,
         fieldLabel(fieldName),
         None,
-        FieldTypeId.String
+        FieldTypeSpec(FieldTypeId.String, false)
       )
     }
 
-    fieldType match {
-      case FieldTypeId.String | FieldTypeId.Enum | FieldTypeId.Boolean => ChartSpec.categorical(
-        getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend, chartType)
+    val jsons = project(items, fieldName)
+    val fieldType = ftf(fieldTypeSpec)
 
-      case FieldTypeId.Double | FieldTypeId.Integer => ChartSpec.numerical(items, fieldName, chartTitle, 20, Some(1), None, None, chartType)
+    val fieldTypeId = fieldTypeSpec.fieldType
+    fieldTypeId match {
+      case FieldTypeId.String =>
+        ChartSpec.categorical(
+          getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend, chartType
+        )
+
+      case FieldTypeId.Enum =>
+        ChartSpec.categorical(
+          getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend, chartType
+        )
+
+      case FieldTypeId.Boolean =>
+        ChartSpec.categorical(
+          getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend, chartType
+        )
+
+      case FieldTypeId.Double => {
+        val doubleFieldType = fieldType.asInstanceOf[FieldType[Double]]
+        val doubles = jsons.map(doubleFieldType.jsonToValue).flatten
+
+        ChartSpec.numerical(doubles, fieldName, chartTitle, 20, Some(1), None, None, chartType)
+      }
+
+      case FieldTypeId.Integer => {
+        val doubleFieldType = fieldType.asInstanceOf[FieldType[Long]]
+        val longs = project(items, fieldName).map(doubleFieldType.jsonToValue).flatten
+
+        ChartSpec.numerical(longs, fieldName, chartTitle, 20, Some(1), None, None, chartType)
+      }
+
+      case FieldTypeId.Date => {
+        val dateFieldType = fieldType.asInstanceOf[FieldType[ju.Date]]
+        val dates = project(items, fieldName).map(dateFieldType.jsonToValue).flatten
+        val ints = dates.map(_.getTime)
+
+        val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+        def formatDate(ms: BigDecimal) = dateFormat.format(new ju.Date(ms.toLongExact))
+
+        ChartSpec.numerical(ints, fieldName, chartTitle, 20, Some(1), None, None, chartType, Some(formatDate))
+      }
 
       case _ => ChartSpec.categorical(
-        getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend)
+        getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend
+      )
     }
   }
 
@@ -499,29 +502,33 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val xFieldName = xField.get.name
       val yFieldName = yField.get.name
 
+      val xFieldType = ftf(xField.get.fieldTypeSpec)
+      val yFieldType = ftf(yField.get.fieldTypeSpec)
+
       val criteria = toCriteria(filter)
       val projection = Seq(xFieldName, yFieldName) ++ groupField.map(_.name)
       val futureXYZItems = repo.find(criteria, Nil, projection.toSet)
 
       futureXYZItems.map{ xyzItems =>
         val xyzSeq = xyzItems.toSeq
-        val xValues = projectDouble(xyzSeq, xFieldName)
-        val yValues = projectDouble(xyzSeq, yFieldName)
+        val xJsons = project(xyzSeq, xFieldName).toSeq
+        val yJsons = project(xyzSeq, yFieldName).toSeq
+
+        val xValues = xJsons.map(xFieldType.jsonToValue)
+        val yValues = yJsons.map(yFieldType.jsonToValue)
 
         groupField match {
           case Some(zField) => {
-            val groupValues = projectString(xyzSeq, zField.name)
+            val zFieldType = ftf(zField.fieldTypeSpec)
+            val groupJsons = project(xyzSeq, zField.name).toSeq
+            val groupValues = groupJsons.map(zFieldType.jsonToDisplayString)
+
             // TODO: simplify this
             (groupValues, xValues, yValues).zipped.map { case (zValue, xValue, yValue) =>
-              (zValue, xValue, yValue).zipped
-            }.flatten.groupBy(_._1).map{ case (zValue, values) =>
+              (Some(zValue), xValue, yValue).zipped
+            }.flatten.groupBy(_._1).map { case (zValue, values) =>
               (
-                zField.numValues.map(_.get(zValue)).flatten.getOrElse(
-                  if (zValue.trim.isEmpty)
-                    "N/A"
-                  else
-                    zValue
-                ),
+                zValue,
                 values.map(tupple => (tupple._2, tupple._3))
               )
             }.toSeq
@@ -620,40 +627,38 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filter: Seq[FilterCondition],
     dateField: Field,
     groupField: Option[Field]
-  ): Future[Seq[(String, Seq[(Date, Any)])]] = {
+  ): Future[Seq[(String, Seq[(ju.Date, Any)])]] = {
     val dateFieldName = dateField.name
 
     val criteria = toCriteria(filter)
     val projection = Seq(dateFieldName) ++ groupField.map(_.name)
     val dateGroupItemsFuture = repo.find(criteria, Nil, projection.toSet)
 
-    val groupDatesFuture: Future[Seq[(String, Seq[Date])]] = dateGroupItemsFuture.map { dateGroupItems =>
-      val dateGroupSeq = dateGroupItems.toSeq
-      val dates = projectDate(dateGroupSeq, dateFieldName)
+    val dateFieldType = ftf(dateField.fieldTypeSpec).asInstanceOf[FieldType[ju.Date]]
 
-      groupField match {
-        case Some(zField) => {
-          val groups = projectString(dateGroupSeq, zField.name)
+    val groupDatesFuture: Future[Seq[(String, Seq[ju.Date])]] =
+      dateGroupItemsFuture.map { dateGroupItems =>
+        val dateGroupSeq = dateGroupItems.toSeq
+        val dateJsons = project(dateGroupSeq, dateFieldName).toSeq
+        val dates = dateJsons.map(dateFieldType.jsonToValue)
 
-          // TODO: simplify this
-          (groups, dates).zipped.map { case (group, date) =>
-            (group, date).zipped
-          }.flatten.groupBy(_._1).map { case (group, values) =>
-            val groupName =
-              zField.numValues.map(_.get(group)).flatten.getOrElse(
-                if (group.trim.isEmpty)
-                  "N/A"
-                else
-                  group
-              )
+        groupField match {
+          case Some(zField) => {
+            val groupFieldType = ftf(zField.fieldTypeSpec)
+            val groupJsons = project(dateGroupSeq, zField.name).toSeq
+            val groups = groupJsons.map(groupFieldType.jsonToDisplayString)
 
-            (groupName, values.map(_._2))
-          }.toSeq
+            // TODO: simplify this
+            (groups, dates).zipped.map { case (group, date) =>
+              (Some(group), date).zipped
+            }.flatten.groupBy(_._1).map { case (group, values) =>
+              (group, values.map(_._2))
+            }.toSeq
+          }
+          case None =>
+            Seq(("all", dates.flatten))
         }
-        case None =>
-          Seq(("all", dates.flatten))
       }
-    }
 
     groupDatesFuture.map(_.map{ case (name, dates) =>
       val count = (dates.sorted, Stream.from(1)).zipped.toSeq
@@ -676,16 +681,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Some(item) => Ok((item \ fieldName).get)
         case None => BadRequest(s"Item '${id.stringify}' not found.")
       }
-  }
-
-  /**
-    * TODO: implement. what is it supposed to return?
-    *
-    * @param value ???
-    * @param fieldType ???
-    */
-  private def readJsValueTyped(value : JsValue, fieldType : FieldTypeId.Value) {
-
   }
 
   private def getFieldLabelMap(fieldNames : Traversable[String]): Future[Map[String, String]] = {

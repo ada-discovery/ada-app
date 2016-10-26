@@ -44,7 +44,7 @@ class JsonBinaryCacheAsyncCrudRepoFactory @Inject()(
     configuration: Configuration
   ) extends JsonCrudRepoFactory {
 
-  private val ftf = FieldTypeFactory(Set[String](""), Seq[String](), 20)
+  private val ftf = FieldTypeFactory(Set[String](""), Seq[String](), "", 20)
 
   override def apply(collectionName: String): JsonCrudRepo =
     applyWithDictionaryAux(collectionName, Nil)

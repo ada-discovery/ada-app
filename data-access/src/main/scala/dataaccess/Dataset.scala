@@ -97,7 +97,7 @@ case class Field(
   var categoryId: Option[BSONObjectID] = None,
   var category: Option[Category] = None
 ) {
-  def fieldTypeSpec: FieldTypeSpec = FieldTypeSpec(fieldType, isArray, numValues)
+  def fieldTypeSpec: FieldTypeSpec = FieldTypeSpec(fieldType, isArray, numValues.map(_.map{ case (a,b) => (a.toInt, b)}))
 }
 
 object FieldTypeId extends Enumeration {
@@ -107,7 +107,7 @@ object FieldTypeId extends Enumeration {
 case class FieldTypeSpec(
   fieldType: FieldTypeId.Value,
   isArray: Boolean = false,
-  enumValues: Option[Map[String, String]] = None
+  enumValues: Option[Map[Int, String]] = None
 )
 
 case class NumFieldStats(min : Double, max : Double, mean : Double, variance : Double)

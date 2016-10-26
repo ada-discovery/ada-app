@@ -2,27 +2,74 @@ package dataaccess
 
 import play.api.libs.json._
 
+import scala.reflect.ClassTag
+import scala.reflect.runtime.universe._
+import scala.reflect.runtime.{universe => ru}
+
 trait FieldType[T] {
+
   val spec: FieldTypeSpec
   val valueClass: Class[_]
+  val classTag: Option[ClassTag[T]]
 
-  protected val nullAliases: Set[String]
-  protected def parseWoNull(text: String): T
+  protected[dataaccess] val nullAliases: Set[String]
 
-  def parse(text: String): Option[T] =
+  def displayStringToValue(text: String): Option[T] =
     if (text == null)
       None
-    else if (nullAliases.contains(text.trim.toLowerCase))
-      None
-    else
-      Some(parseWoNull(text))
+    else {
+      val trimmedText = text.trim
+      if (nullAliases.contains(trimmedText.toLowerCase))
+        None
+      else
+        Some(displayStringToValueWoNull(trimmedText))
+    }
 
-  def toJson(value: T): JsValue
-  def parseToJson(text: String): JsValue =
-    parse(text).fold(JsNull: JsValue)
-      {value => toJson(value)}
+  protected def displayStringToValueWoNull(text: String): T
+
+  def displayJsonToValue(json: JsReadable): Option[T] =
+    json match {
+      case JsNull => None
+      case JsString(s) => displayStringToValue(s)
+      case JsDefined(json) => displayJsonToValue(json)
+      case _: JsUndefined => None
+      case _ => Some(displayJsonToValueWoString(json))
+    }
+
+  protected def displayJsonToValueWoString(json: JsReadable): T
+    = throw new AdaConversionException(s"JSON $json is supposed to be a String.")
+
+  def jsonToValue(json: JsReadable): Option[T] =
+    json match {
+      case JsNull => None
+      case _: JsUndefined => None
+      case JsDefined(json) => jsonToValue(json)
+      case _ => Some(jsonToValueWoNull(json))
+    }
+
+  protected def jsonToValueWoNull(json: JsReadable): T
+
+  def valueToJson(value: Option[T]): JsValue =
+    value.map(valueToJsonNonEmpty).getOrElse(JsNull)
+
+  protected def valueToJsonNonEmpty(value: T): JsValue
+
+  def valueToDisplayString(value: Option[T]): String =
+    value.map(valueToDisplayStringNonEmpty).getOrElse("")
+
+  protected def valueToDisplayStringNonEmpty(value: T): String =
+    value.toString
+
+  def displayStringToJson(text: String): JsValue =
+    valueToJson(displayStringToValue(text))
+
+  def jsonToDisplayString(json: JsReadable): String =
+    valueToDisplayString(jsonToValue(json))
+
+  def isValueOf[E: TypeTag] =
+    typeOf[E].typeSymbol.asClass.equals(valueClass)
 }
 
 private abstract class FormatFieldType[T: Format] extends FieldType[T] {
-  def toJson(value: T): JsValue = Json.toJson(value)
+  override protected def valueToJsonNonEmpty(value: T): JsValue = Json.toJson(value)
 }

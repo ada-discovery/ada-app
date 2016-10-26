@@ -1,11 +1,16 @@
 package dataaccess
 
+import java.text.SimpleDateFormat
+import java.util.Date
+
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import play.api.libs.json._
 import java.{util => ju}
 import java.{lang => jl}
 import dataaccess.ConversionUtil._
+
+import scala.reflect.ClassTag
 
 trait FieldTypeFactory {
   def apply(field: FieldTypeSpec): FieldType[_]
@@ -18,119 +23,395 @@ private case class EnumFieldType(
     enumValueMap: Map[Int, String]
   ) extends FormatFieldType[Int] {
 
-  val spec = FieldTypeSpec(FieldTypeId.Enum, false, Some(enumValueMap.map{ case (from, to) => (from.toString, to)}))
-  val valueClass = classOf[Int]
+  val spec = FieldTypeSpec(FieldTypeId.Enum, false, Some(enumValueMap))
+
+  override val valueClass = classOf[Int]
+
+  override val classTag = Some(implicitly[ClassTag[Int]])
+
   val reversedEnumValueMap = enumValueMap.map(_.swap)
 
-  protected def parseWoNull(text: String) =
-    reversedEnumValueMap(text)
+  override protected def displayStringToValueWoNull(text: String) =
+    reversedEnumValueMap.get(text).getOrElse(
+      throw new AdaConversionException(s"$text is not enum: ${enumValueMap.mkString(";")}.")
+    )
+
+  override protected def valueToDisplayStringNonEmpty(value: Int) =
+    enumValueMap.get(value).getOrElse(
+      throw new AdaConversionException(s"$value is not enum: ${enumValueMap.mkString(";")}.")
+    )
+
+  override protected def jsonToValueWoNull(json: JsReadable): Int =
+    json match {
+      case JsNumber(number) =>
+        try {
+          val int = number.toIntExact
+          if (enumValueMap.contains(int))
+            int
+          else
+            throw new AdaConversionException(s"$number is not enum's int: ${enumValueMap.mkString(";")}.")
+        } catch {
+          case e: ArithmeticException => throw new AdaConversionException(s"$number is not enum's int: ${enumValueMap.mkString(";")}.")
+        }
+      case _ => throw new AdaConversionException(s"Json $json is not enum's int.")
+    }
+
+  override protected def valueToJsonNonEmpty(value: Int): JsValue =
+    if (enumValueMap.contains(value))
+      super.valueToJsonNonEmpty(value)
+    else
+      throw new AdaConversionException(s"$value is not enum's int: ${enumValueMap.mkString(";")}.")
+}
+
+private case class ArrayFieldType[T](
+    elementFieldType: FieldType[T],
+    delimiter: String
+  ) extends FieldType[Array[Option[T]]] {
+
+  val elementFieldTypeSpec = elementFieldType.spec
+  val spec = FieldTypeSpec(elementFieldTypeSpec.fieldType, true, elementFieldTypeSpec.enumValues)
+
+  override protected[dataaccess] val nullAliases: Set[String] = elementFieldType.nullAliases
+
+  override val valueClass = classOf[Array[Any]]
+
+  override val classTag = None
+
+  private implicit val elementClassTag: ClassTag[T] =
+    elementFieldType.classTag.getOrElse(throw new IllegalArgumentException(s"No class tag provided for $elementFieldTypeSpec."))
+
+  override protected def displayStringToValueWoNull(text: String) = {
+    val values: Seq[Option[T]] = text.split(delimiter, -1).map(textElement =>
+      elementFieldType.displayStringToValue(textElement.trim))
+    values.toArray
+  }
+
+  override protected def displayJsonToValueWoString(json: JsReadable) =
+    json match {
+      case JsArray(seq) => {
+        val values: Seq[Option[T]] = seq.map(elementFieldType.displayJsonToValue)
+        values.toArray
+      }
+      case _ => throw new AdaConversionException(s"JSON $json is not an array.")
+    }
+
+  override protected def valueToDisplayStringNonEmpty(array: Array[Option[T]]) =
+    array.map( elementValue =>
+      elementFieldType.valueToDisplayString(elementValue)
+    ).mkString(delimiter)
+
+  override protected def jsonToValueWoNull(json: JsReadable): Array[Option[T]] =
+    json match {
+      case JsArray(array) =>
+        array.map( elementJson =>
+          elementFieldType.jsonToValue(elementJson)
+        ).toArray
+      case _ => throw new AdaConversionException(s"JSON $json is not an array.")
+    }
+
+  override def valueToJsonNonEmpty(array: Array[Option[T]]): JsValue = {
+    val jsValues = array.map(elementFieldType.valueToJson)
+    JsArray(jsValues)
+  }
 }
 
 object FieldTypeFactory {
   def apply(
     nullAliases: Set[String],
     dateFormats: Traversable[String],
+    displayDateFormat: String,
     enumValuesMaxCount: Int
-//    textBooleanValues : List[String],
-//    numBooleanValues  : List[String],
-  ): FieldTypeFactory = new FieldTypeFactoryImpl(nullAliases, dateFormats, enumValuesMaxCount)
+  ): FieldTypeFactory = new FieldTypeFactoryImpl(nullAliases, dateFormats, displayDateFormat, enumValuesMaxCount)
 }
 
 private class FieldTypeFactoryImpl(
     nullValues: Set[String],
     dateFormats: Traversable[String],
+    displayDateFormat: String,
     enumValuesMaxCount: Int
   ) extends FieldTypeFactory {
 
-  private val staticTypes = Seq(
+  private val staticScalarTypes: Seq[FieldType[_]] = Seq(
     // Null
-    new FieldType[Any] {
+    new FieldType[Nothing] {
       val spec = FieldTypeSpec(FieldTypeId.Null, false)
-      val valueClass = classOf[String]
-      protected val nullAliases = nullValues
 
-      protected def parseWoNull(text: String) =
-        throw new AdaConversionException(s"$text in not null.")
+      val valueClass = classOf[Nothing]
 
-      def toJson(value: Any) = JsNull
+      override val classTag = Some(implicitly[ClassTag[Nothing]])
+
+      override protected[dataaccess] val nullAliases = nullValues
+
+      override protected def displayStringToValueWoNull(text: String) =
+        throw new AdaConversionException(s"$text is not null.")
+
+      override protected def displayJsonToValueWoString(json: JsReadable) =
+        throw new AdaConversionException(s"$json is not null.")
+
+      override protected def valueToDisplayStringNonEmpty(value: Nothing) =
+        ""
+
+      override protected def jsonToValueWoNull(json: JsReadable) =
+        throw new AdaConversionException(s"$json is not null.")
+
+      override protected def valueToJsonNonEmpty(value: Nothing) = JsNull
     },
 
     // Integer
     new FormatFieldType[Long] {
       val spec = FieldTypeSpec(FieldTypeId.Integer, false)
-      val valueClass = classOf[jl.Long]
-      protected val nullAliases = nullValues
 
-      protected def parseWoNull(text: String) = toLong(text)
+      val valueClass = classOf[jl.Long]
+
+      override val classTag = Some(implicitly[ClassTag[Long]])
+
+      override protected[dataaccess] val nullAliases = nullValues
+
+      override protected def displayJsonToValueWoString(json: JsReadable) =
+        json match {
+          case JsNumber(number) =>
+            try {
+              number.toLongExact
+            } catch {
+              case e: ArithmeticException => throw new AdaConversionException(s"Json $json is not long.")
+            }
+          case  _ => throw new AdaConversionException(s"Json $json is not long.")
+        }
+
+      override protected def jsonToValueWoNull(json: JsReadable) =
+        displayJsonToValueWoString(json)
+
+      override protected def displayStringToValueWoNull(text: String) =
+        toLong(text)
     },
 
     // Double
     new FormatFieldType[Double] {
       val spec = FieldTypeSpec(FieldTypeId.Double, false)
-      val valueClass = classOf[jl.Double]
-      protected val nullAliases = nullValues
 
-      protected def parseWoNull(text: String) = toDouble(text)
+      val valueClass = classOf[jl.Double]
+
+      override val classTag = Some(implicitly[ClassTag[Double]])
+
+      override protected[dataaccess] val nullAliases = nullValues
+
+      override protected def displayJsonToValueWoString(json: JsReadable) =
+        json match {
+          case JsNumber(number) =>
+            try {
+              number.toDouble
+            } catch {
+              case e: ArithmeticException => throw new AdaConversionException(s"Json $json is not double.")
+            }
+          case  _ => throw new AdaConversionException(s"Json $json is not double.")
+        }
+
+      override protected def jsonToValueWoNull(json: JsReadable) =
+        displayJsonToValueWoString(json)
+
+      override protected def displayStringToValueWoNull(text: String) =
+        toDouble(text)
     },
 
     // Boolean
     new FormatFieldType[Boolean] {
       val spec = FieldTypeSpec(FieldTypeId.Boolean, false)
-      val valueClass = classOf[jl.Boolean]
-      protected val nullAliases = nullValues
 
-      protected def parseWoNull(text: String) = toBoolean(text)
+      val valueClass = classOf[jl.Boolean]
+
+      override val classTag = Some(implicitly[ClassTag[Boolean]])
+
+      override protected[dataaccess] val nullAliases = nullValues
+
+      override protected def displayJsonToValueWoString(json: JsReadable) =
+        json match {
+          case JsBoolean(boolean) => boolean
+          case JsNumber(number) => toBoolean(number.toString)  // we accept also number as a display Json
+          case  _ => throw new AdaConversionException(s"Json $json cannot be converted to a Boolean.")
+        }
+
+      override protected def jsonToValueWoNull(json: JsReadable) =
+        json match {
+          case JsBoolean(boolean) => boolean
+          case  _ => throw new AdaConversionException(s"Json $json is not boolean.")
+        }
+
+      override protected def displayStringToValueWoNull(text: String) =
+        toBoolean(text)
     },
 
     // Date
     new FormatFieldType[ju.Date] {
       val spec = FieldTypeSpec(FieldTypeId.Date, false)
-      val valueClass = classOf[ju.Date]
-      protected val nullAliases = nullValues
 
-      protected def parseWoNull(text: String) = toDate(dateFormats)(text)
+      val valueClass = classOf[ju.Date]
+
+      override val classTag = Some(implicitly[ClassTag[ju.Date]])
+
+      private val displayFormatter = new SimpleDateFormat(displayDateFormat)
+
+      override protected[dataaccess] val nullAliases = nullValues
+
+      override protected def displayStringToValueWoNull(text: String) =
+        toDate(dateFormats)(text)
+
+      override protected def displayJsonToValueWoString(json: JsReadable) =
+        throw new AdaConversionException(s"Json $json cannot be converted to a Date.")
+
+      override protected def jsonToValueWoNull(json: JsReadable) =
+        json match {
+          case JsNumber(number) => new ju.Date(number.toLong)
+          case  _ => throw new AdaConversionException(s"Json $json cannot be converted to a Date.")
+        }
+
+      override protected def valueToDisplayStringNonEmpty(date: Date) =
+        displayFormatter.format(date)
     },
 
     // String
     new FormatFieldType[String] {
       val spec = FieldTypeSpec(FieldTypeId.String, false)
-      val valueClass = classOf[String]
-      protected val nullAliases = nullValues
 
-      protected def parseWoNull(text: String) = text
+      val valueClass = classOf[String]
+
+      override val classTag = Some(implicitly[ClassTag[String]])
+
+      override protected[dataaccess] val nullAliases = nullValues
+
+      override protected def displayStringToValueWoNull(text: String) =
+        text
+
+      override protected def displayJsonToValueWoString(json: JsReadable) =
+        json match {
+          case JsNumber(number) => number.toString
+          case JsBoolean(value) => value.toString
+          case  _ => throw new AdaConversionException(s"Json $json is not String.")
+        }
+
+      override protected def jsonToValueWoNull(json: JsReadable) =
+        json match {
+          case JsString(text) => text
+          case  _ => throw new AdaConversionException(s"Json $json is not a String.")
+        }
     },
 
     // Json
-    new FormatFieldType[JsValue] {
+    new FormatFieldType[JsObject] {
       val spec = FieldTypeSpec(FieldTypeId.Json, false)
-      val valueClass = classOf[JsValue]
-      protected val nullAliases = nullValues
 
-      protected def parseWoNull(text: String) =
+      val valueClass = classOf[JsObject]
+
+      override val classTag = Some(implicitly[ClassTag[JsObject]])
+
+      override protected[dataaccess] val nullAliases = nullValues
+
+      override protected def displayStringToValueWoNull(text: String) =
         try {
-          Json.parse(text)
+          Json.parse(text) match {
+            case x: JsObject => x
+            case _ => throw new AdaConversionException(s"$text cannot be parsed to a JSON.")
+          }
         } catch {
-          case e: JsonParseException => throw new AdaConversionException("Json expected")
-          case e: JsonMappingException => throw new AdaConversionException("Json expected")
+          case e: JsonParseException => throw new AdaConversionException(s"$text cannot be parsed to a JSON.")
+          case e: JsonMappingException => throw new AdaConversionException(s"$text cannot be parsed to a JSON.")
         }
+
+      override protected def valueToDisplayStringNonEmpty(json: JsObject) =
+        Json.stringify(json)
+
+      override def displayJsonToValue(json: JsReadable): Option[JsObject] =
+        json match {
+          case JsNull => None
+          case JsDefined(json) => displayJsonToValue(json)
+          case _: JsUndefined => None
+          case x: JsObject => Some(x)
+          case _ => throw new AdaConversionException(s"$json cannot be parsed to a JSON.")
+        }
+
+      override protected def jsonToValueWoNull(json: JsReadable) =
+        displayJsonToValue(json).get
     }
   )
 
-  private val staticTypeMap = staticTypes.map(fType => (fType.spec, fType)).toMap
+  private val staticJsonArrayType = new FieldType[Array[Option[JsObject]]] {
 
-  override def apply(fieldTypeSpec: FieldTypeSpec) = {
+    val spec = FieldTypeSpec(FieldTypeId.Json, true)
+
+    val valueClass = classOf[Array[Any]]
+
+    override val classTag = None
+
+    override protected[dataaccess] val nullAliases = nullValues
+
+    override protected def displayStringToValueWoNull(text: String) =
+      try {
+        val json = Json.parse(text)
+        json match {
+          case JsArray(value) => value.map(toOption).toArray
+          case _ => Array(toOption(json))
+        }
+      } catch {
+        case e: JsonParseException => throw new AdaConversionException(s"$text cannot be parsed to a JSON array.")
+        case e: JsonMappingException => throw new AdaConversionException(s"$text cannot be parsed to a JSON array.")
+      }
+
+    override protected def valueToDisplayStringNonEmpty(jsons: Array[Option[JsObject]]) =
+      Json.stringify(JsArray(jsons.map(fromOption)))
+
+    override def displayJsonToValue(json: JsReadable): Option[Array[Option[JsObject]]] =
+      json match {
+        case JsNull => None
+        case JsDefined(json) => displayJsonToValue(json)
+        case _: JsUndefined => None
+        case JsArray(array) => Some(array.map(toOption).toArray)
+        case x: JsObject => Some(Array(Some(x)))
+        case _ => throw new AdaConversionException(s"$json is not a JSON array.")
+      }
+
+    override protected def jsonToValueWoNull(json: JsReadable) =
+      json match {
+        case JsArray(array) => array.map(toOption).toArray
+        case _ => throw new AdaConversionException(s"$json is not a JSON array.")
+      }
+
+    override protected def valueToJsonNonEmpty(value: Array[Option[JsObject]]) =
+      JsArray(value.map(fromOption))
+
+    private def toOption(value: JsValue): Option[JsObject] =
+      value match  {
+        case JsNull => None
+        case x: JsObject => Some(x)
+        case _ =>  throw new AdaConversionException(s"$value is not a JSON object.")
+      }
+
+    private def fromOption(value: Option[JsObject]): JsValue =
+      value match  {
+        case None => JsNull
+        case Some(value) => value
+      }
+  }
+
+  private val staticArrayTypes: Seq[FieldType[_]] = staticScalarTypes.map(scalarType => ArrayFieldType(scalarType, ",")) ++ Seq(staticJsonArrayType)
+
+  private val staticTypes: Seq[FieldType[_]] = staticScalarTypes ++ staticArrayTypes
+
+  private val staticTypeMap: Map[FieldTypeSpec, FieldType[_]] = staticTypes.map(fType => (fType.spec, fType)).toMap
+
+  override def apply(fieldTypeSpec: FieldTypeSpec): FieldType[_] = {
     val fieldTypeId = fieldTypeSpec.fieldType
     // handle dynamic types (e.g. enum)
     if (fieldTypeId == FieldTypeId.Enum) {
-      val intEnumMap = fieldTypeSpec.enumValues.map(
-        _.map { case (from, to) => (from.toInt, to) }
-      )
-      EnumFieldType(nullValues, enumValuesMaxCount, intEnumMap.getOrElse(Map[Int, String]()))
-    } else {
+      val intEnumMap = fieldTypeSpec.enumValues.getOrElse(Map[Int, String]())
+      val enumFieldType = EnumFieldType(nullValues, enumValuesMaxCount, intEnumMap)
 
-      // if not successful get static type
+      if (fieldTypeSpec.isArray)
+        ArrayFieldType(enumFieldType, ",")
+      else
+        enumFieldType
+    } else {
+      // if not successful get a static type
       staticTypeMap.getOrElse(fieldTypeSpec,
-        throw new IllegalArgumentException(s"Field type id $fieldTypeId unrecognized.")
+        throw new IllegalArgumentException(s"Field type $fieldTypeSpec unrecognized.")
       )
     }
   }

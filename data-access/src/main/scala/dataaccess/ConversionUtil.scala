@@ -1,6 +1,6 @@
 package dataaccess
 
-import java.text.{ParseException, SimpleDateFormat}
+import java.text.{ParsePosition, ParseException, SimpleDateFormat}
 import java.util.Date
 
 import scala.reflect.ClassTag
@@ -26,12 +26,18 @@ object ConversionUtil {
   private def toDateAux(dateFormats: Traversable[String])(text: String) = {
     val dates = dateFormats.map { format =>
       try {
-        val date = new SimpleDateFormat(format).parse(text)
-        val year1900 = date.getYear
-        // we assume that a valid year is between 1900 and 2100
-        if (year1900 > 0 && year1900 < 200)
-          Some(date)
-        else
+        val dateFormat = new SimpleDateFormat(format)
+        dateFormat.setLenient(false)
+        val parsePosition = new ParsePosition(0)
+        val date = dateFormat.parse(text, parsePosition)
+        if (parsePosition.getIndex == text.length) {
+          val year1900 = date.getYear
+          // we assume that a valid year is between 1900 and 2100
+          if (year1900 > 0 && year1900 < 200)
+            Some(date)
+          else
+            None
+        } else
           None
       } catch {
         case e: ParseException => None
