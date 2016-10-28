@@ -15,7 +15,7 @@ Play2WarKeys.servletVersion := "3.0"
 
 lazy val dataaccess = project in file("data-access")
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala,SbtWeb)  // . // .aggregate(dataaccess).dependsOn(dataaccess)
+lazy val root = (project in file(".")).enablePlugins(PlayScala,SbtWeb) // .aggregate(dataaccess).dependsOn(dataaccess)
 
 libraryDependencies ++= Seq(cache, ws)
 
@@ -26,7 +26,7 @@ resolvers ++= Seq(
 //  "Ivylocal" at "file://home/peter/.ivy2/local/" // " + Path.userHome.absolutePath + "
 )
 
-routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._", "util.FilterCondition.FilterSpecQueryStringBinder")
+routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._", "models.FilterCondition.FilterSpecQueryStringBinder")
 
 libraryDependencies ++= Seq(
   "ada" % "ada-dataaccess_2.11" % "0.3.1-alpha",

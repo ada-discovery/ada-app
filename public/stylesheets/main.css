@@ -169,3 +169,7 @@ tr.clickable-row {
 .topVerticalAlign {
     vertical-align:top
 }
+
+.label-inverse {
+    color: #000000;
+}
