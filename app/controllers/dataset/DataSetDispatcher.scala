@@ -3,9 +3,9 @@ package controllers.dataset
 import javax.inject.Inject
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
+import models.FilterCondition
 import play.api.mvc.{AnyContent, Action}
 import reactivemongo.bson.BSONObjectID
-import util.FilterCondition
 import util.SecurityUtil._
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {

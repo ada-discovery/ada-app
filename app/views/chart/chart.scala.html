@@ -1,0 +1,6 @@
+@import models.ChartSpec
+@import util.chartElementName
+
+@(chartSpec: ChartSpec)
+
+<div id="@chartElementName(chartSpec.title)" class="chart-holder"></div>

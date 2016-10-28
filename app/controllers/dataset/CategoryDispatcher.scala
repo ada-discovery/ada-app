@@ -3,8 +3,8 @@ package controllers.dataset
 import javax.inject.Inject
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
+import models.FilterCondition
 import reactivemongo.bson.BSONObjectID
-import util.FilterCondition
 import util.SecurityUtil.createDataSetPermission
 
 class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: CategoryControllerFactory)

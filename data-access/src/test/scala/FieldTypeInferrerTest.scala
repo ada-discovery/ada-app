@@ -36,6 +36,7 @@ class FieldTypeInferrerTest extends FlatSpec with Matchers {
 
     shouldBeBooleanType (Seq("true"))
     shouldBeBooleanType (Seq(" false", "na", null, "1"))
+    shouldBeBooleanType (Seq(" 0", "na", "1", "1"))
     shouldBeBooleanType (Seq("1", "0", "", " false", "na"))
   }
 

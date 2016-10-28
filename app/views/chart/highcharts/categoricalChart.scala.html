@@ -13,8 +13,8 @@
 
 <script type="text/javascript">
     $(document).ready(function() {
-        var categories = [ @elements.map { case DataPoint(label, value, key) => '@label',}];
-        var data = [ @elements.map { case DataPoint(label, value, key) => {
+        var categories = [ @elements.map { case DataPoint(_, _, label) => '@label',}];
+        var data = [ @elements.map { case DataPoint(key, value, label) => {
             name : '@shorten(label)',
             y : @value,
             key: '@key'

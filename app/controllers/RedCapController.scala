@@ -4,12 +4,11 @@ import be.objectify.deadbolt.scala.DeadboltActions
 import dataaccess.Category
 import org.apache.commons.lang3.StringEscapeUtils
 import play.api.Configuration
-import util.FilterCondition
 
 import scala.concurrent.duration._
 import javax.inject.Inject
 
-import models.Page
+import models.{FilterCondition, Page}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator

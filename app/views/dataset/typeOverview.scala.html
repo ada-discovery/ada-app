@@ -21,12 +21,12 @@
     </div>
 
     <div class="row">
-    @chart.highcharts.pieChart(
+    @highcharts.pieChart(
         "",
         "typeChart",
         true,
         false,
-        fieldTypeCounts.map{case (fieldType, count) => DataPoint(fieldType.toString, count, None) }.toSeq
+        fieldTypeCounts.map{case (fieldType, count) => DataPoint(None, count, fieldType.toString) }.toSeq
     )
     </div>
 }

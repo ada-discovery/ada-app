@@ -6,7 +6,7 @@ import java.{util => ju}
 import javax.inject.Inject
 
 import _root_.util.JsonUtil._
-import _root_.util.{FilterCondition, fieldLabel, JsonUtil}
+import _root_.util.{fieldLabel, JsonUtil}
 import _root_.util.WebExportUtil._
 import dataaccess._
 import models._
@@ -22,7 +22,7 @@ import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, RequestHeader, Request}
 import reactivemongo.bson.BSONObjectID
-import services.TranSMARTService
+import services.{ChartService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
@@ -45,6 +45,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected val categoryRepo = dsa.categoryRepo
 
   @Inject protected var tranSMARTService: TranSMARTService = _
+  @Inject protected var chartService: ChartService = _
 
   // hooks
 
@@ -141,11 +142,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
-  ): Map[String, String => Any] = result(
+  ): Map[String, String => Option[Any]] = result(
     getFields(fieldNames).map(
       _.map { field =>
         val fieldType = ftf(field.fieldTypeSpec)
-        val converter = { text: String => fieldType.displayStringToValue(text).getOrElse("") }
+        val converter = { text: String => fieldType.valueStringToValue(text) }
         (field.name, converter)
       }.toMap
     )
@@ -250,8 +251,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val fieldCharts = setting.overviewFieldChartTypes
     val chartFieldNames = fieldCharts.map(_.fieldName)
     val tableFieldNames = listViewColumns.get
+    val filterFieldNames = filter.map(_.fieldName.trim)
 
-    val requiredFieldNames = (chartFieldNames ++ tableFieldNames).toSet
+    val requiredFieldNames = (chartFieldNames ++ tableFieldNames ++ filterFieldNames).toSet
 
     val fieldNameMapFuture: Future[Map[String, Field]] =
       getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
@@ -260,28 +262,40 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     val futureTableCount = getFutureCount(filter)
 
+    def valueStringToDisplayString[T](fieldType: FieldType[T], text: String): String = {
+      val value = fieldType.valueStringToValue(text)
+      fieldType.valueToDisplayString(value)
+    }
+
     {
       for {
         count <- futureTableCount
         fieldNameMap <- fieldNameMapFuture
+        chartItems <- chartItemsFuture
         tableItems <- {
           val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
             fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
           }
           getFutureItems(Some(page), orderBy, filter, tableFieldNamesToLoad, Some(pageLimit))
         }
-        chartItems <- chartItemsFuture
       } yield {
         val tableFields = tableFieldNames.map(fieldNameMap.get).flatten
         val chartFields = chartFieldNames.map(fieldNameMap.get).flatten
-        val chartSpecs = createChartSpecs(fieldCharts, chartFields, chartItems)
+        val chartSpecs = chartService.createDistributionChartSpecs(chartItems, fieldCharts, chartFields)
         val fieldChartSpecs = chartSpecs.map(chartSpec => FieldChartSpec(chartSpec._1, chartSpec._2))
 
         val end = new ju.Date()
 
+        val newFilter = filter.map { condition =>
+          val field = fieldNameMap.get(condition.fieldName.trim).get
+          val fieldType = ftf(field.fieldTypeSpec)
+          val valueLabel = valueStringToDisplayString(fieldType, condition.value)
+          condition.copy(fieldLabel = field.label, valueLabel = Some(valueLabel))
+        }
+
         Logger.info(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
         render {
-          case Accepts.Html() => Ok(overviewListView(Page(tableItems, page, page * pageLimit, count, orderBy, filter), fieldChartSpecs, tableFields))
+          case Accepts.Html() => Ok(overviewListView(Page(tableItems, page, page * pageLimit, count, orderBy, newFilter), fieldChartSpecs, tableFields))
           case Accepts.Json() => Ok(Json.toJson(tableItems))
         }
       }
@@ -301,7 +315,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param fieldChartTypes Names of the fields. Used to find fields in data repo.
     * @return Chart specs.
     */
-  private def getDataChartSpecs(
+  private def getDistributionChartSpecs(
     criteria: Seq[Criterion[Any]],
     fieldChartTypes: Traversable[FieldChartType],
     showLabels: Boolean = false,
@@ -316,114 +330,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       foundFields <- fieldsFuture
       items <- itemsFuture
     } yield
-      createChartSpecs(fieldChartTypes, foundFields, items, showLabels, showLegend)
+      chartService.createDistributionChartSpecs(items, fieldChartTypes, foundFields, showLabels, showLegend)
   }
 
-  private def createChartSpecs(
-    fieldChartTypes: Traversable[FieldChartType],
-    fields: Traversable[Field],
-    items: Traversable[JsObject],
-    showLabels: Boolean = false,
-    showLegend: Boolean = true
-  ): Traversable[(String, ChartSpec)] = {
-    val nameFieldMap = fields.map(field => (field.name, field)).toMap
-    val createChartSpecAux = createChartSpec(items, showLabels, showLegend)_
-    fieldChartTypes.map { case FieldChartType(fieldName, chartType) =>
-      val chartSpec = nameFieldMap.get(fieldName).fold(
-        createChartSpecAux(Right(fieldName), chartType)
-      )(field =>
-        createChartSpecAux(Left(field), chartType)
-      )
-      (fieldName, chartSpec)
-    }
-  }
-
-  private def createChartSpec(
-    items: Traversable[JsObject],
-    showLabels: Boolean = false,
-    showLegend: Boolean = true)(
-    fieldOrName: Either[Field, String],
-    chartType: Option[ChartType.Value]
-  ): ChartSpec = {
-    val (fieldName, chartTitle, enumMap, fieldTypeSpec) = fieldOrName match {
-      case Left(field) => (
-        field.name,
-        field.label.getOrElse(fieldLabel(field.name)),
-        field.numValues,
-        field.fieldTypeSpec
-      )
-      // failover... no corresponding field, providing default values instead
-      case Right(fieldName) => (
-        fieldName,
-        fieldLabel(fieldName),
-        None,
-        FieldTypeSpec(FieldTypeId.String, false)
-      )
-    }
-
-    val jsons = project(items, fieldName)
-    val fieldType = ftf(fieldTypeSpec)
-
-    val fieldTypeId = fieldTypeSpec.fieldType
-    fieldTypeId match {
-      case FieldTypeId.String =>
-        ChartSpec.categorical(
-          getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend, chartType
-        )
-
-      case FieldTypeId.Enum =>
-        ChartSpec.categorical(
-          getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend, chartType
-        )
-
-      case FieldTypeId.Boolean =>
-        ChartSpec.categorical(
-          getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend, chartType
-        )
-
-      case FieldTypeId.Double => {
-        val doubleFieldType = fieldType.asInstanceOf[FieldType[Double]]
-        val doubles = jsons.map(doubleFieldType.jsonToValue).flatten
-
-        ChartSpec.numerical(doubles, fieldName, chartTitle, 20, Some(1), None, None, chartType)
-      }
-
-      case FieldTypeId.Integer => {
-        val doubleFieldType = fieldType.asInstanceOf[FieldType[Long]]
-        val longs = project(items, fieldName).map(doubleFieldType.jsonToValue).flatten
-
-        ChartSpec.numerical(longs, fieldName, chartTitle, 20, Some(1), None, None, chartType)
-      }
-
-      case FieldTypeId.Date => {
-        val dateFieldType = fieldType.asInstanceOf[FieldType[ju.Date]]
-        val dates = project(items, fieldName).map(dateFieldType.jsonToValue).flatten
-        val ints = dates.map(_.getTime)
-
-        val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-        def formatDate(ms: BigDecimal) = dateFormat.format(new ju.Date(ms.toLongExact))
-
-        ChartSpec.numerical(ints, fieldName, chartTitle, 20, Some(1), None, None, chartType, Some(formatDate))
-      }
-
-      case _ => ChartSpec.categorical(
-        getStringValues(items, fieldName), enumMap, chartTitle, showLabels, showLegend
-      )
-    }
-  }
-
-  private def getFields(fieldNames: Traversable[String]): Future[Traversable[Field]] = {
+  private def getFields(
+    fieldNames: Traversable[String]
+  ): Future[Traversable[Field]] =
     fieldRepo.find(Seq(FieldIdentity.name #=> fieldNames.toSeq))
-  }
-
-  private def getStringValues(
-    items: Traversable[JsObject],
-    fieldName: String
-  ) =
-    toStrings(project(items.toSeq, fieldName))
-
-  private def toStrings(rawValues: Traversable[JsReadable]): Traversable[Option[String]] =
-    rawValues.map(JsonUtil.toString)
 
   /**
     * Fetches, checks and prepares the specified data fields for a scatterplot.
@@ -468,10 +381,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       groupField <- groupFieldFuture
       numericFields <- numericFieldsFuture
       categoricalFields <- categoricalFieldsFuture
-      scattedData <- getScatterData(filter, xField, yField, groupField)
+      xyzItems <- {
+        val criteria = toCriteria(filter)
+        val projection = Seq(xFieldName, yFieldName) ++ groupField.map(_.name)
+        repo.find(criteria, Nil, projection.toSet)
+      }
     } yield {
       val numericFieldNameLabels = numericFields.map(field => (field.name, field.label)).toSeq.sorted
       val categoricalFieldNameLabels = categoricalFields.map(field => (field.name, field.label)).toSeq.sorted
+      val scattedData =
+        if (xField.isDefined && yField.isDefined) {
+          chartService.getScatterData(xyzItems, xField.get, yField.get, groupField)
+        } else
+          Seq[(String, Seq[(Any, Any)])]()
 
       render {
         case Accepts.Html() => Ok(dataset.scatterStats(
@@ -492,60 +414,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  private def getScatterData(
-    filter: Seq[FilterCondition],
-    xField: Option[Field],
-    yField: Option[Field],
-    groupField: Option[Field]
-  ): Future[Seq[(String, Seq[(Any, Any)])]] = {
-    if (xField.isDefined && yField.isDefined) {
-      val xFieldName = xField.get.name
-      val yFieldName = yField.get.name
-
-      val xFieldType = ftf(xField.get.fieldTypeSpec)
-      val yFieldType = ftf(yField.get.fieldTypeSpec)
-
-      val criteria = toCriteria(filter)
-      val projection = Seq(xFieldName, yFieldName) ++ groupField.map(_.name)
-      val futureXYZItems = repo.find(criteria, Nil, projection.toSet)
-
-      futureXYZItems.map{ xyzItems =>
-        val xyzSeq = xyzItems.toSeq
-        val xJsons = project(xyzSeq, xFieldName).toSeq
-        val yJsons = project(xyzSeq, yFieldName).toSeq
-
-        val xValues = xJsons.map(xFieldType.jsonToValue)
-        val yValues = yJsons.map(yFieldType.jsonToValue)
-
-        groupField match {
-          case Some(zField) => {
-            val zFieldType = ftf(zField.fieldTypeSpec)
-            val groupJsons = project(xyzSeq, zField.name).toSeq
-            val groupValues = groupJsons.map(zFieldType.jsonToDisplayString)
-
-            // TODO: simplify this
-            (groupValues, xValues, yValues).zipped.map { case (zValue, xValue, yValue) =>
-              (Some(zValue), xValue, yValue).zipped
-            }.flatten.groupBy(_._1).map { case (zValue, values) =>
-              (
-                zValue,
-                values.map(tupple => (tupple._2, tupple._3))
-              )
-            }.toSeq
-          }
-          case None => {
-            val xys = (xValues, yValues).zipped.map { case (xValue, yValue) =>
-              (xValue, yValue).zipped
-            }.flatten
-
-            Seq(("all", xys))
-          }
-        }
-      }
-    } else
-      Future(Seq[(String, Seq[(Any, Any)])]())
-  }
-
   override def getDistribution(
     fieldNameOption: Option[String],
     filter: Seq[FilterCondition]
@@ -553,7 +421,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     implicit val msg = messagesApi.preferred(request)
 
     val fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
-    val chartSpecsFuture = getDataChartSpecs(
+    val chartSpecsFuture = getDistributionChartSpecs(
       toCriteria(filter),
       Seq(FieldChartType(fieldName, None)),
       true,

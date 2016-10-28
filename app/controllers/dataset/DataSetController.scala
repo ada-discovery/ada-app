@@ -1,9 +1,9 @@
 package controllers.dataset
 
 import controllers.{ReadonlyController, CrudController}
+import models.FilterCondition
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
-import util.FilterCondition
 
 trait DataSetController extends ReadonlyController[BSONObjectID] {
 

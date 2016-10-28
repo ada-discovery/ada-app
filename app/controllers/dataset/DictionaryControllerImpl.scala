@@ -21,7 +21,6 @@ import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.{DeNoPaSetting, DataSetService}
-import util.FilterCondition
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import views.html.dictionary
 import scala.concurrent.duration._

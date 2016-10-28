@@ -1,8 +1,8 @@
 package controllers.dataset
 
 import controllers.CrudController
+import models.FilterCondition
 import play.api.mvc.{Action, AnyContent}
-import util.FilterCondition
 
 trait DictionaryController extends CrudController[String] {
 

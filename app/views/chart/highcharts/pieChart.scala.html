@@ -5,7 +5,7 @@
 
 <script type="text/javascript">
     pieChart('@title', '@{chartElementName}', @showLabels, @showLegend,
-        [ @elements.map { case DataPoint(label, value, key) => {
+        [ @elements.map { case DataPoint(key, value, label) => {
             name : '@shorten(label)',
             y : @value,
             key: '@key'

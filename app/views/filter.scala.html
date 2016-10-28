@@ -1,7 +1,12 @@
-@import util.{FilterCondition, ConditionType}
+@import models.ConditionType
 @import play.api.libs.json.Json
 
-@(filter: Seq[FilterCondition], submitCall: Call, fieldNamesOrCall: Either[Traversable[String], Call], saveCall: Option[Call]=None)
+@(
+    filter: Seq[FilterCondition],
+    submitCall: Call,
+    fieldNamesOrCall: Either[Traversable[String], Call],
+    saveCall: Option[Call] = None
+)
 
 <!-- need to import css and js first -->
 <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/typeahead.min.css")">
@@ -45,9 +50,9 @@
         <li id="condition-full@index" class="condition-full">
             <h4>
                 <span class="condition">
-                    <span class="label label-primary">@condition.fieldName</span>
-                    <span>@condition.conditionType</span>
-                    <span class="label label-primary">@condition.value</span>
+                    <span class="label label-primary">@condition.fieldLabel.getOrElse(condition.fieldName)</span>
+                    <span><b>@condition.conditionType</b></span>
+                    <span class="label label-primary">@condition.valueLabel.getOrElse(condition.value)</span>
                 </span>
                 <span class="condition-buttons" style="display: none">
                     <button type="button" class="btn btn-sm btn-default" onclick="showEditConditionModal('@index');">

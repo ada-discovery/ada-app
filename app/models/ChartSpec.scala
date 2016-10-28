@@ -1,26 +1,52 @@
 package models
 
-import _root_.util.JsonUtil._
 import play.api.libs.json._
 
-import scala.collection.mutable
 import scala.collection.mutable.{Map => MMap}
 import scala.math.BigDecimal.RoundingMode
 import dataaccess.ChartType
 
-abstract class ChartSpec{val title: String}
+abstract class ChartSpec {
+  val title: String
+}
 
-case class CategoricalChartSpec(title: String, showLabels: Boolean, showLegend: Boolean, data: Seq[DataPoint], chartType: ChartType.Value) extends ChartSpec
+case class CategoricalChartSpec(
+  title: String,
+  showLabels: Boolean,
+  showLegend: Boolean,
+  data: Seq[DataPoint],
+  chartType: ChartType.Value
+) extends ChartSpec
 
-case class NumericalChartSpec(title: String, data: Seq[(String, Int)], chartType: ChartType.Value) extends ChartSpec
+case class NumericalChartSpec(
+  title: String,
+  data: Seq[(String, Int)],
+  chartType: ChartType.Value
+) extends ChartSpec
 
-case class ColumnChartSpec(title: String, data: Seq[(String, Int)]) extends ChartSpec
+case class ColumnChartSpec(
+  title: String,
+  data: Seq[(String, Int)]
+) extends ChartSpec
 
-case class ScatterChartSpec(title: String, xAxisCaption: String, yAxisCaption: String, data: Seq[(String, String, Seq[Seq[Any]])]) extends ChartSpec
+case class ScatterChartSpec(
+  title: String,
+  xAxisCaption: String,
+  yAxisCaption: String,
+  data: Seq[(String, String, Seq[Seq[Any]])]
+) extends ChartSpec
 
-case class BoxPlotSpec(title: String, data: Seq[(String, Seq[Double])]) extends ChartSpec
+case class BoxPlotSpec(
+  title: String,
+  data: Seq[(String, Seq[Double])]
+) extends ChartSpec
 
-case class DataPoint(label: String, value: Int, key: Option[String])
+case class DataPoint(
+  key: Option[String],
+  value: Int,
+  label: String
+)
+
 case class FieldChartSpec(fieldName: String, chartSpec : ChartSpec)
 
 object ChartSpec {
@@ -33,23 +59,24 @@ object ChartSpec {
     * @param values Raw values.
     * @return CategoricalChartSpec object for use in view.
     */
-  def categorical(
-    values: Traversable[Option[String]],
+  def categorical[T](
+    values: Traversable[Option[T]],
     keyLabelMap: Option[Map[String, String]] = None,
     title: String,
     showLabels: Boolean,
     showLegend: Boolean,
     chartType: Option[ChartType.Value] = None
   ): CategoricalChartSpec = {
-    val countMap = MMap[Option[String], Int]()
+    val countMap = MMap[Option[T], Int]()
     values.foreach { value =>
       val count = countMap.getOrElse(value, 0)
       countMap.update(value, count + 1)
     }
     val data = countMap.toSeq.sortBy(_._2).map {
       case (key, count) => {
-        val keyOrEmpty = key.getOrElse("")
-        DataPoint(keyLabelMap.map(_.getOrElse(keyOrEmpty, keyOrEmpty)).getOrElse(keyOrEmpty), count, key)
+        val stringKey = key.map(_.toString)
+        val keyOrEmpty = stringKey.getOrElse("")
+        DataPoint(stringKey, count, keyLabelMap.map(_.getOrElse(keyOrEmpty, keyOrEmpty)).getOrElse(keyOrEmpty))
       }
     }
     new CategoricalChartSpec(title, showLabels, showLegend, data, chartType.getOrElse(ChartType.Pie))

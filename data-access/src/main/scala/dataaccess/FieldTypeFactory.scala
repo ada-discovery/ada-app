@@ -36,6 +36,9 @@ private case class EnumFieldType(
       throw new AdaConversionException(s"$text is not enum: ${enumValueMap.mkString(";")}.")
     )
 
+  override protected def valueStringToValueWoNull(text: String) =
+    toInt(text)
+
   override protected def valueToDisplayStringNonEmpty(value: Int) =
     enumValueMap.get(value).getOrElse(
       throw new AdaConversionException(s"$value is not enum: ${enumValueMap.mkString(";")}.")
@@ -83,6 +86,12 @@ private case class ArrayFieldType[T](
   override protected def displayStringToValueWoNull(text: String) = {
     val values: Seq[Option[T]] = text.split(delimiter, -1).map(textElement =>
       elementFieldType.displayStringToValue(textElement.trim))
+    values.toArray
+  }
+
+  override protected def valueStringToValueWoNull(text: String): Array[Option[T]] = {
+    val values: Seq[Option[T]] = text.split(delimiter, -1).map(textElement =>
+      elementFieldType.valueStringToValue(textElement.trim))
     values.toArray
   }
 
@@ -255,6 +264,9 @@ private class FieldTypeFactoryImpl(
       override protected def displayStringToValueWoNull(text: String) =
         toDate(dateFormats)(text)
 
+      override protected def valueStringToValueWoNull(text: String) =
+        toDate(Seq(displayDateFormat))(text)
+
       override protected def displayJsonToValueWoString(json: JsReadable) =
         throw new AdaConversionException(s"Json $json cannot be converted to a Date.")
 
@@ -354,6 +366,9 @@ private class FieldTypeFactoryImpl(
         case e: JsonParseException => throw new AdaConversionException(s"$text cannot be parsed to a JSON array.")
         case e: JsonMappingException => throw new AdaConversionException(s"$text cannot be parsed to a JSON array.")
       }
+
+    override protected def valueStringToValueWoNull(text: String) =
+      displayStringToValueWoNull(text)
 
     override protected def valueToDisplayStringNonEmpty(jsons: Array[Option[JsObject]]) =
       Json.stringify(JsArray(jsons.map(fromOption)))

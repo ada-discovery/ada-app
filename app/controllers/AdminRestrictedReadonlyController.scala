@@ -1,8 +1,8 @@
 package controllers
 
 import be.objectify.deadbolt.scala.DeadboltActions
+import models.FilterCondition
 import play.api.mvc.{AnyContent, Action}
-import util.FilterCondition
 import util.SecurityUtil._
 
 trait AdminRestrictedReadonlyController[ID] extends ReadonlyController[ID] {

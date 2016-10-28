@@ -1,8 +1,8 @@
 package controllers
 
 import dataaccess.{Sort, AsyncReadonlyRepo, Criterion}
+import models.FilterCondition
 import play.api.libs.json.{Json, Format, JsObject}
-import util.FilterCondition
 import util.WebExportUtil.{jsonsToCsvFile, jsonsToJsonFile}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc._

@@ -27,6 +27,20 @@ trait FieldType[T] {
 
   protected def displayStringToValueWoNull(text: String): T
 
+  def valueStringToValue(text: String): Option[T] =
+    if (text == null)
+      None
+    else {
+      val trimmedText = text.trim
+      if (trimmedText.isEmpty)
+        None
+      else
+        Some(valueStringToValueWoNull(trimmedText))
+    }
+
+  protected def valueStringToValueWoNull(text: String): T =
+    displayStringToValueWoNull(text)
+
   def displayJsonToValue(json: JsReadable): Option[T] =
     json match {
       case JsNull => None
@@ -68,6 +82,9 @@ trait FieldType[T] {
 
   def isValueOf[E: TypeTag] =
     typeOf[E].typeSymbol.asClass.equals(valueClass)
+
+  def asValueOf[E] =
+    this.asInstanceOf[FieldType[E]]
 }
 
 private abstract class FormatFieldType[T: Format] extends FieldType[T] {

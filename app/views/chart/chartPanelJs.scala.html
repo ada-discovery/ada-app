@@ -1,16 +1,7 @@
-@import models.ColumnChartSpec
-@import views.html.chart._
-@import util.chartElementName
+@import views.html.chart.chartJs
 
 @(chartSpecs : Traversable[ChartSpec])
 
 @chartSpecs.map { chartSpec =>
-    @{chartSpec match {
-        case CategoricalChartSpec(title, showLabels, showLegend, data, chartType) => highcharts.categoricalChart(title, chartElementName(title), showLabels, showLegend, data, chartType)
-        case NumericalChartSpec(title, data, chartType) => highcharts.numericalChart(title, chartElementName(title), data, chartType)
-
-        case ScatterChartSpec(title, data) => highcharts.scatterChart(title, chartElementName(title), data, chartType)
-
-        case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
-    }}
+    @chartJs(chartSpec)
 }

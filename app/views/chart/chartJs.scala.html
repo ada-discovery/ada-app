@@ -1,0 +1,12 @@
+@import views.html.chart._
+@import util.chartElementName
+
+@(chartSpec: ChartSpec)
+
+@{chartSpec match {
+    case CategoricalChartSpec(title, showLabels, showLegend, data, chartType) => highcharts.categoricalChart(title, chartElementName(title), showLabels, showLegend, data, chartType)
+    case NumericalChartSpec(title, data, chartType) => highcharts.numericalChart(title, chartElementName(title), data, chartType)
+    case ScatterChartSpec(title, xAxisCaption, yAxisCaption, data) => highcharts.scatterChart(title, chartElementName(title), xAxisCaption, yAxisCaption, data)
+    case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
+}}
+

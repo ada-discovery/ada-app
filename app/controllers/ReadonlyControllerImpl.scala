@@ -3,11 +3,9 @@ package controllers
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import _root_.util.{ConditionType, FilterCondition}
 import be.objectify.deadbolt.scala.DeadboltActions
 import dataaccess._
 import models._
-import persistence._
 import play.api.Logger
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -166,7 +164,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     repo.count(criteria)
   }
 
-  import _root_.util.ConditionType._
+  import ConditionType._
 
   protected def toCriteria(
     filter: Seq[FilterCondition]
@@ -178,28 +176,46 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
 
       // convert values if any converters provided
       val value =  filterCondition.value
-      def convertValue(text: String) = valueConverters.get(fieldName).map(converter =>
+      def convertValue(text: String): Option[Any] = valueConverters.get(fieldName).map(converter =>
         converter.apply(text.trim)
-      ).getOrElse(text.trim) // if no converter found use a provided string value
+      ).getOrElse(Some(text.trim)) // if no converter found use a provided string value
 
       def convertedValue = convertValue(value)
-      def convertedValues = value.split(",").map(convertValue)
+      def convertedValues = value.split(",").map(convertValue).flatten
 
       filterCondition.conditionType match {
-        case Equals => EqualsCriterion(fieldName, convertedValue)
-        case RegexEquals => RegexEqualsCriterion(fieldName, value)            // string expected
-        case NotEquals => NotEqualsCriterion(fieldName, convertedValue)
-        case In => InCriterion(fieldName, convertedValues)
-        case NotIn => NotInCriterion(fieldName, convertedValues)
-        case Greater => GreaterCriterion(fieldName, convertedValue)
-        case Less => LessCriterion(fieldName, convertedValue)
+        case Equals => Some(
+          convertedValue.map(
+            EqualsCriterion(fieldName, _)
+          ).getOrElse(
+            EqualsNullCriterion(fieldName)
+          )
+        )
+
+        case RegexEquals => Some(RegexEqualsCriterion(fieldName, value))            // string expected
+
+        case NotEquals => Some(
+          convertedValue.map(
+            NotEqualsCriterion(fieldName, _)
+          ).getOrElse(
+            NotEqualsNullCriterion(fieldName)
+          )
+        )
+
+        case In => Some(InCriterion(fieldName, convertedValues))
+
+        case NotIn => Some(NotInCriterion(fieldName, convertedValues))
+
+        case Greater => convertedValue.map(GreaterCriterion(fieldName, _))
+
+        case Less => convertedValue.map(LessCriterion(fieldName, _))
       }
-    }
+    }.flatten
   }
 
   protected def filterValueConverters(
     fieldNames: Traversable[String]
-  ): Map[String, String => Any] = Map()
+  ): Map[String, String => Option[Any]] = Map()
 
   /**
     * TODO: Move this into utility object.

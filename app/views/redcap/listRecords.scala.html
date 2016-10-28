@@ -1,7 +1,7 @@
+@import models.FilterCondition
 @import views.html.layout.list
 @import play.api.libs.json.JsObject
 @import views.html.table.paginatedJsonTable
-@import util.FilterCondition
 @import util.typeColumns
 
 @(currentPage: Page[JsObject], filter: Seq[FilterCondition])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])

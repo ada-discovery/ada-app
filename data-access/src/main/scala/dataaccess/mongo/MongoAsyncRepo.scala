@@ -134,13 +134,30 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     val fieldName = criterion.fieldName
 
     val mongoCondition = criterion match {
-      case c: EqualsCriterion[T] => toJson(c.value)
+      case c: EqualsCriterion[T] =>
+        toJson(c.value)
+//     {
+//       c.value match {
+//         case Some(value) => toJson(value)
+//         case None => JsNull
+//       }
+//     }
+      case c: EqualsNullCriterion =>
+        JsNull
 
       case RegexEqualsCriterion(_, value) =>
         Json.obj("$regex" -> value, "$options" -> "i")
 
-      case c: NotEqualsCriterion[T] =>
+      case c: NotEqualsCriterion[T] => {
+//        val json = c.value match {
+//            case Some(value) => toJson(value)
+//            case None => JsNull
+//          }
         Json.obj("$ne" -> toJson(c.value))
+      }
+
+      case c: NotEqualsNullCriterion =>
+        Json.obj("$ne" -> JsNull)
 
       case c: InCriterion[V] => {
         val inValues = c.value.map(toJson(_): JsValueWrapper)

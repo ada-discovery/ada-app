@@ -10,6 +10,7 @@ import org.h2.value.DataType
 import dataaccess.ignite.BinaryJsonUtil.escapeIgniteFieldName
 import org.h2.value.Value
 import play.api.Logger
+import play.api.libs.json.JsNull
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -178,25 +179,39 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     val nonNativeFieldTypeFlag = isNonNativeFieldDBType(fieldType)
 
     criterion match {
-      case EqualsCriterion(_, value) =>
-        if (isJavaDBType(value))
-          (s"binEquals($fieldName, ?)", Seq(value))
-        else if (value.isInstanceOf[String] && nonNativeFieldTypeFlag)
-          (s"binStringEquals($fieldName, ?)", Seq(value))
-        else
-          (s"$fieldName = ?", Seq(value))
+      case EqualsCriterion(_, value) => {
+//        optionalValue match {
+//          case None => ("is null", Nil)
+//          case Some(value) =>
+            if (isJavaDBType(value))
+              (s"binEquals($fieldName, ?)", Seq(value))
+            else if (value.isInstanceOf[String] && nonNativeFieldTypeFlag)
+              (s"binStringEquals($fieldName, ?)", Seq(value))
+            else
+              (s"$fieldName = ?", Seq(value))
+      }
+
+      case EqualsNullCriterion(_) =>
+        ("is null", Nil)
 
       // TODO: we need to properly translate client's regex to an SQL version... we can perhaps drop '%' around
       case RegexEqualsCriterion(_, regexString) =>
         (s"$fieldName like ?", Seq(s"%$regexString%"))
 
-      case NotEqualsCriterion(_, value) =>
-        if (isJavaDBType(value))
-          (s"binNotEquals($fieldName, ?)", Seq(value))
-        else if (value.isInstanceOf[String] && nonNativeFieldTypeFlag)
-          (s"binStringNotEquals($fieldName, ?)", Seq(value))
-        else
-          (s"$fieldName != ?", Seq(value))
+      case NotEqualsCriterion(_, value) => {
+//        optionalValue match {
+//          case None => ("is not null", Nil)
+//          case Some(value) =>
+            if (isJavaDBType(value))
+              (s"binNotEquals($fieldName, ?)", Seq(value))
+            else if (value.isInstanceOf[String] && nonNativeFieldTypeFlag)
+              (s"binStringNotEquals($fieldName, ?)", Seq(value))
+            else
+              (s"$fieldName != ?", Seq(value))
+      }
+
+      case NotEqualsNullCriterion(_) =>
+        ("is not null", Nil)
 
       case InCriterion(_, values) => {
         val placeholders = values.map(_ => "?").mkString(",")

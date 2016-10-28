@@ -107,6 +107,7 @@ class DataSetServiceImpl @Inject()(
   private val redCapChoicesDelimiter = "\\|"
   private val redCapChoiceKeyValueDelimiter = ","
   private val redCapVisitField = "redcap_event_name"
+  private val redCapVisitLabel = "Visit"
 
   private val synapseDelimiter = ','
   private val synapseEol = "\n"
@@ -305,9 +306,25 @@ class DataSetServiceImpl @Inject()(
     val fieldRepo = dsa.fieldRepo
     val categoryRepo = dsa.categoryRepo
 
+    val stringFieldType = ftf(FieldTypeSpec(FieldTypeId.String)).asValueOf[String]
+
+    // helper functions to parse jsons
     def displayJsonToJson[T](fieldType: FieldType[T], json: JsReadable): JsValue = {
       val value = fieldType.displayJsonToValue(json)
       fieldType.valueToJson(value)
+    }
+
+    def displayJsonToJsonEnum(fieldType: FieldType[_], json: JsReadable) = {
+      val enumStringValue = stringFieldType.displayJsonToValue(json)
+      enumStringValue match {
+        case Some(string) =>
+          if (ConversionUtil.isInt(string)) {
+            JsNumber(string.toInt)
+          } else {
+            displayJsonToJson(fieldType, json)
+          }
+        case None => JsNull
+      }
     }
 
     for {
@@ -351,20 +368,18 @@ class DataSetServiceImpl @Inject()(
 
       // get the new records
       newRecords: Traversable[JsObject] = records.map { record =>
-        val stringFieldType = ftf(FieldTypeSpec(FieldTypeId.String)).asInstanceOf[FieldType[String]]
 
         val newJsValues = record.fields.map { case (fieldName, jsValue) =>
           val newJsValue = dictionaryFieldNameTypeMap.get(fieldName) match {
-            case Some(fieldType) => fieldType.spec.fieldType match {
-              case FieldTypeId.Enum => {
-                val newEnumValue = stringFieldType.displayJsonToValue(jsValue).map(fromRedCapEnumKey)
-                newEnumValue match {
-                  case Some(intValue) => JsNumber(intValue)
-                  case None => JsNull
-                }
+            case Some(fieldType) => try {
+              fieldType.spec.fieldType match {
+                case FieldTypeId.Enum => displayJsonToJsonEnum(fieldType, jsValue)
+                case _ => displayJsonToJson(fieldType, jsValue)
               }
-              case _ => displayJsonToJson(fieldType, jsValue)
+            } catch {
+              case e: Exception => throw new AdaException(s"JSON value '$jsValue' of the field '$fieldName' can not be processed.", e)
             }
+            // TODO: this shouldn't be like that... if we don't have a field in the dictionary, we should discard it?
             case None => jsValue
           }
           (fieldName, newJsValue)
@@ -381,10 +396,7 @@ class DataSetServiceImpl @Inject()(
       }
 
       // save the records (...ignore the results)
-      _ <- {
-        logger.info(s"Saving JSONs...")
-        dataRepo.save(newRecords)
-      }
+      _ <- saveAndTransformRecords(dataRepo, newRecords.toSeq, None, false, None)
     } yield
       if (importInfo.importDictionaryFlag)
         messageLogger.info(s"Import of data set and dictionary '${importInfo.dataSetName}' successfully finished.")
@@ -424,14 +436,24 @@ class DataSetServiceImpl @Inject()(
         val inferredFieldType: FieldType[_] = inferredFieldNameTypeMap.get(fieldName).get
         val inferredType = inferredFieldType.spec
 
+        def enumOrDouble: FieldTypeSpec = try {
+          FieldTypeSpec(FieldTypeId.Enum, false, getEnumValues(metadata))
+        } catch {
+          case e: AdaParseException => {
+            getDoubles(metadata)
+            logger.warn(s"The field '$fieldName' has floating part(s) in the enum list and so will be treated as Double.")
+            FieldTypeSpec(FieldTypeId.Double)
+          }
+        }
+
         val fieldTypeSpec = metadata.field_type match {
-          case RCFieldType.radio => FieldTypeSpec(FieldTypeId.Enum, false, getEnumValues(metadata))
-          case RCFieldType.checkbox => FieldTypeSpec(FieldTypeId.Enum, false, getEnumValues(metadata))
-          case RCFieldType.dropdown => FieldTypeSpec(FieldTypeId.Enum, false, getEnumValues(metadata))
+          case RCFieldType.radio => enumOrDouble
+          case RCFieldType.checkbox => enumOrDouble
+          case RCFieldType.dropdown => enumOrDouble
           case RCFieldType.calc => inferredType
           case RCFieldType.text => inferredType
           case RCFieldType.descriptive => inferredType
-          case RCFieldType.yesno => inferredType
+          case RCFieldType.yesno => FieldTypeSpec(FieldTypeId.Boolean)
           case RCFieldType.notes => inferredType
           case RCFieldType.file => inferredType
         }
@@ -464,13 +486,19 @@ class DataSetServiceImpl @Inject()(
       }
 
       // fields
-      newFields = inferDictionary(metadatas, categoryNameIds.toMap)
+      newFields = {
+        val fields =  inferDictionary(metadatas, categoryNameIds.toMap)
+
+        // also add redcap_event_name
+        val fieldTypeSpec = inferredFieldNameTypeMap.get(redCapVisitField).get.spec
+        val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
+        val visitField = Field(redCapVisitField, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums, Nil, Some(redCapVisitLabel))
+
+        fields ++ Seq(visitField)
+      }
 
       // save the fields
       _ <- fieldRepo.save(newFields)
-
-      // also add redcap_event_name
-      _ <- fieldRepo.save(Field(redCapVisitField, FieldTypeId.Enum))
     } yield
       newFields.map( field => (field.name, ftf(field.fieldTypeSpec))).toMap
   }
@@ -554,7 +582,7 @@ class DataSetServiceImpl @Inject()(
           else
             logger.info(s"Saving JSONs...")
 
-          saveAndTransformRecords(dataRepo, keyField, updateExisting, transformJsonsFun, transformBatchSize, jsons)
+          saveAndTransformRecords(dataRepo, jsons, keyField, updateExisting, transformJsonsFun, transformBatchSize)
         }
         // remove the old records if key field defined
         _ <- if (keyField.isDefined) {
@@ -614,11 +642,11 @@ class DataSetServiceImpl @Inject()(
 
   private def saveAndTransformRecords(
     dataRepo: JsonCrudRepo,
+    jsons: Seq[JsObject],
     keyField: Option[String],
     updateExisting: Boolean,
     transformJsons: Option[Seq[JsObject] => Future[Seq[JsObject]]],
-    transformBatchSize: Option[Int],
-    jsons: Seq[JsObject]
+    transformBatchSize: Option[Int] = None
   ): Future[Unit] = {
     val size = jsons.size
     val reportLineSize = size * reportLineFreq
@@ -952,14 +980,34 @@ class DataSetServiceImpl @Inject()(
           val keyValueString = choice.split(redCapChoiceKeyValueDelimiter, 2)
 
           val stringKey = keyValueString(0).trim
-          val bigDecimalKey = BigDecimal(keyValueString(0).trim)
           val value = keyValueString(1).trim
 
-          (fromRedCapEnumKey(stringKey), value)
+          (stringKey.toInt, value)
         }.toMap
         Some(keyValueMap)
       } catch {
-        case e: Exception => throw new IllegalArgumentException(s"RedCap Metadata '${metadata.field_name}' has non-parseable choices '${metadata.select_choices_or_calculations}'.")
+        case e: NumberFormatException => throw new AdaParseException(s"RedCap Metadata '${metadata.field_name}' has non-parseable choices '${metadata.select_choices_or_calculations}'.")
+      }
+    } else
+      None
+  }
+
+  private def getDoubles(metadata: Metadata) : Option[Traversable[Double]] = {
+    val choices = metadata.select_choices_or_calculations.trim
+
+    if (choices.nonEmpty) {
+      try {
+        val doubles = choices.split(redCapChoicesDelimiter).map { choice =>
+          val keyValueString = choice.split(redCapChoiceKeyValueDelimiter, 2)
+
+          val stringKey = keyValueString(0).trim
+          val value = keyValueString(1).trim
+
+          stringKey.toDouble
+        }
+        Some(doubles)
+      } catch {
+        case e: NumberFormatException => throw new AdaParseException(s"RedCap Metadata '${metadata.field_name}' has non-parseable choices '${metadata.select_choices_or_calculations}'.")
       }
     } else
       None
@@ -968,10 +1016,18 @@ class DataSetServiceImpl @Inject()(
   private def fromRedCapEnumKey(key: String): Int =
     if (!key.contains(".")) {
       // it's int
-      key.toInt
+      try {
+        val int = key.toInt
+        //      if (int < 0)
+        //        throw new AdaException(s"Negative enum key coming from REDCap found: '$key'.")
+        int
+      } catch {
+        case _ => throw new AdaException(s"'$key' is not int.")
+      }
     } else {
       // it's double :( we need to convert it to negative integer to be stay injectivee
-      -key.replaceAll(".","").toInt
+      val double = -key.replaceAll("\\.","").toInt
+      double
     }
 
   def inferFieldTypes(

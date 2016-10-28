@@ -1,7 +1,5 @@
 package models
 
-import util.FilterCondition
-
 /**
  * Helper for pagination.
  */

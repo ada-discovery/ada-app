@@ -1,8 +1,8 @@
 package controllers.dataset
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
+import models.FilterCondition
 import play.api.mvc.{AnyContent, Action}
-import util.FilterCondition
 import javax.inject.Inject
 
 import util.SecurityUtil._

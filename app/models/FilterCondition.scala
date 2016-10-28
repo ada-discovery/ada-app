@@ -1,9 +1,16 @@
-package util
+package models
 
 import dataaccess.EnumFormat
 import play.api.libs.json.Json
+import util.JsonUtil
 
-case class FilterCondition(fieldName: String, conditionType: ConditionType.Value, value: String)
+case class FilterCondition(
+  fieldName: String,
+  conditionType: ConditionType.Value,
+  value: String,
+  fieldLabel: Option[String],
+  valueLabel: Option[String]
+)
 
 object ConditionType extends Enumeration {
   val Equals = Value("=")
