@@ -333,26 +333,26 @@ class ScalarFieldTypeTest extends FlatSpec with Matchers {
     fieldType.displayStringToValue("") should be (None)
     fieldType.displayStringToValue("2016-08-08 20:11:55") should be (Some(toDate("2016-08-08 20:11:55")))
     fieldType.displayStringToValue("08.08.2016") should be (Some(toDate("2016-08-08 00:00:00")))
+    fieldType.displayStringToValue("1251237600000") should be (Some(new java.util.Date(1251237600000l)))
+    fieldType.displayStringToValue(toDate("2016-08-08 20:11:55").getTime.toString) should be (Some(toDate("2016-08-08 20:11:55")))
+
     a [AdaConversionException] should be thrownBy {
       fieldType.displayStringToValue("aa")
     }
     a [AdaConversionException] should be thrownBy {
-      fieldType.displayStringToValue("54")
-    }
-    a [AdaConversionException] should be thrownBy {
-      fieldType.displayStringToValue(toDate("2016-08-08 20:11:55").getTime.toString)
+      fieldType.displayStringToValue("581251237600000")
     }
 
     fieldType.displayJsonToValue(JsNull) should be (None)
     fieldType.displayJsonToValue(JsString("01.04.2002 18:51:20")) should be (Some(toDate("2002-04-01 18:51:20")))
+    fieldType.displayJsonToValue(JsNumber(toDate("2005-04-08 20:21:11").getTime)) should be (Some(toDate("2005-04-08 20:21:11")))
+    fieldType.displayJsonToValue(JsNumber(1251237600000l)) should be (Some(new java.util.Date(1251237600000l)))
+
     a [AdaConversionException] should be thrownBy {
-      fieldType.displayJsonToValue(JsNumber(toDate("2005-04-08 20:21:11").getTime))
+      fieldType.displayJsonToValue(JsNumber(581251237600000l))
     }
     a [AdaConversionException] should be thrownBy {
       fieldType.displayJsonToValue(JsString("aa"))
-    }
-    a [AdaConversionException] should be thrownBy {
-      fieldType.displayJsonToValue(JsNumber(54))
     }
     a [AdaConversionException] should be thrownBy {
       fieldType.displayJsonToValue(JsBoolean(true))
@@ -364,14 +364,14 @@ class ScalarFieldTypeTest extends FlatSpec with Matchers {
     fieldType.displayStringToJson("") should be (JsNull)
     fieldType.displayStringToJson("2016-08-08 20:11:55") should be (JsNumber(toDate("2016-08-08 20:11:55").getTime))
     fieldType.displayStringToJson("08.08.2016") should be (JsNumber(toDate("2016-08-08 00:00:00").getTime))
+    fieldType.displayStringToJson("1251237600000") should be (JsNumber(1251237600000l))
+    fieldType.displayStringToJson(toDate("2016-08-08 20:11:55").getTime.toString) should be (JsNumber(toDate("2016-08-08 20:11:55").getTime))
+
     a [AdaConversionException] should be thrownBy {
       fieldType.displayStringToJson("aa")
     }
     a [AdaConversionException] should be thrownBy {
-      fieldType.displayStringToJson("54")
-    }
-    a [AdaConversionException] should be thrownBy {
-      fieldType.displayStringToJson(toDate("2016-08-08 20:11:55").getTime.toString)
+      fieldType.displayStringToJson("581251237600000")
     }
 
     fieldType.valueToDisplayString(None) should be ("")

@@ -155,7 +155,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   def inferDictionary = Action.async { implicit request =>
     // TODO: introduce type inference setting for each data set
-    dataSetService.inferDictionary(dataSetId).map( _ =>
+    dataSetService.inferDictionaryAndUpdateRecords(dataSetId, 5,Seq(FieldTypeId.Json)).map( _ =>
       home.flashing("success" -> s"Dictionary for '${dataSetId}'  was successfully inferred.")
     )
   }

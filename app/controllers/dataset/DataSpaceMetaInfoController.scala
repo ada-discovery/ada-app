@@ -113,19 +113,41 @@ class DataSpaceMetaInfoController @Inject() (
         def deleteDataSet: Future[_] =
           dsa.dataSetRepo.deleteAll
 
-        def deleteMetaData: Future[_] =
-          for {
-            _ <- dsa.fieldRepo.deleteAll
-            _ <- dsa.categoryRepo.deleteAll
-            setting <- dsa.setting
-            _ <- dataSetSettingRepo.delete(setting._id.get)
-          } yield
-            ()
+        def deleteFields: Future[_] =
+          dsa.fieldRepo.deleteAll
+
+        def deleteCategories: Future[_] =
+          dsa.categoryRepo.deleteAll
+
+        def deleteSetting: Future[_] =
+          dsa.setting.flatMap ( setting =>
+            dataSetSettingRepo.delete(setting._id.get)
+          )
 
         val future = actionChoice match {
-          case "1" => unregisterDataSet
-          case "2" => unregisterDataSet.flatMap(_ => deleteDataSet)
-          case "3" => unregisterDataSet.flatMap(_ => deleteDataSet).flatMap(_ => deleteMetaData)
+
+          case "1" =>
+            unregisterDataSet
+
+          case "2" => for {
+            _ <- unregisterDataSet
+            _ <- deleteDataSet
+          } yield ()
+
+          case "3" => for {
+            _ <- unregisterDataSet
+            _ <- deleteDataSet
+            _ <- deleteFields
+            _ <- deleteCategories
+          } yield ()
+
+          case "4" => for {
+            _ <- unregisterDataSet
+            _ <- deleteDataSet
+            _ <- deleteFields
+            _ <- deleteCategories
+            _ <- deleteSetting
+          } yield ()
         }
 
         future.map(_ =>

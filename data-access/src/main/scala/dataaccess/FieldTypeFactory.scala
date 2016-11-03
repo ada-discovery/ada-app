@@ -14,12 +14,24 @@ import scala.reflect.ClassTag
 
 trait FieldTypeFactory {
   def apply(field: FieldTypeSpec): FieldType[_]
+
+  def apply(
+    fieldType: FieldTypeId.Value,
+    isArray: Boolean = false,
+    enumValues: Option[Map[Int, String]] = None
+  ): FieldType[_] =
+    apply(FieldTypeSpec(fieldType, isArray, enumValues))
+
   def allStaticTypes: Traversable[FieldType[_]]
+
+  // some common type shortcuts
+
+  def stringScalar = apply(FieldTypeId.String).asValueOf[String]
+  def stringArray = apply(FieldTypeId.String, true).asValueOf[Array[Option[String]]]
 }
 
 private case class EnumFieldType(
     val nullAliases: Set[String],
-    enumValuesMaxCount: Int,
     enumValueMap: Map[Int, String]
   ) extends FormatFieldType[Int] {
 
@@ -129,15 +141,15 @@ object FieldTypeFactory {
     nullAliases: Set[String],
     dateFormats: Traversable[String],
     displayDateFormat: String,
-    enumValuesMaxCount: Int
-  ): FieldTypeFactory = new FieldTypeFactoryImpl(nullAliases, dateFormats, displayDateFormat, enumValuesMaxCount)
+    arrayDelimiter: String
+  ): FieldTypeFactory = new FieldTypeFactoryImpl(nullAliases, dateFormats, displayDateFormat, arrayDelimiter)
 }
 
 private class FieldTypeFactoryImpl(
     nullValues: Set[String],
     dateFormats: Traversable[String],
     displayDateFormat: String,
-    enumValuesMaxCount: Int
+    arrayDelimiter: String
   ) extends FieldTypeFactory {
 
   private val staticScalarTypes: Seq[FieldType[_]] = Seq(
@@ -232,6 +244,9 @@ private class FieldTypeFactoryImpl(
 
       override protected[dataaccess] val nullAliases = nullValues
 
+      override protected def displayStringToValueWoNull(text: String) =
+        toBoolean(text)
+
       override protected def displayJsonToValueWoString(json: JsReadable) =
         json match {
           case JsBoolean(boolean) => boolean
@@ -244,9 +259,6 @@ private class FieldTypeFactoryImpl(
           case JsBoolean(boolean) => boolean
           case  _ => throw new AdaConversionException(s"Json $json is not boolean.")
         }
-
-      override protected def displayStringToValueWoNull(text: String) =
-        toBoolean(text)
     },
 
     // Date
@@ -262,13 +274,21 @@ private class FieldTypeFactoryImpl(
       override protected[dataaccess] val nullAliases = nullValues
 
       override protected def displayStringToValueWoNull(text: String) =
-        toDate(dateFormats)(text)
+        try {
+          toDate(dateFormats)(text)
+        } catch {
+          // as a failover we try to interpret it as milliseconds
+          case e: AdaConversionException => toDateFromMsString(text)
+        }
+
+      override protected def displayJsonToValueWoString(json: JsReadable) =
+        json match {
+          case JsNumber(number) => toDateFromMs(number.toLong)
+          case  _ => throw new AdaConversionException(s"Json $json cannot be converted to a Date.")
+        }
 
       override protected def valueStringToValueWoNull(text: String) =
         toDate(Seq(displayDateFormat))(text)
-
-      override protected def displayJsonToValueWoString(json: JsReadable) =
-        throw new AdaConversionException(s"Json $json cannot be converted to a Date.")
 
       override protected def jsonToValueWoNull(json: JsReadable) =
         json match {
@@ -331,12 +351,9 @@ private class FieldTypeFactoryImpl(
       override protected def valueToDisplayStringNonEmpty(json: JsObject) =
         Json.stringify(json)
 
-      override def displayJsonToValue(json: JsReadable): Option[JsObject] =
+      override def displayJsonToValueWoString(json: JsReadable): JsObject =
         json match {
-          case JsNull => None
-          case JsDefined(json) => displayJsonToValue(json)
-          case _: JsUndefined => None
-          case x: JsObject => Some(x)
+          case x: JsObject => x
           case _ => throw new AdaConversionException(s"$json cannot be parsed to a JSON.")
         }
 
@@ -406,7 +423,7 @@ private class FieldTypeFactoryImpl(
       }
   }
 
-  private val staticArrayTypes: Seq[FieldType[_]] = staticScalarTypes.map(scalarType => ArrayFieldType(scalarType, ",")) ++ Seq(staticJsonArrayType)
+  private val staticArrayTypes: Seq[FieldType[_]] = staticScalarTypes.map(scalarType => ArrayFieldType(scalarType, arrayDelimiter)) ++ Seq(staticJsonArrayType)
 
   private val staticTypes: Seq[FieldType[_]] = staticScalarTypes ++ staticArrayTypes
 
@@ -417,10 +434,10 @@ private class FieldTypeFactoryImpl(
     // handle dynamic types (e.g. enum)
     if (fieldTypeId == FieldTypeId.Enum) {
       val intEnumMap = fieldTypeSpec.enumValues.getOrElse(Map[Int, String]())
-      val enumFieldType = EnumFieldType(nullValues, enumValuesMaxCount, intEnumMap)
+      val enumFieldType = EnumFieldType(nullValues, intEnumMap)
 
       if (fieldTypeSpec.isArray)
-        ArrayFieldType(enumFieldType, ",")
+        ArrayFieldType(enumFieldType, arrayDelimiter)
       else
         enumFieldType
     } else {

@@ -1,90 +1,129 @@
 package dataaccess
 
-import dataaccess.FieldTypeInferrer.INFER_FIELD_TYPE
-import play.api.libs.json.JsReadable
+import dataaccess.FieldTypInferrer.INFER_FIELD_TYPE
+import play.api.libs.json.{JsArray, JsReadable}
 
 import collection.mutable.{Map => MMap}
 
-trait FieldTypeInferrer {
-  def apply(values: Traversable[String]): FieldType[_]
+trait FieldTypeInferrer[T] {
+  def apply(values: Traversable[T]): FieldType[_]
 }
 
-object FieldTypeInferrer {
-  def apply(
-    nullAliases: Set[String],
-    dateFormats: Traversable[String],
-    displayDateFormat: String,
-    enumValuesMaxCount: Int
-  ): FieldTypeInferrer =
-    new FieldTypeInferrerImpl(nullAliases, dateFormats, displayDateFormat, enumValuesMaxCount)
-
-  type INFER_FIELD_TYPE = Traversable[String] => Option[FieldType[_]]
+object FieldTypInferrer {
+  type INFER_FIELD_TYPE[T] = Traversable[T] => Option[FieldType[_]]
 }
 
-private case class EnumFieldTypeInferrer(
-    nullAliases: Set[String],
-    enumValuesMaxCount: Int
+case class FieldTypeInferrerFactory(
+    ftf: FieldTypeFactory,
+    maxEnumValuesCount: Int,
+    minAvgValuesPerEnum: Double,
+    arrayDelimiter: String
   ) {
 
-  def apply: INFER_FIELD_TYPE = { values =>
-    val valuesWoNull = values.filterNot(value => value == null || nullAliases.contains(value.trim.toLowerCase))
-    val countMap = MMap[String, Int]()
-    valuesWoNull.foreach{value =>
-      val count = countMap.getOrElse(value.trim, 0)
-      countMap.update(value.trim, count + 1)
+  def apply: FieldTypeInferrer[String] =
+    new DisplayStringFieldTypeInferrerImpl(ftf, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter)
+
+  def applyJson: FieldTypeInferrer[JsReadable] =
+    new DisplayJsonFieldTypeInferrerImpl(ftf, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter)
+}
+
+private trait EnumFieldTypeInferrer[T] {
+
+  protected val nullAliases: Set[String]
+  protected val maxEnumValuesCount: Int
+  protected val minAvgValuesPerEnum: Double
+
+  protected def toStringValueWoNull(values: Traversable[T]): Traversable[String]
+
+  def apply: INFER_FIELD_TYPE[T] = { values =>
+    try {
+      val valuesWoNull = toStringValueWoNull(values)
+      val countMap = MMap[String, Int]()
+      valuesWoNull.foreach { value =>
+        val count = countMap.getOrElse(value.trim, 0)
+        countMap.update(value.trim, count + 1)
+      }
+      val distinctValues = countMap.keys.toSeq.sorted
+
+      if (distinctValues.size <= maxEnumValuesCount && minAvgValuesPerEnum * distinctValues.size <= valuesWoNull.size) {
+        val enumMap = distinctValues.zipWithIndex.toMap.map(_.swap)
+        Some(fieldType(enumMap))
+      } else
+        None
+    } catch {
+      case e: AdaConversionException => None
     }
-//    val sum = countMap.values.sum
-//    val freqsWoNa = countMap.values.map(count => count.toDouble / sum)
-//    freqsWoNa.size =< enumValuesMaxCount && (freqsWoNa.sum / freqsWoNa.size) > enumFrequencyThreshold
-
-    val distinctValues = countMap.keys.toSeq.sorted
-    if (distinctValues.size <= enumValuesMaxCount) {
-      val enumMap = distinctValues.zipWithIndex.toMap.map(_.swap)
-      Some(EnumFieldType(nullAliases, enumValuesMaxCount, enumMap))
-    } else
-      None
   }
+
+  protected def fieldType(enumMap: Map[Int, String]): FieldType[_] =
+    EnumFieldType(nullAliases, enumMap)
 }
 
-private case class EnumArrayFieldTypeInferrer(
-    nullAliases: Set[String],
-    enumValuesMaxCount: Int,
+private case class StringEnumFieldTypeInferrer(
+    stringFieldType: FieldType[String],
+    val maxEnumValuesCount: Int,
+    val minAvgValuesPerEnum: Double
+  ) extends EnumFieldTypeInferrer[String] {
+
+  override protected val nullAliases = stringFieldType.nullAliases
+
+  override protected def toStringValueWoNull(values: Traversable[String]) =
+    values.map(stringFieldType.displayStringToValue).flatten
+}
+
+private case class JsonEnumFieldTypeInferrer(
+    stringFieldType: FieldType[String],
+    val maxEnumValuesCount: Int,
+    val minAvgValuesPerEnum: Double
+  ) extends EnumFieldTypeInferrer[JsReadable] {
+
+  override protected val nullAliases = stringFieldType.nullAliases
+
+  override protected def toStringValueWoNull(values: Traversable[JsReadable]) =
+    values.map(stringFieldType.displayJsonToValue).flatten
+}
+
+private case class StringArrayEnumFieldTypeInferrer(
+    stringArrayFieldType: FieldType[Array[Option[String]]],
+    val maxEnumValuesCount: Int,
+    val minAvgValuesPerEnum: Double,
     delimiter: String
-  ) {
+  ) extends EnumFieldTypeInferrer[String] {
 
-  def apply: INFER_FIELD_TYPE = { values =>
-    val arrayValuesWoNull = values.filterNot(value => value == null || nullAliases.contains(value.trim.toLowerCase))
-    val valuesWoNull = arrayValuesWoNull.map(_.split(delimiter)).flatten
+  override protected val nullAliases = stringArrayFieldType.nullAliases
 
-    // use scalar inferrer for all values
-    val scalarEnumInferrer = EnumFieldTypeInferrer(nullAliases, enumValuesMaxCount).apply
-    scalarEnumInferrer(valuesWoNull).map( enumType =>
-      ArrayFieldType(enumType, delimiter)
-    )
-  }
+  override protected def toStringValueWoNull(strings: Traversable[String]) =
+    strings.map(stringArrayFieldType.displayStringToValue).flatten.flatten.flatten
+
+  override protected def fieldType(enumMap: Map[Int, String]) =
+    ArrayFieldType(super.fieldType(enumMap), delimiter)
 }
 
-private class FieldTypeInferrerImpl(
-    nullAliases: Set[String],
-    dateFormats: Traversable[String],
-    displayDateFormat: String,
-    enumValuesMaxCount: Int
-  ) extends FieldTypeInferrer {
+private case class JsonArrayEnumFieldTypeInferrer(
+    stringArrayFieldType: FieldType[Array[Option[String]]],
+    val maxEnumValuesCount: Int,
+    val minAvgValuesPerEnum: Double,
+    delimiter: String
+  ) extends EnumFieldTypeInferrer[JsReadable] {
 
-  private val arrayDelimiter = ","
+  override protected val nullAliases = stringArrayFieldType.nullAliases
 
-  private val staticFieldTypes = FieldTypeFactory(nullAliases, dateFormats, displayDateFormat, enumValuesMaxCount).allStaticTypes
+  override protected def toStringValueWoNull(strings: Traversable[JsReadable]) =
+    strings.map(stringArrayFieldType.displayJsonToValue).flatten.flatten.flatten
+
+  override protected def fieldType(enumMap: Map[Int, String]) =
+    ArrayFieldType(super.fieldType(enumMap), delimiter)
+}
+
+private abstract class FieldTypeInferrerImpl[T] extends FieldTypeInferrer[T] {
+
+  protected val ftf: FieldTypeFactory
+
+  protected val stringType = ftf.stringScalar
+  protected val stringArrayType = ftf.stringArray
+
+  private val staticFieldTypes = ftf.allStaticTypes
   private val defaultType = staticFieldTypes.find(_.spec.fieldType == FieldTypeId.String).get
-  private val dynamicFieldInferrers: Seq[((FieldTypeId.Value, Boolean), INFER_FIELD_TYPE)] = Seq(
-    (
-      (FieldTypeId.Enum, false),
-      EnumFieldTypeInferrer(nullAliases, enumValuesMaxCount).apply
-    ),
-    (
-      (FieldTypeId.Enum, true),
-      EnumArrayFieldTypeInferrer(nullAliases, enumValuesMaxCount, arrayDelimiter).apply
-    )
-  )
 
   private val prioritizedFieldTypes = Seq(
     (FieldTypeId.Null, false),
@@ -105,14 +144,48 @@ private class FieldTypeInferrerImpl(
     (FieldTypeId.String, true)
   )
 
-  private val fieldTypeInferrers: Traversable[((FieldTypeId.Value, Boolean), INFER_FIELD_TYPE)] =
+  protected def dynamicFieldInferrers: Seq[((FieldTypeId.Value, Boolean), INFER_FIELD_TYPE[T])]
+  protected def isOfStaticType(fieldType: FieldType[_]): INFER_FIELD_TYPE[T]
+
+  private lazy val fieldTypeInferrers: Traversable[((FieldTypeId.Value, Boolean), INFER_FIELD_TYPE[T])] =
     staticFieldTypes.map(fieldType =>
       ((fieldType.spec.fieldType, fieldType.spec.isArray), isOfStaticType(fieldType))
     ) ++ dynamicFieldInferrers
 
-  private val fieldTypeInferrerMap = fieldTypeInferrers.toMap
+  private lazy val fieldTypeInferrerMap = fieldTypeInferrers.toMap
 
-  private def isOfStaticType(fieldType: FieldType[_]): INFER_FIELD_TYPE = { texts =>
+  override def apply(values: Traversable[T]): FieldType[_] = {
+    val fieldType = prioritizedFieldTypes.view.map( fieldTypeSpec =>
+      fieldTypeInferrerMap.get(fieldTypeSpec).map(_(values)).flatten
+    ).find(_.isDefined)
+
+    fieldType match {
+      case Some(fieldType) => fieldType.get
+      // this should never happen, but who knows :)
+      case None => defaultType
+    }
+  }
+}
+
+private class DisplayStringFieldTypeInferrerImpl(
+    val ftf: FieldTypeFactory,
+    val maxEnumValuesCount: Int,
+    val minAvgValuesPerEnum: Double,
+    val arrayDelimiter: String
+  ) extends FieldTypeInferrerImpl[String] {
+
+  override protected val dynamicFieldInferrers: Seq[((FieldTypeId.Value, Boolean), INFER_FIELD_TYPE[String])] = Seq(
+    (
+      (FieldTypeId.Enum, false),
+      StringEnumFieldTypeInferrer(stringType, maxEnumValuesCount, minAvgValuesPerEnum).apply
+    ),
+    (
+      (FieldTypeId.Enum, true),
+      StringArrayEnumFieldTypeInferrer(stringArrayType, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter).apply
+    )
+  )
+
+  override protected def isOfStaticType(fieldType: FieldType[_]): INFER_FIELD_TYPE[String] = { texts =>
     val passed = texts.forall( text =>
       try {
         fieldType.displayStringToValue(text)
@@ -127,16 +200,39 @@ private class FieldTypeInferrerImpl(
     else
       None
   }
+}
 
-  override def apply(values: Traversable[String]): FieldType[_] = {
-    val fieldType = prioritizedFieldTypes.view.map( fieldTypeSpec =>
-      fieldTypeInferrerMap.get(fieldTypeSpec).map(_(values)).flatten
-    ).find(_.isDefined)
+private class DisplayJsonFieldTypeInferrerImpl(
+    val ftf: FieldTypeFactory,
+    val maxEnumValuesCount: Int,
+    val minAvgValuesPerEnum: Double,
+    val arrayDelimiter: String
+  ) extends FieldTypeInferrerImpl[JsReadable] {
 
-    fieldType match {
-      case Some(fieldType) => fieldType.get
-      // this should never happen, but who knows :)
-      case None => defaultType
-    }
+  override protected val dynamicFieldInferrers: Seq[((FieldTypeId.Value, Boolean), INFER_FIELD_TYPE[JsReadable])] = Seq(
+    (
+      (FieldTypeId.Enum, false),
+      JsonEnumFieldTypeInferrer(stringType, maxEnumValuesCount, minAvgValuesPerEnum).apply
+      ),
+    (
+      (FieldTypeId.Enum, true),
+      JsonArrayEnumFieldTypeInferrer(stringArrayType, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter).apply
+    )
+  )
+
+  override protected def isOfStaticType(fieldType: FieldType[_]): INFER_FIELD_TYPE[JsReadable] = { texts =>
+    val passed = texts.forall( text =>
+      try {
+        fieldType.displayJsonToValue(text)
+        true
+      } catch {
+        case e: AdaConversionException => false
+      }
+    )
+
+    if (passed)
+      Some(fieldType)
+    else
+      None
   }
 }

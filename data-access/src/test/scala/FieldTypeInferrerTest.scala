@@ -51,9 +51,9 @@ class FieldTypeInferrerTest extends FlatSpec with Matchers {
   "Enum field type" should "should be inferred only for enum values" in {
     def shouldBeEnumType(enumValues: Map[Int, String]) = shouldBeInferredType(FieldTypeSpec(FieldTypeId.Enum, false, Some(enumValues)))_
 
-    shouldBeEnumType(Map(0 -> "Male")) (Seq("Male"))
-    shouldBeEnumType(Map(0 -> "Both", 1 -> "Female", 2 -> "Male")) (Seq("Male", " Male", "Female", "Male ", "na", null, "Both", "Female"))
-    shouldBeEnumType(Map(0 -> "1", 1 -> "Sun")) (Seq("1", " 1", "null", "Sun "))
+    shouldBeEnumType(Map(0 -> "Male")) (Seq("Male", " Male"))
+    shouldBeEnumType(Map(0 -> "Both", 1 -> "Female", 2 -> "Male")) (Seq(" Male", "Female", "Male ", "na", null, "Both", "Female"))
+    shouldBeEnumType(Map(0 -> "1", 1 -> "Sun")) (Seq("1", " 1", "1", "null", "Sun "))
   }
 
   "String field type" should "should be inferred only for string (non-enum) values" in {

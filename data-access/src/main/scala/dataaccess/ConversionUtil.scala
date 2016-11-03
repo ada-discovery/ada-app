@@ -7,6 +7,9 @@ import scala.reflect.ClassTag
 
 object ConversionUtil {
 
+  private val minValidYear = 1900
+  private val maxValidYear = 2100
+
   def toDouble = convert(_.toDouble)_
 
   def toInt = convert(_.toInt)_
@@ -17,11 +20,9 @@ object ConversionUtil {
 
   def toBoolean = convert(toBooleanAux)_
 
-//  def toBoolean(valueMap: Map[String, Boolean]) = convert { text =>
-//    valueMap.getOrElse(text.toLowerCase, typeExpectedException(text, classOf[Boolean]))
-//  }_
-
   def toDate(dateFormats: Traversable[String]) = convert(toDateAux(dateFormats))_
+
+  def toDateFromMsString = convert(toDateFromMsStringAux)_
 
   private def toDateAux(dateFormats: Traversable[String])(text: String) = {
     val dates = dateFormats.map { format =>
@@ -32,8 +33,8 @@ object ConversionUtil {
         val date = dateFormat.parse(text, parsePosition)
         if (parsePosition.getIndex == text.length) {
           val year1900 = date.getYear
-          // we assume that a valid year is between 1900 and 2100
-          if (year1900 > 0 && year1900 < 200)
+          // we assume that a valid year is bounded
+          if (year1900 > minValidYear - 1900 && year1900 < maxValidYear - 1900)
             Some(date)
           else
             None
@@ -47,6 +48,26 @@ object ConversionUtil {
     dates.headOption.getOrElse(
       throw typeExpectedException(text, classOf[Date])
     )
+  }
+
+  private def toDateFromMsStringAux(text: String) = {
+    val ms = try {
+      toLong(text)
+    } catch {
+      case e: AdaConversionException => typeExpectedException(text, classOf[Date])
+    }
+
+    toDateFromMs(ms)
+  }
+
+  def toDateFromMs(ms: Long) = {
+    val date = new Date(ms)
+    val year1900 = date.getYear
+    // we assume that a valid year is bounded
+    if (year1900 > minValidYear - 1900 && year1900 < maxValidYear - 1900)
+      date
+    else
+      typeExpectedException(ms.toString, classOf[Date])
   }
 
   private def toBooleanAux(text: String) = {
@@ -71,10 +92,6 @@ object ConversionUtil {
   def isFloat = isConvertible(_.toFloat)_
 
   def isBoolean = isConvertible(toBooleanAux)_
-
-//  def isBoolean(valueMap: Map[String, Boolean]) = isConvertible { text =>
-//    valueMap.getOrElse(text, typeExpectedException(text, classOf[Boolean]))
-//  }_
 
   def isDate(dateFormats: Traversable[String]) = isConvertible(toDateAux(dateFormats))_
 

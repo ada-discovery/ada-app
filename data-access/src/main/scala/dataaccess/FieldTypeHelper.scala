@@ -1,7 +1,5 @@
 package dataaccess
 
-import dataaccess.{FieldTypeInferrer, FieldTypeFactory}
-
 object FieldTypeHelper {
   val nullAliases = Seq("", "na", "n/a", "null")
   val dateFormats = Seq(
@@ -24,8 +22,14 @@ object FieldTypeHelper {
     "MM.yyyy"
   )
   val displayDateFormat = "yyyy-MM-dd HH:mm:ss"
-  val enumValuesMaxCount = 20
+  val maxEnumValuesCount = 20
+  val minAvgValuesPerEnum = 1.5
 
-  val fieldTypeFactory = FieldTypeFactory(nullAliases.toSet, dateFormats, displayDateFormat, enumValuesMaxCount)
-  val fieldTypeInferrer = FieldTypeInferrer(nullAliases.toSet, dateFormats, displayDateFormat, enumValuesMaxCount)
+  val arrayDelimiter = ","
+
+  val fieldTypeFactory = FieldTypeFactory(nullAliases.toSet, dateFormats, displayDateFormat, arrayDelimiter)
+  val fieldTypeInferrerFactory = FieldTypeInferrerFactory(fieldTypeFactory, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter)
+
+  val fieldTypeInferrer = fieldTypeInferrerFactory.apply
+  val jsonFieldTypeInferrer = fieldTypeInferrerFactory.applyJson
 }

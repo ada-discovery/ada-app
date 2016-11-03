@@ -8,6 +8,7 @@ import models._
 import persistence.RepoTypes.DataSetImportRepo
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
+import services.datasetimporter.DataSetImporterCentral
 import collection.mutable.{Map => MMap}
 import scala.concurrent.{Await, Future, ExecutionContext}
 import akka.actor.{Cancellable, ActorSystem, Actor, ActorRef}
@@ -35,7 +36,7 @@ trait DataSetImportScheduler {
 protected class DataSetImportSchedulerImpl @Inject() (
     val system: ActorSystem,
     dataSetImportRepo: DataSetImportRepo,
-    dataSetService: DataSetService)(
+    dataSetImporterCentral: DataSetImporterCentral)(
     implicit ec: ExecutionContext
   ) extends DataSetImportScheduler {
 
@@ -82,7 +83,7 @@ protected class DataSetImportSchedulerImpl @Inject() (
   def executeDataSetImport(id: BSONObjectID): Future[Unit] = {
     for {
       dataSetImportOption <- dataSetImportRepo.get(id)
-      _ <- dataSetImportOption.map(dataSetService.importDataSetUntyped).getOrElse(Future(()))
+      _ <- dataSetImportOption.map(dataSetImporterCentral.apply).getOrElse(Future(()))
     } yield ()
   }.recover {
     case e: Exception => logger.error(s"Import of data set '${id}' failed due to: ${e.getMessage}.")

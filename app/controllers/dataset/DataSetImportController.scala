@@ -4,6 +4,7 @@ import java.util.Date
 import java.util.concurrent.TimeoutException
 
 import dataaccess.{DataSetSetting, RepoException}
+import services.datasetimporter.DataSetImporterCentral
 
 import scala.concurrent.duration._
 import javax.inject.Inject
@@ -33,6 +34,7 @@ import scala.concurrent.{Await, Future}
 class DataSetImportController @Inject()(
     repo: DataSetImportRepo,
     dataSetService: DataSetService,
+    dataSetImporterCentral: DataSetImporterCentral,
     dataSetImportScheduler: DataSetImportScheduler,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     deadbolt: DeadboltActions,
@@ -261,7 +263,7 @@ class DataSetImportController @Inject()(
             home.flashing("errors" -> fullMessage)
           }
           val successRedirect = home// Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
-          dataSetService.importDataSetUntyped(importInfo).map { _ =>
+          dataSetImporterCentral(importInfo).map { _ =>
             val execTimeSec = (new Date().getTime - start.getTime) / 1000
             render {
               case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '${importInfo.dataSetName}' has been imported in $execTimeSec sec(s).")

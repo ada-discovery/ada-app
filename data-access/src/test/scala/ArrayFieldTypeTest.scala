@@ -553,14 +553,14 @@ class ArrayFieldTypeTest extends FlatSpec with Matchers {
     fieldType.displayStringToValue(date2String).get should be (Array(Some(date2)))
     fieldType.displayStringToValue(s"$date1String, $date2String, $date3String").get should be (Array(Some(date1), Some(date2), Some(date3)))
     fieldType.displayStringToValue(s"$date2String,,").get should be (Array(Some(date2), None, None))
+    fieldType.displayStringToValue("1251237600000").get should be (Array(Some(new java.util.Date(1251237600000l))))
+    fieldType.displayStringToValue(date1.getTime.toString).get should be (Array(Some(date1)))
+
     a [AdaConversionException] should be thrownBy {
       fieldType.displayStringToValue("aa")
     }
     a [AdaConversionException] should be thrownBy {
-      fieldType.displayStringToValue("54")
-    }
-    a [AdaConversionException] should be thrownBy {
-      fieldType.displayStringToValue(date1.getTime.toString)
+      fieldType.displayStringToValue("581251237600000")
     }
 
     fieldType.displayJsonToValue(JsNull) should be (None)
@@ -572,17 +572,16 @@ class ArrayFieldTypeTest extends FlatSpec with Matchers {
     fieldType.displayJsonToValue(JsArray(Seq(JsString(date2String), JsNull, JsNull))).get should be (Array(Some(date2), None, None))
     fieldType.displayJsonToValue(JsString(date2String)).get should be (Array(Some(date2)))
     fieldType.displayJsonToValue(JsString(s"$date3String,,$date1String")).get should be (Array(Some(date3), None, Some(date1)))
-    a [AdaConversionException] should be thrownBy {
-      fieldType.displayJsonToValue(JsNumber(date3.getTime))
-    }
-    a [AdaConversionException] should be thrownBy {
-      fieldType.displayJsonToValue(JsArray(Seq(JsNumber(date1.getTime))))
-    }
+    fieldType.displayJsonToValue(JsArray(Seq(JsNumber(date1.getTime)))).get should be (Array(Some(date1)))
+
     a [AdaConversionException] should be thrownBy {
       fieldType.displayJsonToValue(JsString("aa"))
     }
     a [AdaConversionException] should be thrownBy {
-      fieldType.displayJsonToValue(JsNumber(54))
+      fieldType.displayJsonToValue(JsNumber(581251237600000l))
+    }
+    a [AdaConversionException] should be thrownBy {
+      fieldType.displayJsonToValue(JsNumber(date3.getTime))
     }
     a [AdaConversionException] should be thrownBy {
       fieldType.displayJsonToValue(JsBoolean(true))
@@ -597,14 +596,13 @@ class ArrayFieldTypeTest extends FlatSpec with Matchers {
     fieldType.displayStringToJson(date2String) should be (JsArray(Seq(JsNumber(date2.getTime))))
     fieldType.displayStringToJson(s"$date1String, $date2String, $date3String") should be (JsArray(Seq(JsNumber(date1.getTime), JsNumber(date2.getTime), JsNumber(date3.getTime))))
     fieldType.displayStringToJson(s"$date2String,,") should be (JsArray(Seq(JsNumber(date2.getTime), JsNull, JsNull)))
+    fieldType.displayStringToJson("1251237600000") should be (JsArray(Seq(JsNumber(1251237600000l))))
+    fieldType.displayStringToJson(date1.getTime.toString) should be (JsArray(Seq(JsNumber(date1.getTime))))
     a [AdaConversionException] should be thrownBy {
       fieldType.displayStringToJson("aa")
     }
     a [AdaConversionException] should be thrownBy {
-      fieldType.displayStringToJson("54")
-    }
-    a [AdaConversionException] should be thrownBy {
-      fieldType.displayStringToJson(date1.getTime.toString)
+      fieldType.displayStringToJson("581251237600000")
     }
 
     fieldType.valueToDisplayString(None) should be ("")

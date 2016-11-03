@@ -47,7 +47,8 @@ object BinaryJsonUtil {
         case x: JsValue => x // nothing to do
         case x: String => JsString(x)
         case x: BigDecimal => JsNumber(x)
-        case x: Integer => JsNumber(BigDecimal.valueOf(x.toDouble))
+        case x: Integer => JsNumber(BigDecimal.valueOf(x.toLong))
+        case x: Long => JsNumber(BigDecimal.valueOf(x))
         case x: Double => JsNumber(BigDecimal.valueOf(x))
         case x: Boolean => JsBoolean(x)
         case x: Date => Json.toJson(x)
