@@ -47,6 +47,10 @@ body {
     background-color: #0074D9;
 }
 
+.sidebar-nav > li.dataspace {
+    margin-top: 10px;
+    clear: left;
+}
 
 .sidebar-nav > li.dataspace > a,
 .sidebar-nav > li.dataspace > a:focus,
@@ -59,10 +63,18 @@ body {
     padding-bottom: 6px;
 }
 
+.btn-dataspace-expand {
+    float: left;
+    display: inline-block;
+    margin-right: 5px;
+    margin-top: 10px;
+}
+
 .sidebar-nav > li.dataset > a {
-    padding-left: 25px;
+    padding-left: 10px;
     padding-top: 2px;
     padding-bottom: 2px;
+    margin-left: 10px;
 }
 
 .navbar-brand {
@@ -172,4 +184,12 @@ tr.clickable-row {
 
 .label-inverse {
     color: #000000;
+}
+
+.float-left {
+    float: left;
+}
+
+.clear-left {
+    clear: left;
 }
