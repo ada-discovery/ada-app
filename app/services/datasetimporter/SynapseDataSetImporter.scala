@@ -28,9 +28,6 @@ private class SynapseDataSetImporter @Inject() (
   private val synapseDefaultBulkDownloadGroupNumber = 5
   private val keyField = "ROW_ID"
 
-  private type TransformJsonsAndGetNewFieldTypes =
-    Seq[JsObject] => Future[(Seq[JsObject], Seq[(String, FieldType[_])])]
-
   override def apply(importInfo: SynapseDataSetImport): Future[Unit] = {
     val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
 
@@ -57,7 +54,7 @@ private class SynapseDataSetImporter @Inject() (
     importInfo: SynapseDataSetImport,
     synapseService: SynapseService,
     fileFieldNames: Traversable[String],
-    transformJsonsFun: Option[TransformJsonsAndGetNewFieldTypes],
+    transformJsonsFun: Option[Seq[JsObject] => Future[(Seq[JsObject])]],
     transformBatchSize: Option[Int]
   ) = {
     logger.info(new Date().toString)
@@ -128,17 +125,15 @@ private class SynapseDataSetImporter @Inject() (
     tableId: String,
     bulkDownloadGroupNumber: Option[Int])(
     jsons: Seq[JsObject]
-  ): Future[(Seq[JsObject], Seq[(String, FieldType[_])])] = {
+  ): Future[Seq[JsObject]] = {
     val fileHandleIds = fileFieldNames.map { fieldName =>
       jsons.map(json =>
         JsonUtil.toString(json \ fieldName)
       )
     }.flatten.flatten
 
-    val fieldTypes = fileFieldNames.map ( fieldName => (fieldName, ftf(FieldTypeId.Json, true)) ) // json array assumed, TODO: fix
-
     val groupNumber = bulkDownloadGroupNumber.getOrElse(synapseDefaultBulkDownloadGroupNumber)
-    val newJsonsFuture = if (fileHandleIds.nonEmpty) {
+    if (fileHandleIds.nonEmpty) {
       val groupSize = Math.max(fileHandleIds.size / groupNumber, 1)
       val groups = {
         if (fileHandleIds.size.toDouble / groupSize > groupNumber)
@@ -170,10 +165,8 @@ private class SynapseDataSetImporter @Inject() (
         newJsons
       }
     } else
-    // no update
+      // no update
       Future(jsons)
-
-    newJsonsFuture.map ( newJsons => (newJsons, fieldTypes))
   }
 
   protected def createSynapseJsonsWithFieldTypes(

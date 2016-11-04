@@ -4,6 +4,7 @@
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 
 
+@import reactivemongo.bson.BSONObjectID
 @(dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo])(implicit request: Request[_])
 
 @listItem(call: Call, dataSetId: String, text: String) = {
@@ -23,12 +24,17 @@
     }
 }
 
-@spaceItem(call: Call, text: String) = {
-    <li @if(matchesPath(call.url, request.uri, Some(3))) {class="dataspace active"} else {class="dataspace"}>
-        <a href="@call">
-            <h4>@text</h4>
-        </a>
-    </li>
+@spaceItem(id: BSONObjectID, text: String) = {
+    @defining(dataSpaceMetaInfoRoutes.get(id)) { call =>
+        <li @if(matchesPath(call.url, request.uri, Some(3))) { class="dataspace active"} else { class="dataspace"}>
+            <button type="button" class="btn btn-sm btn-default btn-dataspace-expand" data-toggle="collapse" data-target="#dataSets-@id.stringify">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+            </button>
+            <a href="@call" class="float-left">
+                <h4>@text</h4>
+            </a>
+        </li>
+    }
 }
 
 <!--
@@ -38,9 +44,35 @@
 
 <ul class="sidebar-nav nav nav-pills nav-stacked">
     @dataSpaceMetaInfos.toSeq.sortBy(_.sortOrder).map { spaceMetaInfo =>
-        @spaceItem(dataSpaceMetaInfoRoutes.get(spaceMetaInfo._id.get), spaceMetaInfo.name)
-        @spaceMetaInfo.dataSetMetaInfos.filter(!_.hide).sortBy(_.sortOrder).map { setMetaInfo =>
-            @listItem(new DataSetRouter(setMetaInfo.id).plainOverviewList, setMetaInfo.id, setMetaInfo.name)
-        }
+        @spaceItem(spaceMetaInfo._id.get, spaceMetaInfo.name)
+        <div id="dataSets-@{spaceMetaInfo._id.get.stringify}" class="collapse clear-left datasets-div sidebar-nav nav nav-pills nav-stacked">
+            @spaceMetaInfo.dataSetMetaInfos.filter(!_.hide).sortBy(_.sortOrder).map { setMetaInfo =>
+                @listItem(new DataSetRouter(setMetaInfo.id).plainOverviewList, setMetaInfo.id, setMetaInfo.name)
+            }
+        </div>
     }
 </ul>
+
+<script type="text/javascript">
+    $(".datasets-div").each(function() {
+        if($(this).find("li.dataset.active").size() > 0)
+            $(this).addClass("in")
+    });
+    $(".dataspace.active").each(function() {
+        $(this).next().addClass("in");
+    });
+    $('.btn-dataspace-expand').on('click', function() {
+        var iconPlus = $(this).find("span.glyphicon-plus:first");
+        var iconMinus = $(this).find("span.glyphicon-minus:first");
+        console.log(iconPlus);
+        console.log(iconMinus);
+        if (iconPlus.length) {
+            iconPlus.removeClass("glyphicon-plus");
+            iconPlus.addClass("glyphicon-minus");
+        } else {
+            iconMinus.removeClass("glyphicon-minus");
+            iconMinus.addClass("glyphicon-plus");
+        }
+
+    });
+</script>
