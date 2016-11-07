@@ -95,6 +95,7 @@ class DataSetServiceImpl @Inject()(
   private val dataSetIdFieldName = JsObjectIdentity.name
   private val reportLineFreq = 0.1
 
+  private val ftf = FieldTypeHelper.fieldTypeFactory
   private val fti = FieldTypeHelper.fieldTypeInferrer
   private val jsonFti = FieldTypeHelper.jsonFieldTypeInferrer
 
@@ -577,19 +578,19 @@ class DataSetServiceImpl @Inject()(
     removeNullRows: Boolean
   ): (Traversable[JsObject], Seq[(String, FieldTypeSpec)]) = {
     val nullFieldNameSet = fieldNameAndTypes.filter(_._2.fieldType == FieldTypeId.Null).map(_._1).toSet
-    val enumFieldTypes = fieldNameAndTypes.filter(_._2.fieldType == FieldTypeId.Enum)
-    val stringFieldNames = fieldNameAndTypes.filter(_._2.fieldType == FieldTypeId.String).map(_._1)
 
-    // translate strings
-    val (stringConvertedJsons, newStringFieldTypes) = translateStringFields(
-      items, stringFieldNames, translationMap)
+    // get the string or enum scalar field types
+    // TODO: what about arrays?
+    val stringOrEnumScalarFieldTypes = fieldNameAndTypes.filter { fieldNameAndType =>
+      val fieldTypeSpec = fieldNameAndType._2
+      (!fieldTypeSpec.isArray && (fieldTypeSpec.fieldType == FieldTypeId.String || fieldTypeSpec.fieldType == FieldTypeId.Enum))
+    }
 
-    // translate enumns
-    val (enumConvertedJsons, newEnumFieldTypes) = translateEnumsFields(
-      items, enumFieldTypes, translationMap)
+    // translate strings and enums
+    val (convertedJsons, newFieldTypes) = translateFields(items, stringOrEnumScalarFieldTypes, translationMap)
 
-    val convertedJsItems = (items, stringConvertedJsons, enumConvertedJsons).zipped.map {
-      case (json, stringJson: JsObject, enumJson) =>
+    val convertedJsItems = (items, convertedJsons).zipped.map {
+      case (json, converterJson: JsObject) =>
         // remove null columns
         val nonNullValues =
           if (removeNullColumns) {
@@ -598,7 +599,7 @@ class DataSetServiceImpl @Inject()(
             json.fields.filter { case (fieldName, _) => !fieldName.equals(dataSetIdFieldName)}
 
         // merge with String-converted Jsons
-        JsObject(nonNullValues) ++ (stringJson ++ enumJson)
+        JsObject(nonNullValues) ++ (converterJson)
     }
 
     // remove all items without any content
@@ -617,9 +618,7 @@ class DataSetServiceImpl @Inject()(
         fieldNameAndTypes
 
     // merge string and enum field name type maps
-    val stringFieldNameTypeMap = (stringFieldNames, newStringFieldTypes).zipped.toMap
-    val enumFieldNameTypeMap = (enumFieldTypes.map(_._1), newEnumFieldTypes).zipped.toMap
-    val newFieldNameTypeMap = stringFieldNameTypeMap ++ enumFieldNameTypeMap
+    val newFieldNameTypeMap = (stringOrEnumScalarFieldTypes.map(_._1), newFieldTypes).zipped.toMap
 
     // update the field types with the new ones
     val finalFieldNameAndTypes = nonNullFieldNameAndTypes.map { case (fieldName, fieldType) =>
@@ -630,6 +629,25 @@ class DataSetServiceImpl @Inject()(
     (finalJsons, finalFieldNameAndTypes)
   }
 
+  protected def createJsonsWithFieldTypes(
+    fieldNames: Seq[String],
+    values: Seq[Seq[String]]
+  ): (Seq[JsObject], Seq[(String, FieldType[_])]) = {
+    val fieldTypes = values.transpose.par.map(fti.apply).toList
+
+    val jsons = values.map( vals =>
+      JsObject(
+        (fieldNames, fieldTypes, vals).zipped.map {
+          case (fieldName, fieldType, text) =>
+            val jsonValue = fieldType.displayStringToJson(text)
+            (fieldName, jsonValue)
+        })
+    )
+
+    (jsons, fieldNames.zip(fieldTypes))
+  }
+
+  @Deprecated
   private def translateStringFields(
     items: Traversable[JsObject],
     stringFieldNames: Traversable[String],
@@ -653,26 +671,37 @@ class DataSetServiceImpl @Inject()(
     (jsons, fieldTypes.map(_._2.spec))
   }
 
-  protected def createJsonsWithFieldTypes(
-    fieldNames: Seq[String],
-    values: Seq[Seq[String]]
-  ): (Seq[JsObject], Seq[(String, FieldType[_])]) = {
-    val fieldTypes = values.transpose.par.map(fti.apply).toList
+  private def translateFields(
+    items: Traversable[JsObject],
+    fieldNameAndTypeSpecs: Seq[(String, FieldTypeSpec)],
+    translationMap: Map[String, String]
+  ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
 
-    val jsons = values.map( vals =>
-      JsObject(
-        (fieldNames, fieldTypes, vals).zipped.map {
-          case (fieldName, fieldType, text) =>
-            val jsonValue = fieldType.displayStringToJson(text)
-            (fieldName, jsonValue)
-        })
+    // obtain field types from the specs
+    val enumFieldNameAndTypes = fieldNameAndTypeSpecs.map { case (fieldName, fieldTypeSpec) =>
+      (fieldName, ftf(fieldTypeSpec))
+    }
+
+    // translate jsons to String values
+    def translate(json: JsObject) = enumFieldNameAndTypes.map { case (fieldName, fieldType) =>
+      val stringValue = fieldType.jsonToDisplayString(json \ fieldName)
+      translationMap.get(stringValue).getOrElse(stringValue)
+    }
+
+    val convertedStringValues = items.map(translate)
+
+    // infer new types
+    val (jsons, fieldTypes) = createJsonsWithFieldTypes(
+      fieldNameAndTypeSpecs.map(_._1),
+      convertedStringValues.toSeq
     )
 
-    (jsons, fieldNames.zip(fieldTypes))
+    (jsons, fieldTypes.map(_._2.spec))
   }
 
   // TODO: enum inference depends of frequency, therefore we need to check the values as well
-  private def translateEnumsFields(
+  @Deprecated
+  private def translateEnumsFieldsOld(
     items: Traversable[JsObject],
     enumFieldNameAndTypes: Seq[(String, FieldTypeSpec)],
     translationMap: Map[String, String]
