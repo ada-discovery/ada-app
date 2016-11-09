@@ -193,3 +193,8 @@ tr.clickable-row {
 .clear-left {
     clear: left;
 }
+
+.label-filter {
+    vertical-align: middle;
+    margin-left: 10px;
+}

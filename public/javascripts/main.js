@@ -49,47 +49,62 @@ function getQueryParams(qs) {
   return params;
 }
 
-// TODO: Extend to key-value pairs
-function populateTypeahead(element, values, containsSearchFlag, nonWhitespaceDelimiter) {
-  var listSearch = new Bloodhound({
-    datumTokenizer: function(d) {
-      var dd = d;
-      if (nonWhitespaceDelimiter) {
-        dd = d.split(nonWhitespaceDelimiter).join(" ")
-      }
-      var strings = Bloodhound.tokenizers.whitespace(dd);
-      if (containsSearchFlag) {
+function stringDatumTokenizer(searchAsContainsFlag, nonWhitespaceDelimiter, string) {
+    var string2 = string;
+    if (nonWhitespaceDelimiter) {
+        string2 = string.split(nonWhitespaceDelimiter).join(" ")
+    }
+    var strings = Bloodhound.tokenizers.whitespace(string2);
+    if (searchAsContainsFlag) {
         $.each(strings, function (k, v) {
-          var i = 1;
-          while ((i + 1) < v.length) {
-            strings.push(v.substr(i, v.length));
-            i++;
-          }
+            var i = 1;
+            while ((i + 1) < v.length) {
+                strings.push(v.substr(i, v.length));
+                i++;
+            }
         })
-      }
-      return strings;
-    },
+    }
+    return strings;
+}
+
+function createStringDatumTokenizer(searchAsContainsFlag, nonWhitespaceDelimiter) {
+    return stringDatumTokenizer.bind(null, searchAsContainsFlag).bind(null, nonWhitespaceDelimiter)
+}
+
+function populateStringTypeahead(element, data, searchAsContainsFlag, nonWhitespaceDelimiter, updateValueElement) {
+    var datumTokenizer = createStringDatumTokenizer(searchAsContainsFlag, nonWhitespaceDelimiter)
+    populateTypeahead(element, data, datumTokenizer, null, null, updateValueElement)
+}
+
+function populateTypeahead(element, data, datumTokenizer, displayFun, suggestionFun, updateValueElement) {
+  var dataSource = new Bloodhound({
+    datumTokenizer: datumTokenizer,
     queryTokenizer: Bloodhound.tokenizers.whitespace,
-    local: values
+    local: data
   });
+
+  dataSource.initialize();
 
   // Setting of minlength to 0 does not work. To sho ALL items if nothing entered this function needs to be introduced
   function listSearchWithAll(q, sync) {
     if (q == '')
-        sync(listSearch.all());
-     else
-        listSearch.search(q, sync);
+        sync(dataSource.all());
+    else
+        dataSource.search(q, sync);
   }
 
   element.typeahead({
-        hint: true,
-        highlight: true,
-        minLength: 0
-    },{
-        source: listSearchWithAll,
-        limit: 25
-    }
-  );
+    hint: true,
+    highlight: true,
+    minLength: 0
+  }, {
+    source: listSearchWithAll,
+    display: displayFun,
+    templates: {
+      suggestion: suggestionFun
+    },
+    limit: 25
+  });
 
   element.on("focus", function () {
     var value = element.val();
@@ -97,6 +112,78 @@ function populateTypeahead(element, values, containsSearchFlag, nonWhitespaceDel
     element.typeahead('val', value);
     return true
   });
+
+  element.on('typeahead:select', function (e, datum) {
+    if (updateValueElement)
+        updateValueElement(datum);
+  });
+
+  element.on('typeahead:cursorchanged', function (e, datum) {
+    if (updateValueElement)
+        updateValueElement(datum);
+  });
+}
+
+function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, hideFieldNames) {
+    // collect all field names and labels such that if a field has the label defined it will be listed twice.
+    // in this way we make both names and labels searchable.
+    var fullFieldNameAndLabels = fieldNameAndLabels.map( function(field, index) {
+        var nameItem = {key: field.name, value: field.name};
+        var labelItem = {key: field.name, value: field.label, isLabel: true}
+
+        if (hideFieldNames) {
+            if (field.label)
+                return [labelItem]
+            else
+                return []
+        } else {
+            if (field.label)
+                return [nameItem, labelItem]
+            else
+                return [nameItem]
+        }
+    });
+
+    var stringDatumTokenizer = createStringDatumTokenizer(true, false);
+
+    var compareValues = function (a, b) {
+        if (a.value < b.value)
+            return -1;
+        else if (a.value == b.value)
+            return 0;
+        else
+            return 1;
+    };
+
+    populateTypeahead(
+        typeaheadElement,
+        [].concat.apply([], fullFieldNameAndLabels).sort(compareValues),
+        function (item) {
+            return stringDatumTokenizer(item.value);
+        },
+        function (item) {
+            return item.value;
+        },
+        function (item) {
+            var labelBadge = hideFieldNames ? '' : '<span class="label label-success label-filter">label</span>';
+            if (item.isLabel)
+                return '<div><span>' + item.value + '</span>' + labelBadge + '</div>';
+            else
+                return '<div><span>' + item.value + '</span></div>';
+        },
+        function (item) {
+            fieldNameElement.val(item.key);
+        }
+    );
+}
+
+function populateFieldTypeahedFromUrl(typeaheadElement, fieldNameElement, url, hideFieldNames) {
+    $.ajax({
+        url: url,
+        success: function (fieldNameAndLabels) {
+            populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, hideFieldNames);
+        }
+    });
 }
 
 function registerMessageEventSource(url) {
