@@ -19,6 +19,7 @@
     page: Page[Field],
     fieldChartSpecs: Iterable[FieldChartSpec],
     router: DictionaryRouter,
+    fieldNameLabels: Traversable[(String, Option[String])],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
     chartGridWidth: Int = 3
 )(
@@ -28,7 +29,12 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(page.filter, router.plainList, Left(Seq("fieldType", "isArray", "label", "name")))
+            @filter(
+                page.filter,
+                router.plainList,
+                Left(fieldNameLabels),
+                true
+            )
         </div>
         <div class="pull-right">
             <ul class="list-inline">

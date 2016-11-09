@@ -1,8 +1,9 @@
 @import controllers.dataset.DataSetRouter
 @import models.{FilterCondition, ChartSpec}
+@import dataaccess.FieldTypeId
+@import dataaccess.Field
 @import views.html.layout.main
 @import views.html.chart.highcharts.{highchartsJsImport, timeLineChart}
-@import views.html.chart.{chartPanel, chartPanelJs}
 @import views.html.dataset.datasetSubNav
 @import play.api.libs.json.Json
 @import play.api.mvc.Flash
@@ -14,10 +15,8 @@
 
 @(
     domainName: String,
-    dateFieldName: String,
-    groupFieldName: Option[String],
-    dateFields: Seq[(String, Option[String])],
-    categoricalFields: Seq[(String, Option[String])],
+    dateField: Option[Field],
+    groupField: Option[Field],
     series: Seq[(String, Seq[(Date, Any)])],
     filterSpec: Seq[FilterCondition],
     router: DataSetRouter,
@@ -27,34 +26,28 @@
     implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
-@dateFieldNamesAsString = @{
-    Html(dateFields.map(s => "\"" + s._1 + "\"").mkString(","))
-}
-
-@categoricalFieldNamesAsString = @{
-    Html(categoricalFields.map(s => "\"" + s._1 + "\"").mkString(","))
-}
-
 @actions = {
     <div class="row">
         <div class="col-md-12">
-            @filter(filterSpec, router.getDateCount(Some(dateFieldName), groupFieldName, filterSpec), Right(router.fieldNames))
+            @filter(filterSpec, router.getDateCount(dateField.map(_.name), groupField.map(_.name), filterSpec), Right(router.allFieldNameLabels))
         </div>
     </div>
     <hr/>
-    @helper.form(action=router.getDateCount(Some(dateFieldName), groupFieldName, filterSpec), 'role -> "search", 'id -> "fieldForm") {
+    @helper.form(action=router.getDateCount(dateField.map(_.name), groupField.map(_.name), filterSpec), 'role -> "search", 'id -> "fieldForm") {
         <!-- hacky solution to pass data set param since it's ignored when passed as a part of the call in the form action -->
         <input type="hidden" name="dataSet" value="@dataSetId"/>
         <input type="hidden" name="filter" value="@Json.toJson(filterSpec)"/>
         <div class="row">
             <div class="col-md-3">
-                <input id="dateField" name="dateField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@dateFieldName">
+                <input id="dateFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@dateField.map(_.labelOrElseName)">
+                <input id="dateFieldName" name="dateFieldName" type="hidden" value="@dateField.map(_.name)">
             </div>
             <div class="col-md-2" align="right">
                 <label class="top-padded">Group by</label>
             </div>
             <div class="col-md-3">
-                <input id="groupField" name="groupField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@groupFieldName">
+                <input id="groupFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@groupField.map(_.labelOrElseName)">
+                <input id="groupFieldName" name="groupFieldName" type="hidden" value="@groupField.map(_.name)">
             </div>
         </div>
    }
@@ -84,27 +77,34 @@
 
 <script type="text/javascript">
     $(function () {
-        populateTypeahead($('#fieldForm #dateField'), [@dateFieldNamesAsString], true);
-        populateTypeahead($('#fieldForm #groupField'), [@categoricalFieldNamesAsString], true);
+        populateFieldTypeahedFromUrl(
+            $('#fieldForm #dateFieldTypeahead'),
+            $('#fieldForm #dateFieldName'),
+            '@router.fieldNameLabels(Seq(FieldTypeId.Date))'
+        )
 
-        $('#fieldForm #dateField').focus();
+        populateFieldTypeahedFromUrl(
+            $('#fieldForm #groupFieldTypeahead'),
+            $('#fieldForm #groupFieldName'),
+            '@router.fieldNameLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean))'
+        );
 
-        $('#fieldForm #dateField').on('typeahead:selected', function(e, data) {
+        $('#fieldForm #dateFieldTypeahead').on('typeahead:selected', function(e, data) {
             $('#fieldForm').submit();
         });
 
-        $('#fieldForm #groupField').on('typeahead:selected', function(e, data) {
+        $('#fieldForm #groupFieldTypeahead').on('typeahead:selected', function(e, data) {
             $('#fieldForm').submit();
         });
 
-        $('#fieldForm #dateField').keypress(function (e) {
+        $('#fieldForm #dateFieldTypeahead').keypress(function (e) {
             if (e.which == 13) {
                 $('#fieldForm').submit();;
                 return false;
             }
         });
 
-        $('#fieldForm #groupField').keypress(function (e) {
+        $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
             if (e.which == 13) {
                 $('#fieldForm').submit();;
                 return false;

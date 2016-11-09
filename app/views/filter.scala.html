@@ -4,7 +4,8 @@
 @(
     filter: Seq[FilterCondition],
     submitCall: Call,
-    fieldNamesOrCall: Either[Traversable[String], Call],
+    fieldNameLabelsOrCall: Either[Traversable[(String, Option[String])], Call],
+    hideFieldNames: Boolean = false,
     saveCall: Option[Call] = None
 )
 
@@ -23,15 +24,16 @@
                 <div class="modal-body">
                     <input id="conditionIndex" type="hidden" value=""/>
                     <div class="row">
-                        <div class="col-md-4">
-                            <input id="fieldName" class="typeahead" type="text" placeholder="Field Name">
+                        <div class="float-left col-md-4">
+                            <input id="fieldNameTypeahead" class="typeahead" type="text" placeholder="@if(hideFieldNames) {Field Label} else {Field Name or Label}">
+                            <input id="fieldName" type="hidden" value="">
                         </div>
-                        <select id="conditionType" class="col-md-2">
+                        <select id="conditionType" class="float-left">
                             @ConditionType.values.map{ conditionType =>
                                 <option value="@conditionType">@conditionType</option>
                             }
                         </select>
-                        <input id="value" class="col-md-6" placeholder="Condition"/>
+                        <input id="value" class="float-left" placeholder="Condition"/>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -78,34 +80,42 @@
     </li>
 </ul>
 
-@fieldNamesAsString = @{
-    fieldNamesOrCall match {case Left(strings) =>
-        Html(strings.map(s => "\"" + s + "\"").mkString(","))
+@fieldNameLabelsAsString = @{
+    fieldNameLabelsOrCall match {case Left(fieldNameWithLabels) =>
+        Html(
+            Json.stringify(
+                Json.toJson(
+                    fieldNameWithLabels.map { case (fieldName, fieldLabel) =>
+                        Json.obj("name" -> fieldName, "label" -> fieldLabel)
+                    }
+                )
+            )
+        )
     }
 }
 
-@getFieldNamesUrl = @{
-    fieldNamesOrCall match {case Right(call) => call.url}
+@fieldNameLabelsUrl = @{
+    fieldNameLabelsOrCall match {case Right(call) => call.url}
 }
 
 <script type="text/javascript" defer="defer">
     var jsFilter = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}');
     var conditionFields = ["fieldName", "conditionType", "value"];
-    var fieldNames = @if(fieldNamesOrCall.isLeft) {
-        [@fieldNamesAsString]
+    var fieldNameAndLabels = @if(fieldNameLabelsOrCall.isLeft) {
+        JSON.parse('@fieldNameLabelsAsString')
     } else {
         null
     }
 
-    if (fieldNames) {
-        populateTypeahead($('#fieldName'), fieldNames, true);
+    if (fieldNameAndLabels) {
+        populateFieldTypeahed($('#fieldNameTypeahead'), $('#fieldName'), fieldNameAndLabels, @hideFieldNames);
     }
 
     $('#addEditConditionModal').on('shown.bs.modal', function () {
         if ($(this).find("#conditionIndex:first").val())
             $('#condition').focus();
         else
-            $('#fieldName').focus();
+            $('#fieldNameTypeahead').focus();
     })
 
     $(".condition-full").hover(null, function() {
@@ -190,6 +200,14 @@
         $.each(fields,  function( i, field ) {
             $("#addEditConditionModal").find("#" + field).first().val(condition[field]);
         })
+        var fieldNameTypeahead = $("#addEditConditionModal").find("#fieldNameTypeahead").first();
+
+        var elementToSelect = condition["fieldName"];
+        if (condition["fieldLabel"])
+            elementToSelect = condition["fieldLabel"];
+//        var elementToSelect = {name: condition["fieldName"], label: condition["fieldLabel"], isLabel: true};
+
+        fieldNameTypeahead.typeahead('val', elementToSelect);
     }
 
     function updateFilterFromModel(index, condition, fields) {
@@ -199,13 +217,13 @@
     }
 
     function loadFieldNames() {
-        if (!fieldNames) {
-            @if(fieldNamesOrCall.isRight) {
+        if (!fieldNameAndLabels) {
+            @if(fieldNameLabelsOrCall.isRight) {
                 $.ajax({
-                    url: '@getFieldNamesUrl',
+                    url: '@fieldNameLabelsUrl',
                     success: function (data) {
-                        fieldNames = data;
-                        populateTypeahead($('#fieldName'), fieldNames, true);
+                        fieldNameAndLabels = data;
+                        populateFieldTypeahed($('#fieldNameTypeahead'), $('#fieldName'), fieldNameAndLabels, @hideFieldNames);
                     },
                     async: false
                 });

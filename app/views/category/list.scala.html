@@ -29,7 +29,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-9">
-            @filter(page.filter, router.plainList, Left(Seq("name")))
+            @filter(page.filter, router.plainList, Left(Seq(("name", None))))
         </div>
         <div class="pull-right">
             <a class="btn btn-info btn-sm" id="expandAll" href="#" data-toggle="tooltip" title="Expand All" onclick="$('#treeDiv').tree('expandAll');return false;">

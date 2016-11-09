@@ -3,6 +3,7 @@ package controllers.dataset
 import javax.inject.Inject
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
+import dataaccess.FieldTypeId
 import models.FilterCondition
 import play.api.mvc.{AnyContent, Action}
 import reactivemongo.bson.BSONObjectID
@@ -49,6 +50,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     groupFieldName: Option[String],
     filter: Seq[FilterCondition]
   ) = dispatch(_.getDateCount(dateFieldName, groupFieldName, filter))
+
+  override def getFieldNameLabels(fieldTypeIds: Seq[FieldTypeId.Value]) = dispatch(_.getFieldNameLabels(fieldTypeIds))
 
   override def getFieldNames = dispatch(_.getFieldNames)
 

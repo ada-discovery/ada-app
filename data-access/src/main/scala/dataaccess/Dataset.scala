@@ -97,7 +97,10 @@ case class Field(
   var categoryId: Option[BSONObjectID] = None,
   var category: Option[Category] = None
 ) {
-  def fieldTypeSpec: FieldTypeSpec = FieldTypeSpec(fieldType, isArray, numValues.map(_.map{ case (a,b) => (a.toInt, b)}))
+  def fieldTypeSpec: FieldTypeSpec =
+    FieldTypeSpec(fieldType, isArray, numValues.map(_.map{ case (a,b) => (a.toInt, b)}))
+
+  def labelOrElseName = label.getOrElse(name)
 }
 
 object FieldTypeId extends Enumeration {

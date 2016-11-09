@@ -1,5 +1,6 @@
 @import controllers.dataset.DataSetRouter
 @import models.{FilterCondition, ChartSpec}
+@import dataaccess.Field
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.chart.{chartPanel, chartPanelJs}
@@ -13,8 +14,7 @@
 
 @(
     domainName: String,
-    fieldName : String,
-    fields: Seq[(String, Option[String])],
+    field: Option[Field],
     chartSpec: ChartSpec,
     filterSpec: Seq[FilterCondition],
     router: DataSetRouter,
@@ -24,14 +24,10 @@
     implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
-@fieldNamesAsString = @{
-    Html(fields.map(s => "\"" + s._1 + "\"").mkString(","))
-}
-
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(filterSpec, router.getDistribution(Some(fieldName), filterSpec), Left(fields.map(_._1)))
+            @filter(filterSpec, router.getDistribution(field.map(_.name), filterSpec), Right(router.allFieldNameLabels))
         </div>
         <div class="pull-right">
             <a class="btn btn-info btn-sm" href="#" onclick="addToChartOverview();return false" data-toggle="tooltip" title="Add To Chart Overview">
@@ -45,11 +41,12 @@
     <hr/>
     <div class="row">
         <div class="col-md-8">
-            @helper.form(action=router.getDistribution(Some(fieldName), filterSpec), 'role -> "search", 'id -> "fieldForm") {
+            @helper.form(action=router.getDistribution(field.map(_.name), filterSpec), 'role -> "search", 'id -> "fieldForm") {
                 <!-- hacky solution to pass data set param since it's ignored when passed as a part of the call in the form action -->
                 <input type="hidden" name="dataSet" value="@dataSetId"/>
                 <input type="hidden" name="filter" value="@Json.toJson(filterSpec)"/>
-                <input id="fieldName" name="fieldName" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@fieldName">
+                <input id="fieldTypeahead"class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@field.map(_.labelOrElseName)">
+                <input id="fieldName" name="fieldName" type="hidden" value="@field.map(_.name)">
             }
         </div>
     </div>
@@ -79,15 +76,17 @@
 <script type="text/javascript" src="@dataSetSettingRoutes.jsRoutes"></script>
 <script type="text/javascript">
     $(function () {
-        populateTypeahead($('#fieldForm #fieldName'), [@fieldNamesAsString], true);
+        populateFieldTypeahedFromUrl(
+            $('#fieldForm #fieldTypeahead'),
+            $('#fieldForm #fieldName'),
+            '@router.allFieldNameLabels'
+        )
 
-        $('#fieldForm #fieldName').focus();
-
-        $('#fieldForm #fieldName').on('typeahead:selected', function(e, data) {
+        $('#fieldForm #fieldTypeahead').on('typeahead:selected', function(e, data) {
             $('#fieldForm').submit();
         });
 
-        $('#fieldForm #fieldName').keypress(function (e) {
+        $('#fieldForm #fieldTypeahead').keypress(function (e) {
             if (e.which == 13) {
                 $('#fieldForm').submit();;
                 return false;

@@ -1,5 +1,6 @@
 @import controllers.dataset.DataSetRouter
 @import util.BasicStats
+
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.chart.highcharts.scatterChart
 @import views.html.layout.main
@@ -7,16 +8,13 @@
 @import play.api.libs.json.Json
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
-
-@import dataaccess.DataSpaceMetaInfo
+@import dataaccess.{DataSpaceMetaInfo, FieldTypeId, Field}
 
 @(
     domainName: String,
-    xFieldName: String,
-    yFieldName: String,
-    groupFieldName: Option[String],
-    numericFields: Seq[(String, Option[String])],
-    categoricalFields: Seq[(String, Option[String])],
+    xField: Option[Field],
+    yField: Option[Field],
+    groupField: Option[Field],
     series: Seq[(String, Seq[(Any, Any)])],
     filterSpec: Seq[FilterCondition],
     router: DataSetRouter,
@@ -26,18 +24,10 @@
     implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
-@numericFieldNamesAsString = @{
-    Html(numericFields.map(s => "\"" + s._1 + "\"").mkString(","))
-}
-
-@categoricalFieldNamesAsString = @{
-    Html(categoricalFields.map(s => "\"" + s._1 + "\"").mkString(","))
-}
-
 @actions = {
     <div class="row">
         <div class="col-md-12">
-            @filter(filterSpec, router.getScatterStats(Some(xFieldName), Some(yFieldName), groupFieldName, filterSpec), Right(router.fieldNames))
+            @filter(filterSpec, router.getScatterStats(xField.map(_.name), yField.map(_.name), groupField.map(_.name), filterSpec), Right(router.allFieldNameLabels))
         </div>
     </div>
     <hr/>
@@ -47,19 +37,22 @@
         <input type="hidden" name="filter" value="@Json.toJson(filterSpec)"/>
         <div class="row">
             <div class="col-md-3">
-                <input id="xField" name="xField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@xFieldName">
+                <input id="xFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name or Label" value="@xField.map(_.labelOrElseName)">
+                <input id="xFieldName" name="xFieldName" type="hidden" value="@xField.map(_.name)">
             </div>
             <div class="col-md-1" align="center">
                 <label class="top-padded">vs.</label>
             </div>
             <div class="col-md-3">
-                <input id="yField" name="yField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@yFieldName">
+                <input id="yFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name or Label" value="@yField.map(_.labelOrElseName)">
+                <input id="yFieldName" name="yFieldName" type="hidden" value="@yField.map(_.name)">
             </div>
             <div class="col-md-2" align="right">
                 <label class="top-padded">Group by</label>
             </div>
             <div class="col-md-3">
-                <input id="groupField" name="groupField" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@groupFieldName">
+                <input id="groupFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name or Label" value="@groupField.map(_.labelOrElseName)">
+                <input id="groupFieldName" name="groupFieldName" type="hidden" value="@groupField.map(_.name)">
             </div>
         </div>
         <div class="row">
@@ -83,8 +76,8 @@
     @scatterChart(
         "Comparison",
         "scatterChart",
-        xFieldName.capitalize,
-        yFieldName.capitalize,
+        xField.map(_.name.capitalize).getOrElse(""),
+        yField.map(_.name.capitalize).getOrElse(""),
         series.map{ case (name, values) =>
             (name, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
         }
@@ -108,39 +101,47 @@
 
 <script type="text/javascript">
     $(function () {
-        populateTypeahead($('#fieldForm #xField'), [@numericFieldNamesAsString], true);
-        populateTypeahead($('#fieldForm #yField'), [@numericFieldNamesAsString], true);
-        populateTypeahead($('#fieldForm #groupField'), [@categoricalFieldNamesAsString], true);
+        $.ajax({
+            url: '@router.fieldNameLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double))',
+            success: function (data) {
+                populateFieldTypeahed($('#fieldForm #xFieldTypeahead'), $('#fieldForm #xFieldName'), data);
+                populateFieldTypeahed($('#fieldForm #yFieldTypeahead'), $('#fieldForm #yFieldName'), data);
+            }
+        });
 
-        $('#fieldForm #xField').focus();
+        populateFieldTypeahedFromUrl(
+            $('#fieldForm #groupFieldTypeahead'),
+            $('#fieldForm #groupFieldName'),
+            '@router.fieldNameLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean))'
+        );
 
-        $('#fieldForm #xField').on('typeahead:selected', function(e, data) {
+        $('#fieldForm #xFieldTypeahead').on('typeahead:selected', function(e, data) {
             $('#fieldForm').submit();
         });
 
-        $('#fieldForm #yField').on('typeahead:selected', function(e, data) {
+        $('#fieldForm #yFieldTypeahead').on('typeahead:selected', function(e, data) {
             $('#fieldForm').submit();
         });
 
-        $('#fieldForm #groupField').on('typeahead:selected', function(e, data) {
+        $('#fieldForm #groupFieldTypeahead').on('typeahead:selected', function(e, data) {
             $('#fieldForm').submit();
         });
 
-        $('#fieldForm xField').keypress(function (e) {
+        $('#fieldForm #xFieldTypeahead').keypress(function (e) {
             if (e.which == 13) {
                 $('#fieldForm').submit();;
                 return false;
             }
         });
 
-        $('#fieldForm #yField').keypress(function (e) {
+        $('#fieldForm #yFieldTypeahead').keypress(function (e) {
             if (e.which == 13) {
                 $('#fieldForm').submit();;
                 return false;
             }
         });
 
-        $('#fieldForm #groupField').keypress(function (e) {
+        $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
             if (e.which == 13) {
                 $('#fieldForm').submit();;
                 return false;

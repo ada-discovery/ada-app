@@ -22,7 +22,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(page.filter, router.plainList, Right(router.fieldNames))
+            @filter(page.filter, router.plainList, Right(router.allFieldNameLabels))
         </div>
         <div class="col-md-2">
             @exportDataSetDropdown(

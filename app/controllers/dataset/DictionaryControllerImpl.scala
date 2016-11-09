@@ -55,6 +55,14 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   implicit val fieldTypeFormatter = EnumFormatter(FieldTypeId)
   implicit val mapFormatter = MapJsonFormatter.apply
 
+  private val fieldNameLabels = Seq(
+    ("fieldType", Some("Field Type")),
+    ("isArray", Some("Is Array?")),
+    ("label", Some("Label")),
+    ("name", Some("Name"))
+  )
+  private val fieldNameLabelMap = fieldNameLabels.toMap
+
   override protected val form = Form(
     mapping(
       "name" -> nonEmptyText,
@@ -119,6 +127,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       page,
       fieldChartSpecs,
       router,
+      fieldNameLabels,
       dataSpaceMetaInfos,
       6
     )
@@ -144,8 +153,17 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
         metaInfos <- futureMetaInfos
         fieldChartSpecs <- fieldChartSpecsFuture
         _ <- setCategoriesById(categoryRepo, items)
-      } yield
-        Ok(overviewListView(Page(items, page, page * pageLimit, count, orderBy, filter), fieldChartSpecs, metaInfos))
+      } yield {
+        val newFilter = filter.map { condition =>
+          val label = fieldNameLabelMap.get(condition.fieldName.trim)
+          condition.copy(fieldLabel = label.flatten)
+        }
+        Ok(overviewListView(
+          Page(items, page, page * pageLimit, count, orderBy, newFilter),
+          fieldChartSpecs,
+          metaInfos)
+        )
+      }
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the dictionary list process")

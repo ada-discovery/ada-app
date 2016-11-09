@@ -5,7 +5,6 @@
 @import util.{typeColumns, toHumanReadableCamel, formatTimeElement}
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
-@import play.data.format.Formats.DateTime
 
 @import dataaccess.DataSpaceMetaInfo
 @(
@@ -24,7 +23,14 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(page.filter, dataSetImportRoutes.find(), Left(Seq("dataSpaceName", "dataSetName")))
+            @filter(
+                page.filter,
+                dataSetImportRoutes.find(),
+                Left(Seq(
+                    ("dataSpaceName", Some("Data Space Name")),
+                    ("dataSetName", Some("Data Set Name"))
+                ))
+            )
         </div>
         <div class="dropdown pull-right">
             <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-toggle="tooltip" title="Add Data Set Import">

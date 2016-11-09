@@ -1,6 +1,7 @@
 package controllers.dataset
 
 import controllers.{ReadonlyController, CrudController}
+import dataaccess.FieldTypeId
 import models.FilterCondition
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
@@ -27,6 +28,10 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   ): Action[AnyContent]
 
   def getFieldNames: Action[AnyContent]
+
+  def getFieldNameLabels(
+    fieldTypeIds: Seq[FieldTypeId.Value]
+  ): Action[AnyContent]
 
   def getFieldValue(id: BSONObjectID, fieldName: String): Action[AnyContent]
 

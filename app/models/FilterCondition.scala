@@ -1,14 +1,14 @@
 package models
 
-import dataaccess.EnumFormat
+import dataaccess.{FieldTypeId, EnumFormat}
 import play.api.libs.json.Json
 import util.JsonUtil
 
 case class FilterCondition(
   fieldName: String,
+  fieldLabel: Option[String],
   conditionType: ConditionType.Value,
   value: String,
-  fieldLabel: Option[String],
   valueLabel: Option[String]
 )
 
@@ -25,5 +25,8 @@ object ConditionType extends Enumeration {
 object FilterCondition {
   implicit val ConditionTypeFormat = EnumFormat.enumFormat(ConditionType)
   implicit val FilterConditionFormat = Json.format[FilterCondition]
-  implicit def FilterSpecQueryStringBinder = JsonUtil.createQueryStringBinder[Seq[FilterCondition]]
+  implicit val FilterSpecQueryStringBinder = JsonUtil.createQueryStringBinder[Seq[FilterCondition]]
+  // TODO: move elsewhere
+  implicit val FieldTypeIdFormat = EnumFormat.enumFormat(FieldTypeId)
+  implicit val FieldTypeIdsQueryStringBinder = JsonUtil.createQueryStringBinder[Seq[FieldTypeId.Value]]
 }

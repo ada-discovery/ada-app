@@ -8,7 +8,14 @@
 @actions = {
     <div class="row">
         <div class="col-md-8">
-            @filter(page.filter, routes.UserController.find(),  Left(Seq("_id", "email")))
+            @filter(
+                page.filter,
+                routes.UserController.find(),
+                Left(Seq(
+                    ("ldapDn", Some("Id")),
+                    ("email", Some("Email"))
+                ))
+            )
         </div>
         <div class="col-md-4">
             <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.UserController.create()">Add a new user</a>

@@ -35,7 +35,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(page.filter, router.plainOverviewList, Right(router.fieldNames))
+            @filter(page.filter, router.plainOverviewList, Right(router.allFieldNameLabels))
         </div>
         <div class="pull-right">
             @exportDataSetDropdown(

@@ -14,7 +14,13 @@
 @actions = {
     <div class="row">
         <div class="col-md-8">
-            @filter(page.filter, dataSetSettingRoutes.find(), Left(Seq("dataSetId")))
+            @filter(
+                page.filter,
+                dataSetSettingRoutes.find(),
+                Left(Seq(
+                    ("dataSetId", Some("Data Set Id"))
+                ))
+            )
         </div>
         <div class="col-md-4">
             <a class="btn btn-success btn-sm pull-right" id="add" href="@dataSetSettingRoutes.create()">Add a new data set setting</a>

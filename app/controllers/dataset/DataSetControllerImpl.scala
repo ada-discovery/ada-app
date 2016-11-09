@@ -287,10 +287,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val end = new ju.Date()
 
         val newFilter = filter.map { condition =>
-          val field = fieldNameMap.get(condition.fieldName.trim).get
-          val fieldType = ftf(field.fieldTypeSpec)
-          val valueLabel = valueStringToDisplayString(fieldType, condition.value)
-          condition.copy(fieldLabel = field.label, valueLabel = Some(valueLabel))
+          fieldNameMap.get(condition.fieldName.trim) match {
+            case Some(field) => {
+              val fieldType = ftf(field.fieldTypeSpec)
+              val valueLabel = valueStringToDisplayString(fieldType, condition.value)
+              condition.copy(fieldLabel = field.label, valueLabel = Some(valueLabel))
+            }
+            case None => condition
+          }
         }
 
         Logger.info(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
@@ -348,7 +352,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @return View with scatterplot and selection option for different xFieldName and yFieldName.
     */
   override def getScatterStats(
-    xFieldNameOption : Option[String],
+    xFieldNameOption: Option[String],
     yFieldNameOption: Option[String],
     groupFieldNameOption: Option[String],
     filter: Seq[FilterCondition]
@@ -372,23 +376,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val xFieldFuture = fieldRepo.get(xFieldName)
     val yFieldFuture = fieldRepo.get(yFieldName)
     val groupFieldFuture = groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
-    val numericFieldsFuture = fieldRepo.find(Seq("fieldType" #=> numericTypes))
-    val categoricalFieldsFuture = fieldRepo.find(Seq("fieldType" #=> categoricalTypes))
 
     for {
       xField <- xFieldFuture
       yField <- yFieldFuture
       groupField <- groupFieldFuture
-      numericFields <- numericFieldsFuture
-      categoricalFields <- categoricalFieldsFuture
       xyzItems <- {
         val criteria = toCriteria(filter)
         val projection = Seq(xFieldName, yFieldName) ++ groupField.map(_.name)
         repo.find(criteria, Nil, projection.toSet)
       }
     } yield {
-      val numericFieldNameLabels = numericFields.map(field => (field.name, field.label)).toSeq.sorted
-      val categoricalFieldNameLabels = categoricalFields.map(field => (field.name, field.label)).toSeq.sorted
       val scattedData =
         if (xField.isDefined && yField.isDefined) {
           chartService.getScatterData(xyzItems, xField.get, yField.get, groupField)
@@ -398,11 +396,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       render {
         case Accepts.Html() => Ok(dataset.scatterStats(
           dataSetName,
-          xFieldName,
-          yFieldName,
-          groupFieldName,
-          numericFieldNameLabels,
-          categoricalFieldNameLabels,
+          xField,
+          yField,
+          groupField,
           scattedData,
           filter,
           router,
@@ -421,6 +417,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     implicit val msg = messagesApi.preferred(request)
 
     val fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
+
     val chartSpecsFuture = getDistributionChartSpecs(
       toCriteria(filter),
       Seq(FieldChartType(fieldName, None)),
@@ -432,12 +429,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       for {
         chartSpecs <- chartSpecsFuture
         fields <-fieldRepo.find(sort = Seq(AscSort("name")))
+        field <- fieldRepo.get(fieldName)
       } yield {
-        val fieldNameLabels = fields.map(field => (field.name, field.label)).toSeq
-
         render {
           case Accepts.Html() => Ok(dataset.distribution(
-            dataSetName, fieldName, fieldNameLabels, chartSpecs.head._2, filter, router, dataSetId, getMetaInfos
+            dataSetName, field, chartSpecs.head._2, filter, router, dataSetId, getMetaInfos
           ))
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
         }
@@ -460,26 +456,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     val dateFieldFuture = fieldRepo.get(dateFieldName)
     val groupFieldFuture = groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
-    val dateFieldsFuture = fieldRepo.find(Seq("fieldType" #== FieldTypeId.Date))
-    val categoricalFieldsFuture = fieldRepo.find(Seq("fieldType" #=> categoricalTypes))
 
     {
       for {
         dateField <- dateFieldFuture
         groupField <- groupFieldFuture
-        dateFields <- dateFieldsFuture
-        categoricalFields <- categoricalFieldsFuture
         series <- dateField match {
           case Some(dateField) => getDateCountData(filter, dateField, groupField)
           case None => Future(Nil)
         }
       } yield {
-        val dateFieldNameLabels = dateFields.map(field => (field.name, field.label)).toSeq.sorted
-        val categoricalFieldNameLabels = categoricalFields.map(field => (field.name, field.label)).toSeq.sorted
-
         render {
           case Accepts.Html() => Ok(dataset.dateCount(
-            dataSetName, dateFieldName, groupFieldName, dateFieldNameLabels, categoricalFieldNameLabels, series, filter, router, dataSetId, getMetaInfos
+            dataSetName, dateField, groupField, series, filter, router, dataSetId, getMetaInfos
           ))
           case Accepts.Json() => BadRequest("GetDateCount function doesn't support JSON response.")
         }
@@ -534,11 +523,32 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     })
   }
 
+  override def getFieldNameLabels(
+    fieldTypeIds: Seq[FieldTypeId.Value]
+  ) = Action.async { implicit request =>
+    for {
+      fields <- fieldRepo.find(
+        criteria = fieldTypeIds match {
+          case Nil => Nil
+          case _ => Seq("fieldType" #=> fieldTypeIds)
+        },
+        sort = Seq(AscSort("name"))
+      )
+    } yield {
+      val fieldJsons = fields.map( field =>
+        Json.obj("name" -> field.name, "label" -> field.label)
+      )
+      Ok(Json.toJson(fieldJsons))
+    }
+  }
+
   override def getFieldNames = Action.async { implicit request =>
     for {
-      fieldNames <- fieldRepo.find(sort = Seq(AscSort("name"))).map(_.map(_.name))
-    } yield
+      fields <- fieldRepo.find(sort = Seq(AscSort("name")))
+    } yield {
+      val fieldNames = fields.map(_.name)
       Ok(Json.toJson(fieldNames))
+    }
   }
 
   override def getFieldValue(id: BSONObjectID, fieldName: String) = Action.async { implicit request =>

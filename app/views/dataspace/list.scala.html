@@ -10,7 +10,13 @@
 @actions = {
     <div class="row">
         <div class="col-md-8">
-            @filter(page.filter, dataSpaceMetaInfoRoutes.find(), Left(Seq("name")))
+            @filter(
+                page.filter,
+                dataSpaceMetaInfoRoutes.find(),
+                Left(Seq(
+                    ("name", Some("Name"))
+                ))
+            )
         </div>
         <div class="col-md-4">
             <a class="btn btn-success btn-sm pull-right" id="add" href="@dataSpaceMetaInfoRoutes.create()">Add a new data space</a>
