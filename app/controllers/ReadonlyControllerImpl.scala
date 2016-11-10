@@ -87,8 +87,8 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     * @param filter Filter applied on items
     */
   def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) = Action.async { implicit request =>
-    val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
-    futureItems.zip(futureCount).map{ case (items, count) =>
+    val futureItemsAndCount = getFutureItemsAndCount(page, orderBy, filter)
+    futureItemsAndCount.map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
       render {
@@ -108,8 +108,8 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
    * @param orderBy Column to be sorted
    */
   def listAll(orderBy: String) = Action.async { implicit request =>
-    val (futureItems, futureCount) = getFutureItemsAndCount(None, orderBy, Nil, Nil, None)
-    futureItems.zip(futureCount).map{ case (items, count) =>
+    val futureItemsAndCount = getFutureItemsAndCount(None, orderBy, Nil, Nil, None)
+    futureItemsAndCount.map{ case (items, count) =>
       implicit val msg = messagesApi.preferred(request)
 
       render {
@@ -127,7 +127,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     page: Int,
     orderBy: String,
     filter: Seq[FilterCondition]
-  ): (Future[Traversable[E]], Future[Int]) =
+  ): Future[(Traversable[E], Int)] =
     getFutureItemsAndCount(Some(page), orderBy, filter, listViewColumns.getOrElse(Nil), Some(pageLimit))
 
   protected def getFutureItemsAndCount(
@@ -136,13 +136,16 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     filter: Seq[FilterCondition],
     projection: Seq[String],
     limit: Option[Int]
-  ): (Future[Traversable[E]], Future[Int]) = {
+  ): Future[(Traversable[E], Int)] = {
     val sort = toSort(orderBy)
-    val criteria = toCriteria(filter)
 
-    val futureItems = repo.find(criteria, sort, projection, limit, page)
-    val futureCount = repo.count(criteria)
-    (futureItems, futureCount)
+    for {
+      criteria <- toCriteria(filter)
+      items <- repo.find(criteria, sort, projection, limit, page)
+      count <- repo.count(criteria)
+    } yield {
+      (items, count)
+    }
   }
 
   protected def getFutureItems(
@@ -153,69 +156,75 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     limit: Option[Int]
   ): Future[Traversable[E]] = {
     val sort = toSort(orderBy)
-    val criteria = toCriteria(filter)
 
-    repo.find(criteria, sort, projection, limit, page)
+    toCriteria(filter).flatMap ( criteria =>
+      repo.find(criteria, sort, projection, limit, page)
+    )
   }
 
-  protected def getFutureCount(filter: Seq[FilterCondition]): Future[Int] = {
-    val criteria = toCriteria(filter)
-
-    repo.count(criteria)
-  }
+  protected def getFutureCount(filter: Seq[FilterCondition]): Future[Int] =
+    toCriteria(filter).flatMap(repo.count)
 
   import ConditionType._
 
   protected def toCriteria(
     filter: Seq[FilterCondition]
-  ): Seq[Criterion[Any]] = {
+  ): Future[Seq[Criterion[Any]]] = {
     val fieldNames = filter.seq.map(_.fieldName)
-    val valueConverters = filterValueConverters(fieldNames)
-    filter.map{ filterCondition =>
-      val fieldName = filterCondition.fieldName
 
-      // convert values if any converters provided
-      val value =  filterCondition.value
-      def convertValue(text: String): Option[Any] = valueConverters.get(fieldName).map(converter =>
-        converter.apply(text.trim)
-      ).getOrElse(Some(text.trim)) // if no converter found use a provided string value
+    filterValueConverters(fieldNames).map( valueConverters =>
+      filter.map(toCriterion(valueConverters)).flatten
+    )
+  }
 
-      def convertedValue = convertValue(value)
-      def convertedValues = value.split(",").map(convertValue).flatten
+  private def toCriterion(
+    valueConverters: Map[String, String => Option[Any]])(
+    filterCondition: FilterCondition
+  ): Option[Criterion[Any]] = {
+    val fieldName = filterCondition.fieldName
 
-      filterCondition.conditionType match {
-        case Equals => Some(
-          convertedValue.map(
-            EqualsCriterion(fieldName, _)
-          ).getOrElse(
-            EqualsNullCriterion(fieldName)
-          )
+    // convert values if any converters provided
+    val value =  filterCondition.value
+    def convertValue(text: String): Option[Any] = valueConverters.get(fieldName).map(converter =>
+      converter.apply(text.trim)
+    ).getOrElse(Some(text.trim)) // if no converter found use a provided string value
+
+    def convertedValue = convertValue(value)
+    def convertedValues = value.split(",").map(convertValue).flatten
+
+    filterCondition.conditionType match {
+      case Equals => Some(
+        convertedValue.map(
+          EqualsCriterion(fieldName, _)
+        ).getOrElse(
+          EqualsNullCriterion(fieldName)
         )
+      )
 
-        case RegexEquals => Some(RegexEqualsCriterion(fieldName, value))            // string expected
+      case RegexEquals => Some(RegexEqualsCriterion(fieldName, value))            // string expected
 
-        case NotEquals => Some(
-          convertedValue.map(
-            NotEqualsCriterion(fieldName, _)
-          ).getOrElse(
-            NotEqualsNullCriterion(fieldName)
-          )
+      case NotEquals => Some(
+        convertedValue.map(
+          NotEqualsCriterion(fieldName, _)
+        ).getOrElse(
+          NotEqualsNullCriterion(fieldName)
         )
+      )
 
-        case In => Some(InCriterion(fieldName, convertedValues))
+      case In => Some(InCriterion(fieldName, convertedValues))
 
-        case NotIn => Some(NotInCriterion(fieldName, convertedValues))
+      case NotIn => Some(NotInCriterion(fieldName, convertedValues))
 
-        case Greater => convertedValue.map(GreaterCriterion(fieldName, _))
+      case Greater => convertedValue.map(GreaterCriterion(fieldName, _))
 
-        case Less => convertedValue.map(LessCriterion(fieldName, _))
-      }
-    }.flatten
+      case Less => convertedValue.map(LessCriterion(fieldName, _))
+    }
   }
 
   protected def filterValueConverters(
     fieldNames: Traversable[String]
-  ): Map[String, String => Option[Any]] = Map()
+  ): Future[Map[String, String => Option[Any]]] =
+    Future(Map())
 
   /**
     * TODO: Move this into utility object.

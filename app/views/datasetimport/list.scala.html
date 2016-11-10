@@ -5,8 +5,8 @@
 @import util.{typeColumns, toHumanReadableCamel, formatTimeElement}
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import dataaccess.{Field, DataSpaceMetaInfo}
 
-@import dataaccess.DataSpaceMetaInfo
 @(
     page: Page[DataSetImport],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -27,9 +27,10 @@
                 page.filter,
                 dataSetImportRoutes.find(),
                 Left(Seq(
-                    ("dataSpaceName", Some("Data Space Name")),
-                    ("dataSetName", Some("Data Set Name"))
-                ))
+                    Field("dataSpaceName", Some("Data Space Name")),
+                    Field("dataSetName", Some("Data Set Name"))
+                )),
+                Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>
         <div class="dropdown pull-right">

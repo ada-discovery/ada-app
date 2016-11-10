@@ -471,7 +471,7 @@ class DataSetServiceImpl @Inject()(
           val stringEnums = fieldType.enumValues.map(_.map { case (from, to) => (from.toString, to)})
 
           referencedNameFieldMap.get(fieldName) match {
-            case None => Left(Field(fieldName, fieldType.fieldType, fieldType.isArray, stringEnums))
+            case None => Left(Field(fieldName, None, fieldType.fieldType, fieldType.isArray, stringEnums))
             case Some(field) => Right(field.copy(fieldType = fieldType.fieldType, isArray = fieldType.isArray, numValues = stringEnums))
           }
         }
@@ -509,7 +509,7 @@ class DataSetServiceImpl @Inject()(
       _ <- fieldRepo.deleteAll
       fieldNames <- getFieldNames(dataSetRepo)
       _ <- {
-        val fields = fieldNames.map(Field(_, FieldTypeId.String, false))
+        val fields = fieldNames.map(Field(_, None, FieldTypeId.String, false))
         fieldRepo.save(fields)
       }
     } yield

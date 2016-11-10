@@ -60,11 +60,9 @@ class AdminController @Inject() (deadbolt: DeadboltActions, messageRepo: Message
         runnablesRedirect.flashing("success" -> message)
       } catch {
         case e: ClassNotFoundException => {
-          e.printStackTrace
           runnablesRedirect.flashing("errors" -> s"Script ${className} does not exist.")
         }
         case e: Exception => {
-          e.printStackTrace
           runnablesRedirect.flashing("errors" -> s"Script ${className} failed due to: ${e.getMessage}")
         }
       }

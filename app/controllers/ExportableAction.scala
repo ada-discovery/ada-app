@@ -6,6 +6,7 @@ import play.api.libs.json.{Json, Format, JsObject}
 import util.WebExportUtil.{jsonsToCsvFile, jsonsToJsonFile}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc._
+import scala.concurrent.Future
 
 protected trait ExportableAction[E] {
 
@@ -13,7 +14,7 @@ protected trait ExportableAction[E] {
 
   protected def toSort(string: String): Seq[Sort]
 
-  protected def toCriteria(filter: Seq[FilterCondition]): Seq[Criterion[Any]]
+  protected def toCriteria(filter: Seq[FilterCondition]): Future[Seq[Criterion[Any]]]
 
   def exportToCsv(
     filename: String,
@@ -49,8 +50,9 @@ protected trait ExportableAction[E] {
     projection: Traversable[String] = Nil
   )(implicit ev: Format[E]) =
     for {
+      criteria <- toCriteria(filter)
       records <- repoHook.find(
-        criteria = toCriteria(filter),
+        criteria = criteria,
         sort = orderBy.fold(Seq[Sort]())(toSort),
         projection = projection
       )

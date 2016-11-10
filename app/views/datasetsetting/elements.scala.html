@@ -1,8 +1,9 @@
-@import views.html.elements.{inputText, inputTextReadonly, labelValue, checkbox}
+@import views.html.elements.{inputText, inputTextReadonly, labelValue, checkbox, select}
 @import views.html.attributeLabel
 @import views.html.table.dynamicStringTable
 @import views.html.datasetsetting.overviewFieldChartTypeTable
 @import dataaccess.DataSetSetting
+@import util.toHumanReadableCamel
 
 @(form: Form[DataSetSetting])(implicit msg: play.api.i18n.Messages)
 
@@ -28,6 +29,7 @@
 @inputText("dataSetSetting", "defaultScatterYFieldName", form)
 @inputText("dataSetSetting", "defaultDistributionFieldName", form)
 @inputText("dataSetSetting", "defaultDateCountFieldName", form)
+@select("dataSetSetting", "filterShowFieldStyle", form, FilterShowFieldStyle.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString))), true)
 @inputText("dataSetSetting", "tranSMARTVisitFieldName", form)
 @inputText("dataSetSetting", "tranSMARTReplacements", form)
 @checkbox("dataSetSetting", "cacheDataSet", form)

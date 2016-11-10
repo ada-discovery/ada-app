@@ -12,7 +12,7 @@ import dataaccess._
 import models._
 import com.google.inject.assistedinject.Assisted
 import controllers.{ExportableAction, ReadonlyControllerImpl}
-import DataSetFormattersAndIds.FieldIdentity
+import DataSetFormattersAndIds.{FieldIdentity}
 import Criterion.CriterionInfix
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.RepoTypes._
@@ -20,6 +20,7 @@ import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.json._
+import play.api.mvc.Results._
 import play.api.mvc.{Action, AnyContent, RequestHeader, Request}
 import reactivemongo.bson.BSONObjectID
 import services.{ChartService, TranSMARTService}
@@ -109,18 +110,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     page: Page[JsObject],
     fieldChartSpecs: Traversable[FieldChartSpec],
     tableFields: Traversable[Field]
-  )(implicit msg: Messages, request: Request[_]) =
+  )(implicit msg: Messages, request: Request[_]) = {
+    val currentSetting = setting
     dataset.overviewList(
       dataSetName + " Item",
       page,
       tableFields,
       listViewColumns.get,
       fieldChartSpecs,
-      setting.overviewChartElementGridWidth,
+      currentSetting.overviewChartElementGridWidth,
+      currentSetting.filterShowFieldStyle,
       router,
       jsRouter,
       getMetaInfos
     )
+  }
 
   /**
     * Shows all fields of the selected subject.
@@ -142,7 +146,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
-  ): Map[String, String => Option[Any]] = result(
+  ): Future[Map[String, String => Option[Any]]] =
     getFields(fieldNames).map(
       _.map { field =>
         val fieldType = ftf(field.fieldTypeSpec)
@@ -150,7 +154,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         (field.name, converter)
       }.toMap
     )
-  )
 
   /**
     * Generate content of csv export file and create download.
@@ -197,25 +200,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     )
 
   /**
-    * Fetch specified field (column) entries from repo and wrap them in a Traversable object.
-    * If a field contains an empty json, it is represented by None.
-    *
-    * @param fieldName Name of the field of interest.
-    * @return Traversable object containing the String entries of the field.
-    */
-  private def getFieldValues(fieldName : String): Future[Traversable[Option[String]]] =
-    for {
-      field <- fieldRepo.get(fieldName)
-      values <- repo.find(projection = Seq(fieldName))
-    } yield {
-      values.map { item =>
-        val jsValue: JsValue = (item \ fieldName).get
-        JsonUtil.toString(jsValue)
-      }
-    }
-
-  /**
-    * TODO: Instead of throwing an exception, provide option to run one of the standalone scripts for dictionary generation.
     *
     * Generates a view showing the field types of the records.
     * Repo with inferred type dictionaries required!
@@ -258,8 +242,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val fieldNameMapFuture: Future[Map[String, Field]] =
       getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
 
-    val chartItemsFuture = repo.find(toCriteria(filter), Nil, chartFieldNames)
-
     val futureTableCount = getFutureCount(filter)
 
     def valueStringToDisplayString[T](fieldType: FieldType[T], text: String): String = {
@@ -269,9 +251,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
+        criteria <- toCriteria(filter)
         count <- futureTableCount
         fieldNameMap <- fieldNameMapFuture
-        chartItems <- chartItemsFuture
+        chartItems <- repo.find(criteria, Nil, chartFieldNames)
         tableItems <- {
           val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
             fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
@@ -307,6 +290,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       case t: TimeoutException =>
         Logger.error("Problem found in the overviewList process")
         InternalServerError(t.getMessage)
+      case e: AdaConversionException => {
+        val refererUrl = request.headers("Referer")
+        Redirect(refererUrl).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
+      }
     }
   }
 
@@ -381,8 +368,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       xField <- xFieldFuture
       yField <- yFieldFuture
       groupField <- groupFieldFuture
+      criteria <- toCriteria(filter)
       xyzItems <- {
-        val criteria = toCriteria(filter)
         val projection = Seq(xFieldName, yFieldName) ++ groupField.map(_.name)
         repo.find(criteria, Nil, projection.toSet)
       }
@@ -401,6 +388,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           groupField,
           scattedData,
           filter,
+          setting.filterShowFieldStyle,
           router,
           dataSetId,
           getMetaInfos
@@ -418,22 +406,28 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     val fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
 
-    val chartSpecsFuture = getDistributionChartSpecs(
-      toCriteria(filter),
-      Seq(FieldChartType(fieldName, None)),
-      true,
-      false
-    )
-
     {
       for {
-        chartSpecs <- chartSpecsFuture
+        criteria <- toCriteria(filter)
+        chartSpecs <- getDistributionChartSpecs(
+          criteria,
+          Seq(FieldChartType(fieldName, None)),
+          true,
+          false
+        )
         fields <-fieldRepo.find(sort = Seq(AscSort("name")))
         field <- fieldRepo.get(fieldName)
       } yield {
         render {
           case Accepts.Html() => Ok(dataset.distribution(
-            dataSetName, field, chartSpecs.head._2, filter, router, dataSetId, getMetaInfos
+            dataSetName,
+            field,
+            chartSpecs.head._2,
+            filter,
+            setting.filterShowFieldStyle,
+            router,
+            dataSetId,
+            getMetaInfos
           ))
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
         }
@@ -468,7 +462,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       } yield {
         render {
           case Accepts.Html() => Ok(dataset.dateCount(
-            dataSetName, dateField, groupField, series, filter, router, dataSetId, getMetaInfos
+            dataSetName,
+            dateField,
+            groupField,
+            series,
+            filter,
+            setting.filterShowFieldStyle,
+            router,
+            dataSetId,
+            getMetaInfos
           ))
           case Accepts.Json() => BadRequest("GetDateCount function doesn't support JSON response.")
         }
@@ -487,7 +489,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Future[Seq[(String, Seq[(ju.Date, Any)])]] = {
     val dateFieldName = dateField.name
 
-    val criteria = toCriteria(filter)
+    val criteria = result(toCriteria(filter))
     val projection = Seq(dateFieldName) ++ groupField.map(_.name)
     val dateGroupItemsFuture = repo.find(criteria, Nil, projection.toSet)
 
@@ -523,7 +525,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     })
   }
 
-  override def getFieldNameLabels(
+  override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ) = Action.async { implicit request =>
     for {
@@ -535,10 +537,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         sort = Seq(AscSort("name"))
       )
     } yield {
-      val fieldJsons = fields.map( field =>
-        Json.obj("name" -> field.name, "label" -> field.label)
-      )
-      Ok(Json.toJson(fieldJsons))
+      implicit val fieldFormat = DataSetFormattersAndIds.fieldFormat
+      Ok(Json.toJson(fields))
     }
   }
 

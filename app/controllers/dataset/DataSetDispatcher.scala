@@ -28,13 +28,21 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 
-  override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) = dispatch(_.find(page, orderBy, filter))
+  override def find(
+    page: Int,
+    orderBy: String,
+    filter: Seq[FilterCondition]
+  ) = dispatch(_.find(page, orderBy, filter))
 
   override def listAll(orderBy: String) = dispatch(_.listAll(orderBy))
 
   override def overviewFieldTypes = dispatch(_.overviewFieldTypes())
 
-  override def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]) = dispatch(_.overviewList(page, orderBy, filter))
+  override def overviewList(
+    page: Int,
+    orderBy: String,
+    filter: Seq[FilterCondition]
+  ) = dispatch(_.overviewList(page, orderBy, filter))
 
   override def getScatterStats(
     xFieldName: Option[String],
@@ -51,11 +59,16 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filter: Seq[FilterCondition]
   ) = dispatch(_.getDateCount(dateFieldName, groupFieldName, filter))
 
-  override def getFieldNameLabels(fieldTypeIds: Seq[FieldTypeId.Value]) = dispatch(_.getFieldNameLabels(fieldTypeIds))
+  override def getFields(
+    fieldTypeIds: Seq[FieldTypeId.Value]
+  ) = dispatch(_.getFields(fieldTypeIds))
 
   override def getFieldNames = dispatch(_.getFieldNames)
 
-  override def getFieldValue(id: BSONObjectID, fieldName: String) = dispatch(_.getFieldValue(id, fieldName))
+  override def getFieldValue(
+    id: BSONObjectID,
+    fieldName: String
+  ) = dispatch(_.getFieldValue(id, fieldName))
 
   override def exportRecordsAsCsv(
     delimiter: String,

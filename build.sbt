@@ -26,7 +26,7 @@ resolvers ++= Seq(
 //  "Ivylocal" at "file://home/peter/.ivy2/local/" // " + Path.userHome.absolutePath + "
 )
 
-routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._", "models.FilterCondition.FilterSpecQueryStringBinder", "models.FilterCondition.FieldTypeIdsQueryStringBinder")
+routesImport ++= Seq("reactivemongo.bson.BSONObjectID", "models.PathBindables._", "models.QueryStringBinders.FilterSpecQueryStringBinder", "models.QueryStringBinders.FieldTypeIdsQueryStringBinder")
 
 libraryDependencies ++= Seq(
   "ada" % "ada-dataaccess_2.11" % "0.3.1-alpha",

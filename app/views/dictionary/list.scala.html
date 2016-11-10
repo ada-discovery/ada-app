@@ -32,8 +32,8 @@
             @filter(
                 page.filter,
                 router.plainList,
-                Left(fieldNameLabels),
-                true
+                Left(fieldNameLabels.map { case (name, label) => Field(name, label)}),
+                Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>
         <div class="pull-right">

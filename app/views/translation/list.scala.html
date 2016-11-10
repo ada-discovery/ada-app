@@ -1,6 +1,7 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import util.typeColumns
+@import dataaccess.Field
 
 @(page: Page[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
@@ -11,9 +12,10 @@
                 page.filter,
                 routes.TranslationController.find(),
                 Left(Seq(
-                    ("original", Some("Original")),
-                    ("translated", Some("Translated"))
-                ))
+                    Field("original", Some("Original")),
+                    Field("translated", Some("Translated"))
+                )),
+                Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>
         <div class="col-md-4">

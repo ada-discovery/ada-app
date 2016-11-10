@@ -1,17 +1,29 @@
 @import models.ConditionType
 @import play.api.libs.json.Json
+@import models.FilterShowFieldStyle
+@import dataaccess.Field
 
 @(
     filter: Seq[FilterCondition],
     submitCall: Call,
-    fieldNameLabelsOrCall: Either[Traversable[(String, Option[String])], Call],
-    hideFieldNames: Boolean = false,
+    fieldsOrCall: Either[Traversable[Field], Call],
+    showFieldStyle: Option[FilterShowFieldStyle.Value] = None,
     saveCall: Option[Call] = None
 )
 
 <!-- need to import css and js first -->
 <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/typeahead.min.css")">
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("typeahead.bundle.min.js"))"></script>
+
+@showChoice(value: FilterShowFieldStyle.Value, text: String) = {
+    <li>
+        <label class="radio-inline"><input type="radio" name="showChoice" value="@value.id" @if(showFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels) == value) {checked="checked"}>
+            <h5 style="padding-left: 10px">
+                @text
+            </h5>
+        </label>
+    </li>
+}
 
 <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
     <div class="modal-dialog">
@@ -25,15 +37,32 @@
                     <input id="conditionIndex" type="hidden" value=""/>
                     <div class="row">
                         <div class="float-left col-md-4">
-                            <input id="fieldNameTypeahead" class="typeahead" type="text" placeholder="@if(hideFieldNames) {Field Label} else {Field Name or Label}">
+                            <input id="fieldNameTypeahead" class="typeahead" type="text" placeholder="Field Name or Label">
                             <input id="fieldName" type="hidden" value="">
                         </div>
-                        <select id="conditionType" class="float-left">
-                            @ConditionType.values.map{ conditionType =>
-                                <option value="@conditionType">@conditionType</option>
-                            }
-                        </select>
-                        <input id="value" class="float-left" placeholder="Condition"/>
+                        <div id="conditionDiv">
+                            <select id="conditionType" class="float-left">
+                                @ConditionType.values.map{ conditionType =>
+                                    <option value="@conditionType">@conditionType</option>
+                                }
+                            </select>
+                            <input id="value" class="float-left" placeholder="Condition"/>
+                        </div>
+                        <a id="showChoicesButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#show-choices" data-toggle="tooltip" title="Field Name/Label Display Options">
+                            <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+                        </a>
+                    </div>
+                    <div id="show-choices" class="row collapse">
+                        <hr/>
+                        <div class="well">
+                            What do you want to show?
+                            <ul class="list-unstyled">
+                                @showChoice(FilterShowFieldStyle.NamesOnly, "Field names only")
+                                @showChoice(FilterShowFieldStyle.LabelsOnly, "Field labels only")
+                                @showChoice(FilterShowFieldStyle.LabelsAndNamesOnlyIfLabelUndefined, "Field labels, and names only if label undefined")
+                                @showChoice(FilterShowFieldStyle.NamesAndLabels, "Both, field names and labels")
+                            </ul>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -81,12 +110,12 @@
 </ul>
 
 @fieldNameLabelsAsString = @{
-    fieldNameLabelsOrCall match {case Left(fieldNameWithLabels) =>
+    fieldsOrCall match {case Left(fields) =>
         Html(
             Json.stringify(
                 Json.toJson(
-                    fieldNameWithLabels.map { case (fieldName, fieldLabel) =>
-                        Json.obj("name" -> fieldName, "label" -> fieldLabel)
+                    fields.map { field =>
+                        Json.obj("name" -> field.name, "label" -> field.label)
                     }
                 )
             )
@@ -94,21 +123,22 @@
     }
 }
 
-@fieldNameLabelsUrl = @{
-    fieldNameLabelsOrCall match {case Right(call) => call.url}
+@fieldsUrl = @{
+    fieldsOrCall match {case Right(call) => call.url}
 }
 
 <script type="text/javascript" defer="defer">
     var jsFilter = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}');
     var conditionFields = ["fieldName", "conditionType", "value"];
-    var fieldNameAndLabels = @if(fieldNameLabelsOrCall.isLeft) {
+    var fieldNameAndLabels = @if(fieldsOrCall.isLeft) {
         JSON.parse('@fieldNameLabelsAsString')
     } else {
         null
     }
 
     if (fieldNameAndLabels) {
-        populateFieldTypeahed($('#fieldNameTypeahead'), $('#fieldName'), fieldNameAndLabels, @hideFieldNames);
+        initShowFieldNameLabelChoices();
+        repopulateFieldNameTypeahead();
     }
 
     $('#addEditConditionModal').on('shown.bs.modal', function () {
@@ -218,16 +248,63 @@
 
     function loadFieldNames() {
         if (!fieldNameAndLabels) {
-            @if(fieldNameLabelsOrCall.isRight) {
+            @if(fieldsOrCall.isRight) {
                 $.ajax({
-                    url: '@fieldNameLabelsUrl',
+                    url: '@fieldsUrl',
                     success: function (data) {
-                        fieldNameAndLabels = data;
-                        populateFieldTypeahed($('#fieldNameTypeahead'), $('#fieldName'), fieldNameAndLabels, @hideFieldNames);
+                        fieldNameAndLabels = data.map( function(field, index) {
+                            return {name: field.name, label: field.label};
+                        });
+                        initShowFieldNameLabelChoices();
+                        repopulateFieldNameTypeahead();
                     },
                     async: false
                 });
             }
         }
+    }
+
+    function disableShowChoice(value) {
+        var showChoiceElement = $("input[name='showChoice'][value='" + value + "']")
+        showChoiceElement.attr("disabled", true);
+        showChoiceElement.parent().attr("title", "Disabled because no labels available");
+    }
+
+    function initShowFieldNameLabelChoices() {
+        var itemsWithNonNullLabel = $.grep(fieldNameAndLabels, function(item) {
+            return item.label != null
+        });
+
+        // if no labels available disable the options mentioning labels and set the choice to 0 (names only)
+        if (itemsWithNonNullLabel.length == 0) {
+            $("input[name='showChoice'][value='0']").prop('checked', true);
+            disableShowChoice("1");
+            disableShowChoice("2");
+            disableShowChoice("3");
+        }
+    }
+
+    function repopulateFieldNameTypeahead() {
+        var choiceElement = $("input[name='showChoice']:checked")[0]
+        if (choiceElement) {
+            var choiceValue = parseInt(choiceElement.value);
+
+            $('#fieldNameTypeahead').typeahead('destroy');
+
+            populateFieldTypeahed(
+                $('#fieldNameTypeahead'),
+                $('#fieldName'),
+                fieldNameAndLabels,
+                choiceValue
+            )
+        };
+    }
+
+    $('#showChoicesButton').click(function() {
+        repopulateFieldNameTypeahead();
+    });
+
+    function updateCondition() {
+        $("#conditionType")
     }
 </script>

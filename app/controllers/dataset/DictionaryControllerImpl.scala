@@ -66,17 +66,17 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   override protected val form = Form(
     mapping(
       "name" -> nonEmptyText,
+      "label" ->  optional(nonEmptyText),
       "fieldType" -> of[FieldTypeId.Value],
       "isArray" -> boolean,
       "numValues" -> optional(of[Map[String, String]]),
       "aliases" ->  seq(nonEmptyText),
-      "label" ->  optional(nonEmptyText),
       "categoryId" -> optional(nonEmptyText)
       // TODO: make it more pretty perhaps by moving the category stuff to proxy/subclass of Field
-    ) { (name, fieldType, isArray, numValues, aliases, label, categoryId) =>
-      Field(name, fieldType, isArray, numValues, aliases, label, categoryId.map(BSONObjectID(_)))
+    ) { (name, label, fieldType, isArray, numValues, aliases, categoryId) =>
+      Field(name, label, fieldType, isArray, numValues, aliases, categoryId.map(BSONObjectID(_)))
     }
-    ((field: Field) => Some(field.name, field.fieldType, field.isArray, field.numValues, field.aliases, field.label, field.categoryId.map(_.stringify)))
+    ((field: Field) => Some(field.name, field.label, field.fieldType, field.isArray, field.numValues, field.aliases, field.categoryId.map(_.stringify)))
   )
 
   // router for requests; to be passed to views as helper.
@@ -144,12 +144,11 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     }
     val fieldChartSpecsFuture = Future.sequence(futureFieldChartSpecs)
     val futureMetaInfos = dataSpaceMetaInfoRepo.find()
-    val (futureItems, futureCount) = getFutureItemsAndCount(page, orderBy, filter)
+    val futureItemsAndCount = getFutureItemsAndCount(page, orderBy, filter)
 
     {
       for {
-        items <- futureItems
-        count <- futureCount
+        (items, count) <- futureItemsAndCount
         metaInfos <- futureMetaInfos
         fieldChartSpecs <- fieldChartSpecsFuture
         _ <- setCategoriesById(categoryRepo, items)
@@ -238,11 +237,13 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     fieldName : String,
     fieldExtractor : Field => Any
   ) : Future[ChartSpec] =
-    repo.find(
-      criteria = toCriteria(filter),
-      projection = Seq(fieldName)
-    ).map { fields =>
-      val values = fields.map(field => Some(fieldExtractor(field).toString))
-      ChartSpec.categorical(values, None, chartTitle, false, true)
+    toCriteria(filter).flatMap { criteria =>
+      repo.find(
+        criteria = criteria,
+        projection = Seq(fieldName)
+      ).map { fields =>
+        val values = fields.map(field => Some(fieldExtractor(field).toString))
+        ChartSpec.categorical(values, None, chartTitle, false, true)
+      }
     }
 }

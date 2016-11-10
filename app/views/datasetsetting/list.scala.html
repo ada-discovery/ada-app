@@ -4,8 +4,9 @@
 @import util.typeColumns
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import dataaccess.{DataSetSetting, Field}
+@import models.FilterShowFieldStyle
 
-@import dataaccess.DataSetSetting
 @(
     dataSetName: String,
     page: Page[DataSetSetting]
@@ -18,8 +19,9 @@
                 page.filter,
                 dataSetSettingRoutes.find(),
                 Left(Seq(
-                    ("dataSetId", Some("Data Set Id"))
-                ))
+                    Field("dataSetId", Some("Data Set Id"))
+                )),
+                Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>
         <div class="col-md-4">

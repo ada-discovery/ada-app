@@ -45,7 +45,7 @@ private case class EnumFieldType(
 
   override protected def displayStringToValueWoNull(text: String) =
     reversedEnumValueMap.get(text).getOrElse(
-      throw new AdaConversionException(s"$text is not enum: ${enumValueMap.mkString(";")}.")
+      throw new AdaConversionException(s"'$text' is not valid enum label: ${enumValueMap.mkString(";")}.")
     )
 
   override protected def valueStringToValueWoNull(text: String) =
@@ -53,7 +53,7 @@ private case class EnumFieldType(
 
   override protected def valueToDisplayStringNonEmpty(value: Int) =
     enumValueMap.get(value).getOrElse(
-      throw new AdaConversionException(s"$value is not enum: ${enumValueMap.mkString(";")}.")
+      throw new AdaConversionException(s"Number '$value' is not valid enum value: ${enumValueMap.mkString(";")}.")
     )
 
   override protected def jsonToValueWoNull(json: JsReadable): Int =
@@ -64,9 +64,9 @@ private case class EnumFieldType(
           if (enumValueMap.contains(int))
             int
           else
-            throw new AdaConversionException(s"$number is not enum's int: ${enumValueMap.mkString(";")}.")
+            throw new AdaConversionException(s"Number '$number' is not valid enum value: ${enumValueMap.mkString(";")}.")
         } catch {
-          case e: ArithmeticException => throw new AdaConversionException(s"$number is not enum's int: ${enumValueMap.mkString(";")}.")
+          case e: ArithmeticException => throw new AdaConversionException(s"Number '$number' is not valid enum value: ${enumValueMap.mkString(";")}.")
         }
       case _ => throw new AdaConversionException(s"Json $json is not enum's int.")
     }
@@ -75,7 +75,7 @@ private case class EnumFieldType(
     if (enumValueMap.contains(value))
       super.valueToJsonNonEmpty(value)
     else
-      throw new AdaConversionException(s"$value is not enum's int: ${enumValueMap.mkString(";")}.")
+      throw new AdaConversionException(s"'$value' is not valid enum value: ${enumValueMap.mkString(";")}.")
 }
 
 private case class ArrayFieldType[T](

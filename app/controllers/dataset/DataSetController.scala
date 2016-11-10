@@ -29,7 +29,7 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getFieldNames: Action[AnyContent]
 
-  def getFieldNameLabels(
+  def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ): Action[AnyContent]
 

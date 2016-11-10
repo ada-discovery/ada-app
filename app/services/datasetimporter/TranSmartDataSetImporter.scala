@@ -124,7 +124,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
             val (fieldLabel, categoryName) = fieldNameLabelCategoryNameMap.getOrElse(fieldName, ("", None))
             val categoryId = categoryName.map(categoryNameIdMap.get(_).get)
             val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to)})
-            fieldRepo.save(Field(fieldName, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums, Nil, Some(fieldLabel), categoryId))
+            fieldRepo.save(Field(fieldName, Some(fieldLabel), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums, Nil, categoryId))
           }
           Future.sequence(idFutures)
         }

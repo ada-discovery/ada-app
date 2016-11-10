@@ -6,6 +6,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import models.FilterShowFieldStyle
 
 case class DataSpaceMetaInfo(
   _id: Option[BSONObjectID],
@@ -38,11 +39,12 @@ case class DataSetSetting(
   defaultScatterYFieldName: String,
   defaultDistributionFieldName: String,
   defaultDateCountFieldName: String,
+  filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
   tranSMARTVisitFieldName: Option[String],
   tranSMARTReplacements: Map[String, String],
   cacheDataSet: Boolean = false
 ) {
-  def this(dataSetId: String) = this(None, dataSetId, "", None, Seq[String](), Seq[FieldChartType](), 3, "", "", "", "", None, Map[String, String]())
+  def this(dataSetId: String) = this(None, dataSetId, "", None, Seq[String](), Seq[FieldChartType](), 3, "", "", "", "", None, None, Map[String, String]())
 }
 
 object DataSetSetting {
@@ -58,6 +60,7 @@ object DataSetSetting {
     defaultScatterYFieldName: String,
     defaultDistributionFieldName: String,
     defaultDateCountFieldName: String,
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     tranSMARTVisitFieldName: Option[String],
     tranSMARTReplacements: Map[String, String],
     cacheDataSet: Boolean
@@ -65,7 +68,7 @@ object DataSetSetting {
     _id, dataSetId, keyFieldName, exportOrderByFieldName,
     listViewTableColumnNames, overviewChartFieldNames.map(FieldChartType(_, None)), overviewChartElementGridWidth,
     defaultScatterXFieldName, defaultScatterYFieldName, defaultDistributionFieldName, defaultDateCountFieldName,
-    tranSMARTVisitFieldName, tranSMARTReplacements,
+    filterShowFieldStyle, tranSMARTVisitFieldName, tranSMARTReplacements,
     cacheDataSet
   )
 }
@@ -89,11 +92,11 @@ case class Dictionary(
 
 case class Field(
   name: String,
-  fieldType: FieldTypeId.Value,
+  label: Option[String] = None,
+  fieldType: FieldTypeId.Value = FieldTypeId.String,
   isArray: Boolean = false,
   numValues: Option[Map[String, String]] = None, // TODO: rename to enumValues
   aliases: Seq[String] = Seq[String](),
-  label: Option[String] = None,
   var categoryId: Option[BSONObjectID] = None,
   var category: Option[Category] = None
 ) {
@@ -155,15 +158,15 @@ object DataSetFormattersAndIds {
 
   implicit val fieldFormat: Format[Field] = (
     (__ \ "name").format[String] and
+    (__ \ "label").formatNullable[String] and
     (__ \ "fieldType").format[FieldTypeId.Value] and
     (__ \ "isArray").format[Boolean] and
     (__ \ "numValues").formatNullable[Map[String, String]] and
     (__ \ "aliases").format[Seq[String]] and
-    (__ \ "label").formatNullable[String] and
     (__ \ "categoryId").formatNullable[BSONObjectID]
   )(
     Field(_, _, _, _, _, _, _),
-    (item: Field) =>  (item.name, item.fieldType, item.isArray, item.numValues, item.aliases, item.label, item.categoryId)
+    (item: Field) =>  (item.name, item.label, item.fieldType, item.isArray, item.numValues, item.aliases, item.categoryId)
   )
 
   implicit val dictionaryFormat = Json.format[Dictionary]
@@ -172,6 +175,7 @@ object DataSetFormattersAndIds {
   implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
   implicit val fieldChartTypeFormat = Json.format[FieldChartType]
 
+  implicit val filterShowFieldStyleFormat = EnumFormat.enumFormat(FilterShowFieldStyle)
   val dataSetSettingFormat = Json.format[DataSetSetting]
   implicit val serializableDataSetSettingFormat = new SerializableFormat(dataSetSettingFormat.reads, dataSetSettingFormat.writes)
   val serializableBSONObjectIDFormat = new SerializableFormat(BSONObjectIDFormat.reads, BSONObjectIDFormat.writes)

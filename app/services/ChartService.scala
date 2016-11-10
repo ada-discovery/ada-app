@@ -101,41 +101,30 @@ class ChartServiceImpl extends ChartService {
     }
 
     fieldTypeId match {
-      case FieldTypeId.String => {
-        val values = getValues[String]
-
+      case FieldTypeId.String =>
         ChartSpec.categorical(
-          values, enumMap, chartTitle, showLabels, showLegend, chartType
+          getValues[String], enumMap, chartTitle, showLabels, showLegend, chartType
         )
-      }
 
-      case FieldTypeId.Enum => {
-        val values = getValues[Int]
-
+      case FieldTypeId.Enum =>
         ChartSpec.categorical(
-          values, enumMap, chartTitle, showLabels, showLegend, chartType
+          getValues[Int], enumMap, chartTitle, showLabels, showLegend, chartType
         )
-      }
 
-      case FieldTypeId.Boolean => {
-        val values = getValues[Boolean]
-
+      case FieldTypeId.Boolean =>
         ChartSpec.categorical(
-          values, enumMap, chartTitle, showLabels, showLegend, chartType
+          getValues[Boolean], enumMap, chartTitle, showLabels, showLegend, chartType
         )
-      }
 
-      case FieldTypeId.Double => {
-        val values = getValues[Double].flatten
+      case FieldTypeId.Double =>
+        ChartSpec.numerical(
+          getValues[Double].flatten, fieldName, chartTitle, 20, Some(1), None, None, chartType
+        )
 
-        ChartSpec.numerical(values, fieldName, chartTitle, 20, Some(1), None, None, chartType)
-      }
-
-      case FieldTypeId.Integer => {
-        val values = getValues[Long].flatten
-
-        ChartSpec.numerical(values, fieldName, chartTitle, 20, Some(1), None, None, chartType)
-      }
+      case FieldTypeId.Integer =>
+        ChartSpec.numerical(
+          getValues[Long].flatten, fieldName, chartTitle, 20, Some(1), None, None, chartType
+        )
 
       case FieldTypeId.Date => {
         val dates = getValues[ju.Date].flatten

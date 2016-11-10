@@ -18,6 +18,7 @@ object DeNoPaDataSetSettings {
     "a_Alter",
     "a_Datum_Aufnahme",
     None,
+    None,
     Map(("\r", " "), ("\n", " ")),
     false
   )
@@ -34,6 +35,7 @@ object DeNoPaDataSetSettings {
     "b_AESD_I_mean",
     "a_Alter",
     "b_Datum_Aufnahme",
+    None,
     None,
     Map(("\r", " "), ("\n", " ")),
     false
@@ -52,6 +54,7 @@ object DeNoPaDataSetSettings {
     "c_Alter",
     "c_Datum_Aufnahme",
     None,
+    None,
     Map(("\r", " "), ("\n", " ")),
     false
   )
@@ -68,6 +71,7 @@ object DeNoPaDataSetSettings {
     "a_AESD_I_mean",
     "a_Alter",
     "a_Datum_Aufnahme",
+    None,
     None,
     Map(("\r", " "), ("\n", " ")),
     false
@@ -86,6 +90,7 @@ object DeNoPaDataSetSettings {
     "a_Alter",
     "b_Datum_Aufnahme",
     None,
+    None,
     Map(("\r", " "), ("\n", " ")),
     false
   )
@@ -102,6 +107,7 @@ object DeNoPaDataSetSettings {
     "c_AESD_I_mean",
     "c_Alter",
     "c_Datum_Aufnahme",
+    None,
     None,
     Map(("\r", " "), ("\n", " ")),
     false

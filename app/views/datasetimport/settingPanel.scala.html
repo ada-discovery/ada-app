@@ -1,4 +1,5 @@
 @import views.html.elements._
+@import util.toHumanReadableCamel
 
 @(form: Form[_])(implicit msg: Messages)
 
@@ -18,6 +19,7 @@
             @inputText("dataSetImport", "setting.defaultScatterYFieldName", form)
             @inputText("dataSetImport", "setting.defaultDistributionFieldName", form)
             @inputText("dataSetImport", "setting.defaultDateCountFieldName", form)
+            @select("dataSetImport", "setting.filterShowFieldStyle", form, FilterShowFieldStyle.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString))), true)
             @inputText("dataSetImport", "setting.tranSMARTVisitFieldName", form)
             @inputText("dataSetImport", "setting.tranSMARTReplacements", form)
             @checkbox("dataSetImport", "setting.cacheDataSet", form)

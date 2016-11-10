@@ -117,7 +117,7 @@ object ConversionUtil {
   }
 
   def typeExpectedException(value: String, expectedType: Class[_]) =
-    throw new AdaConversionException(s"String $value is expected to be ${expectedType.getSimpleName}-convertible but it's not.")
+    throw new AdaConversionException(s"String '$value' is not ${expectedType.getSimpleName}-convertible.")
 }
 
 class AdaConversionException(message: String) extends RuntimeException(message)

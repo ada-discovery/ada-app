@@ -19,6 +19,7 @@
     groupField: Option[Field],
     series: Seq[(String, Seq[(Date, Any)])],
     filterSpec: Seq[FilterCondition],
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     router: DataSetRouter,
     dataSetId: String,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -29,7 +30,12 @@
 @actions = {
     <div class="row">
         <div class="col-md-12">
-            @filter(filterSpec, router.getDateCount(dateField.map(_.name), groupField.map(_.name), filterSpec), Right(router.allFieldNameLabels))
+            @filter(
+                filterSpec,
+                router.getDateCount(dateField.map(_.name), groupField.map(_.name), filterSpec),
+                Right(router.allFields),
+                filterShowFieldStyle
+            )
         </div>
     </div>
     <hr/>
@@ -80,13 +86,15 @@
         populateFieldTypeahedFromUrl(
             $('#fieldForm #dateFieldTypeahead'),
             $('#fieldForm #dateFieldName'),
-            '@router.fieldNameLabels(Seq(FieldTypeId.Date))'
+            '@Html(router.fields(Seq(FieldTypeId.Date)).url)',
+            @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         )
 
         populateFieldTypeahedFromUrl(
             $('#fieldForm #groupFieldTypeahead'),
             $('#fieldForm #groupFieldName'),
-            '@router.fieldNameLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean))'
+            '@Html(router.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+            @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         );
 
         $('#fieldForm #dateFieldTypeahead').on('typeahead:selected', function(e, data) {

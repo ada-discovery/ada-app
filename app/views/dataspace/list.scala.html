@@ -1,8 +1,8 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
+@import dataaccess.{Field, DataSpaceMetaInfo}
 
-@import dataaccess.DataSpaceMetaInfo
 @(
     page: Page[DataSpaceMetaInfo]
 )(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
@@ -14,7 +14,7 @@
                 page.filter,
                 dataSpaceMetaInfoRoutes.find(),
                 Left(Seq(
-                    ("name", Some("Name"))
+                    Field("name", Some("Name"))
                 ))
             )
         </div>

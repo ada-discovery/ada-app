@@ -17,6 +17,7 @@
     field: Option[Field],
     chartSpec: ChartSpec,
     filterSpec: Seq[FilterCondition],
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     router: DataSetRouter,
     dataSetId: String,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -27,7 +28,12 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(filterSpec, router.getDistribution(field.map(_.name), filterSpec), Right(router.allFieldNameLabels))
+            @filter(
+                filterSpec,
+                router.getDistribution(field.map(_.name), filterSpec),
+                Right(router.allFields),
+                filterShowFieldStyle
+            )
         </div>
         <div class="pull-right">
             <a class="btn btn-info btn-sm" href="#" onclick="addToChartOverview();return false" data-toggle="tooltip" title="Add To Chart Overview">
@@ -79,7 +85,8 @@
         populateFieldTypeahedFromUrl(
             $('#fieldForm #fieldTypeahead'),
             $('#fieldForm #fieldName'),
-            '@router.allFieldNameLabels'
+            '@Html(router.allFields.url)',
+            @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         )
 
         $('#fieldForm #fieldTypeahead').on('typeahead:selected', function(e, data) {

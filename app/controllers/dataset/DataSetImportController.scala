@@ -55,6 +55,7 @@ class DataSetImportController @Inject()(
 
   private implicit val seqFormatter = SeqFormatter.apply
   private implicit val mapFormatter = MapJsonFormatter.apply
+  private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
 
   private val dataSetSettingMapping: Mapping[DataSetSetting] = mapping(
     "id" -> ignored(Option.empty[BSONObjectID]),
@@ -68,12 +69,13 @@ class DataSetImportController @Inject()(
     "defaultScatterYFieldName" -> nonEmptyText,
     "defaultDistributionFieldName" -> nonEmptyText,
     "defaultDateCountFieldName" -> nonEmptyText,
+    "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
     "tranSMARTVisitFieldName" -> optional(text),
     "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
     "cacheDataSet" -> boolean
   ) (DataSetSetting.apply2){
     DataSetSetting.unapply(_).map( v =>
-      (v._1, v._2, v._3, v._4 ,v._5, v._6.map(_.fieldName), v._7, v._8, v._9, v._10, v._11, v._12, v._13, v._14)
+      (v._1, v._2, v._3, v._4 ,v._5, v._6.map(_.fieldName), v._7, v._8, v._9, v._10, v._11, v._12, v._13, v._14, v._15)
     )
   }
 

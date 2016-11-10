@@ -195,7 +195,7 @@ private class RedCapDataSetImporter @Inject() (
 
         val categoryId = nameCategoryIdMap.get(metadata.form_name)
         val stringEnumValues = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
-        Field(metadata.field_name, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnumValues, Seq[String](), Some(metadata.field_label), categoryId)
+        Field(metadata.field_name, Some(metadata.field_label), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnumValues, Seq[String](), categoryId)
       }.toList
 
     for {
@@ -227,7 +227,7 @@ private class RedCapDataSetImporter @Inject() (
         // also add redcap_event_name
         val fieldTypeSpec = inferredFieldNameTypeMap.get(redCapVisitField).get.spec
         val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
-        val visitField = Field(redCapVisitField, fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums, Nil, Some(redCapVisitLabel))
+        val visitField = Field(redCapVisitField, Some(redCapVisitLabel), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums, Nil)
 
         fields ++ Seq(visitField)
       }

@@ -1,4 +1,4 @@
-@import dataaccess.{Category, DataSpaceMetaInfo}
+@import dataaccess.{Category, DataSpaceMetaInfo, Field}
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import views.html.dataset.{datasetSubNav, datasetMenu}
@@ -29,7 +29,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-9">
-            @filter(page.filter, router.plainList, Left(Seq(("name", None))))
+            @filter(page.filter, router.plainList, Left(Seq(Field("name"))))
         </div>
         <div class="pull-right">
             <a class="btn btn-info btn-sm" id="expandAll" href="#" data-toggle="tooltip" title="Expand All" onclick="$('#treeDiv').tree('expandAll');return false;">

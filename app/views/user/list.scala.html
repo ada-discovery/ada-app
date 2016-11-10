@@ -1,7 +1,8 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import util.typeColumns
-@import dataaccess.User
+@import dataaccess.{User, Field}
+@import models.FilterShowFieldStyle
 
 @(page: Page[User])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
@@ -12,9 +13,10 @@
                 page.filter,
                 routes.UserController.find(),
                 Left(Seq(
-                    ("ldapDn", Some("Id")),
-                    ("email", Some("Email"))
-                ))
+                    Field("ldapDn", Some("Id")),
+                    Field("email", Some("Email"))
+                )),
+                Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>
         <div class="col-md-4">

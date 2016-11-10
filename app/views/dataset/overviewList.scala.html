@@ -25,6 +25,7 @@
     displayedFieldNames: Traversable[String], // could differ from the displayed fields since the dictionary doesn't have to contain all the fields... this, however, could happen only when a fresh data set (without dictionary) is imported
     fieldChartSpecs: Traversable[FieldChartSpec],
     chartGridElementWidth: Int,
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     router: DataSetRouter,
     jsRouter: DataSetJsRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -35,7 +36,12 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(page.filter, router.plainOverviewList, Right(router.allFieldNameLabels))
+            @filter(
+                page.filter,
+                router.plainOverviewList,
+                Right(router.allFields),
+                filterShowFieldStyle
+            )
         </div>
         <div class="pull-right">
             @exportDataSetDropdown(

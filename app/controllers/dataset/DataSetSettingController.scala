@@ -8,6 +8,7 @@ import dataaccess.{FieldChartType, DataSetSetting, DataSetFormattersAndIds, Crit
 import dataaccess.RepoTypes.DataSetSettingRepo
 import dataaccess.DataSetFormattersAndIds.{serializableDataSetSettingFormat, fieldChartTypeFormat, DataSetSettingIdentity}
 import models._
+import models.FilterShowFieldStyle
 import Criterion.CriterionInfix
 import persistence.RepoTypes._
 import play.api.Logger
@@ -15,7 +16,6 @@ import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.mvc.{Action, RequestHeader, Request}
-import play.api.libs.json.Json
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
@@ -23,8 +23,6 @@ import services.DataSetService
 import views.html
 import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 import controllers.dataset.routes.javascript.{DataSetSettingController => dataSetSettingJsRoutes}
-import controllers.dataset.DataSetRouter
-import play.api.data.Mapping
 
 import scala.concurrent.Future
 
@@ -43,6 +41,7 @@ class DataSetSettingController @Inject() (
 
   private implicit val mapFormatter = MapJsonFormatter.apply
   private implicit val fieldChartTypeFormatter = JsonFormatter[FieldChartType]
+  private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
 
   override protected val form = Form(
     mapping(
@@ -51,12 +50,13 @@ class DataSetSettingController @Inject() (
       "keyFieldName" -> nonEmptyText,
       "exportOrderByFieldName" -> optional(text),
       "listViewTableColumnNames" -> seq(text),
-      "overviewFieldChartTypes" -> seq(of[FieldChartType]), // fieldChartMapping
+      "overviewFieldChartTypes" -> seq(of[FieldChartType]),
       "overviewChartElementGridWidth" -> number(min = 1, max = 12),
       "defaultScatterXFieldName" -> nonEmptyText,
       "defaultScatterYFieldName" -> nonEmptyText,
       "defaultDistributionFieldName" -> nonEmptyText,
       "defaultDateCountFieldName" -> nonEmptyText,
+      "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
       "tranSMARTVisitFieldName" -> optional(text),
       "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
       "cacheDataSet" -> boolean

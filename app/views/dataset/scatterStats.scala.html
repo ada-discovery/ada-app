@@ -17,6 +17,7 @@
     groupField: Option[Field],
     series: Seq[(String, Seq[(Any, Any)])],
     filterSpec: Seq[FilterCondition],
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     router: DataSetRouter,
     dataSetId: String,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -27,7 +28,12 @@
 @actions = {
     <div class="row">
         <div class="col-md-12">
-            @filter(filterSpec, router.getScatterStats(xField.map(_.name), yField.map(_.name), groupField.map(_.name), filterSpec), Right(router.allFieldNameLabels))
+            @filter(
+                filterSpec,
+                router.getScatterStats(xField.map(_.name), yField.map(_.name), groupField.map(_.name), filterSpec),
+                Right(router.allFields),
+                filterShowFieldStyle
+            )
         </div>
     </div>
     <hr/>
@@ -76,8 +82,8 @@
     @scatterChart(
         "Comparison",
         "scatterChart",
-        xField.map(_.name.capitalize).getOrElse(""),
-        yField.map(_.name.capitalize).getOrElse(""),
+        xField.map(_.labelOrElseName).getOrElse(""),
+        yField.map(_.labelOrElseName).getOrElse(""),
         series.map{ case (name, values) =>
             (name, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
         }
@@ -102,17 +108,28 @@
 <script type="text/javascript">
     $(function () {
         $.ajax({
-            url: '@router.fieldNameLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double))',
+            url: '@Html(router.fields(Seq(FieldTypeId.Integer, FieldTypeId.Double)).url)',
             success: function (data) {
-                populateFieldTypeahed($('#fieldForm #xFieldTypeahead'), $('#fieldForm #xFieldName'), data);
-                populateFieldTypeahed($('#fieldForm #yFieldTypeahead'), $('#fieldForm #yFieldName'), data);
+                populateFieldTypeahed(
+                    $('#fieldForm #xFieldTypeahead'),
+                    $('#fieldForm #xFieldName'),
+                    data,
+                    @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+                );
+                populateFieldTypeahed(
+                    $('#fieldForm #yFieldTypeahead'),
+                    $('#fieldForm #yFieldName'),
+                    data,
+                    @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+                );
             }
         });
 
         populateFieldTypeahedFromUrl(
             $('#fieldForm #groupFieldTypeahead'),
             $('#fieldForm #groupFieldName'),
-            '@router.fieldNameLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean))'
+            '@Html(router.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+            @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         );
 
         $('#fieldForm #xFieldTypeahead').on('typeahead:selected', function(e, data) {
