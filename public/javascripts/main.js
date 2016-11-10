@@ -124,23 +124,24 @@ function populateTypeahead(element, data, datumTokenizer, displayFun, suggestion
   });
 }
 
-function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, hideFieldNames) {
-    // collect all field names and labels such that if a field has the label defined it will be listed twice.
-    // in this way we make both names and labels searchable.
+/**
+ *
+ * @param typeaheadElement
+ * @param fieldNameElement
+ * @param fieldNameAndLabels
+ * @param showOption 0 - show field names only, 1 - show field labels only,
+ *                   2 - show field labels, and field names if no label defined, 3 - show both, field names and labels
+ */
+function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption) {
     var fullFieldNameAndLabels = fieldNameAndLabels.map( function(field, index) {
         var nameItem = {key: field.name, value: field.name};
         var labelItem = {key: field.name, value: field.label, isLabel: true}
 
-        if (hideFieldNames) {
-            if (field.label)
-                return [labelItem]
-            else
-                return []
-        } else {
-            if (field.label)
-                return [nameItem, labelItem]
-            else
-                return [nameItem]
+        switch (showOption) {
+            case 0: return [nameItem];
+            case 1: return (field.label) ? [labelItem] : [];
+            case 2: return (field.label) ? [labelItem] : [nameItem];
+            case 3: return (field.label) ? [nameItem, labelItem] : [nameItem];
         }
     });
 
@@ -165,11 +166,24 @@ function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndL
             return item.value;
         },
         function (item) {
-            var labelBadge = hideFieldNames ? '' : '<span class="label label-success label-filter">label</span>';
+            var nameBadge = '';
+            var labelBadge = '';
+            switch (showOption) {
+                case 0: nameBadge = ''; break;
+                case 1: nameBadge = ''; break;
+                case 2: nameBadge = '<span class="label label-info label-filter">name</span>'; break;
+                case 3: nameBadge = '<span class="label label-info label-filter">name</span>'; break;
+            }
+            switch (showOption) {
+                case 0: labelBadge = ''; break;
+                case 1: labelBadge = ''; break;
+                case 2: labelBadge = '<span class="label label-success label-filter">label</span>'; break;
+                case 3: labelBadge = '<span class="label label-success label-filter">label</span>'; break;
+            }
             if (item.isLabel)
                 return '<div><span>' + item.value + '</span>' + labelBadge + '</div>';
             else
-                return '<div><span>' + item.value + '</span></div>';
+                return '<div><span>' + item.value + '</span>' + nameBadge + '</div>';
         },
         function (item) {
             fieldNameElement.val(item.key);
@@ -177,11 +191,19 @@ function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndL
     );
 }
 
-function populateFieldTypeahedFromUrl(typeaheadElement, fieldNameElement, url, hideFieldNames) {
+/**
+ *
+ * @param typeaheadElement
+ * @param fieldNameElement
+ * @param url
+ * @param showOption 0 - show field names only, 1 - show field labels only,
+ *                   2 - show field labels, and field names if no label defined, 3 - show both, field names and labels
+ */
+function populateFieldTypeahedFromUrl(typeaheadElement, fieldNameElement, url, showOption) {
     $.ajax({
         url: url,
         success: function (fieldNameAndLabels) {
-            populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, hideFieldNames);
+            populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption);
         }
     });
 }
