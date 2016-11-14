@@ -1,22 +1,23 @@
 package dataaccess
 
 import com.google.inject.ImplementedBy
-import dataaccess.RepoTypes.DictionaryCategoryRepo
-import dataaccess.ignite.DictionaryCategoryCacheCrudRepoFactory
+import dataaccess.RepoTypes.CategoryRepo
+import dataaccess.ignite.CategoryCacheCrudRepoFactory
+import models.Category
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
 
-@ImplementedBy(classOf[DictionaryCategoryCacheCrudRepoFactory])
-trait DictionaryCategoryRepoFactory {
-  def apply(dataSetId: String): DictionaryCategoryRepo
+@ImplementedBy(classOf[CategoryCacheCrudRepoFactory])
+trait CategoryRepoFactory {
+  def apply(dataSetId: String): CategoryRepo
 }
 
-object DictionaryCategoryRepo {
+object CategoryRepo {
 
   def saveRecursively(
-    categoryRepo: DictionaryCategoryRepo,
+    categoryRepo: CategoryRepo,
     category: Category
   ): Future[Seq[(Category, BSONObjectID)]] =
     categoryRepo.save(category).flatMap { id =>

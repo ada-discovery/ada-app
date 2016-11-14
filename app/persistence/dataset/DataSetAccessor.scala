@@ -1,6 +1,7 @@
 package persistence.dataset
 
-import dataaccess.{DataSetSetting, DataSetMetaInfo, Criterion}
+import dataaccess.Criterion
+import models.{DataSetSetting, DataSetMetaInfo}
 import dataaccess.RepoTypes.JsonCrudRepo
 import Criterion.CriterionInfix
 import play.api.libs.json._
@@ -13,8 +14,10 @@ import dataaccess.RepoTypes._
 trait DataSetAccessor{
   def dataSetId: String
   def dataSetRepo: JsonCrudRepo
-  def fieldRepo: DictionaryFieldRepo
-  def categoryRepo: DictionaryCategoryRepo
+  def fieldRepo: FieldRepo
+  def categoryRepo: CategoryRepo
+  def filterRepo: FilterRepo
+  def dataViewRepo: DataViewRepo
   def metaInfo: Future[DataSetMetaInfo]
   def setting: Future[DataSetSetting]
   def updateSetting(setting: DataSetSetting): Future[BSONObjectID]
@@ -23,8 +26,10 @@ trait DataSetAccessor{
 protected class DataSetAccessorImpl(
   val dataSetId: String,
   val dataSetRepo: JsonCrudRepo,
-  val fieldRepo: DictionaryFieldRepo,
-  val categoryRepo: DictionaryCategoryRepo,
+  val fieldRepo: FieldRepo,
+  val categoryRepo: CategoryRepo,
+  val filterRepo: FilterRepo,
+  val dataViewRepo: DataViewRepo,
   dataSetMetaInfoRepo: DataSetMetaInfoRepo,
   dataSetSettingRepo: DataSetSettingRepo
   ) extends DataSetAccessor{

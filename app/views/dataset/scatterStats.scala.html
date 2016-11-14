@@ -1,6 +1,5 @@
 @import controllers.dataset.DataSetRouter
 @import util.BasicStats
-
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.chart.highcharts.scatterChart
 @import views.html.layout.main
@@ -8,7 +7,7 @@
 @import play.api.libs.json.Json
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
-@import dataaccess.{DataSpaceMetaInfo, FieldTypeId, Field}
+@import models.{DataSpaceMetaInfo, FieldTypeId, Field}
 
 @(
     domainName: String,
@@ -29,7 +28,7 @@
     <div class="row">
         <div class="col-md-12">
             @filter(
-                filterSpec,
+                Some(new models.Filter(filterSpec)),
                 router.getScatterStats(xField.map(_.name), yField.map(_.name), groupField.map(_.name), filterSpec),
                 Right(router.allFields),
                 filterShowFieldStyle

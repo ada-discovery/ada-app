@@ -89,7 +89,9 @@ protected abstract class CrudControllerImpl[E: Format, ID](
 
   protected def editCall(id: ID)(implicit request: Request[AnyContent]): Future[Option[E]] = repo.get(id)
 
-  def save = Action.async { implicit request =>
+  def save = save(home)
+
+  protected def save(redirect: Result) = Action.async { implicit request =>
     formFromRequest.fold(
       { formWithErrors =>
         implicit val msg = messagesApi.preferred(request)
@@ -98,7 +100,7 @@ protected abstract class CrudControllerImpl[E: Format, ID](
       item => {
         saveCall(item).map { id =>
           render {
-            case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been created")
+            case Accepts.Html() => redirect.flashing("success" -> s"Item ${id} has been created")
             case Accepts.Json() => Created(Json.obj("message" -> "Item successfully created", "id" -> id.toString))
           }
         }.recover {

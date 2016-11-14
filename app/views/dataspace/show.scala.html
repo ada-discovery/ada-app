@@ -5,9 +5,9 @@
 @import controllers.dataset.DataSetRouter
 @import util.typeColumns
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
+@import models.DataSpaceMetaInfo
+@import models.DataSetMetaInfo
 
-@import dataaccess.DataSpaceMetaInfo
-@import dataaccess.DataSetMetaInfo
 @(
     dataSpaceMetaInfo: DataSpaceMetaInfo,
     dataSetIdSizeMap: Map[String, Int],

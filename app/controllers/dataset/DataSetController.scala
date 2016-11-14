@@ -1,7 +1,7 @@
 package controllers.dataset
 
 import controllers.{ReadonlyController, CrudController}
-import dataaccess.FieldTypeId
+import models.FieldTypeId
 import models.FilterCondition
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
@@ -10,7 +10,11 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def overviewFieldTypes: Action[AnyContent]
 
-  def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent]
+  def overviewList(
+    page: Int,
+    orderBy: String,
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ): Action[AnyContent]
 
   def getDistribution(fieldName: Option[String], filter: Seq[FilterCondition]): Action[AnyContent]
 

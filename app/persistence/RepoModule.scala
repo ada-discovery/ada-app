@@ -4,9 +4,9 @@ import javax.inject.Provider
 
 import com.google.inject.{Inject, TypeLiteral, Key}
 import com.google.inject.assistedinject.FactoryModuleBuilder
-import dataaccess.RepoTypes.DictionaryCategoryRepo
+import dataaccess.RepoTypes.CategoryRepo
 import dataaccess.ignite.{CacheAsyncCrudRepoProvider, CacheAsyncCrudRepoFactory, JsonBinaryCacheAsyncCrudRepoFactory}
-import dataaccess.mongo.dataset.{DictionaryFieldMongoAsyncCrudRepo, DictionaryCategoryMongoAsyncCrudRepo}
+import dataaccess.mongo.dataset.{FieldMongoAsyncCrudRepo, CategoryMongoAsyncCrudRepo}
 import dataaccess._
 import dataaccess.mongo._
 import models._
@@ -32,7 +32,7 @@ private object RepoDef extends Enumeration {
 
   import models.DataSetImportFormattersAndIds._
   import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-  import dataaccess.DataSetFormattersAndIds.{dataSetSettingFormat, fieldFormat, dictionaryFormat, dataSpaceMetaInfoFormat, DataSpaceMetaInfoIdentity, DictionaryIdentity, FieldIdentity, DataSetSettingIdentity}
+  import models.DataSetFormattersAndIds.{dataSetSettingFormat, fieldFormat, dictionaryFormat, dataSpaceMetaInfoFormat, DataSpaceMetaInfoIdentity, DictionaryIdentity, FieldIdentity, DataSetSettingIdentity}
 
   val TranslationRepo = Repo[TranslationRepo](
     new MongoAsyncCrudRepo[Translation, BSONObjectID]("translations"))
@@ -69,16 +69,20 @@ private object RepoDef extends Enumeration {
 // repo module used to bind repo types/instances withing Guice IoC container
 class RepoModule extends ScalaModule {
 
-  import dataaccess.DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableBSONObjectIDFormat, DataSetSettingIdentity}
+  import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableBSONObjectIDFormat, DataSetSettingIdentity}
   import dataaccess.User.{serializableUserFormat, UserIdentity}
 
   def configure = {
 
     implicit val formatId = serializableBSONObjectIDFormat
 
-    bind[DataSetSettingRepo].toProvider(new CacheAsyncCrudRepoProvider[DataSetSetting, BSONObjectID]("dataset_settings")).asEagerSingleton
+    bind[DataSetSettingRepo].toProvider(
+      new CacheAsyncCrudRepoProvider[DataSetSetting, BSONObjectID]("dataset_settings")
+    ).asEagerSingleton
 
-    bind[UserRepo].toProvider(new CacheAsyncCrudRepoProvider[User, BSONObjectID]("users")).asEagerSingleton
+    bind[UserRepo].toProvider(
+      new CacheAsyncCrudRepoProvider[User, BSONObjectID]("users")
+    ).asEagerSingleton
 
     // bind the repos defined above
     RepoDef.values.foreach(bindRepo(_))
@@ -102,13 +106,13 @@ class RepoModule extends ScalaModule {
     // install dictionary field repo factory
 
 //    install(new FactoryModuleBuilder()
-//      .implement(new TypeLiteral[DictionaryFieldRepo]{}, classOf[DictionaryFieldMongoAsyncCrudRepo])
-//      .build(classOf[DictionaryFieldRepoFactory]))
+//      .implement(new TypeLiteral[FieldRepo]{}, classOf[DictionaryFieldMongoAsyncCrudRepo])
+//      .build(classOf[FieldRepoFactory]))
 
     // install dictionary category repo factory
 //    install(new FactoryModuleBuilder()
-//      .implement(new TypeLiteral[DictionaryCategoryRepo]{}, classOf[DictionaryCategoryMongoAsyncCrudRepo])
-//      .build(classOf[DictionaryCategoryRepoFactory]))
+//      .implement(new TypeLiteral[CategoryRepo]{}, classOf[DictionaryCategoryMongoAsyncCrudRepo])
+//      .build(classOf[CategoryRepoFactory]))
 
 //    bind[DataSetAccessorFactory].to(classOf[DataSetAccessorMongoFactory]).asEagerSingleton
   }

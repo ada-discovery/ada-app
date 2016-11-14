@@ -1,7 +1,7 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
-@import dataaccess.{Field, DataSpaceMetaInfo}
+@import models.{Field, DataSpaceMetaInfo}
 
 @(
     page: Page[DataSpaceMetaInfo]
@@ -27,7 +27,7 @@
 @table = @{
     paginatedTable(
         page,
-        dataSpaceMetaInfoRoutes.find(_, _, page.filter),
+        dataSpaceMetaInfoRoutes.find(_, _, page.filterConditions),
         Seq(
             (Some("name"), "Name", {item : Any => Html(item.asInstanceOf[DataSpaceMetaInfo].name)}),
             (Some("timeCreated"), "Time Created", {item : Any => Html(item.asInstanceOf[DataSpaceMetaInfo].timeCreated.toString)})

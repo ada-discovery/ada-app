@@ -1,0 +1,27 @@
+@import views.html.layout
+@import views.html.elements._
+@import models.DataView
+@import controllers.dataset.DataViewRouter
+@import views.html.table.dynamicStringTable
+@import views.html.datasetsetting.overviewFieldChartTypeTable
+
+@(domainName: String, form: Form[DataView])(implicit msg: play.api.i18n.Messages)
+
+<!-- dynamic (add, remove) table -->
+<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
+<script type="text/javascript" src="@routes.Assets.versioned("javascripts/dynamicTable.min.js")"></script>
+
+@addModalInner = {
+    <input type="text" id="newItems" class="typeahead">
+}
+
+
+@inputText(domainName, "name", form)
+@inputText(domainName, "filters", form)
+
+@labelValue("tableColumnNames", attributeLabel(domainName, "tableColumnNames")){
+    @dynamicStringTable("tableColumnName", form.value.get.tableColumnNames, true, Some(addModalInner))
+}
+@labelValue("chartTypes", attributeLabel(domainName, "chartTypes")){
+    @overviewFieldChartTypeTable(form.value.get.chartTypes)
+}

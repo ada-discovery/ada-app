@@ -44,6 +44,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
   protected val fieldRepo = dsa.fieldRepo
   protected val categoryRepo = dsa.categoryRepo
+  protected val filterRepo = dsa.filterRepo
+  protected val dataViewRepo = dsa.dataViewRepo
 
   @Inject protected var tranSMARTService: TranSMARTService = _
   @Inject protected var chartService: ChartService = _
@@ -70,6 +72,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   // router for requests; to be passed to views as helper.
   protected val router = new DataSetRouter(dataSetId)
   protected val jsRouter = new DataSetJsRouter(dataSetId)
+  protected val filterRouter = new FilterRouter(dataSetId)
+  protected val filterJsRouter = new FilterJsRouter(dataSetId)
 
   private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
   private val csvEOL = "\n"
@@ -122,6 +126,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       currentSetting.filterShowFieldStyle,
       router,
       jsRouter,
+      filterRouter,
+      filterJsRouter,
       getMetaInfos
     )
   }
@@ -228,21 +234,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]) = Action.async { implicit request =>
+  override def overviewList(
+    page: Int,
+    orderBy: String,
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     val start = new ju.Date()
     val fieldCharts = setting.overviewFieldChartTypes
     val chartFieldNames = fieldCharts.map(_.fieldName)
     val tableFieldNames = listViewColumns.get
-    val filterFieldNames = filter.map(_.fieldName.trim)
-
-    val requiredFieldNames = (chartFieldNames ++ tableFieldNames ++ filterFieldNames).toSet
-
-    val fieldNameMapFuture: Future[Map[String, Field]] =
-      getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
-
-    val futureTableCount = getFutureCount(filter)
 
     def valueStringToDisplayString[T](fieldType: FieldType[T], text: String): String = {
       val value = fieldType.valueStringToValue(text)
@@ -251,25 +253,54 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
-        criteria <- toCriteria(filter)
-        count <- futureTableCount
-        fieldNameMap <- fieldNameMapFuture
+        // use a given filter conditions or load one
+        resolvedFilter <- filterOrId match {
+          case Right(id) =>
+            filterRepo.get(id).map(
+              _.getOrElse(new Filter(Nil))
+          )
+          case Left(filter) => Future(new models.Filter(filter))
+        }
+
+        // get the conditions
+        conditions = resolvedFilter.conditions
+
+        // generate criteria
+        criteria <- toCriteria(conditions)
+
+        // obtain the total item count satysfying the resolved filter
+        count <- getFutureCount(conditions)
+
+        // create a name -> field map of all the referenced fields for a quick lookup
+        fieldNameMap <- {
+          val filterFieldNames = conditions.map(_.fieldName.trim)
+          val requiredFieldNames = (chartFieldNames ++ tableFieldNames ++ filterFieldNames).toSet
+
+          getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
+        }
+
+        // load the items needed for generation of charts
         chartItems <- repo.find(criteria, Nil, chartFieldNames)
+
+        // load the table items
         tableItems <- {
           val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
             fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
           }
-          getFutureItems(Some(page), orderBy, filter, tableFieldNamesToLoad, Some(pageLimit))
+          getFutureItems(Some(page), orderBy, conditions, tableFieldNamesToLoad, Some(pageLimit))
         }
       } yield {
         val tableFields = tableFieldNames.map(fieldNameMap.get).flatten
         val chartFields = chartFieldNames.map(fieldNameMap.get).flatten
-        val chartSpecs = chartService.createDistributionChartSpecs(chartItems, fieldCharts, chartFields)
+        val chartSpecs = if (chartItems.nonEmpty) {
+          chartService.createDistributionChartSpecs(chartItems, fieldCharts, chartFields)
+        } else
+          Nil
         val fieldChartSpecs = chartSpecs.map(chartSpec => FieldChartSpec(chartSpec._1, chartSpec._2))
 
         val end = new ju.Date()
 
-        val newFilter = filter.map { condition =>
+        val newConditions = conditions.map { condition =>
           fieldNameMap.get(condition.fieldName.trim) match {
             case Some(field) => {
               val fieldType = ftf(field.fieldTypeSpec)
@@ -282,7 +313,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         Logger.info(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
         render {
-          case Accepts.Html() => Ok(overviewListView(Page(tableItems, page, page * pageLimit, count, orderBy, newFilter), fieldChartSpecs, tableFields))
+          case Accepts.Html() => {
+            val newPage = Page(tableItems, page, page * pageLimit, count, orderBy, Some(resolvedFilter.copy(conditions = newConditions)))
+            Ok(overviewListView(newPage, fieldChartSpecs, tableFields))
+          }
           case Accepts.Json() => Ok(Json.toJson(tableItems))
         }
       }
@@ -291,8 +325,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         Logger.error("Problem found in the overviewList process")
         InternalServerError(t.getMessage)
       case e: AdaConversionException => {
-        val refererUrl = request.headers("Referer")
-        Redirect(refererUrl).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
+        request.headers.get("Referer") match {
+          case Some(refererUrl) => Redirect(refererUrl).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
+          case None => Redirect(router.plainOverviewList).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
+        }
       }
     }
   }

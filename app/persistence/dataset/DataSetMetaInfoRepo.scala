@@ -3,11 +3,9 @@ package persistence.dataset
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
-import dataaccess.{DataSetMetaInfo, DataSpaceMetaInfo, DataSetFormattersAndIds, Criterion}
+import dataaccess.Criterion
 import dataaccess.mongo.SubordinateObjectMongoAsyncCrudRepo
-
-
-import DataSetFormattersAndIds._
+import models.DataSetFormattersAndIds._
 import models._
 import Criterion.CriterionInfix
 import persistence.RepoTypes._

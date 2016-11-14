@@ -1,12 +1,16 @@
 package models
 
-import dataaccess.{FieldTypeId, EnumFormat, BSONObjectIdentity}
-import models.FilterCondition.FilterConditionFormat
+import controllers.BSONObjectIDQueryStringBindable
+import play.api.mvc.QueryStringBindable
+import util.JsonUtil
+import dataaccess.{EnumFormat, BSONObjectIdentity}
+import models.FilterCondition.{filterConditionFormat, filterFormat}
+import models.DataSetFormattersAndIds.enumTypeFormat
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import java.util.{UUID, Date}
-import play.modules.reactivemongo.json.BSONFormats._
-import util.JsonUtil
+import reactivemongo.play.json.BSONFormats._
+import play.api.libs.json._
 
 case class Message(
   _id: Option[BSONObjectID],
@@ -39,7 +43,40 @@ object Translation {
 }
 
 object QueryStringBinders {
-  implicit val FilterSpecQueryStringBinder = JsonUtil.createQueryStringBinder[Seq[FilterCondition]]
-  implicit val FieldTypeIdFormat = EnumFormat.enumFormat(FieldTypeId)
+
+  def createEitherBinder[L, R](
+    implicit leftBinder: QueryStringBindable[L], rightBinder: QueryStringBindable[R]
+  ) = new QueryStringBindable[Either[L, R]] {
+
+    override def bind(
+      key: String,
+      params: Map[String, Seq[String]]
+    ): Option[Either[String, Either[L, R]]] = {
+      for {
+        left <- leftBinder.bind(key, params)
+        right <- rightBinder.bind(key, params)
+      } yield {
+        left match {
+          case Right(value) => Right(Left(value))
+          case Left(_) => right match {
+            case Right(value) => Right(Right(value))
+            case Left(_) => Left("Unable to bind from String to " + key)
+          }
+        }
+      }
+    }
+
+    override def unbind(key: String, either: Either[L, R]): String =
+      either match {
+        case Left(value) => leftBinder.unbind(key, value)
+        case Right(value) => rightBinder.unbind(key, value)
+      }
+  }
+
+  implicit val FilterConditionQueryStringBinder = JsonUtil.createQueryStringBinder[Seq[FilterCondition]]
+  implicit val FilterQueryStringBinder = JsonUtil.createQueryStringBinder[Filter]
   implicit val FieldTypeIdsQueryStringBinder = JsonUtil.createQueryStringBinder[Seq[FieldTypeId.Value]]
+
+  implicit val BSONObjectIDQueryStringBinder = BSONObjectIDQueryStringBindable
+  implicit val EitherBinder = createEitherBinder[Seq[FilterCondition], BSONObjectID]
 }

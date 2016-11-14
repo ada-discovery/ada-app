@@ -2,7 +2,7 @@
 @import views.html.{exportModal, exportDropdown}
 
 @(
-    filter: Seq[FilterCondition],
+    conditions: Seq[FilterCondition],
     exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call,
     exportJsonCall: (Seq[FilterCondition], Boolean) => Call,
     exportTranSMARTDataCall: Call,
@@ -15,7 +15,7 @@
 }
 
 @exportDropdown(
-    filter,
+    conditions,
     exportCsvCall,
     exportJsonCall
 ) {

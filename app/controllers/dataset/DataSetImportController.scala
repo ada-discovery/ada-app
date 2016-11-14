@@ -3,7 +3,8 @@ package controllers.dataset
 import java.util.Date
 import java.util.concurrent.TimeoutException
 
-import dataaccess.{DataSetSetting, RepoException}
+import dataaccess.RepoException
+import models.DataSetSetting
 import services.datasetimporter.DataSetImporterCentral
 
 import scala.concurrent.duration._

@@ -3,7 +3,7 @@ package controllers.dataset
 import javax.inject.Inject
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
-import dataaccess.FieldTypeId
+import models.FieldTypeId
 import models.FilterCondition
 import play.api.mvc.{AnyContent, Action}
 import reactivemongo.bson.BSONObjectID
@@ -41,8 +41,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override def overviewList(
     page: Int,
     orderBy: String,
-    filter: Seq[FilterCondition]
-  ) = dispatch(_.overviewList(page, orderBy, filter))
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ) = dispatch(_.overviewList(page, orderBy, filterOrId))
 
   override def getScatterStats(
     xFieldName: Option[String],

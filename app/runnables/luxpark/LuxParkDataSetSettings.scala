@@ -1,6 +1,6 @@
 package runnables.luxpark
 
-import dataaccess.DataSetSetting
+import models.DataSetSetting
 import runnables.DataSetId._
 
 object LuxParkDataSetSettings{

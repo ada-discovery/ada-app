@@ -6,7 +6,7 @@ import dataaccess.Criterion
 import Criterion.CriterionInfix
 import com.google.inject.ImplementedBy
 import ldap.{LdapSettings, LdapUserService, LdapConnector}
-import persistence.RepoTypes.UserRepo
+import dataaccess.RepoTypes.UserRepo
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{Await, Future}

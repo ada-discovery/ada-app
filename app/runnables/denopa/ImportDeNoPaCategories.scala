@@ -1,8 +1,9 @@
 package runnables.denopa
 
 import javax.inject.Inject
-import dataaccess.RepoTypes.DictionaryFieldRepo
-import dataaccess.{Category, Criterion, Field, DictionaryCategoryRepo}
+import dataaccess.RepoTypes.FieldRepo
+import dataaccess.{Criterion, CategoryRepo}
+import models._
 import Criterion.CriterionInfix
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
@@ -11,7 +12,7 @@ import DeNoPaTranSMARTMapping._
 import runnables.DataSetId._
 import runnables.GuiceBuilderRunnable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import DictionaryCategoryRepo.saveRecursively
+import dataaccess.CategoryRepo.saveRecursively
 import util.JsonUtil.escapeKey
 import scala.concurrent.duration._
 

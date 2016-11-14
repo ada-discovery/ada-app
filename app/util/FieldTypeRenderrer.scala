@@ -1,6 +1,6 @@
 package util
 
-import dataaccess.Field
+import models.Field
 import play.api.libs.json.JsValue
 import play.twirl.api.Html
 import dataaccess.FieldTypeHelper

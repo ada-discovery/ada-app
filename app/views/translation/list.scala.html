@@ -1,7 +1,7 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import util.typeColumns
-@import dataaccess.Field
+@import models.Field
 
 @(page: Page[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
@@ -27,7 +27,7 @@
 @table = @{
     paginatedTable(
         page,
-        routes.TranslationController.find(_, _, page.filter),
+        routes.TranslationController.find(_, _, page.filterConditions),
         typeColumns[Translation](
             (Some("original"), "Original", _.original),
             (Some("translated"), "Translated", _.translated)

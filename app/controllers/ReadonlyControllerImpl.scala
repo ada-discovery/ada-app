@@ -92,7 +92,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
       implicit val msg = messagesApi.preferred(request)
 
       render {
-        case Accepts.Html() => Ok(listView(Page(items, page, page * pageLimit, count, orderBy, filter)))
+        case Accepts.Html() => Ok(listView(Page(items, page, page * pageLimit, count, orderBy, Some(new models.Filter(filter)))))
         case Accepts.Json() => Ok(Json.toJson(items))
       }
     }.recover {
@@ -113,7 +113,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
       implicit val msg = messagesApi.preferred(request)
 
       render {
-        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, orderBy, Nil)))
+        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, orderBy, None)))
         case Accepts.Json() => Ok(Json.toJson(items))
       }
     }.recover {

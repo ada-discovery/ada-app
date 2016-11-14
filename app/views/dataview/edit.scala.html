@@ -1,0 +1,32 @@
+@import views.html.layout
+@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import controllers.dataset.DataViewRouter
+@import models.DataSpaceMetaInfo
+@import models.DataView
+@import reactivemongo.bson.BSONObjectID
+@import views.html.dataview.elements
+@import views.html.datasetsetting.activateTypeahead
+
+@(
+    domainName: String,
+    id : BSONObjectID,
+    form: Form[DataView],
+    router: DataViewRouter,
+    fieldNamesCall: Call,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+)
+
+@layout.edit(
+    domainName,
+	form.errors,
+    elements(domainName, form),
+    router.update(id),
+    router.plainList,
+    Some(router.delete(id)),
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNav())
+)
+
+@activateTypeahead(fieldNamesCall)

@@ -2,22 +2,23 @@ package dataaccess
 
 import com.google.inject.ImplementedBy
 import dataaccess.Criterion.CriterionInfix
-import dataaccess.DataSetFormattersAndIds.CategoryIdentity
+import models.{Field, DataSetFormattersAndIds}
+import DataSetFormattersAndIds.CategoryIdentity
 import dataaccess.RepoTypes._
-import dataaccess.ignite.DictionaryFieldCacheCrudRepoFactory
+import dataaccess.ignite.FieldCacheCrudRepoFactory
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
 
-@ImplementedBy(classOf[DictionaryFieldCacheCrudRepoFactory])
-trait DictionaryFieldRepoFactory {
-  def apply(dataSetId: String): DictionaryFieldRepo
+@ImplementedBy(classOf[FieldCacheCrudRepoFactory])
+trait FieldRepoFactory {
+  def apply(dataSetId: String): FieldRepo
 }
 
 object DictionaryFieldRepo {
 
   def setCategoriesById(
-    categoryRepo: DictionaryCategoryRepo,
+    categoryRepo: CategoryRepo,
     fields: Traversable[Field]
   ): Future[Unit] = {
     val categoryIds = fields.map(_.categoryId).flatten.map(Some(_)).toSeq
@@ -36,8 +37,8 @@ object DictionaryFieldRepo {
   }
 
   def setCategoryById(
-    categoryRepo: DictionaryCategoryRepo,
-    field: Field
+                       categoryRepo: CategoryRepo,
+                       field: Field
   ): Future[Unit] =
     field.categoryId match {
       case Some(categoryId) =>
@@ -49,8 +50,8 @@ object DictionaryFieldRepo {
 
   // search for a category with a given name (if multiple, select the first one)
   def setCategoryByName(
-    categoryRepo: DictionaryCategoryRepo,
-    field: Field
+                         categoryRepo: CategoryRepo,
+                         field: Field
   ): Future[Unit] =
     field.category match {
       case Some(category) =>

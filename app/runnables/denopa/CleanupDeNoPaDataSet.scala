@@ -1,7 +1,7 @@
 package runnables.denopa
 
 import javax.inject.Inject
-import dataaccess.DataSetMetaInfo
+import models.DataSetMetaInfo
 import runnables.GuiceBuilderRunnable
 import runnables.DataSetId._
 import services.DataSetService

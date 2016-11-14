@@ -3,6 +3,7 @@ package runnables
 import com.google.inject.Inject
 import dataaccess.Criterion.CriterionInfix
 import dataaccess._
+import models.FieldTypeId
 import org.apache.ignite.Ignite
 import org.apache.ignite.binary.BinaryObject
 import reactivemongo.bson.BSONObjectID
@@ -10,7 +11,7 @@ import scala.concurrent.duration._
 
 import scala.concurrent.{Await, Future}
 
-class TestDictionaryIgnite @Inject() (ignite: Ignite, dictionaryFieldRepoFactory: DictionaryFieldRepoFactory) extends Runnable {
+class TestDictionaryIgnite @Inject() (ignite: Ignite, dictionaryFieldRepoFactory: FieldRepoFactory) extends Runnable {
 
   val dataSetId = "lux_park.clinical"
 

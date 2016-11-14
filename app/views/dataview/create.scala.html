@@ -1,0 +1,28 @@
+@import views.html.layout
+@import views.html.elements._
+@import models.DataView
+@import controllers.dataset.DataViewRouter
+@import views.html.table.dynamicStringTable
+@import views.html.datasetsetting.overviewFieldChartTypeTable
+@import views.html.dataview.elements
+
+@(
+    domainName : String,
+	form: Form[DataView],
+	router: DataViewRouter
+)(
+	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+)
+
+@elements = {
+    @inputText(domainName, "name", form)
+    @inputText(domainName, "filters", form)
+}
+
+@layout.create(
+    domainName,
+	form,
+    elements,
+    router.save,
+    router.plainList
+)

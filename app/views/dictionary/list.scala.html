@@ -1,4 +1,4 @@
-@import dataaccess.Field
+@import models.Field
 @import views.html.layout
 @import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu}
 @import views.html.table.paginatedTable
@@ -10,7 +10,7 @@
 @import util.typeColumns
 @import controllers.dataset.{DictionaryRouter, DictionaryJsRouter}
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
-@import dataaccess.DataSpaceMetaInfo
+@import models.DataSpaceMetaInfo
 @import be.objectify.deadbolt.scala.views.html.restrict
 @import models.security.SecurityRole
 
@@ -39,7 +39,11 @@
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
-                    @exportDropdown(page.filter, router.exportCsv(_, true, None, _, _), router.exportJson)()
+                    @exportDropdown(
+                        page.filterConditions,
+                        router.exportCsv(_, true, None, _, _),
+                        router.exportJson
+                    )()
                 </li>
                 <li>
                     @restrict(roles = List(Array(SecurityRole.admin))) {
@@ -81,7 +85,7 @@
     </div>
     @paginatedTable(
         page,
-        router.list(_, _, page.filter),
+        router.list(_, _, page.filterConditions),
         typeColumns[Field](
             (None, "", _ => {<input type="checkbox" class="no-rowClicked"/>}),
             (Some("name"), "Name", {field => util.JsonUtil.unescapeKey(field.name)}),

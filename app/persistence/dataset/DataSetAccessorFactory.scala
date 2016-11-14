@@ -3,6 +3,7 @@ package persistence.dataset
 import javax.inject.{Named, Inject}
 
 import dataaccess._
+import models._
 import dataaccess.RepoTypes.DataSetSettingRepo
 import Criterion.CriterionInfix
 import persistence.RepoTypes._
@@ -33,8 +34,10 @@ trait DataSetAccessorFactory {
 protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     @Named("JsonCrudRepoFactory") dataSetRepoFactory: JsonCrudRepoFactory,
     @Named("CachedJsonCrudRepoFactory") cachedDataSetRepoFactory: JsonCrudRepoFactory,
-    fieldRepoFactory: DictionaryFieldRepoFactory,
-    categoryRepoFactory: DictionaryCategoryRepoFactory,
+    fieldRepoFactory: FieldRepoFactory,
+    categoryRepoFactory: CategoryRepoFactory,
+    filterRepoFactory: FilterRepoFactory,
+    dataViewRepoFactory: DataViewRepoFactory,
     dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo
@@ -43,6 +46,9 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
   override protected def createInstance(dataSetId: String): DataSetAccessor = {
     val fieldRepo = fieldRepoFactory(dataSetId)
     val categoryRepo = categoryRepoFactory(dataSetId)
+    val filterRepo = filterRepoFactory(dataSetId)
+    val dataViewRepo = dataViewRepoFactory(dataSetId)
+
     val collectionName = dataCollectionName(dataSetId)
 
     val dataSetAccessorFuture = for {
@@ -72,7 +78,16 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
           throw new IllegalArgumentException(s"No data set with id '${dataSetId}' found.")
         )
 
-      new DataSetAccessorImpl(dataSetId, dataSetRepo, fieldRepo, categoryRepo, dataSetMetaInfoRepo, dataSetSettingRepo)
+      new DataSetAccessorImpl(
+        dataSetId,
+        dataSetRepo,
+        fieldRepo,
+        categoryRepo,
+        filterRepo,
+        dataViewRepo,
+        dataSetMetaInfoRepo,
+        dataSetSettingRepo
+      )
     }
 
     result(dataSetAccessorFuture, 2 minutes)

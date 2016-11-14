@@ -1,14 +1,19 @@
 @import models.ConditionType
 @import play.api.libs.json.Json
 @import models.FilterShowFieldStyle
-@import dataaccess.Field
+@import models.{Field, Filter}
+@import controllers.dataset.FilterJsRouter
 
 @(
-    filter: Seq[FilterCondition],
+    filter: Option[Filter],
     submitCall: Call,
     fieldsOrCall: Either[Traversable[Field], Call],
     showFieldStyle: Option[FilterShowFieldStyle.Value] = None,
-    saveCall: Option[Call] = None
+    filterJsRouter: Option[FilterJsRouter] = None,
+    listFiltersCall: Option[Call] = None,
+    filterElementName: String = "filter"
+)(
+    implicit request: Request[_]
 )
 
 <!-- need to import css and js first -->
@@ -23,6 +28,53 @@
             </h5>
         </label>
     </li>
+}
+
+@saveFilterModalBody = {
+    <input id="saveFilterName" name="saveFilterName" value="" placeholder="Filter Name">
+}
+@saveFilterModelButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" id="submitButton" onclick="saveFilter();" data-dismiss="modal" class="btn btn-primary">OK</button>
+}
+
+@loadFilterModalBody = {
+    <input id="filterTypeahead" class="typeahead" style="width: 100%;" type="text" placeholder="Filter Name" value="">
+    <input id="filterId" name="filterId" type="hidden" value="">
+}
+
+@loadFilterModelButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" id="submitButton" onclick="loadFilter();" data-dismiss="modal" class="btn btn-primary">OK</button>
+}
+
+@conditionPanel(isDisplayed: Boolean) = {
+    <ul id="conditionPanel" class="list-inline" @if(!isDisplayed) {style="display:None"}>
+    @filter.map{ f =>
+        @f.conditions.zipWithIndex.map { case (condition, index) =>
+            <li id="condition-full@index" class="condition-full">
+                <h4>
+                    <span class="condition">
+                        <span class="label label-primary">@condition.fieldLabel.getOrElse(condition.fieldName)</span>
+                        <span><b>@condition.conditionType</b></span>
+                        <span class="label label-primary">@condition.valueLabel.getOrElse(condition.value)</span>
+                    </span>
+                    <span class="condition-buttons" style="display: none">
+                        <button type="button" class="btn btn-sm btn-default" onclick="showEditConditionModal('@index');">
+                            <span class="glyphicon glyphicon-pencil"></span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-default" onclick="deleteCondition('@index');">
+                            <span class="glyphicon glyphicon-trash"></span>
+                        </button>
+                    </span>
+                </h4>
+            </li>
+        }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
+    }.getOrElse(Html(""))
+        <button type="button" class="btn btn-sm btn-default" onclick="showAddConditionModal();" data-toggle="tooltip" title="Add Filter Condition">
+            <span class="glyphicon glyphicon-plus"></span>
+        </button>
+    </ul>
 }
 
 <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
@@ -77,34 +129,30 @@
     <li>
          Filter:
     </li>
-    @filter.zipWithIndex.map { case (condition, index) =>
-        <li id="condition-full@index" class="condition-full">
-            <h4>
-                <span class="condition">
-                    <span class="label label-primary">@condition.fieldLabel.getOrElse(condition.fieldName)</span>
-                    <span><b>@condition.conditionType</b></span>
-                    <span class="label label-primary">@condition.valueLabel.getOrElse(condition.value)</span>
-                </span>
-                <span class="condition-buttons" style="display: none">
-                    <button type="button" class="btn btn-sm btn-default" onclick="showEditConditionModal('@index');">
-                        <span class="glyphicon glyphicon-pencil"></span>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-default" onclick="deleteCondition('@index');">
-                        <span class="glyphicon glyphicon-trash"></span>
-                    </button>
-                </span>
-            </h4>
-        </li>
-    }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
-    <li>
-        <button type="button" class="btn btn-sm btn-default" onclick="showAddConditionModal();" data-toggle="tooltip" title="Add Filter Condition">
-            <span class="glyphicon glyphicon-plus"></span>
-        </button>
-
-        @if(saveCall.isDefined){
-            <button type="button" class="btn btn-sm btn-default" onclick="saveCall();">
-                <span class="glyphicon glyphicon-floppy-disk"></span>
+    @if(filter.isDefined && filter.get._id.isDefined) {
+        <li>
+            <button id="filterNameButton" type="button" class="btn btn-sm" onclick="showConditionPanel()" title="Show Conditions">
+                <h5><b>@filter.get.name.getOrElse("No Name")</b></h5>
             </button>
+        </li>
+    }
+    <li>
+        @conditionPanel(!filter.isDefined || !filter.get._id.isDefined)
+    </li>
+    <li>
+        @if(filterJsRouter.isDefined && filter.isDefined && filter.get._id.isEmpty && filter.get.conditions.nonEmpty) {
+            <button type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#saveFilterModal" title="Save Filter">
+                <span class="glyphicon glyphicon glyphicon-save"></span>
+            </button>
+            @modal("saveFilterModal", "Save Filter", saveFilterModalBody, None, Some(saveFilterModelButtons))
+        }
+
+        @if(listFiltersCall.isDefined) {
+            <button id="loadFilterButton" type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#loadFilterModal" title="Load Filter">
+                <span class="glyphicon glyphicon-book"></span>
+            </button>
+
+            @modal("loadFilterModal", "Load Filter", loadFilterModalBody, None, Some(loadFilterModelButtons))
         }
     </li>
 </ul>
@@ -127,8 +175,14 @@
     fieldsOrCall match {case Right(call) => call.url}
 }
 
+@if(filterJsRouter.isDefined) {
+    @helper.javascriptRouter("filterJsRoutes")(
+        filterJsRouter.get.saveAjax
+    )
+}
+
 <script type="text/javascript" defer="defer">
-    var jsFilter = JSON.parse('@{Html(Json.stringify(Json.toJson(filter)))}');
+    var jsConditions = JSON.parse('@{Html(Json.stringify(Json.toJson(filter.map(_.conditions).getOrElse(Nil))))}');
     var conditionFields = ["fieldName", "conditionType", "value"];
     var fieldNameAndLabels = @if(fieldsOrCall.isLeft) {
         JSON.parse('@fieldNameLabelsAsString')
@@ -139,6 +193,27 @@
     if (fieldNameAndLabels) {
         initShowFieldNameLabelChoices();
         repopulateFieldNameTypeahead();
+    }
+
+    @if(listFiltersCall.isDefined) {
+        $.ajax({
+            url: '@Html(listFiltersCall.get.url)',
+            success: function (data) {
+                var filterTypeaheadData = data.map( function(filter, index) {
+                    return {name: filter._id.$oid, label: filter.name};
+                });
+                if (filterTypeaheadData.length > 0) {
+                    populateFieldTypeahed(
+                        $('#filterTypeahead'),
+                        $('#filterId'),
+                        filterTypeaheadData,
+                        @FilterShowFieldStyle.LabelsOnly.id
+                    );
+                } else {
+                    $("#loadFilterButton").hide();
+                }
+            }
+        });
     }
 
     $('#addEditConditionModal').on('shown.bs.modal', function () {
@@ -158,6 +233,18 @@
         buttons.fadeIn( 400 );
     });
 
+    $('#saveFilterModal').on('shown.bs.modal', function () {
+        $('#saveFilterName').focus();
+    })
+
+    $('#saveFilterName').keypress(function (e) {
+        if (e.which == 13) {
+            $('#saveFilterModal').modal('hide');
+            saveFilter();
+            return false;
+        }
+    });
+
     function showAddConditionModal() {
         loadFieldNames();
         $("#addEditConditionModal").find("#conditionIndex").first().val("");
@@ -172,7 +259,7 @@
         loadFieldNames();
         $("#addEditConditionModal").find("#conditionIndex").first().val(index);
 
-        var condition = jsFilter[index]
+        var condition = jsConditions[index]
         updateModalFromModel(condition, conditionFields);
 
         $("#addEditConditionModal").modal('show');
@@ -195,7 +282,7 @@
     }
 
     function editAndSubmitConditionFromModal(index) {
-        var condition = jsFilter[index];
+        var condition = jsConditions[index];
 
         updateModelFromModal(condition, conditionFields);
         updateFilterFromModel(index, condition, conditionFields);
@@ -204,18 +291,28 @@
     }
 
     function addAndSubmitCondition(condition) {
-        jsFilter.push(condition);
+        jsConditions.push(condition);
         submitFilter();
     }
 
     function deleteCondition(index) {
-        jsFilter.splice(index, 1);
+        jsConditions.splice(index, 1);
         submitFilter();
     }
 
     function submitFilter() {
+        submitFilterCustom(jsConditions, null);
+    }
+
+    function submitFilterCustom(conditions, filterId) {
         var params = getQueryParams('@submitCall')
-        $.extend(params, {filter: JSON.stringify(jsFilter)});
+
+        if (filterId) {
+            $.extend(params, {@filterElementName: filterId });
+        } else if (conditions) {
+            $.extend(params, {@filterElementName: JSON.stringify(conditions) });
+        }
+
         submit('get', '@submitCall', params);
     }
 
@@ -303,6 +400,29 @@
     $('#showChoicesButton').click(function() {
         repopulateFieldNameTypeahead();
     });
+
+    function saveFilter() {
+        var name = $('#saveFilterName').val();
+        var fullFilter = {_id: null, name: name, timeCreated: 0, conditions: jsConditions};
+        filterJsRoutes.controllers.dataset.FilterDispatcher.saveAjax(JSON.stringify(fullFilter)).ajax( {
+            success: function(data) {
+                showMessage("Filter '" + name + "' successfully saved.");
+            },
+            error: function(data){
+                showError(data.responseText);
+            }
+        });
+    }
+
+    function loadFilter() {
+        var filterId = $('#filterId').val();
+        submitFilterCustom([], filterId);
+    }
+
+    function showConditionPanel() {
+        $("#conditionPanel").show();
+        $("#filterNameButton").hide();
+    }
 
     function updateCondition() {
         $("#conditionType")

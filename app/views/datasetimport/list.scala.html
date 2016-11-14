@@ -5,7 +5,7 @@
 @import util.{typeColumns, toHumanReadableCamel, formatTimeElement}
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
-@import dataaccess.{Field, DataSpaceMetaInfo}
+@import models.{Field, DataSpaceMetaInfo}
 
 @(
     page: Page[DataSetImport],
@@ -74,7 +74,7 @@
 @table = @{
     paginatedTable(
         page,
-        dataSetImportRoutes.find(_, _, page.filter),
+        dataSetImportRoutes.find(_, _, page.filterConditions),
         typeColumns[DataSetImport](
             (Some("dataSpaceName"), "Data Space Name", _.dataSpaceName),
             (Some("dataSetName"), "Data Set Name", _.dataSetName),

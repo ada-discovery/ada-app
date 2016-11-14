@@ -1,0 +1,57 @@
+@import views.html.layout
+@import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu}
+@import views.html.table.paginatedTable
+@import models.DataView
+@import util.typeColumns
+@import controllers.dataset.DataViewRouter
+@import models.DataSpaceMetaInfo
+@import models.Field
+
+@(
+    domainName : String,
+    page: Page[DataView],
+    router: DataViewRouter,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+)
+
+@actions = {
+    <div class="row">
+        <div class="col-md-10">
+            @filter(
+                page.filter,
+                router.plainList,
+                Left(Seq(Field("name", None)))
+            )
+        </div>
+        <div class="col-md-2">
+            <a class="btn btn-success btn-sm pull-right" href="@router.create" data-toggle="tooltip" title="Add New View">
+                <span class="glyphicon glyphicon-plus"></span>
+            </a>
+        </div>
+    </div>
+}
+
+@table = {
+    @paginatedTable(
+        page,
+        router.list(_, _, page.filterConditions),
+        typeColumns[DataView](
+            (Some("name"), "Name", _.name),
+            (Some("timeCreated"), "Time Created", _.timeCreated.toString),
+            (Some("filters"), "Filters", _.filters.map( filter => filter.conditions.map (condition => s"${condition.fieldName} ${condition.conditionType} ${condition.value}" )).mkString("\n"))
+        ),
+        Some({ item : Any => router.get(item.asInstanceOf[DataView]._id.get)})
+    )
+}
+
+@layout.list(
+    domainName,
+    page.total,
+    Some(actions),
+    table,
+    None,
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNav())
+)

@@ -4,7 +4,7 @@ import play.api.libs.json._
 
 import scala.collection.mutable.{Map => MMap}
 import scala.math.BigDecimal.RoundingMode
-import dataaccess.ChartType
+import models.ChartType
 
 abstract class ChartSpec {
   val title: String

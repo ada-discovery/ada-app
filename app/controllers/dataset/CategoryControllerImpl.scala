@@ -4,8 +4,9 @@ import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
 import controllers.CrudControllerImpl
-import dataaccess.{Category, DataSetFormattersAndIds, AscSort, Criterion}
-import DataSetFormattersAndIds._
+import dataaccess.{AscSort, Criterion}
+import models.Category
+import models.DataSetFormattersAndIds._
 import models.{D3Node, Page}
 import Criterion.CriterionInfix
 import persistence.RepoTypes._

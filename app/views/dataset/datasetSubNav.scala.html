@@ -1,5 +1,5 @@
 @import util.{matchesPath, getParamValue}
-@import controllers.dataset.{DataSetRouter, DictionaryRouter, CategoryRouter}
+@import controllers.dataset.{DataSetRouter, DictionaryRouter, CategoryRouter, FilterRouter, DataViewRouter}
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 
 @()(implicit request: Request[_])
@@ -14,19 +14,28 @@
     @defining((
         new DataSetRouter(dataSetId),
         new DictionaryRouter(dataSetId),
-        new CategoryRouter(dataSetId)
-    )) { case (dataSetRouter, dictionaryRouter, categoryRouter) =>
+        new CategoryRouter(dataSetId),
+        new FilterRouter(dataSetId),
+        new DataViewRouter(dataSetId)
+    )) { case (dataSetRouter, dictionaryRouter, categoryRouter, filterRouter, dataViewRouter) =>
         <ul class="nav nav-tabs">
             @listItem(dataSetRouter.plainOverviewList, "Overview", Some(2))
             @listItem(dictionaryRouter.plainList, "Dictionary", Some(2))
             @listItem(categoryRouter.plainList, "Category Tree", Some(2))
-            @listItem(dataSetSettingRoutes.editForDataSet(dataSetId), "Setting", Some(2))
             <li class="dropdown">
-                <a class="dropdown-toggle" data-toggle="dropdown" href="#">Statistics<span class="caret"></span></a>
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">Analytics<span class="caret"></span></a>
                 <ul class="dropdown-menu">
                     @listItem(dataSetRouter.plainGetDistribution, "Distribution", Some(2))
                     @listItem(dataSetRouter.plainGetScatterStats, "Scatter Analysis", Some(2))
                     @listItem(dataSetRouter.getDateCount(None, None, Nil), "Count by Date", Some(2))
+                </ul>
+            </li>
+            <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">Setting<span class="caret"></span></a>
+                <ul class="dropdown-menu">
+                    @listItem(dataSetSettingRoutes.editForDataSet(dataSetId), "General", Some(2))
+                    @listItem(filterRouter.plainList, "Filters", Some(2))
+                    @listItem(dataViewRouter.plainList, "Views", Some(2))
                 </ul>
             </li>
         </ul>

@@ -14,7 +14,7 @@ import dataaccess.mongo.MongoAsyncCrudExtraRepo
 object RepoTypes {
 //  type JsObjectCrudRepo = AsyncCrudRepo[JsObject, BSONObjectID]
   type TranslationRepo = AsyncCrudRepo[Translation, BSONObjectID]
-  type UserRepo = AsyncCrudRepo[User, BSONObjectID]
+
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
   type WorkspaceRepo = AsyncCrudRepo[Workspace, BSONObjectID]
 

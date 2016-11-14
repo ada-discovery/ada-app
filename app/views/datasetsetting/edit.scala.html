@@ -4,9 +4,9 @@
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import views.html.datasetsetting.activateTypeahead
+@import models.DataSpaceMetaInfo
+@import models.DataSetSetting
 
-@import dataaccess.DataSpaceMetaInfo
-@import dataaccess.DataSetSetting
 @(
     dataSetName: String,
     form: Form[DataSetSetting],

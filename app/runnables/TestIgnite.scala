@@ -3,11 +3,11 @@ package runnables
 import com.google.inject.Inject
 import dataaccess.Criterion.CriterionInfix
 import dataaccess.ignite.CacheAsyncCrudRepoFactory
-import dataaccess.{SerializableFormat, DataSetSetting, DataSetFormattersAndIds}
-import dataaccess.DataSetFormattersAndIds.DataSetSettingIdentity
+import dataaccess.SerializableFormat
+import models.DataSetSetting
+import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableBSONObjectIDFormat, DataSetSettingIdentity}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableBSONObjectIDFormat}
 import scala.concurrent.duration._
 
 import scala.concurrent.{Future, Await}

@@ -1,9 +1,9 @@
 package services
 
 import javax.inject.Inject
-import dataaccess.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
+import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import dataaccess._
-import dataaccess.RepoTypes.{DictionaryFieldRepo, DataSetSettingRepo, JsonCrudRepo}
+import dataaccess.RepoTypes.{FieldRepo, DataSetSettingRepo, JsonCrudRepo}
 import _root_.util.{MessageLogger, JsonUtil}
 import com.google.inject.ImplementedBy
 import models._
@@ -448,7 +448,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   private def updateDictionary(
-    fieldRepo: DictionaryFieldRepo,
+    fieldRepo: FieldRepo,
     fieldNameAndTypes: Traversable[(String, FieldTypeSpec)],
     deleteNonReferenced: Boolean
   ): Future[Unit] = {

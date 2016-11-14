@@ -1,10 +1,9 @@
 @import controllers.dataset.DataSetRouter
-@import dataaccess.DataSpaceMetaInfo
+@import models.DataSpaceMetaInfo
 @import util.{getParamValue, matchesPath}
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
-
-
 @import reactivemongo.bson.BSONObjectID
+
 @(dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo])(implicit request: Request[_])
 
 @listItem(call: Call, dataSetId: String, text: String) = {

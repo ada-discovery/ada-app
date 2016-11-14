@@ -3,7 +3,7 @@ package controllers.dataset
 import javax.inject.Inject
 
 import controllers.{AdminRestrictedCrudController, CrudControllerImpl}
-import dataaccess.{DataSetMetaInfo, DataSpaceMetaInfo, DataSetFormattersAndIds}
+import models.{DataSetMetaInfo, DataSpaceMetaInfo, DataSetFormattersAndIds}
 import DataSetFormattersAndIds._
 import models.Page
 import persistence.RepoTypes._

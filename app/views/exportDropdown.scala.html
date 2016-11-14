@@ -3,7 +3,7 @@
 @import views.html.elements.labelValue
 
 @(
-    filter: Seq[FilterCondition],
+    conditions: Seq[FilterCondition],
     exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call,
     exportJsonCall: (Seq[FilterCondition], Boolean) => Call)(
     extraListItems: Html = Html("")
@@ -68,11 +68,11 @@
         @extraListItems
     </ul>
     @exportModal("exportAllCsvModal", "Full CSV Export", exportCsvCall(",", Nil, false), Some(csvBody(",")))
-    @exportModal("exportFilteredCsvModal", "Filtered CSV Export", exportCsvCall(",", filter, false), Some(csvBody(",")))
-    @exportModal("exportFilteredTableCsvModal", "Filtered Table CSV Export", exportCsvCall(",", filter, true), Some(csvBody(",")))
+    @exportModal("exportFilteredCsvModal", "Filtered CSV Export", exportCsvCall(",", conditions, false), Some(csvBody(",")))
+    @exportModal("exportFilteredTableCsvModal", "Filtered Table CSV Export", exportCsvCall(",", conditions, true), Some(csvBody(",")))
     @exportModal("exportAllJsonModal", "Full Json Export", exportJsonCall(Nil, false), Some(jsonBody))
-    @exportModal("exportFilteredJsonModal", "Filtered Json Export", exportJsonCall(filter, false), Some(jsonBody))
-    @exportModal("exportFilteredTableJsonModal", "Filtered Table Json Export", exportJsonCall(filter, true), Some(jsonBody))
+    @exportModal("exportFilteredJsonModal", "Filtered Json Export", exportJsonCall(conditions, false), Some(jsonBody))
+    @exportModal("exportFilteredTableJsonModal", "Filtered Table Json Export", exportJsonCall(conditions, true), Some(jsonBody))
 </div>
 
 <script type="text/javascript">

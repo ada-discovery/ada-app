@@ -1,4 +1,4 @@
-@import dataaccess.{Category, DataSpaceMetaInfo, Field}
+@import models.{Category, DataSpaceMetaInfo, Field}
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import views.html.dataset.{datasetSubNav, datasetMenu}
@@ -81,7 +81,7 @@
 @table = @{
     paginatedTable(
         page,
-        router.list(_, _, page.filter),
+        router.list(_, _, page.filterConditions),
         typeColumns[Category](
             (Some("name"), "Name", _.name)
         ),

@@ -2,6 +2,7 @@ package util
 
 import java.text.{ParseException, SimpleDateFormat}
 
+import com.fasterxml.jackson.core.JsonParseException
 import play.api.libs.json._
 import play.api.mvc.QueryStringBindable
 import java.util.Date
@@ -28,10 +29,14 @@ object JsonUtil {
       } yield {
         jsonString match {
           case Right(jsonString) => {
-            val filterJson = Json.parse(jsonString)
-            Right(filterJson.as[E])
+            try {
+              val filterJson = Json.parse(jsonString)
+              Right(filterJson.as[E])
+            } catch {
+              case e: JsonParseException => Left("Unable to bind JSON from String to " + key)
+            }
           }
-          case _ => Left("Unable to bind from JSON to " + key)
+          case _ => Left("Unable to bind JSON from String to " + key)
         }
       }
     }

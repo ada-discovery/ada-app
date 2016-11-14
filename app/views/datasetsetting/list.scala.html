@@ -4,7 +4,7 @@
 @import util.typeColumns
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
-@import dataaccess.{DataSetSetting, Field}
+@import models.{DataSetSetting, Field}
 @import models.FilterShowFieldStyle
 
 @(
@@ -33,7 +33,7 @@
 @table = @{
     paginatedTable(
         page,
-        dataSetSettingRoutes.find(_, _, page.filter),
+        dataSetSettingRoutes.find(_, _, page.filterConditions),
         typeColumns[DataSetSetting](
             (Some("dataSetId"), "Data Set Id", _.dataSetId),
             (Some("keyField"), "Key Field", _.keyFieldName)

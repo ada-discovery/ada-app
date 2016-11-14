@@ -1,0 +1,35 @@
+@import views.html.layout
+@import views.html.elements.{inputText, select, value}
+@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import controllers.dataset.FilterRouter
+@import models.DataSpaceMetaInfo
+@import models.Filter
+@import reactivemongo.bson.BSONObjectID
+
+@(
+    domainName: String,
+    id : BSONObjectID,
+    form: Form[Filter],
+    router: FilterRouter,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+)
+
+@elements = {
+    @inputText("filter", "name", form)
+    @value("filter", "Created By", form.value.get.createdBy.map(_.ldapDn).getOrElse("") )
+    @value("filter", "Time Created",  form.value.get.timeCreated.map(_.format("yyyy-MM-dd HH:mm:ss")).getOrElse(""))
+    @value("filter", "Conditions", form.value.get.conditions.map( condition => s"${condition.fieldName} ${condition.conditionType} ${condition.value}" ).mkString(" AND "))
+}
+
+@layout.edit(
+    domainName,
+	form.errors,
+    elements,
+    router.update(id),
+    router.plainList,
+    Some(router.delete(id)),
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNav())
+)

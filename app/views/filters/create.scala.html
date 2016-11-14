@@ -1,0 +1,25 @@
+@import views.html.layout
+@import views.html.elements._
+@import models.Filter
+@import controllers.dataset.FilterRouter
+
+@(
+    domainName : String,
+	form: Form[Filter],
+	router: FilterRouter
+)(
+	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+)
+
+@elements = {
+    @inputText(domainName, "name", form)
+    @inputText(domainName, "conditions", form)
+}
+
+@layout.create(
+    domainName,
+	form,
+    elements,
+    router.save,
+    router.plainList
+)

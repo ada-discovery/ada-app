@@ -5,7 +5,7 @@ import javax.inject.{Inject, Singleton}
 import _root_.util.JsonUtil.{jsonObjectsToCsv, escapeKey, unescapeKey}
 import _root_.util.toHumanReadableCamel
 import com.google.inject.ImplementedBy
-import dataaccess.Category
+import models.Category
 import play.api.libs.json._
 
 @ImplementedBy(classOf[TranSMARTServiceImpl])

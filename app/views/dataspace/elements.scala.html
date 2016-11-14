@@ -4,9 +4,9 @@
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import util.typeColumns
 @import reactivemongo.bson.BSONObjectID
+@import models.DataSpaceMetaInfo
+@import models.DataSetMetaInfo
 
-@import dataaccess.DataSpaceMetaInfo
-@import dataaccess.DataSetMetaInfo
 @(
     form: Form[DataSpaceMetaInfo],
     dataSetIdSizeMap: Map[String, Int],

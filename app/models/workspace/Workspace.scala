@@ -1,7 +1,7 @@
 package models.workspace
 
 import models.FilterCondition
-import FilterCondition.FilterConditionFormat
+import FilterCondition.filterConditionFormat
 import dataaccess.BSONObjectIdentity
 import models.FilterCondition
 import play.api.libs.json._

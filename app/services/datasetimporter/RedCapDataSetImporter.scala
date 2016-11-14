@@ -3,9 +3,10 @@ package services.datasetimporter
 import java.util.Date
 import javax.inject.Inject
 
-import dataaccess.RepoTypes.DictionaryCategoryRepo
-import dataaccess.RepoTypes.DictionaryFieldRepo
+import dataaccess.RepoTypes.CategoryRepo
+import dataaccess.RepoTypes.FieldRepo
 import dataaccess._
+import models.{Field, FieldTypeId, FieldTypeSpec, Category}
 import models.redcap.{Metadata, FieldType => RCFieldType}
 import models.{AdaParseException, AdaException, RedCapDataSetImport}
 import play.api.libs.json._
@@ -141,8 +142,8 @@ private class RedCapDataSetImporter @Inject() (
 
   protected def importAndInferRedCapDictionary(
     redCapService: RedCapService,
-    fieldRepo: DictionaryFieldRepo,
-    categoryRepo: DictionaryCategoryRepo,
+    fieldRepo: FieldRepo,
+    categoryRepo: CategoryRepo,
     records: Traversable[JsObject]
   ): Future[Map[String, FieldType[_]]] = {
 

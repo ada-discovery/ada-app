@@ -1,7 +1,8 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import util.typeColumns
-@import dataaccess.{User, Field}
+@import dataaccess.User
+@import models.Field
 @import models.FilterShowFieldStyle
 
 @(page: Page[User])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
@@ -28,7 +29,7 @@
 @table = @{
     paginatedTable(
         page,
-        routes.UserController.find(_, _, page.filter),
+        routes.UserController.find(_, _, page.filterConditions),
         typeColumns[User](
             (Some("id"), "Id", _.ldapDn),
             (Some("email"), "Email", _.email)

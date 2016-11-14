@@ -4,9 +4,10 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import controllers._
-import dataaccess.{FieldChartType, DataSetSetting, DataSetFormattersAndIds, Criterion, ChartType}
+import dataaccess.Criterion
 import dataaccess.RepoTypes.DataSetSettingRepo
-import dataaccess.DataSetFormattersAndIds.{serializableDataSetSettingFormat, fieldChartTypeFormat, DataSetSettingIdentity}
+import models.{FieldChartType, DataSetSetting, DataSetFormattersAndIds, ChartType}
+import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, fieldChartTypeFormat, DataSetSettingIdentity}
 import models._
 import models.FilterShowFieldStyle
 import Criterion.CriterionInfix

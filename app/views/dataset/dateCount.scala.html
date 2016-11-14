@@ -1,7 +1,7 @@
 @import controllers.dataset.DataSetRouter
 @import models.{FilterCondition, ChartSpec}
-@import dataaccess.FieldTypeId
-@import dataaccess.Field
+@import models.FieldTypeId
+@import models.Field
 @import views.html.layout.main
 @import views.html.chart.highcharts.{highchartsJsImport, timeLineChart}
 @import views.html.dataset.datasetSubNav
@@ -10,8 +10,7 @@
 @import play.api.i18n.Messages
 @import java.util.Date
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
-
-@import dataaccess.DataSpaceMetaInfo
+@import models.DataSpaceMetaInfo
 
 @(
     domainName: String,
@@ -31,7 +30,7 @@
     <div class="row">
         <div class="col-md-12">
             @filter(
-                filterSpec,
+                Some(new models.Filter(filterSpec)),
                 router.getDateCount(dateField.map(_.name), groupField.map(_.name), filterSpec),
                 Right(router.allFields),
                 filterShowFieldStyle

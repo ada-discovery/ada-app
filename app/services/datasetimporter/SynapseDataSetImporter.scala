@@ -3,7 +3,8 @@ package services.datasetimporter
 import java.util.Date
 import javax.inject.Inject
 
-import dataaccess.{FieldTypeSpec, FieldType, FieldTypeId, Field}
+import models.{FieldTypeSpec, FieldTypeId, Field}
+import dataaccess.FieldType
 import models.synapse.ColumnType
 import models.SynapseDataSetImport
 import play.api.Configuration

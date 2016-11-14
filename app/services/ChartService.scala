@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 
 import com.google.inject.ImplementedBy
 import dataaccess._
-import models.ChartSpec
+import models._
 import play.api.libs.json.JsObject
 import util._
 import util.JsonUtil.project

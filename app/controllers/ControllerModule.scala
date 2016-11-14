@@ -18,5 +18,13 @@ class ControllerModule extends AbstractModule {
     install(new FactoryModuleBuilder()
       .implement(classOf[CategoryController], classOf[CategoryControllerImpl])
       .build(classOf[CategoryControllerFactory]))
+
+    install(new FactoryModuleBuilder()
+      .implement(classOf[FilterController], classOf[FilterControllerImpl])
+      .build(classOf[FilterControllerFactory]))
+
+    install(new FactoryModuleBuilder()
+      .implement(classOf[DataViewController], classOf[DataViewControllerImpl])
+      .build(classOf[DataViewControllerFactory]))
   }
 }

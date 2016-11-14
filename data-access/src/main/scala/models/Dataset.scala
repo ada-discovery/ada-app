@@ -1,4 +1,4 @@
-package dataaccess
+package models
 
 import java.util.{Date, UUID}
 
@@ -6,7 +6,6 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import models.FilterShowFieldStyle
 
 case class DataSpaceMetaInfo(
   _id: Option[BSONObjectID],

@@ -2,8 +2,8 @@ package services.datasetimporter
 
 import java.util.Date
 
-import dataaccess.DictionaryCategoryRepo._
-import dataaccess.{Field, Category, FieldTypeSpec}
+import dataaccess.CategoryRepo._
+import models.{Field, Category, FieldTypeSpec}
 import models.{TranSmartDataSetImport, AdaParseException}
 import reactivemongo.bson.BSONObjectID
 import collection.mutable.{Map => MMap}

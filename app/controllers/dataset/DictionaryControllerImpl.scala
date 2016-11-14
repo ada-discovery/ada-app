@@ -5,13 +5,13 @@ import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
 import controllers.{ExportableAction, CrudControllerImpl, EnumFormatter, MapJsonFormatter}
-import dataaccess.RepoTypes.DictionaryCategoryRepo
+import dataaccess.RepoTypes.CategoryRepo
 import dataaccess._
 import models._
-import dataaccess.DataSetFormattersAndIds._
+import models.DataSetFormattersAndIds._
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import DictionaryFieldRepo._
+import dataaccess.FieldRepo._
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
@@ -40,7 +40,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   ) extends CrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo) with DictionaryController with ExportableAction[Field] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
-  protected val categoryRepo: DictionaryCategoryRepo = dsa.categoryRepo
+  protected val categoryRepo: CategoryRepo = dsa.categoryRepo
   protected lazy val dataSetName = result(dsa.metaInfo).name
 
   protected override val listViewColumns = Some(Seq("name", "fieldType", "isArray", "label", "categoryId"))
@@ -158,7 +158,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
           condition.copy(fieldLabel = label.flatten)
         }
         Ok(overviewListView(
-          Page(items, page, page * pageLimit, count, orderBy, newFilter),
+          Page(items, page, page * pageLimit, count, orderBy, Some(new models.Filter(newFilter))),
           fieldChartSpecs,
           metaInfos)
         )

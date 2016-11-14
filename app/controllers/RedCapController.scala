@@ -1,7 +1,7 @@
 package controllers
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import dataaccess.Category
+import models.Category
 import org.apache.commons.lang3.StringEscapeUtils
 import play.api.Configuration
 
@@ -55,9 +55,10 @@ class RedCapController @Inject() (
     Action.async { implicit request =>
       implicit val msg = messagesApi.preferred(request)
 
-      redCapService.listRecords(orderBy, f).map( items =>
-        Ok(html.redcap.listRecords(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, filter), filter))
-      )
+      redCapService.listRecords(orderBy, f).map { items =>
+        val newPage = Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, Some(new models.Filter(filter)))
+        Ok(html.redcap.listRecords(newPage, filter))
+      }
     }
   }
 
@@ -66,7 +67,7 @@ class RedCapController @Inject() (
       implicit val msg = messagesApi.preferred(request)
 
       redCapService.listMetadatas(orderBy, filter).map( items =>
-        Ok(html.redcap.listMetadatas(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, Nil)))
+        Ok(html.redcap.listMetadatas(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, None)))
       )
     }
   }
@@ -76,7 +77,7 @@ class RedCapController @Inject() (
       implicit val msg = messagesApi.preferred(request)
 
       redCapService.listExportFields(orderBy, filter).map(items =>
-        Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, Nil)))
+        Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, None)))
       )
     }
   }

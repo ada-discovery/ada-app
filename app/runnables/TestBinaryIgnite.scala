@@ -1,7 +1,7 @@
 package runnables
 
 import com.google.inject.Inject
-import dataaccess.DataSetFormattersAndIds.JsObjectIdentity
+import models.DataSetFormattersAndIds.JsObjectIdentity
 import dataaccess.ignite.{JsonBinaryCacheAsyncCrudRepo, BinaryCacheFactory}
 import dataaccess.{DescSort, AscSort, SerializableApplicationLifecycle}
 import dataaccess.Criterion.CriterionInfix

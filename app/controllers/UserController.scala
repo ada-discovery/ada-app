@@ -5,7 +5,8 @@ import javax.inject.Inject
 import controllers.dataset.{CategoryController, DataSetController, DictionaryController}
 import dataaccess.User
 
-import persistence.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
+import persistence.RepoTypes.DataSpaceMetaInfoRepo
+import dataaccess.RepoTypes.UserRepo
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, seq, email, text}
 import models.Page

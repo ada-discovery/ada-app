@@ -1,6 +1,6 @@
 package util
 
-import dataaccess.Dictionary
+import models.Dictionary
 
 package object VennLayouter {
 

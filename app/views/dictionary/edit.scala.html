@@ -2,13 +2,13 @@
 @import views.html.elements.{inputText, select}
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import controllers.dataset.DictionaryRouter
-@import dataaccess.DataSpaceMetaInfo
-@import dataaccess.Category
+@import models.DataSpaceMetaInfo
+@import models.Category
 
 @(
     domainName : String,
     fieldName : String,
-    form: Form[dataaccess.Field],
+    form: Form[models.Field],
     categories: Traversable[Category],
     router : DictionaryRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
