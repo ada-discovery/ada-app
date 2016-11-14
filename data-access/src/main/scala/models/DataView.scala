@@ -3,22 +3,26 @@ package models
 import dataaccess.{BSONObjectIdentity, EnumFormat}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
-import models.DataSetFormattersAndIds.fieldChartTypeFormat
 import models.FilterCondition.filterFormat
+import java.util.Date
+import reactivemongo.play.json.BSONFormats._
+
 
 case class DataView(
   _id: Option[BSONObjectID],
   name: String,
-  createdById: Option[BSONObjectID],
   default: Boolean,
-  filter: Option[Filter],
+  filters: Seq[Filter],
   tableColumnNames: Seq[String],
-  fieldChartTypes: Seq[FieldChartType]
+  chartTypes: Seq[FieldChartType],
+  createdById: Option[BSONObjectID] = None,
+  timeCreated: Date = new Date()
 )
 
 object DataView {
-  implicit val viewFormat = Json.format[DataView]
+  implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
+  implicit val fieldChartTypeFormat = Json.format[FieldChartType]
+  implicit val dataViewFormat = Json.format[DataView]
 
   implicit object DataViewIdentity extends BSONObjectIdentity[DataView] {
     def of(entity: DataView): Option[BSONObjectID] = entity._id

@@ -2,7 +2,8 @@ package dataaccess.ignite
 
 import javax.inject.Inject
 
-import dataaccess.DataSetFormattersAndIds.JsObjectIdentity
+import models.{FieldTypeSpec, FieldTypeId, DataSetFormattersAndIds}
+import DataSetFormattersAndIds.JsObjectIdentity
 import dataaccess._
 import dataaccess.RepoTypes._
 import dataaccess.ignite.BinaryJsonUtil._

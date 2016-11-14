@@ -57,5 +57,8 @@ dataSetImport.createDummyDictionary.label = Create Dummy Dictionary?
 synapseDataSetImport.downloadColumnFiles.label = Download Column Files?
 redCapDataSetImport.importDictionaryFlag.label = Import Dictionary?
 
+filter.createdBy.label = Created By
+filter.timeCreated.label = Time Created
+
 login.id = User Id
 login.password= Password

@@ -5,6 +5,7 @@ import java.util.Date
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
+import models.{FieldTypeSpec, FieldTypeId}
 import play.api.libs.json._
 import java.{util => ju}
 import java.{lang => jl}

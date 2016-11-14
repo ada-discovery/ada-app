@@ -1,6 +1,7 @@
 import java.text.SimpleDateFormat
 
 import dataaccess._
+import models.{FieldTypeSpec, FieldTypeId}
 import org.scalatest._
 import play.api.libs.json._
 import java.{util => ju}

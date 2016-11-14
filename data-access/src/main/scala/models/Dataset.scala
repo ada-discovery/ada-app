@@ -6,6 +6,9 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import dataaccess._
+import models.FilterCondition.filterFormat
+import models.DataView.dataViewFormat
 
 case class DataSpaceMetaInfo(
   _id: Option[BSONObjectID],
@@ -85,7 +88,9 @@ case class Dictionary(
   _id: Option[BSONObjectID],
   dataSetId: String,
   fields: Seq[Field],
-  categories: Seq[Category]
+  categories: Seq[Category],
+  filters: Seq[Filter],
+  dataviews: Seq[DataView]
 //  parents : Seq[Dictionary],
 )
 
@@ -168,11 +173,12 @@ object DataSetFormattersAndIds {
     (item: Field) =>  (item.name, item.label, item.fieldType, item.isArray, item.numValues, item.aliases, item.categoryId)
   )
 
+  implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
+  implicit val fieldChartTypeFormat = Json.format[FieldChartType]
+
   implicit val dictionaryFormat = Json.format[Dictionary]
   implicit val dataSetMetaInfoFormat = Json.format[DataSetMetaInfo]
   implicit val dataSpaceMetaInfoFormat = Json.format[DataSpaceMetaInfo]
-  implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
-  implicit val fieldChartTypeFormat = Json.format[FieldChartType]
 
   implicit val filterShowFieldStyleFormat = EnumFormat.enumFormat(FilterShowFieldStyle)
   val dataSetSettingFormat = Json.format[DataSetSetting]

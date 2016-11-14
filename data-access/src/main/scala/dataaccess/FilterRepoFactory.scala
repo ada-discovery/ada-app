@@ -1,30 +1,37 @@
 package dataaccess
 
 import com.google.inject.ImplementedBy
-import dataaccess.RepoTypes.CategoryRepo
-import dataaccess.ignite.CategoryCacheCrudRepoFactory
-import models.Category
-import reactivemongo.bson.BSONObjectID
+import dataaccess.RepoTypes.{UserRepo, FilterRepo}
+import dataaccess.User.UserIdentity
+import dataaccess.ignite.FilterCacheCrudRepoFactory
+import scala.concurrent.Future
+import models.Filter
+import dataaccess.Criterion.CriterionInfix
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import scala.concurrent.Future
-
-@ImplementedBy(classOf[CategoryCacheCrudRepoFactory])
-trait CategoryRepoFactory {
-  def apply(dataSetId: String): CategoryRepo
+@ImplementedBy(classOf[FilterCacheCrudRepoFactory])
+trait FilterRepoFactory {
+  def apply(dataSetId: String): FilterRepo
 }
 
-object CategoryRepo {
+object FilterRepo {
 
-  def saveRecursively(
-    categoryRepo: CategoryRepo,
-    category: Category
-  ): Future[Seq[(Category, BSONObjectID)]] =
-    categoryRepo.save(category).flatMap { id =>
-      val idsFuture = category.children.map { child =>
-        child.parentId = Some(id)
-        saveRecursively(categoryRepo, child)
+  def setCreatedBy(
+    userRepo: UserRepo,
+    filters: Traversable[Filter]
+  ): Future[Unit] = {
+    val userIds = filters.map(_.createdById).flatten.map(Some(_)).toSeq
+
+    if (userIds.nonEmpty) {
+      userRepo.find(Seq(UserIdentity.name #=> userIds)).map { users =>
+        val userIdMap = users.map(c => (c._id.get, c)).toMap
+        filters.foreach(filter =>
+          if (filter.createdById.isDefined) {
+            filter.createdBy = userIdMap.get(filter.createdById.get)
+          }
+        )
       }
-      Future.sequence(idsFuture).map(ids => Seq((category, id)) ++ ids.flatten)
-    }
+    } else
+      Future(())
+  }
 }

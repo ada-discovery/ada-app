@@ -3,11 +3,12 @@ package dataaccess.ignite
 import javax.inject.{Inject, Provider}
 
 import dataaccess.{Identity, AsyncCrudRepo}
+import models.DataSetFormattersAndIds
 import play.api.libs.json.Format
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import scala.reflect.runtime.universe._
 import scala.reflect.ClassTag
-import dataaccess.DataSetFormattersAndIds.{dataSetSettingFormat, DataSetSettingIdentity}
+import DataSetFormattersAndIds.{dataSetSettingFormat, DataSetSettingIdentity}
 
 class CacheAsyncCrudRepoProvider[E: TypeTag, ID: ClassTag](
     val mongoCollectionName: String,

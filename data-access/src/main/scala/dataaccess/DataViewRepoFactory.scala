@@ -1,10 +1,10 @@
 package dataaccess
 
 import com.google.inject.ImplementedBy
-import dataaccess.RepoTypes.FilterRepo
-import dataaccess.ignite.FilterCacheCrudRepoFactory
+import dataaccess.RepoTypes.DataViewRepo
+import dataaccess.ignite.DataViewCacheCrudRepoFactory
 
-@ImplementedBy(classOf[FilterCacheCrudRepoFactory])
+@ImplementedBy(classOf[DataViewCacheCrudRepoFactory])
 trait DataViewRepoFactory {
-  def apply(dataSetId: String): FilterRepo
+  def apply(dataSetId: String): DataViewRepo
 }

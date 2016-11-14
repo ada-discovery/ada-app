@@ -5,7 +5,8 @@ import javax.cache.configuration.Factory
 import javax.inject.Inject
 
 import dataaccess._
-import dataaccess.FieldTypeId._
+import models.{FieldTypeSpec, FieldTypeId}
+import FieldTypeId._
 import org.apache.ignite.binary.BinaryObject
 import org.apache.ignite.cache.store.CacheStore
 import org.apache.ignite.cache.{QueryIndex, QueryEntity, CacheAtomicityMode, CacheMode}

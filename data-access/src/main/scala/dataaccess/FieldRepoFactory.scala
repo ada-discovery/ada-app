@@ -15,7 +15,7 @@ trait FieldRepoFactory {
   def apply(dataSetId: String): FieldRepo
 }
 
-object DictionaryFieldRepo {
+object FieldRepo {
 
   def setCategoriesById(
     categoryRepo: CategoryRepo,
@@ -37,21 +37,20 @@ object DictionaryFieldRepo {
   }
 
   def setCategoryById(
-                       categoryRepo: CategoryRepo,
-                       field: Field
+    categoryRepo: CategoryRepo,
+    field: Field
   ): Future[Unit] =
-    field.categoryId match {
-      case Some(categoryId) =>
-        categoryRepo.get(categoryId).map{ category =>
+    field.categoryId.fold(Future(())) {
+      categoryId =>
+        categoryRepo.get(categoryId).map { category =>
           field.category = category
         }
-      case None => Future(())
     }
 
   // search for a category with a given name (if multiple, select the first one)
   def setCategoryByName(
-                         categoryRepo: CategoryRepo,
-                         field: Field
+    categoryRepo: CategoryRepo,
+    field: Field
   ): Future[Unit] =
     field.category match {
       case Some(category) =>

@@ -1,5 +1,6 @@
 package dataaccess
 
+import models.FieldTypeSpec
 import play.api.libs.json._
 
 import scala.reflect.ClassTag

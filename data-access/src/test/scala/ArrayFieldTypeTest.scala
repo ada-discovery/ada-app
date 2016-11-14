@@ -2,6 +2,7 @@ import java.text.SimpleDateFormat
 import java.{util => ju}
 
 import dataaccess._
+import models.{FieldTypeSpec, FieldTypeId}
 import org.scalatest._
 import play.api.libs.json._
 

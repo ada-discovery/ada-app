@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 
 import scala.concurrent.{Await, Future}
 
-class DictionaryCategoryMongoAsyncCrudRepo @Inject()(
+class CategoryMongoAsyncCrudRepo @Inject()(
     @Assisted dataSetId : String,
     dictionaryRepo: DictionaryRootRepo
   ) extends DictionarySubordinateMongoAsyncCrudRepo[Category, BSONObjectID]("categories", dataSetId, dictionaryRepo) {
@@ -28,7 +28,7 @@ class DictionaryCategoryMongoAsyncCrudRepo @Inject()(
   }
 }
 
-class DictionaryCategoryMongoAsyncCrudRepoFactory(
+class CategoryMongoAsyncCrudRepoFactory(
     dataSetId: String,
     configuration: Configuration,
     applicationLifecycle: ApplicationLifecycle
@@ -38,7 +38,7 @@ class DictionaryCategoryMongoAsyncCrudRepoFactory(
     val dictionaryRepo = new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries")
     dictionaryRepo.reactiveMongoApi = ReactiveMongoApi.create(configuration, applicationLifecycle)
 
-    val repo = new DictionaryCategoryMongoAsyncCrudRepo(dataSetId, dictionaryRepo)
+    val repo = new CategoryMongoAsyncCrudRepo(dataSetId, dictionaryRepo)
     Await.result(repo.initIfNeeded, 10 seconds)
     repo
   }

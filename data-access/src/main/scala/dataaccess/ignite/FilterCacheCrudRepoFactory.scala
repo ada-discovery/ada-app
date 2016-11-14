@@ -2,21 +2,20 @@ package dataaccess.ignite
 
 import javax.inject.Inject
 
-import models.DataSetFormattersAndIds
-import DataSetFormattersAndIds.CategoryIdentity
-import dataaccess.RepoTypes.CategoryRepo
+import dataaccess.RepoTypes.FilterRepo
 import dataaccess._
-import dataaccess.mongo.dataset.CategoryMongoAsyncCrudRepoFactory
+import dataaccess.mongo.dataset.FilterMongoAsyncCrudRepoFactory
+import models.FilterCondition.FilterIdentity
 import play.api.Configuration
 
 protected[dataaccess] class FilterCacheCrudRepoFactory @Inject()(
     cacheRepoFactory: CacheAsyncCrudRepoFactory,
     configuration: Configuration
-  ) extends CategoryRepoFactory {
+  ) extends FilterRepoFactory {
 
-  def apply(dataSetId: String): CategoryRepo = {
-    val cacheName = "Category_" + dataSetId.replaceAll("[\\.-]", "_")
-    val mongoRepoFactory = new CategoryMongoAsyncCrudRepoFactory(dataSetId, configuration, new SerializableApplicationLifecycle())
+  def apply(dataSetId: String): FilterRepo = {
+    val cacheName = "Filter_" + dataSetId.replaceAll("[\\.-]", "_")
+    val mongoRepoFactory = new FilterMongoAsyncCrudRepoFactory(dataSetId, configuration, new SerializableApplicationLifecycle())
     cacheRepoFactory(mongoRepoFactory, cacheName)
   }
 }

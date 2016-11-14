@@ -1,7 +1,7 @@
 package dataaccess
 
 import dataaccess.RepoTypes._
-import dataaccess.FieldTypeId
+import models.FieldTypeId
 
 trait JsonCrudRepoFactory {
   def apply(collectionName: String): JsonCrudRepo

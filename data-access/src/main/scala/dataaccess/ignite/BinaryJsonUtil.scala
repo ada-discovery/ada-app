@@ -1,7 +1,8 @@
 package dataaccess.ignite
 
-import dataaccess.FieldTypeId._
-import dataaccess.{FieldTypeId, EnumFormat}
+import models.FieldTypeId
+import FieldTypeId._
+import dataaccess.EnumFormat
 import org.apache.ignite.IgniteBinary
 import org.apache.ignite.binary.{BinaryType, BinaryObject}
 import org.apache.ignite.internal.binary.BinaryObjectImpl

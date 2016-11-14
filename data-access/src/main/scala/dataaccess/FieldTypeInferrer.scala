@@ -1,6 +1,7 @@
 package dataaccess
 
 import dataaccess.FieldTypInferrer.INFER_FIELD_TYPE
+import models.FieldTypeId
 import play.api.libs.json.{JsArray, JsReadable}
 
 import collection.mutable.{Map => MMap}

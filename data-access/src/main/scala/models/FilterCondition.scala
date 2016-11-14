@@ -28,12 +28,15 @@ object ConditionType extends Enumeration {
 
 case class Filter(
   _id: Option[BSONObjectID],
-  name: String,
-  timeCreated: Date,
+  name: Option[String],
   conditions: Seq[FilterCondition],
-  createdById: Option[BSONObjectID],
+  createdById: Option[BSONObjectID] = None,
+  timeCreated: Option[Date] = Some(new Date()),
   var createdBy: Option[User] = None
-)
+) {
+  def this(conditions: Seq[FilterCondition]) =
+    this(None, None, conditions)
+}
 
 object FilterShowFieldStyle extends Enumeration {
   var NamesOnly, LabelsOnly, LabelsAndNamesOnlyIfLabelUndefined, NamesAndLabels = Value
@@ -44,13 +47,13 @@ object FilterCondition {
   implicit val filterConditionFormat = Json.format[FilterCondition]
   implicit val filterFormat: Format[Filter] = (
     (__ \ "_id").formatNullable[BSONObjectID] and
-    (__ \ "name").format[String] and
-    (__ \ "timeCreated").format[Date] and
+    (__ \ "name").formatNullable[String] and
     (__ \ "conditions").format[Seq[FilterCondition]] and
-    (__ \ "createdById").formatNullable[BSONObjectID]
+    (__ \ "createdById").formatNullable[BSONObjectID] and
+    (__ \ "timeCreated").formatNullable[Date]
   )(
     Filter(_, _, _, _, _),
-    (item: Filter) =>  (item._id, item.name, item.timeCreated, item.conditions, item.createdById)
+    (item: Filter) =>  (item._id, item.name, item.conditions, item.createdById, item.timeCreated)
   )
 
   implicit object FilterIdentity extends BSONObjectIdentity[Filter] {

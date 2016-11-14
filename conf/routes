@@ -51,7 +51,7 @@ POST        /admin/dataSetImport/:id                                            
 POST        /admin/dataSetImport/:id/delete                                         controllers.dataset.DataSetImportController.delete(id: BSONObjectID)
 
 # Users management
-GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "ldapDn", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "ldapDn", filter: Seq[models.FilterCondition] ?= Nil)
 GET         /users/all                                                              controllers.UserController.listAll(s: String ?= "ldapDn")
 GET         /users/new                                                              controllers.UserController.create
 POST        /users/save                                                             controllers.UserController.save
@@ -61,7 +61,7 @@ POST        /users/:id                                                          
 POST        /users/:id/delete                                                       controllers.UserController.delete(id: BSONObjectID)
 
 # Translations
-GET         /translations                                                           controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /translations                                                           controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", filter: Seq[models.FilterCondition] ?= Nil)
 GET         /translations/all                                                       controllers.TranslationController.listAll(s: String ?= "original")
 GET         /translations/new                                                       controllers.TranslationController.create
 POST        /translations/save                                                      controllers.TranslationController.save
@@ -87,8 +87,8 @@ GET         /redcap/records/exportTranSMARTMapping                              
 GET         /studies/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
 GET         /studies/records/fieldTypes                                             controllers.dataset.DataSetDispatcher.overviewFieldTypes
-GET         /studies/records/overviewList                                           controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filter: Seq[models.FilterCondition] ?= Nil)
-GET         /studies/fields                                                         controllers.dataset.DataSetDispatcher.getFields(fieldTypeIds: Seq[dataaccess.FieldTypeId.Value] ?= Nil)
+GET         /studies/records/overviewList                                           controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /studies/fields                                                         controllers.dataset.DataSetDispatcher.getFields(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 GET         /studies/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
 GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
@@ -120,6 +120,22 @@ POST        /studies/categories/:id/delete                                      
 GET         /studies/categories/getCategoryD3Root                                   controllers.dataset.CategoryDispatcher.getCategoryD3Root
 GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
 GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
+
+GET         /studies/filters                                                        controllers.dataset.FilterDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /studies/filters/get/:id                                                controllers.dataset.FilterDispatcher.get(id: BSONObjectID)
+GET         /studies/filters/new                                                    controllers.dataset.FilterDispatcher.create
+POST        /studies/filters/save                                                   controllers.dataset.FilterDispatcher.save
+POST        /studies/filters/saveAjax                                               controllers.dataset.FilterDispatcher.saveAjax(filter: models.Filter)
+POST        /studies/filters/:id                                                    controllers.dataset.FilterDispatcher.update(id: BSONObjectID)
+POST        /studies/filters/:id/delete                                             controllers.dataset.FilterDispatcher.delete(id: BSONObjectID)
+GET         /studies/filters/idAndNames                                             controllers.dataset.FilterDispatcher.getIdAndNames
+
+GET         /studies/dataviews                                                      controllers.dataset.DataViewDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /studies/dataviews/get/:id                                              controllers.dataset.DataViewDispatcher.get(id: BSONObjectID)
+GET         /studies/dataviews/new                                                  controllers.dataset.DataViewDispatcher.create
+POST        /studies/dataviews/save                                                 controllers.dataset.DataViewDispatcher.save
+POST        /studies/dataviews/:id                                                  controllers.dataset.DataViewDispatcher.update(id: BSONObjectID)
+POST        /studies/dataviews/:id/delete                                           controllers.dataset.DataViewDispatcher.delete(id: BSONObjectID)
 
 GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: String ?= "dataSetId")
