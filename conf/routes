@@ -84,7 +84,7 @@ GET         /redcap/records/exportTranSMARTMapping                              
 
 
 #Generic study routes using DataSetDispatcher and DictionaryDispatcher
-GET         /studies/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /studies/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter: Seq[models.FilterCondition] ?= Nil)
 GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
 GET         /studies/records/fieldTypes                                             controllers.dataset.DataSetDispatcher.overviewFieldTypes
 GET         /studies/records/overviewList                                           controllers.dataset.DataSetDispatcher.overviewList(p: Int ?= 0, s: String ?= "", filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
@@ -95,9 +95,9 @@ GET         /studies/records/exportAsCsv                                        
 GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
 GET         /studies/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
-GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xFieldName: Option[String] ?= None, yFieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filter : Seq[models.FilterCondition] ?= Nil)
-GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filter : Seq[models.FilterCondition] ?= Nil)
-GET         /studies/dateCount                                                      controllers.dataset.DataSetDispatcher.getDateCount(dateFieldName: Option[String] ?= None, groupFieldName: Option[String], filter : Seq[models.FilterCondition] ?= Nil)
+GET         /studies/scatterStats                                                   controllers.dataset.DataSetDispatcher.getScatterStats(xFieldName: Option[String] ?= None, yFieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /studies/dateCount                                                      controllers.dataset.DataSetDispatcher.getDateCount(dateFieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 
 GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)

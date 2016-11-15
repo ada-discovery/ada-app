@@ -14,7 +14,9 @@ case class FilterCondition(
   conditionType: ConditionType.Value,
   value: String,
   valueLabel: Option[String]
-)
+) {
+  def fieldLabelOrElseName = fieldLabel.getOrElse(fieldName)
+}
 
 object ConditionType extends Enumeration {
   val Equals = Value("=")
@@ -36,6 +38,9 @@ case class Filter(
 ) {
   def this(conditions: Seq[FilterCondition]) =
     this(None, None, conditions)
+
+  def conditionsOrId: Either[Seq[FilterCondition], BSONObjectID] =
+    _id.fold(Left(conditions): Either[Seq[FilterCondition], BSONObjectID]){filterId => Right(filterId)}
 }
 
 object FilterShowFieldStyle extends Enumeration {
