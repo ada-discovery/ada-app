@@ -48,6 +48,13 @@
     <button type="button" id="submitButton" onclick="loadFilter();" data-dismiss="modal" class="btn btn-primary">OK</button>
 }
 
+@valueOrUndefined(condition: FilterCondition) = @{
+    condition.valueLabel.getOrElse(condition.value) match {
+        case s if s.isEmpty => <i>undefined</i>
+        case s => s
+    }
+}
+
 @conditionPanel(isDisplayed: Boolean) = {
     <ul id="conditionPanel" class="list-inline" @if(!isDisplayed) {style="display:None"}>
     @filter.map{ f =>
@@ -55,11 +62,11 @@
             <li id="condition-full@index" class="condition-full">
                 <h4>
                     <span class="condition">
-                        <span class="label label-primary">@condition.fieldLabel.getOrElse(condition.fieldName)</span>
+                        <span class="label label-primary">@condition.fieldLabelOrElseName</span>
                         <span><b>@condition.conditionType</b></span>
-                        <span class="label label-primary">@condition.valueLabel.getOrElse(condition.value)</span>
+                        <span class="label label-primary">@valueOrUndefined(condition)</span>
                     </span>
-                    <span class="condition-buttons" style="display: none">
+                    <span class="condition-buttons" style="display: none; padding-left: 5px">
                         <button type="button" class="btn btn-sm btn-default" onclick="showEditConditionModal('@index');">
                             <span class="glyphicon glyphicon-pencil"></span>
                         </button>

@@ -246,22 +246,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val chartFieldNames = fieldCharts.map(_.fieldName)
     val tableFieldNames = listViewColumns.get
 
-    def valueStringToDisplayString[T](fieldType: FieldType[T], text: String): String = {
-      val value = fieldType.valueStringToValue(text)
-      fieldType.valueToDisplayString(value)
-    }
-
     {
       for {
         // use a given filter conditions or load one
-        resolvedFilter <- filterOrId match {
-          case Right(id) =>
-            filterRepo.get(id).map(
-              _.getOrElse(new Filter(Nil))
-          )
-          case Left(filter) => Future(new models.Filter(filter))
-        }
-
+        resolvedFilter <- resolveFilter(filterOrId)
         // get the conditions
         conditions = resolvedFilter.conditions
 
@@ -297,24 +285,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         } else
           Nil
         val fieldChartSpecs = chartSpecs.map(chartSpec => FieldChartSpec(chartSpec._1, chartSpec._2))
-
+        val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
         val end = new ju.Date()
-
-        val newConditions = conditions.map { condition =>
-          fieldNameMap.get(condition.fieldName.trim) match {
-            case Some(field) => {
-              val fieldType = ftf(field.fieldTypeSpec)
-              val valueLabel = valueStringToDisplayString(fieldType, condition.value)
-              condition.copy(fieldLabel = field.label, valueLabel = Some(valueLabel))
-            }
-            case None => condition
-          }
-        }
 
         Logger.info(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
         render {
           case Accepts.Html() => {
-            val newPage = Page(tableItems, page, page * pageLimit, count, orderBy, Some(resolvedFilter.copy(conditions = newConditions)))
+            val newPage = Page(tableItems, page, page * pageLimit, count, orderBy, Some(newFilter))
             Ok(overviewListView(newPage, fieldChartSpecs, tableFields))
           }
           case Accepts.Json() => Ok(Json.toJson(tableItems))
@@ -332,6 +309,47 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
     }
   }
+
+  private def resolveFilter(
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ): Future[Filter] = {
+    // use a given filter conditions or load one
+    filterOrId match {
+      case Right(id) =>
+        filterRepo.get(id).map(
+          _.getOrElse(new Filter(Nil))
+        )
+      case Left(filter) => Future(new models.Filter(filter))
+    }
+  }
+
+  private def setFilterLabels(
+    filter: Filter,
+    fieldNameMap: Map[String, Field]
+  ): Filter = {
+    def valueStringToDisplayString[T](fieldType: FieldType[T], text: String): String = {
+      val value = fieldType.valueStringToValue(text)
+      fieldType.valueToDisplayString(value)
+    }
+
+    val newConditions = filter.conditions.map { condition =>
+      fieldNameMap.get(condition.fieldName.trim) match {
+        case Some(field) => {
+          val fieldType = ftf(field.fieldTypeSpec)
+          val valueLabel = valueStringToDisplayString(fieldType, condition.value)
+          condition.copy(fieldLabel = field.label, valueLabel = Some(valueLabel))
+        }
+        case None => condition
+      }
+    }
+
+    filter.copy(conditions = newConditions)
+  }
+
+  private def getFilterFieldNameMap(filter: Filter): Future[Map[String, Field]] =
+    getFields(filter.conditions.map(_.fieldName)).map{
+      _.map(field => (field.name, field)).toMap
+    }
 
   /**
     * Infers which chart type to use for a field by checking its type.
@@ -378,7 +396,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     xFieldNameOption: Option[String],
     yFieldNameOption: Option[String],
     groupFieldNameOption: Option[String],
-    filter: Seq[FilterCondition]
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
@@ -404,11 +422,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       xField <- xFieldFuture
       yField <- yFieldFuture
       groupField <- groupFieldFuture
-      criteria <- toCriteria(filter)
+
+      // use a given filter conditions or load one
+      resolvedFilter <- resolveFilter(filterOrId)
+
+      criteria <- toCriteria(resolvedFilter.conditions)
       xyzItems <- {
         val projection = Seq(xFieldName, yFieldName) ++ groupField.map(_.name)
         repo.find(criteria, Nil, projection.toSet)
       }
+
+      // create a name -> field map of the filter referenced fields
+      fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
     } yield {
       val scattedData =
         if (xField.isDefined && yField.isDefined) {
@@ -416,6 +441,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         } else
           Seq[(String, Seq[(Any, Any)])]()
 
+      val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
       render {
         case Accepts.Html() => Ok(dataset.scatterStats(
           dataSetName,
@@ -423,9 +449,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           yField,
           groupField,
           scattedData,
-          filter,
+          newFilter,
           setting.filterShowFieldStyle,
           router,
+          filterRouter,
+          filterJsRouter,
           dataSetId,
           getMetaInfos
         ))
@@ -436,7 +464,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getDistribution(
     fieldNameOption: Option[String],
-    filter: Seq[FilterCondition]
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
@@ -444,7 +472,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
-        criteria <- toCriteria(filter)
+        // use a given filter conditions or load one
+        resolvedFilter <- resolveFilter(filterOrId)
+
+        // get the criteria
+        criteria <- toCriteria(resolvedFilter.conditions)
         chartSpecs <- getDistributionChartSpecs(
           criteria,
           Seq(FieldChartType(fieldName, None)),
@@ -453,15 +485,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         )
         fields <-fieldRepo.find(sort = Seq(AscSort("name")))
         field <- fieldRepo.get(fieldName)
+
+        // create a name -> field map of the filter referenced fields
+        fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
       } yield {
+        val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
         render {
           case Accepts.Html() => Ok(dataset.distribution(
             dataSetName,
             field,
             chartSpecs.head._2,
-            filter,
+            newFilter,
             setting.filterShowFieldStyle,
             router,
+            filterRouter,
+            filterJsRouter,
             dataSetId,
             getMetaInfos
           ))
@@ -478,7 +516,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getDateCount(
     dateFieldNameOption: Option[String],
     groupFieldName: Option[String],
-    filter: Seq[FilterCondition]
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
@@ -490,21 +528,32 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     {
       for {
         dateField <- dateFieldFuture
+
         groupField <- groupFieldFuture
+        // use a given filter conditions or load one
+        resolvedFilter <- resolveFilter(filterOrId)
+
         series <- dateField match {
-          case Some(dateField) => getDateCountData(filter, dateField, groupField)
+          case Some(dateField) => getDateCountData(resolvedFilter.conditions, dateField, groupField)
           case None => Future(Nil)
         }
+
+        // create a name -> field map of the filter referenced fields
+        fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
       } yield {
+        val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+
         render {
           case Accepts.Html() => Ok(dataset.dateCount(
             dataSetName,
             dateField,
             groupField,
             series,
-            filter,
+            newFilter,
             setting.filterShowFieldStyle,
             router,
+            filterRouter,
+            filterJsRouter,
             dataSetId,
             getMetaInfos
           ))

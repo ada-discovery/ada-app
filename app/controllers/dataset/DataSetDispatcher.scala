@@ -48,16 +48,19 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     xFieldName: Option[String],
     yFieldName: Option[String],
     groupFieldName: Option[String],
-    filter: Seq[FilterCondition]
-  ) = dispatch(_.getScatterStats(xFieldName, yFieldName, groupFieldName, filter))
+    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+  ) = dispatch(_.getScatterStats(xFieldName, yFieldName, groupFieldName, filterOrId))
 
-  override def getDistribution(fieldName: Option[String], filter: Seq[FilterCondition]) = dispatch(_.getDistribution(fieldName, filter))
+  override def getDistribution(
+    fieldName: Option[String],
+    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+  ) = dispatch(_.getDistribution(fieldName, filterOrId))
 
   override def getDateCount(
     dateFieldName: Option[String],
     groupFieldName: Option[String],
-    filter: Seq[FilterCondition]
-  ) = dispatch(_.getDateCount(dateFieldName, groupFieldName, filter))
+    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+  ) = dispatch(_.getDateCount(dateFieldName, groupFieldName, filterOrId))
 
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]

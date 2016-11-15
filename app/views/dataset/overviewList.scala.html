@@ -92,7 +92,7 @@
 @table = @{
     paginatedJsonTable(
         page,
-        router.overviewList(_, _, page.filterId.fold(Left(page.filterConditions): Either[Seq[FilterCondition], BSONObjectID]){filterId => Right(filterId) : Either[Seq[FilterCondition], BSONObjectID]}),
+        router.overviewList(_, _, page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))),
         Some(displayedFields.map{ field =>
             field.label.map( fieldLabel => (field.name, fieldLabel))
         }.flatten.toMap),

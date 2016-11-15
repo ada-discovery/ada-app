@@ -1,7 +1,9 @@
-@import controllers.dataset.DataSetRouter
+@import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter}
 @import models.{FilterCondition, ChartSpec}
 @import models.FieldTypeId
 @import models.Field
+@import reactivemongo.bson.BSONObjectID
+@import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.{highchartsJsImport, timeLineChart}
 @import views.html.dataset.datasetSubNav
@@ -17,9 +19,11 @@
     dateField: Option[Field],
     groupField: Option[Field],
     series: Seq[(String, Seq[(Date, Any)])],
-    filterSpec: Seq[FilterCondition],
+    filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     router: DataSetRouter,
+    filterRouter: FilterRouter,
+    filterJsRouter: FilterJsRouter,
     dataSetId: String,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -30,18 +34,21 @@
     <div class="row">
         <div class="col-md-12">
             @filter(
-                Some(new models.Filter(filterSpec)),
-                router.getDateCount(dateField.map(_.name), groupField.map(_.name), filterSpec),
+                Some(filterSpec),
+                router.getDateCount(dateField.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
                 Right(router.allFields),
-                filterShowFieldStyle
+                filterShowFieldStyle,
+                Some(filterJsRouter),
+                Some(filterRouter.idAndNames),
+                "filterOrId"
             )
         </div>
     </div>
     <hr/>
-    @helper.form(action=router.getDateCount(dateField.map(_.name), groupField.map(_.name), filterSpec), 'role -> "search", 'id -> "fieldForm") {
+    @helper.form(action=router.getDateCount(None, None, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {
         <!-- hacky solution to pass data set param since it's ignored when passed as a part of the call in the form action -->
         <input type="hidden" name="dataSet" value="@dataSetId"/>
-        <input type="hidden" name="filter" value="@Json.toJson(filterSpec)"/>
+        <input type="hidden" name="filterOrId" value="@filterSpec.conditionsOrId.fold(Json.toJson(_), _.stringify)"/>
         <div class="row">
             <div class="col-md-3">
                 <input id="dateFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@dateField.map(_.labelOrElseName)">

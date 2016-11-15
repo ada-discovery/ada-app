@@ -13,22 +13,25 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def overviewList(
     page: Int,
     orderBy: String,
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
   ): Action[AnyContent]
 
-  def getDistribution(fieldName: Option[String], filter: Seq[FilterCondition]): Action[AnyContent]
+  def getDistribution(
+    fieldName: Option[String],
+    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+  ): Action[AnyContent]
 
   def getScatterStats(
     xFieldName: Option[String],
     yFieldName: Option[String],
     groupFieldName: Option[String],
-    filter: Seq[FilterCondition]
+    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
   ): Action[AnyContent]
 
   def getDateCount(
     dateFieldName: Option[String],
     groupFieldName: Option[String],
-    filter: Seq[FilterCondition]
+    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
   ): Action[AnyContent]
 
   def getFieldNames: Action[AnyContent]
