@@ -16,7 +16,9 @@
     xField: Option[Field],
     yField: Option[Field],
     groupField: Option[Field],
-    series: Seq[(String, Seq[(Any, Any)])],
+    chartSpec: Option[ScatterChartSpec],
+    xMean: Option[Double],
+    yMean: Option[Double],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     router: DataSetRouter,
@@ -70,12 +72,16 @@
         <div class="row">
             <div class="col-md-2">
                 <div class="well">
-                    Mean: @(BasicStats.mean(series.map(x => x._2).flatten.map(_._1)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
+                    Mean: @{xMean.map { mean =>
+                        BigDecimal(mean).setScale(3, BigDecimal.RoundingMode.FLOOR)
+                    }.getOrElse("N/A")}
                 </div>
             </div>
             <div class="col-md-offset-2 col-md-2">
                 <div class="well">
-                    Mean: @(BasicStats.mean(series.map(x => x._2).flatten.map(_._2)).map(mean => BigDecimal(mean).setScale(3,BigDecimal.RoundingMode.FLOOR)))
+                    Mean: @{yMean.map { mean =>
+                        BigDecimal(mean).setScale(3, BigDecimal.RoundingMode.FLOOR)
+                    }.getOrElse("N/A")}
                 </div>
             </div>
         </div>
@@ -85,15 +91,12 @@
 
 @bottomResources =  {
     @highchartsJsImport()
-    @scatterChart(
-        "Comparison",
-        "scatterChart",
-        xField.map(_.labelOrElseName).getOrElse(""),
-        yField.map(_.labelOrElseName).getOrElse(""),
-        series.map{ case (name, values) =>
-            (name, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
-        }
-    )
+    @chartSpec.map { spec =>
+        @scatterChart(
+            "scatterChart",
+            spec
+        )
+    }.getOrElse("")
 }
 
 @main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {

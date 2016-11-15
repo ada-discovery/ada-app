@@ -16,7 +16,7 @@
 @(
     domainName: String,
     field: Option[Field],
-    chartSpec: ChartSpec,
+    chartSpecs: Seq[ChartSpec],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     router: DataSetRouter,
@@ -66,7 +66,7 @@
 
 @bottomResources = {
     @highchartsJsImport()
-    @chartPanelJs(Seq(chartSpec))
+    @chartPanelJs(chartSpecs)
 }
 
 @main(Messages("distribution.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
@@ -82,7 +82,7 @@
     </div>
     <br/>
     <br/>
-    @chartPanel(Seq(chartSpec), 12)
+    @chartPanel(chartSpecs, 12 / chartSpecs.size)
 }
 
 <script type="text/javascript" src="@dataSetSettingRoutes.jsRoutes"></script>

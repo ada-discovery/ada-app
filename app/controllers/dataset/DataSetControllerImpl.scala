@@ -6,7 +6,7 @@ import java.{util => ju}
 import javax.inject.Inject
 
 import _root_.util.JsonUtil._
-import _root_.util.{fieldLabel, JsonUtil}
+import util.{BasicStats, fieldLabel, JsonUtil}
 import _root_.util.WebExportUtil._
 import dataaccess._
 import models._
@@ -351,37 +351,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       _.map(field => (field.name, field)).toMap
     }
 
-  /**
-    * Infers which chart type to use for a field by checking its type.
-    * Strings are identified as pie charts.
-    * Doubles and Integers are identified as Barplots.
-    * All plots which can not be matched are identified as pie charts.
-    *
-    * @param fieldChartTypes Names of the fields. Used to find fields in data repo.
-    * @return Chart specs.
-    */
-  private def getDistributionChartSpecs(
-    criteria: Seq[Criterion[Any]],
-    fieldChartTypes: Traversable[FieldChartType],
-    showLabels: Boolean = false,
-    showLegend: Boolean = true
-  ): Future[Traversable[(String, ChartSpec)]] = {
-    val fieldNames = fieldChartTypes.map(_.fieldName)
-    val fieldsFuture = getFields(fieldNames)
-
-    val itemsFuture = repo.find(criteria, Nil, fieldNames)
-
-    for {
-      foundFields <- fieldsFuture
-      items <- itemsFuture
-    } yield
-      chartService.createDistributionChartSpecs(items, fieldChartTypes, foundFields, showLabels, showLegend)
-  }
-
   private def getFields(
     fieldNames: Traversable[String]
   ): Future[Traversable[Field]] =
     fieldRepo.find(Seq(FieldIdentity.name #=> fieldNames.toSeq))
+
+  private def getValues[T](
+    field: Field,
+    jsons: Traversable[JsObject]
+  ): Traversable[Option[T]] = {
+    val typedFieldType = ftf(field.fieldTypeSpec).asValueOf[T]
+    val jsonValues = project(jsons, field.name)
+    jsonValues.map(typedFieldType.jsonToValue)
+  }
 
   /**
     * Fetches, checks and prepares the specified data fields for a scatterplot.
@@ -427,6 +409,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       resolvedFilter <- resolveFilter(filterOrId)
 
       criteria <- toCriteria(resolvedFilter.conditions)
+
       xyzItems <- {
         val projection = Seq(xFieldName, yFieldName) ++ groupField.map(_.name)
         repo.find(criteria, Nil, projection.toSet)
@@ -435,11 +418,37 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // create a name -> field map of the filter referenced fields
       fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
     } yield {
-      val scattedData =
-        if (xField.isDefined && yField.isDefined) {
-          chartService.getScatterData(xyzItems, xField.get, yField.get, groupField)
-        } else
-          Seq[(String, Seq[(Any, Any)])]()
+      val chartSpec: Option[ScatterChartSpec] =
+        (xField zip yField).headOption.map { case (xField, yField) =>
+          chartService.createScatterChartSpec(
+            xyzItems,
+            xField,
+            yField,
+            groupField
+          )
+        }
+
+      def mean(field: Field): Option[Double] = {
+        field.fieldTypeSpec.fieldType match {
+          case FieldTypeId.Integer => {
+            val values = getValues[Long](field, xyzItems).flatten
+            BasicStats.mean(values.toSeq)
+          }
+          case FieldTypeId.Double => {
+            val values = getValues[Double](field, xyzItems).flatten
+            BasicStats.mean(values.toSeq)
+          }
+          case FieldTypeId.Date => {
+            val values = getValues[ju.Date](field, xyzItems).flatten
+            BasicStats.mean(values.map(_.getTime).toSeq)
+          }
+          case _ =>
+            None
+        }
+      }
+
+      val xMean = xField.map(mean).flatten
+      val yMean = yField.map(mean).flatten
 
       val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
       render {
@@ -448,7 +457,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           xField,
           yField,
           groupField,
-          scattedData,
+          chartSpec,
+          xMean,
+          yMean,
           newFilter,
           setting.filterShowFieldStyle,
           router,
@@ -477,24 +488,35 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // get the criteria
         criteria <- toCriteria(resolvedFilter.conditions)
-        chartSpecs <- getDistributionChartSpecs(
-          criteria,
-          Seq(FieldChartType(fieldName, None)),
-          true,
-          false
-        )
+
+        // get the chart items
+        chartItems <- repo.find(criteria, Nil, Seq(fieldName))
+
+        // chart fields
+        chartFields <- getFields(Seq(fieldName))
+
+        // generate the distribution chart
+        distributionChartSpecs = chartService.createDistributionChartSpecs(chartItems, Seq(FieldChartType(fieldName, None)), chartFields, true, false)
+
+        // generate the box chart (if possible)
+        boxChartSpec = chartService.createBoxChartSpec(chartItems, chartFields.head)
+
+        // get all the fields
         fields <-fieldRepo.find(sort = Seq(AscSort("name")))
+
+        // get the current field
         field <- fieldRepo.get(fieldName)
 
         // create a name -> field map of the filter referenced fields
         fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
+
       } yield {
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
         render {
           case Accepts.Html() => Ok(dataset.distribution(
             dataSetName,
             field,
-            chartSpecs.head._2,
+            Seq(Some(distributionChartSpecs.head._2), boxChartSpec).flatten,
             newFilter,
             setting.filterShowFieldStyle,
             router,

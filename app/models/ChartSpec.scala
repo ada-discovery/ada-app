@@ -1,5 +1,6 @@
 package models
 
+import _root_.util.BasicStats.Quantiles
 import play.api.libs.json._
 
 import scala.collection.mutable.{Map => MMap}
@@ -33,12 +34,13 @@ case class ScatterChartSpec(
   title: String,
   xAxisCaption: String,
   yAxisCaption: String,
-  data: Seq[(String, String, Seq[Seq[Any]])]
+  data: Seq[(String, String, Seq[Seq[Any]])],
+  expHeight : Option[Int] = None
 ) extends ChartSpec
 
-case class BoxPlotSpec(
+case class BoxChartSpec[T](
   title: String,
-  data: Seq[(String, Seq[Double])]
+  data: Quantiles[T]
 ) extends ChartSpec
 
 case class DataPoint(
@@ -79,7 +81,7 @@ object ChartSpec {
         DataPoint(stringKey, count, keyLabelMap.map(_.getOrElse(keyOrEmpty, keyOrEmpty)).getOrElse(keyOrEmpty))
       }
     }
-    new CategoricalChartSpec(title, showLabels, showLegend, data, chartType.getOrElse(ChartType.Pie))
+    CategoricalChartSpec(title, showLabels, showLegend, data, chartType.getOrElse(ChartType.Pie))
   }
 
   /**
@@ -98,7 +100,7 @@ object ChartSpec {
     fieldName: String,
     title: String,
     columnCount: Int,
-    xAxisScale: Option[Int] = None,
+    specialColumnForMax: Boolean = false,
     explMin: Option[T] = None,
     explMax: Option[T] = None,
     chartType: Option[ChartType.Value] = None,
@@ -107,64 +109,58 @@ object ChartSpec {
     val numeric = implicitly[Numeric[T]]
 
     val data = if (values.nonEmpty) {
+
+      val doubles = values.map(numeric.toDouble)
+
       val max = BigDecimal(
-        numeric.toDouble {
-          if (explMax.isDefined) explMax.get else values.reduce(numeric.max)
-        })
+        if (explMax.isDefined)
+          numeric.toDouble(explMax.get)
+        else
+          doubles.max
+      )
 
       val min = BigDecimal(
-        numeric.toDouble {
-          if (explMin.isDefined) explMin.get else values.reduce(numeric.min)
-        })
-
-      val stepSize: BigDecimal = (max - min) / columnCount
-
-      for (step <- 0 until columnCount) yield {
-        val left = min + step * stepSize
-        val right = left + stepSize
-        val count = if (step == columnCount - 1) {
-          values.filter(value => numeric.toDouble(value) >= left && numeric.toDouble(value) <= right).size
-        } else {
-          values.filter(value => numeric.toDouble(value) >= left && numeric.toDouble(value) < right).size
-        }
-
-        val xValue = if (xAxisScale.isDefined)
-          left.setScale(xAxisScale.get, RoundingMode.HALF_UP)
+        if (explMin.isDefined)
+          numeric.toDouble(explMin.get)
         else
-          left
+          doubles.min
+      )
 
-        (xAxisLabel.map(_.apply(xValue)).getOrElse(xValue.toString), count)
+      val stepSize: BigDecimal =
+        if (min == max)
+          0
+        else if (specialColumnForMax)
+          (max - min) / (columnCount - 1)
+        else
+          (max - min) / columnCount
+
+      val countMap = MMap[Int, Int]()
+
+      // initialize counts to zero
+      (0 until columnCount).foreach { index =>
+        countMap.update(index, 0)
+      }
+      doubles.map { value =>
+        val bucketIndex =
+          if (stepSize.equals(BigDecimal(0)))
+            0
+          else if (value == max)
+            columnCount - 1
+          else
+            ((value - min) / stepSize).setScale(0, RoundingMode.FLOOR).toInt
+
+        val count = countMap.get(bucketIndex).get
+        countMap.update(bucketIndex, count + 1)
+      }
+
+      countMap.toSeq.sortBy(_._1).map { case (index, count) =>
+        val xValue = min + (index * stepSize)
+        val xLabel = xAxisLabel.map(_.apply(xValue)).getOrElse(xValue.toString)
+        (xLabel, count)
       }
     } else
       Seq[(String, Int)]()
 
     NumericalChartSpec(title, data, chartType.getOrElse(ChartType.Column))
   }
-
-  /**
-    * Exctracts fields of interest from the raw items for boxplotting.
-    * TODO: May throw an exception (double conversion step)
-    * TODO: It would be more meaningful to precaculate boxplot quantiles here.
-    *       However Highcharts expects boxplot quantiles as arguments, while plotly calculates them itself.
-    *
-    * @param title Plot title
-    * @param items Raw items.
-    * @param fieldNames Fields of interest.
-    * @return BoxPlotSpec for use in view.
-    */
-  def box(
-   title : String,
-   items : Traversable[JsObject],
-   fieldNames : Seq[String]
-  ) : BoxPlotSpec =
-    {
-      val elements: Seq[(String, Seq[Double])] = fieldNames.map{ field =>
-        val entries: Seq[Double] = items.map{ (item: JsObject) =>
-          val entry: JsValue = (item \ field).get
-          entry.toString.toDouble
-        }.toSeq
-        (field, entries)
-      }
-      BoxPlotSpec(title, elements)
-    }
 }

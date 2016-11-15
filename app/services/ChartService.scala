@@ -6,11 +6,13 @@ import com.google.inject.ImplementedBy
 import dataaccess._
 import models._
 import play.api.libs.json.JsObject
+import util.BasicStats.Quantiles
 import util._
 import util.JsonUtil.project
 import java.{util => ju}
 
 import scala.concurrent.Future
+import scala.math.BigDecimal.RoundingMode
 
 @ImplementedBy(classOf[ChartServiceImpl])
 trait ChartService {
@@ -31,12 +33,17 @@ trait ChartService {
     showLegend: Boolean = true
   ): ChartSpec
 
-  def getScatterData(
+  def createBoxChartSpec(
+    items: Traversable[JsObject],
+    field: Field
+  ): Option[ChartSpec]
+
+  def createScatterChartSpec(
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
     groupField: Option[Field]
-  ): Seq[(String, Seq[(Any, Any)])]
+  ): ScatterChartSpec
 }
 
 class ChartServiceImpl extends ChartService {
@@ -116,15 +123,35 @@ class ChartServiceImpl extends ChartService {
           getValues[Boolean], enumMap, chartTitle, showLabels, showLegend, chartType
         )
 
-      case FieldTypeId.Double =>
-        ChartSpec.numerical(
-          getValues[Double].flatten, fieldName, chartTitle, 20, Some(1), None, None, chartType
-        )
+      case FieldTypeId.Double => {
+        def outputLabel(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP).toString
 
-      case FieldTypeId.Integer =>
         ChartSpec.numerical(
-          getValues[Long].flatten, fieldName, chartTitle, 20, Some(1), None, None, chartType
+          getValues[Double].flatten, fieldName, chartTitle, 20, false, None, None, chartType, Some(outputLabel)
         )
+      }
+
+      case FieldTypeId.Integer => {
+        val values = getValues[Long].flatten
+        val min = values.min
+        val max = values.max
+        val valueCount = max - min
+
+        def outputLabel(value: BigDecimal) = value.toInt.toString
+
+        ChartSpec.numerical(
+          values,
+          fieldName,
+          chartTitle,
+          Math.min(20, valueCount + 1).toInt,
+          valueCount < 20,
+          None, None, chartType,
+          if (valueCount < 20)
+            Some(outputLabel)
+          else
+            None
+        )
+      }
 
       case FieldTypeId.Date => {
         val dates = getValues[ju.Date].flatten
@@ -133,7 +160,7 @@ class ChartServiceImpl extends ChartService {
         val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
         def formatDate(ms: BigDecimal) = dateFormat.format(new ju.Date(ms.toLongExact))
 
-        ChartSpec.numerical(values, fieldName, chartTitle, 20, Some(1), None, None, chartType, Some(formatDate))
+        ChartSpec.numerical(values, fieldName, chartTitle, 20, false, None, None, chartType, Some(formatDate))
       }
 
       // for null and json types we can't show anything
@@ -144,7 +171,25 @@ class ChartServiceImpl extends ChartService {
     }
   }
 
-  override def getScatterData(
+  override def createScatterChartSpec(
+    xyzItems: Traversable[JsObject],
+    xField: Field,
+    yField: Field,
+    groupField: Option[Field]
+  ): ScatterChartSpec = {
+    val data = getScatterData(xyzItems, xField, yField, groupField)
+    ScatterChartSpec(
+      "Comparison",
+      xField.labelOrElseName,
+      yField.labelOrElseName,
+      data.map{ case (name, values) =>
+        val initName = if (name.isEmpty) "Undefined" else name
+        (initName, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
+      }
+    )
+  }
+
+  private def getScatterData(
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
@@ -187,5 +232,39 @@ class ChartServiceImpl extends ChartService {
         Seq(("all", xys))
       }
     }
+  }
+
+  // Box chart can be generated only for numeric typesL Double, Integer
+  override def createBoxChartSpec(
+    items: Traversable[JsObject],
+    field: Field
+  ): Option[ChartSpec] = {
+    val jsons = project(items, field.name)
+    val typeSpec = field.fieldTypeSpec
+    val fieldType = ftf(typeSpec)
+
+    def getValues[T]: Traversable[T] = {
+      val typedFieldType = fieldType.asValueOf[T]
+      jsons.map(typedFieldType.jsonToValue).flatten
+    }
+
+    def quantiles[T: Numeric]: Option[Quantiles[T]] =
+      BasicStats.quantiles(getValues[T].toSeq)
+
+    val quants = typeSpec.fieldType match {
+      case FieldTypeId.Double => quantiles[Double]
+
+      case FieldTypeId.Integer => quantiles[Long]
+
+      case FieldTypeId.Date => {
+        val values = getValues[ju.Date].map(_.getTime)
+        BasicStats.quantiles(values.toSeq)
+      }
+
+      case _ =>
+        None
+    }
+
+    quants.map( quant => BoxChartSpec(field.labelOrElseName + " Box", quant))
   }
 }

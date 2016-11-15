@@ -1,20 +1,17 @@
 @import util.shorten
 @import models.DataPoint
 @import models.ChartType
+@import models.CategoricalChartSpec
 
 @(
-    title: String,
     chartElementName: String,
-    showLabels: Boolean,
-    showLegend: Boolean,
-    elements: Seq[DataPoint],
-    chartType: ChartType.Value
+    chartSpec: CategoricalChartSpec
 )
 
 <script type="text/javascript">
     $(document).ready(function() {
-        var categories = [ @elements.map { case DataPoint(_, _, label) => '@label',}];
-        var data = [ @elements.map { case DataPoint(key, value, label) => {
+        var categories = [ @chartSpec.data.map { case DataPoint(_, _, label) => '@label',}];
+        var data = [ @chartSpec.data.map { case DataPoint(key, value, label) => {
             name : '@shorten(label)',
             y : @value,
             key: '@key'
@@ -24,24 +21,24 @@
             changeChartType(chartType);
         });
 
-        changeChartType('@chartType');
+        changeChartType('@chartSpec.chartType');
 
         function changeChartType(chartType) {
             switch (chartType) {
                 case '@ChartType.Pie':
-                    pieChart('@title', '@{chartElementName}', @showLabels, @showLegend, data, true, true);
+                    pieChart('@chartSpec.title', '@{chartElementName}', @chartSpec.showLabels, @chartSpec.showLegend, data, true, true);
                     break;
                 case '@ChartType.Column':
-                    columnChart('@title', '@{chartElementName}', '', 'Count', false, categories, data, true, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', '', 'Count', false, categories, data, true, true);
                     break;
                 case '@ChartType.Bar':
-                    columnChart('@title', '@{chartElementName}', '', 'Count', true, categories, data, true, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', '', 'Count', true, categories, data, true, true);
                     break;
                 case '@ChartType.Line':
-                    lineChart('@title', '@{chartElementName}', '', 'Count', categories, data, true, true);
+                    lineChart('@chartSpec.title', '@{chartElementName}', '', 'Count', categories, data, true, true);
                     break;
                 case '@ChartType.Polar':
-                    polarChart('@title', '@{chartElementName}', categories, data, true, true);
+                    polarChart('@chartSpec.title', '@{chartElementName}', categories, data, true, true);
                     break;
             }
         }

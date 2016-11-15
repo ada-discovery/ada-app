@@ -1,28 +1,28 @@
-@import util.BasicStats
-
-@(title : String, chartElementName : String, elements : Seq[(String, Seq[Any])])
-
-// arguments:
-// plot title, name fo chart element, sequence of elements [(name, ([lower whisker, lower boxbound, median, upper boxbound, upper whisker])]
+@(
+    chartElementName: String,
+    chartSpec: BoxChartSpec[_]
+)
 
 <div id="@chartElementName" class="chart-holder"></div>
 <script type="text/javascript">
         $(function () {
             $('#@{chartElementName}').highcharts({
                 chart: {
-                    type: 'boxplot',
+                    type: 'boxplot'
                 },
                 title: {
-                    text:  "@title"
+                    text:  "@chartSpec.title"
                 },
                 xAxis: {
-                    categories: [
-                        @elements.map{ case (name, _) => '@name',}
-                    ],
-                    title: {text: 'Fields'}
+                    categories: [''], // @chartSpec.title
+                    @*title: {*@
+                        @*text: '@chartSpec.title'*@
+                    @*}*@
                 },
                 yAxis: {
-
+                    title: {
+                        text: 'Value'
+                    }
                 },
                 legend: {
                     enabled: false
@@ -30,17 +30,20 @@
                 credits: {
                     enabled: false
                 },
-                series: [
-                    {
-                        name: 'Observations',
-                        data: [
-                            // extract quantiles from data series
-                            @elements.map{case (_, data) =>
-                                [@util.BasicStats.quantiles(data)],
-                            }
-                        ]
+                series: [{
+                    name: '@chartSpec.title',
+                    data: [[
+                        @chartSpec.data.lowerWhisker, @chartSpec.data.lowerQuantile, @chartSpec.data.median, @chartSpec.data.upperQuantile, @chartSpec.data.upperWhisker
+                    ]],
+                    tooltip: {
+                        headerFormat: '<b>{point.series.name}</b><br/>',
+                        pointFormat:  '- Upper 1.5 IQR: {point.high}<br/>' +
+                        '- Q3: {point.q3}<br/>' +
+                        '- Median: {point.median}<br/>' +
+                        '- Q1: {point.q1}<br/>' +
+                        '- Lower 1.5 IQR: {point.low}<br/>'
                     }
-                ]
+                }]
             });
         });
 </script>
