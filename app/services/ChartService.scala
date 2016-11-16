@@ -44,6 +44,11 @@ trait ChartService {
     yField: Field,
     groupField: Option[Field]
   ): ScatterChartSpec
+
+  def createPearsonCorrelationChartSpec(
+    items: Traversable[JsObject],
+    fields: Traversable[Field]
+  ): HeatmapChartSpec
 }
 
 class ChartServiceImpl extends ChartService {
@@ -87,7 +92,7 @@ class ChartServiceImpl extends ChartService {
         field.label.getOrElse(fieldLabel(field.name)),
         field.numValues,
         field.fieldTypeSpec
-      )
+        )
 
       // failover... no corresponding field, providing default values instead
       case Right(fieldName) => (
@@ -95,7 +100,7 @@ class ChartServiceImpl extends ChartService {
         fieldLabel(fieldName),
         None,
         FieldTypeSpec(FieldTypeId.String, false)
-      )
+        )
     }
 
     val jsons = project(items, fieldName)
@@ -182,7 +187,7 @@ class ChartServiceImpl extends ChartService {
       "Comparison",
       xField.labelOrElseName,
       yField.labelOrElseName,
-      data.map{ case (name, values) =>
+      data.map { case (name, values) =>
         val initName = if (name.isEmpty) "Undefined" else name
         (initName, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
       }
@@ -221,7 +226,7 @@ class ChartServiceImpl extends ChartService {
           (
             zValue,
             values.map(tupple => (tupple._2, tupple._3))
-          )
+            )
         }.toSeq
       }
       case None => {
@@ -261,10 +266,37 @@ class ChartServiceImpl extends ChartService {
         BasicStats.quantiles(values.toSeq)
       }
 
-      case _ =>
-        None
+      case _ => None
     }
 
-    quants.map( quant => BoxChartSpec(field.labelOrElseName + " Box", quant))
+    quants.map(quant => BoxChartSpec(field.labelOrElseName + " Box", quant))
+  }
+
+  override def createPearsonCorrelationChartSpec(
+    items: Traversable[JsObject],
+    fields: Traversable[Field]
+  ): HeatmapChartSpec = {
+
+    def getValues[T](field: Field): Traversable[Option[T]] = {
+      val typedFieldType = ftf(field.fieldTypeSpec).asValueOf[T]
+      project(items, field.name).map(typedFieldType.jsonToValue)
+    }
+
+//    val numericFields = fields.filter( field => field.fieldType == FieldTypeId.Double || field.fieldType == FieldTypeId.Integer)
+
+    val fieldsWithValues: Traversable[(Field, Traversable[Option[Double]])] = fields.map { field =>
+      field.fieldType match {
+        case FieldTypeId.Double =>
+          Some((field, getValues[Double](field)))
+
+        case FieldTypeId.Integer =>
+          Some((field, getValues[Long](field).map(_.map(_.toDouble))))
+
+        case _ => None
+      }
+    }.flatten
+
+    val fieldNames = fieldsWithValues.map(_._1.labelOrElseName).toSeq
+    HeatmapChartSpec("Correlation", fieldNames, fieldNames, Nil)
   }
 }

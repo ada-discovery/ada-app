@@ -2,6 +2,7 @@ package models
 
 import java.util.{Date, UUID}
 
+import dataaccess.{ManifestedFormat, SubTypeFormat}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
@@ -35,7 +36,7 @@ case class DataSetSetting(
   keyFieldName: String,
   exportOrderByFieldName: Option[String],
   listViewTableColumnNames: Seq[String],
-  overviewFieldChartTypes: Seq[FieldChartType],
+  statsCalcSpecs: Seq[StatsCalcSpec],
   overviewChartElementGridWidth: Int,
   defaultScatterXFieldName: String,
   defaultScatterYFieldName: String,
@@ -46,7 +47,7 @@ case class DataSetSetting(
   tranSMARTReplacements: Map[String, String],
   cacheDataSet: Boolean = false
 ) {
-  def this(dataSetId: String) = this(None, dataSetId, "", None, Seq[String](), Seq[FieldChartType](), 3, "", "", "", "", None, None, Map[String, String]())
+  def this(dataSetId: String) = this(None, dataSetId, "", None, Nil, Nil, 3, "", "", "", "", None, None, Map[String, String]())
 }
 
 object DataSetSetting {
@@ -56,7 +57,7 @@ object DataSetSetting {
     keyFieldName: String,
     exportOrderByFieldName: Option[String],
     listViewTableColumnNames: Seq[String],
-    overviewChartFieldNames: Seq[String],
+    distributionChartFieldNames: Seq[String],
     overviewChartElementGridWidth: Int,
     defaultScatterXFieldName: String,
     defaultScatterYFieldName: String,
@@ -68,17 +69,52 @@ object DataSetSetting {
     cacheDataSet: Boolean
   ) = DataSetSetting(
     _id, dataSetId, keyFieldName, exportOrderByFieldName,
-    listViewTableColumnNames, overviewChartFieldNames.map(FieldChartType(_, None)), overviewChartElementGridWidth,
+    listViewTableColumnNames, distributionChartFieldNames.map(DistributionCalcSpec(_, None)), overviewChartElementGridWidth,
     defaultScatterXFieldName, defaultScatterYFieldName, defaultDistributionFieldName, defaultDateCountFieldName,
     filterShowFieldStyle, tranSMARTVisitFieldName, tranSMARTReplacements,
     cacheDataSet
   )
 }
 
+@Deprecated
 case class FieldChartType(
   fieldName: String,
   chartType: Option[ChartType.Value]
 )
+
+abstract class StatsCalcSpec {
+  def fieldNames: Traversable[String]
+  def elementGridWidth: Option[Int]
+}
+
+case class DistributionCalcSpec(
+  fieldName: String,
+  chartType: Option[ChartType.Value],
+  elementGridWidth: Option[Int] = None
+) extends StatsCalcSpec {
+  override val fieldNames = Seq(fieldName)
+}
+
+case class BoxCalcSpec(
+  fieldName: String,
+  elementGridWidth: Option[Int] = None
+) extends StatsCalcSpec {
+  override val fieldNames = Seq(fieldName)
+}
+
+case class ScatterCalcSpec(
+  xFieldName: String,
+  yFieldName: String,
+  groupFieldName: Option[String],
+  elementGridWidth: Option[Int] = None
+) extends StatsCalcSpec {
+  override val fieldNames = Seq(Some(xFieldName), Some(yFieldName), groupFieldName).flatten
+}
+
+case class CorrelationCalcSpec(
+  fieldNames: Seq[String],
+  elementGridWidth: Option[Int] = None
+) extends StatsCalcSpec
 
 object ChartType extends Enumeration {
   val Pie, Column, Bar, Line, Polar = Value
@@ -175,6 +211,15 @@ object DataSetFormattersAndIds {
 
   implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
   implicit val fieldChartTypeFormat = Json.format[FieldChartType]
+
+  implicit val statsCalcSpecFormat: Format[StatsCalcSpec] = new SubTypeFormat[StatsCalcSpec](
+    Seq(
+      ManifestedFormat(Json.format[DistributionCalcSpec]),
+      ManifestedFormat(Json.format[BoxCalcSpec]),
+      ManifestedFormat(Json.format[ScatterCalcSpec]),
+      ManifestedFormat(Json.format[CorrelationCalcSpec])
+    )
+  )
 
   implicit val dictionaryFormat = Json.format[Dictionary]
   implicit val dataSetMetaInfoFormat = Json.format[DataSetMetaInfo]

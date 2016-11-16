@@ -43,6 +43,13 @@ case class BoxChartSpec[T](
   data: Quantiles[T]
 ) extends ChartSpec
 
+case class HeatmapChartSpec(
+  title: String,
+  xCategories: Seq[String],
+  yCategories: Seq[String],
+  data: Seq[Seq[Double]]
+) extends ChartSpec
+
 case class DataPoint(
   key: Option[String],
   value: Int,

@@ -7,7 +7,7 @@ import controllers._
 import dataaccess.Criterion
 import dataaccess.RepoTypes.DataSetSettingRepo
 import models.{FieldChartType, DataSetSetting, DataSetFormattersAndIds, ChartType}
-import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, fieldChartTypeFormat, DataSetSettingIdentity}
+import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, fieldChartTypeFormat, DataSetSettingIdentity, statsCalcSpecFormat}
 import models._
 import models.FilterShowFieldStyle
 import Criterion.CriterionInfix
@@ -43,6 +43,7 @@ class DataSetSettingController @Inject() (
   private implicit val mapFormatter = MapJsonFormatter.apply
   private implicit val fieldChartTypeFormatter = JsonFormatter[FieldChartType]
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
+  private implicit val statsCalcSpecFormatter = JsonFormatter[StatsCalcSpec]
 
   override protected val form = Form(
     mapping(
@@ -51,7 +52,8 @@ class DataSetSettingController @Inject() (
       "keyFieldName" -> nonEmptyText,
       "exportOrderByFieldName" -> optional(text),
       "listViewTableColumnNames" -> seq(text),
-      "overviewFieldChartTypes" -> seq(of[FieldChartType]),
+      "statsCalcSpecs" -> seq(of[StatsCalcSpec]),
+//      "overviewFieldChartTypes" -> seq(of[FieldChartType]),
       "overviewChartElementGridWidth" -> number(min = 1, max = 12),
       "defaultScatterXFieldName" -> nonEmptyText,
       "defaultScatterYFieldName" -> nonEmptyText,
@@ -74,8 +76,13 @@ class DataSetSettingController @Inject() (
     editView(id, f)
 
   override protected def editView(id: BSONObjectID, f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) = {
-    val fieldNamesCall = new DataSetRouter(f.value.get.dataSetId).fieldNames
-    html.datasetsetting.editNormal(id, "", f, fieldNamesCall)
+    val setting = f.value match {
+      case Some(setting) => Some(setting)
+      case None => result(repo.get(id))
+    }
+    val form = f.copy(value = setting)
+    val fieldNamesCall = new DataSetRouter(setting.get.dataSetId).fieldNames
+    html.datasetsetting.editNormal(id, "", form, fieldNamesCall)
   }
 
   override protected def listView(currentPage: Page[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
@@ -119,11 +126,11 @@ class DataSetSettingController @Inject() (
 
   def addFieldsToChartOverview(dataSet: String, fieldNames: Seq[String]) = restrict {
     processSetting({ setting =>
-      val existingFieldCharts = setting.overviewFieldChartTypes
-      val existingFieldNames = existingFieldCharts.map(_.fieldName)
+      val existingStatsCalcSpecs = setting.statsCalcSpecs
+      val existingFieldNames = existingStatsCalcSpecs.map(_.fieldNames).flatten
       val filteredFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
       if (filteredFieldNames.nonEmpty) {
-        val newSetting = setting.copy(overviewFieldChartTypes = existingFieldCharts ++ filteredFieldNames.map(FieldChartType(_, None)))
+        val newSetting = setting.copy(statsCalcSpecs = existingStatsCalcSpecs ++ filteredFieldNames.map(DistributionCalcSpec(_, None)))
         repo.update(newSetting)
       } else
         Future(())

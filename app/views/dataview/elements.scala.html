@@ -3,7 +3,7 @@
 @import models.DataView
 @import controllers.dataset.DataViewRouter
 @import views.html.table.dynamicStringTable
-@import views.html.datasetsetting.overviewFieldChartTypeTable
+@import views.html.datasetsetting.statsCalcSpecTable$
 
 @(domainName: String, form: Form[DataView])(implicit msg: play.api.i18n.Messages)
 
@@ -21,7 +21,4 @@
 
 @labelValue("tableColumnNames", attributeLabel(domainName, "tableColumnNames")){
     @dynamicStringTable("tableColumnName", form.value.get.tableColumnNames, true, Some(addModalInner))
-}
-@labelValue("chartTypes", attributeLabel(domainName, "chartTypes")){
-    @overviewFieldChartTypeTable(form.value.get.chartTypes)
 }

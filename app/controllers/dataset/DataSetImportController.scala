@@ -64,7 +64,7 @@ class DataSetImportController @Inject()(
     "keyFieldName" -> nonEmptyText,
     "exportOrderByFieldName" -> optional(text),
     "listViewTableColumnNames" -> of[Seq[String]],
-    "overviewChartFieldNames" -> of[Seq[String]],
+    "distributionChartFieldNames" -> of[Seq[String]],
     "overviewChartElementGridWidth" -> number(min = 1, max = 12),
     "defaultScatterXFieldName" -> nonEmptyText,
     "defaultScatterYFieldName" -> nonEmptyText,
@@ -76,7 +76,7 @@ class DataSetImportController @Inject()(
     "cacheDataSet" -> boolean
   ) (DataSetSetting.apply2){
     DataSetSetting.unapply(_).map( v =>
-      (v._1, v._2, v._3, v._4 ,v._5, v._6.map(_.fieldName), v._7, v._8, v._9, v._10, v._11, v._12, v._13, v._14, v._15)
+      (v._1, v._2, v._3, v._4 ,v._5, v._6.map(_.fieldNames.head), v._7, v._8, v._9, v._10, v._11, v._12, v._13, v._14, v._15)
     )
   }
 

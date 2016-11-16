@@ -13,13 +13,15 @@
             @inputText("dataSetImport", "setting.keyFieldName", form)
             @inputText("dataSetImport", "setting.exportOrderByFieldName", form)
             @inputText("dataSetImport", "setting.listViewTableColumnNames", form)
-            @inputText("dataSetImport", "setting.overviewChartFieldNames", form)
+            @inputText("dataSetImport", "setting.distributionChartFieldNames", form)
             @inputText("dataSetImport", "setting.overviewChartElementGridWidth", form)
             @inputText("dataSetImport", "setting.defaultScatterXFieldName", form)
             @inputText("dataSetImport", "setting.defaultScatterYFieldName", form)
             @inputText("dataSetImport", "setting.defaultDistributionFieldName", form)
             @inputText("dataSetImport", "setting.defaultDateCountFieldName", form)
-            @select("dataSetImport", "setting.filterShowFieldStyle", form, FilterShowFieldStyle.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString))), true)
+            @select("dataSetImport", "setting.filterShowFieldStyle", form,
+                FilterShowFieldStyle.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString))), true
+            )
             @inputText("dataSetImport", "setting.tranSMARTVisitFieldName", form)
             @inputText("dataSetImport", "setting.tranSMARTReplacements", form)
             @checkbox("dataSetImport", "setting.cacheDataSet", form)

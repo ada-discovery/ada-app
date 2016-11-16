@@ -1,6 +1,5 @@
-package controllers
+package dataaccess
 
-import models._
 import play.api.libs.json._
 
 case class ManifestedFormat[E: Manifest](format: Format[E]){
@@ -18,17 +17,17 @@ class SubTypeFormat[T](formats: Traversable[ManifestedFormat[_ <: T]]) extends F
 
   override def reads(json: JsValue): JsResult[T] = {
     val concreteClassName = (json \ concreteClassFieldName).asOpt[String].getOrElse(
-      throw new AdaException(s"Field '$concreteClassFieldName' cannot be found in $json.")
+      throw new IllegalArgumentException(s"Field '$concreteClassFieldName' cannot be found in $json.")
     )
     val format = classNameFormatMap.getOrElse(concreteClassName,
-      throw new AdaException(s"Json Formatter for a sub type '$concreteClassName' not recognized."))
+      throw new IllegalArgumentException(s"Json Formatter for a sub type '$concreteClassName' not recognized."))
     format.reads(json)
   }
 
   override def writes(o: T): JsValue = {
     val concreteClassName = o.getClass.getName
     val format = classNameFormatMap.getOrElse(concreteClassName,
-      throw new AdaException(s"Json Formatter for a sub type '$concreteClassName' not recognized."))
+      throw new IllegalArgumentException(s"Json Formatter for a sub type '$concreteClassName' not recognized."))
     val json = format.writes(o).asInstanceOf[JsObject]
     json + (concreteClassFieldName, JsString(concreteClassName))
   }

@@ -1,0 +1,46 @@
+@(
+    chartElementName: String,
+    chartSpec: HeatmapChartSpec
+)
+
+<div id="@chartElementName" class="chart-holder"></div>
+<script type="text/javascript">
+        $(function () {
+            $('#@{chartElementName}').highcharts({
+                chart: {
+                    type: 'boxplot'
+                },
+                title: {
+                    text:  "@chartSpec.title"
+                },
+                xAxis: {
+                    categories: [
+                        @chartSpec.xCategories.map( cat => s"\'$cat\'").mkString(", ")
+                    ]
+                },
+                yAxis: {
+                    catogories: [
+                        @chartSpec.yCategories.map( cat => s"\'$cat\'").mkString(", ")
+                    ]
+                },
+                credits: {
+                    enabled: false
+                },
+                series: [{
+                    name: "@chartSpec.title",
+                    borderWidth: 1,
+                    data: [
+                        @chartSpec.data.zipWithIndex.map { case (seq, i) =>
+                            @seq.zipWithIndex.map { case (value, j) =>
+                                [@i, @j, @value],
+                            }
+                        }
+                    ],
+                    dataLabels: {
+                        enabled: true,
+                        color: '#000000'
+                    }
+                }]
+            });
+        });
+</script>

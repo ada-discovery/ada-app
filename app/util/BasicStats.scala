@@ -48,6 +48,46 @@ package object BasicStats {
       Quantiles(lowerWhisker, lowerQuantile, median, upperQuantile, upperWhisker)
   }
 
+  def pearsonCorrelation(
+    values: Traversable[Seq[Double]]
+  ): Seq[Seq[Option[Double]]] = {
+    val length = values.size
+
+    val elementsCount = values.head.size
+
+    def calc(index1: Int, index2: Int) = {
+      val mean1 = values.map(_(index1)).sum / length
+      val mean2 = values.map(_(index2)).sum / length
+
+      // sum up the squares
+      val mean1Sq = values.map(_(index1)).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
+      val mean2Sq = values.map(_(index2)).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
+
+      // sum up the products
+      val pMean = values.foldLeft(0.0) { case (accum, data) => accum + data(index1) * data(index2) } / length
+
+      // calculate the pearson score
+      val numerator = pMean - mean1 * mean2
+
+      val denominator = Math.sqrt(
+        (mean1Sq - Math.pow(mean1, 2)) * (mean2Sq - Math.pow(mean2, 2))
+      )
+      if (denominator == 0)
+        None
+      else
+        Some(numerator / denominator)
+    }
+
+    for (i <- 0 until elementsCount) yield
+      for (j <- 0 until elementsCount) yield {
+
+        if (i != j)
+          calc(i, j)
+        else
+          Some(1d)
+      }
+  }
+
   /**
     * Calculates mean value for statistical overview.
     *

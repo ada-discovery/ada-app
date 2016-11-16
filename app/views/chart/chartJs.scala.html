@@ -1,4 +1,4 @@
-@import views.html.chart._
+@import views.html.chart.highcharts
 @import util.chartElementName
 
 @(chartSpec: ChartSpec)
@@ -8,6 +8,6 @@
     case x: NumericalChartSpec => highcharts.numericalChart(chartElementName(x.title), x)
     case x: ScatterChartSpec => highcharts.scatterChart(chartElementName(x.title), x)
     case x: BoxChartSpec[_] => highcharts.boxPlot(chartElementName(x.title), x)
+    case x: HeatmapChartSpec => highcharts.heatmap(chartElementName(x.title), x)
     case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
 }}
-

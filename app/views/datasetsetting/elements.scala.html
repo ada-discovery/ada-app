@@ -1,7 +1,7 @@
 @import views.html.elements.{inputText, inputTextReadonly, labelValue, checkbox, select}
 @import views.html.attributeLabel
 @import views.html.table.dynamicStringTable
-@import views.html.datasetsetting.overviewFieldChartTypeTable
+@import views.html.datasetsetting.statsCalcSpecTable
 @import models.DataSetSetting
 @import util.toHumanReadableCamel
 
@@ -21,8 +21,8 @@
 @labelValue("listViewTableColumnNames", attributeLabel("dataSetSetting", "listViewTableColumnNames")){
     @dynamicStringTable("listViewTableColumnName", form.value.get.listViewTableColumnNames, true, Some(addModalInner))
 }
-@labelValue("overviewFieldChartTypes", attributeLabel("dataSetSetting", "overviewFieldChartTypes")){
-    @overviewFieldChartTypeTable(form.value.get.overviewFieldChartTypes)
+@labelValue("statsCalcSpecs", attributeLabel("dataSetSetting", "statsCalcSpecs")){
+    @statsCalcSpecTable(form.value.get.statsCalcSpecs)
 }
 @inputText("dataSetSetting", "overviewChartElementGridWidth", form)
 @inputText("dataSetSetting", "defaultScatterXFieldName", form)

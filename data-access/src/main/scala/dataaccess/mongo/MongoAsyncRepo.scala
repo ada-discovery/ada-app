@@ -57,7 +57,8 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     limit: Option[Int],
     page: Option[Int]
   ): Future[Traversable[E]] = {
-    val jsonProjection = JsObject(projection.map(fieldName => (fieldName, JsNumber(1))).toSeq)
+    val sortedProjection = projection.toSeq.sorted
+    val jsonProjection = JsObject(sortedProjection.map(fieldName => (fieldName, JsNumber(1))))
     val jsonCriteria = JsObject(criteria.map(toMongoCriterion(_)))
 
     // handle criteria and projection (if any)
@@ -66,29 +67,36 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     // use index / hint only if limit is not provided and projection is not empty
     val queryBuilder2 =
       if (limit.isEmpty && projection.size > 1) {
-        val projectionWithId = projection ++ (
-          if (!projection.toSeq.contains(identityName))
+        val projectionWithId = sortedProjection ++ (
+          if (!sortedProjection.contains(identityName))
             Seq(identityName)
           else
             Seq()
           )
+
+        val fullName = projectionWithId.mkString("_")
+        val name = if (fullName.size <= indexNameMaxSize)
+          fullName
+        else {
+          val num = Random.nextInt()
+          fullName.substring(0, indexNameMaxSize - 10) + Math.max(num, -num)
+        }
+        val index = Index(
+          projectionWithId.map((_, IndexType.Ascending)),
+          Some(name)
+        )
+
         for {
-          _ <- {
-            val fullName = projectionWithId.mkString("_")
-            val name = if (fullName.size <= indexNameMaxSize)
-              fullName
-            else {
-              val num = Random.nextInt()
-              fullName.substring(0, indexNameMaxSize - 10) + Math.max(num, -num)
-            }
-            val index = Index(
-              projectionWithId.map((_, IndexType.Ascending)).toSeq,
-              Some(name)
-            )
-            collection.indexesManager.ensure(index)
-          }
+          _ <- collection.indexesManager.ensure(index)
         } yield {
-          val jsonIndex = JsObject(projectionWithId.map(fieldName => (fieldName, JsNumber(1))).toSeq)
+          val jsonIndex = jsonProjection ++
+            (
+              if (!sortedProjection.contains(identityName))
+                Json.obj(identityName -> JsNumber(1))
+              else
+                Json.obj()
+            )
+
           queryBuilder.hint(jsonIndex)
         }
       } else

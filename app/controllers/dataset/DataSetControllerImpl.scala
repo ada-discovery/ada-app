@@ -242,14 +242,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     implicit val msg = messagesApi.preferred(request)
 
     val start = new ju.Date()
-    val fieldCharts = setting.overviewFieldChartTypes
-    val chartFieldNames = fieldCharts.map(_.fieldName)
+    val statsCalcSpecs = setting.statsCalcSpecs
+    val chartFieldNames = statsCalcSpecs.map(_.fieldNames).flatten.toSet
     val tableFieldNames = listViewColumns.get
 
     {
       for {
         // use a given filter conditions or load one
         resolvedFilter <- resolveFilter(filterOrId)
+
         // get the conditions
         conditions = resolvedFilter.conditions
 
@@ -280,11 +281,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       } yield {
         val tableFields = tableFieldNames.map(fieldNameMap.get).flatten
         val chartFields = chartFieldNames.map(fieldNameMap.get).flatten
-        val chartSpecs = if (chartItems.nonEmpty) {
-          chartService.createDistributionChartSpecs(chartItems, fieldCharts, chartFields)
-        } else
+
+        val chartSpecs = if (chartItems.nonEmpty)
+          generateCharts(chartItems, statsCalcSpecs, chartFields)
+        else
           Nil
-        val fieldChartSpecs = chartSpecs.map(chartSpec => FieldChartSpec(chartSpec._1, chartSpec._2))
+
+        val fieldChartSpecs = chartSpecs.map { case (chartSpec,  fieldNames) => FieldChartSpec(fieldNames.head, chartSpec) }
+
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
         val end = new ju.Date()
 
@@ -308,6 +312,49 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       }
     }
+  }
+
+  private def generateCharts(
+    items: Traversable[JsObject],
+    statsCalcSpecs: Traversable[StatsCalcSpec],
+    fields: Traversable[Field]
+  ): Traversable[(ChartSpec, Seq[String])] = {
+    val nameFieldMap = fields.map(field => (field.name, field)).toMap
+
+    statsCalcSpecs.map { calcSpec =>
+      val chartSpec = calcSpec match {
+        case x: DistributionCalcSpec => {
+          val chartSpec = nameFieldMap.get(x.fieldName) match {
+            case Some(field) => chartService.createDistributionChartSpec(items, x.chartType, Left(field))
+            case None => chartService.createDistributionChartSpec(items, x.chartType, Right(x.fieldName))
+          }
+          Some(chartSpec)
+        }
+        case x: ScatterCalcSpec => {
+          val chartSpec = chartService.createScatterChartSpec(
+            items,
+            nameFieldMap.get(x.xFieldName).get,
+            nameFieldMap.get(x.yFieldName).get,
+            x.groupFieldName.map(nameFieldMap.get).flatten
+          )
+          Some(chartSpec)
+        }
+        case x: BoxCalcSpec =>
+          chartService.createBoxChartSpec(
+            items,
+            nameFieldMap.get(x.fieldName).get
+          )
+        case x: CorrelationCalcSpec => {
+          val chartSpec = chartService.createPearsonCorrelationChartSpec(
+            items,
+            fields
+          )
+          Some(chartSpec)
+        }
+
+      }
+      chartSpec.map( chartSpec => (chartSpec, calcSpec.fieldNames.toSeq))
+    }.flatten
   }
 
   private def resolveFilter(
