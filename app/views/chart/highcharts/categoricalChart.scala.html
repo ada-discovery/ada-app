@@ -17,6 +17,8 @@
             key: '@key'
         },}];
 
+        var height = @chartSpec.height.getOrElse(400)
+
         $('#@chartElementName').on('chartTypeChanged', function(event, chartType) {
             changeChartType(chartType);
         });
@@ -26,19 +28,19 @@
         function changeChartType(chartType) {
             switch (chartType) {
                 case '@ChartType.Pie':
-                    pieChart('@chartSpec.title', '@{chartElementName}', @chartSpec.showLabels, @chartSpec.showLegend, data, true, true);
+                    pieChart('@chartSpec.title', '@{chartElementName}', @chartSpec.showLabels, @chartSpec.showLegend, data, true, true, height);
                     break;
                 case '@ChartType.Column':
-                    columnChart('@chartSpec.title', '@{chartElementName}', '', 'Count', false, categories, data, true, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', '', 'Count', false, categories, data, true, true, height);
                     break;
                 case '@ChartType.Bar':
-                    columnChart('@chartSpec.title', '@{chartElementName}', '', 'Count', true, categories, data, true, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', '', 'Count', true, categories, data, true, true, height);
                     break;
                 case '@ChartType.Line':
-                    lineChart('@chartSpec.title', '@{chartElementName}', '', 'Count', categories, data, true, true);
+                    lineChart('@chartSpec.title', '@{chartElementName}', '', 'Count', categories, data, true, true, height);
                     break;
                 case '@ChartType.Polar':
-                    polarChart('@chartSpec.title', '@{chartElementName}', categories, data, true, true);
+                    polarChart('@chartSpec.title', '@{chartElementName}', categories, data, true, true, height);
                     break;
             }
         }

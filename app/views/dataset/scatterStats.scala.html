@@ -1,9 +1,10 @@
 @import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter}
-@import util.BasicStats
+@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import reactivemongo.bson.BSONObjectID
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.chart.highcharts.scatterChart
+@import views.html.chart.{chartJs, chart}
 @import views.html.layout.main
 @import views.html.dataset.datasetSubNav
 @import play.api.libs.json.Json
@@ -32,7 +33,7 @@
 
 @actions = {
     <div class="row">
-        <div class="col-md-12">
+        <div class="col-md-10">
             @filter(
                 Some(filterSpec),
                 router.getScatterStats(xField.map(_.name), yField.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
@@ -42,6 +43,11 @@
                 Some(filterRouter.idAndNames),
                 "filterOrId"
             )
+        </div>
+        <div class="pull-right">
+            <button class="btn btn-info btn-sm" type="button" onclick="addScatterToOverview()" data-toggle="tooltip" title="Add Scatter To Overview">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Overview
+            </button>
         </div>
     </div>
     <hr/>
@@ -91,12 +97,7 @@
 
 @bottomResources =  {
     @highchartsJsImport()
-    @chartSpec.map { spec =>
-        @scatterChart(
-            "scatterChart",
-            spec
-        )
-    }.getOrElse("")
+    @chartSpec.map(chartJs(_)).getOrElse("")
 }
 
 @main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
@@ -111,9 +112,10 @@
         @actions
     </div>
 
-    <div id="scatterChart" class="chart-holder"></div>
+    @chartSpec.map(chart(_)).getOrElse("")
 }
 
+<script type="text/javascript" src="@dataSetSettingRoutes.jsRoutes"></script>
 <script type="text/javascript">
     $(function () {
         $.ajax({
@@ -174,4 +176,25 @@
             }
         });
     });
+
+    function addScatterToOverview() {
+        var xFieldName = $('#fieldForm #xFieldName').val()
+        var yFieldName = $('#fieldForm #yFieldName').val()
+        var groupFieldName = $('#fieldForm #groupFieldName').val()
+
+        if (!groupFieldName) {
+            groupFieldName = null
+        }
+
+        if (fieldName) {
+            jsRoutes.controllers.dataset.DataSetSettingController.addScatterToOverview('@dataSetId', xFieldName, yFieldName, groupFieldName).ajax( {
+                success: function() {
+                    showMessage("Scatter for the fields '" + xFieldName + "', '" + yFieldName + "' has been successfully added to the overview.");
+                },
+                error: function(data){
+                    showError( data.responseText );
+                }
+            });
+        }
+    }
 </script>

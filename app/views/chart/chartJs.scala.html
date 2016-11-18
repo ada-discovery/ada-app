@@ -4,10 +4,10 @@
 @(chartSpec: ChartSpec)
 
 @{chartSpec match {
-    case x: CategoricalChartSpec => highcharts.categoricalChart(chartElementName(x.title), x)
-    case x: NumericalChartSpec => highcharts.numericalChart(chartElementName(x.title), x)
-    case x: ScatterChartSpec => highcharts.scatterChart(chartElementName(x.title), x)
-    case x: BoxChartSpec[_] => highcharts.boxPlot(chartElementName(x.title), x)
-    case x: HeatmapChartSpec => highcharts.heatmap(chartElementName(x.title), x)
+    case x: CategoricalChartSpec => highcharts.categoricalChart(chartElementName(x), x)
+    case x: NumericalChartSpec => highcharts.numericalChart(chartElementName(x), x)
+    case x: ScatterChartSpec => highcharts.scatterChart(chartElementName(x), x)
+    case x: BoxChartSpec[_] => highcharts.boxPlot(chartElementName(x), x)
+    case x: HeatmapChartSpec => highcharts.heatmap(chartElementName(x), x)
     case _ => throw new IllegalArgumentException(s"Chart spec $chartSpec is unknown.")
 }}

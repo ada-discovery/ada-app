@@ -1,4 +1,5 @@
 @import views.html.table.{displayTable, dynamicTable}
+@import views.html.elements.labelValue
 @import util.typeColumns
 @import models.ChartType
 @import models.FieldChartType
@@ -15,37 +16,196 @@
     </select>
 }
 
+@concreteClassHiddenElement(calcSpec: StatsCalcSpec) = {
+    <input type="hidden" id="concreteClass" value="@calcSpec.getClass.getName"/>
+}
+
+@concreteClassName(clazz: Class[_]) = @{
+    clazz.getName.split("\\.")(1).replaceAll("CalcSpec", "")
+}
+
+@outputGridWidthElement(calcSpec: StatsCalcSpec) = {
+    <input type="text" id="outputGridWidth" style="width:40px" value="@calcSpec.outputGridWidth.getOrElse("")">
+}
+
 @table = {
     @displayTable(
-        items.filter(_.isInstanceOf[DistributionCalcSpec]),
+        items,
         typeColumns[StatsCalcSpec](
             (None, "", _ => {<input type="checkbox"/>}),
-            (Some("fieldNames"), "Field", _.fieldNames.mkString(", ")),
-            (None, "Chart Type", {x => editableChartType(x.asInstanceOf[DistributionCalcSpec].chartType)})
+            (None, "", concreteClassHiddenElement),
+            (None, "Calc Type", {x => concreteClassName(x.getClass)}),
+            (Some("fieldNames"), "Field(s)", _.fieldNames.mkString(", ")),
+            (None, "Grid Width", outputGridWidthElement),
+            (None, "Chart Type", {x =>
+                if(x.isInstanceOf[DistributionCalcSpec]) {
+                    editableChartType(x.asInstanceOf[DistributionCalcSpec].chartType)
+                } else ""
+            })
         )
     )
 }
 
 @rowToModelJsFun = {
     function(row) {
-        var fieldNames = row.find('#fieldNames').text().trim().split(",");
-        var jsonFieldNames = JSON.stringify(fieldNames)
-        var chartType = row.find('#chartType').val().trim();
-        if (chartType)
-            return '{"concreteClass": "models.DistributionCalcSpec", "fieldName": "' +  fieldNames[0] + '", "chartType": "' + chartType + '"}';
-        else
-            return '{"concreteClass": "models.DistributionCalcSpec", "fieldName": "' + fieldNames[0] + '"}';
+        var fieldNames = row.find('#fieldNames').text().split(",").map(function(str) {
+            return str.trim();
+        }).filter(function(v) {return v != ''});
+
+        var concreteClass = row.find('#concreteClass').val().trim();
+        var chartTypeElement = row.find('#chartType');
+        var chartType = (chartTypeElement.length > 0) ? chartTypeElement.val().trim() : null;
+        var outputGridWidth = row.find('#outputGridWidth').val().trim()
+
+        var output = {};
+        output["concreteClass"] = concreteClass
+
+        switch (concreteClass) {
+            case "@{classOf[DistributionCalcSpec].getName}" :
+                output["fieldName"] = fieldNames[0];
+                break;
+            case "@{classOf[BoxCalcSpec].getName}" :
+                output["fieldName"] = fieldNames[0];
+                break;
+            case "@{classOf[ScatterCalcSpec].getName}" :
+                output["xFieldName"] = fieldNames[0];
+                output["yFieldName"] = fieldNames[1];
+                output["groupFieldName"] = fieldNames[2];
+                break;
+            case "@{classOf[CorrelationCalcSpec].getName}" :
+                output["fieldNames"] = fieldNames
+                break;
+        }
+
+        if (chartType) {
+            output["chartType"] = chartType
+        }
+
+        if (outputGridWidth) {
+            var intGridWidth = parseInt(outputGridWidth)
+            if (!isNaN(intGridWidth)) {
+                output["outputGridWidth"] = Math.min(intGridWidth, 12)
+            }
+        }
+
+        return JSON.stringify(output);
     }
 }
 
 @itemToRowJsFun = {
-    function(item) {
-        return "<tr><td><input type='checkbox'></input></td><td id='fieldNames'>" + item + `</td><td>@editableChartType(None)</td></tr>`;
+    function(values) {
+        var concreteClass = values["concreteClass"].trim()
+        var concreteClassName = concreteClass.replace('models.','').replace('CalcSpec','')
+
+        var checkboxColumn = "<td><input type='checkbox'></input></td>";
+        var concreteClassValueColumn = "<td><input type='hidden' id='concreteClass' value='" + concreteClass + "'/></td>";
+        var concreteClassNameColumn = "<td>" + concreteClassName + "</td>";
+
+        var fieldNames;
+        switch (concreteClass) {
+            case "@{classOf[DistributionCalcSpec].getName}" :
+                fieldNames = values["fieldName"];
+                break;
+            case "@{classOf[BoxCalcSpec].getName}" :
+                fieldNames = values["fieldName"];
+                break;
+            case "@{classOf[ScatterCalcSpec].getName}" :
+                fieldNames = [values["xFieldName"], values["yFieldName"], values["groupFieldName"]].join(", ");
+                break;
+            case "@{classOf[CorrelationCalcSpec].getName}" :
+                fieldNames = values["fieldNames"]
+                break;
+        }
+
+        var fieldNamesColumn = "<td id='fieldNames'>" + fieldNames + "</td>";
+        var chartTypeColumn = (concreteClass == "@{classOf[DistributionCalcSpec].getName}") ? `<td>@editableChartType(None)</td>` : "<td></td>";
+        var outputGridWidthColumn = "<td><input type='text' id='outputGridWidth' style='width:40px' value=''/></td>";
+
+        return "<tr>" + checkboxColumn + concreteClassValueColumn + concreteClassNameColumn + fieldNamesColumn + outputGridWidthColumn + chartTypeColumn + "</tr>";
+    }
+}
+
+@concreteClassOptions(classes: Class[_]*) = {
+    @classes.map { clazz =>
+        <option value="@{clazz.getName}">@concreteClassName(clazz)</option>
     }
 }
 
 @addModalInner = {
-    <input type="text" id="newItems" class="typeahead">
+    <div class="row">
+        @labelValue("concreteClass", "Type") {
+            <select id="concreteClass" onchange="updateModalItems();">
+                @concreteClassOptions(
+                    classOf[DistributionCalcSpec],
+                    classOf[BoxCalcSpec],
+                    classOf[ScatterCalcSpec],
+                    classOf[CorrelationCalcSpec]
+                )
+            </select>
+        }
+
+        <div id="fieldNameDiv" style="display: none">
+            @labelValue("fieldName", "Field") {
+                <input type="text" id="fieldName" class="typeahead">
+            }
+        </div>
+
+        <div id="xFieldNameDiv" style="display: none">
+            @labelValue("xFieldName", "X Field") {
+                <input type="text" id="xFieldName" class="typeahead">
+            }
+        </div>
+
+        <div id="yFieldNameDiv" style="display: none">
+            @labelValue("yFieldName", "Y Field") {
+                <input type="text" id="yFieldName" class="typeahead">
+            }
+        </div>
+
+        <div id="groupFieldNameDiv" style="display: none">
+            @labelValue("groupFieldName", "Group Field") {
+                <input type="text" id="groupFieldName" class="typeahead">
+            }
+        </div>
+
+        <div id="fieldNamesDiv" style="display: none">
+            @labelValue("fieldNames", "Fields") {
+                <input type="text" id="fieldNames">
+            }
+        </div>
+    </div>
 }
 
-@dynamicTable("statsCalcSpec", table, true, rowToModelJsFun, itemToRowJsFun, Some(addModalInner))
+@dynamicTable("statsCalcSpec", table, true, rowToModelJsFun, itemToRowJsFun, addModalInner)
+
+<script type="text/javascript">
+
+    function hideAll() {
+        $("#fieldNameDiv").hide();
+        $("#xFieldNameDiv").hide();
+        $("#yFieldNameDiv").hide();
+        $("#groupFieldNameDiv").hide();
+    }
+
+    function updateModalItems() {
+        var concreteClass = $('#add_statsCalcSpecModal #concreteClass').val();
+        hideAll();
+
+        switch (concreteClass) {
+            case "@{classOf[DistributionCalcSpec].getName}" :
+                $("#fieldNameDiv").show();
+                break;
+            case "@{classOf[BoxCalcSpec].getName}" :
+                $("#fieldNameDiv").show();
+                break;
+            case "@{classOf[ScatterCalcSpec].getName}" :
+                $("#xFieldNameDiv").show();
+                $("#yFieldNameDiv").show();
+                $("#groupFieldNameDiv").show();
+                break;
+            case "@{classOf[CorrelationCalcSpec].getName}" :
+                $("#fieldNamesDiv").show();
+                break;
+        }
+    }
+</script>

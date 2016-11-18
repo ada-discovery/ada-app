@@ -1,0 +1,113 @@
+@import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter}
+@import models.{FilterCondition, ChartSpec}
+@import models.Field
+@import reactivemongo.bson.BSONObjectID
+@import reactivemongo.play.json.BSONFormats._
+@import views.html.layout.main
+@import views.html.chart.highcharts.highchartsJsImport
+@import views.html.chart.{chartJs, chart}
+@import views.html.dataset.datasetSubNav
+@import play.api.libs.json.Json
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
+@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+@import models.DataSpaceMetaInfo
+
+@(
+    domainName: String,
+    fields: Traversable[Field],
+    chartSpec: Option[ChartSpec],
+    filterSpec: models.Filter,
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
+    router: DataSetRouter,
+    filterRouter: FilterRouter,
+    filterJsRouter: FilterJsRouter,
+    dataSetId: String,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit flash: Flash, msg: Messages, request: Request[_]
+)
+
+@actions = {
+    <div class="row">
+        <div class="col-md-10">
+            @filter(
+                Some(filterSpec),
+                router.getCorrelations(fields.map(_.name).toSeq, filterSpec.conditionsOrId),
+                Right(router.allFields),
+                filterShowFieldStyle,
+                Some(filterJsRouter),
+                Some(filterRouter.idAndNames),
+                "filterOrId"
+            )
+        </div>
+        <div class="pull-right">
+            <button class="btn btn-info btn-sm" type="button" onclick="addToCorrelations()" data-toggle="tooltip" title="Add Correlation(s) To Overview">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Overview
+            </button>
+        </div>
+    </div>
+    <hr/>
+    <div class="row">
+        <div class="col-md-8">
+            @helper.form(action=router.getCorrelations(Nil, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {
+                <input type="hidden" name="dataSet" value="@dataSetId"/>
+                <input type="hidden" name="filterOrId" value="@filterSpec.conditionsOrId.fold(Json.toJson(_), _.stringify)"/>
+                <input id="fieldNamez" name="fieldNamez" class="col-lg-8" value="@fields.map(_.name).mkString(", ")">
+            }
+        </div>
+    </div>
+}
+
+@bottomResources = {
+    @highchartsJsImport()
+    @chartSpec.map(chartJs(_)).getOrElse("")
+}
+
+@main(Messages("correlation.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
+
+    <div class="page-header">
+        <h3>
+            @Messages("correlation.title", domainName)
+        </h3>
+    </div>
+
+    <div id="actions">
+        @actions
+    </div>
+
+    @chartSpec.map(chart(_)).getOrElse("")
+}
+
+<script type="text/javascript" src="@dataSetSettingRoutes.jsRoutes"></script>
+<script type="text/javascript">
+    $(function () {
+        $('#fieldForm #fieldNamez').keypress(function (e) {
+            if (e.which == 13) {
+                var fieldNamesValue = $('#fieldForm #fieldNamez').val()
+                $.each(fieldNamesValue.split(","), function(index, str) {
+                    var map = {};
+                    map["fieldNames"] = str.trim();
+                    addParams($("#fieldForm"), map)
+                })
+            }
+        });
+    });
+
+    function addToCorrelations() {
+        var fieldNamesValue = $('#fieldForm #fieldNamez').val()
+        var fieldNames = fieldNamesValue.split(",").map(function(str) {
+            return str.trim();
+        })
+        if (fieldName) {
+            jsRoutes.controllers.dataset.DataSetSettingController.addCorrelationToOverview('@dataSetId', fieldNames).ajax( {
+                success: function() {
+                    showMessage("Correlations for the fields '" + fieldNamesValue + "' have been successfully added to the overview.");
+                },
+                error: function(data){
+                    showError( data.responseText );
+                }
+            });
+        }
+    }
+</script>

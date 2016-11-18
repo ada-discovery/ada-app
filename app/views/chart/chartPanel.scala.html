@@ -1,12 +1,11 @@
 @import models.ChartSpec
-@import util.chartElementName
 @import views.html.chart.chart
 
 @(chartSpecs : Traversable[ChartSpec], gridWidth: Int = 3)
 
 <div class="row">
     @chartSpecs.map { chartSpec =>
-        <div class="col-md-@gridWidth">
+        <div class="col-md-@{chartSpec.gridWidth.getOrElse(gridWidth)}">
             @chart(chartSpec)
         </div>
     }

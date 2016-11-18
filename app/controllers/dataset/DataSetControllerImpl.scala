@@ -8,6 +8,7 @@ import javax.inject.Inject
 import _root_.util.JsonUtil._
 import util.{BasicStats, fieldLabel, JsonUtil}
 import _root_.util.WebExportUtil._
+import _root_.util.shorten
 import dataaccess._
 import models._
 import com.google.inject.assistedinject.Assisted
@@ -78,9 +79,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
   private val csvEOL = "\n"
 
-  private val numericTypes = Seq(FieldTypeId.Double.toString, FieldTypeId.Integer.toString)
-  private val categoricalTypes = Seq(FieldTypeId.Enum.toString, FieldTypeId.String.toString, FieldTypeId.Boolean.toString)
-
   private val ftf = FieldTypeHelper.fieldTypeFactory
 
   override protected def listViewColumns = Some(setting.listViewTableColumnNames)
@@ -141,14 +139,23 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param request Header of original request.
     * @return View for subject entries.
     */
-  override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: Request[_]) =
+  override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: Request[_]) = {
+    val fieldNameLabelAndRendererMapFuture = fieldRepo.find().map(_.map
+      { field =>
+        val fieldType = ftf(field.fieldTypeSpec)
+        (field.name, (field.labelOrElseName, fieldType.jsonToDisplayString(_)))
+      }.toMap
+    )
+
     dataset.show(
       dataSetName + " Item",
       item,
       router.plainOverviewList,
       true,
+      result(fieldNameLabelAndRendererMapFuture),
       getMetaInfos
     )
+  }
 
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
@@ -263,7 +270,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // create a name -> field map of all the referenced fields for a quick lookup
         fieldNameMap <- {
           val filterFieldNames = conditions.map(_.fieldName.trim)
-          val requiredFieldNames = (chartFieldNames ++ tableFieldNames ++ filterFieldNames).toSet
+          val requiredFieldNames: Set[String] = (chartFieldNames ++ tableFieldNames ++ filterFieldNames)
 
           getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
         }
@@ -322,32 +329,45 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
 
     statsCalcSpecs.map { calcSpec =>
+      val outputGridWidth = calcSpec.outputGridWidth
       val chartSpec = calcSpec match {
-        case x: DistributionCalcSpec => {
-          val chartSpec = nameFieldMap.get(x.fieldName) match {
-            case Some(field) => chartService.createDistributionChartSpec(items, x.chartType, Left(field))
-            case None => chartService.createDistributionChartSpec(items, x.chartType, Right(x.fieldName))
+        case DistributionCalcSpec(fieldName, chartType, _) => {
+          val fieldOrFieldName = nameFieldMap.get(fieldName).fold(
+            Right(fieldName) : Either[Field, String]
+          ){
+            field => Left(field)
           }
+          val chartSpec = chartService.createDistributionChartSpec(items, chartType, fieldOrFieldName, false, true, outputGridWidth)
           Some(chartSpec)
         }
-        case x: ScatterCalcSpec => {
+        case ScatterCalcSpec(xFieldName, yFieldName, groupFieldName, _) => {
+          val xField = nameFieldMap.get(xFieldName).get
+          val yField = nameFieldMap.get(yFieldName).get
+          val shortXFieldLabel = shorten(xField.labelOrElseName, 15)
+          val shortYFieldLabel = shorten(yField.labelOrElseName, 15)
+//          val groupedLabel = groupFieldName.map(_ => "[grouped]").getOrElse("")
           val chartSpec = chartService.createScatterChartSpec(
             items,
-            nameFieldMap.get(x.xFieldName).get,
-            nameFieldMap.get(x.yFieldName).get,
-            x.groupFieldName.map(nameFieldMap.get).flatten
+            xField,
+            yField,
+            groupFieldName.map(nameFieldMap.get).flatten,
+            Some(s"$shortXFieldLabel vs. $shortYFieldLabel"),
+            outputGridWidth
           )
           Some(chartSpec)
         }
-        case x: BoxCalcSpec =>
+        case BoxCalcSpec(fieldName, _) =>
           chartService.createBoxChartSpec(
             items,
-            nameFieldMap.get(x.fieldName).get
+            nameFieldMap.get(fieldName).get,
+            outputGridWidth
           )
-        case x: CorrelationCalcSpec => {
+        case CorrelationCalcSpec(fieldNames, _) => {
+          val corrFields = fieldNames.map(nameFieldMap.get).flatten
           val chartSpec = chartService.createPearsonCorrelationChartSpec(
             items,
-            fields
+            corrFields,
+            outputGridWidth
           )
           Some(chartSpec)
         }
@@ -504,7 +524,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           xField,
           yField,
           groupField,
-          chartSpec,
+          chartSpec.map(_.copy(height = Some(500))),
           xMean,
           yMean,
           newFilter,
@@ -548,9 +568,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // generate the box chart (if possible)
         boxChartSpec = chartService.createBoxChartSpec(chartItems, chartFields.head)
 
-        // get all the fields
-        fields <-fieldRepo.find(sort = Seq(AscSort("name")))
-
         // get the current field
         field <- fieldRepo.get(fieldName)
 
@@ -558,12 +575,75 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
 
       } yield {
+        // set the height of the charts
+        val distributionChart = distributionChartSpecs.head._2 match {
+          case x: CategoricalChartSpec => x.copy(height = Some(500))
+          case x: NumericalChartSpec => x.copy(height = Some(500))
+          case x: ChartSpec => x
+        }
+        val boxChart = boxChartSpec.map(_.copy(height = Some(500)))
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
         render {
           case Accepts.Html() => Ok(dataset.distribution(
             dataSetName,
             field,
-            Seq(Some(distributionChartSpecs.head._2), boxChartSpec).flatten,
+            Seq(Some(distributionChart), boxChart).flatten,
+            newFilter,
+            setting.filterShowFieldStyle,
+            router,
+            filterRouter,
+            filterJsRouter,
+            dataSetId,
+            getMetaInfos
+          ))
+          case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
+        }
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the distribution process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+  def getCorrelations(
+    fieldNames: Seq[String],
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ) = Action.async { implicit request =>
+    implicit val msg = messagesApi.preferred(request)
+
+    {
+      for {
+        // use a given filter conditions or load one
+        resolvedFilter <- resolveFilter(filterOrId)
+
+        // get the criteria
+        criteria <- toCriteria(resolvedFilter.conditions)
+
+        // get the chart items
+        chartItems <- repo.find(criteria, Nil, fieldNames)
+
+        // chart fields
+        chartFields <- getFields(fieldNames)
+
+        // generate the correlation chart
+        correlationChartSpec = chartService.createPearsonCorrelationChartSpec(chartItems, chartFields)
+
+        // get the current fields
+        currentFields <- fieldRepo.find(Seq(FieldIdentity.name #=> fieldNames))
+
+        // create a name -> field map of the filter referenced fields
+        fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
+
+      } yield {
+        // set the height of the charts
+        val newChart = correlationChartSpec.copy(height = Some(500))
+        val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+        render {
+          case Accepts.Html() => Ok(dataset.correlation(
+            dataSetName,
+            currentFields,
+            Some(newChart),
             newFilter,
             setting.filterShowFieldStyle,
             router,

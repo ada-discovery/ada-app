@@ -30,24 +30,29 @@ trait ChartService {
     chartType: Option[ChartType.Value],
     fieldOrName: Either[Field, String],
     showLabels: Boolean = false,
-    showLegend: Boolean = true
+    showLegend: Boolean = true,
+    outputGridWidth: Option[Int] = None
   ): ChartSpec
 
   def createBoxChartSpec(
     items: Traversable[JsObject],
-    field: Field
-  ): Option[ChartSpec]
+    field: Field,
+    outputGridWidth: Option[Int] = None
+  ): Option[BoxChartSpec[_]]
 
   def createScatterChartSpec(
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
-    groupField: Option[Field]
+    groupField: Option[Field],
+    title: Option[String] = None,
+    outputGridWidth: Option[Int] = None
   ): ScatterChartSpec
 
   def createPearsonCorrelationChartSpec(
     items: Traversable[JsObject],
-    fields: Traversable[Field]
+    fields: Traversable[Field],
+    outputGridWidth: Option[Int] = None
   ): HeatmapChartSpec
 }
 
@@ -84,7 +89,8 @@ class ChartServiceImpl extends ChartService {
     chartType: Option[ChartType.Value],
     fieldOrName: Either[Field, String],
     showLabels: Boolean = false,
-    showLegend: Boolean = true
+    showLegend: Boolean = true,
+    outputGridWidth: Option[Int] = None
   ): ChartSpec = {
     val (fieldName, chartTitle, enumMap, fieldTypeSpec) = fieldOrName match {
       case Left(field) => (
@@ -92,7 +98,7 @@ class ChartServiceImpl extends ChartService {
         field.label.getOrElse(fieldLabel(field.name)),
         field.numValues,
         field.fieldTypeSpec
-        )
+      )
 
       // failover... no corresponding field, providing default values instead
       case Right(fieldName) => (
@@ -100,7 +106,7 @@ class ChartServiceImpl extends ChartService {
         fieldLabel(fieldName),
         None,
         FieldTypeSpec(FieldTypeId.String, false)
-        )
+      )
     }
 
     val jsons = project(items, fieldName)
@@ -115,24 +121,24 @@ class ChartServiceImpl extends ChartService {
     fieldTypeId match {
       case FieldTypeId.String =>
         ChartSpec.categorical(
-          getValues[String], enumMap, chartTitle, showLabels, showLegend, chartType
+          getValues[String], enumMap, chartTitle, showLabels, showLegend, chartType, outputGridWidth
         )
 
       case FieldTypeId.Enum =>
         ChartSpec.categorical(
-          getValues[Int], enumMap, chartTitle, showLabels, showLegend, chartType
+          getValues[Int], enumMap, chartTitle, showLabels, showLegend, chartType, outputGridWidth
         )
 
       case FieldTypeId.Boolean =>
         ChartSpec.categorical(
-          getValues[Boolean], enumMap, chartTitle, showLabels, showLegend, chartType
+          getValues[Boolean], enumMap, chartTitle, showLabels, showLegend, chartType, outputGridWidth
         )
 
       case FieldTypeId.Double => {
         def outputLabel(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP).toString
 
         ChartSpec.numerical(
-          getValues[Double].flatten, fieldName, chartTitle, 20, false, None, None, chartType, Some(outputLabel)
+          getValues[Double].flatten, fieldName, chartTitle, 20, false, None, None, chartType, Some(outputLabel), outputGridWidth
         )
       }
 
@@ -154,7 +160,8 @@ class ChartServiceImpl extends ChartService {
           if (valueCount < 20)
             Some(outputLabel)
           else
-            None
+            None,
+          outputGridWidth
         )
       }
 
@@ -165,13 +172,13 @@ class ChartServiceImpl extends ChartService {
         val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
         def formatDate(ms: BigDecimal) = dateFormat.format(new ju.Date(ms.toLongExact))
 
-        ChartSpec.numerical(values, fieldName, chartTitle, 20, false, None, None, chartType, Some(formatDate))
+        ChartSpec.numerical(values, fieldName, chartTitle, 20, false, None, None, chartType, Some(formatDate), outputGridWidth)
       }
 
       // for null and json types we can't show anything
       case FieldTypeId.Null | FieldTypeId.Json =>
         ChartSpec.categorical(
-          Nil, enumMap, chartTitle, showLabels, showLegend, chartType
+          Nil, enumMap, chartTitle, showLabels, showLegend, chartType, outputGridWidth
         )
     }
   }
@@ -180,17 +187,21 @@ class ChartServiceImpl extends ChartService {
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
-    groupField: Option[Field]
+    groupField: Option[Field],
+    title: Option[String] = None,
+    outputGridWidth: Option[Int] = None
   ): ScatterChartSpec = {
     val data = getScatterData(xyzItems, xField, yField, groupField)
     ScatterChartSpec(
-      "Comparison",
+      title.getOrElse("Comparison"),
       xField.labelOrElseName,
       yField.labelOrElseName,
       data.map { case (name, values) =>
         val initName = if (name.isEmpty) "Undefined" else name
         (initName, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
-      }
+      },
+      None,
+      outputGridWidth
     )
   }
 
@@ -198,7 +209,8 @@ class ChartServiceImpl extends ChartService {
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
-    groupField: Option[Field]
+    groupField: Option[Field],
+    outputGridWidth: Option[Int] = None
   ): Seq[(String, Seq[(Any, Any)])] = {
     val xFieldName = xField.name
     val yFieldName = yField.name
@@ -242,8 +254,9 @@ class ChartServiceImpl extends ChartService {
   // Box chart can be generated only for numeric typesL Double, Integer
   override def createBoxChartSpec(
     items: Traversable[JsObject],
-    field: Field
-  ): Option[ChartSpec] = {
+    field: Field,
+    outputGridWidth: Option[Int] = None
+  ): Option[BoxChartSpec[_]] = {
     val jsons = project(items, field.name)
     val typeSpec = field.fieldTypeSpec
     val fieldType = ftf(typeSpec)
@@ -269,12 +282,13 @@ class ChartServiceImpl extends ChartService {
       case _ => None
     }
 
-    quants.map(quant => BoxChartSpec(field.labelOrElseName + " Box", quant))
+    quants.map(quant => BoxChartSpec(field.labelOrElseName + " Box", field.labelOrElseName, quant, None, outputGridWidth))
   }
 
   override def createPearsonCorrelationChartSpec(
     items: Traversable[JsObject],
-    fields: Traversable[Field]
+    fields: Traversable[Field],
+    outputGridWidth: Option[Int] = None
   ): HeatmapChartSpec = {
 
     def getValues[T](field: Field): Traversable[Option[T]] = {
@@ -296,7 +310,35 @@ class ChartServiceImpl extends ChartService {
       }
     }.flatten
 
-    val fieldNames = fieldsWithValues.map(_._1.labelOrElseName).toSeq
-    HeatmapChartSpec("Correlation", fieldNames, fieldNames, Nil)
+    val data: Seq[Seq[Option[Double]]] = fieldsWithValues.map(_._2).toSeq.transpose
+
+//      .map { values =>
+//      val flatValues = values.flatten
+//      // if some of the values was discarded remove the whole row
+//      if (flatValues.size == values.size)
+//        Some(flatValues)
+//      else
+//        None
+//    }.flatten
+
+//    val filteredData = data.filter(!_.contains(None)).map(_.flatten)
+//
+//    println("First")
+//    println
+//    println(filteredData.map(x => x(0)).mkString("\n"))
+//
+//    println
+//    println("Second")
+//    println
+//    println(filteredData.map(x => x(1)).mkString("\n"))
+//    println
+
+    val correlations = BasicStats.pearsonCorrelation(data)
+
+//    println("Correlations")
+//    println(correlations.map(_.mkString(",")).mkString("\n"))
+
+    val fieldLabels = fieldsWithValues.map(_._1.labelOrElseName).toSeq
+    HeatmapChartSpec("Correlations", fieldLabels, fieldLabels, correlations, None, outputGridWidth)
   }
 }

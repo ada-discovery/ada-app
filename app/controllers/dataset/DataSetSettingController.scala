@@ -26,6 +26,7 @@ import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRou
 import controllers.dataset.routes.javascript.{DataSetSettingController => dataSetSettingJsRoutes}
 
 import scala.concurrent.Future
+import scala.reflect.ClassTag
 
 class DataSetSettingController @Inject() (
     repo: DataSetSettingRepo,
@@ -35,13 +36,7 @@ class DataSetSettingController @Inject() (
 
   private implicit val chartTypeFormatter = EnumFormatter(ChartType)
 
-//  private val fieldChartMapping: Mapping[FieldChartType] = mapping(
-//    "fieldName" -> nonEmptyText,
-//    "chartType" -> optional(of[ChartType.Value])
-//  ) (FieldChartType.apply)(FieldChartType.unapply)
-
   private implicit val mapFormatter = MapJsonFormatter.apply
-  private implicit val fieldChartTypeFormatter = JsonFormatter[FieldChartType]
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
   private implicit val statsCalcSpecFormatter = JsonFormatter[StatsCalcSpec]
 
@@ -53,7 +48,6 @@ class DataSetSettingController @Inject() (
       "exportOrderByFieldName" -> optional(text),
       "listViewTableColumnNames" -> seq(text),
       "statsCalcSpecs" -> seq(of[StatsCalcSpec]),
-//      "overviewFieldChartTypes" -> seq(of[FieldChartType]),
       "overviewChartElementGridWidth" -> number(min = 1, max = 12),
       "defaultScatterXFieldName" -> nonEmptyText,
       "defaultScatterYFieldName" -> nonEmptyText,
@@ -124,18 +118,72 @@ class DataSetSettingController @Inject() (
     }
   }
 
-  def addFieldsToChartOverview(dataSet: String, fieldNames: Seq[String]) = restrict {
+  def addDistributionsToOverview(dataSet: String, fieldNames: Seq[String]) = restrict {
     processSetting({ setting =>
-      val existingStatsCalcSpecs = setting.statsCalcSpecs
-      val existingFieldNames = existingStatsCalcSpecs.map(_.fieldNames).flatten
-      val filteredFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
-      if (filteredFieldNames.nonEmpty) {
-        val newSetting = setting.copy(statsCalcSpecs = existingStatsCalcSpecs ++ filteredFieldNames.map(DistributionCalcSpec(_, None)))
+      val existingFieldNames = filterSpecsOf[DistributionCalcSpec](setting).map(_.fieldName)
+      val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
+
+      if (newFieldNames.nonEmpty) {
+        val newSetting = setting.copy(statsCalcSpecs = setting.statsCalcSpecs ++ newFieldNames.map(DistributionCalcSpec(_, None)))
         repo.update(newSetting)
       } else
         Future(())
     }, dataSet)
   }
+
+  def addBoxPlotsToOverview(dataSet: String, fieldNames: Seq[String]) = restrict {
+    processSetting({ setting =>
+      val existingFieldNames = filterSpecsOf[BoxCalcSpec](setting).map(_.fieldName)
+      val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
+
+      if (newFieldNames.nonEmpty) {
+        val newSetting = setting.copy(statsCalcSpecs = setting.statsCalcSpecs ++ newFieldNames.map(BoxCalcSpec(_)))
+        repo.update(newSetting)
+      } else
+        Future(())
+    }, dataSet)
+  }
+
+  def addScatterToOverview(
+    dataSet: String,
+    xFieldName: String,
+    yFieldName: String,
+    groupFieldName: Option[String]
+  ) = restrict {
+    processSetting({ setting =>
+      val existingXYZNames = filterSpecsOf[ScatterCalcSpec](setting).map { spec =>
+        (spec.xFieldName, spec.yFieldName, spec.groupFieldName)
+      }
+      val fieldNames = (xFieldName, yFieldName, groupFieldName)
+      if (!existingXYZNames.contains(fieldNames)) {
+        val newSetting = setting.copy(statsCalcSpecs = setting.statsCalcSpecs ++ Seq(ScatterCalcSpec(xFieldName, yFieldName, groupFieldName)))
+        repo.update(newSetting)
+      } else
+        Future(())
+    }, dataSet)
+  }
+
+  def addCorrelationToOverview(
+    dataSet: String,
+    fieldNames: Seq[String]
+  ) = restrict {
+    processSetting({ setting =>
+      val existingNames = filterSpecsOf[CorrelationCalcSpec](setting).map { spec =>
+        spec.fieldNames
+      }
+      if (!existingNames.contains(fieldNames)) {
+        val newSetting = setting.copy(statsCalcSpecs = setting.statsCalcSpecs ++ Seq(CorrelationCalcSpec(fieldNames)))
+        repo.update(newSetting)
+      } else
+        Future(())
+    }, dataSet)
+  }
+
+  private def filterSpecsOf[T <: StatsCalcSpec](
+    setting: DataSetSetting)(
+    implicit ev: ClassTag[T]
+  ): Seq[T] =
+    setting.statsCalcSpecs.collect{ case t: T => t}
 
   def addFieldsToOverviewTable(dataSet: String, fieldNames: Seq[String]) = restrict {
     processSetting({ setting =>
@@ -166,7 +214,10 @@ class DataSetSettingController @Inject() (
     Action { implicit request =>
       Ok(
         JavaScriptReverseRouter("jsRoutes")(
-          dataSetSettingJsRoutes.addFieldsToChartOverview,
+          dataSetSettingJsRoutes.addDistributionsToOverview,
+          dataSetSettingJsRoutes.addBoxPlotsToOverview,
+          dataSetSettingJsRoutes.addScatterToOverview,
+          dataSetSettingJsRoutes.addCorrelationToOverview,
           dataSetSettingJsRoutes.addFieldsToOverviewTable
         )
       ).as("text/javascript")

@@ -34,6 +34,11 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
   ): Action[AnyContent]
 
+  def getCorrelations(
+    fieldNames: Seq[String],
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ): Action[AnyContent]
+
   def getFieldNames: Action[AnyContent]
 
   def getFields(

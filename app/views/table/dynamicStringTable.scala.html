@@ -1,7 +1,17 @@
 @import views.html.table.{displayTable, dynamicTable}
 @import util.typeColumns
 
-@(domainName: String, items: Traversable[String], sortable: Boolean = false, addModalInner: Option[Html] = None, extraActions: Option[Html] = None)
+@(
+    domainName: String,
+    items: Traversable[String],
+    sortable: Boolean = false,
+    addModalInner: Option[Html] = None,
+    extraActions: Option[Html] = None
+)
+
+@defaultModalInner = {
+    <input text="text" id="newItem" value="">
+}
 
 @table = {
     @displayTable(
@@ -20,9 +30,10 @@
 }
 
 @itemToRowJsFun = {
-    function(item) {
-        return "<tr><td><input type='checkbox'></input></td><td id='name'>" + item + "</td></tr>";
+    function(values) {
+        var name = values["newItem"];
+        return "<tr><td><input type='checkbox'></input></td><td id='name'>" + name + "</td></tr>";
     }
 }
 
-@dynamicTable(domainName, table, sortable, rowToModelJsFun, itemToRowJsFun, addModalInner, extraActions)
+@dynamicTable(domainName, table, sortable, rowToModelJsFun, itemToRowJsFun, addModalInner.getOrElse(defaultModalInner), extraActions)

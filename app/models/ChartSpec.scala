@@ -3,12 +3,15 @@ package models
 import _root_.util.BasicStats.Quantiles
 import play.api.libs.json._
 
+import scala.collection.mutable
 import scala.collection.mutable.{Map => MMap}
 import scala.math.BigDecimal.RoundingMode
 import models.ChartType
 
 abstract class ChartSpec {
   val title: String
+  val height: Option[Int]
+  val gridWidth: Option[Int]
 }
 
 case class CategoricalChartSpec(
@@ -16,18 +19,24 @@ case class CategoricalChartSpec(
   showLabels: Boolean,
   showLegend: Boolean,
   data: Seq[DataPoint],
-  chartType: ChartType.Value
+  chartType: ChartType.Value,
+  height: Option[Int] = None,
+  gridWidth: Option[Int] = None
 ) extends ChartSpec
 
 case class NumericalChartSpec(
   title: String,
   data: Seq[(String, Int)],
-  chartType: ChartType.Value
+  chartType: ChartType.Value,
+  height: Option[Int] = None,
+  gridWidth: Option[Int] = None
 ) extends ChartSpec
 
 case class ColumnChartSpec(
   title: String,
-  data: Seq[(String, Int)]
+  data: Seq[(String, Int)],
+  height: Option[Int] = None,
+  gridWidth: Option[Int] = None
 ) extends ChartSpec
 
 case class ScatterChartSpec(
@@ -35,19 +44,25 @@ case class ScatterChartSpec(
   xAxisCaption: String,
   yAxisCaption: String,
   data: Seq[(String, String, Seq[Seq[Any]])],
-  expHeight : Option[Int] = None
+  height: Option[Int] = None,
+  gridWidth: Option[Int] = None
 ) extends ChartSpec
 
 case class BoxChartSpec[T](
   title: String,
-  data: Quantiles[T]
+  yAxisCaption: String,
+  data: Quantiles[T],
+  height: Option[Int] = None,
+  gridWidth: Option[Int] = None
 ) extends ChartSpec
 
 case class HeatmapChartSpec(
   title: String,
   xCategories: Seq[String],
   yCategories: Seq[String],
-  data: Seq[Seq[Double]]
+  data: Seq[Seq[Option[Double]]],
+  height: Option[Int] = None,
+  gridWidth: Option[Int] = None
 ) extends ChartSpec
 
 case class DataPoint(
@@ -74,7 +89,8 @@ object ChartSpec {
     title: String,
     showLabels: Boolean,
     showLegend: Boolean,
-    chartType: Option[ChartType.Value] = None
+    chartType: Option[ChartType.Value] = None,
+    outputGridWidth: Option[Int] = None
   ): CategoricalChartSpec = {
     val countMap = MMap[Option[T], Int]()
     values.foreach { value =>
@@ -88,7 +104,7 @@ object ChartSpec {
         DataPoint(stringKey, count, keyLabelMap.map(_.getOrElse(keyOrEmpty, keyOrEmpty)).getOrElse(keyOrEmpty))
       }
     }
-    CategoricalChartSpec(title, showLabels, showLegend, data, chartType.getOrElse(ChartType.Pie))
+    CategoricalChartSpec(title, showLabels, showLegend, data, chartType.getOrElse(ChartType.Pie), None, outputGridWidth)
   }
 
   /**
@@ -111,7 +127,8 @@ object ChartSpec {
     explMin: Option[T] = None,
     explMax: Option[T] = None,
     chartType: Option[ChartType.Value] = None,
-    xAxisLabel: Option[BigDecimal => String] = None
+    xAxisLabel: Option[BigDecimal => String] = None,
+    outputGridWidth: Option[Int] = None
   ): NumericalChartSpec = {
     val numeric = implicitly[Numeric[T]]
 
@@ -168,6 +185,6 @@ object ChartSpec {
     } else
       Seq[(String, Int)]()
 
-    NumericalChartSpec(title, data, chartType.getOrElse(ChartType.Column))
+    NumericalChartSpec(title, data, chartType.getOrElse(ChartType.Column), None, outputGridWidth)
   }
 }

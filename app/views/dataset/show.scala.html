@@ -4,20 +4,25 @@
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
+@import play.api.libs.json.JsReadable
 
 @(
-    title : String,
+    title: String,
     item: JsObject,
-    listCall : Call,
-    nonNullOnly : Boolean,
+    listCall: Call,
+    nonNullOnly: Boolean,
+    fieldNameLabelAndRendererMap: Map[String, (String, JsReadable => String)],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
-)(implicit flash: Flash, msg: Messages, request: Request[_])
+)(
+    implicit flash: Flash, msg: Messages, request: Request[_]
+)
 
 @jsonShow(
     title,
     item,
     listCall,
     nonNullOnly,
+    fieldNameLabelAndRendererMap,
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )

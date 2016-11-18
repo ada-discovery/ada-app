@@ -68,7 +68,7 @@
 
 @bottomResources = {
     @highchartsJsImport()
-    @timeLineChart("Date Count", "dateCountChart", Some("Date"), Some("Count"), series)
+    @timeLineChart("Date Count", "dateCountChart", Some("Date"), Some("Count"), series, Some(500))
 }
 
 @main(Messages("dateCount.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {

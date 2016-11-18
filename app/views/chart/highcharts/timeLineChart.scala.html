@@ -5,16 +5,18 @@
     chartElementName : String,
     xAxisCaption: Option[String],
     yAxisCaption: Option[String],
-    series: Seq[(String, Seq[(Date, Any)])]
+    series: Seq[(String, Seq[(Date, Any)])],
+    height: Option[Int] = None
 )
 
 <script type="text/javascript">
-    timeLineChart('@title', '@{chartElementName}', '@{xAxisCaption.getOrElse("")}', '@{yAxisCaption.getOrElse("")}', 500,
+    timeLineChart('@title', '@{chartElementName}', '@{xAxisCaption.getOrElse("")}', '@{yAxisCaption.getOrElse("")}',
         [@series.map{ oneSeries =>
             {
                 name: '@oneSeries._1',
                 data: [ @oneSeries._2.map { case (x, y) => [@x.getTime, @y],}]
             },
-        }]
+        }],
+        @height.getOrElse(400)
     )
 </script>

@@ -9,7 +9,9 @@
     metaInfos: Traversable[DataSpaceMetaInfo],
     dataSetActionNames: Array[String],
     fieldActionNames: Array[String],
-    categoryActionNames: Array[String]
+    categoryActionNames: Array[String],
+    filterActionNames: Array[String],
+    dataViewActionNames: Array[String]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
@@ -17,7 +19,7 @@
 @layout.edit(
     "user",
 	form.errors,
-    elements(form, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames),
+    elements(form, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames, filterActionNames, dataViewActionNames),
 	routes.UserController.update(id),
 	routes.UserController.listAll(),
     Some(routes.UserController.delete(id)),

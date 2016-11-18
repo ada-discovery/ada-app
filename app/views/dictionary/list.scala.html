@@ -72,13 +72,23 @@
         </button>
         <ul class="dropdown-menu">
             <li>
-                <a href="#" onclick="addFieldsToChartOverview();return false" data-toggle="tooltip" title="Add To Chart Overview">
-                    Chart Overview
+                <a href="#" onclick="addFieldDistributionsToOverview();return false" data-toggle="tooltip" title="Add Distributions To Overview">
+                    Distributions
                 </a>
             </li>
             <li>
-                <a href="#" onclick="addFieldsToOverviewTable();return false" data-toggle="tooltip" title="Add To Overview Table">
-                    Overview Table
+                <a href="#" onclick="addFieldBoxPlotsToOverview();return false" data-toggle="tooltip" title="Add Box Plots To Overview">
+                    Box Plots
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="addFieldCorrelationToOverview();return false" data-toggle="tooltip" title="Add Correlation To Overview">
+                    Correlation
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="addFieldsToOverviewTable();return false" data-toggle="tooltip" title="Add To Table">
+                    Table
                 </a>
             </li>
         </ul>
@@ -142,11 +152,36 @@
         });
     })
 
-    function addFieldsToChartOverview() {
+    function addFieldDistributionsToOverview() {
         var fieldNames = getCheckedTableIds("dictionaryTable", "id")
-        jsRoutes.controllers.dataset.DataSetSettingController.addFieldsToChartOverview('@{router.id}', fieldNames).ajax( {
+        jsRoutes.controllers.dataset.DataSetSettingController.addDistributionsToOverview('@{router.id}', fieldNames).ajax( {
             success: function() {
-                showMessage("Field(s) '" + fieldNames + "' have been successfully added to the chart overview.");
+                showMessage("Distributions for the field(s) '" + fieldNames + "' have been successfully added to the overview.");
+            },
+            error: function(data){
+                showError( data.responseText );
+            }
+        });
+    }
+
+
+    function addFieldBoxPlotsToOverview() {
+        var fieldNames = getCheckedTableIds("dictionaryTable", "id")
+        jsRoutes.controllers.dataset.DataSetSettingController.addBoxPlotsToOverview('@{router.id}', fieldNames).ajax( {
+            success: function() {
+                showMessage("Box plots for the field(s) '" + fieldNames + "' have been successfully added to the overview.");
+            },
+            error: function(data){
+                showError( data.responseText );
+            }
+        });
+    }
+
+    function addFieldCorrelationToOverview() {
+        var fieldNames = getCheckedTableIds("dictionaryTable", "id")
+        jsRoutes.controllers.dataset.DataSetSettingController.addCorrelationToOverview('@{router.id}', fieldNames).ajax( {
+            success: function() {
+                showMessage("Correlation for the field(s) '" + fieldNames + "' has been successfully added to the overview.");
             },
             error: function(data){
                 showError( data.responseText );
@@ -158,7 +193,7 @@
         var fieldNames = getCheckedTableIds("dictionaryTable", "id")
         jsRoutes.controllers.dataset.DataSetSettingController.addFieldsToOverviewTable('@{router.id}', fieldNames).ajax( {
             success: function() {
-                showMessage("Field(s) '" + fieldNames + "' have been successfully added to the overview table.");
+                showMessage("Field(s) '" + fieldNames + "' have been successfully added to the table.");
             },
             error: function(data){
                 showError( data.responseText );

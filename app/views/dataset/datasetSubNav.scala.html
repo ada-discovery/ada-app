@@ -26,7 +26,8 @@
                 <a class="dropdown-toggle" data-toggle="dropdown" href="#">Analytics<span class="caret"></span></a>
                 <ul class="dropdown-menu">
                     @listItem(dataSetRouter.plainGetDistribution, "Distribution", Some(2))
-                    @listItem(dataSetRouter.plainGetScatterStats, "Scatter Analysis", Some(2))
+                    @listItem(dataSetRouter.plainGetScatterStats, "Scatter", Some(2))
+                    @listItem(dataSetRouter.getCorrelations(Nil, Left(Nil)), "Correlation", Some(2))
                     @listItem(dataSetRouter.getDateCount(None, None, Left(Nil)), "Count by Date", Some(2))
                 </ul>
             </li>

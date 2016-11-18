@@ -155,7 +155,10 @@
     page.total,
     Some(actions),
     table,
-    Some(filterChartPanel(fieldChartSpecs, chartGridElementWidth)),
+    if (fieldChartSpecs.nonEmpty)
+        Some(filterChartPanel(fieldChartSpecs, chartGridElementWidth))
+    else
+        None,
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav()),
     None,

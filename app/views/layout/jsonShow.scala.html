@@ -1,14 +1,16 @@
 @import views.html.layout.main
 @import views.html.elements.{value => elementValue}
-@import play.api.libs.json.{JsObject, JsNull}
-@import util.JsonUtil.unescapeKey
+@import play.api.libs.json.{JsObject, JsNull, JsValue}
+@import util.JsonUtil
 
+@import play.api.libs.json.JsReadable
 @(
 	domainName : String,
 	item: JsObject,
-	listCall : Call,
-	nonNullOnly : Boolean = true,
-    sideBar: Option[Html] = None,
+	listCall: Call,
+	nonNullOnly: Boolean = true,
+    fieldNameLabelAndRendererMap: Map[String, (String, JsReadable => String)] = Map(),
+	sideBar: Option[Html] = None,
     topContentBar: Option[Html] = None
 )(
 	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
@@ -22,9 +24,21 @@
 
 	<div class="row">
 		<fieldset>
-			@item.fields.map { case (key, value) =>
+			@item.fields.map { case (fieldName, value) =>
 				@if(!nonNullOnly || value != JsNull) {
-					@elementValue(key, attributeLabel(domainName, unescapeKey(key).take(35)), value.asOpt[String].getOrElse(value.toString()), false)
+					@elementValue(
+                        fieldName,
+                        fieldNameLabelAndRendererMap.get(fieldName).map(_._1).getOrElse(
+                            attributeLabel(
+                                domainName,
+                                JsonUtil.unescapeKey(fieldName).take(30)
+                            )
+                        ),
+                        fieldNameLabelAndRendererMap.get(fieldName).map(_._2.apply(value)).getOrElse(
+                            JsonUtil.toString(value).getOrElse("")
+                        ),
+                        false
+                    )
 				}
 			}
 		</fieldset>

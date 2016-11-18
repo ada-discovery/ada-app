@@ -56,6 +56,11 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
   ) = dispatch(_.getDistribution(fieldName, filterOrId))
 
+  override def getCorrelations(
+    fieldNames: Seq[String],
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ) = dispatch(_.getCorrelations(fieldNames, filterOrId))
+
   override def getDateCount(
     dateFieldName: Option[String],
     groupFieldName: Option[String],

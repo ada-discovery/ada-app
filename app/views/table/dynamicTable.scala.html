@@ -1,10 +1,14 @@
 @import util.toHumanReadableCamel
 
-@(domainName: String, table: Html, sortable: Boolean = false, rowToModelJsFun: Html, itemToRowJsFun: Html, addModalInner: Option[Html] = None, extraActions: Option[Html] = None)
-
-@defaultAddModalInner = {
-    <input text="text" id="newItems" value="">
-}
+@(
+    domainName: String,
+    table: Html,
+    sortable: Boolean = false,
+    rowToModelJsFun: Html,
+    itemToRowJsFun: Html,
+    addModalInner:  Html,
+    extraActions: Option[Html] = None
+)
 
 @modalButtons(domainName: String) = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -15,7 +19,7 @@
     <a class="btn btn-info btn-sm" href="#" onclick="$('#@{domainName}Div').dynamicTable('openAddModal');return false;" data-toggle="tooltip" title="Add New @{toHumanReadableCamel(domainName)}">
         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
     </a>
-    <a class="btn btn-info btn-sm" href="#" onclick="$('#@{domainName}Div').dynamicTable('removeItems');return false;" data-toggle="tooltip" title="Delete @{toHumanReadableCamel(domainName)}">
+    <a class="btn btn-info btn-sm" href="#" onclick="$('#@{domainName}Div').dynamicTable('removeRows');return false;" data-toggle="tooltip" title="Delete @{toHumanReadableCamel(domainName)}">
         <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
     </a>
     @if(extraActions.isDefined) {
@@ -24,7 +28,7 @@
     <div>
         @table
     </div>
-    @modal("add_" + domainName + "Modal", "Add " + toHumanReadableCamel(domainName) + "(s)", addModalInner.getOrElse(defaultAddModalInner), None, Some(modalButtons(domainName)))
+    @modal("add_" + domainName + "Modal", "Add " + toHumanReadableCamel(domainName) + "(s)", addModalInner, None, Some(modalButtons(domainName)))
 </div>
 
 <script>

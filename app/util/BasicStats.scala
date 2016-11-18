@@ -49,22 +49,30 @@ package object BasicStats {
   }
 
   def pearsonCorrelation(
-    values: Traversable[Seq[Double]]
+    values: Traversable[Seq[Option[Double]]]
   ): Seq[Seq[Option[Double]]] = {
-    val length = values.size
-
-    val elementsCount = values.head.size
+    val elementsCount = if (values.nonEmpty) values.head.size else 0
 
     def calc(index1: Int, index2: Int) = {
-      val mean1 = values.map(_(index1)).sum / length
-      val mean2 = values.map(_(index2)).sum / length
+      val els = (values.map(_(index1)).toSeq, values.map(_(index2)).toSeq).zipped.map {
+        case (el1: Option[Double], el2: Option[Double]) =>
+          if ((el1.isDefined) && (el2.isDefined)) {
+            Some((el1.get, el2.get))
+          } else
+            None
+        }.flatten
+
+      val length = els.size
+
+      val mean1 = els.map(_._1).sum / length
+      val mean2 = els.map(_._2).sum / length
 
       // sum up the squares
-      val mean1Sq = values.map(_(index1)).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
-      val mean2Sq = values.map(_(index2)).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
+      val mean1Sq = els.map(_._1).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
+      val mean2Sq = els.map(_._2).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
 
       // sum up the products
-      val pMean = values.foldLeft(0.0) { case (accum, data) => accum + data(index1) * data(index2) } / length
+      val pMean = els.foldLeft(0.0) { case (accum, pair) => accum + pair._1 * pair._2 } / length
 
       // calculate the pearson score
       val numerator = pMean - mean1 * mean2

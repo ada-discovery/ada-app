@@ -18,7 +18,7 @@
     $(function () {
         @fieldChartSpecs.map { case FieldChartSpec(fieldName, chartSpec) =>
             @{chartSpec match {
-                case CategoricalChartSpec(title, _, _, _, _) => jsListenToPointClick(chartElementName(title), fieldName)
+                case x: CategoricalChartSpec => jsListenToPointClick(chartElementName(x), fieldName)
                 case _ => ""
             }
         }

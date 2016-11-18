@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import controllers.dataset.{CategoryController, DataSetController, DictionaryController}
+import controllers.dataset._
 import dataaccess.User
 
 import persistence.RepoTypes.DataSpaceMetaInfoRepo
@@ -42,8 +42,10 @@ class UserController @Inject() (
     val dataSetActionNames = getMethodNames[DataSetController]
     val fieldActionNames = getMethodNames[DictionaryController]
     val categoryActionNames = getMethodNames[CategoryController]
+    val filterActionNames = getMethodNames[FilterController]
+    val dataViewActionNames = getMethodNames[DataViewController]
 
-    html.user.create(f, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames)
+    html.user.create(f, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames, filterActionNames, dataViewActionNames)
   }
 
   override protected def showView(id: BSONObjectID, f : Form[User])(implicit msg: Messages, request: Request[_]) =
@@ -55,8 +57,10 @@ class UserController @Inject() (
     val dataSetActionNames = getMethodNames[DataSetController]
     val fieldActionNames = getMethodNames[DictionaryController]
     val categoryActionNames = getMethodNames[CategoryController]
+    val filterActionNames = getMethodNames[FilterController]
+    val dataViewActionNames = getMethodNames[DataViewController]
 
-    html.user.edit(id, f, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames)
+    html.user.edit(id, f, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames, filterActionNames, dataViewActionNames)
   }
 
   override protected def listView(currentPage: Page[User])(implicit msg: Messages, request: Request[_]) =

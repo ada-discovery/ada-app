@@ -8,7 +8,8 @@
         $(function () {
             $('#@{chartElementName}').highcharts({
                 chart: {
-                    type: 'boxplot'
+                    type: 'boxplot',
+                    height: @chartSpec.height.getOrElse(400)
                 },
                 title: {
                     text:  "@chartSpec.title"
@@ -21,7 +22,7 @@
                 },
                 yAxis: {
                     title: {
-                        text: 'Value'
+                        text: '@chartSpec.yAxisCaption'
                     }
                 },
                 legend: {
@@ -29,6 +30,13 @@
                 },
                 credits: {
                     enabled: false
+                },
+                plotOptions: {
+                    boxplot: {
+                        fillColor: '#eeeeee',
+                        lineWidth: 2,
+                        medianWidth: 3,
+                    }
                 },
                 series: [{
                     name: '@chartSpec.title',

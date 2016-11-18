@@ -1,3 +1,4 @@
+import models.ChartSpec
 import org.apache.commons.lang.StringUtils
 import play.twirl.api.Html
 
@@ -57,7 +58,7 @@ package object util {
     fieldLabelMap.map(_.getOrElse(fieldName, defaultLabel)).getOrElse(defaultLabel)
   }
 
-  def chartElementName(title: String) = title.hashCode + "Chart"
+  def chartElementName(chart: ChartSpec) = chart.hashCode + "Chart"
 
   // retyping of column items needed because play templates do not support generics
   def typeColumn[T](column: (Option[String], String, T => Any)): (Option[String], String, Any  => Html) =

@@ -1,3 +1,5 @@
+@import util.shorten
+
 @(
     chartElementName: String,
     chartSpec: HeatmapChartSpec
@@ -8,23 +10,52 @@
         $(function () {
             $('#@{chartElementName}').highcharts({
                 chart: {
-                    type: 'boxplot'
+                    type: 'heatmap'
                 },
                 title: {
                     text:  "@chartSpec.title"
                 },
                 xAxis: {
-                    categories: [
-                        @chartSpec.xCategories.map( cat => s"\'$cat\'").mkString(", ")
-                    ]
+                    categories: [ @chartSpec.xCategories.map { cat => '@cat', } ],
+                    labels: {
+                        formatter: function() {
+                            return shorten(this.value, 10);
+
+                        }
+                    }
                 },
                 yAxis: {
-                    catogories: [
-                        @chartSpec.yCategories.map( cat => s"\'$cat\'").mkString(", ")
-                    ]
+                    categories: [ @chartSpec.xCategories.map { cat => '@cat', } ],
+                    title: null,
+                    labels: {
+                        formatter: function() {
+                            return shorten(this.value, 10);
+
+                        }
+                    }
                 },
                 credits: {
                     enabled: false
+                },
+                colorAxis: {
+                    min: 0,
+                    minColor: '#FFFFFF',
+                    maxColor: Highcharts.getOptions().colors[0]
+                },
+                legend: {
+                    align: 'right',
+                    layout: 'vertical',
+                    margin: 0,
+                    verticalAlign: 'top',
+                    y: 25,
+                    symbolHeight: 280
+                },
+                tooltip: {
+                    formatter: function () {
+                        return '<b>' + this.series.xAxis.categories[this.point.x] + '</b><br><b>' +
+                                this.series.yAxis.categories[this.point.y] + '</b><br>' + Highcharts.numberFormat(this.point.value, 3, '.');
+                    },
+                    valueDecimals: 2
                 },
                 series: [{
                     name: "@chartSpec.title",
@@ -32,12 +63,12 @@
                     data: [
                         @chartSpec.data.zipWithIndex.map { case (seq, i) =>
                             @seq.zipWithIndex.map { case (value, j) =>
-                                [@i, @j, @value],
+                                [@i, @j, @value.getOrElse(0)],
                             }
                         }
                     ],
                     dataLabels: {
-                        enabled: true,
+                        enabled: false,
                         color: '#000000'
                     }
                 }]

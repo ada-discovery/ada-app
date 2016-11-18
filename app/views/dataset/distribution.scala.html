@@ -41,13 +41,23 @@
                 "filterOrId"
             )
         </div>
-        <div class="pull-right">
-            <a class="btn btn-info btn-sm" href="#" onclick="addToChartOverview();return false" data-toggle="tooltip" title="Add To Chart Overview">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Chart Overview
-            </a>
-            <a class="btn btn-info btn-sm" href="#" onclick="addToOverviewTable();return false" data-toggle="tooltip" title="Add To Overview Table">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Overview Table
-            </a>
+        <div class="pull-right dropdown">
+            <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                <li>
+                    <a href="#" onclick="addToDistributions();return false" data-toggle="tooltip" title="Add Distribution To Overview">
+                        To Distributions
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="addToBoxPlots();return false" data-toggle="tooltip" title="Add Box Plots To Overview">
+                        To Box Plots
+                    </a>
+                </li>
+            </ul>
         </div>
     </div>
     <hr/>
@@ -107,12 +117,12 @@
         });
     });
 
-    function addToChartOverview() {
+    function addToDistributions() {
         var fieldName = $('#fieldForm #fieldName').val()
         if (fieldName) {
-            jsRoutes.controllers.dataset.DataSetSettingController.addFieldsToChartOverview('@dataSetId', [fieldName]).ajax( {
+            jsRoutes.controllers.dataset.DataSetSettingController.addDistributionsToOverview('@dataSetId', [fieldName]).ajax( {
                 success: function() {
-                    showMessage("Field '" + fieldName + "' has been successfully added to the chart overview.");
+                    showMessage("Distribution for the field '" + fieldName + "' has been successfully added to the overview.");
                 },
                 error: function(data){
                     showError( data.responseText );
@@ -121,12 +131,12 @@
         }
     }
 
-    function addToOverviewTable() {
+    function addToBoxPlots() {
         var fieldName = $('#fieldForm #fieldName').val()
         if (fieldName) {
-            jsRoutes.controllers.dataset.DataSetSettingController.addFieldsToOverviewTable('@dataSetId', [fieldName]).ajax( {
+            jsRoutes.controllers.dataset.DataSetSettingController.addBoxPlotsToOverview('@dataSetId', [fieldName]).ajax( {
                 success: function() {
-                    showMessage("Field '" + fieldName + "' has been successfully added to the overview table.");
+                    showMessage("Box plot for the field '" + fieldName + "' has been successfully added to the overview.");
                 },
                 error: function(data){
                     showError( data.responseText );

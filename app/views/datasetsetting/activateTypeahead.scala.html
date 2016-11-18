@@ -9,8 +9,11 @@
         $.ajax({
             url: '@fieldNamesCall',
             success: function (data) {
-                populateStringTypeahead($('#add_listViewTableColumnNameModal #newItems'), data, true);
-                populateStringTypeahead($('#add_statsCalcSpecModal #newItems'), data, true);
+                populateStringTypeahead($('#add_listViewTableColumnNameModal #newItem'), data, true);
+                populateStringTypeahead($('#add_statsCalcSpecModal #fieldName'), data, true);
+                populateStringTypeahead($('#add_statsCalcSpecModal #xFieldName'), data, true);
+                populateStringTypeahead($('#add_statsCalcSpecModal #yFieldName'), data, true);
+                populateStringTypeahead($('#add_statsCalcSpecModal #groupFieldName'), data, true);
             }
         });
     });
