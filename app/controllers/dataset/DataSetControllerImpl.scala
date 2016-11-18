@@ -294,7 +294,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         else
           Nil
 
-        val fieldChartSpecs = chartSpecs.map { case (chartSpec,  fieldNames) => FieldChartSpec(fieldNames.head, chartSpec) }
+        val fieldChartSpecs = chartSpecs.map { case (chartSpec,  fieldNames) =>
+          FieldChartSpec(fieldNames.head, chartSpec)
+        }
 
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
         val end = new ju.Date()
@@ -621,7 +623,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         criteria <- toCriteria(resolvedFilter.conditions)
 
         // get the chart items
-        chartItems <- repo.find(criteria, Nil, fieldNames)
+        chartItems <- if (fieldNames.nonEmpty)
+          repo.find(criteria, Nil, fieldNames)
+        else
+          Future(Nil)
 
         // chart fields
         chartFields <- getFields(fieldNames)

@@ -1,7 +1,7 @@
 package dataaccess
 
 import dataaccess.FieldTypInferrer.INFER_FIELD_TYPE
-import models.FieldTypeId
+import models.{FieldTypeSpec, FieldTypeId}
 import play.api.libs.json.{JsArray, JsReadable}
 
 import collection.mutable.{Map => MMap}
@@ -124,6 +124,15 @@ private abstract class FieldTypeInferrerImpl[T] extends FieldTypeInferrer[T] {
   protected val stringArrayType = ftf.stringArray
 
   private val staticFieldTypes = ftf.allStaticTypes
+
+  // these are the types that are not static but don't require any special inference
+  private val semiStaticFieldTypeSpecs = Seq(
+    FieldTypeSpec(FieldTypeId.Double, false),
+    FieldTypeSpec(FieldTypeId.Double, true),
+    FieldTypeSpec(FieldTypeId.Boolean, false),
+    FieldTypeSpec(FieldTypeId.Boolean, true)
+  )
+
   private val defaultType = staticFieldTypes.find(_.spec.fieldType == FieldTypeId.String).get
 
   private val prioritizedFieldTypes = Seq(
@@ -148,10 +157,20 @@ private abstract class FieldTypeInferrerImpl[T] extends FieldTypeInferrer[T] {
   protected def dynamicFieldInferrers: Seq[((FieldTypeId.Value, Boolean), INFER_FIELD_TYPE[T])]
   protected def isOfStaticType(fieldType: FieldType[_]): INFER_FIELD_TYPE[T]
 
-  private lazy val fieldTypeInferrers: Traversable[((FieldTypeId.Value, Boolean), INFER_FIELD_TYPE[T])] =
+  private val staticFieldInferrers =
     staticFieldTypes.map(fieldType =>
       ((fieldType.spec.fieldType, fieldType.spec.isArray), isOfStaticType(fieldType))
-    ) ++ dynamicFieldInferrers
+    )
+
+  private val semiStaticFieldInferrers =
+    semiStaticFieldTypeSpecs.map(fieldTypeSpec =>
+      ((fieldTypeSpec.fieldType, fieldTypeSpec.isArray), isOfStaticType(ftf(fieldTypeSpec)))
+    )
+
+  private lazy val fieldTypeInferrers: Traversable[((FieldTypeId.Value, Boolean), INFER_FIELD_TYPE[T])] =
+    staticFieldInferrers ++
+    semiStaticFieldInferrers ++
+    dynamicFieldInferrers
 
   private lazy val fieldTypeInferrerMap = fieldTypeInferrers.toMap
 

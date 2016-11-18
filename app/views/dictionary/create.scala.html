@@ -14,11 +14,14 @@
 
 @elements = {
     @inputText(domainName, "name", form)
+    @inputText(domainName, "label", form)
     @inputText(domainName, "fieldType", form)
     @inputText(domainName, "isArray", form)
     @inputText(domainName, "numValues", form)
+    @inputText(domainName, "displayDecimalPlaces", form)
+    @inputText(domainName, "displayTrueValue", form)
+    @inputText(domainName, "displayFalseValue", form)
     @inputText(domainName, "aliases", form)
-    @inputText(domainName, "label", form)
     @select(domainName, "categoryId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
 }
 

@@ -61,6 +61,8 @@ case class HeatmapChartSpec(
   xCategories: Seq[String],
   yCategories: Seq[String],
   data: Seq[Seq[Option[Double]]],
+  min: Option[Double] = None,
+  max: Option[Double] = None,
   height: Option[Int] = None,
   gridWidth: Option[Int] = None
 ) extends ChartSpec
@@ -85,7 +87,7 @@ object ChartSpec {
     */
   def categorical[T](
     values: Traversable[Option[T]],
-    keyLabelMap: Option[Map[String, String]] = None,
+    renderer: Option[Option[T] => String],
     title: String,
     showLabels: Boolean,
     showLegend: Boolean,
@@ -101,7 +103,10 @@ object ChartSpec {
       case (key, count) => {
         val stringKey = key.map(_.toString)
         val keyOrEmpty = stringKey.getOrElse("")
-        DataPoint(stringKey, count, keyLabelMap.map(_.getOrElse(keyOrEmpty, keyOrEmpty)).getOrElse(keyOrEmpty))
+        DataPoint(
+          stringKey,
+          count,
+          renderer.map(_.apply(key)).getOrElse(keyOrEmpty))
       }
     }
     CategoricalChartSpec(title, showLabels, showLegend, data, chartType.getOrElse(ChartType.Pie), None, outputGridWidth)

@@ -70,13 +70,27 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       "fieldType" -> of[FieldTypeId.Value],
       "isArray" -> boolean,
       "numValues" -> optional(of[Map[String, String]]),
+      "displayDecimalPlaces" ->  optional(number(0, 20)),
+      "displayTrueValue" ->  optional(nonEmptyText),
+      "displayFalseValue" ->  optional(nonEmptyText),
       "aliases" ->  seq(nonEmptyText),
       "categoryId" -> optional(nonEmptyText)
       // TODO: make it more pretty perhaps by moving the category stuff to proxy/subclass of Field
-    ) { (name, label, fieldType, isArray, numValues, aliases, categoryId) =>
-      Field(name, label, fieldType, isArray, numValues, aliases, categoryId.map(BSONObjectID(_)))
+    ) { (name, label, fieldType, isArray, numValues, displayDecimalPlaces, displayTrueValue, displayFalseValue, aliases, categoryId) =>
+      Field(name, label, fieldType, isArray, numValues, displayDecimalPlaces, displayTrueValue, displayFalseValue, aliases, categoryId.map(BSONObjectID(_)))
     }
-    ((field: Field) => Some(field.name, field.label, field.fieldType, field.isArray, field.numValues, field.aliases, field.categoryId.map(_.stringify)))
+    ((field: Field) => Some(
+      field.name,
+      field.label,
+      field.fieldType,
+      field.isArray,
+      field.numValues,
+      field.displayDecimalPlaces,
+      field.displayTrueValue,
+      field.displayFalseValue,
+      field.aliases,
+      field.categoryId.map(_.stringify))
+    )
   )
 
   // router for requests; to be passed to views as helper.

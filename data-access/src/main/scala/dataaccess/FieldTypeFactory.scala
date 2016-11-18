@@ -31,6 +31,7 @@ trait FieldTypeFactory {
   def stringArray = apply(FieldTypeId.String, true).asValueOf[Array[Option[String]]]
 }
 
+// Enum
 private case class EnumFieldType(
     val nullAliases: Set[String],
     enumValueMap: Map[Int, String]
@@ -77,6 +78,83 @@ private case class EnumFieldType(
       super.valueToJsonNonEmpty(value)
     else
       throw new AdaConversionException(s"'$value' is not valid enum value: ${enumValueMap.mkString(";")}.")
+}
+
+// Double
+private case class DoubleFieldType(
+    val nullAliases: Set[String],
+    displayDecimalPlaces: Option[Int] = None
+  ) extends  FormatFieldType[Double] {
+
+  val spec = FieldTypeSpec(FieldTypeId.Double, false)
+
+  override val valueClass = classOf[jl.Double]
+
+  override val classTag = Some(implicitly[ClassTag[Double]])
+
+  override protected def displayStringToValueWoNull(text: String) =
+    toDouble(text)
+
+  override protected def valueToDisplayStringNonEmpty(value: Double) =
+    displayDecimalPlaces.map( places =>
+      BigDecimal(value).setScale(
+        places,
+        BigDecimal.RoundingMode.HALF_UP
+      ).toString
+    ).getOrElse(value.toString)
+
+  override protected def displayJsonToValueWoString(json: JsReadable) =
+    json match {
+      case JsNumber(number) =>
+        try {
+          number.toDouble
+        } catch {
+          case e: ArithmeticException => throw new AdaConversionException(s"Json $json is not double.")
+        }
+        case  _ => throw new AdaConversionException(s"Json $json is not double.")
+    }
+
+  override protected def jsonToValueWoNull(json: JsReadable) =
+    displayJsonToValueWoString(json)
+}
+
+// Boolean
+private case class BooleanFieldType(
+    val nullAliases: Set[String],
+    displayTrueValue: Option[String] = None,
+    displayFalseValue: Option[String] = None
+  ) extends FormatFieldType[Boolean] {
+
+  val spec = FieldTypeSpec(FieldTypeId.Boolean, false)
+
+  override val valueClass = classOf[jl.Boolean]
+
+  override val classTag = Some(implicitly[ClassTag[Boolean]])
+
+  override protected def displayStringToValueWoNull(text: String) =
+    toBoolean(text)
+
+  override protected def valueToDisplayStringNonEmpty(value: Boolean) = {
+    val displayValue = if (value)
+      displayTrueValue
+    else
+      displayFalseValue
+
+    displayValue.getOrElse(value.toString)
+  }
+
+  override protected def displayJsonToValueWoString(json: JsReadable) =
+    json match {
+      case JsBoolean(boolean) => boolean
+      case JsNumber(number) => toBoolean(number.toString)  // we accept also number as a display Json
+      case  _ => throw new AdaConversionException(s"Json $json cannot be converted to a Boolean.")
+    }
+
+  override protected def jsonToValueWoNull(json: JsReadable) =
+    json match {
+      case JsBoolean(boolean) => boolean
+      case  _ => throw new AdaConversionException(s"Json $json is not boolean.")
+    }
 }
 
 private case class ArrayFieldType[T](
@@ -205,61 +283,6 @@ private class FieldTypeFactoryImpl(
 
       override protected def displayStringToValueWoNull(text: String) =
         toLong(text)
-    },
-
-    // Double
-    new FormatFieldType[Double] {
-      val spec = FieldTypeSpec(FieldTypeId.Double, false)
-
-      val valueClass = classOf[jl.Double]
-
-      override val classTag = Some(implicitly[ClassTag[Double]])
-
-      override protected[dataaccess] val nullAliases = nullValues
-
-      override protected def displayJsonToValueWoString(json: JsReadable) =
-        json match {
-          case JsNumber(number) =>
-            try {
-              number.toDouble
-            } catch {
-              case e: ArithmeticException => throw new AdaConversionException(s"Json $json is not double.")
-            }
-          case  _ => throw new AdaConversionException(s"Json $json is not double.")
-        }
-
-      override protected def jsonToValueWoNull(json: JsReadable) =
-        displayJsonToValueWoString(json)
-
-      override protected def displayStringToValueWoNull(text: String) =
-        toDouble(text)
-    },
-
-    // Boolean
-    new FormatFieldType[Boolean] {
-      val spec = FieldTypeSpec(FieldTypeId.Boolean, false)
-
-      val valueClass = classOf[jl.Boolean]
-
-      override val classTag = Some(implicitly[ClassTag[Boolean]])
-
-      override protected[dataaccess] val nullAliases = nullValues
-
-      override protected def displayStringToValueWoNull(text: String) =
-        toBoolean(text)
-
-      override protected def displayJsonToValueWoString(json: JsReadable) =
-        json match {
-          case JsBoolean(boolean) => boolean
-          case JsNumber(number) => toBoolean(number.toString)  // we accept also number as a display Json
-          case  _ => throw new AdaConversionException(s"Json $json cannot be converted to a Boolean.")
-        }
-
-      override protected def jsonToValueWoNull(json: JsReadable) =
-        json match {
-          case JsBoolean(boolean) => boolean
-          case  _ => throw new AdaConversionException(s"Json $json is not boolean.")
-        }
     },
 
     // Date
@@ -432,20 +455,37 @@ private class FieldTypeFactoryImpl(
 
   override def apply(fieldTypeSpec: FieldTypeSpec): FieldType[_] = {
     val fieldTypeId = fieldTypeSpec.fieldType
-    // handle dynamic types (e.g. enum)
-    if (fieldTypeId == FieldTypeId.Enum) {
-      val intEnumMap = fieldTypeSpec.enumValues.getOrElse(Map[Int, String]())
-      val enumFieldType = EnumFieldType(nullValues, intEnumMap)
 
+    def arrayOrElseScalar(scalarType: FieldType[_]) =
       if (fieldTypeSpec.isArray)
-        ArrayFieldType(enumFieldType, arrayDelimiter)
+        ArrayFieldType(scalarType, arrayDelimiter)
       else
-        enumFieldType
-    } else {
-      // if not successful get a static type
-      staticTypeMap.getOrElse(fieldTypeSpec,
-        throw new IllegalArgumentException(s"Field type $fieldTypeSpec unrecognized.")
-      )
+        scalarType
+
+    // handle dynamic types (e.g. enum)
+    fieldTypeId match {
+      case FieldTypeId.Enum => {
+        val intEnumMap = fieldTypeSpec.enumValues.getOrElse(Map[Int, String]())
+        val scalarType = EnumFieldType(nullValues, intEnumMap)
+        arrayOrElseScalar(scalarType)
+      }
+
+      case FieldTypeId.Double => {
+        val scalarType = DoubleFieldType(nullValues, fieldTypeSpec.displayDecimalPlaces)
+        arrayOrElseScalar(scalarType)
+      }
+
+      case FieldTypeId.Boolean => {
+        val scalarType = BooleanFieldType(nullValues, fieldTypeSpec.displayTrueValue, fieldTypeSpec.displayFalseValue)
+        arrayOrElseScalar(scalarType)
+      }
+
+      case _ => {
+        // get a static type
+        staticTypeMap.getOrElse(fieldTypeSpec,
+          throw new IllegalArgumentException(s"Field type $fieldTypeSpec unrecognized.")
+        )
+      }
     }
   }
 

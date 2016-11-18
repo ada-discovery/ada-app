@@ -118,23 +118,30 @@ class ChartServiceImpl extends ChartService {
       jsons.map(typedFieldType.jsonToValue)
     }
 
+    def getRenderer[T]= {
+      val typedFieldType = fieldType.asValueOf[T]
+      typedFieldType.valueToDisplayString(_)
+    }
+
     fieldTypeId match {
       case FieldTypeId.String =>
         ChartSpec.categorical(
-          getValues[String], enumMap, chartTitle, showLabels, showLegend, chartType, outputGridWidth
+          getValues[String], Some(getRenderer[String]), chartTitle, showLabels, showLegend, chartType, outputGridWidth
         )
 
       case FieldTypeId.Enum =>
         ChartSpec.categorical(
-          getValues[Int], enumMap, chartTitle, showLabels, showLegend, chartType, outputGridWidth
+          getValues[Int], Some(getRenderer[Int]), chartTitle, showLabels, showLegend, chartType, outputGridWidth
         )
 
       case FieldTypeId.Boolean =>
         ChartSpec.categorical(
-          getValues[Boolean], enumMap, chartTitle, showLabels, showLegend, chartType, outputGridWidth
+          getValues[Boolean], Some(getRenderer[Boolean]), chartTitle, showLabels, showLegend, chartType, outputGridWidth
         )
 
       case FieldTypeId.Double => {
+        // TODO: use renderer here
+        val renderer = getRenderer[Double]
         def outputLabel(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP).toString
 
         ChartSpec.numerical(
@@ -178,7 +185,7 @@ class ChartServiceImpl extends ChartService {
       // for null and json types we can't show anything
       case FieldTypeId.Null | FieldTypeId.Json =>
         ChartSpec.categorical(
-          Nil, enumMap, chartTitle, showLabels, showLegend, chartType, outputGridWidth
+          Nil, None, chartTitle, showLabels, showLegend, chartType, outputGridWidth
         )
     }
   }
@@ -282,7 +289,7 @@ class ChartServiceImpl extends ChartService {
       case _ => None
     }
 
-    quants.map(quant => BoxChartSpec(field.labelOrElseName + " Box", field.labelOrElseName, quant, None, outputGridWidth))
+    quants.map(quant => BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quant, None, outputGridWidth))
   }
 
   override def createPearsonCorrelationChartSpec(
@@ -339,6 +346,6 @@ class ChartServiceImpl extends ChartService {
 //    println(correlations.map(_.mkString(",")).mkString("\n"))
 
     val fieldLabels = fieldsWithValues.map(_._1.labelOrElseName).toSeq
-    HeatmapChartSpec("Correlations", fieldLabels, fieldLabels, correlations, None, outputGridWidth)
+    HeatmapChartSpec("Correlations", fieldLabels, fieldLabels, correlations, None, Some(-1), Some(1), outputGridWidth)
   }
 }

@@ -122,13 +122,6 @@ private class RedCapDataSetImporter @Inject() (
         }
 
         JsObject(newJsValues)
-//        val doubleFieldType = ftf(FieldTypeSpec(FieldTypeId.Double)).asInstanceOf[FieldType[Double]]
-//          // TODO: replace this adhoc rounding of age with more conceptual approach
-//          val ageOption = doubleFieldType.displayJsonToValue(record \ "sv_age")
-//          val newAge: JsValue = ageOption.map( age =>
-//            Json.toJson(age.floor)
-//          ).getOrElse(JsNull)
-//          record.+(("sv_age", newAge))
       }
 
       // save the records
@@ -187,6 +180,7 @@ private class RedCapDataSetImporter @Inject() (
           case RCFieldType.checkbox => enumOrDouble
           case RCFieldType.dropdown => enumOrDouble
           case RCFieldType.calc => inferredType
+          case RCFieldType.slider => inferredType
           case RCFieldType.text => inferredType
           case RCFieldType.descriptive => inferredType
           case RCFieldType.yesno => FieldTypeSpec(FieldTypeId.Boolean)
@@ -196,7 +190,7 @@ private class RedCapDataSetImporter @Inject() (
 
         val categoryId = nameCategoryIdMap.get(metadata.form_name)
         val stringEnumValues = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
-        Field(metadata.field_name, Some(metadata.field_label), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnumValues, Seq[String](), categoryId)
+        Field(metadata.field_name, Some(metadata.field_label), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnumValues, None, None, None, Nil, categoryId)
       }.toList
 
     for {
@@ -210,15 +204,16 @@ private class RedCapDataSetImporter @Inject() (
       metadatas <- redCapService.listMetadatas("field_name", "")
 
       // save the obtained categories and return a category name with ids
-      categoryNameIds <- {
+      categoryNameIds <- Future.sequence {
         val categories = metadatas.map(_.form_name).toSet.map { formName: String =>
           new Category(formName)
-        }
-        categoryRepo.save(categories).map(ids =>
-          (categories, ids.toSeq).zipped.map { case (category, id) =>
+        }.toSeq
+
+        categories.map { category =>
+          categoryRepo.save(category).map( id =>
             (category.name, id)
-          }
-        )
+          )
+        }
       }
 
       // fields
@@ -228,7 +223,7 @@ private class RedCapDataSetImporter @Inject() (
         // also add redcap_event_name
         val fieldTypeSpec = inferredFieldNameTypeMap.get(redCapVisitField).get.spec
         val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
-        val visitField = Field(redCapVisitField, Some(redCapVisitLabel), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums, Nil)
+        val visitField = Field(redCapVisitField, Some(redCapVisitLabel), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums)
 
         fields ++ Seq(visitField)
       }

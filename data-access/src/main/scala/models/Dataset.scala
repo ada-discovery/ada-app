@@ -136,12 +136,22 @@ case class Field(
   fieldType: FieldTypeId.Value = FieldTypeId.String,
   isArray: Boolean = false,
   numValues: Option[Map[String, String]] = None, // TODO: rename to enumValues
+  displayDecimalPlaces: Option[Int] = None,
+  displayTrueValue: Option[String] = None,
+  displayFalseValue: Option[String] = None,
   aliases: Seq[String] = Seq[String](),
   var categoryId: Option[BSONObjectID] = None,
   var category: Option[Category] = None
 ) {
   def fieldTypeSpec: FieldTypeSpec =
-    FieldTypeSpec(fieldType, isArray, numValues.map(_.map{ case (a,b) => (a.toInt, b)}))
+    FieldTypeSpec(
+      fieldType,
+      isArray,
+      numValues.map(_.map{ case (a,b) => (a.toInt, b)}),
+      displayDecimalPlaces,
+      displayTrueValue,
+      displayFalseValue
+    )
 
   def labelOrElseName = label.getOrElse(name)
 }
@@ -153,7 +163,10 @@ object FieldTypeId extends Enumeration {
 case class FieldTypeSpec(
   fieldType: FieldTypeId.Value,
   isArray: Boolean = false,
-  enumValues: Option[Map[Int, String]] = None
+  enumValues: Option[Map[Int, String]] = None,
+  displayDecimalPlaces: Option[Int] = None,
+  displayTrueValue: Option[String] = None,
+  displayFalseValue: Option[String] = None
 )
 
 case class NumFieldStats(min : Double, max : Double, mean : Double, variance : Double)
@@ -202,11 +215,17 @@ object DataSetFormattersAndIds {
     (__ \ "fieldType").format[FieldTypeId.Value] and
     (__ \ "isArray").format[Boolean] and
     (__ \ "numValues").formatNullable[Map[String, String]] and
+    (__ \ "displayDecimalPlaces").formatNullable[Int] and
+    (__ \ "displayTrueValue").formatNullable[String] and
+    (__ \ "displayFalseValue").formatNullable[String] and
     (__ \ "aliases").format[Seq[String]] and
     (__ \ "categoryId").formatNullable[BSONObjectID]
   )(
-    Field(_, _, _, _, _, _, _),
-    (item: Field) =>  (item.name, item.label, item.fieldType, item.isArray, item.numValues, item.aliases, item.categoryId)
+    Field(_, _, _, _, _, _, _, _, _, _),
+    (item: Field) =>  (
+        item.name, item.label, item.fieldType, item.isArray, item.numValues, item.displayDecimalPlaces,
+        item.displayTrueValue, item.displayFalseValue, item.aliases, item.categoryId
+      )
   )
 
   implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
