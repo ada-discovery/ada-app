@@ -84,20 +84,20 @@ case class FieldChartType(
 
 abstract class StatsCalcSpec {
   def fieldNames: Traversable[String]
-  def elementGridWidth: Option[Int]
+  def outputGridWidth: Option[Int]
 }
 
 case class DistributionCalcSpec(
   fieldName: String,
   chartType: Option[ChartType.Value],
-  elementGridWidth: Option[Int] = None
+  outputGridWidth: Option[Int] = None
 ) extends StatsCalcSpec {
   override val fieldNames = Seq(fieldName)
 }
 
 case class BoxCalcSpec(
   fieldName: String,
-  elementGridWidth: Option[Int] = None
+  outputGridWidth: Option[Int] = None
 ) extends StatsCalcSpec {
   override val fieldNames = Seq(fieldName)
 }
@@ -106,14 +106,14 @@ case class ScatterCalcSpec(
   xFieldName: String,
   yFieldName: String,
   groupFieldName: Option[String],
-  elementGridWidth: Option[Int] = None
+  outputGridWidth: Option[Int] = None
 ) extends StatsCalcSpec {
   override val fieldNames = Seq(Some(xFieldName), Some(yFieldName), groupFieldName).flatten
 }
 
 case class CorrelationCalcSpec(
   fieldNames: Seq[String],
-  elementGridWidth: Option[Int] = None
+  outputGridWidth: Option[Int] = None
 ) extends StatsCalcSpec
 
 object ChartType extends Enumeration {

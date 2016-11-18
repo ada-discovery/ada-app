@@ -5,7 +5,8 @@
         showLegend,
         data,
         allowPointClick,
-        allowChartTypeChange
+        allowChartTypeChange,
+        height
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
@@ -21,7 +22,8 @@
                 plotBackgroundColor: null,
                 plotBorderWidth: null,
                 plotShadow: false,
-                type: 'pie'
+                type: 'pie',
+                height: height
             },
             title: {
                 text: title
@@ -80,7 +82,8 @@
         categories,
         data,
         allowPointClick,
-        allowChartTypeChange
+        allowChartTypeChange,
+        height
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
@@ -96,7 +99,8 @@
             chartType = 'bar'
         $('#' + chartElementName).highcharts({
             chart: {
-                type: chartType
+                type: chartType,
+                height: height
             },
             title: {
                 text: title
@@ -162,8 +166,8 @@
         chartElementName,
         xAxisCaption,
         yAxisCaption,
-        height,
-        series
+        series,
+        height
     ) {
         $('#' + chartElementName).highcharts({
             chart: {
@@ -222,7 +226,8 @@
         categories,
         data,
         allowPointClick,
-        allowChartTypeChange
+        allowChartTypeChange,
+        height
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
@@ -234,6 +239,9 @@
             cursor = 'pointer';
 
         $('#' + chartElementName).highcharts({
+            chart: {
+                height: height
+            },
             title: {
                 text: title
             },
@@ -299,7 +307,8 @@
         categories,
         data,
         allowPointClick,
-        allowChartTypeChange
+        allowChartTypeChange,
+        height
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
@@ -312,7 +321,8 @@
 
         $('#' + chartElementName).highcharts({
             chart: {
-                polar: true
+                polar: true,
+                height: height
             },
 
             title: {
@@ -384,8 +394,8 @@
         chartElementName,
         xAxisCaption,
         yAxisCaption,
-        height,
-        series
+        series,
+        height
     ) {
         $('#' + chartElementName).highcharts({
             chart: {

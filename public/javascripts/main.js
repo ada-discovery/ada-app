@@ -380,3 +380,10 @@ function handleModalButtonEnterPressed(modalName, submitButtonName, action) {
 
   $("#" + submitButtonName).click(action);
 }
+
+function shorten(string, length) {
+    return (string.length > length) ?
+        string.substring(0, length) + ".."
+    :
+        string
+}

@@ -18,7 +18,7 @@ $.widget( "custom.dynamicTable", {
         this.submitButtonName = domainName + 'SubmitButton'
         this.itemsName = domainName + 's[]'
 
-        handleModalButtonEnterPressed(this.modalName, this.submitButtonName, function() {that.addItems()})
+        handleModalButtonEnterPressed(this.modalName, this.submitButtonName, function() {that.addTableRowFromModal()})
 
         $('form').submit(function(ev) {
             ev.preventDefault();
@@ -33,22 +33,32 @@ $.widget( "custom.dynamicTable", {
     },
 
     openAddModal: function() {
-        $('#' + this.modalName + ' #newItems').val("")
+        $('#' + this.modalName +' input, #' + this.modalName +' select').each(function () {
+            if (this.id)
+                $(this).val("");
+        })
         $('#' + this.modalName).modal()
     },
 
-    addItems: function() {
-        var that = this;
-        $.each($('#' + this.modalName + ' #newItems').val().split(","), function(index, item) {
-            that.addTableRow(item.trim());
+    _getModalValues: function() {
+        var values = {};
+        $('#' + this.modalName +' input, #' + this.modalName +' select').each(function () {
+            if (this.id) {
+                values[this.id] = $(this).val()
+            }
         })
+        return values;
     },
 
-    addTableRow: function(item) {
-        this.tableBody.append(this.options.itemToRow(item))
+    addTableRowFromModal: function() {
+        this.addTableRow(this._getModalValues())
     },
 
-    removeItems: function() {
+    addTableRow: function(values) {
+        this.tableBody.append(this.options.itemToRow(values))
+    },
+
+    removeRows: function() {
         var that = this;
         this.tableBody.find('tr').each(function() {
             var checked = $(this).find("td input[type=checkbox]").is(':checked');
