@@ -49,6 +49,35 @@ function getQueryParams(qs) {
   return params;
 }
 
+function addUrlParm(url, name, value) {
+    var re = new RegExp("([?&]" + name + "=)[^&]+", "");
+
+    function add(sep) {
+        url += sep + name + "=" + encodeURIComponent(value);
+    }
+
+    function change() {
+        url = url.replace(re, "$1" + encodeURIComponent(value));
+    }
+    if (url.indexOf("?") === -1) {
+        add("?");
+    } else {
+        if (re.test(url)) {
+            change();
+        } else {
+            add("&");
+        }
+    }
+}
+
+function getCoreURL(url) {
+    var index = url.indexOf("?")
+    if (url.indexOf("?") != -1) {
+        return url.substring(0, index)
+    }
+    return url
+}
+
 function stringDatumTokenizer(searchAsContainsFlag, nonWhitespaceDelimiter, string) {
     var string2 = string;
     if (nonWhitespaceDelimiter) {
