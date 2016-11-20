@@ -1,5 +1,6 @@
 package controllers.dataset
 
+import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
@@ -11,15 +12,21 @@ import models.FilterCondition.filterFormat
 import Criterion.CriterionInfix
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
+import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 import java.util.Date
 import views.html.dataview
+
+import scala.concurrent.Future
+import scala.reflect.ClassTag
 
 trait DataViewControllerFactory {
   def apply(dataSetId: String): DataViewController
@@ -38,38 +45,44 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   protected override val listViewColumns = None // Some(Seq("name"))
 
-  private implicit val fieldChartTypeFormatter = JsonFormatter[FieldChartType]
-  private implicit val filterFormatter = JsonFormatter[Filter]
+  private implicit val statsCalcSpecFormatter = JsonFormatter[StatsCalcSpec]
+  private implicit val bsonObjectIdFormatter = JsonFormatter[BSONObjectID]
 
   override protected val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
-      "default" -> boolean,
-      "filters" -> seq(of[Filter]),
+      "filterIds" -> seq(optional(of[BSONObjectID])),
       "tableColumnNames" -> seq(text),
-      "chartTypes" -> seq(of[FieldChartType])
-    ) { (id, name, default, filters, tableColumnNames, chartTypes) =>
-      DataView(id, name, default, filters, tableColumnNames, chartTypes)
+      "statsCalcSpecs" -> seq(of[StatsCalcSpec]),
+      "elementGridWidth" -> number(min = 1, max = 12),
+      "default" -> boolean
+    ) { (id, name, filterIds, tableColumnNames, statsCalcSpecs, elementGridWidth, default) =>
+      DataView(id, name, filterIds, tableColumnNames, statsCalcSpecs, elementGridWidth, default)
     }
-    ((item: DataView) => Some((item._id, item.name, item.default, item.filters, item.tableColumnNames, item.chartTypes)))
+    ((item: DataView) => Some((item._id, item.name, item.filterIds, item.tableColumnNames, item.statsCalcSpecs, item.elementGridWidth, item.default)))
   )
 
   // router for requests; to be passed to views as helper.
-  protected lazy val router: DataViewRouter = new DataViewRouter(dataSetId)
-  protected lazy val dataSetRouter: DataSetRouter = new DataSetRouter(dataSetId)
+  protected lazy val router = new DataViewRouter(dataSetId)
+  protected lazy val dataSetRouter = new DataSetRouter(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)
 
-  override protected def createView(f : Form[DataView])(implicit msg: Messages, request: Request[_]) =
-    dataview.create(dataSetName + " Data View", f, router)
+  override protected def createView(f: Form[DataView])(implicit msg: Messages, request: Request[_]) =
+    dataview.create(
+      dataSetName + " Data View",
+      f,
+      router,
+      dataSetRouter.fieldNames
+    )
 
-  override protected def showView(id: BSONObjectID, f : Form[DataView])(implicit msg: Messages, request: Request[_]) =
+  override protected def showView(id: BSONObjectID, f: Form[DataView])(implicit msg: Messages, request: Request[_]) =
     editView(id, f)
 
-  override protected def editView(id: BSONObjectID, f : Form[DataView])(implicit msg: Messages, request: Request[_]) = {
-    dataview.edit(
+  override protected def editView(id: BSONObjectID, f: Form[DataView])(implicit msg: Messages, request: Request[_]) = {
+    dataview.editNormal(
       dataSetName + " Data View",
       id,
       f,
@@ -86,4 +99,138 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       router,
       result(dataSpaceMetaInfoRepo.find())
     )
+
+  override def idAndNames = Action.async { implicit request =>
+    for {
+      dataViews <- repo.find(sort = Seq(AscSort("name")))
+    } yield {
+      val sorted = dataViews.toSeq.sortBy(dataView => (!dataView.default, dataView.name))
+      Ok(Json.toJson(sorted))
+    }
+  }
+
+  override def getAndShowView(id: BSONObjectID) =
+    Action.async { implicit request =>
+      editCall(id).map(_.fold(
+        NotFound(s"Entity #$id not found")
+      ) { entity =>
+        implicit val msg = messagesApi.preferred(request)
+
+        render {
+          case Accepts.Html() => Ok(
+            dataview.edit(
+              dataSetName + " Data View",
+              id,
+              fillForm(entity),
+              router,
+              router.updateAndShowView,
+              dataSetRouter.fieldNames,
+              result(dataSpaceMetaInfoRepo.find())
+            )
+          )
+          case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+        }
+      }).recover {
+        case t: TimeoutException =>
+          Logger.error("Problem found in the edit process")
+          InternalServerError(t.getMessage)
+      }
+    }
+
+  override def updateAndShowView(id: BSONObjectID) =
+    Action.async { implicit request =>
+      update(id, Redirect(dataSetRouter.getView(id, 0, "", Left(Nil)))).apply(request)
+    }
+
+  def addDistributions(
+    dataViewId: BSONObjectID,
+    fieldNames: Seq[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val existingFieldNames = filterSpecsOf[DistributionCalcSpec](dataView).map(_.fieldName)
+    val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
+
+    if (newFieldNames.nonEmpty) {
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(DistributionCalcSpec(_, None)))
+      repo.update(newDataView)
+    } else
+      Future(())
+  }
+
+  def addBoxPlots(
+    dataViewId: BSONObjectID,
+    fieldNames: Seq[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val existingFieldNames = filterSpecsOf[BoxCalcSpec](dataView).map(_.fieldName)
+    val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
+
+    if (newFieldNames.nonEmpty) {
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(BoxCalcSpec(_)))
+      repo.update(newDataView)
+    } else
+      Future(())
+  }
+
+
+  def addScatter(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    yFieldName: String,
+    groupFieldName: Option[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val existingXYZNames = filterSpecsOf[ScatterCalcSpec](dataView).map { spec =>
+      (spec.xFieldName, spec.yFieldName, spec.groupFieldName)
+    }
+    val fieldNames = (xFieldName, yFieldName, groupFieldName)
+    if (!existingXYZNames.contains(fieldNames)) {
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(ScatterCalcSpec(xFieldName, yFieldName, groupFieldName)))
+      repo.update(newDataView)
+    } else
+      Future(())
+  }
+
+  def addCorrelation(
+    dataViewId: BSONObjectID,
+    fieldNames: Seq[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val existingNames = filterSpecsOf[CorrelationCalcSpec](dataView).map(_.fieldNames)
+    if (!existingNames.contains(fieldNames)) {
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(CorrelationCalcSpec(fieldNames)))
+      repo.update(newDataView)
+    } else
+      Future(())
+  }
+
+  def addTableFields(
+    dataViewId: BSONObjectID,
+    fieldNames: Seq[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val existingFieldNames = dataView.tableColumnNames
+    val filteredFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
+    if (filteredFieldNames.nonEmpty) {
+      val newSetting = dataView.copy(tableColumnNames = existingFieldNames ++ filteredFieldNames)
+      repo.update(newSetting)
+    } else {
+      Future(())
+    }
+  }
+
+  private def filterSpecsOf[T <: StatsCalcSpec](
+    dataView: DataView)(
+    implicit ev: ClassTag[T]
+  ): Seq[T] =
+    dataView.statsCalcSpecs.collect{ case t: T => t}
+
+  protected def processDataView(id: BSONObjectID)(fun: DataView => Future[_]) =
+    Action.async { implicit request =>
+      for {
+        dataView <- repo.get(id)
+        response <- dataView match {
+          case Some(dataView) => fun(dataView).map(x => Some(x))
+          case None => Future(None)
+        }
+      } yield
+        response.fold(
+          NotFound(s"Data view '#${id.stringify}' not found")
+        ) { _ => Ok("Done")}
+  }
 }

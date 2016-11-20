@@ -1,5 +1,4 @@
-@import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter}
-@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+@import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter, DataViewRouter, DataViewJsRouter}
 @import reactivemongo.bson.BSONObjectID
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.chart.highcharts.highchartsJsImport
@@ -7,6 +6,7 @@
 @import views.html.chart.{chartJs, chart}
 @import views.html.layout.main
 @import views.html.dataset.datasetSubNav
+@import views.html.dataview.dataViewSelectionModal
 @import play.api.libs.json.Json
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
@@ -25,6 +25,8 @@
     router: DataSetRouter,
     filterRouter: FilterRouter,
     filterJsRouter: FilterJsRouter,
+    dataViewRouter: DataViewRouter,
+    dataViewJsRouter: DataViewJsRouter,
     dataSetId: String,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -45,8 +47,8 @@
             )
         </div>
         <div class="pull-right">
-            <button class="btn btn-info btn-sm" type="button" onclick="addScatterToOverview()" data-toggle="tooltip" title="Add Scatter To Overview">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Overview
+            <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Scatter To View">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
             </button>
         </div>
     </div>
@@ -112,10 +114,15 @@
         @actions
     </div>
 
+    @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter, dataViewJsRouter)
+
     @chartSpec.map(chart(_)).getOrElse("")
 }
 
-<script type="text/javascript" src="@dataSetSettingRoutes.jsRoutes"></script>
+@helper.javascriptRouter("dataViewJsRoutes")(
+    dataViewJsRouter.addScatter
+)
+
 <script type="text/javascript">
     $(function () {
         $.ajax({
@@ -175,9 +182,11 @@
                 return false;
             }
         });
+
+        $("#dataViewSelectionModal #submitButton").on("click", addScatterToView)
     });
 
-    function addScatterToOverview() {
+    function addScatterToView() {
         var xFieldName = $('#fieldForm #xFieldName').val()
         var yFieldName = $('#fieldForm #yFieldName').val()
         var groupFieldName = $('#fieldForm #groupFieldName').val()
@@ -186,10 +195,13 @@
             groupFieldName = null
         }
 
-        if (fieldName) {
-            jsRoutes.controllers.dataset.DataSetSettingController.addScatterToOverview('@dataSetId', xFieldName, yFieldName, groupFieldName).ajax( {
+        var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+        var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
+
+        if (xFieldName) {
+            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addScatter(dataViewId, xFieldName, yFieldName, groupFieldName).ajax( {
                 success: function() {
-                    showMessage("Scatter for the fields '" + xFieldName + "', '" + yFieldName + "' has been successfully added to the overview.");
+                    showMessage("Scatter for the fields '" + xFieldName + "', '" + yFieldName + "' has been successfully added to the view '" + dataViewName + "'.");
                 },
                 error: function(data){
                     showError( data.responseText );

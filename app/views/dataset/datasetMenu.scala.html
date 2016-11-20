@@ -46,7 +46,7 @@
         @spaceItem(spaceMetaInfo._id.get, spaceMetaInfo.name)
         <div id="dataSets-@{spaceMetaInfo._id.get.stringify}" class="collapse clear-left datasets-div sidebar-nav nav nav-pills nav-stacked">
             @spaceMetaInfo.dataSetMetaInfos.filter(!_.hide).sortBy(_.sortOrder).map { setMetaInfo =>
-                @listItem(new DataSetRouter(setMetaInfo.id).plainOverviewList, setMetaInfo.id, setMetaInfo.name)
+                @listItem(new DataSetRouter(setMetaInfo.id).getDefaultView, setMetaInfo.id, setMetaInfo.name)
             }
         </div>
     }

@@ -1,4 +1,4 @@
-@import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter}
+@import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter, DataViewRouter, DataViewJsRouter}
 @import models.{FilterCondition, ChartSpec}
 @import models.Field
 @import reactivemongo.bson.BSONObjectID
@@ -7,10 +7,10 @@
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.chart.{chartJs, chart}
 @import views.html.dataset.datasetSubNav
+@import views.html.dataview.dataViewSelectionModal
 @import play.api.libs.json.Json
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
-@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import models.DataSpaceMetaInfo
 
 @(
@@ -22,6 +22,8 @@
     router: DataSetRouter,
     filterRouter: FilterRouter,
     filterJsRouter: FilterJsRouter,
+    dataViewRouter: DataViewRouter,
+    dataViewJsRouter: DataViewJsRouter,
     dataSetId: String,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -42,8 +44,8 @@
             )
         </div>
         <div class="pull-right">
-            <button class="btn btn-info btn-sm" type="button" onclick="addToCorrelations()" data-toggle="tooltip" title="Add Correlation(s) To Overview">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To Overview
+            <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Correlation(s) To View">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
             </button>
         </div>
     </div>
@@ -76,10 +78,15 @@
         @actions
     </div>
 
+    @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter, dataViewJsRouter)
+
     @chartSpec.map(chart(_)).getOrElse("")
 }
 
-<script type="text/javascript" src="@dataSetSettingRoutes.jsRoutes"></script>
+@helper.javascriptRouter("dataViewJsRoutes")(
+    dataViewJsRouter.addCorrelation
+)
+
 <script type="text/javascript">
     $(function () {
         $('#fieldForm #fieldNamez').keypress(function (e) {
@@ -92,17 +99,22 @@
                 })
             }
         });
+
+        $("#dataViewSelectionModal #submitButton").on("click", addCorrelationToView)
     });
 
-    function addToCorrelations() {
+    function addCorrelationToView() {
+        var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+        var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
+
         var fieldNamesValue = $('#fieldForm #fieldNamez').val()
         var fieldNames = fieldNamesValue.split(",").map(function(str) {
             return str.trim();
         })
-        if (fieldName) {
-            jsRoutes.controllers.dataset.DataSetSettingController.addCorrelationToOverview('@dataSetId', fieldNames).ajax( {
+        if (fieldNames.length > 0) {
+            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId, fieldNames).ajax( {
                 success: function() {
-                    showMessage("Correlations for the fields '" + fieldNamesValue + "' have been successfully added to the overview.");
+                    showMessage("Correlation for the field(s) '" + fieldNamesValue + "' has been successfully added to the view '" + dataViewName + "'.");
                 },
                 error: function(data){
                     showError( data.responseText );

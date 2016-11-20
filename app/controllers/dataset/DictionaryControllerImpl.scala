@@ -94,8 +94,10 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   )
 
   // router for requests; to be passed to views as helper.
-  protected val router: DictionaryRouter = new DictionaryRouter(dataSetId)
-  protected val jsRouter: DictionaryJsRouter = new DictionaryJsRouter(dataSetId)
+  protected val router = new DictionaryRouter(dataSetId)
+  protected val jsRouter = new DictionaryJsRouter(dataSetId)
+  protected val dataViewRouter = new DataViewRouter(dataSetId)
+  protected val dataViewJsRouter = new DataViewJsRouter(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)
@@ -141,6 +143,8 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       page,
       fieldChartSpecs,
       router,
+      dataViewRouter,
+      dataViewJsRouter,
       fieldNameLabels,
       dataSpaceMetaInfos,
       6

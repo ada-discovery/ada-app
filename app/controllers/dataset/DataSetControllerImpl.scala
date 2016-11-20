@@ -75,6 +75,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected val jsRouter = new DataSetJsRouter(dataSetId)
   protected val filterRouter = new FilterRouter(dataSetId)
   protected val filterJsRouter = new FilterJsRouter(dataSetId)
+  protected val dataViewRouter = new DataViewRouter(dataSetId)
+  protected val dataViewJsRouter = new DataViewJsRouter(dataSetId)
 
   private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
   private val csvEOL = "\n"
@@ -130,6 +132,30 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     )
   }
 
+  private def getViewView(
+    dataViewId: BSONObjectID,
+    page: Page[JsObject],
+    fieldChartSpecs: Traversable[FieldChartSpec],
+    tableFields: Traversable[Field],
+    elementGridWidth: Int
+  )(implicit msg: Messages, request: Request[_]) = {
+    dataset.showView(
+      dataSetName + " Item",
+      dataViewId,
+      page,
+      tableFields,
+      fieldChartSpecs,
+      elementGridWidth,
+      setting.filterShowFieldStyle,
+      router,
+      jsRouter,
+      filterRouter,
+      filterJsRouter,
+      dataViewRouter,
+      getMetaInfos
+    )
+  }
+
   /**
     * Shows all fields of the selected subject.
     *
@@ -139,7 +165,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param request Header of original request.
     * @return View for subject entries.
     */
-  override protected def showView(id : BSONObjectID, item : JsObject)(implicit msg: Messages, request: Request[_]) = {
+  override protected def showView(
+    id : BSONObjectID,
+    item : JsObject
+  )(implicit msg: Messages, request: Request[_]) = {
     val fieldNameLabelAndRendererMapFuture = fieldRepo.find().map(_.map
       { field =>
         val fieldType = ftf(field.fieldTypeSpec)
@@ -241,7 +270,85 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
+  private case class ViewResponse(
+    count: Int,
+    fieldChartSpecs: Traversable[FieldChartSpec],
+    tableItems: Traversable[JsObject],
+    filter: Filter,
+    tableFields: Traversable[Field]
+  )
+
+//  override def overviewList(
+//    page: Int,
+//    orderBy: String,
+//    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+//  ) = Action.async { implicit request =>
+//    implicit val msg = messagesApi.preferred(request)
+//
+//    val start = new ju.Date()
+//
+//    {
+//      for {
+//        viewResponse <- getViewResponse(page, orderBy, filterOrId, listViewColumns.get, setting.statsCalcSpecs)
+//      } yield {
+//        val end = new ju.Date()
+//
+//        Logger.info(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
+//        render {
+//          case Accepts.Html() => {
+//            val newPage = Page(viewResponse.tableItems, page, page * pageLimit, viewResponse.count, orderBy, Some(viewResponse.filter))
+//            Ok(overviewListView(newPage, viewResponse.fieldChartSpecs, viewResponse.tableFields))
+//          }
+//          case Accepts.Json() => Ok(Json.toJson(viewResponse.tableItems))
+//        }
+//      }
+//    }.recover {
+//      case t: TimeoutException =>
+//        Logger.error("Problem found in the overviewList process")
+//        InternalServerError(t.getMessage)
+//      case e: AdaConversionException => {
+//        request.headers.get("Referer") match {
+//          case Some(refererUrl) => Redirect(refererUrl).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
+//          case None => Redirect(router.plainOverviewList).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
+//        }
+//      }
+//    }
+//  }
+
   override def overviewList(
+    page: Int,
+    orderBy: String,
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ) = Action.async { implicit request =>
+    Future(Redirect(router.getDefaultView))
+  }
+
+  override def getDefaultView = Action.async { implicit request =>
+    for {
+//      // get the default view
+//      defaultView <- dataViewRepo.find(criteria = Seq("default" #== "true"), limit = Some(1)).map(_.headOption)
+//
+//      // if not available pick any view
+//      selectedView <- defaultView match {
+//        case Some(view) => Future(Some(view))
+//        case None => dataViewRepo.find(limit = Some(1)).map(_.headOption)
+//      }
+      selectedView <- dataViewRepo.find().map( views =>
+        views.find(_.default) match {
+          case Some(view) => Some(view)
+          case None => views.headOption
+        }
+      )
+    } yield {
+      selectedView match {
+        case Some(view) => Redirect(router.getView(view._id.get, 0, "", Left(Nil)))
+        case None => Redirect(dataViewRouter.plainList).flashing("errors" -> "No view to show. You must first define one.")
+      }
+    }
+  }
+
+  override def getView(
+    dataViewId: BSONObjectID,
     page: Int,
     orderBy: String,
     filterOrId: Either[Seq[FilterCondition], BSONObjectID]
@@ -249,70 +356,42 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     implicit val msg = messagesApi.preferred(request)
 
     val start = new ju.Date()
-    val statsCalcSpecs = setting.statsCalcSpecs
-    val chartFieldNames = statsCalcSpecs.map(_.fieldNames).flatten.toSet
-    val tableFieldNames = listViewColumns.get
 
     {
       for {
-        // use a given filter conditions or load one
-        resolvedFilter <- resolveFilter(filterOrId)
+        // load the view
+        dataView <- dataViewRepo.get(dataViewId)
 
-        // get the conditions
-        conditions = resolvedFilter.conditions
+        // get the response data
+        viewResponse <- {
+          val (columnNames, statsCalcSpecs) =
+            dataView.map( view =>
+              (view.tableColumnNames, view.statsCalcSpecs)
+            ).getOrElse((Nil, Nil))
 
-        // generate criteria
-        criteria <- toCriteria(conditions)
-
-        // obtain the total item count satysfying the resolved filter
-        count <- getFutureCount(conditions)
-
-        // create a name -> field map of all the referenced fields for a quick lookup
-        fieldNameMap <- {
-          val filterFieldNames = conditions.map(_.fieldName.trim)
-          val requiredFieldNames: Set[String] = (chartFieldNames ++ tableFieldNames ++ filterFieldNames)
-
-          getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
-        }
-
-        // load the items needed for generation of charts
-        chartItems <- repo.find(criteria, Nil, chartFieldNames)
-
-        // load the table items
-        tableItems <- {
-          val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
-            fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
-          }
-          getFutureItems(Some(page), orderBy, conditions, tableFieldNamesToLoad, Some(pageLimit))
+          getViewResponse(page, orderBy, filterOrId, columnNames, statsCalcSpecs)
         }
       } yield {
-        val tableFields = tableFieldNames.map(fieldNameMap.get).flatten
-        val chartFields = chartFieldNames.map(fieldNameMap.get).flatten
-
-        val chartSpecs = if (chartItems.nonEmpty)
-          generateCharts(chartItems, statsCalcSpecs, chartFields)
-        else
-          Nil
-
-        val fieldChartSpecs = chartSpecs.map { case (chartSpec,  fieldNames) =>
-          FieldChartSpec(fieldNames.head, chartSpec)
-        }
-
-        val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
         val end = new ju.Date()
 
-        Logger.info(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
+        Logger.info(s"Loading of view for the data set '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
         render {
           case Accepts.Html() => {
-            val newPage = Page(tableItems, page, page * pageLimit, count, orderBy, Some(newFilter))
-            Ok(overviewListView(newPage, fieldChartSpecs, tableFields))
+            val newPage = Page(viewResponse.tableItems, page, page * pageLimit, viewResponse.count, orderBy, Some(viewResponse.filter))
+            Ok(getViewView(
+              dataViewId,
+              newPage,
+              viewResponse.fieldChartSpecs,
+              viewResponse.tableFields,
+              dataView.map(_.elementGridWidth).getOrElse(3))
+            )
           }
-          case Accepts.Json() => Ok(Json.toJson(tableItems))
+          case Accepts.Json() => Ok(Json.toJson(viewResponse.tableItems))
         }
       }
     }.recover {
       case t: TimeoutException =>
-        Logger.error("Problem found in the overviewList process")
+        Logger.error("Problem found in the getView process")
         InternalServerError(t.getMessage)
       case e: AdaConversionException => {
         request.headers.get("Referer") match {
@@ -320,6 +399,72 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case None => Redirect(router.plainOverviewList).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
         }
       }
+    }
+  }
+
+  private def getViewResponse(
+    page: Int,
+    orderBy: String,
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID],
+    tableFieldNames: Seq[String],
+    statsCalcSpecs: Seq[StatsCalcSpec]
+  ): Future[ViewResponse] = {
+    val chartFieldNames = statsCalcSpecs.map(_.fieldNames).flatten.toSet
+
+    for {
+
+      // use a given filter conditions or load one
+      resolvedFilter <- resolveFilter(filterOrId)
+
+      // get the conditions
+      conditions = resolvedFilter.conditions
+
+      // generate criteria
+      criteria <- toCriteria(conditions)
+
+      // obtain the total item count satysfying the resolved filter
+      count <- getFutureCount(conditions)
+
+      // create a name -> field map of all the referenced fields for a quick lookup
+      fieldNameMap <- {
+        val filterFieldNames = conditions.map(_.fieldName.trim)
+        val requiredFieldNames: Set[String] = (chartFieldNames ++ tableFieldNames ++ filterFieldNames)
+
+        getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
+      }
+
+      // load the items needed for generation of charts
+      chartItems <- if (chartFieldNames.nonEmpty)
+          repo.find(criteria, Nil, chartFieldNames)
+        else
+          Future(Nil)
+
+      // load the table items
+      tableItems <- {
+        val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
+          fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
+        }
+        if (tableFieldNamesToLoad.nonEmpty)
+            getFutureItems(Some(page), orderBy, conditions, tableFieldNamesToLoad, Some(pageLimit))
+          else
+            Future(Nil)
+      }
+    } yield {
+      val tableFields = tableFieldNames.map(fieldNameMap.get).flatten
+      val chartFields = chartFieldNames.map(fieldNameMap.get).flatten
+
+      val chartSpecs = if (chartItems.nonEmpty)
+          generateCharts(chartItems, statsCalcSpecs, chartFields)
+        else
+          Nil
+
+      val fieldChartSpecs = chartSpecs.map { case (chartSpec,  fieldNames) =>
+        FieldChartSpec(fieldNames.head, chartSpec)
+      }
+
+      val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+
+      ViewResponse(count, fieldChartSpecs, tableItems, newFilter, tableFields)
     }
   }
 
@@ -534,6 +679,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           router,
           filterRouter,
           filterJsRouter,
+          dataViewRouter,
+          dataViewJsRouter,
           dataSetId,
           getMetaInfos
         ))
@@ -595,6 +742,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             router,
             filterRouter,
             filterJsRouter,
+            dataViewRouter,
+            dataViewJsRouter,
             dataSetId,
             getMetaInfos
           ))
@@ -654,6 +803,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             router,
             filterRouter,
             filterJsRouter,
+            dataViewRouter,
+            dataViewJsRouter,
             dataSetId,
             getMetaInfos
           ))

@@ -13,6 +13,8 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val plainList = routeFun(_.find())
   val overviewList = routes.overviewList _ map route
   val plainOverviewList = routeFun(_.overviewList())
+  val getView = routes.getView _ map route
+  val getDefaultView = routeFun(_.getDefaultView)
   val get = routes.get _ map route
   val plainGetScatterStats = routeFun(_.getScatterStats())
   val getScatterStats = routes.getScatterStats _ map route
@@ -32,4 +34,5 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
 
 final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.DataSetDispatcher, "dataSet", dataSetId) {
   val getFieldValue = routeFun(_.getFieldValue)
+  val getView = routeFun(_.getView)
 }

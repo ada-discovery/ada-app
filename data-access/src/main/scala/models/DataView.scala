@@ -3,25 +3,27 @@ package models
 import dataaccess.{BSONObjectIdentity, EnumFormat}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import models.FilterCondition.filterFormat
+import models.DataSetFormattersAndIds.statsCalcSpecFormat
 import java.util.Date
+import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
-
+import dataaccess.OptionFormat
 
 case class DataView(
   _id: Option[BSONObjectID],
   name: String,
-  default: Boolean,
-  filters: Seq[Filter],
+  filterIds: Seq[Option[BSONObjectID]],
   tableColumnNames: Seq[String],
-  chartTypes: Seq[FieldChartType],
+  statsCalcSpecs: Seq[StatsCalcSpec],
+  elementGridWidth: Int = 3,
+  default: Boolean = false,
   createdById: Option[BSONObjectID] = None,
   timeCreated: Date = new Date()
 )
 
 object DataView {
-  implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
-  implicit val fieldChartTypeFormat = Json.format[FieldChartType]
+  // TODO: weird that we had to use a custom option format here..
+  implicit val optionalBSONObjectIdFormat = new OptionFormat[BSONObjectID]
   implicit val dataViewFormat = Json.format[DataView]
 
   implicit object DataViewIdentity extends BSONObjectIdentity[DataView] {

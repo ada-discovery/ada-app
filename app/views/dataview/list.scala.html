@@ -39,8 +39,9 @@
         router.list(_, _, page.filterConditions),
         typeColumns[DataView](
             (Some("name"), "Name", _.name),
-            (Some("timeCreated"), "Time Created", _.timeCreated.toString),
-            (Some("filters"), "Filters", _.filters.map( filter => filter.conditions.map (condition => s"${condition.fieldName} ${condition.conditionType} ${condition.value}" )).mkString("\n"))
+            (Some("default"), "Default?", _.default.toString),
+            (Some("timeCreated"), "Time Created", _.timeCreated.toString)
+//            (Some("filters"), "Filters", _.filters.map( filter => filter.conditions.map (condition => s"${condition.fieldName} ${condition.conditionType} ${condition.value}" )).mkString("\n"))
         ),
         Some({ item : Any => router.get(item.asInstanceOf[DataView]._id.get)})
     )

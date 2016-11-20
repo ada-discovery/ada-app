@@ -44,6 +44,15 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = dispatch(_.overviewList(page, orderBy, filterOrId))
 
+  override def getView(
+    dataViewId: BSONObjectID,
+    page: Int,
+    orderBy: String,
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ) = dispatch(_.getView(dataViewId, page, orderBy, filterOrId))
+
+  override def getDefaultView = dispatch(_.getDefaultView)
+
   override def getScatterStats(
     xFieldName: Option[String],
     yFieldName: Option[String],

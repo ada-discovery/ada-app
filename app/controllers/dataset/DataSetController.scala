@@ -16,6 +16,23 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
   ): Action[AnyContent]
 
+  /**
+    * Renders the view with a given id
+    * @param dataViewId
+    * @param page
+    * @param orderBy
+    * @param filterOrId
+    * @return
+    */
+  def getView(
+    dataViewId: BSONObjectID,
+    page: Int,
+    orderBy: String,
+    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+  ): Action[AnyContent]
+
+  def getDefaultView: Action[AnyContent]
+
   def getDistribution(
     fieldName: Option[String],
     filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]

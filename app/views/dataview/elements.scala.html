@@ -3,9 +3,10 @@
 @import models.DataView
 @import controllers.dataset.DataViewRouter
 @import views.html.table.dynamicStringTable
-@import views.html.datasetsetting.statsCalcSpecTable
+@import views.html.dataview.statsCalcSpecTable
+@import views.html.dataview.activateTypeahead
 
-@(domainName: String, form: Form[DataView])(implicit msg: play.api.i18n.Messages)
+@(form: Form[DataView])(implicit msg: play.api.i18n.Messages)
 
 <!-- dynamic (add, remove) table -->
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
@@ -15,10 +16,15 @@
     <input type="text" id="newItem" class="typeahead">
 }
 
+@inputText("dataView", "name", form)
 
-@inputText(domainName, "name", form)
-@inputText(domainName, "filters", form)
+@checkbox("dataView", "default", form)
 
-@labelValue("tableColumnNames", attributeLabel(domainName, "tableColumnNames")){
-    @dynamicStringTable("tableColumnName", form.value.get.tableColumnNames, true, Some(addModalInner))
+@labelValue("tableColumnNames", attributeLabel("dataView", "tableColumnNames")){
+    @dynamicStringTable("tableColumnName", form.value.map(_.tableColumnNames).getOrElse(Nil), true, Some(addModalInner))
 }
+@labelValue("statsCalcSpecs", attributeLabel("dataView", "statsCalcSpecs")){
+    @statsCalcSpecTable(form.value.map(_.statsCalcSpecs).getOrElse(Nil))
+}
+
+@inputText("dataView", "elementGridWidth", form)

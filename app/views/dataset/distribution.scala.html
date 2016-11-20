@@ -1,4 +1,4 @@
-@import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter}
+@import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter, DataViewRouter, DataViewJsRouter}
 @import models.{FilterCondition, ChartSpec}
 @import models.Field
 @import reactivemongo.bson.BSONObjectID
@@ -7,6 +7,7 @@
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.chart.{chartPanel, chartPanelJs}
 @import views.html.dataset.datasetSubNav
+@import views.html.dataview.dataViewSelectionModal
 @import play.api.libs.json.Json
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
@@ -22,6 +23,8 @@
     router: DataSetRouter,
     filterRouter: FilterRouter,
     filterJsRouter: FilterJsRouter,
+    dataViewRouter: DataViewRouter,
+    dataViewJsRouter: DataViewJsRouter,
     dataSetId: String,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -48,12 +51,12 @@
             </button>
             <ul class="dropdown-menu">
                 <li>
-                    <a href="#" onclick="addToDistributions();return false" data-toggle="tooltip" title="Add Distribution To Overview">
+                    <a href="#" onclick="addDistribution();return false" data-toggle="tooltip" title="Add Distribution To View">
                         To Distributions
                     </a>
                 </li>
                 <li>
-                    <a href="#" onclick="addToBoxPlots();return false" data-toggle="tooltip" title="Add Box Plots To Overview">
+                    <a href="#" onclick="addBoxPlot();return false" data-toggle="tooltip" title="Add Box Plots To View">
                         To Box Plots
                     </a>
                 </li>
@@ -92,10 +95,17 @@
     </div>
     <br/>
     <br/>
+
+    @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter, dataViewJsRouter)
+
     @chartPanel(chartSpecs, 12 / chartSpecs.size)
 }
 
-<script type="text/javascript" src="@dataSetSettingRoutes.jsRoutes"></script>
+@helper.javascriptRouter("dataViewJsRoutes")(
+    dataViewJsRouter.addDistributions,
+    dataViewJsRouter.addBoxPlots
+)
+
 <script type="text/javascript">
     $(function () {
         populateFieldTypeahedFromUrl(
@@ -117,12 +127,33 @@
         });
     });
 
-    function addToDistributions() {
+    function addDistribution() {
+        var handler = function(e) {
+            addDistributionToView();
+        };
+
+        $("#dataViewSelectionModal #submitButton").one( "click", handler );
+        $("#dataViewSelectionModal").modal('show');
+    }
+
+    function addBoxPlot() {
+        var handler = function(e) {
+            addBoxPlotToView();
+        };
+
+        $("#dataViewSelectionModal #submitButton").one( "click", handler );
+        $("#dataViewSelectionModal").modal('show');
+    }
+
+    function addDistributionToView() {
+        var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+        var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
         var fieldName = $('#fieldForm #fieldName').val()
+
         if (fieldName) {
-            jsRoutes.controllers.dataset.DataSetSettingController.addDistributionsToOverview('@dataSetId', [fieldName]).ajax( {
+            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addDistributions(dataViewId, [fieldName]).ajax( {
                 success: function() {
-                    showMessage("Distribution for the field '" + fieldName + "' has been successfully added to the overview.");
+                    showMessage("Distributions for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
                 },
                 error: function(data){
                     showError( data.responseText );
@@ -131,12 +162,15 @@
         }
     }
 
-    function addToBoxPlots() {
+    function addBoxPlotToView() {
+        var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+        var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
         var fieldName = $('#fieldForm #fieldName').val()
+
         if (fieldName) {
-            jsRoutes.controllers.dataset.DataSetSettingController.addBoxPlotsToOverview('@dataSetId', [fieldName]).ajax( {
+            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId, [fieldName]).ajax( {
                 success: function() {
-                    showMessage("Box plot for the field '" + fieldName + "' has been successfully added to the overview.");
+                    showMessage("Box plots for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
                 },
                 error: function(data){
                     showError( data.responseText );
