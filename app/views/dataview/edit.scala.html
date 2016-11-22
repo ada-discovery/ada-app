@@ -2,7 +2,7 @@
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import controllers.dataset.DataViewRouter
 @import models.DataSpaceMetaInfo
-@import models.DataView
+@import models.{DataView, Field}
 @import reactivemongo.bson.BSONObjectID
 @import views.html.dataview.elements
 @import views.html.dataview.activateTypeahead
@@ -13,7 +13,8 @@
     form: Form[DataView],
     router: DataViewRouter,
     updateCall: BSONObjectID => Call,
-    fieldNamesCall: Call,
+    fieldsCall: Call,
+    nameFieldMap: Map[String,  Field],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
@@ -22,7 +23,7 @@
 @layout.edit(
     domainName,
 	form.errors,
-    elements(form),
+    elements(form, nameFieldMap),
     updateCall(id),
     router.plainList,
     Some(router.delete(id)),
@@ -30,5 +31,5 @@
     Some(datasetSubNav())
 )
 
-@activateTypeahead(fieldNamesCall)
+@activateTypeahead(fieldsCall)
 

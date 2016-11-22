@@ -1,4 +1,4 @@
-@(fieldNamesCall: Call)
+@(fieldsCall: Call)
 
 <!-- autocompletion -->
 <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/typeahead.min.css")">
@@ -6,14 +6,45 @@
 
 <script type="text/javascript">
     $(function () {
+        var showOption = @{FilterShowFieldStyle.NamesAndLabels.id}
+        console.log(showOption)
         $.ajax({
-            url: '@fieldNamesCall',
+            url: '@Html(fieldsCall.url)',
             success: function (data) {
-                populateStringTypeahead($('#add_tableColumnNameModal #newItem'), data, true);
-                populateStringTypeahead($('#add_statsCalcSpecModal #fieldName'), data, true);
-                populateStringTypeahead($('#add_statsCalcSpecModal #xFieldName'), data, true);
-                populateStringTypeahead($('#add_statsCalcSpecModal #yFieldName'), data, true);
-                populateStringTypeahead($('#add_statsCalcSpecModal #groupFieldName'), data, true);
+                populateFieldTypeahed(
+                    $('#add_tableColumnNameModal #newItemTypeahead'),
+                    $('#add_tableColumnNameModal #newItem'),
+                    data,
+                    showOption
+                );
+
+                populateFieldTypeahed(
+                    $('#add_statsCalcSpecModal #fieldNameTypeahead'),
+                    $('#add_statsCalcSpecModal #fieldName'),
+                    data,
+                    showOption
+                );
+
+                populateFieldTypeahed(
+                    $('#add_statsCalcSpecModal #xFieldNameTypeahead'),
+                    $('#add_statsCalcSpecModal #xFieldName'),
+                    data,
+                    showOption
+                );
+
+                populateFieldTypeahed(
+                    $('#add_statsCalcSpecModal #yFieldNameTypeahead'),
+                    $('#add_statsCalcSpecModal #yFieldName'),
+                    data,
+                    showOption
+                );
+
+                populateFieldTypeahed(
+                    $('#add_statsCalcSpecModal #groupFieldNameTypeahead'),
+                    $('#add_statsCalcSpecModal #groupFieldName'),
+                    data,
+                    showOption
+                );
             }
         });
     });

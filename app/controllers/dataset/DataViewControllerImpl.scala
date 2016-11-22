@@ -42,6 +42,8 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   protected lazy val dataSetName = result(dsa.metaInfo).name
   protected lazy val dataViewRepo = dsa.dataViewRepo
+  protected lazy val fieldRepo = dsa.fieldRepo
+
 
   protected override val listViewColumns = None // Some(Seq("name"))
 
@@ -75,19 +77,22 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       dataSetName + " Data View",
       f,
       router,
-      dataSetRouter.fieldNames
+      dataSetRouter.allFields
     )
 
   override protected def showView(id: BSONObjectID, f: Form[DataView])(implicit msg: Messages, request: Request[_]) =
     editView(id, f)
 
   override protected def editView(id: BSONObjectID, f: Form[DataView])(implicit msg: Messages, request: Request[_]) = {
+    val nameFieldMap = result(getNameFieldMap)
+
     dataview.editNormal(
       dataSetName + " Data View",
       id,
       f,
       router,
-      dataSetRouter.fieldNames,
+      dataSetRouter.allFields,
+      nameFieldMap,
       result(dataSpaceMetaInfoRepo.find())
     )
   }
@@ -115,6 +120,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
         NotFound(s"Entity #$id not found")
       ) { entity =>
         implicit val msg = messagesApi.preferred(request)
+        val nameFieldMap = result(getNameFieldMap)
 
         render {
           case Accepts.Html() => Ok(
@@ -124,7 +130,8 @@ protected[controllers] class DataViewControllerImpl @Inject() (
               fillForm(entity),
               router,
               router.updateAndShowView,
-              dataSetRouter.fieldNames,
+              dataSetRouter.allFields,
+              nameFieldMap,
               result(dataSpaceMetaInfoRepo.find())
             )
           )
@@ -233,4 +240,10 @@ protected[controllers] class DataViewControllerImpl @Inject() (
           NotFound(s"Data view '#${id.stringify}' not found")
         ) { _ => Ok("Done")}
   }
+
+  private def getNameFieldMap: Future[Map[String, Field]] =
+    fieldRepo.find().map { _.map( field =>
+        (field.name, field)
+      ).toMap
+    }
 }

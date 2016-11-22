@@ -11,7 +11,7 @@
     domainName : String,
 	form: Form[DataView],
 	router: DataViewRouter,
-    fieldNamesCall: Call
+    fieldsCall: Call
 )(
 	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
@@ -24,4 +24,4 @@
     router.plainList
 )
 
-@activateTypeahead(fieldNamesCall)
+@activateTypeahead(fieldsCall)

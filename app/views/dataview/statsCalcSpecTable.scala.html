@@ -3,9 +3,12 @@
 @import util.typeColumns
 @import models.ChartType
 @import models.FieldChartType
-@import models.StatsCalcSpec
+@import models.{StatsCalcSpec, Field}
 
-@(items: Traversable[StatsCalcSpec])
+@(
+    items: Traversable[StatsCalcSpec],
+    nameFieldMap: Map[String,  Field]
+)
 
 @editableChartType(chartType: Option[ChartType.Value]) = {
     <select id="chartType" name="chartType">
@@ -24,6 +27,10 @@
     clazz.getName.split("\\.")(1).replaceAll("CalcSpec", "")
 }
 
+@fieldNamesHiddenElement(calcSpec: StatsCalcSpec) = {
+    <input type="hidden" id="fieldNames" value="@calcSpec.fieldNames.mkString(", ")"/>
+}
+
 @outputGridWidthElement(calcSpec: StatsCalcSpec) = {
     <input type="text" id="outputGridWidth" style="width:40px" value="@calcSpec.outputGridWidth.getOrElse("")">
 }
@@ -35,7 +42,8 @@
             (None, "", _ => {<input type="checkbox"/>}),
             (None, "", concreteClassHiddenElement),
             (None, "Calc Type", {x => concreteClassName(x.getClass)}),
-            (Some("fieldNames"), "Field(s)", _.fieldNames.mkString(", ")),
+            (None, "", fieldNamesHiddenElement),
+            (None, "Field(s)", _.fieldNames.map( fieldName => nameFieldMap.get(fieldName).map(_.labelOrElseName).getOrElse(fieldName) ).mkString(", ")),
             (None, "Grid Width", outputGridWidthElement),
             (None, "Chart Type", {x =>
                 if(x.isInstanceOf[DistributionCalcSpec]) {
@@ -48,7 +56,7 @@
 
 @rowToModelJsFun = {
     function(row) {
-        var fieldNames = row.find('#fieldNames').text().split(",").map(function(str) {
+        var fieldNames = row.find('#fieldNames').val().split(",").map(function(str) {
             return str.trim();
         }).filter(function(v) {return v != ''});
 
@@ -102,26 +110,32 @@
         var concreteClassNameColumn = "<td>" + concreteClassName + "</td>";
 
         var fieldNames;
+        var fieldLabels;
         switch (concreteClass) {
             case "@{classOf[DistributionCalcSpec].getName}" :
                 fieldNames = values["fieldName"];
+                fieldLabels = values["fieldNameTypeahead"];
                 break;
             case "@{classOf[BoxCalcSpec].getName}" :
                 fieldNames = values["fieldName"];
+                fieldLabels = values["fieldNameTypeahead"];
                 break;
             case "@{classOf[ScatterCalcSpec].getName}" :
                 fieldNames = [values["xFieldName"], values["yFieldName"], values["groupFieldName"]].join(", ");
+                fieldLabels = [values["xFieldNameTypeahead"], values["yFieldNameTypeahead"], values["groupFieldNameTypeahead"]].join(", ");
                 break;
             case "@{classOf[CorrelationCalcSpec].getName}" :
                 fieldNames = values["fieldNames"]
+                fieldLabels = values["fieldNames"];
                 break;
         }
 
-        var fieldNamesColumn = "<td id='fieldNames'>" + fieldNames + "</td>";
+        var fieldNamesColumn = "<td><input type='hidden' id='fieldNames' value='" + fieldNames + "'/></td>";
+        var fieldLabelsColumn = "<td>" + fieldLabels + "</td>";
         var chartTypeColumn = (concreteClass == "@{classOf[DistributionCalcSpec].getName}") ? `<td>@editableChartType(None)</td>` : "<td></td>";
         var outputGridWidthColumn = "<td><input type='text' id='outputGridWidth' style='width:40px' value=''/></td>";
 
-        return "<tr>" + checkboxColumn + concreteClassValueColumn + concreteClassNameColumn + fieldNamesColumn + outputGridWidthColumn + chartTypeColumn + "</tr>";
+        return "<tr>" + checkboxColumn + concreteClassValueColumn + concreteClassNameColumn + fieldNamesColumn + fieldLabelsColumn + outputGridWidthColumn + chartTypeColumn + "</tr>";
     }
 }
 
@@ -146,25 +160,29 @@
 
         <div id="fieldNameDiv" style="display: none">
             @labelValue("fieldName", "Field") {
-                <input type="text" id="fieldName" class="typeahead">
+                <input type="text" id="fieldNameTypeahead" class="typeahead">
+                <input type="hidden" id="fieldName">
             }
         </div>
 
         <div id="xFieldNameDiv" style="display: none">
             @labelValue("xFieldName", "X Field") {
-                <input type="text" id="xFieldName" class="typeahead">
+                <input type="text" id="xFieldNameTypeahead" class="typeahead">
+                <input type="hidden" id="xFieldName">
             }
         </div>
 
         <div id="yFieldNameDiv" style="display: none">
             @labelValue("yFieldName", "Y Field") {
-                <input type="text" id="yFieldName" class="typeahead">
+                <input type="text" id="yFieldNameTypeahead" class="typeahead">
+                <input type="hidden" id="yFieldName">
             }
         </div>
 
         <div id="groupFieldNameDiv" style="display: none">
             @labelValue("groupFieldName", "Group Field") {
-                <input type="text" id="groupFieldName" class="typeahead">
+                <input type="text" id="groupFieldNameTypeahead" class="typeahead">
+                <input type="hidden" id="groupFieldName">
             }
         </div>
 
