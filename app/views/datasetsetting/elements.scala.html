@@ -1,15 +1,13 @@
 @import views.html.elements.{inputText, inputTextReadonly, labelValue, checkbox, select}
 @import views.html.attributeLabel
-@import views.html.table.dynamicStringTable
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.datasetsetting.statsCalcSpecTable
 @import models.DataSetSetting
 @import util.toHumanReadableCamel
 
 @(form: Form[DataSetSetting])(implicit msg: play.api.i18n.Messages)
 
-<!-- dynamic (add, remove) table -->
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
-<script type="text/javascript" src="@routes.Assets.versioned("javascripts/dynamicTable.min.js")"></script>
+@dynamicTableJsImport()
 
 @addModalInner = {
     <input type="text" id="newItem" class="typeahead">

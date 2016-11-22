@@ -1,5 +1,5 @@
 @import views.html.elements.{inputText, labelValue}
-@import views.html.table.dynamicStringTable
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 
 @import models.DataSpaceMetaInfo
 @import dataaccess.User
@@ -14,8 +14,7 @@
     dataViewActionNames: Array[String]
 )(implicit msg: play.api.i18n.Messages)
 
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
-<script type="text/javascript" src="@routes.Assets.versioned("javascripts/dynamicTable.min.js")"></script>
+@dynamicTableJsImport()
 
 @addDataSetPermissionModalBody = {
     <div class="row">

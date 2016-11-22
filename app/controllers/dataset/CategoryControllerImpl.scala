@@ -74,7 +74,6 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     )
 
     val fields = result(fieldsFuture)
-    println(fields.size)
     category.edit(
       dataSetName + " Category",
       id,

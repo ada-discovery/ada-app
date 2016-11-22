@@ -16,10 +16,10 @@
 }
 
 <div id="@{domainName}Div" class="row col-sm-4">
-    <a class="btn btn-info btn-sm" href="#" onclick="$('#@{domainName}Div').dynamicTable('openAddModal');return false;" data-toggle="tooltip" title="Add New @{toHumanReadableCamel(domainName)}">
+    <a id="addRowButton" class="btn btn-info btn-sm" href="#" onclick="$('#@{domainName}Div').dynamicTable('openAddModal');return false;" data-toggle="tooltip" title="Add New @{toHumanReadableCamel(domainName)}">
         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
     </a>
-    <a class="btn btn-info btn-sm" href="#" onclick="$('#@{domainName}Div').dynamicTable('removeRows');return false;" data-toggle="tooltip" title="Delete @{toHumanReadableCamel(domainName)}">
+    <a id="remoteRowButton" class="btn btn-info btn-sm" href="#" onclick="$('#@{domainName}Div').dynamicTable('removeRows');return false;" data-toggle="tooltip" title="Delete @{toHumanReadableCamel(domainName)}">
         <span class="glyphicon glyphicon-trash" aria-hidden="true"></span>
     </a>
     @if(extraActions.isDefined) {

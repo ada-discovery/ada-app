@@ -2,7 +2,7 @@
 @import views.html.elements._
 @import models.{DataView, Field}
 @import controllers.dataset.DataViewRouter
-@import views.html.table.dynamicStringTable
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataview.statsCalcSpecTable
 @import views.html.dataview.activateTypeahead
 
@@ -11,9 +11,7 @@
     nameFieldMap: Map[String,  Field] = Map()
 )(implicit msg: play.api.i18n.Messages)
 
-<!-- dynamic (add, remove) table -->
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
-<script type="text/javascript" src="@routes.Assets.versioned("javascripts/dynamicTable.min.js")"></script>
+@dynamicTableJsImport()
 
 @addModalInner = {
     <input type="text" id="newItemTypeahead" class="typeahead">

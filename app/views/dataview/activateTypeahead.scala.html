@@ -1,13 +1,11 @@
 @(fieldsCall: Call)
 
-<!-- autocompletion -->
 <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/typeahead.min.css")">
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("typeahead.bundle.min.js"))"></script>
 
 <script type="text/javascript">
     $(function () {
         var showOption = @{FilterShowFieldStyle.NamesAndLabels.id}
-        console.log(showOption)
         $.ajax({
             url: '@Html(fieldsCall.url)',
             success: function (data) {
@@ -42,6 +40,13 @@
                 populateFieldTypeahed(
                     $('#add_statsCalcSpecModal #groupFieldNameTypeahead'),
                     $('#add_statsCalcSpecModal #groupFieldName'),
+                    data,
+                    showOption
+                );
+
+                populateFieldTypeahed(
+                    $('#add_statsCalcSpecModal #newItemTypeahead'),
+                    $('#add_statsCalcSpecModal #newItem'),
                     data,
                     showOption
                 );

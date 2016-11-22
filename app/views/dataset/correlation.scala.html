@@ -8,6 +8,7 @@
 @import views.html.chart.{chartJs, chart}
 @import views.html.dataset.datasetSubNav
 @import views.html.dataview.dataViewSelectionModal
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import play.api.libs.json.Json
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
@@ -49,21 +50,16 @@
             </button>
         </div>
     </div>
-    <hr/>
-    <div class="row">
-        <div class="col-md-8">
-            @helper.form(action=router.getCorrelations(Nil, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {
-                <input type="hidden" name="dataSet" value="@dataSetId"/>
-                <input type="hidden" name="filterOrId" value="@filterSpec.conditionsOrId.fold(Json.toJson(_), _.stringify)"/>
-                <input id="fieldNamez" name="fieldNamez" class="col-lg-8" value="@fields.map(_.name).mkString(", ")">
-            }
-        </div>
-    </div>
 }
 
 @bottomResources = {
     @highchartsJsImport()
     @chartSpec.map(chartJs(_)).getOrElse("")
+}
+
+@fieldNamesAddModalInner = {
+    <input type="text" id="newItemTypeahead" class="typeahead">
+    <input type="hidden" id="newItem">
 }
 
 @main(Messages("correlation.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
@@ -78,9 +74,28 @@
         @actions
     </div>
 
-    @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter, dataViewJsRouter)
+    <hr/>
 
-    @chartSpec.map(chart(_)).getOrElse("")
+    @dynamicTableJsImport()
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="row">
+                @dynamicStringTable("fieldName", fields.map(_.name), true, Some(fieldNamesAddModalInner))
+            </div>
+            <div class="row">
+                @helper.form(action=router.getCorrelations(Nil, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {
+                    <input type="hidden" name="dataSet" value="@dataSetId"/>
+                    <input type="hidden" name="filterOrId" value="@filterSpec.conditionsOrId.fold(Json.toJson(_), _.stringify)"/>
+                    <button type="primary" onclick="addFieldNames()" class="btn btn-primary">Show</button>
+                }
+            </div>
+        </div>
+        <div class="col-md-9">
+            @chartSpec.map(chart(_)).getOrElse("")
+            @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter, dataViewJsRouter)
+        </div>
+    </div>
 }
 
 @helper.javascriptRouter("dataViewJsRoutes")(
@@ -89,37 +104,50 @@
 
 <script type="text/javascript">
     $(function () {
-        $('#fieldForm #fieldNamez').keypress(function (e) {
-            if (e.which == 13) {
-                var fieldNamesValue = $('#fieldForm #fieldNamez').val()
-                $.each(fieldNamesValue.split(","), function(index, str) {
-                    var map = {};
-                    map["fieldNames"] = str.trim();
-                    addParams($("#fieldForm"), map)
-                })
-            }
-        });
+        populateFieldTypeahedFromUrl(
+            $('#fieldNameDiv #newItemTypeahead'),
+            $('#fieldNameDiv #newItem'),
+            '@Html(router.fields(Seq(FieldTypeId.Double, FieldTypeId.Integer)).url)',
+             @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+        );
 
         $("#dataViewSelectionModal #submitButton").on("click", addCorrelationToView)
+
+        $('#fieldNameDiv #addRowButton').focus();
     });
+
+    function addFieldNames() {
+        var fieldNames = getFieldNames()
+        $.each(fieldNames, function(index, str) {
+            var map = {};
+            map["fieldNames"] = str.trim();
+            addParams($("#fieldForm"), map)
+        })
+    }
 
     function addCorrelationToView() {
         var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
         var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
 
-        var fieldNamesValue = $('#fieldForm #fieldNamez').val()
-        var fieldNames = fieldNamesValue.split(",").map(function(str) {
-            return str.trim();
-        })
+        var fieldNames = getFieldNames()
+
         if (fieldNames.length > 0) {
             dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId, fieldNames).ajax( {
                 success: function() {
-                    showMessage("Correlation for the field(s) '" + fieldNamesValue + "' has been successfully added to the view '" + dataViewName + "'.");
+                    showMessage("Correlation for the field(s) '" + fieldNames.join(", ") + "' has been successfully added to the view '" + dataViewName + "'.");
                 },
                 error: function(data){
                     showError( data.responseText );
                 }
             });
+        } else {
+            showError("No fields defined.");
         }
+    }
+
+    function getFieldNames() {
+        $('#fieldNameDiv').dynamicTable('updateModelFromTable');
+        var fieldNames = $('#fieldNameDiv').dynamicTable('getModel');
+        return fieldNames;
     }
 </script>

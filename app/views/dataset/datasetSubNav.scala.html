@@ -59,11 +59,6 @@
             var currentDataSetId = currentParams["dataSet"]
             var currentDataViewId = currentParams["dataViewId"]
 
-            console.log("Current")
-            console.log(currentCoreUrl)
-            console.log(currentDataSetId)
-            console.log(currentDataViewId)
-
             $.ajax({
                 url: '@Html(dataViewRouter.idAndNames.url)',
                 success: function (data) {
@@ -80,11 +75,6 @@
 
                             var coreUrl = getCoreURL(getViewUrl)
                             var finalUrl = coreUrl + "?" + decodeURIComponent($.param(params));
-
-                            console.log(dataView.name)
-                            console.log(coreUrl)
-                            console.log(dataSetId)
-                            console.log(dataViewId)
 
                             if (currentCoreUrl == coreUrl && dataViewId == currentDataViewId && dataSetId && currentDataSetId) {
                                 $("#viewsDropdownDiv").append("<li class='active'><a href='" + finalUrl + "'>" + dataView.name + "</a></li>")

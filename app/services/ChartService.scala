@@ -151,8 +151,8 @@ class ChartServiceImpl extends ChartService {
 
       case FieldTypeId.Integer => {
         val values = getValues[Long].flatten
-        val min = values.min
-        val max = values.max
+        val min = if (values.nonEmpty) values.min else 0
+        val max = if (values.nonEmpty) values.max else 0
         val valueCount = max - min
 
         def outputLabel(value: BigDecimal) = value.toInt.toString

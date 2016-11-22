@@ -813,7 +813,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
     }.recover {
       case t: TimeoutException =>
-        Logger.error("Problem found in the distribution process")
+        Logger.error("Problem found in the getCorrelations method")
         InternalServerError(t.getMessage)
     }
   }
