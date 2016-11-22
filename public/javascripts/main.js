@@ -6,15 +6,7 @@ function submit(method, action, parameters) {
   form.attr("action", action);
 
   if (parameters)
-    $.each(parameters, function(key, value) {
-      var field = $('<input></input>');
-
-      field.attr("type", "hidden");
-      field.attr("name", key);
-      field.attr("value", value);
-
-      form.append(field);
-    });
+    addParams(form, parameters)
 
   $(document.body).append(form);
   form.submit();
@@ -22,13 +14,23 @@ function submit(method, action, parameters) {
 
 function addParams(form, parameters) {
   $.each(parameters, function(key, value) {
-    var field = $('<input></input>');
+    function addField(val) {
+        var field = $('<input></input>');
 
-    field.attr("type", "hidden");
-    field.attr("name", key);
-    field.attr("value", value);
+        field.attr("type", "hidden");
+        field.attr("name", key);
+        field.attr("value", val);
 
-    form.append(field);
+        form.append(field);
+    }
+
+    if (Array.isArray(value)) {
+        $.each(value, function(index, val) {
+            addField(val);
+        });
+    } else {
+        addField(value);
+    }
   });
 }
 
@@ -43,7 +45,18 @@ function getQueryParams(qs) {
 
   while (tokens = re.exec(qs)) {
     var paramName = decodeURIComponent(tokens[1]).replace("amp;", "");
-    params[paramName] = decodeURIComponent(tokens[2]);
+    var value = decodeURIComponent(tokens[2]);
+    var existingValue = params[paramName];
+
+    if (existingValue) {
+        if (Array.isArray(existingValue)) {
+            existingValue.push(value)
+            params[paramName] = existingValue;
+        } else {
+            params[paramName] = [existingValue, value]
+        }
+    } else
+        params[paramName] = value;
   }
 
   return params;

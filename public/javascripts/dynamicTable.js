@@ -87,5 +87,12 @@ $.widget( "custom.dynamicTable", {
             map[that.itemsName] = item;
             addParams(that.tableDiv, map)
         });
+    },
+
+    getModel: function() {
+        var model = this.tableDiv.find("input[name='" + this.itemsName + "']").map(function() {
+            return $(this).val().trim();
+        }).get();
+        return model;
     }
 })
