@@ -78,6 +78,7 @@ trait DataSetService {
     originalDataSetId: String,
     newDataSetMetaInfo: DataSetMetaInfo,
     newDataSetSetting: Option[DataSetSetting],
+    newDataView: Option[DataView],
     removeNullColumns: Boolean,
     removeNullRows: Boolean
   ): Future[Unit]
@@ -520,6 +521,7 @@ class DataSetServiceImpl @Inject()(
     originalDataSetId: String,
     newDataSetMetaInfo: DataSetMetaInfo,
     newDataSetSetting: Option[DataSetSetting],
+    newDataView: Option[DataView],
     removeNullColumns: Boolean,
     removeNullRows: Boolean
   ) = {
@@ -532,7 +534,7 @@ class DataSetServiceImpl @Inject()(
       // get the accessor (data repo and field repo) for the newly registered data set
       originalDataSetInfo <- originalDsa.metaInfo
       newDsa <- dsaf.register(
-        newDataSetMetaInfo.copy(dataSpaceId = originalDataSetInfo.dataSpaceId), newDataSetSetting
+        newDataSetMetaInfo.copy(dataSpaceId = originalDataSetInfo.dataSpaceId), newDataSetSetting, newDataView
       )
       newDataRepo = newDsa.dataSetRepo
       newFieldRepo = newDsa.fieldRepo

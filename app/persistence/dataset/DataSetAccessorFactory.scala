@@ -20,12 +20,14 @@ trait DataSetAccessorFactory {
     dataSpaceName: String,
     dataSetId: String,
     dataSetName: String,
-    setting: Option[DataSetSetting]
+    setting: Option[DataSetSetting],
+    dataView: Option[DataView]
   ): Future[DataSetAccessor]
 
   def register(
     metaInfo: DataSetMetaInfo,
-    setting: Option[DataSetSetting]
+    setting: Option[DataSetSetting],
+    dataView: Option[DataView]
   ): Future[DataSetAccessor]
 
   def apply(dataSetId: String): Option[DataSetAccessor]
@@ -95,7 +97,8 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
 
   override def register(
     metaInfo: DataSetMetaInfo,
-    setting: Option[DataSetSetting]
+    setting: Option[DataSetSetting],
+    dataView: Option[DataView]
   ) = {
     val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(metaInfo.dataSpaceId.get)
     val metaInfosFuture = dataSetMetaInfoRepo.find(Seq("id" #== metaInfo.id))
@@ -126,11 +129,26 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         dataSetMetaInfoRepo.update(metaInfos.head.copy(name = metaInfo.name))
 
       for {
-        // don't care about the output of futures, just let them execute
+        // execute the setting registration
         _ <- settingFuture
+
+        // execute the meta info registration
         _ <- metaInfoFuture
+
+        // create a data set accessor (and data view repo)
+        dsa = createInstance(metaInfo.id)
+        dataViewRepo = dsa.dataViewRepo
+
+        // check if the data view exist
+        dataViewExist <- dataViewRepo.count().map(_ > 0)
+
+        // register (save) data view if none view already exists
+        _ <- if (!dataViewExist && dataView.isDefined)
+            dsa.dataViewRepo.save(dataView.get)
+          else
+            Future(())
       } yield
-        cache.getOrElseUpdate(metaInfo.id, createInstance(metaInfo.id))
+        cache.getOrElseUpdate(metaInfo.id, dsa)
     }
   }
 
@@ -138,7 +156,8 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     dataSpaceName: String,
     dataSetId: String,
     dataSetName: String,
-    setting: Option[DataSetSetting]
+    setting: Option[DataSetSetting],
+    dataView: Option[DataView]
   ) = for {
       // search for data spaces with a given name
       spaces <- dataSpaceMetaInfoRepo.find(Seq("name" #== dataSpaceName))
@@ -149,7 +168,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
       // register data set meta info and setting, and obtain an accessor
       accessor <- {
         val metaInfo = DataSetMetaInfo(None, dataSetId, dataSetName, 0, false, Some(spaceId))
-        register(metaInfo, setting)
+        register(metaInfo, setting, dataView)
       }
     } yield
       accessor

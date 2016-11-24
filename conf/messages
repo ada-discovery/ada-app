@@ -44,6 +44,11 @@ dataSetImport.setting.tranSMARTVisitFieldName.label = TranSMART Visit Field
 dataSetImport.setting.tranSMARTReplacements.label = TranSMART Export Char Replacements
 dataSetImport.setting.cacheDataSet.label = Cache Data Set
 dataSetImport.setting.filterShowFieldStyle.label = Filter Show Field Style
+dataSetImport.setting.overviewChartElementGridWidth.label = Element Grid Width
+
+dataSetImport.dataView.tableColumnNames.label = Table Column Names
+dataSetImport.dataView.distributionCalcFieldNames.label = Distribution Calc Field Names
+dataSetImport.dataView.elementGridWidth.label = Element Grid Width
 
 dataSetImport.dataSpaceName.label = Study Name
 dataSetImport.eol.label = Specific EOL

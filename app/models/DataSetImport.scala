@@ -19,6 +19,7 @@ abstract class DataSetImport {
   val scheduled: Boolean
   val scheduledTime: Option[ScheduledTime]
   val setting: Option[DataSetSetting]
+  val dataView: Option[DataView]
 }
 
 case class ScheduledTime(hour: Option[Int], minute: Option[Int], second: Option[Int])
@@ -36,6 +37,7 @@ case class CsvDataSetImport(
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],
   setting: Option[DataSetSetting],
+  dataView: Option[DataView],
   timeCreated: Date = new Date(),
   var timeLastExecuted: Option[Date] = None
 ) extends DataSetImport
@@ -53,6 +55,7 @@ case class SynapseDataSetImport(
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],
   setting: Option[DataSetSetting],
+  dataView: Option[DataView],
   timeCreated: Date = new Date(),
   var timeLastExecuted: Option[Date] = None
 ) extends DataSetImport
@@ -69,6 +72,7 @@ case class TranSmartDataSetImport(
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],
   setting: Option[DataSetSetting],
+  dataView: Option[DataView],
   timeCreated: Date = new Date(),
   var timeLastExecuted: Option[Date] = None
 ) extends DataSetImport
@@ -85,6 +89,7 @@ case class RedCapDataSetImport(
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],
   setting: Option[DataSetSetting],
+  dataView: Option[DataView],
   timeCreated: Date = new Date(),
   var timeLastExecuted: Option[Date] = None
 ) extends DataSetImport
@@ -92,6 +97,7 @@ case class RedCapDataSetImport(
 object DataSetImportFormattersAndIds {
   implicit val scheduleTimeFormat = Json.format[ScheduledTime]
   implicit val dataSetSettingFormat = DataSetFormattersAndIds.dataSetSettingFormat
+  implicit val dataViewFormat = DataView.dataViewFormat
 
   implicit val dataSetImportFormat: Format[DataSetImport] = new SubTypeFormat[DataSetImport](
     Seq(

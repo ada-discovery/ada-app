@@ -15,6 +15,7 @@ class CleanupDeNoPaBaseline @Inject()(dataSetService: DataSetService) extends Ru
         denopa_raw_clinical_baseline,
         DataSetMetaInfo(None, denopa_clinical_baseline, "Clinical Baseline", 0, false, None),
         Some(DeNoPaDataSetSettings.ClinicalBaseline),
+        Some(DeNoPaDataViews.ClinicalBaseline),
         true, true
       ),
       2 minutes
@@ -28,6 +29,7 @@ class CleanupDeNoPaFirstVisit @Inject()(dataSetService: DataSetService) extends 
         denopa_raw_clinical_first_visit,
         DataSetMetaInfo(None, denopa_clinical_first_visit, "Clinical First Visit", 1, false, None),
         Some(DeNoPaDataSetSettings.ClinicalFirstVisit),
+        Some(DeNoPaDataViews.ClinicalFirstVisit),
         true, true
       ),
       2 minutes
@@ -41,6 +43,7 @@ class CleanupDeNoPaSecondVisit @Inject()(dataSetService: DataSetService) extends
         denopa_raw_clinical_second_visit,
         DataSetMetaInfo(None, denopa_clinical_second_visit, "Clinical Second Visit", 2, false, None),
         Some(DeNoPaDataSetSettings.ClinicalSecondVisit),
+        Some(DeNoPaDataViews.ClinicalSecondVisit),
         true, true
       ),
       2 minutes

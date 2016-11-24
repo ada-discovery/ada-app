@@ -30,4 +30,19 @@ object DataView {
     def of(entity: DataView): Option[BSONObjectID] = entity._id
     protected def set(entity: DataView, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }
+
+  def applyMain(
+    tableColumnNames: Seq[String],
+    distributionChartFieldNames: Seq[String],
+    elementGridWidth: Int
+  ) =
+    DataView(
+      None,
+      "Main",
+      Nil,
+      tableColumnNames,
+      distributionChartFieldNames.map(DistributionCalcSpec(_, None)),
+      elementGridWidth,
+      true
+    )
 }

@@ -40,7 +40,8 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
       importInfo.dataSpaceName,
       importInfo.dataSetId,
       importInfo.dataSetName,
-      importInfo.setting
+      importInfo.setting,
+      importInfo.dataView
     ), timeout)
 
   protected def createJsonsWithFieldTypes(

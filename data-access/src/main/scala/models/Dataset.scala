@@ -35,9 +35,6 @@ case class DataSetSetting(
   dataSetId: String,
   keyFieldName: String,
   exportOrderByFieldName: Option[String],
-  listViewTableColumnNames: Seq[String],
-  statsCalcSpecs: Seq[StatsCalcSpec],
-  overviewChartElementGridWidth: Int,
   defaultScatterXFieldName: String,
   defaultScatterYFieldName: String,
   defaultDistributionFieldName: String,
@@ -47,33 +44,7 @@ case class DataSetSetting(
   tranSMARTReplacements: Map[String, String],
   cacheDataSet: Boolean = false
 ) {
-  def this(dataSetId: String) = this(None, dataSetId, "", None, Nil, Nil, 3, "", "", "", "", None, None, Map[String, String]())
-}
-
-object DataSetSetting {
-  def apply2(
-    _id: Option[BSONObjectID],
-    dataSetId: String,
-    keyFieldName: String,
-    exportOrderByFieldName: Option[String],
-    listViewTableColumnNames: Seq[String],
-    distributionChartFieldNames: Seq[String],
-    overviewChartElementGridWidth: Int,
-    defaultScatterXFieldName: String,
-    defaultScatterYFieldName: String,
-    defaultDistributionFieldName: String,
-    defaultDateCountFieldName: String,
-    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
-    tranSMARTVisitFieldName: Option[String],
-    tranSMARTReplacements: Map[String, String],
-    cacheDataSet: Boolean
-  ) = DataSetSetting(
-    _id, dataSetId, keyFieldName, exportOrderByFieldName,
-    listViewTableColumnNames, distributionChartFieldNames.map(DistributionCalcSpec(_, None)), overviewChartElementGridWidth,
-    defaultScatterXFieldName, defaultScatterYFieldName, defaultDistributionFieldName, defaultDateCountFieldName,
-    filterShowFieldStyle, tranSMARTVisitFieldName, tranSMARTReplacements,
-    cacheDataSet
-  )
+  def this(dataSetId: String) = this(None, dataSetId, "", None, "", "", "", "", None, None, Map[String, String]())
 }
 
 @Deprecated

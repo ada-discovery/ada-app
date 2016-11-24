@@ -20,7 +20,8 @@ class DeNoPaDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(DeNoPaDataSetSettings.RawClinicalBaseline)
+      Some(DeNoPaDataSetSettings.RawClinicalBaseline),
+      Some(DeNoPaDataViews.RawClinicalBaseline)
     ),
 
     CsvDataSetImport(
@@ -35,7 +36,8 @@ class DeNoPaDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(DeNoPaDataSetSettings.RawClinicalFirstVisit)
+      Some(DeNoPaDataSetSettings.RawClinicalFirstVisit),
+      Some(DeNoPaDataViews.RawClinicalFirstVisit)
     ),
 
     CsvDataSetImport (
@@ -50,7 +52,8 @@ class DeNoPaDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(DeNoPaDataSetSettings.RawClinicalSecondVisit)
+      Some(DeNoPaDataSetSettings.RawClinicalSecondVisit),
+      Some(DeNoPaDataViews.RawClinicalSecondVisit)
     )
   )
 }

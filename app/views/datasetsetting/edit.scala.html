@@ -3,7 +3,6 @@
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
-@import views.html.datasetsetting.activateTypeahead
 @import models.DataSpaceMetaInfo
 @import models.DataSetSetting
 
@@ -28,5 +27,3 @@
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )
-
-@activateTypeahead(fieldNamesCall)

@@ -19,11 +19,11 @@ class TestIgnite @Inject() (cacheRepoFactory: CacheAsyncCrudRepoFactory) extends
   val repo = cacheRepoFactory.applyMongo[BSONObjectID, DataSetSetting]("dataset_settings", Some("dataset_settingsx"))
 
   override def run = {
-    println(getAll.map(x => s"${x._id.toString} ${x.dataSetId}, ${x.overviewChartElementGridWidth}").mkString("\n"))
+    println(getAll.map(x => s"${x._id.toString} ${x.dataSetId}, ${x.exportOrderByFieldName}").mkString("\n"))
 
     val updateFuture =
       repo.get(BSONObjectID("577e09dc8e0000d00093fc06")).flatMap{ setting =>
-        val updatedSetting = setting.get.copy(overviewChartElementGridWidth = 5)
+        val updatedSetting = setting.get.copy(exportOrderByFieldName = Some("lala"))
         repo.update(updatedSetting)
       }
 
@@ -32,13 +32,13 @@ class TestIgnite @Inject() (cacheRepoFactory: CacheAsyncCrudRepoFactory) extends
 
     val saveFuture =
       repo.get(BSONObjectID("577e09dc8e0000d00093fc06")).flatMap{ setting =>
-        val newSetting = setting.get.copy(overviewChartElementGridWidth = 66, dataSetId = "Testxx", _id = None)
+        val newSetting = setting.get.copy(exportOrderByFieldName = Some("lili"), dataSetId = "Testxx", _id = None)
         repo.save(newSetting)
       }
 
     Await.result(saveFuture, 2 minutes)
 
-    println(getAll.map(x => s"${x._id.toString} ${x.dataSetId}, ${x.overviewChartElementGridWidth}").mkString("\n"))
+    println(getAll.map(x => s"${x._id.toString} ${x.dataSetId}, ${x.exportOrderByFieldName}").mkString("\n"))
   }
 
   private def getAll = {

@@ -13,14 +13,15 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       None,
       "Lux Park",
       lux_park_clinical,
-      "Clinical",
+      "Clinical Visit",
       configuration.getString("redcap.prodserver.api.url").get,
       configuration.getString("redcap.prodserver.token").get,
       true,
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.Clinical)
+      Some(LuxParkDataSetSettings.Clinical),
+      Some(LuxParkDataViews.Clinical)
     ),
 
     CsvDataSetImport(
@@ -35,7 +36,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.IBBLBiosamples)
+      Some(LuxParkDataSetSettings.IBBLBiosamples),
+      Some(LuxParkDataViews.IBBLBiosamples)
     ),
 
     CsvDataSetImport(
@@ -50,7 +52,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.IBBLBiosampleTests)
+      Some(LuxParkDataSetSettings.IBBLBiosampleTests),
+      Some(LuxParkDataViews.IBBLBiosampleTests)
     ),
 
     SynapseDataSetImport(
@@ -65,7 +68,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.MPowerMyThoughts)
+      Some(LuxParkDataSetSettings.MPowerMyThoughts),
+      Some(LuxParkDataViews.MPowerMyThoughts)
     ),
 
     SynapseDataSetImport(
@@ -80,7 +84,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.MPowerDemographics)
+      Some(LuxParkDataSetSettings.MPowerDemographics),
+      Some(LuxParkDataViews.MPowerDemographics)
     ),
 
     SynapseDataSetImport(
@@ -95,7 +100,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.MPowerEnrollmentSurvey)
+      Some(LuxParkDataSetSettings.MPowerEnrollmentSurvey),
+      Some(LuxParkDataViews.MPowerEnrollmentSurvey)
     ),
 
     SynapseDataSetImport(
@@ -110,7 +116,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.MPowerPDEnrollmentSurvey)
+      Some(LuxParkDataSetSettings.MPowerPDEnrollmentSurvey),
+      Some(LuxParkDataViews.MPowerPDEnrollmentSurvey)
     ),
 
     SynapseDataSetImport(
@@ -125,7 +132,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.MPowerTremorActivity)
+      Some(LuxParkDataSetSettings.MPowerTremorActivity),
+      Some(LuxParkDataViews.MPowerTremorActivity)
     ),
 
     SynapseDataSetImport(
@@ -140,7 +148,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.MPowerWalkingActivity)
+      Some(LuxParkDataSetSettings.MPowerWalkingActivity),
+      Some(LuxParkDataViews.MPowerWalkingActivity)
     ),
 
     SynapseDataSetImport(
@@ -155,7 +164,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.MPowerTappingActivity)
+      Some(LuxParkDataSetSettings.MPowerTappingActivity),
+      Some(LuxParkDataViews.MPowerTappingActivity)
     ),
 
     SynapseDataSetImport(
@@ -170,7 +180,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.MPowerVoiceActivity)
+      Some(LuxParkDataSetSettings.MPowerVoiceActivity),
+      Some(LuxParkDataViews.MPowerVoiceActivity)
     ),
 
     SynapseDataSetImport(
@@ -185,7 +196,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       false,
       None,
-      Some(LuxParkDataSetSettings.MPowerMemoryActivity)
+      Some(LuxParkDataSetSettings.MPowerMemoryActivity),
+      Some(LuxParkDataViews.MPowerMemoryActivity)
     )
   )
 }

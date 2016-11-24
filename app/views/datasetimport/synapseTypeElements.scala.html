@@ -1,7 +1,7 @@
 @import models.SynapseDataSetImport
 @import views.html.elements.{inputText, checkbox}
 @import play.api.i18n.Messages
-@import views.html.datasetimport.{settingPanel, dataSetInfoPanel, schedulePanel}
+@import views.html.datasetimport.{settingPanel, dataSetInfoPanel, schedulePanel, dataViewPanel}
 
 @(form: Form[SynapseDataSetImport])(implicit msg: Messages)
 
@@ -21,12 +21,14 @@
 </div>
 
 @settingPanel(form)
+@dataViewPanel(form)
 @schedulePanel(form)
 
 <script type="text/javascript">
     $('form').submit(function(ev) {
         ev.preventDefault();
         handleSettingSubmission();
+        handleDataViewSubmission();
         this.submit();
     });
 </script>

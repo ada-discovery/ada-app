@@ -107,7 +107,7 @@
         populateFieldTypeahedFromUrl(
             $('#fieldNameDiv #newItemTypeahead'),
             $('#fieldNameDiv #newItem'),
-            '@Html(router.fields(Seq(FieldTypeId.Double, FieldTypeId.Integer)).url)',
+            '@Html(router.fields(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
              @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         );
 

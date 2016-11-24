@@ -1,28 +1,13 @@
 @import views.html.elements.{inputText, inputTextReadonly, labelValue, checkbox, select}
 @import views.html.attributeLabel
-@import views.html.table.{dynamicStringTable, dynamicTableJsImport}
-@import views.html.datasetsetting.statsCalcSpecTable
 @import models.DataSetSetting
 @import util.toHumanReadableCamel
 
 @(form: Form[DataSetSetting])(implicit msg: play.api.i18n.Messages)
 
-@dynamicTableJsImport()
-
-@addModalInner = {
-    <input type="text" id="newItem" class="typeahead">
-}
-
 @inputTextReadonly("dataSetSetting", "dataSetId", form)
 @inputText("dataSetSetting", "keyFieldName", form)
 @inputText("dataSetSetting", "exportOrderByFieldName", form)
-@labelValue("listViewTableColumnNames", attributeLabel("dataSetSetting", "listViewTableColumnNames")){
-    @dynamicStringTable("listViewTableColumnName", form.value.get.listViewTableColumnNames, true, Some(addModalInner))
-}
-@labelValue("statsCalcSpecs", attributeLabel("dataSetSetting", "statsCalcSpecs")){
-    @statsCalcSpecTable(form.value.get.statsCalcSpecs)
-}
-@inputText("dataSetSetting", "overviewChartElementGridWidth", form)
 @inputText("dataSetSetting", "defaultScatterXFieldName", form)
 @inputText("dataSetSetting", "defaultScatterYFieldName", form)
 @inputText("dataSetSetting", "defaultDistributionFieldName", form)

@@ -13,6 +13,7 @@ import scala.concurrent.Await._
 import scala.concurrent.duration._
 import scala.concurrent.Future
 
+@Deprecated
 class MigrateDataSetSettingToDataViews @Inject()(
     repo: DataSetSettingRepo,
     dsaf: DataSetAccessorFactory
@@ -21,31 +22,31 @@ class MigrateDataSetSettingToDataViews @Inject()(
   private val timeout = 120000 millis
 
   override def run = {
-    val future = repo.find().map { settings =>
-
-      val futures = settings.map { dataSetSetting =>
-        dsaf(dataSetSetting.dataSetId) match {
-          case Some(dsa) => {
-            val dataView = DataView(
-              None,
-              "Main",
-              Nil,
-              dataSetSetting.listViewTableColumnNames,
-              dataSetSetting.statsCalcSpecs,
-              dataSetSetting.overviewChartElementGridWidth,
-              true,
-              None
-            )
-
-            dsa.dataViewRepo.save(dataView)
-          }
-          case None => Future(())
-        }
-      }
-
-      Future.sequence(futures)
-    }
-    result(future, timeout)
+//    val future = repo.find().map { settings =>
+//
+//      val futures = settings.map { dataSetSetting =>
+//        dsaf(dataSetSetting.dataSetId) match {
+//          case Some(dsa) => {
+//            val dataView = DataView(
+//              None,
+//              "Main",
+//              Nil,
+//              dataSetSetting.listViewTableColumnNames,
+//              dataSetSetting.statsCalcSpecs,
+//              dataSetSetting.overviewChartElementGridWidth,
+//              true,
+//              None
+//            )
+//
+//            dsa.dataViewRepo.save(dataView)
+//          }
+//          case None => Future(())
+//        }
+//      }
+//
+//      Future.sequence(futures)
+//    }
+//    result(future, timeout)
   }
 }
 

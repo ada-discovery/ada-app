@@ -17,7 +17,7 @@ import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImpor
 import models._
 import persistence.RepoTypes._
 import play.api.{Configuration, Logger}
-import play.api.data.{Mapping, Form}
+import play.api.data.{Form, Mapping}
 import play.api.data.Forms._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -29,6 +29,7 @@ import java.io.{File, FileInputStream, FileOutputStream}
 import services.{DataSetImportScheduler, DataSetService, DeNoPaSetting}
 import util.SecurityUtil.restrictAdmin
 import views.html.{datasetimport => importViews}
+import views.html.layout
 
 import scala.concurrent.{Await, Future}
 
@@ -63,9 +64,6 @@ class DataSetImportController @Inject()(
     "dataSetId" -> nonEmptyText,
     "keyFieldName" -> nonEmptyText,
     "exportOrderByFieldName" -> optional(text),
-    "listViewTableColumnNames" -> of[Seq[String]],
-    "distributionChartFieldNames" -> of[Seq[String]],
-    "overviewChartElementGridWidth" -> number(min = 1, max = 12),
     "defaultScatterXFieldName" -> nonEmptyText,
     "defaultScatterYFieldName" -> nonEmptyText,
     "defaultDistributionFieldName" -> nonEmptyText,
@@ -74,11 +72,18 @@ class DataSetImportController @Inject()(
     "tranSMARTVisitFieldName" -> optional(text),
     "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
     "cacheDataSet" -> boolean
-  ) (DataSetSetting.apply2){
-    DataSetSetting.unapply(_).map( v =>
-      (v._1, v._2, v._3, v._4 ,v._5, v._6.map(_.fieldNames.head), v._7, v._8, v._9, v._10, v._11, v._12, v._13, v._14, v._15)
-    )
-  }
+  ) (DataSetSetting.apply) (DataSetSetting.unapply)
+
+  private val dataViewMapping: Mapping[DataView] = mapping(
+    "tableColumnNames" -> of[Seq[String]],
+    "distributionCalcFieldNames" -> of[Seq[String]],
+    "elementGridWidth" -> number(min = 1, max = 12)
+  ) (DataView.applyMain)
+  {(item: DataView) => Some((
+    item.tableColumnNames,
+    item.statsCalcSpecs.collect { case p: DistributionCalcSpec => p}.map(_.fieldName),
+    item.elementGridWidth
+  ))}
 
   protected val csvForm = Form(
     mapping(
@@ -94,6 +99,7 @@ class DataSetImportController @Inject()(
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),
+      "dataView" -> optional(dataViewMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
     ) (CsvDataSetImport.apply)(CsvDataSetImport.unapply)
@@ -117,6 +123,7 @@ class DataSetImportController @Inject()(
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),
+      "dataView" -> optional(dataViewMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
     ) (SynapseDataSetImport.apply)(SynapseDataSetImport.unapply)
@@ -139,6 +146,7 @@ class DataSetImportController @Inject()(
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),
+      "dataView" -> optional(dataViewMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
     ) (TranSmartDataSetImport.apply)(TranSmartDataSetImport.unapply)
@@ -161,6 +169,7 @@ class DataSetImportController @Inject()(
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),
+      "dataView" -> optional(dataViewMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
     ) (RedCapDataSetImport.apply)(RedCapDataSetImport.unapply)
@@ -174,28 +183,90 @@ class DataSetImportController @Inject()(
     Seq(
       FormWithViews[CsvDataSetImport](
         csvForm,
-        importViews.createCsvType(_)(_, _, _),
-        importViews.editCsvType(_, _)(_, _, _)
+        createView(
+          "CSV Data Set Import",
+          importViews.csvTypeElements(_)(_)
+        ),
+        editView(
+          "CSV Data Set Import",
+          importViews.csvTypeElements(_)(_)
+        )
       ),
 
       FormWithViews[SynapseDataSetImport](
         synapseForm,
-        importViews.createSynapseType(_)(_, _, _),
-        importViews.editSynapseType(_, _)(_, _, _)
+        createView(
+          "Synapse Data Set Import",
+          importViews.synapseTypeElements(_)(_)
+        ),
+        editView(
+          "Synapse Data Set Import",
+          importViews.synapseTypeElements(_)(_)
+        )
       ),
 
       FormWithViews[TranSmartDataSetImport](
         tranSmartForm,
-        importViews.createTranSmartType(_)(_, _, _),
-        importViews.editTranSmartType(_, _)(_, _, _)
+        createView(
+          "TranSMART Data Set (and Dictionary) Import",
+          importViews.tranSmartTypeElements(_)(_)
+        ),
+        editView(
+          "TranSMART Data Set (and Dictionary) Import",
+          importViews.tranSmartTypeElements(_)(_)
+        )
       ),
 
       FormWithViews[RedCapDataSetImport](
         redCapForm,
-        importViews.createRedCapType(_)(_, _, _),
-        importViews.editRedCapType(_, _)(_, _, _)
+        createView(
+          "RedCap Data Set Import",
+          importViews.redCapTypeElements(_)(_)
+        ),
+        editView(
+          "RedCap Data Set Import",
+          importViews.redCapTypeElements(_)(_)
+        )
       )
     ))
+
+  private def createView[T <: DataSetImport](
+    name: String,
+    elements: (Form[T], Messages) => Html)(
+    f: Form[T],
+    flash: Flash,
+    msg: Messages,
+    request: Request[_]
+  ) =
+    layout.create(
+      name,
+      f,
+      elements(f, msg),
+      controllers.dataset.routes.DataSetImportController.save,
+      controllers.routes.AppController.index,
+      'enctype -> "multipart/form-data"
+    )(flash, msg, request)
+
+  private def editView[T <: DataSetImport](
+    name: String,
+    elements: (Form[T], Messages) => Html)(
+    id: BSONObjectID,
+    f: Form[T],
+    flash: Flash,
+    msg: Messages,
+    request: Request[_]
+  ) =
+    layout.edit(
+      name,
+      f.errors,
+      elements(f, msg),
+      controllers.dataset.routes.DataSetImportController.update(id),
+      controllers.dataset.routes.DataSetImportController.listAll(),
+      Some(controllers.dataset.routes.DataSetImportController.delete(id)),
+      None,
+      None,
+      'enctype -> "multipart/form-data"
+    )(flash, msg, request)
 
   // default form... unused
   override protected val form = csvForm.asInstanceOf[Form[DataSetImport]]

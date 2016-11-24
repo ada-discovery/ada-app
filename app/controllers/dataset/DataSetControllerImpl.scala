@@ -83,7 +83,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
 
-  override protected def listViewColumns = Some(setting.listViewTableColumnNames)
+  // TODO: list view columns should be dependant on the current view
+  override protected def listViewColumns = result(
+    dataViewRepo.find().map {
+    _.filter(_.default).headOption.map(_.tableColumnNames)
+    }
+  )
 
   /**
     * Table displaying given paginated content. Generally used to display fields of the datasets.
@@ -101,36 +106,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       listViewColumns.get,
       router
     )
-
-  /**
-    * Table displaying given paginated content with charts on the top. Generally used to display fields of the datasets.
-    *
-    * @param page Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject representation of data for display.
-    * @param msg Internal request message.
-    * @param request Header of original request.
-    * @return View for all available fields.
-    */
-  private def overviewListView(
-    page: Page[JsObject],
-    fieldChartSpecs: Traversable[FieldChartSpec],
-    tableFields: Traversable[Field]
-  )(implicit msg: Messages, request: Request[_]) = {
-    val currentSetting = setting
-    dataset.overviewList(
-      dataSetName + " Item",
-      page,
-      tableFields,
-      listViewColumns.get,
-      fieldChartSpecs,
-      currentSetting.overviewChartElementGridWidth,
-      currentSetting.filterShowFieldStyle,
-      router,
-      jsRouter,
-      filterRouter,
-      filterJsRouter,
-      getMetaInfos
-    )
-  }
 
   private def getViewView(
     dataViewId: BSONObjectID,

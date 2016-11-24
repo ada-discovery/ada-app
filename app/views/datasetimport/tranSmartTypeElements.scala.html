@@ -1,7 +1,7 @@
 @import models.TranSmartDataSetImport
 @import views.html.elements._
 @import play.api.i18n.Messages
-@import views.html.datasetimport.{settingPanel, fileOrPathInput, dataSetInfoPanel, schedulePanel}
+@import views.html.datasetimport.{settingPanel, fileOrPathInput, dataSetInfoPanel, schedulePanel, dataViewPanel}
 
 @(form: Form[TranSmartDataSetImport])(implicit msg: Messages)
 
@@ -20,12 +20,14 @@
 </div>
 
 @settingPanel(form)
+@dataViewPanel(form)
 @schedulePanel(form)
 
 <script type="text/javascript">
     $('form').submit(function(ev) {
         ev.preventDefault();
         handleSettingSubmission();
+        handleDataViewSubmission();
 
         var localDataFile = $('input[name="dataSourceChoice"]:checked').val() == "1"
         if (localDataFile)

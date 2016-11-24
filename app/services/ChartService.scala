@@ -303,8 +303,6 @@ class ChartServiceImpl extends ChartService {
       project(items, field.name).map(typedFieldType.jsonToValue)
     }
 
-//    val numericFields = fields.filter( field => field.fieldType == FieldTypeId.Double || field.fieldType == FieldTypeId.Integer)
-
     val fieldsWithValues: Traversable[(Field, Traversable[Option[Double]])] = fields.map { field =>
       field.fieldType match {
         case FieldTypeId.Double =>
@@ -313,20 +311,14 @@ class ChartServiceImpl extends ChartService {
         case FieldTypeId.Integer =>
           Some((field, getValues[Long](field).map(_.map(_.toDouble))))
 
+        case FieldTypeId.Date =>
+          Some((field, getValues[java.util.Date](field).map(_.map(_.getTime.toDouble))))
+
         case _ => None
       }
     }.flatten
 
     val data: Seq[Seq[Option[Double]]] = fieldsWithValues.map(_._2).toSeq.transpose
-
-//      .map { values =>
-//      val flatValues = values.flatten
-//      // if some of the values was discarded remove the whole row
-//      if (flatValues.size == values.size)
-//        Some(flatValues)
-//      else
-//        None
-//    }.flatten
 
 //    val filteredData = data.filter(!_.contains(None)).map(_.flatten)
 //

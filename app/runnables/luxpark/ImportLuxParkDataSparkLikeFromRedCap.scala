@@ -26,7 +26,7 @@ class ImportLuxParkDataSparkLikeFromRedCap @Inject() (
   private val timeout = 120000 millis
 
   lazy val dataSetAccessor =
-    result(dsaf.register("Lux Park", lux_park_clinical, "Lux Park", Some(LuxParkDataSetSettings.Clinical)), timeout)
+    result(dsaf.register("Lux Park", lux_park_clinical, "Lux Park", Some(LuxParkDataSetSettings.Clinical), Some(LuxParkDataViews.Clinical)), timeout)
 
   private val syncDataRepo = RepoSynchronizer(dataSetAccessor.dataSetRepo, timeout)
 
