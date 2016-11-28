@@ -3,6 +3,7 @@
 @import models.DataView
 @import controllers.dataset.DataViewRouter
 @import views.html.dataview.elements
+@import views.html.dataview.activateTypeahead
 
 @(
     domainName : String,
@@ -20,3 +21,5 @@
     router.save,
     router.plainList
 )
+
+@activateTypeahead(fieldsCall)

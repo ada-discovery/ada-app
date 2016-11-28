@@ -3,13 +3,16 @@ package controllers.dataset
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
+import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
 import controllers.{JsonFormatter, CrudControllerImpl}
-import dataaccess.{AscSort, Criterion}
+import dataaccess.RepoTypes.UserRepo
+import dataaccess.{DataViewRepo, FilterRepo, AscSort, Criterion}
 import models._
 import models.DataSetFormattersAndIds._
 import models.FilterCondition.filterFormat
 import Criterion.CriterionInfix
+import models.security.UserManager
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -35,8 +38,10 @@ trait DataViewControllerFactory {
 protected[controllers] class DataViewControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends CrudControllerImpl[DataView, BSONObjectID](dsaf(dataSetId).get.dataViewRepo) with DataViewController {
+    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
+    userRepo: UserRepo,
+    val userManager: UserManager
+  ) extends CrudControllerImpl[DataView, BSONObjectID](dsaf(dataSetId).get.dataViewRepo) with DataViewController with AdaAuthConfig {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
@@ -86,6 +91,10 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   override protected def editView(id: BSONObjectID, f: Form[DataView])(implicit msg: Messages, request: Request[_]) = {
     val nameFieldMap = result(getNameFieldMap)
 
+    // TODO: stay in the future
+    if(f.value.isDefined)
+      result(DataViewRepo.setCreatedBy(userRepo, Seq(f.get)))
+
     dataview.editNormal(
       dataSetName + " Data View",
       id,
@@ -97,13 +106,33 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     )
   }
 
-  override protected def listView(page: Page[DataView])(implicit msg: Messages, request: Request[_]) =
+  override protected def listView(page: Page[DataView])(implicit msg: Messages, request: Request[_]) = {
+    // TODO: stay in the future
+    result(DataViewRepo.setCreatedBy(userRepo, page.items))
+
     dataview.list(
       dataSetName + " Data View",
       page,
       router,
       result(dataSpaceMetaInfoRepo.find())
     )
+  }
+
+  override def saveCall(
+    dataView: DataView)(
+    implicit request: Request[AnyContent]
+  ): Future[BSONObjectID] =
+    for {
+      user <- currentUser(request)
+      id <- {
+        val filterWithUser = user match {
+          case Some(user) => dataView.copy(timeCreated = new Date(), createdById = user._id)
+          case None => throw new AdaException("No logged user found")
+        }
+        repo.save(filterWithUser)
+      }
+    } yield
+      id
 
   override def idAndNames = Action.async { implicit request =>
     for {

@@ -100,22 +100,36 @@ protected[controllers] class FilterControllerImpl @Inject() (
     )
   }
 
-  override def saveAjax(filter: Filter) = Action.async { implicit request =>
-    currentUser(request).flatMap(_.fold(
-      Future(BadRequest("No logged user found"))
-    ) { user =>
-      val newFilter = filter.copy(timeCreated = Some(new Date()), createdById = user._id)
-      saveCall(newFilter).map { id =>
-        Ok(s"Item ${id} has been created")
-      }.recover {
-        case t: TimeoutException =>
-          Logger.error("Problem found in the update process")
-          InternalServerError(t.getMessage)
-        case i: RepoException =>
-          Logger.error("Problem found in the update process")
-          InternalServerError(i.getMessage)
+  override def saveCall(
+    filter: Filter)(
+    implicit request: Request[AnyContent]
+  ): Future[BSONObjectID] =
+    for {
+      user <- currentUser(request)
+      id <- {
+        val filterWithUser = user match {
+          case Some(user) => filter.copy(timeCreated = Some(new Date()), createdById = user._id)
+          case None => throw new AdaException("No logged user found")
+        }
+        repo.save(filterWithUser)
       }
-    })
+    } yield
+      id
+
+  override def saveAjax(filter: Filter) = Action.async { implicit request =>
+    saveCall(filter).map { id =>
+      Ok(s"Item ${id} has been created")
+    }.recover {
+      case e: AdaException =>
+        Logger.error("Problem found while executing the save function")
+        BadRequest(e.getMessage)
+      case t: TimeoutException =>
+        Logger.error("Problem found while executing the save function")
+        InternalServerError(t.getMessage)
+      case i: RepoException =>
+        Logger.error("Problem found while executing the save function")
+        InternalServerError(i.getMessage)
+    }
   }
 
   override def getIdAndNames = Action.async { implicit request =>

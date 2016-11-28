@@ -155,7 +155,7 @@
         }
 
         @if(listFiltersCall.isDefined) {
-            <button id="loadFilterButton" type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#loadFilterModal" title="Load Filter">
+            <button id="loadFilterButton" type="button" class="btn btn-sm btn-default" onclick="loadFilterSelectionAndShowModal()" title="Load Filter">
                 <span class="glyphicon glyphicon-book"></span>
             </button>
 
@@ -203,24 +203,7 @@
     }
 
     @if(listFiltersCall.isDefined) {
-        $.ajax({
-            url: '@Html(listFiltersCall.get.url)',
-            success: function (data) {
-                var filterTypeaheadData = data.map( function(filter, index) {
-                    return {name: filter._id.$oid, label: filter.name};
-                });
-                if (filterTypeaheadData.length > 0) {
-                    populateFieldTypeahed(
-                        $('#filterTypeahead'),
-                        $('#filterId'),
-                        filterTypeaheadData,
-                        @FilterShowFieldStyle.LabelsOnly.id
-                    );
-                } else {
-                    $("#loadFilterButton").hide();
-                }
-            }
-        });
+       loadFilterSelection();
     }
 
     $('#addEditConditionModal').on('shown.bs.modal', function () {
@@ -429,6 +412,37 @@
     function showConditionPanel() {
         $("#conditionPanel").show();
         $("#filterNameButton").hide();
+    }
+
+    function loadFilterSelectionAndShowModal() {
+        // always reload new (saved) filters before opening modal
+        loadFilterSelection();
+        $("#loadFilterModal").modal('show');
+    }
+
+    function loadFilterSelection() {
+        @if(listFiltersCall.isDefined) {
+            $.ajax({
+                url: '@Html(listFiltersCall.get.url)',
+                success: function (data) {
+                    var filterTypeaheadData = data.map( function(filter, index) {
+                        return {name: filter._id.$oid, label: filter.name};
+                    });
+                    $('#filterTypeahead').typeahead('destroy');
+                    if (filterTypeaheadData.length > 0) {
+                        populateFieldTypeahed(
+                            $('#filterTypeahead'),
+                            $('#filterId'),
+                            filterTypeaheadData,
+                            @FilterShowFieldStyle.LabelsOnly.id
+                        );
+                    } else {
+                        $("#loadFilterButton").hide();
+                    }
+                },
+                async: false
+            });
+        }
     }
 
     function updateCondition() {

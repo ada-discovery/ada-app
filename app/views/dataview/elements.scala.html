@@ -1,10 +1,8 @@
 @import views.html.layout
 @import views.html.elements._
 @import models.{DataView, Field}
-@import controllers.dataset.DataViewRouter
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataview.statsCalcSpecTable
-@import views.html.dataview.activateTypeahead
 
 @(
     form: Form[DataView],
@@ -19,6 +17,8 @@
 }
 
 @inputText("dataView", "name", form)
+
+@form.value.map(_.createdBy.map ( user => value("dataView", "Created By", user.ldapDn))).flatten.getOrElse("")
 
 @checkbox("dataView", "default", form)
 

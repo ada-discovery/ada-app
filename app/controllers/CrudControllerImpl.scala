@@ -2,6 +2,7 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 import dataaccess.{Identity, RepoException, AsyncCrudRepo}
+import models.AdaException
 import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -81,8 +82,11 @@ protected abstract class CrudControllerImpl[E: Format, ID](
         case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
       }
     }).recover {
+      case e: AdaException =>
+        Logger.error("Problem found while executing the edit function")
+        BadRequest(e.getMessage)
       case t: TimeoutException =>
-        Logger.error("Problem found in the edit process")
+        Logger.error("Problem found while executing the edit function")
         InternalServerError(t.getMessage)
     }
   }
@@ -104,11 +108,14 @@ protected abstract class CrudControllerImpl[E: Format, ID](
             case Accepts.Json() => Created(Json.obj("message" -> "Item successfully created", "id" -> id.toString))
           }
         }.recover {
+          case e: AdaException =>
+            Logger.error("Problem found while executing the save function")
+            BadRequest(e.getMessage)
           case t: TimeoutException =>
-            Logger.error("Problem found in the update process")
+            Logger.error("Problem found while executing the save function")
             InternalServerError(t.getMessage)
           case i: RepoException =>
-            Logger.error("Problem found in the update process")
+            Logger.error("Problem found while executing the save function")
             InternalServerError(i.getMessage)
         }
       }
@@ -132,11 +139,14 @@ protected abstract class CrudControllerImpl[E: Format, ID](
             case Accepts.Json() => Ok(Json.obj("message" -> "Item successly updated", "id" -> id.toString))
           }
         }.recover {
+          case e: AdaException =>
+            Logger.error("Problem found while executing the update function")
+            BadRequest(e.getMessage)
           case t: TimeoutException =>
-            Logger.error("Problem found in the update process")
+            Logger.error("Problem found while executing the update function")
             InternalServerError(t.getMessage)
           case i: RepoException =>
-            Logger.error("Problem found in the update process")
+            Logger.error("Problem found while executing the update function")
             InternalServerError(i.getMessage)
         }
       })
@@ -151,11 +161,14 @@ protected abstract class CrudControllerImpl[E: Format, ID](
         case Accepts.Json() => Ok(Json.obj("message" -> "Item successly deleted", "id" -> id.toString))
       }
     }.recover {
+      case e: AdaException =>
+        Logger.error(s"Problem deleting the item ${id}")
+        BadRequest(e.getMessage)
       case t: TimeoutException =>
-        Logger.error(s"Problem deleting item ${id}")
+        Logger.error(s"Problem deleting the item ${id}")
         InternalServerError(t.getMessage)
       case i: RepoException =>
-        Logger.error(s"Problem deleting item ${id}")
+        Logger.error(s"Problem deleting the item ${id}")
         InternalServerError(i.getMessage)
     }
   }

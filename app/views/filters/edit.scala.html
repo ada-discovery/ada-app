@@ -18,9 +18,9 @@
 
 @elements = {
     @inputText("filter", "name", form)
-    @value("filter", "Created By", form.value.get.createdBy.map(_.ldapDn).getOrElse("") )
-    @value("filter", "Time Created",  form.value.get.timeCreated.map(_.format("yyyy-MM-dd HH:mm:ss")).getOrElse(""))
-    @value("filter", "Conditions", form.value.get.conditions.map( condition => s"${condition.fieldName} ${condition.conditionType} ${condition.value}" ).mkString(" AND "))
+    @value("filter", "Created By", form.value.map(_.createdBy.map(_.ldapDn)).flatten.getOrElse("") )
+    @value("filter", "Time Created",  form.value.map(_.timeCreated.map(_.format("yyyy-MM-dd HH:mm:ss"))).flatten.getOrElse(""))
+    @value("filter", "Conditions", form.value.map(_.conditions.map( condition => s"${condition.fieldName} ${condition.conditionType} ${condition.value}" ).mkString(" AND ")).getOrElse(""))
 }
 
 @layout.edit(
