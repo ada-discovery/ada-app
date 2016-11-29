@@ -24,15 +24,6 @@
         <div class="col-md-10">
             @filter(page.filter, router.plainList, Right(router.allFields))
         </div>
-        <div class="col-md-2">
-            @exportDataSetDropdown(
-                page.filterConditions,
-                router.exportCsv(_, true, None, _, _),
-                router.exportJson,
-                router.exportTranSMARTData,
-                router.exportTranSMARTMapping
-            )
-        </div>
     </div>
 }
 

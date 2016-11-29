@@ -125,11 +125,11 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     for {
       user <- currentUser(request)
       id <- {
-        val filterWithUser = user match {
+        val dataViewWithUser = user match {
           case Some(user) => dataView.copy(timeCreated = new Date(), createdById = user._id)
           case None => throw new AdaException("No logged user found")
         }
-        repo.save(filterWithUser)
+        repo.save(dataViewWithUser)
       }
     } yield
       id

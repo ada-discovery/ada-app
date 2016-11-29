@@ -65,6 +65,7 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def getFieldValue(id: BSONObjectID, fieldName: String): Action[AnyContent]
 
   def exportRecordsAsCsv(
+    dataViewId: BSONObjectID,
     delimiter: String,
     replaceEolWithSpace: Boolean,
     eol: Option[String],
@@ -72,7 +73,11 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     tableColumnsOnly: Boolean
   ): Action[AnyContent]
 
-  def exportRecordsAsJson(filter: Seq[FilterCondition], tableColumnsOnly: Boolean): Action[AnyContent]
+  def exportRecordsAsJson(
+    dataViewId: BSONObjectID,
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ): Action[AnyContent]
 
   def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
 

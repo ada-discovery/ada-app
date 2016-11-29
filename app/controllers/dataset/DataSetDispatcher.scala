@@ -88,17 +88,19 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   ) = dispatch(_.getFieldValue(id, fieldName))
 
   override def exportRecordsAsCsv(
+    dataViewId: BSONObjectID,
     delimiter: String,
     replaceEolWithSpace: Boolean,
     eol: Option[String],
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean
-  ) = dispatch(_.exportRecordsAsCsv(delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly))
+  ) = dispatch(_.exportRecordsAsCsv(dataViewId, delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly))
 
   override def exportRecordsAsJson(
+    dataViewId: BSONObjectID,
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean
-  ) = dispatch(_.exportRecordsAsJson(filter, tableColumnsOnly))
+  ) = dispatch(_.exportRecordsAsJson(dataViewId, filter, tableColumnsOnly))
 
   override def exportTranSMARTDataFile(delimiter : String) = dispatch(_.exportTranSMARTDataFile(delimiter))
 

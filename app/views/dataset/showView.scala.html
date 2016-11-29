@@ -56,8 +56,8 @@
                 <li>
                     @exportDataSetDropdown(
                         page.filterConditions,
-                        router.exportCsv(_, true, None, _, _),
-                        router.exportJson,
+                        router.exportCsv(dataViewId, _, true, None, _, _),
+                        router.exportJson(dataViewId, _, _),
                         router.exportTranSMARTData,
                         router.exportTranSMARTMapping
                     )

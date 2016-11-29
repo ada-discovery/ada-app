@@ -83,7 +83,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
 
-  // TODO: list view columns should be dependant on the current view
   override protected def listViewColumns = result(
     dataViewRepo.find().map {
     _.filter(_.default).headOption.map(_.tableColumnNames)
@@ -179,6 +178,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @return View for download.
     */
   override def exportRecordsAsCsv(
+    dataViewId: BSONObjectID,
     delimiter: String,
     replaceEolWithSpace: Boolean,
     eol: Option[String],
@@ -189,6 +189,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       case Some(eol) => if (eol.trim.nonEmpty) eol.trim else csvEOL
       case None => csvEOL
     }
+
     exportToCsv(
       csvFileName,
       delimiter,
@@ -196,7 +197,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       if (replaceEolWithSpace) csvCharReplacements else Nil)(
       setting.exportOrderByFieldName,
       filter,
-      if (tableColumnsOnly) listViewColumns.get else Nil
+      if (tableColumnsOnly)
+        result(dataViewTableColumnNames(dataViewId))
+      else
+        Nil
     )
   }
 
@@ -206,6 +210,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @return View for download.
     */
   override def exportRecordsAsJson(
+    dataViewId: BSONObjectID,
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean
   ) =
@@ -213,8 +218,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       jsonFileName)(
       setting.exportOrderByFieldName,
       filter,
-      if (tableColumnsOnly) listViewColumns.get else Nil
+      if (tableColumnsOnly)
+        result(dataViewTableColumnNames(dataViewId))
+      else
+        Nil
     )
+
+  private def dataViewTableColumnNames(
+    dataViewId: BSONObjectID
+  ): Future[Seq[String]] =
+    dataViewRepo.get(dataViewId).map {
+      _ match {
+        case Some(dataView) => dataView.tableColumnNames
+        case None => Nil
+      }
+    }
 
   /**
     *
