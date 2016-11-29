@@ -87,7 +87,7 @@ private class SynapseDataSetImporter @Inject() (
         fields <- fieldRepo.find()
 
         // create jsons and field types
-        (jsons, fieldNameAndTypes) = createSynapseJsonsWithFieldTypes(fields, columnNames, fileFieldNames.toSet, values)
+        (jsons, fieldNameAndTypes) = createSynapseJsonsWithFieldTypes(fields, columnNames, fileFieldNames.toSet, values.toSeq)
 
         // transform jsons (if needed) and save (and update) the jsons
         _ <- {

@@ -14,7 +14,6 @@ abstract class DataSetImport {
   val dataSpaceName: String
   val dataSetId: String
   val dataSetName: String
-  @Deprecated
   val createDummyDictionary: Boolean
   val scheduled: Boolean
   val scheduledTime: Option[ScheduledTime]
@@ -33,6 +32,7 @@ case class CsvDataSetImport(
   delimiter: String,
   eol: Option[String],
   charsetName: Option[String],
+  matchQuotes: Boolean,
   createDummyDictionary: Boolean,
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],

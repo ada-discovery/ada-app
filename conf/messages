@@ -61,6 +61,7 @@ dataSetImport.scheduledTime.second.label = Second
 
 dataSetImport.createDummyDictionary.label = Create Dummy Dictionary?
 
+csvDataSetImport.matchQuotes.label = Match Quotes?
 synapseDataSetImport.downloadColumnFiles.label = Download Column Files?
 redCapDataSetImport.importDictionaryFlag.label = Import Dictionary?
 

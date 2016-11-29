@@ -1,6 +1,8 @@
 import models.ChartSpec
 import org.apache.commons.lang.StringUtils
 import play.twirl.api.Html
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 package object util {
 
@@ -85,4 +87,15 @@ package object util {
         ":"
       else "")
     ).getOrElse(noneValue)
+
+  def seqFutures[T, U](
+    items: TraversableOnce[T])(
+    fun: T => Future[U]
+  ): Future[Seq[U]] = {
+    items.foldLeft(Future.successful[List[U]](Nil)) {
+      (f, item) => f.flatMap {
+        x => fun(item).map(_ :: x)
+      }
+    } map (_.reverse)
+  }
 }

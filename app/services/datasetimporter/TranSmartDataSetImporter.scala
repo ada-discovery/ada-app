@@ -37,7 +37,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
       val values = dataSetService.parseLines(columnNames, lines, delimiter, false)
 
       // create jsons and field types
-      val (jsons, fieldNameAndTypes) = createJsonsWithFieldTypes(columnNames, values)
+      val (jsons, fieldNameAndTypes) = createJsonsWithFieldTypes(columnNames, values.toSeq)
 
       for {
         // remove ALL the records from the collection

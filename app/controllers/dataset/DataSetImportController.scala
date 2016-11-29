@@ -95,6 +95,7 @@ class DataSetImportController @Inject()(
       "delimiter" -> nonEmptyText,
       "eol" -> optional(text),
       "charsetName" -> optional(text),
+      "matchQuotes" -> boolean,
       "createDummyDictionary" -> boolean,
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),

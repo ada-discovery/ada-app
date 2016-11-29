@@ -8,6 +8,7 @@ import _root_.util.{MessageLogger, JsonUtil}
 import com.google.inject.ImplementedBy
 import models._
 import Criterion.CriterionInfix
+import org.apache.commons.lang.StringUtils
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -18,6 +19,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import play.api.Configuration
 import _root_.util.JsonUtil._
+import _root_.util.seqFutures
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
@@ -27,6 +29,14 @@ trait DataSetService {
   def inferDictionary(
     dataSetId: String,
     fieldGroupSize: Int = 150
+  ): Future[Unit]
+
+  def inferDictionary(
+    fieldNames: Traversable[String],
+    dataRepo: JsonCrudRepo,
+    fieldRepo: FieldRepo,
+    fieldGroupSize: Int,
+    maxSize: Int
   ): Future[Unit]
 
   def inferDictionaryAndUpdateRecords(
@@ -50,10 +60,15 @@ trait DataSetService {
     columnNames: Seq[String],
     lines: Iterator[String],
     delimiter: String,
-    skipFirstLine: Boolean
-  ): Seq[Seq[String]]
+    skipFirstLine: Boolean,
+    matchQuotes: Boolean = true
+  ): Iterator[Seq[String]]
 
-  def parseLine(delimiter: String, line: String): Seq[String]
+  def parseLine(
+    delimiter: String,
+    line: String,
+    matchQuotes: Boolean = true
+  ): Seq[String]
 
   def saveOrUpdateRecords(
     dataRepo: JsonCrudRepo,
@@ -79,8 +94,16 @@ trait DataSetService {
     newDataSetMetaInfo: DataSetMetaInfo,
     newDataSetSetting: Option[DataSetSetting],
     newDataView: Option[DataView],
+    useTranslations: Boolean,
     removeNullColumns: Boolean,
     removeNullRows: Boolean
+  ): Future[Unit]
+
+  def translateDataAndDictionaryOptimal(
+    originalDataSetId: String,
+    newDataSetMetaInfo: DataSetMetaInfo,
+    newDataSetSetting: Option[DataSetSetting],
+    newDataView: Option[DataView]
   ): Future[Unit]
 }
 
@@ -287,30 +310,38 @@ class DataSetServiceImpl @Inject()(
     columnNames: Seq[String],
     lines: Iterator[String],
     delimiter: String,
-    skipFirstLine: Boolean
-  ): Seq[Seq[String]] = {
+    skipFirstLine: Boolean,
+    matchQuotes: Boolean = true
+  ): Iterator[Seq[String]] = {
     val columnCount = columnNames.size
 
     val contentLines = if (skipFirstLine) lines.drop(1) else lines
-    var bufferedLine = ""
+
+    val lineBuffer = ListBuffer[String]()
 
     // read all the lines
     contentLines.zipWithIndex.map { case (line, index) =>
       // parse the line
-      bufferedLine += line
-      val values = parseLine(delimiter, bufferedLine)
+      val values =
+        if (lineBuffer.isEmpty) {
+          parseLine(delimiter, line, matchQuotes)
+        } else {
+          val bufferedLine = lineBuffer.mkString("") + line
+          parseLine(delimiter, bufferedLine, matchQuotes)
+        }
 
       if (values.size < columnCount) {
         logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
+        lineBuffer.+=(line)
         Option.empty[Seq[String]]
       } else if (values.size > columnCount) {
         throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated.")
       } else {
         // reset the buffer
-        bufferedLine = ""
+        lineBuffer.clear()
         Some(values)
       }
-    }.toSeq.flatten
+    }.flatten
   }
 
   override def inferDictionary(
@@ -338,6 +369,38 @@ class DataSetServiceImpl @Inject()(
       }
     } yield
       messageLogger.info(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
+  }
+
+  override def inferDictionary(
+    fieldNames: Traversable[String],
+    dataRepo: JsonCrudRepo,
+    fieldRepo: FieldRepo,
+    fieldGroupSize: Int,
+    maxSize: Int
+  ): Future[Unit] = {
+    for {
+      existingFields <- fieldRepo.find()
+
+      // infer field types
+      fieldNameAndTypes <- {
+        val existingFieldNames = existingFields.map(_.name).toSet
+
+        val remainingFieldNames = fieldNames.filterNot(existingFieldNames.contains)
+
+        inferFieldTypesInParallel(
+          dataRepo,
+          remainingFieldNames.take(maxSize),
+          fieldGroupSize
+        )
+      }
+
+      // save, update, or delete the fields
+      _ <- {
+        val fieldNameAndTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
+        updateDictionary(fieldRepo, fieldNameAndTypeSpecs, false)
+      }
+    } yield
+      messageLogger.info(s"Dictionary inference for data set successfully finished.")
   }
 
   override def inferDictionaryAndUpdateRecords(
@@ -430,6 +493,7 @@ class DataSetServiceImpl @Inject()(
   ): Traversable[(String, FieldType[_])] =
     fieldNames.map{ fieldName =>
       val jsons = project(items, fieldName)
+      println("Inferring " + fieldName)
       (fieldName, jsonFti(jsons))
     }
 
@@ -522,6 +586,7 @@ class DataSetServiceImpl @Inject()(
     newDataSetMetaInfo: DataSetMetaInfo,
     newDataSetSetting: Option[DataSetSetting],
     newDataView: Option[DataView],
+    useTranslations: Boolean,
     removeNullColumns: Boolean,
     removeNullRows: Boolean
   ) = {
@@ -540,9 +605,13 @@ class DataSetServiceImpl @Inject()(
       newFieldRepo = newDsa.fieldRepo
 
       // obtain the translation map
-      translationMap <- translationRepo.find().map(
-        _.map(translation => (translation.original, translation.translated)).toMap
-      )
+      translationMap <- if (useTranslations) {
+          translationRepo.find().map(
+            _.map(translation => (translation.original, translation.translated)).toMap
+          )
+        } else {
+          Future(Map[String, String]())
+        }
 
       // get the original dictionary fields
       originalFields <- originalDictionaryRepo.find()
@@ -568,6 +637,89 @@ class DataSetServiceImpl @Inject()(
 
       // save, update, or delete the items
       _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes, true)
+    } yield
+      messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")
+  }
+
+  override def translateDataAndDictionaryOptimal(
+    originalDataSetId: String,
+    newDataSetMetaInfo: DataSetMetaInfo,
+    newDataSetSetting: Option[DataSetSetting],
+    newDataView: Option[DataView]
+  ) = {
+    logger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' initiated.")
+    val originalDsa = dsaf(originalDataSetId).get
+    val originalDataRepo = originalDsa.dataSetRepo
+    val originalDictionaryRepo = originalDsa.fieldRepo
+
+    // helper functions to parse jsons
+    def displayJsonToJson[T](fieldType: FieldType[T], json: JsReadable): JsValue = {
+      val value = fieldType.displayJsonToValue(json)
+      fieldType.valueToJson(value)
+    }
+
+    for {
+      // get the accessor (data repo and field repo) for the newly registered data set
+      originalDataSetInfo <- originalDsa.metaInfo
+      newDsa <- dsaf.register(
+        newDataSetMetaInfo.copy(dataSpaceId = originalDataSetInfo.dataSpaceId), newDataSetSetting, newDataView
+      )
+      newDataRepo = newDsa.dataSetRepo
+      newFieldRepo = newDsa.fieldRepo
+
+      // get the original dictionary fields
+      originalFields <- originalDictionaryRepo.find()
+
+      // get the field types
+      originalFieldNameAndTypes = originalFields.map(field => (field.name, field.fieldTypeSpec)).toSeq
+
+      newFieldNameAndTypes <- {
+        logger.info("Inferring new field types")
+        val fieldNames = originalFieldNameAndTypes.map(_._1).sorted
+
+        seqFutures(fieldNames.grouped(100)) {
+          inferFieldTypesInParallel(originalDataRepo, _, 10)
+        }.map(_.flatten)
+      }
+
+      // delete all the data
+      _ <- {
+        logger.info(s"Deleting all the data for '${newDataSetMetaInfo.id}'.")
+        newDataRepo.deleteAll
+      }
+
+      originalIds <- {
+        logger.info("Getting the original ids")
+        // get the items (from the data set)
+        originalDataRepo.find(
+          projection = Seq(dataSetIdFieldName),
+          sort = Seq(AscSort(dataSetIdFieldName))
+        ).map(_.map(json => (json \ dataSetIdFieldName).as[BSONObjectID]))
+      }
+
+      // save the new items
+      _ <- Future.sequence {
+        logger.info("Saving new items")
+        val newFieldNameAndTypeMap: Map[String, FieldType[_]] = newFieldNameAndTypes.toMap
+
+        originalIds.map { id =>
+          originalDataRepo.get(id).flatMap { case Some(originalItem) =>
+
+            val newJsonValues = originalItem.fields.map { case (fieldName, jsonValue) =>
+              val newJsonValue = newFieldNameAndTypeMap.get(fieldName) match {
+                case Some(newFieldType) => displayJsonToJson(newFieldType, jsonValue)
+                case None => jsonValue
+              }
+              (fieldName, newJsonValue)
+            }
+
+            newDataRepo.save(JsObject(newJsonValues))
+          }
+        }
+      }
+
+      // save, update, or delete the items
+      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}, true)
     } yield
       messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")
   }
@@ -680,12 +832,12 @@ class DataSetServiceImpl @Inject()(
   ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
 
     // obtain field types from the specs
-    val enumFieldNameAndTypes = fieldNameAndTypeSpecs.map { case (fieldName, fieldTypeSpec) =>
+    val fieldNameAndTypes = fieldNameAndTypeSpecs.map { case (fieldName, fieldTypeSpec) =>
       (fieldName, ftf(fieldTypeSpec))
     }
 
     // translate jsons to String values
-    def translate(json: JsObject) = enumFieldNameAndTypes.map { case (fieldName, fieldType) =>
+    def translate(json: JsObject) = fieldNameAndTypes.map { case (fieldName, fieldType) =>
       val stringValue = fieldType.jsonToDisplayString(json \ fieldName)
       translationMap.get(stringValue).getOrElse(stringValue)
     }
@@ -758,25 +910,33 @@ class DataSetServiceImpl @Inject()(
       )}.flatten.toList
 
   // parse the lines, returns the parsed items
-  override def parseLine(delimiter: String, line: String): Seq[String] = {
+  override def parseLine(
+    delimiter: String,
+    line: String,
+    matchQuotes: Boolean = true
+  ): Seq[String] = {
     val itemsWithQuotePrefixAndSuffix = line.split(delimiter, -1).map { l =>
       val trimmed = l.trim
 
-      val content = if (trimmed.startsWith("\"[") && trimmed.endsWith("]\"")) {
-        trimmed.substring(2, trimmed.size - 2)
-      } else
-        trimmed
+      if (matchQuotes) {
+        val content = if (trimmed.startsWith("\"[") && trimmed.endsWith("]\"")) {
+          trimmed.substring(2, trimmed.size - 2)
+        } else
+          trimmed
 
-      val quotePrefix = getPrefix(content, '\"')
-      val quoteSuffix = getSuffix(content, '\"')
-      val item =
-        if (quotePrefix.equals(content)) {
-          // the string is just quotes from the start to the end
-          ""
-        } else {
-          content.substring(quotePrefix.size, content.size - quoteSuffix.size).trim.replaceAll("\\\\\"", "\"")
-        }
-      (item, quotePrefix, quoteSuffix)
+        val quotePrefix = getPrefix(content, '\"')
+        val quoteSuffix = getSuffix(content, '\"')
+        val item =
+          if (quotePrefix.equals(content)) {
+            // the string is just quotes from the start to the end
+            ""
+          } else {
+            content.substring(quotePrefix.size, content.size - quoteSuffix.size).trim.replaceAll("\\\\\"", "\"")
+          }
+        (item, quotePrefix, quoteSuffix)
+      } else {
+        (trimmed, "", "")
+      }
     }
 
     fixImproperPrefixSuffix(delimiter, itemsWithQuotePrefixAndSuffix)
