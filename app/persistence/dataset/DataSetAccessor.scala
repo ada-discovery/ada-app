@@ -3,7 +3,7 @@ package persistence.dataset
 import dataaccess.Criterion
 import models.{DataSetSetting, DataSetMetaInfo}
 import dataaccess.RepoTypes.JsonCrudRepo
-import Criterion.CriterionInfix
+import Criterion.Infix
 import play.api.libs.json._
 import persistence.RepoTypes._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

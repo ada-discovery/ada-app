@@ -1,14 +1,12 @@
 package controllers
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import models.Category
+import models._
 import org.apache.commons.lang3.StringEscapeUtils
 import play.api.Configuration
 
 import scala.concurrent.duration._
 import javax.inject.Inject
-
-import models.{FilterCondition, Page}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
@@ -192,12 +190,12 @@ class RedCapController @Inject() (
         (metadata.field_name, nameCategoryMap.get(metadata.form_name).get)
       }.toMap
 
-      // field label map
-      val fieldLabelMap = metadatas.map{metadata =>
-        (metadata.field_name, metadata.field_label)
-      }.toMap
+      // fields
+      val fields = metadatas.map{metadata =>
+        Field(metadata.field_name, Some(metadata.field_label), FieldTypeId.String)
+      }
 
-      val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
+      val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fields)
 
       val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._1.getBytes(exportCharset))
 
@@ -232,13 +230,13 @@ class RedCapController @Inject() (
         (metadata.field_name, nameCategoryMap.get(metadata.form_name).get)
       }.toMap
 
-      // field label map
-      val fieldLabelMap = metadatas.map{metadata =>
-        (metadata.field_name, metadata.field_label)
-      }.toMap
+      // fields
+      val fields = metadatas.map{metadata =>
+        Field(metadata.field_name, Some(metadata.field_label), FieldTypeId.String)
+      }
 
       val fileContents = tranSMARTService.createClinicalDataAndMappingFiles(unescapedDelimiter , "\n", replacements)(
-        records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fieldLabelMap)
+        records.toList, tranSMARTDataFileName, keyField, visitField, fieldCategoryMap, rootCategory, fields)
 
       val fileContent: Enumerator[Array[Byte]] = Enumerator(fileContents._2.getBytes(exportCharset))
 

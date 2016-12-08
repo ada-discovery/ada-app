@@ -13,7 +13,9 @@ package object BasicStats {
     median: T,
     upperQuantile: T,
     upperWhisker: T
-  )
+  ) {
+    def toSeq: Seq[T] = Seq(lowerWhisker, lowerQuantile, median, upperQuantile, upperWhisker)
+  }
 
   /**
     *
@@ -86,14 +88,14 @@ package object BasicStats {
         Some(numerator / denominator)
     }
 
-    for (i <- 0 until elementsCount) yield
-      for (j <- 0 until elementsCount) yield {
-
+    (0 until elementsCount).par.map { i =>
+      (0 until elementsCount).par.map { j =>
         if (i != j)
           calc(i, j)
         else
           Some(1d)
-      }
+      }.toList
+    }.toList
   }
 
   /**

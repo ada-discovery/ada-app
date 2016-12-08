@@ -5,7 +5,7 @@ import javax.inject.{Named, Inject}
 import dataaccess._
 import models._
 import dataaccess.RepoTypes.DataSetSettingRepo
-import Criterion.CriterionInfix
+import Criterion.Infix
 import persistence.RepoTypes._
 import play.api.libs.json.JsObject
 import util.RefreshableCache

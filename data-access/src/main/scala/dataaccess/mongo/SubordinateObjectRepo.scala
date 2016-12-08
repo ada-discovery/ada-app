@@ -1,6 +1,6 @@
 package dataaccess.mongo
 
-import dataaccess.Criterion.CriterionInfix
+import dataaccess.Criterion.Infix
 import dataaccess._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -168,7 +168,7 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
       groups = Some(Seq("count" -> SumValue(1))),
       unwindFieldName = Some(listName),
       limit = None,
-      page = None
+      skip = None
     )
 
     result.map {
@@ -193,7 +193,7 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
     * @param sort Column used as reference for sorting. Leave at None to use default.
     * @param projection Defines which columns are supposed to be returned. Leave at None to use default.
     * @param limit Page limit. Use to define chunk sizes for pagination. Leave at None to use default.
-    * @param page Page to be returned. Specifies which chunk is returned.
+    * @param skip The number of items to skip.
     * @return Traversable subordinateListNames for iteration.
     */
   override def find(
@@ -201,8 +201,10 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
     sort: Seq[Sort] = Nil,
     projection: Traversable[String] = Nil,
     limit: Option[Int] = None,
-    page: Option[Int] = None
+    skip: Option[Int] = None
   ): Future[Traversable[E]] = {
+    val page:Option[Int] = None
+
     val rootCriteria = Seq(rootIdentity.name #== rootId)
     val subCriteria = criteria.map(criterion => criterion.copyWithFieldName(listName + "." + criterion.fieldName))
 
@@ -227,7 +229,7 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
       groups = Some(Seq(listName -> Push(listName))),
       unwindFieldName = Some(listName),
       limit = limit,
-      page = page
+      skip = skip
     )
 
     result.map { result =>

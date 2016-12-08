@@ -5,6 +5,7 @@ import java.util.concurrent.TimeoutException
 
 import dataaccess.RepoException
 import models.DataSetSetting
+import persistence.dataset.DataSpaceMetaInfoRepo
 import services.datasetimporter.DataSetImporterCentral
 
 import scala.concurrent.duration._
@@ -315,7 +316,7 @@ class DataSetImportController @Inject()(
     editView(id, form)
 
   override protected def listView(page: Page[DataSetImport])(implicit msg: Messages, request: Request[_]): Html =
-    importViews.list(page, result(dataSpaceMetaInfoRepo.find()))
+    importViews.list(page, result(DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)))
 
   def create(concreteClassName: String) = restrictAdmin(deadbolt) {
     Action { implicit request =>

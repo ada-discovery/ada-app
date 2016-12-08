@@ -5,8 +5,9 @@ import javax.inject.Inject
 import controllers.dataset._
 import dataaccess.User
 
-import persistence.RepoTypes.DataSpaceMetaInfoRepo
 import dataaccess.RepoTypes.UserRepo
+import persistence.RepoTypes.DataSpaceMetaInfoRepo
+import persistence.dataset.DataSpaceMetaInfoRepo
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText, seq, email, text}
 import models.Page
@@ -38,7 +39,7 @@ class UserController @Inject() (
     Redirect(routes.UserController.find())
 
   override protected def createView(f : Form[User])(implicit msg: Messages, request: Request[_]) = {
-    val metaInfos = result(dataSpaceMetaInfoRepo.find())
+    val metaInfos = result(DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo))
     val dataSetActionNames = getMethodNames[DataSetController]
     val fieldActionNames = getMethodNames[DictionaryController]
     val categoryActionNames = getMethodNames[CategoryController]
@@ -53,7 +54,7 @@ class UserController @Inject() (
 
   override protected def editView(id: BSONObjectID, f : Form[User])(implicit msg: Messages, request: Request[_]) = {
     // TODO: move to admin
-    val metaInfos = result(dataSpaceMetaInfoRepo.find())
+    val metaInfos = result(DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo))
     val dataSetActionNames = getMethodNames[DataSetController]
     val fieldActionNames = getMethodNames[DictionaryController]
     val categoryActionNames = getMethodNames[CategoryController]

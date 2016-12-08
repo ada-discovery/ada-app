@@ -45,7 +45,7 @@
                         page.filterConditions,
                         router.exportCsv(_, true, None, _, _),
                         router.exportJson
-                    )()
+                    )()()
                 </li>
                 <li>
                     @restrict(roles = List(Array(SecurityRole.admin))) {

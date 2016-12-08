@@ -6,7 +6,7 @@ import dataaccess.User.UserIdentity
 import dataaccess.ignite.FilterCacheCrudRepoFactory
 import scala.concurrent.Future
 import models.Filter
-import dataaccess.Criterion.CriterionInfix
+import dataaccess.Criterion.Infix
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[FilterCacheCrudRepoFactory])
@@ -23,7 +23,7 @@ object FilterRepo {
     val userIds = filters.map(_.createdById).flatten.map(Some(_)).toSeq
 
     if (userIds.nonEmpty) {
-      userRepo.find(Seq(UserIdentity.name #=> userIds)).map { users =>
+      userRepo.find(Seq(UserIdentity.name #-> userIds)).map { users =>
         val userIdMap = users.map(c => (c._id.get, c)).toMap
         filters.foreach(filter =>
           if (filter.createdById.isDefined) {

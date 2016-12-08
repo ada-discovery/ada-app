@@ -98,7 +98,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     sort: Seq[Sort],
     projection: Traversable[String],
     limit: Option[Int],
-    page: Option[Int]
+    skip: Option[Int]
   ): Future[Traversable[E]] = {
     val start = new java.util.Date()
     // projection
@@ -121,7 +121,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     // limit + offset
     val limitPart = limit.map{ limit =>
       "limit " + limit +
-        page.map(page => " offset " + (page * limit)).getOrElse("")
+        skip.map(skip => " offset " + skip).getOrElse("")
     }.getOrElse("")
 
     val orderByPart = sort match {
@@ -235,8 +235,14 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
       case GreaterCriterion(_, value) =>
         (s"$fieldName > ?", Seq(value))
 
+      case GreaterEqualCriterion(_, value) =>
+        (s"$fieldName >= ?", Seq(value))
+
       case LessCriterion(_, value) =>
         (s"$fieldName < ?", Seq(value))
+
+      case LessEqualCriterion(_, value) =>
+        (s"$fieldName <= ?", Seq(value))
     }
   }
 

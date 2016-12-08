@@ -20,13 +20,13 @@
     <input type="checkbox" class="no-rowClicked" @if(dataSetInfo.hide) { checked="checked" } disabled="disabled">
 }
 
-@table = {
+@dataSetTable = {
     @displayTable(
         dataSpaceMetaInfo.dataSetMetaInfos.sortBy(_.sortOrder),
         typeColumns[DataSetMetaInfo](
             (None, "Name", _.name),
             (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
-            (None, "# Items/Patients", {info: DataSetMetaInfo => dataSetIdSizeMap.get(info.id).get.toString}),
+            (None, "# Items", {info: DataSetMetaInfo => dataSetIdSizeMap.get(info.id).get.toString}),
             (None, "Hide?", hideCheckbox)
         ),
         None,
@@ -34,11 +34,29 @@
     )
 }
 
+@dataSpaceTable = {
+    @displayTable(
+        dataSpaceMetaInfo.children.sortBy(_.sortOrder),
+        typeColumns[DataSpaceMetaInfo](
+            (None, "Name", _.name),
+            (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
+            (None, "# Items", {info: DataSpaceMetaInfo =>
+                info.dataSetMetaInfos.map( setInfo => dataSetIdSizeMap.get(setInfo.id).get).sum.toString
+            }),
+            (None, "# Data Sets", {info: DataSpaceMetaInfo => info.dataSetMetaInfos.size.toString})
+        ),
+        None,
+        Some({ item : Any => dataSpaceMetaInfoRoutes.get(item.asInstanceOf[DataSpaceMetaInfo]._id.get) })
+    )
+}
+
 @elements = {
     @value("dataSpaceMetaInfo", "Name", dataSpaceMetaInfo.name)
     @value("dataSpaceMetaInfo", "Time Created", dataSpaceMetaInfo.timeCreated.toString)
-    <hr/>
-    @labelValue("dataSetMetaInfos", "Data Sets"){@table}
+    @labelValue("dataSetMetaInfos", "Data Sets"){@dataSetTable}
+    @if(dataSpaceMetaInfo.children.nonEmpty) {
+        @labelValue("dataSpaceMetaInfos", "(Sub) Data Spaces") {@dataSpaceTable}
+    }
 }
 
 @layout.show(

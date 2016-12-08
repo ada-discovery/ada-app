@@ -51,14 +51,14 @@
     }
 }
 
-@table = {
+@dataSetTable = {
     @displayTable(
         form.value.get.dataSetMetaInfos.sortBy(_.sortOrder),
         typeColumns[DataSetMetaInfo](
             (None, "Name", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.name", item.name) }),
             (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
             (None, "Sort Order", { item: DataSetMetaInfo => editableInput("dataSetMetaInfos.sortOrder", item.sortOrder) }),
-            (None, "# Items/Patients", { item: DataSetMetaInfo => dataSetIdSizeMap.get(item.id).get.toString }),
+            (None, "# Items", { item: DataSetMetaInfo => dataSetIdSizeMap.get(item.id).get.toString }),
             (None, "Hide?", editableHideCheckbox),
             (None, "Delete?", deleteButton)
         ),
@@ -68,10 +68,26 @@
     )
 }
 
+@dataSpaceTable = {
+    @displayTable(
+        form.value.get.children.sortBy(_.sortOrder),
+        typeColumns[DataSpaceMetaInfo](
+            (None, "Name", _.name),
+            (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
+            (None, "# Data Sets", {info: DataSpaceMetaInfo => info.dataSetMetaInfos.size.toString}),
+            (None, "# Items", {info: DataSpaceMetaInfo =>
+                info.dataSetMetaInfos.map( setInfo => dataSetIdSizeMap.get(setInfo.id).get).sum.toString
+            })
+        ),
+        None,
+        Some({ item : Any => dataSpaceMetaInfoRoutes.get(item.asInstanceOf[DataSpaceMetaInfo]._id.get) })
+    )
+}
+
 @inputText("dataSpaceMetaInfo", "name", form)
 @inputText("dataSpaceMetaInfo", "sortOrder", form)
 @value("dataSetMetaInfos", "Time Created", form.value.get.timeCreated.toString)
-@labelValue("dataSetMetaInfos", "Data Sets"){@table}
+@labelValue("dataSetMetaInfos", "Data Sets"){@dataSetTable}
 
 <script type="text/javascript">
     $(function () {

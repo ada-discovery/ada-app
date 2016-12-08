@@ -10,7 +10,7 @@ import dataaccess._
 import models._
 import models.DataSetFormattersAndIds._
 import persistence.RepoTypes._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
 import dataaccess.FieldRepo._
 import play.api.Logger
 import play.api.data.Form
@@ -109,7 +109,14 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     editView(name, f)
 
   override protected def editView(name: String, f : Form[Field])(implicit msg: Messages, request: Request[_]) =
-    dictionary.edit(dataSetName + " Field", name, f, allCategories, router, result(dataSpaceMetaInfoRepo.find()))
+    dictionary.edit(
+      dataSetName + " Field",
+      name,
+      f,
+      allCategories,
+      router,
+      result(dataSpaceTree)
+    )
 
   // TODO: Remove
   override protected def listView(page: Page[Field])(implicit msg: Messages, request: Request[_]) =
@@ -161,7 +168,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       getDictionaryChartSpec(title, filter, fieldName, fieldExtractor).map(chartSpec => FieldChartSpec(fieldName, chartSpec))
     }
     val fieldChartSpecsFuture = Future.sequence(futureFieldChartSpecs)
-    val futureMetaInfos = dataSpaceMetaInfoRepo.find()
+    val futureMetaInfos = dataSpaceTree
     val futureItemsAndCount = getFutureItemsAndCount(page, orderBy, filter)
 
     {
@@ -264,4 +271,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
         ChartSpec.categorical(values, None, chartTitle, false, true)
       }
     }
+
+  private def dataSpaceTree =
+    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 }

@@ -6,7 +6,8 @@
     conditions: Seq[FilterCondition],
     exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call,
     exportJsonCall: (Seq[FilterCondition], Boolean) => Call)(
-    extraListItems: Html = Html("")
+    extraListItems: Html = Html(""))(
+    extraModals: Html = Html("")
 )
 
 @csvBody(defaultDelimiter: String) = {
@@ -73,6 +74,7 @@
     @exportModal("exportAllJsonModal", "Full Json Export", exportJsonCall(Nil, false), Some(jsonBody))
     @exportModal("exportFilteredJsonModal", "Filtered Json Export", exportJsonCall(conditions, false), Some(jsonBody))
     @exportModal("exportFilteredTableJsonModal", "Filtered Table Json Export", exportJsonCall(conditions, true), Some(jsonBody))
+    @extraModals
 </div>
 
 <script type="text/javascript">

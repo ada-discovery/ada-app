@@ -7,7 +7,7 @@ import dataaccess.RepoTypes.{FieldRepo, DataSetSettingRepo, JsonCrudRepo}
 import _root_.util.{MessageLogger, JsonUtil}
 import com.google.inject.ImplementedBy
 import models._
-import Criterion.CriterionInfix
+import Criterion.Infix
 import org.apache.commons.lang.StringUtils
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -103,7 +103,8 @@ trait DataSetService {
     originalDataSetId: String,
     newDataSetMetaInfo: DataSetMetaInfo,
     newDataSetSetting: Option[DataSetSetting],
-    newDataView: Option[DataView]
+    newDataView: Option[DataView],
+    jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]] = None
   ): Future[Unit]
 }
 
@@ -211,7 +212,7 @@ class DataSetServiceImpl @Inject()(
       val jsonsWithIdsFuture: Future[Seq[(JsObject, Traversable[JsValue])]] =
         for {
           keyIds <- dataRepo.find(
-            criteria = Seq(keyField.get #=> keys),
+            criteria = Seq(keyField.get #-> keys),
             projection = Seq(keyField.get, dataSetIdFieldName)
           )
         } yield {
@@ -465,36 +466,33 @@ class DataSetServiceImpl @Inject()(
   private def inferFieldTypesInParallel(
     dataRepo: JsonCrudRepo,
     fieldNames: Traversable[String],
-    groupSize: Int
+    groupSize: Int,
+    jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]] = None
   ): Future[Traversable[(String, FieldType[_])]] = {
     val groupedFieldNames = fieldNames.toSeq.grouped(groupSize).toSeq
+    val jfti = jsonFieldTypeInferrer.getOrElse(jsonFti)
 
     for {
       fieldNameAndTypes <- Future.sequence(
         groupedFieldNames.par.map { groupFieldNames =>
-          inferFieldTypes(dataRepo, groupFieldNames)
+          dataRepo.find(projection = groupFieldNames).map(
+            inferFieldTypes(jfti, groupFieldNames)
+          )
         }.toList
       )
     } yield
       fieldNameAndTypes.flatten
   }
 
-  def inferFieldTypes(
-    dataRepo: JsonCrudRepo,
-    fieldNames: Traversable[String]
-  ): Future[Traversable[(String, FieldType[_])]] =
-    dataRepo.find(projection = fieldNames).map(
-      inferFieldTypes(_, fieldNames)
-    )
-
   private def inferFieldTypes(
-    items: Traversable[JsObject],
-    fieldNames: Traversable[String]
+    jsonFieldTypeInferrer: FieldTypeInferrer[JsReadable],
+    fieldNames: Traversable[String])(
+    items: Traversable[JsObject]
   ): Traversable[(String, FieldType[_])] =
-    fieldNames.map{ fieldName =>
+    fieldNames.map { fieldName =>
       val jsons = project(items, fieldName)
       println("Inferring " + fieldName)
-      (fieldName, jsonFti(jsons))
+      (fieldName, jsonFieldTypeInferrer(jsons))
     }
 
   override def updateDictionary(
@@ -522,7 +520,7 @@ class DataSetServiceImpl @Inject()(
     for {
       // get the existing fields
       referencedFields <-
-        fieldRepo.find(Seq(FieldIdentity.name #=> newFieldNames))
+        fieldRepo.find(Seq(FieldIdentity.name #-> newFieldNames))
       referencedNameFieldMap = referencedFields.map(field => (field.name, field)).toMap
 
       // get the non-existing fields
@@ -645,7 +643,8 @@ class DataSetServiceImpl @Inject()(
     originalDataSetId: String,
     newDataSetMetaInfo: DataSetMetaInfo,
     newDataSetSetting: Option[DataSetSetting],
-    newDataView: Option[DataView]
+    newDataView: Option[DataView],
+    jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]]
   ) = {
     logger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' initiated.")
     val originalDsa = dsaf(originalDataSetId).get
@@ -678,7 +677,7 @@ class DataSetServiceImpl @Inject()(
         val fieldNames = originalFieldNameAndTypes.map(_._1).sorted
 
         seqFutures(fieldNames.grouped(100)) {
-          inferFieldTypesInParallel(originalDataRepo, _, 10)
+          inferFieldTypesInParallel(originalDataRepo, _, 10, jsonFieldTypeInferrer)
         }.map(_.flatten)
       }
 

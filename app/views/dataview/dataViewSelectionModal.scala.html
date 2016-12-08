@@ -3,7 +3,8 @@
 @(
     modalName: String,
     dataViewRouter: DataViewRouter,
-    dataViewJsRouter: DataViewJsRouter
+    dataViewJsRouter: DataViewJsRouter,
+    call: Option[Call] = None
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
@@ -15,10 +16,14 @@
 
 @dataViewSelectionModalButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" id="submitButton" data-dismiss="modal" class="btn btn-primary">OK</button>
+    @if(call.isDefined) {
+        <button type="submit" id="submitButton" data-dismiss="modal" class="btn btn-primary">OK</button>
+    } else {
+        <button type="button" id="submitButton" data-dismiss="modal" class="btn btn-primary">OK</button>
+    }
 }
 
-@modal(modalName, "Choose Data View", dataViewSelectionModalBody, None, Some(dataViewSelectionModalButtons))
+@modal(modalName, "Choose Data View", dataViewSelectionModalBody, call, Some(dataViewSelectionModalButtons))
 
 <script type="text/javascript" defer="defer">
     $.ajax({

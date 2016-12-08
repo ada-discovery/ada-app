@@ -7,7 +7,7 @@ import dataaccess.Criterion
 import dataaccess.mongo.SubordinateObjectMongoAsyncCrudRepo
 import models.DataSetFormattersAndIds._
 import models._
-import Criterion.CriterionInfix
+import Criterion.Infix
 import persistence.RepoTypes._
 import persistence._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

@@ -10,11 +10,11 @@ import dataaccess.RepoTypes.UserRepo
 import dataaccess.{FilterRepo, RepoException, AscSort, Criterion}
 import models._
 import models.FilterCondition.{FilterIdentity, filterFormat}
-import Criterion.CriterionInfix
+import Criterion.Infix
 import models.security.{UserManager, SecurityRole}
 import reactivemongo.play.json.BSONFormats._
 import persistence.RepoTypes._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
@@ -83,7 +83,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
       id,
       f,
       router,
-      result(dataSpaceMetaInfoRepo.find())
+      result(dataSpaceTree)
     )
   }
 
@@ -96,7 +96,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
       dataSetName + " Filter",
       page,
       router,
-      result(dataSpaceMetaInfoRepo.find())
+      result(dataSpaceTree)
     )
   }
 
@@ -142,4 +142,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
       Ok(Json.toJson(idAndNames))
     }
   }
+
+  private def dataSpaceTree =
+    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 }

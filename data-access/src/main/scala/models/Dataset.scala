@@ -11,12 +11,17 @@ import dataaccess._
 import models.FilterCondition.filterFormat
 import models.DataView.dataViewFormat
 
+import scala.collection.mutable.Buffer
+import scala.collection.mutable.ListBuffer
+
 case class DataSpaceMetaInfo(
   _id: Option[BSONObjectID],
   name: String,
   sortOrder: Int,
   timeCreated: Date = new Date(),
-  dataSetMetaInfos: Seq[DataSetMetaInfo] = Seq[DataSetMetaInfo]()
+  dataSetMetaInfos: Seq[DataSetMetaInfo] = Seq[DataSetMetaInfo](),
+  parentId: Option[BSONObjectID] = None,
+  var children: Buffer[DataSpaceMetaInfo] = ListBuffer[DataSpaceMetaInfo]()
 )
 
 case class DataSetMetaInfo(
@@ -213,7 +218,19 @@ object DataSetFormattersAndIds {
 
   implicit val dictionaryFormat = Json.format[Dictionary]
   implicit val dataSetMetaInfoFormat = Json.format[DataSetMetaInfo]
-  implicit val dataSpaceMetaInfoFormat = Json.format[DataSpaceMetaInfo]
+  implicit val dataSpaceMetaInfoFormat: Format[DataSpaceMetaInfo] = (
+    (__ \ "_id").formatNullable[BSONObjectID] and
+    (__ \ "name").format[String] and
+    (__ \ "sortOrder").format[Int] and
+    (__ \ "timeCreated").format[java.util.Date] and
+    (__ \ "dataSetMetaInfos").format[Seq[DataSetMetaInfo]] and
+    (__ \ "parentId").formatNullable[BSONObjectID]
+  )(
+    DataSpaceMetaInfo(_, _, _, _, _, _),
+    (item: DataSpaceMetaInfo) =>  (
+      item._id, item.name, item.sortOrder, item.timeCreated, item.dataSetMetaInfos, item.parentId
+    )
+  )
 
   implicit val filterShowFieldStyleFormat = EnumFormat.enumFormat(FilterShowFieldStyle)
   val dataSetSettingFormat = Json.format[DataSetSetting]

@@ -3,7 +3,7 @@ package models.security
 import javax.inject.{Singleton, Inject}
 
 import dataaccess.Criterion
-import Criterion.CriterionInfix
+import Criterion.Infix
 import com.google.inject.ImplementedBy
 import ldap.{LdapSettings, LdapUserService, LdapConnector}
 import dataaccess.RepoTypes.UserRepo

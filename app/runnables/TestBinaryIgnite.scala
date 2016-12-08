@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import dataaccess.ignite.{JsonBinaryCacheAsyncCrudRepo, BinaryCacheFactory}
 import dataaccess.{DescSort, AscSort, SerializableApplicationLifecycle}
-import dataaccess.Criterion.CriterionInfix
+import dataaccess.Criterion.Infix
 import org.apache.ignite.Ignite
 import dataaccess.mongo.JsonRepoFactory
 import play.api.libs.json.JsObject
@@ -43,7 +43,7 @@ class TestBinaryIgnite @Inject() (ignite: Ignite, cacheFactory: BinaryCacheFacto
       criteria = Seq("purdue_test___5" #== "0"),
       projection = Seq("purdue_test___5", "sv_age"),
       limit = Some(10),
-      page = Some(2),
+      skip = Some(19),
       sort = Seq(AscSort("sv_age"))  // , DescSort("purdue_test___5")
     )
     println(Await.result(allFuture, 2 minutes).mkString("\n"))

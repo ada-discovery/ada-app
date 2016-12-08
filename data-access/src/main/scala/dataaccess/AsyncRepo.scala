@@ -22,7 +22,7 @@ trait AsyncReadonlyRepo[E, ID] {
     * @param sort Column used as reference for sorting. Leave at None to use default.
     * @param projection Defines which columns are supposed to be returned. Leave at None to use default.
     * @param limit Page limit. Use to define chunk sizes. Leave at None to use default.
-    * @param page Page to be returned. Specifies which chunk is returned.
+    * @param skip The number of items to skip.
     * @return Traversable object for iteration.
     */
   def find(
@@ -30,7 +30,7 @@ trait AsyncReadonlyRepo[E, ID] {
     sort: Seq[Sort] = Nil,
     projection: Traversable[String] = Nil,
     limit: Option[Int] = None,
-    page: Option[Int] = None
+    skip: Option[Int] = None
   ): Future[Traversable[E]]
 
   /**

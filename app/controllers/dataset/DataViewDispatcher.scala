@@ -48,6 +48,8 @@ class DataViewDispatcher @Inject()(dscf: DataSetControllerFactory, dvc: DataView
 
   override def updateAndShowView(id: BSONObjectID) = dispatch(_.updateAndShowView(id))
 
+  override def copy(id: BSONObjectID) = dispatch(_.copy(id))
+
   override def addDistributions(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]

@@ -19,7 +19,7 @@ trait SyncReadonlyRepo[E, ID] {
     sort: Seq[Sort] = Nil,
     projection : Traversable[String] = Nil,
     limit: Option[Int] = None,
-    page: Option[Int] = None
+    skip: Option[Int] = None
   ): Traversable[E]
 
   def count(criteria: Seq[Criterion[Any]]) : Int
@@ -58,9 +58,9 @@ protected class SyncReadonlyRepoAdapter[E, ID](
     sort: Seq[Sort] = Nil,
     projection : Traversable[String] = Nil,
     limit: Option[Int] = None,
-    page: Option[Int] = None
+    skip: Option[Int] = None
   ) =
-    wait(asyncRepo.find(criteria, sort, projection, limit, page))
+    wait(asyncRepo.find(criteria, sort, projection, limit, skip))
 
   override def count(criteria: Seq[Criterion[Any]]) =
     wait(asyncRepo.count(criteria))

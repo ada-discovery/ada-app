@@ -32,21 +32,34 @@ case class NotInCriterion[V](fieldName: String, value: Seq[V]) extends Criterion
 case class GreaterCriterion[T](fieldName: String, value: T) extends Criterion[T] {
   override def copyWithFieldName(fieldName: String) = copy(fieldName = fieldName)
 }
+case class GreaterEqualCriterion[T](fieldName: String, value: T) extends Criterion[T] {
+  override def copyWithFieldName(fieldName: String) = copy(fieldName = fieldName)
+}
 case class LessCriterion[T](fieldName: String, value: T) extends Criterion[T] {
+  override def copyWithFieldName(fieldName: String) = copy(fieldName = fieldName)
+}
+case class LessEqualCriterion[T](fieldName: String, value: T) extends Criterion[T] {
   override def copyWithFieldName(fieldName: String) = copy(fieldName = fieldName)
 }
 
 object Criterion {
-  implicit class CriterionInfix(val fieldName: String) {
+  implicit class Infix(val fieldName: String) {
 
     def #==[T](value: T) = EqualsCriterion(fieldName, value)
     def #=@[T] = EqualsNullCriterion(fieldName)
-    def #~(value: String) = RegexEqualsCriterion(fieldName, value)
+
     def #!=[T](value: T) = NotEqualsCriterion(fieldName, value)
     def #!@[T] = NotEqualsNullCriterion(fieldName)
-    def #=>[V](value: Seq[V]) = InCriterion(fieldName, value)
+
+    def #~(value: String) = RegexEqualsCriterion(fieldName, value)
+
+    def #->[V](value: Seq[V]) = InCriterion(fieldName, value)
     def #!->[V](value: Seq[V]) = NotInCriterion(fieldName, value)
+
     def #>[T](value: T) = GreaterCriterion(fieldName, value)
+    def #>=[T](value: T) = GreaterEqualCriterion(fieldName, value)
+
     def #<[T](value: T) = LessCriterion(fieldName, value)
+    def #<=[T](value: T) = LessEqualCriterion(fieldName, value)
   }
 }

@@ -1,7 +1,7 @@
 package dataaccess
 
 import com.google.inject.ImplementedBy
-import dataaccess.Criterion.CriterionInfix
+import dataaccess.Criterion.Infix
 import models.{Field, DataSetFormattersAndIds}
 import DataSetFormattersAndIds.CategoryIdentity
 import dataaccess.RepoTypes._
@@ -24,7 +24,7 @@ object FieldRepo {
     val categoryIds = fields.map(_.categoryId).flatten.map(Some(_)).toSeq
 
     if (categoryIds.nonEmpty) {
-      categoryRepo.find(Seq(CategoryIdentity.name #=> categoryIds)).map { categories =>
+      categoryRepo.find(Seq(CategoryIdentity.name #-> categoryIds)).map { categories =>
         val categoryIdMap = categories.map(c => (c._id.get, c)).toMap
         fields.foreach(field =>
           if (field.categoryId.isDefined) {

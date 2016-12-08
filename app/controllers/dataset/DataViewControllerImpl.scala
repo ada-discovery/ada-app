@@ -11,10 +11,10 @@ import dataaccess.{DataViewRepo, FilterRepo, AscSort, Criterion}
 import models._
 import models.DataSetFormattersAndIds._
 import models.FilterCondition.filterFormat
-import Criterion.CriterionInfix
+import Criterion.Infix
 import models.security.UserManager
 import persistence.RepoTypes._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
@@ -72,6 +72,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   // router for requests; to be passed to views as helper.
   protected lazy val router = new DataViewRouter(dataSetId)
+  protected lazy val jsRouter = new DataViewJsRouter(dataSetId)
   protected lazy val dataSetRouter = new DataSetRouter(dataSetId)
 
   override protected lazy val home =
@@ -102,7 +103,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       router,
       dataSetRouter.allFields,
       nameFieldMap,
-      result(dataSpaceMetaInfoRepo.find())
+      result(dataSpaceTree)
     )
   }
 
@@ -114,7 +115,8 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       dataSetName + " Data View",
       page,
       router,
-      result(dataSpaceMetaInfoRepo.find())
+      jsRouter,
+      result(dataSpaceTree)
     )
   }
 
@@ -161,7 +163,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
               router.updateAndShowView,
               dataSetRouter.allFields,
               nameFieldMap,
-              result(dataSpaceMetaInfoRepo.find())
+              result(dataSpaceTree)
             )
           )
           case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
@@ -177,6 +179,21 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     Action.async { implicit request =>
       update(id, Redirect(dataSetRouter.getView(id, 0, "", Left(Nil)))).apply(request)
     }
+
+  override def copy(id: BSONObjectID) =
+    Action.async { implicit request =>
+      repo.get(id).flatMap(_.fold(
+        Future(NotFound(s"Entity #$id not found"))
+      ) { dataView =>
+        implicit val msg = messagesApi.preferred(request)
+
+        val newDataView = dataView.copy(_id = None, name = dataView.name + " copy", default = false)
+        saveCall(newDataView).map { newId =>
+          Redirect(router.get(newId)).flashing("success" -> s"Data view '${dataView.name}' has been copied.")
+        }
+      }
+    )
+  }
 
   def addDistributions(
     dataViewId: BSONObjectID,
@@ -275,4 +292,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
         (field.name, field)
       ).toMap
     }
+
+  private def dataSpaceTree =
+    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 }

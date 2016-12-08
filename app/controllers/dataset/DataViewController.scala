@@ -14,6 +14,8 @@ trait DataViewController extends CrudController[BSONObjectID] {
 
   def updateAndShowView(id: BSONObjectID): Action[AnyContent]
 
+  def copy(id: BSONObjectID): Action[AnyContent]
+
   def addDistributions(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]

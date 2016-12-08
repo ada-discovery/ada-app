@@ -141,6 +141,7 @@ POST        /studies/dataviews/save                                             
 POST        /studies/dataviews/:id                                                  controllers.dataset.DataViewDispatcher.update(id: BSONObjectID)
 POST        /studies/dataviews/updateAndShowView/:id                                controllers.dataset.DataViewDispatcher.updateAndShowView(id: BSONObjectID)
 POST        /studies/dataviews/:id/delete                                           controllers.dataset.DataViewDispatcher.delete(id: BSONObjectID)
+GET         /studies/dataviews/copy                                                 controllers.dataset.DataViewDispatcher.copy(dataViewId: BSONObjectID)
 GET         /studies/dataviews/idAndNames                                           controllers.dataset.DataViewDispatcher.idAndNames
 GET         /studies/dataviews/addDistributions                                     controllers.dataset.DataViewDispatcher.addDistributions(dataViewId: BSONObjectID, fieldNames: Seq[String])
 GET         /studies/dataviews/addBoxPlots                                          controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId: BSONObjectID, fieldNames: Seq[String])

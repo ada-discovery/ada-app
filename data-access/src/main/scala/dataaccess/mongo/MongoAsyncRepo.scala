@@ -55,18 +55,18 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     sort: Seq[Sort],
     projection: Traversable[String],
     limit: Option[Int],
-    page: Option[Int]
+    skip: Option[Int]
   ): Future[Traversable[E]] = {
     val sortedProjection = projection.toSeq.sorted
     val jsonProjection = JsObject(sortedProjection.map(fieldName => (fieldName, JsNumber(1))))
-    val jsonCriteria = JsObject(criteria.map(toMongoCriterion(_)))
+    val jsonCriteria = toMongoCriteria(criteria)
 
     // handle criteria and projection (if any)
     val queryBuilder = collection.find(jsonCriteria, jsonProjection)
 
     // use index / hint only if limit is not provided and projection is not empty
     val queryBuilder2 =
-      if (limit.isEmpty && projection.size > 1) {
+      if (limit.isEmpty && projection.nonEmpty) {
         val projectionWithId = sortedProjection ++ (
           if (!sortedProjection.contains(identityName))
             Seq(identityName)
@@ -110,11 +110,11 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
     finalQueryBuilderFuture.flatMap { finalQueryBuilder =>
       // handle pagination (if requested)
-      val cursor: CursorProducer[E]#ProducedCursor = page match {
-        case Some(page) => limit.map(l =>
-          finalQueryBuilder.options(QueryOpts(page * l, l)).cursor[E]()
+      val cursor: CursorProducer[E]#ProducedCursor = skip match {
+        case Some(skip) => limit.map(l =>
+          finalQueryBuilder.options(QueryOpts(skip, l)).cursor[E]()
         ).getOrElse(
-          throw new IllegalArgumentException("Limit is expected when page is provided.")
+          throw new IllegalArgumentException("Limit is expected when skip is provided.")
         )
 
         case None => finalQueryBuilder.cursor[E]()
@@ -138,12 +138,33 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     JsObject(jsonSorts)
   }
 
-  protected def toMongoCriterion[T, V](criterion: Criterion[T]): (String, JsValue) = {
-    val fieldName = criterion.fieldName
+  protected def toMongoCriteria(criteria: Seq[Criterion[Any]]): JsObject = {
+    val individualCriteria = criteria.map( criterion =>
+      (criterion.fieldName, toMongoCondition(criterion))
+    )
+    if (individualCriteria.length < 2) {
+      JsObject(individualCriteria)
+    } else {
+      val elements = individualCriteria.map { case (fieldName, json) => Json.obj(fieldName -> json) }
+      Json.obj("$and" -> JsArray(elements))
+    }
+  }
 
-    val mongoCondition = criterion match {
+//    val individualCriteria = criteria.groupBy(_.fieldName).map {
+//      case (fieldName, groupedCriteria) =>
+//        (
+//          fieldName,
+//          groupedCriteria.map(toMongoCondition).foldLeft(Json.obj()) { case (json1, json2) =>
+//            json1 ++ json2
+//          }
+//        )
+//    }
+//    JsObject(individualCriteria)
+
+  protected def toMongoCondition[T, V](criterion: Criterion[T]): JsObject =
+    criterion match {
       case c: EqualsCriterion[T] =>
-        toJson(c.value)
+        Json.obj("$eq" -> toJson(c.value))
 //     {
 //       c.value match {
 //         case Some(value) => toJson(value)
@@ -151,7 +172,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 //       }
 //     }
       case c: EqualsNullCriterion =>
-        JsNull
+        Json.obj("$eq" -> JsNull)
 
       case RegexEqualsCriterion(_, value) =>
         Json.obj("$regex" -> value, "$options" -> "i")
@@ -171,21 +192,30 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
         val inValues = c.value.map(toJson(_): JsValueWrapper)
         Json.obj("$in" -> Json.arr(inValues: _*))
       }
+
       case c: NotInCriterion[V] => {
         val inValues = c.value.map(toJson(_): JsValueWrapper)
         Json.obj("$nin" -> Json.arr(inValues: _*))
       }
-      case c: GreaterCriterion[T] => Json.obj("$gt" -> toJson(c.value))
-      case c: LessCriterion[T] => Json.obj("$lt" -> toJson(c.value))
+
+      case c: GreaterCriterion[T] =>
+        Json.obj("$gt" -> toJson(c.value))
+
+      case c: GreaterEqualCriterion[T] =>
+        Json.obj("$gte" -> toJson(c.value))
+
+      case c: LessCriterion[T] =>
+        Json.obj("$lt" -> toJson(c.value))
+
+      case c: LessEqualCriterion[T] =>
+        Json.obj("$lte" -> toJson(c.value))
     }
-    (fieldName, mongoCondition)
-  }
 
   override def count(criteria: Seq[Criterion[Any]]): Future[Int] =
     criteria match {
       case Nil => collection.count()
       case _ => {
-        val jsonCriteria = JsObject(criteria.map(toMongoCriterion(_)))
+        val jsonCriteria = toMongoCriteria(criteria)
         collection.runCommand(Count(jsonCriteria)).map(_.value)
       }
     }
@@ -277,10 +307,10 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
     groups : Option[Seq[(String, GroupFunction)]],
     unwindFieldName : Option[String],
     limit: Option[Int],
-    page: Option[Int]
+    skip: Option[Int]
   ): Future[Traversable[JsObject]] = {
-    val jsonRootCriteria = rootCriteria.headOption.map(_ => JsObject(rootCriteria.map(toMongoCriterion(_))))
-    val jsonSubCriteria = subCriteria.headOption.map(_ => JsObject(subCriteria.map(toMongoCriterion(_))))
+    val jsonRootCriteria = rootCriteria.headOption.map(_ => toMongoCriteria(rootCriteria))
+    val jsonSubCriteria = subCriteria.headOption.map(_ => toMongoCriteria((subCriteria)))
 
     val params = List(
       jsonRootCriteria.map(Match(_)),                                 // $match
@@ -288,7 +318,7 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
       jsonSubCriteria.map(Match(_)),                                  // $match
       projection.map(Project(_)),                                     // $project
       sort.headOption.map(_ => AggSort(toAggregateSort(sort): _ *)),  // $sort
-      page.map(page  => Skip(page * limit.getOrElse(0))),             // $skip
+      skip.map(Skip(_)),                                              // $skip
       limit.map(Limit(_)),                                            // $limit
       idGroup.map(id => Group(id)(groups.get: _*))                    // $group
     ).flatten
@@ -328,7 +358,7 @@ trait MongoAsyncCrudExtraRepo[E, ID] extends AsyncCrudRepo[E, ID] {
     groups : Option[Seq[(String, GroupFunction)]],
     unwindFieldName : Option[String],
     limit: Option[Int],
-    page: Option[Int]
+    skip: Option[Int]
   ): Future[Traversable[JsObject]]
 
   /*

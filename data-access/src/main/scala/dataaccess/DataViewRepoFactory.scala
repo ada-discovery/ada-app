@@ -5,7 +5,7 @@ import dataaccess.RepoTypes._
 import dataaccess.User.UserIdentity
 import dataaccess.ignite.DataViewCacheCrudRepoFactory
 import models.DataView
-import dataaccess.Criterion.CriterionInfix
+import dataaccess.Criterion.Infix
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -23,7 +23,7 @@ object DataViewRepo {
     val userIds = dataViews.map(_.createdById).flatten.map(Some(_)).toSeq
 
     if (userIds.nonEmpty) {
-      userRepo.find(Seq(UserIdentity.name #=> userIds)).map { users =>
+      userRepo.find(Seq(UserIdentity.name #-> userIds)).map { users =>
         val userIdMap = users.map(c => (c._id.get, c)).toMap
         dataViews.foreach(dataView =>
           if (dataView.createdById.isDefined) {

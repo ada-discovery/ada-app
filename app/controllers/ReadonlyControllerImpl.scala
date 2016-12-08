@@ -138,10 +138,13 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     limit: Option[Int]
   ): Future[(Traversable[E], Int)] = {
     val sort = toSort(orderBy)
+    val skip = page.zip(limit).headOption.map { case (page, limit) =>
+      page * limit
+    }
 
     for {
       criteria <- toCriteria(filter)
-      items <- repo.find(criteria, sort, projection, limit, page)
+      items <- repo.find(criteria, sort, projection, limit, skip)
       count <- repo.count(criteria)
     } yield {
       (items, count)
@@ -156,9 +159,12 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     limit: Option[Int]
   ): Future[Traversable[E]] = {
     val sort = toSort(orderBy)
+    val skip = page.zip(limit).headOption.map { case (page, limit) =>
+      page * limit
+    }
 
     toCriteria(filter).flatMap ( criteria =>
-      repo.find(criteria, sort, projection, limit, page)
+      repo.find(criteria, sort, projection, limit, skip)
     )
   }
 

@@ -1,7 +1,7 @@
 package runnables
 
 import com.google.inject.Inject
-import dataaccess.Criterion.CriterionInfix
+import dataaccess.Criterion.Infix
 import dataaccess._
 import models.FieldTypeId
 import org.apache.ignite.Ignite
@@ -40,7 +40,7 @@ class TestDictionaryIgnite @Inject() (ignite: Ignite, dictionaryFieldRepoFactory
 //    val binaryKey = ignite.binary().toBinary(key)
 //    val fieldsInCategoryInFuture = fieldRepo.find(criteria = Seq("categoryId" #== key), projection = Seq("fieldType","categoryId"))
     val keys = Seq(Some(BSONObjectID("577e18c24500004800cdc557")), Some(BSONObjectID("577e18c24500004800cdc55f")))
-    val criteria = Seq("categoryId" #=> keys, "fieldType" #== FieldTypeId.Enum)
+    val criteria = Seq("categoryId" #-> keys, "fieldType" #== FieldTypeId.Enum)
     val fieldsInCategoryFuture = fieldRepo.find(criteria, projection = Seq("name", "fieldType", "isArray", "label", "categoryId"))
     val fieldsInCategory = Await.result(fieldsInCategoryFuture, 2 minutes)
 

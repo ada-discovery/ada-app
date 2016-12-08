@@ -3,7 +3,7 @@ package controllers
 import java.util.concurrent.TimeoutException
 import dataaccess.{RepoException, Criterion}
 import models.workspace.Workspace
-import Criterion.CriterionInfix
+import Criterion.Infix
 import persistence.RepoTypes.WorkspaceRepo
 import play.api.Logger
 import play.api.data.Form

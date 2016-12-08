@@ -8,9 +8,9 @@ import dataaccess.{AscSort, Criterion}
 import models.Category
 import models.DataSetFormattersAndIds._
 import models.{D3Node, Page}
-import Criterion.CriterionInfix
+import Criterion.Infix
 import persistence.RepoTypes._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
@@ -82,7 +82,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       fields,
       router,
       fieldRouter.get,
-      result(dataSpaceMetaInfoRepo.find())
+      result(dataSpaceTree)
     )
   }
 
@@ -91,7 +91,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       dataSetName + " Category",
       page,
       router,
-      result(dataSpaceMetaInfoRepo.find())
+      result(dataSpaceTree)
     )
 
   override protected def deleteCall(id: BSONObjectID)(implicit request: Request[AnyContent]): Future[Unit] = {
@@ -188,4 +188,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     val categoriesFuture = repo.find(sort = Seq(AscSort("name")))
     result(categoriesFuture)
   }
+
+  private def dataSpaceTree =
+    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 }

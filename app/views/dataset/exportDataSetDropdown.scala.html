@@ -1,6 +1,6 @@
 @import models.FilterCondition
 @import views.html.{exportModal, exportDropdown}
-@import reactivemongo.bson.BSONObjectID
+@import views.html.elements.labelValue
 
 @(
     conditions: Seq[FilterCondition],
@@ -11,8 +11,11 @@
 )
 
 @modalBody(defaultDelimiter: String) = {
-    <p>Delimeter</p>
-    <input id="delimiter" name="delimiter" value="@defaultDelimiter">
+    <fieldset>
+        @labelValue("delimiter", "Delimiter") {
+            <input id="delimiter" name="delimiter" value="@defaultDelimiter">
+        }
+    </fieldset>
 }
 
 @exportDropdown(
@@ -30,7 +33,9 @@
         <a href="#" data-toggle="modal" data-target="#exportTranSMARTMappingModal">
             Export TranSMART Mapping
         </a>
+
     </li>
+} {
     @exportModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", exportTranSMARTDataCall, Some(modalBody("\\t")))
     @exportModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", exportTranSMARTMappingCall, Some(modalBody("\\t")))
 }

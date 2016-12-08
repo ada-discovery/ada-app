@@ -99,7 +99,19 @@ object ChartSpec {
       val count = countMap.getOrElse(value, 0)
       countMap.update(value, count + 1)
     }
-    val data = countMap.toSeq.sortBy(_._2).map {
+    categoricalPlain(countMap.toSeq, renderer, title, showLabels, showLegend, chartType, outputGridWidth)
+  }
+
+  def categoricalPlain[T](
+    counts: Seq[(Option[T], Int)],
+    renderer: Option[Option[T] => String],
+    title: String,
+    showLabels: Boolean,
+    showLegend: Boolean,
+    chartType: Option[ChartType.Value] = None,
+    outputGridWidth: Option[Int] = None
+  ): CategoricalChartSpec = {
+    val data = counts.sortBy(_._2).map {
       case (key, count) => {
         val stringKey = key.map(_.toString)
         val keyOrEmpty = stringKey.getOrElse("")
@@ -112,84 +124,17 @@ object ChartSpec {
     CategoricalChartSpec(title, showLabels, showLegend, data, chartType.getOrElse(ChartType.Pie), None, outputGridWidth)
   }
 
-  /**
-    * Given raw items and field names, column chart properties are generated.
-    * Non-defined optional values are auto-calculated.
-    *
-    * @param values Doubles.
-    * @param fieldName Fields of interest.
-    * @param columnCount Number of columns
-    * @param explMin Optional max value for scaling of the columns.
-    * @param explMax Optional min value for scaling of the columns.
-    * @return ColumnChartSpec for us in view.
-    */
-  def numerical[T: Numeric](
-    values: Traversable[T],
-    fieldName: String,
+  def numerical(
+    counts: Traversable[(BigDecimal, Int)],
     title: String,
-    columnCount: Int,
-    specialColumnForMax: Boolean = false,
-    explMin: Option[T] = None,
-    explMax: Option[T] = None,
     chartType: Option[ChartType.Value] = None,
     xAxisLabel: Option[BigDecimal => String] = None,
     outputGridWidth: Option[Int] = None
   ): NumericalChartSpec = {
-    val numeric = implicitly[Numeric[T]]
-
-    val data = if (values.nonEmpty) {
-
-      val doubles = values.map(numeric.toDouble)
-
-      val max = BigDecimal(
-        if (explMax.isDefined)
-          numeric.toDouble(explMax.get)
-        else
-          doubles.max
-      )
-
-      val min = BigDecimal(
-        if (explMin.isDefined)
-          numeric.toDouble(explMin.get)
-        else
-          doubles.min
-      )
-
-      val stepSize: BigDecimal =
-        if (min == max)
-          0
-        else if (specialColumnForMax)
-          (max - min) / (columnCount - 1)
-        else
-          (max - min) / columnCount
-
-      val countMap = MMap[Int, Int]()
-
-      // initialize counts to zero
-      (0 until columnCount).foreach { index =>
-        countMap.update(index, 0)
-      }
-      doubles.map { value =>
-        val bucketIndex =
-          if (stepSize.equals(BigDecimal(0)))
-            0
-          else if (value == max)
-            columnCount - 1
-          else
-            ((value - min) / stepSize).setScale(0, RoundingMode.FLOOR).toInt
-
-        val count = countMap.get(bucketIndex).get
-        countMap.update(bucketIndex, count + 1)
-      }
-
-      countMap.toSeq.sortBy(_._1).map { case (index, count) =>
-        val xValue = min + (index * stepSize)
-        val xLabel = xAxisLabel.map(_.apply(xValue)).getOrElse(xValue.toString)
-        (xLabel, count)
-      }
-    } else
-      Seq[(String, Int)]()
-
-    NumericalChartSpec(title, data, chartType.getOrElse(ChartType.Column), None, outputGridWidth)
+    val stringCounts = counts.toSeq.sortBy(_._1).map { case (xValue, count) =>
+      val xLabel = xAxisLabel.map(_.apply(xValue)).getOrElse(xValue.toString)
+      (xLabel, count)
+    }
+    NumericalChartSpec(title, stringCounts, chartType.getOrElse(ChartType.Column), None, outputGridWidth)
   }
 }

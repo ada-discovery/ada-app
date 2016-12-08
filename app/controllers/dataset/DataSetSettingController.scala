@@ -10,8 +10,9 @@ import models.{FieldChartType, DataSetSetting, DataSetFormattersAndIds, ChartTyp
 import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, fieldChartTypeFormat, DataSetSettingIdentity, statsCalcSpecFormat}
 import models._
 import models.FilterShowFieldStyle
-import Criterion.CriterionInfix
+import Criterion.Infix
 import persistence.RepoTypes._
+import persistence.dataset.DataSpaceMetaInfoRepo
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
@@ -93,7 +94,14 @@ class DataSetSettingController @Inject() (
             case Accepts.Html() => {
               val updateCall = dataSetSettingRoutes.updateForDataSet(entity._id.get)
               val cancelCall = new DataSetRouter(dataSet).plainOverviewList
-              Ok(html.datasetsetting.edit("", fillForm(entity), updateCall, cancelCall, fieldNamesCall, result(dataSpaceMetaInfoRepo.find())))
+              Ok(html.datasetsetting.edit(
+                "",
+                fillForm(entity),
+                updateCall,
+                cancelCall,
+                fieldNamesCall,
+                result(DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)))
+              )
             }
             case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
           }

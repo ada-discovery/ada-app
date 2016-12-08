@@ -4,7 +4,7 @@ import java.text.SimpleDateFormat
 import javax.inject.Inject
 
 import dataaccess.{AscSort, Criterion}
-import Criterion.CriterionInfix
+import Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import runnables.DataSetId._

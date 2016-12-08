@@ -1,6 +1,5 @@
 package controllers.dataset
 
-import java.text.SimpleDateFormat
 import java.util.concurrent.TimeoutException
 import java.{util => ju}
 import javax.inject.Inject
@@ -14,10 +13,10 @@ import models._
 import com.google.inject.assistedinject.Assisted
 import controllers.{ExportableAction, ReadonlyControllerImpl}
 import DataSetFormattersAndIds.{FieldIdentity}
-import Criterion.CriterionInfix
+import Criterion.Infix
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.RepoTypes._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -29,6 +28,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
 
+import scala.collection.generic.SeqFactory
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Await, Future}
 
@@ -126,7 +126,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       filterRouter,
       filterJsRouter,
       dataViewRouter,
-      getMetaInfos
+      result(dataSpaceTree)
     )
   }
 
@@ -156,7 +156,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       router.plainOverviewList,
       true,
       result(fieldNameLabelAndRendererMapFuture),
-      getMetaInfos
+      result(dataSpaceTree)
     )
   }
 
@@ -271,43 +271,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     tableFields: Traversable[Field]
   )
 
-//  override def overviewList(
-//    page: Int,
-//    orderBy: String,
-//    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
-//  ) = Action.async { implicit request =>
-//    implicit val msg = messagesApi.preferred(request)
-//
-//    val start = new ju.Date()
-//
-//    {
-//      for {
-//        viewResponse <- getViewResponse(page, orderBy, filterOrId, listViewColumns.get, setting.statsCalcSpecs)
-//      } yield {
-//        val end = new ju.Date()
-//
-//        Logger.info(s"Loading of '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
-//        render {
-//          case Accepts.Html() => {
-//            val newPage = Page(viewResponse.tableItems, page, page * pageLimit, viewResponse.count, orderBy, Some(viewResponse.filter))
-//            Ok(overviewListView(newPage, viewResponse.fieldChartSpecs, viewResponse.tableFields))
-//          }
-//          case Accepts.Json() => Ok(Json.toJson(viewResponse.tableItems))
-//        }
-//      }
-//    }.recover {
-//      case t: TimeoutException =>
-//        Logger.error("Problem found in the overviewList process")
-//        InternalServerError(t.getMessage)
-//      case e: AdaConversionException => {
-//        request.headers.get("Referer") match {
-//          case Some(refererUrl) => Redirect(refererUrl).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
-//          case None => Redirect(router.plainOverviewList).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
-//        }
-//      }
-//    }
-//  }
-
   override def overviewList(
     page: Int,
     orderBy: String,
@@ -402,8 +365,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     tableFieldNames: Seq[String],
     statsCalcSpecs: Seq[StatsCalcSpec]
   ): Future[ViewResponse] = {
-    val chartFieldNames = statsCalcSpecs.map(_.fieldNames).flatten.toSet
-
     for {
 
       // use a given filter conditions or load one
@@ -419,23 +380,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       count <- getFutureCount(conditions)
 
       // create a name -> field map of all the referenced fields for a quick lookup
-      fieldNameMap <- {
+      nameFieldMap <- {
+        val chartFieldNames = statsCalcSpecs.map(_.fieldNames).flatten.toSet
         val filterFieldNames = conditions.map(_.fieldName.trim)
         val requiredFieldNames: Set[String] = (chartFieldNames ++ tableFieldNames ++ filterFieldNames)
 
         getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
       }
 
-      // load the items needed for generation of charts
-      chartItems <- if (chartFieldNames.nonEmpty)
-          repo.find(criteria, Nil, chartFieldNames)
-        else
-          Future(Nil)
+      // generate the charts
+      chartSpecs <- generateCharts(false, criteria, statsCalcSpecs, nameFieldMap)
 
       // load the table items
       tableItems <- {
         val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
-          fieldNameMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
+          nameFieldMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
         }
         if (tableFieldNamesToLoad.nonEmpty)
             getFutureItems(Some(page), orderBy, conditions, tableFieldNamesToLoad, Some(pageLimit))
@@ -443,78 +402,153 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             Future(Nil)
       }
     } yield {
-      val tableFields = tableFieldNames.map(fieldNameMap.get).flatten
-      val chartFields = chartFieldNames.map(fieldNameMap.get).flatten
-
-      val chartSpecs = if (chartItems.nonEmpty)
-          generateCharts(chartItems, statsCalcSpecs, chartFields)
-        else
-          Nil
+      val tableFields = tableFieldNames.map(nameFieldMap.get).flatten
 
       val fieldChartSpecs = chartSpecs.map { case (chartSpec,  fieldNames) =>
         FieldChartSpec(fieldNames.head, chartSpec)
       }
 
-      val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+      val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)
 
       ViewResponse(count, fieldChartSpecs, tableItems, newFilter, tableFields)
     }
   }
 
   private def generateCharts(
-    items: Traversable[JsObject],
+    perChartRepoMethod: Boolean,
+    criteria: Seq[Criterion[Any]],
     statsCalcSpecs: Traversable[StatsCalcSpec],
-    fields: Traversable[Field]
-  ): Traversable[(ChartSpec, Seq[String])] = {
-    val nameFieldMap = fields.map(field => (field.name, field)).toMap
+    nameFieldMap: Map[String, Field]
+  ): Future[Traversable[(ChartSpec, Seq[String])]] = {
+    val splitStatsCalcSpecs: Traversable[Either[StatsCalcSpec, StatsCalcSpec]] =
+      if (perChartRepoMethod)
+        statsCalcSpecs.collect {
+         case p: DistributionCalcSpec => Left(p)
+          case p: BoxCalcSpec => Left(p)
+          case p: ScatterCalcSpec => Right(p)
+          case p: CorrelationCalcSpec => Right(p)
+        }
+      else
+        statsCalcSpecs.map(Right(_))
 
-    statsCalcSpecs.map { calcSpec =>
-      val outputGridWidth = calcSpec.outputGridWidth
-      val chartSpec = calcSpec match {
-        case DistributionCalcSpec(fieldName, chartType, _) => {
-          val fieldOrFieldName = nameFieldMap.get(fieldName).fold(
-            Right(fieldName) : Either[Field, String]
-          ){
-            field => Left(field)
+    val repoStatsCalcSpecs = splitStatsCalcSpecs.map(_.left.toOption).flatten
+    val fullDataStatsCalcSpecs = splitStatsCalcSpecs.map(_.right.toOption).flatten
+    val fullDataFieldNames = fullDataStatsCalcSpecs.map(_.fieldNames).flatten.toSet
+
+    println("Loaded chart field names: " + fullDataFieldNames.mkString(", "))
+
+    val repoChartSpecsFuture =
+      Future.sequence(
+        repoStatsCalcSpecs.par.map { calcSpec =>
+          generateChartRepo(criteria, nameFieldMap)(calcSpec).map { chartSpec =>
+            (calcSpec, chartSpec)
           }
-          val chartSpec = chartService.createDistributionChartSpec(items, chartType, fieldOrFieldName, false, true, outputGridWidth)
-          Some(chartSpec)
-        }
-        case ScatterCalcSpec(xFieldName, yFieldName, groupFieldName, _) => {
-          val xField = nameFieldMap.get(xFieldName).get
-          val yField = nameFieldMap.get(yFieldName).get
-          val shortXFieldLabel = shorten(xField.labelOrElseName, 15)
-          val shortYFieldLabel = shorten(yField.labelOrElseName, 15)
-//          val groupedLabel = groupFieldName.map(_ => "[grouped]").getOrElse("")
-          val chartSpec = chartService.createScatterChartSpec(
-            items,
-            xField,
-            yField,
-            groupFieldName.map(nameFieldMap.get).flatten,
-            Some(s"$shortXFieldLabel vs. $shortYFieldLabel"),
-            outputGridWidth
-          )
-          Some(chartSpec)
-        }
-        case BoxCalcSpec(fieldName, _) =>
-          chartService.createBoxChartSpec(
-            items,
-            nameFieldMap.get(fieldName).get,
-            outputGridWidth
-          )
-        case CorrelationCalcSpec(fieldNames, _) => {
-          val corrFields = fieldNames.map(nameFieldMap.get).flatten
-          val chartSpec = chartService.createPearsonCorrelationChartSpec(
-            items,
-            corrFields,
-            outputGridWidth
-          )
-          Some(chartSpec)
-        }
+        }.toList
+      )
 
+    val fullDataChartSpecsFuture =
+      if (fullDataFieldNames.nonEmpty)
+        repo.find(criteria, Nil, fullDataFieldNames).map { chartData =>
+          fullDataStatsCalcSpecs.par.map { calcSpec =>
+            val chartSpec = generateChart(chartData, nameFieldMap)(calcSpec)
+            (calcSpec, chartSpec)
+          }.toList
+        }
+      else
+        Future(Nil)
+
+    for {
+      chartSpecs1 <- repoChartSpecsFuture
+      chartSpecs2 <- fullDataChartSpecsFuture
+    } yield {
+      val calcSpecChartMap = (chartSpecs1 ++ chartSpecs2).toMap
+      // return charts in the specified order
+      statsCalcSpecs.map(
+        calcSpecChartMap.get
+      ).flatten.flatten
+    }
+  }
+
+  private def generateChartRepo(
+    criteria: Seq[Criterion[Any]],
+    nameFieldMap: Map[String, Field])(
+    calcSpec: StatsCalcSpec
+  ): Future[Option[(ChartSpec, Seq[String])]] = {
+    val outputGridWidth = calcSpec.outputGridWidth
+    val chartSpecFuture: Future[Option[ChartSpec]] = calcSpec match {
+
+      case DistributionCalcSpec(fieldName, chartType, _) =>
+        nameFieldMap.get(fieldName).map { field =>
+          chartService.createDistributionChartSpec(
+            repo, criteria, chartType, field, false, true, outputGridWidth)
+        }.getOrElse(
+          Future(None)
+        )
+
+      case BoxCalcSpec(fieldName, _) => {
+        chartService.createBoxChartSpecRepo(
+          repo, criteria, nameFieldMap.get(fieldName).get, outputGridWidth
+        )
       }
-      chartSpec.map( chartSpec => (chartSpec, calcSpec.fieldNames.toSeq))
-    }.flatten
+
+      case _ => Future(None)
+    }
+    chartSpecFuture.map(_.map(chartSpec => (chartSpec, calcSpec.fieldNames.toSeq)))
+  }
+
+  private def generateChart(
+    items: Traversable[JsObject],
+    nameFieldMap: Map[String, Field])(
+    calcSpec: StatsCalcSpec
+  ): Option[(ChartSpec, Seq[String])] = {
+    val outputGridWidth = calcSpec.outputGridWidth
+    val chartSpecOption: Option[ChartSpec] = calcSpec match {
+
+      case DistributionCalcSpec(fieldName, chartType, _) =>
+        nameFieldMap.get(fieldName).map { field =>
+          chartService.createDistributionChartSpec(
+            items, chartType, field, false, true, outputGridWidth
+          )
+        }.flatten
+
+      case BoxCalcSpec(fieldName, _) =>
+        nameFieldMap.get(fieldName).map { field =>
+          chartService.createBoxChartSpec(
+            items, field, outputGridWidth
+          )
+        }.flatten
+
+      case ScatterCalcSpec(xFieldName, yFieldName, groupFieldName, _) => {
+        val xField = nameFieldMap.get(xFieldName).get
+        val yField = nameFieldMap.get(yFieldName).get
+        val shortXFieldLabel = shorten(xField.labelOrElseName, 15)
+        val shortYFieldLabel = shorten(yField.labelOrElseName, 15)
+
+        //          val groupedLabel = groupFieldName.map(_ => "[grouped]").getOrElse("")
+
+        val chartSpec = chartService.createScatterChartSpec(
+          items,
+          xField,
+          yField,
+          groupFieldName.map(nameFieldMap.get).flatten,
+          Some(s"$shortXFieldLabel vs. $shortYFieldLabel"),
+          outputGridWidth
+        )
+        Some(chartSpec)
+      }
+
+      case CorrelationCalcSpec(fieldNames, _) => {
+        val corrFields = fieldNames.map(nameFieldMap.get).flatten
+
+        val chartSpec = chartService.createPearsonCorrelationChartSpec(
+          items,
+          corrFields,
+          outputGridWidth
+        )
+        Some(chartSpec)
+      }
+    }
+    chartSpecOption.map(chartSpec => (chartSpec, calcSpec.fieldNames.toSeq))
   }
 
   private def resolveFilter(
@@ -561,7 +595,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private def getFields(
     fieldNames: Traversable[String]
   ): Future[Traversable[Field]] =
-    fieldRepo.find(Seq(FieldIdentity.name #=> fieldNames.toSeq))
+    fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
 
   private def getValues[T](
     field: Field,
@@ -675,7 +709,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           dataViewRouter,
           dataViewJsRouter,
           dataSetId,
-          getMetaInfos
+          result(dataSpaceTree)
         ))
         case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
       }
@@ -698,17 +732,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // get the criteria
         criteria <- toCriteria(resolvedFilter.conditions)
 
-        // get the chart items
-        chartItems <- repo.find(criteria, Nil, Seq(fieldName))
-
-        // chart fields
-        chartFields <- getFields(Seq(fieldName))
+        // chart field
+        chartField <- fieldRepo.get(fieldName)
 
         // generate the distribution chart
-        distributionChartSpecs = chartService.createDistributionChartSpecs(chartItems, Seq(FieldChartType(fieldName, None)), chartFields, true, false)
+        distributionChartSpec <- chartField match {
+          case Some(field) => chartService.createDistributionChartSpec(repo, criteria, None, field, true, false, None)
+          case None => Future(None)
+        }
 
         // generate the box chart (if possible)
-        boxChartSpec = chartService.createBoxChartSpec(chartItems, chartFields.head)
+        boxChartSpec <- chartField.map( field =>
+          chartService.createBoxChartSpecRepo(repo, criteria, field)
+        ).getOrElse(
+          Future(None)
+        )
 
         // get the current field
         field <- fieldRepo.get(fieldName)
@@ -718,18 +756,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
       } yield {
         // set the height of the charts
-        val distributionChart = distributionChartSpecs.head._2 match {
-          case x: CategoricalChartSpec => x.copy(height = Some(500))
-          case x: NumericalChartSpec => x.copy(height = Some(500))
-          case x: ChartSpec => x
+        val distributionChart = distributionChartSpec.map {
+          _ match {
+            case x: CategoricalChartSpec => x.copy(height = Some(500))
+            case x: NumericalChartSpec => x.copy(height = Some(500))
+            case x: ChartSpec => x
+          }
         }
+
         val boxChart = boxChartSpec.map(_.copy(height = Some(500)))
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
         render {
           case Accepts.Html() => Ok(dataset.distribution(
             dataSetName,
             field,
-            Seq(Some(distributionChart), boxChart).flatten,
+            Seq(distributionChart, boxChart).flatten,
             newFilter,
             setting.filterShowFieldStyle,
             router,
@@ -738,7 +779,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             dataViewRouter,
             dataViewJsRouter,
             dataSetId,
-            getMetaInfos
+            result(dataSpaceTree)
           ))
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
         }
@@ -777,7 +818,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         correlationChartSpec = chartService.createPearsonCorrelationChartSpec(chartItems, chartFields)
 
         // get the current fields
-        currentFields <- fieldRepo.find(Seq(FieldIdentity.name #=> fieldNames))
+        currentFields <- fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
 
         // create a name -> field map of the filter referenced fields
         fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
@@ -799,7 +840,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             dataViewRouter,
             dataViewJsRouter,
             dataSetId,
-            getMetaInfos
+            result(dataSpaceTree)
           ))
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
         }
@@ -853,7 +894,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             filterRouter,
             filterJsRouter,
             dataSetId,
-            getMetaInfos
+            result(dataSpaceTree)
           ))
           case Accepts.Json() => BadRequest("GetDateCount function doesn't support JSON response.")
         }
@@ -915,7 +956,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       fields <- fieldRepo.find(
         criteria = fieldTypeIds match {
           case Nil => Nil
-          case _ => Seq("fieldType" #=> fieldTypeIds)
+          case _ => Seq("fieldType" #-> fieldTypeIds)
         },
         sort = Seq(AscSort("name"))
       )
@@ -955,9 +996,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     Future.sequence(futureFieldLabelPairs).map{ _.flatten.toMap }
   }
 
-  // TODO: keep async
-  private def getMetaInfos: Traversable[DataSpaceMetaInfo] =
-    result(dataSpaceMetaInfoRepo.find())
+  private def dataSpaceTree =
+    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 
   //////////////////////
   // Export Functions //
@@ -970,11 +1010,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param delimiter Delimiter for output file.
     * @return View for download.
     */
-  def exportTranSMARTDataFile(delimiter : String): Action[AnyContent] = Action { implicit request =>
-    val fileContent = generateTranSMARTDataFile(tranSMARTDataFileName, delimiter, setting.exportOrderByFieldName)
-    stringToFile(tranSMARTDataFileName)(fileContent)
+  def exportTranSMARTDataFile(delimiter : String) = Action.async { implicit request =>
+    for {
+      fileContent <- generateTranSMARTDataFile(tranSMARTDataFileName, delimiter, setting.exportOrderByFieldName)
+    } yield {
+      stringToFile(tranSMARTDataFileName)(fileContent)
+    }
   }
-
 
   /**
     * Generate content of TRANSMART mapping file and create a download.
@@ -982,11 +1024,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param delimiter Delimiter for output file.
     * @return View for download.
     */
-  def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent] = Action { implicit request =>
-    val fileContent = generateTranSMARTMappingFile(tranSMARTDataFileName, delimiter, setting.exportOrderByFieldName)
-    stringToFile(tranSMARTMappingFileName)(fileContent)
+  def exportTranSMARTMappingFile(delimiter : String) = Action.async { implicit request =>
+    for {
+      fileContent <- generateTranSMARTMappingFile(tranSMARTDataFileName, delimiter, setting.exportOrderByFieldName)
+    } yield {
+      stringToFile(tranSMARTMappingFileName)(fileContent)
+    }
   }
-
 
   /**
     * Generate  content of TRANSMART data file for download.
@@ -1000,18 +1044,24 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dataFilename: String,
     delimiter: String,
     orderBy: Option[String]
-  ): String = {
-    val recordsFuture = repo.find(sort = orderBy.fold(Seq[Sort]())(toSort))
-    val records = result(recordsFuture)
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    val categoriesFuture = categoryRepo.find()
+  ): Future[String] = {
+    for {
+      records <- repo.find(sort = orderBy.fold(Seq[Sort]())(toSort))
+      categories <- categoryRepo.find()
+      categoryMap <- fieldNameCategoryMap(categories)
+      fields <- fieldRepo.find()
+    } yield {
+      val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
-    tranSMARTService.createClinicalDataFile(unescapedDelimiter, csvEOL, setting.tranSMARTReplacements)(
-      records,
-      setting.keyFieldName,
-      setting.tranSMARTVisitFieldName,
-      result(fieldNameCategoryMap(categoriesFuture))
-    )
+
+      tranSMARTService.createClinicalDataFile(unescapedDelimiter, csvEOL, setting.tranSMARTReplacements)(
+        records,
+        setting.keyFieldName,
+        setting.tranSMARTVisitFieldName,
+        categoryMap,
+        fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap
+      )
+    }
   }
 
   /**
@@ -1026,39 +1076,38 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dataFilename: String,
     delimiter: String,
     orderBy: Option[String]
-  ): String = {
+  ): Future[String] = {
     val dataSetSetting = setting
-    val recordsFuture = repo.find(sort = orderBy.fold(Seq[Sort]())(toSort))
-    val records = result(recordsFuture)
-    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-    val categoriesFuture = categoryRepo.find()
+    for {
+      categories <- categoryRepo.find()
+      categoryMap <- fieldNameCategoryMap(categories)
+      fieldMap <- fieldLabelMap
+    } yield {
+      val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
-    tranSMARTService.createMappingFile(unescapedDelimiter, csvEOL, dataSetSetting.tranSMARTReplacements)(
-      records,
-      dataFilename,
-      dataSetSetting.keyFieldName,
-      dataSetSetting.tranSMARTVisitFieldName,
-      result(fieldNameCategoryMap(categoriesFuture)),
-      result(rootCategoryTree(categoriesFuture)),
-      result(fieldLabelMap)
-    )
+      tranSMARTService.createMappingFile(unescapedDelimiter, csvEOL, dataSetSetting.tranSMARTReplacements)(
+        dataFilename,
+        dataSetSetting.keyFieldName,
+        dataSetSetting.tranSMARTVisitFieldName,
+        categoryMap,
+        rootCategoryTree(categories),
+        fieldMap
+      )
+    }
   }
 
   protected def fieldNameCategoryMap(
-    categoriesFuture: Future[Traversable[Category]]
+    categories: Traversable[Category]
   ): Future[Map[String, Category]] = {
-    val idCategoriesFuture = categoriesFuture.map(_.map{ category =>
+    val idCategories = categories.map{ category =>
       (category._id.get, category)
-    })
-
-    val fieldsWithCategoryFuture = fieldRepo.find(
-      criteria = Seq("categoryId" #!= None),
-      projection = Seq("name", "categoryId", "fieldType")
-    )
+    }
 
     for {
-      idCategories <- idCategoriesFuture
-      fieldsWithCategories <- fieldsWithCategoryFuture
+      fieldsWithCategories <- fieldRepo.find(
+        criteria = Seq("categoryId" #!= None),
+        projection = Seq("name", "categoryId", "fieldType")
+      )
     } yield {
       val idCategoriesMap = idCategories.toMap
       fieldsWithCategories.map(field =>
@@ -1067,30 +1116,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  protected def fieldLabelMap: Future[Map[String, String]] =
+  protected def fieldLabelMap: Future[Map[String, Option[String]]] =
     for {
       fields <- fieldRepo.find(projection = Seq("name", "label", "fieldType"))
     } yield
-      fields.map{ field =>
-        (field.name, field.label.getOrElse(field.name))
-      }.toMap
+      fields.map( field => (field.name, field.label)).toMap
 
   protected def rootCategoryTree(
-    categoriesFuture: Future[Traversable[Category]]
-  ): Future[Category] =
-    for {
-      categories <- categoriesFuture
-    } yield {
-      val idCategoryMap = categories.map( category => (category._id.get, category)).toMap
-      categories.foreach {category =>
-        if (category.parentId.isDefined) {
-          val parent = idCategoryMap(category.parentId.get)
-          parent.addChild(category)
-        }
+    categories: Traversable[Category]
+  ): Category = {
+    val idCategoryMap = categories.map( category => (category._id.get, category)).toMap
+    categories.foreach {category =>
+      if (category.parentId.isDefined) {
+        val parent = idCategoryMap(category.parentId.get)
+        parent.addChild(category)
       }
-
-      val layerOneCategories = categories.filter(_.parentId.isEmpty).toSeq
-
-      new Category("").setChildren(layerOneCategories)
     }
+
+    val layerOneCategories = categories.filter(_.parentId.isEmpty).toSeq
+
+    new Category("").setChildren(layerOneCategories)
+  }
 }

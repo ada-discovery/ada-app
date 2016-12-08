@@ -8,7 +8,7 @@
 
 @listItem(call: Call, dataSetId: String, text: String) = {
     @defining(getParamValue(request.uri, "dataSet")) { reqDataSetId =>
-        <li @if(reqDataSetId.isDefined && reqDataSetId.get.equals(dataSetId)) {class="active dataset"} else {class="dataset"}>
+        <li @if(reqDataSetId.isDefined && reqDataSetId.get.equals(dataSetId)) {class="inner-node active"} else {class="inner-node"}>
             <a href="@call">
                 <ul class="list-inline">
                     <li>
@@ -23,17 +23,50 @@
     }
 }
 
-@spaceItem(id: BSONObjectID, text: String) = {
-    @defining(dataSpaceMetaInfoRoutes.get(id)) { call =>
-        <li @if(matchesPath(call.url, request.uri, Some(3))) { class="dataspace active"} else { class="dataspace"}>
-            <button type="button" class="btn btn-sm btn-default btn-dataspace-expand" data-toggle="collapse" data-target="#dataSets-@id.stringify">
+@topSpaceItem(spaceMetaInfo: DataSpaceMetaInfo) = {
+    @defining(dataSpaceMetaInfoRoutes.get(spaceMetaInfo._id.get)) { call =>
+        <li @if(matchesPath(call.url, request.uri, Some(3))) { class="dataspace top-node active" } else {class="dataspace top-node"} >
+            <button type="button" class="btn btn-sm btn-default btn-dataspace-expand btn-dataspace-expand-top" data-toggle="collapse" data-target="#dataSets-@spaceMetaInfo._id.get.stringify">
                 <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
             </button>
             <a href="@call" class="float-left">
-                <h4>@text</h4>
+                <h4>@spaceMetaInfo.name</h4>
             </a>
         </li>
     }
+}
+
+@innerSpaceItem(spaceMetaInfo: DataSpaceMetaInfo) = {
+    @defining(dataSpaceMetaInfoRoutes.get(spaceMetaInfo._id.get)) { call =>
+        <li @if(matchesPath(call.url, request.uri, Some(3))) { class="dataspace inner-node active" } else {class="dataspace inner-node"} >
+            <a href="@call">
+                <ul class="list-inline">
+                    <li class="btn-dataspace-expand">
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                    </li>
+                    <li>
+                        <h5>@spaceMetaInfo.name</h5>
+                    </li>
+                </ul>
+            </a>
+        </li>
+    }
+}
+
+@spaceItemWithDataSets(spaceMetaInfo: DataSpaceMetaInfo, topLevel: Boolean) = {
+    @if(topLevel) {
+        @topSpaceItem(spaceMetaInfo)
+    } else {
+        @innerSpaceItem(spaceMetaInfo)
+    }
+    <div id="dataSets-@{spaceMetaInfo._id.get.stringify}" class="collapse clear-left datasets-div sidebar-nav nav nav-pills nav-stacked">
+        @spaceMetaInfo.dataSetMetaInfos.filter(!_.hide).sortBy(_.sortOrder).map { setMetaInfo =>
+            @listItem(new DataSetRouter(setMetaInfo.id).getDefaultView, setMetaInfo.id, setMetaInfo.name)
+        }
+        @spaceMetaInfo.children.sortBy(_.sortOrder).map { childSpaceInfo =>
+            @spaceItemWithDataSets(childSpaceInfo, false)
+        }
+    </div>
 }
 
 <!--
@@ -43,18 +76,13 @@
 
 <ul class="sidebar-nav nav nav-pills nav-stacked">
     @dataSpaceMetaInfos.toSeq.sortBy(_.sortOrder).map { spaceMetaInfo =>
-        @spaceItem(spaceMetaInfo._id.get, spaceMetaInfo.name)
-        <div id="dataSets-@{spaceMetaInfo._id.get.stringify}" class="collapse clear-left datasets-div sidebar-nav nav nav-pills nav-stacked">
-            @spaceMetaInfo.dataSetMetaInfos.filter(!_.hide).sortBy(_.sortOrder).map { setMetaInfo =>
-                @listItem(new DataSetRouter(setMetaInfo.id).getDefaultView, setMetaInfo.id, setMetaInfo.name)
-            }
-        </div>
+        @spaceItemWithDataSets(spaceMetaInfo, true)
     }
 </ul>
 
 <script type="text/javascript">
     $(".datasets-div").each(function() {
-        if($(this).find("li.dataset.active").size() > 0) {
+        if($(this).find("li.inner-node.active").size() > 0) {
             $(this).addClass("in")
             updatePlusMinusIcon($(this).prev());
         }

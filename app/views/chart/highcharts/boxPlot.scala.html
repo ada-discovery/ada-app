@@ -4,8 +4,25 @@
 )
 
 <div id="@chartElementName" class="chart-holder"></div>
+
 <script type="text/javascript">
         $(function () {
+            var isDate = @{chartSpec.data.median.isInstanceOf[java.util.Date]};
+            var dataType = (isDate) ? 'datetime' : null;
+
+            var pointFormat = (isDate) ?
+                '- Upper 1.5 IQR: {point.high:%Y-%m-%d}<br/>' +
+                '- Q3: {point.q3:%Y-%m-%d}<br/>' +
+                '- Median: {point.median:%Y-%m-%d}<br/>' +
+                '- Q1: {point.q1:%Y-%m-%d}<br/>' +
+                '- Lower 1.5 IQR: {point.low:%Y-%m-%d}<br/>'
+                :
+                '- Upper 1.5 IQR: {point.high}<br/>' +
+                '- Q3: {point.q3}<br/>' +
+                '- Median: {point.median}<br/>' +
+                '- Q1: {point.q1}<br/>' +
+                '- Lower 1.5 IQR: {point.low}<br/>'
+
             $('#@{chartElementName}').highcharts({
                 chart: {
                     type: 'boxplot',
@@ -21,6 +38,7 @@
                     @*}*@
                 },
                 yAxis: {
+                    type: dataType,
                     title: {
                         text: '@chartSpec.yAxisCaption'
                     }
@@ -41,15 +59,14 @@
                 series: [{
                     name: '@chartSpec.title',
                     data: [[
-                        @chartSpec.data.lowerWhisker, @chartSpec.data.lowerQuantile, @chartSpec.data.median, @chartSpec.data.upperQuantile, @chartSpec.data.upperWhisker
+                        @chartSpec.data.toSeq.map( x => x match {
+                            case x: java.util.Date => x.getTime.toString
+                            case _ => x.toString
+                        }).mkString(",")
                     ]],
                     tooltip: {
                         headerFormat: '<b>{point.series.name}</b><br/>',
-                        pointFormat:  '- Upper 1.5 IQR: {point.high}<br/>' +
-                        '- Q3: {point.q3}<br/>' +
-                        '- Median: {point.median}<br/>' +
-                        '- Q1: {point.q1}<br/>' +
-                        '- Lower 1.5 IQR: {point.low}<br/>'
+                        pointFormat:  pointFormat
                     }
                 }]
             });

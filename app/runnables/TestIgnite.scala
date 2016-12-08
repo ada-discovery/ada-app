@@ -1,7 +1,7 @@
 package runnables
 
 import com.google.inject.Inject
-import dataaccess.Criterion.CriterionInfix
+import dataaccess.Criterion.Infix
 import dataaccess.ignite.CacheAsyncCrudRepoFactory
 import dataaccess.SerializableFormat
 import models.DataSetSetting

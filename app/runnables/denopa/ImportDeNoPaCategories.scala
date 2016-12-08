@@ -4,11 +4,13 @@ import javax.inject.Inject
 import dataaccess.RepoTypes.FieldRepo
 import dataaccess.{Criterion, CategoryRepo}
 import models._
-import Criterion.CriterionInfix
+import Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DeNoPaSetting}
-import DeNoPaTranSMARTMapping._
+import DeNoPaBaselineTranSMARTMapping.{subjectsData, clinicalData}
+import DeNoPaBaselineTranSMARTMapping.{fieldCategoryMap => baselineFieldCategoryMap}
+import DeNoPaBaselineTranSMARTMapping.{fieldLabelMap => baselineFieldLabelMap}
 import runnables.DataSetId._
 import runnables.GuiceBuilderRunnable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -19,7 +21,12 @@ import scala.concurrent.duration._
 import scala.concurrent.Await.result
 import scala.concurrent.Future
 
-protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runnable {
+protected abstract class ImportDeNoPaCategories(
+    dataSetId: String,
+    coreFieldCategoryMap: Map[String, Category],
+    coreFieldLabelMap: Map[String, String],
+    fieldNamePrefixReplacement: Option[(String, String)]
+  ) extends Runnable {
 
   @Inject() protected var dataSetService: DataSetService = _
   @Inject() protected var dsaf: DataSetAccessorFactory = _
@@ -29,6 +36,32 @@ protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runna
     val dsa = dsaf(dataSetId).get
     val categoryRepo = dsa.categoryRepo
     val fieldRepo = dsa.fieldRepo
+
+    val fieldCategoryMap = fieldNamePrefixReplacement.map { case (from, to) =>
+      coreFieldCategoryMap.map { case (fieldName, category) =>
+        val newFieldName =
+          if (fieldName.startsWith(from)) {
+            fieldName.replaceFirst(from, to)
+          } else
+            fieldName
+        (newFieldName, category)
+      }
+    }.getOrElse(
+      coreFieldCategoryMap
+    )
+
+    val fieldLabelMap = fieldNamePrefixReplacement.map { case (from, to) =>
+      coreFieldLabelMap.map { case (fieldName, label) =>
+        val newFieldName =
+          if (fieldName.startsWith(from)) {
+            fieldName.replaceFirst(from, to)
+          } else
+            fieldName
+        (newFieldName, label)
+      }
+    }.getOrElse(
+      coreFieldLabelMap
+    )
 
     val future = for {
       // delete all the categories
@@ -50,7 +83,7 @@ protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runna
 
           fieldRepo.find(Seq("name" #== escapedFieldName)).map {
             _.headOption.map( field =>
-              setCategoryAndLabel(field, fieldName, categoryIdMap)
+              setCategoryAndLabel(field, fieldName, categoryIdMap, fieldCategoryMap, fieldLabelMap)
             )
           }
         }
@@ -67,7 +100,9 @@ protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runna
   private def setCategoryAndLabel(
     field: Field,
     fieldName: String,
-    categoryIdMap: Map[Category, BSONObjectID]
+    categoryIdMap: Map[Category, BSONObjectID],
+    fieldCategoryMap: Map[String, Category],
+    fieldLabelMap: Map[String, String]
   ): Field = {
     val category = fieldCategoryMap.get(fieldName)
     val label = fieldLabelMap.get(fieldName)
@@ -89,18 +124,53 @@ protected abstract class ImportDeNoPaCategories(dataSetId: String) extends Runna
   }
 }
 
-class ImportDeNoPaBaselineCategories extends ImportDeNoPaCategories(denopa_raw_clinical_baseline)
-class ImportDeNoPaFirstVisitCategories extends ImportDeNoPaCategories(denopa_raw_clinical_first_visit)
-class ImportDeNoPaSecondVisitCategories extends ImportDeNoPaCategories(denopa_raw_clinical_second_visit)
-class ImportDeNoPaCuratedBaselineCategories extends ImportDeNoPaCategories(denopa_clinical_baseline)
-class ImportDeNoPaCuratedFirstVisitCategories extends ImportDeNoPaCategories(denopa_clinical_first_visit)
-class ImportDeNoPaCuratedSecondVisitCategories extends ImportDeNoPaCategories(denopa_clinical_second_visit)
+class ImportDeNoPaRawBaselineCategories extends ImportDeNoPaCategories(
+  denopa_raw_clinical_baseline,
+  baselineFieldCategoryMap,
+  baselineFieldLabelMap,
+  None
+)
+
+class ImportDeNoPaRawFirstVisitCategories extends ImportDeNoPaCategories(
+  denopa_raw_clinical_first_visit,
+  baselineFieldCategoryMap,
+  baselineFieldLabelMap,
+  Some(("a_", "b_"))
+)
+
+class ImportDeNoPaRawSecondVisitCategories extends ImportDeNoPaCategories(
+  denopa_raw_clinical_second_visit,
+  baselineFieldCategoryMap,
+  baselineFieldLabelMap,
+  Some(("a_", "c_"))
+)
+
+class ImportDeNoPaBaselineCategories extends ImportDeNoPaCategories(
+  denopa_clinical_baseline,
+  baselineFieldCategoryMap,
+  baselineFieldLabelMap,
+  None
+)
+
+class ImportDeNoPaFirstVisitCategories extends ImportDeNoPaCategories(
+  denopa_clinical_first_visit,
+  baselineFieldCategoryMap,
+  baselineFieldLabelMap,
+  Some(("a_", "b_"))
+)
+
+class ImportDeNoPaSecondVisitCategories extends ImportDeNoPaCategories(
+  denopa_clinical_second_visit,
+  baselineFieldCategoryMap,
+  baselineFieldLabelMap,
+  Some(("a_", "c_"))
+)
 
 // app main launchers
+object ImportDeNoPaRawBaselineCategories extends GuiceBuilderRunnable[ImportDeNoPaRawBaselineCategories] with App { run }
+object ImportDeNoPaRawFirstVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaRawFirstVisitCategories] with App { run }
+object ImportDeNoPaRawSecondVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaRawSecondVisitCategories] with App { run }
+
 object ImportDeNoPaBaselineCategories extends GuiceBuilderRunnable[ImportDeNoPaBaselineCategories] with App { run }
 object ImportDeNoPaFirstVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaFirstVisitCategories] with App { run }
 object ImportDeNoPaSecondVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaSecondVisitCategories] with App { run }
-
-object ImportDeNoPaCuratedBaselineCategories extends GuiceBuilderRunnable[ImportDeNoPaCuratedBaselineCategories] with App { run }
-object ImportDeNoPaCuratedFirstVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaCuratedFirstVisitCategories] with App { run }
-object ImportDeNoPaCuratedSecondVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaCuratedSecondVisitCategories] with App { run }

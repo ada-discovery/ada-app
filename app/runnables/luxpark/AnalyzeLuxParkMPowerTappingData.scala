@@ -7,7 +7,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import runnables.DataSetId._
 import runnables.GuiceBuilderRunnable
-import Criterion.CriterionInfix
+import Criterion.Infix
 import scala.concurrent.duration._
 import scala.concurrent.Await._
 import play.api.libs.json.{JsValue, JsArray, JsObject, Json}

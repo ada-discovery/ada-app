@@ -1,7 +1,7 @@
 package dataaccess.mongo.dataset
 
 import dataaccess.RepoTypes.DictionaryRootRepo
-import dataaccess.Criterion.CriterionInfix
+import dataaccess.Criterion.Infix
 import models.{Dictionary, DataSetFormattersAndIds}
 import DataSetFormattersAndIds.{dictionaryFormat, DictionaryIdentity}
 import dataaccess._

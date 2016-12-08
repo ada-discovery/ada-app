@@ -8,7 +8,8 @@ import DataSetFormattersAndIds._
 import models.Page
 import persistence.RepoTypes._
 import dataaccess.RepoTypes.DataSetSettingRepo
-import persistence.dataset.DataSetAccessorFactory
+import dataaccess.Criterion.Infix
+import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.mvc.{Action, Controller}
 import play.api.data.Form
@@ -36,7 +37,10 @@ class DataSpaceMetaInfoController @Inject() (
     "sortOrder" -> number,
     "timeCreated" -> ignored(new java.util.Date()),
     "dataSetMetaInfos" -> ignored(Seq[DataSetMetaInfo]())
-  ) (DataSpaceMetaInfo.apply)(DataSpaceMetaInfo.unapply))
+  ) (DataSpaceMetaInfo(_, _, _, _, _))(
+      (item: DataSpaceMetaInfo) =>
+        Some((item._id, item.name, item.sortOrder, item.timeCreated, item.dataSetMetaInfos))
+  ))
 
   override protected val home =
     Redirect(routes.DataSpaceMetaInfoController.find())
@@ -45,11 +49,28 @@ class DataSpaceMetaInfoController @Inject() (
     html.dataspace.create(f)
 
   override protected def showView(id: BSONObjectID, f: Form[DataSpaceMetaInfo])(implicit msg: Messages, request: Request[_]) = {
-    html.dataspace.show(f.value.get, result(getDataSetSizes(f.value.get)), result(repo.find()))
+    val dataSpace = f.value.get
+    val children = result(repo.find(Seq("parentId" #== dataSpace._id)))
+    dataSpace.children.appendAll(children)
+
+    html.dataspace.show(
+      dataSpace,
+      result(getDataSetSizes(dataSpace)),
+      result(allAsTree)
+    )
   }
 
   override protected def editView(id: BSONObjectID, f: Form[DataSpaceMetaInfo])(implicit msg: Messages, request: Request[_]) = {
-    html.dataspace.edit(id, f, result(getDataSetSizes(f.value.get)), result(repo.find()))
+    val dataSpace = f.value.get
+    val children = result(repo.find(Seq("parentId" #== dataSpace._id)))
+    dataSpace.children.appendAll(children)
+
+    html.dataspace.edit(
+      id,
+      f,
+      result(getDataSetSizes(dataSpace)),
+      result(allAsTree)
+    )
   }
 
   override protected def listView(currentPage: Page[DataSpaceMetaInfo])(implicit msg: Messages, request: Request[_]) =
@@ -162,9 +183,24 @@ class DataSpaceMetaInfoController @Inject() (
       val dsa = dsaf(setMetaInfo.id).get
       dsa.dataSetRepo.count().map(size => (setMetaInfo.id, size))
     }
-    Future.sequence(futures).map(_.toMap)
+    val recFutures = spaceMetaInfo.children.map(getDataSetSizes)
+
+    for {
+      simpleMap <- Future.sequence(futures).map(_.toMap)
+      mergeSubMap <-
+        Future.sequence(recFutures).map { maps =>
+        maps.foldLeft(Map[String, Int]()) { case (a, b) =>
+          a ++ b
+        }
+      }
+    } yield {
+      simpleMap ++ mergeSubMap
+    }
   }
 
   // get is allowed for all logged users
   override def get(id: BSONObjectID) = deadbolt.SubjectPresent()(super.get(id))
+
+  private def allAsTree =
+    DataSpaceMetaInfoRepo.allAsTree(repo)
 }
