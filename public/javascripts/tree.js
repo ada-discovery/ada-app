@@ -204,7 +204,8 @@
                     return (d.name.length > maxLength) ? d.name.substring(0, maxLength - 2) + ".." : d.name;
                 })
                 .style("fill-opacity", 1e-6)
-                .on("click", function(d) {
+                .on("dblclick", function(d) {
+                    console.log("Clicked")
                     that.options.showNodeFun(d)
                 })
 
