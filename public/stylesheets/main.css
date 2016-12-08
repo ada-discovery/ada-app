@@ -47,34 +47,38 @@ body {
     background-color: #0074D9;
 }
 
-.sidebar-nav > li.dataspace {
+
+.sidebar-nav > li.top-node {
     margin-top: 10px;
     clear: left;
 }
 
-.sidebar-nav > li.dataspace > a,
-.sidebar-nav > li.dataspace > a:focus,
-.sidebar-nav > li.dataspace > a:hover {
+.sidebar-nav > li.top-node > a,
+.sidebar-nav > li.top-node > a:focus,
+.sidebar-nav > li.top-node > a:hover {
     color: darkgray;
 }
 
-.sidebar-nav > li.dataspace > a {
+.sidebar-nav > li.top-node > a {
     padding-top: 6px;
     padding-bottom: 6px;
 }
 
-.btn-dataspace-expand {
+.sidebar-nav > li.inner-node > a {
+    padding-left: 10px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.btn-dataspace-expand-top {
     float: left;
     display: inline-block;
     margin-right: 5px;
     margin-top: 10px;
 }
 
-.sidebar-nav > li.dataset > a {
-    padding-left: 10px;
-    padding-top: 2px;
-    padding-bottom: 2px;
-    margin-left: 10px;
+.datasets-div {
+    margin-left: 20px;
 }
 
 .navbar-brand {
