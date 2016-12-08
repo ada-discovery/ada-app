@@ -18,11 +18,11 @@
                     jsonData: data,
                     duration: 700,
                     width: "100%",
-                    height: 600,
+                    height: 700,
                     showNodeFun: function(data) {
                         if (data._id) {
                             var id = data._id.$oid
-                            var r = jsRoutes.controllers.dataset.CategoryDispatcher.get(id);
+                            var r = categoryJsRoutes.controllers.dataset.CategoryDispatcher.get(id);
                             submit('get', r.url, getQueryParams(r.url))
                         }
                     },
@@ -32,7 +32,7 @@
                             var parentId = "";
                             if (parent._id)
                                 parentId = parent._id.$oid;
-                            jsRoutes.controllers.dataset.CategoryDispatcher.relocateToParent(id, parentId).ajax( {
+                            categoryJsRoutes.controllers.dataset.CategoryDispatcher.relocateToParent(id, parentId).ajax( {
                                 success: function() {
                                     showMessage("The category '" + node.name + "' successfully relocated to '" + parent.name + "'.");
                                 },

@@ -1,19 +1,19 @@
-@import controllers.dataset.{DataViewRouter, DataViewJsRouter}
+@import controllers.dataset.{CategoryRouter}
 
 @(
     modalName: String,
-    dataViewRouter: DataViewRouter,
+    routers: CategoryRouter,
     call: Option[Call] = None
 )(
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
 
-@dataViewSelectionModalBody = {
-    <input id="dataViewTypeahead" class="typeahead" style="width: 100%;" type="text" placeholder="Data View Name" value="">
-    <input id="dataViewId" name="dataViewId" type="hidden" value="">
+@selectionModalBody = {
+    <input id="categoryTypeahead" class="typeahead" style="width: 100%;" type="text" placeholder="Category Name" value="">
+    <input id="categoryId" name="categoryId" type="hidden" value="">
 }
 
-@dataViewSelectionModalButtons = {
+@selectionModalButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
     @if(call.isDefined) {
         <button type="submit" id="submitButton" data-dismiss="modal" class="btn btn-primary">OK</button>
@@ -22,18 +22,18 @@
     }
 }
 
-@modal(modalName, "Choose Data View", dataViewSelectionModalBody, call, Some(dataViewSelectionModalButtons))
+@modal(modalName, "Choose Category", selectionModalBody, call, Some(selectionModalButtons))
 
 <script type="text/javascript" defer="defer">
     $.ajax({
-        url: '@Html(dataViewRouter.idAndNames.url)',
+        url: '@Html(routers.idAndNames.url)',
         success: function (data) {
-            var typeaheadData = data.map( function(dataView, index) {
-                return {name: dataView._id.$oid, label: dataView.name};
+            var typeaheadData = data.map( function(item, index) {
+                return {name: item._id.$oid, label: item.name};
             });
             populateFieldTypeahed(
-                $('#dataViewTypeahead'),
-                $('#dataViewId'),
+                $('#categoryTypeahead'),
+                $('#categoryId'),
                 typeaheadData,
                 @FilterShowFieldStyle.LabelsOnly.id
             );

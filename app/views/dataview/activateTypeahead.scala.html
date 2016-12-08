@@ -1,7 +1,6 @@
 @(fieldsCall: Call)
 
-<link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/typeahead.min.css")">
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("typeahead.bundle.min.js"))"></script>
+@typeaheadJsImport()
 
 <script type="text/javascript">
     $(function () {

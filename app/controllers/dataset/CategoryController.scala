@@ -12,5 +12,9 @@ trait CategoryController extends CrudController[BSONObjectID] {
 
   def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]): Action[AnyContent]
 
+  def idAndNames: Action[AnyContent]
+
+  def addFields(categoryId: BSONObjectID, fieldNames: Seq[String]): Action[AnyContent]
+
   def jsRoutes: Action[AnyContent]
 }

@@ -17,8 +17,7 @@
 )
 
 <!-- need to import css and js first -->
-<link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/typeahead.min.css")">
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("typeahead.bundle.min.js"))"></script>
+@typeaheadJsImport()
 
 @showChoice(value: FilterShowFieldStyle.Value, text: String) = {
     <li>

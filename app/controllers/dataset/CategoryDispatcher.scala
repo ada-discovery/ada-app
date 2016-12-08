@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
 import models.FilterCondition
+import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil.createDataSetPermission
 
@@ -46,6 +47,10 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
   override def getCategoryD3Root = dispatch(_.getCategoryD3Root)
 
   override def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]) = dispatch(_.relocateToParent(id, parentId))
+
+  override def idAndNames = dispatch(_.idAndNames)
+
+  override def addFields(categoryId: BSONObjectID, fieldNames: Seq[String]) = dispatch(_.addFields(categoryId, fieldNames))
 
   override def jsRoutes = dispatch(_.jsRoutes)
 }

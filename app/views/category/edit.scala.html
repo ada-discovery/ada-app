@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.table.displayTable
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import views.html.elements._
 @import controllers.dataset.CategoryRouter
@@ -9,6 +9,7 @@
 @import models.DataSpaceMetaInfo
 @import models.Category
 
+@import controllers.dataset.DataSetRouter
 @(
     domainName : String,
     id : BSONObjectID,
@@ -16,27 +17,40 @@
     categories: Traversable[Category],
     fields: Traversable[models.Field],
     router: CategoryRouter,
+    dataSetRouter: DataSetRouter,
     getField: String => Call,
+    showFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
-@table = @{
-    displayTable(
-        fields,
-        Seq(
-            (None, "Name", {item : Any => Html(item.asInstanceOf[models.Field].name)})
-        ),
-        None,
-        Some({ item : Any => getField(item.asInstanceOf[models.Field].name)})
-    )
+@addModalInner = {
+    <input type="text" id="newItemTypeahead" class="typeahead">
+    <input type="hidden" id="newItem">
 }
 
 @elements = {
     @inputText(domainName, "name", form)
     @select(domainName, "parentId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
-    @labelValue("fields", "Fields")(table)
+
+    @dynamicTableJsImport()
+    @typeaheadJsImport()
+
+    @labelValue("fields", attributeLabel("category", "fields")){
+        @dynamicStringTable("field", fields.map(_.name), true, Some(addModalInner))
+    }
+
+    <script type="text/javascript">
+        $(function () {
+            populateFieldTypeahedFromUrl(
+                $('#newItemTypeahead'),
+                $('#newItem'),
+                '@Html(dataSetRouter.allFields.url)',
+                @showFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            );
+        })
+    </script>
 }
 
 @layout.edit(

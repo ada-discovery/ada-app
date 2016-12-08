@@ -5,6 +5,7 @@ import javax.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import controllers.CrudControllerImpl
 import dataaccess.{AscSort, Criterion}
+import dataaccess.Criterion.Infix
 import models.Category
 import models.DataSetFormattersAndIds._
 import models.{D3Node, Page}
@@ -52,8 +53,9 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   )
 
   // router for requests; to be passed to views as helper.
-  protected lazy val router: CategoryRouter = new CategoryRouter(dataSetId)
-  protected lazy val jsRouter: CategoryJsRouter = new CategoryJsRouter(dataSetId)
+  protected lazy val router = new CategoryRouter(dataSetId)
+  protected lazy val jsRouter = new CategoryJsRouter(dataSetId)
+  protected lazy val dataSetRouter = new DataSetRouter(dataSetId)
 
   // field router
   protected lazy val fieldRouter: DictionaryRouter = new DictionaryRouter(dataSetId)
@@ -81,7 +83,9 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       allCategories,
       fields,
       router,
+      dataSetRouter,
       fieldRouter.get,
+      result(dsa.setting.map(_.filterShowFieldStyle)),
       result(dataSpaceTree)
     )
   }
@@ -125,6 +129,34 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     } yield
       repo.delete(id)
   }
+
+  override protected def updateCall(category: Category)(implicit request: Request[AnyContent]) =
+    for {
+      // collect the fields previously associated with a category
+      oldFields <- fieldRepo.find(Seq("categoryId" #== category._id))
+
+      // disassociate the old fields
+      _ <- {
+        val disassociatedFields = oldFields.map(_.copy(categoryId = None))
+        fieldRepo.update(disassociatedFields).map(_ => Some(()))
+      }
+
+      // colect the newly associated fileds
+      newFields <- {
+        val fieldNames = getParamMap(request).get("fields[]").getOrElse(Nil)
+        fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
+      }
+
+      // update them
+      _ <- {
+        val associatedFields = newFields.map(_.copy(categoryId = category._id))
+        fieldRepo.update(associatedFields).map(_ => Some(()))
+      }
+
+      // update the category itself
+      id <- repo.update(category)
+    } yield
+      id
 
   override def getCategoryD3Root = Action { implicit request =>
     val categories = allCategories
@@ -170,15 +202,47 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     repo.save(Category(None, name)).map( id => Ok(Json.toJson(id)))
   }
 
+  override def addFields(
+    categoryId: BSONObjectID,
+    fieldNames: Seq[String]
+  ) = Action.async { implicit request =>
+    for {
+      category <- repo.get(categoryId)
+      fields <- fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
+      response <- category match {
+        case Some(category) => {
+          val newFields = fields.map(_.copy(categoryId = Some(categoryId)))
+          fieldRepo.update(newFields).map(_ => Some(()))
+        }
+        case None => Future(None)
+      }
+    } yield
+      response.fold(
+        NotFound(s"Category '#${categoryId.stringify}' not found")
+      ) { _ => Ok("Done")}
+  }
+
+  override def idAndNames = Action.async { implicit request =>
+    for {
+      categories <- repo.find(
+        sort = Seq(AscSort("name")),
+        projection = Seq("name")
+      )
+    } yield {
+      Ok(Json.toJson(categories))
+    }
+  }
+
   private def notFoundCategory(id: BSONObjectID) =
     NotFound(s"Category with id #${id.stringify} not found. It has been probably deleted (by a different user). It's highly recommended to refresh your screen.")
 
   override def jsRoutes = Action { implicit request =>
     Ok(
-      JavaScriptReverseRouter("jsRoutes")(
+      JavaScriptReverseRouter("categoryJsRoutes")(
         jsRouter.get,
         jsRouter.relocateToParent,
-        jsRouter.saveForName
+        jsRouter.saveForName,
+        jsRouter.addFields
       )
     ).as("text/javascript")
   }

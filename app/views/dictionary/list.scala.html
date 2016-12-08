@@ -7,9 +7,10 @@
 @import views.html.modal
 @import views.html.exportDropdown
 @import views.html.dataview.dataViewSelectionModal
+@import views.html.category.categorySelectionModal
 @import models.FieldChartSpec
 @import util.typeColumns
-@import controllers.dataset.{DataViewRouter, DataViewJsRouter, DictionaryRouter, DictionaryJsRouter}
+@import controllers.dataset.{DataViewRouter, DataViewJsRouter, DictionaryRouter, DictionaryJsRouter, CategoryRouter, CategoryJsRouter}
 @import models.DataSpaceMetaInfo
 @import be.objectify.deadbolt.scala.views.html.restrict
 @import models.security.SecurityRole
@@ -21,6 +22,8 @@
     router: DictionaryRouter,
     dataViewRouter: DataViewRouter,
     dataViewJsRouter: DataViewJsRouter,
+    categoryRouter: CategoryRouter,
+    categoryJsRouter: CategoryJsRouter,
     fieldNameLabels: Traversable[(String, Option[String])],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
     chartGridWidth: Int = 3
@@ -47,20 +50,11 @@
                         router.exportJson
                     )()()
                 </li>
-                <li>
-                    @restrict(roles = List(Array(SecurityRole.admin))) {
-                        <a class="btn btn-info btn-sm" href="@router.inferDictionary">
-                        @if(page.total.equals(0l) && page.filter.isEmpty) {Infer} else {(Re)Infer}
-                        </a>
-                    }
-                </li>
             </ul>
         </div>
     </div>
-    @if(page.total.equals(0l) && page.filter.isEmpty) {
-        @modal("inferModal", "No Dictionary Found", Html("Do you want to infer one?"), Some(router.inferDictionary))
-    }
-    @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter, dataViewJsRouter)
+    @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
+    @categorySelectionModal("categorySelectionModal", categoryRouter)
 }
 
 @editableFieldLabelInput(field: Field) = {
@@ -94,6 +88,12 @@
                     Table
                 </a>
             </li>
+            <li role="separator" class="divider"></li>
+            <li>
+                <a href="#" data-toggle="modal" data-target="#categorySelectionModal" title="Add To Category">
+                    Category
+                </a>
+            </li>
         </ul>
     </div>
     @paginatedTable(
@@ -104,7 +104,7 @@
             (Some("name"), "Name", {field => util.JsonUtil.unescapeKey(field.name)}),
             (Some("fieldType"), "Type", _.fieldType),
             (Some("label"), "Label", editableFieldLabelInput),
-            (Some("category.name"), "Category", _.category.map(_.name).getOrElse(""))
+            (Some("categoryId"), "Category", _.category.map(_.name).getOrElse(""))
         ),
         Some({ item : Any => router.get(item.asInstanceOf[Field].name)}),
         Some("id", {any:Any => any.asInstanceOf[Field].name}),
@@ -138,6 +138,7 @@
 )
 
 <script type="text/javascript" src="@router.jsRoutes"></script>
+<script type="text/javascript" src="@categoryRouter.jsRoutes"></script>
 <script type="text/javascript">
     $(function () {
         $("#inferModal").modal()
@@ -160,6 +161,8 @@
                 inputs.eq( inputs.index(that)+ 1 ).focus();
             }
         });
+
+        $("#categorySelectionModal #submitButton").on("click", addFieldsToCategory)
     })
 
     function addFieldDistributions() {
@@ -251,6 +254,21 @@
         dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addTableFields(dataViewId, fieldNames).ajax( {
             success: function() {
                 showMessage("Field(s) '" + fieldNames + "' have been successfully added to the table of the view '" + dataViewName + "'.");
+            },
+            error: function(data){
+                showError( data.responseText );
+            }
+        });
+    }
+
+    function addFieldsToCategory() {
+        var categoryId = $("#categorySelectionModal #categoryId").val().trim()
+        var categoryName = $("#categorySelectionModal #categoryTypeahead").val().trim()
+        var fieldNames = getCheckedTableIds("dictionaryTable", "id")
+
+        categoryJsRoutes.controllers.dataset.CategoryDispatcher.addFields(categoryId, fieldNames).ajax( {
+            success: function() {
+                showMessage("Field(s) '" + fieldNames + "' have been successfully added to the category '" + categoryName + "'.");
             },
             error: function(data){
                 showError( data.responseText );

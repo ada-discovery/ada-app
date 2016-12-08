@@ -120,8 +120,10 @@ POST        /studies/categories/save                                            
 POST        /studies/categories/save/:name                                          controllers.dataset.CategoryDispatcher.saveForName(name: String)
 POST        /studies/categories/:id                                                 controllers.dataset.CategoryDispatcher.update(id: BSONObjectID)
 POST        /studies/categories/:id/delete                                          controllers.dataset.CategoryDispatcher.delete(id: BSONObjectID)
+GET         /studies/categories/idAndNames                                          controllers.dataset.CategoryDispatcher.idAndNames
 GET         /studies/categories/getCategoryD3Root                                   controllers.dataset.CategoryDispatcher.getCategoryD3Root
 GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
+GET         /studies/categories/addFields                                           controllers.dataset.CategoryDispatcher.addFields(categoryId: BSONObjectID, fieldNames: Seq[String])
 GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
 
 GET         /studies/filters                                                        controllers.dataset.FilterDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)

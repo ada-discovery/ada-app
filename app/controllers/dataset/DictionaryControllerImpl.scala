@@ -98,6 +98,8 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   protected val jsRouter = new DictionaryJsRouter(dataSetId)
   protected val dataViewRouter = new DataViewRouter(dataSetId)
   protected val dataViewJsRouter = new DataViewJsRouter(dataSetId)
+  protected val categoryRouter = new CategoryRouter(dataSetId)
+  protected val categoryJsRouter = new CategoryJsRouter(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)
@@ -152,6 +154,8 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       router,
       dataViewRouter,
       dataViewJsRouter,
+      categoryRouter,
+      categoryJsRouter,
       fieldNameLabels,
       dataSpaceMetaInfos,
       6
@@ -220,7 +224,8 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       if (replaceEolWithSpace) csvCharReplacements else Nil)(
       Some(exportOrderByFieldName),
       filter,
-      if (tableColumnsOnly) listViewColumns.get else Nil
+      if (tableColumnsOnly) listViewColumns.get else Nil,
+      listViewColumns
     )
   }
 

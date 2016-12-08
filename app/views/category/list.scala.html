@@ -48,7 +48,7 @@
         function addCategory() {
             var name = $('#categoryName').val();
             $('#categoryName').val("");
-            jsRoutes.controllers.dataset.CategoryDispatcher.saveForName(name).ajax( {
+            categoryJsRoutes.controllers.dataset.CategoryDispatcher.saveForName(name).ajax( {
                 success: function(id) {
                     $('#treeDiv').tree('addToRoot', id, name);
                     showMessage("The category '" + name + "' successfully created.");
