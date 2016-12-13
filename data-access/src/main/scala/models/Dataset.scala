@@ -30,7 +30,7 @@ case class DataSetMetaInfo(
   name: String,
   sortOrder: Int,
   hide: Boolean,
-  dataSpaceId: Option[BSONObjectID] = None,
+  dataSpaceId: BSONObjectID,
   timeCreated: Date = new Date(),
   sourceDataSetId: Option[BSONObjectID] = None
 )

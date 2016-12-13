@@ -23,7 +23,8 @@ class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends
     result(
       dataSetService.translateDataAndDictionaryOptimal(
         "ppmi.raw_clinical_visit",
-        DataSetMetaInfo(None, "ppmi.clinical_visit", "Clinical Visit", 0, false, None),
+        "ppmi.clinical_visit",
+        "Clinical Visit",
         None,
         None,
         Some(fieldTypeInferrerFactory.applyJson)

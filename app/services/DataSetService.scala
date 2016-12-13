@@ -91,7 +91,8 @@ trait DataSetService {
 
   def translateDataAndDictionary(
     originalDataSetId: String,
-    newDataSetMetaInfo: DataSetMetaInfo,
+    newDataSetId: String,
+    newDataSetName: String,
     newDataSetSetting: Option[DataSetSetting],
     newDataView: Option[DataView],
     useTranslations: Boolean,
@@ -101,7 +102,8 @@ trait DataSetService {
 
   def translateDataAndDictionaryOptimal(
     originalDataSetId: String,
-    newDataSetMetaInfo: DataSetMetaInfo,
+    newDataSetId: String,
+    newDataSetName: String,
     newDataSetSetting: Option[DataSetSetting],
     newDataView: Option[DataView],
     jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]] = None
@@ -581,7 +583,8 @@ class DataSetServiceImpl @Inject()(
 
   override def translateDataAndDictionary(
     originalDataSetId: String,
-    newDataSetMetaInfo: DataSetMetaInfo,
+    newDataSetId: String,
+    newDataSetName: String,
     newDataSetSetting: Option[DataSetSetting],
     newDataView: Option[DataView],
     useTranslations: Boolean,
@@ -597,7 +600,7 @@ class DataSetServiceImpl @Inject()(
       // get the accessor (data repo and field repo) for the newly registered data set
       originalDataSetInfo <- originalDsa.metaInfo
       newDsa <- dsaf.register(
-        newDataSetMetaInfo.copy(dataSpaceId = originalDataSetInfo.dataSpaceId), newDataSetSetting, newDataView
+        DataSetMetaInfo(None, newDataSetId, newDataSetName, 0, false, originalDataSetInfo.dataSpaceId), newDataSetSetting, newDataView
       )
       newDataRepo = newDsa.dataSetRepo
       newFieldRepo = newDsa.fieldRepo
@@ -626,7 +629,7 @@ class DataSetServiceImpl @Inject()(
 
       // delete all the data
       _ <- {
-        logger.info(s"Deleting all the data for '${newDataSetMetaInfo.id}'.")
+        logger.info(s"Deleting all the data for '${newDataSetId}'.")
         newDataRepo.deleteAll
       }
 
@@ -641,7 +644,8 @@ class DataSetServiceImpl @Inject()(
 
   override def translateDataAndDictionaryOptimal(
     originalDataSetId: String,
-    newDataSetMetaInfo: DataSetMetaInfo,
+    newDataSetId: String,
+    newDataSetName: String,
     newDataSetSetting: Option[DataSetSetting],
     newDataView: Option[DataView],
     jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]]
@@ -661,7 +665,7 @@ class DataSetServiceImpl @Inject()(
       // get the accessor (data repo and field repo) for the newly registered data set
       originalDataSetInfo <- originalDsa.metaInfo
       newDsa <- dsaf.register(
-        newDataSetMetaInfo.copy(dataSpaceId = originalDataSetInfo.dataSpaceId), newDataSetSetting, newDataView
+        DataSetMetaInfo(None, newDataSetId, newDataSetName, 0, false, originalDataSetInfo.dataSpaceId), newDataSetSetting, newDataView
       )
       newDataRepo = newDsa.dataSetRepo
       newFieldRepo = newDsa.fieldRepo
@@ -683,7 +687,7 @@ class DataSetServiceImpl @Inject()(
 
       // delete all the data
       _ <- {
-        logger.info(s"Deleting all the data for '${newDataSetMetaInfo.id}'.")
+        logger.info(s"Deleting all the data for '${newDataSetId}'.")
         newDataRepo.deleteAll
       }
 

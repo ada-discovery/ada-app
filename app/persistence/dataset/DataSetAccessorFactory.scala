@@ -100,7 +100,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     setting: Option[DataSetSetting],
     dataView: Option[DataView]
   ) = {
-    val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(metaInfo.dataSpaceId.get)
+    val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(metaInfo.dataSpaceId)
     val metaInfosFuture = dataSetMetaInfoRepo.find(Seq("id" #== metaInfo.id))
     val settingsFuture = dataSetSettingRepo.find(Seq("dataSetId" #== metaInfo.id))
 
@@ -167,7 +167,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
       )
       // register data set meta info and setting, and obtain an accessor
       accessor <- {
-        val metaInfo = DataSetMetaInfo(None, dataSetId, dataSetName, 0, false, Some(spaceId))
+        val metaInfo = DataSetMetaInfo(None, dataSetId, dataSetName, 0, false, spaceId)
         register(metaInfo, setting, dataView)
       }
     } yield
