@@ -22,6 +22,7 @@ libraryDependencies ++= Seq(cache, ws)
 resolvers ++= Seq(
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
   "JCenter" at "http://jcenter.bintray.com/",
+  "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
   Resolver.mavenLocal
 //  "Ivylocal" at "file://home/peter/.ivy2/local/" // " + Path.userHome.absolutePath + "
 )
@@ -35,6 +36,7 @@ routesImport ++= Seq(
 libraryDependencies ++= Seq(
   "ada" % "ada-dataaccess_2.11" % "0.3.1-alpha",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
+  "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
   "org.webjars" %% "webjars-play" % "2.4.0",
   "org.webjars" % "bootstrap" % "3.3.5",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
