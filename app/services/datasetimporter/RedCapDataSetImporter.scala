@@ -12,6 +12,7 @@ import models.{AdaParseException, AdaException, RedCapDataSetImport}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.{RedCapServiceFactory, RedCapService}
+import dataaccess.Criterion.Infix
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.concurrent.Future
@@ -197,22 +198,21 @@ private class RedCapDataSetImporter @Inject() (
       // delete all the fields
       _ <- fieldRepo.deleteAll
 
-      // delete all the categories
-      _ <- categoryRepo.deleteAll
-
       // obtain the RedCAP metadata
       metadatas <- redCapService.listMetadatas("field_name", "")
 
       // save the obtained categories and return a category name with ids
       categoryNameIds <- Future.sequence {
-        val categories = metadatas.map(_.form_name).toSet.map { formName: String =>
-          new Category(formName)
-        }.toSeq
+        metadatas.map(_.form_name).toSet.map { categoryName: String =>
+          categoryRepo.find(Seq("name" #== categoryName)).flatMap { categories =>
+            val id: Future[BSONObjectID] =
+              categories.headOption match {
+                case Some(category) => Future(category._id.get)
+                case None => categoryRepo.save(new Category(categoryName))
+              }
 
-        categories.map { category =>
-          categoryRepo.save(category).map( id =>
-            (category.name, id)
-          )
+            id.map((categoryName, _))
+          }
         }
       }
 
