@@ -1,6 +1,6 @@
 package models
 
-import dataaccess.{User, BSONObjectIdentity, EnumFormat, OptionFormat}
+import dataaccess._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
 import models.DataSetFormattersAndIds.statsCalcSpecFormat
@@ -11,7 +11,7 @@ import reactivemongo.play.json.BSONFormats._
 case class DataView(
   _id: Option[BSONObjectID],
   name: String,
-  filterIds: Seq[Option[BSONObjectID]],
+  filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]],
   tableColumnNames: Seq[String],
   statsCalcSpecs: Seq[StatsCalcSpec],
   elementGridWidth: Int = 3,
@@ -22,12 +22,13 @@ case class DataView(
 )
 
 object DataView {
-  // TODO: weird that we had to use a custom option format here..
-  implicit val optionalBSONObjectIdFormat = new OptionFormat[BSONObjectID]
+
+  implicit val eitherFormat = new EitherFormat[Seq[models.FilterCondition], BSONObjectID]
+
   implicit val dataViewFormat : Format[DataView] = (
     (__ \ "_id").formatNullable[BSONObjectID] and
     (__ \ "name").format[String] and
-    (__ \ "filterIds").format[Seq[Option[BSONObjectID]]] and
+    (__ \ "filterOrIds").format[Seq[Either[Seq[models.FilterCondition], BSONObjectID]]] and
     (__ \ "tableColumnNames").format[Seq[String]] and
     (__ \ "statsCalcSpecs").format[Seq[StatsCalcSpec]] and
     (__ \ "elementGridWidth").format[Int] and
@@ -36,7 +37,7 @@ object DataView {
     (__ \ "timeCreated").format[Date]
   )(
     DataView(_, _, _, _, _, _, _, _, _),
-    (item: DataView) =>  (item._id, item.name, item.filterIds, item.tableColumnNames, item.statsCalcSpecs, item.elementGridWidth, item.default, item.createdById, item.timeCreated)
+    (item: DataView) =>  (item._id, item.name, item.filterOrIds, item.tableColumnNames, item.statsCalcSpecs, item.elementGridWidth, item.default, item.createdById, item.timeCreated)
   )
 
   implicit object DataViewIdentity extends BSONObjectIdentity[DataView] {

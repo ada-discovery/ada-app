@@ -2,13 +2,26 @@ package dataaccess
 
 import play.api.libs.json._
 
-class EitherFormat[T](implicit val format: Format[T]) extends Format[Option[T]] {
-  override def reads(json: JsValue): JsResult[Option[T]] =
-    json match {
-      case JsNull => JsSuccess(None)
-      case _ => format.reads(json).map(Some(_))
-    }
+class EitherFormat[L, R](
+    implicit val leftFormat: Format[L], rightFormat: Format[R]
+  ) extends Format[Either[L, R]] {
 
-  override def writes(o: Option[T]): JsValue =
-    o.map(format.writes(_)).getOrElse(JsNull)
+  override def reads(json: JsValue): JsResult[Either[L, R]] = {
+    val left = leftFormat.reads(json)
+    val right = rightFormat.reads(json)
+
+    if (left.isSuccess) {
+      left.map(Left(_))
+    } else if (right.isSuccess) {
+      right.map(Right(_))
+    } else {
+      JsError(s"Unable to read Either type from JSON $json")
+    }
+  }
+
+  override def writes(o: Either[L, R]): JsValue =
+    o match {
+      case Left(value) => leftFormat.writes(value)
+      case Right(value) => rightFormat.writes(value)
+    }
 }
