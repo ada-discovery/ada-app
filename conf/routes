@@ -150,6 +150,7 @@ GET         /studies/dataviews/addBoxPlots                                      
 GET         /studies/dataviews/addScatter                                           controllers.dataset.DataViewDispatcher.addScatter(dataViewId: BSONObjectID, xFieldName: String, yFieldName: String, groupFieldName: Option[String])
 GET         /studies/dataviews/addCorrelation                                       controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId: BSONObjectID, fieldNames: Seq[String])
 GET         /studies/dataviews/addTableFields                                       controllers.dataset.DataViewDispatcher.addTableFields(dataViewId: BSONObjectID, fieldNames: Seq[String])
+GET         /studies/dataviews/saveFilter                                           controllers.dataset.DataViewDispatcher.saveFilter(dataViewId: BSONObjectID, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
 
 GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: String ?= "dataSetId")

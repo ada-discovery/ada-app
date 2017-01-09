@@ -16,7 +16,7 @@
 @import models.FieldTypeId
 @import models.Page
 @import util.{JsonUtil, FieldTypeRenderer}
-@import controllers.dataset.{FilterJsRouter, FilterRouter, DataViewRouter}
+@import controllers.dataset.{FilterJsRouter, FilterRouter, DataViewRouter, DataViewJsRouter}
 @import be.objectify.deadbolt.scala.views.html.restrict
 
 @import models.security.SecurityRole
@@ -33,6 +33,7 @@
     filterRouter: FilterRouter,
     filterJsRouter: FilterJsRouter,
     dataViewRouter: DataViewRouter,
+    dataViewJsRouter: DataViewJsRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit flash: Flash, msg: Messages, request: Request[_]
@@ -64,9 +65,24 @@
                 </li>
                 <li>
                     @restrict(roles = List(Array(SecurityRole.admin))) {
-                        <a class="btn btn-info btn-sm" href="@{dataViewRouter.getAndShowView(dataViewId)}" data-toggle="tooltip" title="Edit View">
-                            <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
-                        </a>
+                        <div class="dropdown">
+                            <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a href="@{dataViewRouter.getAndShowView(dataViewId)}">
+                                        Edit View
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#" onclick="saveFilterToView()">
+                                        Save Filter To View
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                      }
                 </li>
             </ul>
@@ -132,8 +148,12 @@
     @helper.javascriptRouter("dataSetJsRoutes")(
         jsRouter.getFieldValue
     )
+    @helper.javascriptRouter("dataViewJsRoutes")(
+        dataViewJsRouter.saveFilter
+    )
     @displayJsonModal("jsonModal", None)
     @highchartsJsImport()
+
     @chartPanelJs(fieldChartSpecs.map(_.chartSpec))
     <script type="text/javascript">
         $(function () {
@@ -157,6 +177,19 @@
                 },
                 error: function(data){
                     showError(data.responseText);
+                }
+            });
+        }
+
+        function saveFilterToView() {
+            var filterOrId = (@{page.filterId.isDefined}) ? '@{page.filterId.map(_.stringify).getOrElse("")}' : JSON.stringify(jsConditions);
+
+            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.saveFilter("@{dataViewId.stringify}", filterOrId).ajax( {
+                success: function() {
+                    showMessage("Filter successfully added to the view.");
+                },
+                error: function(data){
+                    showError( data.responseText );
                 }
             });
         }

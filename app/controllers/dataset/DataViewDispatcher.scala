@@ -76,4 +76,9 @@ class DataViewDispatcher @Inject()(dscf: DataSetControllerFactory, dvc: DataView
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
   ) = dispatch(_.addBoxPlots(dataViewId, fieldNames))
+
+  override def saveFilter(
+    dataViewId: BSONObjectID,
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ) = dispatch(_.saveFilter(dataViewId, filterOrId))
 }

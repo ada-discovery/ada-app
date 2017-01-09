@@ -3,6 +3,10 @@
 @import models.{DataView, Field}
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataview.statsCalcSpecTable
+@import views.html.table.displayTable
+@import views.html.filters.displayConditions
+@import util.typeColumns
+@import reactivemongo.bson.BSONObjectID
 
 @(
     form: Form[DataView],
@@ -25,10 +29,25 @@
 @labelValue("tableColumnNames", attributeLabel("dataView", "tableColumnNames")){
     @dynamicStringTable("tableColumnName", form.value.map(_.tableColumnNames).getOrElse(Nil), true, Some(addModalInner))
 }
+
 @labelValue("statsCalcSpecs", attributeLabel("dataView", "statsCalcSpecs")){
     @statsCalcSpecTable(
         form.value.map(_.statsCalcSpecs).getOrElse(Nil),
         nameFieldMap
+    )
+}
+
+@labelValue("filterOrIds", attributeLabel("dataView", "filterOrIds")){
+    @displayTable(
+        form.value.map(_.filterOrIds).getOrElse(Nil),
+        typeColumns[Either[Seq[models.FilterCondition], BSONObjectID]](
+            (None, "Content", { filterOrId =>
+                filterOrId match {
+                    case Left(conditions) => displayConditions(conditions)
+                    case Right(id) => id.stringify
+                }
+            })
+        )
     )
 }
 

@@ -7,7 +7,7 @@ import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
 import controllers.{JsonFormatter, CrudControllerImpl}
 import dataaccess.RepoTypes.UserRepo
-import dataaccess.{DataViewRepo, FilterRepo, AscSort, Criterion}
+import dataaccess._
 import models._
 import models.DataSetFormattersAndIds._
 import models.FilterCondition.filterFormat
@@ -53,13 +53,14 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   protected override val listViewColumns = None // Some(Seq("name"))
 
   private implicit val statsCalcSpecFormatter = JsonFormatter[StatsCalcSpec]
-  private implicit val bsonObjectIdFormatter = JsonFormatter[BSONObjectID]
+  private implicit val eitherFormat = new EitherFormat[Seq[models.FilterCondition], BSONObjectID]
+  private implicit val eitherFormatter = JsonFormatter[Either[Seq[models.FilterCondition], BSONObjectID]]
 
   override protected val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
-      "filterIds" -> seq(optional(of[BSONObjectID])),
+      "filterOrIds" -> seq(of[Either[Seq[models.FilterCondition], BSONObjectID]]),
       "tableColumnNames" -> seq(text),
       "statsCalcSpecs" -> seq(of[StatsCalcSpec]),
       "elementGridWidth" -> number(min = 1, max = 12),
@@ -67,7 +68,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     ) { (id, name, filterIds, tableColumnNames, statsCalcSpecs, elementGridWidth, default) =>
       DataView(id, name, filterIds, tableColumnNames, statsCalcSpecs, elementGridWidth, default)
     }
-    ((item: DataView) => Some((item._id, item.name, item.filterIds, item.tableColumnNames, item.statsCalcSpecs, item.elementGridWidth, item.default)))
+    ((item: DataView) => Some((item._id, item.name, item.filterOrIds, item.tableColumnNames, item.statsCalcSpecs, item.elementGridWidth, item.default)))
   )
 
   // router for requests; to be passed to views as helper.
@@ -133,6 +134,20 @@ protected[controllers] class DataViewControllerImpl @Inject() (
         }
         repo.save(dataViewWithUser)
       }
+    } yield
+      id
+
+  override protected def updateCall(
+    dataView: DataView)(
+    implicit request: Request[AnyContent]
+  ): Future[BSONObjectID] =
+    for {
+      existingDataViewOption <- repo.get(dataView._id.get)
+      id <- existingDataViewOption.map(existingDataView =>
+          repo.update(dataView.copy(filterOrIds = existingDataView.filterOrIds))
+        ).getOrElse(
+          Future(dataView._id.get)
+        )
     } yield
       id
 
@@ -260,8 +275,8 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     val existingFieldNames = dataView.tableColumnNames
     val filteredFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
     if (filteredFieldNames.nonEmpty) {
-      val newSetting = dataView.copy(tableColumnNames = existingFieldNames ++ filteredFieldNames)
-      repo.update(newSetting)
+      val newDataView = dataView.copy(tableColumnNames = existingFieldNames ++ filteredFieldNames)
+      repo.update(newDataView)
     } else {
       Future(())
     }
@@ -285,6 +300,14 @@ protected[controllers] class DataViewControllerImpl @Inject() (
         response.fold(
           NotFound(s"Data view '#${id.stringify}' not found")
         ) { _ => Ok("Done")}
+  }
+
+  override def saveFilter(
+    dataViewId: BSONObjectID,
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+  ) = processDataView(dataViewId) { dataView =>
+    val newDataView = dataView.copy(filterOrIds = Seq(filterOrId))
+    repo.update(newDataView)
   }
 
   private def getNameFieldMap: Future[Map[String, Field]] =

@@ -1,0 +1,14 @@
+@(conditions: Traversable[FilterCondition])
+
+@valueOrUndefined(condition: FilterCondition) = @{
+    condition.valueLabel.getOrElse(condition.value) match {
+        case s if s.isEmpty => "undefined"
+        case s => s
+    }
+}
+
+@displayCondition(condition: FilterCondition) = @{
+    condition.fieldLabelOrElseName + " " + condition.conditionType + " " + valueOrUndefined(condition)
+}
+
+@conditions.map( condition => displayCondition(condition)).mkString(" AND ")

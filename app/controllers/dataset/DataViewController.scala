@@ -42,4 +42,9 @@ trait DataViewController extends CrudController[BSONObjectID] {
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
   ): Action[AnyContent]
+
+  def saveFilter(
+    dataViewId: BSONObjectID,
+    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+  ): Action[AnyContent]
 }

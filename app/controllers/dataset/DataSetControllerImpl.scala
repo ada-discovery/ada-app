@@ -126,6 +126,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       filterRouter,
       filterJsRouter,
       dataViewRouter,
+      dataViewJsRouter,
       result(dataSpaceTree)
     )
   }
@@ -325,7 +326,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
               (view.tableColumnNames, view.statsCalcSpecs)
             ).getOrElse((Nil, Nil))
 
-          getViewResponse(page, orderBy, filterOrId, columnNames, statsCalcSpecs)
+          val viewFilterOrId = dataView.map(_.filterOrIds.headOption).flatten
+
+          val filterOrIdToUse =
+            if (viewFilterOrId.isDefined && filterOrId.isLeft && filterOrId.left.get.isEmpty) {
+              viewFilterOrId.get
+            } else
+              filterOrId
+
+          getViewResponse(page, orderBy, filterOrIdToUse, columnNames, statsCalcSpecs)
         }
       } yield {
         val end = new ju.Date()
