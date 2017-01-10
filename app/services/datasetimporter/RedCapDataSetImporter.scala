@@ -21,10 +21,12 @@ private class RedCapDataSetImporter @Inject() (
     redCapServiceFactory: RedCapServiceFactory
   ) extends AbstractDataSetImporter[RedCapDataSetImport] {
 
-  private val redCapChoicesDelimiter = "\\|"
-  private val redCapChoiceKeyValueDelimiter = ","
-  private val redCapVisitField = "redcap_event_name"
-  private val redCapVisitLabel = "Visit"
+  private val choicesDelimiter = "\\|"
+  private val choiceKeyValueDelimiter = ","
+  private val visitFieldName = "redcap_event_name"
+  private val visitLabel = "Visit"
+  private val visitPrefix = "visit"
+  private val armPrefix = "arm"
 
   override def apply(importInfo: RedCapDataSetImport): Future[Unit] = {
     logger.info(new Date().toString)
@@ -79,33 +81,33 @@ private class RedCapDataSetImporter @Inject() (
       }
 
       // import dictionary (if needed) otherwise use an existing one (should exist)
-      fieldNameTypeMap <-
-        if (importInfo.importDictionaryFlag) {
-          logger.info(s"RedCap dictionary inference and import for data set '${importInfo.dataSetId}' initiated.")
+      fields <- importOrGetDictionary(importInfo, redCapService, fieldRepo, categoryRepo, records)
 
-          val dictionaryMapFuture = importAndInferRedCapDictionary(redCapService, fieldRepo, categoryRepo, records)
+      // create a field-name-type map for a quick lookup
+      fieldNameTypeMap = {
+        val map: Map[String, FieldType[_]] = fields.map(field => (field.name, ftf(field.fieldTypeSpec) : FieldType[_])).toSeq.toMap
+        map
+      }
 
-          dictionaryMapFuture.map { dictionaryMap =>
-            messageLogger.info(s"RedCap dictionary inference and import for data set '${importInfo.dataSetId}' successfully finished.")
-            dictionaryMap
-          }
-        } else {
-          logger.info(s"RedCap dictionary import disabled, using an existing dictionary.")
-          fieldRepo.find().map(fields =>
-            if (fields.nonEmpty) {
-              val map: Map[String, FieldType[_]] = fields.map(field => (field.name, ftf(field.fieldTypeSpec): FieldType[_])).toSeq.toMap
-              map
-            } else {
-              val message = s"No dictionary found for the data set '${importInfo.dataSetId}'. Run the REDCap data set import again with the 'import dictionary' option."
-              messageLogger.error(message)
-              throw new AdaException(message)
-            }
-          )
+      // get the ids of the categories that need to be inherited from the first visit
+      categoryIdsToInherit <-
+        categoryRepo.find(Seq("name" #-> importInfo.categoriesToInheritFromFirstVisit)).map(_.map(_._id.get))
+
+      // obtain the names of the fiels that need to be inherited
+      fieldNamesToInherit = {
+        val categoryIdsToInheritSet = categoryIdsToInherit.toSet
+
+        val fieldsToInherit = fields.filter { field =>
+          field.categoryId.map { categoryId =>
+            categoryIdsToInheritSet.contains(categoryId)
+          }.getOrElse(false)
         }
 
-      // get the new records
-      newRecords: Traversable[JsObject] = records.map { record =>
+        fieldsToInherit.map(_.name)
+      }
 
+      // get the records with inferred types
+      newRecords: Traversable[JsObject] = records.map { record =>
         val newJsValues = record.fields.map { case (fieldName, jsValue) =>
           val newJsValue = fieldNameTypeMap.get(fieldName) match {
             case Some(fieldType) => try {
@@ -114,9 +116,9 @@ private class RedCapDataSetImporter @Inject() (
                 case _ => displayJsonToJson(fieldType, jsValue)
               }
             } catch {
-              case e: Exception => throw new AdaException(s"JSON value '$jsValue' of the field '$fieldName' can not be processed.", e)
+              case e: Exception => throw new AdaException(s"JSON value '$jsValue' of the field '$fieldName' cannot be processed.", e)
             }
-            // TODO: this shouldn't be like that... if we don't have a field in the dictionary, we should discard it?
+            // TODO: this shouldn't be like that... if we don't have a field in the dictionary, we should discard it
             case None => jsValue
           }
           (fieldName, newJsValue)
@@ -125,8 +127,19 @@ private class RedCapDataSetImporter @Inject() (
         JsObject(newJsValues)
       }
 
+      // inherit the values
+      inheritedRecords =
+        importInfo.setting.map { setting =>
+          if (fieldNamesToInherit.nonEmpty)
+            inheritFieldValues(newRecords, setting.keyFieldName, fieldNameTypeMap, fieldNamesToInherit)
+          else
+            newRecords
+        }.getOrElse(
+          newRecords
+        )
+
       // save the records
-      _ <- dataSetService.saveOrUpdateRecords(dataRepo, newRecords.toSeq)
+      _ <- dataSetService.saveOrUpdateRecords(dataRepo, inheritedRecords.toSeq)
     } yield
       if (importInfo.importDictionaryFlag)
         messageLogger.info(s"Import of data set and dictionary '${importInfo.dataSetName}' successfully finished.")
@@ -134,12 +147,88 @@ private class RedCapDataSetImporter @Inject() (
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
   }
 
-  protected def importAndInferRedCapDictionary(
+  private def importOrGetDictionary(
+    importInfo: RedCapDataSetImport,
     redCapService: RedCapService,
     fieldRepo: FieldRepo,
     categoryRepo: CategoryRepo,
     records: Traversable[JsObject]
-  ): Future[Map[String, FieldType[_]]] = {
+  ): Future[Traversable[Field]] = {
+    if (importInfo.importDictionaryFlag) {
+      logger.info(s"RedCap dictionary inference and import for data set '${importInfo.dataSetId}' initiated.")
+
+      val fieldsFuture = importAndInferRedCapDictionary(importInfo.dataSetId, redCapService, fieldRepo, categoryRepo, records)
+
+      fieldsFuture.map { fields =>
+        messageLogger.info(s"RedCap dictionary inference and import for data set '${importInfo.dataSetId}' successfully finished.")
+        fields
+      }
+    } else {
+      logger.info(s"RedCap dictionary import disabled, using an existing dictionary.")
+      fieldRepo.find().map(fields =>
+        if (fields.nonEmpty) {
+          fields
+        } else {
+          val message = s"No dictionary found for the data set '${importInfo.dataSetId}'. Run the REDCap data set import again with the 'import dictionary' option."
+          messageLogger.error(message)
+          throw new AdaException(message)
+        }
+      )
+    }
+  }
+
+  private def inheritFieldValues(
+    records: Traversable[JsObject],
+    keyFieldName: String,
+    fieldNameTypeMap: Map[String, FieldType[_]],
+    fieldNamesToInherit: Traversable[String]
+  ): Traversable[JsObject] = {
+    logger.info("Inheriting fields from the first visit...")
+
+    val visitField = fieldNameTypeMap.get(visitFieldName).get
+
+    def visitValue(json: JsObject): String =
+      visitField.jsonToDisplayString(json \ visitFieldName)
+
+    def inheritFields(
+      json: JsObject,
+      visit1Json: JsObject
+    ): JsObject = {
+      val inheritedJsValues = fieldNamesToInherit.map { fieldName =>
+        val fieldType = fieldNameTypeMap.get(fieldName).get
+        val jsValue = (json \ fieldName).get
+
+        val inheritedJsValue = if (jsValue == JsNull) (visit1Json \ fieldName).get else jsValue
+        (fieldName, inheritedJsValue)
+      }.toSeq
+      json.++(JsObject(inheritedJsValues))
+    }
+
+    val visit1Id = s"${visitPrefix}_1_${armPrefix}_1"
+    val keyField = fieldNameTypeMap.get(keyFieldName).get
+
+    records.groupBy(json => keyField.jsonToValue(json \ keyFieldName)).map { case (_, groupRecords) =>
+
+      val visit1RecordOption = groupRecords.find( record => visitValue(record).equals(visit1Id) )
+
+      visit1RecordOption.map { visit1Record =>
+        groupRecords.map { record =>
+          if (!visitValue(record).equals(visit1Id))
+            inheritFields(record, visit1Record)
+          else
+            record
+        }
+      }.getOrElse(groupRecords)
+    }.flatten
+  }
+
+  private def importAndInferRedCapDictionary(
+    dataSetId: String,
+    redCapService: RedCapService,
+    fieldRepo: FieldRepo,
+    categoryRepo: CategoryRepo,
+    records: Traversable[JsObject]
+  ): Future[Traversable[Field]] = {
 
     def displayJsonToDisplayString[T](fieldType: FieldType[T], json: JsReadable): String = {
       val value = fieldType.displayJsonToValue(json)
@@ -195,13 +284,10 @@ private class RedCapDataSetImporter @Inject() (
       }.toList
 
     for {
-      // delete all the fields
-      _ <- fieldRepo.deleteAll
-
       // obtain the RedCAP metadata
       metadatas <- redCapService.listMetadatas("field_name", "")
 
-      // save the obtained categories and return a category name with ids
+      // save the obtained categories and return category names with ids
       categoryNameIds <- Future.sequence {
         metadatas.map(_.form_name).toSet.map { categoryName: String =>
           categoryRepo.find(Seq("name" #== categoryName)).flatMap { categories =>
@@ -221,17 +307,20 @@ private class RedCapDataSetImporter @Inject() (
         val fields = inferDictionary(metadatas, categoryNameIds.toMap)
 
         // also add redcap_event_name
-        val fieldTypeSpec = inferredFieldNameTypeMap.get(redCapVisitField).get.spec
+        val fieldTypeSpec = inferredFieldNameTypeMap.get(visitFieldName).get.spec
         val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
-        val visitField = Field(redCapVisitField, Some(redCapVisitLabel), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums)
+        val visitField = Field(visitFieldName, Some(visitLabel), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums)
 
         fields ++ Seq(visitField)
       }
 
       // save the fields
-      _ <- fieldRepo.save(newFields)
+      _ <- {
+        val fieldNameTypeSpecs = newFields.map( field => (field.name, field.fieldTypeSpec))
+        dataSetService.updateDictionary(dataSetId, fieldNameTypeSpecs, true, true)
+      }
     } yield
-      newFields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap
+      newFields
   }
 
   private def getEnumValues(metadata: Metadata): Option[Map[Int, String]] = {
@@ -239,8 +328,8 @@ private class RedCapDataSetImporter @Inject() (
 
     if (choices.nonEmpty) {
       try {
-        val keyValueMap = choices.split(redCapChoicesDelimiter).map { choice =>
-          val keyValueString = choice.split(redCapChoiceKeyValueDelimiter, 2)
+        val keyValueMap = choices.split(choicesDelimiter).map { choice =>
+          val keyValueString = choice.split(choiceKeyValueDelimiter, 2)
 
           val stringKey = keyValueString(0).trim
           val value = keyValueString(1).trim
@@ -260,8 +349,8 @@ private class RedCapDataSetImporter @Inject() (
 
     if (choices.nonEmpty) {
       try {
-        val doubles = choices.split(redCapChoicesDelimiter).map { choice =>
-          val keyValueString = choice.split(redCapChoiceKeyValueDelimiter, 2)
+        val doubles = choices.split(choicesDelimiter).map { choice =>
+          val keyValueString = choice.split(choiceKeyValueDelimiter, 2)
 
           val stringKey = keyValueString(0).trim
           val value = keyValueString(1).trim

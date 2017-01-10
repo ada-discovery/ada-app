@@ -14,7 +14,6 @@ abstract class DataSetImport {
   val dataSpaceName: String
   val dataSetId: String
   val dataSetName: String
-  val createDummyDictionary: Boolean
   val scheduled: Boolean
   val scheduledTime: Option[ScheduledTime]
   val setting: Option[DataSetSetting]
@@ -33,7 +32,7 @@ case class CsvDataSetImport(
   eol: Option[String],
   charsetName: Option[String],
   matchQuotes: Boolean,
-  createDummyDictionary: Boolean,
+  inferFieldTypes: Boolean,
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],
   setting: Option[DataSetSetting],
@@ -51,7 +50,6 @@ case class SynapseDataSetImport(
   downloadColumnFiles: Boolean,
   downloadRecordBatchSize: Option[Int],
   bulkDownloadGroupNumber: Option[Int],
-  createDummyDictionary: Boolean,
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],
   setting: Option[DataSetSetting],
@@ -68,7 +66,6 @@ case class TranSmartDataSetImport(
   dataPath: Option[String],
   mappingPath: Option[String],
   charsetName: Option[String],
-  createDummyDictionary: Boolean,
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],
   setting: Option[DataSetSetting],
@@ -85,7 +82,7 @@ case class RedCapDataSetImport(
   url: String,
   token: String,
   importDictionaryFlag: Boolean,
-  createDummyDictionary: Boolean,
+  categoriesToInheritFromFirstVisit: Seq[String],
   scheduled: Boolean,
   scheduledTime: Option[ScheduledTime],
   setting: Option[DataSetSetting],

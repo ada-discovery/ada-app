@@ -192,7 +192,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override def updateAndShowView(id: BSONObjectID) =
     Action.async { implicit request =>
-      update(id, Redirect(dataSetRouter.getView(id, 0, "", Left(Nil)))).apply(request)
+      update(id, Redirect(dataSetRouter.getView(id, 0, "", Left(Nil), false))).apply(request)
     }
 
   override def copy(id: BSONObjectID) =

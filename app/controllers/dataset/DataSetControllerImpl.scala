@@ -298,7 +298,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       )
     } yield {
       selectedView match {
-        case Some(view) => Redirect(router.getView(view._id.get, 0, "", Left(Nil)))
+        case Some(view) => Redirect(router.getView(view._id.get, 0, "", Left(Nil), false))
         case None => Redirect(dataViewRouter.plainList).flashing("errors" -> "No view to show. You must first define one.")
       }
     }
@@ -308,7 +308,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dataViewId: BSONObjectID,
     page: Int,
     orderBy: String,
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID],
+    filterChanged: Boolean
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
@@ -329,7 +330,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           val viewFilterOrId = dataView.map(_.filterOrIds.headOption).flatten
 
           val filterOrIdToUse =
-            if (viewFilterOrId.isDefined && filterOrId.isLeft && filterOrId.left.get.isEmpty) {
+            if (!filterChanged && viewFilterOrId.isDefined && filterOrId.isLeft && filterOrId.left.get.isEmpty) {
               viewFilterOrId.get
             } else
               filterOrId

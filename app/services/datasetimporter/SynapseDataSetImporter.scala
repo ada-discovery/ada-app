@@ -110,7 +110,7 @@ private class SynapseDataSetImporter @Inject() (
         // save, or update the dictionary
         _ <- {
           val fieldNameAndTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-          dataSetService.updateDictionary(importInfo.dataSetId, fieldNameAndTypeSpecs, true)
+          dataSetService.updateDictionary(importInfo.dataSetId, fieldNameAndTypeSpecs, false, true)
         }
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")

@@ -44,7 +44,7 @@
         <div class="col-md-10">
             @filter(
                 page.filter,
-                router.getView(dataViewId, 0, "", Left(Nil)),
+                router.getView(dataViewId, 0, "", Left(Nil), true),
                 Right(router.allFields),
                 filterShowFieldStyle,
                 Some(filterJsRouter),
@@ -121,7 +121,7 @@
 @table = @{
     paginatedJsonTable(
         page,
-        router.getView(dataViewId, _, _, page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))),
+        router.getView(dataViewId, _, _, page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)), true),
         Some(tableFields.map{ field =>
             field.label.map( fieldLabel => (field.name, fieldLabel))
         }.flatten.toMap),

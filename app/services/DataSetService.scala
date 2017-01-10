@@ -48,6 +48,7 @@ trait DataSetService {
   def updateDictionary(
     dataSetId: String,
     fieldNameAndTypes: Traversable[(String, FieldTypeSpec)],
+    deleteAndSave: Boolean,
     deleteNonReferenced: Boolean
   ): Future[Unit]
 
@@ -368,7 +369,7 @@ class DataSetServiceImpl @Inject()(
       // save, update, or delete the fields
       _ <- {
         val fieldNameAndTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-        updateDictionary(fieldRepo, fieldNameAndTypeSpecs, true)
+        updateDictionary(fieldRepo, fieldNameAndTypeSpecs, false, true)
       }
     } yield
       messageLogger.info(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
@@ -400,7 +401,7 @@ class DataSetServiceImpl @Inject()(
       // save, update, or delete the fields
       _ <- {
         val fieldNameAndTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-        updateDictionary(fieldRepo, fieldNameAndTypeSpecs, false)
+        updateDictionary(fieldRepo, fieldNameAndTypeSpecs, false, false)
       }
     } yield
       messageLogger.info(s"Dictionary inference for data set successfully finished.")
@@ -451,7 +452,7 @@ class DataSetServiceImpl @Inject()(
       // save, update, or delete the fields
       _ <- {
         val fieldNameAndTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-        updateDictionary(fieldRepo, fieldNameAndTypeSpecs, false)
+        updateDictionary(fieldRepo, fieldNameAndTypeSpecs, false, false)
       }
     } yield
       messageLogger.info(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
@@ -500,6 +501,7 @@ class DataSetServiceImpl @Inject()(
   override def updateDictionary(
     dataSetId: String,
     fieldNameAndTypes: Traversable[(String, FieldTypeSpec)],
+    deleteAndSave: Boolean,
     deleteNonReferenced: Boolean
   ): Future[Unit] = {
     logger.info(s"Dictionary update for data set '${dataSetId}' initiated.")
@@ -507,7 +509,7 @@ class DataSetServiceImpl @Inject()(
     val dsa = dsaf(dataSetId).get
     val fieldRepo = dsa.fieldRepo
 
-    updateDictionary(fieldRepo, fieldNameAndTypes, deleteNonReferenced).map(_ =>
+    updateDictionary(fieldRepo, fieldNameAndTypes, deleteAndSave, deleteNonReferenced).map(_ =>
       messageLogger.info(s"Dictionary update for '${dataSetId}' successfully finished.")
     )
   }
@@ -515,6 +517,7 @@ class DataSetServiceImpl @Inject()(
   private def updateDictionary(
     fieldRepo: FieldRepo,
     fieldNameAndTypes: Traversable[(String, FieldTypeSpec)],
+    deleteAndSave: Boolean,
     deleteNonReferenced: Boolean
   ): Future[Unit] = {
     val newFieldNames = fieldNameAndTypes.map(_._1).toSeq
@@ -551,7 +554,12 @@ class DataSetServiceImpl @Inject()(
       fieldsToUpdate = fieldsToSaveAndUpdate.map(_.right.toOption).flatten
 
       // update the existing fields
-      _ <- fieldRepo.update(fieldsToUpdate)
+      _ <- if (deleteAndSave)
+          fieldRepo.delete(fieldsToUpdate.map(_.name)).flatMap { _ =>
+            fieldRepo.save(fieldsToUpdate)
+          }
+        else
+          fieldRepo.update(fieldsToUpdate)
 
       // remove the non-referenced fields if needed
       _ <- if (deleteNonReferenced)
@@ -637,7 +645,7 @@ class DataSetServiceImpl @Inject()(
       _ <- saveOrUpdateRecords(newDataRepo, newJsons.toSeq)
 
       // save, update, or delete the items
-      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes, true)
+      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes, false, true)
     } yield
       messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")
   }
@@ -722,7 +730,7 @@ class DataSetServiceImpl @Inject()(
       }
 
       // save, update, or delete the items
-      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}, true)
+      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}, false, true)
     } yield
       messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")
   }

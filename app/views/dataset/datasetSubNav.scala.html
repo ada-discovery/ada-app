@@ -50,7 +50,7 @@
         <script type="text/javascript">
 
 
-            var getViewUrl = '@{Html(dataSetRouter.getView(BSONObjectID.generate(), 0, "", Left(Nil)).url)}'
+            var getViewUrl = '@{Html(dataSetRouter.getView(BSONObjectID.generate(), 0, "", Left(Nil), false).url)}'
             var currentUrl = '@{Html(request.uri)}'
 
             var currentCoreUrl = getCoreURL(currentUrl)

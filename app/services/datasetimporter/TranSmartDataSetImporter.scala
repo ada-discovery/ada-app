@@ -69,7 +69,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
               fieldNameTypeSpecs
             )
           } else {
-            dataSetService.updateDictionary(importInfo.dataSetId, fieldNameTypeSpecs, true)
+            dataSetService.updateDictionary(importInfo.dataSetId, fieldNameTypeSpecs, true, true)
           }
         }
       } yield {

@@ -28,7 +28,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     dataViewId: BSONObjectID,
     page: Int,
     orderBy: String,
-    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID],
+    filterChanged: Boolean
   ): Action[AnyContent]
 
   def getDefaultView: Action[AnyContent]
