@@ -163,21 +163,27 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
   }
 
   protected def toSqlWhereClauseAndArgs(criteria: Seq[Criterion[Any]]) =
-    criteria match {
+    criteria.map(toSqlCriterionAndArgs).flatten match {
       case Nil => ("", Nil)
-      case _ => {
-        val sqlCriteriaWithArgs = criteria.map(toSqlCriterionAndArgs)
+      case sqlCriteriaWithArgs => {
         val whereClause = sqlCriteriaWithArgs.map(_._1).mkString(" and ")
         val args = sqlCriteriaWithArgs.map(_._2).flatten
         (s"where $whereClause", args)
       }
     }
 
-  protected def toSqlCriterionAndArgs(criterion: Criterion[_]): (String, Seq[Any]) = {
+  protected def toSqlCriterionAndArgs(criterion: Criterion[_]): Option[(String, Seq[Any])] = {
     val fieldName = escapeIgniteFieldName(criterion.fieldName)
-    val fieldType = fieldNameTypeMap(fieldName)
-    val nonNativeFieldTypeFlag = isNonNativeFieldDBType(fieldType)
+    fieldNameTypeMap.get(fieldName).map( fieldType =>
+      toSqlCriterionAndArgs(criterion, fieldName, isNonNativeFieldDBType(fieldType))
+    )
+  }
 
+  protected def toSqlCriterionAndArgs(
+    criterion: Criterion[_],
+    fieldName: String,
+    nonNativeFieldTypeFlag: Boolean
+  ): (String, Seq[Any]) = {
     criterion match {
       case EqualsCriterion(_, value) => {
 //        optionalValue match {
