@@ -18,6 +18,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.play" % "play-json_2.11" % "2.4.6",
   "com.typesafe.play" % "play-iteratees_2.11" % "2.4.6",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
+  "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
   "org.apache.ignite" % "ignite-core" % "1.6.0",
   "org.apache.ignite" % "ignite-spring" % "1.6.0",
   "org.apache.ignite" % "ignite-indexing" % "1.6.0",
