@@ -74,7 +74,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         if (cacheDataSet)
           cachedDataSetRepoFactory(collectionName, fieldNamesAndTypes)
         else
-          elasticDataSetRepoFactory(collectionName, fieldNamesAndTypes)
+          mongoDataSetRepoFactory(collectionName, fieldNamesAndTypes)
 
       val dataSetMetaInfoRepo =
         dataSpaceId.map(dataSetMetaInfoRepoFactory(_)).getOrElse(

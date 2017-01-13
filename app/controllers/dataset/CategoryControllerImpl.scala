@@ -39,7 +39,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   protected lazy val dataSetName = result(dsa.metaInfo).name
   protected lazy val fieldRepo = dsa.fieldRepo
 
-  protected override val listViewColumns = Some(Seq("name"))
+  protected override val listViewColumns = Some(Seq(CategoryIdentity.name, "name"))
 
   override protected val form = Form(
     mapping(
