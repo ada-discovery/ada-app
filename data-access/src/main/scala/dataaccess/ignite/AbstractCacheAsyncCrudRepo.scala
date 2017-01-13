@@ -31,14 +31,14 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
 
   def toCacheItem(item: E): CACHE_E
 
-  def queryResultToItem(result: Traversable[(String, Any)]): E
+  def findResultToItem(result: Traversable[(String, Any)]): E
 
   // override if needed
-  def queryResultsToItem(fieldNames: Seq[String], results: Traversable[Seq[Any]]): Traversable[E] =
-    // default implementation simply iterating through and using the single item version queryResultToItem
-    results.map{ result =>
-      queryResultToItem(fieldNames.zip(result))
-    }
+  def findResultsToItems(fieldNames: Seq[String], results: Traversable[Seq[Any]]): Traversable[E] =
+    // default implementation simply iterate through and use the single item version findResultToItem
+    results.map( result =>
+      findResultToItem(fieldNames.zip(result))
+    )
 
   protected val fieldNameAndTypeNames: Traversable[(String, String)] = {
     val queryEntity = cache.getConfiguration(classOf[CacheConfiguration[CACHE_ID, CACHE_E]]).getQueryEntities.head
@@ -151,7 +151,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
         }
         case _ => {
           val values = cursor.map(list => list : Seq[_])
-          queryResultsToItem(projectionSeq, values)
+          findResultsToItems(projectionSeq, values)
         }
       }
 

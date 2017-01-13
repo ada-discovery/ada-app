@@ -43,7 +43,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
 
   protected def repoHook = repo
 
-  protected def listViewColumns : Option[Seq[String]] = None
+  protected def listViewColumns: Option[Seq[String]] = None
 
   protected def showView(
     id : ID,

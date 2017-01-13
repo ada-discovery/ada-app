@@ -3,6 +3,7 @@ package dataaccess.mongo
 import javax.cache.configuration.Factory
 
 import com.google.inject.assistedinject.Assisted
+import models.FieldTypeSpec
 import play.api.libs.json.{Json, JsObject}
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
@@ -16,8 +17,9 @@ import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import scala.concurrent.Future
 import javax.inject.Inject
 
-class JsonMongoCrudRepo @Inject()(
-    @Assisted collectionName : String
+class MongoJsonCrudRepo @Inject()(
+    @Assisted collectionName : String,
+    @Assisted fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]
   ) extends MongoAsyncReadonlyRepo[JsObject, BSONObjectID](collectionName, "_id") with JsonCrudRepo {
 
   override def save(entity: JsObject): Future[BSONObjectID] = {
@@ -58,14 +60,14 @@ class JsonMongoCrudRepo @Inject()(
     collection.remove(Json.obj()) map handleResult
 }
 
-class JsonRepoFactory(
+class MongoJsonRepoFactory(
     collectionName: String,
     configuration: Configuration,
     applicationLifecycle: ApplicationLifecycle
   ) extends Factory[AsyncCrudRepo[JsObject, BSONObjectID]] {
 
   override def create(): AsyncCrudRepo[JsObject, BSONObjectID] = {
-    val repo = new JsonMongoCrudRepo(collectionName)
+    val repo = new MongoJsonCrudRepo(collectionName, Nil)
     repo.reactiveMongoApi = ReactiveMongoApi.create(configuration, applicationLifecycle)
     repo
   }

@@ -5,10 +5,12 @@ import javax.inject.Provider
 import com.google.inject.{Inject, TypeLiteral, Key}
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import dataaccess.RepoTypes.CategoryRepo
+import dataaccess.elastic.{ElasticFormatAsyncCrudRepo, ElasticJsonCrudRepo, ElasticIdRenameFormat, ElasticAsyncCrudRepo}
 import dataaccess.ignite.{CacheAsyncCrudRepoProvider, CacheAsyncCrudRepoFactory, JsonBinaryCacheAsyncCrudRepoFactory}
 import dataaccess.mongo.dataset.{FieldMongoAsyncCrudRepo, CategoryMongoAsyncCrudRepo}
 import dataaccess._
 import dataaccess.mongo._
+import models.DataSetFormattersAndIds._
 import models._
 import net.codingwell.scalaguice.ScalaModule
 import dataaccess.RepoTypes._
@@ -43,8 +45,10 @@ private object RepoDef extends Enumeration {
   val MessageRepo = Repo[MessageRepo](
     new MongoAsyncStreamRepo[Message, BSONObjectID]("messages"))
 
-  val UserSettingsRepo = Repo[WorkspaceRepo](
-    new MongoAsyncCrudRepo[Workspace, BSONObjectID]("workspace"))
+  implicit val workspaceFormat = new ElasticIdRenameFormat(Workspace.WorkspaceFormat)
+
+  val UserSettingsRepo = Repo[UserSettingsRepo](
+    new ElasticFormatAsyncCrudRepo[Workspace, BSONObjectID]("workspace", "workspace"))
 
   val DictionaryRootRepo = Repo[DictionaryRootRepo](
     new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
@@ -94,10 +98,14 @@ class RepoModule extends ScalaModule {
       .implement(new TypeLiteral[DataSetMetaInfoRepo]{}, classOf[DataSetMetaInfoSubordinateMongoAsyncCrudRepo])
       .build(classOf[DataSetMetaInfoRepoFactory]))
 
-    // install JSON repo factory and its cached version
+    // install JSON repo factories and its cached version
     install(new FactoryModuleBuilder()
-      .implement(new TypeLiteral[JsonCrudRepo]{}, classOf[JsonMongoCrudRepo])
-      .build(Key.get(classOf[JsonCrudRepoFactory], Names.named("JsonCrudRepoFactory"))))
+      .implement(new TypeLiteral[JsonCrudRepo]{}, classOf[MongoJsonCrudRepo])
+      .build(Key.get(classOf[JsonCrudRepoFactory], Names.named("MongoJsonCrudRepoFactory"))))
+
+    install(new FactoryModuleBuilder()
+      .implement(new TypeLiteral[JsonCrudRepo]{}, classOf[ElasticJsonCrudRepo])
+      .build(Key.get(classOf[JsonCrudRepoFactory], Names.named("ElasticJsonCrudRepoFactory"))))
 
     bind[JsonCrudRepoFactory]
       .annotatedWith(Names.named("CachedJsonCrudRepoFactory"))

@@ -62,7 +62,7 @@ private class CacheAsyncCrudRepo[ID, E: TypeTag](
   override def toCacheItem(item: E) =
     item
 
-  override def queryResultToItem(result: Traversable[(String, Any)]): E = {
+  override def findResultToItem(result: Traversable[(String, Any)]): E = {
     val fieldNameValueMap = result.map{ case (fieldName, value) => (unescapeFieldName(fieldName), value) }.toMap
     val multiConstructorValues = constructorWithInfos.map { case (constructor, paramNameAndTypes, paramNameDefaultValueMap) =>
       try {
@@ -89,7 +89,7 @@ private class CacheAsyncCrudRepo[ID, E: TypeTag](
     }
   }
 
-  override def queryResultsToItem(rawFieldNames: Seq[String], results: Traversable[Seq[Any]]): Traversable[E] = {
+  override def findResultsToItems(rawFieldNames: Seq[String], results: Traversable[Seq[Any]]): Traversable[E] = {
     val fieldNames = rawFieldNames.map(unescapeFieldName).toSeq
 
     val constructorWithInfosOption = constructorWithInfos.find { case (constructor, paramNameAndTypes, paramNameDefaultValueMap) =>

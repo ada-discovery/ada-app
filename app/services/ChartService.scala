@@ -355,7 +355,7 @@ class ChartServiceImpl extends ChartService {
         }
       }.toList
 
-      val findNoneCriteria = criteria ++ Seq(fieldName #== None)
+      val findNoneCriteria = criteria ++ Seq(fieldName #=@)
       val naValueFuture = dataRepo.count(findNoneCriteria).map { count =>
         (None, count)
       }
@@ -750,6 +750,7 @@ class ChartServiceImpl extends ChartService {
             if (relativeMedianPos > 0) {
               dataRepo.find(
                 criteria = criteria ++ Seq(field.name #> lower),
+                projection = Seq(field.name),
                 sort = Seq(AscSort(field.name)),
                 skip = Some(relativeMedianPos - 1),
                 limit = Some(1)
@@ -762,6 +763,7 @@ class ChartServiceImpl extends ChartService {
           val lowerWhiskerFuture =
             dataRepo.find(
               criteria = criteria ++ Seq(field.name #>= lowerWhiskerValue),
+              projection = Seq(field.name),
               sort = Seq(AscSort(field.name)),
               limit = Some(1)
             ).flatMap { results =>
@@ -775,6 +777,7 @@ class ChartServiceImpl extends ChartService {
           val upperWhiskerFuture =
             dataRepo.find(
               criteria = criteria ++ Seq(field.name #<= upperWhiskerValue),
+              projection = Seq(field.name),
               sort = Seq(DescSort(field.name)),
               limit = Some(1)
             ).flatMap { results =>

@@ -226,7 +226,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     for {
       categories <- repo.find(
         sort = Seq(AscSort("name")),
-        projection = Seq("name")
+        projection = Seq(CategoryIdentity.name, "name")
       )
     } yield {
       Ok(Json.toJson(categories))

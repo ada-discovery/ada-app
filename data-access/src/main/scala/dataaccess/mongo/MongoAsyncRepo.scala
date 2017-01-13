@@ -110,14 +110,15 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
     finalQueryBuilderFuture.flatMap { finalQueryBuilder =>
       // handle pagination (if requested)
-      val cursor: CursorProducer[E]#ProducedCursor = skip match {
-        case Some(skip) => limit.map(l =>
-          finalQueryBuilder.options(QueryOpts(skip, l)).cursor[E]()
-        ).getOrElse(
-          throw new IllegalArgumentException("Limit is expected when skip is provided.")
-        )
+      val cursor: CursorProducer[E]#ProducedCursor = limit match {
+        case Some(limit) =>
+          finalQueryBuilder.options(QueryOpts(skip.getOrElse(0), limit)).cursor[E]()
 
-        case None => finalQueryBuilder.cursor[E]()
+        case None =>
+          if (skip.isDefined)
+            throw new IllegalArgumentException("Limit is expected when skip is provided.")
+          else
+            finalQueryBuilder.cursor[E]()
       }
       // TODO: What about cursor[E](readPreference = ReadPreference.primary)
 
@@ -149,17 +150,6 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
       Json.obj("$and" -> JsArray(elements))
     }
   }
-
-//    val individualCriteria = criteria.groupBy(_.fieldName).map {
-//      case (fieldName, groupedCriteria) =>
-//        (
-//          fieldName,
-//          groupedCriteria.map(toMongoCondition).foldLeft(Json.obj()) { case (json1, json2) =>
-//            json1 ++ json2
-//          }
-//        )
-//    }
-//    JsObject(individualCriteria)
 
   protected def toMongoCondition[T, V](criterion: Criterion[T]): JsObject =
     criterion match {

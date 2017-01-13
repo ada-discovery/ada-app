@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 import dataaccess.{RepoException, Criterion}
 import models.workspace.Workspace
 import Criterion.Infix
-import persistence.RepoTypes.WorkspaceRepo
+import persistence.RepoTypes.UserSettingsRepo
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
@@ -31,7 +31,7 @@ class UserProfileController @Inject() (
     val userManager: UserManager,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
-    workspaceRepo: WorkspaceRepo
+    workspaceRepo: UserSettingsRepo
   ) extends Controller with AdaAuthConfig {
 
   protected val userUpdateForm = Form(

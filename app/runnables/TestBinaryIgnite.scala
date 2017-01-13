@@ -6,7 +6,7 @@ import dataaccess.ignite.{JsonBinaryCacheAsyncCrudRepo, BinaryCacheFactory}
 import dataaccess.{DescSort, AscSort, SerializableApplicationLifecycle}
 import dataaccess.Criterion.Infix
 import org.apache.ignite.Ignite
-import dataaccess.mongo.JsonRepoFactory
+import dataaccess.mongo.MongoJsonRepoFactory
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import play.api.Configuration
@@ -25,7 +25,7 @@ class TestBinaryIgnite @Inject() (ignite: Ignite, cacheFactory: BinaryCacheFacto
     val cache = cacheFactory(
       cacheName,
       Nil,
-      new JsonRepoFactory(
+      new MongoJsonRepoFactory(
         collectionName,
         configuration,
         new SerializableApplicationLifecycle()

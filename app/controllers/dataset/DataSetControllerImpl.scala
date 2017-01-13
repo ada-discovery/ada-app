@@ -12,7 +12,7 @@ import dataaccess._
 import models._
 import com.google.inject.assistedinject.Assisted
 import controllers.{ExportableAction, ReadonlyControllerImpl}
-import DataSetFormattersAndIds.{FieldIdentity}
+import models.DataSetFormattersAndIds.{JsObjectIdentity, FieldIdentity}
 import Criterion.Infix
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.RepoTypes._
@@ -386,7 +386,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // generate criteria
       criteria <- toCriteria(conditions)
 
-      // obtain the total item count satysfying the resolved filter
+      // obtain the total item count satisfying the resolved filter
       count <- getFutureCount(conditions)
 
       // create a name -> field map of all the referenced fields for a quick lookup
@@ -407,7 +407,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           nameFieldMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
         }
         if (tableFieldNamesToLoad.nonEmpty)
-            getFutureItems(Some(page), orderBy, conditions, tableFieldNamesToLoad, Some(pageLimit))
+            getFutureItems(Some(page), orderBy, conditions, tableFieldNamesToLoad ++ Seq(JsObjectIdentity.name), Some(pageLimit))
           else
             Future(Nil)
       }

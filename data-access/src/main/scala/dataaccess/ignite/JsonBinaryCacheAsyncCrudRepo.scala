@@ -7,7 +7,7 @@ import DataSetFormattersAndIds.JsObjectIdentity
 import dataaccess._
 import dataaccess.RepoTypes._
 import dataaccess.ignite.BinaryJsonUtil._
-import dataaccess.mongo.JsonRepoFactory
+import dataaccess.mongo.MongoJsonRepoFactory
 import org.apache.ignite.{Ignite, IgniteCache}
 import org.apache.ignite.binary.BinaryObject
 import play.api.Configuration
@@ -34,7 +34,7 @@ class JsonBinaryCacheAsyncCrudRepo[ID](
   override def toCacheItem(item: JsObject) =
     toBinary(item)
 
-  override def queryResultToItem(result: Traversable[(String, Any)]) =
+  override def findResultToItem(result: Traversable[(String, Any)]) =
     toJsObject(result)
 }
 
@@ -47,28 +47,25 @@ class JsonBinaryCacheAsyncCrudRepoFactory @Inject()(
 
   private val ftf = FieldTypeFactory(Set[String](""), Seq[String](), "", ",")
 
-  override def apply(collectionName: String): JsonCrudRepo =
-    applyWithDictionaryAux(collectionName, Nil)
-
-  override def applyWithDictionary(collectionName: String, fieldNamesAndTypes: Seq[(String, FieldTypeId.Value)]) =
+  override def apply(collectionName: String, fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]) =
     applyWithDictionaryAux(collectionName, fieldNamesAndTypes)
 
   private def applyWithDictionaryAux(
     collectionName: String,
-    fieldNamesAndTypes: Seq[(String, FieldTypeId.Value)]
+    fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]
   ): JsonCrudRepo = {
     val cacheName = collectionName.replaceAll("[\\.-]", "_")
     val identity = JsObjectIdentity
 
     val fieldNamesAndClasses: Seq[(String, Class[_ >: Any])] =
-      (fieldNamesAndTypes.map{ case (fieldName, fieldType) =>
-        (escapeIgniteFieldName(fieldName), ftf(FieldTypeSpec(fieldType)).valueClass.asInstanceOf[Class[_ >: Any]])
+      (fieldNamesAndTypes.map{ case (fieldName, fieldTypeSpec) =>
+        (escapeIgniteFieldName(fieldName), ftf(fieldTypeSpec).valueClass.asInstanceOf[Class[_ >: Any]])
       } ++ Seq((identity.name, classOf[Option[BSONObjectID]].asInstanceOf[Class[_ >: Any]])))
 
     val cache = cacheFactory(
       cacheName,
       fieldNamesAndClasses,
-      new JsonRepoFactory(collectionName, configuration, new SerializableApplicationLifecycle()),
+      new MongoJsonRepoFactory(collectionName, configuration, new SerializableApplicationLifecycle()),
       identity.of(_)
     ) // new DefaultApplicationLifecycle().addStopHook
     cache.loadCache(null)

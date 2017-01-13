@@ -41,7 +41,7 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
         // save, or update the dictionary
         _ <- {
           val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-          dataSetService.updateDictionary(importInfo.dataSetId, fieldNameTypeSpecs, false, true)
+          dataSetService.updateDictionary(importInfo.dataSetId, fieldNameTypeSpecs, true, true)
         }
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")

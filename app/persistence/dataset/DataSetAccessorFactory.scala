@@ -34,7 +34,8 @@ trait DataSetAccessorFactory {
 }
 
 protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
-    @Named("JsonCrudRepoFactory") dataSetRepoFactory: JsonCrudRepoFactory,
+    @Named("MongoJsonCrudRepoFactory") mongoDataSetRepoFactory: JsonCrudRepoFactory,
+    @Named("ElasticJsonCrudRepoFactory") elasticDataSetRepoFactory: JsonCrudRepoFactory,
     @Named("CachedJsonCrudRepoFactory") cachedDataSetRepoFactory: JsonCrudRepoFactory,
     fieldRepoFactory: FieldRepoFactory,
     categoryRepoFactory: CategoryRepoFactory,
@@ -59,8 +60,8 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
           _.headOption.map(_.cacheDataSet).getOrElse(false))
 
       fieldNamesAndTypes <-
-        fieldRepo.find().map(_.map( field =>
-          (field.name, field.fieldType)
+        fieldRepo.find().map(_.map(field =>
+          (field.name, field.fieldTypeSpec)
         ).toSeq)
 
       dataSpaceId <-
@@ -71,9 +72,9 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     } yield {
       val dataSetRepo =
         if (cacheDataSet)
-          cachedDataSetRepoFactory.applyWithDictionary(collectionName, fieldNamesAndTypes)
+          cachedDataSetRepoFactory(collectionName, fieldNamesAndTypes)
         else
-          dataSetRepoFactory.applyWithDictionary(collectionName, fieldNamesAndTypes)
+          elasticDataSetRepoFactory(collectionName, fieldNamesAndTypes)
 
       val dataSetMetaInfoRepo =
         dataSpaceId.map(dataSetMetaInfoRepoFactory(_)).getOrElse(

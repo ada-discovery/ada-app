@@ -156,13 +156,17 @@ class DataSetServiceImpl @Inject()(
         if (transformedJsons.nonEmpty) {
           logger.info(s"Saving ${transformedJsons.size} records...")
         }
-        Future.sequence(
-          transformedJsons.zipWithIndex.map { case (json, index) =>
-            dataRepo.save(json).map(_ =>
-              logProgress(startIndex + index + 1, reportLineSize, size)
-            )
-          }
-        ).map(_ => ())
+//        Future.sequence(
+//          transformedJsons.zipWithIndex.map { case (json, index) =>
+//            dataRepo.save(json).map(_ =>
+//              logProgress(startIndex + index + 1, reportLineSize, size)
+//            )
+//          }
+//        ).map(_ => ())
+        dataRepo.save(transformedJsons).map { _ =>
+          logProgress(startIndex + transformedJsons.size, reportLineSize, size)
+          ()
+        }
       }
     }
 
