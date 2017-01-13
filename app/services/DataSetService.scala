@@ -26,11 +26,13 @@ import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 @ImplementedBy(classOf[DataSetServiceImpl])
 trait DataSetService {
 
+  @Deprecated
   def inferDictionary(
     dataSetId: String,
     fieldGroupSize: Int = 150
   ): Future[Unit]
 
+  @Deprecated
   def inferDictionary(
     fieldNames: Traversable[String],
     dataRepo: JsonCrudRepo,
@@ -39,6 +41,7 @@ trait DataSetService {
     maxSize: Int
   ): Future[Unit]
 
+  @Deprecated
   def inferDictionaryAndUpdateRecords(
     dataSetId: String,
     fieldGroupSize: Int,
@@ -47,6 +50,13 @@ trait DataSetService {
 
   def updateDictionary(
     dataSetId: String,
+    fieldNameAndTypes: Traversable[(String, FieldTypeSpec)],
+    deleteAndSave: Boolean,
+    deleteNonReferenced: Boolean
+  ): Future[Unit]
+
+  def updateDictionary(
+    fieldRepo: FieldRepo,
     fieldNameAndTypes: Traversable[(String, FieldTypeSpec)],
     deleteAndSave: Boolean,
     deleteNonReferenced: Boolean
@@ -84,10 +94,6 @@ trait DataSetService {
     dataRepo: JsonCrudRepo,
     keyField: String,
     keyValues: Seq[_]
-  ): Future[Unit]
-
-  def createDummyDictionary(
-    dataSetId: String
   ): Future[Unit]
 
   def translateDataAndDictionary(
@@ -411,6 +417,7 @@ class DataSetServiceImpl @Inject()(
       messageLogger.info(s"Dictionary inference for data set successfully finished.")
   }
 
+  @Deprecated
   override def inferDictionaryAndUpdateRecords(
     dataSetId: String,
     fieldGroupSize: Int,
@@ -518,7 +525,7 @@ class DataSetServiceImpl @Inject()(
     )
   }
 
-  private def updateDictionary(
+  override def updateDictionary(
     fieldRepo: FieldRepo,
     fieldNameAndTypes: Traversable[(String, FieldTypeSpec)],
     deleteAndSave: Boolean,
@@ -575,24 +582,6 @@ class DataSetServiceImpl @Inject()(
       ()
   }
 
-  override def createDummyDictionary(dataSetId: String): Future[Unit] = {
-    logger.info(s"Creation of dummy dictionary for data set '${dataSetId}' initiated.")
-
-    val dsa = dsaf(dataSetId).get
-    val dataSetRepo = dsa.dataSetRepo
-    val fieldRepo = dsa.fieldRepo
-
-    for {
-      _ <- fieldRepo.deleteAll
-      fieldNames <- getFieldNames(dataSetRepo)
-      _ <- {
-        val fields = fieldNames.map(Field(_, None, FieldTypeId.String, false))
-        fieldRepo.save(fields)
-      }
-    } yield
-      messageLogger.info(s"Dummy dictionary for data set '${dataSetId}' successfully created.")
-  }
-
   override def translateDataAndDictionary(
     originalDataSetId: String,
     newDataSetId: String,
@@ -614,7 +603,6 @@ class DataSetServiceImpl @Inject()(
       newDsa <- dsaf.register(
         DataSetMetaInfo(None, newDataSetId, newDataSetName, 0, false, originalDataSetInfo.dataSpaceId), newDataSetSetting, newDataView
       )
-      newDataRepo = newDsa.dataSetRepo
       newFieldRepo = newDsa.fieldRepo
 
       // obtain the translation map
@@ -639,6 +627,15 @@ class DataSetServiceImpl @Inject()(
       (newJsons, newFieldNameAndTypes) = translateDataAndDictionary(
         items, originalFieldNameAndTypes, translationMap, true, true)
 
+      // update the dictionary
+      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes, false, true)
+
+      // since we possible changed the dictionary (the data structure) we need to update the data set repo
+      _ <- newDsa.updateDataSetRepo
+
+      // get the new data set repo
+      newDataRepo = newDsa.dataSetRepo
+
       // delete all the data
       _ <- {
         logger.info(s"Deleting all the data for '${newDataSetId}'.")
@@ -647,9 +644,6 @@ class DataSetServiceImpl @Inject()(
 
       // save the new items
       _ <- saveOrUpdateRecords(newDataRepo, newJsons.toSeq)
-
-      // save, update, or delete the items
-      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes, false, true)
     } yield
       messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")
   }
@@ -697,6 +691,15 @@ class DataSetServiceImpl @Inject()(
         }.map(_.flatten)
       }
 
+      // update the dictionary
+      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}, false, true)
+
+      // since we possible changed the dictionary (the data structure) we need to update the data set repo
+      _ <- newDsa.updateDataSetRepo
+
+      // get the new data set repo
+      newDataRepo = newDsa.dataSetRepo
+
       // delete all the data
       _ <- {
         logger.info(s"Deleting all the data for '${newDataSetId}'.")
@@ -732,9 +735,6 @@ class DataSetServiceImpl @Inject()(
           }
         }
       }
-
-      // save, update, or delete the items
-      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}, false, true)
     } yield
       messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")
   }

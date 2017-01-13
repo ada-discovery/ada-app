@@ -5,6 +5,7 @@ import java.{util => ju}
 import javax.inject.Inject
 
 import _root_.util.JsonUtil._
+import models.ConditionType._
 import util.{BasicStats, fieldLabel, JsonUtil}
 import _root_.util.WebExportUtil._
 import _root_.util.shorten
@@ -40,13 +41,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends ReadonlyControllerImpl[JsObject, BSONObjectID](dsaf(dataSetId).get.dataSetRepo) with DataSetController with ExportableAction[JsObject] {
+  ) extends ReadonlyControllerImpl[JsObject, BSONObjectID] with DataSetController with ExportableAction[JsObject] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
+
   protected val fieldRepo = dsa.fieldRepo
   protected val categoryRepo = dsa.categoryRepo
   protected val filterRepo = dsa.filterRepo
   protected val dataViewRepo = dsa.dataViewRepo
+
+  // not that data set repo could be updated (by calling updateDataSetRepo)
+  // therefore it should not be stored as val
+  override protected def repo = dsa.dataSetRepo
 
   @Inject protected var tranSMARTService: TranSMARTService = _
   @Inject protected var chartService: ChartService = _
@@ -578,8 +584,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filter: Filter,
     fieldNameMap: Map[String, Field]
   ): Filter = {
-    def valueStringToDisplayString[T](fieldType: FieldType[T], text: String): String = {
-      val value = fieldType.valueStringToValue(text)
+    def valueStringToDisplayString[T](
+      fieldType: FieldType[T],
+      text: String
+    ): String = {
+      val value = fieldType.valueStringToValue(text.trim)
       fieldType.valueToDisplayString(value)
     }
 
@@ -587,7 +596,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       fieldNameMap.get(condition.fieldName.trim) match {
         case Some(field) => {
           val fieldType = ftf(field.fieldTypeSpec)
-          val valueLabel = valueStringToDisplayString(fieldType, condition.value)
+          val value = condition.value
+
+          val valueLabel = condition.conditionType match {
+            case In | NotIn =>
+              value.split(",").map(valueStringToDisplayString(fieldType, _)).mkString(", ")
+
+            case _ => valueStringToDisplayString(fieldType, value)
+          }
           condition.copy(fieldLabel = field.label, valueLabel = Some(valueLabel))
         }
         case None => condition

@@ -62,7 +62,6 @@ private class SynapseDataSetImporter @Inject() (
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
     val dsa = createDataSetAccessor(importInfo)
-    val dataRepo = dsa.dataSetRepo
     val fieldRepo = dsa.fieldRepo
     val delimiter = synapseDelimiter.toString
 
@@ -89,6 +88,18 @@ private class SynapseDataSetImporter @Inject() (
         // create jsons and field types
         (jsons, fieldNameAndTypes) = createSynapseJsonsWithFieldTypes(fields, columnNames, fileFieldNames.toSet, values.toSeq)
 
+        // save, or update the dictionary
+        _ <- {
+          val fieldNameAndTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
+          dataSetService.updateDictionary(importInfo.dataSetId, fieldNameAndTypeSpecs, false, true)
+        }
+
+        // since we possible changed the dictionary (the data structure) we need to update the data set repo
+        _ <- dsa.updateDataSetRepo
+
+        // get the new data set repo
+        dataRepo = dsa.dataSetRepo
+
         // transform jsons (if needed) and save (and update) the jsons
         _ <- {
           if (transformJsonsFun.isDefined)
@@ -105,12 +116,6 @@ private class SynapseDataSetImporter @Inject() (
           val fieldType = fieldNameTypeMap.get(keyField).get
           val keys = JsonUtil.project(jsons, keyField).map(fieldType.jsonToValue)
           dataSetService.deleteRecordsExcept(dataRepo, keyField, keys.flatten.toSeq)
-        }
-
-        // save, or update the dictionary
-        _ <- {
-          val fieldNameAndTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-          dataSetService.updateDictionary(importInfo.dataSetId, fieldNameAndTypeSpecs, false, true)
         }
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")

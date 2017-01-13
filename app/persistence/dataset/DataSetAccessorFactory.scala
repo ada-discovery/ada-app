@@ -1,6 +1,6 @@
 package persistence.dataset
 
-import javax.inject.{Named, Inject}
+import javax.inject.{Singleton, Named, Inject}
 
 import dataaccess._
 import models._
@@ -33,6 +33,7 @@ trait DataSetAccessorFactory {
   def apply(dataSetId: String): Option[DataSetAccessor]
 }
 
+@Singleton
 protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     @Named("MongoJsonCrudRepoFactory") mongoDataSetRepoFactory: JsonCrudRepoFactory,
     @Named("ElasticJsonCrudRepoFactory") elasticDataSetRepoFactory: JsonCrudRepoFactory,
@@ -46,12 +47,13 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     dataSetSettingRepo: DataSetSettingRepo
   ) extends RefreshableCache[String, DataSetAccessor] with DataSetAccessorFactory {
 
+  println("CREATING DSAF!!!")
+
   override protected def createInstance(dataSetId: String): DataSetAccessor = {
     val fieldRepo = fieldRepoFactory(dataSetId)
     val categoryRepo = categoryRepoFactory(dataSetId)
     val filterRepo = filterRepoFactory(dataSetId)
     val dataViewRepo = dataViewRepoFactory(dataSetId)
-
     val collectionName = dataCollectionName(dataSetId)
 
     val dataSetAccessorFuture = for {
@@ -59,22 +61,17 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId)).map(
           _.headOption.map(_.cacheDataSet).getOrElse(false))
 
-      fieldNamesAndTypes <-
-        fieldRepo.find().map(_.map(field =>
-          (field.name, field.fieldTypeSpec)
-        ).toSeq)
-
       dataSpaceId <-
         dataSpaceMetaInfoRepo.find(
           Seq("dataSetMetaInfos.id" #== dataSetId)
         ).map(_.headOption.map(_._id.get))
 
     } yield {
-      val dataSetRepo =
+      val dataSetRepoCreate = (fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]) =>
         if (cacheDataSet)
           cachedDataSetRepoFactory(collectionName, fieldNamesAndTypes)
         else
-          mongoDataSetRepoFactory(collectionName, fieldNamesAndTypes)
+          elasticDataSetRepoFactory(collectionName, fieldNamesAndTypes)
 
       val dataSetMetaInfoRepo =
         dataSpaceId.map(dataSetMetaInfoRepoFactory(_)).getOrElse(
@@ -83,11 +80,11 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
 
       new DataSetAccessorImpl(
         dataSetId,
-        dataSetRepo,
         fieldRepo,
         categoryRepo,
         filterRepo,
         dataViewRepo,
+        dataSetRepoCreate,
         dataSetMetaInfoRepo,
         dataSetSettingRepo
       )

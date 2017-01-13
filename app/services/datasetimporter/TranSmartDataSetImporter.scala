@@ -3,6 +3,7 @@ package services.datasetimporter
 import java.util.Date
 
 import dataaccess.CategoryRepo._
+import dataaccess.RepoTypes.{CategoryRepo, FieldRepo}
 import models.{Field, Category, FieldTypeSpec}
 import models.{TranSmartDataSetImport, AdaParseException}
 import reactivemongo.bson.BSONObjectID
@@ -19,7 +20,9 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
-    val dataRepo = createDataSetAccessor(importInfo).dataSetRepo
+    val dsa = createDataSetAccessor(importInfo)
+    val fieldRepo = dsa.fieldRepo
+    val categoryRepo = dsa.categoryRepo
     val delimiter = tranSmartDelimeter.toString
 
     try {
@@ -40,6 +43,35 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
       val (jsons, fieldNameAndTypes) = createJsonsWithFieldTypes(columnNames, values.toSeq)
 
       for {
+        // import the dictionary or save the inferred one
+        _ <- {
+          val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
+
+          if (importInfo.mappingPath.isDefined) {
+            importTranSMARTDictionary(
+              importInfo.dataSetId,
+              fieldRepo,
+              categoryRepo,
+              tranSmartFieldGroupSize,
+              tranSmartDelimeter.toString,
+              createCsvFileLineIterator(
+                importInfo.mappingPath.get,
+                importInfo.charsetName,
+                None
+              ),
+              fieldNameTypeSpecs
+            )
+          } else {
+            dataSetService.updateDictionary(fieldRepo, fieldNameTypeSpecs, true, true)
+          }
+        }
+
+        // since we possible changed the dictionary (the data structure) we need to update the data set repo
+        _ <- dsa.updateDataSetRepo
+
+        // get the new data set repo
+        dataRepo = dsa.dataSetRepo
+
         // remove ALL the records from the collection
         _ <- {
           logger.info(s"Deleting the old data set...")
@@ -51,27 +83,6 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
           logger.info(s"Saving JSONs...")
           dataSetService.saveOrUpdateRecords(dataRepo, jsons)
         }
-
-        // import the dictionary or save the inferred one
-        _ <- {
-          val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-
-          if (importInfo.mappingPath.isDefined) {
-            importTranSMARTDictionary(
-              importInfo.dataSetId,
-              tranSmartFieldGroupSize,
-              tranSmartDelimeter.toString,
-              createCsvFileLineIterator(
-                importInfo.mappingPath.get,
-                importInfo.charsetName,
-                None
-              ),
-              fieldNameTypeSpecs
-            )
-          } else {
-            dataSetService.updateDictionary(importInfo.dataSetId, fieldNameTypeSpecs, true, true)
-          }
-        }
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
       }
@@ -82,16 +93,14 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
 
   protected def importTranSMARTDictionary(
     dataSetId: String,
+    fieldRepo: FieldRepo,
+    categoryRepo: CategoryRepo,
     fieldGroupSize: Int,
     delimiter: String,
     mappingFileLineIterator: => Iterator[String],
     fieldNameAndTypes: Seq[(String, FieldTypeSpec)]
   ): Future[Unit] = {
     logger.info(s"TranSMART dictionary inference and import for data set '${dataSetId}' initiated.")
-
-    val dsa = dsaf(dataSetId).get
-    val fieldRepo = dsa.fieldRepo
-    val categoryRepo = dsa.categoryRepo
 
     // read the mapping file to obtain tupples: field name, field label, and category name; and a category name map
     val indexFieldNameMap: Map[Int, String] = fieldNameAndTypes.map(_._1).zipWithIndex.map(_.swap).toMap

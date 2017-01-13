@@ -132,7 +132,11 @@ class DataSpaceMetaInfoController @Inject() (
 
         // maybe dropping the entire table/collection would be more appropriate than deleting all the records
         def deleteDataSet: Future[_] =
-          dsa.dataSetRepo.deleteAll
+          for {
+            _ <- dsa.updateDataSetRepo
+            _ <- dsa.dataSetRepo.deleteAll
+          } yield
+            ()
 
         def deleteFields: Future[_] =
           dsa.fieldRepo.deleteAll

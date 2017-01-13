@@ -41,7 +41,6 @@ private class RedCapDataSetImporter @Inject() (
 
     // Data repo to store the data to
     val dsa = createDataSetAccessor(importInfo)
-    val dataRepo = dsa.dataSetRepo
     val fieldRepo = dsa.fieldRepo
     val categoryRepo = dsa.categoryRepo
 
@@ -74,12 +73,6 @@ private class RedCapDataSetImporter @Inject() (
         redCapService.listRecords("cdisc_dm_usubjd", "")
       }
 
-      // delete all the records
-      _ <- {
-        logger.info(s"Deleting the old data set...")
-        dataRepo.deleteAll
-      }
-
       // import dictionary (if needed) otherwise use an existing one (should exist)
       fields <- importOrGetDictionary(importInfo, redCapService, fieldRepo, categoryRepo, records)
 
@@ -104,6 +97,18 @@ private class RedCapDataSetImporter @Inject() (
         }
 
         fieldsToInherit.map(_.name)
+      }
+
+      // since we possible changed the dictionary (the data structure) we need to update the data set repo
+      _ <- dsa.updateDataSetRepo
+
+      // get the new data set repo
+      dataRepo = dsa.dataSetRepo
+
+      // delete all the records
+      _ <- {
+        logger.info(s"Deleting the old data set...")
+        dataRepo.deleteAll
       }
 
       // get the records with inferred types

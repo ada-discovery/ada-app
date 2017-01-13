@@ -32,7 +32,7 @@ trait ReadonlyController[ID] {
  * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
-protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val repo: AsyncReadonlyRepo[E, ID]) extends Controller with ReadonlyController[ID] {
+protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controller with ReadonlyController[ID] {
 
   @Inject var messagesApi: MessagesApi = _
   @Inject var deadbolt: DeadboltActions = _
@@ -40,6 +40,8 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
   protected val pageLimit = 20
 
   protected val timeout = 200000 millis
+
+  protected def repo: AsyncReadonlyRepo[E, ID]
 
   protected def repoHook = repo
 
@@ -190,13 +192,16 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID](protected val rep
     val fieldName = filterCondition.fieldName
 
     // convert values if any converters provided
-    val value =  filterCondition.value
     def convertValue(text: String): Option[Any] = valueConverters.get(fieldName).map(converter =>
       converter.apply(text.trim)
     ).getOrElse(Some(text.trim)) // if no converter found use a provided string value
 
+    val value =  filterCondition.value
+
     def convertedValue = convertValue(value)
-    def convertedValues = value.split(",").map(convertValue).flatten
+    def convertedValues = {
+      value.split(",").map(convertValue).flatten
+    }
 
     filterCondition.conditionType match {
       case Equals => Some(
