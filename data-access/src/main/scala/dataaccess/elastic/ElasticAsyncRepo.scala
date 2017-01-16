@@ -44,7 +44,7 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
         // criteria
         (
           criteria.nonEmpty,
-          (_: SearchDefinition) bool must (criteria.map(toQuery))
+          (_: SearchDefinition) bool must (criteria.map(toQuery)) fetchSource(projection.isEmpty)
         ),
 
         // projection
@@ -208,13 +208,16 @@ abstract protected class ElasticAsyncRepo[E, ID](
   override def save(entities: Traversable[E]): Future[Traversable[ID]] = {
     val saveDefAndIds = entities map createSaveDefWithId
 
-    client execute {
-      bulk {
-        saveDefAndIds.toSeq map (_._1)
-      } refresh setting.saveBulkRefresh
-    } map (_ =>
-      saveDefAndIds map (_._2)
-    )
+    if (saveDefAndIds.nonEmpty) {
+      client execute {
+        bulk {
+          saveDefAndIds.toSeq map (_._1)
+        } refresh setting.saveBulkRefresh
+      } map (_ =>
+        saveDefAndIds map (_._2)
+      )
+    } else
+      Future(Nil)
   }
 
   protected def createSaveDefWithId(entity: E): (IndexDefinition, ID) = {
@@ -251,13 +254,16 @@ abstract protected class ElasticAsyncCrudRepo[E, ID](
   override def update(entities: Traversable[E]): Future[Traversable[ID]] = {
     val updateDefAndIds = entities map createUpdateDefWithId
 
-    client execute {
-      bulk {
-        updateDefAndIds.toSeq map (_._1)
-      } refresh setting.updateBulkRefresh
-    } map (_ =>
-      updateDefAndIds map (_._2)
+    if (updateDefAndIds.nonEmpty) {
+      client execute {
+        bulk {
+          updateDefAndIds.toSeq map (_._1)
+        } refresh setting.updateBulkRefresh
+      } map (_ =>
+        updateDefAndIds map (_._2)
       )
+    } else
+      Future(Nil)
   }
 
   protected def createUpdateDefWithId(entity: E): (UpdateDefinition, ID) = {

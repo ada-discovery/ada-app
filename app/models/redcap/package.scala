@@ -28,7 +28,7 @@ package object redcap {
   )
 
   object FieldType extends Enumeration {
-    val radio, calc, text, checkbox, descriptive, yesno, dropdown, notes, file, slider = Value
+    val radio, calc, text, checkbox, descriptive, yesno, dropdown, notes, file, slider, truefalse = Value
   }
 
   case class ExportField(

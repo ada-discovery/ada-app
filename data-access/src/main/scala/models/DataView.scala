@@ -16,6 +16,7 @@ case class DataView(
   statsCalcSpecs: Seq[StatsCalcSpec],
   elementGridWidth: Int = 3,
   default: Boolean = false,
+  useOptimizedRepoChartCalcMethod: Boolean = false,
   createdById: Option[BSONObjectID] = None,
   timeCreated: Date = new Date(),
   var createdBy: Option[User] = None
@@ -33,11 +34,22 @@ object DataView {
     (__ \ "statsCalcSpecs").format[Seq[StatsCalcSpec]] and
     (__ \ "elementGridWidth").format[Int] and
     (__ \ "default").format[Boolean] and
+    (__ \ "useOptimizedRepoChartCalcMethod").format[Boolean] and
     (__ \ "createdById").formatNullable[BSONObjectID] and
     (__ \ "timeCreated").format[Date]
   )(
-    DataView(_, _, _, _, _, _, _, _, _),
-    (item: DataView) =>  (item._id, item.name, item.filterOrIds, item.tableColumnNames, item.statsCalcSpecs, item.elementGridWidth, item.default, item.createdById, item.timeCreated)
+    DataView(_, _, _, _, _, _, _, _, _, _),
+    (item: DataView) =>  (
+      item._id,
+      item.name,
+      item.filterOrIds,
+      item.tableColumnNames,
+      item.statsCalcSpecs,
+      item.elementGridWidth,
+      item.default,
+      item.useOptimizedRepoChartCalcMethod,
+      item.createdById,
+      item.timeCreated)
   )
 
   implicit object DataViewIdentity extends BSONObjectIdentity[DataView] {
@@ -48,7 +60,8 @@ object DataView {
   def applyMain(
     tableColumnNames: Seq[String],
     distributionChartFieldNames: Seq[String],
-    elementGridWidth: Int
+    elementGridWidth: Int,
+    useOptimizedRepoChartCalcMethod: Boolean
   ) =
     DataView(
       None,
@@ -57,6 +70,7 @@ object DataView {
       tableColumnNames,
       distributionChartFieldNames.map(DistributionCalcSpec(_, None)),
       elementGridWidth,
-      true
+      true,
+      useOptimizedRepoChartCalcMethod
     )
 }

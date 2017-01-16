@@ -1,6 +1,6 @@
 package runnables.denopa
 
-import models.DataSetSetting
+import models.{StorageType, DataSetSetting}
 import runnables.DataSetId._
 
 object DeNoPaDataSetSettings {
@@ -17,6 +17,7 @@ object DeNoPaDataSetSettings {
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -32,6 +33,7 @@ object DeNoPaDataSetSettings {
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -47,6 +49,7 @@ object DeNoPaDataSetSettings {
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -62,6 +65,7 @@ object DeNoPaDataSetSettings {
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -77,6 +81,7 @@ object DeNoPaDataSetSettings {
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -92,6 +97,7 @@ object DeNoPaDataSetSettings {
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 }

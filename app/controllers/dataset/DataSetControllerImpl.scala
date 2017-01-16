@@ -341,7 +341,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             } else
               filterOrId
 
-          getViewResponse(page, orderBy, filterOrIdToUse, columnNames, statsCalcSpecs)
+          val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
+
+          getViewResponse(page, orderBy, filterOrIdToUse, columnNames, statsCalcSpecs, useChartRepoMethod)
         }
       } yield {
         val end = new ju.Date()
@@ -379,7 +381,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     orderBy: String,
     filterOrId: Either[Seq[FilterCondition], BSONObjectID],
     tableFieldNames: Seq[String],
-    statsCalcSpecs: Seq[StatsCalcSpec]
+    statsCalcSpecs: Seq[StatsCalcSpec],
+    useOptimizedRepoChartCalcMethod: Boolean
   ): Future[ViewResponse] = {
     for {
 
@@ -405,7 +408,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
 
       // generate the charts
-      chartSpecs <- generateCharts(false, criteria, statsCalcSpecs, nameFieldMap)
+      chartSpecs <- generateCharts(useOptimizedRepoChartCalcMethod, criteria, statsCalcSpecs, nameFieldMap)
 
       // load the table items
       tableItems <- {
@@ -648,10 +651,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
+    val settings = setting
 
     // initialize x, y, and group field names
-    val xFieldName = xFieldNameOption.getOrElse(setting.defaultScatterXFieldName)
-    val yFieldName = yFieldNameOption.getOrElse(setting.defaultScatterYFieldName)
+    val xFieldName = xFieldNameOption.getOrElse(settings.defaultScatterXFieldName)
+    val yFieldName = yFieldNameOption.getOrElse(settings.defaultScatterYFieldName)
     val groupFieldName: Option[String] = groupFieldNameOption match {
       case Some(fieldName) => {
         val trimmed = fieldName.trim

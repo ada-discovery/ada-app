@@ -64,11 +64,12 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       "tableColumnNames" -> seq(text),
       "statsCalcSpecs" -> seq(of[StatsCalcSpec]),
       "elementGridWidth" -> number(min = 1, max = 12),
-      "default" -> boolean
-    ) { (id, name, filterIds, tableColumnNames, statsCalcSpecs, elementGridWidth, default) =>
-      DataView(id, name, filterIds, tableColumnNames, statsCalcSpecs, elementGridWidth, default)
-    }
-    ((item: DataView) => Some((item._id, item.name, item.filterOrIds, item.tableColumnNames, item.statsCalcSpecs, item.elementGridWidth, item.default)))
+      "default" -> boolean,
+      "useOptimizedRepoChartCalcMethod" -> boolean
+    ) {
+       DataView(_, _, _, _, _, _, _, _)
+     }
+    ((item: DataView) => Some((item._id, item.name, item.filterOrIds, item.tableColumnNames, item.statsCalcSpecs, item.elementGridWidth, item.default, item.useOptimizedRepoChartCalcMethod)))
   )
 
   // router for requests; to be passed to views as helper.

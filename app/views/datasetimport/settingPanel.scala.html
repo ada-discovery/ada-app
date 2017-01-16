@@ -21,6 +21,9 @@
             )
             @inputText("dataSetImport", "setting.tranSMARTVisitFieldName", form)
             @inputText("dataSetImport", "setting.tranSMARTReplacements", form)
+            @select("dataSetImport", "setting.storageType", form,
+                StorageType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), true
+            )
             @checkbox("dataSetImport", "setting.cacheDataSet", form)
         </div>
     </div>

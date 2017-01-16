@@ -37,7 +37,7 @@ protected class DataSetAccessorImpl(
     val categoryRepo: CategoryRepo,
     val filterRepo: FilterRepo,
     val dataViewRepo: DataViewRepo,
-    dataSetRepoCreate: (Seq[(String, FieldTypeSpec)] => JsonCrudRepo),
+    dataSetRepoCreate: (Seq[(String, FieldTypeSpec)] => Future[JsonCrudRepo]),
     dataSetMetaInfoRepo: DataSetMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo
   ) extends DataSetAccessor {
@@ -49,10 +49,12 @@ protected class DataSetAccessorImpl(
   private def createDataSetRepo =
     for {
       fields <- fieldRepo.find()
-    } yield {
-      val fieldNamesAndTypes = fields.map(field => (field.name, field.fieldTypeSpec)).toSeq
-      dataSetRepoCreate(fieldNamesAndTypes)
-    }
+      dataSetRepo <- {
+        val fieldNamesAndTypes = fields.map(field => (field.name, field.fieldTypeSpec)).toSeq
+        dataSetRepoCreate(fieldNamesAndTypes)
+      }
+    } yield
+      dataSetRepo
 
   override def updateDataSetRepo =
     for {

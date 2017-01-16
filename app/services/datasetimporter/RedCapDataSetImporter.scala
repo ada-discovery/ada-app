@@ -260,25 +260,33 @@ private class RedCapDataSetImporter @Inject() (
         val inferredFieldType: FieldType[_] = inferredFieldNameTypeMap.get(fieldName).get
         val inferredType = inferredFieldType.spec
 
-        def enumOrDouble: FieldTypeSpec = try {
+        def enumOrDoubleOrString: FieldTypeSpec = try {
           FieldTypeSpec(FieldTypeId.Enum, false, getEnumValues(metadata))
         } catch {
           case e: AdaParseException => {
-            getDoubles(metadata)
-            logger.warn(s"The field '$fieldName' has floating part(s) in the enum list and so will be treated as Double.")
-            FieldTypeSpec(FieldTypeId.Double)
+            try {
+              getDoubles(metadata)
+              logger.warn(s"The field '$fieldName' has floating part(s) in the enum list and so will be treated as Double.")
+              FieldTypeSpec(FieldTypeId.Double)
+            } catch {
+              case e: AdaParseException => {
+                logger.warn(s"The field '$fieldName' has strings in the enum list and so will be treated as String.")
+                FieldTypeSpec(FieldTypeId.String)
+              }
+            }
           }
         }
 
         val fieldTypeSpec = metadata.field_type match {
-          case RCFieldType.radio => enumOrDouble
-          case RCFieldType.checkbox => enumOrDouble
-          case RCFieldType.dropdown => enumOrDouble
+          case RCFieldType.radio => enumOrDoubleOrString
+          case RCFieldType.checkbox => enumOrDoubleOrString
+          case RCFieldType.dropdown => enumOrDoubleOrString
           case RCFieldType.calc => inferredType
           case RCFieldType.slider => inferredType
           case RCFieldType.text => inferredType
           case RCFieldType.descriptive => inferredType
           case RCFieldType.yesno => FieldTypeSpec(FieldTypeId.Boolean)
+          case RCFieldType.truefalse => FieldTypeSpec(FieldTypeId.Boolean)
           case RCFieldType.notes => inferredType
           case RCFieldType.file => inferredType
         }

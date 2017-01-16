@@ -35,6 +35,11 @@ case class DataSetMetaInfo(
   sourceDataSetId: Option[BSONObjectID] = None
 )
 
+object StorageType extends Enumeration {
+  val Mongo = Value("Mongo")
+  val ElasticSearch = Value("Elastic Search")
+}
+
 case class DataSetSetting(
   _id: Option[BSONObjectID],
   dataSetId: String,
@@ -47,9 +52,10 @@ case class DataSetSetting(
   filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
   tranSMARTVisitFieldName: Option[String],
   tranSMARTReplacements: Map[String, String],
+  storageType: StorageType.Value,
   cacheDataSet: Boolean = false
 ) {
-  def this(dataSetId: String) = this(None, dataSetId, "", None, "", "", "", "", None, None, Map[String, String]())
+  def this(dataSetId: String) = this(None, dataSetId, "", None, "", "", "", "", None, None, Map[String, String](), StorageType.Mongo)
 }
 
 @Deprecated
@@ -233,6 +239,7 @@ object DataSetFormattersAndIds {
   )
 
   implicit val filterShowFieldStyleFormat = EnumFormat.enumFormat(FilterShowFieldStyle)
+  implicit val storageTypeFormat = EnumFormat.enumFormat(StorageType)
   val dataSetSettingFormat = Json.format[DataSetSetting]
   implicit val serializableDataSetSettingFormat = new SerializableFormat(dataSetSettingFormat.reads, dataSetSettingFormat.writes)
   val serializableBSONObjectIDFormat = new SerializableFormat(BSONObjectIDFormat.reads, BSONObjectIDFormat.writes)

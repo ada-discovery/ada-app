@@ -26,6 +26,8 @@
 
 @checkbox("dataView", "default", form)
 
+@checkbox("dataView", "useOptimizedRepoChartCalcMethod", form)
+
 @labelValue("tableColumnNames", attributeLabel("dataView", "tableColumnNames")){
     @dynamicStringTable("tableColumnName", form.value.map(_.tableColumnNames).getOrElse(Nil), true, Some(addModalInner))
 }

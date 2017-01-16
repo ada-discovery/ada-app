@@ -89,12 +89,12 @@ class ElasticJsonCrudRepo @Inject()(
 
   private def toElasticFieldType(fieldName: String, fieldTypeSpec: FieldTypeSpec): TypedFieldDefinition =
     fieldTypeSpec.fieldType match {
-      case FieldTypeId.Integer => fieldName typed LongType
-      case FieldTypeId.Double => new CoerceDoubleFieldDefinition(fieldName)
-      case FieldTypeId.Boolean => fieldName typed BooleanType
-      case FieldTypeId.Enum => fieldName typed IntegerType
-      case FieldTypeId.String => fieldName typed StringType index NotAnalyzed
-      case FieldTypeId.Date => fieldName typed LongType
+      case FieldTypeId.Integer => fieldName typed LongType store true
+      case FieldTypeId.Double => new CoerceDoubleFieldDefinition(fieldName) store true
+      case FieldTypeId.Boolean => fieldName typed BooleanType  store true
+      case FieldTypeId.Enum => fieldName typed IntegerType  store true
+      case FieldTypeId.String => fieldName typed StringType index NotAnalyzed  store true
+      case FieldTypeId.Date => fieldName typed LongType  store true
       case FieldTypeId.Json => fieldName typed NestedType
       case FieldTypeId.Null => fieldName typed ShortType // doesnt matter which type since it's always null
     }

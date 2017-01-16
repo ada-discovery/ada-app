@@ -59,6 +59,7 @@ class DataSetImportController @Inject()(
   private implicit val seqFormatter = SeqFormatter.apply
   private implicit val mapFormatter = MapJsonFormatter.apply
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
+  private implicit val storageTypeFormatter = EnumFormatter(StorageType)
 
   private val dataSetSettingMapping: Mapping[DataSetSetting] = mapping(
     "id" -> ignored(Option.empty[BSONObjectID]),
@@ -72,18 +73,21 @@ class DataSetImportController @Inject()(
     "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
     "tranSMARTVisitFieldName" -> optional(text),
     "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
+    "storageType" -> of[StorageType.Value],
     "cacheDataSet" -> boolean
   ) (DataSetSetting.apply) (DataSetSetting.unapply)
 
   private val dataViewMapping: Mapping[DataView] = mapping(
     "tableColumnNames" -> of[Seq[String]],
     "distributionCalcFieldNames" -> of[Seq[String]],
-    "elementGridWidth" -> number(min = 1, max = 12)
+    "elementGridWidth" -> number(min = 1, max = 12),
+    "useOptimizedRepoChartCalcMethod" -> boolean
   ) (DataView.applyMain)
   {(item: DataView) => Some((
     item.tableColumnNames,
     item.statsCalcSpecs.collect { case p: DistributionCalcSpec => p}.map(_.fieldName),
-    item.elementGridWidth
+    item.elementGridWidth,
+    item.useOptimizedRepoChartCalcMethod
   ))}
 
   protected val csvForm = Form(

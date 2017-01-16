@@ -7,6 +7,7 @@ import models._
 import dataaccess.RepoTypes.DataSetSettingRepo
 import Criterion.Infix
 import persistence.RepoTypes._
+import play.api.Logger
 import play.api.libs.json.JsObject
 import util.RefreshableCache
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -47,8 +48,6 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     dataSetSettingRepo: DataSetSettingRepo
   ) extends RefreshableCache[String, DataSetAccessor] with DataSetAccessorFactory {
 
-  println("CREATING DSAF!!!")
-
   override protected def createInstance(dataSetId: String): DataSetAccessor = {
     val fieldRepo = fieldRepoFactory(dataSetId)
     val categoryRepo = categoryRepoFactory(dataSetId)
@@ -57,22 +56,12 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     val collectionName = dataCollectionName(dataSetId)
 
     val dataSetAccessorFuture = for {
-      cacheDataSet <-
-        dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId)).map(
-          _.headOption.map(_.cacheDataSet).getOrElse(false))
-
       dataSpaceId <-
         dataSpaceMetaInfoRepo.find(
           Seq("dataSetMetaInfos.id" #== dataSetId)
         ).map(_.headOption.map(_._id.get))
 
     } yield {
-      val dataSetRepoCreate = (fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]) =>
-        if (cacheDataSet)
-          cachedDataSetRepoFactory(collectionName, fieldNamesAndTypes)
-        else
-          elasticDataSetRepoFactory(collectionName, fieldNamesAndTypes)
-
       val dataSetMetaInfoRepo =
         dataSpaceId.map(dataSetMetaInfoRepoFactory(_)).getOrElse(
           throw new IllegalArgumentException(s"No data set with id '${dataSetId}' found.")
@@ -84,7 +73,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         categoryRepo,
         filterRepo,
         dataViewRepo,
-        dataSetRepoCreate,
+        dataSetRepoCreate(collectionName, dataSetId),
         dataSetMetaInfoRepo,
         dataSetSettingRepo
       )
@@ -92,6 +81,37 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
 
     result(dataSetAccessorFuture, 2 minutes)
   }
+
+  protected def dataSetRepoCreate(
+    collectionName: String,
+    dataSetId: String)(
+    fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]
+  ) = {
+    for {
+      dataSetSetting <- dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId)).map(_.headOption)
+    } yield {
+      val cacheDataSet =
+        dataSetSetting.map(_.cacheDataSet).getOrElse(false)
+
+      val storageType =
+        dataSetSetting.map(_.storageType).getOrElse(StorageType.Mongo)
+
+      if (cacheDataSet) {
+        println(s"Creating cached data set repo for '$dataSetId'.")
+        cachedDataSetRepoFactory(collectionName, fieldNamesAndTypes)
+      } else
+        storageType match {
+          case StorageType.Mongo => {
+            println(s"Creating Mongo based data set repo for '$dataSetId'.")
+            mongoDataSetRepoFactory(collectionName, fieldNamesAndTypes)
+          }
+          case StorageType.ElasticSearch => {
+            println(s"Creating Elastic Search based data set repo for '$dataSetId'.")
+            elasticDataSetRepoFactory(collectionName, fieldNamesAndTypes)
+          }
+        }
+      }
+    }
 
   override def register(
     metaInfo: DataSetMetaInfo,

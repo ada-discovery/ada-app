@@ -1,6 +1,6 @@
 package runnables.luxpark
 
-import models.DataSetSetting
+import models.{StorageType, DataSetSetting}
 import runnables.DataSetId._
 
 object LuxParkDataSetSettings{
@@ -17,6 +17,7 @@ object LuxParkDataSetSettings{
     None,
     Some("redcap_event_name"),
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -32,6 +33,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -47,6 +49,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -62,6 +65,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -77,6 +81,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -92,6 +97,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -107,6 +113,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -122,6 +129,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -137,6 +145,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -152,6 +161,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -167,6 +177,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 
@@ -182,6 +193,7 @@ object LuxParkDataSetSettings{
     None,
     None,
     Map(("\r", " "), ("\n", " ")),
+    StorageType.Mongo,
     false
   )
 }

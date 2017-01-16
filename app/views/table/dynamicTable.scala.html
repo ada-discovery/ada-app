@@ -7,7 +7,8 @@
     rowToModelJsFun: Html,
     itemToRowJsFun: Html,
     addModalInner:  Html,
-    extraActions: Option[Html] = None
+    extraActions: Option[Html] = None,
+    gridWidth: Int = 4
 )
 
 @modalButtons(domainName: String) = {
@@ -15,7 +16,7 @@
     <button type="button" class="btn btn-primary" id="@{domainName}SubmitButton" data-dismiss="modal">OK</button>
 }
 
-<div id="@{domainName}Div" class="row col-sm-4">
+<div id="@{domainName}Div" class="row col-sm-@gridWidth">
     <a id="addRowButton" class="btn btn-info btn-sm" href="#" onclick="$('#@{domainName}Div').dynamicTable('openAddModal');return false;" data-toggle="tooltip" title="Add New @{toHumanReadableCamel(domainName)}">
         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
     </a>
