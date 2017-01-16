@@ -16,11 +16,15 @@ import javax.inject.Inject
 
 class ElasticJsonCrudRepo @Inject()(
     @Assisted collectionName : String,
-    @Assisted fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]
-  ) extends ElasticAsyncCrudRepo[JsObject, BSONObjectID](collectionName, collectionName) with JsonCrudRepo {
+    @Assisted fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
+    client: ElasticClient
+  ) extends ElasticAsyncCrudRepo[JsObject, BSONObjectID](collectionName, collectionName, client) with JsonCrudRepo {
 
-  private implicit val jsonIdRenameFormat = JsonIdRenameFormat.apply
-  private val fieldNamesAndTypeWithId = fieldNamesAndTypes ++ Seq((JsonIdRenameFormat.newIdName, FieldTypeSpec(FieldTypeId.Json)))
+  private implicit val jsonIdRenameFormat = ElasticIdRenameUtil.createFormat
+  private val fieldNamesAndTypeWithId = fieldNamesAndTypes ++ Seq((ElasticIdRenameUtil.newIdName, FieldTypeSpec(FieldTypeId.Json)))
+
+  // TODO: should be called as a post-init method, since all vals must be instantiated (i.e. the order matters)
+  createIndexIfNeeded()
 
   override protected def serializeGetResult(response: RichGetResponse) = {
     Json.parse(response.sourceAsString) match {
@@ -49,11 +53,14 @@ class ElasticJsonCrudRepo @Inject()(
     }.toIterable.flatten
   }
 
-  override protected def serializeSearchResult(result: Traversable[(String, Any)]) =
+  override protected def serializeProjectionSearchResult(
+    projection: Seq[String],
+    result: Traversable[(String, Any)]
+  ) =
     JsObject(
       result.map { case (fieldName, value) =>
-        if (fieldName.startsWith(JsonIdRenameFormat.newIdName))
-          (JsonIdRenameFormat.originalIdName, Json.toJson(BSONObjectID.apply(value.asInstanceOf[String])))
+        if (fieldName.startsWith(ElasticIdRenameUtil.newIdName))
+          (ElasticIdRenameUtil.originalIdName, Json.toJson(BSONObjectID.apply(value.asInstanceOf[String])))
         else
           (fieldName, BinaryJsonUtil.toJson(value))
       }.toSeq
@@ -69,8 +76,8 @@ class ElasticJsonCrudRepo @Inject()(
     ElasticDsl.update id id in indexAndType doc JsonDocumentSource(stringSource)
   }
 
-  override protected def createIndex(c: ElasticClient = client) =
-    c execute {
+  override protected def createIndex() =
+    client execute {
       create index collectionName replicas 0 mappings (
         collectionName as (
           fieldNamesAndTypeWithId.map { case (fieldName, fieldTypeSpec) =>

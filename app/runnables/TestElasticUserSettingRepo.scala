@@ -9,7 +9,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Future, Await}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class TestElasticUserSetting @Inject() (userSettingRepo: UserSettingsRepo) extends Runnable {
+class TestElasticUserSettingRepo @Inject()(userSettingRepo: UserSettingsRepo) extends Runnable {
 
 //  val repo = cacheRepoFactory.applyMongo[BSONObjectID, DataSetSetting]("dataset_settings", Some("dataset_settingsx"))
 
@@ -20,7 +20,7 @@ class TestElasticUserSetting @Inject() (userSettingRepo: UserSettingsRepo) exten
         _ <- userSettingRepo.save(Workspace(None, "olaf", UserGroup(None, "LCSB", Some("LCSB Uni group")), Nil, Nil))
         searchResult <- userSettingRepo.find(
           criteria = Seq("userId" #== "olaf"),
-          projection = Seq("userId")
+          projection = Seq("_id", "userId", "collaborators._id")
         )
         all <- userSettingRepo.find()
       } yield {
@@ -34,4 +34,4 @@ class TestElasticUserSetting @Inject() (userSettingRepo: UserSettingsRepo) exten
   }
 }
 
-object TestElasticUserSetting extends GuiceBuilderRunnable[TestElasticUserSetting] with App { run }
+object TestElasticUserSettingRepo extends GuiceBuilderRunnable[TestElasticUserSettingRepo] with App { run }

@@ -50,7 +50,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected val filterRepo = dsa.filterRepo
   protected val dataViewRepo = dsa.dataViewRepo
 
-  // not that data set repo could be updated (by calling updateDataSetRepo)
+  // not that the associated data set repo could be updated (by calling updateDataSetRepo)
   // therefore it should not be stored as val
   override protected def repo = dsa.dataSetRepo
 

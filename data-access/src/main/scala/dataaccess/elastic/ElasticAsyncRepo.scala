@@ -1,14 +1,9 @@
 package dataaccess.elastic
 
-import javax.inject.Inject
-
-import com.evojam.play.elastic4s.configuration.ClusterSetup
-import com.evojam.play.elastic4s.{PlayElasticFactory, PlayElasticJsonSupport}
 import com.sksamuel.elastic4s._
 import org.elasticsearch.search.sort.SortOrder
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.duration._
-import play.api.libs.json.Format
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -19,26 +14,14 @@ import dataaccess._
 
 abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     indexName: String,
-    typeName: String
-  ) extends ElasticDsl with PlayElasticJsonSupport with AsyncReadonlyRepo[E, ID] {
-
-  @Inject protected var cs: ClusterSetup = _
-  @Inject protected var elasticFactory: PlayElasticFactory = _
+    typeName: String,
+    val client: ElasticClient,
+    setting: ElasticSetting
+  ) extends AsyncReadonlyRepo[E, ID]
+      with ElasticSerializer[E]
+      with ElasticDsl {
 
   protected val indexAndType = IndexAndType(indexName, typeName)
-  protected lazy val client: ElasticClient = result(
-    {
-      println(s"Loading Elastic '$indexName', instance: ${this.toString}")
-      val e = elasticFactory(cs)
-      // create index if needed
-      for {
-        exists <- existsIndex(e)
-        _ <- if (!exists) createIndex(e) else Future(())
-      } yield
-        e
-    },
-    10 seconds
-  )
 
   protected val unboundLimit = Integer.MAX_VALUE
 
@@ -46,8 +29,6 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     client execute {
       ElasticDsl.get id id from indexAndType
     } map (serializeGetResult)
-
-  protected def serializeGetResult(response: RichGetResponse): Option[E]
 
   override def find(
     criteria: Seq[Criterion[Any]],
@@ -94,11 +75,6 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
         if (cond) createNewDef(sd) else sd
     }
 
-    def serializeProjectionSearchResult(result: Seq[RichSearchHitField]): E = {
-      val nameValues = result.map( field => (field.name, field.getValue[Any]))
-      serializeSearchResult(nameValues)
-    }
-
     client execute {
       searchDefinition
     } map { searchResult =>
@@ -108,16 +84,12 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
       }
       val result: Traversable[E] = projection match {
         case Nil => serializeSearchResult(searchResult)
-        case _ => searchResult.hits.map(hit => serializeProjectionSearchResult(hit.fieldsSeq))
+        case _ => serializeProjectionSearchResults(projectionSeq, searchResult.hits)
       }
       println(s"Serialization for the projection '${projection.mkString(", ")}' finished in ${new Date().getTime - serializationStart.getTime} ms.")
       result
     }
   }
-
-  protected def serializeSearchResult(response: RichSearchResponse): Traversable[E]
-
-  protected def serializeSearchResult(result: Traversable[(String, Any)]): E
 
   private def toSort(sorts: Seq[Sort]): Seq[SortDefinition] =
     sorts map {
@@ -167,7 +139,6 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
 
     if (fieldName.contains(".")) {
       val path = fieldName.takeWhile(!_.equals('.'))
-      println("Path: " + path)
       NestedQueryDefinition(path, qDef)
     } else
       qDef
@@ -181,10 +152,7 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     }
 
   private def toDBFieldName(fieldName: String): String =
-   fieldName match {
-      case JsonIdRenameFormat.originalIdName => JsonIdRenameFormat.newIdName + ".$oid"
-      case _ => fieldName
-    }
+    ElasticIdRenameUtil.rename(fieldName, true)
 
   override def count(criteria: Seq[Criterion[Any]]): Future[Int] = {
     def countDef =
@@ -195,42 +163,46 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     }.map(_.getCount.toInt)
   }
 
-  protected def createIndex(c: ElasticClient = client) =
-    c execute {
-      create index indexName replicas 0
+  protected def createIndex(): Future[_] =
+    client execute {
+      create index indexName replicas 0 indexSetting("max_result_window", unboundLimit)
     }
 
-  protected def existsIndex(c: ElasticClient = client): Future[Boolean] =
-    c execute {
-      admin IndexExistsDefinition(Seq(indexName))
+  protected def existsIndex(): Future[Boolean] =
+    client execute {
+      admin IndexExistsDefinition (Seq(indexName))
     } map (_.isExists)
-}
 
-class ElasticFormatAsyncReadonlyRepo[E, ID](
-    indexName: String,
-    typeName: String)(
-    implicit format: Format[E], manifest: Manifest[E]
-  ) extends ElasticAsyncReadonlyRepo[E, ID](indexName, typeName) {
-
-  override protected def serializeGetResult(response: RichGetResponse) =
-    response.as[E]
-
-  override protected def serializeSearchResult(response: RichSearchResponse) =
-    response.as[E]
-
-  override protected def serializeSearchResult(result: Traversable[(String, Any)]): E = ???
+  protected def createIndexIfNeeded(): Unit =
+    result(
+      {
+        for {
+          exists <- existsIndex()
+          _ <- if (!exists) createIndex() else Future(())
+        } yield
+          ()
+      },
+      20 seconds
+    )
 }
 
 abstract protected class ElasticAsyncRepo[E, ID](
     indexName: String,
-    typeName: String)(
+    typeName: String,
+    client: ElasticClient,
+    setting: ElasticSetting)(
     implicit identity: Identity[E, ID]
-  ) extends ElasticAsyncReadonlyRepo[E, ID](indexName, typeName) with AsyncRepo[E, ID] {
+  ) extends ElasticAsyncReadonlyRepo[E, ID](indexName, typeName, client, setting) with AsyncRepo[E, ID] {
+
+  protected def flushIndex: Future[Unit] =
+    client execute {
+      flush index indexName
+    } map ( _ => ())
 
   override def save(entity: E): Future[ID] = {
     val (saveDef, id) = createSaveDefWithId(entity)
 
-    client execute saveDef map (_ => id)
+    client execute (saveDef refresh setting.saveRefresh) map (_ => id)
   }
 
   override def save(entities: Traversable[E]): Future[Traversable[ID]] = {
@@ -239,7 +211,7 @@ abstract protected class ElasticAsyncRepo[E, ID](
     client execute {
       bulk {
         saveDefAndIds.toSeq map (_._1)
-      }
+      } refresh setting.saveBulkRefresh
     } map (_ =>
       saveDefAndIds map (_._2)
     )
@@ -262,34 +234,18 @@ abstract protected class ElasticAsyncRepo[E, ID](
     }
 }
 
-class ElasticFormatAsyncRepo[E, ID](
-    indexName: String,
-    typeName: String)(
-    implicit format: Format[E], manifest: Manifest[E], identity: Identity[E, ID]
-  ) extends ElasticAsyncRepo[E, ID](indexName, typeName) {
-
-  override protected def serializeGetResult(response: RichGetResponse) =
-    response.as[E]
-
-  override protected def serializeSearchResult(response: RichSearchResponse) =
-    response.as[E]
-
-  override protected def serializeSearchResult(result: Traversable[(String, Any)]): E = ???
-
-  override protected def createSaveDef(entity: E, id: ID): IndexDefinition =
-     index into indexAndType source entity id id
-}
-
 abstract protected class ElasticAsyncCrudRepo[E, ID](
     indexName: String,
-    typeName: String)(
+    typeName: String,
+    client: ElasticClient,
+    setting: ElasticSetting = ElasticSetting())(
     implicit identity: Identity[E, ID]
-  ) extends ElasticAsyncRepo[E, ID](indexName, typeName) with AsyncCrudRepo[E, ID] {
+  ) extends ElasticAsyncRepo[E, ID](indexName, typeName, client, setting) with AsyncCrudRepo[E, ID] {
 
   override def update(entity: E): Future[ID] = {
     val (updateDef, id) = createUpdateDefWithId(entity)
 
-    client execute updateDef map (_ => id)
+    client execute (updateDef refresh setting.updateRefresh) map (_ => id)
   }
 
   override def update(entities: Traversable[E]): Future[Traversable[ID]] = {
@@ -298,10 +254,10 @@ abstract protected class ElasticAsyncCrudRepo[E, ID](
     client execute {
       bulk {
         updateDefAndIds.toSeq map (_._1)
-      }
+      } refresh setting.updateBulkRefresh
     } map (_ =>
       updateDefAndIds map (_._2)
-    )
+      )
   }
 
   protected def createUpdateDefWithId(entity: E): (UpdateDefinition, ID) = {
@@ -322,33 +278,12 @@ abstract protected class ElasticAsyncCrudRepo[E, ID](
     for {
       indexExists <- existsIndex()
       _ <- if (indexExists)
-          client execute {
-            ElasticDsl.delete index indexName
-          }
-        else
-          Future(())
+        client execute {
+          ElasticDsl.delete index indexName
+        }
+      else
+        Future(())
       _ <- createIndex()
     } yield
       ()
-}
-
-class ElasticFormatAsyncCrudRepo[E, ID](
-    indexName: String,
-    typeName: String)(
-    implicit format: Format[E], manifest: Manifest[E], identity: Identity[E, ID]
-  ) extends ElasticAsyncCrudRepo[E, ID](indexName, typeName) {
-
-  override protected def serializeGetResult(response: RichGetResponse) =
-    response.as[E]
-
-  override protected def serializeSearchResult(response: RichSearchResponse) =
-    response.as[E]
-
-  override protected def serializeSearchResult(result: Traversable[(String, Any)]): E = ???
-
-  override protected def createSaveDef(entity: E, id: ID) =
-    index into indexAndType source entity id id
-
-  override def createUpdateDef(entity: E, id: ID) =
-    ElasticDsl.update id id in indexAndType source entity
 }

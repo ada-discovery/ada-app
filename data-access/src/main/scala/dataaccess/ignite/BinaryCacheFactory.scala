@@ -25,7 +25,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
 
   private val logger = Logger
-  private val ftu = FieldTypeFactory(Set[String](""), Seq[String](), "", ",")
+  private val ftf = FieldTypeHelper.fieldTypeFactory
 
   def apply[ID](
     cacheName: String,
@@ -95,30 +95,6 @@ class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
     ignite.getOrCreateCache(cacheConfig).withKeepBinary()
   }
 
-  private def createFieldNameTypeMapFromDataSet[ID](
-    idFieldName: String,
-    dataRepo: AsyncCrudRepo[JsObject, ID])(
-    implicit tagId: ClassTag[ID]
-  ): Future[Map[String, String]] = {
-    val firstElementFuture = dataRepo.find(limit = Some(1)).map(_.headOption)
-
-    firstElementFuture.map( firstElement =>
-      firstElement.get.fields.map { case (fieldName, jsValue) =>
-        val fieldType = if (fieldName.equals(idFieldName))
-          tagId.runtimeClass.getName
-        else {
-//          val value = getValueFromJson(jsValue)
-//          if (value != null)
-//            value.getClass.getName
-//          else
-            classOf[String].getName
-        }
-
-        (escapeIgniteFieldName(fieldName), fieldType)
-      }.toMap
-    )
-  }
-
   private def createFieldNameTypeMapFromDictionary[ID](
     idFieldName: String,
     fieldNamesAndTypes: Seq[(String, FieldTypeId.Value)])(
@@ -126,7 +102,7 @@ class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
   ): Map[String, String] =
     (
       fieldNamesAndTypes.map{ case (fieldName, fieldType) =>
-        (escapeIgniteFieldName(fieldName), ftu(FieldTypeSpec(fieldType)).valueClass.getName)
+        (escapeIgniteFieldName(fieldName), ftf(FieldTypeSpec(fieldType)).valueClass.getName)
       } ++
         Seq((idFieldName, tagId.runtimeClass.getName))
     ).toMap
@@ -138,7 +114,7 @@ class BinaryCacheFactory @Inject()(ignite: Ignite) extends Serializable {
   ): Map[String, Class[_]] =
     (
       fieldNamesAndTypes.map{ case (fieldName, fieldType) =>
-        (escapeIgniteFieldName(fieldName), ftu(FieldTypeSpec(fieldType)).valueClass.asInstanceOf[Class[_ >: Any]])
+        (escapeIgniteFieldName(fieldName), ftf(FieldTypeSpec(fieldType)).valueClass.asInstanceOf[Class[_ >: Any]])
       } ++
         Seq((idFieldName, tagId.runtimeClass.asInstanceOf[Class[_ >: Any]]))
      ).toMap

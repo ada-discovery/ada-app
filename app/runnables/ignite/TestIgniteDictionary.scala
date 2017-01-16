@@ -1,17 +1,17 @@
-package runnables
+package runnables.ignite
 
 import com.google.inject.Inject
 import dataaccess.Criterion.Infix
 import dataaccess._
 import models.FieldTypeId
 import org.apache.ignite.Ignite
-import org.apache.ignite.binary.BinaryObject
 import reactivemongo.bson.BSONObjectID
+import runnables.GuiceBuilderRunnable
+
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
-import scala.concurrent.{Await, Future}
-
-class TestDictionaryIgnite @Inject() (ignite: Ignite, dictionaryFieldRepoFactory: FieldRepoFactory) extends Runnable {
+class TestIgniteDictionary @Inject() (ignite: Ignite, dictionaryFieldRepoFactory: FieldRepoFactory) extends Runnable {
 
   val dataSetId = "lux_park.clinical"
 
@@ -53,4 +53,4 @@ class TestDictionaryIgnite @Inject() (ignite: Ignite, dictionaryFieldRepoFactory
   }
 }
 
-object TestDictionaryIgnite extends GuiceBuilderRunnable[TestDictionaryIgnite] with App { run }
+object TestIgniteDictionary extends GuiceBuilderRunnable[TestIgniteDictionary] with App { run }

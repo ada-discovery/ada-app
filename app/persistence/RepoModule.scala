@@ -4,8 +4,9 @@ import javax.inject.Provider
 
 import com.google.inject.{Inject, TypeLiteral, Key}
 import com.google.inject.assistedinject.FactoryModuleBuilder
+import com.sksamuel.elastic4s.ElasticClient
 import dataaccess.RepoTypes.CategoryRepo
-import dataaccess.elastic.{ElasticFormatAsyncCrudRepo, ElasticJsonCrudRepo, ElasticIdRenameFormat, ElasticAsyncCrudRepo}
+import dataaccess.elastic.{ElasticClientProvider, ElasticFormatAsyncCrudRepo, ElasticJsonCrudRepo}
 import dataaccess.ignite.{CacheAsyncCrudRepoProvider, CacheAsyncCrudRepoFactory, JsonBinaryCacheAsyncCrudRepoFactory}
 import dataaccess.mongo.dataset.{FieldMongoAsyncCrudRepo, CategoryMongoAsyncCrudRepo}
 import dataaccess._
@@ -32,8 +33,9 @@ private object RepoDef extends Enumeration {
 
   implicit def valueToRepo[T](x: Value) = x.asInstanceOf[Repo[T]]
 
-  import models.DataSetImportFormattersAndIds._
+  import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
   import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+  import Workspace.WorkspaceFormat
   import models.DataSetFormattersAndIds.{dataSetSettingFormat, fieldFormat, dictionaryFormat, dataSpaceMetaInfoFormat, DataSpaceMetaInfoIdentity, DictionaryIdentity, FieldIdentity, DataSetSettingIdentity}
 
   val TranslationRepo = Repo[TranslationRepo](
@@ -45,10 +47,8 @@ private object RepoDef extends Enumeration {
   val MessageRepo = Repo[MessageRepo](
     new MongoAsyncStreamRepo[Message, BSONObjectID]("messages"))
 
-  implicit val workspaceFormat = new ElasticIdRenameFormat(Workspace.WorkspaceFormat)
-
   val UserSettingsRepo = Repo[UserSettingsRepo](
-    new ElasticFormatAsyncCrudRepo[Workspace, BSONObjectID]("workspace", "workspace"))
+    new MongoAsyncCrudRepo[Workspace, BSONObjectID]("workspace"))
 
   val DictionaryRootRepo = Repo[DictionaryRootRepo](
     new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
@@ -58,6 +58,9 @@ private object RepoDef extends Enumeration {
 
 //  val DataSetSettingRepo = Repo[DataSetSettingRepo](
 //    new MongoAsyncCrudRepo[DataSetSetting, BSONObjectID]("dataset_settings"))
+
+//  val DataSetImportRepo = Repo[DataSetImportRepo](
+//    new ElasticFormatAsyncCrudRepo[DataSetImport, BSONObjectID]("dataset_imports", "dataset_imports", true, true, true, true))
 
   val DataSetImportRepo = Repo[DataSetImportRepo](
     new MongoAsyncCrudRepo[DataSetImport, BSONObjectID]("dataset_imports"))
@@ -86,6 +89,10 @@ class RepoModule extends ScalaModule {
 
     bind[UserRepo].toProvider(
       new CacheAsyncCrudRepoProvider[User, BSONObjectID]("users")
+    ).asEagerSingleton
+
+    bind[ElasticClient].toProvider(
+      new ElasticClientProvider
     ).asEagerSingleton
 
     // bind the repos defined above

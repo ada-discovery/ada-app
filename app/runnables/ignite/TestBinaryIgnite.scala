@@ -1,19 +1,18 @@
-package runnables
+package runnables.ignite
 
 import com.google.inject.Inject
-import models.DataSetFormattersAndIds.JsObjectIdentity
-import dataaccess.ignite.{JsonBinaryCacheAsyncCrudRepo, BinaryCacheFactory}
-import dataaccess.{DescSort, AscSort, SerializableApplicationLifecycle}
 import dataaccess.Criterion.Infix
-import org.apache.ignite.Ignite
+import dataaccess.ignite.{BinaryCacheFactory, JsonBinaryCacheAsyncCrudRepo}
 import dataaccess.mongo.MongoJsonRepoFactory
-import play.api.libs.json.JsObject
-import reactivemongo.bson.BSONObjectID
+import dataaccess.{AscSort, SerializableApplicationLifecycle}
+import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.apache.ignite.Ignite
 import play.api.Configuration
-import scala.concurrent.duration._
-import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+import reactivemongo.bson.BSONObjectID
+import runnables.GuiceBuilderRunnable
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class TestBinaryIgnite @Inject() (ignite: Ignite, cacheFactory: BinaryCacheFactory, configuration: Configuration) extends Runnable {
 

@@ -1,11 +1,11 @@
 package dataaccess.elastic
 
+import dataaccess.RenameFieldFormat
 import play.api.libs.json._
-import collection.mutable.{Map => MMap}
 
 class ElasticIdRenameFormat[T](format: Format[T]) extends  Format[T] {
 
-  private val jsFormat = JsonIdRenameFormat.apply
+  private val jsFormat = ElasticIdRenameUtil.createFormat
 
   override def reads(json: JsValue): JsResult[T] =
     format.compose(jsFormat).reads(json)
@@ -14,41 +14,26 @@ class ElasticIdRenameFormat[T](format: Format[T]) extends  Format[T] {
     format.transform(jsFormat).writes(o)
 }
 
-private class JsonRenameFormat(
-    originalFieldName: String,
-    newFieldName: String
-  ) extends Format[JsValue] {
-
-  override def reads(json: JsValue): JsResult[JsValue] = {
-    val newJson = rename(json, newFieldName, originalFieldName)
-    JsSuccess(newJson)
-  }
-
-  override def writes(json: JsValue): JsValue =
-    rename(json, originalFieldName, newFieldName)
-
-  private def rename(json: JsValue, from: String, to: String): JsValue =
-    json match {
-      case jsObject: JsObject =>
-        (jsObject \ from) match {
-          case JsDefined(value) => {
-            val newValues = MMap[String, JsValue]()
-            newValues.++=(jsObject.value)
-            newValues.-=(from)
-            newValues.+=((to, value))
-            JsObject(newValues)
-          }
-          case _ =>
-            jsObject
-      }
-
-      case _ => json
-    }
-}
-
-object JsonIdRenameFormat {
+object ElasticIdRenameUtil {
   val originalIdName = "_id"
   val newIdName = "__id"
+  val newIdNameSuffix = ".$oid"
+  val newIdNameWithSuffix = newIdName + newIdNameSuffix
 
-  def apply: Format[JsValue] = new JsonRenameFormat(originalIdName, newIdName)
+  def createFormat: Format[JsValue] = new RenameFieldFormat(originalIdName, newIdName)
+
+  def rename(fieldName: String, withSuffix: Boolean) =
+    if (fieldName.equals(originalIdName))
+      if (withSuffix)
+        newIdNameWithSuffix
+      else
+        newIdName
+    else
+      fieldName
+
+  def unrename(fieldName: String) =
+    if (fieldName.equals(newIdName) || fieldName.equals(newIdNameWithSuffix))
+      originalIdName
+    else
+      fieldName
 }

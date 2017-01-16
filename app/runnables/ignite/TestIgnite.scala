@@ -1,17 +1,16 @@
-package runnables
+package runnables.ignite
 
 import com.google.inject.Inject
 import dataaccess.Criterion.Infix
 import dataaccess.ignite.CacheAsyncCrudRepoFactory
-import dataaccess.SerializableFormat
+import models.DataSetFormattersAndIds.{DataSetSettingIdentity, serializableBSONObjectIDFormat, serializableDataSetSettingFormat}
 import models.DataSetSetting
-import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableBSONObjectIDFormat, DataSetSettingIdentity}
-import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import scala.concurrent.duration._
+import runnables.GuiceBuilderRunnable
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 
 class TestIgnite @Inject() (cacheRepoFactory: CacheAsyncCrudRepoFactory) extends Runnable {
 
