@@ -45,10 +45,12 @@ dataSetImport.setting.tranSMARTReplacements.label = TranSMART Export Char Replac
 dataSetImport.setting.cacheDataSet.label = Cache Data Set
 dataSetImport.setting.filterShowFieldStyle.label = Filter Show Field Style
 dataSetImport.setting.overviewChartElementGridWidth.label = Element Grid Width
+dataSetImport.setting.storageType.label = Storage Type
 
 dataSetImport.dataView.tableColumnNames.label = Table Column Names
 dataSetImport.dataView.distributionCalcFieldNames.label = Distribution Calc Field Names
 dataSetImport.dataView.elementGridWidth.label = Element Grid Width
+dataSetImport.dataView.useOptimizedRepoChartCalcMethod.label = Optimized Repo Chart Calc
 
 dataSetImport.dataSpaceName.label = Study Name
 dataSetImport.eol.label = Specific EOL
@@ -59,11 +61,11 @@ dataSetImport.scheduledTime.hour.label = Hour
 dataSetImport.scheduledTime.minute.label = Minute
 dataSetImport.scheduledTime.second.label = Second
 
-dataSetImport.createDummyDictionary.label = Create Dummy Dictionary?
-
 csvDataSetImport.matchQuotes.label = Match Quotes?
 synapseDataSetImport.downloadColumnFiles.label = Download Column Files?
 redCapDataSetImport.importDictionaryFlag.label = Import Dictionary?
+
+dataView.useOptimizedRepoChartCalcMethod.label = Optimized Repo Chart Calc
 
 filter.createdBy.label = Created By
 filter.timeCreated.label = Time Created
