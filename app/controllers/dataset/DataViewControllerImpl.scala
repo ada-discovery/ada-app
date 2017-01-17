@@ -145,7 +145,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     for {
       existingDataViewOption <- repo.get(dataView._id.get)
       id <- existingDataViewOption.map(existingDataView =>
-          repo.update(dataView.copy(filterOrIds = existingDataView.filterOrIds))
+          repo.update(dataView) // .copy(filterOrIds = existingDataView.filterOrIds)
         ).getOrElse(
           Future(dataView._id.get)
         )

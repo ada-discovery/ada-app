@@ -2,7 +2,7 @@
 @import views.html.elements._
 @import models.{DataView, Field}
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
-@import views.html.dataview.statsCalcSpecTable
+@import views.html.dataview.{statsCalcSpecTable, filterOrIdTable}
 @import views.html.table.displayTable
 @import views.html.filters.displayConditions
 @import util.typeColumns
@@ -26,8 +26,6 @@
 
 @checkbox("dataView", "default", form)
 
-@checkbox("dataView", "useOptimizedRepoChartCalcMethod", form)
-
 @labelValue("tableColumnNames", attributeLabel("dataView", "tableColumnNames")){
     @dynamicStringTable("tableColumnName", form.value.map(_.tableColumnNames).getOrElse(Nil), true, Some(addModalInner))
 }
@@ -39,18 +37,10 @@
     )
 }
 
-@labelValue("filterOrIds", attributeLabel("dataView", "filterOrIds")){
-    @displayTable(
-        form.value.map(_.filterOrIds).getOrElse(Nil),
-        typeColumns[Either[Seq[models.FilterCondition], BSONObjectID]](
-            (None, "Content", { filterOrId =>
-                filterOrId match {
-                    case Left(conditions) => displayConditions(conditions)
-                    case Right(id) => id.stringify
-                }
-            })
-        )
-    )
+@labelValue("filterOrIds", attributeLabel("dataView", "filterOrIds")) {
+    @filterOrIdTable(form.value.map(_.filterOrIds).getOrElse(Nil))
 }
 
 @inputText("dataView", "elementGridWidth", form)
+
+@checkbox("dataView", "useOptimizedRepoChartCalcMethod", form)

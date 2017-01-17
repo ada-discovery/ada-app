@@ -1,7 +1,5 @@
-@import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter, DataViewRouter, DataViewJsRouter}
 @import models.{FilterCondition, ChartSpec}
 @import models.Field
-@import reactivemongo.bson.BSONObjectID
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
@@ -10,9 +8,9 @@
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import play.api.libs.json.Json
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName: String,
@@ -20,15 +18,9 @@
     chartSpec: Option[ChartSpec],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
-    router: DataSetRouter,
-    filterRouter: FilterRouter,
-    filterJsRouter: FilterJsRouter,
-    dataViewRouter: DataViewRouter,
-    dataViewJsRouter: DataViewJsRouter,
-    dataSetId: String,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: Flash, msg: Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @actions = {
@@ -36,8 +28,8 @@
         <div class="col-md-10">
             @filter(
                 Some(filterSpec),
-                router.getCorrelations(fields.map(_.name).toSeq, filterSpec.conditionsOrId),
-                Right(router.allFields),
+                dataSetRouter.getCorrelations(fields.map(_.name).toSeq, filterSpec.conditionsOrId),
+                Right(dataSetRouter.allFields),
                 filterShowFieldStyle,
                 Some(filterJsRouter),
                 Some(filterRouter.idAndNames),
@@ -84,8 +76,8 @@
                 @dynamicStringTable("fieldName", fields.map(_.name), true, Some(fieldNamesAddModalInner))
             </div>
             <div class="row">
-                @helper.form(action=router.getCorrelations(Nil, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {
-                    <input type="hidden" name="dataSet" value="@dataSetId"/>
+                @helper.form(action=dataSetRouter.getCorrelations(Nil, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {
+                    <input type="hidden" name="dataSet" value="@context.dataSetId"/>
                     <input type="hidden" name="filterOrId" value="@filterSpec.conditionsOrId.fold(Json.toJson(_), _.stringify)"/>
                     <button type="primary" onclick="addFieldNames()" class="btn btn-primary">Show</button>
                 }
@@ -107,7 +99,7 @@
         populateFieldTypeahedFromUrl(
             $('#fieldNameDiv #newItemTypeahead'),
             $('#fieldNameDiv #newItem'),
-            '@Html(router.fields(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
+            '@Html(dataSetRouter.fields(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
              @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         );
 

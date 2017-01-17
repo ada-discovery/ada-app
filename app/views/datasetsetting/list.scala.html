@@ -36,7 +36,8 @@
         dataSetSettingRoutes.find(_, _, page.filterConditions),
         typeColumns[DataSetSetting](
             (Some("dataSetId"), "Data Set Id", _.dataSetId),
-            (Some("keyField"), "Key Field", _.keyFieldName)
+            (Some("keyField"), "Key Field", _.keyFieldName),
+            (Some("storageType"), "Storage Type", _.storageType)
         ),
         Some({ item : Any => dataSetSettingRoutes.get(item.asInstanceOf[DataSetSetting]._id.get)})
     )

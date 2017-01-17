@@ -1,28 +1,23 @@
 @import views.html.table.paginatedJsonTable
-@import views.html.dataset.exportDataSetDropdown
 @import play.api.libs.json.JsObject
 @import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 @import reactivemongo.bson.BSONObjectID
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
-@import controllers.dataset.DataSetRouter
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName : String,
     page: Page[JsObject],
     fieldLabelMap : Map[String, String],
-    fieldsToShow : Seq[String],
-
-    // All calls wrapped in a router object
-    router : DataSetRouter
+    fieldsToShow : Seq[String]
 )(
-    implicit flash: Flash, msg: Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(page.filter, router.plainList, Right(router.allFields))
+            @filter(page.filter, dataSetRouter.plainList, Right(dataSetRouter.allFields))
         </div>
     </div>
 }
@@ -30,10 +25,10 @@
 @table = @{
     paginatedJsonTable(
         page,
-        router.list(_, _, page.filterConditions),
+        dataSetRouter.list(_, _, page.filterConditions),
         Some(fieldLabelMap),
         Some(fieldsToShow),
-        Some({ (item : JsObject) => router.get((item \ "_id").as[BSONObjectID])})
+        Some({ (item : JsObject) => dataSetRouter.get((item \ "_id").as[BSONObjectID])})
     )
 }
 

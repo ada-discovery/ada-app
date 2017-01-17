@@ -8,18 +8,16 @@
 @import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 @import reactivemongo.bson.BSONObjectID
 @import models.FieldChartSpec
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
 @import play.api.libs.json.{JsValue, JsArray, JsObject}
-@import controllers.dataset.{DataSetRouter, DataSetJsRouter}
 @import models.DataSpaceMetaInfo
 @import models.FieldTypeId
 @import models.Page
 @import util.{JsonUtil, FieldTypeRenderer}
-@import controllers.dataset.{FilterJsRouter, FilterRouter, DataViewRouter, DataViewJsRouter}
 @import be.objectify.deadbolt.scala.views.html.restrict
-
 @import models.security.SecurityRole
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+
 @(
     domainName : String,
     dataViewId: BSONObjectID,
@@ -28,15 +26,9 @@
     fieldChartSpecs: Traversable[FieldChartSpec],
     chartGridElementWidth: Int,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
-    router: DataSetRouter,
-    jsRouter: DataSetJsRouter,
-    filterRouter: FilterRouter,
-    filterJsRouter: FilterJsRouter,
-    dataViewRouter: DataViewRouter,
-    dataViewJsRouter: DataViewJsRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: Flash, msg: Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @actions = {
@@ -44,8 +36,8 @@
         <div class="col-md-10">
             @filter(
                 page.filter,
-                router.getView(dataViewId, 0, "", Left(Nil), true),
-                Right(router.allFields),
+                dataSetRouter.getView(dataViewId, 0, "", Left(Nil), true),
+                Right(dataSetRouter.allFields),
                 filterShowFieldStyle,
                 Some(filterJsRouter),
                 Some(filterRouter.idAndNames),
@@ -57,10 +49,10 @@
                 <li>
                     @exportDataSetDropdown(
                         page.filterConditions,
-                        router.exportCsv(dataViewId, _, true, None, _, _),
-                        router.exportJson(dataViewId, _, _),
-                        router.exportTranSMARTData,
-                        router.exportTranSMARTMapping
+                        dataSetRouter.exportCsv(dataViewId, _, true, None, _, _),
+                        dataSetRouter.exportJson(dataViewId, _, _),
+                        dataSetRouter.exportTranSMARTData,
+                        dataSetRouter.exportTranSMARTMapping
                     )
                 </li>
                 <li>
@@ -92,7 +84,7 @@
 
 @genJsonRender(id: BSONObjectID, fieldName: String)(linkTitle: Html) = {
     <a href="#" onclick="showFieldValue('@id.stringify', '@fieldName');" class="jsonModalLink">
-    @linkTitle
+        @linkTitle
     </a>
 }
 
@@ -121,12 +113,12 @@
 @table = @{
     paginatedJsonTable(
         page,
-        router.getView(dataViewId, _, _, page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)), true),
+        dataSetRouter.getView(dataViewId, _, _, page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)), true),
         Some(tableFields.map{ field =>
             field.label.map( fieldLabel => (field.name, fieldLabel))
         }.flatten.toMap),
         Some(tableFields.map(_.name).toSeq),
-        Some({ item : JsObject => router.get((item \ "_id").as[BSONObjectID])}),
+        Some({ item : JsObject => dataSetRouter.get((item \ "_id").as[BSONObjectID])}),
         Some(tableFields.map{ field =>
             if (field.isArray) {
                 if(field.fieldType == FieldTypeId.Json)
@@ -146,7 +138,7 @@
 
 @bottomResources = {
     @helper.javascriptRouter("dataSetJsRoutes")(
-        jsRouter.getFieldValue
+        dataSetJsRouter.getFieldValue
     )
     @helper.javascriptRouter("dataViewJsRoutes")(
         dataViewJsRouter.saveFilter

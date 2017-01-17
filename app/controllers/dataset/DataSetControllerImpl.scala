@@ -12,7 +12,7 @@ import _root_.util.shorten
 import dataaccess._
 import models._
 import com.google.inject.assistedinject.Assisted
-import controllers.{ExportableAction, ReadonlyControllerImpl}
+import controllers.{DataSetWebContext, ExportableAction, ReadonlyControllerImpl}
 import models.DataSetFormattersAndIds.{JsObjectIdentity, FieldIdentity}
 import Criterion.Infix
 import org.apache.commons.lang3.StringEscapeUtils
@@ -78,16 +78,16 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   // router for requests; to be passed to views as helper.
   protected val router = new DataSetRouter(dataSetId)
-  protected val jsRouter = new DataSetJsRouter(dataSetId)
-  protected val filterRouter = new FilterRouter(dataSetId)
-  protected val filterJsRouter = new FilterJsRouter(dataSetId)
-  protected val dataViewRouter = new DataViewRouter(dataSetId)
-  protected val dataViewJsRouter = new DataViewJsRouter(dataSetId)
 
   private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
   private val csvEOL = "\n"
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
+
+  private implicit def toWebContext(implicit request: Request[_]) = {
+    implicit val msg = messagesApi.preferred(request)
+    DataSetWebContext(dataSetId)
+  }
 
   override protected def listViewColumns = result(
     dataViewRepo.find().map {
@@ -103,13 +103,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param request Header of original request.
     * @return View for all available fields.
     */
-  override protected def listView(page: Page[JsObject])(implicit msg: Messages, request: Request[_]) =
+  override protected def listView(
+    page: Page[JsObject])(
+    implicit msg: Messages, request: Request[_]
+  ) =
     dataset.list(
       dataSetName + " Item",
       page,
       result(getFieldLabelMap(listViewColumns.get)), // TODO: refactor
-      listViewColumns.get,
-      router
+      listViewColumns.get
     )
 
   private def getViewView(
@@ -118,7 +120,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldChartSpecs: Traversable[FieldChartSpec],
     tableFields: Traversable[Field],
     elementGridWidth: Int
-  )(implicit msg: Messages, request: Request[_]) = {
+  )(implicit request: Request[_]) =
     dataset.showView(
       dataSetName + " Item",
       dataViewId,
@@ -127,15 +129,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       fieldChartSpecs,
       elementGridWidth,
       setting.filterShowFieldStyle,
-      router,
-      jsRouter,
-      filterRouter,
-      filterJsRouter,
-      dataViewRouter,
-      dataViewJsRouter,
       result(dataSpaceTree)
     )
-  }
 
   /**
     * Shows all fields of the selected subject.
@@ -303,9 +298,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       )
     } yield {
+      val webContext = implicitly[DataSetWebContext]
+
       selectedView match {
         case Some(view) => Redirect(router.getView(view._id.get, 0, "", Left(Nil), false))
-        case None => Redirect(dataViewRouter.plainList).flashing("errors" -> "No view to show. You must first define one.")
+        case None => Redirect(webContext.dataViewRouter.plainList).flashing("errors" -> "No view to show. You must first define one.")
       }
     }
   }
@@ -650,7 +647,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     groupFieldNameOption: Option[String],
     filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
     val settings = setting
 
     // initialize x, y, and group field names
@@ -722,6 +718,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val yMean = yField.map(mean).flatten
 
       val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+
       render {
         case Accepts.Html() => Ok(dataset.scatterStats(
           dataSetName,
@@ -733,12 +730,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           yMean,
           newFilter,
           setting.filterShowFieldStyle,
-          router,
-          filterRouter,
-          filterJsRouter,
-          dataViewRouter,
-          dataViewJsRouter,
-          dataSetId,
           result(dataSpaceTree)
         ))
         case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
@@ -750,8 +741,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldNameOption: Option[String],
     filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
-
     val fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
 
     {
@@ -796,6 +785,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         val boxChart = boxChartSpec.map(_.copy(height = Some(500)))
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+
         render {
           case Accepts.Html() => Ok(dataset.distribution(
             dataSetName,
@@ -803,12 +793,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             Seq(distributionChart, boxChart).flatten,
             newFilter,
             setting.filterShowFieldStyle,
-            router,
-            filterRouter,
-            filterJsRouter,
-            dataViewRouter,
-            dataViewJsRouter,
-            dataSetId,
             result(dataSpaceTree)
           ))
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
@@ -825,8 +809,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldNames: Seq[String],
     filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
-
     {
       for {
         // use a given filter conditions or load one
@@ -857,6 +839,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // set the height of the charts
         val newChart = correlationChartSpec.copy(height = Some(500))
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+
         render {
           case Accepts.Html() => Ok(dataset.correlation(
             dataSetName,
@@ -864,12 +847,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             Some(newChart),
             newFilter,
             setting.filterShowFieldStyle,
-            router,
-            filterRouter,
-            filterJsRouter,
-            dataViewRouter,
-            dataViewJsRouter,
-            dataSetId,
             result(dataSpaceTree)
           ))
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
@@ -920,10 +897,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             series,
             newFilter,
             setting.filterShowFieldStyle,
-            router,
-            filterRouter,
-            filterJsRouter,
-            dataSetId,
             result(dataSpaceTree)
           ))
           case Accepts.Json() => BadRequest("GetDateCount function doesn't support JSON response.")
@@ -1006,10 +979,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def getFieldValue(id: BSONObjectID, fieldName: String) = Action.async { implicit request =>
+//    for {
+//      items <- repo.find(criteria = Seq("_id" #== id), projection = Seq(fieldName))
+//    } yield
+//      items.headOption match {
+//        case Some(item) => Ok((item \ fieldName).get)
+//        case None => BadRequest(s"Item '${id.stringify}' not found.")
+//      }
     for {
-      items <- repo.find(criteria = Seq("_id" #== id), projection = Seq(fieldName))
+      item <- repo.get(id)
     } yield
-      items.headOption match {
+      item match {
         case Some(item) => Ok((item \ fieldName).get)
         case None => BadRequest(s"Item '${id.stringify}' not found.")
       }

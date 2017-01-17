@@ -1,5 +1,3 @@
-@import controllers.dataset.{DataSetRouter, FilterRouter, FilterJsRouter, DataViewRouter, DataViewJsRouter}
-@import reactivemongo.bson.BSONObjectID
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.chart.highcharts.scatterChart
@@ -8,9 +6,9 @@
 @import views.html.dataset.datasetSubNav
 @import views.html.dataview.dataViewSelectionModal
 @import play.api.libs.json.Json
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
 @import models.{DataSpaceMetaInfo, FieldTypeId, Field}
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName: String,
@@ -22,15 +20,9 @@
     yMean: Option[Double],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
-    router: DataSetRouter,
-    filterRouter: FilterRouter,
-    filterJsRouter: FilterJsRouter,
-    dataViewRouter: DataViewRouter,
-    dataViewJsRouter: DataViewJsRouter,
-    dataSetId: String,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: Flash, msg: Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @actions = {
@@ -38,8 +30,8 @@
         <div class="col-md-10">
             @filter(
                 Some(filterSpec),
-                router.getScatterStats(xField.map(_.name), yField.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
-                Right(router.allFields),
+                dataSetRouter.getScatterStats(xField.map(_.name), yField.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
+                Right(dataSetRouter.allFields),
                 filterShowFieldStyle,
                 Some(filterJsRouter),
                 Some(filterRouter.idAndNames),
@@ -53,9 +45,9 @@
         </div>
     </div>
     <hr/>
-    @helper.form(action=router.plainGetScatterStats, 'role -> "search", 'id -> "fieldForm") {
+    @helper.form(action=dataSetRouter.plainGetScatterStats, 'role -> "search", 'id -> "fieldForm") {
         <!-- hacky solution to pass data set param since it's ignored when passed as a part of call in form action -->
-        <input type="hidden" name="dataSet" value="@dataSetId"/>
+        <input type="hidden" name="dataSet" value="@context.dataSetId"/>
         <input type="hidden" name="filterOrId" value="@filterSpec.conditionsOrId.fold(Json.toJson(_), _.stringify)"/>
         <div class="row">
             <div class="col-md-3">
@@ -126,7 +118,7 @@
 <script type="text/javascript">
     $(function () {
         $.ajax({
-            url: '@Html(router.fields(Seq(FieldTypeId.Integer, FieldTypeId.Double)).url)',
+            url: '@Html(dataSetRouter.fields(Seq(FieldTypeId.Integer, FieldTypeId.Double)).url)',
             success: function (data) {
                 populateFieldTypeahed(
                     $('#fieldForm #xFieldTypeahead'),
@@ -146,7 +138,7 @@
         populateFieldTypeahedFromUrl(
             $('#fieldForm #groupFieldTypeahead'),
             $('#fieldForm #groupFieldName'),
-            '@Html(router.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+            '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
             @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         );
 
