@@ -1,18 +1,18 @@
 $.widget( "custom.multiFilter", {
     // default options
     options: {
-        jsConditions: null,
+        jsonConditions: null,
         fieldNameAndLabels: null,
         getFieldsCall: null,
         submitCall: null,
-        filterElementName: null,
+        filterSubmitParamName: null,
         listFilters: null
     },
 
     // the constructor
     _create: function() {
         var that = this;
-        this.jsConditions = this.options.jsConditions;
+        this.jsonConditions = this.options.jsonConditions;
         this.conditionFields = ["fieldName", "conditionType", "value"];
         this.fieldNameAndLabels = this.options.fieldNameAndLabels;
 
@@ -88,7 +88,7 @@ $.widget( "custom.multiFilter", {
         this.loadFieldNames();
         this.addEditConditionModalElement.find("#conditionIndex").first().val(index);
 
-        var condition = this.jsConditions[index]
+        var condition = this.jsonConditions[index]
         this.updateModalFromModel(condition, this.conditionFields);
 
         this.addEditConditionModalElement.modal('show');
@@ -111,7 +111,7 @@ $.widget( "custom.multiFilter", {
     },
 
     editAndSubmitConditionFromModal: function (index) {
-        var condition = this.jsConditions[index];
+        var condition = this.jsonConditions[index];
 
         this.updateModelFromModal(condition, this.conditionFields);
         this.updateFilterFromModel(index, condition, this.conditionFields);
@@ -120,17 +120,21 @@ $.widget( "custom.multiFilter", {
     },
 
     addAndSubmitCondition: function (condition) {
-        this.jsConditions.push(condition);
+        this.jsonConditions.push(condition);
         this.submitFilter();
     },
 
     deleteCondition: function (index) {
-        this.jsConditions.splice(index, 1);
+        this.jsonConditions.splice(index, 1);
         this.submitFilter();
     },
 
+    getJsonConditions: function () {
+        return this.jsonConditions;
+    },
+
     submitFilter: function () {
-        this.submitFilterCustom(this.jsConditions, null);
+        this.submitFilterCustom(this.jsonConditions, null);
     },
 
     submitFilterCustom: function (conditions, filterId) {
@@ -139,9 +143,9 @@ $.widget( "custom.multiFilter", {
         var filterIdOrConditions = {};
 
         if (filterId) {
-            filterIdOrConditions[this.options.filterElementName] = filterId;
+            filterIdOrConditions[this.options.filterSubmitParamName] = filterId;
         } else if (conditions) {
-            filterIdOrConditions[this.options.filterElementName] = JSON.stringify(conditions);
+            filterIdOrConditions[this.options.filterSubmitParamName] = JSON.stringify(conditions);
         }
 
         $.extend(params, filterIdOrConditions);
@@ -236,7 +240,7 @@ $.widget( "custom.multiFilter", {
 
     saveFilter: function () {
         var name = this.saveFilterNameElement.val();
-        var fullFilter = {_id: null, name: name, timeCreated: 0, conditions: this.jsConditions};
+        var fullFilter = {_id: null, name: name, timeCreated: 0, conditions: this.jsonConditions};
         filterJsRoutes.controllers.dataset.FilterDispatcher.saveAjax(JSON.stringify(fullFilter)).ajax( {
             success: function(data) {
                 showMessage("Filter '" + name + "' successfully saved.");
