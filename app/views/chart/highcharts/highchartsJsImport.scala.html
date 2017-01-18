@@ -1,8 +1,10 @@
+@(useBoost: Boolean = false)
+
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "highcharts.js"))"></script>
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "exporting.js"))"></script>
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "heatmap.js"))"></script>
-<!--
+@if(useBoost) {
     <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "boost.js"))"></script>
--->
+}
 <script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "highcharts-more.js"))"></script>
 <script type="text/javascript" src="@routes.Assets.versioned("javascripts/ada-highcharts.min.js")"></script>

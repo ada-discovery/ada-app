@@ -1,4 +1,3 @@
-@import models.Field
 @import views.html.layout
 @import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu, displayJsonModal}
 @import views.html.chart.chartPanelJs
@@ -7,23 +6,20 @@
 @import views.html.dataset.exportDataSetDropdown
 @import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 @import reactivemongo.bson.BSONObjectID
-@import models.FieldChartSpec
-@import play.api.libs.json.{JsValue, JsArray, JsObject}
+@import play.api.libs.json.{JsValue, JsObject}
 @import models.DataSpaceMetaInfo
 @import models.FieldTypeId
-@import models.Page
-@import util.{JsonUtil, FieldTypeRenderer}
+@import util.FieldTypeRenderer
 @import be.objectify.deadbolt.scala.views.html.restrict
 @import models.security.SecurityRole
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
 
+@import controllers.dataset.DataSetViewData
 @(
     domainName : String,
     dataViewId: BSONObjectID,
-    page: Page[JsObject],
-    tableFields: Traversable[Field],
-    fieldChartSpecs: Traversable[FieldChartSpec],
+    viewParts: Seq[DataSetViewData],
     chartGridElementWidth: Int,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -34,21 +30,24 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(
-                page.filter,
-                dataSetRouter.getView(dataViewId, 0, "", Left(Nil), true),
-                Right(dataSetRouter.allFields),
-                filterShowFieldStyle,
-                Some(filterJsRouter),
-                Some(filterRouter.idAndNames),
-                "filterOrId"
-            )
+            @viewParts.zipWithIndex.map { case (viewPart, index) =>
+                @filter(
+                    viewPart.page.filter,
+                    dataSetRouter.getView(dataViewId, 0, "", Left(Nil), true),
+                    Right(dataSetRouter.allFields),
+                    filterShowFieldStyle,
+                    Some(filterJsRouter),
+                    Some(filterRouter.idAndNames),
+                    "filterOrId",
+                    s"filter$index"
+                )
+            }
         </div>
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
                     @exportDataSetDropdown(
-                        page.filterConditions,
+                        viewParts.head.page.filterConditions,
                         dataSetRouter.exportCsv(dataViewId, _, true, None, _, _),
                         dataSetRouter.exportJson(dataViewId, _, _),
                         dataSetRouter.exportTranSMARTData,
@@ -110,16 +109,16 @@
     @fun(jsValue)
 }
 
-@table = @{
+@table(viewData: DataSetViewData) = @{
     paginatedJsonTable(
-        page,
-        dataSetRouter.getView(dataViewId, _, _, page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)), true),
-        Some(tableFields.map{ field =>
+        viewData.page,
+        dataSetRouter.getView(dataViewId, _, _, viewData.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)), true),
+        Some(viewData.tableFields.map{ field =>
             field.label.map( fieldLabel => (field.name, fieldLabel))
         }.flatten.toMap),
-        Some(tableFields.map(_.name).toSeq),
+        Some(viewData.tableFields.map(_.name).toSeq),
         Some({ item : JsObject => dataSetRouter.get((item \ "_id").as[BSONObjectID])}),
-        Some(tableFields.map{ field =>
+        Some(viewData.tableFields.map{ field =>
             if (field.isArray) {
                 if(field.fieldType == FieldTypeId.Json)
                     Some(field.name, jsonArrayRender(_, _, _))
@@ -136,6 +135,26 @@
     )
 }
 
+@tables = {
+    <div class="row vertical-divider">
+        @viewParts.map { viewPart =>
+            <div class="col-md-@{12 / viewParts.size}">
+                @table(viewPart)
+            </div>
+        }
+    </div>
+}
+
+@charts = {
+    <div class="row vertical-divider">
+        @viewParts.zipWithIndex.map { case (viewPart, index) =>
+            <div class="col-md-@{12 / viewParts.size}">
+                @filterChartPanel(s"filter$index", viewPart.fieldChartSpecs, chartGridElementWidth)
+            </div>
+        }
+    </div>
+}
+
 @bottomResources = {
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.getFieldValue
@@ -146,7 +165,9 @@
     @displayJsonModal("jsonModal", None)
     @highchartsJsImport()
 
-    @chartPanelJs(fieldChartSpecs.map(_.chartSpec))
+    @viewParts.map { viewPart =>
+        @chartPanelJs(viewPart.fieldChartSpecs.map(_.chartSpec))
+    }
     <script type="text/javascript">
         $(function () {
             $(".jsonModalLink").click(function(event) {
@@ -174,7 +195,8 @@
         }
 
         function saveFilterToView() {
-            var filterOrId = (@{page.filterId.isDefined}) ? '@{page.filterId.map(_.stringify).getOrElse("")}' : JSON.stringify(jsConditions);
+            var filterOrId = (@{viewParts.head.page.filterId.isDefined}) ?
+                    '@{viewParts.head.page.filterId.map(_.stringify).getOrElse("")}' : JSON.stringify($("#filter0").multiFilter('getJsonConditions'));
 
             dataViewJsRoutes.controllers.dataset.DataViewDispatcher.saveFilter("@{dataViewId.stringify}", filterOrId).ajax( {
                 success: function() {
@@ -190,11 +212,11 @@
 
 @layout.list(
     domainName,
-    page.total,
+    viewParts.head.page.total,
     Some(actions),
-    table,
-    if (fieldChartSpecs.nonEmpty)
-        Some(filterChartPanel(fieldChartSpecs, chartGridElementWidth))
+    tables,
+    if (viewParts.head.fieldChartSpecs.nonEmpty)
+        Some(charts)
     else
         None,
     Some(datasetMenu(dataSpaceMetaInfos)),

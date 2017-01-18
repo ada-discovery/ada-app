@@ -11,7 +11,8 @@
     showFieldStyle: Option[FilterShowFieldStyle.Value] = None,
     filterJsRouter: Option[FilterJsRouter] = None,
     listFiltersCall: Option[Call] = None,
-    filterElementName: String = "filter"
+    filterSubmitParamName: String = "filter",
+    filterElementName: String = "filterDiv"
 )(
     implicit request: Request[_]
 )
@@ -23,7 +24,7 @@
     <li>
         <label class="radio-inline"><input type="radio" name="showChoice" value="@value.id" @if(showFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels) == value) {checked="checked"}>
             <h5 style="padding-left: 10px">
-                @text
+            @text
             </h5>
         </label>
     </li>
@@ -34,7 +35,7 @@
 }
 @saveFilterModelButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" id="submitButton" onclick="saveFilter();" data-dismiss="modal" class="btn btn-primary">OK</button>
+    <button type="button" id="submitButton" onclick="$('#@filterElementName').multiFilter('saveFilter');" data-dismiss="modal" class="btn btn-primary">OK</button>
 }
 
 @loadFilterModalBody = {
@@ -44,7 +45,7 @@
 
 @loadFilterModelButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" id="submitButton" onclick="loadFilter();" data-dismiss="modal" class="btn btn-primary">OK</button>
+    <button type="button" id="submitButton" onclick="$('#@filterElementName').multiFilter('loadFilter');" data-dismiss="modal" class="btn btn-primary">OK</button>
 }
 
 @valueOrUndefined(condition: FilterCondition) = @{
@@ -56,8 +57,8 @@
 
 @conditionPanel(isDisplayed: Boolean) = {
     <ul id="conditionPanel" class="list-inline" @if(!isDisplayed) {style="display:None"}>
-    @filter.map{ f =>
-        @f.conditions.zipWithIndex.map { case (condition, index) =>
+        @filter.map{ f =>
+            @f.conditions.zipWithIndex.map { case (condition, index) =>
             <li id="condition-full@index" class="condition-full">
                 <h4>
                     <span class="condition">
@@ -66,385 +67,112 @@
                         <span class="label label-primary">@valueOrUndefined(condition)</span>
                     </span>
                     <span class="condition-buttons" style="display: none; padding-left: 5px">
-                        <button type="button" class="btn btn-sm btn-default" onclick="showEditConditionModal('@index');">
+                        <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showEditConditionModal', '@index')">
                             <span class="glyphicon glyphicon-pencil"></span>
                         </button>
-                        <button type="button" class="btn btn-sm btn-default" onclick="deleteCondition('@index');">
-                            <span class="glyphicon glyphicon-trash"></span>
-                        </button>
-                    </span>
-                </h4>
+                        <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('deleteCondition', '@index')">
+                <span class="glyphicon glyphicon-trash"></span>
+            </button>
+            </span>
+            </h4>
             </li>
-        }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
-    }.getOrElse(Html(""))
-        <button type="button" class="btn btn-sm btn-default" onclick="showAddConditionModal();" data-toggle="tooltip" title="Add Filter Condition">
+            }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
+        }.getOrElse(Html(""))
+        <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showAddConditionModal')" data-toggle="tooltip" title="Add Filter Condition">
             <span class="glyphicon glyphicon-plus"></span>
         </button>
     </ul>
 }
 
-<div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title">Add/Edit Condition</h4>
-            </div>
-            <form onsubmit="return false;">
-                <div class="modal-body">
-                    <input id="conditionIndex" type="hidden" value=""/>
-                    <div class="row">
-                        <div class="float-left col-md-4">
-                            <input id="fieldNameTypeahead" class="typeahead" type="text" placeholder="Field Name or Label">
-                            <input id="fieldName" type="hidden" value="">
-                        </div>
-                        <div id="conditionDiv">
-                            <select id="conditionType" class="float-left">
+<div id="@filterElementName">
+    <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Add/Edit Condition</h4>
+                </div>
+                <form onsubmit="return false;">
+                    <div class="modal-body">
+                        <input id="conditionIndex" type="hidden" value=""/>
+                        <div class="row">
+                            <div class="float-left col-md-4">
+                                <input id="fieldNameTypeahead" class="typeahead" type="text" placeholder="Field Name or Label">
+                                <input id="fieldName" type="hidden" value="">
+                            </div>
+                            <div id="conditionDiv">
+                                <select id="conditionType" class="float-left">
                                 @ConditionType.values.map{ conditionType =>
                                     <option value="@conditionType">@conditionType</option>
                                 }
-                            </select>
-                            <input id="value" class="float-left" placeholder="Condition"/>
+                                </select>
+                                <input id="value" class="float-left" placeholder="Condition"/>
+                            </div>
+                            <a id="showChoicesButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#show-choices" data-toggle="tooltip" title="Field Name/Label Display Options">
+                                <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+                            </a>
                         </div>
-                        <a id="showChoicesButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#show-choices" data-toggle="tooltip" title="Field Name/Label Display Options">
-                            <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
-                        </a>
-                    </div>
-                    <div id="show-choices" class="row collapse">
-                        <hr/>
-                        <div class="well">
-                            What do you want to show?
-                            <ul class="list-unstyled">
-                                @showChoice(FilterShowFieldStyle.NamesOnly, "Field names only")
-                                @showChoice(FilterShowFieldStyle.LabelsOnly, "Field labels only")
-                                @showChoice(FilterShowFieldStyle.LabelsAndNamesOnlyIfLabelUndefined, "Field labels, and names only if label undefined")
-                                @showChoice(FilterShowFieldStyle.NamesAndLabels, "Both, field names and labels")
-                            </ul>
+                        <div id="show-choices" class="row collapse">
+                            <hr/>
+                            <div class="well">
+                                What do you want to show?
+                                <ul class="list-unstyled">
+                                    @showChoice(FilterShowFieldStyle.NamesOnly, "Field names only")
+                                    @showChoice(FilterShowFieldStyle.LabelsOnly, "Field labels only")
+                                    @showChoice(FilterShowFieldStyle.LabelsAndNamesOnlyIfLabelUndefined, "Field labels, and names only if label undefined")
+                                    @showChoice(FilterShowFieldStyle.NamesAndLabels, "Both, field names and labels")
+                                </ul>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary" data-dismiss="modal" onclick="addEditConditionFinished();">Confirm</button>
-                </div>
-            </form>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary" data-dismiss="modal" onclick="$('#@filterElementName').multiFilter('addEditConditionFinished')">Confirm</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
-<ul class="list-inline">
-    <li>
-         Filter:
-    </li>
-    @if(filter.isDefined && filter.get._id.isDefined) {
+
+    <ul class="list-inline">
         <li>
-            <button id="filterNameButton" type="button" class="btn btn-sm" onclick="showConditionPanel()" title="Show Conditions">
-                <h5><b>@filter.get.name.getOrElse("No Name")</b></h5>
-            </button>
+            Filter:
         </li>
-    }
-    <li>
+        @if(filter.isDefined && filter.get._id.isDefined) {
+            <li>
+                <button id="filterNameButton" type="button" class="btn btn-sm" onclick="$('#@filterElementName').multiFilter('showConditionPanel')" title="Show Conditions">
+                    <h5><b>@filter.get.name.getOrElse("No Name")</b></h5>
+                </button>
+            </li>
+        }
+        <li>
         @conditionPanel(!filter.isDefined || !filter.get._id.isDefined)
-    </li>
-    <li>
-        @if(filterJsRouter.isDefined && filter.isDefined && filter.get._id.isEmpty && filter.get.conditions.nonEmpty) {
-            <button type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#saveFilterModal" title="Save Filter">
-                <span class="glyphicon glyphicon glyphicon-save"></span>
-            </button>
-            @modal("saveFilterModal", "Save Filter", saveFilterModalBody, None, Some(saveFilterModelButtons))
-        }
-
-        @if(listFiltersCall.isDefined) {
-            <button id="loadFilterButton" type="button" class="btn btn-sm btn-default" onclick="loadFilterSelectionAndShowModal()" title="Load Filter">
-                <span class="glyphicon glyphicon-book"></span>
-            </button>
-
-            @modal("loadFilterModal", "Load Filter", loadFilterModalBody, None, Some(loadFilterModelButtons))
-        }
-    </li>
-</ul>
-
-@fieldNameLabelsAsString = @{
-    fieldsOrCall match {case Left(fields) =>
-        Html(
-            Json.stringify(
-                Json.toJson(
-                    fields.map { field =>
-                        Json.obj("name" -> field.name, "label" -> field.label)
-                    }
-                )
-            )
-        )
-    }
-}
-
-@fieldsUrl = @{
-    fieldsOrCall match {case Right(call) => call.url}
-}
-
-@if(filterJsRouter.isDefined) {
-    @helper.javascriptRouter("filterJsRoutes")(
-        filterJsRouter.get.saveAjax
-    )
-}
-
-<script type="text/javascript" defer="defer">
-    var jsConditions = JSON.parse('@{Html(Json.stringify(Json.toJson(filter.map(_.conditions).getOrElse(Nil))))}');
-    var conditionFields = ["fieldName", "conditionType", "value"];
-    var fieldNameAndLabels = @if(fieldsOrCall.isLeft) {
-        JSON.parse('@fieldNameLabelsAsString')
-    } else {
-        null
-    }
-
-    if (fieldNameAndLabels) {
-        initShowFieldNameLabelChoices();
-        repopulateFieldNameTypeahead();
-    }
-
-    @if(listFiltersCall.isDefined) {
-       loadFilterSelection();
-    }
-
-    $('#addEditConditionModal').on('shown.bs.modal', function () {
-        if ($(this).find("#conditionIndex:first").val())
-            $('#condition').focus();
-        else
-            $('#fieldNameTypeahead').focus();
-    })
-
-    $(".condition-full").hover(null, function() {
-        var buttons = $(this).find(".condition-buttons").first();
-        buttons.fadeOut( 400 );
-    });
-
-    $(".condition").click(function() {
-        var buttons = $(this).parent().children(".condition-buttons").first();
-        buttons.fadeIn( 400 );
-    });
-
-    $('#saveFilterModal').on('shown.bs.modal', function () {
-        $('#saveFilterName').focus();
-    })
-
-    $('#saveFilterName').keypress(function (e) {
-        if (e.which == 13) {
-            $('#saveFilterModal').modal('hide');
-            saveFilter();
-            return false;
-        }
-    });
-
-    function showAddConditionModal() {
-        loadFieldNames();
-        $("#addEditConditionModal").find("#conditionIndex").first().val("");
-
-        var condition = {conditionType : "="};
-        updateModalFromModel(condition, conditionFields);
-
-        $("#addEditConditionModal").modal('show');
-    }
-
-    function showEditConditionModal(index) {
-        loadFieldNames();
-        $("#addEditConditionModal").find("#conditionIndex").first().val(index);
-
-        var condition = jsConditions[index]
-        updateModalFromModel(condition, conditionFields);
-
-        $("#addEditConditionModal").modal('show');
-    }
-
-    function addEditConditionFinished() {
-        var index =  $("#addEditConditionModal").find("#conditionIndex").val();
-        if (index)
-            editAndSubmitConditionFromModal(index)
-        else
-            addAndSubmitConditionFromModal()
-    }
-
-    function addAndSubmitConditionFromModal() {
-        var condition = { };
-
-        updateModelFromModal(condition, conditionFields);
-
-        addAndSubmitCondition(condition);
-    }
-
-    function editAndSubmitConditionFromModal(index) {
-        var condition = jsConditions[index];
-
-        updateModelFromModal(condition, conditionFields);
-        updateFilterFromModel(index, condition, conditionFields);
-
-        submitFilter();
-    }
-
-    function addAndSubmitCondition(condition) {
-        jsConditions.push(condition);
-        submitFilter();
-    }
-
-    function deleteCondition(index) {
-        jsConditions.splice(index, 1);
-        submitFilter();
-    }
-
-    function submitFilter() {
-        submitFilterCustom(jsConditions, null);
-    }
-
-    function submitFilterCustom(conditions, filterId) {
-        var params = getQueryParams('@submitCall')
-
-        if (filterId) {
-            $.extend(params, {@filterElementName: filterId });
-        } else if (conditions) {
-            $.extend(params, {@filterElementName: JSON.stringify(conditions) });
-        }
-
-        submit('get', '@submitCall', params);
-    }
-
-    // update functions
-    function updateModelFromModal(condition, fields) {
-        $.each(fields, function( i, field ) {
-            condition[field] = $("#addEditConditionModal").find("#" + field).first().val();
-        })
-    }
-
-    function updateModalFromModel(condition, fields) {
-        $.each(fields,  function( i, field ) {
-            $("#addEditConditionModal").find("#" + field).first().val(condition[field]);
-        })
-        var fieldNameTypeahead = $("#addEditConditionModal").find("#fieldNameTypeahead").first();
-
-        var elementToSelect = condition["fieldName"];
-        if (condition["fieldLabel"])
-            elementToSelect = condition["fieldLabel"];
-//        var elementToSelect = {name: condition["fieldName"], label: condition["fieldLabel"], isLabel: true};
-
-        fieldNameTypeahead.typeahead('val', elementToSelect);
-    }
-
-    function updateFilterFromModel(index, condition, fields) {
-        $.each(fields, function( i, field ) {
-            $("#condition-full" + index).find("#" + field).first().html(condition[field]);
-        })
-    }
-
-    function loadFieldNames() {
-        if (!fieldNameAndLabels) {
-            @if(fieldsOrCall.isRight) {
-                $.ajax({
-                    url: '@fieldsUrl',
-                    success: function (data) {
-                        fieldNameAndLabels = data.map( function(field, index) {
-                            return {name: field.name, label: field.label};
-                        });
-                        initShowFieldNameLabelChoices();
-                        repopulateFieldNameTypeahead();
-                    },
-                    async: false
-                });
+        </li>
+        <li>
+            @if(filterJsRouter.isDefined && filter.isDefined && filter.get._id.isEmpty && filter.get.conditions.nonEmpty) {
+                <button type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#saveFilterModal" title="Save Filter">
+                    <span class="glyphicon glyphicon glyphicon-save"></span>
+                </button>
+                @modal("saveFilterModal", "Save Filter", saveFilterModalBody, None, Some(saveFilterModelButtons))
             }
-        }
-    }
 
-    function disableShowChoice(value) {
-        var showChoiceElement = $("input[name='showChoice'][value='" + value + "']")
-        showChoiceElement.attr("disabled", true);
-        showChoiceElement.parent().attr("title", "Disabled because no labels available");
-    }
+            @if(listFiltersCall.isDefined) {
+                <button id="loadFilterButton" type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('loadFilterSelectionAndShowModal')" title="Load Filter">
+                    <span class="glyphicon glyphicon-book"></span>
+                </button>
 
-    function initShowFieldNameLabelChoices() {
-        var itemsWithNonNullLabel = $.grep(fieldNameAndLabels, function(item) {
-            return item.label != null
-        });
-
-        // if no labels available disable the options mentioning labels and set the choice to 0 (names only)
-        if (itemsWithNonNullLabel.length == 0) {
-            $("input[name='showChoice'][value='0']").prop('checked', true);
-            disableShowChoice("1");
-            disableShowChoice("2");
-            disableShowChoice("3");
-        }
-    }
-
-    function repopulateFieldNameTypeahead() {
-        var choiceElement = $("input[name='showChoice']:checked")[0]
-        if (choiceElement) {
-            var choiceValue = parseInt(choiceElement.value);
-
-            $('#fieldNameTypeahead').typeahead('destroy');
-
-            populateFieldTypeahed(
-                $('#fieldNameTypeahead'),
-                $('#fieldName'),
-                fieldNameAndLabels,
-                choiceValue
-            )
-        };
-    }
-
-    $('#showChoicesButton').click(function() {
-        repopulateFieldNameTypeahead();
-    });
-
-    function saveFilter() {
-        var name = $('#saveFilterName').val();
-        var fullFilter = {_id: null, name: name, timeCreated: 0, conditions: jsConditions};
-        filterJsRoutes.controllers.dataset.FilterDispatcher.saveAjax(JSON.stringify(fullFilter)).ajax( {
-            success: function(data) {
-                showMessage("Filter '" + name + "' successfully saved.");
-            },
-            error: function(data){
-                showError(data.responseText);
+                @modal("loadFilterModal", "Load Filter", loadFilterModalBody, None, Some(loadFilterModelButtons))
             }
-        });
-    }
+        </li>
+    </ul>
+</div>
 
-    function loadFilter() {
-        var filterId = $('#filterId').val();
-        submitFilterCustom([], filterId);
-    }
-
-    function showConditionPanel() {
-        $("#conditionPanel").show();
-        $("#filterNameButton").hide();
-    }
-
-    function loadFilterSelectionAndShowModal() {
-        // always reload new (saved) filters before opening modal
-        loadFilterSelection();
-        $("#loadFilterModal").modal('show');
-    }
-
-    function loadFilterSelection() {
-        @if(listFiltersCall.isDefined) {
-            $.ajax({
-                url: '@Html(listFiltersCall.get.url)',
-                success: function (data) {
-                    var filterTypeaheadData = data.map( function(filter, index) {
-                        return {name: filter._id.$oid, label: filter.name};
-                    });
-                    $('#filterTypeahead').typeahead('destroy');
-                    if (filterTypeaheadData.length > 0) {
-                        populateFieldTypeahed(
-                            $('#filterTypeahead'),
-                            $('#filterId'),
-                            filterTypeaheadData,
-                            @FilterShowFieldStyle.LabelsOnly.id
-                        );
-                    } else {
-                        $("#loadFilterButton").hide();
-                    }
-                },
-                async: false
-            });
-        }
-    }
-
-    function updateCondition() {
-        $("#conditionType")
-    }
-</script>
+@filterJs(
+    filter,
+    submitCall,
+    fieldsOrCall,
+    filterJsRouter,
+    listFiltersCall,
+    filterSubmitParamName,
+    filterElementName
+)

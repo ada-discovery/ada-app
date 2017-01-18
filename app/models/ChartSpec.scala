@@ -2,6 +2,7 @@ package models
 
 import _root_.util.BasicStats.Quantiles
 import play.api.libs.json._
+import reactivemongo.bson.BSONObjectID
 
 import scala.collection.mutable
 import scala.collection.mutable.{Map => MMap}
@@ -12,6 +13,7 @@ abstract class ChartSpec {
   val title: String
   val height: Option[Int]
   val gridWidth: Option[Int]
+  val _id: BSONObjectID = BSONObjectID.generate()
 }
 
 case class CategoricalChartSpec(

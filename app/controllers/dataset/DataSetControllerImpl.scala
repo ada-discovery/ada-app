@@ -116,17 +116,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private def getViewView(
     dataViewId: BSONObjectID,
-    page: Page[JsObject],
-    fieldChartSpecs: Traversable[FieldChartSpec],
-    tableFields: Traversable[Field],
+    viewParts: Seq[DataSetViewData],
     elementGridWidth: Int
   )(implicit request: Request[_]) =
     dataset.showView(
       dataSetName + " Item",
       dataViewId,
-      page,
-      tableFields,
-      fieldChartSpecs,
+      viewParts,
       elementGridWidth,
       setting.filterShowFieldStyle,
       result(dataSpaceTree)
@@ -314,8 +310,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: Either[Seq[FilterCondition], BSONObjectID],
     filterChanged: Boolean
   ) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
-
     val start = new ju.Date()
 
     {
@@ -324,23 +318,30 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         dataView <- dataViewRepo.get(dataViewId)
 
         // get the response data
-        viewResponse <- {
+        viewResponses <- {
           val (columnNames, statsCalcSpecs) =
             dataView.map( view =>
               (view.tableColumnNames, view.statsCalcSpecs)
             ).getOrElse((Nil, Nil))
 
-          val viewFilterOrId = dataView.map(_.filterOrIds.headOption).flatten
+          val viewFilterOrIds = dataView.map(_.filterOrIds)
+          val viewHeadFilterOrId = viewFilterOrIds.map(_.headOption).flatten
 
-          val filterOrIdToUse =
-            if (!filterChanged && viewFilterOrId.isDefined && filterOrId.isLeft && filterOrId.left.get.isEmpty) {
-              viewFilterOrId.get
+          val headFilterOrIdToUse =
+            if (!filterChanged && viewHeadFilterOrId.isDefined && filterOrId.isLeft && filterOrId.left.get.isEmpty) {
+              viewHeadFilterOrId.get
             } else
               filterOrId
 
+          val filterOrIdsToUse = Seq(headFilterOrIdToUse) ++ viewFilterOrIds.map(_.tail).getOrElse(Nil)
+
           val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
 
-          getViewResponse(page, orderBy, filterOrIdToUse, columnNames, statsCalcSpecs, useChartRepoMethod)
+          Future.sequence(
+            filterOrIdsToUse.map(
+              getViewResponse(page, orderBy, _, columnNames, statsCalcSpecs, useChartRepoMethod)
+            )
+          )
         }
       } yield {
         val end = new ju.Date()
@@ -348,16 +349,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         Logger.info(s"Loading of view for the data set '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
         render {
           case Accepts.Html() => {
-            val newPage = Page(viewResponse.tableItems, page, page * pageLimit, viewResponse.count, orderBy, Some(viewResponse.filter))
+            val viewParts = viewResponses.map { viewResponse =>
+              val newPage = Page(viewResponse.tableItems, page, page * pageLimit, viewResponse.count, orderBy, Some(viewResponse.filter))
+              DataSetViewData(newPage, viewResponse.fieldChartSpecs, viewResponse.tableFields)
+            }
             Ok(getViewView(
               dataViewId,
-              newPage,
-              viewResponse.fieldChartSpecs,
-              viewResponse.tableFields,
+              viewParts,
               dataView.map(_.elementGridWidth).getOrElse(3))
             )
           }
-          case Accepts.Json() => Ok(Json.toJson(viewResponse.tableItems))
+          case Accepts.Json() => Ok(Json.toJson(viewResponses.head.tableItems))
         }
       }
     }.recover {

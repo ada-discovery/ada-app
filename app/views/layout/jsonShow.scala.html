@@ -24,11 +24,11 @@
 
 	<div class="row">
 		<fieldset>
-			@item.fields.map { case (fieldName, value) =>
+			@item.fields.sortBy(_._1).map { case (fieldName, value) =>
 				@if(!nonNullOnly || value != JsNull) {
 					@elementValue(
                         fieldName,
-                        fieldNameLabelAndRendererMap.get(fieldName).map(_._1).getOrElse(
+                        fieldNameLabelAndRendererMap.get(fieldName).map(_._1.take(30)).getOrElse(
                             attributeLabel(
                                 domainName,
                                 JsonUtil.unescapeKey(fieldName).take(30)

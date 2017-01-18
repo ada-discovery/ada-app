@@ -2,7 +2,11 @@
 @import views.html.chart.chartPanel
 @import util.chartElementName
 
-@(fieldChartSpecs : Traversable[FieldChartSpec], gridElementWidth: Int = 3)
+@(
+    filterElementName: String,
+    fieldChartSpecs: Traversable[FieldChartSpec],
+    gridElementWidth: Int = 3
+)
 
 @chartPanel(fieldChartSpecs.map(_.chartSpec), gridElementWidth)
 
@@ -10,7 +14,7 @@
     $('#@chartElementName').on('pointClick', function(event, data) {
 //        alert('Point clicked: name ' + data.name + ', y: ' + data.y + ', k: ' + data.key);
         var condition = { fieldName : "@fieldName", conditionType : "=", value : data.key};
-        addAndSubmitCondition(condition);
+        $('#@filterElementName').multiFilter('addAndSubmitCondition', condition);
     });
 }
 

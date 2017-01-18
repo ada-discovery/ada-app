@@ -60,7 +60,7 @@ package object util {
     fieldLabelMap.map(_.getOrElse(fieldName, defaultLabel)).getOrElse(defaultLabel)
   }
 
-  def chartElementName(chart: ChartSpec) = chart.hashCode + "Chart"
+  def chartElementName(chart: ChartSpec) = chart._id.stringify + "Chart"
 
   // retyping of column items needed because play templates do not support generics
   def typeColumn[T](column: (Option[String], String, T => Any)): (Option[String], String, Any  => Html) =

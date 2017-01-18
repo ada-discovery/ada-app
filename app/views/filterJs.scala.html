@@ -1,0 +1,80 @@
+@import play.api.libs.json.Json
+@import models.{Field, Filter}
+@import controllers.dataset.FilterJsRouter
+
+@(
+    filter: Option[Filter],
+    submitCall: Call,
+    fieldsOrCall: Either[Traversable[Field], Call],
+    filterJsRouter: Option[FilterJsRouter],
+    listFiltersCall: Option[Call],
+    filterSubmitParamName: String,
+    filterElementName: String
+)(
+    implicit request: Request[_]
+)
+
+@fieldNameLabelsAsString = @{
+    fieldsOrCall match {case Left(fields) =>
+        Html(
+            Json.stringify(
+                Json.toJson(
+                    fields.map { field =>
+                        Json.obj("name" -> field.name, "label" -> field.label)
+                    }
+                )
+            )
+        )
+    }
+}
+
+@fieldsUrl = @{
+    fieldsOrCall match {case Right(call) => call.url}
+}
+
+@if(filterJsRouter.isDefined) {
+    @helper.javascriptRouter("filterJsRoutes")(
+        filterJsRouter.get.saveAjax
+    )
+}
+
+<!-- '
+    Widget' part of the JQuery UI lib is sufficient for the filter JS, however for consistence we load the whole JQuery UI
+    <script type="text/javascript" src="@routes.Assets.versioned("javascripts/jquery-ui-1.11.4-widget.min.js")"></script>
+-->
+<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
+<script type="text/javascript" src="@routes.Assets.versioned("javascripts/multiFilter.min.js")"></script>
+
+<script type="text/javascript" defer="defer">
+    var jsConditions = JSON.parse('@{Html(Json.stringify(Json.toJson(filter.map(_.conditions).getOrElse(Nil))))}');
+
+    var fieldNameAndLabels =
+        @if(fieldsOrCall.isLeft) {
+            JSON.parse('@fieldNameLabelsAsString')
+        } else {
+            null
+        }
+
+    var getFieldsCall =
+        @if(fieldsOrCall.isRight) {
+            '@fieldsUrl'
+        } else {
+            null
+        }
+
+    var listFiltersCall =
+        @if(listFiltersCall.isDefined) {
+            '@listFiltersCall.get.url'
+        } else {
+            null
+        }
+
+    $("#@{filterElementName}").multiFilter({
+        jsonConditions: jsConditions,
+        fieldNameAndLabels: fieldNameAndLabels,
+        getFieldsCall: getFieldsCall,
+        submitCall: '@submitCall.url',
+        filterSubmitParamName: '@filterSubmitParamName',
+        listFilters: listFiltersCall
+    })
+</script>
