@@ -5,7 +5,7 @@ import models.FilterCondition
 import play.api.mvc.{AnyContent, Action}
 import util.SecurityUtil._
 
-trait AdminRestrictedReadonlyController[ID] extends ReadonlyController[ID] {
+trait RestrictedReadonlyController[ID] extends ReadonlyController[ID] {
 
   def deadbolt: DeadboltActions
 
