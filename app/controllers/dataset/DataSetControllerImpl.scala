@@ -118,15 +118,20 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dataViewId: BSONObjectID,
     viewParts: Seq[DataSetViewData],
     elementGridWidth: Int
-  )(implicit request: Request[_]) =
+  )(implicit request: Request[_]) = {
+    val start = new java.util.Date()
+    val tree = result(dataSpaceTree)
+    println(s"Data space tree loaded in ${new java.util.Date().getTime - start.getTime} ms.")
+
     dataset.showView(
       dataSetName + " Item",
       dataViewId,
       viewParts,
       elementGridWidth,
       setting.filterShowFieldStyle,
-      result(dataSpaceTree)
+      tree
     )
+  }
 
   /**
     * Shows all fields of the selected subject.
@@ -333,7 +338,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             } else
               filterOrId
 
-          val filterOrIdsToUse = Seq(headFilterOrIdToUse) ++ viewFilterOrIds.map(_.tail).getOrElse(Nil)
+          val filterOrIdsToUse = Seq(headFilterOrIdToUse) ++
+            viewFilterOrIds.map ( viewFilterOrIds =>
+              viewFilterOrIds match {
+                case Nil => Nil
+                case _ => viewFilterOrIds.tail
+              }
+            ).getOrElse(Nil)
 
           val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
 
@@ -1008,8 +1019,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     Future.sequence(futureFieldLabelPairs).map{ _.flatten.toMap }
   }
 
-  private def dataSpaceTree =
-    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
+  // TODO: tree should be cached
+    private def dataSpaceTree =
+      DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
+
+//  private lazy val dataSpaceTree =
+//    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 
   //////////////////////
   // Export Functions //

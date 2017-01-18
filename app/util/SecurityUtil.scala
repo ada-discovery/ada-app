@@ -63,4 +63,7 @@ object SecurityUtil {
 
   def restrictAdmin[A](deadbolt: DeadboltActions)(action: Action[A]): Action[A] =
     deadbolt.Restrict[A](List(Array(SecurityRole.admin)))(action)
+
+  def restrictSubjectPresent[A](deadbolt: DeadboltActions)(action: Action[A]): Action[A] =
+    deadbolt.SubjectPresent()(action)
 }

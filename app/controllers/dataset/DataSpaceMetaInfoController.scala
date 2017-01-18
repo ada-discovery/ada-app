@@ -2,7 +2,7 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.{AdminRestrictedCrudController, CrudControllerImpl}
+import controllers.{SubjectPresentRestrictedCrudController, AdminRestrictedCrudController, CrudControllerImpl}
 import models.{DataSetMetaInfo, DataSpaceMetaInfo, DataSetFormattersAndIds}
 import DataSetFormattersAndIds._
 import models.Page
@@ -28,7 +28,7 @@ class DataSpaceMetaInfoController @Inject() (
     repo: DataSpaceMetaInfoRepo,
     dsaf: DataSetAccessorFactory,
     dataSetSettingRepo: DataSetSettingRepo
-  ) extends CrudControllerImpl[DataSpaceMetaInfo, BSONObjectID](repo) with AdminRestrictedCrudController[BSONObjectID] {
+  ) extends CrudControllerImpl[DataSpaceMetaInfo, BSONObjectID](repo) with SubjectPresentRestrictedCrudController[BSONObjectID] {
 
   override protected val form = Form(
     mapping(
@@ -202,8 +202,8 @@ class DataSpaceMetaInfoController @Inject() (
     }
   }
 
-  // get is allowed for all logged users
-  override def get(id: BSONObjectID) = deadbolt.SubjectPresent()(super.get(id))
+//  // get is allowed for all logged users
+//  override def get(id: BSONObjectID) = deadbolt.SubjectPresent()(super.get(id))
 
   private def allAsTree =
     DataSpaceMetaInfoRepo.allAsTree(repo)
