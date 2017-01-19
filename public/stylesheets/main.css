@@ -207,7 +207,7 @@ tr.clickable-row {
     overflow: hidden;
 }
 .row.vertical-divider > div[class^="col-"] {
-    text-align: center;
+    /*text-align: center;*/
     padding-bottom: 100px;
     margin-bottom: -100px;
     border-left: 3px solid #F2F7F9;

@@ -224,7 +224,8 @@ object DataSetFormattersAndIds {
 
   implicit val dictionaryFormat = Json.format[Dictionary]
   implicit val dataSetMetaInfoFormat = Json.format[DataSetMetaInfo]
-  implicit val dataSpaceMetaInfoFormat: Format[DataSpaceMetaInfo] = (
+
+  val dataSpaceMetaInfoFormat: Format[DataSpaceMetaInfo] = (
     (__ \ "_id").formatNullable[BSONObjectID] and
     (__ \ "name").format[String] and
     (__ \ "sortOrder").format[Int] and
@@ -237,6 +238,7 @@ object DataSetFormattersAndIds {
       item._id, item.name, item.sortOrder, item.timeCreated, item.dataSetMetaInfos, item.parentId
     )
   )
+  implicit val serializableDataSpaceMetaInfoFormat: Format[DataSpaceMetaInfo] = new SerializableFormat(dataSpaceMetaInfoFormat.reads, dataSpaceMetaInfoFormat.writes)
 
   implicit val filterShowFieldStyleFormat = EnumFormat.enumFormat(FilterShowFieldStyle)
   implicit val storageTypeFormat = EnumFormat.enumFormat(StorageType)
