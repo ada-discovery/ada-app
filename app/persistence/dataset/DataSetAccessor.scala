@@ -2,10 +2,8 @@ package persistence.dataset
 
 import dataaccess.{JsonCrudRepoFactory, Criterion}
 import models.{FieldTypeSpec, DataSetSetting, DataSetMetaInfo}
-import dataaccess.RepoTypes.JsonCrudRepo
 import Criterion.Infix
 import scala.concurrent.duration._
-import persistence.RepoTypes._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future

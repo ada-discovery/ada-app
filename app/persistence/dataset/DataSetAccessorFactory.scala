@@ -4,9 +4,8 @@ import javax.inject.{Singleton, Named, Inject}
 
 import dataaccess._
 import models._
-import dataaccess.RepoTypes.DataSetSettingRepo
+import dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
 import Criterion.Infix
-import persistence.RepoTypes._
 import play.api.Logger
 import play.api.libs.json.JsObject
 import util.RefreshableCache
@@ -57,10 +56,13 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
 
     val dataSetAccessorFuture = for {
       dataSpaceId <-
-        dataSpaceMetaInfoRepo.find(
-          Seq("dataSetMetaInfos.id" #== dataSetId)
-        ).map(_.headOption.map(_._id.get))
-
+      // TODO: dataSpaceMetaInfoRepo is cached and so querying nested objects "dataSetMetaInfos.id" does not work properly
+//        dataSpaceMetaInfoRepo.find(
+//          Seq("dataSetMetaInfos.id" #== dataSetId)
+//        ).map(_.headOption.map(_._id.get))
+        dataSpaceMetaInfoRepo.find().map ( dataSpaceMetaInfos =>
+          dataSpaceMetaInfos.find(_.dataSetMetaInfos.map(_.id).contains(dataSetId)).map(_._id.get)
+        )
     } yield {
       val dataSetMetaInfoRepo =
         dataSpaceId.map(dataSetMetaInfoRepoFactory(_)).getOrElse(

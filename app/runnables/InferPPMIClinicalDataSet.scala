@@ -27,6 +27,7 @@ class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends
         "Clinical Visit",
         None,
         None,
+        Some(100),
         Some(fieldTypeInferrerFactory.applyJson)
       ),
       30 minutes

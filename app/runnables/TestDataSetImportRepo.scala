@@ -14,9 +14,9 @@ class TestDataSetImportRepo @Inject() (repo: DataSetImportRepo) extends Runnable
   override def run = {
     val future =
       for {
-        _ <- repo.save(CsvDataSetImport(None, "Lux Park", "lux_park.lala1", "Lala 1", Some("/home/temp/data1.csv"), ",", None, None, true, false, false, None, None, None))
-        _ <- repo.save(CsvDataSetImport(None, "Lux Park", "lux_park.lala2", "Lala 2", Some("/home/temp/data2.csv"), ";", None, None, true, false, false, None, None, None))
-        _ <- repo.save(RedCapDataSetImport(None, "Lux Park", "lux_park.lala3", "Lala 3","https:/something.com/rest", "54j39gryu65936f3", true, Nil, false, None, None, None))
+        _ <- repo.save(CsvDataSetImport(None, "Lux Park", "lux_park.lala1", "Lala 1", Some("/home/temp/data1.csv"), ",", None, None, true, false))
+        _ <- repo.save(CsvDataSetImport(None, "Lux Park", "lux_park.lala2", "Lala 2", Some("/home/temp/data2.csv"), ";", None, None, true, false))
+        _ <- repo.save(RedCapDataSetImport(None, "Lux Park", "lux_park.lala3", "Lala 3","https:/something.com/rest", "54j39gryu65936f3", false))
         csvSearchResult <- repo.find(
           criteria = Seq("dataSetId" #== "lux_park.lala1"),
           projection = Seq("concreteClass", "dataSpaceName", "dataSetName", "dataSetId", "delimiter", "timeCreated")

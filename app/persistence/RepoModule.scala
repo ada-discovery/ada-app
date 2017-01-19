@@ -36,7 +36,7 @@ private object RepoDef extends Enumeration {
   import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
   import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
   import Workspace.WorkspaceFormat
-  import models.DataSetFormattersAndIds.{dataSetSettingFormat, fieldFormat, dictionaryFormat, dataSpaceMetaInfoFormat, DataSpaceMetaInfoIdentity, DictionaryIdentity, FieldIdentity, DataSetSettingIdentity}
+  import models.DataSetFormattersAndIds.{dataSetSettingFormat, fieldFormat, dictionaryFormat, DataSpaceMetaInfoIdentity, DictionaryIdentity, FieldIdentity, DataSetSettingIdentity}
 
   val TranslationRepo = Repo[TranslationRepo](
     new MongoAsyncCrudRepo[Translation, BSONObjectID]("translations"))
@@ -53,8 +53,11 @@ private object RepoDef extends Enumeration {
   val DictionaryRootRepo = Repo[DictionaryRootRepo](
     new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
 
-  val DataSpaceMetaInfoRepo = Repo[DataSpaceMetaInfoRepo](
-    new MongoAsyncCrudRepo[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos"))
+  val MongoDataSpaceMetaInfoRepo = Repo[MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]](
+    new MongoAsyncCrudRepo[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos"), true)
+
+  //  val DataSpaceMetaInfoRepo = Repo[MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]](
+//    new MongoAsyncCrudRepo[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos"))
 
 //  val DataSetSettingRepo = Repo[DataSetSettingRepo](
 //    new MongoAsyncCrudRepo[DataSetSetting, BSONObjectID]("dataset_settings"))
@@ -76,7 +79,7 @@ private object RepoDef extends Enumeration {
 // repo module used to bind repo types/instances withing Guice IoC container
 class RepoModule extends ScalaModule {
 
-  import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableBSONObjectIDFormat, DataSetSettingIdentity}
+  import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableDataSpaceMetaInfoFormat, serializableBSONObjectIDFormat, DataSetSettingIdentity}
   import dataaccess.User.{serializableUserFormat, UserIdentity}
 
   def configure = {
@@ -91,9 +94,11 @@ class RepoModule extends ScalaModule {
       new CacheAsyncCrudRepoProvider[User, BSONObjectID]("users")
     ).asEagerSingleton
 
-    bind[ElasticClient].toProvider(
-      new ElasticClientProvider
+    bind[DataSpaceMetaInfoRepo].toProvider(
+      new CacheAsyncCrudRepoProvider[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos")
     ).asEagerSingleton
+
+    bind[ElasticClient].toProvider(new ElasticClientProvider).asEagerSingleton
 
     // bind the repos defined above
     RepoDef.values.foreach(bindRepo(_))
@@ -128,8 +133,6 @@ class RepoModule extends ScalaModule {
 //    install(new FactoryModuleBuilder()
 //      .implement(new TypeLiteral[CategoryRepo]{}, classOf[DictionaryCategoryMongoAsyncCrudRepo])
 //      .build(classOf[CategoryRepoFactory]))
-
-//    bind[DataSetAccessorFactory].to(classOf[DataSetAccessorMongoFactory]).asEagerSingleton
   }
 
   private def bindRepo[T](repo : Repo[T]) = {

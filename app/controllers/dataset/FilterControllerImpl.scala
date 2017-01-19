@@ -6,7 +6,7 @@ import javax.inject.Inject
 import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
 import controllers.{JsonFormatter, CrudControllerImpl}
-import dataaccess.RepoTypes.UserRepo
+import dataaccess.RepoTypes.{UserRepo, DataSpaceMetaInfoRepo}
 import dataaccess.{FilterRepo, RepoException, AscSort, Criterion}
 import models._
 import models.FilterCondition.{FilterIdentity, filterFormat}

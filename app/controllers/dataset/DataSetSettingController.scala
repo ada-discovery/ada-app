@@ -5,13 +5,12 @@ import javax.inject.Inject
 
 import controllers._
 import dataaccess.Criterion
-import dataaccess.RepoTypes.DataSetSettingRepo
+import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, DataSetSettingRepo}
 import models.{FieldChartType, DataSetSetting, DataSetFormattersAndIds, ChartType}
 import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, fieldChartTypeFormat, DataSetSettingIdentity, statsCalcSpecFormat}
 import models._
 import models.FilterShowFieldStyle
 import Criterion.Infix
-import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import play.api.Logger
 import play.api.data.Form

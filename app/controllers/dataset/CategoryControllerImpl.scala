@@ -10,7 +10,7 @@ import models.Category
 import models.DataSetFormattersAndIds._
 import models.{D3Node, Page}
 import Criterion.Infix
-import persistence.RepoTypes._
+import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form

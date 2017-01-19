@@ -16,7 +16,7 @@ import controllers.{DataSetWebContext, ExportableAction, ReadonlyControllerImpl}
 import models.DataSetFormattersAndIds.{JsObjectIdentity, FieldIdentity}
 import Criterion.Infix
 import org.apache.commons.lang3.StringEscapeUtils
-import persistence.RepoTypes._
+import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.i18n.Messages
@@ -119,10 +119,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     viewParts: Seq[DataSetViewData],
     elementGridWidth: Int
   )(implicit request: Request[_]) = {
-    val start = new java.util.Date()
     val tree = result(dataSpaceTree)
-    println(s"Data space tree loaded in ${new java.util.Date().getTime - start.getTime} ms.")
-
     dataset.showView(
       dataSetName + " Item",
       dataViewId,

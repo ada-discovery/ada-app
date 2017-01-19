@@ -3,7 +3,7 @@ package services.datasetimporter
 import java.nio.charset.{MalformedInputException, UnsupportedCharsetException, Charset}
 import javax.inject.Inject
 
-import dataaccess.{FieldTypeHelper, FieldType}
+import dataaccess._
 import models.{AdaParseException, DataSetImport}
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -30,7 +30,7 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
   protected val logger = Logger
   protected lazy val messageLogger = MessageLogger(logger, messageRepo)
 
-  protected val fti = FieldTypeHelper.fieldTypeInferrer
+  protected val defaultFti = FieldTypeHelper.fieldTypeInferrer
   protected val ftf = FieldTypeHelper.fieldTypeFactory
   protected val defaultCharset = "UTF-8"
   protected val timeout = 2 minutes
@@ -46,9 +46,10 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
 
   protected def createJsonsWithFieldTypes(
     fieldNames: Seq[String],
-    values: Seq[Seq[String]]
+    values: Seq[Seq[String]],
+    fti: Option[FieldTypeInferrer[String]] = None
   ): (Seq[JsObject], Seq[(String, FieldType[_])]) = {
-    val fieldTypes = values.transpose.par.map(fti.apply).toList
+    val fieldTypes = values.transpose.par.map(fti.getOrElse(defaultFti).apply).toList
 
     val jsons = values.map( vals =>
       JsObject(

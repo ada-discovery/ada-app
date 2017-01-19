@@ -19,7 +19,7 @@ class CleanupDeNoPaBaseline @Inject()(dataSetService: DataSetService) extends Ru
         Some(DeNoPaDataViews.ClinicalBaseline),
         true, true, true
       ),
-      2 minutes
+      10 minutes
     )
 }
 
@@ -34,7 +34,7 @@ class CleanupDeNoPaFirstVisit @Inject()(dataSetService: DataSetService) extends 
         Some(DeNoPaDataViews.ClinicalFirstVisit),
         true, true, true
       ),
-      2 minutes
+      10 minutes
     )
 }
 
@@ -49,7 +49,7 @@ class CleanupDeNoPaSecondVisit @Inject()(dataSetService: DataSetService) extends
         Some(DeNoPaDataViews.ClinicalSecondVisit),
         true, true, true
       ),
-      2 minutes
+      10 minutes
     )
 }
 

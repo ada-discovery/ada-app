@@ -18,8 +18,6 @@ object RepoTypes {
   type MessageRepo = AsyncStreamRepo[Message, BSONObjectID]
   type UserSettingsRepo = AsyncCrudRepo[Workspace, BSONObjectID]
 
-  type DataSpaceMetaInfoRepo = MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]
-  type DataSetMetaInfoRepo = AsyncCrudRepo[DataSetMetaInfo, BSONObjectID]
   type DataSetImportRepo = AsyncCrudRepo[DataSetImport, BSONObjectID]
 
   // experimental

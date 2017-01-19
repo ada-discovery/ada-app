@@ -185,7 +185,7 @@ private class SynapseDataSetImporter @Inject() (
     val existingFieldTypeMap: Map[String, FieldType[_]] = fields.map ( field => (field.name, ftf(field.fieldTypeSpec))).toMap
 
     // infer the new types
-    val newFieldTypes = values.transpose.par.map(fti.apply).toList
+    val newFieldTypes = values.transpose.par.map(defaultFti.apply).toList
 
     // merge the old and new field types
     val fieldNameAndTypesForParsing = fieldNames.zip(newFieldTypes).map { case (fieldName, newFieldType) =>

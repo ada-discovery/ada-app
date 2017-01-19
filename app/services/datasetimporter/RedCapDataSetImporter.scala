@@ -247,7 +247,7 @@ private class RedCapDataSetImporter @Inject() (
         val stringValues = records.map(record =>
           displayJsonToDisplayString(stringFieldType, (record \ fieldName))
         )
-        (fieldName, fti(stringValues))
+        (fieldName, defaultFti(stringValues))
       }.toMap
 
     // TODO: optimize this... introduce field groups to speed up inference

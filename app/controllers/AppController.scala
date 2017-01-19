@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import persistence.RepoTypes.DataSpaceMetaInfoRepo
+import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import persistence.dataset.DataSpaceMetaInfoRepo
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, Controller}

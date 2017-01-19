@@ -16,13 +16,13 @@ import scala.concurrent.duration._
 import scala.concurrent.{Future, Await}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class TestElasticJsonRepo @Inject() (dsaf: DataSetAccessorFactory) extends Runnable {
+class TestElasticJsonRepo @Inject() (dsaf: DataSetAccessorFactory) { // extends Runnable
 
   val dsa = dsaf("lux_park.ibbl_biosamples").get
   val dataSetRepo = dsa.dataSetRepo
   val idName = JsObjectIdentity.name
 
-  override def run = {
+  def run = {
     val future =
       for {
         firstTwo <- dataSetRepo.find(limit = Some(2))
@@ -156,4 +156,4 @@ class TestElasticJsonRepo @Inject() (dsaf: DataSetAccessorFactory) extends Runna
     jsons.forall(json => (json \ JsObjectIdentity.name).toOption.isDefined)
 }
 
-object TestElasticJsonRepo extends GuiceBuilderRunnable[TestElasticJsonRepo] with App { run }
+//object TestElasticJsonRepo extends GuiceBuilderRunnable[TestElasticJsonRepo] with App { run }

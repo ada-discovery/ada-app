@@ -6,8 +6,7 @@ import controllers.{SubjectPresentRestrictedCrudController, AdminRestrictedCrudC
 import models.{DataSetMetaInfo, DataSpaceMetaInfo, DataSetFormattersAndIds}
 import DataSetFormattersAndIds._
 import models.Page
-import persistence.RepoTypes._
-import dataaccess.RepoTypes.DataSetSettingRepo
+import dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
 import dataaccess.Criterion.Infix
 import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessorFactory}
 import play.api.Logger

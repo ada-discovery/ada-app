@@ -16,7 +16,8 @@ import controllers.ViewTypes.{EditView, CreateView}
 import controllers._
 import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
 import models._
-import persistence.RepoTypes._
+import persistence.RepoTypes.DataSetImportRepo
+import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import play.api.{Configuration, Logger}
 import play.api.data.{Form, Mapping}
 import play.api.data.Forms._
@@ -31,7 +32,7 @@ import services.{DataSetImportScheduler, DataSetService, DeNoPaSetting}
 import util.SecurityUtil.restrictAdmin
 import views.html.{datasetimport => importViews}
 import views.html.layout
-
+import play.api.data.format.Formats._
 import scala.concurrent.{Await, Future}
 
 class DataSetImportController @Inject()(
@@ -102,6 +103,9 @@ class DataSetImportController @Inject()(
       "charsetName" -> optional(text),
       "matchQuotes" -> boolean,
       "inferFieldTypes" -> boolean,
+      "inferenceMaxEnumValuesCount" -> optional(number(min = 1)),
+      "inferenceMinAvgValuesPerEnum" -> optional(of[Double]),
+      "saveBatchSize" -> optional(number(min = 1)),
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),

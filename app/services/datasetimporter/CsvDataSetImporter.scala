@@ -1,11 +1,12 @@
 package services.datasetimporter
 
 import java.util.Date
-import dataaccess.FieldType
+import dataaccess.{FieldTypeHelper, FieldTypeFactory, FieldTypeInferrerFactory, FieldType}
 import dataaccess.RepoTypes.JsonCrudRepo
 import models.CsvDataSetImport
 import persistence.dataset.DataSetAccessor
 import play.api.libs.json.JsObject
+import util.seqFutures
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -35,9 +36,9 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
         // save the jsons and get the field types
         fieldNameAndTypes <-
           if (importInfo.inferFieldTypes)
-            saveJsonsWithTypeInference(columnNames, values, dsa)
+            saveJsonsWithTypeInference(dsa, columnNames, values, importInfo)
           else
-            saveJsonsWithoutTypeInference(columnNames, values, dsa)
+            saveJsonsWithoutTypeInference(dsa, columnNames, values, importInfo.saveBatchSize)
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
       }
@@ -47,9 +48,10 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
   }
 
   private def saveJsonsWithoutTypeInference(
+    dsa: DataSetAccessor,
     columnNames: Seq[String],
     values: Iterator[Seq[String]],
-    dsa: DataSetAccessor
+    saveBatchSize: Option[Int]
   ): Future[Seq[(String, FieldType[_])]] = {
     // create jsons and field types
     logger.info(s"Creating JSONs...")
@@ -75,23 +77,47 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
       }
 
       // save the jsons
-      _ <- Future.sequence {
+      _ <- {
         logger.info(s"Saving JSONs...")
-        jsons.map(dataRepo.save)
+        saveBatchSize match {
+          case Some(saveBatchSize) =>
+            seqFutures(
+              jsons.grouped(saveBatchSize))(
+              dataRepo.save
+            )
+
+          case None =>
+            Future.sequence(
+              jsons.map(dataRepo.save)
+            )
+        }
       }
     } yield
       fieldNameAndTypes
   }
 
   private def saveJsonsWithTypeInference(
+    dsa: DataSetAccessor,
     columnNames: Seq[String],
     values: Iterator[Seq[String]],
-    dsa: DataSetAccessor
+    importInfo: CsvDataSetImport
   ): Future[Seq[(String, FieldType[_])]] = {
 
-    // create jsons and field types
-    logger.info(s"Creating JSONs...")
-    val (jsons, fieldNameAndTypes) = createJsonsWithFieldTypes(columnNames, values.toSeq)
+    // infer field types and create JSONSs
+    logger.info(s"Inferring field types and creating JSONs...")
+    val fti =
+      if (importInfo.inferenceMaxEnumValuesCount.isDefined || importInfo.inferenceMinAvgValuesPerEnum.isDefined) {
+        Some(
+          FieldTypeInferrerFactory(
+            FieldTypeHelper.fieldTypeFactory,
+            importInfo.inferenceMaxEnumValuesCount.getOrElse(FieldTypeHelper.maxEnumValuesCount),
+            importInfo.inferenceMinAvgValuesPerEnum.getOrElse(FieldTypeHelper.minAvgValuesPerEnum),
+            FieldTypeHelper.arrayDelimiter
+          ).apply
+        )
+      } else
+        None
+    val (jsons, fieldNameAndTypes) = createJsonsWithFieldTypes(columnNames, values.toSeq, fti)
 
     for {
       // save, or update the dictionary
@@ -115,7 +141,7 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
       // save the jsons
       _ <- {
         logger.info(s"Saving JSONs...")
-        dataSetService.saveOrUpdateRecords(dataRepo, jsons)
+        dataSetService.saveOrUpdateRecords(dataRepo, jsons,  None, false, None, importInfo.saveBatchSize)
       }
     } yield
       fieldNameAndTypes

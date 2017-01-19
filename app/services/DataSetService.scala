@@ -87,7 +87,7 @@ trait DataSetService {
     keyField: Option[String] = None,
     updateExisting: Boolean = false,
     transformJsons: Option[Seq[JsObject] => Future[(Seq[JsObject])]] = None,
-    transformBatchSize: Option[Int] = None
+    batchSize: Option[Int] = None
   ): Future[Unit]
 
   def deleteRecordsExcept(
@@ -113,6 +113,7 @@ trait DataSetService {
     newDataSetName: String,
     newDataSetSetting: Option[DataSetSetting],
     newDataView: Option[DataView],
+    saveBatchSize: Option[Int],
     jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]] = None
   ): Future[Unit]
 }
@@ -142,7 +143,7 @@ class DataSetServiceImpl @Inject()(
     keyField: Option[String] = None,
     updateExisting: Boolean = false,
     transformJsons: Option[Seq[JsObject] => Future[(Seq[JsObject])]] = None,
-    transformBatchSize: Option[Int] = None
+    batchSize: Option[Int] = None
   ): Future[Unit] = {
     val size = jsons.size
     val reportLineSize = size * reportLineFreq
@@ -282,13 +283,17 @@ class DataSetServiceImpl @Inject()(
         transformAndSaveAux(startIndex)(jsonRecords)
       }
 
-    if (transformBatchSize.isDefined) {
-      val indexedGroups = jsons.grouped(transformBatchSize.get).zipWithIndex
+    ///////////////
+    // Main part //
+    ///////////////
+
+    if (batchSize.isDefined) {
+      val indexedGroups = jsons.grouped(batchSize.get).zipWithIndex
 
       indexedGroups.foldLeft(Future(())){
         case (x, (groupedJsons, groupIndex)) =>
           x.flatMap {_ =>
-            transformAndSaveOrUpdateMainAux(groupIndex * transformBatchSize.get)(groupedJsons)
+            transformAndSaveOrUpdateMainAux(groupIndex * batchSize.get)(groupedJsons)
           }
         }
     } else
@@ -648,24 +653,73 @@ class DataSetServiceImpl @Inject()(
       messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")
   }
 
+  private def createNewJsonsAndSave(
+    originalDataRepo: JsonCrudRepo,
+    newDataRepo: JsonCrudRepo,
+    newFieldNameAndTypeMap: Map[String, FieldType[_]],
+    overallSize: Int,
+    batchSize: Int)(
+    idsIndex: (Seq[BSONObjectID], Int)
+  ): Future[Traversable[BSONObjectID]] = {
+    // helper functions to parse jsons
+    def displayJsonToJson[T](fieldType: FieldType[T], json: JsReadable): JsValue = {
+      val value = fieldType.displayJsonToValue(json)
+      fieldType.valueToJson(value)
+    }
+
+    val ids = idsIndex._1
+    val index = idsIndex._2
+    val reportLineSize = overallSize * reportLineFreq
+
+    val newJsonsFuture: Future[Traversable[JsObject]] =
+      originalDataRepo.find(Seq(JsObjectIdentity.name #-> ids)).map { originalItems =>
+        originalItems.map { originalItem =>
+          val newJsonValues = originalItem.fields.map { case (fieldName, jsonValue) =>
+            val newJsonValue = newFieldNameAndTypeMap.get(fieldName) match {
+              case Some(newFieldType) => displayJsonToJson(newFieldType, jsonValue)
+              case None => jsonValue
+            }
+            (fieldName, newJsonValue)
+          }
+          JsObject(newJsonValues)
+        }
+      }
+    //            ids.map { id =>
+    //              originalDataRepo.get(id).map { case Some(originalItem) =>
+    //
+    //                val newJsonValues = originalItem.fields.map { case (fieldName, jsonValue) =>
+    //                  val newJsonValue = newFieldNameAndTypeMap.get(fieldName) match {
+    //                    case Some(newFieldType) => displayJsonToJson(newFieldType, jsonValue)
+    //                    case None => jsonValue
+    //                  }
+    //                  (fieldName, newJsonValue)
+    //                }
+    //
+    //                JsObject(newJsonValues)
+    //              }
+    //            }
+
+    newJsonsFuture.flatMap { newJsons =>
+      newDataRepo.save(newJsons).map { ids =>
+        logProgress((index + 1) * batchSize, reportLineSize, overallSize)
+        ids
+      }
+    }
+  }
+
   override def translateDataAndDictionaryOptimal(
     originalDataSetId: String,
     newDataSetId: String,
     newDataSetName: String,
     newDataSetSetting: Option[DataSetSetting],
     newDataView: Option[DataView],
+    saveBatchSize: Option[Int],
     jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]]
   ) = {
     logger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' initiated.")
     val originalDsa = dsaf(originalDataSetId).get
     val originalDataRepo = originalDsa.dataSetRepo
     val originalDictionaryRepo = originalDsa.fieldRepo
-
-    // helper functions to parse jsons
-    def displayJsonToJson[T](fieldType: FieldType[T], json: JsReadable): JsValue = {
-      val value = fieldType.displayJsonToValue(json)
-      fieldType.valueToJson(value)
-    }
 
     for {
       // get the accessor (data repo and field repo) for the newly registered data set
@@ -716,24 +770,15 @@ class DataSetServiceImpl @Inject()(
       }
 
       // save the new items
-      _ <- Future.sequence {
+      _ <- {
         logger.info("Saving new items")
         val newFieldNameAndTypeMap: Map[String, FieldType[_]] = newFieldNameAndTypes.toMap
-
-        originalIds.map { id =>
-          originalDataRepo.get(id).flatMap { case Some(originalItem) =>
-
-            val newJsonValues = originalItem.fields.map { case (fieldName, jsonValue) =>
-              val newJsonValue = newFieldNameAndTypeMap.get(fieldName) match {
-                case Some(newFieldType) => displayJsonToJson(newFieldType, jsonValue)
-                case None => jsonValue
-              }
-              (fieldName, newJsonValue)
-            }
-
-            newDataRepo.save(JsObject(newJsonValues))
-          }
-        }
+        val size = originalIds.size
+        seqFutures(
+          originalIds.toSeq.grouped(saveBatchSize.getOrElse(1)).zipWithIndex
+        )(
+          createNewJsonsAndSave(originalDataRepo, newDataRepo, newFieldNameAndTypeMap, size, saveBatchSize.getOrElse(1))
+        )
       }
     } yield
       messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")

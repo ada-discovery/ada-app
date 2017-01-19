@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
 import controllers.{ExportableAction, CrudControllerImpl, EnumFormatter, MapJsonFormatter}
-import dataaccess.RepoTypes.CategoryRepo
+import dataaccess.RepoTypes.{CategoryRepo, DataSpaceMetaInfoRepo}
 import dataaccess._
 import models._
 import models.DataSetFormattersAndIds._

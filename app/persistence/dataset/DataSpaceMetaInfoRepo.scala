@@ -2,8 +2,6 @@ package persistence.dataset
 
 import dataaccess.RepoTypes._
 import models.DataSpaceMetaInfo
-import persistence.RepoTypes.DataSpaceMetaInfoRepo
-import reactivemongo.bson.BSONObjectID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 

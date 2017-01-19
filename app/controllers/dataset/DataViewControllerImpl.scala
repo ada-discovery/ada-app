@@ -11,9 +11,8 @@ import dataaccess._
 import models._
 import models.DataSetFormattersAndIds._
 import models.FilterCondition.filterFormat
-import Criterion.Infix
 import models.security.UserManager
-import persistence.RepoTypes._
+import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -22,7 +21,6 @@ import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
-import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import java.util.Date

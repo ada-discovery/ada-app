@@ -1,14 +1,14 @@
 package persistence.dataset
 
-import javax.inject.Inject
+import javax.inject.{Inject, Named}
 
 import com.google.inject.assistedinject.Assisted
 import dataaccess.Criterion
-import dataaccess.mongo.SubordinateObjectMongoAsyncCrudRepo
+import dataaccess.mongo.{MongoAsyncCrudExtraRepo, SubordinateObjectMongoAsyncCrudRepo}
 import models.DataSetFormattersAndIds._
 import models._
 import Criterion.Infix
-import persistence.RepoTypes._
+import dataaccess.RepoTypes._
 import persistence._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -23,14 +23,17 @@ trait DataSetMetaInfoRepoFactory {
 
 protected[persistence] class DataSetMetaInfoSubordinateMongoAsyncCrudRepo @Inject()(
     @Assisted dataSpaceId: BSONObjectID,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
+    @Named("MongoDataSpaceMetaInfoRepo") dataSpaceMetaInfoRepo: MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]
   ) extends SubordinateObjectMongoAsyncCrudRepo[DataSetMetaInfo, BSONObjectID, DataSpaceMetaInfo, BSONObjectID]("dataSetMetaInfos", dataSpaceMetaInfoRepo) {
+
+  override protected lazy val rootId = dataSpaceId
 
   override protected def getDefaultRoot =
     DataSpaceMetaInfo(Some(dataSpaceId), "", 0, new java.util.Date(), Seq[DataSetMetaInfo]())
 
   override protected def getRootObject =
-    dataSpaceMetaInfoRepo.find(Seq(DataSpaceMetaInfoIdentity.name #== dataSpaceId)).map(_.headOption)
+    Future(Some(getDefaultRoot))
+  //    rootRepo.find(Seq(DataSpaceMetaInfoIdentity.name #== dataSpaceId)).map(_.headOption)
 
   override def save(entity: DataSetMetaInfo): Future[BSONObjectID] = {
     val identity = DataSetMetaInfoIdentity
