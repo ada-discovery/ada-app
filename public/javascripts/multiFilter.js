@@ -3,10 +3,12 @@ $.widget( "custom.multiFilter", {
     options: {
         jsonConditions: null,
         fieldNameAndLabels: null,
-        getFieldsCall: null,
-        submitCall: null,
+        getFieldsUrl: null,
+        submitUrl: null,
+        listFiltersUrl: null,
         filterSubmitParamName: null,
-        listFilters: null
+        filterId: null,
+        createSubmissionJson: null
     },
 
     // the constructor
@@ -23,7 +25,10 @@ $.widget( "custom.multiFilter", {
         this.fieldNameTypeaheadElement = this.element.find("#fieldNameTypeahead");
         this.fieldNameElement = this.element.find("#fieldName");
         this.valueElement = this.element.find("#value");
-        this.saveFilterModalElement = this.element.find("#saveFilterModal");
+        var saveFilterModalName = "saveFilterModal" + this.element.attr('id');
+        console.log(saveFilterModalName)
+        console.log(this.element)
+        this.saveFilterModalElement = this.element.find("#" + saveFilterModalName);
         this.saveFilterNameElement = this.element.find("#saveFilterName");
         this.showChoicesButtonElement = this.element.find("#showChoicesButton");
         this.conditionPanelElement = this.element.find("#conditionPanel");
@@ -36,7 +41,7 @@ $.widget( "custom.multiFilter", {
             that.repopulateFieldNameTypeahead();
         }
 
-        if (this.options.listFilters) {
+        if (this.options.listFiltersUrl) {
             that.loadFilterSelection();
         }
 
@@ -133,24 +138,37 @@ $.widget( "custom.multiFilter", {
         return this.jsonConditions;
     },
 
-    submitFilter: function () {
-        this.submitFilterCustom(this.jsonConditions, null);
+    getJsonFilterId: function () {
+        var filterIdFromElement = this.filterIdElement.val();
+        var outputFilterId = (filterIdFromElement) ? filterIdFromElement : this.options.filterId;
+        return (outputFilterId) ? {'$oid': outputFilterId} : null;
     },
 
-    submitFilterCustom: function (conditions, filterId) {
-        var params = getQueryParams(this.options.submitCall)
+    submitFilter: function () {
+        this.submitFilterOrId(this.jsonConditions, null);
+    },
 
-        var filterIdOrConditions = {};
+    submitFilterOrId: function (conditions, filterId) {
+        var params = getQueryParams(this.options.submitUrl)
 
-        if (filterId) {
-            filterIdOrConditions[this.options.filterSubmitParamName] = filterId;
-        } else if (conditions) {
-            filterIdOrConditions[this.options.filterSubmitParamName] = JSON.stringify(conditions);
-        }
+        var filterIdOrConditions =
+            (this.options.createSubmissionJson) ?
+                this.options.createSubmissionJson(conditions, filterId)
+            :
+                this._defaultCreateSubmissionJson(conditions, filterId);
 
         $.extend(params, filterIdOrConditions);
 
-        submit('get', this.options.submitCall, params);
+        submit('get', this.options.submitUrl, params);
+    },
+
+    _defaultCreateSubmissionJson: function (conditions, filterId) {
+        var filterOrId = (filterId) ? {'$oid': filterId} : conditions;
+
+        var filterIdOrConditions = {};
+        filterIdOrConditions[this.options.filterSubmitParamName] = JSON.stringify(filterOrId);
+
+        return filterIdOrConditions;
     },
 
     // update functions
@@ -186,9 +204,9 @@ $.widget( "custom.multiFilter", {
     loadFieldNames: function () {
         var that = this;
         if (!this.fieldNameAndLabels) {
-                if(this.options.getFieldsCall) {
+                if(this.options.getFieldsUrl) {
                     $.ajax({
-                        url: this.options.getFieldsCall,
+                        url: this.options.getFieldsUrl,
                         success: function (data) {
                             that.fieldNameAndLabels = data.map( function(field, index) {
                                 return {name: field.name, label: field.label};
@@ -253,7 +271,7 @@ $.widget( "custom.multiFilter", {
 
     loadFilter: function () {
         var filterId = this.filterIdElement.val();
-        this.submitFilterCustom([], filterId);
+        this.submitFilterOrId([], filterId);
     },
 
     showConditionPanel: function () {
@@ -269,9 +287,9 @@ $.widget( "custom.multiFilter", {
 
     loadFilterSelection: function () {
         var that = this;
-        if(this.options.listFilters) {
+        if(this.options.listFiltersUrl) {
             $.ajax({
-                url: this.options.listFilters,
+                url: this.options.listFiltersUrl,
                 success: function (data) {
                     var filterTypeaheadData = data.map( function(filter, index) {
                         return {name: filter._id.$oid, label: filter.name};
