@@ -1,5 +1,6 @@
 package models
 
+import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 
 /**
@@ -21,4 +22,12 @@ case class Page[A](
 
   lazy val filterId: Option[BSONObjectID] =
     filter.map(_._id).flatten
+
+  def toTablePage = TablePage(page, orderBy)
+}
+
+case class TablePage(page: Int, orderBy: String)
+
+object TablePage {
+  implicit val format = Json.format[TablePage]
 }

@@ -12,7 +12,8 @@
     filterJsRouter: Option[FilterJsRouter] = None,
     listFiltersCall: Option[Call] = None,
     filterSubmitParamName: String = "filter",
-    filterElementName: String = "filterDiv"
+    filterElementName: String = "filterDiv",
+    createSubmissionJson: Option[Html] = None
 )(
     implicit request: Request[_]
 )
@@ -150,10 +151,10 @@
         </li>
         <li>
             @if(filterJsRouter.isDefined && filter.isDefined && filter.get._id.isEmpty && filter.get.conditions.nonEmpty) {
-                <button type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#saveFilterModal" title="Save Filter">
+                <button type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#saveFilterModal@filterElementName" title="Save Filter">
                     <span class="glyphicon glyphicon glyphicon-save"></span>
                 </button>
-                @modal("saveFilterModal", "Save Filter", saveFilterModalBody, None, Some(saveFilterModelButtons))
+                @modal(s"saveFilterModal$filterElementName", "Save Filter", saveFilterModalBody, None, Some(saveFilterModelButtons))
             }
 
             @if(listFiltersCall.isDefined) {
@@ -174,5 +175,6 @@
     filterJsRouter,
     listFiltersCall,
     filterSubmitParamName,
-    filterElementName
+    filterElementName,
+    createSubmissionJson
 )

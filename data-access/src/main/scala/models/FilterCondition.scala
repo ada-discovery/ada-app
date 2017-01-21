@@ -2,7 +2,7 @@ package models
 
 import java.util.Date
 
-import dataaccess.{BSONObjectIdentity, EnumFormat, User}
+import dataaccess.{EitherFormat, BSONObjectIdentity, EnumFormat, User}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
@@ -64,5 +64,12 @@ object FilterCondition {
   implicit object FilterIdentity extends BSONObjectIdentity[Filter] {
     def of(entity: Filter): Option[BSONObjectID] = entity._id
     protected def set(entity: Filter, id: Option[BSONObjectID]) = entity.copy(_id = id)
+  }
+
+  def filterOrIdsToJson(filterOrIds: Seq[Either[Seq[FilterCondition], BSONObjectID]]): JsValue = {
+    implicit val eitherFormat = EitherFormat[Seq[FilterCondition], BSONObjectID]
+    Json.toJson(
+      filterOrIds.map(inputFilterConditionOrId => Json.toJson(inputFilterConditionOrId))
+    )
   }
 }

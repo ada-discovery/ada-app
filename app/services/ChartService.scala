@@ -53,16 +53,9 @@ trait ChartService {
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
-    outputGridWidth: Option[Int] = None
+    outputGridWidth: Option[Int] = None,
+    height: Option[Int] = None
   ): Future[Option[BoxChartSpec[_]]]
-
-  def createBoxChartSpecRepoNumeric[T](
-    toDouble: T => Double,
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    field: Field,
-    outputGridWidth: Option[Int] = None
-  ): Future[Option[BoxChartSpec[T]]]
 
   def createScatterChartSpec(
     xyzItems: Traversable[JsObject],
@@ -616,31 +609,41 @@ class ChartServiceImpl extends ChartService {
     def quantiles[T: Numeric]: Option[Quantiles[T]] =
       BasicStats.quantiles(getValues[T].toSeq)
 
-    val quants = typeSpec.fieldType match {
-      case FieldTypeId.Double => quantiles[Double]
+    def createChart[T: Ordering](quants: Option[Quantiles[T]]) =
+      quants.map(
+        BoxChartSpec(field.labelOrElseName, field.labelOrElseName, _, None, None, None, outputGridWidth)
+      )
 
-      case FieldTypeId.Integer => quantiles[Long]
+    typeSpec.fieldType match {
+      case FieldTypeId.Double => createChart(quantiles[Double])
+
+      case FieldTypeId.Integer => createChart(quantiles[Long])
 
       case FieldTypeId.Date => {
         val values = getValues[ju.Date].map(_.getTime)
-        BasicStats.quantiles(values.toSeq)
+        createChart(BasicStats.quantiles(values.toSeq))
       }
 
       case _ => None
     }
-
-    quants.map(quant => BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quant, None, outputGridWidth))
   }
 
   override def createBoxChartSpecRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
-    outputGridWidth: Option[Int] = None
+    outputGridWidth: Option[Int] = None,
+    height: Option[Int] = None
   ): Future[Option[BoxChartSpec[_]]] = {
     val typeSpec = field.fieldTypeSpec
 
-    def createChart[T](toDouble: T => Double) = createBoxChartSpecRepoNumeric[T](toDouble, dataRepo, criteria, field, outputGridWidth)
+    def createChart[T: Ordering](toDouble: T => Double) = {
+      createQuantiles[T](toDouble, dataRepo, criteria, field).map( quants =>
+        quants.map {
+          BoxChartSpec(field.labelOrElseName, field.labelOrElseName, _, None, None, height, outputGridWidth)
+        }
+      )
+    }
 
     typeSpec.fieldType match {
       case FieldTypeId.Double => createChart[Double](identity)
@@ -654,13 +657,12 @@ class ChartServiceImpl extends ChartService {
   }
 
 
-  override def createBoxChartSpecRepoNumeric[T](
+  private def createQuantiles[T](
     toDouble: T => Double,
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
-    field: Field,
-    outputGridWidth: Option[Int] = None
-  ): Future[Option[BoxChartSpec[T]]] = {
+    field: Field
+  ): Future[Option[Quantiles[T]]] = {
     for {
       // total length
       length <- dataRepo.count(criteria ++ Seq(field.name #!@))
@@ -668,23 +670,19 @@ class ChartServiceImpl extends ChartService {
       // create quantiles
       quants <-
         if (length > 0)
-          createQuantiles(toDouble, length, dataRepo, criteria, field, outputGridWidth)
+          createQuantilesAux(toDouble, length, dataRepo, criteria, field)
         else
           Future(None)
-    } yield {
-      quants.map {
-        BoxChartSpec(field.labelOrElseName, field.labelOrElseName, _, None, outputGridWidth)
-      }
-    }
+    } yield
+      quants
   }
 
-  private def createQuantiles[T](
+  private def createQuantilesAux[T](
     toDouble: T => Double,
     length: Int,                                            // must be non-zero
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
-    field: Field,
-    outputGridWidth: Option[Int] = None
+    field: Field
   ): Future[Option[Quantiles[T]]] = {
     val typeSpec = field.fieldTypeSpec
     val fieldType = ftf(typeSpec).asValueOf[T]

@@ -4,7 +4,6 @@
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.table.paginatedJsonTable
 @import views.html.dataset.exportDataSetDropdown
-@import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 @import reactivemongo.bson.BSONObjectID
 @import play.api.libs.json.{JsValue, JsObject}
 @import models.DataSpaceMetaInfo
@@ -14,8 +13,13 @@
 @import models.security.SecurityRole
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
-
 @import controllers.dataset.DataSetViewData
+@import reactivemongo.play.json.BSONFormats._
+@import models.FilterCondition.filterConditionFormat
+@import dataaccess.EitherFormat
+@import play.api.libs.json.Json
+@import play.api.libs.json.JsArray
+
 @(
     domainName : String,
     dataViewId: BSONObjectID,
@@ -30,29 +34,14 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @viewParts.zipWithIndex.map { case (viewPart, index) =>
-                @filter(
-                    viewPart.page.filter,
-                    dataSetRouter.getView(dataViewId, 0, "", Left(Nil), true),
-                    Right(dataSetRouter.allFields),
-                    filterShowFieldStyle,
-                    Some(filterJsRouter),
-                    Some(filterRouter.idAndNames),
-                    "filterOrId",
-                    s"filter$index"
-                )
+            @if(viewParts.size == 1) {
+                @viewFilter(viewParts.head, 0)
             }
         </div>
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
-                    @exportDataSetDropdown(
-                        viewParts.head.page.filterConditions,
-                        dataSetRouter.exportCsv(dataViewId, _, true, None, _, _),
-                        dataSetRouter.exportJson(dataViewId, _, _),
-                        dataSetRouter.exportTranSMARTData,
-                        dataSetRouter.exportTranSMARTMapping
-                    )
+                    @exportMenu(viewParts.head)
                 </li>
                 <li>
                     @restrict(roles = List(Array(SecurityRole.admin))) {
@@ -109,10 +98,35 @@
     @fun(jsValue)
 }
 
-@table(viewData: DataSetViewData) = @{
+@inputFilterConditionsOrIds = @{
+    viewParts.map(_.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)))
+}
+
+@exportMenu(viewData: DataSetViewData) = @{
+    exportDataSetDropdown(
+        viewData.page.filterConditions,
+        dataSetRouter.exportCsv(dataViewId, _, true, None, _, _),
+        dataSetRouter.exportJson(dataViewId, _, _),
+        dataSetRouter.exportTranSMARTData,
+        dataSetRouter.exportTranSMARTMapping
+    )
+}
+
+@table(viewData: DataSetViewData, index: Int) = @{
     paginatedJsonTable(
-        viewData.page,
-        dataSetRouter.getView(dataViewId, _, _, viewData.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)), true),
+        viewData.page, { (page: Int, orderBy: String) =>
+            dataSetRouter.getView(
+                dataViewId,
+                viewParts.zipWithIndex.map { case (viewPart, i) =>
+                    if (i == index)
+                        TablePage(page, orderBy)
+                    else
+                        viewPart.page.toTablePage
+                },
+                inputFilterConditionsOrIds,
+                true
+            )
+        },
         Some(viewData.tableFields.map{ field =>
             field.label.map( fieldLabel => (field.name, fieldLabel))
         }.flatten.toMap),
@@ -135,11 +149,66 @@
     )
 }
 
+@createSubmissionJsonJsFunction(index: Int) = {
+    function(conditions, filterId) {
+        var filterOrIds = JSON.parse('@{Html(Json.stringify(FilterCondition.filterOrIdsToJson(inputFilterConditionsOrIds)))}');
+
+        filterOrIds[@index] = (filterId) ? {'$oid': filterId} : conditions;
+
+        return {"filterOrIds": JSON.stringify(filterOrIds)};
+    }
+}
+
+@viewFilter(viewPart: DataSetViewData, index: Int) = {
+    @filter(
+        viewPart.page.filter,
+        dataSetRouter.getView(dataViewId, Nil, Nil, true),
+        Right(dataSetRouter.allFields),
+        filterShowFieldStyle,
+        Some(filterJsRouter),
+        Some(filterRouter.idAndNames),
+        "filterOrIds",
+        s"filter$index",
+        Some(createSubmissionJsonJsFunction(index))
+    )
+}
+
 @tables = {
     <div class="row vertical-divider">
-        @viewParts.map { viewPart =>
+        @viewParts.zipWithIndex.map { case (viewPart, index) =>
             <div class="col-md-@{12 / viewParts.size}">
-                @table(viewPart)
+                @table(viewPart, index)
+            </div>
+        }
+    </div>
+}
+
+@filters = {
+    <div class="row vertical-divider">
+        @viewParts.zipWithIndex.map { case (viewPart, index) =>
+            <div class="col-md-@{12 / viewParts.size}">
+                <div class="row">
+                    <div class="col-md-7">
+                        <ul class="list-inline">
+                            <li>Count:</li>
+                            <li><h3>@viewPart.page.total</h3></li>
+                        </ul>
+                    </div>
+<!--
+                    <div class="col-md-5">
+                        <ul class="list-inline">
+                            <li>
+                                @exportMenu(viewPart)
+                            </li>
+                        </ul>
+                    </div>
+-->
+                </div>
+                <div class="row">
+                    <div class="col-md-10">
+                        @viewFilter(viewPart, index)
+                    </div>
+                </div>
             </div>
         }
     </div>
@@ -153,6 +222,12 @@
             </div>
         }
     </div>
+}
+
+@filtersAndCharts = {
+    @filters
+    <hr/>
+    @charts
 }
 
 @bottomResources = {
@@ -194,11 +269,25 @@
             });
         }
 
-        function saveFilterToView() {
-            var filterOrId = (@{viewParts.head.page.filterId.isDefined}) ?
-                    '@{viewParts.head.page.filterId.map(_.stringify).getOrElse("")}' : JSON.stringify($("#filter0").multiFilter('getJsonConditions'));
+        function getFilterOrId(index) {
+            var filterOrId = $("#filter" + index).multiFilter('getJsonFilterId')
+            if (!filterOrId) {
+                filterOrId = $("#filter" + index).multiFilter('getJsonConditions')
+            }
+            return filterOrId;
+        }
 
-            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.saveFilter("@{dataViewId.stringify}", filterOrId).ajax( {
+        function saveFilterToView() {
+            var filterOrIds = [
+                @viewParts.zipWithIndex.map{ case (viewPart, index) => getFilterOrId(@index)}.mkString(",")
+            ];
+
+            console.log(filterOrIds);
+
+            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.saveFilter(
+                "@{dataViewId.stringify}",
+                 JSON.stringify(filterOrIds)
+            ).ajax( {
                 success: function() {
                     showMessage("Filter successfully added to the view.");
                 },
@@ -212,13 +301,17 @@
 
 @layout.list(
     domainName,
-    viewParts.head.page.total,
+    viewParts.map(_.page.total).sum,
     Some(actions),
     tables,
-    if (viewParts.head.fieldChartSpecs.nonEmpty)
-        Some(charts)
-    else
-        None,
+    if (viewParts.size == 1) {
+        if (viewParts.head.fieldChartSpecs.nonEmpty)
+            Some(charts)
+        else
+            None
+    } else {
+        Some(filtersAndCharts)
+    },
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav()),
     None,

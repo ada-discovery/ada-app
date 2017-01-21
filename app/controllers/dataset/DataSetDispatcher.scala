@@ -3,8 +3,7 @@ package controllers.dataset
 import javax.inject.Inject
 
 import controllers.{SecureControllerDispatcher, ControllerDispatcher}
-import models.FieldTypeId
-import models.FilterCondition
+import models.{TablePage, FieldTypeId, FilterCondition}
 import play.api.mvc.{AnyContent, Action}
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil._
@@ -46,11 +45,10 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getView(
     dataViewId: BSONObjectID,
-    page: Int,
-    orderBy: String,
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID],
+    tablePages: Seq[TablePage],
+    filterOrIds: Seq[FilterOrId],
     filterChanged: Boolean
-  ) = dispatch(_.getView(dataViewId, page, orderBy, filterOrId, filterChanged))
+  ) = dispatch(_.getView(dataViewId, tablePages, filterOrIds, filterChanged))
 
   override def getDefaultView = dispatch(_.getDefaultView)
 

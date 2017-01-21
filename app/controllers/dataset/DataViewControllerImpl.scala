@@ -191,7 +191,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override def updateAndShowView(id: BSONObjectID) =
     Action.async { implicit request =>
-      update(id, Redirect(dataSetRouter.getView(id, 0, "", Left(Nil), false))).apply(request)
+      update(id, Redirect(dataSetRouter.getView(id, Nil, Nil, false))).apply(request)
     }
 
   override def copy(id: BSONObjectID) =
@@ -303,9 +303,9 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override def saveFilter(
     dataViewId: BSONObjectID,
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+    filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]]
   ) = processDataView(dataViewId) { dataView =>
-    val newDataView = dataView.copy(filterOrIds = Seq(filterOrId))
+    val newDataView = dataView.copy(filterOrIds = filterOrIds)
     repo.update(newDataView)
   }
 

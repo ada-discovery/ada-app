@@ -83,7 +83,7 @@ GET         /redcap/records/exportTranSMARTData                                 
 GET         /redcap/records/exportTranSMARTMapping                                  controllers.RedCapController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 
 
-#Generic study routes using DataSetDispatcher and DictionaryDispatcher
+# DataSetDispatcher
 GET         /studies/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter: Seq[models.FilterCondition] ?= Nil)
 GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
 GET         /studies/records/fieldTypes                                             controllers.dataset.DataSetDispatcher.overviewFieldTypes
@@ -95,13 +95,14 @@ GET         /studies/records/exportAsCsv                                        
 GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(dataViewId: BSONObjectID, filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
 GET         /studies/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
-GET         /studies/getView                                                        controllers.dataset.DataSetDispatcher.getView(dataViewId: BSONObjectID, p: Int ?= 0, s: String ?= "", filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil), filterChanged: Boolean ?= false)
+GET         /studies/getView                                                        controllers.dataset.DataSetDispatcher.getView(dataViewId: BSONObjectID, tablePages: Seq[models.TablePage] ?= Nil, filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]] ?= Nil, filterChanged: Boolean ?= false)
 GET         /studies/getDefaultView                                                 controllers.dataset.DataSetDispatcher.getDefaultView
 GET         /studies/scatter                                                        controllers.dataset.DataSetDispatcher.getScatterStats(xFieldName: Option[String] ?= None, yFieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/correlations                                                   controllers.dataset.DataSetDispatcher.getCorrelations(fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/dateCount                                                      controllers.dataset.DataSetDispatcher.getDateCount(dateFieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 
+# DictionaryDispatcher
 GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)
 POST        /studies/dictionary/save                                                controllers.dataset.DictionaryDispatcher.save
@@ -113,6 +114,7 @@ GET         /studies/dictionary/jsRoutes                                        
 GET         /studies/dictionary/exportAsCsv                                         controllers.dataset.DictionaryDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 GET         /studies/dictionary/exportAsJson                                        controllers.dataset.DictionaryDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 
+# CategoryDispatcher
 GET         /studies/categories                                                     controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/categories/get/:id                                             controllers.dataset.CategoryDispatcher.get(id: BSONObjectID)
 GET         /studies/categories/new                                                 controllers.dataset.CategoryDispatcher.create
@@ -126,6 +128,7 @@ GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>           
 GET         /studies/categories/addFields                                           controllers.dataset.CategoryDispatcher.addFields(categoryId: BSONObjectID, fieldNames: Seq[String])
 GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
 
+# FilterDispatcher
 GET         /studies/filters                                                        controllers.dataset.FilterDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/filters/get/:id                                                controllers.dataset.FilterDispatcher.get(id: BSONObjectID)
 GET         /studies/filters/new                                                    controllers.dataset.FilterDispatcher.create
@@ -135,6 +138,7 @@ POST        /studies/filters/:id                                                
 POST        /studies/filters/:id/delete                                             controllers.dataset.FilterDispatcher.delete(id: BSONObjectID)
 GET         /studies/filters/idAndNames                                             controllers.dataset.FilterDispatcher.getIdAndNames
 
+# DataViewDispatcher
 GET         /studies/dataviews                                                      controllers.dataset.DataViewDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/dataviews/get/:id                                              controllers.dataset.DataViewDispatcher.get(id: BSONObjectID)
 GET         /studies/dataviews/getAndShowView/:id                                   controllers.dataset.DataViewDispatcher.getAndShowView(id: BSONObjectID)
@@ -150,7 +154,7 @@ GET         /studies/dataviews/addBoxPlots                                      
 GET         /studies/dataviews/addScatter                                           controllers.dataset.DataViewDispatcher.addScatter(dataViewId: BSONObjectID, xFieldName: String, yFieldName: String, groupFieldName: Option[String])
 GET         /studies/dataviews/addCorrelation                                       controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId: BSONObjectID, fieldNames: Seq[String])
 GET         /studies/dataviews/addTableFields                                       controllers.dataset.DataViewDispatcher.addTableFields(dataViewId: BSONObjectID, fieldNames: Seq[String])
-GET         /studies/dataviews/saveFilter                                           controllers.dataset.DataViewDispatcher.saveFilter(dataViewId: BSONObjectID, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
+GET         /studies/dataviews/saveFilter                                           controllers.dataset.DataViewDispatcher.saveFilter(dataViewId: BSONObjectID, filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]])
 
 GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: String ?= "dataSetId")

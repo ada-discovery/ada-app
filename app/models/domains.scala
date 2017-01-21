@@ -1,5 +1,6 @@
 package models
 
+import com.fasterxml.jackson.core.JsonParseException
 import controllers.BSONObjectIDQueryStringBindable
 import play.api.mvc.QueryStringBindable
 import util.JsonUtil
@@ -11,6 +12,7 @@ import reactivemongo.bson.BSONObjectID
 import java.util.{UUID, Date}
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
+import dataaccess.EitherFormat._
 
 case class Message(
   _id: Option[BSONObjectID],
@@ -44,39 +46,38 @@ object Translation {
 
 object QueryStringBinders {
 
-  def createEitherBinder[L, R](
-    implicit leftBinder: QueryStringBindable[L], rightBinder: QueryStringBindable[R]
-  ) = new QueryStringBindable[Either[L, R]] {
+  def createQueryStringBinder[E:Format](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[E] {
 
     override def bind(
       key: String,
       params: Map[String, Seq[String]]
-    ): Option[Either[String, Either[L, R]]] = {
+    ): Option[Either[String, E]] = {
       for {
-        left <- leftBinder.bind(key, params)
-        right <- rightBinder.bind(key, params)
+        jsonString <- stringBinder.bind(key, params)
       } yield {
-        left match {
-          case Right(value) => Right(Left(value))
-          case Left(_) => right match {
-            case Right(value) => Right(Right(value))
-            case Left(_) => Left("Unable to bind from String to " + key)
+        jsonString match {
+          case Right(jsonString) => {
+            try {
+              val filterJson = Json.parse(jsonString)
+              Right(filterJson.as[E])
+            } catch {
+              case e: JsonParseException => Left("Unable to bind JSON from String to " + key)
+            }
           }
+          case _ => Left("Unable to bind JSON from String to " + key)
         }
       }
     }
 
-    override def unbind(key: String, either: Either[L, R]): String =
-      either match {
-        case Left(value) => leftBinder.unbind(key, value)
-        case Right(value) => rightBinder.unbind(key, value)
-      }
+    override def unbind(key: String, filterSpec: E): String =
+      stringBinder.unbind(key, Json.stringify(Json.toJson(filterSpec)))
   }
 
-  implicit val FilterConditionQueryStringBinder = JsonUtil.createQueryStringBinder[Seq[FilterCondition]]
-  implicit val FilterQueryStringBinder = JsonUtil.createQueryStringBinder[Filter]
-  implicit val FieldTypeIdsQueryStringBinder = JsonUtil.createQueryStringBinder[Seq[FieldTypeId.Value]]
-
+  implicit val FilterConditionQueryStringBinder = createQueryStringBinder[Seq[FilterCondition]]
+  implicit val FilterQueryStringBinder = createQueryStringBinder[Filter]
+  implicit val FieldTypeIdsQueryStringBinder = createQueryStringBinder[Seq[FieldTypeId.Value]]
   implicit val BSONObjectIDQueryStringBinder = BSONObjectIDQueryStringBindable
-  implicit val EitherBinder = createEitherBinder[Seq[FilterCondition], BSONObjectID]
+  implicit val FilterOrIdBinder = createQueryStringBinder[Either[Seq[FilterCondition], BSONObjectID]]
+  implicit val FilterOrIdSeqBinder = createQueryStringBinder[Seq[Either[Seq[FilterCondition], BSONObjectID]]]
+  implicit val TablePageSeqBinder = createQueryStringBinder[Seq[TablePage]]
 }

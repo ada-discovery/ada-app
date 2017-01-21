@@ -25,3 +25,7 @@ class EitherFormat[L, R](
       case Right(value) => rightFormat.writes(value)
     }
 }
+
+object EitherFormat {
+  implicit def apply[L: Format, R: Format]: Format[Either[L, R]] = new EitherFormat[L, R]
+}

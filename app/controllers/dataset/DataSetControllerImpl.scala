@@ -28,6 +28,7 @@ import services.{ChartService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
+import reflect.runtime.universe._
 
 import scala.collection.generic.SeqFactory
 import scala.collection.mutable.ArrayBuffer
@@ -299,7 +300,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val webContext = implicitly[DataSetWebContext]
 
       selectedView match {
-        case Some(view) => Redirect(router.getView(view._id.get, 0, "", Left(Nil), false))
+        case Some(view) => Redirect(router.getView(view._id.get, Nil, Nil, false))
         case None => Redirect(webContext.dataViewRouter.plainList).flashing("errors" -> "No view to show. You must first define one.")
       }
     }
@@ -307,9 +308,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getView(
     dataViewId: BSONObjectID,
-    page: Int,
-    orderBy: String,
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID],
+    tablePages: Seq[TablePage],
+    filterOrIds: Seq[FilterOrId],
     filterChanged: Boolean
   ) = Action.async { implicit request =>
     val start = new ju.Date()
@@ -319,6 +319,34 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // load the view
         dataView <- dataViewRepo.get(dataViewId)
 
+        // initialize filters
+        filterOrIdsToUse: Seq[FilterOrId] =
+          if (!filterChanged) {
+            dataView.map(_.filterOrIds) match {
+              case Some(viewFilterOrIds) =>
+                val initViewFilterOrIds = if (viewFilterOrIds.nonEmpty) viewFilterOrIds else Seq(Left(Nil))
+
+                val padding = Seq.fill(Math.max(initViewFilterOrIds.size - filterOrIds.size, 0))(Left(Nil))
+
+                (filterOrIds ++ padding).zip(initViewFilterOrIds).map { case (filterOrId, viewFilterOrId) =>
+                  if (filterOrId.isLeft && filterOrId.left.get.isEmpty) {
+                    viewFilterOrId
+                  } else
+                    filterOrId
+                }
+
+              case None =>
+                filterOrIds
+            }
+          } else
+            filterOrIds
+
+        // initialize table pages
+        tablePagesToUse = {
+          val padding = Seq.fill(Math.max(filterOrIdsToUse.size - tablePages.size, 0))(TablePage(0, ""))
+          tablePages ++ padding
+        }
+
         // get the response data
         viewResponses <- {
           val (columnNames, statsCalcSpecs) =
@@ -326,29 +354,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
               (view.tableColumnNames, view.statsCalcSpecs)
             ).getOrElse((Nil, Nil))
 
-          val viewFilterOrIds = dataView.map(_.filterOrIds)
-          val viewHeadFilterOrId = viewFilterOrIds.map(_.headOption).flatten
-
-          val headFilterOrIdToUse =
-            if (!filterChanged && viewHeadFilterOrId.isDefined && filterOrId.isLeft && filterOrId.left.get.isEmpty) {
-              viewHeadFilterOrId.get
-            } else
-              filterOrId
-
-          val filterOrIdsToUse = Seq(headFilterOrIdToUse) ++
-            viewFilterOrIds.map ( viewFilterOrIds =>
-              viewFilterOrIds match {
-                case Nil => Nil
-                case _ => viewFilterOrIds.tail
-              }
-            ).getOrElse(Nil)
-
           val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
 
           Future.sequence(
-            filterOrIdsToUse.map(
-              getViewResponse(page, orderBy, _, columnNames, statsCalcSpecs, useChartRepoMethod)
-            )
+            filterOrIdsToUse.zip(tablePagesToUse).map { case (filterOrId, tablePage) =>
+              getViewResponse(tablePage.page, tablePage.orderBy, filterOrId, columnNames, statsCalcSpecs, useChartRepoMethod)
+            }
           )
         }
       } yield {
@@ -357,10 +368,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         Logger.info(s"Loading of view for the data set '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
         render {
           case Accepts.Html() => {
-            val viewParts = viewResponses.map { viewResponse =>
-              val newPage = Page(viewResponse.tableItems, page, page * pageLimit, viewResponse.count, orderBy, Some(viewResponse.filter))
-              DataSetViewData(newPage, viewResponse.fieldChartSpecs, viewResponse.tableFields)
-            }
+            val fieldChartsSpecs =
+              if (viewResponses.size > 1)
+                setBoxPlotMinMax(viewResponses.map(_.fieldChartSpecs))
+              else
+                viewResponses.map(_.fieldChartSpecs)
+
+            val viewParts = (viewResponses, fieldChartsSpecs, tablePagesToUse).zipped.map {
+              case (viewResponse, fieldChartSpecs, tablePage) =>
+                val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
+                DataSetViewData(newPage, fieldChartSpecs, viewResponse.tableFields)
+              }
             Ok(getViewView(
               dataViewId,
               viewParts,
@@ -381,6 +399,83 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       }
     }
+  }
+
+  // TODO: refactor... to many retyping
+  private def setBoxPlotMinMax(
+    fieldChartSpecs: Seq[Traversable[FieldChartSpec]]
+  ): Seq[Traversable[FieldChartSpec]] = {
+    val chartSpecsSeqs = fieldChartSpecs.map(_.toSeq)
+    val chartCount = fieldChartSpecs.head.size
+
+    def boxChart[T](
+      chartSpecs: Seq[FieldChartSpec],
+      index: Int
+    ): Option[BoxChartSpec[T]] =
+      chartSpecs(index).chartSpec match {
+        case x: BoxChartSpec[T] =>
+          if (x.data.median.isInstanceOf[T]) Some(x) else None
+        case _ =>
+          None
+      }
+
+    def getMinMaxWhiskers[T: Ordering](
+      index: Int)(
+      implicit tag: TypeTag[T]
+    ): Option[(T, T)] = {
+        val boxPlots: Seq[BoxChartSpec[T]] = chartSpecsSeqs.map { chartSpecs =>
+          boxChart[T](chartSpecs, index)
+        }.flatten
+
+        boxPlots match {
+          case Nil => None
+          case _ =>
+            try {
+              val minLowerWhisker = boxPlots.map(_.data.lowerWhisker).min
+              val maxUpperWhisker = boxPlots.map(_.data.upperWhisker).max
+              Some(minLowerWhisker, maxUpperWhisker)
+            } catch {
+              case e: ClassCastException => None
+            }
+        }
+      }
+
+      def setMinMax[T: Ordering](
+        boxPlot: BoxChartSpec[T],
+        minMax: (Any, Any)
+      ): BoxChartSpec[T] =
+        boxPlot.copy(min = Some(minMax._1.asInstanceOf[T]), max = Some(minMax._2.asInstanceOf[T]))
+
+      val indexMinMaxWhiskers =
+        for (index <- 0 until chartCount) yield {
+          val minMaxWhiskers =
+            getMinMaxWhiskers[Long](index) match {
+              case None => getMinMaxWhiskers[Double](index) match {
+                case None => getMinMaxWhiskers[java.util.Date](index)
+                case Some(x) => Some(x)
+              }
+              case Some(x) => Some(x)
+            }
+
+          (index, minMaxWhiskers)
+        }
+
+      chartSpecsSeqs.map { chartSpecs =>
+        chartSpecs.zip(indexMinMaxWhiskers).map{ case (fieldChartSpec, (index, minMaxWhiskers)) =>
+          minMaxWhiskers match {
+            case Some(minMaxWhiskers) =>
+              val newChartSpec =
+                fieldChartSpec.chartSpec match {
+                  case x: BoxChartSpec[Double] => setMinMax(x, minMaxWhiskers)
+                  case x: BoxChartSpec[Long] => setMinMax(x, minMaxWhiskers)
+                  case x: BoxChartSpec[java.util.Date] => setMinMax(x, minMaxWhiskers)
+                  case _ =>  fieldChartSpec.chartSpec
+                }
+              FieldChartSpec(fieldChartSpec.fieldName, newChartSpec)
+            case None => fieldChartSpec
+          }
+        }
+      }
   }
 
   private def getViewResponse(
@@ -772,7 +867,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // generate the box chart (if possible)
         boxChartSpec <- chartField.map( field =>
-          chartService.createBoxChartSpecRepo(repo, criteria, field)
+          chartService.createBoxChartSpecRepo(repo, criteria, field, None, Some(500))
         ).getOrElse(
           Future(None)
         )
@@ -793,14 +888,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           }
         }
 
-        val boxChart = boxChartSpec.map(_.copy(height = Some(500)))
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
 
         render {
           case Accepts.Html() => Ok(dataset.distribution(
             dataSetName,
             field,
-            Seq(distributionChart, boxChart).flatten,
+            Seq(distributionChart, boxChartSpec).flatten,
             newFilter,
             setting.filterShowFieldStyle,
             result(dataSpaceTree)

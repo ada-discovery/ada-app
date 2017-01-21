@@ -79,6 +79,6 @@ class DataViewDispatcher @Inject()(dscf: DataSetControllerFactory, dvc: DataView
 
   override def saveFilter(
     dataViewId: BSONObjectID,
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
-  ) = dispatch(_.saveFilter(dataViewId, filterOrId))
+    filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]]
+  ) = dispatch(_.saveFilter(dataViewId, filterOrIds))
 }

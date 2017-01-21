@@ -41,7 +41,25 @@
                     type: dataType,
                     title: {
                         text: '@chartSpec.yAxisCaption'
-                    }
+                    },
+                    min: @if(chartSpec.min.isDefined) {
+                            @if(chartSpec.min.get.isInstanceOf[java.util.Date]) {
+                                @{chartSpec.min.get.asInstanceOf[java.util.Date].getTime}
+                            } else {
+                                @{chartSpec.min.get}
+                            }
+                        } else {
+                            null
+                        },
+                    max: @if(chartSpec.max.isDefined) {
+                            @if(chartSpec.max.get.isInstanceOf[java.util.Date]) {
+                                @{chartSpec.max.get.asInstanceOf[java.util.Date].getTime}
+                            } else {
+                                @{chartSpec.max.get}
+                            }
+                         } else {
+                            null
+                    },
                 },
                 legend: {
                     enabled: false

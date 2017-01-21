@@ -1,34 +1,34 @@
 package controllers.dataset
 
 import controllers.{ReadonlyController, CrudController}
-import models.FieldTypeId
-import models.FilterCondition
+import models.{TablePage, FieldTypeId, FilterCondition}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 
 trait DataSetController extends ReadonlyController[BSONObjectID] {
+
+  type FilterOrId = Either[Seq[FilterCondition], BSONObjectID]
 
   def overviewFieldTypes: Action[AnyContent]
 
   def overviewList(
     page: Int,
     orderBy: String,
-    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ): Action[AnyContent]
 
   /**
     * Renders the view with a given id
+ *
     * @param dataViewId
-    * @param page
-    * @param orderBy
-    * @param filterOrId
+    * @param tablePages
+    * @param filterOrIds
     * @return
     */
   def getView(
     dataViewId: BSONObjectID,
-    page: Int,
-    orderBy: String,
-    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID],
+    tablePages: Seq[TablePage],
+    filterOrIds: Seq[FilterOrId],
     filterChanged: Boolean
   ): Action[AnyContent]
 
@@ -36,25 +36,25 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getDistribution(
     fieldName: Option[String],
-    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ): Action[AnyContent]
 
   def getScatterStats(
     xFieldName: Option[String],
     yFieldName: Option[String],
     groupFieldName: Option[String],
-    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ): Action[AnyContent]
 
   def getDateCount(
     dateFieldName: Option[String],
     groupFieldName: Option[String],
-    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ): Action[AnyContent]
 
   def getCorrelations(
     fieldNames: Seq[String],
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ): Action[AnyContent]
 
   def getFieldNames: Action[AnyContent]

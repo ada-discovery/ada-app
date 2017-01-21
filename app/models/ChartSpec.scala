@@ -50,12 +50,16 @@ case class ScatterChartSpec(
   gridWidth: Option[Int] = None
 ) extends ChartSpec
 
-case class BoxChartSpec[T](
+case class BoxChartSpec[T <% Ordered[T]](
   title: String,
   yAxisCaption: String,
   data: Quantiles[T],
+  min: Option[T] = None,
+  max: Option[T] = None,
   height: Option[Int] = None,
   gridWidth: Option[Int] = None
+//                                        )(
+//  implicit ordering: Ordering[T]
 ) extends ChartSpec
 
 case class HeatmapChartSpec(
