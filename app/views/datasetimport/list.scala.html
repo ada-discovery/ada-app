@@ -1,6 +1,7 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import views.html.dataset.{datasetSubNav, datasetMenu}
+@import views.html.filter.filter
 @import controllers.dataset.routes.{DataSetImportController => dataSetImportRoutes}
 @import util.{typeColumns, toHumanReadableCamel, formatTimeElement}
 @import play.api.mvc.Flash
@@ -30,6 +31,7 @@
                     Field("dataSpaceName", Some("Data Space Name")),
                     Field("dataSetName", Some("Data Set Name"))
                 )),
+                None,
                 Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>

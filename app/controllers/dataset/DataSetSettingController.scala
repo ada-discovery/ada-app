@@ -131,7 +131,7 @@ class DataSetSettingController @Inject() (
   ): Future[BSONObjectID] = {
     repo.update(item).map { id =>
       // update data set repo since we change the setting, which could affect how the data set is accessed
-      dsaf(item.dataSetId).foreach(_.updateDataSetRepo)
+      dsaf(item.dataSetId).foreach(_.updateDataSetRepo(item))
       // return id
       id
     }

@@ -6,9 +6,8 @@ import com.google.inject.assistedinject.Assisted
 import controllers.CrudControllerImpl
 import dataaccess.{AscSort, Criterion}
 import dataaccess.Criterion.Infix
-import models.Category
+import models.{JsTreeNode, Category, D3Node, Page}
 import models.DataSetFormattersAndIds._
-import models.{D3Node, Page}
 import Criterion.Infix
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
@@ -45,11 +44,12 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
+      "label" -> optional(nonEmptyText),
       "parentId" -> optional(nonEmptyText)
-    ) { (id, name, parentId) =>
-      Category(id, name, parentId.map(BSONObjectID(_)))
+    ) { (id, name, label, parentId) =>
+      Category(id, name, label, parentId.map(BSONObjectID(_)))
     }
-    ((category: Category) => Some(category._id, category.name, category.parentId.map(_.stringify)))
+    ((category: Category) => Some(category._id, category.name, category.label, category.parentId.map(_.stringify)))
   )
 
   // router for requests; to be passed to views as helper.
@@ -176,6 +176,17 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     val root = D3Node(None, "Root", None, layerOneCategories.map(category => idD3NodeMap(category._id.get)).toSeq)
 
     Ok(Json.toJson(root))
+  }
+
+  override def getCategoriesWithFieldsAsTreeNodes = Action.async { implicit request =>
+    for {
+      categories <- repo.find()
+      fieldsWithCategory <- fieldRepo.find(Seq("categoryId" #!= None))
+    } yield {
+      val jsTreeNodes =
+        categories.map(JsTreeNode.fromCategory) ++ fieldsWithCategory.map(JsTreeNode.fromField)
+      Ok(Json.toJson(jsTreeNodes))
+    }
   }
 
   override def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]) = Action.async{ implicit request =>

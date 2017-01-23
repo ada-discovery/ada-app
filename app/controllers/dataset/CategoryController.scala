@@ -8,6 +8,8 @@ trait CategoryController extends CrudController[BSONObjectID] {
 
   def getCategoryD3Root: Action[AnyContent]
 
+  def getCategoriesWithFieldsAsTreeNodes: Action[AnyContent]
+
   def saveForName(name: String): Action[AnyContent]
 
   def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]): Action[AnyContent]

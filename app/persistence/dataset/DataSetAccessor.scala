@@ -26,6 +26,7 @@ trait DataSetAccessor {
   // functions to refresh a few attributes
 
   def updateDataSetRepo: Future[Unit]
+  def updateDataSetRepo(setting: DataSetSetting): Future[Unit]
   def updateSetting(setting: DataSetSetting): Future[BSONObjectID]
 }
 
@@ -35,28 +36,34 @@ protected class DataSetAccessorImpl(
     val categoryRepo: CategoryRepo,
     val filterRepo: FilterRepo,
     val dataViewRepo: DataViewRepo,
-    dataSetRepoCreate: (Seq[(String, FieldTypeSpec)] => Future[JsonCrudRepo]),
+    dataSetRepoCreate: (Seq[(String, FieldTypeSpec)], Option[DataSetSetting]) => Future[JsonCrudRepo],
     dataSetMetaInfoRepo: DataSetMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo
   ) extends DataSetAccessor {
 
-  private var _dataSetRepo = result(createDataSetRepo, 10 seconds)
+  private var _dataSetRepo = result(createDataSetRepo(None), 10 seconds)
 
   override def dataSetRepo = _dataSetRepo
 
-  private def createDataSetRepo =
+  private def createDataSetRepo(dataSetSetting: Option[DataSetSetting]) =
     for {
       fields <- fieldRepo.find()
       dataSetRepo <- {
         val fieldNamesAndTypes = fields.map(field => (field.name, field.fieldTypeSpec)).toSeq
-        dataSetRepoCreate(fieldNamesAndTypes)
+        dataSetRepoCreate(fieldNamesAndTypes, dataSetSetting)
       }
     } yield
       dataSetRepo
 
+  override def updateDataSetRepo(setting: DataSetSetting) =
+    for {
+      newDataSetRepo <- createDataSetRepo(Some(setting))
+    } yield
+      _dataSetRepo = newDataSetRepo
+
   override def updateDataSetRepo =
     for {
-      newDataSetRepo <- createDataSetRepo
+      newDataSetRepo <- createDataSetRepo(None)
     } yield
       _dataSetRepo = newDataSetRepo
 

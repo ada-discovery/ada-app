@@ -1,5 +1,6 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
+@import views.html.filter.filter
 @import util.typeColumns
 @import dataaccess.User
 @import models.Field
@@ -17,6 +18,7 @@
                     Field("ldapDn", Some("Id")),
                     Field("email", Some("Email"))
                 )),
+                None,
                 Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>

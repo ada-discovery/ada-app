@@ -1,5 +1,6 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
+@import views.html.filter.filter
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import util.typeColumns
 @import play.api.mvc.Flash
@@ -21,6 +22,7 @@
                 Left(Seq(
                     Field("dataSetId", Some("Data Set Id"))
                 )),
+                None,
                 Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>

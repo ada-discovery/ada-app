@@ -8,6 +8,7 @@
 @import views.html.exportDropdown
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.category.categorySelectionModal
+@import views.html.filter.filter
 @import models.FieldChartSpec
 @import util.typeColumns
 @import controllers.dataset.{DataViewRouter, DataViewJsRouter, DictionaryRouter, DictionaryJsRouter, CategoryRouter, CategoryJsRouter}
@@ -38,6 +39,7 @@
                 page.filter,
                 router.plainList,
                 Left(fieldNameLabels.map { case (name, label) => Field(name, label)}),
+                None,
                 Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>

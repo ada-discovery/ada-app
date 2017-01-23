@@ -1,5 +1,6 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
+@import views.html.filter.filter
 @import util.typeColumns
 @import models.Field
 
@@ -15,6 +16,7 @@
                     Field("original", Some("Original")),
                     Field("translated", Some("Translated"))
                 )),
+                None,
                 Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>

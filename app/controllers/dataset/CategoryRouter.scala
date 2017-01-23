@@ -15,6 +15,7 @@ final class CategoryRouter(dataSetId: String) extends GenericRouter(routes.Categ
   val update = routes.update _ map route
   val delete = routes.delete _ map route
   val getCategoryD3Root= routeFun(_.getCategoryD3Root)
+  val getCategoriesWithFieldsAsTreeNodes= routeFun(_.getCategoriesWithFieldsAsTreeNodes)
   val relocateToParent = routes.relocateToParent _ map route
   val idAndNames = routeFun(_.idAndNames)
   val jsRoutes = routeFun(_.jsRoutes)

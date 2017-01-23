@@ -1,0 +1,120 @@
+@import play.api.libs.json.JsValue
+
+@import play.api.libs.json.Json
+
+@(
+    dataOrUrl: Either[JsValue, String],
+    treeElementName: String = "jstree1",
+    nodeSelectedFun: Option[Html] = None
+)
+
+<div class="row jsTree-filter">
+    <div class="col-md-9">
+        <input class="jsTree-search-input" placeholder="Field Name or Label"></input>
+    </div>
+    <div class="col-md-3">
+        <a class="btn btn-info btn-sm" id="collapseAll" href="#" data-toggle="tooltip" title="Collapse All" onclick="$('#categoryTree').jstree('close_all');return false;">
+            <span class="glyphicon glyphicon-resize-small" aria-hidden="true"></span>
+        </a>
+        <a class="btn btn-info btn-sm" id="expandAll" href="#" data-toggle="tooltip" title="Expand All" onclick="$('#categoryTree').jstree('open_all');return false;">
+            <span class="glyphicon glyphicon-resize-full" aria-hidden="true"></span>
+        </a>
+    </div>
+</div>
+<div class="row jsTree-tree">
+    <div id="@treeElementName" class="col-md-12">
+    </div>
+    <hr/>
+</div>
+
+<script type="text/javascript" src="@routes.Assets.versioned("javascripts/jstree-3.3.3.min.js")"></script>
+<link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/jsTree/style.min.css")">
+
+<script>
+    var jsonData =
+        @if(dataOrUrl.isLeft) {
+            JSON.parse('@Html(Json.stringify(dataOrUrl.left.get))')
+        } else {
+            null
+        }
+
+    var dataUrl =
+        @if(dataOrUrl.isRight) {
+            '@dataOrUrl.right.get'
+        } else {
+            null
+        }
+
+    var data =
+        (jsonData) ?
+            jsonData
+        :
+            {'url' : dataUrl, 'data' : function (node) {return { 'id' : node.id };}}
+
+    $(".jsTree-search-input").keypress(function (e) {
+        if (e.which == 13) {
+            var searchString = $(this).val();
+            $('#@treeElementName').jstree('search', searchString);
+            e.preventDefault();
+        }
+    });
+
+    function initJsTree() {
+        $('#@treeElementName').jstree({
+            "core" : {
+                "animation" : 0,
+                "check_callback" : true,
+                "themes" : {
+                    'responsive' : false,
+                    'variant' : 'large',
+                    "stripes" : true
+                },
+                'data' : data
+            },
+            "types" : {
+                "default" : {
+                    "icon" : "glyphicon glyphicon-folder-close category-node"
+                },
+                "category" : {
+                    "icon" : "glyphicon glyphicon-folder-close category-node"
+                },
+                'category-open' : {
+                    'icon' : 'glyphicon glyphicon-folder-open category-node'
+                },
+                "field" : {
+                    "icon" : "glyphicon glyphicon-leaf"
+                }
+            },
+
+            "search": {
+                "case_insensitive": true,
+                "show_only_matches" : true,
+                "search_leaves_only": true
+            },
+
+            "plugins" : [
+                "search", "sort", "state", "types", "wholerow" // "contextmenu", "dnd",
+            ]
+        });
+
+        $("#@treeElementName").on('open_node.jstree', function (event, data) {
+            data.instance.set_type(data.node,'category-open');
+        });
+
+        $("#@treeElementName").on('close_node.jstree', function (event, data) {
+            data.instance.set_type(data.node,'category');
+        });
+
+        $('#@treeElementName').jstree("deselect_all");
+
+        @if(nodeSelectedFun.isDefined) {
+            var nodeSelectedFun = @nodeSelectedFun.get
+
+            $("#@treeElementName").on("select_node.jstree",
+                function(evt, data) {
+                    nodeSelectedFun(data.node);
+                }
+            );
+        }
+    }
+</script>

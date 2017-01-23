@@ -5,11 +5,26 @@
 
 @(page: Page[Metadata])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
 
+@modalBody(defaultDelimiter: String) = {
+    <p>Delimeter</p>
+    <input id="delimiter" name="delimiter" value="@defaultDelimiter">
+}
+
 @actions = {
     @helper.form(action=routes.RedCapController.listMetadatas(), 'class -> "navbar-form navbar-left", 'role -> "search") {
-        <input type="search" id="searchbox" name="f" value="@page.filter" placeholder="Filter by field name...">
-        <input type="submit" id="searchsubmit" value="Filter by field name" class="btn btn-primary btn-sm">
+        <div class="row">
+            <div class="col-md-8">
+                <input type="search" id="searchbox" name="f" value="@page.filter" placeholder="Filter by field name...">
+                <input type="submit" id="searchsubmit" value="Filter by field name" class="btn btn-primary btn-sm">
+            </div>
+            <div class="col-md-4">
+                <a class="btn btn-info btn-sm" href="#" data-toggle="modal" data-target="#exportCsvModal">
+                    Export All as CSV
+                </a>
+            </div>
+        </div>
     }
+    @views.html.exportModal("exportCsvModal", "LuxPark REDCap Metadata CSV Export", routes.RedCapController.exportAllMetadatasAsCsv(), Some(modalBody(",")))
 }
 
 @table = @{

@@ -1,7 +1,11 @@
 package controllers
 
+import _root_.util.WebExportUtil.jsonsToCsvFile
 import be.objectify.deadbolt.scala.DeadboltActions
+import dataaccess.{AsyncReadonlyRepo, Criterion, Sort}
 import models._
+import models.redcap.Metadata
+import models.redcap.JsonFormat.MetadataFormat
 import org.apache.commons.lang3.StringEscapeUtils
 import play.api.Configuration
 
@@ -10,16 +14,16 @@ import javax.inject.Inject
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{Json, JsObject, JsString, JsNull}
+import play.api.libs.json._
 import services.{RedCapServiceFactory, TranSMARTService, RedCapService}
 import services.RedCapServiceFactory.defaultRedCapService
 import views.html
 import play.api.mvc.{ResponseHeader, Action, Controller, Result}
 import collection.mutable.{Map => MMap}
-import util.JsonUtil.jsonObjectsToCsv
-import util.SecurityUtil.restrictAdmin
+import _root_.util.JsonUtil.jsonObjectsToCsv
+import _root_.util.SecurityUtil.restrictAdmin
 
-import scala.concurrent.Await
+import scala.concurrent.{Future, Await}
 
 class RedCapController @Inject() (
     redCapServiceFactory: RedCapServiceFactory,
@@ -34,7 +38,9 @@ class RedCapController @Inject() (
   private val timeout = 120000 millis
   private val exportCharset = "UTF-8"
 
-  private val csvFileName = "luxpark-redcap_records.csv"
+  private val recordsCsvFileName = "luxpark-redcap_records.csv"
+  private val metadatasCsvFileName = "luxpark-redcap_metadatas.csv"
+  private val metadatasExportFieldNames = Seq("form_name", "field_name","field_label")
   private val tranSMARTDataFileName = "luxpark-redcap_data_file"
   private val tranSMARTMappingFileName = "luxpark-redcap_mapping_file"
 
@@ -147,22 +153,25 @@ class RedCapController @Inject() (
     countMap.toSeq.sortBy(_._2)
   }
 
-
   def exportRecordsAsCsv(delimiter : String) = restrictAdmin(deadbolt) {
-    Action { implicit request =>
-      val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
+    Action.async { implicit request =>
+      for {
+        records <- redCapService.listRecords(keyField, "")
+      } yield {
+        jsonsToCsvFile(recordsCsvFileName, delimiter, "\n", replacements, None)(records)
+      }
+    }
+  }
 
-      val recordsFuture = redCapService.listRecords(keyField, "")
-      val records = Await.result(recordsFuture, timeout)
-
-      val content = jsonObjectsToCsv(unescapedDelimiter, "\n", None, replacements)(records)
-
-      val fileContent: Enumerator[Array[Byte]] = Enumerator(content.getBytes(exportCharset))
-
-      Result(
-        header = ResponseHeader(200, Map(CONTENT_TYPE->"application/x-download", CONTENT_LENGTH -> content.length.toString, CONTENT_DISPOSITION->s"attachment; filename=${csvFileName}")),
-        body = fileContent
-      )
+  def exportAllMetadatasAsCsv(delimiter : String) = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      for {
+        metadatas <- redCapService.listMetadatas("form_name", "")
+      } yield {
+        jsonsToCsvFile(metadatasCsvFileName,  delimiter, "\n", replacements, Some(metadatasExportFieldNames))(
+          Json.toJson(metadatas).asInstanceOf[JsArray].value.map(_.asInstanceOf[JsObject])
+        )
+      }
     }
   }
 

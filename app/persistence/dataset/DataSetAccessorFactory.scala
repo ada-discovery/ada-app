@@ -4,7 +4,7 @@ import javax.inject.{Singleton, Named, Inject}
 
 import dataaccess._
 import models._
-import dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
+import dataaccess.RepoTypes._
 import Criterion.Infix
 import play.api.Logger
 import play.api.libs.json.JsObject
@@ -87,10 +87,15 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
   protected def dataSetRepoCreate(
     collectionName: String,
     dataSetId: String)(
-    fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]
-  ) = {
+    fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
+    dataSetSetting: Option[DataSetSetting] = None
+  ): Future[JsonCrudRepo] = {
     for {
-      dataSetSetting <- dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId)).map(_.headOption)
+      dataSetSetting <-
+        dataSetSetting match {
+          case Some(dataSetSetting) => Future(Some(dataSetSetting))
+          case None => dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId)).map(_.headOption)
+        }
     } yield {
       val cacheDataSet =
         dataSetSetting.map(_.cacheDataSet).getOrElse(false)

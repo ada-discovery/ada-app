@@ -6,6 +6,7 @@
 @import views.html.chart.{chartPanel, chartPanelJs}
 @import views.html.dataset.datasetSubNav
 @import views.html.dataview.dataViewSelectionModal
+@import views.html.filter.filter
 @import play.api.libs.json.Json
 @import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
@@ -31,6 +32,7 @@
                 Some(filterSpec),
                 dataSetRouter.getDistribution(field.map(_.name), filterSpec.conditionsOrId),
                 Right(dataSetRouter.allFields),
+                Some(Right(categoryRouter.getCategoriesWithFieldsAsTreeNodes)),
                 filterShowFieldStyle,
                 Some(filterJsRouter),
                 Some(filterRouter.idAndNames),

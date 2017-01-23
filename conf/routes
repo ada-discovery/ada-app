@@ -79,6 +79,7 @@ GET         /redcap/records/get/:id                                             
 GET         /redcap/metadatas/get/:id                                               controllers.RedCapController.showMetadata(id: String)
 GET         /redcap/fieldNames/get/:id                                              controllers.RedCapController.showExportField(id: String)
 GET         /redcap/records/exportAllAsCsv                                          controllers.RedCapController.exportRecordsAsCsv(delimiter : String ?= ",")
+GET         /redcap/records/exportAllMetadatasAsCsv                                 controllers.RedCapController.exportAllMetadatasAsCsv(delimiter : String ?= ",")
 GET         /redcap/records/exportTranSMARTData                                     controllers.RedCapController.exportTranSMARTDataFile(delimiter : String ?= "\t")
 GET         /redcap/records/exportTranSMARTMapping                                  controllers.RedCapController.exportTranSMARTMappingFile(delimiter : String ?= "\t")
 
@@ -124,6 +125,7 @@ POST        /studies/categories/:id                                             
 POST        /studies/categories/:id/delete                                          controllers.dataset.CategoryDispatcher.delete(id: BSONObjectID)
 GET         /studies/categories/idAndNames                                          controllers.dataset.CategoryDispatcher.idAndNames
 GET         /studies/categories/getCategoryD3Root                                   controllers.dataset.CategoryDispatcher.getCategoryD3Root
+GET         /studies/categories/getCategoriesWithFieldsAsTreeNodes                  controllers.dataset.CategoryDispatcher.getCategoriesWithFieldsAsTreeNodes
 GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
 GET         /studies/categories/addFields                                           controllers.dataset.CategoryDispatcher.addFields(categoryId: BSONObjectID, fieldNames: Seq[String])
 GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes

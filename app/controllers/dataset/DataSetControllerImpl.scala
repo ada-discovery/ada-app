@@ -266,7 +266,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private case class ViewResponse(
     count: Int,
-    fieldChartSpecs: Traversable[FieldChartSpec],
+    fieldChartSpecs: Traversable[Option[FieldChartSpec]],
     tableItems: Traversable[JsObject],
     filter: Filter,
     tableFields: Traversable[Field]
@@ -377,7 +377,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             val viewParts = (viewResponses, fieldChartsSpecs, tablePagesToUse).zipped.map {
               case (viewResponse, fieldChartSpecs, tablePage) =>
                 val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
-                DataSetViewData(newPage, fieldChartSpecs, viewResponse.tableFields)
+                DataSetViewData(newPage, fieldChartSpecs.flatten, viewResponse.tableFields)
               }
             Ok(getViewView(
               dataViewId,
@@ -403,21 +403,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   // TODO: refactor... to many retyping
   private def setBoxPlotMinMax(
-    fieldChartSpecs: Seq[Traversable[FieldChartSpec]]
-  ): Seq[Traversable[FieldChartSpec]] = {
+    fieldChartSpecs: Seq[Traversable[Option[FieldChartSpec]]]
+  ): Seq[Traversable[Option[FieldChartSpec]]] = {
     val chartSpecsSeqs = fieldChartSpecs.map(_.toSeq)
     val chartCount = fieldChartSpecs.head.size
 
     def boxChart[T](
-      chartSpecs: Seq[FieldChartSpec],
+      chartSpecs: Seq[Option[FieldChartSpec]],
       index: Int
     ): Option[BoxChartSpec[T]] =
-      chartSpecs(index).chartSpec match {
+      chartSpecs(index).map(_.chartSpec match {
         case x: BoxChartSpec[T] =>
           if (x.data.median.isInstanceOf[T]) Some(x) else None
         case _ =>
           None
-      }
+      }).flatten
 
     def getMinMaxWhiskers[T: Ordering](
       index: Int)(
@@ -464,14 +464,16 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         chartSpecs.zip(indexMinMaxWhiskers).map{ case (fieldChartSpec, (index, minMaxWhiskers)) =>
           minMaxWhiskers match {
             case Some(minMaxWhiskers) =>
-              val newChartSpec =
-                fieldChartSpec.chartSpec match {
-                  case x: BoxChartSpec[Double] => setMinMax(x, minMaxWhiskers)
-                  case x: BoxChartSpec[Long] => setMinMax(x, minMaxWhiskers)
-                  case x: BoxChartSpec[java.util.Date] => setMinMax(x, minMaxWhiskers)
-                  case _ =>  fieldChartSpec.chartSpec
-                }
-              FieldChartSpec(fieldChartSpec.fieldName, newChartSpec)
+              fieldChartSpec.map { fieldChartSpec =>
+                val newChartSpec =
+                  fieldChartSpec.chartSpec match {
+                    case x: BoxChartSpec[Double] => setMinMax(x, minMaxWhiskers)
+                    case x: BoxChartSpec[Long] => setMinMax(x, minMaxWhiskers)
+                    case x: BoxChartSpec[java.util.Date] => setMinMax(x, minMaxWhiskers)
+                    case _ => fieldChartSpec.chartSpec
+                  }
+                FieldChartSpec(fieldChartSpec.fieldName, newChartSpec)
+              }
             case None => fieldChartSpec
           }
         }
@@ -525,9 +527,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     } yield {
       val tableFields = tableFieldNames.map(nameFieldMap.get).flatten
 
-      val fieldChartSpecs = chartSpecs.map { case (chartSpec,  fieldNames) =>
+      val fieldChartSpecs = chartSpecs.map(_.map { case (chartSpec,  fieldNames) =>
         FieldChartSpec(fieldNames.head, chartSpec)
-      }
+      })
 
       val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)
 
@@ -540,7 +542,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     statsCalcSpecs: Traversable[StatsCalcSpec],
     nameFieldMap: Map[String, Field]
-  ): Future[Traversable[(ChartSpec, Seq[String])]] = {
+  ): Future[Traversable[Option[(ChartSpec, Seq[String])]]] = {
     val splitStatsCalcSpecs: Traversable[Either[StatsCalcSpec, StatsCalcSpec]] =
       if (perChartRepoMethod)
         statsCalcSpecs.collect {
@@ -584,9 +586,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     } yield {
       val calcSpecChartMap = (chartSpecs1 ++ chartSpecs2).toMap
       // return charts in the specified order
-      statsCalcSpecs.map(
-        calcSpecChartMap.get
-      ).flatten.flatten
+      statsCalcSpecs.map(calcSpecChartMap.get).flatten
     }
   }
 

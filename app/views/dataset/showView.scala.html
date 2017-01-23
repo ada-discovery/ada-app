@@ -4,6 +4,7 @@
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.table.paginatedJsonTable
 @import views.html.dataset.exportDataSetDropdown
+@import views.html.filter.filter
 @import reactivemongo.bson.BSONObjectID
 @import play.api.libs.json.{JsValue, JsObject}
 @import models.DataSpaceMetaInfo
@@ -164,6 +165,7 @@
         viewPart.page.filter,
         dataSetRouter.getView(dataViewId, Nil, Nil, true),
         Right(dataSetRouter.allFields),
+        Some(Right(categoryRouter.getCategoriesWithFieldsAsTreeNodes)),
         filterShowFieldStyle,
         Some(filterJsRouter),
         Some(filterRouter.idAndNames),
@@ -281,8 +283,6 @@
             var filterOrIds = [
                 @viewParts.zipWithIndex.map{ case (viewPart, index) => getFilterOrId(@index)}.mkString(",")
             ];
-
-            console.log(filterOrIds);
 
             dataViewJsRoutes.controllers.dataset.DataViewDispatcher.saveFilter(
                 "@{dataViewId.stringify}",

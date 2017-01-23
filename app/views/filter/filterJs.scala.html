@@ -1,0 +1,152 @@
+@import play.api.libs.json.Json
+@import models.{Field, Filter}
+@import controllers.dataset.FilterJsRouter
+
+@(
+    filter: Option[Filter],
+    submitCall: Call,
+    fieldsOrCall: Either[Traversable[Field], Call],
+    filterJsRouter: Option[FilterJsRouter],
+    listFiltersCall: Option[Call],
+    filterSubmitParamName: String,
+    filterElementName: String,
+    createSubmissionJson: Option[Html],
+    categoryTreeElementName: Option[String]
+)(
+    implicit request: Request[_]
+)
+
+@fieldNameLabelsAsString = @{
+    fieldsOrCall match {case Left(fields) =>
+        Html(
+            Json.stringify(
+                Json.toJson(
+                    fields.map { field =>
+                        Json.obj("name" -> field.name, "label" -> field.label)
+                    }
+                )
+            )
+        )
+    }
+}
+
+@fieldsUrl = @{
+    fieldsOrCall match {case Right(call) => call.url}
+}
+
+@if(filterJsRouter.isDefined) {
+    @helper.javascriptRouter("filterJsRoutes")(
+        filterJsRouter.get.saveAjax
+    )
+}
+
+<!-- '
+    Widget' part of the JQuery UI lib is sufficient for the filter JS, however for consistence we load the whole JQuery UI
+    <script type="text/javascript" src="@routes.Assets.versioned("javascripts/jquery-ui-1.11.4-widget.min.js")"></script>
+-->
+<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
+<script type="text/javascript" src="@routes.Assets.versioned("javascripts/multiFilter.min.js")"></script>
+
+<script type="text/javascript" defer="defer">
+    var jsConditions = JSON.parse('@{Html(Json.stringify(Json.toJson(filter.map(_.conditions).getOrElse(Nil))))}');
+
+    var filterId =
+        @if(filter.isDefined && filter.get._id.isDefined) {
+            '@filter.get._id.get.stringify'
+        } else {
+            null
+        }
+
+    var fieldNameAndLabels =
+        @if(fieldsOrCall.isLeft) {
+            JSON.parse('@fieldNameLabelsAsString')
+        } else {
+            null
+        }
+
+    var getFieldsUrl =
+        @if(fieldsOrCall.isRight) {
+            '@fieldsUrl'
+        } else {
+            null
+        }
+
+    var listFiltersUrl =
+        @if(listFiltersCall.isDefined) {
+            '@listFiltersCall.get.url'
+        } else {
+            null
+        }
+
+    var createSubmissionJson = @if(createSubmissionJson.isDefined) {@createSubmissionJson} else {null}
+
+    var fieldDisplayChoiceCallback = null;
+    var initFilterIfNeededTreeCallback = null;
+
+    @if(categoryTreeElementName.isDefined) {
+        var categoryTreeFieldNodeIdLabels = null;
+
+        function initCategoryTreeFieldNodeIdLabels() {
+            categoryTreeFieldNodeIdLabels = Object.values($("#@categoryTreeElementName.get").jstree(true)._model.data).filter(
+                    function(node) {
+                        return node.type == "field";
+                    }
+            ).map(function (field, index) { return {id: field.id, label: field.data.label}; });
+        }
+
+        fieldDisplayChoiceCallback = function(choiceVal) {
+            if (!categoryTreeFieldNodeIdLabels) {
+                initCategoryTreeFieldNodeIdLabels()
+            }
+            $.each(categoryTreeFieldNodeIdLabels, function( index, field ) {
+                var text;
+                switch (choiceVal) {
+                    case 0: text = field.id; break;
+                    case 1: text = field.label; break;
+                    case 2: text = (field.label) ? field.label : field.id; break;
+                    case 3: text = (field.label) ? field.label : field.id; break;
+                }
+                if (text) {
+                    $("#@categoryTreeElementName.get").jstree('set_text', field.id, text);
+                    $("#@categoryTreeElementName.get").jstree(true).show_node(field.id);
+                } else {
+                    $("#@categoryTreeElementName.get").jstree(true).hide_node(field.id);
+                }
+            });
+            $('#@categoryTreeElementName.get').jstree("deselect_all");
+        }
+
+        if (fieldNameAndLabels) {
+            initJsTree()
+            $("#@categoryTreeElementName.get").bind('ready.jstree', function(e, data) {
+                var rootNode = $('#@categoryTreeElementName.get').jstree(true).get_node("#")
+                if(rootNode.children.length == 0) {
+                    $("#showCategoryTreeButton").hide();
+                }
+            })
+        } else {
+            initFilterIfNeededTreeCallback = function() {
+                initJsTree();
+                $("#@categoryTreeElementName.get").bind('ready.jstree', function(e, data) {
+                    var rootNode = $('#@categoryTreeElementName.get').jstree(true).get_node("#")
+                    if(rootNode.children.length == 0) {
+                        $("#showCategoryTreeButton").hide();
+                    }
+                })
+            }
+        }
+    }
+
+    $("#@{filterElementName}").multiFilter({
+        jsonConditions: jsConditions,
+        fieldNameAndLabels: fieldNameAndLabels,
+        getFieldsUrl: getFieldsUrl,
+        submitUrl: '@submitCall.url',
+        listFiltersUrl: listFiltersUrl,
+        filterSubmitParamName: '@filterSubmitParamName',
+        filterId: filterId,
+        createSubmissionJson: createSubmissionJson,
+        initFilterIfNeededCallback: initFilterIfNeededTreeCallback,
+        fieldDisplayChoiceCallback: fieldDisplayChoiceCallback
+    })
+</script>

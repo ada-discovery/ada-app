@@ -2,12 +2,16 @@
 @import play.api.libs.json.Json
 @import models.FilterShowFieldStyle
 @import models.{Field, Filter}
+@import models.JsTreeNode.format
 @import controllers.dataset.FilterJsRouter
+@import views.html.filter.jsTree
+@import play.api.libs.json.JsArray
 
 @(
     filter: Option[Filter],
     submitCall: Call,
     fieldsOrCall: Either[Traversable[Field], Call],
+    categoriesOrCall: Option[Either[Traversable[Category], Call]] = None,
     showFieldStyle: Option[FilterShowFieldStyle.Value] = None,
     filterJsRouter: Option[FilterJsRouter] = None,
     listFiltersCall: Option[Call] = None,
@@ -34,6 +38,7 @@
 @saveFilterModalBody = {
     <input id="saveFilterName" name="saveFilterName" value="" placeholder="Filter Name">
 }
+
 @saveFilterModelButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
     <button type="button" id="submitButton" onclick="$('#@filterElementName').multiFilter('saveFilter');" data-dismiss="modal" class="btn btn-primary">OK</button>
@@ -85,6 +90,21 @@
     </ul>
 }
 
+@categoryTreeDataOrUrl = @{
+    categoriesOrCall.get match {
+        case Left(categories) => Left(Json.toJson(categories.map(JsTreeNode.fromCategory)))
+        case Right(call) => Right(call.url)
+    }
+}
+
+@categoryTreeNodeSelectedJsFun = {
+    function(node) {
+        if (node.type == "field") {
+            $('#@filterElementName').multiFilter('setFieldTypeaheadAndName', node.id, node.text);
+        }
+    }
+}
+
 <div id="@filterElementName">
     <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
         <div class="modal-dialog">
@@ -96,6 +116,12 @@
                 <form onsubmit="return false;">
                     <div class="modal-body">
                         <input id="conditionIndex" type="hidden" value=""/>
+                        @if(categoriesOrCall.isDefined) {
+                            <div id="categoryDiv" class="row collapse">
+                                @jsTree(categoryTreeDataOrUrl, "categoryTree", Some(categoryTreeNodeSelectedJsFun))
+                                <hr/>
+                            </div>
+                        }
                         <div class="row">
                             <div class="float-left col-md-4">
                                 <input id="fieldNameTypeahead" class="typeahead" type="text" placeholder="Field Name or Label">
@@ -109,11 +135,16 @@
                                 </select>
                                 <input id="value" class="float-left" placeholder="Condition"/>
                             </div>
-                            <a id="showChoicesButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#show-choices" data-toggle="tooltip" title="Field Name/Label Display Options">
+                            <a id="showChoicesButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#showChoicesPanel" data-toggle="tooltip" title="Field Name/Label Display Options">
                                 <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
                             </a>
+                            @if(categoriesOrCall.isDefined) {
+                                <a id="showCategoryTreeButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#categoryDiv" data-toggle="tooltip" title="Show Category Tree">
+                                    <span class="glyphicon glyphicon-leaf" aria-hidden="true"></span>
+                                </a>
+                            }
                         </div>
-                        <div id="show-choices" class="row collapse">
+                        <div id="showChoicesPanel" class="row collapse">
                             <hr/>
                             <div class="well">
                                 What do you want to show?
@@ -176,5 +207,6 @@
     listFiltersCall,
     filterSubmitParamName,
     filterElementName,
-    createSubmissionJson
+    createSubmissionJson,
+    categoriesOrCall.map(_ => "categoryTree")
 )
