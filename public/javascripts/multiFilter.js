@@ -8,7 +8,9 @@ $.widget( "custom.multiFilter", {
         listFiltersUrl: null,
         filterSubmitParamName: null,
         filterId: null,
-        createSubmissionJson: null
+        createSubmissionJson: null,
+        initFilterIfNeededCallback: null,
+        fieldDisplayChoiceCallback: null
     },
 
     // the constructor
@@ -26,10 +28,9 @@ $.widget( "custom.multiFilter", {
         this.fieldNameElement = this.element.find("#fieldName");
         this.valueElement = this.element.find("#value");
         var saveFilterModalName = "saveFilterModal" + this.element.attr('id');
-        console.log(saveFilterModalName)
-        console.log(this.element)
         this.saveFilterModalElement = this.element.find("#" + saveFilterModalName);
         this.saveFilterNameElement = this.element.find("#saveFilterName");
+        this.showChoicesPanelElement = this.element.find("#showChoicesPanel");
         this.showChoicesButtonElement = this.element.find("#showChoicesButton");
         this.conditionPanelElement = this.element.find("#conditionPanel");
         this.filterNameButtonElement = this.element.find("#filterNameButton");
@@ -38,7 +39,7 @@ $.widget( "custom.multiFilter", {
 
         if (this.fieldNameAndLabels) {
             that.initShowFieldNameLabelChoices();
-            that.repopulateFieldNameTypeahead();
+            that.repopulateFieldNameChoices();
         }
 
         if (this.options.listFiltersUrl) {
@@ -48,8 +49,8 @@ $.widget( "custom.multiFilter", {
         this.addEditConditionModalElement.on('shown.bs.modal', function () {
             if ($(this).find("#conditionIndex:first").val())
                 that.valueElement.focus();
-            else
-                that.fieldNameTypeaheadElement.focus();
+//            else
+//                that.fieldNameTypeaheadElement.focus();
         })
 
         $(".condition-full").hover(null, function() {
@@ -74,13 +75,18 @@ $.widget( "custom.multiFilter", {
             }
         });
 
-        this.showChoicesButtonElement.click(function() {
-            that.repopulateFieldNameTypeahead();
+        this.element.find('input[name="showChoice"]').change(function() {
+            that.repopulateFieldNameChoices();
+            that.showChoicesPanelElement.collapse('hide');
         });
+
+        //this.showChoicesButtonElement.click(function() {
+        //    that.repopulateFieldNameChoices();
+        //});
     },
 
     showAddConditionModal: function() {
-        this.loadFieldNames();
+        this.initFilterIfNeeded();
         this.addEditConditionModalElement.find("#conditionIndex").first().val("");
 
         var condition = {conditionType : "="};
@@ -90,7 +96,7 @@ $.widget( "custom.multiFilter", {
     },
 
     showEditConditionModal: function (index) {
-        this.loadFieldNames();
+        this.initFilterIfNeeded();
         this.addEditConditionModalElement.find("#conditionIndex").first().val(index);
 
         var condition = this.jsonConditions[index]
@@ -201,7 +207,7 @@ $.widget( "custom.multiFilter", {
         })
     },
 
-    loadFieldNames: function () {
+    initFilterIfNeeded: function () {
         var that = this;
         if (!this.fieldNameAndLabels) {
                 if(this.options.getFieldsUrl) {
@@ -211,8 +217,11 @@ $.widget( "custom.multiFilter", {
                             that.fieldNameAndLabels = data.map( function(field, index) {
                                 return {name: field.name, label: field.label};
                             });
+                            if (that.options.initFilterIfNeededCallback) {
+                                that.options.initFilterIfNeededCallback();
+                            }
                             that.initShowFieldNameLabelChoices();
-                            that.repopulateFieldNameTypeahead();
+                            that.repopulateFieldNameChoices();
                         },
                         async: false
                     });
@@ -240,8 +249,9 @@ $.widget( "custom.multiFilter", {
         }
     },
 
-    repopulateFieldNameTypeahead: function () {
-        var choiceElement = $("input[name='showChoice']:checked")[0]
+    repopulateFieldNameChoices: function () {
+        var that = this;
+        var choiceElement = this.element.find('input[name="showChoice"]:checked')[0]
         if (choiceElement) {
             var choiceValue = parseInt(choiceElement.value);
 
@@ -253,6 +263,12 @@ $.widget( "custom.multiFilter", {
                 this.fieldNameAndLabels,
                 choiceValue
             )
+
+            this.fieldNameTypeaheadElement.typeahead('val', '');
+
+            if (this.options.fieldDisplayChoiceCallback) {
+                this.options.fieldDisplayChoiceCallback(choiceValue)
+            }
         };
     },
 
@@ -309,5 +325,10 @@ $.widget( "custom.multiFilter", {
                 async: false
             });
         }
+    },
+
+    setFieldTypeaheadAndName: function(name, typeaheadVal) {
+        this.fieldNameTypeaheadElement.typeahead('val', typeaheadVal);
+        this.fieldNameElement.val(name)
     }
 })

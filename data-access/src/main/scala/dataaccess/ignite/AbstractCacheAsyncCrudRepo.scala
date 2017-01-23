@@ -198,7 +198,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
       }
 
       case EqualsNullCriterion(_) =>
-        ("is null", Nil)
+        (s"$fieldName is null", Nil)
 
       // TODO: we need to properly translate client's regex to an SQL version... we can perhaps drop '%' around
       case RegexEqualsCriterion(_, regexString) =>
@@ -217,7 +217,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
       }
 
       case NotEqualsNullCriterion(_) =>
-        ("is not null", Nil)
+        (s"$fieldName is not null", Nil)
 
       case InCriterion(_, values) => {
         val placeholders = values.map(_ => "?").mkString(",")

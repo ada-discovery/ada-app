@@ -219,3 +219,23 @@ tr.clickable-row {
 .row.vertical-divider div[class^="col-"]:last-child {
     border-right: none;
 }
+
+.category-node {
+    color:dodgerblue;
+}
+
+.jstree-default a.jstree-search {
+    color:dimgrey;
+}
+
+.jsTree-filter {
+    margin-left: 5px;
+    padding-bottom: 10px
+}
+
+.jsTree-tree {
+    margin-left: 5px;
+    margin-right: 10px;
+    max-height: 600px;
+    overflow-y: scroll;
+}

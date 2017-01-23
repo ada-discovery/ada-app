@@ -205,7 +205,6 @@
                 })
                 .style("fill-opacity", 1e-6)
                 .on("dblclick", function(d) {
-                    console.log("Clicked")
                     that.options.showNodeFun(d)
                 })
 

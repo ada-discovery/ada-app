@@ -156,6 +156,7 @@ case class NumFieldStats(min : Double, max : Double, mean : Double, variance : D
 case class Category(
   _id: Option[BSONObjectID],
   name: String,
+  label: Option[String] = None,
   var parentId: Option[BSONObjectID] = None,
   var parent: Option[Category] = None,
   var children: Seq[Category] = Seq[Category]()
@@ -176,6 +177,8 @@ case class Category(
     this
   }
 
+  def labelOrElseName = label.getOrElse(name)
+
   override def toString = name
 
   override def hashCode = name.hashCode
@@ -188,8 +191,9 @@ object DataSetFormattersAndIds {
   implicit val categoryFormat: Format[Category] = (
     (__ \ "_id").formatNullable[BSONObjectID] and
     (__ \ "name").format[String] and
+    (__ \ "label").formatNullable[String] and
     (__ \ "parentId").formatNullable[BSONObjectID]
-    )(Category(_, _, _), (item: Category) =>  (item._id, item.name, item.parentId))
+    )(Category(_, _, _, _), (item: Category) =>  (item._id, item.name, item.label, item.parentId))
 
   implicit val fieldFormat: Format[Field] = (
     (__ \ "name").format[String] and
