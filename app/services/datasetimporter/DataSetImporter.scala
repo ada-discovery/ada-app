@@ -63,6 +63,24 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
     (jsons, fieldNames.zip(fieldTypes))
   }
 
+  protected def createJsonsWithStringFieldTypes(
+    fieldNames: Seq[String],
+    values: Iterator[Seq[String]]
+  ): (Iterator[JsObject], Seq[(String, FieldType[_])]) = {
+    val fieldTypes = fieldNames.map(_ => ftf.stringScalar)
+
+    val jsons = values.map( vals =>
+      JsObject(
+        (fieldNames, fieldTypes, vals).zipped.map {
+          case (fieldName, fieldType, text) =>
+            val jsonValue = fieldType.displayStringToJson(text)
+            (fieldName, jsonValue)
+        })
+    )
+
+    (jsons, fieldNames.zip(fieldTypes))
+  }
+
   protected def createCsvFileLineIterator(
     path: String,
     charsetName: Option[String],

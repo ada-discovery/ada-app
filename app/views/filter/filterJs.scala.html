@@ -84,7 +84,7 @@
     var initFilterIfNeededTreeCallback = null;
 
     @if(categoryTreeElementName.isDefined) {
-        var categoryTreeFieldNodeIdLabels = null;
+        var categoryTreeFieldNodeIdLabels = [];
 
         function initCategoryTreeFieldNodeIdLabels() {
             categoryTreeFieldNodeIdLabels = Object.values($("#@categoryTreeElementName.get").jstree(true)._model.data).filter(
@@ -95,7 +95,7 @@
         }
 
         fieldDisplayChoiceCallback = function(choiceVal) {
-            if (!categoryTreeFieldNodeIdLabels) {
+            if (categoryTreeFieldNodeIdLabels.length == 0) {
                 initCategoryTreeFieldNodeIdLabels()
             }
             $.each(categoryTreeFieldNodeIdLabels, function( index, field ) {

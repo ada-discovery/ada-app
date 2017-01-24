@@ -128,6 +128,7 @@ GET         /studies/categories/getCategoryD3Root                               
 GET         /studies/categories/getCategoriesWithFieldsAsTreeNodes                  controllers.dataset.CategoryDispatcher.getCategoriesWithFieldsAsTreeNodes
 GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
 GET         /studies/categories/addFields                                           controllers.dataset.CategoryDispatcher.addFields(categoryId: BSONObjectID, fieldNames: Seq[String])
+POST        /studies/categories/updateLabel/:id/:label                              controllers.dataset.CategoryDispatcher.updateLabel(id: BSONObjectID, label: String)
 GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
 
 # FilterDispatcher

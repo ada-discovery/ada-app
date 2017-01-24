@@ -33,8 +33,8 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
       val values = dataSetService.parseLines(columnNames, lines, importInfo.delimiter, importInfo.eol.isDefined, importInfo.matchQuotes)
 
       for {
-        // save the jsons and get the field types
-        fieldNameAndTypes <-
+        // save the jsons and dictionary
+        _ <-
           if (importInfo.inferFieldTypes)
             saveJsonsWithTypeInference(dsa, columnNames, values, importInfo)
           else
@@ -52,10 +52,10 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
     columnNames: Seq[String],
     values: Iterator[Seq[String]],
     saveBatchSize: Option[Int]
-  ): Future[Seq[(String, FieldType[_])]] = {
+  ): Future[Unit] = {
     // create jsons and field types
     logger.info(s"Creating JSONs...")
-    val (jsons, fieldNameAndTypes) = createDummyJsonsWithFieldTypes(columnNames, values)
+    val (jsons, fieldNameAndTypes) = createJsonsWithStringFieldTypes(columnNames, values)
 
     for {
      // save, or update the dictionary
@@ -93,7 +93,7 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
         }
       }
     } yield
-      fieldNameAndTypes
+      ()
   }
 
   private def saveJsonsWithTypeInference(
@@ -101,7 +101,7 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
     columnNames: Seq[String],
     values: Iterator[Seq[String]],
     importInfo: CsvDataSetImport
-  ): Future[Seq[(String, FieldType[_])]] = {
+  ): Future[Unit] = {
 
     // infer field types and create JSONSs
     logger.info(s"Inferring field types and creating JSONs...")
@@ -144,24 +144,6 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
         dataSetService.saveOrUpdateRecords(dataRepo, jsons,  None, false, None, importInfo.saveBatchSize)
       }
     } yield
-      fieldNameAndTypes
-  }
-
-  protected def createDummyJsonsWithFieldTypes(
-    fieldNames: Seq[String],
-    values: Iterator[Seq[String]]
-  ): (Iterator[JsObject], Seq[(String, FieldType[_])]) = {
-    val fieldTypes = fieldNames.map(_ => ftf.stringScalar)
-
-    val jsons = values.map( vals =>
-      JsObject(
-        (fieldNames, fieldTypes, vals).zipped.map {
-          case (fieldName, fieldType, text) =>
-            val jsonValue = fieldType.displayStringToJson(text)
-            (fieldName, jsonValue)
-        })
-    )
-
-    (jsons, fieldNames.zip(fieldTypes))
+      ()
   }
 }

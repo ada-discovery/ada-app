@@ -3,6 +3,7 @@ package persistence.dataset
 import javax.inject.{Singleton, Named, Inject}
 
 import dataaccess._
+import models.DataSetFormattersAndIds.DataSetMetaInfoIdentity
 import models._
 import dataaccess.RepoTypes._
 import Criterion.Infix
@@ -147,11 +148,27 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
       )
 
       // register meta info
-      val metaInfoFuture = if (metaInfos.isEmpty)
-        dataSetMetaInfoRepo.save(metaInfo)
-      else
-        // if already exists update the name
-        dataSetMetaInfoRepo.update(metaInfos.head.copy(name = metaInfo.name))
+      val metaInfoFuture =
+        if (metaInfos.isEmpty) {
+          for {
+            dataSpaceMetaInfo <- dataSpaceMetaInfoRepo.get(metaInfo.dataSpaceId)
+
+            metaInfoId <- dataSetMetaInfoRepo.save(metaInfo)
+
+            _ <-
+              dataSpaceMetaInfo match {
+                case Some(dataSpaceMetaInfo) =>
+                  val metaInfoWithId = DataSetMetaInfoIdentity.set(metaInfo, metaInfoId)
+                  dataSpaceMetaInfoRepo.update(
+                    dataSpaceMetaInfo.copy(dataSetMetaInfos = (dataSpaceMetaInfo.dataSetMetaInfos ++ Seq(metaInfoWithId)))
+                  )
+                case None => Future(())
+              }
+          } yield
+            metaInfoId
+        } else
+          // if already exists update the name
+          dataSetMetaInfoRepo.update(metaInfos.head.copy(name = metaInfo.name))
 
       for {
         // execute the setting registration

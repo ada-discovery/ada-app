@@ -228,7 +228,11 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
 
       case Greater => convertedValue.map(GreaterCriterion(fieldName, _))
 
+      case GreaterEqual => convertedValue.map(GreaterEqualCriterion(fieldName, _))
+
       case Less => convertedValue.map(LessCriterion(fieldName, _))
+
+      case LessEqual => convertedValue.map(LessEqualCriterion(fieldName, _))
     }
   }
 

@@ -18,5 +18,7 @@ trait CategoryController extends CrudController[BSONObjectID] {
 
   def addFields(categoryId: BSONObjectID, fieldNames: Seq[String]): Action[AnyContent]
 
+  def updateLabel(id: BSONObjectID, label: String): Action[AnyContent]
+
   def jsRoutes: Action[AnyContent]
 }

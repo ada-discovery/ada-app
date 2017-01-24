@@ -720,6 +720,7 @@ class DataSetServiceImpl @Inject()(
     val originalDsa = dsaf(originalDataSetId).get
     val originalDataRepo = originalDsa.dataSetRepo
     val originalDictionaryRepo = originalDsa.fieldRepo
+    val originalCategoryRepo = originalDsa.categoryRepo
 
     for {
       // get the accessor (data repo and field repo) for the newly registered data set
@@ -729,12 +730,17 @@ class DataSetServiceImpl @Inject()(
       )
       newDataRepo = newDsa.dataSetRepo
       newFieldRepo = newDsa.fieldRepo
+      newCategoryRepo = newDsa.categoryRepo
 
       // get the original dictionary fields
       originalFields <- originalDictionaryRepo.find()
 
+      // get the original categories
+      originalCategories <- originalCategoryRepo.find()
+
       // get the field types
-      originalFieldNameAndTypes = originalFields.map(field => (field.name, field.fieldTypeSpec)).toSeq
+      originalFieldNameAndTypes = originalFields.toSeq.map(field => (field.name, field.fieldTypeSpec))
+      originalFieldNameMap = originalFields.map(field => (field.name, field)).toMap
 
       newFieldNameAndTypes <- {
         logger.info("Inferring new field types")
@@ -746,7 +752,29 @@ class DataSetServiceImpl @Inject()(
       }
 
       // update the dictionary
-      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}, false, true)
+//      _ <- updateDictionary(newFieldRepo, newFieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}, false, true)
+
+      // delete all the new fields
+      _ <- newFieldRepo.deleteAll
+
+      // save the new fields
+      _ <- {
+        val newFields = newFieldNameAndTypes.map { case (fieldName, fieldType) =>
+          val fieldTypeSpec = fieldType.spec
+          val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to)})
+
+          originalFieldNameMap.get(fieldName).map( field =>
+            field.copy(fieldType = fieldTypeSpec.fieldType, isArray = fieldTypeSpec.isArray, numValues = stringEnums)
+          )
+        }.flatten
+        newFieldRepo.save(newFields)
+      }
+
+      // delete all the new categories
+      _ <- newCategoryRepo.deleteAll
+
+      // save all the new categories
+      _ <- newCategoryRepo.save(originalCategories)
 
       // since we possible changed the dictionary (the data structure) we need to update the data set repo
       _ <- newDsa.updateDataSetRepo

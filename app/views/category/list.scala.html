@@ -79,14 +79,21 @@
     </script>
 }
 
+@editableCategoryLabelInput(category: Category) = {
+    <input type="text" class="no-rowClicked categoryLabel" value='@{category.label.getOrElse("")}'/>
+}
+
 @table = @{
     paginatedTable(
         page,
         router.list(_, _, page.filterConditions),
         typeColumns[Category](
-            (Some("name"), "Name", _.name)
+            (Some("name"), "Name", _.name),
+            (Some("label"), "Label", editableCategoryLabelInput)
         ),
-        Some({ item : Any => router.get(item.asInstanceOf[Category]._id.get)})
+        Some({ item : Any => router.get(item.asInstanceOf[Category]._id.get)}),
+        Some("id", {any:Any => any.asInstanceOf[Category]._id.get.stringify}),
+        Some("categoryTable")
     )
 }
 
@@ -99,3 +106,29 @@
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )
+
+<script type="text/javascript" src="@router.jsRoutes"></script>
+
+<script type="text/javascript">
+    $(function () {
+        $(".categoryLabel").on("keydown",function(e) {
+            if(e.keyCode == 13) {
+                var id = getNearestRowId($(this), "id");
+                var label = $(this).val();
+                var that = $(this)
+                if (label) {
+                    categoryJsRoutes.controllers.dataset.CategoryDispatcher.updateLabel(id, label).ajax( {
+                        success: function() {
+                            showMessage("The category '" + id + "' has been successfully relabeled to '" + label + "'.");
+                        },
+                        error: function(data){
+                            showError( data.responseText );
+                        }
+                    });
+                }
+                var inputs = that.closest('tbody').find('.fieldLabel');
+                inputs.eq( inputs.index(that)+ 1 ).focus();
+            }
+        });
+    })
+</script>

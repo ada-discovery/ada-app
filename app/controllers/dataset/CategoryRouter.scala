@@ -26,4 +26,5 @@ final class CategoryJsRouter(dataSetId: String) extends GenericJsRouter(routes.j
   val saveForName = routeFun(_.saveForName)
   val relocateToParent = routeFun(_.relocateToParent)
   val addFields = routeFun(_.addFields)
+  val updateLabel = routeFun(_.updateLabel)
 }

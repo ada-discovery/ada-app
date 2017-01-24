@@ -38,7 +38,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   protected lazy val dataSetName = result(dsa.metaInfo).name
   protected lazy val fieldRepo = dsa.fieldRepo
 
-  protected override val listViewColumns = Some(Seq(CategoryIdentity.name, "name"))
+  protected override val listViewColumns = Some(Seq(CategoryIdentity.name, "name", "label"))
 
   override protected val form = Form(
     mapping(
@@ -247,13 +247,24 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   private def notFoundCategory(id: BSONObjectID) =
     NotFound(s"Category with id #${id.stringify} not found. It has been probably deleted (by a different user). It's highly recommended to refresh your screen.")
 
+  override def updateLabel(id: BSONObjectID, label: String) = Action.async { implicit request =>
+    repo.get(id).flatMap(_.fold(
+      Future(NotFound(s"Category '$id' not found"))
+    ){ category =>
+      repo.update(category.copy(label = Some(label))).map(_ =>
+        Ok("Done")
+      )
+    })
+  }
+
   override def jsRoutes = Action { implicit request =>
     Ok(
       JavaScriptReverseRouter("categoryJsRoutes")(
         jsRouter.get,
         jsRouter.relocateToParent,
         jsRouter.saveForName,
-        jsRouter.addFields
+        jsRouter.addFields,
+        jsRouter.updateLabel
       )
     ).as("text/javascript")
   }

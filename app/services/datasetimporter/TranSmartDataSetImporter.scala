@@ -3,10 +3,12 @@ package services.datasetimporter
 import java.util.Date
 
 import dataaccess.CategoryRepo._
+import dataaccess.{FieldTypeHelper, FieldTypeInferrerFactory, FieldType}
 import dataaccess.RepoTypes.{CategoryRepo, FieldRepo}
-import models.{Field, Category, FieldTypeSpec}
-import models.{TranSmartDataSetImport, AdaParseException}
+import models._
+import persistence.dataset.DataSetAccessor
 import reactivemongo.bson.BSONObjectID
+import util._
 import collection.mutable.{Map => MMap}
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -21,8 +23,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
     val dsa = createDataSetAccessor(importInfo)
-    val fieldRepo = dsa.fieldRepo
-    val categoryRepo = dsa.categoryRepo
+
     val delimiter = tranSmartDelimeter.toString
 
     try {
@@ -37,58 +38,154 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
 
       // parse lines
       logger.info(s"Parsing lines...")
-      val values = dataSetService.parseLines(columnNames, lines, delimiter, false)
-
-      // create jsons and field types
-      val (jsons, fieldNameAndTypes) = createJsonsWithFieldTypes(columnNames, values.toSeq)
+      val values = dataSetService.parseLines(columnNames, lines, delimiter, false, importInfo.matchQuotes)
 
       for {
-        // import the dictionary or save the inferred one
-        _ <- {
-          val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-
-          if (importInfo.mappingPath.isDefined) {
-            importTranSMARTDictionary(
-              importInfo.dataSetId,
-              fieldRepo,
-              categoryRepo,
-              tranSmartFieldGroupSize,
-              tranSmartDelimeter.toString,
-              createCsvFileLineIterator(
-                importInfo.mappingPath.get,
-                importInfo.charsetName,
-                None
-              ),
-              fieldNameTypeSpecs
-            )
-          } else {
-            dataSetService.updateDictionary(fieldRepo, fieldNameTypeSpecs, true, true)
-          }
-        }
-
-        // since we possible changed the dictionary (the data structure) we need to update the data set repo
-        _ <- dsa.updateDataSetRepo
-
-        // get the new data set repo
-        dataRepo = dsa.dataSetRepo
-
-        // remove ALL the records from the collection
-        _ <- {
-          logger.info(s"Deleting the old data set...")
-          dataRepo.deleteAll
-        }
-
-        // save the jsons
-        _ <- {
-          logger.info(s"Saving JSONs...")
-          dataSetService.saveOrUpdateRecords(dataRepo, jsons)
-        }
+        // save the jsons and dictionary
+        _ <-
+          if (importInfo.inferFieldTypes)
+            saveJsonsWithTypeInference(dsa, columnNames, values, importInfo)
+          else
+            saveJsonsWithoutTypeInference(dsa, columnNames, values, importInfo)
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
       }
     } catch {
       case e: Exception => Future.failed(e)
     }
+  }
+
+  private def saveJsonsWithoutTypeInference(
+    dsa: DataSetAccessor,
+    columnNames: Seq[String],
+    values: Iterator[Seq[String]],
+    importInfo: TranSmartDataSetImport
+  ): Future[Unit] = {
+    // create jsons and field types
+    logger.info(s"Creating JSONs...")
+    val (jsons, fieldNameAndTypes) = createJsonsWithStringFieldTypes(columnNames, values)
+
+    for {
+      // save, or update the dictionary
+      _ <- {
+        val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
+        if (importInfo.mappingPath.isDefined) {
+          importTranSMARTDictionary(
+            importInfo.dataSetId,
+            dsa.fieldRepo,
+            dsa.categoryRepo,
+            tranSmartFieldGroupSize,
+            tranSmartDelimeter.toString,
+            createCsvFileLineIterator(
+              importInfo.mappingPath.get,
+              importInfo.charsetName,
+              None
+            ),
+            fieldNameTypeSpecs
+          )
+        } else {
+          dataSetService.updateDictionary(dsa.fieldRepo, fieldNameTypeSpecs, true, true)
+        }
+      }
+
+      // since we possible changed the dictionary (the data structure) we need to update the data set repo
+      _ <- dsa.updateDataSetRepo
+
+      // get the new data set repo
+      dataRepo = dsa.dataSetRepo
+
+      // remove ALL the records from the collection
+      _ <- {
+        logger.info(s"Deleting the old data set...")
+        dsa.dataSetRepo.deleteAll
+      }
+
+      // save the jsons
+      _ <- {
+        logger.info(s"Saving JSONs...")
+        importInfo.saveBatchSize match {
+          case Some(saveBatchSize) =>
+            seqFutures(
+              jsons.grouped(saveBatchSize))(
+              dataRepo.save
+            )
+
+          case None =>
+            Future.sequence(
+              jsons.map(dataRepo.save)
+            )
+        }
+      }
+    } yield
+      ()
+  }
+
+  private def saveJsonsWithTypeInference(
+    dsa: DataSetAccessor,
+    columnNames: Seq[String],
+    values: Iterator[Seq[String]],
+    importInfo: TranSmartDataSetImport
+  ): Future[Unit] = {
+
+    // infer field types and create JSONSs
+    logger.info(s"Inferring field types and creating JSONs...")
+    val fti =
+      if (importInfo.inferenceMaxEnumValuesCount.isDefined || importInfo.inferenceMinAvgValuesPerEnum.isDefined) {
+        Some(
+          FieldTypeInferrerFactory(
+            FieldTypeHelper.fieldTypeFactory,
+            importInfo.inferenceMaxEnumValuesCount.getOrElse(FieldTypeHelper.maxEnumValuesCount),
+            importInfo.inferenceMinAvgValuesPerEnum.getOrElse(FieldTypeHelper.minAvgValuesPerEnum),
+            FieldTypeHelper.arrayDelimiter
+          ).apply
+        )
+      } else
+        None
+    val (jsons, fieldNameAndTypes) = createJsonsWithFieldTypes(columnNames, values.toSeq, fti)
+
+    for {
+    // save, or update the dictionary
+      _ <- {
+        val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
+
+        if (importInfo.mappingPath.isDefined) {
+          importTranSMARTDictionary(
+            importInfo.dataSetId,
+            dsa.fieldRepo,
+            dsa.categoryRepo,
+            tranSmartFieldGroupSize,
+            tranSmartDelimeter.toString,
+            createCsvFileLineIterator(
+              importInfo.mappingPath.get,
+              importInfo.charsetName,
+              None
+            ),
+            fieldNameTypeSpecs
+          )
+        } else {
+          dataSetService.updateDictionary(dsa.fieldRepo, fieldNameTypeSpecs, true, true)
+        }
+      }
+
+      // since we possible changed the dictionary (the data structure) we need to update the data set repo
+      _ <- dsa.updateDataSetRepo
+
+      // get the new data set repo
+      dataRepo = dsa.dataSetRepo
+
+      // remove ALL the records from the collection
+      _ <- {
+        logger.info(s"Deleting the old data set...")
+        dataRepo.deleteAll
+      }
+
+      // save the jsons
+      _ <- {
+        logger.info(s"Saving JSONs...")
+        dataSetService.saveOrUpdateRecords(dataRepo, jsons,  None, false, None, importInfo.saveBatchSize)
+      }
+    } yield
+      ()
   }
 
   protected def importTranSMARTDictionary(
@@ -104,7 +201,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
 
     // read the mapping file to obtain tupples: field name, field label, and category name; and a category name map
     val indexFieldNameMap: Map[Int, String] = fieldNameAndTypes.map(_._1).zipWithIndex.map(_.swap).toMap
-    val (fieldNameLabelCategoryNameMap, nameCategoryMap) = createFieldNameAndCategoryNameMaps(mappingFileLineIterator, delimiter, indexFieldNameMap)
+    val (fieldNameLabelCategoryMap, categories) = createFieldNameAndCategoryNameMaps(mappingFileLineIterator, delimiter, indexFieldNameMap)
 
     for {
       // delete all the fields
@@ -115,7 +212,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
 
       // save the categories
       categoryIds: Traversable[(Category, BSONObjectID)] <- {
-        val firstLayerCategories = nameCategoryMap.values.filter(!_.parent.isDefined)
+        val firstLayerCategories = categories.filter(!_.parent.isDefined)
         Future.sequence(
           firstLayerCategories.map(
             saveRecursively(categoryRepo, _)
@@ -125,13 +222,13 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
 
       // save the fields... use a field label and a category from the mapping file provided, and infer a type
       _ <- {
-        val categoryNameIdMap = categoryIds.map { case (category, id) => (category.name, id) }.toMap
+        val categoryIdMap = categoryIds.toMap
         val groupedFieldNameAndTypes = fieldNameAndTypes.grouped(fieldGroupSize).toSeq
         val futures = groupedFieldNameAndTypes.par.map { fieldNameAndTypesGroup =>
           // Don't care about the result here, that's why we ignore ids and return Unit
           val idFutures = for ((fieldName, fieldTypeSpec) <- fieldNameAndTypesGroup) yield {
-            val (fieldLabel, categoryName) = fieldNameLabelCategoryNameMap.getOrElse(fieldName, ("", None))
-            val categoryId = categoryName.map(categoryNameIdMap.get(_).get)
+            val (fieldLabel, category) = fieldNameLabelCategoryMap.getOrElse(fieldName, ("", None))
+            val categoryId = category.map(categoryIdMap.get(_).get)
             val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to)})
             fieldRepo.save(Field(fieldName, Some(fieldLabel), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums, None, None, None, Nil, categoryId))
           }
@@ -147,12 +244,13 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     lineIterator: => Iterator[String],
     delimiter: String,
     indexFieldNameMap: Map[Int, String]
-  ): (Map[String, (String, Option[String])], Map[String, Category]) = {
-    val nameCategoryMap = MMap[String, Category]()
+  ): (Map[String, (String, Option[Category])], Seq[Category]) = {
+    val pathCategoryMap = MMap[String, Category]()
+//    val columnNames  =  dataSetService.getColumnNames(delimiter, lineIterator)
 
-    val fieldNameLabelCategoryNameMap = lineIterator.drop(1).zipWithIndex.map { case (line, index) =>
+    val fieldNameLabelCategoryMap = lineIterator.drop(1).zipWithIndex.map { case (line, index) =>
       val values = dataSetService.parseLine(delimiter, line)
-      if (values.size != 4)
+      if (values.size < 4)
         throw new AdaParseException(s"TranSMART mapping file contains a line (index '$index') with '${values.size}' items, but 4 expected (filename, category, column number, and data label). Parsing terminated.")
 
       val filename	= values(0).trim
@@ -165,27 +263,32 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
       )
 
       // collect all categories
-      val categoryNames = if (categoryCD.nonEmpty)
+      val categoryPathNames = if (categoryCD.nonEmpty)
         categoryCD.split("\\+").map(_.trim.replaceAll("_", " "))
       else
         Array[String]()
 
-      val assocCategoryName = if (categoryNames.nonEmpty) {
-        val categories = categoryNames.map(categoryName =>
-          nameCategoryMap.getOrElseUpdate(categoryName, new Category(categoryName))
-        )
-        categories.sliding(2).foreach { adjCategories =>
-          val parent = adjCategories(0)
-          val child = adjCategories(1)
-          if (!parent.children.contains(child))
-            parent.addChild(child)
-        }
-        Some(categoryNames.last)
-      } else
-        None
+      val assocCategory =
+        if (categoryPathNames.nonEmpty) {
+          val categories = (1 to categoryPathNames.length).map { pathSize =>
+            val path = categoryPathNames.take(pathSize)
+            val categoryName = path.last
+            pathCategoryMap.getOrElseUpdate(path.mkString("+"), new Category(categoryName))
+          }
+          if (categories.size > 1) {
+            categories.sliding(2).foreach { adjCategories =>
+              val parent = adjCategories(0)
+              val child = adjCategories(1)
+              if (!parent.children.contains(child))
+               parent.addChild(child)
+            }
+          }
+          Some(categories.last)
+        } else
+          None
 
-      (fieldName, (fieldLabel, assocCategoryName))
+      (fieldName, (fieldLabel, assocCategory))
     }.toMap
-    (fieldNameLabelCategoryNameMap, nameCategoryMap.toMap)
+    (fieldNameLabelCategoryMap, pathCategoryMap.values.toSeq)
   }
 }
