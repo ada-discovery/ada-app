@@ -19,12 +19,15 @@ object CategoryRepo {
   def saveRecursively(
     categoryRepo: CategoryRepo,
     category: Category
-  ): Future[Seq[(Category, BSONObjectID)]] =
+  ): Future[Seq[(Category, BSONObjectID)]] = {
+    val children = category.children
+    category.children = Nil
     categoryRepo.save(category).flatMap { id =>
-      val idsFuture = category.children.map { child =>
+      val idsFuture = children.map { child =>
         child.parentId = Some(id)
         saveRecursively(categoryRepo, child)
       }
       Future.sequence(idsFuture).map(ids => Seq((category, id)) ++ ids.flatten)
     }
+  }
 }

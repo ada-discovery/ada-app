@@ -155,7 +155,7 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     ElasticIdRenameUtil.rename(fieldName, true)
 
   override def count(criteria: Seq[Criterion[Any]]): Future[Int] = {
-    def countDef =
+    val countDef =
       ElasticDsl.count from indexAndType query new BoolQueryDefinition().must(criteria.map(toQuery))
 
     client.execute {

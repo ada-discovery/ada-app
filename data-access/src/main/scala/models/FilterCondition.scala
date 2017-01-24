@@ -25,7 +25,9 @@ object ConditionType extends Enumeration {
   val In = Value("in")
   val NotIn = Value("nin")
   val Greater = Value(">")
+  val GreaterEqual = Value(">=")
   val Less = Value("<")
+  val LessEqual = Value("<=")
 }
 
 case class Filter(
