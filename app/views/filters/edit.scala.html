@@ -6,15 +6,16 @@
 @import models.DataSpaceMetaInfo
 @import models.Filter
 @import reactivemongo.bson.BSONObjectID
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName: String,
     id : BSONObjectID,
     form: Form[Filter],
-    router: FilterRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @elements = {
@@ -30,9 +31,9 @@
     domainName,
 	form.errors,
     elements,
-    router.update(id),
-    router.plainList,
-    Some(router.delete(id)),
+    filterRouter.update(id),
+    filterRouter.plainList,
+    Some(filterRouter.delete(id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )

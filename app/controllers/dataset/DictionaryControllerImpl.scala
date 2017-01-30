@@ -4,27 +4,26 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
-import controllers.{ExportableAction, CrudControllerImpl, EnumFormatter, MapJsonFormatter}
+import controllers._
 import dataaccess.RepoTypes.{CategoryRepo, DataSpaceMetaInfoRepo}
 import dataaccess._
 import models._
 import models.DataSetFormattersAndIds._
 import persistence.RepoTypes._
-import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import dataaccess.FieldRepo._
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.libs.json.{JsObject, Json}
-import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
+import play.api.mvc.{Action, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
-import services.{DeNoPaSetting, DataSetService}
+import services.{DataSetService, DeNoPaSetting}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import views.html.dictionary
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.concurrent.Await.result
 
@@ -54,6 +53,11 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   implicit val fieldTypeFormatter = EnumFormatter(FieldTypeId)
   implicit val mapFormatter = MapJsonFormatter.apply
+
+  private implicit def toWebContext(implicit request: Request[_]) = {
+    implicit val msg = messagesApi.preferred(request)
+    DataSetWebContext(dataSetId)
+  }
 
   private val fieldNameLabels = Seq(
     ("fieldType", Some("Field Type")),
@@ -93,19 +97,14 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     )
   )
 
-  // router for requests; to be passed to views as helper.
   protected val router = new DictionaryRouter(dataSetId)
   protected val jsRouter = new DictionaryJsRouter(dataSetId)
-  protected val dataViewRouter = new DataViewRouter(dataSetId)
-  protected val dataViewJsRouter = new DataViewJsRouter(dataSetId)
-  protected val categoryRouter = new CategoryRouter(dataSetId)
-  protected val categoryJsRouter = new CategoryJsRouter(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)
 
   override protected def createView(f : Form[Field])(implicit msg: Messages, request: Request[_]) =
-    dictionary.create(dataSetName + " Field", f, allCategories, router)
+    dictionary.create(dataSetName + " Field", f, allCategories)
 
   override protected def showView(name: String, f : Form[Field])(implicit msg: Messages, request: Request[_]) =
     editView(name, f)
@@ -116,7 +115,6 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       name,
       f,
       allCategories,
-      router,
       result(dataSpaceTree)
     )
 
@@ -151,11 +149,6 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       dataSetName + " Field",
       page,
       fieldChartSpecs,
-      router,
-      dataViewRouter,
-      dataViewJsRouter,
-      categoryRouter,
-      categoryJsRouter,
       fieldNameLabels,
       dataSpaceMetaInfos,
       6

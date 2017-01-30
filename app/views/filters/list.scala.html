@@ -6,14 +6,15 @@
 @import util.typeColumns
 @import controllers.dataset.FilterRouter
 @import models.DataSpaceMetaInfo
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName : String,
     page: Page[Filter],
-    router: FilterRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @actions = {
@@ -21,12 +22,12 @@
         <div class="col-md-10">
             @filter(
                 page.filter,
-                router.plainList,
+                filterRouter.plainList,
                 Left(Seq(Field("name", None)))
             )
         </div>
         <div class="col-md-2">
-            <a class="btn btn-success btn-sm pull-right" href="@router.create" data-toggle="tooltip" title="Add New Filter">
+            <a class="btn btn-success btn-sm pull-right" href="@filterRouter.create" data-toggle="tooltip" title="Add New Filter">
                 <span class="glyphicon glyphicon-plus"></span>
             </a>
         </div>
@@ -36,14 +37,14 @@
 @table = {
     @paginatedTable(
         page,
-        router.list(_, _, page.filterConditions),
+        filterRouter.list(_, _, page.filterConditions),
         typeColumns[Filter](
             (Some("name"), "Name", _.name.getOrElse("")),
             (Some("createdById"), "Created By", _.createdBy.map(_.ldapDn).getOrElse("") ),
             (Some("timeCreated"), "Time Created", _.timeCreated.map(_.format("yyyy-MM-dd HH:mm:ss")).getOrElse("")),
             (Some("conditions"), "Conditions", _.conditions.map( condition => s"${condition.fieldName} ${condition.conditionType} ${condition.value}" ).mkString(" AND "))
         ),
-        Some({ item : Any => router.get(item.asInstanceOf[Filter]._id.get)})
+        Some({ item : Any => filterRouter.get(item.asInstanceOf[Filter]._id.get)})
     )
 }
 

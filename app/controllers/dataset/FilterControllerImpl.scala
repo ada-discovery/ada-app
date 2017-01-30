@@ -5,25 +5,26 @@ import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
-import controllers.{JsonFormatter, CrudControllerImpl}
-import dataaccess.RepoTypes.{UserRepo, DataSpaceMetaInfoRepo}
-import dataaccess.{FilterRepo, RepoException, AscSort, Criterion}
+import controllers.{CrudControllerImpl, DataSetWebContext, JsonFormatter}
+import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
+import dataaccess.{AscSort, Criterion, FilterRepo, RepoException}
 import models._
 import models.FilterCondition.{FilterIdentity, filterFormat}
 import Criterion.Infix
-import models.security.{UserManager, SecurityRole}
+import models.security.{SecurityRole, UserManager}
 import reactivemongo.play.json.BSONFormats._
 import persistence.RepoTypes._
-import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
+import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import reactivemongo.bson.BSONObjectID
 import java.util.Date
+
 import views.html.filters
 
 import scala.concurrent.Future
@@ -60,14 +61,19 @@ protected[controllers] class FilterControllerImpl @Inject() (
     ((item: Filter) => Some(item._id, item.name.getOrElse(""), item.conditions))
   )
 
-  protected lazy val router: FilterRouter = new FilterRouter(dataSetId)
-  protected lazy val jsRouter: FilterJsRouter = new FilterJsRouter(dataSetId)
+  protected val router: FilterRouter = new FilterRouter(dataSetId)
+  protected val jsRouter: FilterJsRouter = new FilterJsRouter(dataSetId)
+
+  private implicit def toWebContext(implicit request: Request[_]) = {
+    implicit val msg = messagesApi.preferred(request)
+    DataSetWebContext(dataSetId)
+  }
 
   override protected lazy val home =
     Redirect(router.plainList)
 
   override protected def createView(f : Form[Filter])(implicit msg: Messages, request: Request[_]) =
-    filters.create(dataSetName + " Filter", f, router)
+    filters.create(dataSetName + " Filter", f)
 
   override protected def showView(id: BSONObjectID, f : Form[Filter])(implicit msg: Messages, request: Request[_]) =
     editView(id, f)
@@ -82,7 +88,6 @@ protected[controllers] class FilterControllerImpl @Inject() (
       dataSetName + " Filter",
       id,
       f,
-      router,
       result(dataSpaceTree)
     )
   }
@@ -95,7 +100,6 @@ protected[controllers] class FilterControllerImpl @Inject() (
     filters.list(
       dataSetName + " Filter",
       page,
-      router,
       result(dataSpaceTree)
     )
   }

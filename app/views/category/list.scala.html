@@ -4,19 +4,17 @@
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import views.html.category.treeChart
 @import views.html.filter.filter
-@import controllers.dataset.CategoryRouter
 @import util.typeColumns
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
 @import models.Page
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName : String,
     page: Page[Category],
-    router : CategoryRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash:Flash, msg: Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @modalBody = {
@@ -30,7 +28,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-9">
-            @filter(page.filter, router.plainList, Left(Seq(Field("name"))))
+            @filter(page.filter, categoryRouter.plainList, Left(Seq(Field("name"))))
         </div>
         <div class="pull-right">
             <a class="btn btn-info btn-sm" id="collapseAll" href="#" data-toggle="tooltip" title="Collapse All" onclick="$('#treeDiv').tree('collapseAll');return false;">
@@ -86,12 +84,12 @@
 @table = @{
     paginatedTable(
         page,
-        router.list(_, _, page.filterConditions),
+        categoryRouter.list(_, _, page.filterConditions),
         typeColumns[Category](
             (Some("name"), "Name", _.name),
             (Some("label"), "Label", editableCategoryLabelInput)
         ),
-        Some({ item : Any => router.get(item.asInstanceOf[Category]._id.get)}),
+        Some({ item : Any => categoryRouter.get(item.asInstanceOf[Category]._id.get)}),
         Some("id", {any:Any => any.asInstanceOf[Category]._id.get.stringify}),
         Some("categoryTable")
     )
@@ -102,12 +100,12 @@
     page.total,
     Some(actions),
     table,
-    Some(treeChart(router)),
+    Some(treeChart(categoryRouter)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )
 
-<script type="text/javascript" src="@router.jsRoutes"></script>
+<script type="text/javascript" src="@categoryRouter.jsRoutes"></script>
 
 <script type="text/javascript">
     $(function () {

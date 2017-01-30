@@ -4,26 +4,24 @@
 @import reactivemongo.bson.BSONObjectID
 @import views.html.dataview.edit
 @import models.Field
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName: String,
     id : BSONObjectID,
     form: Form[DataView],
-    router: DataViewRouter,
-    fieldsCall: Call,
     nameFieldMap: Map[String,  Field],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @edit(
     domainName,
     id,
     form,
-    router,
-    router.update,
-    fieldsCall,
+    dataViewRouter.update,
     nameFieldMap,
     dataSpaceMetaInfos
 )

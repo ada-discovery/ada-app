@@ -8,16 +8,16 @@
 @import controllers.dataset.{DataViewRouter, DataViewJsRouter}
 @import models.DataSpaceMetaInfo
 @import models.Field
-
 @import reactivemongo.bson.BSONObjectID
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+
 @(
     domainName : String,
     page: Page[DataView],
-    router: DataViewRouter,
-    jsRouter: DataViewJsRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @actions = {
@@ -25,14 +25,14 @@
         <div class="col-md-10">
             @filter(
                 page.filter,
-                router.plainList,
+                dataViewRouter.plainList,
                 Left(Seq(Field("name", None)))
             )
         </div>
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
-                    <a class="btn btn-success btn-sm pull-right" href="@router.create" data-toggle="tooltip" title="Add New View">
+                    <a class="btn btn-success btn-sm pull-right" href="@dataViewRouter.create" data-toggle="tooltip" title="Add New View">
                         <span class="glyphicon glyphicon-plus"></span>
                     </a>
                 </li>
@@ -42,7 +42,7 @@
                     </a>
                 </li>
             </ul>
-            @dataViewSelectionModal("dataViewSelectionModal", router, Some(router.copy(BSONObjectID.generate)))
+            @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter, Some(dataViewRouter.copy(BSONObjectID.generate)))
         </div>
     </div>
 }
@@ -50,14 +50,14 @@
 @table = {
     @paginatedTable(
         page,
-        router.list(_, _, page.filterConditions),
+        dataViewRouter.list(_, _, page.filterConditions),
         typeColumns[DataView](
             (Some("name"), "Name", _.name),
             (Some("default"), "Default?", _.default.toString),
             (Some("timeCreated"), "Time Created", _.timeCreated.toString),
             (Some("createdById"), "Created By", _.createdBy.map(_.ldapDn).getOrElse("") )
         ),
-        Some({ item : Any => router.get(item.asInstanceOf[DataView]._id.get)})
+        Some({ item : Any => dataViewRouter.get(item.asInstanceOf[DataView]._id.get)})
     )
 }
 

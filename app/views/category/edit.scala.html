@@ -2,27 +2,22 @@
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataset.{datasetSubNav, datasetMenu}
 @import views.html.elements._
-@import controllers.dataset.CategoryRouter
 @import reactivemongo.bson.BSONObjectID
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
 @import models.Category
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
-@import controllers.dataset.DataSetRouter
 @(
     domainName : String,
     id : BSONObjectID,
     form: Form[Category],
     categories: Traversable[Category],
     fields: Traversable[models.Field],
-    router: CategoryRouter,
-    dataSetRouter: DataSetRouter,
-    getField: String => Call,
     showFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: Flash, msg: Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @addModalInner = {
@@ -58,9 +53,9 @@
     domainName,
 	form.errors,
     elements,
-    router.update(id),
-    router.plainList,
-    Some(router.delete(id)),
+    categoryRouter.update(id),
+    categoryRouter.plainList,
+    Some(categoryRouter.delete(id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )

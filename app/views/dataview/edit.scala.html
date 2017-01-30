@@ -6,18 +6,18 @@
 @import reactivemongo.bson.BSONObjectID
 @import views.html.dataview.elements
 @import views.html.dataview.activateTypeahead
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName: String,
     id : BSONObjectID,
     form: Form[DataView],
-    router: DataViewRouter,
     updateCall: BSONObjectID => Call,
-    fieldsCall: Call,
     nameFieldMap: Map[String,  Field],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @layout.edit(
@@ -25,11 +25,11 @@
 	form.errors,
     elements(form, nameFieldMap),
     updateCall(id),
-    router.plainList,
-    Some(router.delete(id)),
+    dataViewRouter.plainList,
+    Some(dataViewRouter.delete(id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())
 )
 
-@activateTypeahead(fieldsCall)
+@activateTypeahead(dataSetRouter.allFields)
 

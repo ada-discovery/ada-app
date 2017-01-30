@@ -1,19 +1,19 @@
 @import views.html.layout
 @import views.html.elements.{inputText, select}
 @import views.html.dataset.{datasetSubNav, datasetMenu}
-@import controllers.dataset.DictionaryRouter
 @import models.DataSpaceMetaInfo
 @import models.Category
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName : String,
     fieldName : String,
     form: Form[models.Field],
     categories: Traversable[Category],
-    router : DictionaryRouter,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @elements = {
@@ -34,8 +34,8 @@
     domainName,
 	form.errors,
     elements,
-    router.update(fieldName),
-    router.plainList,
+    dictionaryRouter.update(fieldName),
+    dictionaryRouter.plainList,
     deleteCall = None,
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav())

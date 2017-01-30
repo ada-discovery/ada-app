@@ -15,21 +15,18 @@
 @import models.DataSpaceMetaInfo
 @import be.objectify.deadbolt.scala.views.html.restrict
 @import models.security.SecurityRole
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName : String,
     page: Page[Field],
     fieldChartSpecs: Iterable[FieldChartSpec],
-    router: DictionaryRouter,
-    dataViewRouter: DataViewRouter,
-    dataViewJsRouter: DataViewJsRouter,
-    categoryRouter: CategoryRouter,
-    categoryJsRouter: CategoryJsRouter,
     fieldNameLabels: Traversable[(String, Option[String])],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
     chartGridWidth: Int = 3
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @actions = {
@@ -37,7 +34,7 @@
         <div class="col-md-10">
             @filter(
                 page.filter,
-                router.plainList,
+                dictionaryRouter.plainList,
                 Left(fieldNameLabels.map { case (name, label) => Field(name, label)}),
                 None,
                 Some(FilterShowFieldStyle.LabelsOnly)
@@ -48,8 +45,8 @@
                 <li>
                     @exportDropdown(
                         page.filterConditions,
-                        router.exportCsv(_, true, None, _, _),
-                        router.exportJson
+                        dictionaryRouter.exportCsv(_, true, None, _, _),
+                        dictionaryRouter.exportJson
                     )()()
                 </li>
             </ul>
@@ -100,7 +97,7 @@
     </div>
     @paginatedTable(
         page,
-        router.list(_, _, page.filterConditions),
+        dictionaryRouter.list(_, _, page.filterConditions),
         typeColumns[Field](
             (None, "", _ => {<input type="checkbox" class="no-rowClicked"/>}),
             (Some("name"), "Name", {field => util.JsonUtil.unescapeKey(field.name)}),
@@ -108,7 +105,7 @@
             (Some("label"), "Label", editableFieldLabelInput),
             (Some("categoryId"), "Category", _.category.map(_.name).getOrElse(""))
         ),
-        Some({ item : Any => router.get(item.asInstanceOf[Field].name)}),
+        Some({ item : Any => dictionaryRouter.get(item.asInstanceOf[Field].name)}),
         Some("id", {any:Any => any.asInstanceOf[Field].name}),
         Some("dictionaryTable")
     )
@@ -139,7 +136,7 @@
     dataViewJsRouter.addTableFields
 )
 
-<script type="text/javascript" src="@router.jsRoutes"></script>
+<script type="text/javascript" src="@dictionaryRouter.jsRoutes"></script>
 <script type="text/javascript" src="@categoryRouter.jsRoutes"></script>
 <script type="text/javascript">
     $(function () {

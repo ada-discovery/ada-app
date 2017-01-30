@@ -2,14 +2,15 @@
 @import views.html.layout
 @import views.html.elements._
 @import models.{Category, Field}
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     domainName : String,
 	form: Form[Field],
-	categories: Traversable[Category],
-	router : DictionaryRouter
+	categories: Traversable[Category]
 )(
-	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: DataSetWebContext
 )
 
 @elements = {
@@ -29,6 +30,6 @@
     domainName,
 	form,
     elements,
-    router.save,
-    router.plainList
+    dictionaryRouter.save,
+    dictionaryRouter.plainList
 )

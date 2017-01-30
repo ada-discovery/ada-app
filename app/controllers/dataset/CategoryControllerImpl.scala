@@ -3,24 +3,25 @@ package controllers.dataset
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
-import controllers.CrudControllerImpl
+import controllers.{CrudControllerImpl, DataSetWebContext}
 import dataaccess.{AscSort, Criterion}
 import dataaccess.Criterion.Infix
-import models.{JsTreeNode, Category, D3Node, Page}
+import models.{Category, D3Node, JsTreeNode, Page}
 import models.DataSetFormattersAndIds._
 import Criterion.Infix
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
-import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
+import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import views.html.category
+
 import scala.concurrent.Future
 
 trait CategoryControllerFactory {
@@ -52,10 +53,13 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     ((category: Category) => Some(category._id, category.name, category.label, category.parentId.map(_.stringify)))
   )
 
-  // router for requests; to be passed to views as helper.
-  protected lazy val router = new CategoryRouter(dataSetId)
-  protected lazy val jsRouter = new CategoryJsRouter(dataSetId)
-  protected lazy val dataSetRouter = new DataSetRouter(dataSetId)
+  private implicit def toWebContext(implicit request: Request[_]) = {
+    implicit val msg = messagesApi.preferred(request)
+    DataSetWebContext(dataSetId)
+  }
+
+  protected val router = new CategoryRouter(dataSetId)
+  protected val jsRouter = new CategoryJsRouter(dataSetId)
 
   // field router
   protected lazy val fieldRouter: DictionaryRouter = new DictionaryRouter(dataSetId)
@@ -64,7 +68,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     Redirect(router.plainList)
 
   override protected def createView(f : Form[Category])(implicit msg: Messages, request: Request[_]) =
-    category.create(dataSetName + " Category", f, allCategories, router)
+    category.create(dataSetName + " Category", f, allCategories)
 
   override protected def showView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: Request[_]) =
     editView(id, f)
@@ -82,9 +86,6 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       f,
       allCategories,
       fields,
-      router,
-      dataSetRouter,
-      fieldRouter.get,
       result(dsa.setting.map(_.filterShowFieldStyle)),
       result(dataSpaceTree)
     )
@@ -94,7 +95,6 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     category.list(
       dataSetName + " Category",
       page,
-      router,
       result(dataSpaceTree)
     )
 

@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
-import controllers.{JsonFormatter, CrudControllerImpl}
+import controllers.{CrudControllerImpl, DataSetWebContext, JsonFormatter}
 import dataaccess.RepoTypes.UserRepo
 import dataaccess._
 import models._
@@ -13,17 +13,18 @@ import models.DataSetFormattersAndIds._
 import models.FilterCondition.filterFormat
 import models.security.UserManager
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
-import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
 import play.api.libs.json.Json
-import play.api.mvc.{AnyContent, Action, RequestHeader, Request}
+import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import java.util.Date
+
 import views.html.dataview
 
 import scala.concurrent.Future
@@ -71,9 +72,14 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   )
 
   // router for requests; to be passed to views as helper.
-  protected lazy val router = new DataViewRouter(dataSetId)
-  protected lazy val jsRouter = new DataViewJsRouter(dataSetId)
-  protected lazy val dataSetRouter = new DataSetRouter(dataSetId)
+  protected val router = new DataViewRouter(dataSetId)
+  protected val jsRouter = new DataViewJsRouter(dataSetId)
+  protected val dataSetRouter = new DataSetRouter(dataSetId)
+
+  private implicit def toWebContext(implicit request: Request[_]) = {
+    implicit val msg = messagesApi.preferred(request)
+    DataSetWebContext(dataSetId)
+  }
 
   override protected lazy val home =
     Redirect(router.plainList)
@@ -81,9 +87,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   override protected def createView(f: Form[DataView])(implicit msg: Messages, request: Request[_]) =
     dataview.create(
       dataSetName + " Data View",
-      f,
-      router,
-      dataSetRouter.allFields
+      f
     )
 
   override protected def showView(id: BSONObjectID, f: Form[DataView])(implicit msg: Messages, request: Request[_]) =
@@ -100,8 +104,6 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       dataSetName + " Data View",
       id,
       f,
-      router,
-      dataSetRouter.allFields,
       nameFieldMap,
       result(dataSpaceTree)
     )
@@ -114,8 +116,6 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     dataview.list(
       dataSetName + " Data View",
       page,
-      router,
-      jsRouter,
       result(dataSpaceTree)
     )
   }
@@ -173,9 +173,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
               dataSetName + " Data View",
               id,
               fillForm(entity),
-              router,
               router.updateAndShowView,
-              dataSetRouter.allFields,
               nameFieldMap,
               result(dataSpaceTree)
             )
