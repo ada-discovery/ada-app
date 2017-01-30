@@ -29,6 +29,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
 import reflect.runtime.universe._
+import scala.math.Ordering.Implicits._
 
 import scala.collection.generic.SeqFactory
 import scala.collection.mutable.ArrayBuffer
@@ -154,7 +155,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dataset.show(
       dataSetName + " Item",
       item,
-      router.plainOverviewList,
+      router.getDefaultView,
       true,
       result(fieldNameLabelAndRendererMapFuture),
       result(dataSpaceTree)
@@ -272,14 +273,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     tableFields: Traversable[Field]
   )
 
-  override def overviewList(
-    page: Int,
-    orderBy: String,
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
-  ) = Action.async { implicit request =>
-    Future(Redirect(router.getDefaultView))
-  }
-
   override def getDefaultView = Action.async { implicit request =>
     for {
 //      // get the default view
@@ -395,89 +388,63 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       case e: AdaConversionException => {
         request.headers.get("Referer") match {
           case Some(refererUrl) => Redirect(refererUrl).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
-          case None => Redirect(router.plainOverviewList).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
+          case None => Redirect(router.getDefaultView).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
         }
       }
     }
   }
 
-  // TODO: refactor... to many retyping
   private def setBoxPlotMinMax(
     fieldChartSpecs: Seq[Traversable[Option[FieldChartSpec]]]
   ): Seq[Traversable[Option[FieldChartSpec]]] = {
     val chartSpecsSeqs = fieldChartSpecs.map(_.toSeq)
     val chartCount = fieldChartSpecs.head.size
 
-    def boxChart[T](
-      chartSpecs: Seq[Option[FieldChartSpec]],
-      index: Int
-    ): Option[BoxChartSpec[T]] =
-      chartSpecs(index).map(_.chartSpec match {
-        case x: BoxChartSpec[T] =>
-          if (x.data.median.isInstanceOf[T]) Some(x) else None
+    def getMinMaxWhiskers[T](index: Int): Option[(T, T)] = {
+      val boxPlots: Seq[BoxChartSpec[T]] = chartSpecsSeqs.map { chartSpecs =>
+        chartSpecs(index).map(_.chartSpec).collect {
+          case x: BoxChartSpec[T] => x
+        }
+      }.flatten
+
+      boxPlots match {
+        case Nil => None
         case _ =>
-          None
-      }).flatten
+          implicit val ordering = boxPlots.head.ordering
+          val minLowerWhisker = boxPlots.map(_.data.lowerWhisker).min
+          val maxUpperWhisker = boxPlots.map(_.data.upperWhisker).max
+          Some(minLowerWhisker.asInstanceOf[T], maxUpperWhisker.asInstanceOf[T])
+      }
+    }
 
-    def getMinMaxWhiskers[T: Ordering](
-      index: Int)(
-      implicit tag: TypeTag[T]
-    ): Option[(T, T)] = {
-        val boxPlots: Seq[BoxChartSpec[T]] = chartSpecsSeqs.map { chartSpecs =>
-          boxChart[T](chartSpecs, index)
-        }.flatten
+    def setMinMax[T: Ordering](
+      boxPlot: BoxChartSpec[T],
+      minMax: (Any, Any)
+    ): BoxChartSpec[T] =
+      boxPlot.copy(min = Some(minMax._1.asInstanceOf[T]), max = Some(minMax._2.asInstanceOf[T]))
 
-        boxPlots match {
-          case Nil => None
-          case _ =>
-            try {
-              val minLowerWhisker = boxPlots.map(_.data.lowerWhisker).min
-              val maxUpperWhisker = boxPlots.map(_.data.upperWhisker).max
-              Some(minLowerWhisker, maxUpperWhisker)
-            } catch {
-              case e: ClassCastException => None
+    val indexMinMaxWhiskers =
+      for (index <- 0 until chartCount) yield
+        (index, getMinMaxWhiskers[Any](index))
+
+    chartSpecsSeqs.map { chartSpecs =>
+      chartSpecs.zip(indexMinMaxWhiskers).map{ case (fieldChartSpec, (index, minMaxWhiskers)) =>
+        minMaxWhiskers match {
+          case Some(minMaxWhiskers) =>
+            fieldChartSpec.map { fieldChartSpec =>
+              val newChartSpec =
+                fieldChartSpec.chartSpec match {
+                  case x: BoxChartSpec[_] =>
+                    implicit val ordering = x.ordering
+                    setMinMax(x, minMaxWhiskers)
+                  case _ => fieldChartSpec.chartSpec
+                }
+              FieldChartSpec(fieldChartSpec.fieldName, newChartSpec)
             }
+          case None => fieldChartSpec
         }
       }
-
-      def setMinMax[T: Ordering](
-        boxPlot: BoxChartSpec[T],
-        minMax: (Any, Any)
-      ): BoxChartSpec[T] =
-        boxPlot.copy(min = Some(minMax._1.asInstanceOf[T]), max = Some(minMax._2.asInstanceOf[T]))
-
-      val indexMinMaxWhiskers =
-        for (index <- 0 until chartCount) yield {
-          val minMaxWhiskers =
-            getMinMaxWhiskers[Long](index) match {
-              case None => getMinMaxWhiskers[Double](index) match {
-                case None => getMinMaxWhiskers[java.util.Date](index)
-                case Some(x) => Some(x)
-              }
-              case Some(x) => Some(x)
-            }
-
-          (index, minMaxWhiskers)
-        }
-
-      chartSpecsSeqs.map { chartSpecs =>
-        chartSpecs.zip(indexMinMaxWhiskers).map{ case (fieldChartSpec, (index, minMaxWhiskers)) =>
-          minMaxWhiskers match {
-            case Some(minMaxWhiskers) =>
-              fieldChartSpec.map { fieldChartSpec =>
-                val newChartSpec =
-                  fieldChartSpec.chartSpec match {
-                    case x: BoxChartSpec[Double] => setMinMax(x, minMaxWhiskers)
-                    case x: BoxChartSpec[Long] => setMinMax(x, minMaxWhiskers)
-                    case x: BoxChartSpec[java.util.Date] => setMinMax(x, minMaxWhiskers)
-                    case _ => fieldChartSpec.chartSpec
-                  }
-                FieldChartSpec(fieldChartSpec.fieldName, newChartSpec)
-              }
-            case None => fieldChartSpec
-          }
-        }
-      }
+    }
   }
 
   private def getViewResponse(

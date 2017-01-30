@@ -95,7 +95,7 @@ class DataSetSettingController @Inject() (
           render {
             case Accepts.Html() => {
               val updateCall = dataSetSettingRoutes.updateForDataSet(entity._id.get)
-              val cancelCall = new DataSetRouter(dataSet).plainOverviewList
+              val cancelCall = new DataSetRouter(dataSet).getDefaultView
               Ok(html.datasetsetting.edit(
                 "",
                 fillForm(entity),
@@ -120,7 +120,7 @@ class DataSetSettingController @Inject() (
     Action.async { implicit request =>
       val dataSetIdFuture = repo.get(id).map(_.get.dataSetId)
       dataSetIdFuture.flatMap { dataSetId =>
-        update(id, Redirect(new DataSetRouter(dataSetId).plainOverviewList)).apply(request)
+        update(id, Redirect(new DataSetRouter(dataSetId).getDefaultView)).apply(request)
       }
     }
   }

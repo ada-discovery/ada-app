@@ -37,12 +37,6 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def overviewFieldTypes = dispatch(_.overviewFieldTypes())
 
-  override def overviewList(
-    page: Int,
-    orderBy: String,
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
-  ) = dispatch(_.overviewList(page, orderBy, filterOrId))
-
   override def getView(
     dataViewId: BSONObjectID,
     tablePages: Seq[TablePage],

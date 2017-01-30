@@ -11,12 +11,6 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def overviewFieldTypes: Action[AnyContent]
 
-  def overviewList(
-    page: Int,
-    orderBy: String,
-    filterOrId: FilterOrId
-  ): Action[AnyContent]
-
   /**
     * Renders the view with a given id
  *

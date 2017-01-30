@@ -50,7 +50,7 @@
     @helper.form(action=dataSetRouter.plainGetScatterStats, 'role -> "search", 'id -> "fieldForm") {
         <!-- hacky solution to pass data set param since it's ignored when passed as a part of call in form action -->
         <input type="hidden" name="dataSet" value="@context.dataSetId"/>
-        <input type="hidden" name="filterOrId" value="@filterSpec.conditionsOrId.fold(Json.toJson(_), _.stringify)"/>
+        <input type="hidden" name="filterOrId" value="@Json.toJson(filterSpec.conditionsOrId)"/>
         <div class="row">
             <div class="col-md-3">
                 <input id="xFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name or Label" value="@xField.map(_.labelOrElseName)">

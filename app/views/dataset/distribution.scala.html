@@ -11,6 +11,7 @@
 @import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import models.DataSpaceMetaInfo
+@import models.FilterCondition.eitherFilterOrIdFormat
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
 
@@ -64,7 +65,7 @@
             @helper.form(action=dataSetRouter.plainGetDistribution, 'role -> "search", 'id -> "fieldForm") {
                 <!-- hacky solution to pass data set param since it's ignored when passed as a part of the call in the form action -->
                 <input type="hidden" name="dataSet" value="@context.dataSetId"/>
-                <input type="hidden" name="filterOrId" value="@filterSpec.conditionsOrId.fold(Json.toJson(_), _.stringify)"/>
+                <input type="hidden" name="filterOrId" value="@Json.toJson(filterSpec.conditionsOrId)"/>
                 <input id="fieldTypeahead"class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@field.map(_.labelOrElseName)">
                 <input id="fieldName" name="fieldName" type="hidden" value="@field.map(_.name)">
             }

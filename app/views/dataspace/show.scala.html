@@ -30,7 +30,7 @@
             (None, "Hide?", hideCheckbox)
         ),
         None,
-        Some({ item : Any => new DataSetRouter(item.asInstanceOf[DataSetMetaInfo].id).plainOverviewList})
+        Some({ item : Any => new DataSetRouter(item.asInstanceOf[DataSetMetaInfo].id).getDefaultView})
     )
 }
 

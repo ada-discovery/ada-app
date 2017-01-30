@@ -58,9 +58,9 @@ case class BoxChartSpec[T <% Ordered[T]](
   max: Option[T] = None,
   height: Option[Int] = None,
   gridWidth: Option[Int] = None
-//                                        )(
-//  implicit ordering: Ordering[T]
-) extends ChartSpec
+) extends ChartSpec {
+  def ordering = implicitly[Ordering[T]]
+}
 
 case class HeatmapChartSpec(
   title: String,

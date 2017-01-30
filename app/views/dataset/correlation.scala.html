@@ -80,7 +80,7 @@
             <div class="row">
                 @helper.form(action=dataSetRouter.getCorrelations(Nil, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {
                     <input type="hidden" name="dataSet" value="@context.dataSetId"/>
-                    <input type="hidden" name="filterOrId" value="@filterSpec.conditionsOrId.fold(Json.toJson(_), _.stringify)"/>
+                    <input type="hidden" name="filterOrId" value="@Json.toJson(filterSpec.conditionsOrId)"/>
                     <button type="primary" onclick="addFieldNames()" class="btn btn-primary">Show</button>
                 }
             </div>

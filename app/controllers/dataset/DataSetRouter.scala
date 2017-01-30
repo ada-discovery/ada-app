@@ -11,8 +11,6 @@ import scalaz.Scalaz._
 class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispatcher, "dataSet", dataSetId) {
   val list = routes.find _ map route
   val plainList = routeFun(_.find())
-  val overviewList = routes.overviewList _ map route
-  val plainOverviewList = routeFun(_.overviewList())
   val getView = routes.getView _ map route
   val getDefaultView = routeFun(_.getDefaultView)
   val get = routes.get _ map route
