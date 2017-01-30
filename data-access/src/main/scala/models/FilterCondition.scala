@@ -68,8 +68,9 @@ object FilterCondition {
     protected def set(entity: Filter, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }
 
+  implicit val eitherFilterOrIdFormat = EitherFormat[Seq[FilterCondition], BSONObjectID]
+
   def filterOrIdsToJson(filterOrIds: Seq[Either[Seq[FilterCondition], BSONObjectID]]): JsValue = {
-    implicit val eitherFormat = EitherFormat[Seq[FilterCondition], BSONObjectID]
     Json.toJson(
       filterOrIds.map(inputFilterConditionOrId => Json.toJson(inputFilterConditionOrId))
     )
