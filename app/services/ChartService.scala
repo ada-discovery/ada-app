@@ -606,8 +606,10 @@ class ChartServiceImpl extends ChartService {
       jsons.map(typedFieldType.jsonToValue).flatten
     }
 
-    def quantiles[T: Numeric]: Option[Quantiles[T]] =
-      BasicStats.quantiles(getValues[T].toSeq)
+    def quantiles[T: Ordering](
+      toDouble: T => Double
+    ): Option[Quantiles[T]] =
+      BasicStats.quantiles[T](getValues[T].toSeq, toDouble)
 
     def createChart[T: Ordering](quants: Option[Quantiles[T]]) =
       quants.map(
@@ -615,14 +617,11 @@ class ChartServiceImpl extends ChartService {
       )
 
     typeSpec.fieldType match {
-      case FieldTypeId.Double => createChart(quantiles[Double])
+      case FieldTypeId.Double => createChart(quantiles[Double](identity))
 
-      case FieldTypeId.Integer => createChart(quantiles[Long])
+      case FieldTypeId.Integer => createChart(quantiles[Long](_.toDouble))
 
-      case FieldTypeId.Date => {
-        val values = getValues[ju.Date].map(_.getTime)
-        createChart(BasicStats.quantiles(values.toSeq))
-      }
+      case FieldTypeId.Date => createChart(quantiles[ju.Date](_.getTime.toDouble))
 
       case _ => None
     }

@@ -25,7 +25,10 @@ package object BasicStats {
     * @param elements sequence of elements.
     * @return 5-value tuple with (lower 1.5 IQR whisker, lower quantile, median, upper quantile, upper 1.5 IQR whisker)
     */
-  def quantiles[T](elements: Seq[T])(implicit num: Numeric[T]): Option[Quantiles[T]] =
+  def quantiles[T: Ordering](
+    elements: Seq[T],
+    toDouble: T => Double
+  ): Option[Quantiles[T]] =
     elements.headOption.map { _ =>
       val length = elements.length
       val sorted = elements.sorted
@@ -39,13 +42,15 @@ package object BasicStats {
       // lower quartile
       val lowerQuantile = sorted(length / 4)
 
-      val iqr = num.toDouble(num.minus(upperQuantile, lowerQuantile))
+      val upperQuantileDouble = toDouble(upperQuantile)
+      val lowerQuantileDouble = toDouble(lowerQuantile)
+      val iqr = upperQuantileDouble - lowerQuantileDouble
 
-      val upperWhiskerValue = num.toDouble(upperQuantile) + 1.5 * iqr
-      val lowerWhiskerValue = num.toDouble(lowerQuantile) - 1.5 * iqr
+      val upperWhiskerValue = upperQuantileDouble + 1.5 * iqr
+      val lowerWhiskerValue = lowerQuantileDouble - 1.5 * iqr
 
-      val lowerWhisker = sorted.find(value => num.toDouble(value) >= lowerWhiskerValue).getOrElse(sorted.last)
-      val upperWhisker = sorted.reverse.find(value => num.toDouble(value) <= upperWhiskerValue).getOrElse(sorted.head)
+      val lowerWhisker = sorted.find(value => toDouble(value) >= lowerWhiskerValue).getOrElse(sorted.last)
+      val upperWhisker = sorted.reverse.find(value => toDouble(value) <= upperWhiskerValue).getOrElse(sorted.head)
 
       Quantiles(lowerWhisker, lowerQuantile, median, upperQuantile, upperWhisker)
   }

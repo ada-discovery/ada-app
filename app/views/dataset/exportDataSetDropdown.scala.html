@@ -33,9 +33,33 @@
         <a href="#" data-toggle="modal" data-target="#exportTranSMARTMappingModal">
             Export TranSMART Mapping
         </a>
-
+    </li>
+    <li role="separator" class="divider"></li>
+    <li>
+        <a href="#" onclick="exportCharts('image/png');">
+            Export Charts as PNG
+        </a>
+    </li>
+    <li>
+        <a href="#" onclick="exportCharts('image/svg+xml');">
+            Export Charts as SVG
+        </a>
+    </li>
+    <li>
+        <a href="#" onclick="exportCharts('application/pdf');">
+            Export Charts as PDF
+        </a>
     </li>
 } {
     @exportModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", exportTranSMARTDataCall, Some(modalBody("\\t")))
     @exportModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", exportTranSMARTMappingCall, Some(modalBody("\\t")))
 }
+
+<script type="text/javascript">
+    function exportCharts(type) {
+        var chartIds = $.map($(".chart-holder"), function (chart, i) {
+            return chart.id;
+        })
+        Highcharts.exportCharts(chartIds, {type: type});
+    }
+</script>

@@ -1,7 +1,7 @@
 @import views.html.layout
 @import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu, displayJsonModal}
 @import views.html.chart.chartPanelJs
-@import views.html.chart.highcharts.highchartsJsImport
+@import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
 @import views.html.table.paginatedJsonTable
 @import views.html.dataset.exportDataSetDropdown
 @import views.html.filter.filter
@@ -241,6 +241,7 @@
     )
     @displayJsonModal("jsonModal", None)
     @highchartsJsImport()
+    @highchartsJsImportForBulkExport()
 
     @viewParts.map { viewPart =>
         @chartPanelJs(viewPart.fieldChartSpecs.map(_.chartSpec))
