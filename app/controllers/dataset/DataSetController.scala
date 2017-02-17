@@ -1,7 +1,8 @@
 package controllers.dataset
 
-import controllers.{ReadonlyController, CrudController}
-import models.{TablePage, FieldTypeId, FilterCondition}
+import controllers.{CrudController, ReadonlyController}
+import dataaccess.{Criterion, Sort}
+import models.{FieldTypeId, FilterCondition, TablePage}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 
@@ -13,7 +14,7 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   /**
     * Renders the view with a given id
- *
+    *
     * @param dataViewId
     * @param tablePages
     * @param filterOrIds
@@ -77,4 +78,12 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
 
   def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent]
+
+  def findCustom(
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID],
+    orderBy: String,
+    projection: Seq[String],
+    limit: Option[Int],
+    skip: Option[Int]
+  ): Action[AnyContent]
 }

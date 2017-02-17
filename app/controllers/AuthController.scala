@@ -20,7 +20,6 @@ import models.security._
 import dataaccess.{User => AdaUser}
 import security.AdaAuthConfig
 
-
 class AuthController @Inject() (
     val userManager: UserManager,
     mailClientProvider: MailClientProvider
@@ -65,24 +64,28 @@ class AuthController @Inject() (
   /**
     * Login for restful api.
     * Gives restful response for form errors and login success.
- *
+    *
     * @return
     */
   def loginREST = Action.async { implicit request =>
     loginForm.bindFromRequest().fold(
       formWithErrors => Future.successful(BadRequest(loginForm.errorsAsJson)),
-      idPassword => {
-        val usrOpFuture = userManager.findById(idPassword._1)
-        usrOpFuture.flatMap{ usrOp =>
-          val usrJs = Json.obj("user" -> JsString(usrOp.get.ldapDn))
-          gotoLoginSucceeded(usrOp.get.ldapDn, Future.successful((Ok(usrJs))))}
-      }
+      idPassword =>
+        userManager.findById(idPassword._1).flatMap(
+          _ match {
+            case Some(user) => {
+              val usrJs = Json.obj("user" -> JsString(user.ldapDn))
+              gotoLoginSucceeded(user.ldapDn, Future(Ok(s"'${user.ldapDn}' successfully logged in.")))
+            }
+            case None => Future(Redirect(routes.AuthController.unauthorized()))
+          }
+      )
     )
   }
 
   /**
     * Logout for restful api.
- *
+    *
     * @return
     */
   def logoutREST = Action { implicit request =>
@@ -97,14 +100,13 @@ class AuthController @Inject() (
   def authenticate = Action.async { implicit request =>
     loginForm.bindFromRequest.fold(
       formWithErrors => Future.successful(BadRequest(views.html.auth.login(formWithErrors))),
-      idPassword => userManager.findById(idPassword._1).flatMap((user: Option[AdaUser]) =>
-        user match {
-          case Some(u) => {
-            gotoLoginSucceeded(u.ldapDn)
+      idPassword =>
+        userManager.findById(idPassword._1).flatMap(
+          _ match {
+            case Some(user) => gotoLoginSucceeded(user.ldapDn)
+            case None => Future(Redirect(routes.AuthController.unauthorized()))
           }
-          case None => Future(Redirect(routes.AuthController.unauthorized()))
-        }
-      )
+        )
     )
   }
 

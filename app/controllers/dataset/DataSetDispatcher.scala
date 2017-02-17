@@ -95,7 +95,19 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     tableColumnsOnly: Boolean
   ) = dispatch(_.exportRecordsAsJson(dataViewId, filter, tableColumnsOnly))
 
-  override def exportTranSMARTDataFile(delimiter : String) = dispatch(_.exportTranSMARTDataFile(delimiter))
+  override def exportTranSMARTDataFile(
+    delimiter : String
+  ) = dispatch(_.exportTranSMARTDataFile(delimiter))
 
-  override def exportTranSMARTMappingFile(delimiter : String) = dispatch(_.exportTranSMARTMappingFile(delimiter))
+  override def exportTranSMARTMappingFile(
+    delimiter : String
+  ) = dispatch(_.exportTranSMARTMappingFile(delimiter))
+
+  override def findCustom(
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID],
+    orderBy: String,
+    projection: Seq[String],
+    limit: Option[Int],
+    skip: Option[Int]
+  ) = dispatch(_.findCustom(filterOrId, orderBy, projection, limit, skip))
 }

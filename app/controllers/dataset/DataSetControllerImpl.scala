@@ -454,9 +454,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     tableFieldNames: Seq[String],
     statsCalcSpecs: Seq[StatsCalcSpec],
     useOptimizedRepoChartCalcMethod: Boolean
-  ): Future[ViewResponse] = {
+  ): Future[ViewResponse] =
     for {
-
       // use a given filter conditions or load one
       resolvedFilter <- resolveFilter(filterOrId)
 
@@ -502,6 +501,31 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
       ViewResponse(count, fieldChartSpecs, tableItems, newFilter, tableFields)
     }
+
+  override def findCustom(
+    filterOrId: Either[Seq[FilterCondition], BSONObjectID],
+    orderBy: String,
+    projection: Seq[String],
+    limit: Option[Int],
+    skip: Option[Int]
+  ) = Action.async { implicit request =>
+    for {
+    // use a given filter conditions or load one
+      resolvedFilter <- resolveFilter(filterOrId)
+
+      // get the conditions
+      conditions = resolvedFilter.conditions
+
+      // generate criteria
+      criteria <- toCriteria(conditions)
+
+      // get the items
+      items <- repo.find(criteria, toSort(orderBy), projection, limit, skip)
+    } yield
+      render {
+        case Accepts.Html() => BadRequest("Html version of the service is not available.")
+        case Accepts.Json() => Ok(Json.toJson(items))
+      }
   }
 
   private def generateCharts(
