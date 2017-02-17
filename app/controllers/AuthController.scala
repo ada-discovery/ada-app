@@ -1,14 +1,16 @@
 package controllers
 
 import javax.inject.Inject
+
+import models.FieldTypeId
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
-import play.api.libs.json.{JsNull, JsString, JsObject}
-import play.api.mvc.{Action, Controller}
-import play.api.libs.json.Json
+import play.api.libs.json._
+import play.api.mvc.{Action, Controller, Request, Result}
 import play.api.data.Forms._
 import play.api.data._
 import services.MailClientProvider
+import views.html.dataset
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
@@ -32,10 +34,11 @@ class AuthController @Inject() (
     tuple(
       "id" -> nonEmptyText,
       "password" -> nonEmptyText
-    ).verifying(
-      "Invalid LUMS ID or password",
-      idPassword => Await.result(userManager.authenticate(idPassword._1, idPassword._2), 120000 millis)
     )
+//      .verifying(
+//        "Invalid LUMS ID or password",
+//        idPassword => Await.result(userManager.authenticate(idPassword._1, idPassword._2), 120000 millis)
+//      )
   }
 
   /**
@@ -55,41 +58,17 @@ class AuthController @Inject() (
   }
 
   /**
+    * Logout for restful api.
+    */
+  def logoutREST = Action.async { implicit request =>
+    gotoLogoutSucceeded(Future(Ok(s"You have been successfully logged out.\n")))
+  }
+
+  /**
     * Redirect to logout message page
     */
   def loggedOut = Action { implicit request =>
     Ok(views.html.auth.loggedOut())
-  }
-
-  /**
-    * Login for restful api.
-    * Gives restful response for form errors and login success.
-    *
-    * @return
-    */
-  def loginREST = Action.async { implicit request =>
-    loginForm.bindFromRequest().fold(
-      formWithErrors => Future.successful(BadRequest(loginForm.errorsAsJson)),
-      idPassword =>
-        userManager.findById(idPassword._1).flatMap(
-          _ match {
-            case Some(user) => {
-              val usrJs = Json.obj("user" -> JsString(user.ldapDn))
-              gotoLoginSucceeded(user.ldapDn, Future(Ok(s"'${user.ldapDn}' successfully logged in.")))
-            }
-            case None => Future(Redirect(routes.AuthController.unauthorized()))
-          }
-      )
-    )
-  }
-
-  /**
-    * Logout for restful api.
-    *
-    * @return
-    */
-  def logoutREST = Action { implicit request =>
-    tokenAccessor.delete(Ok(JsNull))
   }
 
   /**
@@ -98,15 +77,48 @@ class AuthController @Inject() (
     * @return Redirect to success page (if successful) or redirect back to login form (if failed).
     */
   def authenticate = Action.async { implicit request =>
-    loginForm.bindFromRequest.fold(
-      formWithErrors => Future.successful(BadRequest(views.html.auth.login(formWithErrors))),
-      idPassword =>
-        userManager.findById(idPassword._1).flatMap(
-          _ match {
-            case Some(user) => gotoLoginSucceeded(user.ldapDn)
-            case None => Future(Redirect(routes.AuthController.unauthorized()))
-          }
+    render.async {
+      case Accepts.Html() =>
+        authenticateAux(
+          (formWithErrors: Form[(String, String)]) => BadRequest(views.html.auth.login(formWithErrors)),
+          BadRequest(views.html.auth.login(loginForm.withGlobalError("Invalid user id or password"))),
+          Redirect(routes.AuthController.unauthorized()),
+          (userId: String) => gotoLoginSucceeded(userId)
         )
+
+      case Accepts.Json() =>
+        authenticateAux(
+          (formWithErrors: Form[(String, String)]) => BadRequest(formWithErrors.errorsAsJson),
+          Unauthorized("Invalid user id or password\n"),
+          Unauthorized("User not found.\n"),
+          (userId: String) => gotoLoginSucceeded(userId, Future(Ok(s"User '${userId}' successfully logged in. Check the header for a 'PLAY_SESSION' cookie.\n")))
+        )
+      }
+  }
+
+  private def authenticateAux(
+    badFormResult: Form[(String, String)] => Result,
+    authenticationUnsuccessfulResult: Result,
+    userNotFoundResult: Result,
+    loginSuccessfulResult: String => Future[Result])(
+    implicit request: Request[_]
+  ): Future[Result] = {
+    loginForm.bindFromRequest.fold(
+      formWithErrors => Future.successful(badFormResult(formWithErrors)),
+      idPassword =>
+        for {
+          authenticationSuccessful <- userManager.authenticate(idPassword._1, idPassword._2)
+          userOption <- userManager.findById(idPassword._1)
+          response <-
+            if (!authenticationSuccessful)
+              Future(authenticationUnsuccessfulResult)
+           else
+            userOption match {
+              case Some(user) => loginSuccessfulResult(user.ldapDn)
+              case None => Future(userNotFoundResult)
+            }
+        } yield
+          response
     )
   }
 

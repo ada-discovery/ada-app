@@ -1121,10 +1121,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     */
   def exportTranSMARTDataFile(delimiter : String) = Action.async { implicit request =>
     for {
-      fileContent <- generateTranSMARTDataFile(tranSMARTDataFileName, delimiter, setting.exportOrderByFieldName)
-    } yield {
+      fileContent <- generateTranSMARTDataFile(
+          tranSMARTDataFileName,
+          delimiter,
+          setting.exportOrderByFieldName
+        )
+    } yield
       stringToFile(tranSMARTDataFileName)(fileContent)
-    }
   }
 
   /**
@@ -1135,10 +1138,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     */
   def exportTranSMARTMappingFile(delimiter : String) = Action.async { implicit request =>
     for {
-      fileContent <- generateTranSMARTMappingFile(tranSMARTDataFileName, delimiter, setting.exportOrderByFieldName)
-    } yield {
+      fileContent <- generateTranSMARTMappingFile(
+          tranSMARTDataFileName,
+          delimiter,
+          setting.exportOrderByFieldName
+        )
+    } yield
       stringToFile(tranSMARTMappingFileName)(fileContent)
-    }
   }
 
   /**
