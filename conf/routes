@@ -26,7 +26,6 @@ GET         /loginBasic                                                         
 GET         /loginAdmin                                                             controllers.AuthController.loginAdmin
 
 # login/logout for REST interface
-POST        /loginRest                                                              controllers.AuthController.loginREST
 GET         /logoutRest                                                             controllers.AuthController.logoutREST
 
 # ldap debugging
