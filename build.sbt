@@ -51,18 +51,20 @@ libraryDependencies ++= Seq(
   "net.codingwell" %% "scala-guice" % "4.0.1",
   "org.clapper" % "classutil_2.11" % "1.0.6",
   "org.scalaz" % "scalaz-core_2.11" % "7.2.1",
-  "org.apache.spark" % "spark-core_2.11" % "2.0.0-preview", // exclude("asm", "asm")
-  "org.apache.spark" % "spark-sql_2.11" % "2.0.0-preview", // exclude("asm", "asm")
-  "org.apache.spark" % "spark-mllib_2.11" % "2.0.0-preview",
+  "org.apache.spark" % "spark-core_2.11" % "2.1.0", // exclude("asm", "asm")
+  "org.apache.spark" % "spark-sql_2.11" % "2.1.0", // exclude("asm", "asm")
+  "org.apache.spark" % "spark-mllib_2.11" % "2.1.0",
   "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.2", // exclude("asm", "asm")
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",
   "be.objectify" % "deadbolt-scala_2.11" % "2.4.3",
   "jp.t2v" %% "play2-auth" % "0.14.1",
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
-  "com.typesafe.play" %% "play-mailer" % "4.0.0"
-)
+  "com.typesafe.play" %% "play-mailer" % "4.0.0",
+  "org.apache.ignite" % "ignite-spark" % "1.6.0"
+).map(_.exclude("org.slf4j", "slf4j-log4j12" ))
 
+//  "com.typesafe.play" % "play-logback_2.11" % "2.5.1"
 // Following overrides are needed since Spark 1.6 uses jackson-databind 2.4.4
 // Note that deadbolt's dependency jackson-datatype-jsr310 has to be overriden as well because of transitivity
 // dependencyOverrides ++= Set(
