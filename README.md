@@ -64,19 +64,24 @@ sudo service mongod stop
 
 ## API
 
+```diff
++ this will be highlighted in green
+- this will be highlighted in red
+```
+
 **Login**
 ```bash
 curl -v -X POST -H "Accept: application/json" --data "id=peter.banda&password=xxx" http://10.79.2.192:8080/login
 ```
 
-Response
+**Response**
 
 ```
 < HTTP/1.1 200 OK
 * Server Apache-Coyote/1.1 is not blacklisted
 < Server: Apache-Coyote/1.1
 < Vary: Accept
-< Set-Cookie: **PLAY2AUTH_SESS_ID=xxx**; Expires=Wed, 22-Feb-2017 12:19:28 GMT; Path=/; HttpOnly
+< Set-Cookie: PLAY2AUTH_SESS_ID=xxx; Expires=Wed, 22-Feb-2017 12:19:28 GMT; Path=/; HttpOnly
 < Content-Type: text/plain;charset=utf-8
 < Content-Length: 89
 < Date: Wed, 22 Feb 2017 11:19:28 GMT
