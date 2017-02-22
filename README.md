@@ -105,7 +105,7 @@ TODO
 
 Use **http://10.79.2.192:8080** as the API's core url. Note that it's planned to change the protocol to https so pls. check this site for future announcements.
 
-Since html and json service types share the end points you need to specify the **"Accept: application/json"** header to get JSON back.
+Since html and json service types share the same end points you need to specify the **"Accept: application/json"** header to get JSONs back.
 
 <br/>
 
@@ -114,7 +114,7 @@ Since html and json service types share the end points you need to specify the *
 curl -v -X POST -H "Accept: application/json" --data "id=userxxx&password=yyy" http://10.79.2.192:8080/login
 ```
 
-***Response***
+__Response__
 
 ```
 < HTTP/1.1 200 OK
@@ -128,8 +128,6 @@ curl -v -X POST -H "Accept: application/json" --data "id=userxxx&password=yyy" h
 < 
 User 'userxxx' successfully logged in. Check the header for a 'PLAY_SESSION' cookie.
 ```
-<br/>
-<br/>
 <br/>
 
 **Find Data**
@@ -150,7 +148,7 @@ curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: ap
             -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx"
 ```
 
-with JSON formatting
+***All with JSON formatted***
 
 ```bash
 curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json"
