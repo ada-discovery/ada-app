@@ -66,8 +66,20 @@ sudo service mongod stop
 
 **Login**
 ```bash
-curl -v -X POST -H "Accept: application/json" --data "id=peter.banda&password=xxx" http://localhost:9000/login
+curl -v -X POST -H "Accept: application/json" --data "id=peter.banda&password=xxx" http://10.79.2.192:8080/login
 ```
+
+Response
+< HTTP/1.1 200 OK
+* Server Apache-Coyote/1.1 is not blacklisted
+< Server: Apache-Coyote/1.1
+< Vary: Accept
+< Set-Cookie: PLAY2AUTH_SESS_ID=xxx; Expires=Wed, 22-Feb-2017 12:19:28 GMT; Path=/; HttpOnly
+< Content-Type: text/plain;charset=utf-8
+< Content-Length: 89
+< Date: Wed, 22 Feb 2017 11:19:28 GMT
+< 
+User 'peter.banda' successfully logged in. Check the header for a 'PLAY_SESSION' cookie.
 
 **Find Data**
 ```bash
