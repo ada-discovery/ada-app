@@ -70,6 +70,8 @@ curl -v -X POST -H "Accept: application/json" --data "id=peter.banda&password=xx
 ```
 
 Response
+
+```
 < HTTP/1.1 200 OK
 * Server Apache-Coyote/1.1 is not blacklisted
 < Server: Apache-Coyote/1.1
@@ -80,6 +82,7 @@ Response
 < Date: Wed, 22 Feb 2017 11:19:28 GMT
 < 
 User 'peter.banda' successfully logged in. Check the header for a 'PLAY_SESSION' cookie.
+```
 
 **Find Data**
 ```bash
