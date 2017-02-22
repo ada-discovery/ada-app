@@ -71,7 +71,7 @@ sudo service mongod stop
 
 **Login**
 ```bash
-curl -v -X POST -H "Accept: application/json" --data "id=peter.banda&password=xxx" http://10.79.2.192:8080/login
+curl -v -X POST -H "Accept: application/json" --data "id=userxxx&password=yyy" http://10.79.2.192:8080/login
 ```
 
 **Response**
@@ -86,10 +86,27 @@ curl -v -X POST -H "Accept: application/json" --data "id=peter.banda&password=xx
 < Content-Length: 89
 < Date: Wed, 22 Feb 2017 11:19:28 GMT
 < 
-User 'peter.banda' successfully logged in. Check the header for a 'PLAY_SESSION' cookie.
+User 'userxxx' successfully logged in. Check the header for a 'PLAY_SESSION' cookie.
 ```
 
 **Find Data**
+
+**All Data**
+
 ```bash
-curl -X GET -v -G http://localhost:9000/studies/records/findCustom -H "Accept: application/json" -d "dataSet=ml.iris&orderBy=class&projection=class&projection=sepal-length" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
+curl -X GET -G http://localhost:9000/studies/records/findCustom -H "Accept: application/json"
+            -d "dataSet=ml.iris" --cookie "PLAY2AUTH_SESS_ID=xxx"
+```
+
+or with JSON formatting
+
+```bash
+curl -X GET -G http://localhost:9000/studies/records/findCustom -H "Accept: application/json"
+            -d "dataSet=ml.iris" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
+```
+
+
+```bash
+curl -X GET -v -G http://localhost:9000/studies/records/findCustom -H "Accept: application/json"
+               -d "dataSet=ml.iris&orderBy=class&projection=class&projection=sepal-length" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
 ```
