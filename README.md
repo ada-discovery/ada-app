@@ -65,8 +65,8 @@ sudo service mongod stop
 ## API
 
 ```diff
-+ Use http://10.79.2.192:8080 as the API's core url. Note that it's planned to change it to https so pls. check this site for announcements.
-+ Since html and json service types share the end points you need to specify the "Accept: application/json" header to get JSON back.
++ Use **http://10.79.2.192:8080** as the API's core url. Note that it's planned to change the protocol to https so pls. check this site for future announcements.
++ Since html and json service types share the end points you need to specify the **"Accept: application/json"** header to get JSON back.
 ```
 
 **Login**
