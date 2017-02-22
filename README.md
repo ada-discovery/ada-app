@@ -1,4 +1,5 @@
 # Ada (NCER-PD Reporting System)
+<br/>
 
 ## Application Server (Apache Tomcat)
 
@@ -33,6 +34,8 @@ ps -A | grep java (to check if still running, if yes do: 'kill -s kill pid')
 /etc/cron.daily/ada-backup
 ```
 
+<br/>
+
 ## Database (Mongo)
 
 **Start**
@@ -62,12 +65,49 @@ sudo service mongod stop
 /etc/cron.daily/ada-db-backup
 ```
 
+<br/>
+
+## Database (Elastic Search)
+
+**Start**
+```bash
+ssh -p 8022 yourusername@10.79.2.235
+sudo service elasticsearch start
+```
+
+**Stop**
+```bash
+ssh -p 8022 yourusername@10.79.2.235
+sudo service elasticsearch stop
+```
+
+**Config(s)**
+```bash
+/etc/elasticsearch/elasticsearch.yml
+/etc/init.d/elasticsearch
+/etc/default/elasticsearch
+/usr/lib/systemd/system/elasticsearch.service
+```
+
+**Log**
+```bash
+/var/log/elasticsearch/ada-cluster.log
+```
+
+**Backup script**
+```bash
+TODO
+```
+
+<br/>
+
 ## API
 
 Use **http://10.79.2.192:8080** as the API's core url. Note that it's planned to change the protocol to https so pls. check this site for future announcements.
 
 Since html and json service types share the end points you need to specify the **"Accept: application/json"** header to get JSON back.
 
+<br/>
 
 **Login**
 ```bash
