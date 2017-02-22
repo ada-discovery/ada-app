@@ -61,3 +61,15 @@ sudo service mongod stop
 ```bash
 /etc/cron.daily/ada-db-backup
 ```
+
+## API
+
+**Login**
+```bash
+curl -v -X POST -H "Accept: application/json" --data "id=peter.banda&password=xxx" http://localhost:9000/login
+```
+
+**Find Data**
+```bash
+curl -X GET -v -G http://localhost:9000/studies/records/findCustom -H "Accept: application/json" -d "dataSet=ml.iris&orderBy=class&projection=class&projection=sepal-length" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
+```
