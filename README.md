@@ -65,6 +65,7 @@ sudo service mongod stop
 ## API
 
 Use **http://10.79.2.192:8080** as the API's core url. Note that it's planned to change the protocol to https so pls. check this site for future announcements.
+
 Since html and json service types share the end points you need to specify the **"Accept: application/json"** header to get JSON back.
 
 
@@ -94,27 +95,27 @@ The following parameters are supported:
 
  Param Name    | Description   | Required 
  ------------- | ------------- | -------------
- dataSet       | Data set id, such as, __denopa.clinical_baseline__ | true 
- orderBy       | The namd of the field to sort by   | 
- projection    | The field names to retrieve. If not specified all fields are returned    |
- filterOrId    | The id of filter (if saved) or the filter's conditions to satisfy     |
+ dataSet       | Data set id, such as __denopa.clinical_baseline__. | true 
+ orderBy       | The name of the field to sort by.   | 
+ projection    | The field names to retrieve. If not specified all fields are returned.    |
+ filterOrId    | The id of filter (if saved) or the filter's conditions to satisfy.     |
 
 **All Data**
 
 ```bash
-curl -X GET -G http://localhost:9000/studies/records/findCustom -H "Accept: application/json"
-            -d "dataSet=ml.iris" --cookie "PLAY2AUTH_SESS_ID=xxx"
+curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json"
+            -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx"
 ```
 
 or with JSON formatting
 
 ```bash
-curl -X GET -G http://localhost:9000/studies/records/findCustom -H "Accept: application/json"
-            -d "dataSet=ml.iris" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
+curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json"
+            -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
 ```
 
 
 ```bash
-curl -X GET -v -G http://localhost:9000/studies/records/findCustom -H "Accept: application/json"
-               -d "dataSet=ml.iris&orderBy=class&projection=class&projection=sepal-length" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
+curl -X GET -v -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json"
+               -d "dataSet=denopa.clinical_baseline&orderBy=class&projection=class&projection=sepal-length" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
 ```
