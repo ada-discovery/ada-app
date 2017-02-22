@@ -98,12 +98,12 @@ Markdown | Less | Pretty
 
 The following parameters are supported:
 
-| Param Name    | Description   | Required |
-| ------------- |:-------------:|:-------------:|
-| dataSet       | Data set id, such as, __denopa.clinical_baseline__ | true |
-| orderBy       | The field name to sort the data by.   | false |
-| projection    | The field names to retrieve. If not specified all fields are returned.    | false |
-| filterOrId    | The id of filter (if saved) or the filter's conditions to satisfy .    | false |
+ Param Name    | Description   | Required 
+ ------------- | ------------- | -------------
+ dataSet       | Data set id, such as, __denopa.clinical_baseline__ | true 
+ orderBy       | The namd of the field to sort by   | 
+ projection    | The field names to retrieve. If not specified all fields are returned    |
+ filterOrId    | The id of filter (if saved) or the filter's conditions to satisfy     |
 
 **All Data**
 
