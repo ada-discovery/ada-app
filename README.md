@@ -88,7 +88,9 @@ curl -v -X POST -H "Accept: application/json" --data "id=userxxx&password=yyy" h
 < 
 User 'userxxx' successfully logged in. Check the header for a 'PLAY_SESSION' cookie.
 ```
-
+<br/>
+<br/>
+<br/>
 
 **Find Data**
 
