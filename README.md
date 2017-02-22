@@ -91,6 +91,13 @@ User 'userxxx' successfully logged in. Check the header for a 'PLAY_SESSION' coo
 
 **Find Data**
 
+Markdown | Less | Pretty
+--- | --- | ---
+*Still* | `renders` | **nicely**
+1 | 2 | 3
+
+The following parameters are supported:
+
 | Param Name    | Description   |
 | ------------- |:-------------:|
 | dataSet       | (required) Data set id, such as, ``denopa.clinical_baseline`` |
