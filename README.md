@@ -141,12 +141,16 @@ The following parameters are supported:
  projection    | The field names to retrieve. If not specified all fields are returned.    |
  filterOrId    | The id of filter (if saved) or the filter's conditions to satisfy.     |
 
+<br/>
+
 ***All***
 
 ```bash
 curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json"
             -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx"
 ```
+
+<br/>
 
 ***All with JSON formatted***
 
@@ -155,9 +159,11 @@ curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: ap
             -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
 ```
 
+<br/>
+
 ***With Filter, OrderBy, and Projections***
 
-The following query returns JSONs with two fields: __Geschlecht__ (gender), and __a_Alter__ (age), ordered by __a_Alter__ from __denopa.clinical_baseline__ for all the items with __a_Alter__ greater than 70
+The following query returns JSONs with two fields: __Geschlecht__ (gender), and __a_Alter__ (age), ordered by __a_Alter__ from the __denopa.clinical_baseline__ data set for all the items with __a_Alter__ greater than 70.
 
 ```bash
 curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json" 
