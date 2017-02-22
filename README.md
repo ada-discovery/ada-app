@@ -91,6 +91,13 @@ User 'userxxx' successfully logged in. Check the header for a 'PLAY_SESSION' coo
 
 **Find Data**
 
+| Param Name    | Description   |
+| ------------- |:-------------:|
+| dataSet       | (required) Data set id, such as, ``denopa.clinical_baseline`` |
+| orderBy       | The field name to sort the data by.   |
+| projection    | The field names to retrieve. If not specified all fields are returned.    |
+| filterOrId    | The id of filter (if saved) or the filter's conditions to satisfy .    |
+
 **All Data**
 
 ```bash
