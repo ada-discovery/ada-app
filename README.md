@@ -74,7 +74,7 @@ Since html and json service types share the end points you need to specify the *
 curl -v -X POST -H "Accept: application/json" --data "id=userxxx&password=yyy" http://10.79.2.192:8080/login
 ```
 
-**Response**
+***Response***
 
 ```
 < HTTP/1.1 200 OK
@@ -89,6 +89,7 @@ curl -v -X POST -H "Accept: application/json" --data "id=userxxx&password=yyy" h
 User 'userxxx' successfully logged in. Check the header for a 'PLAY_SESSION' cookie.
 ```
 
+
 **Find Data**
 
 The following parameters are supported:
@@ -100,20 +101,21 @@ The following parameters are supported:
  projection    | The field names to retrieve. If not specified all fields are returned.    |
  filterOrId    | The id of filter (if saved) or the filter's conditions to satisfy.     |
 
-**All Data**
+***All***
 
 ```bash
 curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json"
             -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx"
 ```
 
-or with JSON formatting
+with JSON formatting
 
 ```bash
 curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json"
             -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
 ```
 
+***With Filter, OrderBy, and Projections***
 
 ```bash
 curl -X GET -v -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json"
