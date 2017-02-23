@@ -140,6 +140,8 @@ The following parameters are supported:
  orderBy       | The name of the field to sort by.   | 
  projection    | The field names to retrieve. If not specified all fields are returned.    |
  filterOrId    | The id of filter (if saved) or the filter's conditions to satisfy.     |
+ limit         | The number of items to retrieve. |
+ skip          | The number of items to skip. |
 
 <br/>
 
