@@ -63,6 +63,7 @@ class AdminController @Inject() (deadbolt: DeadboltActions, messageRepo: Message
           runnablesRedirect.flashing("errors" -> s"Script ${className} does not exist.")
         }
         case e: Exception => {
+          logger.error(s"Script ${className} failed", e)
           runnablesRedirect.flashing("errors" -> s"Script ${className} failed due to: ${e.getMessage}")
         }
       }
