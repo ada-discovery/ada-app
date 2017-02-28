@@ -151,26 +151,28 @@ class CreateClinicalMPowerTappingDataSet @Inject()(
         criteria = Seq(ClinicalField.MPowerId.toString #-> tappingItems.map(_.externalId).toSeq),
         projection = ClinicalField.values.map(_.toString)
       )
+    } yield {
+      import NewMPowerTappingField._
 
-      mPowerIdClinicalJsonMap =
+      val mPowerIdClinicalJsonsMap: Map[String, Traversable[JsObject]] =
         clinicalJsons.map { clinicalJson =>
           val mPowerId = (clinicalJson \ ClinicalField.MPowerId.toString).get.as[String]
           (mPowerId, clinicalJson)
-        }.toMap
-    } yield {
-      import NewMPowerTappingField._
+        }.groupBy(_._1).map{ case (key, keyJsons) => (key, keyJsons.map(_._2))}
+
       tappingItems.map { tappingItem =>
-        mPowerIdClinicalJsonMap.get(tappingItem.externalId).map { clinicalJson =>
-          clinicalJson ++ Json.obj(
-            CreatedOn.toString -> tappingItem.createdOn,
-            MedsMoment.toString -> tappingItem.medsMoment,
-            LeftTappingCount.toString -> tappingItem.leftTappingCount,
-            RightTappingCount.toString -> tappingItem.rightTappingCount,
-            LeftTappingScore.toString -> tappingItem.leftTappingScore,
-            RightTappingScore.toString -> tappingItem.rightTappingScore
+        mPowerIdClinicalJsonsMap.get(tappingItem.externalId).map(_.map( clinicalJson =>
+            clinicalJson ++ Json.obj(
+              CreatedOn.toString -> tappingItem.createdOn,
+              MedsMoment.toString -> tappingItem.medsMoment,
+              LeftTappingCount.toString -> tappingItem.leftTappingCount,
+              RightTappingCount.toString -> tappingItem.rightTappingCount,
+              LeftTappingScore.toString -> tappingItem.leftTappingScore,
+              RightTappingScore.toString -> tappingItem.rightTappingScore
+            )
           )
-        }
-      }.flatten
+        )
+      }.flatten.flatten
     }
 
   private def getTappingItems(
@@ -216,7 +218,9 @@ class CreateClinicalMPowerTappingDataSet @Inject()(
 
       clinicalFields <-
         luxParkFieldRepo.find(Seq("name" #-> ClinicalField.values.map(_.toString).toSeq))
+
     } yield {
+
       import NewMPowerTappingField._
       val tappingNameFieldMap = tappingFields.map(field => (field.name, field)).toMap
 

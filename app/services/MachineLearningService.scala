@@ -6,10 +6,15 @@ import com.google.inject.ImplementedBy
 import dataaccess.{FieldType, FieldTypeHelper}
 import models.FieldTypeId
 import models.ml._
+import models.ml.{LogisticRegression => LogisticRegressionDef}
+import models.ml.{LinearRegression => LinearRegressionDef}
+import models.ml.{GeneralizedLinearRegression => GeneralizedLinearRegressionDef}
+import models.ml.{RegressionTree => RegressionTreeDef}
 import org.apache.spark.ml.{Estimator, Model}
-import org.apache.spark.ml.classification
-import classification._
-import classification.{NaiveBayes => NaiveBayesClassifier}
+import org.apache.spark.ml.classification._
+import org.apache.spark.ml.classification.{NaiveBayes => NaiveBayesClassifier}
+import org.apache.spark.ml.classification.{LogisticRegression => LogisticRegressionClassifier}
+import org.apache.spark.ml.regression.{DecisionTreeRegressor, GeneralizedLinearRegression, LinearRegression}
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, MulticlassClassificationEvaluator}
 import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.sql.types._
@@ -28,14 +33,14 @@ trait MachineLearningService {
     dataSetId: String,
     featureFieldNames: Seq[String],
     outputFieldNames: String,
-    mlModel: MultiLayerPerceptron
+    mlModel: LogisticRegressionDef
   ): Double
 
   def classify(
     dataSetId: String,
     featureFieldNames: Seq[String],
     outputFieldNames: String,
-    mlModel: Regression
+    mlModel: MultiLayerPerceptron
   ): Double
 
   def classify(
@@ -65,6 +70,27 @@ trait MachineLearningService {
     outputFieldName: String,
     mlModel: models.ml.NaiveBayes
   ): Double
+
+  def regress(
+    dataSetId: String,
+    featureFieldNames: Seq[String],
+    outputFieldNames: String,
+    mlModel: LinearRegressionDef
+  ): Double
+
+  def regress(
+    dataSetId: String,
+    featureFieldNames: Seq[String],
+    outputFieldNames: String,
+    mlModel: GeneralizedLinearRegressionDef
+  ): Double
+
+  def regress(
+    dataSetId: String,
+    featureFieldNames: Seq[String],
+    outputFieldNames: String,
+    mlModel: RegressionTreeDef
+  ): Double
 }
 
 @Singleton
@@ -79,6 +105,32 @@ private class MachineLearningServiceImpl @Inject() (
   private val sparkContext = sparkApp.sc
   private implicit val sqlContext = sparkApp.sqlContext
   import sqlContext.implicits._
+
+  override def classify(
+    dataSetId: String,
+    featureFieldNames: Seq[String],
+    outputFieldName: String,
+    mlModel: LogisticRegressionDef
+  ): Double = {
+    def set[T] = setSourceParam[T, LogisticRegressionDef, LogisticRegressionClassifier](mlModel)_
+
+    val trainer = chain(
+      set(_.aggregationDepth, _.setAggregationDepth),
+      set(_.elasticMixingRatio, _.setElasticNetParam),
+      set(_.family.map(_.toString), _.setFamily),
+      set(_.fitIntercept, _.setFitIntercept),
+      set(_.maxIteration, _.setMaxIter),
+      set(_.regularization, _.setRegParam),
+      set(_.threshold, _.setThreshold),
+      set(_.standardization, _.setStandardization),
+      set(_.tolerance, _.setTol)
+    )(new LogisticRegressionClassifier())
+
+    val df = loadDataFrame(dataSetId, featureFieldNames, outputFieldName)
+
+    val Array(training, test) = df.randomSplit(Array(0.7, 0.3), seed = 11L)
+    train(trainer, training, test)
+  }
 
   override def classify(
     dataSetId: String,
@@ -99,32 +151,6 @@ private class MachineLearningServiceImpl @Inject() (
     )(new MultilayerPerceptronClassifier())
 
     val df = loadDataFrame(dataSetId, featureFields, outputField)
-
-    val Array(training, test) = df.randomSplit(Array(0.7, 0.3), seed = 11L)
-    train(trainer, training, test)
-  }
-
-  override def classify(
-    dataSetId: String,
-    featureFieldNames: Seq[String],
-    outputFieldName: String,
-    mlModel: Regression
-  ): Double = {
-    def set[T] = setSourceParam[T, Regression, LogisticRegression](mlModel)_
-
-    val trainer = chain(
-      set(_.aggregationDepth, _.setAggregationDepth),
-      set(_.elasticMixingRatio, _.setElasticNetParam),
-      set(_.family.map(_.toString), _.setFamily),
-      set(_.fitIntercept, _.setFitIntercept),
-      set(_.maxIteration, _.setMaxIter),
-      set(_.regularization, _.setRegParam),
-      set(_.threshold, _.setThreshold),
-      set(_.standardization, _.setStandardization),
-      set(_.tolerance, _.setTol)
-    )(new LogisticRegression())
-
-    val df = loadDataFrame(dataSetId, featureFieldNames, outputFieldName)
 
     val Array(training, test) = df.randomSplit(Array(0.7, 0.3), seed = 11L)
     train(trainer, training, test)
@@ -217,6 +243,78 @@ private class MachineLearningServiceImpl @Inject() (
       set(_.smoothing, _.setSmoothing),
       set(_.modelType.map(_.toString), _.setModelType)
     )(new NaiveBayesClassifier())
+
+    val df = loadDataFrame(dataSetId, featureFieldNames, outputFieldName)
+
+    val Array(training, test) = df.randomSplit(Array(0.7, 0.3), seed = 11L)
+    train(trainer, training, test)
+  }
+
+  override def regress(
+    dataSetId: String,
+    featureFieldNames: Seq[String],
+    outputFieldName: String,
+    mlModel: LinearRegressionDef
+  ): Double = {
+    def set[T] = setSourceParam[T, LinearRegressionDef, LinearRegression](mlModel)_
+
+    val trainer = chain(
+      set(_.aggregationDepth, _.setAggregationDepth),
+      set(_.elasticMixingRatio, _.setElasticNetParam),
+      set(_.solver.map(_.toString), _.setSolver),
+      set(_.fitIntercept, _.setFitIntercept),
+      set(_.maxIteration, _.setMaxIter),
+      set(_.regularization, _.setRegParam),
+      set(_.standardization, _.setStandardization),
+      set(_.tolerance, _.setTol)
+    )(new LinearRegression())
+
+    val df = loadDataFrame(dataSetId, featureFieldNames, outputFieldName)
+
+    val Array(training, test) = df.randomSplit(Array(0.7, 0.3), seed = 11L)
+    train(trainer, training, test)
+  }
+
+  override def regress(
+    dataSetId: String,
+    featureFieldNames: Seq[String],
+    outputFieldName: String,
+    mlModel: GeneralizedLinearRegressionDef
+  ): Double = {
+    def set[T] = setSourceParam[T, GeneralizedLinearRegressionDef, GeneralizedLinearRegression](mlModel)_
+
+    val trainer = chain(
+      set(_.solver.map(_.toString), _.setSolver),
+      set(_.fitIntercept, _.setFitIntercept),
+      set(_.maxIteration, _.setMaxIter),
+      set(_.regularization, _.setRegParam),
+      set(_.family.map(_.toString), _.setFamily),
+      set(_.link.map(_.toString), _.setLink),
+      set(_.tolerance, _.setTol)
+    )(new GeneralizedLinearRegression())
+
+    val df = loadDataFrame(dataSetId, featureFieldNames, outputFieldName)
+
+    val Array(training, test) = df.randomSplit(Array(0.7, 0.3), seed = 11L)
+    train(trainer, training, test)
+  }
+
+  override def regress(
+    dataSetId: String,
+    featureFieldNames: Seq[String],
+    outputFieldName: String,
+    mlModel: RegressionTreeDef
+  ): Double = {
+    def set[T] = setSourceParam[T, RegressionTreeDef, DecisionTreeRegressor](mlModel)_
+
+    val trainer = chain(
+      set(_.maxDepth, _.setMaxDepth),
+      set(_.maxBins, _.setMaxBins),
+      set(_.minInstancesPerNode, _.setMinInstancesPerNode),
+      set(_.minInfoGain, _.setMinInfoGain),
+      set(_.seed, _.setSeed),
+      set(_.impurity.map(_.toString), _.setImpurity)
+    )(new DecisionTreeRegressor())
 
     val df = loadDataFrame(dataSetId, featureFieldNames, outputFieldName)
 
