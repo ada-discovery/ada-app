@@ -118,13 +118,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private def getViewView(
     dataViewId: BSONObjectID,
+    dataViewName: String,
     viewParts: Seq[DataSetViewData],
     elementGridWidth: Int
   )(implicit request: Request[_]) = {
     val tree = result(dataSpaceTree)
     dataset.showView(
-      dataSetName + " Item",
+      dataSetName,
       dataViewId,
+      dataViewName,
       viewParts,
       elementGridWidth,
       setting.filterShowFieldStyle,
@@ -374,6 +376,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
               }
             Ok(getViewView(
               dataViewId,
+              dataView.map(_.name).getOrElse("N/A"),
               viewParts,
               dataView.map(_.elementGridWidth).getOrElse(3))
             )

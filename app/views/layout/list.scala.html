@@ -1,5 +1,6 @@
 @(
-    domainName: String,
+    itemName: String,
+    title: Option[String],
     count: Long,
     actions: Option[Html],
     table: Html,
@@ -12,11 +13,11 @@
     implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
 )
 
-@main(Messages("overviewList.title", domainName), sideBar, topContentBar, topResources, bottomResources) {
+@main(title.getOrElse(Messages("overviewList.title", itemName)), sideBar, topContentBar, topResources, bottomResources) {
 
     <div class="page-header">
         <h3>
-            @Messages("list.count.title", count, domainName)
+            @Messages("list.count.title", count, itemName)
         </h3>
     </div>
 

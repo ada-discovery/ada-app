@@ -22,8 +22,9 @@
 @import play.api.libs.json.JsArray
 
 @(
-    domainName : String,
+    dataSetName : String,
     dataViewId: BSONObjectID,
+    dataViewName: String,
     viewParts: Seq[DataSetViewData],
     chartGridElementWidth: Int,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
@@ -301,7 +302,8 @@
 }
 
 @layout.list(
-    domainName,
+    dataSetName + " Item",
+    Some(dataSetName + " ("+ dataViewName + ")"),
     viewParts.map(_.page.total).sum,
     Some(actions),
     tables,

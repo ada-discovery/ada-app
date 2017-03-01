@@ -9,9 +9,11 @@ import models.DataSetFormattersAndIds.FieldIdentity
 import models._
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
-import play.api.libs.json.{JsNumber, JsObject}
+import play.api.libs.json.{JsNumber, JsObject, Json}
 import reactivemongo.bson.BSONObjectID
+import runnables.DataSetId.lux_park_clinical
 import runnables.GuiceBuilderRunnable
+
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -101,9 +103,13 @@ class CreateOverallActivityDataSet  @Inject()(
       ))
     )
 
+  val subjectIdField =
+    Field("cdisc_dm_usubjd", Some("Clinical Subject Id"), FieldTypeId.String)
+
   val mergedFields = Seq(
     createdOnField,
     externalIdField,
+    subjectIdField,
     dataGroupsField,
     momentInDayField,
     appVersionField,
@@ -120,51 +126,29 @@ class CreateOverallActivityDataSet  @Inject()(
     appVersionField
   ).map(_.name)
 
+  object ClinicalField extends Enumeration {
+    val SubjectId = Value("cdisc_dm_usubjd")
+    val MPowerId = Value("dm_mpowerid")
+  }
+
+  private val luxParkDsa = dsaf(lux_park_clinical).get
+
+  private val appVersionFieldType = ftf(appVersionField.fieldTypeSpec)
+  private val externalIdFieldType = ftf(externalIdField.fieldTypeSpec)
+
   override def run() = {
     val future = for {
       // register a new data set and object dsa
       newDsa <- dsaf.register(mergedDataSetInfo, None, None)
 
-      // collect all the items from mPower activity data sets
-      mergedItems <- Future.sequence(
-        dataSetIds.map { dataSetId =>
-
-          val dsa = dsaf(dataSetId).get
-          val dataSetRepo = dsa.dataSetRepo
-
-          for {
-//            _ <- checkFields(dsa.fieldRepo, dataSetId)
-            fields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
-
-            items <- dataSetRepo.find(projection = fieldNames)
-
-          } yield {
-            val appVersionFieldType = ftf(appVersionField.fieldTypeSpec)
-
-            val fieldMap = fields.map( field => (field.name, field)).toMap
-            items.map { item =>
-              val originalAppVersionField = fieldMap.get(appVersionField.name).get
-              val originalAppVersionFieldType = ftf(originalAppVersionField.fieldTypeSpec)
-              val originalAppVersionString = originalAppVersionFieldType.jsonToDisplayString(item \ appVersionField.name)
-
-              val newAppVersionJson = appVersionFieldType.displayStringToJson(originalAppVersionString)
-
-              item.++(
-                JsObject(Seq(
-                  (appVersionField.name, newAppVersionJson),
-                  (activityField.name, JsNumber(dataSetIdActivityEnumMap.get(dataSetId).get))
-                ))
-              )
-            }
-          }
-        }
-      )
+      // collect all the items from mPower activity data sets and match them with clinical subject id
+      mergedJsons <- createJsons
 
       // first delete all items from the new data set
       _ <- newDsa.dataSetRepo.deleteAll
 
       // then, save the merged items to the new data set
-      _ <- newDsa.dataSetRepo.save(mergedItems.flatten)
+      _ <- newDsa.dataSetRepo.save(mergedJsons)
 
       // delete all the fields
       _ <- newDsa.fieldRepo.deleteAll
@@ -176,6 +160,70 @@ class CreateOverallActivityDataSet  @Inject()(
 
     Await.result(future, timeout)
   }
+
+  def createJsons: Future[Traversable[JsObject]] =
+    for {
+      // register a new data set and object dsa
+      newDsa <- dsaf.register(mergedDataSetInfo, None, None)
+
+      // collect all the items from mPower activity data sets
+      externalIdMPowerItemsItems <- Future.sequence(
+        dataSetIds.map { dataSetId =>
+
+          val dsa = dsaf(dataSetId).get
+          val dataSetRepo = dsa.dataSetRepo
+
+          for {
+          //            _ <- checkFields(dsa.fieldRepo, dataSetId)
+            fields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
+
+            items <- dataSetRepo.find(projection = fieldNames)
+
+          } yield {
+
+            val fieldMap = fields.map( field => (field.name, field)).toMap
+            items.map { item =>
+              val originalAppVersionField = fieldMap.get(appVersionField.name).get
+              val originalAppVersionFieldType = ftf(originalAppVersionField.fieldTypeSpec)
+              val originalAppVersionString = originalAppVersionFieldType.jsonToDisplayString(item \ appVersionField.name)
+
+              val newAppVersionJson = appVersionFieldType.displayStringToJson(originalAppVersionString)
+
+              val json =
+                item ++ Json.obj(
+                  (appVersionField.name, newAppVersionJson),
+                  (activityField.name, JsNumber(dataSetIdActivityEnumMap.get(dataSetId).get))
+                )
+              val externalId = externalIdFieldType.jsonToDisplayString(item \ externalIdField.name)
+              (externalId, json)
+            }
+          }
+        }
+      )
+
+      externalIdMPowerItems = externalIdMPowerItemsItems.flatten
+
+      // get clinical items for given mpower ids
+      clinicalJsons <- luxParkDsa.dataSetRepo.find(
+        criteria = Seq(ClinicalField.MPowerId.toString #-> externalIdMPowerItems.map(_._1).toSet.toSeq),
+        projection = ClinicalField.values.map(_.toString)
+      )
+    } yield {
+      import ClinicalField._
+
+      val mPowerIdSujectIdMap: Map[String, String] =
+        clinicalJsons.map { clinicalJson =>
+          val mPowerId = (clinicalJson \ MPowerId.toString).get.as[String]
+          val subjectId = (clinicalJson \ SubjectId.toString).get.as[String]
+          (mPowerId, subjectId)
+        }.toMap
+
+      externalIdMPowerItems.map { case (mPowerId, mPowerJson) =>
+        mPowerIdSujectIdMap.get(mPowerId).map( subjectId =>
+          mPowerJson ++ Json.obj(SubjectId.toString -> subjectId)
+        )
+      }.flatten
+    }
 
   private def checkFields(fieldRepo: FieldRepo, dataSetId: String): Future[Unit] = {
     fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames)).map { fields =>
