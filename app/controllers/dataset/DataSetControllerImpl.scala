@@ -748,38 +748,44 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ) = Action.async { implicit request =>
     val settings = setting
 
-    // initialize x, y, and group field names
-    val xFieldName = xFieldNameOption.getOrElse(settings.defaultScatterXFieldName)
-    val yFieldName = yFieldNameOption.getOrElse(settings.defaultScatterYFieldName)
-    val groupFieldName: Option[String] = groupFieldNameOption match {
-      case Some(fieldName) => {
-        val trimmed = fieldName.trim
-        if (trimmed.isEmpty)
-          None
-        else
-          Some(trimmed)
-      }
-      case None => None
-    }
+    // initialize the x, y, and group field names
+    val xFieldName: Option[String] =
+      xFieldNameOption.map(Some(_)).getOrElse(
+          settings.defaultScatterXFieldName
+      )
 
-    val xFieldFuture = fieldRepo.get(xFieldName)
-    val yFieldFuture = fieldRepo.get(yFieldName)
-    val groupFieldFuture = groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
+    val yFieldName: Option[String] =
+      yFieldNameOption.map(Some(_)).getOrElse(
+        settings.defaultScatterYFieldName
+      )
+
+    val groupFieldName: Option[String] =
+      groupFieldNameOption.map { fieldName =>
+        val trimmed = fieldName.trim
+        if (trimmed.isEmpty) None else Some(trimmed)
+    }.flatten
+
+    // auxiliary function to retrieve a field definition
+    def getField(fieldName: Option[String]): Future[Option[Field]] =
+      fieldName.map(fieldRepo.get).getOrElse(Future(None))
 
     for {
-      xField <- xFieldFuture
-      yField <- yFieldFuture
-      groupField <- groupFieldFuture
+      xField <- getField(xFieldName)
+      yField <- getField(yFieldName)
+      groupField <- getField(groupFieldName)
 
       // use a given filter conditions or load one
       resolvedFilter <- resolveFilter(filterOrId)
 
       criteria <- toCriteria(resolvedFilter.conditions)
 
-      xyzItems <- {
-        val projection = Seq(xFieldName, yFieldName) ++ groupField.map(_.name)
-        repo.find(criteria, Nil, projection.toSet)
-      }
+      xyzItems <-
+        (xField zip yField).headOption.map { case (xField, yField) =>
+          val projection = (Seq(xField, yField) ++ groupField).map(_.name)
+          repo.find(criteria, Nil, projection.toSet)
+        }.getOrElse(
+          Future(Nil)
+        )
 
       // create a name -> field map of the filter referenced fields
       fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
@@ -959,28 +965,42 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getDateCount(
     dateFieldNameOption: Option[String],
-    groupFieldName: Option[String],
+    groupFieldNameOption: Option[String],
     filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    val dateFieldName = dateFieldNameOption.getOrElse(setting.defaultDateCountFieldName)
+    // intialiaze the date and group field names
+    val dateFieldName: Option[String] =
+      dateFieldNameOption.map(Some(_)).getOrElse(
+        setting.defaultDateCountFieldName
+      )
 
-    val dateFieldFuture = fieldRepo.get(dateFieldName)
-    val groupFieldFuture = groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
+    val groupFieldName: Option[String] =
+      groupFieldNameOption.map { fieldName =>
+        val trimmed = fieldName.trim
+        if (trimmed.isEmpty) None else Some(trimmed)
+      }.flatten
+
+    // auxiliary function to retrieve a field definition
+    def getField(fieldName: Option[String]): Future[Option[Field]] =
+      fieldName.map(fieldRepo.get).getOrElse(Future(None))
 
     {
       for {
-        dateField <- dateFieldFuture
+        dateField <- getField(dateFieldName)
 
-        groupField <- groupFieldFuture
+        groupField <- getField(groupFieldName)
         // use a given filter conditions or load one
         resolvedFilter <- resolveFilter(filterOrId)
 
-        series <- dateField match {
-          case Some(dateField) => getDateCountData(resolvedFilter.conditions, dateField, groupField)
-          case None => Future(Nil)
-        }
+        // retrive the data count series
+        series <-
+          dateField.map( dateField =>
+            getDateCountData(resolvedFilter.conditions, dateField, groupField)
+          ).getOrElse(
+            Future(Nil)
+          )
 
         // create a name -> field map of the filter referenced fields
         fieldNameMap <- getFilterFieldNameMap(resolvedFilter)

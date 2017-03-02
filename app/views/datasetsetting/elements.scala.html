@@ -8,9 +8,9 @@
 @inputTextReadonly("dataSetSetting", "dataSetId", form)
 @inputText("dataSetSetting", "keyFieldName", form)
 @inputText("dataSetSetting", "exportOrderByFieldName", form)
+@inputText("dataSetSetting", "defaultDistributionFieldName", form)
 @inputText("dataSetSetting", "defaultScatterXFieldName", form)
 @inputText("dataSetSetting", "defaultScatterYFieldName", form)
-@inputText("dataSetSetting", "defaultDistributionFieldName", form)
 @inputText("dataSetSetting", "defaultDateCountFieldName", form)
 @select("dataSetSetting", "filterShowFieldStyle", form,
     FilterShowFieldStyle.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString))), true
