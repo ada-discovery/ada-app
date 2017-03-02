@@ -45,17 +45,17 @@ case class DataSetSetting(
   dataSetId: String,
   keyFieldName: String,
   exportOrderByFieldName: Option[String],
-  defaultScatterXFieldName: String,
-  defaultScatterYFieldName: String,
+  defaultScatterXFieldName: Option[String],
+  defaultScatterYFieldName: Option[String],
   defaultDistributionFieldName: String,
-  defaultDateCountFieldName: String,
+  defaultDateCountFieldName: Option[String],
   filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
   tranSMARTVisitFieldName: Option[String],
   tranSMARTReplacements: Map[String, String],
   storageType: StorageType.Value,
   cacheDataSet: Boolean = false
 ) {
-  def this(dataSetId: String) = this(None, dataSetId, "", None, "", "", "", "", None, None, Map[String, String](), StorageType.Mongo)
+  def this(dataSetId: String) = this(None, dataSetId, "", None, None, None, "", None, None, None, Map[String, String](), StorageType.Mongo)
 }
 
 @Deprecated
