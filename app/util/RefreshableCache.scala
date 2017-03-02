@@ -6,11 +6,12 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
 
 // TODO: introduce a read-write lock
-abstract class RefreshableCache[ID, T] {
+abstract class RefreshableCache[ID, T](eagerLoad: Boolean) {
   //  protected val lock: Lock
   protected val cache = {
     val map = MMap[ID, T]()
-    refresh(map)
+    if (eagerLoad)
+      refresh(map)
     map
   }
 

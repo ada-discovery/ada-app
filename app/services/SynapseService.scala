@@ -7,14 +7,16 @@ import javax.inject.Inject
 import com.google.inject.assistedinject.Assisted
 import models.synapse._
 import org.apache.commons.io.IOUtils
-import play.api.libs.ws.{WSRequest, WSResponse, WSClient}
-import play.api.{Logger, Configuration}
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
+import play.api.{Configuration, Logger}
+import play.api.libs.json.{JsObject, Json}
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import models.synapse.JsonFormat._
+import util.ZipFileIterator
 
 trait SynapseServiceFactory {
   def apply(@Assisted("username") username: String, @Assisted("password") password: String): SynapseService
@@ -377,35 +379,4 @@ protected[services] class SynapseServiceWSImpl @Inject() (
 
   def withRequestTimeout(timeout: Duration)(request: WSRequest): WSRequest =
     request.withRequestTimeout(timeout.toMillis)
-}
-
-object ZipFileIterator {
-
-  protected class ZipStreamIterator(zin: ZipInputStream) extends Iterator[(String, String)] {
-
-    private var ze = zin.getNextEntry
-
-    override def hasNext() = {
-      val isNext = ze != null
-      if (!isNext)
-        zin.close
-      isNext
-    }
-
-    override def next() = {
-      val baos = new ByteArrayOutputStream(2048)
-      IOUtils.copy(zin, baos)
-      val string = baos.toString("UTF-8")
-      baos.close
-      zin.closeEntry
-      val result = (ze.getName, string)
-      ze = zin.getNextEntry
-      result
-    }
-  }
-
-  def apply(bytes: Array[Byte]): Iterator[(String, String)] =
-    new ZipStreamIterator(
-      new ZipInputStream(
-        new ByteArrayInputStream(bytes)))
 }

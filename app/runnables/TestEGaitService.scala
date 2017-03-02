@@ -7,7 +7,9 @@ import services.EGaitServiceFactory
 import scala.concurrent.Await.result
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Configuration
+import util.ZipFileIterator
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class TestEGaitService @Inject() (
@@ -27,35 +29,40 @@ class TestEGaitService @Inject() (
       proxySessionToken <-
         eGaitService.getProxySessionToken
 
-      connectTokenForSearch <-
-        eGaitService.getConnectionToken("MilifeSession", proxySessionToken)
-
-      connectTokenForLogin <-
-        eGaitService.getConnectionToken("AuthenticationService", proxySessionToken)
-
       userSessionId <-
-        eGaitService.login(connectTokenForLogin)
+        eGaitService.login(proxySessionToken)
 
-      searchSessionId <-
-        eGaitService.searchSession(connectTokenForSearch, userSessionId, adviser)
+      searchSessionIds <-
+        eGaitService.searchSessions(proxySessionToken, userSessionId)
 
-      connectTokenForDownload <-
-        eGaitService.getConnectionToken("MilifeRest", proxySessionToken)
+      csvs <- Future.sequence(
+        searchSessionIds.map( searchSessionId =>
+          eGaitService.downloadParametersAsCSV(proxySessionToken, userSessionId, searchSessionId)
+        )
+      )
 
-      parameters <-
-        eGaitService.downloadParametersAsCSV(connectTokenForDownload, userSessionId, searchSessionId)
+      rawDatas <- Future.sequence(
+        searchSessionIds.map( searchSessionId =>
+          eGaitService.downloadRawData(proxySessionToken, userSessionId, searchSessionId)
+        )
+      )
 
-      connectTokenForLogOff <-
-        eGaitService.getConnectionToken("AuthenticationService", proxySessionToken)
-
-      _ <- eGaitService.logoff(connectTokenForLogOff, userSessionId)
+      _ <- eGaitService.logoff(proxySessionToken, userSessionId)
     } yield {
-      println("Search session id:")
-      println("------------------")
-      println(searchSessionId)
-      println("Params:")
+      println("Search session ids:")
+      println("-------------------")
+      println(searchSessionIds.mkString(", "))
+      println("CSVs:")
       println("-------")
-      print(parameters)
+      println(csvs.mkString("\n"))
+      println("Raw Data:")
+      println("--------")
+
+      val fileNames = rawDatas.map( rawData =>
+        ZipFileIterator(rawData).map(_._1).mkString(", ")
+      )
+
+      println(fileNames.mkString("\n"))
     }
 
     result(future, timeout)

@@ -41,34 +41,38 @@ trait EGaitService {
   /**
     * Logins and returns a user session id
     */
-  def login(connectionToken: String): Future[String]
+  def login(sessionToken: String): Future[String]
 
   /**
     * Logoffs
     *
-    * @param connectionToken
+    * @param sessionToken
     * @param userSessionId
     * @return
     */
-  def logoff(connectionToken: String, userSessionId: String): Future[Unit]
+  def logoff(sessionToken: String, userSessionId: String): Future[Unit]
 
   /**
     *
-    * @param connectionToken
+    * @param sessionToken
     * @param userSessionId
-    * @param adviserId
     */
-  def searchSession(
-    connectionToken: String,
-    userSessionId: String,
-    adviserId: String
-  ): Future[String]
+  def searchSessions(
+    sessionToken: String,
+    userSessionId: String
+  ): Future[Traversable[String]]
 
   def downloadParametersAsCSV(
-    connectionToken: String,
+    sessionToken: String,
     userSessionId: String,
     searchSessionId: String
   ): Future[String]
+
+  def downloadRawData(
+    sessionToken: String,
+    userSessionId: String,
+    searchSessionId: String
+  ): Future[Array[Byte]]
 }
 
 protected[services] class EGaitServiceWSImpl @Inject() (
@@ -79,14 +83,21 @@ protected[services] class EGaitServiceWSImpl @Inject() (
   ) extends EGaitService {
 
   object Url {
-    val base = confValue("egait.api.rest.url")
-    val session = confValue("egait.api.session.url")
-    val serviceConnectionToken = confValue("egait.api.service_connection_token.url")
-    val login = confValue("egait.api.login.url")
-    val logoff = confValue("egait.api.logoff.url")
-    val searchSessions = confValue("egait.api.search_sessions.url")
-    val downloadParametersAsCsvSub1 = confValue("egait.api.download_parameters_as_csv.url.part1")
-    val downloadParametersAsCsvSub2 = confValue("egait.api.download_parameters_as_csv.url.part2")
+    val Base = confValue("egait.api.rest.url")
+    val Session = confValue("egait.api.session.url")
+    val ServiceConnectionToken = confValue("egait.api.service_connection_token.url")
+    val Login = confValue("egait.api.login.url")
+    val Logoff = confValue("egait.api.logoff.url")
+    val SearchSessions = confValue("egait.api.search_sessions.url")
+    val DownloadParametersAsCsvSub1 = confValue("egait.api.download_parameters_as_csv.url.part1")
+    val DownloadParametersAsCsvSub2 = confValue("egait.api.download_parameters_as_csv.url.part2")
+    val DownloadRawData = confValue("egait.api.download_raw_data.url")
+  }
+
+  object ConnectionServiceName {
+    val Authentication = "AuthenticationService"
+    val SearchSessions = "MilifeSession"
+    val CsvDownload = "MilifeRest"
   }
 
   private val ws = {
@@ -97,16 +108,14 @@ protected[services] class EGaitServiceWSImpl @Inject() (
   }
 
   private val logger = Logger
-  private val timeout = 10 minutes
   private val certificateFileName = confValue("egait.api.certificate.path")
-  private var sessionToken: Option[String] = None
 
   private def confValue(key: String) = configuration.getString(key).get
 
   override def getProxySessionToken: Future[String] = {
     val certificateContent = loadFileAsBase64(certificateFileName)
 
-    val request = ws.url(Url.base + Url.session).withHeaders(
+    val request = ws.url(Url.Base + Url.Session).withHeaders(
       "Content-Type" -> "application/octet-stream",
       "Content-Length" -> certificateContent.length.toString
     )
@@ -116,19 +125,11 @@ protected[services] class EGaitServiceWSImpl @Inject() (
     )
   }
 
-  private def loadFileAsBase64(fileName : String):String = {
-    val source = scala.io.Source.fromFile(fileName, "ISO-8859-1")
-    val byteArray = source.map(_.toByte).toArray
-    source.close()
-    val encoded = Base64.encodeBase64(byteArray)
-    new String(encoded, "ASCII")
-  }
-
   override def getConnectionToken(
     serviceName: String,
     sessionToken: String
   ): Future[String] = {
-    val request = ws.url(Url.base + Url.serviceConnectionToken + serviceName).withHeaders(
+    val request = ws.url(Url.Base + Url.ServiceConnectionToken + serviceName).withHeaders(
       "session-token" -> sessionToken
     )
 
@@ -137,7 +138,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
     )
   }
 
-  override def login(connectionToken: String): Future[String] = {
+  override def login(sessionToken: String): Future[String] = {
     val loginInfoXML =
       s"""
         <LoginWithClientInfo xmlns="http://tempuri.org/">
@@ -150,98 +151,154 @@ protected[services] class EGaitServiceWSImpl @Inject() (
         <a:WindowsUser>dkpeters</a:WindowsUser></clientData></LoginWithClientInfo>
       """
 
-    SSLContext.getDefault
+    for {
+      // get the connection token for the authentication service
+      connectionToken <-
+        getConnectionToken(ConnectionServiceName.Authentication, sessionToken)
 
-    val request = ws.url(Url.base + Url.login).withHeaders(
-      "Content-Type" -> "application/xml",
-      "connect-token" -> connectionToken
-    )
+      // login and obtain a user session id
+      userSessionId <- {
+        val request =
+          withXmlContent(
+            withConnectionToken(connectionToken)(
+              ws.url(Url.Base + Url.Login)
+            )
+          )
 
-    //  namespaces ={"a": "http://schemas.datacontract.org/2004/07/AstrumIT.Meditalk.Platform.Core.Interfaces.Security"}
-    //  return xml.find(".//a:SessionId", namespaces).text
-
-    request.post(loginInfoXML).map { response =>
-      (response.xml \\ "SessionId").text
-    }
+        request.post(loginInfoXML).map { response =>
+          (response.xml \\ "SessionId").text
+        }
+      }
+    } yield
+      userSessionId
   }
 
   override def logoff(
-    connectionToken: String,
+    sessionToken: String,
     userSessionId: String
   ): Future[Unit] = {
     val logoffInfoXML = s"""<Logoff xmlns="http://tempuri.org/s"><sessionId>${userSessionId}</sessionId></Logoff>"""
 
-    val request = ws.url(Url.base + Url.logoff).withHeaders(
-      "Content-Type" -> "application/xml",
-      "connect-token" -> connectionToken,
-      "user-session" -> userSessionId
-    )
+    for {
+      // get the connection token for the authentication service
+      connectionToken <-
+        getConnectionToken(ConnectionServiceName.Authentication, sessionToken)
 
-    request.post(logoffInfoXML).map(_ => ())
+      // logs off
+      _ <- {
+        val request =
+          withXmlContent(
+            withConnectionToken(connectionToken)(
+              withUserSessionId(userSessionId)(
+                ws.url(Url.Base + Url.Logoff)
+              )
+            )
+          )
+
+        request.post(logoffInfoXML).map(_ => ())
+      }
+    } yield ()
   }
 
-  override def searchSession(
-    connectionToken: String,
-    userSessionId: String,
-    adviserId: String
-  ): Future[String] = {
-    val filterXML =
+  override def searchSessions(
+    sessionToken: String,
+    userSessionId: String
+  ): Future[Traversable[String]] = {
+    val findAllFilterXML =
        """
-         <Session xmlns="http://schemas.datacontract.org/2004/07/AstrumIT.MiLife.Server.MiLifeWcfRestServiceInterface.DataModel.SearchSession" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
-         </Session>
+          <Session xmlns="http://schemas.datacontract.org/2004/07/AstrumIT.MiLife.Server.MiLifeWcfRestServiceInterface.DataModel.SearchSession" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+          </Session>
        """
-//             <Tag>60217</Tag>
-//      s"""
-//        <Session xmlns="http://schemas.datacontract.org/2004/07/AstrumIT.MiLife.Server.MiLifeWcfRestServiceInterface.DataModel.SearchSession" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
-//          <EndDate>2017-10-10T00:00:00</EndDate>
-//          <Note/>
-//          <PersonNo />
-//          <SearchTestComments>true</SearchTestComments>
-//          <StartDate>2015-09-14T00:00:00</StartDate>
-//          <Adviser>XXX</Adviser>
-//          <Tag>SID0302</Tag>
-//	      </Session>
-//      """
-    // <Tag>60217</Tag>
-    //           <Adviser>${adviserId}</Adviser>
 
+    for {
+      // get the connection token for the authentication service
+      connectionToken <-
+        getConnectionToken(ConnectionServiceName.SearchSessions, sessionToken)
 
-    val request = ws.url(Url.base + Url.searchSessions).withHeaders(
-      "Content-Type" -> "application/xml",
-      "connect-token" -> connectionToken,
-      "user-session" -> userSessionId
-    )
+      // search sessions and obtain the ids
+      searchSessionIds <- {
+        val request =
+          withXmlContent(
+            withConnectionToken(connectionToken)(
+              withUserSessionId(userSessionId)(
+                ws.url(Url.Base + Url.SearchSessions)
+              )
+            )
+          )
 
-    //  namespaces ={"ml":"http://schemas.datacontract.org/2004/07/AstrumIT.MiLife.Server.MiLifeWcfRestServiceInterface.DataModel.SearchSession"}
-    //  return xml.find("ml:Session/ml:SessionId", namespaces).text
-
-    request.post(filterXML).map { response =>
-      (response.xml \\ "Session" \ "SessionId").text
-    }
+        request.post(findAllFilterXML).map( response =>
+          (response.xml \\ "Session" \ "SessionId").map(_.text)
+        )
+      }
+    } yield
+      searchSessionIds
   }
 
   override def downloadParametersAsCSV(
-    connectionToken: String,
+    sessionToken: String,
     userSessionId: String,
     searchSessionId: String
-  ): Future[String] = {
-    val request = ws.url(Url.base + Url.downloadParametersAsCsvSub1 + searchSessionId + Url.downloadParametersAsCsvSub2).withHeaders(
-      "connect-token" -> connectionToken,
-      "user-session" -> userSessionId
-    )
+  ): Future[String] =
+    for {
+      // get the connection token for the authentication service
+      connectionToken <-
+        getConnectionToken(ConnectionServiceName.CsvDownload, sessionToken)
 
-    request.get.map { response =>
-      println(response.allHeaders.mkString("\n"))
-      response.body
-    }
-  }
+      // get the csv (content)
+      csv <- {
+        val request =
+          withConnectionToken(connectionToken)(
+            withUserSessionId(userSessionId)(
+              ws.url(Url.Base + Url.DownloadParametersAsCsvSub1 + searchSessionId + Url.DownloadParametersAsCsvSub2)
+            )
+          )
 
-//  def withSessionToken(request: WSRequest): WSRequest =
-//    request.withHeaders("sessionToken" -> getSessionToken)
+        request.get.map(_.body)
+      }
+    } yield
+      csv
 
-  def withJsonContent(request: WSRequest): WSRequest =
-    request.withHeaders("Content-Type" -> "application/json")
+  override def downloadRawData(
+    sessionToken: String,
+    userSessionId: String,
+    searchSessionId: String
+  ): Future[Array[Byte]] =
+    for {
+      // get the connection token for the authentication service
+      connectionToken <-
+        getConnectionToken(ConnectionServiceName.CsvDownload, sessionToken)
 
-  def withRequestTimeout(timeout: Duration)(request: WSRequest): WSRequest =
+      // get the csv (content)
+      csv <- {
+        val request =
+          withConnectionToken(connectionToken)(
+            withUserSessionId(userSessionId)(
+              ws.url(Url.Base + Url.DownloadRawData + searchSessionId)
+            )
+          )
+
+        request.get.map(_.bodyAsBytes)
+      }
+    } yield
+      csv
+
+  private def withXmlContent(request: WSRequest): WSRequest =
+    request.withHeaders("Content-Type" -> "application/xml")
+
+  private def withConnectionToken(connectionToken: String)(request: WSRequest): WSRequest =
+    request.withHeaders("connect-token" -> connectionToken)
+
+  private def withUserSessionId(userSessionId: String)(request: WSRequest): WSRequest =
+    request.withHeaders("user-session" -> userSessionId)
+
+  private def withRequestTimeout(timeout: Duration)(request: WSRequest): WSRequest =
     request.withRequestTimeout(timeout.toMillis)
+
+  private def loadFileAsBase64(fileName : String):String = {
+    val source = scala.io.Source.fromFile(fileName, "ISO-8859-1")
+    val byteArray = source.map(_.toByte).toArray
+    source.close()
+    val encoded = Base64.encodeBase64(byteArray)
+    new String(encoded, "ASCII")
+  }
 }
