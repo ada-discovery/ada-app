@@ -31,6 +31,7 @@ dataSetSetting.defaultDistributionFieldName.label = Distribution Field
 dataSetSetting.defaultDateCountFieldName.label = Date Count Field
 dataSetSetting.tranSMARTVisitFieldName.label = TranSMART Visit Field
 dataSetSetting.tranSMARTReplacements.label = TranSMART Export Char Replacements
+dataSetSetting.mongoAutoCreateIndexForProjection.label = Mongo Auto-create Index for Projection
 
 dataSetImport.setting.keyFieldName.label = Key Field
 dataSetImport.setting.exportOrderByFieldName.label = Export OrderBy Field
@@ -45,6 +46,7 @@ dataSetImport.setting.tranSMARTReplacements.label = TranSMART Export Char Replac
 dataSetImport.setting.cacheDataSet.label = Cache Data Set
 dataSetImport.setting.filterShowFieldStyle.label = Filter Show Field Style
 dataSetImport.setting.overviewChartElementGridWidth.label = Element Grid Width
+dataSetImport.setting.mongoAutoCreateIndexForProjection.label = Mongo Auto-create Index for Projection
 dataSetImport.setting.storageType.label = Storage Type
 
 dataSetImport.dataView.tableColumnNames.label = Table Column Names
