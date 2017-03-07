@@ -7,14 +7,17 @@ import dataaccess.RepoTypes.JsonCrudRepo
 import dataaccess._
 import models._
 import play.api.libs.iteratee.Input.Empty
-import play.api.libs.json.{JsLookupResult, JsObject}
+import play.api.libs.json.{JsLookupResult, JsObject, JsValue}
 import reactivemongo.bson.BSONObjectID
 import util.BasicStats.Quantiles
+
 import scala.collection.mutable.{Map => MMap}
 import util._
 import util.JsonUtil.project
 import java.{util => ju}
+
 import Criterion.Infix
+
 import scala.concurrent.Future
 import scala.math.BigDecimal.RoundingMode
 import scala.concurrent.Await.result
@@ -224,11 +227,7 @@ class ChartServiceImpl extends ChartService {
     val fieldTypeId = fieldTypeSpec.fieldType
 
     val jsons = project(items, field.name)
-
-    def getValues[T]: Traversable[Option[T]] = {
-      val typedFieldType = fieldType.asValueOf[T]
-      jsons.map(typedFieldType.jsonToValue)
-    }
+    def getValues[T]: Traversable[Option[T]] = jsonsToValues[T](jsons, fieldType)
 
     def getRenderer[T]= {
       val typedFieldType = fieldType.asValueOf[T]
@@ -601,15 +600,13 @@ class ChartServiceImpl extends ChartService {
     val typeSpec = field.fieldTypeSpec
     val fieldType = ftf(typeSpec)
 
-    def getValues[T]: Traversable[T] = {
-      val typedFieldType = fieldType.asValueOf[T]
-      jsons.map(typedFieldType.jsonToValue).flatten
-    }
-
     def quantiles[T: Ordering](
       toDouble: T => Double
     ): Option[Quantiles[T]] =
-      BasicStats.quantiles[T](getValues[T].toSeq, toDouble)
+      BasicStats.quantiles[T](
+        jsonsToValues[T](jsons, fieldType).flatten.toSeq,
+        toDouble
+      )
 
     def createChart[T: Ordering](quants: Option[Quantiles[T]]) =
       quants.map(
@@ -857,4 +854,20 @@ class ChartServiceImpl extends ChartService {
     val fieldLabels = fieldsWithValues.map(_._1.labelOrElseName).toSeq
     HeatmapChartSpec("Correlations", fieldLabels, fieldLabels, correlations, None, Some(-1), Some(1), outputGridWidth)
   }
+
+  def jsonsToValues[T](
+    jsons: Traversable[JsLookupResult],
+    fieldType: FieldType[_]
+  ): Traversable[Option[T]] =
+    if (fieldType.spec.isArray) {
+      val typedFieldType = fieldType.asValueOf[Array[Option[T]]]
+
+      jsons.map( json =>
+        typedFieldType.jsonToValue(json).map(_.toSeq).getOrElse(Seq(None))
+      ).flatten
+    } else {
+      val typedFieldType = fieldType.asValueOf[T]
+
+      jsons.map(typedFieldType.jsonToValue)
+    }
 }

@@ -60,6 +60,10 @@
     <input type="text" class="no-rowClicked fieldLabel" value='@{field.label.getOrElse("")}'/>
 }
 
+@isArrayCheckbox(field: Field) = {
+    <input type="checkbox" class="no-rowClicked" @if(field.isArray) { checked="checked" } disabled="disabled"/>
+}
+
 @table = {
     <div class="pull-right dropdown">
         <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -101,8 +105,9 @@
         typeColumns[Field](
             (None, "", _ => {<input type="checkbox" class="no-rowClicked"/>}),
             (Some("name"), "Name", {field => util.JsonUtil.unescapeKey(field.name)}),
-            (Some("fieldType"), "Type", _.fieldType),
             (Some("label"), "Label", editableFieldLabelInput),
+            (Some("fieldType"), "Type", _.fieldType),
+            (Some("isArray"), "Is Array?", isArrayCheckbox),
             (Some("categoryId"), "Category", _.category.map(_.name).getOrElse(""))
         ),
         Some({ item : Any => dictionaryRouter.get(item.asInstanceOf[Field].name)}),

@@ -36,9 +36,9 @@ trait DataSetAccessorFactory {
 
 @Singleton
 protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
-    @Named("MongoJsonCrudRepoFactory") mongoDataSetRepoFactory: JsonCrudRepoFactory,
+    @Named("MongoJsonCrudRepoFactory") mongoDataSetRepoFactory: MongoJsonCrudRepoFactory,
     @Named("ElasticJsonCrudRepoFactory") elasticDataSetRepoFactory: JsonCrudRepoFactory,
-    @Named("CachedJsonCrudRepoFactory") cachedDataSetRepoFactory: JsonCrudRepoFactory,
+    @Named("CachedJsonCrudRepoFactory") cachedDataSetRepoFactory: MongoJsonCrudRepoFactory,
     fieldRepoFactory: FieldRepoFactory,
     categoryRepoFactory: CategoryRepoFactory,
     filterRepoFactory: FilterRepoFactory,
@@ -46,7 +46,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo
-  ) extends RefreshableCache[String, DataSetAccessor](false) with DataSetAccessorFactory {
+  ) extends RefreshableCache[String, DataSetAccessor](true) with DataSetAccessorFactory {
 
   override protected def createInstance(dataSetId: String): DataSetAccessor = {
     val fieldRepo = fieldRepoFactory(dataSetId)
@@ -104,14 +104,17 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
       val storageType =
         dataSetSetting.map(_.storageType).getOrElse(StorageType.Mongo)
 
+      val mongoAutoCreateIndex =
+        dataSetSetting.map(_.mongoAutoCreateIndexForProjection).getOrElse(false)
+
       if (cacheDataSet) {
         println(s"Creating cached data set repo for '$dataSetId'.")
-        cachedDataSetRepoFactory(collectionName, fieldNamesAndTypes)
+        cachedDataSetRepoFactory(collectionName, fieldNamesAndTypes, mongoAutoCreateIndex)
       } else
         storageType match {
           case StorageType.Mongo => {
             println(s"Creating Mongo based data set repo for '$dataSetId'.")
-            mongoDataSetRepoFactory(collectionName, fieldNamesAndTypes)
+            mongoDataSetRepoFactory(collectionName, fieldNamesAndTypes, mongoAutoCreateIndex)
           }
           case StorageType.ElasticSearch => {
             println(s"Creating Elastic Search based data set repo for '$dataSetId'.")

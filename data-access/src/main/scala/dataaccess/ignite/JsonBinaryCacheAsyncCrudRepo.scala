@@ -43,16 +43,21 @@ class JsonBinaryCacheAsyncCrudRepoFactory @Inject()(
     ignite: Ignite,
     cacheFactory: BinaryCacheFactory,
     configuration: Configuration
-  ) extends JsonCrudRepoFactory {
+  ) extends MongoJsonCrudRepoFactory {
 
   private val ftf = FieldTypeFactory(Set[String](""), Seq[String](), "", ",")
 
-  override def apply(collectionName: String, fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]) =
-    applyWithDictionaryAux(collectionName, fieldNamesAndTypes)
+  override def apply(
+    collectionName: String,
+    fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
+    createIndexForProjectionAutomatically: Boolean
+  ) =
+    applyWithDictionaryAux(collectionName, fieldNamesAndTypes, createIndexForProjectionAutomatically)
 
   private def applyWithDictionaryAux(
     collectionName: String,
-    fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]
+    fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
+    createIndexForProjectionAutomatically: Boolean
   ): JsonCrudRepo = {
     val cacheName = collectionName.replaceAll("[\\.-]", "_")
     val identity = JsObjectIdentity
@@ -65,7 +70,7 @@ class JsonBinaryCacheAsyncCrudRepoFactory @Inject()(
     val cache = cacheFactory(
       cacheName,
       fieldNamesAndClasses,
-      new MongoJsonRepoFactory(collectionName, configuration, new SerializableApplicationLifecycle()),
+      new MongoJsonRepoFactory(collectionName, createIndexForProjectionAutomatically, configuration, new SerializableApplicationLifecycle()),
       identity.of(_)
     ) // new DefaultApplicationLifecycle().addStopHook
     cache.loadCache(null)

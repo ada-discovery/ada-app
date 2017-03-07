@@ -21,6 +21,7 @@ class DataSetImporterCentralImpl @Inject()(
     tranSmartDataSetImporter: TranSmartDataSetImporter,
     redCapDataSetImporter: RedCapDataSetImporter,
     synapseDataSetImporter: SynapseDataSetImporter,
+    eGaitDataSetImporter: EGaitDataSetImporter,
     dataSetImportRepo: DataSetImportRepo
   ) extends DataSetImporterCentral {
 
@@ -31,6 +32,7 @@ class DataSetImporterCentralImpl @Inject()(
         case x: TranSmartDataSetImport => tranSmartDataSetImporter(x)
         case x: RedCapDataSetImport => redCapDataSetImporter(x)
         case x: SynapseDataSetImport => synapseDataSetImporter(x)
+        case x: EGaitDataSetImport => eGaitDataSetImporter(x)
       }
       _ <- {
         dataSetImport.timeLastExecuted = Some(new Date())

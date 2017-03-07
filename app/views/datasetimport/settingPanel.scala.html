@@ -24,6 +24,7 @@
             @select("dataSetImport", "setting.storageType", form,
                 StorageType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), true
             )
+            @checkbox("dataSetImport", "setting.mongoAutoCreateIndexForProjection", form)
             @checkbox("dataSetImport", "setting.cacheDataSet", form)
         </div>
     </div>

@@ -19,8 +19,9 @@ import javax.inject.Inject
 
 class MongoJsonCrudRepo @Inject()(
     @Assisted collectionName : String,
-    @Assisted fieldNamesAndTypes: Seq[(String, FieldTypeSpec)]
-  ) extends MongoAsyncReadonlyRepo[JsObject, BSONObjectID](collectionName, "_id") with JsonCrudRepo {
+    @Assisted fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
+    @Assisted mongoAutoCreateIndexForProjection: Boolean
+  ) extends MongoAsyncReadonlyRepo[JsObject, BSONObjectID](collectionName, "_id", mongoAutoCreateIndexForProjection) with JsonCrudRepo {
 
   override def save(entity: JsObject): Future[BSONObjectID] = {
     val (doc, id) = addId(entity)
@@ -62,12 +63,13 @@ class MongoJsonCrudRepo @Inject()(
 
 class MongoJsonRepoFactory(
     collectionName: String,
+    createIndexForProjectionAutomatically: Boolean,
     configuration: Configuration,
     applicationLifecycle: ApplicationLifecycle
   ) extends Factory[AsyncCrudRepo[JsObject, BSONObjectID]] {
 
   override def create(): AsyncCrudRepo[JsObject, BSONObjectID] = {
-    val repo = new MongoJsonCrudRepo(collectionName, Nil)
+    val repo = new MongoJsonCrudRepo(collectionName, Nil, createIndexForProjectionAutomatically)
     repo.reactiveMongoApi = ReactiveMongoApi.create(configuration, applicationLifecycle)
     repo
   }

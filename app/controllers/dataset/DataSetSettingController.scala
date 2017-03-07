@@ -56,6 +56,7 @@ class DataSetSettingController @Inject() (
       "tranSMARTVisitFieldName" -> optional(text),
       "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
       "storageType" -> of[StorageType.Value],
+      "mongoAutoCreateIndexForProjection" -> boolean,
       "cacheDataSet" -> boolean
     ) (DataSetSetting.apply)(DataSetSetting.unapply)
   )

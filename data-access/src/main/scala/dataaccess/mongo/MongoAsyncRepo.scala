@@ -25,7 +25,8 @@ import scala.util.Random
 
 protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     collectionName : String,
-    val identityName : String
+    val identityName : String,
+    mongoAutoCreateIndexForProjection: Boolean = false
   ) extends AsyncReadonlyRepo[E, ID] {
 
   import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -73,9 +74,9 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     // handle criteria and projection (if any)
     val queryBuilder = collection.find(jsonCriteria, jsonProjection)
 
-    // use index / hint only if limit is not provided and projection is not empty
+    // use index / hint only if the limit is not provided and projection is not empty
     val queryBuilder2 =
-      if (limit.isEmpty && projection.nonEmpty) {
+      if (mongoAutoCreateIndexForProjection && limit.isEmpty && projection.nonEmpty) {
         val fullName = sortedProjection.mkString("_")
         val name = if (fullName.size <= indexNameMaxSize)
           fullName

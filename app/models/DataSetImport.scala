@@ -99,6 +99,19 @@ case class RedCapDataSetImport(
   var timeLastExecuted: Option[Date] = None
 ) extends DataSetImport
 
+case class EGaitDataSetImport(
+  _id: Option[BSONObjectID],
+  dataSpaceName: String,
+  dataSetId: String,
+  dataSetName: String,
+  scheduled: Boolean = false,
+  scheduledTime: Option[ScheduledTime] = None,
+  setting: Option[DataSetSetting] = None,
+  dataView: Option[DataView] = None,
+  timeCreated: Date = new Date(),
+  var timeLastExecuted: Option[Date] = None
+) extends DataSetImport
+
 object DataSetImportFormattersAndIds {
   implicit val scheduleTimeFormat = Json.format[ScheduledTime]
   implicit val dataSetSettingFormat = DataSetFormattersAndIds.dataSetSettingFormat
@@ -109,7 +122,8 @@ object DataSetImportFormattersAndIds {
       ManifestedFormat(Json.format[CsvDataSetImport]),
       ManifestedFormat(Json.format[SynapseDataSetImport]),
       ManifestedFormat(Json.format[TranSmartDataSetImport]),
-      ManifestedFormat(Json.format[RedCapDataSetImport])
+      ManifestedFormat(Json.format[RedCapDataSetImport]),
+      ManifestedFormat(Json.format[EGaitDataSetImport])
     )
   )
 
@@ -122,6 +136,7 @@ object DataSetImportFormattersAndIds {
         case x: SynapseDataSetImport => x.copy(_id = id)
         case x: TranSmartDataSetImport => x.copy(_id = id)
         case x: RedCapDataSetImport => x.copy(_id = id)
+        case x: EGaitDataSetImport => x.copy(_id = id)
       }
   }
 }

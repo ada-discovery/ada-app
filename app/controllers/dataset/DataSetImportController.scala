@@ -75,6 +75,7 @@ class DataSetImportController @Inject()(
     "tranSMARTVisitFieldName" -> optional(text),
     "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
     "storageType" -> of[StorageType.Value],
+    "mongoAutoCreateIndexForProjection" -> boolean,
     "cacheDataSet" -> boolean
   ) (DataSetSetting.apply) (DataSetSetting.unapply)
 
@@ -192,6 +193,25 @@ class DataSetImportController @Inject()(
       )
   )
 
+  protected val eGaitForm = Form(
+    mapping(
+      "id" -> ignored(Option.empty[BSONObjectID]),
+      "dataSpaceName" -> nonEmptyText,
+      "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
+      "dataSetName" -> nonEmptyText,
+      "scheduled" -> boolean,
+      "scheduledTime" -> optional(scheduledTimeMapping),
+      "setting" -> optional(dataSetSettingMapping),
+      "dataView" -> optional(dataViewMapping),
+      "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
+      "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
+    ) (EGaitDataSetImport.apply)(EGaitDataSetImport.unapply)
+      .verifying(
+        "Import is marked as 'scheduled' but no time provided",
+        importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
+      )
+  )
+
   private val classNameFormViewsMap = FormWithViews.toMap[DataSetImport](
     Seq(
       FormWithViews[CsvDataSetImport](
@@ -240,46 +260,20 @@ class DataSetImportController @Inject()(
           "RedCap Data Set Import",
           importViews.redCapTypeElements(_)(_)
         )
+      ),
+
+      FormWithViews[EGaitDataSetImport](
+        eGaitForm,
+        createView(
+          "eGait Data Set Import",
+          importViews.eGaitTypeElements(_)(_)
+        ),
+        editView(
+          "eGait Data Set Import",
+          importViews.eGaitTypeElements(_)(_)
+        )
       )
     ))
-
-  private def createView[T <: DataSetImport](
-    name: String,
-    elements: (Form[T], Messages) => Html)(
-    f: Form[T],
-    flash: Flash,
-    msg: Messages,
-    request: Request[_]
-  ) =
-    layout.create(
-      name,
-      f,
-      elements(f, msg),
-      controllers.dataset.routes.DataSetImportController.save,
-      controllers.routes.AppController.index,
-      'enctype -> "multipart/form-data"
-    )(flash, msg, request)
-
-  private def editView[T <: DataSetImport](
-    name: String,
-    elements: (Form[T], Messages) => Html)(
-    id: BSONObjectID,
-    f: Form[T],
-    flash: Flash,
-    msg: Messages,
-    request: Request[_]
-  ) =
-    layout.edit(
-      name,
-      f.errors,
-      elements(f, msg),
-      controllers.dataset.routes.DataSetImportController.update(id),
-      controllers.dataset.routes.DataSetImportController.listAll(),
-      Some(controllers.dataset.routes.DataSetImportController.delete(id)),
-      None,
-      None,
-      'enctype -> "multipart/form-data"
-    )(flash, msg, request)
 
   // default form... unused
   override protected val form = csvForm.asInstanceOf[Form[DataSetImport]]
@@ -453,4 +447,43 @@ class DataSetImportController @Inject()(
     new FileOutputStream(dest) getChannel() transferFrom(
       new FileInputStream(src) getChannel, 0, Long.MaxValue )
   }
+
+
+  private def createView[T <: DataSetImport](
+    name: String,
+    elements: (Form[T], Messages) => Html)(
+    f: Form[T],
+    flash: Flash,
+    msg: Messages,
+    request: Request[_]
+  ) =
+    layout.create(
+      name,
+      f,
+      elements(f, msg),
+      controllers.dataset.routes.DataSetImportController.save,
+      controllers.routes.AppController.index,
+      'enctype -> "multipart/form-data"
+    )(flash, msg, request)
+
+  private def editView[T <: DataSetImport](
+    name: String,
+    elements: (Form[T], Messages) => Html)(
+    id: BSONObjectID,
+    f: Form[T],
+    flash: Flash,
+    msg: Messages,
+    request: Request[_]
+  ) =
+    layout.edit(
+      name,
+      f.errors,
+      elements(f, msg),
+      controllers.dataset.routes.DataSetImportController.update(id),
+      controllers.dataset.routes.DataSetImportController.listAll(),
+      Some(controllers.dataset.routes.DataSetImportController.delete(id)),
+      None,
+      None,
+      'enctype -> "multipart/form-data"
+    )(flash, msg, request)
 }

@@ -113,13 +113,13 @@ class RepoModule extends ScalaModule {
     // install JSON repo factories and its cached version
     install(new FactoryModuleBuilder()
       .implement(new TypeLiteral[JsonCrudRepo]{}, classOf[MongoJsonCrudRepo])
-      .build(Key.get(classOf[JsonCrudRepoFactory], Names.named("MongoJsonCrudRepoFactory"))))
+      .build(Key.get(classOf[MongoJsonCrudRepoFactory], Names.named("MongoJsonCrudRepoFactory"))))
 
     install(new FactoryModuleBuilder()
       .implement(new TypeLiteral[JsonCrudRepo]{}, classOf[ElasticJsonCrudRepo])
       .build(Key.get(classOf[JsonCrudRepoFactory], Names.named("ElasticJsonCrudRepoFactory"))))
 
-    bind[JsonCrudRepoFactory]
+    bind[MongoJsonCrudRepoFactory]
       .annotatedWith(Names.named("CachedJsonCrudRepoFactory"))
       .to(classOf[JsonBinaryCacheAsyncCrudRepoFactory])
 

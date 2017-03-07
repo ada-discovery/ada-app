@@ -1003,65 +1003,110 @@ class DataSetServiceImpl @Inject()(
     line: String,
     matchQuotes: Boolean = true
   ): Seq[String] = {
-    val itemsWithQuotePrefixAndSuffix = line.split(delimiter, -1).map { l =>
+    val itemsWithPrefixAndSuffix = line.split(delimiter, -1).map { l =>
       val trimmed = l.trim
 
       if (matchQuotes) {
-        val content = if (trimmed.startsWith("\"[") && trimmed.endsWith("]\"")) {
-          trimmed.substring(2, trimmed.size - 2)
-        } else
-          trimmed
+        val (item, prefixSuffix) = handlePrefixSuffixes(trimmed, Seq(
+            ("\"[", "]\""),
+            ("[", "]"),
+            ("\"", "\"")
+          ))
 
-        val quotePrefix = getPrefix(content, '\"')
-        val quoteSuffix = getSuffix(content, '\"')
-        val item =
-          if (quotePrefix.equals(content)) {
-            // the string is just quotes from the start to the end
-            ""
-          } else {
-            content.substring(quotePrefix.size, content.size - quoteSuffix.size).trim.replaceAll("\\\\\"", "\"")
-          }
-        (item, quotePrefix, quoteSuffix)
+        // TODO: this seems very ad-hoc and should be investigated where it is actually used
+        val newItem = item.replaceAll("\\\\\"", "\"")
+
+        (newItem, prefixSuffix)
       } else {
-        (trimmed, "", "")
+        (trimmed, None)
       }
     }
 
-    fixImproperPrefixSuffix(delimiter, itemsWithQuotePrefixAndSuffix)
+    fixImproperPrefixSuffix(delimiter, itemsWithPrefixAndSuffix)
   }
 
-  private def getPrefix(string: String, char: Char) =
-    string.takeWhile(_.equals(char))
+  private def handlePrefixSuffixes(
+    string: String,
+    prefixSuffixStrings: Seq[(String, String)]
+  ): (String, Option[PrefixSuffix]) =
+    prefixSuffixStrings.foldLeft((string, Option.empty[PrefixSuffix])){
+      case ((string, prefixSuffix), (prefix, suffix)) =>
+        if (prefixSuffix.isDefined)
+          (string, prefixSuffix)
+        else
+          handlePrefixSuffix(string, prefix, suffix)
+    }
 
-  private def getSuffix(string: String, char: Char) =
-    getPrefix(string.reverse, char)
+  private def handlePrefixSuffix(
+    string: String,
+    prefixString: String,
+    suffixString: String
+  ): (String, Option[PrefixSuffix]) = {
+    val prefixMatchCount = getPrefixMatchCount(string, prefixString)
+    val suffixMatchCount = getSuffixMatchCount(string, suffixString)
+
+    if (prefixMatchCount == 0 && suffixMatchCount == 0)
+      (string, None)
+    else {
+      val prefix = prefixString * prefixMatchCount
+      val suffix = suffixString * suffixMatchCount
+      val expectedSuffix = suffixString * prefixMatchCount
+
+      val item =
+        if (prefix.equals(string)) {
+          // the string is just prefix and suffix from the start to the end
+          ""
+        } else {
+          string.substring(prefix.length, string.length - suffix.length).trim
+        }
+      (item, Some(PrefixSuffix(prefix, expectedSuffix, suffix)))
+    }
+  }
+
+  private def getPrefixMatchCount(string: String, matchingString: String): Int =
+    if (matchingString.isEmpty)
+      0
+    else
+      string.grouped(matchingString.length).takeWhile(_.equals(matchingString)).size
+
+  private def getSuffixMatchCount(string: String, matchingString: String) =
+    getPrefixMatchCount(string.reverse, matchingString)
+
+  private case class PrefixSuffix(
+    prefix: String,
+    expectedSuffix: String,
+    suffix: String
+  )
 
   private def fixImproperPrefixSuffix(
     delimiter: String,
-    itemsWithPrefixAndSuffix: Array[(String, String, String)]
+    itemsWithPrefixSuffix: Array[(String, Option[PrefixSuffix])]
   ) = {
     val fixedItems = ListBuffer.empty[String]
 
-    var unmatchedPrefixOption: Option[String] = None
+    var unmatchedSuffixOption: Option[String] = None
 
     var bufferedItem = ""
-    itemsWithPrefixAndSuffix.foreach{ case (item, prefix, suffix) =>
-      unmatchedPrefixOption match {
+    itemsWithPrefixSuffix.foreach{ case (item, prefixSuffix) =>
+      val expectedSuffix = prefixSuffix.map(_.expectedSuffix).getOrElse("")
+      val suffix = prefixSuffix.map(_.suffix).getOrElse("")
+
+      unmatchedSuffixOption match {
         case None =>
-          if (prefix.equals(suffix)) {
+          if (expectedSuffix.equals(suffix)) {
             // if we have both, prefix and suffix matching, everything is fine
             fixedItems += item
           } else {
             // prefix not matching suffix indicates an improper split, buffer
-            unmatchedPrefixOption = Some(prefix)
+            unmatchedSuffixOption = Some(expectedSuffix)
             bufferedItem += item + delimiter
           }
-        case Some(unmatchedPrefix) =>
-          if (unmatchedPrefix.equals(suffix)) {
+        case Some(unmatchedSuffix) =>
+          if (unmatchedSuffix.equals(suffix)) {
             // end buffering
             bufferedItem += item
             fixedItems += bufferedItem
-            unmatchedPrefixOption = None
+            unmatchedSuffixOption = None
             bufferedItem = ""
           } else {
             // continue buffering

@@ -1,0 +1,30 @@
+@import models.EGaitDataSetImport
+@import views.html.elements.{inputText, checkbox}
+@import play.api.i18n.Messages
+@import views.html.datasetimport.{settingPanel, dataSetInfoPanel, schedulePanel, dataViewPanel}
+
+@(form: Form[EGaitDataSetImport])(implicit msg: Messages)
+
+@dataSetInfoPanel("eGaitDataSetImport", form)
+
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[EGaitDataSetImport].getName}">
+
+<div class="panel panel-default">
+    <div class="panel-heading">eGait</div>
+    <div class="panel-body">
+        N/A
+    </div>
+</div>
+
+@settingPanel(form)
+@dataViewPanel(form)
+@schedulePanel(form)
+
+<script type="text/javascript">
+    $('form').submit(function(ev) {
+        ev.preventDefault();
+        handleSettingSubmission();
+        handleDataViewSubmission();
+        this.submit();
+    });
+</script>

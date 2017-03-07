@@ -53,6 +53,7 @@ case class DataSetSetting(
   tranSMARTVisitFieldName: Option[String],
   tranSMARTReplacements: Map[String, String],
   storageType: StorageType.Value,
+  mongoAutoCreateIndexForProjection: Boolean = false,
   cacheDataSet: Boolean = false
 ) {
   def this(dataSetId: String) = this(None, dataSetId, "", None, None, None, "", None, None, None, Map[String, String](), StorageType.Mongo)

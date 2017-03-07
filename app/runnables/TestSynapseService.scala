@@ -6,7 +6,7 @@ import javax.inject.Inject
 
 import models.synapse._
 import org.apache.commons.io.IOUtils
-import services.{ZipFileIterator, SynapseServiceFactory}
+import services.SynapseServiceFactory
 import scala.concurrent.Await.result
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

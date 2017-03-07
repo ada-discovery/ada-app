@@ -26,6 +26,7 @@ class TestBinaryIgnite @Inject() (ignite: Ignite, cacheFactory: BinaryCacheFacto
       Nil,
       new MongoJsonRepoFactory(
         collectionName,
+        false,
         configuration,
         new SerializableApplicationLifecycle()
       ),
