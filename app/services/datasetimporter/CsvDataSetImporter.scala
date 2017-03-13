@@ -37,7 +37,7 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
           if (importInfo.inferFieldTypes)
             saveDataAndDictionaryWithTypeInference(dsa, columnNames, values, importInfo)
           else
-            saveDataAndDictionaryWithoutTypeInference(dsa, columnNames, values, importInfo.saveBatchSize)
+            saveStringsAndDictionaryWithoutTypeInference(dsa, columnNames, values, importInfo.saveBatchSize)
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
       }
@@ -68,6 +68,6 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
       } else
         None
 
-    saveDataAndDictionaryWithTypeInference(dsa, columnNames, values, importInfo.saveBatchSize, fti)
+    saveStringsAndDictionaryWithTypeInference(dsa, columnNames, values, importInfo.saveBatchSize, fti)
   }
 }

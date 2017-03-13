@@ -104,6 +104,7 @@ case class EGaitDataSetImport(
   dataSpaceName: String,
   dataSetId: String,
   dataSetName: String,
+  importRawData: Boolean = false,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
   setting: Option[DataSetSetting] = None,

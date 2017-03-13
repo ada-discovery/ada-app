@@ -199,6 +199,7 @@ class DataSetImportController @Inject()(
       "dataSpaceName" -> nonEmptyText,
       "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
       "dataSetName" -> nonEmptyText,
+      "importRawData" ->  boolean,
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),

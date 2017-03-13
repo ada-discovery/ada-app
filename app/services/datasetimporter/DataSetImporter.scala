@@ -4,7 +4,7 @@ import java.nio.charset.{Charset, MalformedInputException, UnsupportedCharsetExc
 import javax.inject.Inject
 
 import dataaccess._
-import models.{AdaParseException, CsvDataSetImport, DataSetImport}
+import models.{AdaParseException, CsvDataSetImport, DataSetImport, FieldTypeSpec}
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
@@ -107,7 +107,7 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
     }
   }
 
-  protected def saveDataAndDictionaryWithoutTypeInference(
+  protected def saveStringsAndDictionaryWithoutTypeInference(
     dsa: DataSetAccessor,
     columnNames: Seq[String],
     values: Iterator[Seq[String]],
@@ -156,7 +156,7 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
       ()
   }
 
-  protected def saveDataAndDictionaryWithTypeInference(
+  protected def saveStringsAndDictionaryWithTypeInference(
     dsa: DataSetAccessor,
     columnNames: Seq[String],
     values: Iterator[Seq[String]],
@@ -167,13 +167,20 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
     logger.info(s"Inferring field types and creating JSONs...")
 
     val (jsons, fieldNameAndTypes) = createJsonsWithFieldTypes(columnNames, values.toSeq, fti)
+    val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
 
+    saveJsonsAndDictionary(dsa, jsons, fieldNameTypeSpecs, saveBatchSize)
+  }
+
+  protected def saveJsonsAndDictionary(
+    dsa: DataSetAccessor,
+    jsons: Seq[JsObject],
+    fieldNameAndTypeSpecs: Seq[(String, FieldTypeSpec)],
+    saveBatchSize: Option[Int] = None
+  ): Future[Unit] =
     for {
-    // save, or update the dictionary
-      _ <- {
-        val fieldNameTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-        dataSetService.updateDictionary(dsa.fieldRepo, fieldNameTypeSpecs, true, true)
-      }
+      // save, or update the dictionary
+      _ <- dataSetService.updateDictionary(dsa.fieldRepo, fieldNameAndTypeSpecs, true, true)
 
       // since we possible changed the dictionary (the data structure) we need to update the data set repo
       _ <- dsa.updateDataSetRepo
@@ -194,5 +201,4 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
       }
     } yield
       ()
-  }
 }

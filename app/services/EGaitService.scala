@@ -5,16 +5,20 @@ import javax.net.ssl.SSLContext
 
 import com.google.inject.assistedinject.Assisted
 import com.ning.http.client.AsyncHttpClientConfigBean
+import dataaccess.ConversionUtil
+import models.egait.{EGaitKineticData, SpatialPoint}
 import play.api.libs.ws.{WSAuthScheme, WSClient, WSRequest, WSResponse}
 import play.api.{Configuration, Logger}
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.ning.NingWSClient
-import org.apache.commons.codec.binary.{Hex, Base64}
+import org.apache.commons.codec.binary.{Base64, Hex}
+import util.ZipFileIterator
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.io.{Codec, Source}
+import scala.xml.{Node, XML}
 
 trait EGaitServiceFactory {
   def apply(@Assisted("username") username: String, @Assisted("password") password: String): EGaitService
@@ -73,6 +77,12 @@ trait EGaitService {
     userSessionId: String,
     searchSessionId: String
   ): Future[Array[Byte]]
+
+  def downloadRawDataStructured(
+    sessionToken: String,
+    userSessionId: String,
+    searchSessionId: String
+  ): Future[Seq[EGaitKineticData]]
 }
 
 protected[services] class EGaitServiceWSImpl @Inject() (
@@ -99,6 +109,8 @@ protected[services] class EGaitServiceWSImpl @Inject() (
     val SearchSessions = "MilifeSession"
     val CsvDownload = "MilifeRest"
   }
+
+  private val dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
 
   private val ws = {
     val config = new AsyncHttpClientConfigBean
@@ -269,7 +281,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
         getConnectionToken(ConnectionServiceName.CsvDownload, sessionToken)
 
       // get the csv (content)
-      csv <- {
+      bytes <- {
         val request =
           withConnectionToken(connectionToken)(
             withUserSessionId(userSessionId)(
@@ -280,7 +292,93 @@ protected[services] class EGaitServiceWSImpl @Inject() (
         request.get.map(_.bodyAsBytes)
       }
     } yield
-      csv
+      bytes
+
+  case class TestInfo(name: String, duration: Int, rightStart: Int, rightStop: Int, leftStart: Int, leftStop: Int)
+
+  override def downloadRawDataStructured(
+    sessionToken: String,
+    userSessionId: String,
+    searchSessionId: String
+  ): Future[Seq[EGaitKineticData]] =
+    for {
+      rawData <- downloadRawData(sessionToken, userSessionId, searchSessionId)
+    } yield {
+      val files = ZipFileIterator.asBytes(rawData).toSeq
+
+      val rightSensorKineticData = extractKineticData(files(1)._2).toSeq
+      val leftSensorKineticData = extractKineticData(files(2)._2).toSeq
+
+      val sessionXmlString = new String(files(0)._2, "UTF-8")
+      val sessionXML = XML.loadString(sessionXmlString)
+
+      val testInfos = parseTestInfos(sessionXML)
+
+      testInfos.map { testInfo =>
+        val testRightKineticData = rightSensorKineticData.slice(testInfo.rightStart, testInfo.rightStop)
+        val testLeftKineticData = leftSensorKineticData.slice(testInfo.leftStart, testInfo.leftStop)
+
+//        s"${testInfo.name}, ${testInfo.duration}:\nRight: ${testInfo.rightStart}, ${testInfo.rightStop}, size: ${testRightKineticData.size}\nLeft: ${testInfo.leftStart}, ${testInfo.leftStop}, size: ${testLeftKineticData.size}"
+
+        EGaitKineticData(
+          sessionId = (sessionXML \ "SessionId").text,
+          personId = (sessionXML \ "PersonId").text,
+          instructor = (sessionXML \ "Instructor").text,
+          startTime = ConversionUtil.toDate(Seq(dateFormat))((sessionXML \ "Start").text),
+          testName = testInfo.name,
+          testDuration = testInfo.duration,
+          rightSensorFileName = files(1)._1,
+          leftSensorFileName = files(2)._1,
+          rightSensorStartIndex = testInfo.rightStart,
+          rightSensorStopIndex = testInfo.rightStop,
+          leftSensorStartIndex = testInfo.leftStart,
+          leftSensorStopIndex = testInfo.leftStop,
+          rightAccelerometerPoints = testRightKineticData.map(_._1),
+          rightGyroscopePoints = testRightKineticData.map(_._2),
+          leftAccelerometerPoints = testLeftKineticData.map(_._1),
+          leftGyroscopePoints = testLeftKineticData.map(_._2)
+        )
+      }
+    }
+
+  // the first component is accelerometer, the second one gyroscope
+  private def extractKineticData(bytes: Array[Byte]): Iterator[(SpatialPoint, SpatialPoint)] =
+    bytes.grouped(12).map { timePointData =>
+      // little-endian conversion
+//      def intValue(startIndex: Int) = ((timePointData(startIndex + 1) & 0xff) << 8) | (timePointData(startIndex) & 0xff)
+      def intValue(startIndex: Int) = (timePointData(startIndex + 1) << 8 | timePointData(startIndex) & 0xff)
+
+      val accelerometerPoint = SpatialPoint(x = intValue(0), y = intValue(2), z = intValue(4))
+      val gyroscopePoint = SpatialPoint(x = intValue(6), y = intValue(8), z = intValue(10))
+      (accelerometerPoint, gyroscopePoint)
+    }
+
+  private def parseTestInfos(sessionXML: Node): Seq[TestInfo] =
+    (sessionXML \ "TestList" \ "Test").map { testXML =>
+      val testName = (testXML \ "Name").text
+      val duration = (testXML \ "Duration").text.toInt
+
+      def posStartStop(moteXML: Node) = {
+        val position  = (moteXML \ "Position").text
+        val start = (moteXML \ "Tag" \ "Start").text.toInt
+        val stop = (moteXML \ "Tag" \ "Stop").text.toInt
+        (position, start, stop)
+      }
+
+      val moteXMLs = (testXML \ "MoteList" \ "Mote")
+      if (moteXMLs.size != 2)
+        throw new IllegalArgumentException("eGait Test XML " + testXML.toString + " do not contain two motes for and left and right sensors).")
+
+      val startStops = moteXMLs.map(posStartStop)
+
+      val rightStartStop = startStops.find(_._1.equals("RightFoot"))
+      val leftStartStop = startStops.find(_._1.equals("LeftFoot"))
+
+      if (rightStartStop.isEmpty && leftStartStop.isEmpty)
+        throw new IllegalArgumentException("eGait Test XML " + testXML.toString + " do not contain two motes for and left and right sensors).")
+
+      TestInfo(testName, duration, rightStartStop.get._2, rightStartStop.get._3, leftStartStop.get._2, leftStartStop.get._3)
+    }
 
   private def withXmlContent(request: WSRequest): WSRequest =
     request.withHeaders("Content-Type" -> "application/xml")

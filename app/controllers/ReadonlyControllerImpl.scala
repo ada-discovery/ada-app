@@ -12,9 +12,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
 import play.twirl.api.Html
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
-
 import scala.concurrent.{Await, Future}
 
 trait ReadonlyController[ID] {

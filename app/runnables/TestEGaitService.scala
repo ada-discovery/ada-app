@@ -6,11 +6,12 @@ import services.EGaitServiceFactory
 
 import scala.concurrent.Await.result
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.Configuration
+import play.api.{Configuration, Play}
 import util.ZipFileIterator
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.xml.XML
 
 class TestEGaitService @Inject() (
     configuration: Configuration,
@@ -41,9 +42,9 @@ class TestEGaitService @Inject() (
         )
       )
 
-      rawDatas <- Future.sequence(
+      kineticDatas <- Future.sequence(
         searchSessionIds.map( searchSessionId =>
-          eGaitService.downloadRawData(proxySessionToken, userSessionId, searchSessionId)
+          eGaitService.downloadRawDataStructured(proxySessionToken, userSessionId, searchSessionId)
         )
       )
 
@@ -55,14 +56,41 @@ class TestEGaitService @Inject() (
       println("CSVs:")
       println("-------")
       println(csvs.mkString("\n"))
-      println("Raw Data:")
-      println("--------")
+      println("Kinetic (Raw) Data:")
+      println("-------------------")
 
-      val fileNames = rawDatas.map( rawData =>
-        ZipFileIterator(rawData).map(_._1).mkString(", ")
-      )
+      val kineticDataStrings = kineticDatas.flatten.map { kineticData =>
+        s"""
+          ${kineticData.sessionId}, ${kineticData.personId}, ${kineticData.instructor}, ${kineticData.startTime}, ${kineticData.testName},
+          ${kineticData.rightSensorFileName}, ${kineticData.leftSensorFileName}
 
-      println(fileNames.mkString("\n"))
+          Right Accelerometer
+
+          x: ${kineticData.rightAccelerometerPoints.take(10).map(_.x).mkString(", ")}
+          y: ${kineticData.rightAccelerometerPoints.take(10).map(_.y).mkString(", ")}
+          z: ${kineticData.rightAccelerometerPoints.take(10).map(_.z).mkString(", ")}
+
+          Right Gyroscope
+
+          x: ${kineticData.rightGyroscopePoints.take(10).map(_.x).mkString(", ")}
+          y: ${kineticData.rightGyroscopePoints.take(10).map(_.y).mkString(", ")}
+          z: ${kineticData.rightGyroscopePoints.take(10).map(_.z).mkString(", ")}
+
+          Left Accelerometer
+
+          x: ${kineticData.leftAccelerometerPoints.take(10).map(_.x).mkString(", ")}
+          y: ${kineticData.leftAccelerometerPoints.take(10).map(_.y).mkString(", ")}
+          z: ${kineticData.leftAccelerometerPoints.take(10).map(_.z).mkString(", ")}
+
+          Left Gyroscope
+
+          x: ${kineticData.leftGyroscopePoints.take(10).map(_.x).mkString(", ")}
+          y: ${kineticData.leftGyroscopePoints.take(10).map(_.y).mkString(", ")}
+          z: ${kineticData.leftGyroscopePoints.take(10).map(_.z).mkString(", ")}
+        """
+      }
+
+      println(kineticDataStrings.mkString("\n"))
     }
 
     result(future, timeout)
