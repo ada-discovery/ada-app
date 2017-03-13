@@ -104,6 +104,7 @@ GET         /studies/records/findCustom                                         
 
 # DictionaryDispatcher
 GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /studies/dictionary/listAll                                             controllers.dataset.DictionaryDispatcher.listAll(s: String ?= "name")
 GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)
 POST        /studies/dictionary/save                                                controllers.dataset.DictionaryDispatcher.save
 GET         /studies/dictionary/edit/:name                                          controllers.dataset.DictionaryDispatcher.edit(name: String)
