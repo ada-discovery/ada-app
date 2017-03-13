@@ -171,3 +171,12 @@ The following query returns JSONs with two fields: __Geschlecht__ (gender), and 
 curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json" 
                 -d "dataSet=denopa.clinical_baseline&orderBy=a_Alter&projection=Geschlecht&projection=a_Alter&filterOrId=[{\"fieldName\":\"a_Alter\",\"conditionType\":\">\",\"value\":\"70\"}]" --cookie "PLAY2AUTH_SESS_ID=xxx"
 ```
+
+<br/>
+
+**Get Dictionary**
+
+```bash
+curl -X GET -G http://10.79.2.192:8080/studies/dictionary/listAll -H "Accept: application/json"
+            -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx"
+```
