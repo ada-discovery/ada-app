@@ -29,6 +29,11 @@ private class EGaitDataSetImporter @Inject()(
   private val saveBatchSize = 100
 //  private val rawSaveBatchSize = 2
 
+  private val prefixSuffixSeparators = Seq(
+    ("\"", "\""),
+    ("[", "]")
+  )
+
   // Field type inferrer
   private val nullValueAliases = Set("", "-")
   private val fti = {
@@ -105,7 +110,7 @@ private class EGaitDataSetImporter @Inject()(
       // parse lines
       values = {
         logger.info(s"Parsing lines...")
-        dataSetService.parseLines(columnNames, lines, delimiter.toString, true)
+        dataSetService.parseLines(columnNames, lines, delimiter.toString, true, prefixSuffixSeparators)
       }
 
       _ <- saveStringsAndDictionaryWithTypeInference(dsa, columnNames, values, Some(saveBatchSize), Some(fti))

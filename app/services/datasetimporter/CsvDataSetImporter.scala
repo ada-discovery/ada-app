@@ -11,6 +11,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImport] {
 
+  private val quotePrefixSuffix = ("\"", "\"")
+
   override def apply(importInfo: CsvDataSetImport): Future[Unit] = {
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
@@ -29,7 +31,8 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
 
       // parse lines
       logger.info(s"Parsing lines...")
-      val values = dataSetService.parseLines(columnNames, lines, importInfo.delimiter, importInfo.eol.isDefined, importInfo.matchQuotes)
+      val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
+      val values = dataSetService.parseLines(columnNames, lines, importInfo.delimiter, importInfo.eol.isDefined, prefixSuffixSeparators)
 
       for {
         // save the jsons and dictionary

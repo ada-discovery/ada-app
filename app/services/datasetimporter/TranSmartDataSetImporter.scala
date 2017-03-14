@@ -18,6 +18,8 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
   private val tranSmartDelimeter = '\t'
   private val tranSmartFieldGroupSize = 100
 
+  private val quotePrefixSuffix = ("\"", "\"")
+
   override def apply(importInfo: TranSmartDataSetImport): Future[Unit] = {
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
@@ -38,7 +40,8 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
 
       // parse lines
       logger.info(s"Parsing lines...")
-      val values = dataSetService.parseLines(columnNames, lines, delimiter, false, importInfo.matchQuotes)
+      val prefixSuffixSeparators = if (importInfo.matchQuotes) Seq(quotePrefixSuffix) else Nil
+      val values = dataSetService.parseLines(columnNames, lines, delimiter, false, prefixSuffixSeparators)
 
       for {
         // save the jsons and dictionary

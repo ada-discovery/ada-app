@@ -48,6 +48,8 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     dataSetSettingRepo: DataSetSettingRepo
   ) extends RefreshableCache[String, DataSetAccessor](true) with DataSetAccessorFactory {
 
+  println("Creating DataSetAccessorFactoryImpl!!!")
+
   override protected def createInstance(dataSetId: String): DataSetAccessor = {
     val fieldRepo = fieldRepoFactory(dataSetId)
     val categoryRepo = categoryRepoFactory(dataSetId)

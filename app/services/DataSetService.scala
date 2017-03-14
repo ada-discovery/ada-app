@@ -72,13 +72,13 @@ trait DataSetService {
     lines: Iterator[String],
     delimiter: String,
     skipFirstLine: Boolean,
-    matchQuotes: Boolean = true
+    prefixSuffixSeparators: Seq[(String, String)] = Nil
   ): Iterator[Seq[String]]
 
   def parseLine(
     delimiter: String,
     line: String,
-    matchQuotes: Boolean = true
+    prefixSuffixSeparators: Seq[(String, String)] = Nil
   ): Seq[String]
 
   def saveOrUpdateRecords(
@@ -330,7 +330,7 @@ class DataSetServiceImpl @Inject()(
     lines: Iterator[String],
     delimiter: String,
     skipFirstLine: Boolean,
-    matchQuotes: Boolean = true
+    prefixSuffixSeparators: Seq[(String, String)] = Nil
   ): Iterator[Seq[String]] = {
     val columnCount = columnNames.size
 
@@ -343,10 +343,10 @@ class DataSetServiceImpl @Inject()(
       // parse the line
       val values =
         if (lineBuffer.isEmpty) {
-          parseLine(delimiter, line, matchQuotes)
+          parseLine(delimiter, line, prefixSuffixSeparators)
         } else {
           val bufferedLine = lineBuffer.mkString("") + line
-          parseLine(delimiter, bufferedLine, matchQuotes)
+          parseLine(delimiter, bufferedLine, prefixSuffixSeparators)
         }
 
       if (values.size < columnCount) {
@@ -998,20 +998,44 @@ class DataSetServiceImpl @Inject()(
       )}.flatten.toList
 
   // parse the lines, returns the parsed items
+//  override def parseLine(
+//    delimiter: String,
+//    line: String,
+//    matchQuotes: Boolean = true
+//  ): Seq[String] = {
+//    val itemsWithPrefixAndSuffix = line.split(delimiter, -1).map { l =>
+//      val trimmed = l.trim
+//
+//      if (matchQuotes) {
+//        val (item, prefixSuffix) = handlePrefixSuffixes(trimmed, Seq(
+//            ("\"[", "]\""),
+//            ("[", "]"),
+//            ("\"", "\"")
+//          ))
+//
+//        // TODO: this seems very ad-hoc and should be investigated where it is actually used
+//        val newItem = item.replaceAll("\\\\\"", "\"")
+//
+//        (newItem, prefixSuffix)
+//      } else {
+//        (trimmed, None)
+//      }
+//    }
+//
+//    fixImproperPrefixSuffix(delimiter, itemsWithPrefixAndSuffix)
+//  }
+
+  // parse the line, returns the parsed items
   override def parseLine(
     delimiter: String,
     line: String,
-    matchQuotes: Boolean = true
+    prefixSuffixSeparators: Seq[(String, String)] = Nil
   ): Seq[String] = {
     val itemsWithPrefixAndSuffix = line.split(delimiter, -1).map { l =>
       val trimmed = l.trim
 
-      if (matchQuotes) {
-        val (item, prefixSuffix) = handlePrefixSuffixes(trimmed, Seq(
-            ("\"[", "]\""),
-            ("[", "]"),
-            ("\"", "\"")
-          ))
+      if (prefixSuffixSeparators.nonEmpty) {
+        val (item, prefixSuffix) = handlePrefixSuffixes(trimmed, prefixSuffixSeparators)
 
         // TODO: this seems very ad-hoc and should be investigated where it is actually used
         val newItem = item.replaceAll("\\\\\"", "\"")
@@ -1070,7 +1094,7 @@ class DataSetServiceImpl @Inject()(
       string.grouped(matchingString.length).takeWhile(_.equals(matchingString)).size
 
   private def getSuffixMatchCount(string: String, matchingString: String) =
-    getPrefixMatchCount(string.reverse, matchingString)
+    getPrefixMatchCount(string.reverse, matchingString.reverse)
 
   private case class PrefixSuffix(
     prefix: String,
@@ -1114,12 +1138,15 @@ class DataSetServiceImpl @Inject()(
           }
       }
     }
+    if (unmatchedSuffixOption.isDefined) {
+      throw new AdaParseException(s"Unmatched suffix detected ${unmatchedSuffixOption.get}.")
+    }
     fixedItems
   }
 
   private def logProgress(index: Int, granularity: Double, total: Int) =
     if (index == total || (index % granularity) < ((index - 1) % granularity)) {
-      val progress = (index * 100) / total
+      val progress = if (total != 0) (index * 100) / total else 100
       val sb = new StringBuilder
       sb.append("Progress: [")
       for (_ <- 1 to progress)

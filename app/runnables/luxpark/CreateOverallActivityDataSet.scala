@@ -174,7 +174,7 @@ class CreateOverallActivityDataSet  @Inject()(
           val dataSetRepo = dsa.dataSetRepo
 
           for {
-          //            _ <- checkFields(dsa.fieldRepo, dataSetId)
+            // _ <- checkFields(dsa.fieldRepo, dataSetId)
             fields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
 
             items <- dataSetRepo.find(projection = fieldNames)
@@ -183,7 +183,9 @@ class CreateOverallActivityDataSet  @Inject()(
 
             val fieldMap = fields.map( field => (field.name, field)).toMap
             items.map { item =>
-              val originalAppVersionField = fieldMap.get(appVersionField.name).get
+              val originalAppVersionField = fieldMap.get(appVersionField.name).getOrElse(
+                throw new AdaException(s"The field ${appVersionField.name} not found in the data set $dataSetId.")
+              )
               val originalAppVersionFieldType = ftf(originalAppVersionField.fieldTypeSpec)
               val originalAppVersionString = originalAppVersionFieldType.jsonToDisplayString(item \ appVersionField.name)
 

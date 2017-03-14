@@ -29,6 +29,12 @@ private class SynapseDataSetImporter @Inject() (
   private val synapseDefaultBulkDownloadGroupNumber = 5
   private val keyField = "ROW_ID"
 
+  private val prefixSuffixSeparators = Seq(
+    ("\"[\"\"", "\"\"]\""),
+    ("\"[", "]\""),
+    ("\"", "\"")
+  )
+
   override def apply(importInfo: SynapseDataSetImport): Future[Unit] = {
     val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
 
@@ -78,8 +84,7 @@ private class SynapseDataSetImporter @Inject() (
 
       // parse lines
       logger.info(s"Parsing lines...")
-      val values = dataSetService.parseLines(columnNames, lines, delimiter, true)
-
+      val values = dataSetService.parseLines(columnNames, lines, delimiter, true, prefixSuffixSeparators)
 
       for {
         // get all the fields
