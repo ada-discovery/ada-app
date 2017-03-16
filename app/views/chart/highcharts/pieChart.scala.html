@@ -1,14 +1,28 @@
 @import util.shorten
-@import models.DataPoint
+@import models.Count
 
-@(title: String, chartElementName: String, showLabels: Boolean, showLegend: Boolean, elements: Seq[DataPoint])
+@(
+    title: String,
+    chartElementName: String,
+    showLabels: Boolean,
+    showLegend: Boolean,
+    elements: Seq[Count]
+)
 
 <script type="text/javascript">
-    pieChart('@title', '@{chartElementName}', @showLabels, @showLegend,
-        [ @elements.map { case DataPoint(key, value, label) => {
+    (function() {
+        var data = [ @elements.map { case Count(key, value, label) => {
             name : '@shorten(label)',
             y : @value,
             key: '@key'
-         },}]
-    );
+        },}]
+
+        var series = [{
+            name: '@title',
+            colorByPoint: true,
+            data: data
+        }]
+
+        pieChart('@title', '@{chartElementName}', series, @showLabels, @showLegend);
+    })()
 </script>

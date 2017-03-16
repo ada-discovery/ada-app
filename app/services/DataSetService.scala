@@ -997,34 +997,6 @@ class DataSetServiceImpl @Inject()(
         escapeKey(columnName.replaceAll("\"", "").trim)
       )}.flatten.toList
 
-  // parse the lines, returns the parsed items
-//  override def parseLine(
-//    delimiter: String,
-//    line: String,
-//    matchQuotes: Boolean = true
-//  ): Seq[String] = {
-//    val itemsWithPrefixAndSuffix = line.split(delimiter, -1).map { l =>
-//      val trimmed = l.trim
-//
-//      if (matchQuotes) {
-//        val (item, prefixSuffix) = handlePrefixSuffixes(trimmed, Seq(
-//            ("\"[", "]\""),
-//            ("[", "]"),
-//            ("\"", "\"")
-//          ))
-//
-//        // TODO: this seems very ad-hoc and should be investigated where it is actually used
-//        val newItem = item.replaceAll("\\\\\"", "\"")
-//
-//        (newItem, prefixSuffix)
-//      } else {
-//        (trimmed, None)
-//      }
-//    }
-//
-//    fixImproperPrefixSuffix(delimiter, itemsWithPrefixAndSuffix)
-//  }
-
   // parse the line, returns the parsed items
   override def parseLine(
     delimiter: String,

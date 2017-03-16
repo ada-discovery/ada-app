@@ -7,7 +7,21 @@
 )
 
 <script type="text/javascript">
-    columnChart('@title', '@{chartElementName}', '@{xAxisCaption.getOrElse("")}', '@{yAxisCaption.getOrElse("")}', true,
-        [ @elements.map { case (x, y) => '@x',}], [ @elements.map { case (x, y) => @y,}]
-    )
+    (function() {
+        var series = [{
+            name: '@title',
+            colorByPoint: true,
+            data: [@elements.map { case (x, y) => @y, }]
+        }]
+
+        columnChart(
+            '@title',
+            '@{chartElementName}',
+            [ @elements.map { case (x, y) => '@x',}],
+            series,
+            true,
+            '@{xAxisCaption.getOrElse("")}',
+            '@{yAxisCaption.getOrElse("")}'
+        )
+    })()
 </script>

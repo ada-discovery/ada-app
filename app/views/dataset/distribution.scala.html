@@ -18,6 +18,7 @@
 @(
     domainName: String,
     field: Option[Field],
+    groupField: Option[Field],
     chartSpecs: Seq[ChartSpec],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
@@ -31,7 +32,7 @@
         <div class="col-md-10">
             @filter(
                 Some(filterSpec),
-                dataSetRouter.getDistribution(field.map(_.name), filterSpec.conditionsOrId),
+                dataSetRouter.getDistribution(field.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
                 Right(dataSetRouter.allFields),
                 Some(Right(categoryRouter.getCategoriesWithFieldsAsTreeNodes)),
                 filterShowFieldStyle,
@@ -66,8 +67,19 @@
                 <!-- hacky solution to pass data set param since it's ignored when passed as a part of the call in the form action -->
                 <input type="hidden" name="dataSet" value="@context.dataSetId"/>
                 <input type="hidden" name="filterOrId" value="@Json.toJson(filterSpec.conditionsOrId)"/>
-                <input id="fieldTypeahead"class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@field.map(_.labelOrElseName)">
-                <input id="fieldName" name="fieldName" type="hidden" value="@field.map(_.name)">
+                <div class="row">
+                    <div class="col-md-3">
+                        <input id="fieldTypeahead"class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@field.map(_.labelOrElseName)">
+                        <input id="fieldName" name="fieldName" type="hidden" value="@field.map(_.name)">
+                    </div>
+                    <div class="col-md-2" align="right">
+                        <label class="top-padded">Group by</label>
+                    </div>
+                    <div class="col-md-3">
+                        <input id="groupFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name or Label" value="@groupField.map(_.labelOrElseName)">
+                        <input id="groupFieldName" name="groupFieldName" type="hidden" value="@groupField.map(_.name)">
+                    </div>
+                </div>
             }
         </div>
     </div>
@@ -111,11 +123,29 @@
             @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         )
 
+        populateFieldTypeahedFromUrl(
+            $('#fieldForm #groupFieldTypeahead'),
+            $('#fieldForm #groupFieldName'),
+            '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+            @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+        );
+
         $('#fieldForm #fieldTypeahead').on('typeahead:selected', function(e, data) {
             $('#fieldForm').submit();
         });
 
+        $('#fieldForm #groupFieldTypeahead').on('typeahead:selected', function(e, data) {
+            $('#fieldForm').submit();
+        });
+
         $('#fieldForm #fieldTypeahead').keypress(function (e) {
+            if (e.which == 13) {
+                $('#fieldForm').submit();;
+                return false;
+            }
+        });
+
+        $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
             if (e.which == 13) {
                 $('#fieldForm').submit();;
                 return false;

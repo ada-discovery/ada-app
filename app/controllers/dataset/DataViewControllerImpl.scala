@@ -215,7 +215,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
 
     if (newFieldNames.nonEmpty) {
-      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(DistributionCalcSpec(_, None)))
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(DistributionCalcSpec(_, None, None)))
       repo.update(newDataView)
     } else
       Future(())

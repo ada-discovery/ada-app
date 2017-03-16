@@ -24,27 +24,37 @@ import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-@ImplementedBy(classOf[ChartServiceImpl])
-trait ChartService {
+@ImplementedBy(classOf[StatsServiceImpl])
+trait StatsService {
 
-  def createDistributionChartSpec(
-    items: Traversable[JsObject],
-    chartType: Option[ChartType.Value],
-    field: Field,
-    showLabels: Boolean,
-    showLegend: Boolean,
-    outputGridWidth: Option[Int] = None
-  ): Option[ChartSpec]
-
-  def createDistributionChartSpec(
+  def calcDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
-    chartType: Option[ChartType.Value],
+    field: Field
+  ): Future[Seq[Count]]
+
+  def calcDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field
+  ): Seq[Count]
+
+  def calcGroupedDistributionCounts(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
     field: Field,
-    showLabels: Boolean,
-    showLegend: Boolean,
-    outputGridWidth: Option[Int]
-  ): Future[Option[ChartSpec]]
+    groupField: Field
+  ): Future[Seq[(String, Seq[Count])]]
+
+  def calcGroupedDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Field
+  ): Seq[(String, Seq[Count])]
+
+  def categoricalCountsWithFormatting[T](
+    values: Traversable[Option[T]],
+    renderer: Option[Option[T] => String]
+  ): Seq[Count]
 
   def createBoxChartSpec(
     items: Traversable[JsObject],
@@ -76,21 +86,16 @@ trait ChartService {
   ): HeatmapChartSpec
 }
 
-class ChartServiceImpl extends ChartService {
+class StatsServiceImpl extends StatsService {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
   protected val timeout = 200000 millis
 
-  override def createDistributionChartSpec(
+  override def calcDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
-    chartType: Option[ChartType.Value],
-    field: Field,
-    showLabels: Boolean,
-    showLegend: Boolean,
-    outputGridWidth: Option[Int]
-  ): Future[Option[ChartSpec]] = {
-    val chartTitle = field.label.getOrElse(fieldLabel(field.name))
+    field: Field
+  ): Future[Seq[Count]] = {
     val fieldTypeSpec = field.fieldTypeSpec
     val fieldType = ftf(fieldTypeSpec)
     val fieldTypeId = fieldTypeSpec.fieldType
@@ -106,14 +111,6 @@ class ChartServiceImpl extends ChartService {
       }
     }
 
-    def chartOrNone[T](
-      values: Traversable[T],
-      createChart: Traversable[T] => ChartSpec
-    ): Option[ChartSpec] = values match {
-      case Nil => None
-      case values => Some(createChart(values))
-    }
-
     fieldTypeId match {
       case FieldTypeId.String =>
         for {
@@ -121,29 +118,23 @@ class ChartServiceImpl extends ChartService {
         } yield {
           val typedFieldType = fieldType.asValueOf[String]
           val values = jsons.map(json => typedFieldType.jsonToValue(json \ field.name))
-
-          chartOrNone(
-            values,
-            ChartSpec.categorical(
-              _: Traversable[Option[String]], Some(getRenderer[String]), chartTitle, showLabels, showLegend, chartType, outputGridWidth
-            )
-          )
+          categoricalCountsWithFormatting(values, Some(getRenderer[String]))
         }
 
       case FieldTypeId.Enum => {
-        val createChart = ChartSpec.categoricalPlain(
-           _ : Seq[(Option[Int], Int)], Some(getRenderer[Int]), chartTitle, showLabels, showLegend, chartType, outputGridWidth
-        )
-        val values = fieldTypeSpec.enumValues.map(_.map(_._1)).getOrElse(Nil)
-        createDistributionChartSpec(field.name, values, dataRepo, criteria, createChart)
+        val values = fieldTypeSpec.enumValues.map(_.map(_._1).toSeq.sorted).getOrElse(Nil)
+        for {
+          counts <- categoricalCountsRepo(field.name, values, dataRepo, criteria)
+        } yield
+          formatCategoricalCounts(counts, Some(getRenderer[Int]))
       }
 
       case FieldTypeId.Boolean => {
-        val createChart = ChartSpec.categoricalPlain(
-           _ : Seq[(Option[Boolean], Int)], Some(getRenderer[Boolean]), chartTitle, showLabels, showLegend, chartType, outputGridWidth
-        )
         val values = Seq(true, false)
-        createDistributionChartSpec(field.name, values, dataRepo, criteria, createChart)
+        for {
+          counts <- categoricalCountsRepo(field.name, values, dataRepo, criteria)
+        } yield
+          formatCategoricalCounts(counts, Some(getRenderer[Boolean]))
       }
 
       case FieldTypeId.Double => {
@@ -158,12 +149,7 @@ class ChartServiceImpl extends ChartService {
               field.name, fieldType.asValueOf[Double], dataRepo, criteria, 20, false, None, None
             )
         } yield
-          chartOrNone(
-            numCounts,
-            ChartSpec.numerical(
-              _: Traversable[(BigDecimal, Int)], chartTitle, chartType, Some(outputLabel), outputGridWidth
-            )
-          )
+          formatNumericalCounts(numCounts, Some(outputLabel))
       }
 
       case FieldTypeId.Integer =>
@@ -180,11 +166,7 @@ class ChartServiceImpl extends ChartService {
             else
               None
 
-          chartOrNone(
-            numCounts,
-            ChartSpec.numerical(
-              _: Traversable[(BigDecimal, Int)], chartTitle, chartType, outputLabel, outputGridWidth)
-            )
+          formatNumericalCounts(numCounts, outputLabel)
         }
 
       case FieldTypeId.Date => {
@@ -199,29 +181,90 @@ class ChartServiceImpl extends ChartService {
               field.name, fieldType.asValueOf[ju.Date], dataRepo, criteria, 20, false, None, None
             )
         } yield
-          chartOrNone(
-            numCounts,
-            ChartSpec.numerical(
-              _: Traversable[(BigDecimal, Int)], chartTitle, chartType, Some(formatDate), outputGridWidth
-            )
-          )
+          formatNumericalCounts(numCounts, Some(formatDate))
       }
 
-      // for null and json types we can't show anything
-      case FieldTypeId.Null | FieldTypeId.Json =>
-        Future(None)
+      case FieldTypeId.Null =>
+        for {
+          count <- dataRepo.count(criteria)
+        } yield
+          formatCategoricalCounts[Nothing](Seq((None, count)), None)
+
+      // for the json type we can't do anything
+      case FieldTypeId.Json =>
+        Future(Nil)
     }
   }
 
-  override def createDistributionChartSpec(
-    items: Traversable[JsObject],
-    chartType: Option[ChartType.Value],
+  def calcGroupedDistributionCounts(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
     field: Field,
-    showLabels: Boolean = false,
-    showLegend: Boolean = true,
-    outputGridWidth: Option[Int] = None
-  ): Option[ChartSpec] = {
-    val chartTitle = field.label.getOrElse(fieldLabel(field.name))
+    groupField: Field
+  ): Future[Seq[(String, Seq[Count])]] = {
+
+    val groupFieldSpec = groupField.fieldTypeSpec
+    val groupFieldType = ftf(groupFieldSpec)
+    val groupFieldTypeId = groupFieldSpec.fieldType
+
+    for {
+      groupLabelValues <- groupFieldTypeId match {
+        case FieldTypeId.String =>
+          for {
+            jsons <- dataRepo.find(criteria = criteria, projection = Seq(groupField.name))
+          } yield {
+            val typedFieldType = groupFieldType.asValueOf[String]
+            val values = jsons.map(json => typedFieldType.jsonToValue(json \ groupField.name)).flatten
+            values.toSet.toSeq.sorted.map(string => (string, string))
+          }
+
+        case FieldTypeId.Enum => {
+          val values = groupFieldSpec.enumValues.map(_.toSeq.sortBy(_._1).map { case (int, label) =>
+            (label, int)
+          }).getOrElse(Nil)
+          Future(values)
+        }
+
+        case FieldTypeId.Boolean =>
+          val values = Seq(
+            (groupFieldSpec.displayTrueValue.getOrElse("True"), true),
+            (groupFieldSpec.displayFalseValue.getOrElse("False"), false)
+          )
+          Future(values)
+      }
+
+      seriesCounts <- {
+        val groupFieldName = groupField.name
+        val countFutures = groupLabelValues.par.map { case (label, value) =>
+          val finalCriteria = criteria ++ Seq(groupFieldName #== value)
+          calcDistributionCounts(dataRepo, finalCriteria, field).map { counts =>
+            (label, counts)
+          }
+        }.toList
+
+        val undefinedGroupCriteria = criteria ++ Seq(groupFieldName #=@)
+        val naValueFuture = calcDistributionCounts(dataRepo, undefinedGroupCriteria, field).map { counts =>
+          ("Undefined", counts)
+        }
+
+        Future.sequence(countFutures ++ Seq(naValueFuture))
+      }
+    } yield {
+      val seriesCountsMap = seriesCounts.toMap
+      val seriesNames = groupLabelValues.map(_._1) ++ Seq("Undefined")
+
+      // series counts sorted by the order of group labels
+      seriesNames.map { name =>
+        val counts = seriesCountsMap.get(name).get
+        (name, counts)
+      }
+    }
+  }
+
+  override def calcDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field
+  ): Seq[Count] = {
     val fieldTypeSpec = field.fieldTypeSpec
     val fieldType = ftf(fieldTypeSpec)
     val fieldTypeId = fieldTypeSpec.fieldType
@@ -240,52 +283,25 @@ class ChartServiceImpl extends ChartService {
       }
     }
 
-    def chartOrNone[T](
-      values: Traversable[T],
-      createChart: Traversable[T] => ChartSpec
-    ): Option[ChartSpec] = values match {
-      case Nil => None
-      case values => Some(createChart(values))
-    }
-
     fieldTypeId match {
 
       case FieldTypeId.String =>
-        chartOrNone(
-          getValues[String],
-          ChartSpec.categorical(
-            _: Traversable[Option[String]], Some(getRenderer[String]), chartTitle, showLabels, showLegend, chartType, outputGridWidth
-          )
-        )
+        categoricalCountsWithFormatting(getValues[String], Some(getRenderer[String]))
 
       case FieldTypeId.Enum =>
-        chartOrNone(
-          getValues[Int],
-          ChartSpec.categorical(
-            _: Traversable[Option[Int]], Some(getRenderer[Int]), chartTitle, showLabels, showLegend, chartType, outputGridWidth
-          )
-        )
+        categoricalCountsWithFormatting(getValues[Int], Some(getRenderer[Int]))
 
       case FieldTypeId.Boolean =>
-        chartOrNone(
-          getValues[Boolean],
-          ChartSpec.categorical(
-            _: Traversable[Option[Boolean]], Some(getRenderer[Boolean]), chartTitle, showLabels, showLegend, chartType, outputGridWidth
-          )
-        )
+        categoricalCountsWithFormatting(getValues[Boolean], Some(getRenderer[Boolean]))
 
       case FieldTypeId.Double => {
         // TODO: use renderer here
         val renderer = getRenderer[Double]
-        def outputLabel(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP).toString
-        val numCounts = numericalCounts(getValues[Double].flatten, 20, false, None, None)
 
-        chartOrNone(
-          numCounts,
-          ChartSpec.numerical(
-            _: Traversable[(BigDecimal, Int)], chartTitle, chartType, Some(outputLabel), outputGridWidth
-          )
-        )
+        def outputLabel(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP).toString
+
+        val numCounts = numericalCounts(getValues[Double].flatten, 20, false, None, None)
+        formatNumericalCounts(numCounts, Some(outputLabel))
       }
 
       case FieldTypeId.Integer => {
@@ -301,12 +317,7 @@ class ChartServiceImpl extends ChartService {
             None
 
         val numCounts = numericalCounts(values, Math.min(20, valueCount + 1).toInt, valueCount < 20, None, None)
-        chartOrNone(
-          numCounts,
-          ChartSpec.numerical(
-            _: Traversable[(BigDecimal, Int)], chartTitle, chartType, outputLabel, outputGridWidth
-          )
-        )
+        formatNumericalCounts(numCounts, outputLabel)
       }
 
       case FieldTypeId.Date => {
@@ -314,57 +325,114 @@ class ChartServiceImpl extends ChartService {
         val values = dates.map(_.getTime)
 
         val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+
         def formatDate(ms: BigDecimal) = dateFormat.format(new ju.Date(ms.toLongExact))
 
         val numCounts = numericalCounts(values, 20, false, None, None)
-
-        chartOrNone(
-          numCounts,
-          ChartSpec.numerical(
-            _: Traversable[(BigDecimal, Int)], chartTitle, chartType, Some(formatDate), outputGridWidth
-          )
-        )
+        formatNumericalCounts(numCounts, Some(formatDate))
       }
 
-      // for null and json types we can't show anything
-      case FieldTypeId.Null | FieldTypeId.Json =>
-        None
+      case FieldTypeId.Null =>
+        formatCategoricalCounts[Nothing](Seq((None, jsons.size)), None)
+
+      // for the json type we can't do anything
+      case FieldTypeId.Json =>
+        Nil
     }
   }
 
-  private def createDistributionChartSpec[T](
+  override def calcGroupedDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Field
+  ): Seq[(String, Seq[Count])] = {
+    val groupFieldSpec = groupField.fieldTypeSpec
+    val groupFieldType = ftf(groupFieldSpec)
+    val groupFieldTypeId = groupFieldSpec.fieldType
+
+    def groupValues[T]: Traversable[(Option[T], Traversable[JsObject])] = {
+      val typedFieldType = groupFieldType.asValueOf[T]
+
+      val groupedJsons = items.map { json =>
+        val value = typedFieldType.jsonToValue(json \ groupField.name)
+        (value, json)
+      }.groupBy(_._1)
+
+      groupedJsons.map { case (groupName, values) => (groupName, values.map(_._2))}
+    }
+
+    val groupedValues = groupFieldTypeId match {
+
+      case FieldTypeId.String => {
+        val groupJsons = groupValues[String].filter(_._1.isDefined).map {
+          case (option, jsons) => (option.get, jsons)
+        }.toSeq.sortBy(_._1)
+        val undefinedGroupJsons = groupValues[String].find(_._1.isEmpty).map(_._2).getOrElse(Nil)
+        groupJsons ++ Seq(("Undefined", undefinedGroupJsons))
+      }
+
+      case FieldTypeId.Enum => {
+        val jsonsMap = groupValues[Int].toMap
+        def getJsons(groupValue: Option[Int]) = jsonsMap.get(groupValue).getOrElse(Nil)
+
+        val groupJsons = groupFieldSpec.enumValues.map(_.toSeq.sortBy(_._1).map { case (int, label) =>
+          (label, getJsons(Some(int)))
+        }).getOrElse(Nil)
+
+        groupJsons ++ Seq(("Undefined", getJsons(None)))
+      }
+
+      case FieldTypeId.Boolean => {
+        val jsonsMap = groupValues[Boolean].toMap
+        def getJsons(groupValue: Option[Boolean]) = jsonsMap.get(groupValue).getOrElse(Nil)
+
+        Seq(
+          (groupFieldSpec.displayTrueValue.getOrElse("True"), getJsons(Some(true))),
+          (groupFieldSpec.displayFalseValue.getOrElse("False"), getJsons(Some(false))),
+          ("Undefined", getJsons(None))
+        )
+      }
+    }
+
+    groupedValues.map { case (groupName, jsons) =>
+      val counts = calcDistributionCounts(jsons, field)
+      (groupName, counts)
+    }
+  }
+
+  private def categoricalCounts[T](
+    values: Traversable[Option[T]]
+  ): Seq[(Option[T], Int)] = {
+    val countMap = MMap[Option[T], Int]()
+    values.foreach { value =>
+      val count = countMap.getOrElse(value, 0)
+      countMap.update(value, count + 1)
+    }
+    countMap.toSeq
+  }
+
+  private def categoricalCountsRepo[T](
     fieldName: String,
     values: Traversable[T],
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    createChart: Seq[(Option[T], Int)] => ChartSpec
-  ): Future[Option[ChartSpec]] = {
-    val countsFuture = {
-      val countFutures = values.par.map { value =>
-        val finalCriteria = criteria ++ Seq(fieldName #== value)
-          dataRepo.count(finalCriteria).map { count =>
-          (Some(value), count)
-        }
-      }.toList
-
-      val findNoneCriteria = criteria ++ Seq(fieldName #=@)
-      val naValueFuture = dataRepo.count(findNoneCriteria).map { count =>
-        (None, count)
+    criteria: Seq[Criterion[Any]]
+  ): Future[Seq[(Option[T], Int)]] = {
+    val countFutures = values.par.map { value =>
+      val finalCriteria = criteria ++ Seq(fieldName #== value)
+      dataRepo.count(finalCriteria).map { count =>
+        (Some(value), count)
       }
+    }.toList
 
-      Future.sequence(countFutures ++ Seq(naValueFuture))
+    val findNoneCriteria = criteria ++ Seq(fieldName #=@)
+    val naValueFuture = dataRepo.count(findNoneCriteria).map { count =>
+      (None, count)
     }
 
-    countsFuture.map { counts =>
-      val nonZeroCounts = counts.filter(_._2 > 0)
-      nonZeroCounts match {
-        case Nil => None
-        case _ => Some(createChart(nonZeroCounts))
-      }
-    }
+    Future.sequence(countFutures ++ Seq(naValueFuture))
   }
 
-  def numericalCounts[T: Numeric](
+  private def numericalCounts[T: Numeric](
     values: Traversable[T],
     columnCount: Int,
     specialColumnForMax: Boolean = false,
@@ -426,7 +494,7 @@ class ChartServiceImpl extends ChartService {
       Seq[(BigDecimal, Int)]()
   }
 
-  def numericalCountsRepo[T](
+  private def numericalCountsRepo[T](
     toBigDecimal: T => BigDecimal,
     toRangeVal: BigDecimal => Any,
     fieldName: String,
@@ -479,14 +547,14 @@ class ChartServiceImpl extends ChartService {
               maxColumnCount
 
           val stepSize: BigDecimal = if (min == max)
-              0
-            else if (columnForEachIntValue && columnCount < maxColumnCount)
-              (max - min) / (columnCount - 1)
-            else
-              (max - min) / columnCount
+            0
+          else if (columnForEachIntValue && columnCount < maxColumnCount)
+            (max - min) / (columnCount - 1)
+          else
+            (max - min) / columnCount
 
-          (columnCount, stepSize)
-        }
+        (columnCount, stepSize)
+      }
 
       bucketCounts <-
         minOption.zip(columnCountStepSizeOption).headOption.map { case (min, (columnCount, stepSize)) =>
@@ -520,8 +588,47 @@ class ChartServiceImpl extends ChartService {
         )
 
     } yield
-        bucketCounts
+      bucketCounts
   }
+
+  override def categoricalCountsWithFormatting[T](
+    values: Traversable[Option[T]],
+    renderer: Option[Option[T] => String]
+  ): Seq[Count] =
+    formatCategoricalCounts(categoricalCounts(values), renderer)
+
+  private def formatCategoricalCounts[T](
+    counts: Seq[(Option[T], Int)],
+    renderer: Option[Option[T] => String]
+  ): Seq[Count] =
+    counts.map {
+      case (key, count) => {
+        val stringKey = key.map(_.toString)
+        val keyOrEmpty = stringKey.getOrElse("")
+        val label = renderer.map(_.apply(key)).getOrElse(keyOrEmpty)
+
+        Count(
+          stringKey,
+          count,
+          label
+        )
+      }
+    }
+
+  private def formatNumericalCounts(
+    counts: Seq[(BigDecimal, Int)],
+    renderer: Option[BigDecimal => String] = None
+  ): Seq[Count] =
+    counts.sortBy(_._1).map {
+      case (xValue, count) =>
+        val xLabel = renderer.map(_.apply(xValue)).getOrElse(xValue.toString)
+
+        Count(
+          None,
+          count,
+          xLabel
+        )
+    }
 
   override def createScatterChartSpec(
     xyzItems: Traversable[JsObject],
@@ -549,8 +656,7 @@ class ChartServiceImpl extends ChartService {
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
-    groupField: Option[Field],
-    outputGridWidth: Option[Int] = None
+    groupField: Option[Field]
   ): Seq[(String, Seq[(Any, Any)])] = {
     val xFieldName = xField.name
     val yFieldName = yField.name
@@ -591,38 +697,48 @@ class ChartServiceImpl extends ChartService {
     }
   }
 
+//  override def createBoxChartSpec(
+//    items: Traversable[JsObject],
+//    field: Field,
+//    outputGridWidth: Option[Int] = None
+//  ): Option[BoxChartSpec[_]] = {
+//    val jsons = project(items, field.name)
+//    val typeSpec = field.fieldTypeSpec
+//    val fieldType = ftf(typeSpec)
+//
+//    def quantiles[T: Ordering](
+//      toDouble: T => Double
+//    ): Option[Quantiles[T]] =
+//      BasicStats.quantiles[T](
+//        jsonsToValues[T](jsons, fieldType).flatten.toSeq,
+//        toDouble
+//      )
+//
+//    def createChart[T: Ordering](quants: Option[Quantiles[T]]) =
+//      quants.map(
+//        BoxChartSpec(field.labelOrElseName, field.labelOrElseName, _, None, None, None, outputGridWidth)
+//      )
+//
+//    typeSpec.fieldType match {
+//      case FieldTypeId.Double => createChart(quantiles[Double](identity))
+//
+//      case FieldTypeId.Integer => createChart(quantiles[Long](_.toDouble))
+//
+//      case FieldTypeId.Date => createChart(quantiles[ju.Date](_.getTime.toDouble))
+//
+//      case _ => None
+//    }
+//  }
+
   override def createBoxChartSpec(
     items: Traversable[JsObject],
     field: Field,
     outputGridWidth: Option[Int] = None
-  ): Option[BoxChartSpec[_]] = {
-    val jsons = project(items, field.name)
-    val typeSpec = field.fieldTypeSpec
-    val fieldType = ftf(typeSpec)
-
-    def quantiles[T: Ordering](
-      toDouble: T => Double
-    ): Option[Quantiles[T]] =
-      BasicStats.quantiles[T](
-        jsonsToValues[T](jsons, fieldType).flatten.toSeq,
-        toDouble
-      )
-
-    def createChart[T: Ordering](quants: Option[Quantiles[T]]) =
-      quants.map(
-        BoxChartSpec(field.labelOrElseName, field.labelOrElseName, _, None, None, None, outputGridWidth)
-      )
-
-    typeSpec.fieldType match {
-      case FieldTypeId.Double => createChart(quantiles[Double](identity))
-
-      case FieldTypeId.Integer => createChart(quantiles[Long](_.toDouble))
-
-      case FieldTypeId.Date => createChart(quantiles[ju.Date](_.getTime.toDouble))
-
-      case _ => None
+  ): Option[BoxChartSpec[_]] =
+    calcQuantiles(items, field).map { quants =>
+      implicit val ordering = quants.ordering
+      BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quants, None, None, None, outputGridWidth)
     }
-  }
 
   override def createBoxChartSpecRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
@@ -630,35 +746,71 @@ class ChartServiceImpl extends ChartService {
     field: Field,
     outputGridWidth: Option[Int] = None,
     height: Option[Int] = None
-  ): Future[Option[BoxChartSpec[_]]] = {
-    val typeSpec = field.fieldTypeSpec
+  ): Future[Option[BoxChartSpec[_]]] =
+    for {
+      quantiles <- calcQuantiles(dataRepo, criteria, field)
+    } yield
+      quantiles.map { quants =>
+        implicit val ordering = quants.ordering
+        BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quants, None, None, height, outputGridWidth)
+      }
 
-    def createChart[T: Ordering](toDouble: T => Double) = {
-      createQuantiles[T](toDouble, dataRepo, criteria, field).map( quants =>
-        quants.map {
-          BoxChartSpec(field.labelOrElseName, field.labelOrElseName, _, None, None, height, outputGridWidth)
-        }
-      )
-    }
+  private def calcQuantiles(
+    items: Traversable[JsObject],
+    field: Field
+  ): Option[Quantiles[Any]] = {
+    val jsons = project(items, field.name)
+    val typeSpec = field.fieldTypeSpec
+    val fieldType = ftf(typeSpec)
+
+    def quantiles[T: Ordering](
+      toDouble: T => Double
+    ): Option[Quantiles[Any]] =
+      BasicStats.quantiles[T](
+        jsonsToValues[T](jsons, fieldType).flatten.toSeq,
+        toDouble
+      ).asInstanceOf[Option[Quantiles[Any]]]
 
     typeSpec.fieldType match {
-      case FieldTypeId.Double => createChart[Double](identity)
+      case FieldTypeId.Double => quantiles[Double](identity)
 
-      case FieldTypeId.Integer => createChart[Long](_.toDouble)
+      case FieldTypeId.Integer => quantiles[Long](_.toDouble)
 
-      case FieldTypeId.Date => createChart[ju.Date](_.getTime.toDouble)
+      case FieldTypeId.Date => quantiles[ju.Date](_.getTime.toDouble)
+
+      case _ => None
+    }
+  }
+
+  private def calcQuantiles(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    field: Field
+  ): Future[Option[Quantiles[Any]]] = {
+    val typeSpec = field.fieldTypeSpec
+
+    def quantiles[T: Ordering](toDouble: T => Double) =
+      calcQuantiles[T](dataRepo, criteria, field, toDouble).map(
+        _.asInstanceOf[Option[Quantiles[Any]]]
+      )
+
+    typeSpec.fieldType match {
+      case FieldTypeId.Double => quantiles[Double](identity)
+
+      case FieldTypeId.Integer => quantiles[Long](_.toDouble)
+
+      case FieldTypeId.Date => quantiles[ju.Date](_.getTime.toDouble)
 
       case _ => Future(None)
     }
   }
 
-
-  private def createQuantiles[T](
-    toDouble: T => Double,
+  def calcQuantiles[T: Ordering](
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
-    field: Field
-  ): Future[Option[Quantiles[T]]] = {
+    field: Field,
+    toDouble: T => Double
+  ): Future[Option[Quantiles[T]]] =
     for {
       // total length
       length <- dataRepo.count(criteria ++ Seq(field.name #!@))
@@ -671,9 +823,8 @@ class ChartServiceImpl extends ChartService {
           Future(None)
     } yield
       quants
-  }
 
-  private def createQuantilesAux[T](
+  private def createQuantilesAux[T: Ordering](
     toDouble: T => Double,
     length: Int,                                            // must be non-zero
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],

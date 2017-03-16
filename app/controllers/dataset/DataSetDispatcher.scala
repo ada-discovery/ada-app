@@ -55,8 +55,9 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getDistribution(
     fieldName: Option[String],
+    groupFieldName: Option[String],
     filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
-  ) = dispatch(_.getDistribution(fieldName, filterOrId))
+  ) = dispatch(_.getDistribution(fieldName, groupFieldName, filterOrId))
 
   override def getCorrelations(
     fieldNames: Seq[String],

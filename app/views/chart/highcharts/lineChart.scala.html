@@ -7,7 +7,19 @@
 )
 
 <script type="text/javascript">
-    lineChart('@title', '@{chartElementName}', '@{xAxisCaption.getOrElse("")}', '@{yAxisCaption.getOrElse("")}',
-            [ @elements.map { case (x, y) => '@x',}], [ @elements.map { case (x, y) => @y,}]
-    )
+    (function() {
+        var series = [{
+            name: '@title',
+            data: [@elements.map { case (x, y) => @y, }]
+        }]
+
+        lineChart(
+            '@title',
+            '@{chartElementName}',
+            [@elements.map { case (x, y) => '@x', }],
+            series,
+            '@{xAxisCaption.getOrElse("")}',
+            '@{yAxisCaption.getOrElse("")}'
+        )
+    })()
 </script>

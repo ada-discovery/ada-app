@@ -183,20 +183,25 @@ class CreateOverallActivityDataSet  @Inject()(
 
             val fieldMap = fields.map( field => (field.name, field)).toMap
             items.map { item =>
-              val originalAppVersionField = fieldMap.get(appVersionField.name).getOrElse(
-                throw new AdaException(s"The field ${appVersionField.name} not found in the data set $dataSetId.")
-              )
-              val originalAppVersionFieldType = ftf(originalAppVersionField.fieldTypeSpec)
-              val originalAppVersionString = originalAppVersionFieldType.jsonToDisplayString(item \ appVersionField.name)
+
+              def fieldValueAsString(fieldName: String) = {
+                val field = fieldMap.get(fieldName).getOrElse(
+                  throw new AdaException(s"The field ${fieldName} not found in the data set $dataSetId.")
+                )
+                ftf(field.fieldTypeSpec).jsonToDisplayString(item \ fieldName)
+              }
+
+              val originalAppVersionString = fieldValueAsString(appVersionField.name)
+              val externalId = fieldValueAsString(externalIdField.name)
 
               val newAppVersionJson = appVersionFieldType.displayStringToJson(originalAppVersionString)
 
               val json =
                 item ++ Json.obj(
                   (appVersionField.name, newAppVersionJson),
+                  (externalIdField.name, externalId),
                   (activityField.name, JsNumber(dataSetIdActivityEnumMap.get(dataSetId).get))
                 )
-              val externalId = externalIdFieldType.jsonToDisplayString(item \ externalIdField.name)
               (externalId, json)
             }
           }

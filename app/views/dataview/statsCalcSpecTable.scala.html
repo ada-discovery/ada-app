@@ -72,6 +72,7 @@
         switch (concreteClass) {
             case "@{classOf[DistributionCalcSpec].getName}" :
                 output["fieldName"] = fieldNames[0];
+                output["groupFieldName"] = fieldNames[1];
                 break;
             case "@{classOf[BoxCalcSpec].getName}" :
                 output["fieldName"] = fieldNames[0];
@@ -114,8 +115,8 @@
         var fieldLabels;
         switch (concreteClass) {
             case "@{classOf[DistributionCalcSpec].getName}" :
-                fieldNames = values["fieldName"];
-                fieldLabels = values["fieldNameTypeahead"];
+                fieldNames = [values["fieldName"], values["groupFieldName"]].join(", ");
+                fieldLabels = [values["fieldNameTypeahead"], values["groupFieldNameTypeahead"]].join(", ");
                 break;
             case "@{classOf[BoxCalcSpec].getName}" :
                 fieldNames = values["fieldName"];
@@ -213,6 +214,7 @@
         switch (concreteClass) {
             case "@{classOf[DistributionCalcSpec].getName}" :
                 $("#fieldNameDiv").show();
+                $("#groupFieldNameDiv").show();
                 break;
             case "@{classOf[BoxCalcSpec].getName}" :
                 $("#fieldNameDiv").show();

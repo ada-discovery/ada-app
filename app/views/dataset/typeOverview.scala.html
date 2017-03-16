@@ -1,6 +1,6 @@
 @import views.html.layout.main
 @import views.html.chart._
-@import models.DataPoint
+@import models.Count
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import models.FieldTypeId
@@ -26,7 +26,7 @@
         "typeChart",
         true,
         false,
-        fieldTypeCounts.map{case (fieldType, count) => DataPoint(None, count, fieldType.toString) }.toSeq
+        fieldTypeCounts.map{case (fieldType, count) => Count(None, count, fieldType.toString) }.toSeq
     )
     </div>
 }

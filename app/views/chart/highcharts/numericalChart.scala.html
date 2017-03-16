@@ -1,5 +1,5 @@
 @import util.shorten
-@import models.DataPoint
+@import models.Count
 @import models.ChartType
 @import models.NumericalChartSpec
 
@@ -10,12 +10,17 @@
 
 <script type="text/javascript">
     $(document).ready(function() {
-        var categories = [ @chartSpec.data.map { case (x, y) => '@x',}];
-        var data = [ @chartSpec.data.map { case (x, y) => {
-            name : '@x',
-            y : @y
-        },}];
+        var datas = [@chartSpec.data.map { singleSeries => {
+            name: '@singleSeries._1',
+            data: [@singleSeries._2.map { case (x, y) => {
+                name: '@x',
+                x: @x,
+                y: @y
+            }, }]
+        }, }];
 
+        var seriesSize = datas.length
+        var showLegend = seriesSize > 1
         var height = @chartSpec.height.getOrElse(400)
 
         $('#@chartElementName').on('chartTypeChanged', function(event, chartType) {
@@ -27,19 +32,39 @@
         function changeChartType(chartType) {
             switch (chartType) {
                 case '@ChartType.Pie':
-                    pieChart('@chartSpec.title', '@{chartElementName}', false, false, data, false, true, height);
+                    var series = datas.map( function(data, index) {
+                        var size = (100 / seriesSize) * index
+                        var innerSize = Math.max(0, (100 / seriesSize) * (index - 1) + 1)
+                        return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
+                    });
+
+                    pieChart('@chartSpec.title', '@{chartElementName}', series, false, showLegend, height, false, true);
                     break;
                 case '@ChartType.Column':
-                    columnChart('@chartSpec.title', '@{chartElementName}', '@chartSpec.title', 'Count', false, categories, data, false, true, height);
+                    var series = datas.map( function(data, index) {
+                        return {name: data.name, data: data.data, colorByPoint: false};
+                    });
+
+                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, false, '@chartSpec.title', 'Count', showLegend, height, false, true);
                     break;
                 case '@ChartType.Bar':
-                    columnChart('@chartSpec.title', '@{chartElementName}', '@chartSpec.title', 'Count', true, categories, data, false, true, height);
+                    var series = datas.map( function(data, index) {
+                        return {name: data.name, data: data.data, colorByPoint: false};
+                    });
+
+                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, true, '@chartSpec.title', 'Count', showLegend, height, false, true);
                     break;
                 case '@ChartType.Line':
-                    lineChart('@chartSpec.title', '@{chartElementName}', '@chartSpec.title', 'Count', categories, data, false, true, height);
+                    var series = datas
+
+                    lineChart('@chartSpec.title', '@{chartElementName}', null, series, '@chartSpec.title', 'Count', showLegend, height, false, true);
                     break;
                 case '@ChartType.Polar':
-                    polarChart('@chartSpec.title', '@{chartElementName}', categories, data, false, true, height);
+                    var series = datas.map( function(data, index) {
+                        return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
+                    });
+
+                    polarChart('@chartSpec.title', '@{chartElementName}', null, series, showLegend, height, false, true);
                     break;
             }
         }

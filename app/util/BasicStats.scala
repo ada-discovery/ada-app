@@ -7,13 +7,14 @@ import scala.collection.mutable.{Map => MMap}
   */
 package object BasicStats {
 
-  case class Quantiles[T](
+  case class Quantiles[T <% Ordered[T]](
     lowerWhisker: T,
     lowerQuantile: T,
     median: T,
     upperQuantile: T,
     upperWhisker: T
   ) {
+    def ordering = implicitly[Ordering[T]]
     def toSeq: Seq[T] = Seq(lowerWhisker, lowerQuantile, median, upperQuantile, upperWhisker)
   }
 
