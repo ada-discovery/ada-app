@@ -72,10 +72,11 @@ abstract class StatsCalcSpec {
 
 case class DistributionCalcSpec(
   fieldName: String,
+  groupFieldName: Option[String],
   chartType: Option[ChartType.Value],
   outputGridWidth: Option[Int] = None
 ) extends StatsCalcSpec {
-  override val fieldNames = Seq(fieldName)
+  override val fieldNames = Seq(Some(fieldName), groupFieldName).flatten
 }
 
 case class BoxCalcSpec(

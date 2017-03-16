@@ -68,7 +68,7 @@ object DataView {
       "Main",
       Nil,
       tableColumnNames,
-      distributionChartFieldNames.map(DistributionCalcSpec(_, None)),
+      distributionChartFieldNames.map(DistributionCalcSpec(_, None, None)),
       elementGridWidth,
       true,
       useOptimizedRepoChartCalcMethod

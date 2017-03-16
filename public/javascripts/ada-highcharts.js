@@ -1,12 +1,12 @@
     function pieChart(
         title,
         chartElementName,
+        series,
         showLabels,
         showLegend,
-        data,
+        height,
         allowPointClick,
-        allowChartTypeChange,
-        height
+        allowChartTypeChange
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
@@ -65,25 +65,22 @@
                 enabled: false
             },
             exporting: exporting,
-            series: [{
-                name: title,
-                colorByPoint: true,
-                data: data
-            }]
+            series: series
         });
     }
 
     function columnChart(
         title,
         chartElementName,
+        categories,
+        series,
+        inverted,
         xAxisCaption,
         yAxisCaption,
-        inverted,
-        categories,
-        data,
+        showLegend,
+        height,
         allowPointClick,
-        allowChartTypeChange,
-        height
+        allowChartTypeChange
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
@@ -119,7 +116,7 @@
                 }
             },
             legend: {
-                enabled: false
+                enabled: showLegend
             },
             credits: {
                 enabled: false
@@ -153,11 +150,7 @@
                 pointFormat: '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.2f}</b><br/>'
             },
 
-            series: [{
-                name: title,
-                colorByPoint: true,
-                data: data
-            }]
+            series: series
         })
     }
 
@@ -221,13 +214,14 @@
     function lineChart(
         title,
         chartElementName,
+        categories,
+        series,
         xAxisCaption,
         yAxisCaption,
-        categories,
-        data,
+        showLegend,
+        height,
         allowPointClick,
-        allowChartTypeChange,
-        height
+        allowChartTypeChange
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
@@ -257,7 +251,7 @@
                 }
             },
             legend: {
-                enabled: false
+                enabled: showLegend
             },
             credits: {
                 enabled: false
@@ -294,10 +288,7 @@
                 pointFormat: '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.2f}</b><br/>'
             },
 
-            series: [{
-                name: title,
-                data: data
-            }]
+            series: series
         })
     }
 
@@ -305,10 +296,11 @@
         title,
         chartElementName,
         categories,
-        data,
+        series,
+        showLegend,
+        height,
         allowPointClick,
-        allowChartTypeChange,
-        height
+        allowChartTypeChange
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
@@ -338,7 +330,7 @@
                 //align: 'center',
                 //verticalAlign: 'bottom',
                 //layout: 'vertical',
-                enabled: false
+                enabled: showLegend
             },
             xAxis: {
                 categories: categories,
@@ -379,13 +371,7 @@
             credits: {
                 enabled: false
             },
-            series: [{
-                name: title,
-                type: 'area',
-                pointPlacement: 'on',
-                data: data
-            }]
-
+            series: series
         });
     }
 
