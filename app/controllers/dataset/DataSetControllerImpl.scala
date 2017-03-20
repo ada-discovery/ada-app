@@ -597,18 +597,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val groupField =  groupFieldName.map(nameFieldMap.get).flatten
 
         field.map { field =>
-          val fieldShortLabel = shorten(field.label.getOrElse(fieldLabel(field.name)), 15)
+          val label = field.label.getOrElse(fieldLabel(field.name))
 
           for {
             (chartTitle, countSeries) <- groupField match {
               case Some(groupField) =>
                 statsService.calcGroupedDistributionCounts(repo, criteria, field, groupField).map { counts =>
                   val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 15)
-                  (fieldShortLabel + " by " + groupShortLabel, counts)
+                  (shorten(label, 15) + " by " + groupShortLabel, counts)
                 }
               case None =>
                 statsService.calcDistributionCounts(repo, criteria, field).map { counts =>
-                  (fieldShortLabel, Seq(("All", counts)))
+                  (label, Seq(("All", counts)))
                 }
             }
           } yield
@@ -617,11 +617,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           Future(None)
         )
 
-      case BoxCalcSpec(fieldName, _) => {
-        statsService.createBoxChartSpecRepo(
-          repo, criteria, nameFieldMap.get(fieldName).get, outputGridWidth
-        )
-      }
+      case BoxCalcSpec(fieldName, _) =>
+        val field = nameFieldMap.get(fieldName).get
+        for {
+          quantiles <- statsService.calcQuantiles(repo, criteria, field)
+        } yield
+          quantiles.map { quants =>
+            implicit val ordering = quants.ordering
+            BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quants, None, None, None, outputGridWidth)
+          }
 
       case _ => Future(None)
     }
@@ -641,18 +645,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val groupField =  groupFieldName.map(nameFieldMap.get).flatten
 
         field.map { field =>
-          val fieldShortLabel = shorten(field.label.getOrElse(fieldLabel(field.name)), 15)
+          val label = field.label.getOrElse(fieldLabel(field.name))
 
           val (chartTitle, countSeries) = groupField match {
             case Some(groupField) => {
-              val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 15)
               val counts = statsService.calcGroupedDistributionCounts(items, field, groupField)
-              (fieldShortLabel + " by " + groupShortLabel, counts)
+              val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 15)
+              (shorten(label, 15) + " by " + groupShortLabel, counts)
             }
 
             case None => {
               val counts = statsService.calcDistributionCounts(items, field)
-              (fieldShortLabel, Seq(("All", counts)))
+              (label, Seq(("All", counts)))
             }
           }
           createDistributionChartSpec(countSeries, chartType, field, chartTitle, false, true, None, outputGridWidth)
@@ -660,9 +664,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
       case BoxCalcSpec(fieldName, _) =>
         nameFieldMap.get(fieldName).map { field =>
-          statsService.createBoxChartSpec(
-            items, field, outputGridWidth
-          )
+          statsService.calcQuantiles(items, field).map { quants =>
+            implicit val ordering = quants.ordering
+            BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quants, None, None, None, outputGridWidth)
+          }
         }.flatten
 
       case ScatterCalcSpec(xFieldName, yFieldName, groupFieldName, _) => {
@@ -673,7 +678,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         //          val groupedLabel = groupFieldName.map(_ => "[grouped]").getOrElse("")
 
-        val chartSpec = statsService.createScatterChartSpec(
+        val chartSpec = createScatterChartSpec(
           items,
           xField,
           yField,
@@ -687,7 +692,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       case CorrelationCalcSpec(fieldNames, _) => {
         val corrFields = fieldNames.map(nameFieldMap.get).flatten
 
-        val chartSpec = statsService.createPearsonCorrelationChartSpec(
+        val chartSpec = createPearsonCorrelationChartSpec(
           items,
           corrFields,
           outputGridWidth
@@ -824,7 +829,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     } yield {
       val chartSpec: Option[ScatterChartSpec] =
         (xField zip yField).headOption.map { case (xField, yField) =>
-          statsService.createScatterChartSpec(
+          createScatterChartSpec(
             xyzItems,
             xField,
             yField,
@@ -904,17 +909,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // calc distribution/counts
         chartTitleCountSeries <- field match {
           case Some(field) =>
-            val fieldShortLabel = shorten(field.label.getOrElse(fieldLabel(field.name)), 15)
+            val label = field.label.getOrElse(fieldLabel(field.name))
 
             groupField match {
               case Some(groupField) =>
                 statsService.calcGroupedDistributionCounts(repo, criteria, field, groupField).map { counts =>
                   val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 15)
-                  (fieldShortLabel + " by " + groupShortLabel, counts)
+                  (shorten(label, 15) + " by " + groupShortLabel, counts)
                 }
               case None =>
                 statsService.calcDistributionCounts(repo, criteria, field).map { counts =>
-                  (fieldShortLabel, Seq(("All", counts)))
+                  (label, Seq(("All", counts)))
                 }
             }
           case None => Future(("", Nil))
@@ -922,7 +927,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // generate the box chart (if possible)
         boxChartSpec <- field.map( field =>
-          statsService.createBoxChartSpecRepo(repo, criteria, field, None, Some(500))
+          for {
+            quantiles <- statsService.calcQuantiles(repo, criteria, field)
+          } yield
+            quantiles.map { quants =>
+              implicit val ordering = quants.ordering
+              BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quants, None, None, Some(500))
+            }
         ).getOrElse(
           Future(None)
         )
@@ -980,7 +991,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         chartFields <- getFields(fieldNames)
 
         // generate the correlation chart
-        correlationChartSpec = statsService.createPearsonCorrelationChartSpec(chartItems, chartFields)
+        correlationChartSpec = createPearsonCorrelationChartSpec(chartItems, chartFields.toSeq)
 
         // get the current fields
         currentFields <- fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
@@ -1326,7 +1337,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def createDistributionChartSpec(
-    countSeries: Seq[(String, Seq[Count])],
+    countSeries: Seq[(String, Seq[Count[_]])],
     chartType: Option[ChartType.Value],
     field: Field,
     chartTitle: String,
@@ -1343,27 +1354,33 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         fieldTypeId match {
           case FieldTypeId.String | FieldTypeId.Enum | FieldTypeId.Boolean | FieldTypeId.Null | FieldTypeId.Json => {
             // enforce the same categories in all the series
-            val labelGroupedCounts = countSeries.map(_._2).flatten.groupBy(_.label)
+            val labelGroupedCounts = countSeries.map(_._2).flatten.groupBy(_.value)
             val nonZeroLabelSumCounts = labelGroupedCounts.map { case (label, counts) =>
               (label, counts.map(_.count).sum)
             }.filter(_._2 > 0)
 
-            val sortedLabels: Seq[String] = nonZeroLabelSumCounts.toSeq.sortBy(_._2).map(_._1)
+            val sortedLabels: Seq[String] = nonZeroLabelSumCounts.toSeq.sortBy(_._2).map(_._1.toString)
 
             val countSeriesSorted = countSeries.map { case (seriesName, counts) =>
-              val labelCountMap = counts.map ( count => (count.label, count)).toMap
+
+              val labelCountMap = counts.map { count =>
+                val label = count.value.toString
+                (label, Count(label, count.count, count.key))
+              }.toMap
+
               val newCounts = sortedLabels.map ( label =>
-                labelCountMap.get(label).getOrElse(Count(None, 0, label))
+                labelCountMap.get(label).getOrElse(Count(label, 0, None))
               )
               (seriesName, newCounts)
             }
+            val nonZeroCountSerieSorted = countSeriesSorted.filter(_._2.exists(_.count > 0))
 
-            CategoricalChartSpec(chartTitle, showLabels, showLegend, countSeriesSorted, chartType.getOrElse(ChartType.Pie), height, outputGridWidth)
+            CategoricalChartSpec(chartTitle, showLabels, showLegend, nonZeroCountSerieSorted, chartType.getOrElse(ChartType.Pie), height, outputGridWidth)
           }
 
           case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date => {
             val nonZeroNumCountSeries = countSeries.filter(_._2.nonEmpty).map { case (seriesName, counts) =>
-              (seriesName, counts.map ( count => (count.label, count.count)))
+              (seriesName, counts.map ( count => (count.value, count.count)))
             }
 
             NumericalChartSpec(chartTitle, nonZeroNumCountSeries, chartType.getOrElse(ChartType.Line), height, outputGridWidth)
@@ -1372,5 +1389,38 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       )
     else
       Option.empty[ChartSpec]
+  }
+
+  private def createScatterChartSpec(
+    xyzItems: Traversable[JsObject],
+    xField: Field,
+    yField: Field,
+    groupField: Option[Field],
+    title: Option[String] = None,
+    outputGridWidth: Option[Int] = None
+  ): ScatterChartSpec = {
+    val data = statsService.collectScatterData(xyzItems, xField, yField, groupField)
+    ScatterChartSpec(
+      title.getOrElse("Comparison"),
+      xField.labelOrElseName,
+      yField.labelOrElseName,
+      data.map { case (name, values) =>
+        val initName = if (name.isEmpty) "Undefined" else name
+        (initName, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
+      },
+      None,
+      outputGridWidth
+    )
+  }
+
+  private def createPearsonCorrelationChartSpec(
+    items: Traversable[JsObject],
+    fields: Seq[Field],
+    outputGridWidth: Option[Int] = None
+  ): HeatmapChartSpec = {
+    val correlations = statsService.calcPearsonCorrelations(items, fields)
+
+    val fieldLabels = fields.map(_.labelOrElseName)
+    HeatmapChartSpec("Correlations", fieldLabels, fieldLabels, correlations, None, Some(-1), Some(1), outputGridWidth)
   }
 }

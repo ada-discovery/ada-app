@@ -6,14 +6,14 @@
     chartElementName: String,
     showLabels: Boolean,
     showLegend: Boolean,
-    elements: Seq[Count]
+    elements: Seq[Count[String]]
 )
 
 <script type="text/javascript">
     (function() {
-        var data = [ @elements.map { case Count(key, value, label) => {
+        var data = [ @elements.map { case Count(label, count, key) => {
             name : '@shorten(label)',
-            y : @value,
+            y : @count,
             key: '@key'
         },}]
 

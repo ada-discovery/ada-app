@@ -10,12 +10,12 @@
 
 <script type="text/javascript">
     $(document).ready(function() {
-        var categories = [ @chartSpec.data.head._2.map { case Count(_, _, label) => '@label',}];
+        var categories = [ @chartSpec.data.head._2.map { case Count(label, _, _) => '@label',}];
         var datas = [@chartSpec.data.map { singleSeries => {
             name: '@singleSeries._1',
-            data: [@singleSeries._2.map { case Count(key, value, label) => {
+            data: [@singleSeries._2.map { case Count(label, count, key) => {
                 name: '@shorten(label)',
-                y: @value,
+                y: @count,
                 key: '@key'
             }, }]
         }, }];
@@ -51,7 +51,7 @@
                         return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                     });
 
-                    columnChart('@chartSpec.title', '@{chartElementName}', categories, series, false, '', 'Count', showLegend, height, true, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', categories, series, false, '', 'Count', showLegend, height, null, true, true);
                     break;
                 case '@ChartType.Bar':
                     var colorByPoint = (seriesSize == 1)
@@ -59,19 +59,19 @@
                         return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                     });
 
-                    columnChart('@chartSpec.title', '@{chartElementName}', categories, series, true, '', 'Count', showLegend, height, true, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', categories, series, true, '', 'Count', showLegend, height, null, true, true);
                     break;
                 case '@ChartType.Line':
                     var series = datas
 
-                    lineChart('@chartSpec.title', '@{chartElementName}', categories, series, '', 'Count', showLegend, height, true, true);
+                    lineChart('@chartSpec.title', '@{chartElementName}', categories, series, '', 'Count', showLegend, height, null, true, true);
                     break;
                 case '@ChartType.Polar':
                     var series = datas.map( function(data, index) {
                         return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
                     });
 
-                    polarChart('@chartSpec.title', '@{chartElementName}', categories, series, showLegend, height, true, true);
+                    polarChart('@chartSpec.title', '@{chartElementName}', categories, series, showLegend, height, null, true, true);
                     break;
             }
         }

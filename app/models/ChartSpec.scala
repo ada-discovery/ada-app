@@ -20,15 +20,15 @@ case class CategoricalChartSpec(
   title: String,
   showLabels: Boolean,
   showLegend: Boolean,
-  data: Seq[(String, Seq[Count])],
+  data: Seq[(String, Seq[Count[String]])],
   chartType: ChartType.Value,
   height: Option[Int] = None,
   gridWidth: Option[Int] = None
 ) extends ChartSpec
 
-case class NumericalChartSpec(
+case class NumericalChartSpec[T](
   title: String,
-  data: Seq[(String, Seq[(String, Int)])],
+  data: Seq[(String, Seq[(T, Int)])],
   chartType: ChartType.Value,
   height: Option[Int] = None,
   gridWidth: Option[Int] = None
@@ -73,10 +73,10 @@ case class HeatmapChartSpec(
   gridWidth: Option[Int] = None
 ) extends ChartSpec
 
-case class Count(
-  key: Option[String],
+case class Count[T](
+  value: T,
   count: Int,
-  label: String
+  key: Option[String]
 )
 
 case class FieldChartSpec(fieldName: String, chartSpec : ChartSpec)

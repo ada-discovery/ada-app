@@ -3,18 +3,36 @@
 @import models.ChartType
 @import models.NumericalChartSpec
 
+@import java.text.SimpleDateFormat
 @(
     chartElementName : String,
-    chartSpec: NumericalChartSpec
+    chartSpec: NumericalChartSpec[_]
 )
+
+@numericValue(x: Any) = @{
+    x match {
+        case x: java.util.Date => x.getTime.toString
+        case _ => x.toString
+    }
+}
+
+@label(x: Any) = @{
+    x match {
+        case x: java.util.Date => new SimpleDateFormat("yyyy-dd-MM").format(x)
+        case _ => x.toString
+    }
+}
 
 <script type="text/javascript">
     $(document).ready(function() {
+        var isDate = @{chartSpec.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
+        var dataType = (isDate) ? 'datetime' : null;
+
         var datas = [@chartSpec.data.map { singleSeries => {
             name: '@singleSeries._1',
             data: [@singleSeries._2.map { case (x, y) => {
-                name: '@x',
-                x: @x,
+                name: '@{label(x)}',
+                x: @{numericValue(x)},
                 y: @y
             }, }]
         }, }];
@@ -45,26 +63,26 @@
                         return {name: data.name, data: data.data, colorByPoint: false};
                     });
 
-                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, false, '@chartSpec.title', 'Count', showLegend, height, false, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, false, '@chartSpec.title', 'Count', showLegend, height, dataType, false, true);
                     break;
                 case '@ChartType.Bar':
                     var series = datas.map( function(data, index) {
                         return {name: data.name, data: data.data, colorByPoint: false};
                     });
 
-                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, true, '@chartSpec.title', 'Count', showLegend, height, false, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, true, '@chartSpec.title', 'Count', showLegend, height, dataType, false, true);
                     break;
                 case '@ChartType.Line':
                     var series = datas
 
-                    lineChart('@chartSpec.title', '@{chartElementName}', null, series, '@chartSpec.title', 'Count', showLegend, height, false, true);
+                    lineChart('@chartSpec.title', '@{chartElementName}', null, series, '@chartSpec.title', 'Count', showLegend, height, dataType, false, true);
                     break;
                 case '@ChartType.Polar':
                     var series = datas.map( function(data, index) {
                         return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
                     });
 
-                    polarChart('@chartSpec.title', '@{chartElementName}', null, series, showLegend, height, false, true);
+                    polarChart('@chartSpec.title', '@{chartElementName}', null, series, showLegend, height, dataType, false, true);
                     break;
             }
         }

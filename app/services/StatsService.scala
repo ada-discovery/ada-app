@@ -1,13 +1,9 @@
 package services
 
-import java.text.SimpleDateFormat
-
 import com.google.inject.ImplementedBy
-import dataaccess.RepoTypes.JsonCrudRepo
 import dataaccess._
-import models._
-import play.api.libs.iteratee.Input.Empty
-import play.api.libs.json.{JsLookupResult, JsObject, JsValue}
+import models.{Field, FieldTypeId, Count}
+import play.api.libs.json.{JsLookupResult, JsObject}
 import reactivemongo.bson.BSONObjectID
 import util.BasicStats.Quantiles
 
@@ -20,7 +16,6 @@ import Criterion.Infix
 
 import scala.concurrent.Future
 import scala.math.BigDecimal.RoundingMode
-import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -31,59 +26,53 @@ trait StatsService {
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
-  ): Future[Seq[Count]]
+  ): Future[Seq[Count[_]]]
 
   def calcDistributionCounts(
     items: Traversable[JsObject],
     field: Field
-  ): Seq[Count]
+  ): Seq[Count[_]]
 
   def calcGroupedDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
     groupField: Field
-  ): Future[Seq[(String, Seq[Count])]]
+  ): Future[Seq[(String, Seq[Count[_]])]]
 
   def calcGroupedDistributionCounts(
     items: Traversable[JsObject],
     field: Field,
     groupField: Field
-  ): Seq[(String, Seq[Count])]
+  ): Seq[(String, Seq[Count[_]])]
 
   def categoricalCountsWithFormatting[T](
     values: Traversable[Option[T]],
     renderer: Option[Option[T] => String]
-  ): Seq[Count]
+  ): Seq[Count[String]]
 
-  def createBoxChartSpec(
+  def calcQuantiles(
     items: Traversable[JsObject],
-    field: Field,
-    outputGridWidth: Option[Int] = None
-  ): Option[BoxChartSpec[_]]
+    field: Field
+  ): Option[Quantiles[Any]]
 
-  def createBoxChartSpecRepo(
+  def calcQuantiles(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
-    field: Field,
-    outputGridWidth: Option[Int] = None,
-    height: Option[Int] = None
-  ): Future[Option[BoxChartSpec[_]]]
+    field: Field
+  ): Future[Option[Quantiles[Any]]]
 
-  def createScatterChartSpec(
+  def collectScatterData(
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
-    groupField: Option[Field],
-    title: Option[String] = None,
-    outputGridWidth: Option[Int] = None
-  ): ScatterChartSpec
+    groupField: Option[Field]
+  ): Seq[(String, Seq[(Any, Any)])]
 
-  def createPearsonCorrelationChartSpec(
+  def calcPearsonCorrelations(
     items: Traversable[JsObject],
-    fields: Traversable[Field],
-    outputGridWidth: Option[Int] = None
-  ): HeatmapChartSpec
+    fields: Seq[Field]
+  ): Seq[Seq[Option[Double]]]
 }
 
 class StatsServiceImpl extends StatsService {
@@ -95,7 +84,7 @@ class StatsServiceImpl extends StatsService {
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
-  ): Future[Seq[Count]] = {
+  ): Future[Seq[Count[_]]] = {
     val fieldTypeSpec = field.fieldTypeSpec
     val fieldType = ftf(fieldTypeSpec)
     val fieldTypeId = fieldTypeSpec.fieldType
@@ -138,9 +127,9 @@ class StatsServiceImpl extends StatsService {
       }
 
       case FieldTypeId.Double => {
-        // TODO: use renderer here
-        val renderer = getRenderer[Double]
-        def outputLabel(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP).toString
+//        // TODO: use renderer here
+//        val renderer = getRenderer[Double]
+        def convert(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP)
 
         for {
           numCounts <-
@@ -149,7 +138,7 @@ class StatsServiceImpl extends StatsService {
               field.name, fieldType.asValueOf[Double], dataRepo, criteria, 20, false, None, None
             )
         } yield
-          formatNumericalCounts(numCounts, Some(outputLabel))
+          convertNumericalCounts(numCounts, Some(convert(_)))
       }
 
       case FieldTypeId.Integer =>
@@ -160,18 +149,17 @@ class StatsServiceImpl extends StatsService {
               field.name, fieldType.asValueOf[Long], dataRepo, criteria, 20, true, None, None
             )
         } yield {
-          val outputLabel =
+          val convert =
             if (numCounts.length < 20)
-              Some { value: BigDecimal => value.toInt.toString }
+              Some { value: BigDecimal => value.toInt }
             else
               None
 
-          formatNumericalCounts(numCounts, outputLabel)
+          convertNumericalCounts(numCounts, convert)
         }
 
       case FieldTypeId.Date => {
-        val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-        def formatDate(ms: BigDecimal) = dateFormat.format(new ju.Date(ms.toLongExact))
+        def convert(ms: BigDecimal) = new ju.Date(ms.toLongExact)
 
         for {
           numCounts <-
@@ -181,7 +169,7 @@ class StatsServiceImpl extends StatsService {
               field.name, fieldType.asValueOf[ju.Date], dataRepo, criteria, 20, false, None, None
             )
         } yield
-          formatNumericalCounts(numCounts, Some(formatDate))
+          convertNumericalCounts(numCounts, Some(convert(_)))
       }
 
       case FieldTypeId.Null =>
@@ -201,7 +189,7 @@ class StatsServiceImpl extends StatsService {
     criteria: Seq[Criterion[Any]],
     field: Field,
     groupField: Field
-  ): Future[Seq[(String, Seq[Count])]] = {
+  ): Future[Seq[(String, Seq[Count[_]])]] = {
 
     val groupFieldSpec = groupField.fieldTypeSpec
     val groupFieldType = ftf(groupFieldSpec)
@@ -264,7 +252,7 @@ class StatsServiceImpl extends StatsService {
   override def calcDistributionCounts(
     items: Traversable[JsObject],
     field: Field
-  ): Seq[Count] = {
+  ): Seq[Count[_]] = {
     val fieldTypeSpec = field.fieldTypeSpec
     val fieldType = ftf(fieldTypeSpec)
     val fieldTypeId = fieldTypeSpec.fieldType
@@ -296,12 +284,11 @@ class StatsServiceImpl extends StatsService {
 
       case FieldTypeId.Double => {
         // TODO: use renderer here
-        val renderer = getRenderer[Double]
-
-        def outputLabel(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP).toString
+//        val renderer = getRenderer[Double]
+        def convert(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP)
 
         val numCounts = numericalCounts(getValues[Double].flatten, 20, false, None, None)
-        formatNumericalCounts(numCounts, Some(outputLabel))
+        convertNumericalCounts(numCounts, Some(convert(_)))
       }
 
       case FieldTypeId.Integer => {
@@ -310,26 +297,24 @@ class StatsServiceImpl extends StatsService {
         val max = if (values.nonEmpty) values.max else 0
         val valueCount = max - min
 
-        val outputLabel =
+        val convert =
           if (valueCount < 20)
-            Some { value: BigDecimal => value.toInt.toString }
+            Some { value: BigDecimal => value.toInt }
           else
             None
 
         val numCounts = numericalCounts(values, Math.min(20, valueCount + 1).toInt, valueCount < 20, None, None)
-        formatNumericalCounts(numCounts, outputLabel)
+        convertNumericalCounts(numCounts, convert)
       }
 
       case FieldTypeId.Date => {
         val dates = getValues[ju.Date].flatten
         val values = dates.map(_.getTime)
 
-        val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-
-        def formatDate(ms: BigDecimal) = dateFormat.format(new ju.Date(ms.toLongExact))
+        def convert(ms: BigDecimal) = new ju.Date(ms.toLongExact)
 
         val numCounts = numericalCounts(values, 20, false, None, None)
-        formatNumericalCounts(numCounts, Some(formatDate))
+        convertNumericalCounts(numCounts, Some(convert(_)))
       }
 
       case FieldTypeId.Null =>
@@ -345,7 +330,7 @@ class StatsServiceImpl extends StatsService {
     items: Traversable[JsObject],
     field: Field,
     groupField: Field
-  ): Seq[(String, Seq[Count])] = {
+  ): Seq[(String, Seq[Count[_]])] = {
     val groupFieldSpec = groupField.fieldTypeSpec
     val groupFieldType = ftf(groupFieldSpec)
     val groupFieldTypeId = groupFieldSpec.fieldType
@@ -364,22 +349,22 @@ class StatsServiceImpl extends StatsService {
     val groupedValues = groupFieldTypeId match {
 
       case FieldTypeId.String => {
-        val groupJsons = groupValues[String].filter(_._1.isDefined).map {
+        val groupedJsons = groupValues[String].filter(_._1.isDefined).map {
           case (option, jsons) => (option.get, jsons)
         }.toSeq.sortBy(_._1)
         val undefinedGroupJsons = groupValues[String].find(_._1.isEmpty).map(_._2).getOrElse(Nil)
-        groupJsons ++ Seq(("Undefined", undefinedGroupJsons))
+        groupedJsons ++ Seq(("Undefined", undefinedGroupJsons))
       }
 
       case FieldTypeId.Enum => {
         val jsonsMap = groupValues[Int].toMap
         def getJsons(groupValue: Option[Int]) = jsonsMap.get(groupValue).getOrElse(Nil)
 
-        val groupJsons = groupFieldSpec.enumValues.map(_.toSeq.sortBy(_._1).map { case (int, label) =>
+        val groupedJsons = groupFieldSpec.enumValues.map(_.toSeq.sortBy(_._1).map { case (int, label) =>
           (label, getJsons(Some(int)))
         }).getOrElse(Nil)
 
-        groupJsons ++ Seq(("Undefined", getJsons(None)))
+        groupedJsons ++ Seq(("Undefined", getJsons(None)))
       }
 
       case FieldTypeId.Boolean => {
@@ -594,13 +579,13 @@ class StatsServiceImpl extends StatsService {
   override def categoricalCountsWithFormatting[T](
     values: Traversable[Option[T]],
     renderer: Option[Option[T] => String]
-  ): Seq[Count] =
+  ): Seq[Count[String]] =
     formatCategoricalCounts(categoricalCounts(values), renderer)
 
   private def formatCategoricalCounts[T](
     counts: Seq[(Option[T], Int)],
     renderer: Option[Option[T] => String]
-  ): Seq[Count] =
+  ): Seq[Count[String]] =
     counts.map {
       case (key, count) => {
         val stringKey = key.map(_.toString)
@@ -608,51 +593,24 @@ class StatsServiceImpl extends StatsService {
         val label = renderer.map(_.apply(key)).getOrElse(keyOrEmpty)
 
         Count(
-          stringKey,
+          label,
           count,
-          label
+          stringKey
         )
       }
     }
 
-  private def formatNumericalCounts(
+  private def convertNumericalCounts[T](
     counts: Seq[(BigDecimal, Int)],
-    renderer: Option[BigDecimal => String] = None
-  ): Seq[Count] =
+    convert: Option[BigDecimal => T] = None
+  ): Seq[Count[_]] =
     counts.sortBy(_._1).map {
       case (xValue, count) =>
-        val xLabel = renderer.map(_.apply(xValue)).getOrElse(xValue.toString)
-
-        Count(
-          None,
-          count,
-          xLabel
-        )
+        val convertedValue = convert.map(_.apply(xValue)).getOrElse(xValue.toDouble)
+        Count(convertedValue, count, None)
     }
 
-  override def createScatterChartSpec(
-    xyzItems: Traversable[JsObject],
-    xField: Field,
-    yField: Field,
-    groupField: Option[Field],
-    title: Option[String] = None,
-    outputGridWidth: Option[Int] = None
-  ): ScatterChartSpec = {
-    val data = getScatterData(xyzItems, xField, yField, groupField)
-    ScatterChartSpec(
-      title.getOrElse("Comparison"),
-      xField.labelOrElseName,
-      yField.labelOrElseName,
-      data.map { case (name, values) =>
-        val initName = if (name.isEmpty) "Undefined" else name
-        (initName, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
-      },
-      None,
-      outputGridWidth
-    )
-  }
-
-  private def getScatterData(
+  override def collectScatterData(
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
@@ -684,7 +642,7 @@ class StatsServiceImpl extends StatsService {
           (
             zValue,
             values.map(tupple => (tupple._2, tupple._3))
-            )
+          )
         }.toSeq
       }
       case None => {
@@ -697,65 +655,7 @@ class StatsServiceImpl extends StatsService {
     }
   }
 
-//  override def createBoxChartSpec(
-//    items: Traversable[JsObject],
-//    field: Field,
-//    outputGridWidth: Option[Int] = None
-//  ): Option[BoxChartSpec[_]] = {
-//    val jsons = project(items, field.name)
-//    val typeSpec = field.fieldTypeSpec
-//    val fieldType = ftf(typeSpec)
-//
-//    def quantiles[T: Ordering](
-//      toDouble: T => Double
-//    ): Option[Quantiles[T]] =
-//      BasicStats.quantiles[T](
-//        jsonsToValues[T](jsons, fieldType).flatten.toSeq,
-//        toDouble
-//      )
-//
-//    def createChart[T: Ordering](quants: Option[Quantiles[T]]) =
-//      quants.map(
-//        BoxChartSpec(field.labelOrElseName, field.labelOrElseName, _, None, None, None, outputGridWidth)
-//      )
-//
-//    typeSpec.fieldType match {
-//      case FieldTypeId.Double => createChart(quantiles[Double](identity))
-//
-//      case FieldTypeId.Integer => createChart(quantiles[Long](_.toDouble))
-//
-//      case FieldTypeId.Date => createChart(quantiles[ju.Date](_.getTime.toDouble))
-//
-//      case _ => None
-//    }
-//  }
-
-  override def createBoxChartSpec(
-    items: Traversable[JsObject],
-    field: Field,
-    outputGridWidth: Option[Int] = None
-  ): Option[BoxChartSpec[_]] =
-    calcQuantiles(items, field).map { quants =>
-      implicit val ordering = quants.ordering
-      BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quants, None, None, None, outputGridWidth)
-    }
-
-  override def createBoxChartSpecRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    field: Field,
-    outputGridWidth: Option[Int] = None,
-    height: Option[Int] = None
-  ): Future[Option[BoxChartSpec[_]]] =
-    for {
-      quantiles <- calcQuantiles(dataRepo, criteria, field)
-    } yield
-      quantiles.map { quants =>
-        implicit val ordering = quants.ordering
-        BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quants, None, None, height, outputGridWidth)
-      }
-
-  private def calcQuantiles(
+  override def calcQuantiles(
     items: Traversable[JsObject],
     field: Field
   ): Option[Quantiles[Any]] = {
@@ -782,7 +682,7 @@ class StatsServiceImpl extends StatsService {
     }
   }
 
-  private def calcQuantiles(
+  override def calcQuantiles(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
@@ -957,18 +857,17 @@ class StatsServiceImpl extends StatsService {
     }
   }
 
-  override def createPearsonCorrelationChartSpec(
+  def calcPearsonCorrelations(
     items: Traversable[JsObject],
-    fields: Traversable[Field],
-    outputGridWidth: Option[Int] = None
-  ): HeatmapChartSpec = {
+    fields: Seq[Field]
+  ): Seq[Seq[Option[Double]]] = {
 
     def getValues[T](field: Field): Traversable[Option[T]] = {
       val typedFieldType = ftf(field.fieldTypeSpec).asValueOf[T]
       project(items, field.name).map(typedFieldType.jsonToValue)
     }
 
-    val fieldsWithValues: Traversable[(Field, Traversable[Option[Double]])] = fields.map { field =>
+    val fieldsWithValues: Seq[(Field, Traversable[Option[Double]])] = fields.map { field =>
       field.fieldType match {
         case FieldTypeId.Double =>
           Some((field, getValues[Double](field)))
@@ -983,27 +882,24 @@ class StatsServiceImpl extends StatsService {
       }
     }.flatten
 
-    val data: Seq[Seq[Option[Double]]] = fieldsWithValues.map(_._2).toSeq.transpose
+    val data: Seq[Seq[Option[Double]]] = fieldsWithValues.map(_._2).transpose
 
-//    val filteredData = data.filter(!_.contains(None)).map(_.flatten)
-//
-//    println("First")
-//    println
-//    println(filteredData.map(x => x(0)).mkString("\n"))
-//
-//    println
-//    println("Second")
-//    println
-//    println(filteredData.map(x => x(1)).mkString("\n"))
-//    println
+    //    val filteredData = data.filter(!_.contains(None)).map(_.flatten)
+    //
+    //    println("First")
+    //    println
+    //    println(filteredData.map(x => x(0)).mkString("\n"))
+    //
+    //    println
+    //    println("Second")
+    //    println
+    //    println(filteredData.map(x => x(1)).mkString("\n"))
+    //    println
 
-    val correlations = BasicStats.pearsonCorrelation(data)
+    //    println("Correlations")
+    //    println(correlations.map(_.mkString(",")).mkString("\n"))
 
-//    println("Correlations")
-//    println(correlations.map(_.mkString(",")).mkString("\n"))
-
-    val fieldLabels = fieldsWithValues.map(_._1.labelOrElseName).toSeq
-    HeatmapChartSpec("Correlations", fieldLabels, fieldLabels, correlations, None, Some(-1), Some(1), outputGridWidth)
+    BasicStats.pearsonCorrelation(data)
   }
 
   def jsonsToValues[T](
