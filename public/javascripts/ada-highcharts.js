@@ -79,6 +79,7 @@
         yAxisCaption,
         showLegend,
         height,
+        dataType,
         allowPointClick,
         allowChartTypeChange
     ) {
@@ -104,6 +105,7 @@
             },
             xAxis: {
 //                type: 'category',
+                type: dataType,
                 title: {
                     text: xAxisCaption
                 },
@@ -220,6 +222,7 @@
         yAxisCaption,
         showLegend,
         height,
+        dataType,
         allowPointClick,
         allowChartTypeChange
     ) {
@@ -240,6 +243,7 @@
                 text: title
             },
             xAxis: {
+                type: dataType,
                 title: {
                     text: xAxisCaption
                 },
@@ -299,6 +303,7 @@
         series,
         showLegend,
         height,
+        dataType,
         allowPointClick,
         allowChartTypeChange
     ) {
@@ -333,6 +338,7 @@
                 enabled: showLegend
             },
             xAxis: {
+                type: dataType,
                 categories: categories,
                 tickmarkPlacement: 'on',
                 lineWidth: 0
