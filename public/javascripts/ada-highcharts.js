@@ -37,7 +37,7 @@
                     cursor: cursor,
                     dataLabels: {
                         enabled: showLabels,
-                        format: '<b>{point.name}</b>: {point.percentage:.1f}%',
+                        format: '<b>{point.x}</b>: {point.percentage:.1f}%',
                         style: {
                             color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
                         }
@@ -78,6 +78,7 @@
         xAxisCaption,
         yAxisCaption,
         showLegend,
+        pointFormat,
         height,
         dataType,
         allowPointClick,
@@ -118,6 +119,15 @@
                 }
             },
             legend: {
+                layout: 'vertical',
+                align: 'right',
+                verticalAlign: 'middle',
+                borderWidth: 0,
+                itemStyle: {
+                    width:'100px',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden'
+                },
                 enabled: showLegend
             },
             credits: {
@@ -149,7 +159,7 @@
 
             tooltip: {
                 headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
-                pointFormat: '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.2f}</b><br/>'
+                pointFormat: pointFormat
             },
 
             series: series
@@ -191,7 +201,12 @@
                 layout: 'vertical',
                 align: 'right',
                 verticalAlign: 'middle',
-                borderWidth: 0
+                borderWidth: 0,
+                itemStyle: {
+                    width:'80px',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden'
+                }
             },
             credits: {
                 enabled: false
@@ -221,6 +236,7 @@
         xAxisCaption,
         yAxisCaption,
         showLegend,
+        pointFormat,
         height,
         dataType,
         allowPointClick,
@@ -255,6 +271,15 @@
                 }
             },
             legend: {
+                layout: 'vertical',
+                align: 'right',
+                verticalAlign: 'middle',
+                borderWidth: 0,
+                itemStyle: {
+                    width:'80px',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden'
+                },
                 enabled: showLegend
             },
             credits: {
@@ -271,6 +296,7 @@
                             }
                         }
                     },
+                    turboThreshold: 5000,
                     allowPointSelect: allowPointClick,
                     cursor: cursor,
                     point: {
@@ -289,7 +315,7 @@
 
             tooltip: {
                 headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
-                pointFormat: '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.2f}</b><br/>'
+                pointFormat: pointFormat
             },
 
             series: series
@@ -332,9 +358,15 @@
                 endAngle: 360
             },
             legend: {
-                //align: 'center',
-                //verticalAlign: 'bottom',
-                //layout: 'vertical',
+                layout: 'vertical',
+                align: 'right',
+                verticalAlign: 'middle',
+                borderWidth: 0,
+                itemStyle: {
+                    width:'80px',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden'
+                },
                 enabled: showLegend
             },
             xAxis: {
@@ -416,7 +448,12 @@
                 layout: 'vertical',
                 align: 'right',
                 verticalAlign: 'middle',
-                borderWidth: 0
+                borderWidth: 0,
+                itemStyle: {
+                    width:'100px',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden'
+                }
             },
             credits: {
                 enabled: false
