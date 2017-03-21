@@ -77,6 +77,11 @@
                 </a>
             </li>
             <li>
+                <a href="#" onclick="addFieldCumulativeCounts();return false" data-toggle="tooltip" title="Add Cumulative Counts To View">
+                    Cumulative Counts
+                </a>
+            </li>
+            <li>
                 <a href="#" onclick="addFieldBoxPlots();return false" data-toggle="tooltip" title="Add Box Plots To View">
                     Box Plots
                 </a>
@@ -136,6 +141,7 @@
 
 @helper.javascriptRouter("dataViewJsRoutes")(
     dataViewJsRouter.addDistributions,
+    dataViewJsRouter.addCumulativeCounts,
     dataViewJsRouter.addBoxPlots,
     dataViewJsRouter.addScatter,
     dataViewJsRouter.addCorrelation,
@@ -179,6 +185,15 @@
         $("#dataViewSelectionModal").modal('show');
     }
 
+    function addFieldCumulativeCounts() {
+        var handler = function(e) {
+            addFieldCumulativeCountsToView();
+        };
+
+        $("#dataViewSelectionModal #submitButton").one( "click", handler );
+        $("#dataViewSelectionModal").modal('show');
+    }
+
     function addFieldBoxPlots() {
         var handler = function(e) {
             addFieldBoxPlotsToView();
@@ -214,6 +229,21 @@
         dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addDistributions(dataViewId, fieldNames).ajax( {
             success: function() {
                 showMessage("Distributions for the field(s) '" + fieldNames + "' have been successfully added to the view '" + dataViewName + "'.");
+            },
+            error: function(data){
+                showError( data.responseText );
+            }
+        });
+    }
+
+    function addFieldCumulativeCountsToView() {
+        var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+        var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
+        var fieldNames = getCheckedTableIds("dictionaryTable", "id")
+
+        dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCumulativeCounts(dataViewId, fieldNames).ajax( {
+            success: function() {
+                showMessage("Cumulative Counts for the field(s) '" + fieldNames + "' have been successfully added to the view '" + dataViewName + "'.");
             },
             error: function(data){
                 showError( data.responseText );

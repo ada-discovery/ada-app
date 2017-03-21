@@ -51,7 +51,7 @@ class DataSetSettingController @Inject() (
       "defaultScatterXFieldName" -> optional(text),
       "defaultScatterYFieldName" -> optional(text),
       "defaultDistributionFieldName" -> nonEmptyText,
-      "defaultDateCountFieldName" -> optional(text),
+      "defaultCumulativeCountFieldName" -> optional(text),
       "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
       "tranSMARTVisitFieldName" -> optional(text),
       "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),

@@ -52,8 +52,8 @@
             (None, "Grid Offset", displayGridOffsetElement),
             (None, "Grid Width", displayGridWidthElement),
             (None, "Chart Type", {x =>
-                if(x.isInstanceOf[DistributionCalcSpec]) {
-                    editableChartType(x.asInstanceOf[DistributionCalcSpec].displayOptions.chartType)
+                if(x.displayOptions.isInstanceOf[ChartDisplayOptions]) {
+                    editableChartType(x.displayOptions.asInstanceOf[ChartDisplayOptions].chartType)
                 } else ""
             })
         )
@@ -79,6 +79,10 @@
 
         switch (concreteClass) {
             case "@{classOf[DistributionCalcSpec].getName}" :
+                output["fieldName"] = fieldNames[0];
+                output["groupFieldName"] = fieldNames[1];
+                break;
+            case "@{classOf[CumulativeCountCalcSpec].getName}" :
                 output["fieldName"] = fieldNames[0];
                 output["groupFieldName"] = fieldNames[1];
                 break;
@@ -135,6 +139,10 @@
                 fieldNames = [values["fieldName"], values["groupFieldName"]].join(", ");
                 fieldLabels = [values["fieldNameTypeahead"], values["groupFieldNameTypeahead"]].join(", ");
                 break;
+            case "@{classOf[CumulativeCountCalcSpec].getName}" :
+                fieldNames = [values["fieldName"], values["groupFieldName"]].join(", ");
+                fieldLabels = [values["fieldNameTypeahead"], values["groupFieldNameTypeahead"]].join(", ");
+                break;
             case "@{classOf[BoxCalcSpec].getName}" :
                 fieldNames = values["fieldName"];
                 fieldLabels = values["fieldNameTypeahead"];
@@ -171,6 +179,7 @@
             <select id="concreteClass" onchange="updateModalItems();">
                 @concreteClassOptions(
                     classOf[DistributionCalcSpec],
+                    classOf[CumulativeCountCalcSpec],
                     classOf[BoxCalcSpec],
                     classOf[ScatterCalcSpec],
                     classOf[CorrelationCalcSpec]
@@ -231,6 +240,10 @@
 
         switch (concreteClass) {
             case "@{classOf[DistributionCalcSpec].getName}" :
+                $("#fieldNameDiv").show();
+                $("#groupFieldNameDiv").show();
+                break;
+            case "@{classOf[CumulativeCountCalcSpec].getName}" :
                 $("#fieldNameDiv").show();
                 $("#groupFieldNameDiv").show();
                 break;

@@ -48,7 +48,7 @@ case class DataSetSetting(
   defaultScatterXFieldName: Option[String],
   defaultScatterYFieldName: Option[String],
   defaultDistributionFieldName: String,
-  defaultDateCountFieldName: Option[String],
+  defaultCumulativeCountFieldName: Option[String],
   filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
   tranSMARTVisitFieldName: Option[String],
   tranSMARTReplacements: Map[String, String],
@@ -90,6 +90,14 @@ abstract class StatsCalcSpec {
 }
 
 case class DistributionCalcSpec(
+  fieldName: String,
+  groupFieldName: Option[String],
+  displayOptions: ChartDisplayOptions = ChartDisplayOptions()
+) extends StatsCalcSpec {
+  override val fieldNames = Seq(Some(fieldName), groupFieldName).flatten
+}
+
+case class CumulativeCountCalcSpec(
   fieldName: String,
   groupFieldName: Option[String],
   displayOptions: ChartDisplayOptions = ChartDisplayOptions()
@@ -242,6 +250,7 @@ object DataSetFormattersAndIds {
   implicit val statsCalcSpecFormat: Format[StatsCalcSpec] = new SubTypeFormat[StatsCalcSpec](
     Seq(
       ManifestedFormat(Json.format[DistributionCalcSpec]),
+      ManifestedFormat(Json.format[CumulativeCountCalcSpec]),
       ManifestedFormat(Json.format[BoxCalcSpec]),
       ManifestedFormat(Json.format[ScatterCalcSpec]),
       ManifestedFormat(Json.format[CorrelationCalcSpec])

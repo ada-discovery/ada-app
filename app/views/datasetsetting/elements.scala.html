@@ -11,7 +11,7 @@
 @inputText("dataSetSetting", "defaultDistributionFieldName", form)
 @inputText("dataSetSetting", "defaultScatterXFieldName", form)
 @inputText("dataSetSetting", "defaultScatterYFieldName", form)
-@inputText("dataSetSetting", "defaultDateCountFieldName", form)
+@inputText("dataSetSetting", "defaultCumulativeCountFieldName", form)
 @select("dataSetSetting", "filterShowFieldStyle", form,
     FilterShowFieldStyle.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString))), true
 )

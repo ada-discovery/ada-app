@@ -23,6 +23,7 @@
         var seriesSize = datas.length
         var showLegend = seriesSize > 1
         var height = @chartSpec.displayOptions.height.getOrElse(400)
+        var pointFormat = '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.2f}</b><br/>'
 
         $('#@chartElementName').on('chartTypeChanged', function(event, chartType) {
             changeChartType(chartType);
@@ -38,8 +39,6 @@
                         var innerSize = 0
                         if (index > 0)
                             innerSize = (100 / seriesSize) * index + 1
-                        console.log(size)
-                        console.log(innerSize)
                         return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
                     });
 
@@ -51,7 +50,7 @@
                         return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                     });
 
-                    columnChart('@chartSpec.title', '@{chartElementName}', categories, series, false, '', 'Count', showLegend, height, null, true, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', categories, series, false, '', 'Count', showLegend, pointFormat, height, null, true, true);
                     break;
                 case '@ChartType.Bar':
                     var colorByPoint = (seriesSize == 1)
@@ -59,12 +58,12 @@
                         return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                     });
 
-                    columnChart('@chartSpec.title', '@{chartElementName}', categories, series, true, '', 'Count', showLegend, height, null, true, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', categories, series, true, '', 'Count', showLegend, pointFormat, height, null, true, true);
                     break;
                 case '@ChartType.Line':
                     var series = datas
 
-                    lineChart('@chartSpec.title', '@{chartElementName}', categories, series, '', 'Count', showLegend, height, null, true, true);
+                    lineChart('@chartSpec.title', '@{chartElementName}', categories, series, '', 'Count', showLegend, pointFormat, height, null, true, true);
                     break;
                 case '@ChartType.Polar':
                     var series = datas.map( function(data, index) {

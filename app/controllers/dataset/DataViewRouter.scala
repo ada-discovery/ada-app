@@ -20,6 +20,8 @@ final class DataViewRouter(dataSetId: String) extends GenericRouter(routes.DataV
 final class DataViewJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.DataViewDispatcher, "dataSet", dataSetId) {
   val addDistributions = routeFun(_.addDistributions)
   val addDistribution = routeFun(_.addDistribution)
+  val addCumulativeCounts = routeFun(_.addCumulativeCounts)
+  val addCumulativeCount = routeFun(_.addCumulativeCount)
   val addBoxPlots = routeFun(_.addBoxPlots)
   val addScatter = routeFun(_.addScatter)
   val addCorrelation = routeFun(_.addCorrelation)

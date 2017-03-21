@@ -230,6 +230,29 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     repo.update(newDataView)
   }
 
+  override def addCumulativeCounts(
+    dataViewId: BSONObjectID,
+    fieldNames: Seq[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val existingFieldNames = filterSpecsOf[CumulativeCountCalcSpec](dataView).map(_.fieldName)
+    val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
+
+    if (newFieldNames.nonEmpty) {
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(CumulativeCountCalcSpec(_, None)))
+      repo.update(newDataView)
+    } else
+      Future(())
+  }
+
+  override def addCumulativeCount(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    groupFieldName: Option[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(CumulativeCountCalcSpec(fieldName, groupFieldName)))
+    repo.update(newDataView)
+  }
+
   override def addBoxPlots(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]

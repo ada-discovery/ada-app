@@ -111,7 +111,7 @@ object JsonUtil {
     * @param fieldName Field of interest.
     * @return Items in specified field.
     */
-  def project(items : Traversable[JsObject], fieldName : String): Traversable[JsLookupResult] =
+  def project(items : Traversable[JsObject], fieldName : String): Traversable[JsReadable] =
     items.map { item => (item \ fieldName) }
 
   def toString(value: JsReadable): Option[String] =

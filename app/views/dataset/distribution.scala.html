@@ -147,6 +147,9 @@
 
         $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
             if (e.which == 13) {
+                var groupFieldTypeahedVal = $('#fieldForm #groupFieldTypeahead').val();
+                if (!groupFieldTypeahedVal)
+                    $('#fieldForm #groupFieldName').val("")
                 $('#fieldForm').submit();;
                 return false;
             }
@@ -182,7 +185,7 @@
         if (fieldName) {
             dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addDistribution(dataViewId, fieldName, groupFieldName).ajax( {
                 success: function() {
-                    showMessage("Distributions for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
+                    showMessage("Distribution for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
                 },
                 error: function(data){
                     showError( data.responseText );
@@ -199,7 +202,7 @@
         if (fieldName) {
             dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId, [fieldName]).ajax( {
                 success: function() {
-                    showMessage("Box plots for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
+                    showMessage("Box plot for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
                 },
                 error: function(data){
                     showError( data.responseText );

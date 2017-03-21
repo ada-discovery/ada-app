@@ -35,15 +35,15 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def getScatterStats(
-    xFieldName: Option[String],
-    yFieldName: Option[String],
+  def getCumulativeCount(
+    fieldName: Option[String],
     groupFieldName: Option[String],
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def getDateCount(
-    dateFieldName: Option[String],
+  def getScatterStats(
+    xFieldName: Option[String],
+    yFieldName: Option[String],
     groupFieldName: Option[String],
     filterOrId: FilterOrId
   ): Action[AnyContent]

@@ -61,6 +61,17 @@ class DataViewDispatcher @Inject()(dscf: DataSetControllerFactory, dvc: DataView
     groupFieldName: Option[String]
   ) = dispatch(_.addDistribution(dataViewId, fieldName, groupFieldName))
 
+  override def addCumulativeCounts(
+    dataViewId: BSONObjectID,
+    fieldNames: Seq[String]
+  ) = dispatch(_.addCumulativeCounts(dataViewId, fieldNames))
+
+  override def addCumulativeCount(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    groupFieldName: Option[String]
+  ) = dispatch(_.addCumulativeCount(dataViewId, fieldName, groupFieldName))
+
   override def addTableFields(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]

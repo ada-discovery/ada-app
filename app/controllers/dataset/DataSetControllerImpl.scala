@@ -542,6 +542,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         statsCalcSpecs.collect {
           case p: DistributionCalcSpec => Left(p)
           case p: BoxCalcSpec => Left(p)
+          case p: CumulativeCountCalcSpec => Right(p)
           case p: ScatterCalcSpec => Right(p)
           case p: CorrelationCalcSpec => Right(p)
         }
@@ -602,8 +603,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             (chartTitle, countSeries) <- groupField match {
               case Some(groupField) =>
                 statsService.calcGroupedDistributionCounts(repo, criteria, field, groupField).map { counts =>
-                  val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 15)
-                  (shorten(label, 15) + " by " + groupShortLabel, counts)
+                  val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 20)
+                  (shorten(label, 20) + " by " + groupShortLabel, counts)
                 }
               case None =>
                 statsService.calcDistributionCounts(repo, criteria, field).map { counts =>
@@ -648,8 +649,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           val (chartTitle, countSeries) = groupField match {
             case Some(groupField) => {
               val counts = statsService.calcGroupedDistributionCounts(items, field, groupField)
-              val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 15)
-              (shorten(label, 15) + " by " + groupShortLabel, counts)
+              val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 20)
+              (shorten(label, 20) + " by " + groupShortLabel, counts)
             }
 
             case None => {
@@ -659,6 +660,27 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           }
           createDistributionChartSpec(countSeries, field, chartTitle, false, true, displayOptions)
         }.flatten
+
+      case CumulativeCountCalcSpec(fieldName, groupFieldName, displayOptions) => {
+        val field = nameFieldMap.get(fieldName).get
+        val groupField = groupFieldName.map(nameFieldMap.get).flatten
+
+        val series = statsService.calcCumulativeCounts(items, field, groupField)
+
+        val label = field.label.getOrElse(fieldLabel(field.name))
+
+        val chartTitle =
+          groupField match {
+            case Some(groupField) =>
+              val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 25)
+              shorten(label, 25) + " by " + groupShortLabel
+            case None => label
+          }
+
+        val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
+        val chartSpec = NumericalChartSpec(chartTitle, series, initializedDisplayOptions)
+        Some(chartSpec)
+      }
 
       case BoxCalcSpec(fieldName, displayOptions) =>
         nameFieldMap.get(fieldName).map { field =>
@@ -671,8 +693,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       case ScatterCalcSpec(xFieldName, yFieldName, groupFieldName, displayOptions) => {
         val xField = nameFieldMap.get(xFieldName).get
         val yField = nameFieldMap.get(yFieldName).get
-        val shortXFieldLabel = shorten(xField.labelOrElseName, 15)
-        val shortYFieldLabel = shorten(yField.labelOrElseName, 15)
+        val shortXFieldLabel = shorten(xField.labelOrElseName, 20)
+        val shortYFieldLabel = shorten(yField.labelOrElseName, 20)
 
         //          val groupedLabel = groupFieldName.map(_ => "[grouped]").getOrElse("")
 
@@ -914,8 +936,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             groupField match {
               case Some(groupField) =>
                 statsService.calcGroupedDistributionCounts(repo, criteria, field, groupField).map { counts =>
-                  val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 15)
-                  (shorten(label, 15) + " by " + groupShortLabel, counts)
+                  val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 20)
+                  (shorten(label, 20) + " by " + groupShortLabel, counts)
                 }
               case None =>
                 statsService.calcDistributionCounts(repo, criteria, field).map { counts =>
@@ -1022,19 +1044,20 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def getDateCount(
-    dateFieldNameOption: Option[String],
+  override def getCumulativeCount(
+    fieldNameOption: Option[String],
     groupFieldNameOption: Option[String],
     filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    // intialiaze the date and group field names
-    val dateFieldName: Option[String] =
-      dateFieldNameOption.map(Some(_)).getOrElse(
-        setting.defaultDateCountFieldName
+    // initialize the field name
+    val fieldName: Option[String] =
+      fieldNameOption.map(Some(_)).getOrElse(
+        setting.defaultCumulativeCountFieldName
       )
 
+    // initialize the group name
     val groupFieldName: Option[String] =
       groupFieldNameOption.map { fieldName =>
         val trimmed = fieldName.trim
@@ -1047,17 +1070,22 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
-        dateField <- getField(dateFieldName)
+        field <- getField(fieldName)
 
         groupField <- getField(groupFieldName)
         // use a given filter conditions or load one
         resolvedFilter <- resolveFilter(filterOrId)
 
-        // retrive the data count series
+        criteria <- toCriteria(resolvedFilter.conditions)
+
+        // retrieve the jsons/items with or without a group field and collect the cumulative counts
         series <-
-          dateField.map( dateField =>
-            getDateCountData(resolvedFilter.conditions, dateField, groupField)
-          ).getOrElse(
+          field.map { field =>
+            val projection = Seq(field.name) ++ groupField.map(_.name)
+            repo.find(criteria, Nil, projection.toSet).map(jsons =>
+              statsService.calcCumulativeCounts(jsons, field, groupField)
+            )
+          }.getOrElse(
             Future(Nil)
           )
 
@@ -1066,67 +1094,36 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       } yield {
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
 
+        val options = ChartDisplayOptions(chartType = Some(ChartType.Line), height = Some(500))
+        val chartTitle = field.map { field =>
+          val label = field.label.getOrElse(fieldLabel(field.name))
+          groupField match {
+            case Some(groupField) =>
+              val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 20)
+              shorten(label, 20) + " by " + groupShortLabel
+            case None => label
+          }
+        }.getOrElse("N/A")
+
+        val chartSpec = NumericalChartSpec(chartTitle, series, options)
         render {
-          case Accepts.Html() => Ok(dataset.dateCount(
+          case Accepts.Html() => Ok(dataset.cumulativeCount(
             dataSetName,
-            dateField,
+            field,
             groupField,
-            series,
+            chartSpec,
             newFilter,
             setting.filterShowFieldStyle,
             result(dataSpaceTree)
           ))
-          case Accepts.Json() => BadRequest("GetDateCount function doesn't support JSON response.")
+          case Accepts.Json() => BadRequest("GetCumulativeCount function doesn't support JSON response.")
         }
       }
     }.recover {
       case t: TimeoutException =>
-        Logger.error("Problem found in the getDateCountd process")
+        Logger.error("Problem found in the GetCumulativeCount process")
         InternalServerError(t.getMessage)
     }
-  }
-
-  private def getDateCountData(
-    filter: Seq[FilterCondition],
-    dateField: Field,
-    groupField: Option[Field]
-  ): Future[Seq[(String, Seq[(ju.Date, Any)])]] = {
-    val dateFieldName = dateField.name
-
-    val criteria = result(toCriteria(filter))
-    val projection = Seq(dateFieldName) ++ groupField.map(_.name)
-    val dateGroupItemsFuture = repo.find(criteria, Nil, projection.toSet)
-
-    val dateFieldType = ftf(dateField.fieldTypeSpec).asInstanceOf[FieldType[ju.Date]]
-
-    val groupDatesFuture: Future[Seq[(String, Seq[ju.Date])]] =
-      dateGroupItemsFuture.map { dateGroupItems =>
-        val dateGroupSeq = dateGroupItems.toSeq
-        val dateJsons = project(dateGroupSeq, dateFieldName).toSeq
-        val dates = dateJsons.map(dateFieldType.jsonToValue)
-
-        groupField match {
-          case Some(zField) => {
-            val groupFieldType = ftf(zField.fieldTypeSpec)
-            val groupJsons = project(dateGroupSeq, zField.name).toSeq
-            val groups = groupJsons.map(groupFieldType.jsonToDisplayString)
-
-            // TODO: simplify this
-            (groups, dates).zipped.map { case (group, date) =>
-              (Some(group), date).zipped
-            }.flatten.groupBy(_._1).map { case (group, values) =>
-              (group, values.map(_._2))
-            }.toSeq
-          }
-          case None =>
-            Seq(("all", dates.flatten))
-        }
-      }
-
-    groupDatesFuture.map(_.map{ case (name, dates) =>
-      val count = (dates.sorted, Stream.from(1)).zipped.toSeq
-      (name, count)
-    })
   }
 
   override def getFields(

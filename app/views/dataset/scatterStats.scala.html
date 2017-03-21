@@ -172,6 +172,9 @@
 
         $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
             if (e.which == 13) {
+                var groupFieldTypeahedVal = $('#fieldForm #groupFieldTypeahead').val();
+                if (!groupFieldTypeahedVal)
+                    $('#fieldForm #groupFieldName').val("")
                 $('#fieldForm').submit();;
                 return false;
             }

@@ -2,8 +2,8 @@ package services
 
 import com.google.inject.ImplementedBy
 import dataaccess._
-import models.{Field, FieldTypeId, Count}
-import play.api.libs.json.{JsLookupResult, JsObject}
+import models.{Count, Field, FieldTypeId, FilterCondition}
+import play.api.libs.json.{JsLookupResult, JsNull, JsObject, JsReadable}
 import reactivemongo.bson.BSONObjectID
 import util.BasicStats.Quantiles
 
@@ -51,6 +51,12 @@ trait StatsService {
     renderer: Option[Option[T] => String]
   ): Seq[Count[String]]
 
+  def calcCumulativeCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Option[Field]
+  ): Seq[(String, Seq[(Any, Int)])]
+
   def calcQuantiles(
     items: Traversable[JsObject],
     field: Field
@@ -67,7 +73,7 @@ trait StatsService {
     xField: Field,
     yField: Field,
     groupField: Option[Field]
-  ): Seq[(String, Seq[(Any, Any)])]
+  ): Seq[(String, Traversable[(Any, Any)])]
 
   def calcPearsonCorrelations(
     items: Traversable[JsObject],
@@ -615,7 +621,7 @@ class StatsServiceImpl extends StatsService {
     xField: Field,
     yField: Field,
     groupField: Option[Field]
-  ): Seq[(String, Seq[(Any, Any)])] = {
+  ): Seq[(String, Traversable[(Any, Any)])] = {
     val xFieldName = xField.name
     val yFieldName = yField.name
 
@@ -629,31 +635,101 @@ class StatsServiceImpl extends StatsService {
     val xValues = xJsons.map(xFieldType.jsonToValue)
     val yValues = yJsons.map(yFieldType.jsonToValue)
 
+    def flattenTupples[A, B](
+      tupples: Traversable[(Option[A], Option[B])]
+    ): Traversable[(A, B)] =
+      tupples.map(_.zipped).flatten
+
     groupField match {
-      case Some(zField) => {
-        val zFieldType = ftf(zField.fieldTypeSpec)
-        val groupJsons = project(xyzSeq, zField.name).toSeq
-        val groupValues = groupJsons.map(zFieldType.jsonToDisplayString)
+      case Some(groupField) =>
+        val groupFieldType = ftf(groupField.fieldTypeSpec)
+        val groupJsons = project(xyzSeq, groupField.name).toSeq
+        val groupValues = jsonsToDisplayString(groupFieldType, groupJsons)
 
-        // TODO: simplify this
-        (groupValues, xValues, yValues).zipped.map { case (zValue, xValue, yValue) =>
-          (Some(zValue), xValue, yValue).zipped
-        }.flatten.groupBy(_._1).map { case (zValue, values) =>
+        val groupedValues = (groupValues, xValues, yValues).zipped.groupBy(_._1).map { case (groupValue, values) =>
           (
-            zValue,
-            values.map(tupple => (tupple._2, tupple._3))
+            groupValue,
+            flattenTupples(values.map(tupple => (tupple._2, tupple._3)))
           )
-        }.toSeq
-      }
-      case None => {
-        val xys = (xValues, yValues).zipped.map { case (xValue, yValue) =>
-          (xValue, yValue).zipped
-        }.flatten
+        }
+        groupedValues.filter(_._2.nonEmpty).toSeq
 
+      case None =>
+        val lala = (xValues, yValues).zipped
+        val xys = flattenTupples(lala)
         Seq(("all", xys))
-      }
+
     }
   }
+
+  override def calcCumulativeCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Option[Field]
+  ): Seq[(String, Seq[(Any, Int)])] = {
+    def calcCounts[T: Ordering] = calcCumulativeCountsAux[T](items, field, groupField)
+
+    field.fieldType match {
+
+      case FieldTypeId.String => calcCounts[String]
+
+      case FieldTypeId.Enum => calcCounts[Int]
+
+      case FieldTypeId.Boolean => calcCounts[Boolean]
+
+      case FieldTypeId.Double => calcCounts[Double]
+
+      case FieldTypeId.Integer => calcCounts[Long]
+
+      case FieldTypeId.Date => calcCounts[ju.Date]
+
+      case _ => Nil
+    }
+  }
+
+  private def calcCumulativeCountsAux[T: Ordering](
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Option[Field]
+  ): Seq[(String, Seq[(T, Int)])] = {
+    val fieldType = ftf(field.fieldTypeSpec).asInstanceOf[FieldType[T]]
+
+    val itemsSeq = items.toSeq
+    val jsons = project(itemsSeq, field.name).toSeq
+    val values = jsons.map(fieldType.jsonToValue)
+
+    def sortValues(groupedValues: Seq[(String, Seq[T])]) =
+      groupedValues.map{ case (name, values) =>
+        val counts = (values.sorted, Stream.from(1)).zipped.toSeq
+        (name, counts)
+      }
+
+    groupField match {
+      case Some(groupField) =>
+        val groupFieldType = ftf(groupField.fieldTypeSpec)
+        val groupJsons = project(itemsSeq, groupField.name).toSeq
+        val groups = jsonsToDisplayString(groupFieldType, groupJsons)
+
+        val groupedValues = (groups, values).zipped.groupBy(_._1).map { case (group, values) =>
+          (group, values.map(_._2).flatten.toSeq)
+        }.toSeq
+        sortValues(groupedValues)
+
+      case None =>
+        sortValues(Seq(("all", values.flatten)))
+    }
+  }
+
+  private def jsonsToDisplayString[T](
+    fieldType: FieldType[T],
+    jsons: Traversable[JsReadable]
+  ): Traversable[String] =
+    jsons.map { json =>
+      fieldType.jsonToValue(json) match {
+        case None => "Undefined"
+        case Some(value) => fieldType.valueToDisplayString(Some(value))
+      }
+    }
 
   override def calcQuantiles(
     items: Traversable[JsObject],
@@ -903,7 +979,7 @@ class StatsServiceImpl extends StatsService {
   }
 
   def jsonsToValues[T](
-    jsons: Traversable[JsLookupResult],
+    jsons: Traversable[JsReadable],
     fieldType: FieldType[_]
   ): Traversable[Option[T]] =
     if (fieldType.spec.isArray) {

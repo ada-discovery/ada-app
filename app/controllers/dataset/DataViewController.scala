@@ -27,6 +27,17 @@ trait DataViewController extends CrudController[BSONObjectID] {
     groupName: Option[String]
   ): Action[AnyContent]
 
+  def addCumulativeCount(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    groupName: Option[String]
+  ): Action[AnyContent]
+
+  def addCumulativeCounts(
+    dataViewId: BSONObjectID,
+    fieldNames: Seq[String]
+  ): Action[AnyContent]
+
   def addBoxPlots(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]

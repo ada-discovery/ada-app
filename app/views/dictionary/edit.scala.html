@@ -25,7 +25,6 @@
     @inputText(domainName, "displayDecimalPlaces", form)
     @inputText(domainName, "displayTrueValue", form)
     @inputText(domainName, "displayFalseValue", form)
-    @inputText(domainName, "label", form)
     @inputText(domainName, "aliases", form)
     @select(domainName, "categoryId", form, categories.map(cat => (cat._id.get.stringify, cat.name)).toSeq, true)
 }

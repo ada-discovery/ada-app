@@ -34,7 +34,7 @@ case class ScatterChartSpec(
   title: String,
   xAxisCaption: String,
   yAxisCaption: String,
-  data: Seq[(String, String, Seq[Seq[Any]])],
+  data: Seq[(String, String, Traversable[Seq[Any]])],
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends ChartSpec
 

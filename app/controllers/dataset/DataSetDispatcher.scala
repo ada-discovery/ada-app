@@ -64,11 +64,11 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: Either[Seq[FilterCondition], BSONObjectID]
   ) = dispatch(_.getCorrelations(fieldNames, filterOrId))
 
-  override def getDateCount(
+  override def getCumulativeCount(
     dateFieldName: Option[String],
     groupFieldName: Option[String],
     filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
-  ) = dispatch(_.getDateCount(dateFieldName, groupFieldName, filterOrId))
+  ) = dispatch(_.getCumulativeCount(dateFieldName, groupFieldName, filterOrId))
 
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
