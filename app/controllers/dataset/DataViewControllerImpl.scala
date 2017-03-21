@@ -207,7 +207,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     )
   }
 
-  def addDistributions(
+  override def addDistributions(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
   ) = processDataView(dataViewId) { dataView =>
@@ -215,13 +215,22 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
 
     if (newFieldNames.nonEmpty) {
-      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(DistributionCalcSpec(_, None, None)))
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(DistributionCalcSpec(_, None)))
       repo.update(newDataView)
     } else
       Future(())
   }
 
-  def addBoxPlots(
+  override def addDistribution(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    groupFieldName: Option[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(DistributionCalcSpec(fieldName, groupFieldName)))
+    repo.update(newDataView)
+  }
+
+  override def addBoxPlots(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
   ) = processDataView(dataViewId) { dataView =>
@@ -235,8 +244,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       Future(())
   }
 
-
-  def addScatter(
+  override def addScatter(
     dataViewId: BSONObjectID,
     xFieldName: String,
     yFieldName: String,
@@ -253,7 +261,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       Future(())
   }
 
-  def addCorrelation(
+  override def addCorrelation(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
   ) = processDataView(dataViewId) { dataView =>
@@ -265,7 +273,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       Future(())
   }
 
-  def addTableFields(
+  override def addTableFields(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
   ) = processDataView(dataViewId) { dataView =>

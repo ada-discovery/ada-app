@@ -21,6 +21,12 @@ trait DataViewController extends CrudController[BSONObjectID] {
     fieldNames: Seq[String]
   ): Action[AnyContent]
 
+  def addDistribution(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    groupName: Option[String]
+  ): Action[AnyContent]
+
   def addBoxPlots(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]

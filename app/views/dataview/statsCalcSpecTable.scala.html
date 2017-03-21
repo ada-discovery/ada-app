@@ -32,8 +32,12 @@
     <input type="hidden" id="fieldNames" value="@calcSpec.fieldNames.mkString(", ")"/>
 }
 
-@outputGridWidthElement(calcSpec: StatsCalcSpec) = {
-    <input type="text" id="outputGridWidth" style="width:40px" value="@calcSpec.outputGridWidth.getOrElse("")">
+@displayGridWidthElement(calcSpec: StatsCalcSpec) = {
+    <input type="text" id="gridWidth" style="width:40px" value="@calcSpec.displayOptions.gridWidth.getOrElse("")">
+}
+
+@displayGridOffsetElement(calcSpec: StatsCalcSpec) = {
+    <input type="text" id="gridOffset" style="width:40px" value="@calcSpec.displayOptions.gridOffset.getOrElse("")">
 }
 
 @table = {
@@ -45,10 +49,11 @@
             (None, "Calc Type", {x => concreteClassName(x.getClass)}),
             (None, "", fieldNamesHiddenElement),
             (None, "Field(s)", _.fieldNames.map( fieldName => nameFieldMap.get(fieldName).map(_.labelOrElseName).getOrElse(fieldName) ).mkString(", ")),
-            (None, "Grid Width", outputGridWidthElement),
+            (None, "Grid Offset", displayGridOffsetElement),
+            (None, "Grid Width", displayGridWidthElement),
             (None, "Chart Type", {x =>
                 if(x.isInstanceOf[DistributionCalcSpec]) {
-                    editableChartType(x.asInstanceOf[DistributionCalcSpec].chartType)
+                    editableChartType(x.asInstanceOf[DistributionCalcSpec].displayOptions.chartType)
                 } else ""
             })
         )
@@ -64,10 +69,13 @@
         var concreteClass = row.find('#concreteClass').val().trim();
         var chartTypeElement = row.find('#chartType');
         var chartType = (chartTypeElement.length > 0) ? chartTypeElement.val().trim() : null;
-        var outputGridWidth = row.find('#outputGridWidth').val().trim()
+        var gridOffset = row.find('#gridOffset').val().trim()
+        var gridWidth = row.find('#gridWidth').val().trim()
 
         var output = {};
         output["concreteClass"] = concreteClass
+
+        var displayOptions = {};
 
         switch (concreteClass) {
             case "@{classOf[DistributionCalcSpec].getName}" :
@@ -88,15 +96,24 @@
         }
 
         if (chartType) {
-            output["chartType"] = chartType
+            displayOptions["chartType"] = chartType
         }
 
-        if (outputGridWidth) {
-            var intGridWidth = parseInt(outputGridWidth)
-            if (!isNaN(intGridWidth)) {
-                output["outputGridWidth"] = Math.min(intGridWidth, 12)
+        if (gridOffset) {
+            var intGridOffset = parseInt(gridOffset)
+            if (!isNaN(intGridOffset)) {
+                displayOptions["gridOffset"] = Math.min(intGridOffset, 12)
             }
         }
+
+        if (gridWidth) {
+            var intGridWidth = parseInt(gridWidth)
+            if (!isNaN(intGridWidth)) {
+                displayOptions["gridWidth"] = Math.min(intGridWidth, 12)
+            }
+        }
+
+        output["displayOptions"] = displayOptions;
 
         return JSON.stringify(output);
     }
@@ -135,9 +152,10 @@
         var fieldNamesColumn = "<td><input type='hidden' id='fieldNames' value='" + fieldNames + "'/></td>";
         var fieldLabelsColumn = "<td>" + fieldLabels + "</td>";
         var chartTypeColumn = (concreteClass == "@{classOf[DistributionCalcSpec].getName}") ? `<td>@editableChartType(None)</td>` : "<td></td>";
-        var outputGridWidthColumn = "<td><input type='text' id='outputGridWidth' style='width:40px' value=''/></td>";
+        var gridOffsetColumn = "<td><input type='text' id='gridOffset' style='width:40px' value=''/></td>";
+        var gridWidthColumn = "<td><input type='text' id='gridWidth' style='width:40px' value=''/></td>";
 
-        return "<tr>" + checkboxColumn + concreteClassValueColumn + concreteClassNameColumn + fieldNamesColumn + fieldLabelsColumn + outputGridWidthColumn + chartTypeColumn + "</tr>";
+        return "<tr>" + checkboxColumn + concreteClassValueColumn + concreteClassNameColumn + fieldNamesColumn + fieldLabelsColumn + gridOffsetColumn + gridWidthColumn + chartTypeColumn + "</tr>";
     }
 }
 

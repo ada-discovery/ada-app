@@ -153,6 +153,7 @@ POST        /studies/dataviews/:id/delete                                       
 GET         /studies/dataviews/copy                                                 controllers.dataset.DataViewDispatcher.copy(dataViewId: BSONObjectID)
 GET         /studies/dataviews/idAndNames                                           controllers.dataset.DataViewDispatcher.idAndNames
 GET         /studies/dataviews/addDistributions                                     controllers.dataset.DataViewDispatcher.addDistributions(dataViewId: BSONObjectID, fieldNames: Seq[String])
+GET         /studies/dataviews/addDistribution                                      controllers.dataset.DataViewDispatcher.addDistribution(dataViewId: BSONObjectID, fieldName: String, groupFieldName: Option[String])
 GET         /studies/dataviews/addBoxPlots                                          controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId: BSONObjectID, fieldNames: Seq[String])
 GET         /studies/dataviews/addScatter                                           controllers.dataset.DataViewDispatcher.addScatter(dataViewId: BSONObjectID, xFieldName: String, yFieldName: String, groupFieldName: Option[String])
 GET         /studies/dataviews/addCorrelation                                       controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId: BSONObjectID, fieldNames: Seq[String])

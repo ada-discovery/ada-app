@@ -65,23 +65,41 @@ case class FieldChartType(
   chartType: Option[ChartType.Value]
 )
 
+sealed trait DisplayOptions {
+  val gridWidth: Option[Int]
+  val gridOffset: Option[Int]
+  val height: Option[Int]
+}
+
+case class BasicDisplayOptions(
+  gridWidth: Option[Int] = None,
+  gridOffset: Option[Int] = None,
+  height: Option[Int] = None
+) extends DisplayOptions
+
+case class ChartDisplayOptions(
+  gridWidth: Option[Int] = None,
+  gridOffset: Option[Int] = None,
+  height: Option[Int] = None,
+  chartType: Option[ChartType.Value] = None
+) extends DisplayOptions
+
 abstract class StatsCalcSpec {
   def fieldNames: Traversable[String]
-  def outputGridWidth: Option[Int]
+  val displayOptions: DisplayOptions
 }
 
 case class DistributionCalcSpec(
   fieldName: String,
   groupFieldName: Option[String],
-  chartType: Option[ChartType.Value],
-  outputGridWidth: Option[Int] = None
+  displayOptions: ChartDisplayOptions = ChartDisplayOptions()
 ) extends StatsCalcSpec {
   override val fieldNames = Seq(Some(fieldName), groupFieldName).flatten
 }
 
 case class BoxCalcSpec(
   fieldName: String,
-  outputGridWidth: Option[Int] = None
+  displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends StatsCalcSpec {
   override val fieldNames = Seq(fieldName)
 }
@@ -90,14 +108,14 @@ case class ScatterCalcSpec(
   xFieldName: String,
   yFieldName: String,
   groupFieldName: Option[String],
-  outputGridWidth: Option[Int] = None
+  displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends StatsCalcSpec {
   override val fieldNames = Seq(Some(xFieldName), Some(yFieldName), groupFieldName).flatten
 }
 
 case class CorrelationCalcSpec(
   fieldNames: Seq[String],
-  outputGridWidth: Option[Int] = None
+  displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends StatsCalcSpec
 
 object ChartType extends Enumeration {
@@ -218,6 +236,8 @@ object DataSetFormattersAndIds {
 
   implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
   implicit val fieldChartTypeFormat = Json.format[FieldChartType]
+  implicit val basicDisplayOptionsFormat = Json.format[BasicDisplayOptions]
+  implicit val distributionDisplayOptionsFormat = Json.format[ChartDisplayOptions]
 
   implicit val statsCalcSpecFormat: Format[StatsCalcSpec] = new SubTypeFormat[StatsCalcSpec](
     Seq(

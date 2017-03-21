@@ -23,7 +23,7 @@ abstract class RefreshableCache[ID, T](eagerLoad: Boolean) {
     val future = getAllIds.map(_.map(id =>
       map.put(id, createInstance(id))
     ))
-    Await.result(future, 120000 millis)
+    Await.result(future, 10 minutes)
   }
 
   def refresh: Unit = this.synchronized {

@@ -110,7 +110,7 @@
 }
 
 @helper.javascriptRouter("dataViewJsRoutes")(
-    dataViewJsRouter.addDistributions,
+    dataViewJsRouter.addDistribution,
     dataViewJsRouter.addBoxPlots
 )
 
@@ -175,9 +175,12 @@
         var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
         var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
         var fieldName = $('#fieldForm #fieldName').val()
+        var groupFieldName = $('#fieldForm #groupFieldName').val()
+        if (groupFieldName == "")
+            groupFieldName = null
 
         if (fieldName) {
-            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addDistributions(dataViewId, [fieldName]).ajax( {
+            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addDistribution(dataViewId, fieldName, groupFieldName).ajax( {
                 success: function() {
                     showMessage("Distributions for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
                 },

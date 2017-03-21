@@ -22,13 +22,13 @@
 
         var seriesSize = datas.length
         var showLegend = seriesSize > 1
-        var height = @chartSpec.height.getOrElse(400)
+        var height = @chartSpec.displayOptions.height.getOrElse(400)
 
         $('#@chartElementName').on('chartTypeChanged', function(event, chartType) {
             changeChartType(chartType);
         });
 
-        changeChartType('@chartSpec.chartType');
+        changeChartType('@chartSpec.displayOptions.chartType');
 
         function changeChartType(chartType) {
             switch (chartType) {

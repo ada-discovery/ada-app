@@ -4,15 +4,9 @@ import _root_.util.BasicStats.Quantiles
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 
-import scala.collection.mutable
-import scala.collection.mutable.{Map => MMap}
-import scala.math.BigDecimal.RoundingMode
-import models.ChartType
-
 abstract class ChartSpec {
   val title: String
-  val height: Option[Int]
-  val gridWidth: Option[Int]
+  val displayOptions: DisplayOptions
   val _id: BSONObjectID = BSONObjectID.generate()
 }
 
@@ -21,24 +15,19 @@ case class CategoricalChartSpec(
   showLabels: Boolean,
   showLegend: Boolean,
   data: Seq[(String, Seq[Count[String]])],
-  chartType: ChartType.Value,
-  height: Option[Int] = None,
-  gridWidth: Option[Int] = None
+  displayOptions: ChartDisplayOptions = ChartDisplayOptions()
 ) extends ChartSpec
 
 case class NumericalChartSpec[T](
   title: String,
   data: Seq[(String, Seq[(T, Int)])],
-  chartType: ChartType.Value,
-  height: Option[Int] = None,
-  gridWidth: Option[Int] = None
+  displayOptions: ChartDisplayOptions = ChartDisplayOptions()
 ) extends ChartSpec
 
 case class ColumnChartSpec(
   title: String,
   data: Seq[(String, Int)],
-  height: Option[Int] = None,
-  gridWidth: Option[Int] = None
+  displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends ChartSpec
 
 case class ScatterChartSpec(
@@ -46,8 +35,7 @@ case class ScatterChartSpec(
   xAxisCaption: String,
   yAxisCaption: String,
   data: Seq[(String, String, Seq[Seq[Any]])],
-  height: Option[Int] = None,
-  gridWidth: Option[Int] = None
+  displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends ChartSpec
 
 case class BoxChartSpec[T <% Ordered[T]](
@@ -56,8 +44,7 @@ case class BoxChartSpec[T <% Ordered[T]](
   data: Quantiles[T],
   min: Option[T] = None,
   max: Option[T] = None,
-  height: Option[Int] = None,
-  gridWidth: Option[Int] = None
+  displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends ChartSpec {
   def ordering = implicitly[Ordering[T]]
 }
@@ -69,8 +56,7 @@ case class HeatmapChartSpec(
   data: Seq[Seq[Option[Double]]],
   min: Option[Double] = None,
   max: Option[Double] = None,
-  height: Option[Int] = None,
-  gridWidth: Option[Int] = None
+  displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends ChartSpec
 
 case class Count[T](

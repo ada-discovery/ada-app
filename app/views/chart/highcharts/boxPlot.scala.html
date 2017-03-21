@@ -26,7 +26,7 @@
             $('#@{chartElementName}').highcharts({
                 chart: {
                     type: 'boxplot',
-                    height: @chartSpec.height.getOrElse(400)
+                    height: @chartSpec.displayOptions.height.getOrElse(400)
                 },
                 title: {
                     text:  "@chartSpec.title"

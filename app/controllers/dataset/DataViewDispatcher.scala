@@ -55,6 +55,12 @@ class DataViewDispatcher @Inject()(dscf: DataSetControllerFactory, dvc: DataView
     fieldNames: Seq[String]
   ) = dispatch(_.addDistributions(dataViewId, fieldNames))
 
+  override def addDistribution(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    groupFieldName: Option[String]
+  ) = dispatch(_.addDistribution(dataViewId, fieldName, groupFieldName))
+
   override def addTableFields(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
