@@ -19,7 +19,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.libs.json.Json
+import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
@@ -51,7 +51,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   protected override val listViewColumns = None // Some(Seq("name"))
 
-  private implicit val statsCalcSpecFormatter = JsonFormatter[StatsCalcSpec]
+  private implicit val statsCalcSpecFormatter = JsonFormatter[WidgetSpec]
   private implicit val eitherFormat = new EitherFormat[Seq[models.FilterCondition], BSONObjectID]
   private implicit val eitherFormatter = JsonFormatter[Either[Seq[models.FilterCondition], BSONObjectID]]
 
@@ -61,7 +61,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       "name" -> nonEmptyText,
       "filterOrIds" -> seq(of[Either[Seq[models.FilterCondition], BSONObjectID]]),
       "tableColumnNames" -> seq(text),
-      "statsCalcSpecs" -> seq(of[StatsCalcSpec]),
+      "statsCalcSpecs" -> seq(of[WidgetSpec]),
       "elementGridWidth" -> number(min = 1, max = 12),
       "default" -> boolean,
       "useOptimizedRepoChartCalcMethod" -> boolean
@@ -152,10 +152,22 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override def idAndNames = Action.async { implicit request =>
     for {
-      dataViews <- repo.find(sort = Seq(AscSort("name")))
+      dataViews <- repo.find(
+        sort = Seq(AscSort("name")),
+        projection = Seq("name", "default", "elementGridWidth", "timeCreated")
+      )
     } yield {
-      val sorted = dataViews.toSeq.sortBy(dataView => (!dataView.default, dataView.name))
-      Ok(Json.toJson(sorted))
+      val sorted = dataViews.toSeq.sortBy(dataView =>
+        (!dataView.default, dataView.name)
+      )
+      val idAndNames = sorted.map( dataView =>
+        Json.obj(
+          "_id" -> dataView._id,
+          "name" -> dataView.name,
+          "default" -> dataView.default
+        )
+      )
+      Ok(JsArray(idAndNames))
     }
   }
 
@@ -211,11 +223,11 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
   ) = processDataView(dataViewId) { dataView =>
-    val existingFieldNames = filterSpecsOf[DistributionCalcSpec](dataView).map(_.fieldName)
+    val existingFieldNames = filterSpecsOf[DistributionWidgetSpec](dataView).map(_.fieldName)
     val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
 
     if (newFieldNames.nonEmpty) {
-      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(DistributionCalcSpec(_, None)))
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(DistributionWidgetSpec(_, None)))
       repo.update(newDataView)
     } else
       Future(())
@@ -226,7 +238,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     fieldName: String,
     groupFieldName: Option[String]
   ) = processDataView(dataViewId) { dataView =>
-    val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(DistributionCalcSpec(fieldName, groupFieldName)))
+    val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(DistributionWidgetSpec(fieldName, groupFieldName)))
     repo.update(newDataView)
   }
 
@@ -234,11 +246,11 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
   ) = processDataView(dataViewId) { dataView =>
-    val existingFieldNames = filterSpecsOf[CumulativeCountCalcSpec](dataView).map(_.fieldName)
+    val existingFieldNames = filterSpecsOf[CumulativeCountWidgetSpec](dataView).map(_.fieldName)
     val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
 
     if (newFieldNames.nonEmpty) {
-      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(CumulativeCountCalcSpec(_, None)))
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(CumulativeCountWidgetSpec(_, None)))
       repo.update(newDataView)
     } else
       Future(())
@@ -249,7 +261,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     fieldName: String,
     groupFieldName: Option[String]
   ) = processDataView(dataViewId) { dataView =>
-    val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(CumulativeCountCalcSpec(fieldName, groupFieldName)))
+    val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(CumulativeCountWidgetSpec(fieldName, groupFieldName)))
     repo.update(newDataView)
   }
 
@@ -257,11 +269,11 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
   ) = processDataView(dataViewId) { dataView =>
-    val existingFieldNames = filterSpecsOf[BoxCalcSpec](dataView).map(_.fieldName)
+    val existingFieldNames = filterSpecsOf[BoxWidgetSpec](dataView).map(_.fieldName)
     val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
 
     if (newFieldNames.nonEmpty) {
-      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(BoxCalcSpec(_)))
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ newFieldNames.map(BoxWidgetSpec(_)))
       repo.update(newDataView)
     } else
       Future(())
@@ -273,12 +285,12 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     yFieldName: String,
     groupFieldName: Option[String]
   ) = processDataView(dataViewId) { dataView =>
-    val existingXYZNames = filterSpecsOf[ScatterCalcSpec](dataView).map { spec =>
+    val existingXYZNames = filterSpecsOf[ScatterWidgetSpec](dataView).map { spec =>
       (spec.xFieldName, spec.yFieldName, spec.groupFieldName)
     }
     val fieldNames = (xFieldName, yFieldName, groupFieldName)
     if (!existingXYZNames.contains(fieldNames)) {
-      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(ScatterCalcSpec(xFieldName, yFieldName, groupFieldName)))
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(ScatterWidgetSpec(xFieldName, yFieldName, groupFieldName)))
       repo.update(newDataView)
     } else
       Future(())
@@ -288,9 +300,9 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
   ) = processDataView(dataViewId) { dataView =>
-    val existingNames = filterSpecsOf[CorrelationCalcSpec](dataView).map(_.fieldNames)
+    val existingNames = filterSpecsOf[CorrelationWidgetSpec](dataView).map(_.fieldNames)
     if (!existingNames.contains(fieldNames)) {
-      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(CorrelationCalcSpec(fieldNames)))
+      val newDataView = dataView.copy(statsCalcSpecs = dataView.statsCalcSpecs ++ Seq(CorrelationWidgetSpec(fieldNames)))
       repo.update(newDataView)
     } else
       Future(())
@@ -310,7 +322,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     }
   }
 
-  private def filterSpecsOf[T <: StatsCalcSpec](
+  private def filterSpecsOf[T <: WidgetSpec](
     dataView: DataView)(
     implicit ev: ClassTag[T]
   ): Seq[T] =

@@ -269,7 +269,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       ).map { fields =>
         val values = fields.map(field => Some(fieldExtractor(field).toString))
         val counts = statsService.categoricalCountsWithFormatting(values, None)
-        CategoricalChartSpec(chartTitle, false, true, Seq((chartTitle, counts)), ChartDisplayOptions(chartType = Some(ChartType.Pie)))
+        CategoricalChartSpec(chartTitle, false, true, Seq((chartTitle, counts)), MultiChartDisplayOptions(chartType = Some(ChartType.Pie)))
       }
     }
 

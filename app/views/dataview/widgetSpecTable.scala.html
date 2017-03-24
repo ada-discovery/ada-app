@@ -4,10 +4,10 @@
 @import util.typeColumns
 @import models.ChartType
 @import models.FieldChartType
-@import models.{StatsCalcSpec, Field}
+@import models.{WidgetSpec, Field}
 
 @(
-    items: Traversable[StatsCalcSpec],
+    items: Traversable[WidgetSpec],
     nameFieldMap: Map[String,  Field]
 )
 
@@ -20,40 +20,60 @@
     </select>
 }
 
-@concreteClassHiddenElement(calcSpec: StatsCalcSpec) = {
-    <input type="hidden" id="concreteClass" value="@calcSpec.getClass.getName"/>
+@concreteClassHiddenElement(widgetSpec: WidgetSpec) = {
+    <input type="hidden" id="concreteClass" value="@widgetSpec.getClass.getName"/>
 }
 
 @concreteClassName(clazz: Class[_]) = @{
-    clazz.getName.split("\\.")(1).replaceAll("CalcSpec", "")
+    clazz.getName.split("\\.")(1).replaceAll("WidgetSpec", "")
 }
 
-@fieldNamesHiddenElement(calcSpec: StatsCalcSpec) = {
-    <input type="hidden" id="fieldNames" value="@calcSpec.fieldNames.mkString(", ")"/>
+@fieldNamesHiddenElement(widgetSpec: WidgetSpec) = {
+    <input type="hidden" id="fieldNames" value="@widgetSpec.fieldNames.mkString(", ")"/>
 }
 
-@displayGridWidthElement(calcSpec: StatsCalcSpec) = {
-    <input type="text" id="gridWidth" style="width:40px" value="@calcSpec.displayOptions.gridWidth.getOrElse("")">
+@gridWidthElement(widgetSpec: WidgetSpec) = {
+    <input type="text" id="gridWidth" style="width:40px" value="@widgetSpec.displayOptions.gridWidth.getOrElse("")">
 }
 
-@displayGridOffsetElement(calcSpec: StatsCalcSpec) = {
-    <input type="text" id="gridOffset" style="width:40px" value="@calcSpec.displayOptions.gridOffset.getOrElse("")">
+@gridOffsetElement(widgetSpec: WidgetSpec) = {
+    <input type="text" id="gridOffset" style="width:40px" value="@widgetSpec.displayOptions.gridOffset.getOrElse("")">
+}
+
+@heightElement(widgetSpec: WidgetSpec) = {
+    <input type="text" id="height" style="width:60px" value="@widgetSpec.displayOptions.height.getOrElse("")">
+}
+
+@distCountNumericBinCountElement(widgetSpec: DistributionWidgetSpec) = {
+    <input type="text" id="numericBinCount" style="width:40px" value="@widgetSpec.numericBinCount.getOrElse("")">
+}
+
+@cumCountNumericBinCountElement(widgetSpec: CumulativeCountWidgetSpec) = {
+    <input type="text" id="numericBinCount" style="width:40px" value="@widgetSpec.numericBinCount.getOrElse("")">
 }
 
 @table = {
     @displayTable(
         items,
-        typeColumns[StatsCalcSpec](
+        typeColumns[WidgetSpec](
             (None, "", _ => {<input type="checkbox"/>}),
             (None, "", concreteClassHiddenElement),
             (None, "Calc Type", {x => concreteClassName(x.getClass)}),
             (None, "", fieldNamesHiddenElement),
             (None, "Field(s)", _.fieldNames.map( fieldName => nameFieldMap.get(fieldName).map(_.labelOrElseName).getOrElse(fieldName) ).mkString(", ")),
-            (None, "Grid Offset", displayGridOffsetElement),
-            (None, "Grid Width", displayGridWidthElement),
+            (None, "Grid Offset", gridOffsetElement),
+            (None, "Grid Width", gridWidthElement),
+            (None, "Height", heightElement),
+            (None, "Numeric Bin Count", {x =>
+                x match {
+                    case x: DistributionWidgetSpec => distCountNumericBinCountElement(x)
+                    case x: CumulativeCountWidgetSpec => cumCountNumericBinCountElement(x)
+                    case _ => ""
+                }
+            }),
             (None, "Chart Type", {x =>
-                if(x.displayOptions.isInstanceOf[ChartDisplayOptions]) {
-                    editableChartType(x.displayOptions.asInstanceOf[ChartDisplayOptions].chartType)
+                if(x.displayOptions.isInstanceOf[MultiChartDisplayOptions]) {
+                    editableChartType(x.displayOptions.asInstanceOf[MultiChartDisplayOptions].chartType)
                 } else ""
             })
         )
@@ -71,6 +91,18 @@
         var chartType = (chartTypeElement.length > 0) ? chartTypeElement.val().trim() : null;
         var gridOffset = row.find('#gridOffset').val().trim()
         var gridWidth = row.find('#gridWidth').val().trim()
+        var height = row.find('#height').val().trim()
+        var numericBinCountElement = row.find('#numericBinCount');
+        var intNumericBinCount = null;
+        if (numericBinCountElement) {
+            var numericBinCount = (numericBinCountElement.length > 0) ? numericBinCountElement.val().trim() : null;
+            if (numericBinCount) {
+                intNumericBinCount = parseInt(numericBinCount)
+                if (!isNaN(intNumericBinCount)) {
+                    intNumericBinCount = Math.max(intNumericBinCount, 1)
+                }
+            }
+        }
 
         var output = {};
         output["concreteClass"] = concreteClass
@@ -78,23 +110,29 @@
         var displayOptions = {};
 
         switch (concreteClass) {
-            case "@{classOf[DistributionCalcSpec].getName}" :
+            case "@{classOf[DistributionWidgetSpec].getName}" :
                 output["fieldName"] = fieldNames[0];
                 output["groupFieldName"] = fieldNames[1];
+                if (intNumericBinCount) {
+                    output["numericBinCount"] = intNumericBinCount;
+                }
                 break;
-            case "@{classOf[CumulativeCountCalcSpec].getName}" :
+            case "@{classOf[CumulativeCountWidgetSpec].getName}" :
                 output["fieldName"] = fieldNames[0];
                 output["groupFieldName"] = fieldNames[1];
+                if (intNumericBinCount) {
+                    output["numericBinCount"] = intNumericBinCount;
+                }
                 break;
-            case "@{classOf[BoxCalcSpec].getName}" :
+            case "@{classOf[BoxWidgetSpec].getName}" :
                 output["fieldName"] = fieldNames[0];
                 break;
-            case "@{classOf[ScatterCalcSpec].getName}" :
+            case "@{classOf[ScatterWidgetSpec].getName}" :
                 output["xFieldName"] = fieldNames[0];
                 output["yFieldName"] = fieldNames[1];
                 output["groupFieldName"] = fieldNames[2];
                 break;
-            case "@{classOf[CorrelationCalcSpec].getName}" :
+            case "@{classOf[CorrelationWidgetSpec].getName}" :
                 output["fieldNames"] = fieldNames
                 break;
         }
@@ -117,6 +155,13 @@
             }
         }
 
+        if (height) {
+            var intHeight = parseInt(height)
+            if (!isNaN(intHeight)) {
+                displayOptions["height"] = Math.min(intHeight, 1000)
+            }
+        }
+
         output["displayOptions"] = displayOptions;
 
         return JSON.stringify(output);
@@ -126,7 +171,7 @@
 @itemToRowJsFun = {
     function(values) {
         var concreteClass = values["concreteClass"].trim()
-        var concreteClassName = concreteClass.replace('models.','').replace('CalcSpec','')
+        var concreteClassName = concreteClass.replace('models.','').replace('WidgetSpec','')
 
         var checkboxColumn = "<td><input type='checkbox'></input></td>";
         var concreteClassValueColumn = "<td><input type='hidden' id='concreteClass' value='" + concreteClass + "'/></td>";
@@ -135,23 +180,23 @@
         var fieldNames;
         var fieldLabels;
         switch (concreteClass) {
-            case "@{classOf[DistributionCalcSpec].getName}" :
+            case "@{classOf[DistributionWidgetSpec].getName}" :
                 fieldNames = [values["fieldName"], values["groupFieldName"]].join(", ");
                 fieldLabels = [values["fieldNameTypeahead"], values["groupFieldNameTypeahead"]].join(", ");
                 break;
-            case "@{classOf[CumulativeCountCalcSpec].getName}" :
+            case "@{classOf[CumulativeCountWidgetSpec].getName}" :
                 fieldNames = [values["fieldName"], values["groupFieldName"]].join(", ");
                 fieldLabels = [values["fieldNameTypeahead"], values["groupFieldNameTypeahead"]].join(", ");
                 break;
-            case "@{classOf[BoxCalcSpec].getName}" :
+            case "@{classOf[BoxWidgetSpec].getName}" :
                 fieldNames = values["fieldName"];
                 fieldLabels = values["fieldNameTypeahead"];
                 break;
-            case "@{classOf[ScatterCalcSpec].getName}" :
+            case "@{classOf[ScatterWidgetSpec].getName}" :
                 fieldNames = [values["xFieldName"], values["yFieldName"], values["groupFieldName"]].join(", ");
                 fieldLabels = [values["xFieldNameTypeahead"], values["yFieldNameTypeahead"], values["groupFieldNameTypeahead"]].join(", ");
                 break;
-            case "@{classOf[CorrelationCalcSpec].getName}" :
+            case "@{classOf[CorrelationWidgetSpec].getName}" :
                 fieldNames = values["fieldNames"]
                 fieldLabels = values["fieldNames"];
                 break;
@@ -159,11 +204,13 @@
 
         var fieldNamesColumn = "<td><input type='hidden' id='fieldNames' value='" + fieldNames + "'/></td>";
         var fieldLabelsColumn = "<td>" + fieldLabels + "</td>";
-        var chartTypeColumn = (concreteClass == "@{classOf[DistributionCalcSpec].getName}") ? `<td>@editableChartType(None)</td>` : "<td></td>";
+        var chartTypeColumn = (concreteClass == "@{classOf[DistributionWidgetSpec].getName}") ? `<td>@editableChartType(None)</td>` : "<td></td>";
         var gridOffsetColumn = "<td><input type='text' id='gridOffset' style='width:40px' value=''/></td>";
         var gridWidthColumn = "<td><input type='text' id='gridWidth' style='width:40px' value=''/></td>";
+        var heightColumn = "<td><input type='text' id='height' style='width:60px' value=''/></td>";
+        var numericBinCountColumn = "<td><input type='text' id='numericBinCount' style='width:40px' value=''/></td>";
 
-        return "<tr>" + checkboxColumn + concreteClassValueColumn + concreteClassNameColumn + fieldNamesColumn + fieldLabelsColumn + gridOffsetColumn + gridWidthColumn + chartTypeColumn + "</tr>";
+        return "<tr>" + checkboxColumn + concreteClassValueColumn + concreteClassNameColumn + fieldNamesColumn + fieldLabelsColumn + gridOffsetColumn + gridWidthColumn + heightColumn + numericBinCountColumn + chartTypeColumn + "</tr>";
     }
 }
 
@@ -178,11 +225,11 @@
         @labelValue("concreteClass", "Type") {
             <select id="concreteClass" onchange="updateModalItems();">
                 @concreteClassOptions(
-                    classOf[DistributionCalcSpec],
-                    classOf[CumulativeCountCalcSpec],
-                    classOf[BoxCalcSpec],
-                    classOf[ScatterCalcSpec],
-                    classOf[CorrelationCalcSpec]
+                    classOf[DistributionWidgetSpec],
+                    classOf[CumulativeCountWidgetSpec],
+                    classOf[BoxWidgetSpec],
+                    classOf[ScatterWidgetSpec],
+                    classOf[CorrelationWidgetSpec]
                 )
             </select>
         }
@@ -239,23 +286,23 @@
         hideAll();
 
         switch (concreteClass) {
-            case "@{classOf[DistributionCalcSpec].getName}" :
+            case "@{classOf[DistributionWidgetSpec].getName}" :
                 $("#fieldNameDiv").show();
                 $("#groupFieldNameDiv").show();
                 break;
-            case "@{classOf[CumulativeCountCalcSpec].getName}" :
+            case "@{classOf[CumulativeCountWidgetSpec].getName}" :
                 $("#fieldNameDiv").show();
                 $("#groupFieldNameDiv").show();
                 break;
-            case "@{classOf[BoxCalcSpec].getName}" :
+            case "@{classOf[BoxWidgetSpec].getName}" :
                 $("#fieldNameDiv").show();
                 break;
-            case "@{classOf[ScatterCalcSpec].getName}" :
+            case "@{classOf[ScatterWidgetSpec].getName}" :
                 $("#xFieldNameDiv").show();
                 $("#yFieldNameDiv").show();
                 $("#groupFieldNameDiv").show();
                 break;
-            case "@{classOf[CorrelationCalcSpec].getName}" :
+            case "@{classOf[CorrelationWidgetSpec].getName}" :
                 $("#fieldNamesDiv").show();
                 break;
         }

@@ -77,54 +77,56 @@ case class BasicDisplayOptions(
   height: Option[Int] = None
 ) extends DisplayOptions
 
-case class ChartDisplayOptions(
+case class MultiChartDisplayOptions(
   gridWidth: Option[Int] = None,
   gridOffset: Option[Int] = None,
   height: Option[Int] = None,
   chartType: Option[ChartType.Value] = None
 ) extends DisplayOptions
 
-abstract class StatsCalcSpec {
+abstract class WidgetSpec {
   def fieldNames: Traversable[String]
   val displayOptions: DisplayOptions
 }
 
-case class DistributionCalcSpec(
+case class DistributionWidgetSpec(
   fieldName: String,
   groupFieldName: Option[String],
-  displayOptions: ChartDisplayOptions = ChartDisplayOptions()
-) extends StatsCalcSpec {
+  numericBinCount: Option[Int] = None,
+  displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
+) extends WidgetSpec {
   override val fieldNames = Seq(Some(fieldName), groupFieldName).flatten
 }
 
-case class CumulativeCountCalcSpec(
+case class CumulativeCountWidgetSpec(
   fieldName: String,
   groupFieldName: Option[String],
-  displayOptions: ChartDisplayOptions = ChartDisplayOptions()
-) extends StatsCalcSpec {
+  numericBinCount: Option[Int] = None,
+  displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
+) extends WidgetSpec {
   override val fieldNames = Seq(Some(fieldName), groupFieldName).flatten
 }
 
-case class BoxCalcSpec(
+case class BoxWidgetSpec(
   fieldName: String,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
-) extends StatsCalcSpec {
+) extends WidgetSpec {
   override val fieldNames = Seq(fieldName)
 }
 
-case class ScatterCalcSpec(
+case class ScatterWidgetSpec(
   xFieldName: String,
   yFieldName: String,
   groupFieldName: Option[String],
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
-) extends StatsCalcSpec {
+) extends WidgetSpec {
   override val fieldNames = Seq(Some(xFieldName), Some(yFieldName), groupFieldName).flatten
 }
 
-case class CorrelationCalcSpec(
+case class CorrelationWidgetSpec(
   fieldNames: Seq[String],
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
-) extends StatsCalcSpec
+) extends WidgetSpec
 
 object ChartType extends Enumeration {
   val Pie, Column, Bar, Line, Polar = Value
@@ -245,15 +247,15 @@ object DataSetFormattersAndIds {
   implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
   implicit val fieldChartTypeFormat = Json.format[FieldChartType]
   implicit val basicDisplayOptionsFormat = Json.format[BasicDisplayOptions]
-  implicit val distributionDisplayOptionsFormat = Json.format[ChartDisplayOptions]
+  implicit val distributionDisplayOptionsFormat = Json.format[MultiChartDisplayOptions]
 
-  implicit val statsCalcSpecFormat: Format[StatsCalcSpec] = new SubTypeFormat[StatsCalcSpec](
+  implicit val widgetSpecFormat: Format[WidgetSpec] = new SubTypeFormat[WidgetSpec](
     Seq(
-      ManifestedFormat(Json.format[DistributionCalcSpec]),
-      ManifestedFormat(Json.format[CumulativeCountCalcSpec]),
-      ManifestedFormat(Json.format[BoxCalcSpec]),
-      ManifestedFormat(Json.format[ScatterCalcSpec]),
-      ManifestedFormat(Json.format[CorrelationCalcSpec])
+      ManifestedFormat(Json.format[DistributionWidgetSpec]),
+      ManifestedFormat(Json.format[CumulativeCountWidgetSpec]),
+      ManifestedFormat(Json.format[BoxWidgetSpec]),
+      ManifestedFormat(Json.format[ScatterWidgetSpec]),
+      ManifestedFormat(Json.format[CorrelationWidgetSpec])
     )
   )
 

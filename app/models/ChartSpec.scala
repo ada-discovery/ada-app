@@ -15,13 +15,13 @@ case class CategoricalChartSpec(
   showLabels: Boolean,
   showLegend: Boolean,
   data: Seq[(String, Seq[Count[String]])],
-  displayOptions: ChartDisplayOptions = ChartDisplayOptions()
+  displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends ChartSpec
 
 case class NumericalChartSpec[T](
   title: String,
   data: Seq[(String, Seq[(T, Int)])],
-  displayOptions: ChartDisplayOptions = ChartDisplayOptions()
+  displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends ChartSpec
 
 case class ColumnChartSpec(

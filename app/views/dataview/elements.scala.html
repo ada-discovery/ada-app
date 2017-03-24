@@ -2,7 +2,7 @@
 @import views.html.elements._
 @import models.{DataView, Field}
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
-@import views.html.dataview.{statsCalcSpecTable, filterOrIdTable}
+@import views.html.dataview.{widgetSpecTable, filterOrIdTable}
 @import views.html.table.displayTable
 @import views.html.filters.displayConditions
 @import util.typeColumns
@@ -31,7 +31,7 @@
 }
 
 @labelValue("statsCalcSpecs", attributeLabel("dataView", "statsCalcSpecs")){
-    @statsCalcSpecTable(
+    @widgetSpecTable(
         form.value.map(_.statsCalcSpecs).getOrElse(Nil),
         nameFieldMap
     )

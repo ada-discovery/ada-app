@@ -10,7 +10,8 @@
         $(function () {
             $('#@{chartElementName}').highcharts({
                 chart: {
-                    type: 'heatmap'
+                    type: 'heatmap',
+                    height: @chartSpec.displayOptions.height.getOrElse(400)
                 },
                 title: {
                     text:  "@chartSpec.title"

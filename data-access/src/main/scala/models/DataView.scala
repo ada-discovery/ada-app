@@ -3,23 +3,23 @@ package models
 import dataaccess._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
-import models.DataSetFormattersAndIds.statsCalcSpecFormat
+import models.DataSetFormattersAndIds.widgetSpecFormat
 import java.util.Date
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
 
 case class DataView(
-  _id: Option[BSONObjectID],
-  name: String,
-  filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]],
-  tableColumnNames: Seq[String],
-  statsCalcSpecs: Seq[StatsCalcSpec],
-  elementGridWidth: Int = 3,
-  default: Boolean = false,
-  useOptimizedRepoChartCalcMethod: Boolean = false,
-  createdById: Option[BSONObjectID] = None,
-  timeCreated: Date = new Date(),
-  var createdBy: Option[User] = None
+                     _id: Option[BSONObjectID],
+                     name: String,
+                     filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]],
+                     tableColumnNames: Seq[String],
+                     statsCalcSpecs: Seq[WidgetSpec],
+                     elementGridWidth: Int = 3,
+                     default: Boolean = false,
+                     useOptimizedRepoChartCalcMethod: Boolean = false,
+                     createdById: Option[BSONObjectID] = None,
+                     timeCreated: Date = new Date(),
+                     var createdBy: Option[User] = None
 )
 
 object DataView {
@@ -31,7 +31,7 @@ object DataView {
     (__ \ "name").format[String] and
     (__ \ "filterOrIds").format[Seq[Either[Seq[models.FilterCondition], BSONObjectID]]] and
     (__ \ "tableColumnNames").format[Seq[String]] and
-    (__ \ "statsCalcSpecs").format[Seq[StatsCalcSpec]] and
+    (__ \ "statsCalcSpecs").format[Seq[WidgetSpec]] and
     (__ \ "elementGridWidth").format[Int] and
     (__ \ "default").format[Boolean] and
     (__ \ "useOptimizedRepoChartCalcMethod").format[Boolean] and
@@ -68,7 +68,7 @@ object DataView {
       "Main",
       Nil,
       tableColumnNames,
-      distributionChartFieldNames.map(DistributionCalcSpec(_, None)),
+      distributionChartFieldNames.map(DistributionWidgetSpec(_, None)),
       elementGridWidth,
       true,
       useOptimizedRepoChartCalcMethod

@@ -20,7 +20,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.libs.json.Json
+import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import reactivemongo.bson.BSONObjectID
 import java.util.Date
@@ -138,13 +138,12 @@ protected[controllers] class FilterControllerImpl @Inject() (
 
   override def getIdAndNames = Action.async { implicit request =>
     for {
-      filters <- filterRepo.find(sort = Seq(AscSort("name")))
-    } yield {
-      val idAndNames = filters.map( filter =>
-        Json.obj("_id" -> filter._id, "name" -> filter.name)
+      filters <- filterRepo.find(
+        sort = Seq(AscSort("name")),
+        projection = Seq("name")
       )
-      Ok(Json.toJson(idAndNames))
-    }
+    } yield
+      Ok(Json.toJson(filters))
   }
 
   private def dataSpaceTree =

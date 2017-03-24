@@ -7,7 +7,7 @@ import controllers._
 import dataaccess.Criterion
 import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, DataSetSettingRepo}
 import models.{FieldChartType, DataSetSetting, DataSetFormattersAndIds, ChartType}
-import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, fieldChartTypeFormat, DataSetSettingIdentity, statsCalcSpecFormat}
+import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, fieldChartTypeFormat, DataSetSettingIdentity, widgetSpecFormat}
 import models._
 import models.FilterShowFieldStyle
 import Criterion.Infix
@@ -40,7 +40,7 @@ class DataSetSettingController @Inject() (
   private implicit val mapFormatter = MapJsonFormatter.apply
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
   private implicit val storageTypeFormatter = EnumFormatter(StorageType)
-  private implicit val statsCalcSpecFormatter = JsonFormatter[StatsCalcSpec]
+  private implicit val statsCalcSpecFormatter = JsonFormatter[WidgetSpec]
 
   override protected val form = Form(
     mapping(

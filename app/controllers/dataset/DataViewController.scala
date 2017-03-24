@@ -1,7 +1,7 @@
 package controllers.dataset
 
 import controllers.CrudController
-import models.{CorrelationCalcSpec, ScatterCalcSpec, BoxCalcSpec, DistributionCalcSpec}
+import models.{CorrelationWidgetSpec, ScatterWidgetSpec, BoxWidgetSpec, DistributionWidgetSpec}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 

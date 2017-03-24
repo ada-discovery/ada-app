@@ -87,7 +87,7 @@ class DataSetImportController @Inject()(
   ) (DataView.applyMain)
   {(item: DataView) => Some((
     item.tableColumnNames,
-    item.statsCalcSpecs.collect { case p: DistributionCalcSpec => p}.map(_.fieldName),
+    item.statsCalcSpecs.collect { case p: DistributionWidgetSpec => p}.map(_.fieldName),
     item.elementGridWidth,
     item.useOptimizedRepoChartCalcMethod
   ))}

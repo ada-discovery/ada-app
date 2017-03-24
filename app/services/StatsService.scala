@@ -25,25 +25,29 @@ trait StatsService {
   def calcDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
-    field: Field
+    field: Field,
+    numericBinCount: Option[Int]
   ): Future[Seq[Count[_]]]
 
   def calcDistributionCounts(
     items: Traversable[JsObject],
-    field: Field
+    field: Field,
+    numericBinCount: Option[Int]
   ): Seq[Count[_]]
 
   def calcGroupedDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
-    groupField: Field
+    groupField: Field,
+    numericBinCount: Option[Int]
   ): Future[Seq[(String, Seq[Count[_]])]]
 
   def calcGroupedDistributionCounts(
     items: Traversable[JsObject],
     field: Field,
-    groupField: Field
+    groupField: Field,
+    numericBinCount: Option[Int]
   ): Seq[(String, Seq[Count[_]])]
 
   def categoricalCountsWithFormatting[T](
@@ -85,15 +89,18 @@ class StatsServiceImpl extends StatsService {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
   protected val timeout = 200000 millis
+  private val defaultNumericBinCount = 20
 
   override def calcDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
-    field: Field
+    field: Field,
+    numericBinCountOption: Option[Int]
   ): Future[Seq[Count[_]]] = {
     val fieldTypeSpec = field.fieldTypeSpec
     val fieldType = ftf(fieldTypeSpec)
     val fieldTypeId = fieldTypeSpec.fieldType
+    val numericBinCount = numericBinCountOption.getOrElse(defaultNumericBinCount)
 
     def getRenderer[T]= {
       val typedFieldType = fieldType.asValueOf[T]
@@ -141,7 +148,7 @@ class StatsServiceImpl extends StatsService {
           numCounts <-
             numericalCountsRepo(
               BigDecimal(_: Double), _.toDouble,
-              field.name, fieldType.asValueOf[Double], dataRepo, criteria, 20, false, None, None
+              field.name, fieldType.asValueOf[Double], dataRepo, criteria, numericBinCount, false, None, None
             )
         } yield
           convertNumericalCounts(numCounts, Some(convert(_)))
@@ -152,7 +159,7 @@ class StatsServiceImpl extends StatsService {
           numCounts <-
             numericalCountsRepo(
               BigDecimal(_: Long), _.toDouble,
-              field.name, fieldType.asValueOf[Long], dataRepo, criteria, 20, true, None, None
+              field.name, fieldType.asValueOf[Long], dataRepo, criteria, numericBinCount, true, None, None
             )
         } yield {
           val convert =
@@ -172,7 +179,7 @@ class StatsServiceImpl extends StatsService {
             numericalCountsRepo(
               {x : ju.Date => BigDecimal(x.getTime)},
               {x : BigDecimal => new ju.Date(x.toLongExact)},
-              field.name, fieldType.asValueOf[ju.Date], dataRepo, criteria, 20, false, None, None
+              field.name, fieldType.asValueOf[ju.Date], dataRepo, criteria, numericBinCount, false, None, None
             )
         } yield
           convertNumericalCounts(numCounts, Some(convert(_)))
@@ -194,7 +201,8 @@ class StatsServiceImpl extends StatsService {
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
-    groupField: Field
+    groupField: Field,
+    numericBinCountOption: Option[Int]
   ): Future[Seq[(String, Seq[Count[_]])]] = {
 
     val groupFieldSpec = groupField.fieldTypeSpec
@@ -231,13 +239,13 @@ class StatsServiceImpl extends StatsService {
         val groupFieldName = groupField.name
         val countFutures = groupLabelValues.par.map { case (label, value) =>
           val finalCriteria = criteria ++ Seq(groupFieldName #== value)
-          calcDistributionCounts(dataRepo, finalCriteria, field).map { counts =>
+          calcDistributionCounts(dataRepo, finalCriteria, field, numericBinCountOption).map { counts =>
             (label, counts)
           }
         }.toList
 
         val undefinedGroupCriteria = criteria ++ Seq(groupFieldName #=@)
-        val naValueFuture = calcDistributionCounts(dataRepo, undefinedGroupCriteria, field).map { counts =>
+        val naValueFuture = calcDistributionCounts(dataRepo, undefinedGroupCriteria, field, numericBinCountOption).map { counts =>
           ("Undefined", counts)
         }
 
@@ -257,11 +265,13 @@ class StatsServiceImpl extends StatsService {
 
   override def calcDistributionCounts(
     items: Traversable[JsObject],
-    field: Field
+    field: Field,
+    numericBinCountOption: Option[Int]
   ): Seq[Count[_]] = {
     val fieldTypeSpec = field.fieldTypeSpec
     val fieldType = ftf(fieldTypeSpec)
     val fieldTypeId = fieldTypeSpec.fieldType
+    val numericBinCount = numericBinCountOption.getOrElse(defaultNumericBinCount)
 
     val jsons = project(items, field.name)
     def getValues[T]: Traversable[Option[T]] = jsonsToValues[T](jsons, fieldType)
@@ -293,7 +303,7 @@ class StatsServiceImpl extends StatsService {
 //        val renderer = getRenderer[Double]
         def convert(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP)
 
-        val numCounts = numericalCounts(getValues[Double].flatten, 20, false, None, None)
+        val numCounts = numericalCounts(getValues[Double].flatten, numericBinCount, false, None, None)
         convertNumericalCounts(numCounts, Some(convert(_)))
       }
 
@@ -304,12 +314,12 @@ class StatsServiceImpl extends StatsService {
         val valueCount = max - min
 
         val convert =
-          if (valueCount < 20)
+          if (valueCount < numericBinCount)
             Some { value: BigDecimal => value.toInt }
           else
             None
 
-        val numCounts = numericalCounts(values, Math.min(20, valueCount + 1).toInt, valueCount < 20, None, None)
+        val numCounts = numericalCounts(values, Math.min(numericBinCount, valueCount + 1).toInt, valueCount < numericBinCount, None, None)
         convertNumericalCounts(numCounts, convert)
       }
 
@@ -319,7 +329,7 @@ class StatsServiceImpl extends StatsService {
 
         def convert(ms: BigDecimal) = new ju.Date(ms.toLongExact)
 
-        val numCounts = numericalCounts(values, 20, false, None, None)
+        val numCounts = numericalCounts(values, numericBinCount, false, None, None)
         convertNumericalCounts(numCounts, Some(convert(_)))
       }
 
@@ -335,7 +345,8 @@ class StatsServiceImpl extends StatsService {
   override def calcGroupedDistributionCounts(
     items: Traversable[JsObject],
     field: Field,
-    groupField: Field
+    groupField: Field,
+    numericBinCountOption: Option[Int]
   ): Seq[(String, Seq[Count[_]])] = {
     val groupFieldSpec = groupField.fieldTypeSpec
     val groupFieldType = ftf(groupFieldSpec)
@@ -386,7 +397,7 @@ class StatsServiceImpl extends StatsService {
     }
 
     groupedValues.map { case (groupName, jsons) =>
-      val counts = calcDistributionCounts(jsons, field)
+      val counts = calcDistributionCounts(jsons, field, numericBinCountOption)
       (groupName, counts)
     }
   }
