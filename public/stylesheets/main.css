@@ -239,3 +239,15 @@ tr.clickable-row {
     max-height: 600px;
     overflow-y: scroll;
 }
+
+tr.vertical-divider > td {
+    /*text-align: center;*/
+    border-left: 3px solid #F2F7F9;
+    border-right: 3px solid #F2F7F9;
+}
+tr.vertical-divider > td:first-child {
+    border-left: none;
+}
+tr.vertical-divider > td:last-child {
+    border-right: none;
+}

@@ -61,7 +61,7 @@ $.widget( "custom.dynamicTable", {
     removeRows: function() {
         var that = this;
         this.tableBody.find('tr').each(function() {
-            var checked = $(this).find("td input[type=checkbox]").is(':checked');
+            var checked = $(this).find("td input.table-selection[type=checkbox]").is(':checked');
             if (checked) {
                 $(this).remove()
             }
