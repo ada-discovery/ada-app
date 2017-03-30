@@ -261,7 +261,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     filter: Seq[FilterCondition],
     fieldName : String,
     fieldExtractor : Field => Any
-  ) : Future[ChartSpec] =
+  ) : Future[Widget] =
     toCriteria(filter).flatMap { criteria =>
       repo.find(
         criteria = criteria,
@@ -269,7 +269,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       ).map { fields =>
         val values = fields.map(field => Some(fieldExtractor(field).toString))
         val counts = statsService.categoricalCountsWithFormatting(values, None)
-        CategoricalChartSpec(chartTitle, false, true, Seq((chartTitle, counts)), MultiChartDisplayOptions(chartType = Some(ChartType.Pie)))
+        CategoricalCountWidget(chartTitle, fieldName, false, true, Seq((chartTitle, counts)), MultiChartDisplayOptions(chartType = Some(ChartType.Pie)))
       }
     }
 

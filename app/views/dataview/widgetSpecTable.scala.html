@@ -44,6 +44,10 @@
     <input type="text" id="height" style="width:60px" value="@widgetSpec.displayOptions.height.getOrElse("")">
 }
 
+@isTextualFormElement(widgetSpec: WidgetSpec) = {
+    <input type="checkbox" id="isTextualForm" name="isTextualForm" @if(widgetSpec.displayOptions.isTextualForm) { checked="checked"}/>
+}
+
 @distCountNumericBinCountElement(widgetSpec: DistributionWidgetSpec) = {
     <input type="text" id="numericBinCount" style="width:40px" value="@widgetSpec.numericBinCount.getOrElse("")">
 }
@@ -56,7 +60,7 @@
     @displayTable(
         items,
         typeColumns[WidgetSpec](
-            (None, "", _ => {<input type="checkbox"/>}),
+            (None, "", _ => {<input type="checkbox" class="table-selection"/>}),
             (None, "", concreteClassHiddenElement),
             (None, "Calc Type", {x => concreteClassName(x.getClass)}),
             (None, "", fieldNamesHiddenElement),
@@ -64,6 +68,7 @@
             (None, "Grid Offset", gridOffsetElement),
             (None, "Grid Width", gridWidthElement),
             (None, "Height", heightElement),
+            (None, "Textual?", isTextualFormElement),
             (None, "Numeric Bin Count", {x =>
                 x match {
                     case x: DistributionWidgetSpec => distCountNumericBinCountElement(x)
@@ -92,6 +97,7 @@
         var gridOffset = row.find('#gridOffset').val().trim()
         var gridWidth = row.find('#gridWidth').val().trim()
         var height = row.find('#height').val().trim()
+        var isTextualForm = row.find('#isTextualForm').is(':checked')
         var numericBinCountElement = row.find('#numericBinCount');
         var intNumericBinCount = null;
         if (numericBinCountElement) {
@@ -108,6 +114,7 @@
         output["concreteClass"] = concreteClass
 
         var displayOptions = {};
+        displayOptions["isTextualForm"] = isTextualForm
 
         switch (concreteClass) {
             case "@{classOf[DistributionWidgetSpec].getName}" :
@@ -173,7 +180,7 @@
         var concreteClass = values["concreteClass"].trim()
         var concreteClassName = concreteClass.replace('models.','').replace('WidgetSpec','')
 
-        var checkboxColumn = "<td><input type='checkbox'></input></td>";
+        var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
         var concreteClassValueColumn = "<td><input type='hidden' id='concreteClass' value='" + concreteClass + "'/></td>";
         var concreteClassNameColumn = "<td>" + concreteClassName + "</td>";
 
@@ -204,13 +211,14 @@
 
         var fieldNamesColumn = "<td><input type='hidden' id='fieldNames' value='" + fieldNames + "'/></td>";
         var fieldLabelsColumn = "<td>" + fieldLabels + "</td>";
-        var chartTypeColumn = (concreteClass == "@{classOf[DistributionWidgetSpec].getName}") ? `<td>@editableChartType(None)</td>` : "<td></td>";
+        var chartTypeColumn = (concreteClass == "@{classOf[DistributionWidgetSpec].getName}" || concreteClass == "@{classOf[CumulativeCountWidgetSpec].getName}") ? `<td>@editableChartType(None)</td>` : "<td></td>";
         var gridOffsetColumn = "<td><input type='text' id='gridOffset' style='width:40px' value=''/></td>";
         var gridWidthColumn = "<td><input type='text' id='gridWidth' style='width:40px' value=''/></td>";
         var heightColumn = "<td><input type='text' id='height' style='width:60px' value=''/></td>";
-        var numericBinCountColumn = "<td><input type='text' id='numericBinCount' style='width:40px' value=''/></td>";
+        var isTextualFormColumn = "<td><input type='checkbox' id='isTextualForm' name='isTextualForm'/></td>";
+        var numericBinCountColumn = (concreteClass == "@{classOf[DistributionWidgetSpec].getName}" || concreteClass == "@{classOf[CumulativeCountWidgetSpec].getName}") ? "<td><input type='text' id='numericBinCount' style='width:40px' value=''/></td>" : "<td></td>";
 
-        return "<tr>" + checkboxColumn + concreteClassValueColumn + concreteClassNameColumn + fieldNamesColumn + fieldLabelsColumn + gridOffsetColumn + gridWidthColumn + heightColumn + numericBinCountColumn + chartTypeColumn + "</tr>";
+        return "<tr>" + checkboxColumn + concreteClassValueColumn + concreteClassNameColumn + fieldNamesColumn + fieldLabelsColumn + gridOffsetColumn + gridWidthColumn + heightColumn + isTextualFormColumn + numericBinCountColumn + chartTypeColumn + "</tr>";
     }
 }
 
@@ -270,7 +278,7 @@
     </div>
 }
 
-@dynamicTable("statsCalcSpec", table, true, rowToModelJsFun, itemToRowJsFun, addModalInner, None, 8)
+@dynamicTable("widgetSpec", table, true, rowToModelJsFun, itemToRowJsFun, addModalInner, None, 8)
 
 <script type="text/javascript">
 
@@ -282,7 +290,7 @@
     }
 
     function updateModalItems() {
-        var concreteClass = $('#add_statsCalcSpecModal #concreteClass').val();
+        var concreteClass = $('#add_widgetSpecModal #concreteClass').val();
         hideAll();
 
         switch (concreteClass) {

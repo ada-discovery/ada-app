@@ -1,7 +1,0 @@
-@import views.html.chart.chartJs
-
-@(chartSpecs : Traversable[ChartSpec])
-
-@chartSpecs.map { chartSpec =>
-    @chartJs(chartSpec)
-}

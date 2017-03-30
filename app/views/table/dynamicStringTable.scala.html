@@ -17,7 +17,7 @@
     @displayTable(
         items,
         typeColumns[String](
-            (None, "", _ => {<input type="checkbox"/>}),
+            (None, "", _ => {<input type="checkbox" class="table-selection"/>}),
             (Some("name"), "Name", identity)
         )
     )
@@ -32,7 +32,7 @@
 @itemToRowJsFun = {
     function(values) {
         var name = values["newItem"];
-        return "<tr><td><input type='checkbox'></input></td><td id='name'>" + name + "</td></tr>";
+        return "<tr><td><input type='checkbox' class='table-selection'></input></td><td id='name'>" + name + "</td></tr>";
     }
 }
 

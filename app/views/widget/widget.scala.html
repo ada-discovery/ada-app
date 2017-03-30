@@ -1,0 +1,6 @@
+@import models.Widget
+@import util.widgetElementId
+
+@(widget: Widget)
+
+<div id="@widgetElementId(widget)" class="chart-holder"></div>

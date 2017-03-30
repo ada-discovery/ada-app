@@ -69,19 +69,22 @@ sealed trait DisplayOptions {
   val gridWidth: Option[Int]
   val gridOffset: Option[Int]
   val height: Option[Int]
+  val isTextualForm: Boolean
 }
 
 case class BasicDisplayOptions(
   gridWidth: Option[Int] = None,
   gridOffset: Option[Int] = None,
-  height: Option[Int] = None
+  height: Option[Int] = None,
+  isTextualForm: Boolean = false
 ) extends DisplayOptions
 
 case class MultiChartDisplayOptions(
   gridWidth: Option[Int] = None,
   gridOffset: Option[Int] = None,
   height: Option[Int] = None,
-  chartType: Option[ChartType.Value] = None
+  chartType: Option[ChartType.Value] = None,
+  isTextualForm: Boolean = false
 ) extends DisplayOptions
 
 abstract class WidgetSpec {
@@ -127,6 +130,13 @@ case class CorrelationWidgetSpec(
   fieldNames: Seq[String],
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec
+
+case class BasicStatsWidgetSpec(
+  fieldName: String,
+  displayOptions: BasicDisplayOptions = BasicDisplayOptions()
+) extends WidgetSpec {
+  override val fieldNames = Seq(fieldName)
+}
 
 object ChartType extends Enumeration {
   val Pie, Column, Bar, Line, Polar = Value

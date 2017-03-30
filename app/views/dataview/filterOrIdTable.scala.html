@@ -17,7 +17,7 @@
     @displayTable(
         items,
         typeColumns[Either[Seq[models.FilterCondition], BSONObjectID]](
-            (None, "", _ => {<input type="checkbox"/>}),
+            (None, "", _ => {<input type="checkbox" class="table-selection"/>}),
             (None, "", { filterOrId =>
                 filterOrId match {
                     case Left(conditions) => filterOrIdHiddenElement(conditions)
@@ -42,7 +42,7 @@
 
 @itemToRowJsFun = {
     function(values) {
-        var checkboxColumn = "<td><input type='checkbox'></input></td>";
+        var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
         var filterOrIdHiddenColumn = "<td><input type='hidden' id='filterOrId' value='[]'/></td>";
         var contentColumn = "<td></td>";
 

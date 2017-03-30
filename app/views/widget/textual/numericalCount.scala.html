@@ -1,0 +1,51 @@
+@import util.shorten
+@import models.ChartType
+@import models.NumericalCountWidget
+@import views.html.table.displayTable
+@import util.{typeColumns, typeColumn}
+@import java.text.SimpleDateFormat
+
+@(
+    elementId : String,
+    widget: NumericalCountWidget[_]
+)
+
+@displayValue(x: Any) = @{
+    x match {
+        case x: java.util.Date => new SimpleDateFormat("yyyy-MM-dd").format(x)
+        case _ => x.toString
+    }
+}
+
+@countTableAux(groupName: String, data: Seq[(_, Int)]) = {
+    @displayTable(
+        data,
+        typeColumns[(_, Int)](
+            (None, shorten(widget.fieldLabel, 15), {x => displayValue(x._1)}),
+            (None, shorten(groupName, 15), _._2)
+        )
+    )
+}
+
+@countTable = {
+    <table align="center">
+        <tr class="vertical-divider" valign='top'>
+            @widget.data.map{ case (a, b) =>
+                <td>
+                    @countTableAux(a, b)
+                </td>
+            }
+        </tr>
+    </table>
+}
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        var isDate = @{widget.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
+        var dataType = (isDate) ? 'datetime' : null;
+        var header ="<h4 align='center'> @widget.title </h4>"
+
+        var table = "@Html(countTable.toString().replaceAll("\n","").replaceAll("\"","\'"))";
+        $('#' + '@elementId').html(header + table);
+    });
+</script>

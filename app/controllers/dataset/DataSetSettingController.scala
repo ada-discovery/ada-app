@@ -40,7 +40,7 @@ class DataSetSettingController @Inject() (
   private implicit val mapFormatter = MapJsonFormatter.apply
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
   private implicit val storageTypeFormatter = EnumFormatter(StorageType)
-  private implicit val statsCalcSpecFormatter = JsonFormatter[WidgetSpec]
+  private implicit val widgetSpecFormatter = JsonFormatter[WidgetSpec]
 
   override protected val form = Form(
     mapping(

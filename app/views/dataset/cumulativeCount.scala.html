@@ -3,7 +3,7 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.{highchartsJsImport, timeLineChart}
-@import views.html.chart.{chartPanel, chartPanelJs}
+@import views.html.widget.{widgetPanel, widgetPanelJs}
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.dataset.datasetSubNav
 @import views.html.filter.filter
@@ -18,7 +18,7 @@
     domainName: String,
     field: Option[Field],
     groupField: Option[Field],
-    chartSpec: ChartSpec,
+    chartSpec: Option[Widget],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -70,7 +70,7 @@
 
 @bottomResources = {
     @highchartsJsImport(true)
-    @chartPanelJs(Seq(chartSpec))
+    @widgetPanelJs(Seq(chartSpec).flatten)
 }
 
 @main(Messages("cumulativeCount.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
@@ -87,7 +87,7 @@
     <br/>
     <br/>
 
-    @chartPanel(Seq(chartSpec), 12)
+    @widgetPanel(Seq(chartSpec).flatten, 12)
     @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
 }
 

@@ -1,9 +1,9 @@
-@import models.{FilterCondition, ChartSpec}
+@import models.{FilterCondition, Widget}
 @import models.Field
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
-@import views.html.chart.{chartPanel, chartPanelJs}
+@import views.html.widget.{widgetPanel, widgetPanelJs}
 @import views.html.dataset.datasetSubNav
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.filter.filter
@@ -19,7 +19,7 @@
     domainName: String,
     field: Option[Field],
     groupField: Option[Field],
-    chartSpecs: Seq[ChartSpec],
+    chartSpecs: Seq[Widget],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -87,7 +87,7 @@
 
 @bottomResources = {
     @highchartsJsImport()
-    @chartPanelJs(chartSpecs)
+    @widgetPanelJs(chartSpecs)
 }
 
 @main(Messages("distribution.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
@@ -106,7 +106,7 @@
 
     @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
 
-    @chartPanel(chartSpecs, 12 / chartSpecs.size)
+    @widgetPanel(chartSpecs, 12 / chartSpecs.size)
 }
 
 @helper.javascriptRouter("dataViewJsRoutes")(

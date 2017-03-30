@@ -1,4 +1,4 @@
-import models.ChartSpec
+import models.Widget
 import org.apache.commons.lang.StringUtils
 import play.twirl.api.Html
 import scala.concurrent.Future
@@ -60,7 +60,7 @@ package object util {
     fieldLabelMap.map(_.getOrElse(fieldName, defaultLabel)).getOrElse(defaultLabel)
   }
 
-  def chartElementName(chart: ChartSpec) = chart._id.stringify + "Chart"
+  def widgetElementId(chart: Widget) = chart._id.stringify + "Widget"
 
   // retyping of column items needed because play templates do not support generics
   def typeColumn[T](column: (Option[String], String, T => Any)): (Option[String], String, Any  => Html) =

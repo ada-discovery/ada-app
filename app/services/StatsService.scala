@@ -139,11 +139,7 @@ class StatsServiceImpl extends StatsService {
           formatCategoricalCounts(counts, Some(getRenderer[Boolean]))
       }
 
-      case FieldTypeId.Double => {
-//        // TODO: use renderer here
-//        val renderer = getRenderer[Double]
-        def convert(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP)
-
+      case FieldTypeId.Double =>
         for {
           numCounts <-
             numericalCountsRepo(
@@ -151,8 +147,7 @@ class StatsServiceImpl extends StatsService {
               field.name, fieldType.asValueOf[Double], dataRepo, criteria, numericBinCount, false, None, None
             )
         } yield
-          convertNumericalCounts(numCounts, Some(convert(_)))
-      }
+          convertNumericalCounts(numCounts, None)
 
       case FieldTypeId.Integer =>
         for {
@@ -298,20 +293,15 @@ class StatsServiceImpl extends StatsService {
       case FieldTypeId.Boolean =>
         categoricalCountsWithFormatting(getValues[Boolean], Some(getRenderer[Boolean]))
 
-      case FieldTypeId.Double => {
-        // TODO: use renderer here
-//        val renderer = getRenderer[Double]
-        def convert(value: BigDecimal) = value.setScale(1, RoundingMode.HALF_UP)
-
+      case FieldTypeId.Double =>
         val numCounts = numericalCounts(getValues[Double].flatten, numericBinCount, false, None, None)
-        convertNumericalCounts(numCounts, Some(convert(_)))
-      }
+        convertNumericalCounts(numCounts, None)
 
       case FieldTypeId.Integer => {
         val values = getValues[Long].flatten
         val min = if (values.nonEmpty) values.min else 0
         val max = if (values.nonEmpty) values.max else 0
-        val valueCount = max - min
+        val valueCount = Math.abs(max - min)
 
         val convert =
           if (valueCount < numericBinCount)

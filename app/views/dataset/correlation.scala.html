@@ -1,9 +1,9 @@
-@import models.{FilterCondition, ChartSpec}
+@import models.{FilterCondition, Widget}
 @import models.Field
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
-@import views.html.chart.{chartJs, chart}
+@import views.html.widget.{widgetJs, widget}
 @import views.html.dataset.datasetSubNav
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
@@ -16,7 +16,7 @@
 @(
     domainName: String,
     fields: Traversable[Field],
-    chartSpec: Option[ChartSpec],
+    chartSpec: Option[Widget],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -48,7 +48,7 @@
 
 @bottomResources = {
     @highchartsJsImport()
-    @chartSpec.map(chartJs(_)).getOrElse("")
+    @chartSpec.map(widgetJs(_)).getOrElse("")
 }
 
 @fieldNamesAddModalInner = {
@@ -86,7 +86,7 @@
             </div>
         </div>
         <div class="col-md-9">
-            @chartSpec.map(chart(_)).getOrElse("")
+            @chartSpec.map(widget(_)).getOrElse("")
             @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
         </div>
     </div>

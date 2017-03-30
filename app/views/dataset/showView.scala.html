@@ -1,6 +1,6 @@
 @import views.html.layout
-@import views.html.dataset.{filterChartPanel, datasetSubNav, datasetMenu, displayJsonModal}
-@import views.html.chart.chartPanelJs
+@import views.html.dataset.{filterWidgetPanel, datasetSubNav, datasetMenu, displayJsonModal}
+@import views.html.widget.widgetPanelJs
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
 @import views.html.table.paginatedJsonTable
 @import views.html.dataset.exportDataSetDropdown
@@ -221,7 +221,7 @@
     <div class="row vertical-divider">
         @viewParts.zipWithIndex.map { case (viewPart, index) =>
             <div class="col-md-@{12 / viewParts.size}">
-                @filterChartPanel(s"filter$index", viewPart.fieldChartSpecs, chartGridElementWidth)
+                @filterWidgetPanel(s"filter$index", viewPart.fieldChartSpecs, chartGridElementWidth)
             </div>
         }
     </div>
@@ -245,7 +245,7 @@
     @highchartsJsImportForBulkExport()
 
     @viewParts.map { viewPart =>
-        @chartPanelJs(viewPart.fieldChartSpecs.map(_.chartSpec))
+        @widgetPanelJs(viewPart.fieldChartSpecs.map(_.chartSpec))
     }
     <script type="text/javascript">
         $(function () {

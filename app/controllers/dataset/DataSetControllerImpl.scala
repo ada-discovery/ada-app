@@ -344,16 +344,16 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // get the response data
         viewResponses <- {
-          val (columnNames, statsCalcSpecs) =
+          val (columnNames, widgetSpecs) =
             dataView.map( view =>
-              (view.tableColumnNames, view.statsCalcSpecs)
+              (view.tableColumnNames, view.widgetSpecs)
             ).getOrElse((Nil, Nil))
 
           val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
 
           Future.sequence(
             filterOrIdsToUse.zip(tablePagesToUse).map { case (filterOrId, tablePage) =>
-              getViewResponse(tablePage.page, tablePage.orderBy, filterOrId, columnNames, statsCalcSpecs, useChartRepoMethod)
+              getViewResponse(tablePage.page, tablePage.orderBy, filterOrId, columnNames, widgetSpecs, useChartRepoMethod)
             }
           )
         }
@@ -404,9 +404,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val chartCount = fieldChartSpecs.head.size
 
     def getMinMaxWhiskers[T](index: Int): Option[(T, T)] = {
-      val boxPlots: Seq[BoxChartSpec[T]] = chartSpecsSeqs.map { chartSpecs =>
+      val boxPlots: Seq[BoxWidget[T]] = chartSpecsSeqs.map { chartSpecs =>
         chartSpecs(index).map(_.chartSpec).collect {
-          case x: BoxChartSpec[T] => x
+          case x: BoxWidget[T] => x
         }
       }.flatten
 
@@ -421,9 +421,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
 
     def setMinMax[T: Ordering](
-      boxPlot: BoxChartSpec[T],
-      minMax: (Any, Any)
-    ): BoxChartSpec[T] =
+                                boxPlot: BoxWidget[T],
+                                minMax: (Any, Any)
+    ): BoxWidget[T] =
       boxPlot.copy(min = Some(minMax._1.asInstanceOf[T]), max = Some(minMax._2.asInstanceOf[T]))
 
     val indexMinMaxWhiskers =
@@ -437,7 +437,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             fieldChartSpec.map { fieldChartSpec =>
               val newChartSpec =
                 fieldChartSpec.chartSpec match {
-                  case x: BoxChartSpec[_] =>
+                  case x: BoxWidget[_] =>
                     implicit val ordering = x.ordering
                     setMinMax(x, minMaxWhiskers)
                   case _ => fieldChartSpec.chartSpec
@@ -455,7 +455,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     orderBy: String,
     filterOrId: Either[Seq[FilterCondition], BSONObjectID],
     tableFieldNames: Seq[String],
-    statsCalcSpecs: Seq[WidgetSpec],
+    widgetSpecs: Seq[WidgetSpec],
     useOptimizedRepoChartCalcMethod: Boolean
   ): Future[ViewResponse] =
     for {
@@ -473,7 +473,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
       // create a name -> field map of all the referenced fields for a quick lookup
       nameFieldMap <- {
-        val chartFieldNames = statsCalcSpecs.map(_.fieldNames).flatten.toSet
+        val chartFieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
         val filterFieldNames = conditions.map(_.fieldName.trim)
         val requiredFieldNames: Set[String] = (chartFieldNames ++ tableFieldNames ++ filterFieldNames)
 
@@ -481,7 +481,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
 
       // generate the charts
-      chartSpecs <- generateCharts(useOptimizedRepoChartCalcMethod, criteria, statsCalcSpecs, nameFieldMap)
+      chartSpecs <- generateCharts(useOptimizedRepoChartCalcMethod, criteria, widgetSpecs, nameFieldMap)
 
       // load the table items
       tableItems <- {
@@ -536,7 +536,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     widgetSpecs: Traversable[WidgetSpec],
     nameFieldMap: Map[String, Field]
-  ): Future[Traversable[Option[(ChartSpec, Seq[String])]]] = {
+  ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
     val splitWidgetSpecs: Traversable[Either[WidgetSpec, WidgetSpec]] =
       if (perChartRepoMethod)
         widgetSpecs.collect {
@@ -589,8 +589,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     nameFieldMap: Map[String, Field])(
     widgetSpec: WidgetSpec
-  ): Future[Option[(ChartSpec, Seq[String])]] = {
-    val chartSpecFuture: Future[Option[ChartSpec]] = widgetSpec match {
+  ): Future[Option[(Widget, Seq[String])]] = {
+    val chartSpecFuture: Future[Option[Widget]] = widgetSpec match {
 
       case DistributionWidgetSpec(fieldName, groupFieldName, binCount, displayOptions) =>
         val field = nameFieldMap.get(fieldName)
@@ -612,8 +612,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         field.map { field =>
           calcCumulativeCounts(criteria, field, groupField, binCount).map { cumCountSeries =>
             val chartTitle = getCumulativeCountChartTitle(field, groupField)
+            val nonZeroCountSeries = cumCountSeries.filter(_._2.exists(_._2 > 0))
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-            Some(NumericalChartSpec(chartTitle, cumCountSeries, initializedDisplayOptions))
+            Some(NumericalCountWidget(chartTitle, field.labelOrElseName, nonZeroCountSeries, initializedDisplayOptions))
           }
         }.getOrElse(
           Future(None)
@@ -626,7 +627,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         } yield
           quantiles.map { quants =>
             implicit val ordering = quants.ordering
-            BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quants, None, None, displayOptions)
+            BoxWidget(field.labelOrElseName, field.labelOrElseName, quants, None, None, displayOptions)
           }
 
       case _ => Future(None)
@@ -638,8 +639,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     items: Traversable[JsObject],
     nameFieldMap: Map[String, Field])(
     widgetSpec: WidgetSpec
-  ): Option[(ChartSpec, Seq[String])] = {
-    val chartSpecOption: Option[ChartSpec] = widgetSpec match {
+  ): Option[(Widget, Seq[String])] = {
+    val chartSpecOption: Option[Widget] = widgetSpec match {
 
       case DistributionWidgetSpec(fieldName, groupFieldName, binCount, displayOptions) =>
         val field = nameFieldMap.get(fieldName)
@@ -656,10 +657,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val groupField = groupFieldName.map(nameFieldMap.get).flatten
 
         val series = calcCumulativeCounts(items, field, groupField, binCount)
+        val nonZeroCountSeries = series.filter(_._2.exists(_._2 > 0))
+
         val chartTitle = getCumulativeCountChartTitle(field, groupField)
 
         val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-        val chartSpec = NumericalChartSpec(chartTitle, series, initializedDisplayOptions)
+        val chartSpec = NumericalCountWidget(chartTitle, field.labelOrElseName, nonZeroCountSeries, initializedDisplayOptions)
         Some(chartSpec)
       }
 
@@ -667,7 +670,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         nameFieldMap.get(fieldName).map { field =>
           statsService.calcQuantiles(items, field).map { quants =>
             implicit val ordering = quants.ordering
-            BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quants, None, None, displayOptions)
+            BoxWidget(field.labelOrElseName, field.labelOrElseName, quants, None, None, displayOptions)
           }
         }.flatten
 
@@ -826,7 +829,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // create a name -> field map of the filter referenced fields
       fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
     } yield {
-      val chartSpec: Option[ScatterChartSpec] =
+      val chartSpec: Option[ScatterWidget] =
         (xField zip yField).headOption.map { case (xField, yField) =>
           createScatterChartSpec(
             xyzItems,
@@ -920,7 +923,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           } yield
             quantiles.map { quants =>
               implicit val ordering = quants.ordering
-              BoxChartSpec(field.labelOrElseName, field.labelOrElseName, quants, None, None, BasicDisplayOptions(height = Some(500)))
+              BoxWidget(field.labelOrElseName, field.labelOrElseName, quants, None, None, BasicDisplayOptions(height = Some(500)))
             }
         ).getOrElse(
           Future(None)
@@ -1062,11 +1065,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
 
         val options = MultiChartDisplayOptions(chartType = Some(ChartType.Line), height = Some(500))
-        val chartTitle = field.map( field =>
-          getCumulativeCountChartTitle(field, groupField)
-        ).getOrElse("N/A")
+        val chartSpec = field.map { field =>
+          val chartTitle = getCumulativeCountChartTitle(field, groupField)
+          val nonZeroCountSeries = series.filter(_._2.exists(_._2 > 0))
+          NumericalCountWidget(chartTitle, field.labelOrElseName, nonZeroCountSeries, options)
+        }
 
-        val chartSpec = NumericalChartSpec(chartTitle, series, options)
         render {
           case Accepts.Html() => Ok(dataset.cumulativeCount(
             dataSetName,
@@ -1300,7 +1304,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     showLabels: Boolean,
     showLegend: Boolean,
     displayOptions: MultiChartDisplayOptions
-  ): Option[ChartSpec] = {
+  ): Option[Widget] = {
     val fieldTypeId = field.fieldTypeSpec.fieldType
 
     val nonZeroExists = countSeries.exists(_._2.nonEmpty)
@@ -1331,7 +1335,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             val nonZeroCountSeriesSorted = countSeriesSorted.filter(_._2.exists(_.count > 0))
 
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Pie)))
-            CategoricalChartSpec(chartTitle, showLabels, showLegend, nonZeroCountSeriesSorted, initializedDisplayOptions)
+            CategoricalCountWidget(chartTitle, field.labelOrElseName, showLabels, showLegend, nonZeroCountSeriesSorted, initializedDisplayOptions)
           }
 
           case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date => {
@@ -1340,12 +1344,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             }
 
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-            NumericalChartSpec(chartTitle, nonZeroNumCountSeries, initializedDisplayOptions)
+            NumericalCountWidget(chartTitle, field.labelOrElseName, nonZeroNumCountSeries, initializedDisplayOptions)
           }
         }
       )
     else
-      Option.empty[ChartSpec]
+      Option.empty[Widget]
   }
 
   private def calcDistributionCounts(
@@ -1457,9 +1461,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     groupField: Option[Field],
     title: Option[String] = None,
     displayOptions: DisplayOptions = BasicDisplayOptions()
-  ): ScatterChartSpec = {
+  ): ScatterWidget = {
     val data = statsService.collectScatterData(xyzItems, xField, yField, groupField)
-    ScatterChartSpec(
+    ScatterWidget(
       title.getOrElse("Comparison"),
       xField.labelOrElseName,
       yField.labelOrElseName,
@@ -1475,10 +1479,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     items: Traversable[JsObject],
     fields: Seq[Field],
     displayOptions: DisplayOptions
-  ): HeatmapChartSpec = {
+  ): HeatmapWidget = {
     val correlations = statsService.calcPearsonCorrelations(items, fields)
 
     val fieldLabels = fields.map(_.labelOrElseName)
-    HeatmapChartSpec("Correlations", fieldLabels, fieldLabels, correlations, Some(-1), Some(1), displayOptions)
+    HeatmapWidget("Correlations", fieldLabels, fieldLabels, correlations, Some(-1), Some(1), displayOptions)
   }
 }

@@ -1,9 +1,9 @@
 @import models.ChartType
-@import models.NumericalChartSpec
+@import models.NumericalCountWidget
 
 @(
     chartElementName : String,
-    chartSpec: NumericalChartSpec[_]
+    chartSpec: NumericalCountWidget[_]
 )
 
 @numericValue(x: Any) = @{
@@ -16,6 +16,7 @@
 <script type="text/javascript">
     $(document).ready(function() {
         var isDate = @{chartSpec.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
+        var isDouble = @{chartSpec.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[Double])).flatten.getOrElse(false)};
         var dataType = (isDate) ? 'datetime' : null;
 
         var datas = [@chartSpec.data.map { singleSeries => {
@@ -32,7 +33,10 @@
         var pointFormat = (isDate) ?
             '<span style="color:{point.color}">{point.x:%Y-%m-%d} (Count)</span>: <b>{point.y:.2f}</b><br/>'
             :
-            '<span style="color:{point.color}">{point.x} (Count)</span>: <b>{point.y:.2f}</b><br/>'
+            (isDouble) ?
+                '<span style="color:{point.color}">{point.x:.2f} (Count)</span>: <b>{point.y:.2f}</b><br/>'
+                :
+                '<span style="color:{point.color}">{point.x} (Count)</span>: <b>{point.y:.2f}</b><br/>'
 
         $('#@chartElementName').on('chartTypeChanged', function(event, chartType) {
             changeChartType(chartType);
@@ -56,19 +60,19 @@
                         return {name: data.name, data: data.data, colorByPoint: false};
                     });
 
-                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, false, '@chartSpec.title', 'Count', showLegend, pointFormat, height, dataType, false, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, false, '@chartSpec.fieldLabel', 'Count', showLegend, pointFormat, height, dataType, false, true);
                     break;
                 case '@ChartType.Bar':
                     var series = datas.map( function(data, index) {
                         return {name: data.name, data: data.data, colorByPoint: false};
                     });
 
-                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, true, '@chartSpec.title', 'Count', showLegend, pointFormat, height, dataType, false, true);
+                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, true, '@chartSpec.fieldLabel', 'Count', showLegend, pointFormat, height, dataType, false, true);
                     break;
                 case '@ChartType.Line':
                     var series = datas
 
-                    lineChart('@chartSpec.title', '@{chartElementName}', null, series, '@chartSpec.title', 'Count', showLegend, pointFormat, height, dataType, false, true);
+                    lineChart('@chartSpec.title', '@{chartElementName}', null, series, '@chartSpec.fieldLabel', 'Count', showLegend, pointFormat, height, dataType, false, true);
                     break;
                 case '@ChartType.Polar':
                     var series = datas.map( function(data, index) {

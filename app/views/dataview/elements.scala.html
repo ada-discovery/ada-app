@@ -30,9 +30,9 @@
     @dynamicStringTable("tableColumnName", form.value.map(_.tableColumnNames).getOrElse(Nil), true, Some(addModalInner))
 }
 
-@labelValue("statsCalcSpecs", attributeLabel("dataView", "statsCalcSpecs")){
+@labelValue("widgetSpecs", attributeLabel("dataView", "widgetSpecs")){
     @widgetSpecTable(
-        form.value.map(_.statsCalcSpecs).getOrElse(Nil),
+        form.value.map(_.widgetSpecs).getOrElse(Nil),
         nameFieldMap
     )
 }

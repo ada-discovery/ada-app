@@ -1,0 +1,40 @@
+@import util.shorten
+@import models.Count
+@import models.ChartType
+@import models.CategoricalCountWidget$
+@import models.CategoricalCountWidget.groupDataByValue
+@import views.html.table.displayTable
+@import util.{typeColumns, typeColumn}
+
+@(
+    elementId: String,
+    widget: CategoricalCountWidget
+)
+
+@countTableAux(groupNames: Seq[String], data: Seq[(String, Seq[Int])]) = {
+    @displayTable(
+        data,
+        Seq(
+            typeColumn[(String, Seq[Int])](None, shorten(widget.fieldLabel, 15), _._1)
+        ) ++ groupNames.zipWithIndex.map { case (groupName, index) =>
+            typeColumn[(String, Seq[Int])](None, shorten(groupName, 15), _._2(index))
+        }
+    )
+}
+
+@countTable = @{
+    countTableAux(
+        widget.data.map(_._1),
+        groupDataByValue(widget)
+    )
+}
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        var categories = [ @widget.data.head._2.map { case Count(label, _, _) => '@label',}];
+        var header ="<h4 align='center'> @widget.title </h4>"
+
+        var table = "@Html(countTable.toString().replaceAll("\n","").replaceAll("\"","\'"))";
+        $('#' + '@elementId').html(header + table);
+    });
+</script>
