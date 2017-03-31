@@ -4,7 +4,7 @@
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
 @import views.html.table.paginatedJsonTable
 @import views.html.dataset.exportDataSetDropdown
-@import views.html.filter.filter
+@import views.html.filter.{filter, filterJs}
 @import reactivemongo.bson.BSONObjectID
 @import play.api.libs.json.{JsValue, JsObject}
 @import models.DataSpaceMetaInfo
@@ -164,15 +164,25 @@
 @viewFilter(viewPart: DataSetViewData, index: Int) = {
     @filter(
         viewPart.page.filter,
-        dataSetRouter.getView(dataViewId, Nil, Nil, true),
-        Right(dataSetRouter.allFields),
         Some(Right(categoryRouter.getCategoriesWithFieldsAsTreeNodes)),
         filterShowFieldStyle,
         Some(filterJsRouter),
         Some(filterRouter.idAndNames),
+        s"filter$index"
+    )
+}
+
+@viewFilterJs(viewPart: DataSetViewData, index: Int) = {
+    @filterJs(
+        viewPart.page.filter,
+        dataSetRouter.getView(dataViewId, Nil, Nil, true),
+        Right(dataSetRouter.allFields),
+        Some(filterJsRouter),
+        Some(filterRouter.idAndNames),
         "filterOrIds",
         s"filter$index",
-        Some(createSubmissionJsonJsFunction(index))
+        Some(createSubmissionJsonJsFunction(index)),
+        Some("categoryTree")
     )
 }
 
@@ -247,6 +257,11 @@
     @viewParts.map { viewPart =>
         @widgetPanelJs(viewPart.fieldChartSpecs.map(_.chartSpec))
     }
+
+    @viewParts.zipWithIndex.map { case (viewPart, index) =>
+        @viewFilterJs(viewPart, index)
+    }
+
     <script type="text/javascript">
         $(function () {
             $(".jsonModalLink").click(function(event) {

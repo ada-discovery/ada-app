@@ -1,6 +1,6 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
-@import views.html.filter.filter
+@import views.html.filter.{filter, filterWithJs}
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import models.{Field, DataSpaceMetaInfo}
 
@@ -11,7 +11,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-8">
-            @filter(
+            @filterWithJs(
                 page.filter,
                 dataSpaceMetaInfoRoutes.find(),
                 Left(Seq(

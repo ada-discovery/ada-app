@@ -1,0 +1,44 @@
+@import models.ConditionType
+@import play.api.libs.json.Json
+@import models.FilterShowFieldStyle
+@import models.{Field, Filter}
+@import models.JsTreeNode.format
+@import controllers.dataset.FilterJsRouter
+@import views.html.filter.{filter => filterUI, filterJs}
+@import play.api.libs.json.JsArray
+
+@(
+    filter: Option[Filter],
+    submitCall: Call,
+    fieldsOrCall: Either[Traversable[Field], Call],
+    categoriesOrCall: Option[Either[Traversable[Category], Call]] = None,
+    showFieldStyle: Option[FilterShowFieldStyle.Value] = None,
+    filterJsRouter: Option[FilterJsRouter] = None,
+    listFiltersCall: Option[Call] = None,
+    filterSubmitParamName: String = "filter",
+    filterElementName: String = "filterDiv",
+    createSubmissionJson: Option[Html] = None
+)(
+    implicit request: Request[_]
+)
+
+@filterUI(
+    filter,
+    categoriesOrCall,
+    showFieldStyle,
+    filterJsRouter,
+    listFiltersCall,
+    filterElementName
+)
+
+@filterJs(
+    filter,
+    submitCall,
+    fieldsOrCall,
+    filterJsRouter,
+    listFiltersCall,
+    filterSubmitParamName,
+    filterElementName,
+    createSubmissionJson,
+    categoriesOrCall.map(_ => "categoryTree")
+)

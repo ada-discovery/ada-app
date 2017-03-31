@@ -7,7 +7,7 @@
 @import views.html.dataset.datasetSubNav
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
-@import views.html.filter.filter
+@import views.html.filter.{filter, filterWithJs}
 @import play.api.libs.json.Json
 @import models.DataSpaceMetaInfo
 @import controllers.DataSetWebContext
@@ -27,7 +27,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(
+            @filterWithJs(
                 Some(filterSpec),
                 dataSetRouter.getCorrelations(fields.map(_.name).toSeq, filterSpec.conditionsOrId),
                 Right(dataSetRouter.allFields),

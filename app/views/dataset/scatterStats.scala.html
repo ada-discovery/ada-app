@@ -5,7 +5,7 @@
 @import views.html.layout.main
 @import views.html.dataset.datasetSubNav
 @import views.html.dataview.dataViewSelectionModal
-@import views.html.filter.filter
+@import views.html.filter.{filter, filterWithJs}
 @import play.api.libs.json.Json
 @import models.{DataSpaceMetaInfo, FieldTypeId, Field}
 @import controllers.DataSetWebContext
@@ -29,7 +29,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(
+            @filterWithJs(
                 Some(filterSpec),
                 dataSetRouter.getScatterStats(xField.map(_.name), yField.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
                 Right(dataSetRouter.allFields),

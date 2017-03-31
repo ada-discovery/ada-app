@@ -9,15 +9,11 @@
 
 @(
     filter: Option[Filter],
-    submitCall: Call,
-    fieldsOrCall: Either[Traversable[Field], Call],
     categoriesOrCall: Option[Either[Traversable[Category], Call]] = None,
     showFieldStyle: Option[FilterShowFieldStyle.Value] = None,
     filterJsRouter: Option[FilterJsRouter] = None,
     listFiltersCall: Option[Call] = None,
-    filterSubmitParamName: String = "filter",
-    filterElementName: String = "filterDiv",
-    createSubmissionJson: Option[Html] = None
+    filterElementName: String = "filterDiv"
 )(
     implicit request: Request[_]
 )
@@ -198,15 +194,3 @@
         </li>
     </ul>
 </div>
-
-@filterJs(
-    filter,
-    submitCall,
-    fieldsOrCall,
-    filterJsRouter,
-    listFiltersCall,
-    filterSubmitParamName,
-    filterElementName,
-    createSubmissionJson,
-    categoriesOrCall.map(_ => "categoryTree")
-)

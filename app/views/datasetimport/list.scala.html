@@ -1,7 +1,7 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import views.html.dataset.{datasetSubNav, datasetMenu}
-@import views.html.filter.filter
+@import views.html.filter.{filter, filterWithJs}
 @import controllers.dataset.routes.{DataSetImportController => dataSetImportRoutes}
 @import util.{typeColumns, toHumanReadableCamel, formatTimeElement}
 @import play.api.mvc.Flash
@@ -24,7 +24,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(
+            @filterWithJs(
                 page.filter,
                 dataSetImportRoutes.find(),
                 Left(Seq(

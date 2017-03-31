@@ -1,6 +1,6 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
-@import views.html.filter.filter
+@import views.html.filter.{filter, filterWithJs}
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import util.typeColumns
 @import play.api.mvc.Flash
@@ -16,7 +16,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-8">
-            @filter(
+            @filterWithJs(
                 page.filter,
                 dataSetSettingRoutes.find(),
                 Left(Seq(

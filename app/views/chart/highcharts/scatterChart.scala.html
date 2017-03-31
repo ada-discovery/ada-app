@@ -6,10 +6,12 @@
 )
 
 <script type="text/javascript">
-    scatterChart('@chartSpec.title', '@{chartElementName}', '@{chartSpec.xAxisCaption}', '@{chartSpec.yAxisCaption}',
-        [ @chartSpec.data.map { case (name, color, data) =>
-            {name : '@shorten(name)', data : [@data.map{ point => [@{point.mkString(",")}],}]},}
-        ], // color : 'color'
-        @{chartSpec.displayOptions.height.getOrElse(400)}
-    )
+    $(function () {
+        scatterChart('@chartSpec.title', '@{chartElementName}', '@{chartSpec.xAxisCaption}', '@{chartSpec.yAxisCaption}',
+            [ @chartSpec.data.map { case (name, color, data) =>
+                {name : '@shorten(name)', data : [@data.map{ point => [@{point.mkString(",")}],}]},}
+            ], // color : 'color'
+            @{chartSpec.displayOptions.height.getOrElse(400)}
+        )
+    });
 </script>

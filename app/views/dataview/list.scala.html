@@ -2,7 +2,7 @@
 @import views.html.dataset.{filterWidgetPanel$, datasetSubNav, datasetMenu}
 @import views.html.table.paginatedTable
 @import views.html.dataview.dataViewSelectionModal
-@import views.html.filter.filter
+@import views.html.filter.{filter, filterWithJs}
 @import models.DataView
 @import util.typeColumns
 @import controllers.dataset.{DataViewRouter, DataViewJsRouter}
@@ -23,7 +23,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(
+            @filterWithJs(
                 page.filter,
                 dataViewRouter.plainList,
                 Left(Seq(Field("name", None)))

@@ -9,70 +9,21 @@
 )
 
 <script type="text/javascript">
-    $(document).ready(function() {
+    $(function () {
         var categories = [ @widget.data.head._2.map { case Count(label, _, _) => '@label',}];
         var datas = [@widget.data.map { singleSeries => {
             name: '@singleSeries._1',
-            data: [@singleSeries._2.map { case Count(label, count, key) => {
-                name: '@shorten(label)',
-                y: @count,
-                key: '@key'
-            }, }]
+            data: [@singleSeries._2.map { case Count(label, count, key) => {name: '@shorten(label)', y: @count, key: '@key' }, }]
         }, }];
 
         var seriesSize = datas.length
-        var showLegend = seriesSize > 1
         var height = @widget.displayOptions.height.getOrElse(400)
         var pointFormat = '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.2f}</b><br/>'
 
         $('#@elementId').on('chartTypeChanged', function(event, chartType) {
-            changeChartType(chartType);
+            changeCategoricalCountChartType(chartType, categories, datas, seriesSize, '@widget.title', '@{elementId}', @widget.showLabels, @widget.showLegend, height, pointFormat);
         });
 
-        changeChartType('@widget.displayOptions.chartType');
-
-        function changeChartType(chartType) {
-            switch (chartType) {
-                case '@ChartType.Pie':
-                    var series = datas.map( function(data, index) {
-                        var size = (100 / seriesSize) * (index + 1)
-                        var innerSize = 0
-                        if (index > 0)
-                            innerSize = (100 / seriesSize) * index + 1
-                        return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
-                    });
-
-                    pieChart('@widget.title', '@{elementId}', series, @widget.showLabels, @widget.showLegend, height, true, true);
-                    break;
-                case '@ChartType.Column':
-                    var colorByPoint = (seriesSize == 1)
-                    var series = datas.map( function(data, index) {
-                        return {name: data.name, data: data.data, colorByPoint: colorByPoint};
-                    });
-
-                    columnChart('@widget.title', '@{elementId}', categories, series, false, '', 'Count', showLegend, pointFormat, height, null, true, true);
-                    break;
-                case '@ChartType.Bar':
-                    var colorByPoint = (seriesSize == 1)
-                    var series = datas.map( function(data, index) {
-                        return {name: data.name, data: data.data, colorByPoint: colorByPoint};
-                    });
-
-                    columnChart('@widget.title', '@{elementId}', categories, series, true, '', 'Count', showLegend, pointFormat, height, null, true, true);
-                    break;
-                case '@ChartType.Line':
-                    var series = datas
-
-                    lineChart('@widget.title', '@{elementId}', categories, series, '', 'Count', showLegend, pointFormat, height, null, true, true);
-                    break;
-                case '@ChartType.Polar':
-                    var series = datas.map( function(data, index) {
-                        return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
-                    });
-
-                    polarChart('@widget.title', '@{elementId}', categories, series, showLegend, height, null, true, true);
-                    break;
-            }
-        }
+        changeCategoricalCountChartType('@widget.displayOptions.chartType', categories, datas, seriesSize, '@widget.title', '@{elementId}', @widget.showLabels, @widget.showLegend, height, pointFormat)
     });
 </script>

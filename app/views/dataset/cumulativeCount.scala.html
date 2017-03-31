@@ -6,7 +6,7 @@
 @import views.html.widget.{widgetPanel, widgetPanelJs}
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.dataset.datasetSubNav
-@import views.html.filter.filter
+@import views.html.filter.{filter, filterWithJs}
 @import play.api.libs.json.Json
 @import java.util.Date
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
@@ -29,7 +29,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filter(
+            @filterWithJs(
                 Some(filterSpec),
                 dataSetRouter.getCumulativeCount(field.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
                 Right(dataSetRouter.allFields),

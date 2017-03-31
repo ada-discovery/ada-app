@@ -2,7 +2,7 @@
 @import models.NumericalCountWidget
 
 @(
-    chartElementName : String,
+    elementId : String,
     chartSpec: NumericalCountWidget[_]
 )
 
@@ -14,20 +14,14 @@
 }
 
 <script type="text/javascript">
-    $(document).ready(function() {
+    $(function () {
         var isDate = @{chartSpec.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
         var isDouble = @{chartSpec.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[Double])).flatten.getOrElse(false)};
         var dataType = (isDate) ? 'datetime' : null;
 
-        var datas = [@chartSpec.data.map { singleSeries => {
-            name: '@singleSeries._1',
-            data: [@singleSeries._2.map { case (x, y) =>
-                [@{numericValue(x)}, @y]
-            , }]
-        }, }];
+        var datas = [@chartSpec.data.map { singleSeries => {name: '@singleSeries._1', data: [@singleSeries._2.map { case (x, y) => [@{numericValue(x)}, @y], }]}, }];
 
         var seriesSize = datas.length
-        var showLegend = seriesSize > 1
         var height = @chartSpec.displayOptions.height.getOrElse(400)
 
         var pointFormat = (isDate) ?
@@ -38,50 +32,10 @@
                 :
                 '<span style="color:{point.color}">{point.x} (Count)</span>: <b>{point.y:.2f}</b><br/>'
 
-        $('#@chartElementName').on('chartTypeChanged', function(event, chartType) {
-            changeChartType(chartType);
+        $('#@elementId').on('chartTypeChanged', function(event, chartType) {
+            changeNumericalCountChartType(chartType, datas, seriesSize, '@chartSpec.title', '@{elementId}', height, pointFormat, dataType)
         });
 
-        changeChartType('@chartSpec.displayOptions.chartType');
-
-        function changeChartType(chartType) {
-            switch (chartType) {
-                case '@ChartType.Pie':
-                    var series = datas.map( function(data, index) {
-                        var size = (100 / seriesSize) * index
-                        var innerSize = Math.max(0, (100 / seriesSize) * (index - 1) + 1)
-                        return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
-                    });
-
-                    pieChart('@chartSpec.title', '@{chartElementName}', series, false, showLegend, height, false, true);
-                    break;
-                case '@ChartType.Column':
-                    var series = datas.map( function(data, index) {
-                        return {name: data.name, data: data.data, colorByPoint: false};
-                    });
-
-                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, false, '@chartSpec.fieldLabel', 'Count', showLegend, pointFormat, height, dataType, false, true);
-                    break;
-                case '@ChartType.Bar':
-                    var series = datas.map( function(data, index) {
-                        return {name: data.name, data: data.data, colorByPoint: false};
-                    });
-
-                    columnChart('@chartSpec.title', '@{chartElementName}', null, series, true, '@chartSpec.fieldLabel', 'Count', showLegend, pointFormat, height, dataType, false, true);
-                    break;
-                case '@ChartType.Line':
-                    var series = datas
-
-                    lineChart('@chartSpec.title', '@{chartElementName}', null, series, '@chartSpec.fieldLabel', 'Count', showLegend, pointFormat, height, dataType, false, true);
-                    break;
-                case '@ChartType.Polar':
-                    var series = datas.map( function(data, index) {
-                        return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
-                    });
-
-                    polarChart('@chartSpec.title', '@{chartElementName}', null, series, showLegend, height, dataType, false, true);
-                    break;
-            }
-        }
+        changeNumericalCountChartType('@chartSpec.displayOptions.chartType', datas, seriesSize, '@chartSpec.title', '@chartSpec.fieldLabel', '@{elementId}', height, pointFormat, dataType)
     });
 </script>

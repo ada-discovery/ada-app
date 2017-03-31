@@ -1,6 +1,6 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
-@import views.html.filter.filter
+@import views.html.filter.{filter, filterWithJs}
 @import util.typeColumns
 @import models.Field
 
@@ -9,7 +9,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-8">
-            @filter(
+            @filterWithJs(
                 page.filter,
                 routes.TranslationController.find(),
                 Left(Seq(
