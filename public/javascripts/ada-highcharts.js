@@ -1,6 +1,6 @@
     function pieChart(
         title,
-        chartElementName,
+        chartElementId,
         series,
         showLabels,
         showLegend,
@@ -11,13 +11,13 @@
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = chartTypeMenu(chartElementName, chartTypes)
+            exporting = chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowPointClick)
             cursor = 'pointer';
 
-        $('#' + chartElementName).highcharts({
+        $('#' + chartElementId).highcharts({
             chart: {
                 plotBackgroundColor: null,
                 plotBorderWidth: null,
@@ -47,7 +47,7 @@
                         events: {
                             click: function () {
                                 if (allowPointClick)
-                                    $('#' + chartElementName).trigger("pointClick", this);
+                                    $('#' + chartElementId).trigger("pointClick", this);
                             }
                         }
                     }
@@ -71,7 +71,7 @@
 
     function columnChart(
         title,
-        chartElementName,
+        chartElementId,
         categories,
         series,
         inverted,
@@ -87,7 +87,7 @@
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = chartTypeMenu(chartElementName, chartTypes)
+            exporting = chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowPointClick)
@@ -96,7 +96,7 @@
         var chartType = 'column'
         if (inverted)
             chartType = 'bar'
-        $('#' + chartElementName).highcharts({
+        $('#' + chartElementId).highcharts({
             chart: {
                 type: chartType,
                 height: height
@@ -147,7 +147,7 @@
                         events: {
                             click: function () {
                                 if (allowPointClick)
-                                    $('#' + chartElementName).trigger("pointClick", this);
+                                    $('#' + chartElementId).trigger("pointClick", this);
                             }
                         }
                     },
@@ -168,13 +168,13 @@
 
     function timeLineChart(
         title,
-        chartElementName,
+        chartElementId,
         xAxisCaption,
         yAxisCaption,
         series,
         height
     ) {
-        $('#' + chartElementName).highcharts({
+        $('#' + chartElementId).highcharts({
             chart: {
                 type: 'line', // 'spline'
                 height: height
@@ -230,7 +230,7 @@
 
     function lineChart(
         title,
-        chartElementName,
+        chartElementId,
         categories,
         series,
         xAxisCaption,
@@ -245,13 +245,13 @@
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = chartTypeMenu(chartElementName, chartTypes)
+            exporting = chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowPointClick)
             cursor = 'pointer';
 
-        $('#' + chartElementName).highcharts({
+        $('#' + chartElementId).highcharts({
             chart: {
                 height: height
             },
@@ -303,7 +303,7 @@
                         events: {
                             click: function () {
                                 if (allowPointClick)
-                                    $('#' + chartElementName).trigger("pointClick", this);
+                                    $('#' + chartElementId).trigger("pointClick", this);
                             }
                         }
                     },
@@ -324,7 +324,7 @@
 
     function polarChart(
         title,
-        chartElementName,
+        chartElementId,
         categories,
         series,
         showLegend,
@@ -336,13 +336,13 @@
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
-            exporting = chartTypeMenu(chartElementName, chartTypes)
+            exporting = chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
         if (allowPointClick)
             cursor = 'pointer';
 
-        $('#' + chartElementName).highcharts({
+        $('#' + chartElementId).highcharts({
             chart: {
                 polar: true,
                 height: height
@@ -393,7 +393,7 @@
                         events: {
                             click: function () {
                                 if (allowPointClick)
-                                    $('#' + chartElementName).trigger("pointClick", this);
+                                    $('#' + chartElementId).trigger("pointClick", this);
                             }
                         }
                     },
@@ -415,13 +415,13 @@
 
     function scatterChart(
         title,
-        chartElementName,
+        chartElementId,
         xAxisCaption,
         yAxisCaption,
         series,
         height
     ) {
-        $('#' + chartElementName).highcharts({
+        $('#' + chartElementId).highcharts({
             chart: {
                 type: 'scatter',
                 zoomType: 'xy',
@@ -486,7 +486,61 @@
         });
     }
 
-    function chartTypeMenu(chartElementName, chartTypes) {
+    function boxPlot(
+        title,
+        chartElementId,
+        yAxisCaption,
+        data,
+        min,
+        max,
+        pointFormat,
+        height,
+        dataType
+    ) {
+        $('#' + chartElementId).highcharts({
+            chart: {
+                type: 'boxplot',
+                height: height
+            },
+            title: {
+                text:  title
+            },
+            xAxis: {
+                categories: ['']
+            },
+            yAxis: {
+                type: dataType,
+                title: {
+                    text: yAxisCaption
+                },
+                min: min,
+                max: max
+            },
+            legend: {
+                enabled: false
+            },
+            credits: {
+                enabled: false
+            },
+            plotOptions: {
+                boxplot: {
+                    fillColor: '#eeeeee',
+                        lineWidth: 2,
+                        medianWidth: 3
+                }
+            },
+            series: [{
+                name: title,
+                data: data,
+                tooltip: {
+                    headerFormat: '<b>{point.series.name}</b><br/>',
+                    pointFormat:  pointFormat
+                }
+            }]
+        });
+    }
+
+    function chartTypeMenu(chartElementId, chartTypes) {
         Highcharts.setOptions({
             lang: {
                 chartTypeButtonTitle: "Chart Type"
@@ -504,11 +558,99 @@
                             return {
                                 text: name,
                                 onclick: function () {
-                                    $('#' + chartElementName).trigger("chartTypeChanged", name);
+                                    $('#' + chartElementId).trigger("chartTypeChanged", name);
                                 }
                             }
                         })
                 }
             }
         };
+    }
+
+    function changeCategoricalCountChartType(chartType, categories, datas, seriesSize, title, elementId, showLabels, showLegend, height, pointFormat) {
+        var showLegendImpl = seriesSize > 1
+
+        switch (chartType) {
+            case 'Pie':
+                var series = datas.map( function(data, index) {
+                    var size = (100 / seriesSize) * (index + 1)
+                    var innerSize = 0
+                    if (index > 0)
+                        innerSize = (100 / seriesSize) * index + 1
+                    return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
+                });
+
+                pieChart(title, elementId, series, showLabels, showLegend, height, true, true);
+                break;
+            case 'Column':
+                var colorByPoint = (seriesSize == 1)
+                var series = datas.map( function(data, index) {
+                    return {name: data.name, data: data.data, colorByPoint: colorByPoint};
+                });
+
+                columnChart(title, elementId, categories, series, false, '', 'Count', showLegendImpl, pointFormat, height, null, true, true);
+                break;
+            case 'Bar':
+                var colorByPoint = (seriesSize == 1)
+                var series = datas.map( function(data, index) {
+                    return {name: data.name, data: data.data, colorByPoint: colorByPoint};
+                });
+
+                columnChart(title, elementId, categories, series, true, '', 'Count', showLegendImpl, pointFormat, height, null, true, true);
+                break;
+            case 'Line':
+                var series = datas
+
+                lineChart(title, elementId, categories, series, '', 'Count', showLegendImpl, pointFormat, height, null, true, true);
+                break;
+            case 'Polar':
+                var series = datas.map( function(data, index) {
+                    return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
+                });
+
+                polarChart(title, elementId, categories, series, showLegendImpl, height, null, true, true);
+                break;
+        }
+    }
+
+    function changeNumericalCountChartType(chartType, datas, seriesSize, title, fieldLabel, elementId, height, pointFormat, dataType) {
+        var showLegend = seriesSize > 1
+
+        switch (chartType) {
+            case 'Pie':
+                var series = datas.map( function(data, index) {
+                    var size = (100 / seriesSize) * index
+                    var innerSize = Math.max(0, (100 / seriesSize) * (index - 1) + 1)
+                    return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
+                });
+
+                pieChart(title, elementId, series, false, showLegend, height, false, true);
+                break;
+            case 'Column':
+                var series = datas.map( function(data, index) {
+                    return {name: data.name, data: data.data, colorByPoint: false};
+                });
+
+                columnChart(title, elementId, null, series, false, fieldLabel, 'Count', showLegend, pointFormat, height, dataType, false, true);
+                break;
+            case 'Bar':
+                var series = datas.map( function(data, index) {
+                    return {name: data.name, data: data.data, colorByPoint: false};
+                });
+
+                columnChart(title, elementId, null, series, true, fieldLabel, 'Count', showLegend, pointFormat, height, dataType, false, true);
+                break;
+            case 'Line':
+                var series = datas
+
+                lineChart(title, elementId, null, series, fieldLabel, 'Count', showLegend, pointFormat, height, dataType, false, true);
+                break;
+            case 'Polar':
+                var series = datas.map( function(data, index) {
+                    return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
+                });
+
+                polarChart(title, elementId, null, series, showLegend, height, dataType, false, true);
+                break;
+        }
     }
