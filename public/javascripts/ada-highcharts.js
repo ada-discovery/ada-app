@@ -54,7 +54,7 @@
                 },
                 series: {
                     animation: {
-                        duration: 700
+                        duration: 600
                     }
                 }
             },
@@ -152,7 +152,7 @@
                         }
                     },
                     animation: {
-                        duration: 700
+                        duration: 600
                     }
                 }
             },
@@ -308,7 +308,7 @@
                         }
                     },
                     animation: {
-                        duration: 700
+                        duration: 600
                     }
                 }
             },
@@ -398,7 +398,7 @@
                         }
                     },
                     animation: {
-                        duration: 700
+                        duration: 600
                     }
                 }
             },
