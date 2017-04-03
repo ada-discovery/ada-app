@@ -1,6 +1,6 @@
 @import views.html.layout
 @import views.html.elements.{inputText, labelValue, value}
-@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
 @import views.html.filters.displayConditions
 @import controllers.dataset.FilterRouter
 @import models.DataSpaceMetaInfo
@@ -35,5 +35,5 @@
     filterRouter.plainList,
     Some(filterRouter.delete(id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNav())
+    Some(datasetSubNavWithJs())
 )

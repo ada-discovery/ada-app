@@ -4,7 +4,7 @@
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.{widgetPanel, widgetPanelJs}
-@import views.html.dataset.datasetSubNav
+@import views.html.dataset.datasetSubNavWithJs
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.filter.{filter, filterWithJs}
 @import play.api.libs.json.Json
@@ -90,7 +90,7 @@
     @widgetPanelJs(chartSpecs)
 }
 
-@main(Messages("distribution.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
+@main(Messages("distribution.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
         <h3>

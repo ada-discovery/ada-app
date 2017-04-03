@@ -36,7 +36,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
-  protected lazy val dataSetName = result(dsa.metaInfo).name
+  protected def dataSetName = result(dsa.metaInfo).name
   protected lazy val fieldRepo = dsa.fieldRepo
 
   protected override val listViewColumns = Some(Seq(CategoryIdentity.name, "name", "label"))

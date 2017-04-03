@@ -81,29 +81,29 @@
 </ul>
 
 <script type="text/javascript">
-    $(".datasets-div").each(function() {
-        if($(this).find("li.inner-node.active").size() > 0) {
-            $(this).addClass("in")
-            updatePlusMinusIcon($(this).prev());
-        }
-    });
-    $(".dataspace.active").each(function() {
-        $(this).next().addClass("in");
-        updatePlusMinusIcon($(this));
-    });
-    $('.btn-dataspace-expand').on('click', function() {
-        updatePlusMinusIcon($(this));
-    });
+        $(".datasets-div").each(function () {
+            if ($(this).find("li.inner-node.active").size() > 0) {
+                $(this).addClass("in")
+                updatePlusMinusIcon($(this).prev());
+            }
+        });
+        $(".dataspace.active").each(function () {
+            $(this).next().addClass("in");
+            updatePlusMinusIcon($(this));
+        });
+        $('.btn-dataspace-expand').on('click', function () {
+            updatePlusMinusIcon($(this));
+        });
 
-    function updatePlusMinusIcon(element) {
-        var iconPlus = element.find("span.glyphicon-plus:first");
-        var iconMinus = element.find("span.glyphicon-minus:first");
-        if (iconPlus.length) {
-            iconPlus.removeClass("glyphicon-plus");
-            iconPlus.addClass("glyphicon-minus");
-        } else {
-            iconMinus.removeClass("glyphicon-minus");
-            iconMinus.addClass("glyphicon-plus");
+        function updatePlusMinusIcon(element) {
+            var iconPlus = element.find("span.glyphicon-plus:first");
+            var iconMinus = element.find("span.glyphicon-minus:first");
+            if (iconPlus.length) {
+                iconPlus.removeClass("glyphicon-plus");
+                iconPlus.addClass("glyphicon-minus");
+            } else {
+                iconMinus.removeClass("glyphicon-minus");
+                iconMinus.addClass("glyphicon-plus");
+            }
         }
-    }
 </script>

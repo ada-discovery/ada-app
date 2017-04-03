@@ -18,9 +18,6 @@
     implicit request: Request[_]
 )
 
-<!-- need to import css and js first -->
-@typeaheadJsImport()
-
 @showChoice(value: FilterShowFieldStyle.Value, text: String) = {
     <li>
         <label class="radio-inline"><input type="radio" name="showChoice" value="@value.id" @if(showFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels) == value) {checked="checked"}>

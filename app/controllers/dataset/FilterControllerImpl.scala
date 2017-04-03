@@ -43,7 +43,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
-  protected lazy val dataSetName = result(dsa.metaInfo).name
+  protected def dataSetName = result(dsa.metaInfo).name
   protected lazy val filterRepo = dsa.filterRepo
 
   protected override val listViewColumns = None // Some(Seq("name", "conditions"))

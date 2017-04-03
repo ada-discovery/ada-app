@@ -1,7 +1,7 @@
 @import models.{Category, DataSpaceMetaInfo, Field}
 @import views.html.layout
 @import views.html.table.paginatedTable
-@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
 @import views.html.category.treeChart
 @import views.html.filter.{filter, filterWithJs}
 @import util.typeColumns
@@ -103,7 +103,7 @@
     table,
     Some(treeChart(categoryRouter)),
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNav())
+    Some(datasetSubNavWithJs())
 )
 
 <script type="text/javascript" src="@categoryRouter.jsRoutes"></script>

@@ -6,7 +6,7 @@ import javax.inject.Inject
 
 import _root_.util.JsonUtil._
 import models.ConditionType._
-import util.{BasicStats, JsonUtil, fieldLabel}
+import util.{BasicStats, fieldLabel}
 import _root_.util.WebExportUtil._
 import _root_.util.shorten
 import dataaccess._
@@ -28,12 +28,9 @@ import services.{StatsService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
-
-import reflect.runtime.universe._
 import scala.math.Ordering.Implicits._
-import scala.collection.generic.SeqFactory
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 trait GenericDataSetControllerFactory {
   def apply(dataSetId: String): DataSetController
@@ -60,8 +57,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   @Inject protected var statsService: StatsService = _
 
   // hooks
-
-  protected def dataSetName = result(dsa.metaInfo).name
 
   // auto-generated filename for csv files
   protected def csvFileName: String = dataSetId.replace(" ", "-") + ".csv"
@@ -110,7 +105,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     implicit msg: Messages, request: Request[_]
   ) =
     dataset.list(
-      dataSetName + " Item",
+      result(dataSetNameFuture) + " Item",
       page,
       result(getFieldLabelMap(listViewColumns.get)), // TODO: refactor
       listViewColumns.get
@@ -119,10 +114,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private def getViewView(
     dataViewId: BSONObjectID,
     dataViewName: String,
+    dataSetName: String,
     viewParts: Seq[DataSetViewData],
-    elementGridWidth: Int
-  )(implicit request: Request[_]) = {
-    val tree = result(dataSpaceTree)
+    elementGridWidth: Int,
+    dataSpaceTree: Traversable[DataSpaceMetaInfo]
+  )(implicit request: Request[_]) =
     dataset.showView(
       dataSetName,
       dataViewId,
@@ -130,9 +126,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       viewParts,
       elementGridWidth,
       setting.filterShowFieldStyle,
-      tree
+      dataSpaceTree
     )
-  }
 
   /**
     * Shows all fields of the selected subject.
@@ -155,12 +150,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     )
 
     dataset.show(
-      dataSetName + " Item",
+      result(dataSetNameFuture) + " Item",
       item,
       router.getDefaultView,
       true,
       result(fieldNameLabelAndRendererMapFuture),
-      result(dataSpaceTree)
+      result(dataSpaceTreeFuture)
     )
   }
 
@@ -257,7 +252,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
       implicit val msg = messagesApi.preferred(request)
       render {
-        case Accepts.Html() => Ok(dataset.typeOverview(dataSetName, (FieldTypeId.values, fieldTypeCounts).zipped.toList))
+        case Accepts.Html() => Ok(dataset.typeOverview(result(dataSetNameFuture), (FieldTypeId.values, fieldTypeCounts).zipped.toList))
         case Accepts.Json() => Ok(JsObject(
           (FieldTypeId.values, fieldTypeCounts).zipped.map{ case (fieldType, count) =>
             (fieldType.toString, JsNumber(count))
@@ -311,6 +306,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
+        // get the data set name
+        dataSetName <- dataSetNameFuture
+
+        // get the data space tree
+        dataSpaceTree <- dataSpaceTreeFuture
+
         // load the view
         dataView <- dataViewRepo.get(dataViewId)
 
@@ -344,6 +345,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // get the response data
         viewResponses <- {
+          val responseStart = new ju.Date()
           val (columnNames, widgetSpecs) =
             dataView.map( view =>
               (view.tableColumnNames, view.widgetSpecs)
@@ -358,9 +360,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           )
         }
       } yield {
-        val end = new ju.Date()
-
-        Logger.info(s"Loading of view for the data set '${dataSetId}' finished in ${end.getTime - start.getTime} ms")
+        Logger.info(s"Data loading of a view for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
+        val renderingStart = new ju.Date()
         render {
           case Accepts.Html() => {
             val fieldChartsSpecs =
@@ -374,12 +375,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
                 DataSetViewData(newPage, fieldChartSpecs.flatten, viewResponse.tableFields)
               }
-            Ok(getViewView(
+
+            val response = Ok(getViewView(
               dataViewId,
               dataView.map(_.name).getOrElse("N/A"),
+              dataSetName,
               viewParts,
-              dataView.map(_.elementGridWidth).getOrElse(3))
-            )
+              dataView.map(_.elementGridWidth).getOrElse(3),
+              dataSpaceTree
+            ))
+            Logger.info(s"Rendering of a view for the data set '${dataSetId}' finished in ${new ju.Date().getTime - renderingStart.getTime} ms")
+            response
           }
           case Accepts.Json() => Ok(Json.toJson(viewResponses.head.tableItems))
         }
@@ -809,8 +815,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       fieldName.map(fieldRepo.get).getOrElse(Future(None))
 
     for {
+    // get the data set name
+      dataSetName <- dataSetNameFuture
+
+      // get the data space tree
+      dataSpaceTree <- dataSpaceTreeFuture
+
+      // x field
       xField <- getField(xFieldName)
+
+      // y field
       yField <- getField(yFieldName)
+
+      // group field
       groupField <- getField(groupFieldName)
 
       // use a given filter conditions or load one
@@ -876,7 +893,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           yMean,
           newFilter,
           setting.filterShowFieldStyle,
-          result(dataSpaceTree)
+          dataSpaceTree
         ))
         case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
       }
@@ -898,6 +915,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
+        // get the data set name
+        dataSetName <- dataSetNameFuture
+
+        // get the data space tree
+        dataSpaceTree <- dataSpaceTreeFuture
+
         // use a given filter conditions or load one
         resolvedFilter <- resolveFilter(filterOrId)
 
@@ -949,7 +972,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             Seq(distributionChart, boxChartSpec).flatten,
             newFilter,
             setting.filterShowFieldStyle,
-            result(dataSpaceTree)
+            dataSpaceTree
           ))
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
         }
@@ -967,6 +990,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ) = Action.async { implicit request =>
     {
       for {
+        // get the data set name
+        dataSetName <- dataSetNameFuture
+
+        // get the data space tree
+        dataSpaceTree <- dataSpaceTreeFuture
+
         // use a given filter conditions or load one
         resolvedFilter <- resolveFilter(filterOrId)
 
@@ -1002,7 +1031,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             Some(correlationChartSpec),
             newFilter,
             setting.filterShowFieldStyle,
-            result(dataSpaceTree)
+            dataSpaceTree
           ))
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
         }
@@ -1040,9 +1069,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
+        // get the data set name
+        dataSetName <- dataSetNameFuture
+
+        // get the data space tree
+        dataSpaceTree <- dataSpaceTreeFuture
+
+        // get the field definition
         field <- getField(fieldName)
 
+        // get the group field definition
         groupField <- getField(groupFieldName)
+
         // use a given filter conditions or load one
         resolvedFilter <- resolveFilter(filterOrId)
 
@@ -1079,7 +1117,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             chartSpec,
             newFilter,
             setting.filterShowFieldStyle,
-            result(dataSpaceTree)
+            dataSpaceTree
           ))
           case Accepts.Json() => BadRequest("GetCumulativeCount function doesn't support JSON response.")
         }
@@ -1145,12 +1183,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     Future.sequence(futureFieldLabelPairs).map{ _.flatten.toMap }
   }
 
-  // TODO: tree should be cached
-    private def dataSpaceTree =
-      DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
+  private def dataSpaceTreeFuture = DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 
-//  private lazy val dataSpaceTree =
-//    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
+  private def dataSetNameFuture = dsa.metaInfo.map(_.name)
 
   //////////////////////
   // Export Functions //

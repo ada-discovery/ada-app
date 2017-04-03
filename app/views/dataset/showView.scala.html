@@ -1,25 +1,18 @@
 @import views.html.layout
-@import views.html.dataset.{filterWidgetPanel, datasetSubNav, datasetMenu, displayJsonModal}
+@import views.html.dataset.{filterWidgetPanel, datasetSubNav, datasetSubNavJs, datasetMenu}
 @import views.html.widget.widgetPanelJs
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
-@import views.html.table.paginatedJsonTable
+@import views.html.dataset.{showViewTable, showViewTableJs}
 @import views.html.dataset.exportDataSetDropdown
 @import views.html.filter.{filter, filterJs}
 @import reactivemongo.bson.BSONObjectID
-@import play.api.libs.json.{JsValue, JsObject}
 @import models.DataSpaceMetaInfo
-@import models.FieldTypeId
-@import util.FieldTypeRenderer
 @import be.objectify.deadbolt.scala.views.html.restrict
 @import models.security.SecurityRole
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
 @import controllers.dataset.DataSetViewData
-@import reactivemongo.play.json.BSONFormats._
-@import models.FilterCondition.filterConditionFormat
-@import dataaccess.EitherFormat
 @import play.api.libs.json.Json
-@import play.api.libs.json.JsArray
 
 @(
     dataSetName : String,
@@ -72,34 +65,6 @@
     </div>
 }
 
-@genJsonRender(id: BSONObjectID, fieldName: String)(linkTitle: Html) = {
-    <a href="#" onclick="showFieldValue('@id.stringify', '@fieldName');" class="jsonModalLink">
-        @linkTitle
-    </a>
-}
-
-@jsonRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @genJsonRender(id, fieldName) {
-        <b>Json</b>
-    }
-}
-
-@arrayRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @genJsonRender(id, fieldName) {
-        <b>Array</b>
-    }
-}
-
-@jsonArrayRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @genJsonRender(id, fieldName) {
-        <b>Json Array</b>
-    }
-}
-
-@render(fun: Option[JsValue] => Html)(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @fun(jsValue)
-}
-
 @inputFilterConditionsOrIds = @{
     viewParts.map(_.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)))
 }
@@ -111,43 +76,6 @@
         dataSetRouter.exportJson(dataViewId, _, _),
         dataSetRouter.exportTranSMARTData,
         dataSetRouter.exportTranSMARTMapping
-    )
-}
-
-@table(viewData: DataSetViewData, index: Int) = @{
-    paginatedJsonTable(
-        viewData.page, { (page: Int, orderBy: String) =>
-            dataSetRouter.getView(
-                dataViewId,
-                viewParts.zipWithIndex.map { case (viewPart, i) =>
-                    if (i == index)
-                        TablePage(page, orderBy)
-                    else
-                        viewPart.page.toTablePage
-                },
-                inputFilterConditionsOrIds,
-                true
-            )
-        },
-        Some(viewData.tableFields.map{ field =>
-            field.label.map( fieldLabel => (field.name, fieldLabel))
-        }.flatten.toMap),
-        Some(viewData.tableFields.map(_.name).toSeq),
-        Some({ item : JsObject => dataSetRouter.get((item \ "_id").as[BSONObjectID])}),
-        Some(viewData.tableFields.map{ field =>
-            if (field.isArray) {
-                if(field.fieldType == FieldTypeId.Json)
-                    Some(field.name, jsonArrayRender(_, _, _))
-                else
-                    Some(field.name, arrayRender(_, _, _))
-            } else
-                if (field.fieldType == FieldTypeId.Json)
-                    Some(field.name, jsonRender(_, _, _))
-                else {
-                    val renderer = FieldTypeRenderer(field)
-                    Some(field.name, { (id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) => renderer(jsValue) })
-                }
-        }.flatten.toMap)
     )
 }
 
@@ -186,16 +114,6 @@
     )
 }
 
-@tables = {
-    <div class="row vertical-divider">
-        @viewParts.zipWithIndex.map { case (viewPart, index) =>
-            <div class="col-md-@{12 / viewParts.size}">
-                @table(viewPart, index)
-            </div>
-        }
-    </div>
-}
-
 @filters = {
     <div class="row vertical-divider">
         @viewParts.zipWithIndex.map { case (viewPart, index) =>
@@ -207,15 +125,6 @@
                             <li><h3>@viewPart.page.total</h3></li>
                         </ul>
                     </div>
-<!--
-                    <div class="col-md-5">
-                        <ul class="list-inline">
-                            <li>
-                                @exportMenu(viewPart)
-                            </li>
-                        </ul>
-                    </div>
--->
                 </div>
                 <div class="row">
                     <div class="col-md-10">
@@ -244,13 +153,6 @@
 }
 
 @bottomResources = {
-    @helper.javascriptRouter("dataSetJsRoutes")(
-        dataSetJsRouter.getFieldValue
-    )
-    @helper.javascriptRouter("dataViewJsRoutes")(
-        dataViewJsRouter.saveFilter
-    )
-    @displayJsonModal("jsonModal", None)
     @highchartsJsImport()
     @highchartsJsImportForBulkExport()
 
@@ -258,36 +160,19 @@
         @widgetPanelJs(viewPart.fieldChartSpecs.map(_.chartSpec))
     }
 
+    @datasetSubNavJs()
+
+    @helper.javascriptRouter("dataViewJsRoutes")(
+        dataViewJsRouter.saveFilter
+    )
+
     @viewParts.zipWithIndex.map { case (viewPart, index) =>
         @viewFilterJs(viewPart, index)
     }
 
+    @showViewTableJs(dataSetJsRouter)
+
     <script type="text/javascript">
-        $(function () {
-            $(".jsonModalLink").click(function(event) {
-                event.stopPropagation();
-            })
-        })
-
-        function showFieldValue(id, fieldName) {
-            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
-                success: function(data) {
-                    var json = JSON.stringify(data, null, "\t").replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;').replace(/\n/g, '</br>')
-                    var size = data.length
-                    var title = "JSON Browser"
-                    if (size)
-                        title = title + ": Array (Size " + size + ")"
-
-                    $('#jsonModal #jsonModalBody').html(json)
-                    $('#jsonModal .modal-title').html(title)
-                    $('#jsonModal').modal();
-                },
-                error: function(data){
-                    showError(data.responseText);
-                }
-            });
-        }
-
         function getFilterOrId(index) {
             var filterOrId = $("#filter" + index).multiFilter('getJsonFilterId')
             if (!filterOrId) {
@@ -321,7 +206,7 @@
     Some(dataSetName + " ("+ dataViewName + ")"),
     viewParts.map(_.page.total).sum,
     Some(actions),
-    tables,
+    showViewTable(dataViewId, viewParts, dataSetRouter),
     if (viewParts.size == 1) {
         if (viewParts.head.fieldChartSpecs.nonEmpty)
             Some(charts)

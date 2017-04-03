@@ -1,6 +1,6 @@
 @import views.html.layout
 @import views.html.datasetsetting.elements
-@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
@@ -25,5 +25,5 @@
     cancelCall = cancelCall,
     deleteCall = None,
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNav())
+    Some(datasetSubNavWithJs())
 )

@@ -3,7 +3,7 @@
 @import views.html.chart.highcharts.scatterChart
 @import views.html.widget.{widgetJs, widget}
 @import views.html.layout.main
-@import views.html.dataset.datasetSubNav
+@import views.html.dataset.datasetSubNavWithJs
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.filter.{filter, filterWithJs}
 @import play.api.libs.json.Json
@@ -96,7 +96,7 @@
     @chartSpec.map(widgetJs(_)).getOrElse("")
 }
 
-@main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
+@main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
         <h3>

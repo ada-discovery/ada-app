@@ -1,0 +1,38 @@
+@import controllers.dataset.DataSetJsRouter
+
+@(
+    dataSetJsRouter: DataSetJsRouter
+)(
+    implicit request: Request[_]
+)
+
+@helper.javascriptRouter("dataSetJsRoutes")(
+    dataSetJsRouter.getFieldValue
+)
+
+<script type="text/javascript">
+    $(function () {
+        $(".jsonModalLink").click(function(event) {
+            event.stopPropagation();
+        })
+    })
+
+    function showFieldValue(id, fieldName) {
+        dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
+            success: function(data) {
+                var json = JSON.stringify(data, null, "\t").replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;').replace(/\n/g, '</br>')
+                var size = data.length
+                var title = "JSON Browser"
+                if (size)
+                    title = title + ": Array (Size " + size + ")"
+
+                $('#jsonModal #jsonModalBody').html(json)
+                $('#jsonModal .modal-title').html(title)
+                $('#jsonModal').modal();
+            },
+            error: function(data){
+                showError(data.responseText);
+            }
+        });
+    }
+</script>

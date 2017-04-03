@@ -1,6 +1,6 @@
 @import models.Field
 @import views.html.layout
-@import views.html.dataset.{filterWidgetPanel, datasetSubNav, datasetMenu}
+@import views.html.dataset.{filterWidgetPanel, datasetSubNavWithJs, datasetMenu}
 @import views.html.table.paginatedTable
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.widgetPanelJs
@@ -134,7 +134,7 @@
     table,
     Some(filterWidgetPanel("filterDiv", fieldChartSpecs, chartGridWidth)),
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNav()),
+    Some(datasetSubNavWithJs()),
     None,
     Some(bottomResources)
 )

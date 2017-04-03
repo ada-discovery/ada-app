@@ -1,6 +1,6 @@
 @import views.html.layout
 @import views.html.elements.{inputText, select}
-@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
 @import models.DataSpaceMetaInfo
 @import models.Category
 @import controllers.DataSetWebContext
@@ -37,5 +37,5 @@
     dictionaryRouter.plainList,
     deleteCall = None,
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNav())
+    Some(datasetSubNavWithJs())
 )

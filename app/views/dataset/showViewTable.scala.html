@@ -1,0 +1,95 @@
+@import views.html.table.paginatedJsonTable
+@import views.html.dataset.displayJsonModal
+@import reactivemongo.bson.BSONObjectID
+@import play.api.libs.json.{JsValue, JsObject}
+@import models.FieldTypeId
+@import util.FieldTypeRenderer
+@import controllers.dataset.DataSetViewData
+@import controllers.dataset.{DataSetRouter, DataSetJsRouter}
+@import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+
+@(
+    dataViewId: BSONObjectID,
+    viewParts: Seq[DataSetViewData],
+    dataSetRouter: DataSetRouter
+)(
+    implicit request: Request[_]
+)
+
+@genJsonRender(id: BSONObjectID, fieldName: String)(linkTitle: Html) = {
+    <a href="#" onclick="showFieldValue('@id.stringify', '@fieldName');" class="jsonModalLink">
+        @linkTitle
+    </a>
+}
+
+@jsonRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @genJsonRender(id, fieldName) {
+        <b>Json</b>
+    }
+}
+
+@arrayRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @genJsonRender(id, fieldName) {
+        <b>Array</b>
+    }
+}
+
+@jsonArrayRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @genJsonRender(id, fieldName) {
+        <b>Json Array</b>
+    }
+}
+
+@render(fun: Option[JsValue] => Html)(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @fun(jsValue)
+}
+
+@inputFilterConditionsOrIds = @{
+    viewParts.map(_.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)))
+}
+
+@table(viewData: DataSetViewData, index: Int) = @{
+    paginatedJsonTable(
+        viewData.page, { (page: Int, orderBy: String) =>
+            dataSetRouter.getView(
+                dataViewId,
+                viewParts.zipWithIndex.map { case (viewPart, i) =>
+                    if (i == index)
+                        TablePage(page, orderBy)
+                    else
+                        viewPart.page.toTablePage
+                },
+                inputFilterConditionsOrIds,
+                true
+            )
+        },
+        Some(viewData.tableFields.map{ field =>
+            field.label.map( fieldLabel => (field.name, fieldLabel))
+        }.flatten.toMap),
+        Some(viewData.tableFields.map(_.name).toSeq),
+        Some({ item : JsObject => dataSetRouter.get((item \ "_id").as[BSONObjectID])}),
+        Some(viewData.tableFields.map{ field =>
+            if (field.isArray) {
+                if(field.fieldType == FieldTypeId.Json)
+                    Some(field.name, jsonArrayRender(_, _, _))
+                else
+                    Some(field.name, arrayRender(_, _, _))
+            } else
+                if (field.fieldType == FieldTypeId.Json)
+                    Some(field.name, jsonRender(_, _, _))
+                else {
+                    val renderer = FieldTypeRenderer(field)
+                    Some(field.name, { (id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) => renderer(jsValue) })
+                }
+        }.flatten.toMap)
+    )
+}
+
+<div class="row vertical-divider">
+    @viewParts.zipWithIndex.map { case (viewPart, index) =>
+        <div class="col-md-@{12 / viewParts.size}">
+            @table(viewPart, index)
+        </div>
+    }
+    @displayJsonModal("jsonModal", None)
+</div>

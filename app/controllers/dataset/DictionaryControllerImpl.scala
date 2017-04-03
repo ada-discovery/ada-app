@@ -42,7 +42,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
   protected val categoryRepo: CategoryRepo = dsa.categoryRepo
-  protected lazy val dataSetName = result(dsa.metaInfo).name
+  protected def dataSetName = result(dsa.metaInfo).name
 
   protected override val listViewColumns = Some(Seq("name", "fieldType", "isArray", "label", "categoryId"))
 

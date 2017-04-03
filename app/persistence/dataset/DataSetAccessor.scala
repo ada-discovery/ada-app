@@ -28,6 +28,7 @@ trait DataSetAccessor {
   def updateDataSetRepo: Future[Unit]
   def updateDataSetRepo(setting: DataSetSetting): Future[Unit]
   def updateSetting(setting: DataSetSetting): Future[BSONObjectID]
+  def updateMetaInfo(metaInfo: DataSetMetaInfo): Future[BSONObjectID]
 }
 
 protected class DataSetAccessorImpl(
@@ -87,4 +88,7 @@ protected class DataSetAccessorImpl(
 
   override def updateSetting(setting: DataSetSetting) =
     dataSetSettingRepo.update(setting)
+
+  override def updateMetaInfo(metaInfo: DataSetMetaInfo) =
+    dataSetMetaInfoRepo.update(metaInfo)
 }

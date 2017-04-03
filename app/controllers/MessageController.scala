@@ -55,8 +55,8 @@ class MessageController @Inject() (
     }
   }
 
-  def eventId(jsObject: JsValue) = Some(((jsObject \ "_id").get.as[BSONObjectID]).stringify)
-  implicit val idExtractor = new EventIdExtractor[JsValue](eventId)
+  private  def eventId(jsObject: JsValue) = Some(((jsObject \ "_id").get.as[BSONObjectID]).stringify)
+  private implicit val idExtractor = new EventIdExtractor[JsValue](eventId)
 
   def eventStream = deadbolt.SubjectPresent() {
     Action { implicit request =>

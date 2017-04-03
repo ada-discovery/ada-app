@@ -79,7 +79,7 @@ class DataSpaceMetaInfoController @Inject() (
     for {
       Some(existingItem) <- repo.get(item._id.get)
       // copy existing data set meta infos
-      id <- {
+      newDataSetMetaInfos = {
         val requestMap = request.body.asFormUrlEncoded.get
         val ids = requestMap.get("dataSetMetaInfos.id").get
         val newDataSetNames = requestMap.get("dataSetMetaInfos.name").get
@@ -89,7 +89,7 @@ class DataSpaceMetaInfoController @Inject() (
         val existingDataSetMetaInfos = existingItem.dataSetMetaInfos
         val dataSetMetaInfoIdMap = existingDataSetMetaInfos.map( info => (info._id.get, info)).toMap
 
-        val newDataSetMetaInfos = ((ids, newDataSetNames, newDataSetSortOrders).zipped, newHides).zipped.map{ case ((id, newDataSetName, newDataSetSortOrder), newHide) =>
+        ((ids, newDataSetNames, newDataSetSortOrders).zipped, newHides).zipped.map{ case ((id, newDataSetName, newDataSetSortOrder), newHide) =>
           val existingDataSetMetaInfo = dataSetMetaInfoIdMap(BSONObjectID(id))
 
           val newSortOrder = try {
@@ -101,9 +101,22 @@ class DataSpaceMetaInfoController @Inject() (
 
           existingDataSetMetaInfo.copy(name = newDataSetName, sortOrder = newSortOrder, hide = newHide.equals("true"))
         }
-
-        repo.update(item.copy(dataSetMetaInfos = newDataSetMetaInfos.toSeq, timeCreated = existingItem.timeCreated))
       }
+
+      // update the data space meta info
+      id <-
+        repo.update(item.copy(dataSetMetaInfos = newDataSetMetaInfos.toSeq, timeCreated = existingItem.timeCreated))
+
+      // update the individual data set meta infos
+      _ <- Future.sequence(
+          newDataSetMetaInfos.map( newDataSetMetaInfo =>
+            dsaf(newDataSetMetaInfo.id).map { dsa =>
+              dsa.updateMetaInfo(newDataSetMetaInfo)
+            }.getOrElse(
+              Future(())
+            )
+          )
+        )
     } yield
       id
 

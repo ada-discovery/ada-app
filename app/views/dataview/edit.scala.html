@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
 @import controllers.dataset.DataViewRouter
 @import models.DataSpaceMetaInfo
 @import models.{DataView, Field}
@@ -28,7 +28,7 @@
     dataViewRouter.plainList,
     Some(dataViewRouter.delete(id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNav())
+    Some(datasetSubNavWithJs())
 )
 
 @activateTypeahead(dataSetRouter.allFields)

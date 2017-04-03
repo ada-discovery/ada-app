@@ -1,6 +1,6 @@
 @import views.html.layout
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
-@import views.html.dataset.{datasetSubNav, datasetMenu}
+@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
 @import views.html.elements._
 @import reactivemongo.bson.BSONObjectID
 @import models.DataSpaceMetaInfo
@@ -57,5 +57,5 @@
     categoryRouter.plainList,
     Some(categoryRouter.delete(id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNav())
+    Some(datasetSubNavWithJs())
 )

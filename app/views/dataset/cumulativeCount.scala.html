@@ -5,7 +5,7 @@
 @import views.html.chart.highcharts.{highchartsJsImport, timeLineChart}
 @import views.html.widget.{widgetPanel, widgetPanelJs}
 @import views.html.dataview.dataViewSelectionModal
-@import views.html.dataset.datasetSubNav
+@import views.html.dataset.datasetSubNavWithJs
 @import views.html.filter.{filter, filterWithJs}
 @import play.api.libs.json.Json
 @import java.util.Date
@@ -73,7 +73,7 @@
     @widgetPanelJs(Seq(chartSpec).flatten)
 }
 
-@main(Messages("cumulativeCount.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
+@main(Messages("cumulativeCount.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
         <h3>

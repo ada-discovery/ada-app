@@ -50,11 +50,11 @@ private object RepoDef extends Enumeration {
   val UserSettingsRepo = Repo[UserSettingsRepo](
     new MongoAsyncCrudRepo[Workspace, BSONObjectID]("workspace"))
 
-  val DictionaryRootRepo = Repo[DictionaryRootRepo](
-    new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
+//  val DictionaryRootRepo = Repo[DictionaryRootRepo](
+//    new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
 
-  val MongoDataSpaceMetaInfoRepo = Repo[MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]](
-    new MongoAsyncCrudRepo[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos"), true)
+//  val MongoDataSpaceMetaInfoRepo = Repo[MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]](
+//    new MongoAsyncCrudRepo[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos"), true)
 
   //  val DataSpaceMetaInfoRepo = Repo[MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]](
 //    new MongoAsyncCrudRepo[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos"))
@@ -105,11 +105,6 @@ class RepoModule extends ScalaModule {
 
     bind[DataSetAccessorFactory].to(classOf[DataSetAccessorFactoryImpl]).asEagerSingleton
 
-    // install data set meta info repo factory
-    install(new FactoryModuleBuilder()
-      .implement(new TypeLiteral[DataSetMetaInfoRepo]{}, classOf[DataSetMetaInfoSubordinateMongoAsyncCrudRepo])
-      .build(classOf[DataSetMetaInfoRepoFactory]))
-
     // install JSON repo factories and its cached version
     install(new FactoryModuleBuilder()
       .implement(new TypeLiteral[JsonCrudRepo]{}, classOf[MongoJsonCrudRepo])
@@ -122,6 +117,11 @@ class RepoModule extends ScalaModule {
     bind[MongoJsonCrudRepoFactory]
       .annotatedWith(Names.named("CachedJsonCrudRepoFactory"))
       .to(classOf[JsonBinaryCacheAsyncCrudRepoFactory])
+
+    // install data set meta info repo factory
+//    install(new FactoryModuleBuilder()
+//      .implement(new TypeLiteral[DataSetMetaInfoRepo]{}, classOf[DataSetMetaInfoSubordinateMongoAsyncCrudRepo])
+//      .build(classOf[DataSetMetaInfoRepoFactory]))
 
     // install dictionary field repo factory
 

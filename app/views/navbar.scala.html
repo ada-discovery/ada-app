@@ -99,8 +99,10 @@
     </div>
 </div>
 <script type="text/javascript">
-    $("li.dropdown").each(function() {
-        if($(this).find("li.active").size() > 0)
-            $(this).addClass("active")
-    });
+    $(function () {
+        $("li.dropdown").each(function () {
+            if ($(this).find("li.active").size() > 0)
+                $(this).addClass("active")
+        });
+    })
 </script>

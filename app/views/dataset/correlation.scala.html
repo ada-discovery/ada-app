@@ -4,7 +4,7 @@
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.{widgetJs, widget}
-@import views.html.dataset.datasetSubNav
+@import views.html.dataset.datasetSubNavWithJs
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.filter.{filter, filterWithJs}
@@ -56,7 +56,7 @@
     <input type="hidden" id="newItem">
 }
 
-@main(Messages("correlation.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNav()), None, Some(bottomResources)) {
+@main(Messages("correlation.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
         <h3>

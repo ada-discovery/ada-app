@@ -44,7 +44,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
-  protected lazy val dataSetName = result(dsa.metaInfo).name
+  protected def dataSetName = result(dsa.metaInfo).name
   protected lazy val dataViewRepo = dsa.dataViewRepo
   protected lazy val fieldRepo = dsa.fieldRepo
 
