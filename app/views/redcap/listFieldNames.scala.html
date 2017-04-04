@@ -2,8 +2,10 @@
 @import views.html.table._
 @import models.redcap.ExportField
 @import util.typeColumns
+@import controllers.WebContext
+@import controllers.WebContext._
 
-@(currentPage: Page[ExportField])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(currentPage: Page[ExportField])(implicit context: WebContext)
 
 @actions = {
     @helper.form(action=routes.RedCapController.listExportFields(), 'class -> "navbar-form navbar-left", 'role -> "search") {

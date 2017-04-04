@@ -2,8 +2,10 @@
 @import com.typesafe.config.ConfigValue
 @import views.html.table.displayTable
 @import util.typeColumns
+@import controllers.WebContext
+@import controllers.WebContext._
 
-@(settings: LdapSettings)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(settings: LdapSettings)(implicit context: WebContext)
 
 @layout.show(
     "LDAP Settings",

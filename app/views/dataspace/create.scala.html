@@ -2,11 +2,13 @@
 @import views.html.dataspace.elements
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import models.DataSpaceMetaInfo
+@import controllers.WebContext
+@import controllers.WebContext._
 
 @(
     form: Form[DataSpaceMetaInfo]
 )(
-	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+	implicit context: WebContext
 )
 
 @layout.create(

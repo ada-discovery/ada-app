@@ -8,8 +8,8 @@ import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 
 object ViewTypes {
-  type CreateView[E] = (Form[E], Flash, Messages, Request[_]) => Html
-  type EditView[E] = (BSONObjectID, Form[E], Flash, Messages, Request[_]) => Html
+  type CreateView[E] = (Form[E], WebContext) => Html
+  type EditView[E] = (BSONObjectID, Form[E], WebContext) => Html
 }
 
 case class FormWithViews[E: Manifest](

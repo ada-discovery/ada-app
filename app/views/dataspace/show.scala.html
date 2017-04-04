@@ -7,13 +7,15 @@
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import models.DataSpaceMetaInfo
 @import models.DataSetMetaInfo
+@import controllers.WebContext
+@import controllers.WebContext._
 
 @(
     dataSpaceMetaInfo: DataSpaceMetaInfo,
     dataSetIdSizeMap: Map[String, Int],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: WebContext
 )
 
 @hideCheckbox(dataSetInfo: DataSetMetaInfo) = {

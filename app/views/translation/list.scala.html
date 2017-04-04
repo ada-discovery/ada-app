@@ -3,8 +3,14 @@
 @import views.html.filter.{filter, filterWithJs}
 @import util.typeColumns
 @import models.Field
+@import controllers.WebContext
+@import controllers.WebContext._
 
-@(page: Page[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(
+    page: Page[Translation]
+)(
+    implicit context: WebContext
+)
 
 @actions = {
     <div class="row">

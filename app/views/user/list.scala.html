@@ -5,8 +5,10 @@
 @import dataaccess.User
 @import models.Field
 @import models.FilterShowFieldStyle
+@import controllers.WebContext
+@import controllers.WebContext._
 
-@(page: Page[User])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(page: Page[User])(implicit context: WebContext)
 
 @actions = {
     <div class="row">

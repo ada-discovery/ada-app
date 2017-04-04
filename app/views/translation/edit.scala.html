@@ -1,15 +1,22 @@
 @import views.html.layout
 @import views.html.elements.editableTextElements
+@import reactivemongo.bson.BSONObjectID
+@import controllers.WebContext
+@import controllers.WebContext._
 
-@(id: reactivemongo.bson.BSONObjectID, form: Form[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(
+    data: EditViewFormData[BSONObjectID, Translation]
+)(
+    implicit context: WebContext
+)
 
 @layout.edit(
     "translation",
-	errors = form.errors,
-    elements = editableTextElements("translation", form),
-	updateCall = routes.TranslationController.update(id),
+	errors = data.form.errors,
+    elements = editableTextElements("translation", data.form),
+	updateCall = routes.TranslationController.update(data.id),
 	cancelCall = routes.TranslationController.listAll(),
-    deleteCall = Some(routes.TranslationController.delete(id)),
+    deleteCall = Some(routes.TranslationController.delete(data.id)),
     None,
     None
 )

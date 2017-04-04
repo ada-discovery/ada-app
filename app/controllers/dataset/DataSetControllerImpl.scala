@@ -12,7 +12,7 @@ import _root_.util.shorten
 import dataaccess._
 import models.{MultiChartDisplayOptions, _}
 import com.google.inject.assistedinject.Assisted
-import controllers.{DataSetWebContext, ExportableAction, ReadonlyControllerImpl}
+import controllers._
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import Criterion.Infix
 import org.apache.commons.lang3.StringEscapeUtils
@@ -22,12 +22,13 @@ import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.Results._
-import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
+import play.api.mvc.{Filter => _, _}
 import reactivemongo.bson.BSONObjectID
 import services.{StatsService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
+
 import scala.math.Ordering.Implicits._
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.Future
@@ -81,10 +82,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
 
-  private implicit def toWebContext(implicit request: Request[_]) = {
-    implicit val msg = messagesApi.preferred(request)
-    DataSetWebContext(dataSetId)
-  }
+  private implicit def toDataSetWebContext(implicit context: WebContext) =
+    DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
 
   override protected def listViewColumns = result(
     dataViewRepo.find().map {
@@ -92,72 +91,59 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   )
 
+  override protected type ListViewData = Page[JsObject]
+
+  override protected def createListViewData(page: Page[JsObject]) = Future(page)
+
   /**
     * Table displaying given paginated content. Generally used to display fields of the datasets.
     *
     * @param page Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
-    * @param msg Internal request message.
-    * @param request Header of original request.
+    * @param context Web context: request header, messages, and flash
     * @return View for all available fields.
     */
-  override protected def listView(
-    page: Page[JsObject])(
-    implicit msg: Messages, request: Request[_]
-  ) =
+  override protected def listView = { implicit ctx =>
     dataset.list(
       result(dataSetNameFuture) + " Item",
-      page,
+      _,
       result(getFieldLabelMap(listViewColumns.get)), // TODO: refactor
       listViewColumns.get
     )
-
-  private def getViewView(
-    dataViewId: BSONObjectID,
-    dataViewName: String,
-    dataSetName: String,
-    viewParts: Seq[DataSetViewData],
-    elementGridWidth: Int,
-    dataSpaceTree: Traversable[DataSpaceMetaInfo]
-  )(implicit request: Request[_]) =
-    dataset.showView(
-      dataSetName,
-      dataViewId,
-      dataViewName,
-      viewParts,
-      elementGridWidth,
-      setting.filterShowFieldStyle,
-      dataSpaceTree
-    )
-
-  /**
-    * Shows all fields of the selected subject.
-    *
-    * @param id BSON ID key of subject.
-    * @param item JsObject represenation of subject data.
-    * @param msg Internal request message.
-    * @param request Header of original request.
-    * @return View for subject entries.
-    */
-  override protected def showView(
-    id : BSONObjectID,
-    item : JsObject
-  )(implicit msg: Messages, request: Request[_]) = {
-    val fieldNameLabelAndRendererMapFuture = fieldRepo.find().map(_.map
-      { field =>
-        val fieldType = ftf(field.fieldTypeSpec)
-        (field.name, (field.labelOrElseName, fieldType.jsonToDisplayString(_)))
-      }.toMap
-    )
-
-    dataset.show(
-      result(dataSetNameFuture) + " Item",
-      item,
-      router.getDefaultView,
-      true,
-      result(fieldNameLabelAndRendererMapFuture),
-      result(dataSpaceTreeFuture)
-    )
   }
+
+  override type ShowViewData = DataSetShowViewDataHolder
+
+  override protected def createShowViewData(
+    id: BSONObjectID,
+    item: JsObject
+  ) =
+    for {
+      // get the data set name
+      dataSetName <- dataSetNameFuture
+
+      // get the data space name
+      dataSpaceTree <- dataSpaceTreeFuture
+
+      // create a field name label / renderer map
+      fieldNameLabelAndRendererMap <-
+        fieldRepo.find().map(_.map
+          { field =>
+            val fieldType = ftf(field.fieldTypeSpec)
+            (field.name, (field.labelOrElseName, fieldType.jsonToDisplayString(_)))
+          }.toMap
+        )
+    } yield
+      DataSetShowViewDataHolder(
+        id,
+        dataSetName + " Item",
+        item,
+        router.getDefaultView,
+        true,
+        fieldNameLabelAndRendererMap,
+        dataSpaceTree
+      )
+
+  override protected def showView = { implicit ctx => dataset.show(_) }
 
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
@@ -376,14 +362,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 DataSetViewData(newPage, fieldChartSpecs.flatten, viewResponse.tableFields)
               }
 
-            val response = Ok(getViewView(
-              dataViewId,
-              dataView.map(_.name).getOrElse("N/A"),
-              dataSetName,
-              viewParts,
-              dataView.map(_.elementGridWidth).getOrElse(3),
-              dataSpaceTree
-            ))
+            val response = Ok(
+              dataset.showView(
+                dataSetName,
+                dataViewId,
+                dataView.map(_.name).getOrElse("N/A"),
+                viewParts,
+                dataView.map(_.elementGridWidth).getOrElse(3),
+                setting.filterShowFieldStyle,
+                dataSpaceTree
+              )
+            )
             Logger.info(s"Rendering of a view for the data set '${dataSetId}' finished in ${new ju.Date().getTime - renderingStart.getTime} ms")
             response
           }
@@ -1521,3 +1510,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     HeatmapWidget("Correlations", fieldLabels, fieldLabels, correlations, Some(-1), Some(1), displayOptions)
   }
 }
+
+case class DataSetShowViewDataHolder(
+  id: BSONObjectID,
+  title: String,
+  item: JsObject,
+  listCall: Call,
+  nonNullOnly: Boolean,
+  fieldNameLabelAndRendererMap: Map[String, (String, JsReadable => String)],
+  dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)

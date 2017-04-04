@@ -1,4 +1,6 @@
 @import views.html.layout.formErrors
+@import controllers.WebContext
+@import controllers.WebContext._
 
 @(
 	domainName : String,
@@ -8,7 +10,7 @@
 	listCall : Call,
 	formArgs: (Symbol,String)*
 )(
-	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+	implicit context: WebContext
 )
 
 @main(Messages("create.title", domainName), None, None, None, None, Some(formErrors(domainName, form.errors))) {

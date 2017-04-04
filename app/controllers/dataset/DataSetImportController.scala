@@ -30,7 +30,7 @@ import reactivemongo.bson.BSONObjectID
 import java.io.{File, FileInputStream, FileOutputStream}
 import services.{DataSetImportScheduler, DataSetService, DeNoPaSetting}
 import util.SecurityUtil.restrictAdmin
-import views.html.{datasetimport => importViews}
+import views.html.{datasetimport => view}
 import views.html.layout
 import play.api.data.format.Formats._
 import scala.concurrent.{Await, Future}
@@ -46,16 +46,17 @@ class DataSetImportController @Inject()(
     configuration: Configuration
   ) extends CrudControllerImpl[DataSetImport, BSONObjectID](repo) with AdminRestrictedCrudController[BSONObjectID] {
 
-  private val logger = Logger // (this.getClass)
+  private val logger = Logger
+  // (this.getClass)
   private val importFolder = configuration.getString("datasetimport.import.folder").get
 
   // Forms
 
   protected val scheduledTimeMapping: Mapping[ScheduledTime] = mapping(
-    "hour" -> optional(number(min=0, max=23)),
-    "minute" -> optional(number(min=0, max=59)),
-    "second" -> optional(number(min=0, max=59))
-  ) (ScheduledTime.apply)(ScheduledTime.unapply)
+    "hour" -> optional(number(min = 0, max = 23)),
+    "minute" -> optional(number(min = 0, max = 59)),
+    "second" -> optional(number(min = 0, max = 59))
+  )(ScheduledTime.apply)(ScheduledTime.unapply)
 
   private implicit val seqFormatter = SeqFormatter.apply
   private implicit val mapFormatter = MapJsonFormatter.apply
@@ -77,20 +78,21 @@ class DataSetImportController @Inject()(
     "storageType" -> of[StorageType.Value],
     "mongoAutoCreateIndexForProjection" -> boolean,
     "cacheDataSet" -> boolean
-  ) (DataSetSetting.apply) (DataSetSetting.unapply)
+  )(DataSetSetting.apply)(DataSetSetting.unapply)
 
   private val dataViewMapping: Mapping[DataView] = mapping(
     "tableColumnNames" -> of[Seq[String]],
     "distributionCalcFieldNames" -> of[Seq[String]],
     "elementGridWidth" -> number(min = 1, max = 12),
     "useOptimizedRepoChartCalcMethod" -> boolean
-  ) (DataView.applyMain)
-  {(item: DataView) => Some((
-    item.tableColumnNames,
-    item.widgetSpecs.collect { case p: DistributionWidgetSpec => p}.map(_.fieldName),
-    item.elementGridWidth,
-    item.useOptimizedRepoChartCalcMethod
-  ))}
+  )(DataView.applyMain) { (item: DataView) =>
+    Some((
+      item.tableColumnNames,
+      item.widgetSpecs.collect { case p: DistributionWidgetSpec => p }.map(_.fieldName),
+      item.elementGridWidth,
+      item.useOptimizedRepoChartCalcMethod
+    ))
+  }
 
   protected val csvForm = Form(
     mapping(
@@ -113,7 +115,7 @@ class DataSetImportController @Inject()(
       "dataView" -> optional(dataViewMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
-    ) (CsvDataSetImport.apply)(CsvDataSetImport.unapply)
+    )(CsvDataSetImport.apply)(CsvDataSetImport.unapply)
       .verifying(
         "Import is marked as 'scheduled' but no time provided",
         importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
@@ -128,15 +130,15 @@ class DataSetImportController @Inject()(
       "dataSetName" -> nonEmptyText,
       "tableId" -> nonEmptyText,
       "downloadColumnFiles" -> boolean,
-      "downloadRecordBatchSize" -> optional(number(min=1)),
-      "bulkDownloadGroupNumber" -> optional(number(min=1)),
+      "downloadRecordBatchSize" -> optional(number(min = 1)),
+      "bulkDownloadGroupNumber" -> optional(number(min = 1)),
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),
       "dataView" -> optional(dataViewMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
-    ) (SynapseDataSetImport.apply)(SynapseDataSetImport.unapply)
+    )(SynapseDataSetImport.apply)(SynapseDataSetImport.unapply)
       .verifying(
         "Import is marked as 'scheduled' but no time provided",
         importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
@@ -163,7 +165,7 @@ class DataSetImportController @Inject()(
       "dataView" -> optional(dataViewMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
-    ) (TranSmartDataSetImport.apply)(TranSmartDataSetImport.unapply)
+    )(TranSmartDataSetImport.apply)(TranSmartDataSetImport.unapply)
       .verifying(
         "Import is marked as 'scheduled' but no time provided",
         importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
@@ -186,7 +188,7 @@ class DataSetImportController @Inject()(
       "dataView" -> optional(dataViewMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
-    ) (RedCapDataSetImport.apply)(RedCapDataSetImport.unapply)
+    )(RedCapDataSetImport.apply)(RedCapDataSetImport.unapply)
       .verifying(
         "Import is marked as 'scheduled' but no time provided",
         importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
@@ -199,14 +201,14 @@ class DataSetImportController @Inject()(
       "dataSpaceName" -> nonEmptyText,
       "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
       "dataSetName" -> nonEmptyText,
-      "importRawData" ->  boolean,
+      "importRawData" -> boolean,
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),
       "dataView" -> optional(dataViewMapping),
       "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
       "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
-    ) (EGaitDataSetImport.apply)(EGaitDataSetImport.unapply)
+    )(EGaitDataSetImport.apply)(EGaitDataSetImport.unapply)
       .verifying(
         "Import is marked as 'scheduled' but no time provided",
         importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
@@ -219,11 +221,11 @@ class DataSetImportController @Inject()(
         csvForm,
         createView(
           "CSV Data Set Import",
-          importViews.csvTypeElements(_)(_)
+          view.csvTypeElements(_)(_)
         ),
         editView(
           "CSV Data Set Import",
-          importViews.csvTypeElements(_)(_)
+          view.csvTypeElements(_)(_)
         )
       ),
 
@@ -231,11 +233,11 @@ class DataSetImportController @Inject()(
         synapseForm,
         createView(
           "Synapse Data Set Import",
-          importViews.synapseTypeElements(_)(_)
+          view.synapseTypeElements(_)(_)
         ),
         editView(
           "Synapse Data Set Import",
-          importViews.synapseTypeElements(_)(_)
+          view.synapseTypeElements(_)(_)
         )
       ),
 
@@ -243,11 +245,11 @@ class DataSetImportController @Inject()(
         tranSmartForm,
         createView(
           "TranSMART Data Set (and Dictionary) Import",
-          importViews.tranSmartTypeElements(_)(_)
+          view.tranSmartTypeElements(_)(_)
         ),
         editView(
           "TranSMART Data Set (and Dictionary) Import",
-          importViews.tranSmartTypeElements(_)(_)
+          view.tranSmartTypeElements(_)(_)
         )
       ),
 
@@ -255,11 +257,11 @@ class DataSetImportController @Inject()(
         redCapForm,
         createView(
           "RedCap Data Set Import",
-          importViews.redCapTypeElements(_)(_)
+          view.redCapTypeElements(_)(_)
         ),
         editView(
           "RedCap Data Set Import",
-          importViews.redCapTypeElements(_)(_)
+          view.redCapTypeElements(_)(_)
         )
       ),
 
@@ -267,11 +269,11 @@ class DataSetImportController @Inject()(
         eGaitForm,
         createView(
           "eGait Data Set Import",
-          importViews.eGaitTypeElements(_)(_)
+          view.eGaitTypeElements(_)(_)
         ),
         editView(
           "eGait Data Set Import",
-          importViews.eGaitTypeElements(_)(_)
+          view.eGaitTypeElements(_)(_)
         )
       )
     ))
@@ -294,14 +296,16 @@ class DataSetImportController @Inject()(
     getForm(concreteClassName).bindFromRequest
   }
 
-  override protected def createView(form: Form[DataSetImport])(implicit msg: Messages, request: Request[_]) = {
-    val subCreateView = getViews(form)._1
-    subCreateView(form, request.flash, msg, request)
+  override protected def createView = { implicit ctx =>
+    data =>
+      val subCreateView = getViews(data)._1
+      subCreateView(data, ctx)
   }
 
-  override protected def editView(id: BSONObjectID, form: Form[DataSetImport])(implicit msg: Messages, request: Request[_]) = {
-    val subEditView = getViews(form)._2
-    subEditView(id, form, request.flash, msg, request)
+  override protected def editView = { implicit ctx =>
+    data =>
+      val subEditView = getViews(data.form)._2
+      subEditView(data.id, data.form, ctx)
   }
 
   private def getFormWithViews(concreteClassName: String) =
@@ -318,17 +322,16 @@ class DataSetImportController @Inject()(
     (formWithViews._2, formWithViews._3)
   }
 
-  override protected def showView(id: BSONObjectID, form: Form[DataSetImport])(implicit msg: Messages, request: Request[_]) =
-    editView(id, form)
+  override protected def showView = editView
 
-  override protected def listView(page: Page[DataSetImport])(implicit msg: Messages, request: Request[_]): Html =
-    importViews.list(page, result(DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)))
+  override protected def listView = { implicit ctx =>
+    view.list(_, result(DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)))
+  }
 
   def create(concreteClassName: String) = restrictAdmin(deadbolt) {
     Action { implicit request =>
-      implicit val msg = messagesApi.preferred(request)
       val formWithViews = getFormWithViews(concreteClassName)
-      Ok(formWithViews._2(formWithViews._1, request.flash, msg, request))
+      Ok(formWithViews._2(formWithViews._1, implicitly[WebContext]))
     }
   }
 
@@ -454,37 +457,33 @@ class DataSetImportController @Inject()(
     name: String,
     elements: (Form[T], Messages) => Html)(
     f: Form[T],
-    flash: Flash,
-    msg: Messages,
-    request: Request[_]
+    context: WebContext
   ) =
     layout.create(
       name,
       f,
-      elements(f, msg),
+      elements(f, context.msg),
       controllers.dataset.routes.DataSetImportController.save,
       controllers.routes.AppController.index,
       'enctype -> "multipart/form-data"
-    )(flash, msg, request)
+    )(context)
 
   private def editView[T <: DataSetImport](
     name: String,
     elements: (Form[T], Messages) => Html)(
     id: BSONObjectID,
     f: Form[T],
-    flash: Flash,
-    msg: Messages,
-    request: Request[_]
+    context: WebContext
   ) =
     layout.edit(
       name,
       f.errors,
-      elements(f, msg),
+      elements(f, context.msg),
       controllers.dataset.routes.DataSetImportController.update(id),
       controllers.dataset.routes.DataSetImportController.listAll(),
       Some(controllers.dataset.routes.DataSetImportController.delete(id)),
       None,
       None,
       'enctype -> "multipart/form-data"
-    )(flash, msg, request)
+    )(context)
 }

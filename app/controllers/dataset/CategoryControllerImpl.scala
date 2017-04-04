@@ -3,8 +3,8 @@ package controllers.dataset
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
-import controllers.{CrudControllerImpl, DataSetWebContext}
-import dataaccess.{AscSort, Criterion}
+import controllers.{CrudControllerImpl, DataSetWebContext, WebContext}
+import dataaccess.{AscSort, Criterion, User}
 import dataaccess.Criterion.Infix
 import models.{Category, D3Node, JsTreeNode, Page}
 import models.DataSetFormattersAndIds._
@@ -53,50 +53,54 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     ((category: Category) => Some(category._id, category.name, category.label, category.parentId.map(_.stringify)))
   )
 
-  private implicit def toWebContext(implicit request: Request[_]) = {
-    implicit val msg = messagesApi.preferred(request)
-    DataSetWebContext(dataSetId)
-  }
+  private implicit def toDataSetWebContext(implicit context: WebContext) =
+    DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
 
   protected val router = new CategoryRouter(dataSetId)
   protected val jsRouter = new CategoryJsRouter(dataSetId)
 
   // field router
-  protected lazy val fieldRouter: DictionaryRouter = new DictionaryRouter(dataSetId)
+  protected val fieldRouter: DictionaryRouter = new DictionaryRouter(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)
 
-  override protected def createView(f : Form[Category])(implicit msg: Messages, request: Request[_]) =
-    category.create(dataSetName + " Category", f, allCategories)
-
-  override protected def showView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: Request[_]) =
-    editView(id, f)
-
-  override protected def editView(id: BSONObjectID, f : Form[Category])(implicit msg: Messages, request: Request[_]) = {
-    val fieldsFuture = fieldRepo.find(
-      criteria = Seq("categoryId" #== Some(id)),
-      sort = Seq(AscSort("name"))
-    )
-
-    val fields = result(fieldsFuture)
-    category.edit(
+  override protected def createView = { implicit ctx =>
+    category.create(
       dataSetName + " Category",
-      id,
-      f,
-      allCategories,
-      fields,
-      result(dsa.setting.map(_.filterShowFieldStyle)),
-      result(dataSpaceTree)
+      _,
+      allCategories
     )
   }
 
-  override protected def listView(page: Page[Category])(implicit msg: Messages, request: Request[_]) =
+  override protected def showView = editView
+
+  override protected def editView = { implicit ctx =>
+    data =>
+      val fieldsFuture = fieldRepo.find(
+        criteria = Seq("categoryId" #== Some(data.id)),
+        sort = Seq(AscSort("name"))
+      )
+
+    val fields = result(fieldsFuture)
+      category.edit(
+        dataSetName + " Category",
+        data.id,
+        data.form,
+        allCategories,
+        fields,
+        result(dsa.setting.map(_.filterShowFieldStyle)),
+        result(dataSpaceTree)
+      )
+  }
+
+  override protected def listView = { implicit ctx =>
     category.list(
       dataSetName + " Category",
-      page,
+      _,
       result(dataSpaceTree)
     )
+  }
 
   override protected def deleteCall(id: BSONObjectID)(implicit request: Request[AnyContent]): Future[Unit] = {
     // relocate the children to a new parent
@@ -190,11 +194,11 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   }
 
   override def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]) = Action.async{ implicit request =>
-    getCall(id).flatMap{ category =>
+    repo.get(id).flatMap{ category =>
       if (category.isEmpty)
         Future(notFoundCategory(id))
       else if (parentId.isDefined)
-        getCall(parentId.get).flatMap { parent =>
+        repo.get(parentId.get).flatMap { parent =>
           if (parent.isEmpty)
             Future(notFoundCategory(parentId.get))
           else {

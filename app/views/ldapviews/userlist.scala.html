@@ -1,10 +1,11 @@
 @import views.html.layout
 @import views.html.table.{paginatedTable, displayTable}
 @import util.typeColumns
-
 @import models.security.LdapUser
+@import controllers.WebContext
+@import controllers.WebContext._
 
-@(items: Traversable[LdapUser])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(items: Traversable[LdapUser])(implicit context: WebContext)
 
 @table = @{
     displayTable(

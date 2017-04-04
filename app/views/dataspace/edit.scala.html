@@ -4,6 +4,8 @@
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import reactivemongo.bson.BSONObjectID
 @import models.DataSpaceMetaInfo
+@import controllers.WebContext
+@import controllers.WebContext._
 
 @(
     id: BSONObjectID,
@@ -11,7 +13,7 @@
     dataSetIdSizeMap: Map[String, Int],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: WebContext
 )
 
 @layout.edit(

@@ -3,10 +3,14 @@
 @import views.html.filter.{filter, filterWithJs}
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import models.{Field, DataSpaceMetaInfo}
+@import controllers.WebContext
+@import controllers.WebContext._
 
 @(
     page: Page[DataSpaceMetaInfo]
-)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+)(
+    implicit context: WebContext
+)
 
 @actions = {
     <div class="row">

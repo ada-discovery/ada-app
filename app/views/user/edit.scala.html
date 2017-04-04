@@ -2,6 +2,8 @@
 @import views.html.user.elements
 @import models.DataSpaceMetaInfo
 @import dataaccess.User
+@import controllers.WebContext
+@import controllers.WebContext._
 
 @(
     id: reactivemongo.bson.BSONObjectID,
@@ -13,7 +15,7 @@
     filterActionNames: Array[String],
     dataViewActionNames: Array[String]
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: WebContext
 )
 
 @layout.edit(

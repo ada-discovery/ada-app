@@ -1,10 +1,12 @@
 @import views.html.layout
+@import controllers.WebContext
+@import controllers.WebContext._
 
 @(
     title: String,
     valueCounts : Seq[(String, Seq[(String, Any)])]
 )(
-    implicit msg: Messages, request: Request[_], flash: Flash
+    implicit context: WebContext
 )
 
 @layout.main(title) {

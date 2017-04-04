@@ -4,11 +4,13 @@
 @import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import models.DataSetSetting
+@import controllers.WebContext
+@import controllers.WebContext._
 
 @(
     form: Form[DataSetSetting]
 )(
-	implicit flash: Flash, msg: Messages, request: Request[_]
+	implicit context: WebContext
 )
 
 @layout.create(

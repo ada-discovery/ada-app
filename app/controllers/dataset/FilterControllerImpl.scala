@@ -5,7 +5,8 @@ import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
-import controllers.{CrudControllerImpl, DataSetWebContext, JsonFormatter}
+import controllers.{CrudControllerImpl, DataSetWebContext, JsonFormatter, WebContext}
+import controllers.WebContext._
 import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
 import dataaccess.{AscSort, Criterion, FilterRepo, RepoException}
 import models._
@@ -24,9 +25,7 @@ import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import reactivemongo.bson.BSONObjectID
 import java.util.Date
-
-import views.html.filters
-
+import views.html.{ filters => view }
 import scala.concurrent.Future
 
 trait FilterControllerFactory {
@@ -64,45 +63,52 @@ protected[controllers] class FilterControllerImpl @Inject() (
   protected val router: FilterRouter = new FilterRouter(dataSetId)
   protected val jsRouter: FilterJsRouter = new FilterJsRouter(dataSetId)
 
-  private implicit def toWebContext(implicit request: Request[_]) = {
-    implicit val msg = messagesApi.preferred(request)
-    DataSetWebContext(dataSetId)
-  }
+  private implicit def toDataSetWebContext(implicit context: WebContext) =
+    DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
 
   override protected lazy val home =
     Redirect(router.plainList)
 
-  override protected def createView(f : Form[Filter])(implicit msg: Messages, request: Request[_]) =
-    filters.create(dataSetName + " Filter", f)
-
-  override protected def showView(id: BSONObjectID, f : Form[Filter])(implicit msg: Messages, request: Request[_]) =
-    editView(id, f)
-
-  override protected def editView(id: BSONObjectID, f : Form[Filter])(implicit msg: Messages, request: Request[_]) = {
-    // TODO: stay in the future
-    // set created by
-    if(f.value.isDefined)
-      result(FilterRepo.setCreatedBy(userRepo, Seq(f.get)))
-
-    filters.edit(
+  override protected def createView = { implicit ctx =>
+    view.create(
       dataSetName + " Filter",
-      id,
-      f,
-      result(dataSpaceTree)
+      _
+    )(
+      toDataSetWebContext(ctx)
     )
   }
 
-  override protected def listView(page: Page[Filter])(implicit msg: Messages, request: Request[_]) = {
-    // TODO: stay in the future
-    // set created by
-    result(FilterRepo.setCreatedBy(userRepo, page.items))
+  override protected def showView = editView
 
-    filters.list(
-      dataSetName + " Filter",
-      page,
-      result(dataSpaceTree)
+  override protected def editView = { implicit ctx =>
+    data =>
+      // TODO: stay in the future
+      // set created by
+      if(data.form.value.isDefined)
+        result(FilterRepo.setCreatedBy(userRepo, Seq(data.form.get)))
+
+      view.edit(
+        dataSetName + " Filter",
+        data.id,
+        data.form,
+        result(dataSpaceTree)
+    )(
+      toDataSetWebContext(ctx)
     )
   }
+
+  override protected def listView = { implicit ctx =>
+    data =>
+      // TODO: stay in the future
+      // set created by
+      result(FilterRepo.setCreatedBy(userRepo, data.items))
+
+      view.list(
+        dataSetName + " Filter",
+        data,
+        result(dataSpaceTree)
+      )(toDataSetWebContext(ctx))
+    }
 
   override def saveCall(
     filter: Filter)(

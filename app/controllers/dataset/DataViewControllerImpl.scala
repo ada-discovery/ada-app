@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
-import controllers.{CrudControllerImpl, DataSetWebContext, JsonFormatter}
+import controllers.{CrudControllerImpl, DataSetWebContext, JsonFormatter, WebContext}
 import dataaccess.RepoTypes.UserRepo
 import dataaccess._
 import models._
@@ -24,8 +24,7 @@ import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import java.util.Date
-
-import views.html.dataview
+import views.html.{dataview => view}
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -76,49 +75,46 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   protected val jsRouter = new DataViewJsRouter(dataSetId)
   protected val dataSetRouter = new DataSetRouter(dataSetId)
 
-  private implicit def toWebContext(implicit request: Request[_]) = {
-    implicit val msg = messagesApi.preferred(request)
-    DataSetWebContext(dataSetId)
-  }
+  private implicit def toDataSetWebContext(implicit context: WebContext) =
+    DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
 
   override protected lazy val home =
     Redirect(router.plainList)
 
-  override protected def createView(f: Form[DataView])(implicit msg: Messages, request: Request[_]) =
-    dataview.create(
-      dataSetName + " Data View",
-      f
-    )
-
-  override protected def showView(id: BSONObjectID, f: Form[DataView])(implicit msg: Messages, request: Request[_]) =
-    editView(id, f)
-
-  override protected def editView(id: BSONObjectID, f: Form[DataView])(implicit msg: Messages, request: Request[_]) = {
-    val nameFieldMap = result(getNameFieldMap)
-
-    // TODO: stay in the future
-    if(f.value.isDefined)
-      result(DataViewRepo.setCreatedBy(userRepo, Seq(f.get)))
-
-    dataview.editNormal(
-      dataSetName + " Data View",
-      id,
-      f,
-      nameFieldMap,
-      result(dataSpaceTree)
-    )
+  override protected def createView = { implicit ctx =>
+    view.create(dataSetName + " Data View", _)
   }
 
-  override protected def listView(page: Page[DataView])(implicit msg: Messages, request: Request[_]) = {
-    // TODO: stay in the future
-    result(DataViewRepo.setCreatedBy(userRepo, page.items))
+  override protected def showView = editView
 
-    dataview.list(
-      dataSetName + " Data View",
-      page,
-      result(dataSpaceTree)
-    )
+  override protected def editView = { implicit ctx =>
+    data =>
+      val nameFieldMap = result(getNameFieldMap)
+
+      // TODO: stay in the future
+      if(data.form.value.isDefined)
+        result(DataViewRepo.setCreatedBy(userRepo, Seq(data.form.get)))
+
+      view.editNormal(
+        dataSetName + " Data View",
+        data.id,
+        data.form,
+        nameFieldMap,
+        result(dataSpaceTree)
+      )
   }
+
+  override protected def listView = { implicit ctx =>
+    data =>
+      // TODO: stay in the future
+      result(DataViewRepo.setCreatedBy(userRepo, data.items))
+
+      view.list(
+        dataSetName + " Data View",
+        data,
+        result(dataSpaceTree)
+      )
+    }
 
   override def saveCall(
     dataView: DataView)(
@@ -173,7 +169,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override def getAndShowView(id: BSONObjectID) =
     Action.async { implicit request =>
-      editCall(id).map(_.fold(
+      repo.get(id).map(_.fold(
         NotFound(s"Entity #$id not found")
       ) { entity =>
         implicit val msg = messagesApi.preferred(request)
@@ -181,7 +177,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
         render {
           case Accepts.Html() => Ok(
-            dataview.edit(
+            view.edit(
               dataSetName + " Data View",
               id,
               fillForm(entity),

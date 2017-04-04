@@ -1,7 +1,9 @@
 @import play.api.libs.json.JsObject
 @import views.html.layout.jsonShow
+@import controllers.WebContext
+@import controllers.WebContext._
 
-@(item: JsObject)(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(item: JsObject)(implicit context: WebContext)
 
 @jsonShow(
 	"Metadata",

@@ -15,6 +15,11 @@ class LdapUserController @Inject() (
     ldapUserService: LdapUserService
   ) extends Controller {
 
+  protected implicit def toWebContext(implicit request: Request[_]): WebContext = {
+    implicit val msg = messagesApi.preferred(request)
+    WebContext()
+  }
+
   def listAll = restrictAdmin(deadbolt) {
     Action { implicit request =>
       implicit val msg = messagesApi.preferred(request)

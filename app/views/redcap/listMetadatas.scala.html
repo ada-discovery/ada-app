@@ -2,8 +2,10 @@
 @import views.html.table.paginatedTable
 @import models.redcap.Metadata
 @import util.typeColumns
+@import controllers.WebContext
+@import controllers.WebContext._
 
-@(page: Page[Metadata])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(page: Page[Metadata])(implicit context: WebContext)
 
 @modalBody(defaultDelimiter: String) = {
     <p>Delimeter</p>

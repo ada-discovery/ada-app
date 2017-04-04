@@ -1,8 +1,9 @@
 package controllers
 
 import java.util.concurrent.TimeoutException
-import dataaccess.{Identity, RepoException, AsyncCrudRepo}
-import models.AdaException
+
+import dataaccess.{AsyncCrudRepo, Identity, RepoException, User}
+import models.{AdaException, Page, Translation}
 import play.api.Logger
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -12,6 +13,7 @@ import play.api.data.Form
 
 import scala.concurrent.Future
 import play.twirl.api.Html
+import reactivemongo.bson.BSONObjectID
 
 trait CrudController[ID] extends ReadonlyController[ID] {
 
@@ -44,44 +46,78 @@ protected abstract class CrudControllerImpl[E: Format, ID](
   protected def formFromRequest(implicit request: Request[AnyContent]): Form[E] =
     form.bindFromRequest
 
-  protected def createView(
-    form : Form[E]
-  )(implicit msg: Messages, request: Request[_]): Html
-
-  protected def editView(
-    id : ID,
-    form : Form[E]
-  )(implicit msg: Messages, request: Request[_]): Html
-
-  protected def showView(
-     id : ID,
-     form : Form[E]
-  )(implicit msg: Messages, request: Request[_]): Html
-
-  override protected def showView(
-    id : ID,
-    entity : E
-  )(implicit msg: Messages, request: Request[_]) =
-    showView(id, fillForm(entity))
-
   protected def home: Result
 
+  // create view
+
+  protected type CreateViewData = Form[E]
+
+  protected def createView: WebContext => CreateViewData => Html
+
+  private def createViewAux(
+    data: CreateViewData)(
+    implicit context: WebContext
+  ) = createView(context)(data)
+
+  // show view
+
+  override protected type ShowViewData = EditViewData
+
+  override protected def createShowViewData(id: ID, item: E) = createEditViewData(id, item)
+
+  // edit view
+
+  protected type EditViewData = EditViewFormData[ID, E]
+
+  protected def createEditViewData(id: ID, item: E) = Future(EditViewFormData(id, fillForm(item)))
+
+  protected def editView: WebContext => EditViewData => Html
+
+  private def editViewAux(
+    data: EditViewData)(
+    implicit context: WebContext
+  ) = editView(context)(data)
+
+  // list view
+
+  override protected type ListViewData = Page[E]
+
+  override protected def createListViewData(page: Page[E]) = Future(page)
+
+  // actions
+
   def create = Action { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
-    Ok(createView(form))
+    Ok(createViewAux(form))
   }
 
+  /**
+    * Retrieve a single object by its id and display as editable.
+    * NotFound response is generated if key does not exists.
+    *
+    * @param id id/ primary key of the object.
+    */
   def edit(id: ID) = Action.async { implicit request =>
-    editCall(id).map(_.fold(
-      NotFound(s"Entity #$id not found")
-    ) { entity =>
-      implicit val msg = messagesApi.preferred(request)
+    {
+      for {
+        // retrieve the item
+        item <- repo.get(id)
 
-      render {
-        case Accepts.Html() => Ok(editView(id, fillForm(entity)))
-        case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
-      }
-    }).recover {
+        // create a view data if the item has been found
+        viewData <- item.fold(
+          Future(Option.empty[EditViewData])
+        ) { entity =>
+          createEditViewData(id, entity).map(Some(_))
+        }
+      } yield
+        item match {
+          case None => NotFound(s"Entity #$id not found")
+          case Some(entity) =>
+            render {
+              case Accepts.Html() => Ok(editViewAux(viewData.get))
+              case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+            }
+        }
+    }.recover {
       case e: AdaException =>
         Logger.error("Problem found while executing the edit function")
         BadRequest(e.getMessage)
@@ -91,15 +127,12 @@ protected abstract class CrudControllerImpl[E: Format, ID](
     }
   }
 
-  protected def editCall(id: ID)(implicit request: Request[AnyContent]): Future[Option[E]] = repo.get(id)
-
   def save = save(home)
 
   protected def save(redirect: Result) = Action.async { implicit request =>
     formFromRequest.fold(
       { formWithErrors =>
-        implicit val msg = messagesApi.preferred(request)
-        Future.successful(BadRequest(createView(formWithErrors)))
+        Future.successful(BadRequest(createViewAux(formWithErrors)))
       },
       item => {
         saveCall(item).map { id =>
@@ -130,7 +163,7 @@ protected abstract class CrudControllerImpl[E: Format, ID](
     formFromRequest.fold(
       { formWithErrors =>
         implicit val msg = messagesApi.preferred(request)
-        Future.successful(BadRequest(editView(id, formWithErrors)))
+        Future.successful(BadRequest(editViewAux(EditViewFormData(id, formWithErrors))))
       },
       item => {
         updateCall(identity.set(item, id)).map { _ =>
@@ -191,3 +224,7 @@ protected abstract class CrudControllerImpl[E: Format, ID](
 //    case _ => Json.obj()
 //  }
 }
+
+case class ShowViewFormData[ID, E](id: ID, form: Form[E])
+
+case class EditViewFormData[ID, E](id: ID, form: Form[E])

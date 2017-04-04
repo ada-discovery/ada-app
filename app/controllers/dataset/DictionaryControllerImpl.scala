@@ -22,7 +22,7 @@ import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DeNoPaSetting, StatsService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import views.html.dictionary
+import views.html.{ dictionary => view}
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -56,10 +56,8 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   implicit val fieldTypeFormatter = EnumFormatter(FieldTypeId)
   implicit val mapFormatter = MapJsonFormatter.apply
 
-  private implicit def toWebContext(implicit request: Request[_]) = {
-    implicit val msg = messagesApi.preferred(request)
-    DataSetWebContext(dataSetId)
-  }
+  private implicit def toDataSetWebContext(implicit context: WebContext) =
+    DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
 
   private val fieldNameLabels = Seq(
     ("fieldType", Some("Field Type")),
@@ -105,24 +103,31 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   override protected lazy val home =
     Redirect(router.plainList)
 
-  override protected def createView(f : Form[Field])(implicit msg: Messages, request: Request[_]) =
-    dictionary.create(dataSetName + " Field", f, allCategories)
-
-  override protected def showView(name: String, f : Form[Field])(implicit msg: Messages, request: Request[_]) =
-    editView(name, f)
-
-  override protected def editView(name: String, f : Form[Field])(implicit msg: Messages, request: Request[_]) =
-    dictionary.edit(
+  override protected def createView = { implicit ctx =>
+    view.create(
       dataSetName + " Field",
-      name,
-      f,
-      allCategories,
-      result(dataSpaceTree)
+      _,
+      allCategories
     )
+  }
+
+  override protected def showView = editView
+
+  override protected def editView = { implicit ctx =>
+    data =>
+      view.edit(
+        dataSetName + " Field",
+        data.id,
+        data.form,
+        allCategories,
+        result(dataSpaceTree)
+      )
+  }
 
   // TODO: Remove
-  override protected def listView(page: Page[Field])(implicit msg: Messages, request: Request[_]) =
+  override protected def listView = { implicit ctx =>
     throw new IllegalStateException("List not implemented... use overviewList instead.")
+  }
 
   // TODO: change to an async call
   protected def allCategories = {
@@ -147,7 +152,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     fieldChartSpecs : Iterable[FieldChartSpec],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
   )(implicit msg: Messages, request: Request[_]) =
-    dictionary.list(
+    view.list(
       dataSetName + " Field",
       page,
       fieldChartSpecs,

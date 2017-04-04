@@ -35,6 +35,10 @@ object DataSetWebContext {
     implicit webContext: DataSetWebContext
   ): Request[_] = webContext.request
 
+  implicit def toWebContext(
+    implicit webContext: DataSetWebContext
+  ): WebContext = WebContext()
+
   def dataSetRouter(
     implicit webContext: DataSetWebContext
   ) = webContext.dataSetRouter

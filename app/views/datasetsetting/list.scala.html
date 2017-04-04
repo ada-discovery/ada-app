@@ -7,11 +7,15 @@
 @import play.api.i18n.Messages
 @import models.{DataSetSetting, Field}
 @import models.FilterShowFieldStyle
+@import controllers.WebContext
+@import controllers.WebContext._
 
 @(
     dataSetName: String,
     page: Page[DataSetSetting]
-)(implicit flash:Flash, msg: Messages, request: Request[_])
+)(
+    implicit context: WebContext
+)
 
 @actions = {
     <div class="row">

@@ -7,11 +7,15 @@
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 @import models.{Field, DataSpaceMetaInfo}
+@import controllers.WebContext
+@import controllers.WebContext._
 
 @(
     page: Page[DataSetImport],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
-)(implicit flash:Flash, msg: Messages, request: Request[_])
+)(
+    implicit webContext: WebContext
+)
 
 @importLink(clazz: Class[_], title: String) = {
     <li>

@@ -41,20 +41,42 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
 
   protected val timeout = 200000 millis
 
+  protected implicit def toWebContext(implicit request: Request[_]): WebContext = {
+    implicit val msg = messagesApi.preferred(request)
+    WebContext()
+  }
+
   protected def repo: AsyncReadonlyRepo[E, ID]
 
   protected def repoHook = repo
 
   protected def listViewColumns: Option[Seq[String]] = None
 
-  protected def showView(
-    id : ID,
-    item : E
-  )(implicit msg: Messages, request: Request[_]) : Html
+  // list view
 
-  protected def listView(
-    currentPage: Page[E]
-  )(implicit msg: Messages, request: Request[_]) : Html
+  protected type ListViewData
+
+  protected def createListViewData(page: Page[E]): Future[ListViewData]
+
+  protected def listView: WebContext => ListViewData => Html
+
+  private def listViewAux(
+    data: ListViewData)(
+    implicit context: WebContext
+  ) = listView(context)(data)
+
+  // show view
+
+  protected type ShowViewData
+
+  protected def createShowViewData(id: ID, item: E): Future[ShowViewData]
+
+  protected def showView: WebContext => ShowViewData => Html
+
+  private def showViewAux(
+    data: ShowViewData)(
+    implicit context: WebContext
+  ) = showView(context)(data)
 
   /**
    * Retrieve single object by its Id.
@@ -63,23 +85,32 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
    * @param id id/ primary key of the object.
    */
   def get(id: ID) = Action.async { implicit request =>
-    getCall(id).map(_.fold(
-      NotFound(s"Entity #$id not found")
-    ){ entity =>
-      implicit val msg = messagesApi.preferred(request)
+    {
+      for {
+        // retrieve the item
+        item <- repo.get(id)
 
-      render {
-        case Accepts.Html() => Ok(showView(id, entity))
-        case Accepts.Json() => Ok(Json.toJson(entity))
-      }
-    }).recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the get process")
-        InternalServerError(t.getMessage)
+        // create a view data if the item has been found
+        viewData <- item.fold(
+          Future(Option.empty[ShowViewData])
+        ) { entity =>
+          createShowViewData(id, entity).map(Some(_))
+        }
+      } yield
+        item match {
+          case None => NotFound(s"Entity #$id not found")
+          case Some(entity) =>
+            render {
+              case Accepts.Html() => Ok(showViewAux(viewData.get))
+              case Accepts.Json() => Ok(Json.toJson(entity))
+            }
+        }
+    }.recover {
+        case t: TimeoutException =>
+          Logger.error("Problem found in the get process")
+          InternalServerError(t.getMessage)
     }
   }
-
-  protected def getCall(id: ID): Future[Option[E]] = repo.get(id)
 
   /**
     * Display the paginated list.
@@ -89,14 +120,18 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
     * @param filter Filter applied on items
     */
   def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) = Action.async { implicit request =>
-    val futureItemsAndCount = getFutureItemsAndCount(page, orderBy, filter)
-    futureItemsAndCount.map{ case (items, count) =>
-      implicit val msg = messagesApi.preferred(request)
+    {
+      for {
+        (items, count) <- getFutureItemsAndCount(page, orderBy, filter)
 
-      render {
-        case Accepts.Html() => Ok(listView(Page(items, page, page * pageLimit, count, orderBy, Some(new models.Filter(filter)))))
-        case Accepts.Json() => Ok(Json.toJson(items))
-      }
+        viewData <- createListViewData(
+          Page(items, page, page * pageLimit, count, orderBy, Some(new models.Filter(filter)))
+        )
+      } yield
+        render {
+          case Accepts.Html() => Ok(listViewAux(viewData))
+          case Accepts.Json() => Ok(Json.toJson(items))
+        }
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
@@ -110,14 +145,18 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
    * @param orderBy Column to be sorted
    */
   def listAll(orderBy: String) = Action.async { implicit request =>
-    val futureItemsAndCount = getFutureItemsAndCount(None, orderBy, Nil, Nil, None)
-    futureItemsAndCount.map{ case (items, count) =>
-      implicit val msg = messagesApi.preferred(request)
+    {
+      for {
+        (items, count) <- getFutureItemsAndCount(None, orderBy, Nil, Nil, None)
 
-      render {
-        case Accepts.Html() => Ok(listView(Page(items, 0, 0, count, orderBy, None)))
-        case Accepts.Json() => Ok(Json.toJson(items))
-      }
+        viewData <- createListViewData(
+          Page(items, 0, 0, count, orderBy, None)
+        )
+      } yield
+        render {
+          case Accepts.Html() => Ok(listViewAux(viewData))
+          case Accepts.Json() => Ok(Json.toJson(items))
+        }
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the list process")
@@ -274,3 +313,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
   protected def result[T](future: Future[T]): T =
     Await.result(future, timeout)
 }
+
+case class ShowViewDataHolder[ID, E](id: ID, item: E)
+
+case class EditViewDataHolder[ID, E](id: ID, item: E)

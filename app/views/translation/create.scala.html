@@ -1,7 +1,13 @@
 @import views.html.layout
 @import views.html.elements.editableTextElements
+@import controllers.WebContext
+@import controllers.WebContext._
 
-@(form: Form[Translation])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(
+	form: Form[Translation]
+)(
+    implicit context: WebContext
+)
 
 @layout.create(
     "translation",

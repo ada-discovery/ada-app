@@ -2,23 +2,23 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.{SubjectPresentRestrictedCrudController, AdminRestrictedCrudController, CrudControllerImpl}
-import models.{DataSetMetaInfo, DataSpaceMetaInfo, DataSetFormattersAndIds}
+import controllers.{AdminRestrictedCrudController, CrudControllerImpl, SubjectPresentRestrictedCrudController, WebContext}
+import models._
 import DataSetFormattersAndIds._
-import models.Page
 import dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
 import dataaccess.Criterion.Infix
-import persistence.dataset.{DataSpaceMetaInfoRepo, DataSetAccessorFactory}
+import persistence.dataset.{DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import play.api.Logger
 import play.api.mvc.{Action, Controller}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.i18n.Messages
-import play.api.mvc.{Action, AnyContent, RequestHeader, Request}
+import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil._
-import views.html
+import views.html.{ dataspace => view}
+
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import controllers.dataset.routes.javascript.{DataSpaceMetaInfoController => dataSpaceMetaInfoJsRoutes}
@@ -44,36 +44,36 @@ class DataSpaceMetaInfoController @Inject() (
   override protected val home =
     Redirect(routes.DataSpaceMetaInfoController.find())
 
-  override protected def createView(f : Form[DataSpaceMetaInfo])(implicit msg: Messages, request: Request[_]) =
-    html.dataspace.create(f)
+  override protected def createView = { implicit ctx => view.create(_) }
 
-  override protected def showView(id: BSONObjectID, f: Form[DataSpaceMetaInfo])(implicit msg: Messages, request: Request[_]) = {
-    val dataSpace = f.value.get
-    val children = result(repo.find(Seq("parentId" #== dataSpace._id)))
-    dataSpace.children.appendAll(children)
+  override protected def showView = { implicit ctx =>
+    data =>
+      val dataSpace = data.form.value.get
+      val children = result(repo.find(Seq("parentId" #== dataSpace._id)))
+      dataSpace.children.appendAll(children)
 
-    html.dataspace.show(
-      dataSpace,
-      result(getDataSetSizes(dataSpace)),
-      result(allAsTree)
-    )
+      view.show(
+        dataSpace,
+        result(getDataSetSizes(dataSpace)),
+        result(allAsTree)
+      )
   }
 
-  override protected def editView(id: BSONObjectID, f: Form[DataSpaceMetaInfo])(implicit msg: Messages, request: Request[_]) = {
-    val dataSpace = f.value.get
-    val children = result(repo.find(Seq("parentId" #== dataSpace._id)))
-    dataSpace.children.appendAll(children)
+  override protected def editView = { implicit ctx =>
+    data =>
+      val dataSpace = data.form.value.get
+      val children = result(repo.find(Seq("parentId" #== dataSpace._id)))
+      dataSpace.children.appendAll(children)
 
-    html.dataspace.edit(
-      id,
-      f,
-      result(getDataSetSizes(dataSpace)),
-      result(allAsTree)
-    )
+      view.edit(
+        data.id,
+        data.form,
+        result(getDataSetSizes(dataSpace)),
+        result(allAsTree)
+      )
   }
 
-  override protected def listView(currentPage: Page[DataSpaceMetaInfo])(implicit msg: Messages, request: Request[_]) =
-    html.dataspace.list(currentPage)
+  override protected def listView = { implicit ctx => view.list(_) }
 
   override protected def updateCall(item: DataSpaceMetaInfo)(implicit request: Request[AnyContent]) =
     for {

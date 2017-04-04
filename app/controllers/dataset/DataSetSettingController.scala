@@ -21,10 +21,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.DataSetService
-import views.html
+import views.html.{datasetsetting => view}
 import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 import controllers.dataset.routes.javascript.{DataSetSettingController => dataSetSettingJsRoutes}
-
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
@@ -58,30 +57,28 @@ class DataSetSettingController @Inject() (
       "storageType" -> of[StorageType.Value],
       "mongoAutoCreateIndexForProjection" -> boolean,
       "cacheDataSet" -> boolean
-    ) (DataSetSetting.apply)(DataSetSetting.unapply)
+    )(DataSetSetting.apply)(DataSetSetting.unapply)
   )
 
   override protected val home =
     Redirect(routes.DataSetSettingController.find())
 
-  override protected def createView(f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
-    html.datasetsetting.create(f)
+  override protected def createView = { implicit ctx => view.create(_) }
 
-  override protected def showView(id: BSONObjectID, f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
-    editView(id, f)
+  override protected def showView = editView
 
-  override protected def editView(id: BSONObjectID, f : Form[DataSetSetting])(implicit msg: Messages, request: Request[_]) = {
-    val setting = f.value match {
-      case Some(setting) => Some(setting)
-      case None => result(repo.get(id))
-    }
-    val form = f.copy(value = setting)
-    val fieldNamesCall = new DataSetRouter(setting.get.dataSetId).fieldNames
-    html.datasetsetting.editNormal(id, "", form, fieldNamesCall)
+  override protected def editView = { implicit ctx =>
+    data =>
+      val setting = data.form.value match {
+        case Some(setting) => Some(setting)
+        case None => result(repo.get(data.id))
+      }
+      val form = data.form.copy(value = setting)
+      val fieldNamesCall = new DataSetRouter(setting.get.dataSetId).fieldNames
+      view.editNormal(data.id, "", form, fieldNamesCall)
   }
 
-  override protected def listView(currentPage: Page[DataSetSetting])(implicit msg: Messages, request: Request[_]) =
-    html.datasetsetting.list("", currentPage)
+  override protected def listView = { implicit ctx => view.list("", _) }
 
   def editForDataSet(dataSet: String) = restrict {
     Action.async { implicit request =>
@@ -97,7 +94,7 @@ class DataSetSettingController @Inject() (
             case Accepts.Html() => {
               val updateCall = dataSetSettingRoutes.updateForDataSet(entity._id.get)
               val cancelCall = new DataSetRouter(dataSet).getDefaultView
-              Ok(html.datasetsetting.edit(
+              Ok(view.edit(
                 "",
                 fillForm(entity),
                 updateCall,

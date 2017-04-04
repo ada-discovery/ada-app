@@ -3,8 +3,10 @@
 @import play.api.libs.json.JsObject
 @import views.html.table.paginatedJsonTable
 @import util.typeColumns
+@import controllers.WebContext
+@import controllers.WebContext._
 
-@(currentPage: Page[JsObject], filter: Seq[FilterCondition])(implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_])
+@(currentPage: Page[JsObject], filter: Seq[FilterCondition])(implicit context: WebContext)
 
 @modalBody(defaultDelimiter: String) = {
     <p>Delimeter</p>

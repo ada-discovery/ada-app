@@ -11,19 +11,21 @@ import play.api.Configuration
 
 import scala.concurrent.duration._
 import javax.inject.Inject
+
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
-import services.{RedCapServiceFactory, TranSMARTService, RedCapService}
+import services.{RedCapService, RedCapServiceFactory, TranSMARTService}
 import services.RedCapServiceFactory.defaultRedCapService
 import views.html
-import play.api.mvc.{ResponseHeader, Action, Controller, Result}
+import play.api.mvc._
+
 import collection.mutable.{Map => MMap}
 import _root_.util.JsonUtil.jsonObjectsToCsv
 import _root_.util.SecurityUtil.restrictAdmin
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.{Await, Future}
 
 class RedCapController @Inject() (
     redCapServiceFactory: RedCapServiceFactory,
@@ -50,6 +52,10 @@ class RedCapController @Inject() (
   private val keyField = "cdisc_dm_usubjd"
   private val visitField = Some("redcap_event_name")
 
+  protected implicit def toWebContext(implicit request: Request[_]): WebContext = {
+    implicit val msg = messagesApi.preferred(request)
+    WebContext()
+  }
 
   def index = restrictAdmin(deadbolt) {
     Action { Redirect(routes.RedCapController.listExportFields()) }
@@ -57,8 +63,6 @@ class RedCapController @Inject() (
 
   def listRecords(page: Int, orderBy: String, f: String, filter: Seq[FilterCondition]) = restrictAdmin(deadbolt) {
     Action.async { implicit request =>
-      implicit val msg = messagesApi.preferred(request)
-
       redCapService.listRecords(orderBy, f).map { items =>
         val newPage = Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, Some(new models.Filter(filter)))
         Ok(html.redcap.listRecords(newPage, filter))
@@ -68,8 +72,6 @@ class RedCapController @Inject() (
 
   def listMetadatas(page: Int, orderBy: String, filter: String) = restrictAdmin(deadbolt) {
     Action.async { implicit request =>
-      implicit val msg = messagesApi.preferred(request)
-
       redCapService.listMetadatas(orderBy, filter).map( items =>
         Ok(html.redcap.listMetadatas(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, None)))
       )
@@ -78,8 +80,6 @@ class RedCapController @Inject() (
 
   def listExportFields(page: Int, orderBy: String, filter: String) = restrictAdmin(deadbolt) {
     Action.async { implicit request =>
-      implicit val msg = messagesApi.preferred(request)
-
       redCapService.listExportFields(orderBy, filter).map(items =>
         Ok(html.redcap.listFieldNames(Page(items.drop(page * limit).take(limit), page, page * limit, items.size, orderBy, None)))
       )
@@ -92,7 +92,6 @@ class RedCapController @Inject() (
         if (foundItems.isEmpty) {
           NotFound(s"Entity #$id not found")
         } else {
-          implicit val msg = messagesApi.preferred(request)
           Ok(html.redcap.showRecord(foundItems.head))
         }
       }
@@ -118,7 +117,6 @@ class RedCapController @Inject() (
         if (foundItems.isEmpty) {
           NotFound(s"Entity #$id not found")
         } else {
-          implicit val msg = messagesApi.preferred(request)
           Ok(html.redcap.showFieldName(foundItems.head))
         }
       }
@@ -127,8 +125,6 @@ class RedCapController @Inject() (
 
   def overview = restrictAdmin(deadbolt) {
     Action.async { implicit request =>
-      implicit val msg = messagesApi.preferred(request)
-
       redCapService.listRecords(keyField, "").map { items =>
 
         val valueCounts = fieldsOfInterest.map{ case(name, key) =>
