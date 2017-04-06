@@ -1,8 +1,10 @@
 @import views.html.layout.main
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
 
-@(runnableNames : Iterable[String])(implicit flash: Flash, msg: Messages, request: Request[_])
+@(runnableNames : Iterable[String])(implicit context: WebContext)
 
 @main("Runnables") {
 

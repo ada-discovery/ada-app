@@ -2,18 +2,14 @@
 @import views.html.user.elements
 @import models.DataSpaceMetaInfo
 @import dataaccess.User
-@import controllers.WebContext
-@import controllers.WebContext._
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
 
 @(
     id: reactivemongo.bson.BSONObjectID,
     form: Form[User],
     metaInfos: Traversable[DataSpaceMetaInfo],
-    dataSetActionNames: Array[String],
-    fieldActionNames: Array[String],
-    categoryActionNames: Array[String],
-    filterActionNames: Array[String],
-    dataViewActionNames: Array[String]
+    controllerActionNames: DataSetControllerActionNames
 )(
     implicit context: WebContext
 )
@@ -21,7 +17,7 @@
 @layout.edit(
     "user",
 	form.errors,
-    elements(form, metaInfos, dataSetActionNames, fieldActionNames, categoryActionNames, filterActionNames, dataViewActionNames),
+    elements(form, metaInfos, controllerActionNames),
 	routes.UserController.update(id),
 	routes.UserController.listAll(),
     Some(routes.UserController.delete(id)),

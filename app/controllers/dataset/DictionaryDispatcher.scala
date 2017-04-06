@@ -41,8 +41,6 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
 
   override def save = dispatch(_.save)
 
-  override def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]) = dispatch(_.overviewList(page, orderBy, filter))
-
   override def inferDictionary = dispatch(_.inferDictionary)
 
   override def updateLabel(id: String, label: String) = dispatch(_.updateLabel(id, label))

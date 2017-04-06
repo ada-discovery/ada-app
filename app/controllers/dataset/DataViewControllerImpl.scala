@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
-import controllers.{CrudControllerImpl, DataSetWebContext, JsonFormatter, WebContext}
+import controllers.{DataSetWebContext, JsonFormatter}
 import dataaccess.RepoTypes.UserRepo
 import dataaccess._
 import models._
@@ -24,6 +24,8 @@ import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import java.util.Date
+
+import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
 import views.html.{dataview => view}
 
 import scala.concurrent.Future
@@ -39,14 +41,16 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     userRepo: UserRepo,
     val userManager: UserManager
-  ) extends CrudControllerImpl[DataView, BSONObjectID](dsaf(dataSetId).get.dataViewRepo) with DataViewController with AdaAuthConfig {
+  ) extends CrudControllerImpl[DataView, BSONObjectID](dsaf(dataSetId).get.dataViewRepo)
+
+    with DataViewController
+    with AdaAuthConfig
+    with HasFormShowEqualEditView[DataView, BSONObjectID] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
-  protected def dataSetName = result(dsa.metaInfo).name
   protected lazy val dataViewRepo = dsa.dataViewRepo
   protected lazy val fieldRepo = dsa.fieldRepo
-
 
   protected override val listViewColumns = None // Some(Seq("name"))
 
@@ -75,46 +79,88 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   protected val jsRouter = new DataViewJsRouter(dataSetId)
   protected val dataSetRouter = new DataSetRouter(dataSetId)
 
-  private implicit def toDataSetWebContext(implicit context: WebContext) =
-    DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
+  private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)
 
+  // create view and data
+
+  override protected type CreateViewData = (String, Form[DataView])
+
+  override protected def createFormCreateViewData(form: Form[DataView]) =
+    for {
+      dataSetName <- dsa.dataSetName
+    } yield
+      (dataSetName + " Data View", form)
+
   override protected def createView = { implicit ctx =>
-    view.create(dataSetName + " Data View", _)
+    (view.create(_, _)).tupled
   }
 
-  override protected def showView = editView
+  // edit view and data (= show view)
+
+  override protected type EditViewData = (
+    String,
+    BSONObjectID,
+    Form[DataView],
+    Map[String, Field],
+    Traversable[DataSpaceMetaInfo]
+  )
+
+  override protected def createFormEditViewData(
+    id: BSONObjectID,
+    form: Form[DataView]
+  ): Future[EditViewData] = {
+    val dataSetNameFuture = dsa.dataSetName
+    val nameFieldMapFuture = getNameFieldMap
+    val treeFuture = dataSpaceTree
+    val setCreatedByFuture =
+      form.value match {
+        case Some(dataView) => DataViewRepo.setCreatedBy(userRepo, Seq(dataView))
+        case None => Future(())
+      }
+    for {
+      dataSetName <- dataSetNameFuture
+      nameFieldMap <- nameFieldMapFuture
+      tree <- treeFuture
+      _ <- setCreatedByFuture
+    } yield
+      (dataSetName + " Data View", id, form, nameFieldMap, tree)
+  }
 
   override protected def editView = { implicit ctx =>
-    data =>
-      val nameFieldMap = result(getNameFieldMap)
+    (view.editNormal(_, _, _, _, _)).tupled
+  }
 
-      // TODO: stay in the future
-      if(data.form.value.isDefined)
-        result(DataViewRepo.setCreatedBy(userRepo, Seq(data.form.get)))
+  // list view and data
 
-      view.editNormal(
-        dataSetName + " Data View",
-        data.id,
-        data.form,
-        nameFieldMap,
-        result(dataSpaceTree)
-      )
+  override protected type ListViewData = (
+    String,
+    Page[DataView],
+    Traversable[DataSpaceMetaInfo]
+  )
+
+  override protected def createListViewData(
+    page: Page[DataView]
+  ): Future[ListViewData] = {
+    val setCreatedByFuture = DataViewRepo.setCreatedBy(userRepo, page.items)
+    val dataSpaceTreeFuture = dataSpaceTree
+    val dataSetNameFuture = dsa.dataSetName
+
+    for {
+      _ <- setCreatedByFuture
+      tree <- dataSpaceTreeFuture
+      dataSetName <- dataSetNameFuture
+    } yield
+      (dataSetName + " Data View", page, tree)
   }
 
   override protected def listView = { implicit ctx =>
-    data =>
-      // TODO: stay in the future
-      result(DataViewRepo.setCreatedBy(userRepo, data.items))
+    (view.list(_, _, _)).tupled
+  }
 
-      view.list(
-        dataSetName + " Data View",
-        data,
-        result(dataSpaceTree)
-      )
-    }
+  // actions
 
   override def saveCall(
     dataView: DataView)(
@@ -169,25 +215,24 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override def getAndShowView(id: BSONObjectID) =
     Action.async { implicit request =>
-      repo.get(id).map(_.fold(
-        NotFound(s"Entity #$id not found")
+      repo.get(id).flatMap(_.fold(
+        Future(NotFound(s"Entity #$id not found"))
       ) { entity =>
-        implicit val msg = messagesApi.preferred(request)
-        val nameFieldMap = result(getNameFieldMap)
-
-        render {
-          case Accepts.Html() => Ok(
-            view.edit(
-              dataSetName + " Data View",
-              id,
-              fillForm(entity),
-              router.updateAndShowView,
-              nameFieldMap,
-              result(dataSpaceTree)
-            )
+          createEditViewData(id, entity).map( viewData =>
+            render {
+              case Accepts.Html() => Ok(
+                view.edit(
+                  viewData._1,
+                  viewData._2,
+                  viewData._3,
+                  viewData._4,
+                  viewData._5,
+                  router.updateAndShowView
+                )
+              )
+              case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+            }
           )
-          case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
-        }
       }).recover {
         case t: TimeoutException =>
           Logger.error("Problem found in the edit process")
@@ -205,8 +250,6 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Entity #$id not found"))
       ) { dataView =>
-        implicit val msg = messagesApi.preferred(request)
-
         val newDataView = dataView.copy(_id = None, name = dataView.name + " copy", default = false)
         saveCall(newDataView).map { newId =>
           Redirect(router.get(newId)).flashing("success" -> s"Data view '${dataView.name}' has been copied.")

@@ -1,14 +1,12 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
-@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
-@import views.html.filter.{filter, filterWithJs}
+@import views.html.dataset.{datasetMenu}
+@import views.html.filter.filterWithJs
 @import controllers.dataset.routes.{DataSetImportController => dataSetImportRoutes}
-@import util.{typeColumns, toHumanReadableCamel, formatTimeElement}
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
-@import models.{Field, DataSpaceMetaInfo}
-@import controllers.WebContext
-@import controllers.WebContext._
+@import util.{formatTimeElement, toHumanReadableCamel, typeColumns}
+@import models.{DataSpaceMetaInfo, Field}
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
 
 @(
     page: Page[DataSetImport],

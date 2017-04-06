@@ -3,15 +3,12 @@
 @import views.html.filter.{filter, filterWithJs}
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import util.typeColumns
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
 @import models.{DataSetSetting, Field}
 @import models.FilterShowFieldStyle
-@import controllers.WebContext
-@import controllers.WebContext._
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
 
 @(
-    dataSetName: String,
     page: Page[DataSetSetting]
 )(
     implicit context: WebContext
@@ -50,7 +47,7 @@
 }
 
 @layout.list(
-    dataSetName + "Data Set Setting",
+    "Data Set Setting",
     None,
     page.total,
     Some(actions),

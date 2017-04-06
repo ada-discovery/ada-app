@@ -1,6 +1,6 @@
 @import views.html.layout.formErrors
-@import controllers.WebContext
-@import controllers.WebContext._
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
 
 @(
     domainName: String,
@@ -8,15 +8,16 @@
     elements: Html,
     updateCall: Call,
     cancelCall: Call,
-    deleteCall: Option[Call],
-    sideBar: Option[Html],
-    topContentBar: Option[Html],
-    formArgs: (Symbol,String)*
+    deleteCall: Option[Call] = None,
+    sideBar: Option[Html] = None,
+    topContentBar: Option[Html] = None,
+    bottomResources: Option[Html] = None,
+    formArgs: Seq[(Symbol, String)] = Nil
 )(
     implicit context: WebContext
 )
 
-@main(Messages("edit.title", domainName), sideBar, topContentBar, None, None, Some(formErrors(domainName, errors))) {
+@main(Messages("edit.title", domainName), sideBar, topContentBar, None, bottomResources, Some(formErrors(domainName, errors))) {
 
     <div class="page-header">
         <h3>@Messages("edit.title", domainName)</h3>

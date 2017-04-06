@@ -1,4 +1,4 @@
-package controllers
+package controllers.core
 
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
@@ -7,12 +7,10 @@ import be.objectify.deadbolt.scala.DeadboltActions
 import dataaccess._
 import models._
 import play.api.Logger
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
-import play.twirl.api.Html
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -32,19 +30,17 @@ trait ReadonlyController[ID] {
  * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
-protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controller with ReadonlyController[ID] {
+protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] extends Controller
+  with ReadonlyController[ID]
+  with HasListView[E]
+  with HasShowView[E, ID] {
 
   @Inject var messagesApi: MessagesApi = _
   @Inject var deadbolt: DeadboltActions = _
 
   protected val pageLimit = 20
 
-  protected val timeout = 200000 millis
-
-  protected implicit def toWebContext(implicit request: Request[_]): WebContext = {
-    implicit val msg = messagesApi.preferred(request)
-    WebContext()
-  }
+  protected val timeout = 200 seconds
 
   protected def repo: AsyncReadonlyRepo[E, ID]
 
@@ -52,31 +48,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
 
   protected def listViewColumns: Option[Seq[String]] = None
 
-  // list view
-
-  protected type ListViewData
-
-  protected def createListViewData(page: Page[E]): Future[ListViewData]
-
-  protected def listView: WebContext => ListViewData => Html
-
-  private def listViewAux(
-    data: ListViewData)(
-    implicit context: WebContext
-  ) = listView(context)(data)
-
-  // show view
-
-  protected type ShowViewData
-
-  protected def createShowViewData(id: ID, item: E): Future[ShowViewData]
-
-  protected def showView: WebContext => ShowViewData => Html
-
-  private def showViewAux(
-    data: ShowViewData)(
-    implicit context: WebContext
-  ) = showView(context)(data)
+  protected implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
 
   /**
    * Retrieve single object by its Id.
@@ -101,7 +73,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
           case None => NotFound(s"Entity #$id not found")
           case Some(entity) =>
             render {
-              case Accepts.Html() => Ok(showViewAux(viewData.get))
+              case Accepts.Html() => Ok(showViewWithContext(viewData.get))
               case Accepts.Json() => Ok(Json.toJson(entity))
             }
         }
@@ -129,7 +101,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
         )
       } yield
         render {
-          case Accepts.Html() => Ok(listViewAux(viewData))
+          case Accepts.Html() => Ok(listViewWithContext(viewData))
           case Accepts.Json() => Ok(Json.toJson(items))
         }
     }.recover {
@@ -154,7 +126,7 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
         )
       } yield
         render {
-          case Accepts.Html() => Ok(listViewAux(viewData))
+          case Accepts.Html() => Ok(listViewWithContext(viewData))
           case Accepts.Json() => Ok(Json.toJson(items))
         }
     }.recover {
@@ -207,6 +179,21 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
     toCriteria(filter).flatMap ( criteria =>
       repo.find(criteria, sort, projection, limit, skip)
     )
+  }
+
+  protected def getFutureItemsForCriteria(
+    page: Option[Int],
+    orderBy: String,
+    criteria: Seq[Criterion[Any]],
+    projection: Seq[String],
+    limit: Option[Int]
+  ): Future[Traversable[E]] = {
+    val sort = toSort(orderBy)
+    val skip = page.zip(limit).headOption.map { case (page, limit) =>
+      page * limit
+    }
+
+    repo.find(criteria, sort, projection, limit, skip)
   }
 
   protected def getFutureCount(filter: Seq[FilterCondition]): Future[Int] =
@@ -313,7 +300,3 @@ protected abstract class ReadonlyControllerImpl[E: Format, ID] extends Controlle
   protected def result[T](future: Future[T]): T =
     Await.result(future, timeout)
 }
-
-case class ShowViewDataHolder[ID, E](id: ID, item: E)
-
-case class EditViewDataHolder[ID, E](id: ID, item: E)

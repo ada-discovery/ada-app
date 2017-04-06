@@ -2,16 +2,19 @@ package controllers
 
 import javax.inject.Inject
 
-import models.{DataView, Page, Translation}
+import controllers.core._
+import models.{Translation}
 import persistence.RepoTypes._
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText}
 import reactivemongo.bson.BSONObjectID
-import views.html.{user, translation => view}
+import views.html.{translation => view}
 
 class TranslationController @Inject() (
     translationRepo: TranslationRepo
-  ) extends CrudControllerImpl[Translation, BSONObjectID](translationRepo) with AdminRestrictedCrudController[BSONObjectID] {
+  ) extends CrudControllerImpl[Translation, BSONObjectID](translationRepo)
+    with AdminRestrictedCrudController[BSONObjectID]
+    with HasBasicFormCrudViews[Translation, BSONObjectID] {
 
   override protected val form = Form(
     mapping(

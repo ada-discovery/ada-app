@@ -33,7 +33,7 @@
                 '<span style="color:{point.color}">{point.x} (Count)</span>: <b>{point.y:.2f}</b><br/>'
 
         $('#@elementId').on('chartTypeChanged', function(event, chartType) {
-            changeNumericalCountChartType(chartType, datas, seriesSize, '@chartSpec.title', '@{elementId}', height, pointFormat, dataType)
+            changeNumericalCountChartType(chartType, datas, seriesSize, '@chartSpec.title', '@chartSpec.fieldLabel', '@{elementId}', height, pointFormat, dataType)
         });
 
         changeNumericalCountChartType('@chartSpec.displayOptions.chartType', datas, seriesSize, '@chartSpec.title', '@chartSpec.fieldLabel', '@{elementId}', height, pointFormat, dataType)

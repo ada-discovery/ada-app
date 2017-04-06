@@ -12,7 +12,7 @@ import scala.concurrent.duration._
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import controllers.ViewTypes.{EditView, CreateView}
+import controllers.ViewTypes.{CreateView, EditView}
 import controllers._
 import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
 import models._
@@ -28,11 +28,14 @@ import play.api.mvc._
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import java.io.{File, FileInputStream, FileOutputStream}
+
+import controllers.core._
 import services.{DataSetImportScheduler, DataSetService, DeNoPaSetting}
 import util.SecurityUtil.restrictAdmin
 import views.html.{datasetimport => view}
 import views.html.layout
 import play.api.data.format.Formats._
+
 import scala.concurrent.{Await, Future}
 
 class DataSetImportController @Inject()(
@@ -44,7 +47,11 @@ class DataSetImportController @Inject()(
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
     configuration: Configuration
-  ) extends CrudControllerImpl[DataSetImport, BSONObjectID](repo) with AdminRestrictedCrudController[BSONObjectID] {
+  ) extends CrudControllerImpl[DataSetImport, BSONObjectID](repo)
+    with AdminRestrictedCrudController[BSONObjectID]
+    with HasBasicFormCreateView[DataSetImport]
+    with HasBasicFormShowView[DataSetImport, BSONObjectID]
+    with HasBasicFormEditView[DataSetImport, BSONObjectID] {
 
   private val logger = Logger
   // (this.getClass)
@@ -324,9 +331,15 @@ class DataSetImportController @Inject()(
 
   override protected def showView = editView
 
-  override protected def listView = { implicit ctx =>
-    view.list(_, result(DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)))
-  }
+  override protected type ListViewData = (Page[DataSetImport], Traversable[DataSpaceMetaInfo])
+
+  override protected def createListViewData(page: Page[DataSetImport]): Future[ListViewData] =
+    for {
+      tree <- DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
+    } yield
+      (page, tree)
+
+  override protected def listView = { implicit ctx => (view.list(_, _)).tupled}
 
   def create(concreteClassName: String) = restrictAdmin(deadbolt) {
     Action { implicit request =>
@@ -484,6 +497,7 @@ class DataSetImportController @Inject()(
       Some(controllers.dataset.routes.DataSetImportController.delete(id)),
       None,
       None,
-      'enctype -> "multipart/form-data"
+      None,
+      Seq('enctype -> "multipart/form-data")
     )(context)
 }

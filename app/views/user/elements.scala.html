@@ -7,11 +7,7 @@
 @(
     form: Form[User],
     metaInfos: Traversable[DataSpaceMetaInfo],
-    dataSetActionNames: Array[String],
-    fieldActionNames: Array[String],
-    categoryActionNames: Array[String],
-    filterActionNames: Array[String],
-    dataViewActionNames: Array[String]
+    controllerActionNames: DataSetControllerActionNames
 )(implicit msg: play.api.i18n.Messages)
 
 @dynamicTableJsImport()
@@ -81,11 +77,11 @@
         $("#permission-controller").val("")
     })
 
-    var dataSetActionNames = [@actionNamesAsString(dataSetActionNames)]
-    var fieldActionNames = [@actionNamesAsString(fieldActionNames)]
-    var categoryActionNames = [@actionNamesAsString(categoryActionNames)]
-    var filterActionNames = [@actionNamesAsString(filterActionNames)]
-    var dataViewActionNames = [@actionNamesAsString(dataViewActionNames)]
+    var dataSetActionNames = [@actionNamesAsString(controllerActionNames.dataSetActions)]
+    var fieldActionNames = [@actionNamesAsString(controllerActionNames.fieldActions)]
+    var categoryActionNames = [@actionNamesAsString(controllerActionNames.categoryActions)]
+    var filterActionNames = [@actionNamesAsString(controllerActionNames.filterActions)]
+    var dataViewActionNames = [@actionNamesAsString(controllerActionNames.dataViewActions)]
 
     function updateActionItems() {
         var permission_controller = $('#permission-controller').val()

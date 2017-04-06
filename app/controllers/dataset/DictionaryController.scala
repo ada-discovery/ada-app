@@ -1,12 +1,10 @@
 package controllers.dataset
 
-import controllers.CrudController
+import controllers.core.CrudController
 import models.FilterCondition
 import play.api.mvc.{Action, AnyContent}
 
 trait DictionaryController extends CrudController[String] {
-
-  def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]): Action[AnyContent]
 
   def inferDictionary: Action[AnyContent]
 

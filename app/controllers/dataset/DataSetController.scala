@@ -1,6 +1,6 @@
 package controllers.dataset
 
-import controllers.{CrudController, ReadonlyController}
+import controllers.core.{CrudController, ReadonlyController}
 import dataaccess.{Criterion, Sort}
 import models.{FieldTypeId, FilterCondition, TablePage}
 import play.api.mvc.{Action, AnyContent}

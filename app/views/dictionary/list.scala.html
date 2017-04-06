@@ -21,10 +21,9 @@
 @(
     domainName : String,
     page: Page[Field],
-    fieldChartSpecs: Iterable[FieldChartSpec],
+    fieldChartSpecs: Traversable[FieldChartSpec],
     fieldNameLabels: Traversable[(String, Option[String])],
-    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
-    chartGridWidth: Int = 3
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit context: DataSetWebContext
 )
@@ -132,7 +131,7 @@
     page.total,
     Some(actions),
     table,
-    Some(filterWidgetPanel("filterDiv", fieldChartSpecs, chartGridWidth)),
+    Some(filterWidgetPanel("filterDiv", fieldChartSpecs, 6)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNavWithJs()),
     None,

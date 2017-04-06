@@ -2,32 +2,34 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.{AdminRestrictedCrudController, CrudControllerImpl, SubjectPresentRestrictedCrudController, WebContext}
+import controllers.{AdminRestrictedCrudController, SubjectPresentRestrictedCrudController}
 import models._
 import DataSetFormattersAndIds._
+import controllers.core.{CrudControllerImpl, HasBasicFormCreateView, HasBasicListView}
 import dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
 import dataaccess.Criterion.Infix
 import persistence.dataset.{DataSetAccessorFactory, DataSpaceMetaInfoRepo}
-import play.api.Logger
-import play.api.mvc.{Action, Controller}
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
-import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil._
-import views.html.{ dataspace => view}
+import views.html.{dataspace => view}
+import play.api.data.Form
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import controllers.dataset.routes.javascript.{DataSpaceMetaInfoController => dataSpaceMetaInfoJsRoutes}
+import dataaccess.User
 
 class DataSpaceMetaInfoController @Inject() (
     repo: DataSpaceMetaInfoRepo,
     dsaf: DataSetAccessorFactory,
     dataSetSettingRepo: DataSetSettingRepo
-  ) extends CrudControllerImpl[DataSpaceMetaInfo, BSONObjectID](repo) with SubjectPresentRestrictedCrudController[BSONObjectID] {
+  ) extends CrudControllerImpl[DataSpaceMetaInfo, BSONObjectID](repo)
+    with SubjectPresentRestrictedCrudController[BSONObjectID]
+    with HasBasicFormCreateView[DataSpaceMetaInfo]
+    with HasBasicListView[DataSpaceMetaInfo] {
 
   override protected val form = Form(
     mapping(
@@ -44,34 +46,65 @@ class DataSpaceMetaInfoController @Inject() (
   override protected val home =
     Redirect(routes.DataSpaceMetaInfoController.find())
 
+  // create view
+
   override protected def createView = { implicit ctx => view.create(_) }
 
-  override protected def showView = { implicit ctx =>
-    data =>
-      val dataSpace = data.form.value.get
-      val children = result(repo.find(Seq("parentId" #== dataSpace._id)))
-      dataSpace.children.appendAll(children)
+  // show view
 
-      view.show(
-        dataSpace,
-        result(getDataSetSizes(dataSpace)),
-        result(allAsTree)
-      )
+  override protected type ShowViewData = (DataSpaceMetaInfo, Map[String, Int], Traversable[DataSpaceMetaInfo])
+
+  override protected def createFormShowViewData(
+    id: BSONObjectID,
+    form: Form[DataSpaceMetaInfo]
+  ): Future[ShowViewData] =
+    createFormEditViewData(id, form).map { case (_, form, dataSetSizes, tree) =>
+      (form.get, dataSetSizes, tree)
+    }
+
+  override protected def showView = { implicit ctx =>
+    (view.show(_, _, _)).tupled
+  }
+
+  // edit view and data
+
+  override protected type EditViewData = (
+    BSONObjectID,
+    Form[DataSpaceMetaInfo],
+    Map[String, Int],
+    Traversable[DataSpaceMetaInfo]
+  )
+
+  override protected def createFormEditViewData(
+    id: BSONObjectID,
+    form: Form[DataSpaceMetaInfo]
+  ): Future[EditViewData] = {
+    val treeFuture = allAsTree
+    val childrenFuture = repo.find(Seq("parentId" #== id))
+
+    for {
+      // get the data space tree
+      tree <- treeFuture
+
+      // get the children of this data space (data sets)
+      children <- childrenFuture
+
+      // calc the sizes of the children data sets
+      dataSetSizes <- {
+        val dataSpace = form.value.get
+        dataSpace.children.appendAll(children)
+        getDataSetSizes(dataSpace)
+      }
+    } yield {
+      (id, form, dataSetSizes, tree)
+    }
   }
 
   override protected def editView = { implicit ctx =>
-    data =>
-      val dataSpace = data.form.value.get
-      val children = result(repo.find(Seq("parentId" #== dataSpace._id)))
-      dataSpace.children.appendAll(children)
-
-      view.edit(
-        data.id,
-        data.form,
-        result(getDataSetSizes(dataSpace)),
-        result(allAsTree)
-      )
+    (view.edit(_, _, _, _)).tupled
   }
+
+  // list view
 
   override protected def listView = { implicit ctx => view.list(_) }
 

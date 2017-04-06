@@ -3,10 +3,11 @@ package controllers
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
+import controllers.core.WebContext
 import persistence.RepoTypes.MessageRepo
 import play.api.Logger
 import play.api.i18n.MessagesApi
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.{Action, Controller, Request}
 import play.api.Play.current
 import util.MessageLogger
 import util.ReflectionUtil._
@@ -20,7 +21,9 @@ class AdminController @Inject() (deadbolt: DeadboltActions, messageRepo: Message
   @Inject var messagesApi: MessagesApi = _
 
   // we scan only the jars starting with this prefix to speed up the class search
-  val libPrefix = "ncer-pd"
+  private val libPrefix = "ncer-pd"
+
+  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
 
   /**
     * Creates view showing all runnables.
@@ -33,7 +36,6 @@ class AdminController @Inject() (deadbolt: DeadboltActions, messageRepo: Message
       val classes = findClasses[Runnable](libPrefix, Some("runnables."), None)
       val runnableNames = classes.map(_.getName).sorted
 
-      implicit val msg = messagesApi.preferred(request)
       Ok(views.html.admin.runnables(runnableNames))
     }
   }

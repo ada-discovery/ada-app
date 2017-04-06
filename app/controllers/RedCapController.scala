@@ -24,6 +24,7 @@ import play.api.mvc._
 import collection.mutable.{Map => MMap}
 import _root_.util.JsonUtil.jsonObjectsToCsv
 import _root_.util.SecurityUtil.restrictAdmin
+import controllers.core.WebContext
 
 import scala.concurrent.{Await, Future}
 
@@ -52,10 +53,7 @@ class RedCapController @Inject() (
   private val keyField = "cdisc_dm_usubjd"
   private val visitField = Some("redcap_event_name")
 
-  protected implicit def toWebContext(implicit request: Request[_]): WebContext = {
-    implicit val msg = messagesApi.preferred(request)
-    WebContext()
-  }
+  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
 
   def index = restrictAdmin(deadbolt) {
     Action { Redirect(routes.RedCapController.listExportFields()) }

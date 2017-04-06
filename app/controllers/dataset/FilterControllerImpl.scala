@@ -5,27 +5,25 @@ import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
-import controllers.{CrudControllerImpl, DataSetWebContext, JsonFormatter, WebContext}
-import controllers.WebContext._
+import controllers.{DataSetWebContext, JsonFormatter}
 import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
-import dataaccess.{AscSort, Criterion, FilterRepo, RepoException}
+import dataaccess._
 import models._
 import models.FilterCondition.{FilterIdentity, filterFormat}
-import Criterion.Infix
-import models.security.{SecurityRole, UserManager}
-import reactivemongo.play.json.BSONFormats._
-import persistence.RepoTypes._
+import models.security.UserManager
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.i18n.Messages
-import play.api.libs.json.{JsArray, Json}
-import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import java.util.Date
-import views.html.{ filters => view }
+
+import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
+import views.html.{dataview, filters => view}
+
 import scala.concurrent.Future
 
 trait FilterControllerFactory {
@@ -38,12 +36,15 @@ protected[controllers] class FilterControllerImpl @Inject() (
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     userRepo: UserRepo,
     val userManager: UserManager
-) extends CrudControllerImpl[Filter, BSONObjectID](dsaf(dataSetId).get.filterRepo) with FilterController with AdaAuthConfig {
+  ) extends CrudControllerImpl[Filter, BSONObjectID](dsaf(dataSetId).get.filterRepo)
+
+    with FilterController
+    with AdaAuthConfig
+    with HasFormShowEqualEditView[Filter, BSONObjectID] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
-  protected def dataSetName = result(dsa.metaInfo).name
-  protected lazy val filterRepo = dsa.filterRepo
+  protected val filterRepo = dsa.filterRepo
 
   protected override val listViewColumns = None // Some(Seq("name", "conditions"))
 
@@ -63,52 +64,96 @@ protected[controllers] class FilterControllerImpl @Inject() (
   protected val router: FilterRouter = new FilterRouter(dataSetId)
   protected val jsRouter: FilterJsRouter = new FilterJsRouter(dataSetId)
 
-  private implicit def toDataSetWebContext(implicit context: WebContext) =
-    DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
+  private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)
 
+  // create view and data
+
+  override protected type CreateViewData = (String, Form[Filter])
+
+  override protected def createFormCreateViewData(form: Form[Filter]) =
+    for {
+      dataSetName <- dsa.dataSetName
+    } yield
+      (dataSetName + " Filter", form)
+
   override protected def createView = { implicit ctx =>
-    view.create(
-      dataSetName + " Filter",
-      _
-    )(
-      toDataSetWebContext(ctx)
-    )
+    (view.create(_, _)).tupled
   }
 
-  override protected def showView = editView
+  // edit view and data (= show view)
+
+  override protected type EditViewData = (
+    String,
+    BSONObjectID,
+    Form[Filter],
+    Traversable[DataSpaceMetaInfo]
+  )
+
+  override protected def createFormEditViewData(
+    id: BSONObjectID,
+    form: Form[Filter]
+  ): Future[EditViewData] = {
+    val dataSetNameFuture = dsa.dataSetName
+
+    val treeFuture = dataSpaceTreeFuture
+
+    val setCreatedByFuture =
+      form.value match {
+        case Some(filter) => FilterRepo.setCreatedBy(userRepo, Seq(filter))
+        case None => Future(())
+      }
+
+    for {
+      // get the data set name
+      dataSetName <- dataSetNameFuture
+
+      // get the data space tree
+      tree <- treeFuture
+
+      // set the "created by" field for the filter
+      _ <- setCreatedByFuture
+    } yield
+      (dataSetName + " Filter", id, form, tree)
+  }
 
   override protected def editView = { implicit ctx =>
-    data =>
-      // TODO: stay in the future
-      // set created by
-      if(data.form.value.isDefined)
-        result(FilterRepo.setCreatedBy(userRepo, Seq(data.form.get)))
+    (view.edit(_, _, _, _)).tupled
+  }
 
-      view.edit(
-        dataSetName + " Filter",
-        data.id,
-        data.form,
-        result(dataSpaceTree)
-    )(
-      toDataSetWebContext(ctx)
-    )
+  // list view and data
+
+  override protected type ListViewData = (
+    String,
+    Page[Filter],
+    Traversable[DataSpaceMetaInfo]
+  )
+
+  override protected def createListViewData(
+    page: Page[Filter]
+  ): Future[ListViewData] = {
+    val setCreatedByFuture = FilterRepo.setCreatedBy(userRepo, page.items)
+    val treeFuture = dataSpaceTreeFuture
+    val dataSetNameFuture = dsa.dataSetName
+
+    for {
+      // set created by
+      _ <- setCreatedByFuture
+
+      // get the data space tree
+      tree <- treeFuture
+
+      // get the data set name
+      dataSetName <- dataSetNameFuture
+    } yield
+      (dataSetName + " Filter", page, tree)
   }
 
   override protected def listView = { implicit ctx =>
-    data =>
-      // TODO: stay in the future
-      // set created by
-      result(FilterRepo.setCreatedBy(userRepo, data.items))
-
-      view.list(
-        dataSetName + " Filter",
-        data,
-        result(dataSpaceTree)
-      )(toDataSetWebContext(ctx))
-    }
+    (view.list(_, _, _)).tupled
+  }
 
   override def saveCall(
     filter: Filter)(
@@ -152,6 +197,6 @@ protected[controllers] class FilterControllerImpl @Inject() (
       Ok(Json.toJson(filters))
   }
 
-  private def dataSpaceTree =
+  private def dataSpaceTreeFuture =
     DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 }

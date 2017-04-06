@@ -1,15 +1,15 @@
 @import views.html.layout.main
 @import views.html.chart._
 @import models.Count
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
 @import models.FieldTypeId
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
 
 @(
     domainName: String,
     fieldTypeCounts : Traversable[(FieldTypeId.Value, Int)]
 )(
-    implicit flash: Flash, msg: Messages, request: Request[_]
+    implicit context: WebContext
 )
 
 @main(Messages("typeOverview.title", domainName)) {

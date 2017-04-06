@@ -1,11 +1,11 @@
 @import views.html.layout
 @import views.html.dataspace.elements
-@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import reactivemongo.bson.BSONObjectID
 @import models.DataSpaceMetaInfo
-@import controllers.WebContext
-@import controllers.WebContext._
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
 
 @(
     id: BSONObjectID,

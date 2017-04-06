@@ -1,6 +1,7 @@
 package controllers
 
 import be.objectify.deadbolt.scala.DeadboltActions
+import controllers.core.{CrudController, ReadonlyController}
 import models.FilterCondition
 import play.api.mvc.{Action, AnyContent}
 import util.SecurityUtil._

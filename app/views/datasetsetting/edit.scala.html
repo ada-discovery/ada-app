@@ -1,15 +1,12 @@
 @import views.html.layout
 @import views.html.datasetsetting.elements
-@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import models.DataSpaceMetaInfo
 @import models.DataSetSetting
-@import controllers.WebContext
-@import controllers.WebContext._
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
 
 @(
-    dataSetName: String,
     form: Form[DataSetSetting],
     updateCall: Call,
     cancelCall: Call,
@@ -20,7 +17,7 @@
 )
 
 @layout.edit(
-    dataSetName + "Data Set Setting",
+    "Data Set Setting",
 	errors = form.errors,
     elements = elements(form),
 	updateCall = updateCall,

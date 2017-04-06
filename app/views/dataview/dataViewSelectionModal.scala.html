@@ -1,11 +1,13 @@
 @import controllers.dataset.{DataViewRouter, DataViewJsRouter}
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
 
 @(
     modalName: String,
     dataViewRouter: DataViewRouter,
     call: Option[Call] = None
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: WebContext
 )
 
 @dataViewSelectionModalBody = {

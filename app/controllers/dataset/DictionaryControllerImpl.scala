@@ -5,6 +5,7 @@ import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
 import controllers._
+import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
 import dataaccess.RepoTypes.{CategoryRepo, DataSpaceMetaInfoRepo}
 import dataaccess._
 import models._
@@ -22,7 +23,7 @@ import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DeNoPaSetting, StatsService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
-import views.html.{ dictionary => view}
+import views.html.{dataview, dictionary => view}
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
@@ -38,11 +39,14 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     dataSetService: DataSetService,
     statsService: StatsService,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends CrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo) with DictionaryController with ExportableAction[Field] {
+  ) extends CrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo)
+
+    with DictionaryController
+    with ExportableAction[Field]
+    with HasFormShowEqualEditView[Field, String] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
   protected val categoryRepo: CategoryRepo = dsa.categoryRepo
-  protected def dataSetName = result(dsa.metaInfo).name
 
   protected override val listViewColumns = Some(Seq("name", "fieldType", "isArray", "label", "categoryId"))
 
@@ -56,8 +60,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   implicit val fieldTypeFormatter = EnumFormatter(FieldTypeId)
   implicit val mapFormatter = MapJsonFormatter.apply
 
-  private implicit def toDataSetWebContext(implicit context: WebContext) =
-    DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
+  private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   private val fieldNameLabels = Seq(
     ("fieldType", Some("Field Type")),
@@ -103,101 +106,119 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   override protected lazy val home =
     Redirect(router.plainList)
 
-  override protected def createView = { implicit ctx =>
-    view.create(
-      dataSetName + " Field",
-      _,
-      allCategories
-    )
+  // create view and  data
+
+  override protected type CreateViewData = (String, Form[Field], Traversable[Category])
+
+  override protected def createFormCreateViewData(form: Form[Field]) = {
+    val dataSetNameFuture = dsa.dataSetName
+    val categoriesFuture = allCategoriesFuture
+
+    for {
+      // get the data set name
+      dataSetName <- dataSetNameFuture
+
+      // get all the categories
+      allCategories <- categoriesFuture
+    } yield
+      (dataSetName + " Field", form, allCategories)
   }
 
-  override protected def showView = editView
+  override protected def createView = { implicit ctx =>
+    (view.create(_, _, _)).tupled
+  }
+
+  // edit view and data (= show view)
+
+  override protected type EditViewData = (
+    String,
+    String,
+    Form[Field],
+    Traversable[Category],
+    Traversable[DataSpaceMetaInfo]
+  )
+
+  override protected def createFormEditViewData(
+    id: String,
+    form: Form[Field]
+  ): Future[EditViewData] = {
+    val dataSetNameFuture = dsa.dataSetName
+    val categoriesFuture = allCategoriesFuture
+    val treeFuture = dataSpaceTreeFuture
+
+    for {
+      // get the data set name
+      dataSetName <- dataSetNameFuture
+
+      // retrieve all the categories
+      allCategories <- categoriesFuture
+
+      // get the data space tree
+      tree <- treeFuture
+    } yield
+      (dataSetName + " Field", id, form, allCategories, tree)
+  }
 
   override protected def editView = { implicit ctx =>
-    data =>
-      view.edit(
-        dataSetName + " Field",
-        data.id,
-        data.form,
-        allCategories,
-        result(dataSpaceTree)
-      )
+    (view.edit(_, _, _, _, _)).tupled
   }
 
-  // TODO: Remove
-  override protected def listView = { implicit ctx =>
-    throw new IllegalStateException("List not implemented... use overviewList instead.")
-  }
+  // list view and data
 
-  // TODO: change to an async call
-  protected def allCategories = {
-    val categoriesFuture = categoryRepo.find(sort = Seq(AscSort("name")))
-    result(categoriesFuture)
-  }
+  override protected type ListViewData = (
+    String,
+    Page[Field],
+    Traversable[FieldChartSpec],
+    Traversable[(String, Option[String])],
+    Traversable[DataSpaceMetaInfo]
+  )
 
-//  override protected  def getCall(name: String) =
-//    for {
-//      field <- repo.get(name)
-//      _ <- setCategoryById(categoryRepo, field.get) if (field.isDefined)
-//    } yield field
-
-//    repo.get(name).flatMap(_.fold(
-//      Future(Option.empty[Field])
-//    ) { field =>
-//      setCategoryById(categoryRepo, field).map(_ => Some(field))
-//    })
-
-  private def overviewListView(
-    page: Page[Field],
-    fieldChartSpecs : Iterable[FieldChartSpec],
-    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
-  )(implicit msg: Messages, request: Request[_]) =
-    view.list(
-      dataSetName + " Field",
-      page,
-      fieldChartSpecs,
-      fieldNameLabels,
-      dataSpaceMetaInfos,
-      6
-    )
-
-  override def overviewList(page: Int, orderBy: String, filter: Seq[FilterCondition]) = Action.async { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
-
+  override protected def createListViewData(page: Page[Field]): Future[ListViewData] = {
     val fieldNameExtractors = Seq(
       ("Field Type", "fieldType", (field : Field) => field.fieldType)
-//      ("Enum", "isEnum", (field : Field) => field.isEnum)
+      //      ("Enum", "isEnum", (field : Field) => field.isEnum)
     )
-    val futureFieldChartSpecs = fieldNameExtractors.map { case (title, fieldName, fieldExtractor) =>
-      getDictionaryChartSpec(title, filter, fieldName, fieldExtractor).map(chartSpec => FieldChartSpec(fieldName, chartSpec))
-    }
-    val fieldChartSpecsFuture = Future.sequence(futureFieldChartSpecs)
-    val futureMetaInfos = dataSpaceTree
-    val futureItemsAndCount = getFutureItemsAndCount(page, orderBy, filter)
 
-    {
-      for {
-        (items, count) <- futureItemsAndCount
-        metaInfos <- futureMetaInfos
-        fieldChartSpecs <- fieldChartSpecsFuture
-        _ <- setCategoriesById(categoryRepo, items)
-      } yield {
-        val newFilter = filter.map { condition =>
-          val label = fieldNameLabelMap.get(condition.fieldName.trim)
-          condition.copy(fieldLabel = label.flatten)
-        }
-        Ok(overviewListView(
-          Page(items, page, page * pageLimit, count, orderBy, Some(new models.Filter(newFilter))),
-          fieldChartSpecs,
-          metaInfos)
-        )
-      }
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the dictionary list process")
-        InternalServerError(t.getMessage)
+    val newConditions = page.filterConditions.map { condition =>
+      val label = fieldNameLabelMap.get(condition.fieldName.trim)
+      condition.copy(fieldLabel = label.flatten)
     }
+
+    val newPage = page.copy(filter = Some(new models.Filter(newConditions)))
+
+    // create futures as vals so they are executed in parallel
+    val treeFuture = dataSpaceTreeFuture
+
+    val nameFuture = dsa.dataSetName
+
+    val fieldChartSpecsFuture = Future.sequence(
+      fieldNameExtractors.map { case (title, fieldName, fieldExtractor) =>
+        getDictionaryChartSpec(title, newConditions, fieldName, fieldExtractor).map(chartSpec => FieldChartSpec(fieldName, chartSpec))
+      }
+    )
+    val setCategoriesFuture = setCategoriesById(categoryRepo, newPage.items)
+
+    for {
+      // get the data space tree
+      tree <- treeFuture
+
+      // get the data set name
+      dataSetName <- nameFuture
+
+      // create charts
+      fieldChartSpecs <- fieldChartSpecsFuture
+
+      // set categories
+      _ <- setCategoriesFuture
+    } yield
+      (dataSetName + " Field", newPage, fieldChartSpecs, fieldNameLabels, tree)
   }
+
+  override protected def listView = { implicit ctx =>
+    (view.list(_, _, _, _, _)).tupled
+  }
+
+  // actions
 
   def inferDictionary = Action.async { implicit request =>
     // TODO: introduce type inference setting for each data set
@@ -278,6 +299,9 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       }
     }
 
-  private def dataSpaceTree =
+  private def dataSpaceTreeFuture =
     DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
+
+  protected def allCategoriesFuture =
+    categoryRepo.find(sort = Seq(AscSort("name")))
 }

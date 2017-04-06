@@ -21,6 +21,7 @@ trait DataSetAccessor {
 
   def dataSetRepo: JsonCrudRepo
   def metaInfo: Future[DataSetMetaInfo]
+  def dataSetName = metaInfo.map(_.name)
   def setting: Future[DataSetSetting]
 
   // functions to refresh a few attributes

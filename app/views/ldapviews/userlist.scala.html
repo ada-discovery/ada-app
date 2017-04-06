@@ -1,9 +1,9 @@
 @import views.html.layout
-@import views.html.table.{paginatedTable, displayTable}
+@import views.html.table.{displayTable, paginatedTable}
 @import util.typeColumns
 @import models.security.LdapUser
-@import controllers.WebContext
-@import controllers.WebContext._
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
 
 @(items: Traversable[LdapUser])(implicit context: WebContext)
 

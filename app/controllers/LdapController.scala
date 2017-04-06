@@ -3,6 +3,7 @@ package controllers
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
+import controllers.core.WebContext
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller, Request}
 import util.SecurityUtil._
@@ -18,10 +19,7 @@ class LdapController @Inject() (
     messagesApi: MessagesApi
   ) extends Controller{
 
-  protected implicit def toWebContext(implicit request: Request[_]): WebContext = {
-    implicit val msg = messagesApi.preferred(request)
-    WebContext()
-  }
+  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
 
   def settings = restrictAdmin(deadbolt) {
     Action{ implicit request =>

@@ -3,24 +3,23 @@ package controllers.dataset
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
-import controllers.{CrudControllerImpl, DataSetWebContext, WebContext}
+import controllers.DataSetWebContext
 import dataaccess.{AscSort, Criterion, User}
-import dataaccess.Criterion.Infix
-import models.{Category, D3Node, JsTreeNode, Page}
+import models._
 import models.DataSetFormattersAndIds._
 import Criterion.Infix
+import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-import views.html.category
+import views.html.{dataview, user, category => view}
 
 import scala.concurrent.Future
 
@@ -32,12 +31,14 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends CrudControllerImpl[Category, BSONObjectID](dsaf(dataSetId).get.categoryRepo) with CategoryController {
+  ) extends CrudControllerImpl[Category, BSONObjectID](dsaf(dataSetId).get.categoryRepo)
+
+    with CategoryController
+    with HasFormShowEqualEditView[Category, BSONObjectID] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
-  protected def dataSetName = result(dsa.metaInfo).name
-  protected lazy val fieldRepo = dsa.fieldRepo
+  protected val fieldRepo = dsa.fieldRepo
 
   protected override val listViewColumns = Some(Seq(CategoryIdentity.name, "name", "label"))
 
@@ -53,54 +54,98 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     ((category: Category) => Some(category._id, category.name, category.label, category.parentId.map(_.stringify)))
   )
 
-  private implicit def toDataSetWebContext(implicit context: WebContext) =
-    DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
+  private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   protected val router = new CategoryRouter(dataSetId)
   protected val jsRouter = new CategoryJsRouter(dataSetId)
-
-  // field router
-  protected val fieldRouter: DictionaryRouter = new DictionaryRouter(dataSetId)
+  protected val fieldRouter = new DictionaryRouter(dataSetId)
 
   override protected lazy val home =
     Redirect(router.plainList)
 
-  override protected def createView = { implicit ctx =>
-    category.create(
-      dataSetName + " Category",
-      _,
-      allCategories
-    )
+  // create view and data
+
+  override protected type CreateViewData = (String, Form[Category], Traversable[Category])
+
+  override protected def createFormCreateViewData(form: Form[Category]) = {
+    val dataSetNameFuture = dsa.dataSetName
+    val categoriesFuture = allCategoriesFuture
+
+    for {
+      dataSetName <- dataSetNameFuture
+      allCategories <- categoriesFuture
+    } yield
+      (dataSetName + " Categoy", form, allCategories)
   }
 
-  override protected def showView = editView
+  override protected def createView = { implicit ctx =>
+    (view.create(_, _, _)).tupled
+  }
+
+  // edit view and data (= show view)
+
+  override protected type EditViewData = (
+    String,
+    BSONObjectID,
+    Form[Category],
+    Traversable[Category],
+    Traversable[Field],
+    Option[FilterShowFieldStyle.Value],
+    Traversable[DataSpaceMetaInfo]
+  )
+
+  override protected def createFormEditViewData(
+    id: BSONObjectID,
+    form: Form[Category]
+  ): Future[EditViewData] = {
+    val assocfieldsFuture = fieldRepo.find(
+      criteria = Seq("categoryId" #== Some(id)),
+      sort = Seq(AscSort("name"))
+    )
+    val dataSetNameFuture = dsa.dataSetName
+    val treeFuture = dataSpaceTreeFuture
+    val categoriesFuture = allCategoriesFuture
+    val showFieldStyleFuture = dsa.setting.map(_.filterShowFieldStyle)
+
+    for {
+      // retrieve the associated fields
+      fields <- assocfieldsFuture
+
+      // get the data set name
+      dataSetName <- dataSetNameFuture
+
+      // get the data space tree
+      tree <- treeFuture
+
+      // retrieve all the categories
+      allCategories <- categoriesFuture
+
+      // get the show field style
+      showFieldStyle <- showFieldStyleFuture
+    } yield
+      (dataSetName + " Category", id, form, allCategories, fields, showFieldStyle, tree)
+  }
 
   override protected def editView = { implicit ctx =>
-    data =>
-      val fieldsFuture = fieldRepo.find(
-        criteria = Seq("categoryId" #== Some(data.id)),
-        sort = Seq(AscSort("name"))
-      )
-
-    val fields = result(fieldsFuture)
-      category.edit(
-        dataSetName + " Category",
-        data.id,
-        data.form,
-        allCategories,
-        fields,
-        result(dsa.setting.map(_.filterShowFieldStyle)),
-        result(dataSpaceTree)
-      )
+    (view.edit(_, _, _, _, _, _, _)).tupled
   }
 
-  override protected def listView = { implicit ctx =>
-    category.list(
-      dataSetName + " Category",
-      _,
-      result(dataSpaceTree)
-    )
+  // list view and data
+
+  override protected type ListViewData = (String, Page[Category], Traversable[DataSpaceMetaInfo])
+
+  override protected def createListViewData(page: Page[Category]): Future[ListViewData] = {
+    val treeFuture = dataSpaceTreeFuture
+    val nameFuture = dsa.dataSetName
+
+    for {
+      tree <- treeFuture
+      dataSetName <- nameFuture
+    } yield
+      (dataSetName + " Category", page, tree)
   }
+
+  override protected def listView = { implicit ctx => (view.list(_, _, _)).tupled }
 
   override protected def deleteCall(id: BSONObjectID)(implicit request: Request[AnyContent]): Future[Unit] = {
     // relocate the children to a new parent
@@ -162,24 +207,24 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     } yield
       id
 
-  override def getCategoryD3Root = Action { implicit request =>
-    val categories = allCategories
+  override def getCategoryD3Root = Action.async { implicit request =>
+    allCategoriesFuture.map { categories =>
+      val idD3NodeMap = categories.map(category => (category._id.get, D3Node(category._id, category.name, None))).toMap
 
-    val idD3NodeMap = categories.map(category => (category._id.get, D3Node(category._id, category.name, None))).toMap
-
-    categories.foreach { category =>
-      if (category.parentId.isDefined) {
-        val node = idD3NodeMap(category._id.get)
-        val parent = idD3NodeMap(category.parentId.get)
-        parent.children = parent.children ++ Seq(node)
+      categories.foreach { category =>
+        if (category.parentId.isDefined) {
+          val node = idD3NodeMap(category._id.get)
+          val parent = idD3NodeMap(category.parentId.get)
+          parent.children = parent.children ++ Seq(node)
+        }
       }
+
+      val layerOneCategories = categories.filter(_.parentId.isEmpty)
+
+      val root = D3Node(None, "Root", None, layerOneCategories.map(category => idD3NodeMap(category._id.get)).toSeq)
+
+      Ok(Json.toJson(root))
     }
-
-    val layerOneCategories = categories.filter(_.parentId.isEmpty)
-
-    val root = D3Node(None, "Root", None, layerOneCategories.map(category => idD3NodeMap(category._id.get)).toSeq)
-
-    Ok(Json.toJson(root))
   }
 
   override def getCategoriesWithFieldsAsTreeNodes = Action.async { implicit request =>
@@ -273,12 +318,9 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     ).as("text/javascript")
   }
 
-  // TODO: change to an async call
-  protected def allCategories = {
-    val categoriesFuture = repo.find(sort = Seq(AscSort("name")))
-    result(categoriesFuture)
-  }
+  protected def allCategoriesFuture =
+    repo.find(sort = Seq(AscSort("name")))
 
-  private def dataSpaceTree =
+  private def dataSpaceTreeFuture: Future[Traversable[DataSpaceMetaInfo]] =
     DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 }

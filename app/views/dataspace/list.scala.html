@@ -2,9 +2,9 @@
 @import views.html.table.paginatedTable
 @import views.html.filter.{filter, filterWithJs}
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
-@import models.{Field, DataSpaceMetaInfo}
-@import controllers.WebContext
-@import controllers.WebContext._
+@import models.{DataSpaceMetaInfo, Field}
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
 
 @(
     page: Page[DataSpaceMetaInfo]

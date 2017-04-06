@@ -13,9 +13,9 @@
     domainName: String,
     id : BSONObjectID,
     form: Form[DataView],
-    updateCall: BSONObjectID => Call,
     nameFieldMap: Map[String,  Field],
-    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
+    updateCall: BSONObjectID => Call
 )(
     implicit context: DataSetWebContext
 )
@@ -28,8 +28,6 @@
     dataViewRouter.plainList,
     Some(dataViewRouter.delete(id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNavWithJs())
+    Some(datasetSubNavWithJs()),
+    Some(activateTypeahead(dataSetRouter.allFields))
 )
-
-@activateTypeahead(dataSetRouter.allFields)
-

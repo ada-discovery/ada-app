@@ -3,8 +3,8 @@
 @import play.api.libs.json.JsObject
 @import views.html.table.paginatedJsonTable
 @import util.typeColumns
-@import controllers.WebContext
-@import controllers.WebContext._
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
 
 @(currentPage: Page[JsObject], filter: Seq[FilterCondition])(implicit context: WebContext)
 

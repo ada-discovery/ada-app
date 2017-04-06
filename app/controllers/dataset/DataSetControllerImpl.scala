@@ -15,6 +15,7 @@ import com.google.inject.assistedinject.Assisted
 import controllers._
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import Criterion.Infix
+import controllers.core.{ReadonlyControllerImpl, WebContext}
 import org.apache.commons.lang3.StringEscapeUtils
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
@@ -41,7 +42,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends ReadonlyControllerImpl[JsObject, BSONObjectID] with DataSetController with ExportableAction[JsObject] {
+  ) extends ReadonlyControllerImpl[JsObject, BSONObjectID]
+
+    with DataSetController
+    with ExportableAction[JsObject] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
@@ -82,8 +86,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
 
-  private implicit def toDataSetWebContext(implicit context: WebContext) =
-    DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
+  private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   override protected def listViewColumns = result(
     dataViewRepo.find().map {
@@ -91,9 +94,27 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   )
 
-  override protected type ListViewData = Page[JsObject]
+  // list view and data
 
-  override protected def createListViewData(page: Page[JsObject]) = Future(page)
+  override protected type ListViewData = (
+    String,
+    Page[JsObject],
+    Map[String, String],
+    Seq[String]
+  )
+
+  override protected def createListViewData(
+    page: Page[JsObject]
+  ): Future[ListViewData] = {
+    val dataSetNameFuture = dsa.dataSetName
+    val fieldLabelMapFuture = getFieldLabelMap(listViewColumns.get)
+
+    for {
+      dataSetName <- dataSetNameFuture
+      fieldLabelMap <- fieldLabelMapFuture
+    } yield
+      (dataSetName + " Item", page, fieldLabelMap, listViewColumns.get)
+  }
 
   /**
     * Table displaying given paginated content. Generally used to display fields of the datasets.
@@ -103,13 +124,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @return View for all available fields.
     */
   override protected def listView = { implicit ctx =>
-    dataset.list(
-      result(dataSetNameFuture) + " Item",
-      _,
-      result(getFieldLabelMap(listViewColumns.get)), // TODO: refactor
-      listViewColumns.get
-    )
+    (dataset.list(_, _, _, _)).tupled
   }
+
+  // show view and data
 
   override type ShowViewData = DataSetShowViewDataHolder
 
@@ -119,7 +137,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ) =
     for {
       // get the data set name
-      dataSetName <- dataSetNameFuture
+      dataSetName <- dsa.dataSetName
 
       // get the data space name
       dataSpaceTree <- dataSpaceTreeFuture
@@ -236,9 +254,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         fieldTypeCounts(field.fieldType.id) += 1
       }
 
-      implicit val msg = messagesApi.preferred(request)
       render {
-        case Accepts.Html() => Ok(dataset.typeOverview(result(dataSetNameFuture), (FieldTypeId.values, fieldTypeCounts).zipped.toList))
+        case Accepts.Html() => Ok(dataset.typeOverview(result(dsa.dataSetName), (FieldTypeId.values, fieldTypeCounts).zipped.toList))
         case Accepts.Json() => Ok(JsObject(
           (FieldTypeId.values, fieldTypeCounts).zipped.map{ case (fieldType, count) =>
             (fieldType.toString, JsNumber(count))
@@ -266,20 +283,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 //        case Some(view) => Future(Some(view))
 //        case None => dataViewRepo.find(limit = Some(1)).map(_.headOption)
 //      }
-      selectedView <- dataViewRepo.find().map( views =>
-        views.find(_.default) match {
-          case Some(view) => Some(view)
-          case None => views.headOption
-        }
+      selectedView <- dataViewRepo.find(sort = Seq(DescSort("default")), limit = Some(1)).map(
+        _.headOption
       )
-    } yield {
-      val webContext = implicitly[DataSetWebContext]
-
+    } yield
       selectedView match {
         case Some(view) => Redirect(router.getView(view._id.get, Nil, Nil, false))
-        case None => Redirect(webContext.dataViewRouter.plainList).flashing("errors" -> "No view to show. You must first define one.")
+        case None => Redirect(new DataViewRouter(dataSetId).plainList).flashing("errors" -> "No view to show. You must first define one.")
       }
-    }
   }
 
   override def getView(
@@ -290,16 +301,20 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ) = Action.async { implicit request =>
     val start = new ju.Date()
 
+    val dataSetNameFuture = dsa.dataSetName
+    val treeFuture = dataSpaceTreeFuture
+    val dataViewFuture = dataViewRepo.get(dataViewId)
+
     {
       for {
         // get the data set name
         dataSetName <- dataSetNameFuture
 
         // get the data space tree
-        dataSpaceTree <- dataSpaceTreeFuture
+        dataSpaceTree <- treeFuture
 
         // load the view
-        dataView <- dataViewRepo.get(dataViewId)
+        dataView <- dataViewFuture
 
         // initialize filters
         filterOrIdsToUse: Seq[FilterOrId] =
@@ -331,7 +346,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // get the response data
         viewResponses <- {
-          val responseStart = new ju.Date()
           val (columnNames, widgetSpecs) =
             dataView.map( view =>
               (view.tableColumnNames, view.widgetSpecs)
@@ -416,8 +430,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
 
     def setMinMax[T: Ordering](
-                                boxPlot: BoxWidget[T],
-                                minMax: (Any, Any)
+      boxPlot: BoxWidget[T],
+      minMax: (Any, Any)
     ): BoxWidget[T] =
       boxPlot.copy(min = Some(minMax._1.asInstanceOf[T]), max = Some(minMax._2.asInstanceOf[T]))
 
@@ -463,42 +477,71 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // generate criteria
       criteria <- toCriteria(conditions)
 
-      // obtain the total item count satisfying the resolved filter
-      count <- getFutureCount(conditions)
-
       // create a name -> field map of all the referenced fields for a quick lookup
       nameFieldMap <- {
         val chartFieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
         val filterFieldNames = conditions.map(_.fieldName.trim)
         val requiredFieldNames: Set[String] = (chartFieldNames ++ tableFieldNames ++ filterFieldNames)
 
-        getFields(requiredFieldNames).map{_.map(field => (field.name, field)).toMap}
+        getFields(requiredFieldNames).map {
+          _.map(field => (field.name, field)).toMap
+        }
       }
+
+      response <- getViewResponseAux(
+        page, orderBy, resolvedFilter, criteria, nameFieldMap, tableFieldNames, widgetSpecs, useOptimizedRepoChartCalcMethod
+      )
+    } yield
+      response
+
+  private def getViewResponseAux(
+    page: Int,
+    orderBy: String,
+    filter: Filter,
+    criteria: Seq[Criterion[Any]],
+    nameFieldMap: Map[String, Field],
+    tableFieldNames: Seq[String],
+    widgetSpecs: Seq[WidgetSpec],
+    useOptimizedRepoChartCalcMethod: Boolean
+  ): Future[ViewResponse] = {
+    // total count
+    val countFuture = repo.count(criteria)
+
+    // charts
+    val chartsFuture = generateCharts(useOptimizedRepoChartCalcMethod, criteria, widgetSpecs, nameFieldMap)
+
+    val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
+      nameFieldMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
+    }
+
+    // table items
+    val tableItemsFuture =
+      if (tableFieldNamesToLoad.nonEmpty)
+        getFutureItemsForCriteria(Some(page), orderBy, criteria, tableFieldNamesToLoad ++ Seq(JsObjectIdentity.name), Some(pageLimit))
+      else
+        Future(Nil)
+
+    for {
+      // obtain the total item count satisfying the resolved filter
+      count <- countFuture
 
       // generate the charts
-      chartSpecs <- generateCharts(useOptimizedRepoChartCalcMethod, criteria, widgetSpecs, nameFieldMap)
+      chartSpecs <- chartsFuture
 
       // load the table items
-      tableItems <- {
-        val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
-          nameFieldMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
-        }
-        if (tableFieldNamesToLoad.nonEmpty)
-            getFutureItems(Some(page), orderBy, conditions, tableFieldNamesToLoad ++ Seq(JsObjectIdentity.name), Some(pageLimit))
-          else
-            Future(Nil)
-      }
+      tableItems <- tableItemsFuture
     } yield {
       val tableFields = tableFieldNames.map(nameFieldMap.get).flatten
 
-      val fieldChartSpecs = chartSpecs.map(_.map { case (chartSpec,  fieldNames) =>
+      val fieldChartSpecs = chartSpecs.map(_.map { case (chartSpec, fieldNames) =>
         FieldChartSpec(fieldNames.head, chartSpec)
       })
 
-      val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)
+      val newFilter = setFilterLabels(filter, nameFieldMap)
 
       ViewResponse(count, fieldChartSpecs, tableItems, newFilter, tableFields)
     }
+  }
 
   override def findCustom(
     filterOrId: Either[Seq[FilterCondition], BSONObjectID],
@@ -805,7 +848,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     for {
     // get the data set name
-      dataSetName <- dataSetNameFuture
+      dataSetName <- dsa.dataSetName
 
       // get the data space tree
       dataSpaceTree <- dataSpaceTreeFuture
@@ -905,7 +948,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     {
       for {
         // get the data set name
-        dataSetName <- dataSetNameFuture
+        dataSetName <- dsa.dataSetName
 
         // get the data space tree
         dataSpaceTree <- dataSpaceTreeFuture
@@ -980,7 +1023,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     {
       for {
         // get the data set name
-        dataSetName <- dataSetNameFuture
+        dataSetName <- dsa.dataSetName
 
         // get the data space tree
         dataSpaceTree <- dataSpaceTreeFuture
@@ -1059,7 +1102,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     {
       for {
         // get the data set name
-        dataSetName <- dataSetNameFuture
+        dataSetName <- dsa.dataSetName
 
         // get the data space tree
         dataSpaceTree <- dataSpaceTreeFuture
@@ -1173,8 +1216,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def dataSpaceTreeFuture = DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
-
-  private def dataSetNameFuture = dsa.metaInfo.map(_.name)
 
   //////////////////////
   // Export Functions //

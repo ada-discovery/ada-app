@@ -103,7 +103,7 @@ GET         /studies/cumulativeCount                                            
 GET         /studies/records/findCustom                                             controllers.dataset.DataSetDispatcher.findCustom(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil), orderBy: String ?= "", projection: Seq[String] ?= Nil, limit: Option[Int] ?= None, skip: Option[Int] ?= None)
 
 # DictionaryDispatcher
-GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.overviewList(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/dictionary/listAll                                             controllers.dataset.DictionaryDispatcher.listAll(s: String ?= "name")
 GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)
 POST        /studies/dictionary/save                                                controllers.dataset.DictionaryDispatcher.save

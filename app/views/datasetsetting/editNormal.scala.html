@@ -1,15 +1,12 @@
 @import views.html.layout
 @import views.html.datasetsetting.elements
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
 @import models.DataSetSetting
-@import controllers.WebContext
-@import controllers.WebContext._
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
 
 @(
     id: reactivemongo.bson.BSONObjectID,
-    dataSetName: String,
     form: Form[DataSetSetting],
     fieldNamesCall: Call
 )(
@@ -17,7 +14,7 @@
 )
 
 @layout.edit(
-    dataSetName + "Data Set Setting",
+    "Data Set Setting",
     errors = form.errors,
     elements = elements(form),
     updateCall = dataSetSettingRoutes.update(id),

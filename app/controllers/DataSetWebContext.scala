@@ -1,13 +1,14 @@
 package controllers
 
-import com.sksamuel.elastic4s.{RichSearchHit, HitAs}
+import com.sksamuel.elastic4s.{HitAs, RichSearchHit}
+import controllers.core.WebContext
 import controllers.dataset._
 import play.api.libs.json.{Json, Reads}
 import play.api.mvc.{Flash, Request}
-import play.api.i18n.Messages
+import play.api.i18n.{Messages, MessagesApi}
 
-case class DataSetWebContext(
-  dataSetId: String)(
+class DataSetWebContext(
+  val dataSetId: String)(
   implicit val flash: Flash, val msg: Messages, val request: Request[_]) {
 
   val dataSetRouter = new DataSetRouter(dataSetId)
@@ -23,6 +24,12 @@ case class DataSetWebContext(
 }
 
 object DataSetWebContext {
+  implicit def apply(
+    dataSetId: String)(
+    implicit context: WebContext
+  ) =
+    new DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
+
   implicit def toFlash(
     implicit webContext: DataSetWebContext
   ): Flash = webContext.flash
