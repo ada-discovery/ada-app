@@ -54,11 +54,11 @@ class DataSpaceMetaInfoController @Inject() (
 
   override protected type ShowViewData = (DataSpaceMetaInfo, Map[String, Int], Traversable[DataSpaceMetaInfo])
 
-  override protected def createFormShowViewData(
+  override protected def getFormShowViewData(
     id: BSONObjectID,
     form: Form[DataSpaceMetaInfo]
   ): Future[ShowViewData] =
-    createFormEditViewData(id, form).map { case (_, form, dataSetSizes, tree) =>
+    getFormEditViewData(id, form).map { case (_, form, dataSetSizes, tree) =>
       (form.get, dataSetSizes, tree)
     }
 
@@ -75,7 +75,7 @@ class DataSpaceMetaInfoController @Inject() (
     Traversable[DataSpaceMetaInfo]
   )
 
-  override protected def createFormEditViewData(
+  override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[DataSpaceMetaInfo]
   ): Future[EditViewData] = {

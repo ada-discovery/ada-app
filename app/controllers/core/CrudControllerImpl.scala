@@ -52,7 +52,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
   // actions
 
   def create = Action.async { implicit request =>
-    createCreateViewData.map( viewData =>
+    getCreateViewData.map(viewData =>
       Ok(createViewWithContext(viewData))
     )
   }
@@ -73,7 +73,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
         viewData <- item.fold(
           Future(Option.empty[EditViewData])
         ) { entity =>
-          createEditViewData(id, entity).map(Some(_))
+          getEditViewData(id, entity).map(Some(_))
         }
       } yield
         item match {
@@ -99,7 +99,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
   protected def save(redirect: Result) = Action.async { implicit request =>
     formFromRequest.fold(
       { formWithErrors =>
-        createFormCreateViewData(formWithErrors).map( viewData =>
+        getFormCreateViewData(formWithErrors).map(viewData =>
           BadRequest(createViewWithContext(viewData))
         )
       },
@@ -131,7 +131,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
   protected def update(id: ID, redirect: Result): Action[AnyContent] = Action.async { implicit request =>
     formFromRequest.fold(
       { formWithErrors =>
-        createFormEditViewData(id, formWithErrors).map { viewData =>
+        getFormEditViewData(id, formWithErrors).map { viewData =>
           BadRequest(editViewWithContext(viewData))
         }
       },

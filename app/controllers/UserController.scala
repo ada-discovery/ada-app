@@ -54,7 +54,7 @@ class UserController @Inject() (
 
   override protected type CreateViewData = (Form[User], Traversable[DataSpaceMetaInfo], DataSetControllerActionNames)
 
-  override protected def createFormCreateViewData(form: Form[User]) =
+  override protected def getFormCreateViewData(form: Form[User]) =
     for {
       tree <- dataSpaceTree
     } yield
@@ -73,7 +73,7 @@ class UserController @Inject() (
     DataSetControllerActionNames
   )
 
-  override protected def createFormEditViewData(
+  override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[User]
   ): Future[EditViewData] =

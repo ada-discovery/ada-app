@@ -66,7 +66,7 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
         viewData <- item.fold(
           Future(Option.empty[ShowViewData])
         ) { entity =>
-          createShowViewData(id, entity).map(Some(_))
+          getShowViewData(id, entity).map(Some(_))
         }
       } yield
         item match {
@@ -96,7 +96,7 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
       for {
         (items, count) <- getFutureItemsAndCount(page, orderBy, filter)
 
-        viewData <- createListViewData(
+        viewData <- getListViewData(
           Page(items, page, page * pageLimit, count, orderBy, Some(new models.Filter(filter)))
         )
       } yield
@@ -121,7 +121,7 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
       for {
         (items, count) <- getFutureItemsAndCount(None, orderBy, Nil, Nil, None)
 
-        viewData <- createListViewData(
+        viewData <- getListViewData(
           Page(items, 0, 0, count, orderBy, None)
         )
       } yield

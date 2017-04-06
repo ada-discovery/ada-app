@@ -333,7 +333,7 @@ class DataSetImportController @Inject()(
 
   override protected type ListViewData = (Page[DataSetImport], Traversable[DataSpaceMetaInfo])
 
-  override protected def createListViewData(page: Page[DataSetImport]): Future[ListViewData] =
+  override protected def getListViewData(page: Page[DataSetImport]): Future[ListViewData] =
     for {
       tree <- DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
     } yield

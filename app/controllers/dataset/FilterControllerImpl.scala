@@ -73,7 +73,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
 
   override protected type CreateViewData = (String, Form[Filter])
 
-  override protected def createFormCreateViewData(form: Form[Filter]) =
+  override protected def getFormCreateViewData(form: Form[Filter]) =
     for {
       dataSetName <- dsa.dataSetName
     } yield
@@ -92,7 +92,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
     Traversable[DataSpaceMetaInfo]
   )
 
-  override protected def createFormEditViewData(
+  override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[Filter]
   ): Future[EditViewData] = {
@@ -131,7 +131,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
     Traversable[DataSpaceMetaInfo]
   )
 
-  override protected def createListViewData(
+  override protected def getListViewData(
     page: Page[Filter]
   ): Future[ListViewData] = {
     val setCreatedByFuture = FilterRepo.setCreatedBy(userRepo, page.items)

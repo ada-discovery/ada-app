@@ -67,7 +67,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   override protected type CreateViewData = (String, Form[Category], Traversable[Category])
 
-  override protected def createFormCreateViewData(form: Form[Category]) = {
+  override protected def getFormCreateViewData(form: Form[Category]) = {
     val dataSetNameFuture = dsa.dataSetName
     val categoriesFuture = allCategoriesFuture
 
@@ -94,7 +94,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     Traversable[DataSpaceMetaInfo]
   )
 
-  override protected def createFormEditViewData(
+  override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[Category]
   ): Future[EditViewData] = {
@@ -134,7 +134,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   override protected type ListViewData = (String, Page[Category], Traversable[DataSpaceMetaInfo])
 
-  override protected def createListViewData(page: Page[Category]): Future[ListViewData] = {
+  override protected def getListViewData(page: Page[Category]): Future[ListViewData] = {
     val treeFuture = dataSpaceTreeFuture
     val nameFuture = dsa.dataSetName
 

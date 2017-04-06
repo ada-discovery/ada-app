@@ -103,7 +103,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     Seq[String]
   )
 
-  override protected def createListViewData(
+  override protected def getListViewData(
     page: Page[JsObject]
   ): Future[ListViewData] = {
     val dataSetNameFuture = dsa.dataSetName
@@ -131,7 +131,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override type ShowViewData = DataSetShowViewDataHolder
 
-  override protected def createShowViewData(
+  override protected def getShowViewData(
     id: BSONObjectID,
     item: JsObject
   ) =

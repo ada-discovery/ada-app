@@ -88,7 +88,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override protected type CreateViewData = (String, Form[DataView])
 
-  override protected def createFormCreateViewData(form: Form[DataView]) =
+  override protected def getFormCreateViewData(form: Form[DataView]) =
     for {
       dataSetName <- dsa.dataSetName
     } yield
@@ -108,7 +108,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     Traversable[DataSpaceMetaInfo]
   )
 
-  override protected def createFormEditViewData(
+  override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[DataView]
   ): Future[EditViewData] = {
@@ -141,7 +141,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     Traversable[DataSpaceMetaInfo]
   )
 
-  override protected def createListViewData(
+  override protected def getListViewData(
     page: Page[DataView]
   ): Future[ListViewData] = {
     val setCreatedByFuture = DataViewRepo.setCreatedBy(userRepo, page.items)
@@ -218,7 +218,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Entity #$id not found"))
       ) { entity =>
-          createEditViewData(id, entity).map( viewData =>
+          getEditViewData(id, entity).map(viewData =>
             render {
               case Accepts.Html() => Ok(
                 view.edit(

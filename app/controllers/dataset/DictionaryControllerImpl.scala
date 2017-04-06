@@ -110,7 +110,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   override protected type CreateViewData = (String, Form[Field], Traversable[Category])
 
-  override protected def createFormCreateViewData(form: Form[Field]) = {
+  override protected def getFormCreateViewData(form: Form[Field]) = {
     val dataSetNameFuture = dsa.dataSetName
     val categoriesFuture = allCategoriesFuture
 
@@ -138,7 +138,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     Traversable[DataSpaceMetaInfo]
   )
 
-  override protected def createFormEditViewData(
+  override protected def getFormEditViewData(
     id: String,
     form: Form[Field]
   ): Future[EditViewData] = {
@@ -173,7 +173,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     Traversable[DataSpaceMetaInfo]
   )
 
-  override protected def createListViewData(page: Page[Field]): Future[ListViewData] = {
+  override protected def getListViewData(page: Page[Field]): Future[ListViewData] = {
     val fieldNameExtractors = Seq(
       ("Field Type", "fieldType", (field : Field) => field.fieldType)
       //      ("Enum", "isEnum", (field : Field) => field.isEnum)

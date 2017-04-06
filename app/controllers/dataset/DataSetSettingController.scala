@@ -82,7 +82,7 @@ class DataSetSettingController @Inject() (
     Call
   )
 
-  override protected def createFormEditViewData(
+  override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[DataSetSetting]
   ): Future[EditViewData] = {
