@@ -426,3 +426,23 @@ function shorten(string, length) {
     :
         string
 }
+
+function loadNewContent(url, elementId) {
+    $.ajax({
+        url: url,
+        success: function (html) {
+            $("#" + elementId).html(html);
+        }
+    });
+}
+
+function activateRowClickable() {
+    $(function() {
+        $(".clickable-row").dblclick(function () {
+            window.document.location = $(this).data("href");
+        });
+        $(".no-rowClicked").dblclick(function (event) {
+            event.stopPropagation();
+        });
+    });
+}
