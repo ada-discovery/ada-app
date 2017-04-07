@@ -18,6 +18,7 @@ import Criterion.Infix
 import controllers.core.{ReadonlyControllerImpl, WebContext}
 import org.apache.commons.lang3.StringEscapeUtils
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
+import models.FilterCondition.FilterOrId
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import play.api.Logger
 import play.api.i18n.Messages
@@ -267,7 +268,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private case class ViewResponse(
     count: Int,
-    fieldChartSpecs: Traversable[Option[FieldChartSpec]],
+    widgets: Traversable[Option[Widget]],
     tableItems: Traversable[JsObject],
     filter: Filter,
     tableFields: Traversable[Field]
@@ -295,7 +296,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getView(
     dataViewId: BSONObjectID,
-    tablePages: Seq[TablePage],
+    tablePages: Seq[PageOrder],
     filterOrIds: Seq[FilterOrId],
     filterChanged: Boolean
   ) = Action.async { implicit request =>
@@ -340,7 +341,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // initialize table pages
         tablePagesToUse = {
-          val padding = Seq.fill(Math.max(filterOrIdsToUse.size - tablePages.size, 0))(TablePage(0, ""))
+          val padding = Seq.fill(Math.max(filterOrIdsToUse.size - tablePages.size, 0))(PageOrder(0, ""))
           tablePages ++ padding
         }
 
@@ -366,9 +367,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Html() => {
             val fieldChartsSpecs =
               if (viewResponses.size > 1)
-                setBoxPlotMinMax(viewResponses.map(_.fieldChartSpecs))
+                setBoxPlotMinMax(viewResponses.map(_.widgets))
               else
-                viewResponses.map(_.fieldChartSpecs)
+                viewResponses.map(_.widgets)
 
             val viewParts = (viewResponses, fieldChartsSpecs, tablePagesToUse).zipped.map {
               case (viewResponse, fieldChartSpecs, tablePage) =>
@@ -406,54 +407,84 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
+  override def getTable(
+    page: Int,
+    orderBy: String,
+    fieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
+    val filterFuture = resolveFilter(filterOrId)
+
+    val fieldsFuture = getFields(fieldNames)
+
+    for {
+      // use a given filter conditions or load one
+      resolvedFilter <- filterFuture
+
+      // get the fields
+      fields <- fieldsFuture
+
+      // resolve criteria
+      criteria <- toCriteria(resolvedFilter.conditions)
+
+      // retrieve all the table items
+      tableItems <- {
+        val nameFieldMap = fields.map(field => (field.name, field)).toMap
+        getTableItems(page, orderBy, criteria, nameFieldMap, fieldNames)
+      }
+
+      // get the total count
+      count <- repo.count(criteria)
+    } yield {
+      val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy, Some(resolvedFilter))
+      Ok(dataset.showViewTable(tablePage, fields, router, true))
+    }
+  }
+
   private def setBoxPlotMinMax(
-    fieldChartSpecs: Seq[Traversable[Option[FieldChartSpec]]]
-  ): Seq[Traversable[Option[FieldChartSpec]]] = {
-    val chartSpecsSeqs = fieldChartSpecs.map(_.toSeq)
-    val chartCount = fieldChartSpecs.head.size
+    widgets: Seq[Traversable[Option[Widget]]]
+  ): Seq[Traversable[Option[Widget]]] = {
+    val widgetsSeqs = widgets.map(_.toSeq)
+    val chartCount = widgets.head.size
 
     def getMinMaxWhiskers[T](index: Int): Option[(T, T)] = {
-      val boxPlots: Seq[BoxWidget[T]] = chartSpecsSeqs.map { chartSpecs =>
-        chartSpecs(index).map(_.chartSpec).collect {
-          case x: BoxWidget[T] => x
-        }
+      val boxWidgets: Seq[BoxWidget[T]] = widgetsSeqs.map { widgets =>
+        widgets(index).collect { case x: BoxWidget[T] => x }
       }.flatten
 
-      boxPlots match {
+      boxWidgets match {
         case Nil => None
         case _ =>
-          implicit val ordering = boxPlots.head.ordering
-          val minLowerWhisker = boxPlots.map(_.data.lowerWhisker).min
-          val maxUpperWhisker = boxPlots.map(_.data.upperWhisker).max
+          implicit val ordering = boxWidgets.head.ordering
+          val minLowerWhisker = boxWidgets.map(_.data.lowerWhisker).min
+          val maxUpperWhisker = boxWidgets.map(_.data.upperWhisker).max
           Some(minLowerWhisker.asInstanceOf[T], maxUpperWhisker.asInstanceOf[T])
       }
     }
 
     def setMinMax[T: Ordering](
-      boxPlot: BoxWidget[T],
+      boxWidget: BoxWidget[T],
       minMax: (Any, Any)
     ): BoxWidget[T] =
-      boxPlot.copy(min = Some(minMax._1.asInstanceOf[T]), max = Some(minMax._2.asInstanceOf[T]))
+      boxWidget.copy(min = Some(minMax._1.asInstanceOf[T]), max = Some(minMax._2.asInstanceOf[T]))
 
     val indexMinMaxWhiskers =
       for (index <- 0 until chartCount) yield
         (index, getMinMaxWhiskers[Any](index))
 
-    chartSpecsSeqs.map { chartSpecs =>
-      chartSpecs.zip(indexMinMaxWhiskers).map{ case (fieldChartSpec, (index, minMaxWhiskers)) =>
+    widgetsSeqs.map { widgets =>
+      widgets.zip(indexMinMaxWhiskers).map{ case (widget, (index, minMaxWhiskers)) =>
         minMaxWhiskers match {
           case Some(minMaxWhiskers) =>
-            fieldChartSpec.map { fieldChartSpec =>
-              val newChartSpec =
-                fieldChartSpec.chartSpec match {
-                  case x: BoxWidget[_] =>
-                    implicit val ordering = x.ordering
-                    setMinMax(x, minMaxWhiskers)
-                  case _ => fieldChartSpec.chartSpec
-                }
-              FieldChartSpec(fieldChartSpec.fieldName, newChartSpec)
+            widget.map { widget =>
+              widget match {
+                case x: BoxWidget[_] =>
+                  implicit val ordering = x.ordering
+                  setMinMax(x, minMaxWhiskers)
+                case _ => widget
+              }
             }
-          case None => fieldChartSpec
+          case None => widget
         }
       }
     }
@@ -462,7 +493,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private def getViewResponse(
     page: Int,
     orderBy: String,
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID],
+    filterOrId: FilterOrId,
     tableFieldNames: Seq[String],
     widgetSpecs: Seq[WidgetSpec],
     useOptimizedRepoChartCalcMethod: Boolean
@@ -504,47 +535,53 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     widgetSpecs: Seq[WidgetSpec],
     useOptimizedRepoChartCalcMethod: Boolean
   ): Future[ViewResponse] = {
+
     // total count
     val countFuture = repo.count(criteria)
 
-    // charts
-    val chartsFuture = generateCharts(useOptimizedRepoChartCalcMethod, criteria, widgetSpecs, nameFieldMap)
-
-    val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
-      nameFieldMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
-    }
+    // widgets
+    val widgetsFuture = generateWidgets(useOptimizedRepoChartCalcMethod, criteria, widgetSpecs, nameFieldMap)
 
     // table items
-    val tableItemsFuture =
-      if (tableFieldNamesToLoad.nonEmpty)
-        getFutureItemsForCriteria(Some(page), orderBy, criteria, tableFieldNamesToLoad ++ Seq(JsObjectIdentity.name), Some(pageLimit))
-      else
-        Future(Nil)
+    val tableItemsFuture = getTableItems(page, orderBy, criteria, nameFieldMap, tableFieldNames)
 
     for {
       // obtain the total item count satisfying the resolved filter
       count <- countFuture
 
       // generate the charts
-      chartSpecs <- chartsFuture
+      chartSpecs <- widgetsFuture
 
       // load the table items
       tableItems <- tableItemsFuture
     } yield {
       val tableFields = tableFieldNames.map(nameFieldMap.get).flatten
-
-      val fieldChartSpecs = chartSpecs.map(_.map { case (chartSpec, fieldNames) =>
-        FieldChartSpec(fieldNames.head, chartSpec)
-      })
-
+      val widgets = chartSpecs.map(_.map(_._1))
       val newFilter = setFilterLabels(filter, nameFieldMap)
-
-      ViewResponse(count, fieldChartSpecs, tableItems, newFilter, tableFields)
+      ViewResponse(count, widgets, tableItems, newFilter, tableFields)
     }
   }
 
+  private def getTableItems(
+    page: Int,
+    orderBy: String,
+    criteria: Seq[Criterion[Any]],
+    nameFieldMap: Map[String, Field],
+    tableFieldNames: Seq[String]
+  ): Future[Traversable[JsObject]] = {
+    val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
+      nameFieldMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
+    }
+
+    // table items
+    if (tableFieldNamesToLoad.nonEmpty)
+      getFutureItemsForCriteria(Some(page), orderBy, criteria, tableFieldNamesToLoad ++ Seq(JsObjectIdentity.name), Some(pageLimit))
+    else
+      Future(Nil)
+  }
+
   override def findCustom(
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID],
+    filterOrId: FilterOrId,
     orderBy: String,
     projection: Seq[String],
     limit: Option[Int],
@@ -569,7 +606,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
   }
 
-  private def generateCharts(
+  private def generateWidgets(
     perChartRepoMethod: Boolean,
     criteria: Seq[Criterion[Any]],
     widgetSpecs: Traversable[WidgetSpec],
@@ -744,7 +781,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def resolveFilter(
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ): Future[Filter] = {
     // use a given filter conditions or load one
     filterOrId match {
@@ -821,7 +858,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     xFieldNameOption: Option[String],
     yFieldNameOption: Option[String],
     groupFieldNameOption: Option[String],
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ) = Action.async { implicit request =>
     val settings = setting
 
@@ -935,7 +972,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getDistribution(
     fieldNameOption: Option[String],
     groupFieldNameOption: Option[String],
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ) = Action.async { implicit request =>
     val fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
 
@@ -1018,7 +1055,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   def getCorrelations(
     fieldNames: Seq[String],
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ) = Action.async { implicit request =>
     {
       for {
@@ -1078,7 +1115,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getCumulativeCount(
     fieldNameOption: Option[String],
     groupFieldNameOption: Option[String],
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
@@ -1400,7 +1437,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             val nonZeroCountSeriesSorted = countSeriesSorted.filter(_._2.exists(_.count > 0))
 
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Pie)))
-            CategoricalCountWidget(chartTitle, field.labelOrElseName, showLabels, showLegend, nonZeroCountSeriesSorted, initializedDisplayOptions)
+            CategoricalCountWidget(chartTitle, field.name, field.labelOrElseName, showLabels, showLegend, nonZeroCountSeriesSorted, initializedDisplayOptions)
           }
 
           case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date => {

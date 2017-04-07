@@ -2,16 +2,19 @@
 @import views.html.dataset.displayJsonModal
 @import reactivemongo.bson.BSONObjectID
 @import play.api.libs.json.{JsValue, JsObject}
-@import models.FieldTypeId
+@import models.{Field, FieldTypeId}
 @import util.FieldTypeRenderer
 @import controllers.dataset.DataSetViewData
-@import controllers.dataset.{DataSetRouter, DataSetJsRouter}
+@import controllers.dataset.DataSetRouter
 @import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+@import models.FilterCondition.FilterOrId
+@import models.DataSetFormattersAndIds.JsObjectIdentity
 
 @(
-    dataViewId: BSONObjectID,
-    viewParts: Seq[DataSetViewData],
-    dataSetRouter: DataSetRouter
+    page: Page[JsObject],
+    tableFields: Traversable[Field],
+    dataSetRouter: DataSetRouter,
+    withRowClickableJs: Boolean = false
 )(
     implicit request: Request[_]
 )
@@ -40,56 +43,42 @@
     }
 }
 
-@render(fun: Option[JsValue] => Html)(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @fun(jsValue)
-}
-
-@inputFilterConditionsOrIds = @{
-    viewParts.map(_.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)))
-}
-
-@table(viewData: DataSetViewData, index: Int) = @{
-    paginatedJsonTable(
-        viewData.page, { (page: Int, orderBy: String) =>
-            dataSetRouter.getView(
-                dataViewId,
-                viewParts.zipWithIndex.map { case (viewPart, i) =>
-                    if (i == index)
-                        TablePage(page, orderBy)
-                    else
-                        viewPart.page.toTablePage
-                },
-                inputFilterConditionsOrIds,
-                true
-            )
-        },
-        Some(viewData.tableFields.map{ field =>
-            field.label.map( fieldLabel => (field.name, fieldLabel))
-        }.flatten.toMap),
-        Some(viewData.tableFields.map(_.name).toSeq),
-        Some({ item : JsObject => dataSetRouter.get((item \ "_id").as[BSONObjectID])}),
-        Some(viewData.tableFields.map{ field =>
-            if (field.isArray) {
-                if(field.fieldType == FieldTypeId.Json)
-                    Some(field.name, jsonArrayRender(_, _, _))
-                else
-                    Some(field.name, arrayRender(_, _, _))
-            } else
-                if (field.fieldType == FieldTypeId.Json)
-                    Some(field.name, jsonRender(_, _, _))
-                else {
-                    val renderer = FieldTypeRenderer(field)
-                    Some(field.name, { (id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) => renderer(jsValue) })
-                }
-        }.flatten.toMap)
-    )
-}
-
-<div class="row vertical-divider">
-    @viewParts.zipWithIndex.map { case (viewPart, index) =>
-        <div class="col-md-@{12 / viewParts.size}">
-            @table(viewPart, index)
-        </div>
+@render(field: Field) = @{
+    if (field.isArray) {
+        if(field.fieldType == FieldTypeId.Json)
+            (field.name, jsonArrayRender(_, _, _))
+        else
+            (field.name, arrayRender(_, _, _))
+    } else {
+        if(field.fieldType == FieldTypeId.Json)
+            (field.name, jsonRender(_, _, _))
+        else {
+            val renderer = FieldTypeRenderer(field)
+            (field.name, { (id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) => renderer(jsValue) })
+        }
     }
-    @displayJsonModal("jsonModal", None)
-</div>
+}
+
+@paginatedJsonTable(
+    page,
+    dataSetRouter.getTable(
+        _, _,
+        tableFields.map(_.name).toSeq,
+        page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))
+    ),
+    Some(
+        tableFields.map( field =>
+            field.label.map( fieldLabel => (field.name, fieldLabel))
+        ).flatten.toMap
+    ),
+    Some(tableFields.map(_.name).toSeq),
+    Some({ item : JsObject => dataSetRouter.get((item \ JsObjectIdentity.name).as[BSONObjectID])}),
+    Some(tableFields.map(render).toMap),
+    true
+)
+
+@if(withRowClickableJs) {
+    <script type="text/javascript">
+        activateRowClickable();
+    </script>
+}

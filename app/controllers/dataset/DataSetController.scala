@@ -1,33 +1,30 @@
 package controllers.dataset
 
 import controllers.core.{CrudController, ReadonlyController}
-import dataaccess.{Criterion, Sort}
-import models.{FieldTypeId, FilterCondition, TablePage}
+import models.FilterCondition.FilterOrId
+import models.{FieldTypeId, FilterCondition, PageOrder}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 
 trait DataSetController extends ReadonlyController[BSONObjectID] {
 
-  type FilterOrId = Either[Seq[FilterCondition], BSONObjectID]
-
   def overviewFieldTypes: Action[AnyContent]
 
-  /**
-    * Renders the view with a given id
-    *
-    * @param dataViewId
-    * @param tablePages
-    * @param filterOrIds
-    * @return
-    */
   def getView(
     dataViewId: BSONObjectID,
-    tablePages: Seq[TablePage],
+    tablePages: Seq[PageOrder],
     filterOrIds: Seq[FilterOrId],
     filterChanged: Boolean
   ): Action[AnyContent]
 
   def getDefaultView: Action[AnyContent]
+
+  def getTable(
+    page: Int,
+    orderBy: String,
+    fieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
 
   def getDistribution(
     fieldName: Option[String],
@@ -81,7 +78,7 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent]
 
   def findCustom(
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID],
+    filterOrId: FilterOrId,
     orderBy: String,
     projection: Seq[String],
     limit: Option[Int],

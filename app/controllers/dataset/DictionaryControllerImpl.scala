@@ -168,7 +168,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   override protected type ListViewData = (
     String,
     Page[Field],
-    Traversable[FieldChartSpec],
+    Traversable[Widget],
     Traversable[(String, Option[String])],
     Traversable[DataSpaceMetaInfo]
   )
@@ -191,9 +191,9 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
     val nameFuture = dsa.dataSetName
 
-    val fieldChartSpecsFuture = Future.sequence(
+    val widgetsFuture = Future.sequence(
       fieldNameExtractors.map { case (title, fieldName, fieldExtractor) =>
-        getDictionaryChartSpec(title, newConditions, fieldName, fieldExtractor).map(chartSpec => FieldChartSpec(fieldName, chartSpec))
+        getDictionaryWidget(title, newConditions, fieldName, fieldExtractor)
       }
     )
     val setCategoriesFuture = setCategoriesById(categoryRepo, newPage.items)
@@ -205,13 +205,13 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       // get the data set name
       dataSetName <- nameFuture
 
-      // create charts
-      fieldChartSpecs <- fieldChartSpecsFuture
+      // create widgets
+      widgets <- widgetsFuture
 
       // set categories
       _ <- setCategoriesFuture
     } yield
-      (dataSetName + " Field", newPage, fieldChartSpecs, fieldNameLabels, tree)
+      (dataSetName + " Field", newPage, widgets, fieldNameLabels, tree)
   }
 
   override protected def listView = { implicit ctx =>
@@ -282,7 +282,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     ).as("text/javascript")
   }
 
-  private def getDictionaryChartSpec(
+  private def getDictionaryWidget(
     chartTitle : String,
     filter: Seq[FilterCondition],
     fieldName : String,
@@ -295,7 +295,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       ).map { fields =>
         val values = fields.map(field => Some(fieldExtractor(field).toString))
         val counts = statsService.categoricalCountsWithFormatting(values, None)
-        CategoricalCountWidget(chartTitle, fieldName, false, true, Seq((chartTitle, counts)), MultiChartDisplayOptions(chartType = Some(ChartType.Pie)))
+        CategoricalCountWidget(chartTitle, fieldName, fieldName, false, true, Seq((chartTitle, counts)), MultiChartDisplayOptions(chartType = Some(ChartType.Pie)))
       }
     }
 

@@ -2,7 +2,7 @@
 @import views.html.dataset.{filterWidgetPanel, datasetSubNav, datasetSubNavJs, datasetMenu}
 @import views.html.widget.widgetPanelJs
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
-@import views.html.dataset.{showViewTable, showViewTableJs}
+@import views.html.dataset.{showViewTables$, showViewTablesJs$}
 @import views.html.dataset.exportDataSetDropdown
 @import views.html.filter.{filter, filterJs}
 @import reactivemongo.bson.BSONObjectID
@@ -136,20 +136,20 @@
     </div>
 }
 
-@charts = {
+@widgets = {
     <div class="row vertical-divider">
         @viewParts.zipWithIndex.map { case (viewPart, index) =>
             <div class="col-md-@{12 / viewParts.size}">
-                @filterWidgetPanel(s"filter$index", viewPart.fieldChartSpecs, chartGridElementWidth)
+                @filterWidgetPanel(s"filter$index", viewPart.widgets, chartGridElementWidth)
             </div>
         }
     </div>
 }
 
-@filtersAndCharts = {
+@filtersAndWidgets = {
     @filters
     <hr/>
-    @charts
+    @widgets
 }
 
 @bottomResources = {
@@ -157,7 +157,7 @@
     @highchartsJsImportForBulkExport()
 
     @viewParts.map { viewPart =>
-        @widgetPanelJs(viewPart.fieldChartSpecs.map(_.chartSpec))
+        @widgetPanelJs(viewPart.widgets)
     }
 
     @datasetSubNavJs()
@@ -170,7 +170,7 @@
         @viewFilterJs(viewPart, index)
     }
 
-    @showViewTableJs(dataSetJsRouter)
+    @showViewTablesJs(dataSetJsRouter)
 
     <script type="text/javascript">
         function getFilterOrId(index) {
@@ -206,14 +206,14 @@
     Some(dataSetName + " ("+ dataViewName + ")"),
     viewParts.map(_.page.total).sum,
     Some(actions),
-    showViewTable(dataViewId, viewParts, dataSetRouter),
+    showViewTables(dataViewId, viewParts, dataSetRouter),
     if (viewParts.size == 1) {
-        if (viewParts.head.fieldChartSpecs.nonEmpty)
-            Some(charts)
+        if (viewParts.head.widgets.nonEmpty)
+            Some(widgets)
         else
             None
     } else {
-        Some(filtersAndCharts)
+        Some(filtersAndWidgets)
     },
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNav()),

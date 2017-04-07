@@ -2,15 +2,16 @@
 
 @(
     page: Page[_],
-    listCall : (Int, String) => Call,
+    refreshCall : (Int, String) => Call,
     columns : Traversable[(Option[String], String, (Any => Html))],
     rowClickCall : Option[Any => Call] = None,
     hiddenRowId: Option[(String, Any => String)] = None,
-    tableId: Option[String] = None
+    tableId: Option[String] = None,
+    isAjaxRefresh: Boolean = false
 )
 
-@listCallAux(newPage : Int, newOrderBy : Option[String]) = @{
-    listCall(newPage, newOrderBy.map { nOrderBy =>
+@refreshCallAux(newPage : Int, newOrderBy : Option[String]) = @{
+    refreshCall(newPage, newOrderBy.map { nOrderBy =>
         if (nOrderBy == page.orderBy) {
             "-" + page.orderBy
         } else if (("-" + nOrderBy) == page.orderBy) {
@@ -20,7 +21,16 @@
 }
 
 @if(page.items.nonEmpty) {
-    @displayTable(page.items, columns, Some(header(page.orderBy, listCallAux)), rowClickCall, hiddenRowId, tableId)
-    <hr/>
-    @pagination(page, listCallAux)
+    @defining(tableId.getOrElse("tableDiv_" + scala.util.Random.nextLong())) { tableDivId =>
+        @displayTable(
+            page.items,
+            columns,
+            Some(header(page.orderBy, refreshCallAux, Some(tableDivId), isAjaxRefresh)),
+            rowClickCall,
+            hiddenRowId,
+            tableId
+        )
+        <hr/>
+        @pagination(page, refreshCallAux, Some(tableDivId), isAjaxRefresh)
+    }
 }

@@ -1,0 +1,26 @@
+@import views.html.dataset.{displayJsonModal, showViewTable}
+@import reactivemongo.bson.BSONObjectID
+@import controllers.dataset.DataSetViewData
+@import controllers.dataset.DataSetRouter
+@import models.FilterCondition.FilterOrId
+
+@(
+    dataViewId: BSONObjectID,
+    viewParts: Seq[DataSetViewData],
+    dataSetRouter: DataSetRouter
+)(
+    implicit request: Request[_]
+)
+
+<div class="row vertical-divider">
+    @viewParts.map { viewPart =>
+        <div class="col-md-@{12 / viewParts.size}">
+            @showViewTable(
+                viewPart.page,
+                viewPart.tableFields,
+                dataSetRouter
+            )
+        </div>
+    }
+    @displayJsonModal("jsonModal", None)
+</div>

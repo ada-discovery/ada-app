@@ -9,7 +9,6 @@
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.category.categorySelectionModal
 @import views.html.filter.{filter, filterWithJs}
-@import models.FieldChartSpec
 @import util.typeColumns
 @import controllers.dataset.{DataViewRouter, DataViewJsRouter, DictionaryRouter, DictionaryJsRouter, CategoryRouter, CategoryJsRouter}
 @import models.DataSpaceMetaInfo
@@ -21,7 +20,7 @@
 @(
     domainName : String,
     page: Page[Field],
-    fieldChartSpecs: Traversable[FieldChartSpec],
+    widgets: Traversable[Widget],
     fieldNameLabels: Traversable[(String, Option[String])],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -122,7 +121,7 @@
 
 @bottomResources = {
     @highchartsJsImport()
-    @widgetPanelJs(fieldChartSpecs.map(_.chartSpec))
+    @widgetPanelJs(widgets)
 }
 
 @layout.list(
@@ -131,7 +130,7 @@
     page.total,
     Some(actions),
     table,
-    Some(filterWidgetPanel("filterDiv", fieldChartSpecs, 6)),
+    Some(filterWidgetPanel("filterDiv", widgets, 6)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNavWithJs()),
     None,

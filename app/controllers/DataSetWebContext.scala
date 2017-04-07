@@ -1,11 +1,9 @@
 package controllers
 
-import com.sksamuel.elastic4s.{HitAs, RichSearchHit}
 import controllers.core.WebContext
 import controllers.dataset._
-import play.api.libs.json.{Json, Reads}
 import play.api.mvc.{Flash, Request}
-import play.api.i18n.{Messages, MessagesApi}
+import play.api.i18n.Messages
 
 class DataSetWebContext(
   val dataSetId: String)(

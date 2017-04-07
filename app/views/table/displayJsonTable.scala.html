@@ -9,10 +9,11 @@
     fieldLabelMap : Option[Map[String, String]] = None,
     fieldsToShow : Option[Seq[String]] = None,
     rowClickCall : Option[JsObject => Call] = None,
-    fieldNameRenderMap: Option[Map[String, (BSONObjectID, String, Option[JsValue]) => Html]] = None
+    fieldNameRenderMap: Option[Map[String, (BSONObjectID, String, Option[JsValue]) => Html]] = None,
+    tableId: Option[String] = None
 )
 
-<table class="table table-striped">
+<table @if(tableId.isDefined) {id="@tableId.get"} class="table table-striped">
 	<thead>
 		<tr>
             @if(fieldsToShow.isDefined) {

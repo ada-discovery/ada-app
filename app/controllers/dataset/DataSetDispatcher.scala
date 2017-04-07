@@ -2,9 +2,10 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.{SecureControllerDispatcher, ControllerDispatcher}
-import models.{TablePage, FieldTypeId, FilterCondition}
-import play.api.mvc.{AnyContent, Action}
+import controllers.{ControllerDispatcher, SecureControllerDispatcher}
+import models.FilterCondition.FilterOrId
+import models.{FieldTypeId, FilterCondition, PageOrder}
+import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil._
 
@@ -39,35 +40,42 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getView(
     dataViewId: BSONObjectID,
-    tablePages: Seq[TablePage],
+    tablePages: Seq[PageOrder],
     filterOrIds: Seq[FilterOrId],
     filterChanged: Boolean
   ) = dispatch(_.getView(dataViewId, tablePages, filterOrIds, filterChanged))
 
   override def getDefaultView = dispatch(_.getDefaultView)
 
+  override def getTable(
+    page: Int,
+    orderBy: String,
+    fieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ) = dispatch(_.getTable(page, orderBy, fieldNames, filterOrId))
+
   override def getScatterStats(
     xFieldName: Option[String],
     yFieldName: Option[String],
     groupFieldName: Option[String],
-    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ) = dispatch(_.getScatterStats(xFieldName, yFieldName, groupFieldName, filterOrId))
 
   override def getDistribution(
     fieldName: Option[String],
     groupFieldName: Option[String],
-    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ) = dispatch(_.getDistribution(fieldName, groupFieldName, filterOrId))
 
   override def getCorrelations(
     fieldNames: Seq[String],
-    filterOrId: Either[Seq[FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ) = dispatch(_.getCorrelations(fieldNames, filterOrId))
 
   override def getCumulativeCount(
     dateFieldName: Option[String],
     groupFieldName: Option[String],
-    filterOrId: Either[Seq[models.FilterCondition], BSONObjectID]
+    filterOrId: FilterOrId
   ) = dispatch(_.getCumulativeCount(dateFieldName, groupFieldName, filterOrId))
 
   override def getFields(

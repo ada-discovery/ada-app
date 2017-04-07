@@ -4,12 +4,13 @@ import com.fasterxml.jackson.core.JsonParseException
 import controllers.BSONObjectIDQueryStringBindable
 import play.api.mvc.QueryStringBindable
 import util.JsonUtil
-import dataaccess.{EnumFormat, BSONObjectIdentity}
-import models.FilterCondition.{filterConditionFormat, filterFormat}
+import dataaccess.{BSONObjectIdentity, EnumFormat}
+import models.FilterCondition.{FilterOrId, filterConditionFormat, filterFormat}
 import models.DataSetFormattersAndIds.enumTypeFormat
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
-import java.util.{UUID, Date}
+import java.util.{Date, UUID}
+
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
 import dataaccess.EitherFormat._
@@ -77,7 +78,7 @@ object QueryStringBinders {
   implicit val FilterQueryStringBinder = createQueryStringBinder[Filter]
   implicit val FieldTypeIdsQueryStringBinder = createQueryStringBinder[Seq[FieldTypeId.Value]]
   implicit val BSONObjectIDQueryStringBinder = BSONObjectIDQueryStringBindable
-  implicit val FilterOrIdBinder = createQueryStringBinder[Either[Seq[FilterCondition], BSONObjectID]]
-  implicit val FilterOrIdSeqBinder = createQueryStringBinder[Seq[Either[Seq[FilterCondition], BSONObjectID]]]
-  implicit val TablePageSeqBinder = createQueryStringBinder[Seq[TablePage]]
+  implicit val FilterOrIdBinder = createQueryStringBinder[FilterOrId]
+  implicit val FilterOrIdSeqBinder = createQueryStringBinder[Seq[FilterOrId]]
+  implicit val TablePageSeqBinder = createQueryStringBinder[Seq[PageOrder]]
 }

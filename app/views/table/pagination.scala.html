@@ -1,10 +1,23 @@
-@(page: Page[_], listCall : (Int, Option[String]) => Call)
+@(
+    page: Page[_],
+    refreshCall: (Int, Option[String]) => Call,
+    tableDivId: Option[String] = None,
+    isAjaxRefresh: Boolean = false
+)
+
+@link(page: Int)(title: Html) = {
+    @if(isAjaxRefresh) {
+        <a href="#" onclick="loadNewContent('@refreshCall(page, None).url', '@tableDivId.getOrElse(throw new IllegalArgumentException("TableDivId expected for ajax refresh"))'); return false">@title</a>
+    } else {
+        <a href="@refreshCall(page, None)">@title</a>
+    }
+}
 
 <ul class="pager">
     @page.prev.map { page =>
-    <li class="previous">
-        <a href="@listCall(page, None)">&larr; Previous</a>
-    </li>
+        <li class="previous">
+            @link(page){&larr; Previous}
+        </li>
     }.getOrElse {
         <li class="previous disabled">
             <a>&larr; Previous</a>
@@ -14,9 +27,9 @@
     <a>Displaying @(page.offset + 1) to @(page.offset + page.items.size) of @page.total</a>
 </li>
     @page.next.map { page =>
-    <li class="next">
-        <a href="@listCall(page, None)">Next &rarr;</a>
-    </li>
+        <li class="next">
+            @link(page){Next &rarr;}
+        </li>
     }.getOrElse {
         <li class="next disabled">
             <a>Next &rarr;</a>

@@ -12,6 +12,7 @@ abstract class Widget {
 
 case class CategoricalCountWidget(
   title: String,
+  fieldName: String,
   fieldLabel: String,
   showLabels: Boolean,
   showLegend: Boolean,
@@ -67,8 +68,6 @@ case class Count[T](
   count: Int,
   key: Option[String]
 )
-
-case class FieldChartSpec(fieldName: String, chartSpec : Widget)
 
 // TODO: move elsewhere
 object CategoricalCountWidget {

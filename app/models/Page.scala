@@ -23,11 +23,11 @@ case class Page[A](
   lazy val filterId: Option[BSONObjectID] =
     filter.map(_._id).flatten
 
-  def toTablePage = TablePage(page, orderBy)
+  def toPageOrder = PageOrder(page, orderBy)
 }
 
-case class TablePage(page: Int, orderBy: String)
+case class PageOrder(page: Int, orderBy: String)
 
-object TablePage {
-  implicit val format = Json.format[TablePage]
+object PageOrder {
+  implicit val format = Json.format[PageOrder]
 }

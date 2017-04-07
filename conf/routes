@@ -49,7 +49,7 @@ GET         /admin/dataSetImport/:id                                            
 POST        /admin/dataSetImport/:id                                                controllers.dataset.DataSetImportController.update(id: BSONObjectID)
 POST        /admin/dataSetImport/:id/delete                                         controllers.dataset.DataSetImportController.delete(id: BSONObjectID)
 
-# Users management
+# User Management
 GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "ldapDn", filter: Seq[models.FilterCondition] ?= Nil)
 GET         /users/all                                                              controllers.UserController.listAll(s: String ?= "ldapDn")
 GET         /users/new                                                              controllers.UserController.create
@@ -94,12 +94,13 @@ GET         /studies/records/exportAsCsv                                        
 GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(dataViewId: BSONObjectID, filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
 GET         /studies/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
-GET         /studies/getView                                                        controllers.dataset.DataSetDispatcher.getView(dataViewId: BSONObjectID, tablePages: Seq[models.TablePage] ?= Nil, filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]] ?= Nil, filterChanged: Boolean ?= false)
+GET         /studies/getView                                                        controllers.dataset.DataSetDispatcher.getView(dataViewId: BSONObjectID, tablePages: Seq[models.PageOrder] ?= Nil, filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]] ?= Nil, filterChanged: Boolean ?= false)
 GET         /studies/getDefaultView                                                 controllers.dataset.DataSetDispatcher.getDefaultView
 GET         /studies/scatter                                                        controllers.dataset.DataSetDispatcher.getScatterStats(xFieldName: Option[String] ?= None, yFieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/correlations                                                   controllers.dataset.DataSetDispatcher.getCorrelations(fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/cumulativeCount                                                controllers.dataset.DataSetDispatcher.getCumulativeCount(fieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /studies/table                                                          controllers.dataset.DataSetDispatcher.getTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
 GET         /studies/records/findCustom                                             controllers.dataset.DataSetDispatcher.findCustom(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil), orderBy: String ?= "", projection: Seq[String] ?= Nil, limit: Option[Int] ?= None, skip: Option[Int] ?= None)
 
 # DictionaryDispatcher
