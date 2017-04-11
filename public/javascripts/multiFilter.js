@@ -117,21 +117,44 @@ $.widget( "custom.multiFilter", {
         var condition = { };
 
         this.updateModelFromModal(condition, this.conditionFields);
+        this._updateModelFromModalAux(condition, "fieldNameTypeahead", "fieldLabel");
 
         this.addAndSubmitCondition(condition);
+    },
+
+    addAndSubmitCondition: function(condition) {
+        this.jsonConditions.push(condition);
+        var index = this.jsonConditions.size - 1;
+
+        // this._createNewFilterCondition(index, condition);
+
+        this.submitFilter();
+    },
+
+    _createNewFilterCondition: function (index, condition) {
+        var li = $("<li>", {id: "condition-full" + index, "class": "condition-full"});
+
+        var conditionSpan = $("<span>", {"class": "condition"})
+        conditionSpan.append("<span class='label label-primary' id='fieldLabel'>" + condition['fieldLabel'] + "</span>");
+        conditionSpan.append("<span id='conditionType'><b> " + condition['conditionType'] + " </b></span>");
+        conditionSpan.append("<span class='label label-primary' id='value'>" + condition['value'] + "</span>");
+
+        var h4 = $("<h4></h4>");
+        h4.append(conditionSpan)
+
+        li.append(h4);
+        this.conditionPanelElement.append(li)
     },
 
     editAndSubmitConditionFromModal: function (index) {
         var condition = this.jsonConditions[index];
 
         this.updateModelFromModal(condition, this.conditionFields);
-        this.updateFilterFromModel(index, condition, this.conditionFields);
+        this._updateModelFromModalAux(condition, "fieldNameTypeahead", "fieldLabel");
 
-        this.submitFilter();
-    },
+        var fields = this.conditionFields.concat(["fieldLabel"])
+        this.updateFilterFromModel(index, condition, fields);
 
-    addAndSubmitCondition: function (condition) {
-        this.jsonConditions.push(condition);
         this.submitFilter();
     },
 
@@ -181,8 +204,13 @@ $.widget( "custom.multiFilter", {
     updateModelFromModal: function (condition, fields) {
         var that = this;
         $.each(fields, function( i, field ) {
-            condition[field] = that.addEditConditionModalElement.find("#" + field).first().val();
+            that._updateModelFromModalAux(condition, field, field);
         })
+    },
+
+    _updateModelFromModalAux: function (condition, fieldFrom, fieldTo) {
+        var that = this;
+        condition[fieldTo] = that.addEditConditionModalElement.find("#" + fieldFrom).first().val();
     },
 
     updateModalFromModel: function (condition, fields) {
@@ -203,7 +231,7 @@ $.widget( "custom.multiFilter", {
     updateFilterFromModel: function (index, condition, fields) {
         var that = this;
         $.each(fields, function( i, field ) {
-            that.element.find("#condition-full" + index +" #" + field).first().html(condition[field]);
+            that.conditionPanelElement.find("#condition-full" + index +" #" + field).first().html(condition[field]);
         })
     },
 
