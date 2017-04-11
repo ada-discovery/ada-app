@@ -1,8 +1,7 @@
-@import views.html.dataset.{displayJsonModal, showViewTable}
+@import views.html.dataset.{displayJsonModal, viewTable}
 @import reactivemongo.bson.BSONObjectID
 @import controllers.dataset.DataSetViewData
 @import controllers.dataset.DataSetRouter
-@import models.FilterCondition.FilterOrId
 
 @(
     dataViewId: BSONObjectID,
@@ -15,7 +14,7 @@
 <div class="row vertical-divider">
     @viewParts.map { viewPart =>
         <div class="col-md-@{12 / viewParts.size}">
-            @showViewTable(
+            @viewTable(
                 viewPart.page,
                 viewPart.tableFields,
                 dataSetRouter

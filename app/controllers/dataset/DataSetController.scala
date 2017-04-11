@@ -19,6 +19,13 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getDefaultView: Action[AnyContent]
 
+  def getWidgetPanelAndTable(
+    dataViewId: BSONObjectID,
+    tablePage: Int,
+    tableOrder: String,
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
   def getTable(
     page: Int,
     orderBy: String,
@@ -76,6 +83,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def exportTranSMARTDataFile(delimiter : String): Action[AnyContent]
 
   def exportTranSMARTMappingFile(delimiter : String): Action[AnyContent]
+
+  def getCategoriesWithFieldsAsTreeNodes(filterOrId: FilterOrId): Action[AnyContent]
 
   def findCustom(
     filterOrId: FilterOrId,

@@ -55,31 +55,37 @@
 }
 
 @conditionPanel(isDisplayed: Boolean) = {
-    <ul id="conditionPanel" class="list-inline" @if(!isDisplayed) {style="display:None"}>
-        @filter.map{ f =>
-            @f.conditions.zipWithIndex.map { case (condition, index) =>
-            <li id="condition-full@index" class="condition-full">
-                <h4>
-                    <span class="condition">
-                        <span class="label label-primary">@condition.fieldLabelOrElseName</span>
-                        <span><b>@condition.conditionType</b></span>
-                        <span class="label label-primary">@valueOrUndefined(condition)</span>
-                    </span>
-                    <span class="condition-buttons" style="display: none; padding-left: 5px">
-                        <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showEditConditionModal', '@index')">
-                            <span class="glyphicon glyphicon-pencil"></span>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('deleteCondition', '@index')">
-                <span class="glyphicon glyphicon-trash"></span>
+    <ul class="list-inline">
+        <li>
+            <ul id="conditionPanel" class="list-inline" @if(!isDisplayed) {style="display:None"}>
+                @filter.map{ f =>
+                    @f.conditions.zipWithIndex.map { case (condition, index) =>
+                    <li id="condition-full@index" class="condition-full">
+                        <h4>
+                            <span class="condition">
+                                <span class="label label-primary" id="fieldLabel">@condition.fieldLabelOrElseName</span>
+                                <span id="conditionType"><b>@condition.conditionType</b></span>
+                                <span class="label label-primary" id="value">@valueOrUndefined(condition)</span>
+                            </span>
+                            <span class="condition-buttons" style="display: none; padding-left: 5px">
+                                <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showEditConditionModal', '@index')">
+                                    <span class="glyphicon glyphicon-pencil"></span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('deleteCondition', '@index')">
+                                    <span class="glyphicon glyphicon-trash"></span>
+                                </button>
+                            </span>
+                        </h4>
+                    </li>
+                    }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
+                }.getOrElse(Html(""))
+            </ul>
+        </li>
+        <li>
+            <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showAddConditionModal')" data-toggle="tooltip" title="Add Filter Condition">
+                <span class="glyphicon glyphicon-plus"></span>
             </button>
-            </span>
-            </h4>
-            </li>
-            }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
-        }.getOrElse(Html(""))
-        <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showAddConditionModal')" data-toggle="tooltip" title="Add Filter Condition">
-            <span class="glyphicon glyphicon-plus"></span>
-        </button>
+        </li>
     </ul>
 }
 
@@ -92,8 +98,14 @@
 
 @categoryTreeNodeSelectedJsFun = {
     function(node) {
-        if (node.type == "field") {
-            $('#@filterElementName').multiFilter('setFieldTypeaheadAndName', node.id, node.text);
+        if (node.type.startsWith("field-")) {
+            var text = node.text
+            var nonNullCount = node.data.nonNullCount
+            if (nonNullCount) {
+                var lastIndex = text.lastIndexOf(" (" + nonNullCount + ")")
+                text = text.substring(0, lastIndex)
+            }
+            $('#@filterElementName').multiFilter('setFieldTypeaheadAndName', node.id, text);
         }
     }
 }
@@ -111,7 +123,24 @@
                         <input id="conditionIndex" type="hidden" value=""/>
                         @if(categoriesOrCall.isDefined) {
                             <div id="categoryDiv" class="row collapse">
-                                @jsTree(categoryTreeDataOrUrl, "categoryTree", Some(categoryTreeNodeSelectedJsFun))
+                                @jsTree(
+                                    categoryTreeDataOrUrl,
+                                    "categoryTree",
+                                    Json.obj(
+                                        "default" -> Json.obj("icon" -> "glyphicon glyphicon-folder-close category-node"),
+                                        "category" -> Json.obj("icon" -> "glyphicon glyphicon-folder-close category-node"),
+                                        "category-open" -> Json.obj("icon" -> "glyphicon glyphicon-folder-open category-node"),
+                                        "field-" + FieldTypeId.Null -> Json.obj("icon" -> "glyphicon glyphicon-ban-circle"),
+                                        "field-" + FieldTypeId.Double -> Json.obj("icon" -> "glyphicon glyphicon-stats"),
+                                        "field-" + FieldTypeId.Integer -> Json.obj("icon" -> "glyphicon glyphicon-signal"),
+                                        "field-" + FieldTypeId.Boolean -> Json.obj("icon" -> "glyphicon glyphicon-check"),
+                                        "field-" + FieldTypeId.Enum -> Json.obj("icon" -> "glyphicon glyphicon-font"),
+                                        "field-" + FieldTypeId.String -> Json.obj("icon" -> "glyphicon glyphicon-bold"),
+                                        "field-" + FieldTypeId.Date -> Json.obj("icon" -> "glyphicon glyphicon-calendar"),
+                                        "field-" + FieldTypeId.Json -> Json.obj("icon" -> "glyphicon glyphicon-book")
+                                    ),
+                                    Some(categoryTreeNodeSelectedJsFun)
+                                )
                                 <hr/>
                             </div>
                         }

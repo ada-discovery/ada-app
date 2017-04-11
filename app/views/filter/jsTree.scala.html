@@ -1,10 +1,12 @@
 @import play.api.libs.json.JsValue
 
 @import play.api.libs.json.Json
+@import play.api.libs.json.JsObject
 
 @(
     dataOrUrl: Either[JsValue, String],
     treeElementName: String = "jstree1",
+    typesSetting: JsObject,
     nodeSelectedFun: Option[Html] = None
 )
 
@@ -40,7 +42,7 @@
 
     var dataUrl =
         @if(dataOrUrl.isRight) {
-            '@dataOrUrl.right.get'
+            '@Html(dataOrUrl.right.get)'
         } else {
             null
         }
@@ -71,21 +73,7 @@
                 },
                 'data' : data
             },
-            "types" : {
-                "default" : {
-                    "icon" : "glyphicon glyphicon-folder-close category-node"
-                },
-                "category" : {
-                    "icon" : "glyphicon glyphicon-folder-close category-node"
-                },
-                'category-open' : {
-                    'icon' : 'glyphicon glyphicon-folder-open category-node'
-                },
-                "field" : {
-                    "icon" : "glyphicon glyphicon-leaf"
-                }
-            },
-
+            "types" : @Html(Json.stringify(typesSetting)),
             "search": {
                 "case_insensitive": true,
                 "show_only_matches" : true,

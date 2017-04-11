@@ -2,8 +2,9 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.{SecureControllerDispatcher, ControllerDispatcher}
+import controllers.{ControllerDispatcher, SecureControllerDispatcher}
 import models.FilterCondition
+import models.FilterCondition.FilterOrId
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil.createDataSetPermission
@@ -45,8 +46,6 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
   override def saveForName(name: String) = dispatch(_.saveForName(name))
 
   override def getCategoryD3Root = dispatch(_.getCategoryD3Root)
-
-  override def getCategoriesWithFieldsAsTreeNodes = dispatch(_.getCategoriesWithFieldsAsTreeNodes)
 
   override def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]) = dispatch(_.relocateToParent(id, parentId))
 

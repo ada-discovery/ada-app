@@ -59,6 +59,7 @@ class DataSetSettingController @Inject() (
       "defaultDistributionFieldName" -> nonEmptyText,
       "defaultCumulativeCountFieldName" -> optional(text),
       "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
+      "filterShowNonNullCount" -> boolean,
       "tranSMARTVisitFieldName" -> optional(text),
       "tranSMARTReplacements" -> default(of[Map[String, String]], Map("\n" -> " ", "\r" -> " ")),
       "storageType" -> of[StorageType.Value],

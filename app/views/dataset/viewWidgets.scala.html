@@ -1,0 +1,14 @@
+@import views.html.dataset.filterWidgetPanel
+
+@(
+    widgets: Seq[Traversable[Widget]],
+    gridElementWidth: Int
+)
+
+<div class="row vertical-divider">
+    @widgets.zipWithIndex.map { case (innerWidgets, index) =>
+        <div class="col-md-@{12 / widgets.size}">
+            @filterWidgetPanel(s"filter$index", innerWidgets, gridElementWidth)
+        </div>
+    }
+</div>

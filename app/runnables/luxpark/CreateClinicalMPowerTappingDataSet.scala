@@ -94,6 +94,7 @@ class CreateClinicalMPowerTappingDataSet @Inject()(
           NewMPowerTappingField.LeftTappingScore.toString,
           None,
           None,
+          false,
           None,
           Map(),
         StorageType.ElasticSearch,

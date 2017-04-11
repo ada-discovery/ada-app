@@ -47,6 +47,13 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getDefaultView = dispatch(_.getDefaultView)
 
+  override def getWidgetPanelAndTable(
+    dataViewId: BSONObjectID,
+    tablePage: Int,
+    tableOrder: String,
+    filterOrId: FilterOrId
+  ) = dispatch(_.getWidgetPanelAndTable(dataViewId, tablePage, tableOrder, filterOrId))
+
   override def getTable(
     page: Int,
     orderBy: String,
@@ -119,4 +126,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     limit: Option[Int],
     skip: Option[Int]
   ) = dispatch(_.findCustom(filterOrId, orderBy, projection, limit, skip))
+
+  override def getCategoriesWithFieldsAsTreeNodes(
+    filterOrId: FilterOrId
+  ) = dispatch(_.getCategoriesWithFieldsAsTreeNodes(filterOrId))
 }

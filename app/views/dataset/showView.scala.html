@@ -1,8 +1,8 @@
 @import views.html.layout
-@import views.html.dataset.{filterWidgetPanel, datasetSubNav, datasetSubNavJs, datasetMenu}
+@import views.html.dataset.{viewWidgets, datasetSubNav, datasetSubNavJs, datasetMenu}
 @import views.html.widget.widgetPanelJs
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
-@import views.html.dataset.{showViewTables$, showViewTablesJs$}
+@import views.html.dataset.{viewTables, viewTablesJs}
 @import views.html.dataset.exportDataSetDropdown
 @import views.html.filter.{filter, filterJs}
 @import reactivemongo.bson.BSONObjectID
@@ -19,7 +19,7 @@
     dataViewId: BSONObjectID,
     dataViewName: String,
     viewParts: Seq[DataSetViewData],
-    chartGridElementWidth: Int,
+    widgetGridElementWidth: Int,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
@@ -92,7 +92,7 @@
 @viewFilter(viewPart: DataSetViewData, index: Int) = {
     @filter(
         viewPart.page.filter,
-        Some(Right(categoryRouter.getCategoriesWithFieldsAsTreeNodes)),
+        Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(viewPart.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))))),
         filterShowFieldStyle,
         Some(filterJsRouter),
         Some(filterRouter.idAndNames),
@@ -137,13 +137,7 @@
 }
 
 @widgets = {
-    <div class="row vertical-divider">
-        @viewParts.zipWithIndex.map { case (viewPart, index) =>
-            <div class="col-md-@{12 / viewParts.size}">
-                @filterWidgetPanel(s"filter$index", viewPart.widgets, chartGridElementWidth)
-            </div>
-        }
-    </div>
+    @viewWidgets(viewParts.map(_.widgets), widgetGridElementWidth)
 }
 
 @filtersAndWidgets = {
@@ -170,7 +164,7 @@
         @viewFilterJs(viewPart, index)
     }
 
-    @showViewTablesJs(dataSetJsRouter)
+    @viewTablesJs(dataSetJsRouter)
 
     <script type="text/javascript">
         function getFilterOrId(index) {
@@ -206,7 +200,7 @@
     Some(dataSetName + " ("+ dataViewName + ")"),
     viewParts.map(_.page.total).sum,
     Some(actions),
-    showViewTables(dataViewId, viewParts, dataSetRouter),
+    viewTables(dataViewId, viewParts, dataSetRouter),
     if (viewParts.size == 1) {
         if (viewParts.head.widgets.nonEmpty)
             Some(widgets)

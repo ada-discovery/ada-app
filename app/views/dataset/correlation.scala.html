@@ -31,7 +31,7 @@
                 Some(filterSpec),
                 dataSetRouter.getCorrelations(fields.map(_.name).toSeq, filterSpec.conditionsOrId),
                 Right(dataSetRouter.allFields),
-                Some(Right(categoryRouter.getCategoriesWithFieldsAsTreeNodes)),
+                Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
                 filterShowFieldStyle,
                 Some(filterJsRouter),
                 Some(filterRouter.idAndNames),

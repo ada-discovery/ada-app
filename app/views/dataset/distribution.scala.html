@@ -34,7 +34,7 @@
                 Some(filterSpec),
                 dataSetRouter.getDistribution(field.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
                 Right(dataSetRouter.allFields),
-                Some(Right(categoryRouter.getCategoriesWithFieldsAsTreeNodes)),
+                Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
                 filterShowFieldStyle,
                 Some(filterJsRouter),
                 Some(filterRouter.idAndNames),

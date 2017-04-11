@@ -1,16 +1,19 @@
 package controllers.dataset
 
 import javax.inject.Inject
+import java.{util => ju}
 
 import com.google.inject.assistedinject.Assisted
 import controllers.DataSetWebContext
-import dataaccess.{AscSort, Criterion, User}
+import dataaccess.{AscSort, Criterion}
 import models._
 import models.DataSetFormattersAndIds._
 import Criterion.Infix
 import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
+import models.FilterCondition.FilterOrId
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
+import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
@@ -19,7 +22,8 @@ import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-import views.html.{dataview, user, category => view}
+import util.ExecutionContexts
+import views.html.{category => view}
 
 import scala.concurrent.Future
 
@@ -36,7 +40,11 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     with CategoryController
     with HasFormShowEqualEditView[Category, BSONObjectID] {
 
+//  implicit val ec = ExecutionContexts.fixed1000ThreadEC
+
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
+
+  private val logger = Logger  // (this.getClass())
 
   protected val fieldRepo = dsa.fieldRepo
 
@@ -224,17 +232,6 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       val root = D3Node(None, "Root", None, layerOneCategories.map(category => idD3NodeMap(category._id.get)).toSeq)
 
       Ok(Json.toJson(root))
-    }
-  }
-
-  override def getCategoriesWithFieldsAsTreeNodes = Action.async { implicit request =>
-    for {
-      categories <- repo.find()
-      fieldsWithCategory <- fieldRepo.find(Seq("categoryId" #!= None))
-    } yield {
-      val jsTreeNodes =
-        categories.map(JsTreeNode.fromCategory) ++ fieldsWithCategory.map(JsTreeNode.fromField)
-      Ok(Json.toJson(jsTreeNodes))
     }
   }
 

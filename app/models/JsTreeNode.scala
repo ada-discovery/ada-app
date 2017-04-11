@@ -23,12 +23,16 @@ object JsTreeNode {
       Some(Json.obj("label" -> category.label))
     )
 
-  def fromField(field: Field) =
+  def fromField(field: Field, nonNullCount: Option[Int]) = {
+    val countText = nonNullCount.map(" (" + _ + ")").getOrElse("")
+    val countJson = nonNullCount.map( count => Json.obj("nonNullCount" -> count)).getOrElse(Json.obj())
+
     JsTreeNode(
       field.name,
       field.categoryId.map(_.stringify).getOrElse("#"),
-      field.labelOrElseName,
-      Some("field"),
-      Some(Json.obj("label" -> field.label))
+      field.labelOrElseName + countText,
+      Some("field-" + field.fieldType.toString),
+      Some(Json.obj("label" -> field.label) ++  countJson)
     )
+  }
 }

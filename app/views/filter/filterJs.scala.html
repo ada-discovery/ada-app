@@ -88,22 +88,23 @@
         var initFilterIfNeededTreeCallback = null;
 
         @if(categoryTreeElementName.isDefined) {
-            var categoryTreeFieldNodeIdLabels = [];
+            var categoryTreeFieldNodeDatas = [];
 
-            function initCategoryTreeFieldNodeIdLabels() {
-                categoryTreeFieldNodeIdLabels = Object.values($("#@categoryTreeElementName.get").jstree(true)._model.data).filter(
+            function initCategoryTreeFieldNodeDatas() {
+                categoryTreeFieldNodeDatas = Object.values($("#@categoryTreeElementName.get").jstree(true)._model.data).filter(
                     function(node) {
-                        return node.type == "field";
+                        return node.type.startsWith("field-");
                     }
-                ).map(function (field, index) { return {id: field.id, label: field.data.label}; });
+                ).map(function (field, index) { return {id: field.id, label: field.data.label, nonNullCount: field.data.nonNullCount}; });
             }
 
             fieldDisplayChoiceCallback = function(choiceVal) {
-                if (categoryTreeFieldNodeIdLabels.length == 0) {
-                    initCategoryTreeFieldNodeIdLabels()
+                if (categoryTreeFieldNodeDatas.length == 0) {
+                    initCategoryTreeFieldNodeDatas()
                 }
-                $.each(categoryTreeFieldNodeIdLabels, function( index, field ) {
+                $.each(categoryTreeFieldNodeDatas, function( index, field ) {
                     var text;
+                    var nonNullCount = field.nonNullCount
                     switch (choiceVal) {
                         case 0: text = field.id; break;
                         case 1: text = field.label; break;
@@ -111,6 +112,9 @@
                         case 3: text = (field.label) ? field.label : field.id; break;
                     }
                     if (text) {
+                        if (nonNullCount) {
+                            text = text + " (" + nonNullCount + ")"
+                        }
                         $("#@categoryTreeElementName.get").jstree('set_text', field.id, text);
                         $("#@categoryTreeElementName.get").jstree(true).show_node(field.id);
                     } else {

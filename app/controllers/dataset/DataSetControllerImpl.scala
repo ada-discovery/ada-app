@@ -9,6 +9,7 @@ import models.ConditionType._
 import util.{BasicStats, fieldLabel}
 import _root_.util.WebExportUtil._
 import _root_.util.shorten
+import _root_.util.seqFutures
 import dataaccess._
 import models.{MultiChartDisplayOptions, _}
 import com.google.inject.assistedinject.Assisted
@@ -21,13 +22,12 @@ import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.FilterCondition.FilterOrId
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import play.api.Logger
-import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.Results._
-import play.api.mvc.{Filter => _, _}
 import reactivemongo.bson.BSONObjectID
 import services.{StatsService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.mvc.{Action, Call, Request, Result}
 import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
 
@@ -55,6 +55,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   protected val filterRepo = dsa.filterRepo
   protected val dataViewRepo = dsa.dataViewRepo
 
+  private val logger = Logger  // (this.getClass())
+
   // not that the associated data set repo could be updated (by calling updateDataSetRepo)
   // therefore it should not be stored as val
   override protected def repo = dsa.dataSetRepo
@@ -75,9 +77,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   // auto-generated filename for tranSMART mapping files
   protected def tranSMARTMappingFileName: String = dataSetId.replace(" ", "-") + "_mapping_file"
-
-  // setting of data set ui aspects such as overview chart field names, etc.
-  protected def setting = result(dsa.setting)
 
   // router for requests; to be passed to views as helper.
   protected val router = new DataSetRouter(dataSetId)
@@ -199,7 +198,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       delimiter,
       eolToUse,
       if (replaceEolWithSpace) csvCharReplacements else Nil)(
-      setting.exportOrderByFieldName,
+      result(dsa.setting).exportOrderByFieldName,
       filter,
       if (tableColumnsOnly)
         result(dataViewTableColumnNames(dataViewId))
@@ -220,7 +219,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ) =
     exportToJson(
       jsonFileName)(
-      setting.exportOrderByFieldName,
+      result(dsa.setting).exportOrderByFieldName,
       filter,
       if (tableColumnsOnly)
         result(dataViewTableColumnNames(dataViewId))
@@ -305,6 +304,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val dataSetNameFuture = dsa.dataSetName
     val treeFuture = dataSpaceTreeFuture
     val dataViewFuture = dataViewRepo.get(dataViewId)
+    val settingFuture = dsa.setting
 
     {
       for {
@@ -316,6 +316,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // load the view
         dataView <- dataViewFuture
+
+        // setting
+        setting <- settingFuture
 
         // initialize filters
         filterOrIdsToUse: Seq[FilterOrId] =
@@ -407,6 +410,56 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
+  override def getWidgetPanelAndTable(
+    dataViewId: BSONObjectID,
+    tablePage: Int,
+    tableOrder: String,
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
+    val start = new ju.Date()
+
+    val dataViewFuture = dataViewRepo.get(dataViewId)
+
+    {
+      for {
+        // load the view
+        dataView <- dataViewFuture
+
+        // get the response data
+        viewResponse <- {
+          val (columnNames, widgetSpecs) =
+            dataView.map( view => (view.tableColumnNames, view.widgetSpecs)).getOrElse((Nil, Nil))
+
+          val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
+
+          getViewResponse(tablePage, tableOrder, filterOrId, columnNames, widgetSpecs, useChartRepoMethod)
+        }
+      } yield {
+        Logger.info(s"Data loading of a widget panel and a table for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
+
+        val renderingStart = new ju.Date()
+
+        render {
+          case Accepts.Html() => {
+            val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder, Some(viewResponse.filter))
+
+            val widgetPanel = dataset.filterWidgetPanel("filter", viewResponse.widgets.flatten, dataView.map(_.elementGridWidth).getOrElse(3))
+
+            val table = dataset.viewTable(newPage, viewResponse.tableFields, router, true)
+
+            Logger.info(s"Rendering of a widget panel and a table for the data set '${dataSetId}' finished in ${new ju.Date().getTime - renderingStart.getTime} ms")
+            Ok(widgetPanel)
+          }
+          case Accepts.Json() => Ok(Json.toJson(viewResponse.tableItems))
+        }
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the getWidgetPanelAndTable process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
   override def getTable(
     page: Int,
     orderBy: String,
@@ -437,7 +490,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       count <- repo.count(criteria)
     } yield {
       val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy, Some(resolvedFilter))
-      Ok(dataset.showViewTable(tablePage, fields, router, true))
+      Ok(dataset.viewTable(tablePage, fields, router, true))
     }
   }
 
@@ -860,44 +913,63 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     groupFieldNameOption: Option[String],
     filterOrId: FilterOrId
   ) = Action.async { implicit request =>
-    val settings = setting
+    dsa.setting.flatMap { setting =>
+      // initialize the x, y, and group field names
+      val xFieldName: Option[String] =
+        xFieldNameOption.map(Some(_)).getOrElse(
+          setting.defaultScatterXFieldName
+        )
 
-    // initialize the x, y, and group field names
-    val xFieldName: Option[String] =
-      xFieldNameOption.map(Some(_)).getOrElse(
-          settings.defaultScatterXFieldName
-      )
+      val yFieldName: Option[String] =
+        yFieldNameOption.map(Some(_)).getOrElse(
+          setting.defaultScatterYFieldName
+        )
 
-    val yFieldName: Option[String] =
-      yFieldNameOption.map(Some(_)).getOrElse(
-        settings.defaultScatterYFieldName
-      )
+      val groupFieldName: Option[String] =
+        groupFieldNameOption.map { fieldName =>
+          val trimmed = fieldName.trim
+          if (trimmed.isEmpty) None else Some(trimmed)
+        }.flatten
 
-    val groupFieldName: Option[String] =
-      groupFieldNameOption.map { fieldName =>
-        val trimmed = fieldName.trim
-        if (trimmed.isEmpty) None else Some(trimmed)
-    }.flatten
+      getScatterStatsAux(xFieldName, yFieldName, groupFieldName, filterOrId, setting)
+    }
+  }
+
+  private def getScatterStatsAux(
+    xFieldName: Option[String],
+    yFieldName: Option[String],
+    groupFieldName: Option[String],
+    filterOrId: FilterOrId,
+    setting: DataSetSetting)(
+    implicit request: Request[_]
+  ): Future[Result] = {
+    val dataSetNameFuture = dsa.dataSetName
+
+    val treeFuture = dataSpaceTreeFuture
 
     // auxiliary function to retrieve a field definition
     def getField(fieldName: Option[String]): Future[Option[Field]] =
       fieldName.map(fieldRepo.get).getOrElse(Future(None))
 
+    val xFieldFuture = getField(xFieldName)
+    val yFieldFuture = getField(yFieldName)
+    val groupFieldFuture = getField(groupFieldName)
+
     for {
     // get the data set name
-      dataSetName <- dsa.dataSetName
+      dataSetName <- dataSetNameFuture
 
       // get the data space tree
-      dataSpaceTree <- dataSpaceTreeFuture
+      dataSpaceTree <- treeFuture
 
       // x field
-      xField <- getField(xFieldName)
+      xField <- xFieldFuture
 
       // y field
-      yField <- getField(yFieldName)
+      yField <- yFieldFuture
 
       // group field
-      groupField <- getField(groupFieldName)
+      groupField <- groupFieldFuture
 
       // use a given filter conditions or load one
       resolvedFilter <- resolveFilter(filterOrId)
@@ -905,12 +977,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       criteria <- toCriteria(resolvedFilter.conditions)
 
       xyzItems <-
-        (xField zip yField).headOption.map { case (xField, yField) =>
-          val projection = (Seq(xField, yField) ++ groupField).map(_.name)
-          repo.find(criteria, Nil, projection.toSet)
-        }.getOrElse(
-          Future(Nil)
-        )
+      (xField zip yField).headOption.map { case (xField, yField) =>
+        val projection = (Seq(xField, yField) ++ groupField).map(_.name)
+        repo.find(criteria, Nil, projection.toSet)
+      }.getOrElse(
+        Future(Nil)
+      )
 
       // create a name -> field map of the filter referenced fields
       fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
@@ -974,7 +1046,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     groupFieldNameOption: Option[String],
     filterOrId: FilterOrId
   ) = Action.async { implicit request =>
-    val fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
 
     val groupFieldName: Option[String] =
       groupFieldNameOption.map { fieldName =>
@@ -995,6 +1066,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // get the criteria
         criteria <- toCriteria(resolvedFilter.conditions)
+
+        // get the data set setting
+        setting <- dsa.setting
+
+        fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
 
         // chart field
         field <- fieldRepo.get(fieldName)
@@ -1059,6 +1135,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ) = Action.async { implicit request =>
     {
       for {
+        // get the setting
+        setting <- dsa.setting
+
         // get the data set name
         dataSetName <- dsa.dataSetName
 
@@ -1119,12 +1198,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
-    // initialize the field name
-    val fieldName: Option[String] =
-      fieldNameOption.map(Some(_)).getOrElse(
-        setting.defaultCumulativeCountFieldName
-      )
-
     // initialize the group name
     val groupFieldName: Option[String] =
       groupFieldNameOption.map { fieldName =>
@@ -1138,11 +1211,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
+        // get the data set setting
+        setting <- dsa.setting
+
         // get the data set name
         dataSetName <- dsa.dataSetName
 
         // get the data space tree
         dataSpaceTree <- dataSpaceTreeFuture
+
+        // initialize the field name
+        fieldName = fieldNameOption.map(Some(_)).getOrElse(
+          setting.defaultCumulativeCountFieldName
+        )
 
         // get the field definition
         field <- getField(fieldName)
@@ -1195,6 +1276,62 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       case t: TimeoutException =>
         Logger.error("Problem found in the GetCumulativeCount process")
         InternalServerError(t.getMessage)
+    }
+  }
+
+  def getCategoriesWithFieldsAsTreeNodes(
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
+    val start = new ju.Date()
+
+    val settingFuture = dsa.setting
+
+    val filterFuture = resolveFilter(filterOrId)
+
+    val allCategoriesFuture = categoryRepo.find()
+
+    val fieldsWithCategoryFuture = fieldRepo.find(
+      criteria = Seq("categoryId" #!= None),
+      projection = Seq("name", "label", "categoryId", "fieldType")
+    )
+
+    for {
+      // get the data set setting
+      setting <- settingFuture
+
+      // get the filter
+      filter <- filterFuture
+
+      // retrieve all the categories
+      categories <- allCategoriesFuture
+
+      // retrieve all the fields with a category defined
+      fieldsWithCategory <- fieldsWithCategoryFuture
+
+      // convert conditions to criteria
+      criteria <- toCriteria(filter.conditions)
+
+      // count the not-null elements for each field
+      fieldNotNullCounts <-
+        if (setting.filterShowNonNullCount) {
+          seqFutures(fieldsWithCategory.toSeq.grouped(1000)) {fieldGroup =>
+            Future.sequence(
+              fieldGroup.map( field =>
+                // count not null
+                dsa.dataSetRepo.count(criteria ++ Seq(field.name #!@)).map( count => (field, Some(count)))
+              )
+            )
+          }
+        } else {
+          Future(Seq(fieldsWithCategory.map( field => (field, None))))
+        }
+    } yield {
+      val jsTreeNodes =
+        categories.map(JsTreeNode.fromCategory) ++
+          fieldNotNullCounts.flatten.map { case (field, count) => JsTreeNode.fromField(field, count) }
+
+      logger.info("Categories with fields and counts retrieved in " + (new ju.Date().getTime - start.getTime) + " ms.")
+      Ok(Json.toJson(jsTreeNodes))
     }
   }
 
@@ -1267,11 +1404,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     */
   def exportTranSMARTDataFile(delimiter : String) = Action.async { implicit request =>
     for {
+      setting <- dsa.setting
+
       fileContent <- generateTranSMARTDataFile(
-          tranSMARTDataFileName,
-          delimiter,
-          setting.exportOrderByFieldName
-        )
+        tranSMARTDataFileName,
+        delimiter,
+        setting.exportOrderByFieldName
+      )
     } yield
       stringToFile(tranSMARTDataFileName)(fileContent)
   }
@@ -1284,11 +1423,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     */
   def exportTranSMARTMappingFile(delimiter : String) = Action.async { implicit request =>
     for {
+      setting <- dsa.setting
+
       fileContent <- generateTranSMARTMappingFile(
-          tranSMARTDataFileName,
-          delimiter,
-          setting.exportOrderByFieldName
-        )
+        tranSMARTDataFileName,
+        delimiter,
+        setting.exportOrderByFieldName
+      )
     } yield
       stringToFile(tranSMARTMappingFileName)(fileContent)
   }
@@ -1307,13 +1448,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     orderBy: Option[String]
   ): Future[String] = {
     for {
+      setting <- dsa.setting
+
       records <- repo.find(sort = orderBy.fold(Seq[Sort]())(toSort))
+
       categories <- categoryRepo.find()
+
       categoryMap <- fieldNameCategoryMap(categories)
+
       fields <- fieldRepo.find()
     } yield {
       val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
-
 
       tranSMARTService.createClinicalDataFile(unescapedDelimiter, csvEOL, setting.tranSMARTReplacements)(
         records,
@@ -1338,18 +1483,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     delimiter: String,
     orderBy: Option[String]
   ): Future[String] = {
-    val dataSetSetting = setting
     for {
+      setting <- dsa.setting
+
       categories <- categoryRepo.find()
+
       categoryMap <- fieldNameCategoryMap(categories)
+
       fieldMap <- fieldLabelMap
     } yield {
       val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
 
-      tranSMARTService.createMappingFile(unescapedDelimiter, csvEOL, dataSetSetting.tranSMARTReplacements)(
+      tranSMARTService.createMappingFile(unescapedDelimiter, csvEOL, setting.tranSMARTReplacements)(
         dataFilename,
-        dataSetSetting.keyFieldName,
-        dataSetSetting.tranSMARTVisitFieldName,
+        setting.keyFieldName,
+        setting.tranSMARTVisitFieldName,
         categoryMap,
         rootCategoryTree(categories),
         fieldMap

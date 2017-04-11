@@ -19,6 +19,7 @@
             @select("dataSetImport", "setting.filterShowFieldStyle", form,
                 FilterShowFieldStyle.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString))), true
             )
+            @checkbox("dataSetImport", "setting.filterShowNonNullCount", form)
             @inputText("dataSetImport", "setting.tranSMARTVisitFieldName", form)
             @inputText("dataSetImport", "setting.tranSMARTReplacements", form)
             @select("dataSetImport", "setting.storageType", form,
