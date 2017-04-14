@@ -115,66 +115,63 @@ function createStringDatumTokenizer(searchAsContainsFlag, nonWhitespaceDelimiter
 
 function populateStringTypeahead(element, data, searchAsContainsFlag, nonWhitespaceDelimiter, updateValueElement) {
     var datumTokenizer = createStringDatumTokenizer(searchAsContainsFlag, nonWhitespaceDelimiter)
-    populateTypeahead(element, data, datumTokenizer, null, null, updateValueElement)
+    var source = createBloodhoundSource(data, datumTokenizer)
+    populateTypeahead(element, source, null, null, updateValueElement)
 }
 
-function populateTypeahead(element, data, datumTokenizer, displayFun, suggestionFun, updateValueElement) {
-  var dataSource = new Bloodhound({
-    datumTokenizer: datumTokenizer,
-    queryTokenizer: Bloodhound.tokenizers.whitespace,
-    local: data
-  });
+function createBloodhoundSource(data, datumTokenizer) {
+    var dataSource = new Bloodhound({
+        datumTokenizer: datumTokenizer,
+        queryTokenizer: Bloodhound.tokenizers.whitespace,
+        local: data
+    });
 
-  dataSource.initialize();
+    dataSource.initialize();
 
-  // Setting of minlength to 0 does not work. To sho ALL items if nothing entered this function needs to be introduced
-  function listSearchWithAll(q, sync) {
-    if (q == '')
-        sync(dataSource.all());
-    else
-        dataSource.search(q, sync);
-  }
+    // Setting of minlength to 0 does not work. To sho ALL items if nothing entered this function needs to be introduced
+    function listSearchWithAll(q, sync) {
+        if (q == '')
+            sync(dataSource.all());
+        else
+            dataSource.search(q, sync);
+    }
 
-  element.typeahead({
-    hint: true,
-    highlight: true,
-    minLength: 0
-  }, {
-    source: listSearchWithAll,
-    display: displayFun,
-    templates: {
-      suggestion: suggestionFun
-    },
-    limit: 25
-  });
-
-  element.on("focus", function () {
-    var value = element.val();
-    element.typeahead('val', '_');
-    element.typeahead('val', value);
-    return true
-  });
-
-  element.on('typeahead:select', function (e, datum) {
-    if (updateValueElement)
-        updateValueElement(datum);
-  });
-
-  element.on('typeahead:cursorchanged', function (e, datum) {
-    if (updateValueElement)
-        updateValueElement(datum);
-  });
+    return listSearchWithAll;
 }
 
-/**
- *
- * @param typeaheadElement
- * @param fieldNameElement
- * @param fieldNameAndLabels
- * @param showOption 0 - show field names only, 1 - show field labels only,
- *                   2 - show field labels, and field names if no label defined, 3 - show both, field names and labels
- */
-function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption) {
+function populateTypeahead(element, source, displayFun, suggestionFun, updateValueElement) {
+    element.typeahead({
+        hint: true,
+        highlight: true,
+        minLength: 0
+    }, {
+        source: source,
+        display: displayFun,
+        templates: {
+            suggestion: suggestionFun
+        },
+        limit: 25
+    });
+
+    element.on("focus", function () {
+        var value = element.val();
+        element.typeahead('val', '_');
+        element.typeahead('val', value);
+        return true
+    });
+
+    element.on('typeahead:select', function (e, datum) {
+        if (updateValueElement)
+            updateValueElement(datum);
+    });
+
+    element.on('typeahead:cursorchanged', function (e, datum) {
+        if (updateValueElement)
+            updateValueElement(datum);
+    });
+}
+
+function createFieldBloodhoundSource(fieldNameAndLabels, showOption) {
     var fullFieldNameAndLabels = fieldNameAndLabels.map( function(field, index) {
         var nameItem = {key: field.name, value: field.name};
         var labelItem = {key: field.name, value: field.label, isLabel: true}
@@ -198,12 +195,39 @@ function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndL
             return 1;
     };
 
-    populateTypeahead(
-        typeaheadElement,
+    return createBloodhoundSource(
         [].concat.apply([], fullFieldNameAndLabels).sort(compareValues),
         function (item) {
             return stringDatumTokenizer(item.value);
-        },
+        }
+    )
+}
+
+function populateFieldTypeaheds(typeaheadElements, fieldNameElements, fieldNameAndLabels, showOption) {
+    var source = createFieldBloodhoundSource(fieldNameAndLabels, showOption)
+
+    for(var i = 0; i < typeaheadElements.length; i++){
+        populateFieldTypeahedAux(typeaheadElements[i], fieldNameElements[i], source, showOption)
+    }
+}
+
+/**
+ *
+ * @param typeaheadElement
+ * @param fieldNameElement
+ * @param fieldNameAndLabels
+ * @param showOption 0 - show field names only, 1 - show field labels only,
+ *                   2 - show field labels, and field names if no label defined, 3 - show both, field names and labels
+ */
+function populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption) {
+    var source = createFieldBloodhoundSource(fieldNameAndLabels, showOption)
+    populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, showOption)
+}
+
+function populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, showOption) {
+    populateTypeahead(
+        typeaheadElement,
+        source,
         function (item) {
             return item.value;
         },
@@ -445,4 +469,14 @@ function activateRowClickable() {
             event.stopPropagation();
         });
     });
+}
+
+function getModalValues(modalElementId) {
+    var values = {};
+    $('#' + modalElementId +' input, #' + modalElementId +' select, #' + modalElementId +' textarea').each(function () {
+        if (this.id) {
+            values[this.id] = $(this).val()
+        }
+    })
+    return values;
 }

@@ -77,6 +77,7 @@
         inverted,
         xAxisCaption,
         yAxisCaption,
+        showLabels,
         showLegend,
         pointFormat,
         height,
@@ -138,8 +139,8 @@
                 series: {
                     borderWidth: 0,
                     dataLabels: {
-                        enabled: true,
-                        format: '{point.y:.1f}'
+                        enabled: showLabels,
+                        format: '{point.y:.0f}'
                     },
                     allowPointSelect: allowPointClick,
                     cursor: cursor,
@@ -588,7 +589,7 @@
                     return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                 });
 
-                columnChart(title, elementId, categories, series, false, '', 'Count', showLegendImpl, pointFormat, height, null, true, true);
+                columnChart(title, elementId, categories, series, false, '', 'Count', true, showLegendImpl, pointFormat, height, null, true, true);
                 break;
             case 'Bar':
                 var colorByPoint = (seriesSize == 1)
@@ -596,7 +597,7 @@
                     return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                 });
 
-                columnChart(title, elementId, categories, series, true, '', 'Count', showLegendImpl, pointFormat, height, null, true, true);
+                columnChart(title, elementId, categories, series, true, '', 'Count', true, showLegendImpl, pointFormat, height, null, true, true);
                 break;
             case 'Line':
                 var series = datas
@@ -631,14 +632,14 @@
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                columnChart(title, elementId, null, series, false, fieldLabel, 'Count', showLegend, pointFormat, height, dataType, false, true);
+                columnChart(title, elementId, null, series, false, fieldLabel, 'Count', false, showLegend, pointFormat, height, dataType, false, true);
                 break;
             case 'Bar':
                 var series = datas.map( function(data, index) {
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                columnChart(title, elementId, null, series, true, fieldLabel, 'Count', showLegend, pointFormat, height, dataType, false, true);
+                columnChart(title, elementId, null, series, true, fieldLabel, 'Count', false, showLegend, pointFormat, height, dataType, false, true);
                 break;
             case 'Line':
                 var series = datas

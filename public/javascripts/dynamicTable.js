@@ -33,25 +33,19 @@ $.widget( "custom.dynamicTable", {
     },
 
     openAddModal: function() {
-        $('#' + this.modalName +' input, #' + this.modalName +' select').each(function () {
+        $('#' + this.modalName +' input, #' + this.modalName +' select, #' + this.modalName +' textarea').each(function () {
             if (this.id)
                 $(this).val("");
         })
         $('#' + this.modalName).modal()
     },
 
-    _getModalValues: function() {
-        var values = {};
-        $('#' + this.modalName +' input, #' + this.modalName +' select').each(function () {
-            if (this.id) {
-                values[this.id] = $(this).val()
-            }
-        })
-        return values;
+    _getAddModalValues: function() {
+        return getModalValues(this.modalName);
     },
 
     addTableRowFromModal: function() {
-        this.addTableRow(this._getModalValues())
+        this.addTableRow(this._getAddModalValues())
     },
 
     addTableRow: function(values) {
@@ -66,6 +60,10 @@ $.widget( "custom.dynamicTable", {
                 $(this).remove()
             }
         });
+    },
+
+    replaceTableRow: function(values) {
+        this.tableBody.append(this.options.itemToRow(values))
     },
 
     removeTableModel: function() {
