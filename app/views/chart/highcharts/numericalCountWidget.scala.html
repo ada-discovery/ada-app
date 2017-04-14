@@ -25,12 +25,12 @@
         var height = @chartSpec.displayOptions.height.getOrElse(400)
 
         var pointFormat = (isDate) ?
-            '<span style="color:{point.color}">{point.x:%Y-%m-%d} (Count)</span>: <b>{point.y:.2f}</b><br/>'
+            '<span style="color:{point.color}">{point.x:%Y-%m-%d} (Count)</span>: <b>{point.y:.0f}</b><br/>'
             :
             (isDouble) ?
-                '<span style="color:{point.color}">{point.x:.2f} (Count)</span>: <b>{point.y:.2f}</b><br/>'
+                '<span style="color:{point.color}">{point.x:.2f} (Count)</span>: <b>{point.y:.0f}</b><br/>'
                 :
-                '<span style="color:{point.color}">{point.x} (Count)</span>: <b>{point.y:.2f}</b><br/>'
+                '<span style="color:{point.color}">{point.x} (Count)</span>: <b>{point.y:.0f}</b><br/>'
 
         $('#@elementId').on('chartTypeChanged', function(event, chartType) {
             changeNumericalCountChartType(chartType, datas, seriesSize, '@chartSpec.title', '@chartSpec.fieldLabel', '@{elementId}', height, pointFormat, dataType)

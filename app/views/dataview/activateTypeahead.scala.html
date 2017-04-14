@@ -8,44 +8,29 @@
         $.ajax({
             url: '@Html(fieldsCall.url)',
             success: function (data) {
-                populateFieldTypeahed(
-                    $('#add_tableColumnNameModal #newItemTypeahead'),
-                    $('#add_tableColumnNameModal #newItem'),
-                    data,
-                    showOption
-                );
-
-                populateFieldTypeahed(
-                    $('#add_widgetSpecModal #fieldNameTypeahead'),
-                    $('#add_widgetSpecModal #fieldName'),
-                    data,
-                    showOption
-                );
-
-                populateFieldTypeahed(
-                    $('#add_widgetSpecModal #xFieldNameTypeahead'),
-                    $('#add_widgetSpecModal #xFieldName'),
-                    data,
-                    showOption
-                );
-
-                populateFieldTypeahed(
-                    $('#add_widgetSpecModal #yFieldNameTypeahead'),
-                    $('#add_widgetSpecModal #yFieldName'),
-                    data,
-                    showOption
-                );
-
-                populateFieldTypeahed(
-                    $('#add_widgetSpecModal #groupFieldNameTypeahead'),
-                    $('#add_widgetSpecModal #groupFieldName'),
-                    data,
-                    showOption
-                );
-
-                populateFieldTypeahed(
-                    $('#add_widgetSpecModal #newItemTypeahead'),
-                    $('#add_widgetSpecModal #newItem'),
+                populateFieldTypeaheds(
+                    [
+                        $('#add_tableColumnNameModal #newItemTypeahead'),
+                        $('#add_widgetSpecModal #fieldNameTypeahead'),
+                        $('#add_widgetSpecModal #groupFieldNameTypeahead'),
+                        $('#add_widgetSpecModal #xFieldNameTypeahead'),
+                        $('#add_widgetSpecModal #yFieldNameTypeahead'),
+                        $('#edit_widgetSpecModal #fieldNameTypeahead'),
+                        $('#edit_widgetSpecModal #groupFieldNameTypeahead'),
+                        $('#edit_widgetSpecModal #xFieldNameTypeahead'),
+                        $('#edit_widgetSpecModal #yFieldNameTypeahead')
+                    ],
+                    [
+                        $('#add_tableColumnNameModal #newItem'),
+                        $('#add_widgetSpecModal #fieldName'),
+                        $('#add_widgetSpecModal #groupFieldName'),
+                        $('#add_widgetSpecModal #xFieldName'),
+                        $('#add_widgetSpecModal #yFieldName'),
+                        $('#edit_widgetSpecModal #fieldName'),
+                        $('#edit_widgetSpecModal #groupFieldName'),
+                        $('#edit_widgetSpecModal #xFieldName'),
+                        $('#edit_widgetSpecModal #yFieldName')
+                    ],
                     data,
                     showOption
                 );

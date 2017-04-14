@@ -1,7 +1,7 @@
 @import util.shorten
 @import models.Count
 @import models.ChartType
-@import models.CategoricalCountWidget$
+@import models.CategoricalCountWidget
 
 @(
     elementId: String,
@@ -18,7 +18,7 @@
 
         var seriesSize = datas.length
         var height = @widget.displayOptions.height.getOrElse(400)
-        var pointFormat = '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.2f}</b><br/>'
+        var pointFormat = '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.0f}</b><br/>'
 
         $('#@elementId').on('chartTypeChanged', function(event, chartType) {
             changeCategoricalCountChartType(chartType, categories, datas, seriesSize, '@widget.title', '@{elementId}', @widget.showLabels, @widget.showLegend, height, pointFormat);

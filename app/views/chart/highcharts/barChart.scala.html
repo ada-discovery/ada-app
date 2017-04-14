@@ -14,6 +14,7 @@
             data: [@elements.map { case (x, y) => @y, }]
         }]
 
+        var pointFormat = '<span style="color:{point.color}">{point.x} (Count)</span>: <b>{point.y:.2f}</b><br/>'
         columnChart(
             '@title',
             '@{chartElementName}',
@@ -21,7 +22,10 @@
             series,
             true,
             '@{xAxisCaption.getOrElse("")}',
-            '@{yAxisCaption.getOrElse("")}'
+            '@{yAxisCaption.getOrElse("")}',
+            true,
+            false,
+            pointFormat
         )
     })()
 </script>

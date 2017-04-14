@@ -27,13 +27,6 @@ case class NumericalCountWidget[T](
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends Widget
 
-//
-//case class ColumnWidget(
-//  title: String,
-//  data: Seq[(String, Int)],
-//  displayOptions: DisplayOptions = BasicDisplayOptions()
-//) extends Widget
-
 case class ScatterWidget(
   title: String,
   xAxisCaption: String,
@@ -60,6 +53,12 @@ case class HeatmapWidget(
   data: Seq[Seq[Option[Double]]],
   min: Option[Double] = None,
   max: Option[Double] = None,
+  displayOptions: DisplayOptions = BasicDisplayOptions()
+) extends Widget
+
+case class HtmlWidget(
+  title: String,
+  content: String,
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 

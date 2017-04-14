@@ -50,9 +50,4 @@ object ReflectionUtil {
 
   def getMethodNames[T](implicit tag: ClassTag[T]): Array[String] =
     tag.runtimeClass.getMethods.map(_.getName)
-
-  def getCaseMethodNames[T: TypeTag]: Traversable[String] =
-    typeOf[T].members.collect {
-      case m: MethodSymbol if m.isCaseAccessor => m.fullName
-    }.toList
 }

@@ -13,6 +13,7 @@ import models.DataView.dataViewFormat
 
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.ListBuffer
+import scala.reflect.ClassTag
 
 case class DataSpaceMetaInfo(
   _id: Option[BSONObjectID],
@@ -139,6 +140,13 @@ case class BasicStatsWidgetSpec(
   override val fieldNames = Seq(fieldName)
 }
 
+case class TemplateHtmlWidgetSpec(
+  content: String,
+  displayOptions: BasicDisplayOptions = BasicDisplayOptions()
+) extends WidgetSpec {
+  override val fieldNames = Nil
+}
+
 object ChartType extends Enumeration {
   val Pie, Column, Bar, Line, Polar = Value
 }
@@ -227,6 +235,10 @@ case class Category(
 
 // JSON converters and identities
 
+object WidgetSpec {
+
+}
+
 object DataSetFormattersAndIds {
   implicit val enumTypeFormat = EnumFormat.enumFormat(FieldTypeId)
   implicit val categoryFormat: Format[Category] = (
@@ -260,15 +272,21 @@ object DataSetFormattersAndIds {
   implicit val basicDisplayOptionsFormat = Json.format[BasicDisplayOptions]
   implicit val distributionDisplayOptionsFormat = Json.format[MultiChartDisplayOptions]
 
-  implicit val widgetSpecFormat: Format[WidgetSpec] = new SubTypeFormat[WidgetSpec](
+  // register your widget spec class here
+  private val widgetSpecManifestedFormats: Seq[ManifestedFormat[_ <: WidgetSpec]] =
     Seq(
       ManifestedFormat(Json.format[DistributionWidgetSpec]),
       ManifestedFormat(Json.format[CumulativeCountWidgetSpec]),
       ManifestedFormat(Json.format[BoxWidgetSpec]),
       ManifestedFormat(Json.format[ScatterWidgetSpec]),
-      ManifestedFormat(Json.format[CorrelationWidgetSpec])
+      ManifestedFormat(Json.format[CorrelationWidgetSpec]),
+      ManifestedFormat(Json.format[BasicStatsWidgetSpec]),
+      ManifestedFormat(Json.format[TemplateHtmlWidgetSpec])
     )
-  )
+
+  val widgetSpecClasses: Seq[Class[_ <: WidgetSpec]] = widgetSpecManifestedFormats.map(_.runtimeClass)
+
+  implicit val widgetSpecFormat: Format[WidgetSpec] = new SubTypeFormat[WidgetSpec](widgetSpecManifestedFormats)
 
   implicit val dictionaryFormat = Json.format[Dictionary]
   implicit val dataSetMetaInfoFormat = Json.format[DataSetMetaInfo]

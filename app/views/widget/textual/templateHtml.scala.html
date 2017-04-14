@@ -1,0 +1,13 @@
+@import models.HtmlWidget
+
+@(
+    elementId: String,
+    widget: HtmlWidget
+)
+
+<script type="text/javascript">
+    $(document).ready(function() {
+        var htmlContent = `@Html(widget.content)`;
+        $('#' + '@elementId').html(htmlContent);
+    });
+</script>

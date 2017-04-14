@@ -4,6 +4,7 @@ import play.api.libs.json._
 
 case class ManifestedFormat[E: Manifest](format: Format[E]){
   val man = manifest[E]
+  val runtimeClass = man.runtimeClass.asInstanceOf[Class[E]]
 }
 
 class SubTypeFormat[T](formats: Traversable[ManifestedFormat[_ <: T]]) extends Format[T] {

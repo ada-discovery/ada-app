@@ -673,6 +673,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case p: CumulativeCountWidgetSpec => if (p.numericBinCount.isDefined) Left(p) else Right(p)
           case p: ScatterWidgetSpec => Right(p)
           case p: CorrelationWidgetSpec => Right(p)
+          case p: BasicStatsWidgetSpec => Right(p)
+          case p: TemplateHtmlWidgetSpec => Left(p)
         }
       else
         widgetSpecs.map(Right(_))
@@ -758,6 +760,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             BoxWidget(field.labelOrElseName, field.labelOrElseName, quants, None, None, displayOptions)
           }
 
+      case TemplateHtmlWidgetSpec(content, displayOptions) =>
+        val widget = HtmlWidget("", content, displayOptions)
+        Future(Some(widget))
+
       case _ => Future(None)
     }
     chartSpecFuture.map(_.map(chartSpec => (chartSpec, widgetSpec.fieldNames.toSeq)))
@@ -829,6 +835,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         )
         Some(chartSpec)
       }
+
+      case TemplateHtmlWidgetSpec(content, displayOptions) =>
+        val widget = HtmlWidget("", content, displayOptions)
+        Some(widget)
     }
     chartSpecOption.map(chartSpec => (chartSpec, widgetSpec.fieldNames.toSeq))
   }
@@ -1344,7 +1354,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Nil => Nil
           case _ => Seq("fieldType" #-> fieldTypeIds)
         },
-        sort = Seq(AscSort("name"))
+//        sort = Seq(AscSort("name")),
+        projection = Seq("name", "label", "fieldType")
       )
     } yield {
       implicit val fieldFormat = DataSetFormattersAndIds.fieldFormat

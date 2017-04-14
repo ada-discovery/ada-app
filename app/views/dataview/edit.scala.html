@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
+@import views.html.dataset.{datasetSubNav, datasetSubNavJs, datasetMenu}
 @import controllers.dataset.DataViewRouter
 @import models.DataSpaceMetaInfo
 @import models.{DataView, Field}
@@ -20,6 +20,11 @@
     implicit context: DataSetWebContext
 )
 
+@bottomResources = {
+    @activateTypeahead(dataSetRouter.allFields)
+    @datasetSubNavJs()
+}
+
 @layout.edit(
     domainName,
 	form.errors,
@@ -28,6 +33,6 @@
     dataViewRouter.plainList,
     Some(dataViewRouter.delete(id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
-    Some(datasetSubNavWithJs()),
-    Some(activateTypeahead(dataSetRouter.allFields))
+    Some(datasetSubNav()),
+    Some(bottomResources)
 )
