@@ -20,6 +20,7 @@ distribution.title = {0} Distribution
 cumulativeCount.title = {0} Cumulative Count
 scatterAnalysis.title = {0} Scatter Analysis
 correlation.title = {0} Correlations
+fractalis.title = Fractalis ({0})
 
 dataSetSetting.keyFieldName.label = Key Field
 dataSetSetting.exportOrderByFieldName.label = Export OrderBy Field
