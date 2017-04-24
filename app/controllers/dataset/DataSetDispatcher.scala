@@ -85,6 +85,10 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: FilterOrId
   ) = dispatch(_.getCumulativeCount(dateFieldName, groupFieldName, filterOrId))
 
+  override def getFractalis(
+    fieldNameOption: Option[String]
+  ) = dispatch(_.getFractalis(fieldNameOption))
+
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ) = dispatch(_.getFields(fieldTypeIds))

@@ -1345,6 +1345,46 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
+  override def getFractalis(
+    fieldNameOption: Option[String]
+  ) = Action.async { implicit request =>
+    val dataSetNameFuture = dsa.dataSetName
+    val treeFuture = dataSpaceTreeFuture
+    val settingFuture = dsa.setting
+
+    {
+      for {
+        // get the data set name
+        dataSetName <- dataSetNameFuture
+
+        // get the data space tree
+        dataSpaceTree <- treeFuture
+
+        // get the data set setting
+        setting <- settingFuture
+
+        fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
+
+        // field
+        field <- fieldRepo.get(fieldName)
+      } yield {
+        render {
+          case Accepts.Html() => Ok(dataset.fractalis(
+            dataSetName,
+            field,
+            setting.filterShowFieldStyle,
+            dataSpaceTree
+          ))
+          case Accepts.Json() => BadRequest("getFractalis function doesn't support JSON response.")
+        }
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the getFractalis process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ) = Action.async { implicit request =>

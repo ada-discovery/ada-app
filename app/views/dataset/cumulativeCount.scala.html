@@ -71,6 +71,75 @@
 @bottomResources = {
     @highchartsJsImport(true)
     @widgetPanelJs(Seq(chartSpec).flatten)
+
+    @helper.javascriptRouter("dataViewJsRoutes")(
+        dataViewJsRouter.addCumulativeCount
+    )
+
+    <script type="text/javascript">
+        $(function () {
+            populateFieldTypeahedFromUrl(
+                $('#fieldForm #fieldTypeahead'),
+                $('#fieldForm #fieldName'),
+                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Date, FieldTypeId.Integer, FieldTypeId.Double)).url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            )
+
+            populateFieldTypeahedFromUrl(
+                $('#fieldForm #groupFieldTypeahead'),
+                $('#fieldForm #groupFieldName'),
+                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            );
+
+            $('#fieldForm #fieldTypeahead').on('typeahead:selected', function(e, data) {
+                $('#fieldForm').submit();
+            });
+
+            $('#fieldForm #groupFieldTypeahead').on('typeahead:selected', function(e, data) {
+                $('#fieldForm').submit();
+            });
+
+            $('#fieldForm #fieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    $('#fieldForm').submit();;
+                        return false;
+                }
+            });
+
+            $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    var groupFieldTypeahedVal = $('#fieldForm #groupFieldTypeahead').val();
+                        if (!groupFieldTypeahedVal)
+                            $('#fieldForm #groupFieldName').val("")
+                    $('#fieldForm').submit();;
+                    return false;
+                }
+            });
+
+            $("#dataViewSelectionModal #submitButton").on("click", addCumulativeCountToView)
+        });
+
+        function addCumulativeCountToView() {
+            var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+            var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
+            var fieldName = $('#fieldForm #fieldName').val()
+            var groupFieldName = $('#fieldForm #groupFieldName').val()
+            if (groupFieldName == "")
+                groupFieldName = null
+
+            if (fieldName) {
+                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCumulativeCount(dataViewId, fieldName, groupFieldName).ajax( {
+                    success: function() {
+                        showMessage("Cumulative count for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
+                    },
+                    error: function(data){
+                        showError( data.responseText );
+                    }
+                });
+            }
+        }
+    </script>
 }
 
 @main(Messages("cumulativeCount.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
@@ -90,72 +159,3 @@
     @widgetPanel(Seq(chartSpec).flatten, 12)
     @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
 }
-
-@helper.javascriptRouter("dataViewJsRoutes")(
-    dataViewJsRouter.addCumulativeCount
-)
-
-<script type="text/javascript">
-    $(function () {
-        populateFieldTypeahedFromUrl(
-            $('#fieldForm #fieldTypeahead'),
-            $('#fieldForm #fieldName'),
-            '@Html(dataSetRouter.fields(Seq(FieldTypeId.Date, FieldTypeId.Integer, FieldTypeId.Double)).url)',
-            @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
-        )
-
-        populateFieldTypeahedFromUrl(
-            $('#fieldForm #groupFieldTypeahead'),
-            $('#fieldForm #groupFieldName'),
-            '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
-            @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
-        );
-
-        $('#fieldForm #fieldTypeahead').on('typeahead:selected', function(e, data) {
-            $('#fieldForm').submit();
-        });
-
-        $('#fieldForm #groupFieldTypeahead').on('typeahead:selected', function(e, data) {
-            $('#fieldForm').submit();
-        });
-
-        $('#fieldForm #fieldTypeahead').keypress(function (e) {
-            if (e.which == 13) {
-                $('#fieldForm').submit();;
-                return false;
-            }
-        });
-
-        $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
-            if (e.which == 13) {
-                var groupFieldTypeahedVal = $('#fieldForm #groupFieldTypeahead').val();
-                if (!groupFieldTypeahedVal)
-                    $('#fieldForm #groupFieldName').val("")
-                $('#fieldForm').submit();;
-                return false;
-            }
-        });
-
-        $("#dataViewSelectionModal #submitButton").on("click", addCumulativeCountToView)
-    });
-
-    function addCumulativeCountToView() {
-        var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
-        var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
-        var fieldName = $('#fieldForm #fieldName').val()
-        var groupFieldName = $('#fieldForm #groupFieldName').val()
-        if (groupFieldName == "")
-            groupFieldName = null
-
-        if (fieldName) {
-            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCumulativeCount(dataViewId, fieldName, groupFieldName).ajax( {
-                success: function() {
-                    showMessage("Cumulative count for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
-                },
-                error: function(data){
-                    showError( data.responseText );
-                }
-            });
-        }
-    }
-</script>

@@ -1,0 +1,97 @@
+@import models.Field
+@import reactivemongo.play.json.BSONFormats._
+@import views.html.layout.main
+@import views.html.dataset.datasetSubNavWithJs
+@import play.api.i18n.Messages
+@import models.DataSpaceMetaInfo
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+
+@(
+    domainName: String,
+    field: Option[Field],
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@actions = {
+    <div class="row">
+        <div class="col-md-3">
+            <input id="fieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@field.map(_.labelOrElseName)">
+            <input id="fieldName" name="fieldName" type="hidden" value="@field.map(_.name)">
+        </div>
+    </div>
+}
+
+@bottomResources = {
+    @typeaheadJsImport()
+
+    <script type="text/javascript" src="@routes.Assets.versioned("javascripts/fractal.min.js")"></script>
+
+    <script type="text/javascript">
+        $(function () {
+            populateFieldTypeahedFromUrl(
+                $('#fieldTypeahead'),
+                $('#fieldName'),
+                '@Html(dataSetRouter.allFields.url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            )
+
+            function addFieldToFractalis() {
+                var fieldName = $("#fieldName").val();
+                var fieldLabel = $("#fieldTypeahead").val();
+                fjs.loadData([
+                    {
+                        data_type: 'Double',
+                        data_set: '@context.dataSetId',
+                        projection: fieldName,
+                        get description () {
+                            return fieldLabel;
+                        }
+                    }
+                ])
+            }
+
+            $('#fieldTypeahead').on('typeahead:selected', function(e, data) {
+                addFieldToFractalis();
+            });
+
+            $('#fieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    addFieldToFractalis();
+                }
+            });
+
+            const fjs = fractal.init({
+                handler: 'ada',
+                thisBaseURL: 'http://10.79.2.192:8080',
+                fractalisBaseURL: 'http://10.240.6.46:8080',
+                getAuth () {
+//                    return {token: ""}
+                    return {"user": "", passwd: ""}
+                }
+            })
+
+            fjs.setChart({chart: 'correlation-analysis', selector: '#fractalis-div'})
+        });
+    </script>
+}
+
+@main(Messages("fractalis.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
+
+    <div class="page-header">
+        <h3>
+            @Messages("fractalis.title", domainName)
+        </h3>
+    </div>
+
+    <div id="actions">
+        @actions
+    </div>
+    <hr/>
+    <div style="width: 1200px; height: 800px">
+        <div id="fractalis-div"></div>
+    </div>
+}

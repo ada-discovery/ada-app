@@ -34,6 +34,8 @@
                     @listItem(dataSetRouter.getCumulativeCount(None, None, Left(Nil)), "Cumulative Count", Some(2))
                     @listItem(dataSetRouter.plainGetScatterStats, "Scatter", Some(2))
                     @listItem(dataSetRouter.getCorrelations(Nil, Left(Nil)), "Correlation", Some(2))
+                    <li role="separator" class="divider"></li>
+                    @listItem(dataSetRouter.getFractalis(None), "Fractalis", Some(2))
                 </ul>
             </li>
             @listItem(dictionaryRouter.plainList, "Dictionary", Some(2))
