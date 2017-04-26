@@ -90,6 +90,7 @@ GET         /studies/records/fieldTypes                                         
 GET         /studies/fields                                                         controllers.dataset.DataSetDispatcher.getFields(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 GET         /studies/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
+GET         /studies/field/:fieldName                                               controllers.dataset.DataSetDispatcher.getField(fieldName: String)
 GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(dataViewId: BSONObjectID, delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(dataViewId: BSONObjectID, filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
