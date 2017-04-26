@@ -27,7 +27,7 @@ import play.api.mvc.Results._
 import reactivemongo.bson.BSONObjectID
 import services.{StatsService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{Action, Call, Request, Result}
+import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
 import views.html.dataset
 
@@ -1400,6 +1400,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     } yield {
       implicit val fieldFormat = DataSetFormattersAndIds.fieldFormat
       Ok(Json.toJson(fields))
+    }
+  }
+
+  override def getField(fieldName: String) = Action.async { implicit request =>
+    for {
+      field <- fieldRepo.get(fieldName)
+    } yield {
+      implicit val fieldFormat = DataSetFormattersAndIds.fieldFormat
+      Ok(Json.toJson(field))
     }
   }
 

@@ -93,6 +93,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     fieldTypeIds: Seq[FieldTypeId.Value]
   ) = dispatch(_.getFields(fieldTypeIds))
 
+  override def getField(fieldName: String) = dispatch(_.getField(fieldName))
+
   override def getFieldNames = dispatch(_.getFieldNames)
 
   override def getFieldValue(

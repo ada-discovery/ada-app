@@ -69,6 +69,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getFieldValue(id: BSONObjectID, fieldName: String): Action[AnyContent]
 
+  def getField(fieldName: String): Action[AnyContent]
+
   def exportRecordsAsCsv(
     dataViewId: BSONObjectID,
     delimiter: String,

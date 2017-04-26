@@ -28,6 +28,10 @@
 @bottomResources = {
     @typeaheadJsImport()
 
+    @helper.javascriptRouter("dataSetJsRoutes")(
+        dataSetJsRouter.getField
+    )
+
     <script type="text/javascript" src="@routes.Assets.versioned("javascripts/fractal.min.js")"></script>
 
     <script type="text/javascript">
@@ -42,16 +46,24 @@
             function addFieldToFractalis() {
                 var fieldName = $("#fieldName").val();
                 var fieldLabel = $("#fieldTypeahead").val();
-                fjs.loadData([
-                    {
-                        data_type: 'Double',
-                        data_set: '@context.dataSetId',
-                        projection: fieldName,
-                        get description () {
-                            return fieldLabel;
-                        }
+
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getField(fieldName).ajax( {
+                    success: function(field) {
+                        fjs.loadData([
+                            {
+                                data_type: field.fieldType,
+                                data_set: '@context.dataSetId',
+                                projection: fieldName,
+                                get description () {
+                                    return fieldLabel;
+                                }
+                            }
+                        ])
+                    },
+                    error: function(data){
+                        showError( data.responseText );
                     }
-                ])
+                });
             }
 
             $('#fieldTypeahead').on('typeahead:selected', function(e, data) {
