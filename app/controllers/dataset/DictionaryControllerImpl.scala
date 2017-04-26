@@ -70,7 +70,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   )
   private val fieldNameLabelMap = fieldNameLabels.toMap
 
-  override protected val form = Form(
+  override protected[controllers] val form = Form(
     mapping(
       "name" -> nonEmptyText,
       "label" ->  optional(nonEmptyText),
@@ -124,7 +124,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       (dataSetName + " Field", form, allCategories)
   }
 
-  override protected def createView = { implicit ctx =>
+  override protected[controllers] def createView = { implicit ctx =>
     (view.create(_, _, _)).tupled
   }
 
@@ -159,7 +159,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       (dataSetName + " Field", id, form, allCategories, tree)
   }
 
-  override protected def editView = { implicit ctx =>
+  override protected[controllers] def editView = { implicit ctx =>
     (view.edit(_, _, _, _, _)).tupled
   }
 
@@ -214,7 +214,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       (dataSetName + " Field", newPage, widgets, fieldNameLabels, tree)
   }
 
-  override protected def listView = { implicit ctx =>
+  override protected[controllers] def listView = { implicit ctx =>
     (view.list(_, _, _, _, _)).tupled
   }
 

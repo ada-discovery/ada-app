@@ -62,11 +62,11 @@ object SparkMLEstimatorFactory {
     def set[T] = setSourceParam[T, DecisionTree, DecisionTreeClassifier](model)_
 
     chain(
-      set(_.maxDepth, _.setMaxDepth),
-      set(_.maxBins, _.setMaxBins),
-      set(_.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.minInfoGain, _.setMinInfoGain),
-      set(_.seed, _.setSeed),
+      set(_.core.maxDepth, _.setMaxDepth),
+      set(_.core.maxBins, _.setMaxBins),
+      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
+      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(_.core.seed, _.setSeed),
       set(_.impurity.map(_.toString), _.setImpurity)
     )(new DecisionTreeClassifier())
   }
@@ -76,11 +76,11 @@ object SparkMLEstimatorFactory {
 
     chain(
       set(_.numTrees, _.setNumTrees),
-      set(_.maxDepth, _.setMaxDepth),
-      set(_.maxBins, _.setMaxBins),
-      set(_.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.minInfoGain, _.setMinInfoGain),
-      set(_.seed, _.setSeed),
+      set(_.core.maxDepth, _.setMaxDepth),
+      set(_.core.maxBins, _.setMaxBins),
+      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
+      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(_.core.seed, _.setSeed),
       set(_.subsamplingRate, _.setSubsamplingRate),
       set(_.impurity.map(_.toString), _.setImpurity),
       set(_.featureSubsetStrategy.map(_.toString), _.setFeatureSubsetStrategy)
@@ -94,11 +94,11 @@ object SparkMLEstimatorFactory {
       set(_.lossType.map(_.toString), _.setLossType),
       set(_.maxIteration, _.setMaxIter),
       set(_.stepSize, _.setStepSize),
-      set(_.maxDepth, _.setMaxDepth),
-      set(_.maxBins, _.setMaxBins),
-      set(_.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.minInfoGain, _.setMinInfoGain),
-      set(_.seed, _.setSeed),
+      set(_.core.maxDepth, _.setMaxDepth),
+      set(_.core.maxBins, _.setMaxBins),
+      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
+      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(_.core.seed, _.setSeed),
       set(_.subsamplingRate, _.setSubsamplingRate)
 //      set(_.impurity.map(_.toString), _.setImpurity)
     )(new GBTClassifier())
@@ -146,11 +146,11 @@ object SparkMLEstimatorFactory {
     def set[T] = setSourceParam[T, RegressionTreeDef, DecisionTreeRegressor](model)_
 
     chain(
-      set(_.maxDepth, _.setMaxDepth),
-      set(_.maxBins, _.setMaxBins),
-      set(_.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.minInfoGain, _.setMinInfoGain),
-      set(_.seed, _.setSeed),
+      set(_.core.maxDepth, _.setMaxDepth),
+      set(_.core.maxBins, _.setMaxBins),
+      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
+      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(_.core.seed, _.setSeed),
       set(_.impurity.map(_.toString), _.setImpurity)
     )(new DecisionTreeRegressor())
   }
@@ -161,11 +161,11 @@ object SparkMLEstimatorFactory {
     chain(
       set(_.impurity.map(_.toString), _.setImpurity),
       set(_.numTrees, _.setNumTrees),
-      set(_.maxDepth, _.setMaxDepth),
-      set(_.maxBins, _.setMaxBins),
-      set(_.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.minInfoGain, _.setMinInfoGain),
-      set(_.seed, _.setSeed),
+      set(_.core.maxDepth, _.setMaxDepth),
+      set(_.core.maxBins, _.setMaxBins),
+      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
+      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(_.core.seed, _.setSeed),
       set(_.subsamplingRate, _.setSubsamplingRate),
       set(_.featureSubsetStrategy.map(_.toString), _.setFeatureSubsetStrategy)
     )(new RandomForestRegressor())
@@ -178,11 +178,11 @@ object SparkMLEstimatorFactory {
       set(_.lossType.map(_.toString), _.setLossType),
       set(_.maxIteration, _.setMaxIter),
       set(_.stepSize, _.setStepSize),
-      set(_.maxDepth, _.setMaxDepth),
-      set(_.maxBins, _.setMaxBins),
-      set(_.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.minInfoGain, _.setMinInfoGain),
-      set(_.seed, _.setSeed),
+      set(_.core.maxDepth, _.setMaxDepth),
+      set(_.core.maxBins, _.setMaxBins),
+      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
+      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(_.core.seed, _.setSeed),
       set(_.subsamplingRate, _.setSubsamplingRate)
       //      set(_.impurity.map(_.toString), _.setImpurity)
     )(new GBTRegressor())

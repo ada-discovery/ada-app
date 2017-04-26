@@ -186,6 +186,26 @@ POST        /studies/metainfo/:id                                               
 POST        /studies/metainfo/:id/delete                                            controllers.dataset.DataSpaceMetaInfoController.delete(id: BSONObjectID)
 POST        /studies/metainfo/deleteDataSet/:id                                     controllers.dataset.DataSpaceMetaInfoController.deleteDataSet(id: BSONObjectID)
 
+# ML Classification
+GET         /ml/classification                                                      controllers.ml.ClassificationController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[models.FilterCondition] ?= Nil)
+GET         /ml/classification/all                                                  controllers.ml.ClassificationController.listAll(s: String ?= "concreteClass")
+GET         /ml/classification/new                                                  controllers.ml.ClassificationController.create(concreteClassName: String)
+POST        /ml/classification/save                                                 controllers.ml.ClassificationController.save
+GET         /ml/classification/:id/get                                              controllers.ml.ClassificationController.get(id: BSONObjectID)
+GET         /ml/classification/:id                                                  controllers.ml.ClassificationController.edit(id: BSONObjectID)
+POST        /ml/classification/:id                                                  controllers.ml.ClassificationController.update(id: BSONObjectID)
+POST        /ml/classification/:id/delete                                           controllers.ml.ClassificationController.delete(id: BSONObjectID)
+
+# ML Regression
+GET         /ml/regression                                                          controllers.ml.RegressionController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[models.FilterCondition] ?= Nil)
+GET         /ml/regression/all                                                      controllers.ml.RegressionController.listAll(s: String ?= "concreteClass")
+GET         /ml/regression/new                                                      controllers.ml.RegressionController.create(concreteClassName: String)
+POST        /ml/regression/save                                                     controllers.ml.RegressionController.save
+GET         /ml/regression/:id/get                                                  controllers.ml.RegressionController.get(id: BSONObjectID)
+GET         /ml/regression/:id                                                      controllers.ml.RegressionController.edit(id: BSONObjectID)
+POST        /ml/regression/:id                                                      controllers.ml.RegressionController.update(id: BSONObjectID)
+POST        /ml/regression/:id/delete                                               controllers.ml.RegressionController.delete(id: BSONObjectID)
+
 # Message
 GET         /messages/stream                                                        controllers.MessageController.stream
 GET         /messages/eventStream                                                   controllers.MessageController.eventStream

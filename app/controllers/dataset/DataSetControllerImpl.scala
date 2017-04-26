@@ -123,7 +123,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param context Web context: request header, messages, and flash
     * @return View for all available fields.
     */
-  override protected def listView = { implicit ctx =>
+  override protected[controllers] def listView = { implicit ctx =>
     (dataset.list(_, _, _, _)).tupled
   }
 
@@ -161,7 +161,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         dataSpaceTree
       )
 
-  override protected def showView = { implicit ctx => dataset.show(_) }
+  override protected[controllers] def showView = { implicit ctx => dataset.show(_) }
 
   override protected def filterValueConverters(
     fieldNames: Traversable[String]

@@ -50,7 +50,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
 
   private implicit val filterConditionFormatter = JsonFormatter[FilterCondition]
 
-  override protected val form = Form(
+  override protected[controllers] val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
@@ -79,7 +79,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
     } yield
       (dataSetName + " Filter", form)
 
-  override protected def createView = { implicit ctx =>
+  override protected[controllers] def createView = { implicit ctx =>
     (view.create(_, _)).tupled
   }
 
@@ -119,7 +119,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
       (dataSetName + " Filter", id, form, tree)
   }
 
-  override protected def editView = { implicit ctx =>
+  override protected[controllers] def editView = { implicit ctx =>
     (view.edit(_, _, _, _)).tupled
   }
 
@@ -151,7 +151,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
       (dataSetName + " Filter", page, tree)
   }
 
-  override protected def listView = { implicit ctx =>
+  override protected[controllers] def listView = { implicit ctx =>
     (view.list(_, _, _)).tupled
   }
 

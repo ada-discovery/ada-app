@@ -1,0 +1,16 @@
+@import views.html.elements.{inputText, select}
+@import play.api.i18n.Messages
+@import models.ml.classification.NaiveBayes
+@import models.ml.classification.BayesModelType
+
+@(form: Form[NaiveBayes])(implicit msg: Messages)
+
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[NaiveBayes].getName}">
+
+@inputText("naiveBayes", "name", form)
+
+<hr/>
+
+@inputText("naiveBayes", "smoothing", form)
+@select("naiveBayes", "modelType", form, util.enumToValueString(BayesModelType), true)
+

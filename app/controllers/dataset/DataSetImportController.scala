@@ -3,7 +3,6 @@ package controllers.dataset
 import java.util.Date
 import java.util.concurrent.TimeoutException
 
-import dataaccess.RepoException
 import models.DataSetSetting
 import persistence.dataset.DataSpaceMetaInfoRepo
 import services.datasetimporter.DataSetImporterCentral
@@ -12,7 +11,6 @@ import scala.concurrent.duration._
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import controllers.ViewTypes.{CreateView, EditView}
 import controllers._
 import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
 import models._
@@ -30,10 +28,12 @@ import reactivemongo.bson.BSONObjectID
 import java.io.{File, FileInputStream, FileOutputStream}
 
 import controllers.core._
+import models.ml.classification.Classification
 import services.{DataSetImportScheduler, DataSetService, DeNoPaSetting}
 import util.SecurityUtil.restrictAdmin
 import views.html.{datasetimport => view}
 import views.html.layout
+import util.getRequestParamValue
 import play.api.data.format.Formats._
 
 import scala.concurrent.{Await, Future}
@@ -49,9 +49,8 @@ class DataSetImportController @Inject()(
     configuration: Configuration
   ) extends CrudControllerImpl[DataSetImport, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
-    with HasBasicFormCreateView[DataSetImport]
-    with HasBasicFormShowView[DataSetImport, BSONObjectID]
-    with HasBasicFormEditView[DataSetImport, BSONObjectID] {
+    with HasCreateEditSubTypeFormViews[DataSetImport, BSONObjectID]
+    with HasFormShowEqualEditView[DataSetImport, BSONObjectID] {
 
   private val logger = Logger
   // (this.getClass)
@@ -223,114 +222,83 @@ class DataSetImportController @Inject()(
       )
   )
 
-  private val classNameFormViewsMap = FormWithViews.toMap[DataSetImport](
+  protected case class DataSetImportCreateEditViews[E <: DataSetImport](
+    name: String,
+    val form: Form[E],
+    viewElements: (Form[E], Messages) => Html)(
+    implicit manifest: Manifest[E]
+  ) extends CreateEditFormViews[E, BSONObjectID] {
+
+    override protected[controllers] def fillForm(item: E) =
+      form.fill(item)
+
+    override protected[controllers] def createView = { implicit ctx: WebContext =>
+      form: Form[E] =>
+        layout.create(
+          name,
+          form,
+          viewElements(form, ctx.msg),
+          controllers.dataset.routes.DataSetImportController.save,
+          controllers.dataset.routes.DataSetImportController.listAll(),
+          'enctype -> "multipart/form-data"
+        )
+    }
+
+    override protected[controllers] def editView = { implicit ctx: WebContext =>
+      data: IdForm[BSONObjectID, E] =>
+        layout.edit(
+          name,
+          data.form.errors,
+          viewElements(data.form, ctx.msg),
+          controllers.dataset.routes.DataSetImportController.update(data.id),
+          controllers.dataset.routes.DataSetImportController.listAll(),
+          Some(controllers.dataset.routes.DataSetImportController.delete(data.id)),
+          None,
+          None,
+          None,
+          Seq('enctype -> "multipart/form-data")
+        )
+    }
+  }
+
+  override protected val createEditFormViews =
     Seq(
-      FormWithViews[CsvDataSetImport](
+      DataSetImportCreateEditViews[CsvDataSetImport](
+        "CSV Data Set Import",
         csvForm,
-        createView(
-          "CSV Data Set Import",
-          view.csvTypeElements(_)(_)
-        ),
-        editView(
-          "CSV Data Set Import",
-          view.csvTypeElements(_)(_)
-        )
+        view.csvTypeElements(_)(_)
       ),
 
-      FormWithViews[SynapseDataSetImport](
+      DataSetImportCreateEditViews[SynapseDataSetImport](
+        "Synapse Data Set Import",
         synapseForm,
-        createView(
-          "Synapse Data Set Import",
-          view.synapseTypeElements(_)(_)
-        ),
-        editView(
-          "Synapse Data Set Import",
-          view.synapseTypeElements(_)(_)
-        )
+        view.synapseTypeElements(_)(_)
       ),
 
-      FormWithViews[TranSmartDataSetImport](
+      DataSetImportCreateEditViews[TranSmartDataSetImport](
+        "TranSMART Data Set (and Dictionary) Import",
         tranSmartForm,
-        createView(
-          "TranSMART Data Set (and Dictionary) Import",
-          view.tranSmartTypeElements(_)(_)
-        ),
-        editView(
-          "TranSMART Data Set (and Dictionary) Import",
-          view.tranSmartTypeElements(_)(_)
-        )
+        view.tranSmartTypeElements(_)(_)
       ),
 
-      FormWithViews[RedCapDataSetImport](
+      DataSetImportCreateEditViews[RedCapDataSetImport](
+        "RedCap Data Set Import",
         redCapForm,
-        createView(
-          "RedCap Data Set Import",
-          view.redCapTypeElements(_)(_)
-        ),
-        editView(
-          "RedCap Data Set Import",
-          view.redCapTypeElements(_)(_)
-        )
+        view.redCapTypeElements(_)(_)
       ),
 
-      FormWithViews[EGaitDataSetImport](
+      DataSetImportCreateEditViews[EGaitDataSetImport](
+        "eGait Data Set Import",
         eGaitForm,
-        createView(
-          "eGait Data Set Import",
-          view.eGaitTypeElements(_)(_)
-        ),
-        editView(
-          "eGait Data Set Import",
-          view.eGaitTypeElements(_)(_)
-        )
+        view.eGaitTypeElements(_)(_)
       )
-    ))
+    )
 
   // default form... unused
-  override protected val form = csvForm.asInstanceOf[Form[DataSetImport]]
-
-  private val concreteClassFieldName = "concreteClass"
+  override protected[controllers] val form = csvForm.asInstanceOf[Form[DataSetImport]]
 
   override protected val home =
     Redirect(routes.DataSetImportController.find())
-
-  override protected def fillForm(entity: DataSetImport): Form[DataSetImport] = {
-    val concreteClassName = entity.getClass.getName
-    getForm(concreteClassName).fill(entity)
-  }
-
-  override protected def formFromRequest(implicit request: Request[AnyContent]): Form[DataSetImport] = {
-    val concreteClassName = getParamValue(concreteClassFieldName)
-    getForm(concreteClassName).bindFromRequest
-  }
-
-  override protected def createView = { implicit ctx =>
-    data =>
-      val subCreateView = getViews(data)._1
-      subCreateView(data, ctx)
-  }
-
-  override protected def editView = { implicit ctx =>
-    data =>
-      val subEditView = getViews(data.form)._2
-      subEditView(data.id, data.form, ctx)
-  }
-
-  private def getFormWithViews(concreteClassName: String) =
-    classNameFormViewsMap.get(concreteClassName).getOrElse(
-      throw new AdaException(s"Form and views a sub type '$concreteClassName' not found."))
-
-  private def getForm(concreteClassName: String) =
-    getFormWithViews(concreteClassName)._1
-
-  private def getViews(form: Form[DataSetImport]): (CreateView[DataSetImport], EditView[DataSetImport]) = {
-    val concreteClassName = form.value.map(_.getClass.getName).getOrElse(form(concreteClassFieldName).value.get)
-    val formWithViews = classNameFormViewsMap.get(concreteClassName).getOrElse(
-      throw new AdaException(s"Form and views for a sub type '$concreteClassName' not found."))
-    (formWithViews._2, formWithViews._3)
-  }
-
-  override protected def showView = editView
 
   override protected type ListViewData = (Page[DataSetImport], Traversable[DataSpaceMetaInfo])
 
@@ -340,12 +308,17 @@ class DataSetImportController @Inject()(
     } yield
       (page, tree)
 
-  override protected def listView = { implicit ctx => (view.list(_, _)).tupled}
+  override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled}
 
   def create(concreteClassName: String) = restrictAdmin(deadbolt) {
-    Action { implicit request =>
-      val formWithViews = getFormWithViews(concreteClassName)
-      Ok(formWithViews._2(formWithViews._1, implicitly[WebContext]))
+    Action.async { implicit request =>
+
+      def createAux[E <: DataSetImport](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =
+        x.getCreateViewData.map { viewData =>
+          Ok(x.createView(implicitly[WebContext])(viewData))
+        }
+
+      createAux(getFormWithViews(concreteClassName))
     }
   }
 
@@ -416,7 +389,7 @@ class DataSetImportController @Inject()(
           getFile("dataFile", request).map(dataFile =>
             copyImportFile(dataFile._1, dataFile._2)
           ).getOrElse(
-            getParamValue("path"))
+            getRequestParamValue("path"))
         importInfo.copy(path = Some(path))
       }
       case importInfo: TranSmartDataSetImport => {
@@ -424,12 +397,12 @@ class DataSetImportController @Inject()(
           getFile("dataFile", request).map(dataFile =>
             copyImportFile(dataFile._1, dataFile._2)
           ).getOrElse(
-            getParamValue("dataPath"))
+            getRequestParamValue("dataPath"))
 
         val mappingPath = getFile("mappingFile", request).map(mappingFile =>
           copyImportFile(mappingFile._1, mappingFile._2)
         ).getOrElse(
-          getParamValue("mappingPath"))
+          getRequestParamValue("mappingPath"))
 
         importInfo.copy(dataPath = Some(dataPath), mappingPath = Some(mappingPath))
       }
@@ -465,40 +438,4 @@ class DataSetImportController @Inject()(
     new FileOutputStream(dest) getChannel() transferFrom(
       new FileInputStream(src) getChannel, 0, Long.MaxValue )
   }
-
-
-  private def createView[T <: DataSetImport](
-    name: String,
-    elements: (Form[T], Messages) => Html)(
-    f: Form[T],
-    context: WebContext
-  ) =
-    layout.create(
-      name,
-      f,
-      elements(f, context.msg),
-      controllers.dataset.routes.DataSetImportController.save,
-      controllers.routes.AppController.index,
-      'enctype -> "multipart/form-data"
-    )(context)
-
-  private def editView[T <: DataSetImport](
-    name: String,
-    elements: (Form[T], Messages) => Html)(
-    id: BSONObjectID,
-    f: Form[T],
-    context: WebContext
-  ) =
-    layout.edit(
-      name,
-      f.errors,
-      elements(f, context.msg),
-      controllers.dataset.routes.DataSetImportController.update(id),
-      controllers.dataset.routes.DataSetImportController.listAll(),
-      Some(controllers.dataset.routes.DataSetImportController.delete(id)),
-      None,
-      None,
-      None,
-      Seq('enctype -> "multipart/form-data")
-    )(context)
 }

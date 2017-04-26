@@ -7,6 +7,8 @@ import models.workspace.Workspace
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import dataaccess.mongo.MongoAsyncCrudExtraRepo
+import models.ml.classification.Classification
+import models.ml.regression.Regression
 
 /**
  * Common repo type shortcuts
@@ -19,6 +21,9 @@ object RepoTypes {
   type UserSettingsRepo = AsyncCrudRepo[Workspace, BSONObjectID]
 
   type DataSetImportRepo = AsyncCrudRepo[DataSetImport, BSONObjectID]
+
+  type ClassificationRepo = AsyncCrudRepo[Classification, BSONObjectID]
+  type RegressionRepo = AsyncCrudRepo[Regression, BSONObjectID]
 
   // experimental
   type StudentDistRepo = DistributedRepo[Student, BSONObjectID]

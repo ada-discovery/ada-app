@@ -48,7 +48,7 @@ class DataSetSettingController @Inject() (
   private implicit val storageTypeFormatter = EnumFormatter(StorageType)
   private implicit val widgetSpecFormatter = JsonFormatter[WidgetSpec]
 
-  override protected val form = Form(
+  override protected[controllers] val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "dataSetId" -> nonEmptyText,
@@ -73,7 +73,7 @@ class DataSetSettingController @Inject() (
 
   // create view
 
-  override protected def createView = { implicit ctx => view.create(_) }
+  override protected[controllers] def createView = { implicit ctx => view.create(_) }
 
   // edit view and data (show view = edit view)
 
@@ -102,13 +102,13 @@ class DataSetSettingController @Inject() (
     }
   }
 
-  override protected def editView = { implicit ctx =>
+  override protected[controllers] def editView = { implicit ctx =>
     (view.editNormal(_, _, _)).tupled
   }
 
   // list view
 
-  override protected def listView = { implicit ctx => view.list(_) }
+  override protected[controllers] def listView = { implicit ctx => view.list(_) }
 
   def editForDataSet(dataSet: String) = restrict {
     Action.async { implicit request =>

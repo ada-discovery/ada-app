@@ -1,0 +1,82 @@
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import views.html.dataset.datasetMenu
+@import views.html.filter.filterWithJs
+@import controllers.ml.routes.{RegressionController => regressionRoutes}
+@import util.{formatTimeElement, toHumanReadableCamel, typeColumns}
+@import models.{DataSpaceMetaInfo, Field}
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
+@import models.ml.regression.Regression
+@import models.ml.regression.GeneralizedLinearRegression
+@import models.ml.regression.RegressionTree
+@import models.ml.regression.RandomRegressionForest
+@import models.ml.regression.GradientBoostRegressionTree
+@import models.ml.regression.LinearRegression
+
+@(
+    page: Page[Regression],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit webContext: WebContext
+)
+
+@importLink(clazz: Class[_], title: String) = {
+    <li>
+        <a href="@regressionRoutes.create(clazz.getName)">
+        @title
+        </a>
+    </li>
+}
+
+@actions = {
+    <div class="row">
+        <div class="col-md-10">
+            @filterWithJs(
+                page.filter,
+                regressionRoutes.find(),
+                Left(Seq(
+                    Field("name", Some("Name"))
+                )),
+                None,
+                Some(FilterShowFieldStyle.LabelsOnly)
+            )
+        </div>
+        <div class="dropdown pull-right">
+            <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-toggle="tooltip" title="Add Data Set Import">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                @importLink(classOf[LinearRegression], "Linear Regression")
+                @importLink(classOf[GeneralizedLinearRegression], "Generalized Linear Regression")
+                @importLink(classOf[RegressionTree], "Regression Tree")
+                @importLink(classOf[RandomRegressionForest], "Random Regression Forest")
+                @importLink(classOf[GradientBoostRegressionTree], "Gradient Boost Regression Tree")
+            </ul>
+        </div>
+    </div>
+}
+
+@table = @{
+    paginatedTable(
+        page,
+        regressionRoutes.find(_, _, page.filterConditions),
+        typeColumns[Regression](
+            (Some("concreteClass"), "Type", {classification => toHumanReadableCamel(classification.getClass.getSimpleName)}),
+            (Some("name"), "Name", _.name.getOrElse("")),
+            (Some("timeCreated"), "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss"))
+        ),
+        Some({ item : Any => regressionRoutes.get(item.asInstanceOf[Regression]._id.get)})
+    )
+}
+
+@layout.list(
+    "Regression",
+    None,
+    page.total,
+    Some(actions),
+    table,
+    None,
+    Some(datasetMenu(dataSpaceMetaInfos))
+)

@@ -1,0 +1,22 @@
+@import views.html.elements.{inputText, select, checkbox}
+@import play.api.i18n.Messages
+@import models.ml.regression.GeneralizedLinearRegression
+@import models.ml.regression.GeneralizedLinearRegressionLinkType
+@import models.ml.regression.GeneralizedLinearRegressionFamily
+@import models.ml.regression.GeneralizedLinearRegressionSolver
+
+@(form: Form[GeneralizedLinearRegression])(implicit msg: Messages)
+
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[GeneralizedLinearRegression].getName}">
+
+@inputText("generalizedLinearRegression", "name", form)
+
+<hr/>
+
+@inputText("generalizedLinearRegression", "maxIteration", form)
+@inputText("generalizedLinearRegression", "regularization", form)
+@select("generalizedLinearRegression", "link", form, util.enumToValueString(GeneralizedLinearRegressionLinkType), true)
+@inputText("generalizedLinearRegression", "tolerance", form)
+@checkbox("generalizedLinearRegression", "fitIntercept", form)
+@select("generalizedLinearRegression", "family", form, util.enumToValueString(GeneralizedLinearRegressionFamily), true)
+@select("generalizedLinearRegression", "solver", form, util.enumToValueString(GeneralizedLinearRegressionSolver), true)

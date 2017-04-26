@@ -1,0 +1,19 @@
+@import views.html.elements.{inputText, select}
+@import play.api.i18n.Messages
+@import models.ml.regression.RegressionTree
+@import models.ml.regression.RegressionTreeImpurity
+
+@(form: Form[RegressionTree])(implicit msg: Messages)
+
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[RegressionTree].getName}">
+
+@inputText("regressionTree", "name", form)
+
+<hr/>
+
+@inputText("regressionTree", "core.maxDepth", form)
+@inputText("regressionTree", "core.maxBins", form)
+@inputText("regressionTree", "core.minInstancesPerNode", form)
+@inputText("regressionTree", "core.minInfoGain", form)
+@inputText("regressionTree", "core.seed", form)
+@select("regressionTree", "impurity", form, util.enumToValueString(RegressionTreeImpurity), true)

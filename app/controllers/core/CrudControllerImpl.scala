@@ -39,8 +39,6 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
     with HasFormShowView[E, ID]
     with HasFormEditView[E, ID] {
 
-  protected def form: Form[E]
-
   protected def fillForm(entity: E): Form[E] =
     form.fill(entity)
 

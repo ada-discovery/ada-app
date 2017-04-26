@@ -1,0 +1,84 @@
+@import views.html.layout
+@import views.html.table.paginatedTable
+@import views.html.dataset.datasetMenu
+@import views.html.filter.filterWithJs
+@import controllers.ml.routes.{ClassificationController => classificationRoutes}
+@import util.{formatTimeElement, toHumanReadableCamel, typeColumns}
+@import models.{DataSpaceMetaInfo, Field}
+@import models.ml.classification.Classification
+@import models.ml.classification.LogisticRegression
+@import models.ml.classification.MultiLayerPerceptron
+@import models.ml.classification.DecisionTree
+@import models.ml.classification.RandomForest
+@import models.ml.classification.GradientBoostTree
+@import models.ml.classification.NaiveBayes
+@import controllers.core.WebContext._
+@import controllers.core.WebContext
+
+@(
+    page: Page[Classification],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit webContext: WebContext
+)
+
+@importLink(clazz: Class[_], title: String) = {
+    <li>
+        <a href="@classificationRoutes.create(clazz.getName)">
+        @title
+        </a>
+    </li>
+}
+
+@actions = {
+    <div class="row">
+        <div class="col-md-10">
+            @filterWithJs(
+                page.filter,
+                classificationRoutes.find(),
+                Left(Seq(
+                    Field("name", Some("Name"))
+                )),
+                None,
+                Some(FilterShowFieldStyle.LabelsOnly)
+            )
+        </div>
+        <div class="dropdown pull-right">
+            <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-toggle="tooltip" title="Add Data Set Import">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu">
+                @importLink(classOf[LogisticRegression], "Logistic Regression")
+                @importLink(classOf[MultiLayerPerceptron], "Multi Layer Perceptron")
+                @importLink(classOf[DecisionTree], "Decision Tree")
+                @importLink(classOf[RandomForest], "Random Forest")
+                @importLink(classOf[GradientBoostTree], "Gradient Boost Tree")
+                @importLink(classOf[NaiveBayes], "Naive Bayes")
+            </ul>
+        </div>
+    </div>
+}
+
+@table = @{
+    paginatedTable(
+        page,
+        classificationRoutes.find(_, _, page.filterConditions),
+        typeColumns[Classification](
+            (Some("concreteClass"), "Type", {classification => toHumanReadableCamel(classification.getClass.getSimpleName)}),
+            (Some("name"), "Name", _.name.getOrElse("")),
+            (Some("timeCreated"), "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss"))
+        ),
+        Some({ item : Any => classificationRoutes.get(item.asInstanceOf[Classification]._id.get)})
+    )
+}
+
+@layout.list(
+    "Classification",
+    None,
+    page.total,
+    Some(actions),
+    table,
+    None,
+    Some(datasetMenu(dataSpaceMetaInfos))
+)

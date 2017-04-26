@@ -10,9 +10,11 @@ trait HasCreateView {
 
   protected type CreateViewData
 
-  protected def getCreateViewData: Future[CreateViewData]
+  protected type CreateView = WebContext => CreateViewData => Html
 
-  protected def createView: WebContext => CreateViewData => Html
+  protected[controllers] def getCreateViewData: Future[CreateViewData]
+
+  protected[controllers] def createView: CreateView
 
   protected def createViewWithContext(
     data: CreateViewData)(
@@ -24,9 +26,9 @@ trait HasFormCreateView[E] extends HasCreateView {
 
   protected def getFormCreateViewData(form: Form[E]): Future[CreateViewData]
 
-  override protected def getCreateViewData = getFormCreateViewData(form)
+  override protected[controllers] def getCreateViewData = getFormCreateViewData(form)
 
-  protected def form: Form[E]
+  protected[controllers] def form: Form[E]
 }
 
 trait HasBasicFormCreateView[E] extends HasFormCreateView[E] {

@@ -2,13 +2,13 @@ package persistence
 
 import javax.inject.Provider
 
-import com.google.inject.{Inject, TypeLiteral, Key}
+import com.google.inject.{Inject, Key, TypeLiteral}
 import com.google.inject.assistedinject.FactoryModuleBuilder
 import com.sksamuel.elastic4s.ElasticClient
 import dataaccess.RepoTypes.CategoryRepo
 import dataaccess.elastic.{ElasticClientProvider, ElasticFormatAsyncCrudRepo, ElasticJsonCrudRepo}
-import dataaccess.ignite.{CacheAsyncCrudRepoProvider, CacheAsyncCrudRepoFactory, JsonBinaryCacheAsyncCrudRepoFactory}
-import dataaccess.mongo.dataset.{FieldMongoAsyncCrudRepo, CategoryMongoAsyncCrudRepo}
+import dataaccess.ignite.{CacheAsyncCrudRepoFactory, CacheAsyncCrudRepoProvider, JsonBinaryCacheAsyncCrudRepoFactory}
+import dataaccess.mongo.dataset.{CategoryMongoAsyncCrudRepo, FieldMongoAsyncCrudRepo}
 import dataaccess._
 import dataaccess.mongo._
 import models.DataSetFormattersAndIds._
@@ -17,6 +17,8 @@ import net.codingwell.scalaguice.ScalaModule
 import dataaccess.RepoTypes._
 import persistence.RepoTypes._
 import com.google.inject.name.Names
+import models.ml.classification.Classification
+import models.ml.regression.Regression
 import persistence.dataset._
 import reactivemongo.bson.BSONObjectID
 import persistence.RepoDef.Repo
@@ -50,7 +52,13 @@ private object RepoDef extends Enumeration {
   val UserSettingsRepo = Repo[UserSettingsRepo](
     new MongoAsyncCrudRepo[Workspace, BSONObjectID]("workspace"))
 
-//  val DictionaryRootRepo = Repo[DictionaryRootRepo](
+  val ClassificationRepo = Repo[ClassificationRepo](
+    new MongoAsyncCrudRepo[Classification, BSONObjectID]("classifications"))
+
+  val RegressionRepo = Repo[RegressionRepo](
+    new MongoAsyncCrudRepo[Regression, BSONObjectID]("regressions"))
+
+  //  val DictionaryRootRepo = Repo[DictionaryRootRepo](
 //    new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
 
 //  val MongoDataSpaceMetaInfoRepo = Repo[MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]](

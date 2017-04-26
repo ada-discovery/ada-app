@@ -2,6 +2,7 @@ package runnables
 
 import javax.inject.Inject
 
+import models.ml.TreeCore
 import models.ml.classification._
 import services.ml.MachineLearningService
 
@@ -47,12 +48,12 @@ class MachineLearningClassificationTest @Inject()(machineLearningService: Machin
 
     println("Decision tree")
 
-    val accuracy3 = classify(DecisionTree(maxDepth = Some(10)))
+    val accuracy3 = classify(DecisionTree(core = TreeCore(maxDepth = Some(10))))
     println(accuracy3)
 
     println("Random forest")
 
-    val accuracy4 = classify(RandomForest(maxDepth = Some(10)))
+    val accuracy4 = classify(RandomForest(core = TreeCore(maxDepth = Some(10))))
     println(accuracy4)
     println
 

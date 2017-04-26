@@ -10,9 +10,11 @@ trait HasShowView[E, ID] {
 
   protected type ShowViewData
 
+  protected type ShowView = WebContext => ShowViewData => Html
+
   protected def getShowViewData(id: ID, item: E): Future[ShowViewData]
 
-  protected def showView: WebContext => ShowViewData => Html
+  protected[controllers] def showView: ShowView
 
   protected def showViewWithContext(
     data: ShowViewData)(
@@ -24,9 +26,9 @@ trait HasFormShowView[E, ID] extends HasShowView[E, ID] {
 
   protected def getFormShowViewData(id: ID, form: Form[E]): Future[ShowViewData]
 
-  override protected def getShowViewData(id: ID, item: E) = getFormShowViewData(id, form.fill(item))
+  override protected def getShowViewData(id: ID, item: E) = getFormShowViewData(id, fillForm(item))
 
-  protected def form: Form[E]
+  protected def fillForm(item: E): Form[E]
 }
 
 trait HasBasicFormShowView[E, ID] extends HasFormShowView[E, ID] {
@@ -41,7 +43,7 @@ trait HasShowEqualEditView[E, ID] extends HasShowView[E, ID] {
 
   override protected type ShowViewData = EditViewData
 
-  override protected def showView = editView
+  override protected[controllers] def showView = editView
 }
 
 trait HasFormShowEqualEditView[E, ID] extends HasFormShowView[E, ID] {
@@ -51,5 +53,5 @@ trait HasFormShowEqualEditView[E, ID] extends HasFormShowView[E, ID] {
 
   override protected def getFormShowViewData(id: ID, form: Form[E]) = getFormEditViewData(id, form)
 
-  override protected def showView = editView
+  override protected[controllers] def showView = editView
 }

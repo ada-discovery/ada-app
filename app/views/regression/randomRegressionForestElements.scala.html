@@ -1,0 +1,23 @@
+@import views.html.elements.{inputText, select}
+@import play.api.i18n.Messages
+@import models.ml.regression.RandomRegressionForest
+@import models.ml.regression.RegressionTreeImpurity
+@import models.ml.regression.RandomRegressionForestFeatureSubsetStrategy
+
+@(form: Form[RandomRegressionForest])(implicit msg: Messages)
+
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[RandomRegressionForest].getName}">
+
+@inputText("randomRegressionForest", "name", form)
+
+<hr/>
+
+@inputText("randomRegressionForest", "core.maxDepth", form)
+@inputText("randomRegressionForest", "core.maxBins", form)
+@inputText("randomRegressionForest", "core.minInstancesPerNode", form)
+@inputText("randomRegressionForest", "core.minInfoGain", form)
+@inputText("randomRegressionForest", "core.seed", form)
+@inputText("randomRegressionForest", "numTrees", form)
+@inputText("randomRegressionForest", "subsamplingRate", form)
+@select("randomRegressionForest", "impurity", form, util.enumToValueString(RegressionTreeImpurity), true)
+@select("randomRegressionForest", "featureSubsetStrategy", form, util.enumToValueString(RandomRegressionForestFeatureSubsetStrategy), true)

@@ -58,7 +58,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   private implicit val eitherFormat = new EitherFormat[Seq[models.FilterCondition], BSONObjectID]
   private implicit val eitherFormatter = JsonFormatter[Either[Seq[models.FilterCondition], BSONObjectID]]
 
-  override protected val form = Form(
+  override protected[controllers] val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
@@ -94,7 +94,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     } yield
       (dataSetName + " Data View", form)
 
-  override protected def createView = { implicit ctx =>
+  override protected[controllers] def createView = { implicit ctx =>
     (view.create(_, _)).tupled
   }
 
@@ -129,7 +129,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       (dataSetName + " Data View", id, form, nameFieldMap, tree)
   }
 
-  override protected def editView = { implicit ctx =>
+  override protected[controllers] def editView = { implicit ctx =>
     (view.editNormal(_, _, _, _, _)).tupled
   }
 
@@ -156,7 +156,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       (dataSetName + " Data View", page, tree)
   }
 
-  override protected def listView = { implicit ctx =>
+  override protected[controllers] def listView = { implicit ctx =>
     (view.list(_, _, _)).tupled
   }
 

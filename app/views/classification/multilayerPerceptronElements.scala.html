@@ -1,0 +1,20 @@
+@import views.html.elements.{inputText, select}
+@import play.api.i18n.Messages
+@import models.ml.classification.MultiLayerPerceptron
+@import models.ml.classification.MLPSolver
+
+@(form: Form[MultiLayerPerceptron])(implicit msg: Messages)
+
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[MultiLayerPerceptron].getName}">
+
+@inputText("multiLayerPerceptron", "name", form)
+
+<hr/>
+
+@inputText("multiLayerPerceptron", "layers", form)
+@inputText("multiLayerPerceptron", "maxIteration", form)
+@inputText("multiLayerPerceptron", "tolerance", form)
+@inputText("multiLayerPerceptron", "blockSize", form)
+@select("multiLayerPerceptron", "solver", form, util.enumToValueString(MLPSolver), true)
+@inputText("multiLayerPerceptron", "seed", form)
+@inputText("multiLayerPerceptron", "stepSize", form)

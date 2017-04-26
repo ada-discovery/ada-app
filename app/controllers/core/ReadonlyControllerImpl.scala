@@ -284,19 +284,6 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
     } else
       Nil
 
-  protected def getParamMap(implicit request: Request[AnyContent]): Map[String, Seq[String]] = {
-    val body = request.body
-    if (body.asFormUrlEncoded.isDefined)
-      body.asFormUrlEncoded.get
-    else if (body.asMultipartFormData.isDefined)
-      body.asMultipartFormData.get.asFormUrlEncoded
-    else
-      throw new AdaException("FormUrlEncoded or MultipartFormData request expected.")
-  }
-
-  protected def getParamValue(paramKey: String)(implicit request: Request[AnyContent]) =
-    getParamMap.get(paramKey).get.head
-
   protected def result[T](future: Future[T]): T =
     Await.result(future, timeout)
 }

@@ -16,15 +16,11 @@
             @inputText("dataSetImport", "setting.defaultScatterXFieldName", form)
             @inputText("dataSetImport", "setting.defaultScatterYFieldName", form)
             @inputText("dataSetImport", "setting.defaultCumulativeCountFieldName", form)
-            @select("dataSetImport", "setting.filterShowFieldStyle", form,
-                FilterShowFieldStyle.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString))), true
-            )
+            @select("dataSetImport", "setting.filterShowFieldStyle", form, util.enumToValueString(FilterShowFieldStyle), true)
             @checkbox("dataSetImport", "setting.filterShowNonNullCount", form)
             @inputText("dataSetImport", "setting.tranSMARTVisitFieldName", form)
             @inputText("dataSetImport", "setting.tranSMARTReplacements", form)
-            @select("dataSetImport", "setting.storageType", form,
-                StorageType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), true
-            )
+            @select("dataSetImport", "setting.storageType", form, util.enumToValueString(StorageType), true)
             @checkbox("dataSetImport", "setting.mongoAutoCreateIndexForProjection", form)
             @checkbox("dataSetImport", "setting.cacheDataSet", form)
         </div>

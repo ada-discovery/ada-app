@@ -10,9 +10,11 @@ trait HasListView[E] {
 
   protected type ListViewData
 
+  protected type ListView = WebContext => ListViewData => Html
+
   protected def getListViewData(page: Page[E]): Future[ListViewData]
 
-  protected def listView: WebContext => ListViewData => Html
+  protected[controllers] def listView: ListView
 
   protected def listViewWithContext(
     data: ListViewData)(

@@ -1,6 +1,8 @@
-import models.Widget
+import models.{AdaException, Widget}
 import org.apache.commons.lang.StringUtils
+import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
+
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -87,6 +89,22 @@ package object util {
         ":"
       else "")
     ).getOrElse(noneValue)
+
+  def getRequestParamMap(implicit request: Request[AnyContent]): Map[String, Seq[String]] = {
+    val body = request.body
+    if (body.asFormUrlEncoded.isDefined)
+      body.asFormUrlEncoded.get
+    else if (body.asMultipartFormData.isDefined)
+      body.asMultipartFormData.get.asFormUrlEncoded
+    else
+      throw new AdaException("FormUrlEncoded or MultipartFormData request expected.")
+  }
+
+  def getRequestParamValue(paramKey: String)(implicit request: Request[AnyContent]) =
+    getRequestParamMap.get(paramKey).get.head
+
+  def enumToValueString(enum: Enumeration): Seq[(String, String)] =
+    enum.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString)))
 
   def seqFutures[T, U](
     items: TraversableOnce[T])(

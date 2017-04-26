@@ -22,7 +22,7 @@ import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-import util.ExecutionContexts
+import util.getRequestParamMap
 import views.html.{category => view}
 
 import scala.concurrent.Future
@@ -50,7 +50,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   protected override val listViewColumns = Some(Seq(CategoryIdentity.name, "name", "label"))
 
-  override protected val form = Form(
+  override protected[controllers] val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
@@ -86,7 +86,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       (dataSetName + " Categoy", form, allCategories)
   }
 
-  override protected def createView = { implicit ctx =>
+  override protected[controllers] def createView = { implicit ctx =>
     (view.create(_, _, _)).tupled
   }
 
@@ -134,7 +134,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       (dataSetName + " Category", id, form, allCategories, fields, showFieldStyle, tree)
   }
 
-  override protected def editView = { implicit ctx =>
+  override protected[controllers] def editView = { implicit ctx =>
     (view.edit(_, _, _, _, _, _, _)).tupled
   }
 
@@ -153,7 +153,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       (dataSetName + " Category", page, tree)
   }
 
-  override protected def listView = { implicit ctx => (view.list(_, _, _)).tupled }
+  override protected[controllers] def listView = { implicit ctx => (view.list(_, _, _)).tupled }
 
   override protected def deleteCall(id: BSONObjectID)(implicit request: Request[AnyContent]): Future[Unit] = {
     // relocate the children to a new parent
@@ -200,7 +200,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
       // colect the newly associated fileds
       newFields <- {
-        val fieldNames = getParamMap(request).get("fields[]").getOrElse(Nil)
+        val fieldNames = getRequestParamMap(request).get("fields[]").getOrElse(Nil)
         fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
       }
 

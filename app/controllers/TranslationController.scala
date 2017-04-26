@@ -16,7 +16,7 @@ class TranslationController @Inject() (
     with AdminRestrictedCrudController[BSONObjectID]
     with HasBasicFormCrudViews[Translation, BSONObjectID] {
 
-  override protected val form = Form(
+  override protected[controllers] val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "original" -> nonEmptyText,
@@ -25,8 +25,8 @@ class TranslationController @Inject() (
 
   override protected val home = Redirect(routes.TranslationController.find())
 
-  override protected def createView = { implicit ctx => view.create(_) }
-  override protected def showView = editView
-  override protected def editView = { implicit ctx => view.edit(_) }
-  override protected def listView = { implicit ctx => view.list(_) }
+  override protected[controllers] def createView = { implicit ctx => view.create(_) }
+  override protected[controllers] def showView = editView
+  override protected[controllers] def editView = { implicit ctx => view.edit(_) }
+  override protected[controllers] def listView = { implicit ctx => view.list(_) }
 }

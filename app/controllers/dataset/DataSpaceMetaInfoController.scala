@@ -31,7 +31,7 @@ class DataSpaceMetaInfoController @Inject() (
     with HasBasicFormCreateView[DataSpaceMetaInfo]
     with HasBasicListView[DataSpaceMetaInfo] {
 
-  override protected val form = Form(
+  override protected[controllers] val form = Form(
     mapping(
     "id" -> ignored(Option.empty[BSONObjectID]),
     "name" -> nonEmptyText,
@@ -48,7 +48,7 @@ class DataSpaceMetaInfoController @Inject() (
 
   // create view
 
-  override protected def createView = { implicit ctx => view.create(_) }
+  override protected[controllers] def createView = { implicit ctx => view.create(_) }
 
   // show view
 
@@ -62,7 +62,7 @@ class DataSpaceMetaInfoController @Inject() (
       (form.get, dataSetSizes, tree)
     }
 
-  override protected def showView = { implicit ctx =>
+  override protected[controllers] def showView = { implicit ctx =>
     (view.show(_, _, _)).tupled
   }
 
@@ -100,13 +100,13 @@ class DataSpaceMetaInfoController @Inject() (
     }
   }
 
-  override protected def editView = { implicit ctx =>
+  override protected[controllers] def editView = { implicit ctx =>
     (view.edit(_, _, _, _)).tupled
   }
 
   // list view
 
-  override protected def listView = { implicit ctx => view.list(_) }
+  override protected[controllers] def listView = { implicit ctx => view.list(_) }
 
   override protected def updateCall(item: DataSpaceMetaInfo)(implicit request: Request[AnyContent]) =
     for {

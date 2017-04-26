@@ -30,7 +30,7 @@ class UserController @Inject() (
     with HasFormShowEqualEditView[User, BSONObjectID]
     with HasBasicListView[User] {
 
-  override protected val form = Form(
+  override protected[controllers] val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
@@ -60,7 +60,7 @@ class UserController @Inject() (
     } yield
       (form, tree, controllerActionNames)
 
-  override protected def createView = { implicit ctx =>
+  override protected[controllers] def createView = { implicit ctx =>
     (view.create(_,_, _)).tupled
   }
 
@@ -82,13 +82,13 @@ class UserController @Inject() (
     } yield
       (id, form, tree, controllerActionNames)
 
-  override protected def editView = { implicit ctx =>
+  override protected[controllers] def editView = { implicit ctx =>
     (view.edit(_, _, _, _)).tupled
   }
 
   // list view and data
 
-  override protected def listView = { implicit ctx => view.list(_) }
+  override protected[controllers] def listView = { implicit ctx => view.list(_) }
 
   // actions
 

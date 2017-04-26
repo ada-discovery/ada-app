@@ -2,6 +2,7 @@ package runnables
 
 import javax.inject.Inject
 
+import models.ml.TreeCore
 import models.ml.regression._
 import services.ml.MachineLearningService
 
@@ -43,12 +44,12 @@ class MachineLearningRegressionTest @Inject()(machineLearningService: MachineLea
 
     println("Regression tree")
 
-    val error3 = regress(RegressionTree(maxDepth = Some(10)))
+    val error3 = regress(RegressionTree(core = TreeCore(maxDepth = Some(10))))
     println(error3)
 
     println("Random regression forest")
 
-    val error4 = regress(RandomRegressionForest(maxDepth = Some(10)))
+    val error4 = regress(RandomRegressionForest(core = TreeCore(maxDepth = Some(10))))
     println(error4)
     println
 

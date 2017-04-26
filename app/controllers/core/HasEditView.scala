@@ -10,9 +10,11 @@ trait HasEditView[E, ID] {
 
   protected type EditViewData
 
+  protected type EditView = WebContext => EditViewData => Html
+
   protected def getEditViewData(id: ID, item: E): Future[EditViewData]
 
-  protected def editView: WebContext => EditViewData => Html
+  protected[controllers] def editView: EditView
 
   protected def editViewWithContext(
     data: EditViewData)(
@@ -24,9 +26,9 @@ trait HasFormEditView[E, ID] extends HasEditView[E, ID] {
 
   protected def getFormEditViewData(id: ID, form: Form[E]): Future[EditViewData]
 
-  override protected def getEditViewData(id: ID, item: E) = getFormEditViewData(id, form.fill(item))
+  override protected def getEditViewData(id: ID, item: E) = getFormEditViewData(id, fillForm(item))
 
-  protected def form: Form[E]
+  protected def fillForm(item: E): Form[E]
 }
 
 trait HasBasicFormEditView[E, ID] extends HasFormEditView[E, ID] {
