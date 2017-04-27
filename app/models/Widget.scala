@@ -71,13 +71,21 @@ case class Count[T](
 // TODO: move elsewhere
 object CategoricalCountWidget {
 
-  def groupDataByValue(chartSpec: CategoricalCountWidget): Seq[(String, Seq[Int])] = {
-    val values = chartSpec.data.map(_._2.map(_.value)).flatten.toSet.toSeq
-    values.map { value =>
-      val counts = chartSpec.data.map { series =>
-        series._2.find(_.value.equals(value)).map(_.count).getOrElse(0)
-      }
-      (value, counts)
+  def groupDataByValue(chartSpec: CategoricalCountWidget): Seq[(String, Seq[Int])] =
+    chartSpec.data match {
+      case Nil => Nil
+      case series =>
+        val firstSeriesValueLabels = series.head._2.map(_.value)
+
+        val otherValueLabels = series.tail.map(_._2.map(_.value)).flatten.toSet.toSeq
+        val firstSeriesValueLabelsSet = firstSeriesValueLabels.toSet
+        val extraValueLabels = otherValueLabels.filterNot(firstSeriesValueLabelsSet)
+
+        (firstSeriesValueLabels ++ extraValueLabels).map { value =>
+          val counts = chartSpec.data.map { series =>
+            series._2.find(_.value.equals(value)).map(_.count).getOrElse(0)
+          }
+          (value, counts)
+        }
     }
-  }
 }

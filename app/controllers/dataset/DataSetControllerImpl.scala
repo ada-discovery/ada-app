@@ -477,20 +477,22 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // get the fields
       fields <- fieldsFuture
 
+      // create a name->field map
+      nameFieldMap = fields.map(field => (field.name, field)).toMap
+
       // resolve criteria
       criteria <- toCriteria(resolvedFilter.conditions)
 
       // retrieve all the table items
-      tableItems <- {
-        val nameFieldMap = fields.map(field => (field.name, field)).toMap
-        getTableItems(page, orderBy, criteria, nameFieldMap, fieldNames)
-      }
+      tableItems <- getTableItems(page, orderBy, criteria, nameFieldMap, fieldNames)
 
       // get the total count
       count <- repo.count(criteria)
     } yield {
       val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy, Some(resolvedFilter))
-      Ok(dataset.viewTable(tablePage, fields, router, true))
+      val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
+
+      Ok(dataset.viewTable(tablePage, fieldsInOrder, router, true))
     }
   }
 

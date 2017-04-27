@@ -9,6 +9,7 @@
 @import play.api.libs.json.JsObject
 
 @import util.JsonUtil
+@import play.api.libs.json.JsArray
 @(
     items: Traversable[WidgetSpec],
     nameFieldMap: Map[String,  Field]
@@ -78,10 +79,12 @@
 @dataHiddenElement(widgetSpec: WidgetSpec) = {
     @{
         Json.toJson(widgetSpec).as[JsObject].-("displayOptions").fields.map {
-            case (fieldName, jsValue) => hiddenElement(fieldName, JsonUtil.toString(jsValue))
+            case (fieldName, jsValue) => jsValue match {
+                case JsArray(seq) => hiddenElement(fieldName, seq.map(JsonUtil.toString).flatten.mkString(", "))
+                case _ => hiddenElement(fieldName, JsonUtil.toString(jsValue))
+            }
         } ++ Seq(fieldTypeaheadElements(widgetSpec))
     }
-
 }
 
 @concreteClassName(clazz: Class[_]) = @{
@@ -144,6 +147,9 @@
 @rowToModelJsFun = {
     function(row) {
         var model = widgetRowToModel(row);
+
+        model
+
         return JSON.stringify(model);
     }
 }
@@ -172,17 +178,24 @@
 
         var contentDisplayColumn = $("<td></td>")
         var contentHrefElement = $("<a href='#' class='widget-table-cell' onclick='showEditModal(this)'></a>")
-        contentHrefElement.append("<div class='row'>Fields: " + fieldLabels + "</div>")
+        if (fieldLabels.length > 0)
+            contentHrefElement.append("<div class='row'>Fields: " + fieldLabels + "</div>")
 
+        // distribution and cumulative count
         var isDistributionOrCumulativeCountType = concreteClass == "@{classOf[DistributionWidgetSpec].getName}" || concreteClass == "@{classOf[CumulativeCountWidgetSpec].getName}"
-        var isTemplateHtmlType = concreteClass == "@{classOf[TemplateHtmlWidgetSpec].getName}"
-
         var numericBinCount = values["numericBinCount"]
         var numericBinCountLabelValue =  (isDistributionOrCumulativeCountType && numericBinCount) ? ("Numeric Bin Count: " + numericBinCount) : "";
-        var contentLabelValue =  (isTemplateHtmlType) ? ("Content: " + values["content"]) : "";
-        contentHrefElement.append("<div class='row'>" + numericBinCountLabelValue + contentLabelValue + "</div>")
-        contentDisplayColumn.append(contentHrefElement)
 
+        // template html
+        var isTemplateHtmlType = concreteClass == "@{classOf[TemplateHtmlWidgetSpec].getName}"
+        var contentLabelValue =  (isTemplateHtmlType) ? ("Content: " + values["content"]) : "";
+
+        // correlation
+        var isCorrelationType = concreteClass == "@{classOf[CorrelationWidgetSpec].getName}"
+        var fieldNamesValue =  (isCorrelationType) ? ("Fields: " + values["fieldNames"]) : "";
+
+        contentHrefElement.append("<div class='row'>" + numericBinCountLabelValue + contentLabelValue + fieldNamesValue + "</div>")
+        contentDisplayColumn.append(contentHrefElement)
 
         // display options
         var gridOffsetColumn = "<td><input type='text' id='gridOffset' style='width:40px' value=''/></td>";
@@ -334,6 +347,17 @@
             return intValue;
         }
 
+        function getArray(elementId) {
+            var value = getValue(elementId)
+            var arrayValue = null;
+            if (value && value.length > 0) {
+                arrayValue = value.split(",").map(function(str) {
+                    return str.trim();
+                }).filter(function(v) {return v != ''});
+            }
+            return arrayValue;
+        }
+
         var output = {};
         var concreteClass = getValue('concreteClass')
         output["concreteClass"] = concreteClass
@@ -348,6 +372,9 @@
 
         // numeric bin count is integer hence we need to do the setting again
         setIfNotNull(output, "numericBinCount", getIntValue("numericBinCount", 20))
+
+        // fieldNames (of correlation widget) is array  hence we need to do the setting again
+        setIfNotNull(output, "fieldNames", getArray("fieldNames"))
 
         // display options
         var displayOptions = {};
@@ -368,6 +395,7 @@
         $("#" + modalName + " #groupFieldNameDiv").hide();
         $("#" + modalName + " #contentDiv").hide();
         $("#" + modalName + " #numericBinCountDiv").hide();
+        $("#" + modalName + " #fieldNamesDiv").hide();
     }
 
     function showEditModal(source) {

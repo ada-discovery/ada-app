@@ -1,7 +1,7 @@
 @import util.shorten
 @import models.Count
 @import models.ChartType
-@import models.CategoricalCountWidget$
+@import models.CategoricalCountWidget
 @import models.CategoricalCountWidget.groupDataByValue
 @import views.html.table.displayTable
 @import util.{typeColumns, typeColumn}
@@ -18,14 +18,25 @@
             typeColumn[(String, Seq[Int])](None, shorten(widget.fieldLabel, 15), _._1)
         ) ++ groupNames.zipWithIndex.map { case (groupName, index) =>
             typeColumn[(String, Seq[Int])](None, shorten(groupName, 15), _._2(index))
-        }
+        } ++ (
+            if (groupNames.size > 1)
+                Seq(typeColumn[(String, Seq[Int])](None, "Total", _._2.sum))
+            else
+                Nil
+        )
     )
 }
 
 @countTable = @{
     countTableAux(
         widget.data.map(_._1),
-        groupDataByValue(widget)
+        groupDataByValue(widget) ++
+        (
+            if (widget.data.size > 1)
+                Seq(("<b><i>Total</i></b>", widget.data.map(_._2.map(_.count).sum)))
+            else
+                Nil
+        )
     )
 }
 
