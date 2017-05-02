@@ -80,12 +80,12 @@
             $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
             var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
 
-            $("#successRate").val("");
+            $('#outputDiv').hide();
 
             dataSetJsRoutes.controllers.dataset.DataSetDispatcher.classify(mlModelId, inputFieldNames, outputFieldName, "[]").ajax( {
-                success: function(successRate) {
-                    showMessage("Classification finished.")
-                    $("#successRate").val(successRate);
+                success: function(evalRates) {
+                    showMessage("'" + mlModelName + "' classification finished.")
+                    showMLOutput(evalRates)
                 },
                 error: function(data){
                     showError( data.responseText );
@@ -106,18 +106,4 @@
     </div>
 
     @mlElements()
-
-    <hr/>
-
-    <div class="row">
-        <div class="col-md-12">
-            <form>
-                <fieldset>
-                    @labelValue("successRate", "Success Rate") {
-                        <input type="text" id="successRate" name="successRate" readonly="readonly" value=""/>
-                    }
-                </fieldset>
-            </form>
-        </div>
-    </div>
 }

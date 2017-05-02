@@ -30,14 +30,14 @@ trait MachineLearningService {
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Classification
-  ): Double
+  ): Traversable[(ClassificationEvalMetric.Value, Double)]
 
   def regress(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression
-  ): Double
+  ): Traversable[(RegressionEvalMetric.Value, Double)]
 
   // AFTSurvivalRegression
   // IsotonicRegression
@@ -57,18 +57,22 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Classification
-  ): Double = {
+  ): Traversable[(ClassificationEvalMetric.Value, Double)] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
-    val evaluator = new MulticlassClassificationEvaluator()
-      .setLabelCol("label")
-      .setPredictionCol("prediction")
-      .setMetricName("accuracy")
+    val evaluators = ClassificationEvalMetric.values.map { metric =>
+      val evaluator = new MulticlassClassificationEvaluator()
+        .setLabelCol("label")
+        .setPredictionCol("prediction")
+        .setMetricName(metric.toString)
+
+      (metric, evaluator)
+    }
 
     val dataFrame = jsonsToLearningDataFrame(data, fields, outputFieldName)
     val Array(training, test) = dataFrame.randomSplit(Array(0.7, 0.3), seed = 11L)
 
-    train(trainer, Seq(evaluator), training, test).head
+    train(trainer, evaluators, training, test)
   }
 
   override def regress(
@@ -76,17 +80,23 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression
-  ): Double = {
+  ): Traversable[(RegressionEvalMetric.Value, Double)] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
-    val evaluator = new RegressionEvaluator()
-      .setLabelCol("label")
-      .setPredictionCol("prediction")
-      .setMetricName("mae")
+
+    val evaluators = RegressionEvalMetric.values.map { metric =>
+
+      val evaluator = new RegressionEvaluator()
+        .setLabelCol("label")
+        .setPredictionCol("prediction")
+        .setMetricName(metric.toString)
+
+      (metric, evaluator)
+    }
 
     val dataFrame = jsonsToLearningDataFrame(data, fields, outputFieldName)
     val Array(training, test) = dataFrame.randomSplit(Array(0.7, 0.3), seed = 11L)
 
-    train(trainer, Seq(evaluator), training, test).head
+    train(trainer, evaluators, training, test)
   }
 
   private def jsonsToLearningDataFrame(
@@ -224,19 +234,19 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
   //    println("Test Error = " + (1.0 - accuracy))
   //  }
 
-  private def train[M <: Model[M]](
+  private def train[M <: Model[M], Q](
     reg: Estimator[M],
-    evaluators: Traversable[Evaluator],
+    metricWithEvaluators: Traversable[(Q, Evaluator)],
     trainData: DataFrame,
     testData: DataFrame
-  ): Traversable[Double] = {
+  ): Traversable[(Q, Double)] = {
     // Fit the model
     val lrModel = reg.fit(trainData)
 
     // Make predictions.
     val predictions = lrModel.transform(testData)
 
-    evaluators.map(_.evaluate(predictions))
+    metricWithEvaluators.map{ case (metric, evaluator) => (metric, evaluator.evaluate(predictions))}
   }
 
 //  private def jsonsToDataFrameOld(
@@ -309,3 +319,12 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
     }
   }
 }
+
+object ClassificationEvalMetric extends Enumeration {
+  val f1, weightedPrecision, weightedRecall, accuracy = Value
+}
+
+object RegressionEvalMetric extends Enumeration {
+  val mse, rmse, r2, mae = Value
+}
+

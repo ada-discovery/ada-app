@@ -8,8 +8,7 @@ import _root_.util.JsonUtil._
 import models.ConditionType._
 import util.{BasicStats, fieldLabel}
 import _root_.util.WebExportUtil._
-import _root_.util.shorten
-import _root_.util.seqFutures
+import _root_.util.{shorten, seqFutures, toHumanReadableCamel}
 import dataaccess._
 import models.{MultiChartDisplayOptions, _}
 import com.google.inject.assistedinject.Assisted
@@ -32,7 +31,7 @@ import services.{DataSetService, StatsService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
-import services.ml.MachineLearningService
+import services.ml.{ClassificationEvalMetric, MachineLearningService, RegressionEvalMetric}
 import views.html.dataset
 
 import scala.math.Ordering.Implicits._
@@ -1468,8 +1467,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     } yield
       mlModel match {
         case Some(mlModel) =>
-          val x = mlService.classify(jsons, fields, outputFieldName, mlModel)
-          Ok(x.toString)
+          val evalRates = mlService.classify(jsons, fields, outputFieldName, mlModel)
+          val evalJsons = evalRates.map { case (metric, evalRate) =>
+            Json.obj(
+              "metricName" -> toHumanReadableCamel(metric.toString),
+              "evalRate" -> evalRate
+            )
+          }
+          Ok(JsArray(evalJsons.toSeq))
         case None =>
           BadRequest(s"ML classification model with id ${mlModelId.stringify} not found.")
       }
@@ -1496,8 +1501,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     } yield
       mlModel match {
         case Some(mlModel) =>
-          val x = mlService.regress(jsons, fields, outputFieldName, mlModel)
-          Ok(x.toString)
+          val evalRates = mlService.regress(jsons, fields, outputFieldName, mlModel)
+          val evalJsons = evalRates.map { case (metric, evalRate) =>
+            Json.obj(
+              "metricName" -> toHumanReadableCamel(metric.toString),
+              "evalRate" -> evalRate
+            )
+          }
+          Ok(JsArray(evalJsons.toSeq))
         case None =>
           BadRequest(s"ML regression model with id ${mlModelId.stringify} not found.")
       }
