@@ -1,10 +1,11 @@
 package services.ml
 
 import javax.inject.{Inject, Singleton}
+import java.{util => ju}
 
 import com.google.inject.ImplementedBy
 import dataaccess.{FieldType, FieldTypeHelper}
-import models.FieldTypeId
+import models.{FieldTypeId, FieldTypeSpec}
 import models.ml.classification.Classification
 import models.ml.regression.Regression
 import org.apache.spark.ml.evaluation.{Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
@@ -25,16 +26,16 @@ import scala.util.Random
 trait MachineLearningService {
 
   def classify(
-    dataSetId: String,
-    featureFieldNames: Seq[String],
-    outputFieldNames: String,
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: String,
     mlModel: Classification
   ): Double
 
   def regress(
-    dataSetId: String,
-    featureFieldNames: Seq[String],
-    outputFieldNames: String,
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: String,
     mlModel: Regression
   ): Double
 
@@ -43,10 +44,7 @@ trait MachineLearningService {
 }
 
 @Singleton
-private class MachineLearningServiceImpl @Inject() (
-    sparkApp: SparkApp,
-    dsaf: DataSetAccessorFactory
-  ) extends MachineLearningService {
+private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends MachineLearningService {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
 
@@ -55,8 +53,8 @@ private class MachineLearningServiceImpl @Inject() (
   private implicit val sqlContext = sparkApp.sqlContext
 
   override def classify(
-    dataSetId: String,
-    featureFieldNames: Seq[String],
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Classification
   ): Double = {
@@ -67,15 +65,15 @@ private class MachineLearningServiceImpl @Inject() (
       .setPredictionCol("prediction")
       .setMetricName("accuracy")
 
-    val dataFrame = loadDataFrame(dataSetId, featureFieldNames, outputFieldName)
+    val dataFrame = jsonsToLearningDataFrame(data, fields, outputFieldName)
     val Array(training, test) = dataFrame.randomSplit(Array(0.7, 0.3), seed = 11L)
 
-    train(trainer, evaluator, training, test)
+    train(trainer, Seq(evaluator), training, test).head
   }
 
   override def regress(
-    dataSetId: String,
-    featureFieldNames: Seq[String],
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression
   ): Double = {
@@ -83,38 +81,52 @@ private class MachineLearningServiceImpl @Inject() (
     val evaluator = new RegressionEvaluator()
       .setLabelCol("label")
       .setPredictionCol("prediction")
-      .setMetricName("rmse")
+      .setMetricName("mae")
 
-    val dataFrame = loadDataFrame(dataSetId, featureFieldNames, outputFieldName)
+    val dataFrame = jsonsToLearningDataFrame(data, fields, outputFieldName)
     val Array(training, test) = dataFrame.randomSplit(Array(0.7, 0.3), seed = 11L)
 
-    train(trainer, evaluator, training, test)
+    train(trainer, Seq(evaluator), training, test).head
   }
 
-  private def loadDataFrame(
-    dataSetId: String,
+  private def jsonsToLearningDataFrame(
+    jsons: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: String
+  ): DataFrame = {
+    // convert jsons to a data frame
+    val fieldNameAndTypes = fields.map { case (name, fieldTypeSpec) => (name, ftf(fieldTypeSpec))}
+    val df = jsonsToDataFrame(jsons, fieldNameAndTypes)
+
+    // prep the data frame for learning
+    val featureFieldNames = fields.map(_._1).filterNot(_ == outputFieldName)
+    prepLearningDataFrame(df, featureFieldNames, outputFieldName)
+  }
+
+  private def prepLearningDataFrame(
+    df: DataFrame,
     featureFieldNames: Seq[String],
     outputFieldName: String
   ): DataFrame = {
-    val dsa = dsaf(dataSetId).get
-    // Load training data
-    val df = Await.result(dataSetToDataFrame(dsa), 2 minutes)
-//    df.printSchema()
-    df.schema.fields.foreach(field =>
-      println(s"${field.name}: ${field.dataType.typeName} (nullable = ${field.nullable}), metadata = ${field.metadata.toString()}")
-    )
+    //    df.printSchema()
+//    df.schema.fields.foreach(field =>
+//      println(s"${field.name}: ${field.dataType.typeName} (nullable = ${field.nullable}), metadata = ${field.metadata.toString()}")
+//    )
+
+    // drop null values
+    val nonNullDf = df.na.drop
 
     val assembler = new VectorAssembler()
-      .setInputCols(df.columns.filter(featureFieldNames.contains))
+      .setInputCols(nonNullDf.columns.filter(featureFieldNames.contains))
       .setOutputCol("features")
 
-    val data = assembler.transform(df).withColumnRenamed(outputFieldName, "label")
+    val data = assembler.transform(nonNullDf).withColumnRenamed(outputFieldName, "label")
 
-//    val data = new StringIndexer()
-//      .setInputCol(outputFieldName)
-//      .setOutputCol("label")
-//      .fit(data2).transform(data2)
-//    data.printSchema()
+    //    val data = new StringIndexer()
+    //      .setInputCol(outputFieldName)
+    //      .setOutputCol("label")
+    //      .fit(data2).transform(data2)
+    //    data.printSchema()
 
     //    val data1 = data.filter(data("label").===(1))
     //    val data0 = data.filter(data("label").===(0)).limit(data1.count().toInt)
@@ -214,27 +226,18 @@ private class MachineLearningServiceImpl @Inject() (
 
   private def train[M <: Model[M]](
     reg: Estimator[M],
-    evaluator: Evaluator,
+    evaluators: Traversable[Evaluator],
     trainData: DataFrame,
     testData: DataFrame
-  ): Double = {
+  ): Traversable[Double] = {
     // Fit the model
     val lrModel = reg.fit(trainData)
 
     // Make predictions.
     val predictions = lrModel.transform(testData)
 
-    evaluator.evaluate(predictions)
+    evaluators.map(_.evaluate(predictions))
   }
-
-  private def dataSetToDataFrame(dsa: DataSetAccessor) =
-    for {
-      fields <- dsa.fieldRepo.find()
-      jsons <- dsa.dataSetRepo.find()
-    } yield {
-      val fieldNameAndTypes = fields.map(field => (field.name, ftf(field.fieldTypeSpec)))
-      jsonsToDataFrame(jsons, fieldNameAndTypes.toSeq)
-    }
 
 //  private def jsonsToDataFrameOld(
 //    jsons: Traversable[JsObject],
@@ -257,10 +260,15 @@ private class MachineLearningServiceImpl @Inject() (
   ): DataFrame = {
     val data = jsons.map { json =>
       val values = fieldNameAndTypes.map { case (fieldName, fieldType) =>
-        if (fieldType.spec.fieldType == FieldTypeId.Enum) {
-          fieldType.jsonToDisplayString(json \ fieldName)
-        } else {
-          fieldType.jsonToValue(json \ fieldName).getOrElse(null)
+        fieldType.spec.fieldType match {
+          case FieldTypeId.Enum =>
+            fieldType.jsonToDisplayString(json \ fieldName)
+
+          case FieldTypeId.Date =>
+            fieldType.asValueOf[ju.Date].jsonToValue(json \ fieldName).map( date => new java.sql.Date(date.getTime)).getOrElse(null)
+
+          case _ =>
+            fieldType.jsonToValue(json \ fieldName).getOrElse(null)
         }
       }
       Row.fromSeq(values)
@@ -280,7 +288,7 @@ private class MachineLearningServiceImpl @Inject() (
         case FieldTypeId.Null => NullType
       }
 
-      // TODO: we can pehaps create our own metadata for enums without StringIndexer
+      // TODO: we can perhaps create our own metadata for enums without StringIndexer
 //      val jsonMetadata = Json.obj("ml_attr" -> Json.obj(
 //        "vals" -> JsArray(Seq(JsString("lala"), JsString("lili"))),
 //        "type" -> "nominal"

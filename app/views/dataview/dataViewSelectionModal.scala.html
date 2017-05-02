@@ -26,19 +26,21 @@
 
 @modal(modalName, "Choose Data View", dataViewSelectionModalBody, call, Some(dataViewSelectionModalButtons))
 
-<script type="text/javascript" defer="defer">
-    $.ajax({
-        url: '@Html(dataViewRouter.idAndNames.url)',
-        success: function (data) {
-            var typeaheadData = data.map( function(dataView, index) {
-                return {name: dataView._id.$oid, label: dataView.name};
-            });
-            populateFieldTypeahed(
-                $('#dataViewTypeahead'),
-                $('#dataViewId'),
-                typeaheadData,
-                @FilterShowFieldStyle.LabelsOnly.id
-            );
-        }
-    });
+<script type="text/javascript">
+    $(function () {
+        $.ajax({
+            url: '@Html(dataViewRouter.idAndNames.url)',
+            success: function (data) {
+                var typeaheadData = data.map(function (dataView, index) {
+                    return {name: dataView._id.$oid, label: dataView.name};
+                });
+                populateFieldTypeahed(
+                    $('#dataViewTypeahead'),
+                    $('#dataViewId'),
+                    typeaheadData,
+                    @FilterShowFieldStyle.LabelsOnly.id
+                );
+            }
+        });
+    })
 </script>

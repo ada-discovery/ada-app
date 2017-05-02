@@ -4,17 +4,31 @@ import javax.inject.Inject
 
 import models.ml.TreeCore
 import models.ml.regression._
+import persistence.dataset.DataSetAccessorFactory
+import services.DataSetService
 import services.ml.MachineLearningService
+import scala.concurrent.duration._
 
-class MachineLearningRegressionTest @Inject()(machineLearningService: MachineLearningService) extends Runnable {
+import scala.concurrent.Await.result
+
+class MachineLearningRegressionTest @Inject()(
+    machineLearningService: MachineLearningService,
+    dsaf: DataSetAccessorFactory,
+    dss: DataSetService
+  ) extends Runnable {
 
   private val dataSetId = "ml.iris"
   private val featureFieldNames = Seq("petal-length", "petal-width", "sepal-length", "class")
   private val outputField = "sepal-width"
 
   override def run = {
+    val dsa = dsaf(dataSetId).get
+    val (jsons, fields) = result(dss.loadDataAndFields(dsa), 2 minutes)
+
+    // featureFieldNames,
+
     def regress(model: Regression) =
-      machineLearningService.regress(dataSetId, featureFieldNames, outputField, model)
+      machineLearningService.regress(jsons, fields, outputField, model)
 
     println("Linear regression")
 

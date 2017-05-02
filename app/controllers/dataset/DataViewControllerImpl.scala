@@ -195,7 +195,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   override def idAndNames = Action.async { implicit request =>
     for {
       dataViews <- repo.find(
-        sort = Seq(AscSort("name")),
+//        sort = Seq(AscSort("name")),
         projection = Seq("name", "default", "elementGridWidth", "timeCreated")
       )
     } yield {

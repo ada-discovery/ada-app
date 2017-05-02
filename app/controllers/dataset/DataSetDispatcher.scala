@@ -89,6 +89,24 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     fieldNameOption: Option[String]
   ) = dispatch(_.getFractalis(fieldNameOption))
 
+  override def getClassification = dispatch(_.getClassification)
+
+  override def getRegression = dispatch(_.getRegression)
+
+  override def classify(
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId
+  ) = dispatch(_.classify(mlModelId, inputFieldNames, outputFieldName, filterOrId))
+
+  override def regress(
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId
+  ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterOrId))
+
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ) = dispatch(_.getFields(fieldTypeIds))

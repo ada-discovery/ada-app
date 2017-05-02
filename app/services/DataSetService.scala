@@ -1,10 +1,11 @@
 package services
 
 import javax.inject.Inject
+
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import dataaccess._
-import dataaccess.RepoTypes.{FieldRepo, DataSetSettingRepo, JsonCrudRepo}
-import _root_.util.{MessageLogger, JsonUtil}
+import dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, JsonCrudRepo}
+import _root_.util.{JsonUtil, MessageLogger}
 import com.google.inject.ImplementedBy
 import models._
 import Criterion.Infix
@@ -15,11 +16,14 @@ import play.api.Logger
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
+
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import play.api.Configuration
 import _root_.util.JsonUtil._
 import _root_.util.seqFutures
+import models.FilterCondition.FilterOrId
+
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
@@ -116,6 +120,12 @@ trait DataSetService {
     saveBatchSize: Option[Int],
     jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]] = None
   ): Future[Unit]
+
+  def loadDataAndFields(
+    dsa: DataSetAccessor,
+    fieldNames: Seq[String] = Nil,
+    criteria: Seq[Criterion[Any]] = Nil
+  ): Future[(Traversable[JsObject], Seq[(String, FieldTypeSpec)])]
 }
 
 class DataSetServiceImpl @Inject()(
@@ -1114,6 +1124,32 @@ class DataSetServiceImpl @Inject()(
       throw new AdaParseException(s"Unmatched suffix detected ${unmatchedSuffixOption.get}.")
     }
     fixedItems
+  }
+
+  override def loadDataAndFields(
+    dsa: DataSetAccessor,
+    fieldNames: Seq[String],
+    criteria: Seq[Criterion[Any]]
+  ): Future[(Traversable[JsObject], Seq[(String, FieldTypeSpec)])] = {
+    val fieldsFuture =
+      if (fieldNames.nonEmpty)
+        dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
+      else
+        dsa.fieldRepo.find()
+
+    val dataFuture =
+      if (fieldNames.nonEmpty)
+        dsa.dataSetRepo.find(criteria, projection = fieldNames)
+      else
+        dsa.dataSetRepo.find(criteria)
+
+    for {
+      fields <- fieldsFuture
+      jsons <- dataFuture
+    } yield {
+      val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
+      (jsons, fieldNameAndSpecs.toSeq)
+    }
   }
 
   private def logProgress(index: Int, granularity: Double, total: Int) =

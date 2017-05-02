@@ -1,0 +1,123 @@
+@import reactivemongo.play.json.BSONFormats._
+@import views.html.layout.main
+@import views.html.elements._
+@import views.html.dataset.{mlElements, datasetSubNavWithJs}
+@import play.api.i18n.Messages
+@import models.DataSpaceMetaInfo
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+
+@(
+    dataSetName: String,
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@bottomResources = {
+    @typeaheadJsImport()
+
+    @helper.javascriptRouter("dataSetJsRoutes")(
+        dataSetJsRouter.classify
+    )
+
+    <script type="text/javascript">
+        $(function () {
+            populateFieldTypeahedFromUrl(
+                $('#outputFieldTypeahead'),
+                $('#outputFieldName'),
+                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            )
+
+            populateFieldTypeahedFromUrl(
+                $('#inputFieldNameDiv #newItemTypeahead'),
+                $('#inputFieldNameDiv #newItem'),
+                '@Html(dataSetRouter.allFields.url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            )
+
+            $.ajax({
+                url: '@Html(controllers.ml.routes.ClassificationController.idAndNames.url)',
+                success: function (data) {
+                    var typeaheadData = data.map(function (classification, index) {
+                        return {name: classification._id.$oid, label: classification.name};
+                    });
+                    populateFieldTypeahed(
+                        $('#mlModelTypeahead'),
+                        $('#mlModelId'),
+                        typeaheadData,
+                        @FilterShowFieldStyle.LabelsOnly.id
+                    );
+                }
+            });
+
+            $('#outputFieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    classify();
+                }
+            });
+
+            $('#mlModelTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    classify();
+                }
+            });
+
+            $('#launchButton').on('click', function() {
+                classify();
+            })
+        });
+
+        function classify() {
+            var outputFieldName = $("#outputFieldName").val();
+            var outputFieldLabel = $("#outputFieldTypeahead").val();
+
+            var mlModelId = $("#mlModelId").val();
+            var mlModelName = $("#mlModelTypeahead").val();
+
+            $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
+            var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
+
+            $("#successRate").val("");
+
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.classify(mlModelId, inputFieldNames, outputFieldName, "[]").ajax( {
+                success: function(successRate) {
+                    showMessage("Classification finished.")
+                    $("#successRate").val(successRate);
+                },
+                error: function(data){
+                    showError( data.responseText );
+                }
+            });
+
+            showMessage("Classification for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
+        }
+    </script>
+}
+
+@main(Messages("classification.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
+
+    <div class="page-header">
+        <h3>
+            @Messages("classification.title", dataSetName)
+        </h3>
+    </div>
+
+    @mlElements()
+
+    <hr/>
+
+    <div class="row">
+        <div class="col-md-12">
+            <form>
+                <fieldset>
+                    @labelValue("successRate", "Success Rate") {
+                        <input type="text" id="successRate" name="successRate" readonly="readonly" value=""/>
+                    }
+                </fieldset>
+            </form>
+        </div>
+    </div>
+}

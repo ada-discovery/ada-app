@@ -20,15 +20,19 @@ import controllers.core.{ReadonlyControllerImpl, WebContext}
 import org.apache.commons.lang3.StringEscapeUtils
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.FilterCondition.FilterOrId
+import models.ml.classification.LogisticRegression
+import models.ml.regression.LinearRegression
+import persistence.RepoTypes.{ClassificationRepo, RegressionRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
 import play.api.Logger
 import play.api.libs.json._
 import play.api.mvc.Results._
 import reactivemongo.bson.BSONObjectID
-import services.{StatsService, TranSMARTService}
+import services.{DataSetService, StatsService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
+import services.ml.MachineLearningService
 import views.html.dataset
 
 import scala.math.Ordering.Implicits._
@@ -42,6 +46,10 @@ trait GenericDataSetControllerFactory {
 protected[controllers] class DataSetControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
+    mlService: MachineLearningService,
+    dataSetService: DataSetService,
+    classificationRepo: ClassificationRepo,
+    regressionRepo: RegressionRepo,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
   ) extends ReadonlyControllerImpl[JsObject, BSONObjectID]
 
@@ -1350,20 +1358,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getFractalis(
     fieldNameOption: Option[String]
   ) = Action.async { implicit request =>
-    val dataSetNameFuture = dsa.dataSetName
-    val treeFuture = dataSpaceTreeFuture
-    val settingFuture = dsa.setting
-
     {
       for {
-        // get the data set name
-        dataSetName <- dataSetNameFuture
-
-        // get the data space tree
-        dataSpaceTree <- treeFuture
-
-        // get the data set setting
-        setting <- settingFuture
+        // get the data set name, data space tree and the data set setting
+        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
 
         fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
 
@@ -1375,7 +1373,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             dataSetName,
             field,
             setting.filterShowFieldStyle,
-            dataSpaceTree
+            tree
           ))
           case Accepts.Json() => BadRequest("getFractalis function doesn't support JSON response.")
         }
@@ -1385,6 +1383,124 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         Logger.error("Problem found in the getFractalis process")
         InternalServerError(t.getMessage)
     }
+  }
+
+  def getClassification = Action.async { implicit request =>
+    {
+      for {
+        // get the data set name, data space tree and the data set setting
+        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
+      } yield {
+        render {
+          case Accepts.Html() => Ok(dataset.classification(
+            dataSetName,
+            setting.filterShowFieldStyle,
+            tree
+          ))
+          case Accepts.Json() => BadRequest("getClassification function doesn't support JSON response.")
+        }
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the getClassification process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+  def getRegression = Action.async { implicit request =>
+    {
+      for {
+        // get the data set name, data space tree and the data set setting
+        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
+      } yield {
+        render {
+          case Accepts.Html() => Ok(dataset.regression(
+            dataSetName,
+            setting.filterShowFieldStyle,
+            tree
+          ))
+          case Accepts.Json() => BadRequest("getRegression function doesn't support JSON response.")
+        }
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the getRegression process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+  private def getDataSetNameTreeAndSetting: Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)]= {
+    val dataSetNameFuture = dsa.dataSetName
+    val treeFuture = dataSpaceTreeFuture
+    val settingFuture = dsa.setting
+
+    for {
+      // get the data set name
+      dataSetName <- dataSetNameFuture
+
+      // get the data space tree
+      dataSpaceTree <- treeFuture
+
+      // get the data set setting
+      setting <- settingFuture
+    } yield
+      (dataSetName, dataSpaceTree, setting)
+  }
+
+  override def classify(
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
+    val explFieldNamesToLoads =
+      if (inputFieldNames.nonEmpty)
+        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
+      else
+        Nil
+
+    val mlModelFuture = classificationRepo.get(mlModelId)
+    val dataAndFieldsFuture = dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads)
+
+    for {
+      (jsons, fields) <- dataAndFieldsFuture
+      mlModel <- mlModelFuture
+    } yield
+      mlModel match {
+        case Some(mlModel) =>
+          val x = mlService.classify(jsons, fields, outputFieldName, mlModel)
+          Ok(x.toString)
+        case None =>
+          BadRequest(s"ML classification model with id ${mlModelId.stringify} not found.")
+      }
+  }
+
+  override def regress(
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
+    val explFieldNamesToLoads =
+      if (inputFieldNames.nonEmpty)
+        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
+      else
+        Nil
+
+    val mlModelFuture = regressionRepo.get(mlModelId)
+    val dataAndFieldsFuture = dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads)
+
+    for {
+      (jsons, fields) <- dataAndFieldsFuture
+      mlModel <- mlModelFuture
+    } yield
+      mlModel match {
+        case Some(mlModel) =>
+          val x = mlService.regress(jsons, fields, outputFieldName, mlModel)
+          Ok(x.toString)
+        case None =>
+          BadRequest(s"ML regression model with id ${mlModelId.stringify} not found.")
+      }
   }
 
   override def getFields(

@@ -5,6 +5,7 @@ import javax.inject.Inject
 
 import controllers.core._
 import controllers.{AdminRestrictedCrudController, EnumFormatter, SeqFormatter, routes}
+import dataaccess.AscSort
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models._
 import models.ml.TreeCore
@@ -15,10 +16,12 @@ import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}
 import play.api.i18n.Messages
+import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, Result}
 import play.twirl.api.Html
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
-import util.SecurityUtil.restrictAdmin
+import util.SecurityUtil.{restrictAdmin, restrictSubjectPresent}
 import views.html.{layout, classification => view}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -131,11 +134,11 @@ class ClassificationController @Inject()(
 
 
   protected case class ClassificationCreateEditViews[E <: Classification](
-    name: String,
-    val form: Form[E],
-    viewElements: (Form[E], Messages) => Html)(
-    implicit manifest: Manifest[E]
-  ) extends CreateEditFormViews[E, BSONObjectID] {
+                                                                           name: String,
+                                                                           val form: Form[E],
+                                                                           viewElements: (Form[E], Messages) => Html)(
+                                                                           implicit manifest: Manifest[E]
+                                                                         ) extends CreateEditFormViews[E, BSONObjectID] {
 
     override protected[controllers] def fillForm(item: E) =
       form.fill(item)
@@ -230,4 +233,23 @@ class ClassificationController @Inject()(
       (page, tree)
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
+
+  def idAndNames = restrictSubjectPresent(deadbolt) {
+    Action.async { implicit request =>
+      for {
+        classifications <- repo.find(
+          sort = Seq(AscSort("name"))
+//          projection = Seq("concreteClass", "name", "timeCreated")
+        )
+      } yield {
+        val idAndNames = classifications.map(classification =>
+          Json.obj(
+            "_id" -> classification._id,
+            "name" -> classification.name
+          )
+        )
+        Ok(JsArray(idAndNames.toSeq))
+      }
+    }
+  }
 }

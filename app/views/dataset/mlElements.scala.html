@@ -1,0 +1,33 @@
+@import views.html.elements.labelValue
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport}
+
+@dynamicTableJsImport()
+
+@fieldNamesAddModalInner = {
+    <input type="text" id="newItemTypeahead" class="typeahead">
+    <input type="hidden" id="newItem">
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <form>
+            <fieldset>
+                @labelValue("outputField", "Output Field") {
+                    <input id="outputFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="">
+                    <input id="outputFieldName" name="outputFieldName" type="hidden" value="">
+                }
+                @labelValue("inputFieldNames", "Input Field Names") {
+                    @dynamicStringTable("inputFieldName", Nil, true, Some(fieldNamesAddModalInner))
+                }
+                @labelValue("mlModel", "ML Model") {
+                    <input id="mlModelTypeahead" class="typeahead typeahead-large" type="text" placeholder="ML Model" value="">
+                    <input id="mlModelId" name="mlModelId" type="hidden" value="">
+                }
+            </fieldset>
+
+            <div class="actions pull-right">
+                <button id="launchButton" type="button" class="btn btn-primary">Submit</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -61,6 +61,24 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     fieldName: Option[String]
   ): Action[AnyContent]
 
+  def getClassification: Action[AnyContent]
+
+  def getRegression: Action[AnyContent]
+
+  def classify(
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def regress(
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
   def getFieldNames: Action[AnyContent]
 
   def getFields(

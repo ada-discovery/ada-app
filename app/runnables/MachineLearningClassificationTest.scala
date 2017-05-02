@@ -4,9 +4,17 @@ import javax.inject.Inject
 
 import models.ml.TreeCore
 import models.ml.classification._
+import persistence.dataset.DataSetAccessorFactory
+import services.DataSetService
 import services.ml.MachineLearningService
+import scala.concurrent.Await.result
+import scala.concurrent.duration._
 
-class MachineLearningClassificationTest @Inject()(machineLearningService: MachineLearningService) extends Runnable {
+class MachineLearningClassificationTest @Inject()(
+    machineLearningService: MachineLearningService,
+    dsaf: DataSetAccessorFactory,
+    dss: DataSetService
+  ) extends Runnable {
 
 //  private val dataSetId = "ppmi.ppmi_si"
 //  private val featureFieldNames = Seq("DP", "NALT", "NHET", "NMIN", "NVAR", "PASS", "PASS_S", "QUAL", "RATE", "SING", "TITV")
@@ -17,8 +25,13 @@ class MachineLearningClassificationTest @Inject()(machineLearningService: Machin
   private val outputField = "class"
 
   override def run = {
+    val dsa = dsaf(dataSetId).get
+    val (jsons, fields) = result(dss.loadDataAndFields(dsa), 2 minutes)
+
+    // featureFieldNames,
+
     def classify(model: Classification) =
-      machineLearningService.classify(dataSetId, featureFieldNames, outputField, model)
+      machineLearningService.classify(jsons, fields, outputField, model)
 
     println("Logistic regression")
 

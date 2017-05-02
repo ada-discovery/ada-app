@@ -101,6 +101,10 @@ GET         /studies/scatter                                                    
 GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/correlations                                                   controllers.dataset.DataSetDispatcher.getCorrelations(fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/cumulativeCount                                                controllers.dataset.DataSetDispatcher.getCumulativeCount(fieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /studies/classification                                                 controllers.dataset.DataSetDispatcher.getClassification
+GET         /studies/regression                                                     controllers.dataset.DataSetDispatcher.getRegression
+POST        /studies/classify                                                       controllers.dataset.DataSetDispatcher.classify(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
+POST        /studies/regress                                                        controllers.dataset.DataSetDispatcher.regress(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
 GET         /studies/fractalis                                                      controllers.dataset.DataSetDispatcher.getFractalis(fieldName: Option[String] ?= None)
 GET         /studies/table                                                          controllers.dataset.DataSetDispatcher.getTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
 GET         /studies/widgetPanelAndTable                                            controllers.dataset.DataSetDispatcher.getWidgetPanelAndTable(dataViewId: BSONObjectID, tablePage: Int, tableOrder: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
@@ -192,20 +196,20 @@ GET         /ml/classification                                                  
 GET         /ml/classification/all                                                  controllers.ml.ClassificationController.listAll(s: String ?= "concreteClass")
 GET         /ml/classification/new                                                  controllers.ml.ClassificationController.create(concreteClassName: String)
 POST        /ml/classification/save                                                 controllers.ml.ClassificationController.save
-GET         /ml/classification/:id/get                                              controllers.ml.ClassificationController.get(id: BSONObjectID)
-GET         /ml/classification/:id                                                  controllers.ml.ClassificationController.edit(id: BSONObjectID)
+GET         /ml/classification/get/:id                                              controllers.ml.ClassificationController.get(id: BSONObjectID)
 POST        /ml/classification/:id                                                  controllers.ml.ClassificationController.update(id: BSONObjectID)
 POST        /ml/classification/:id/delete                                           controllers.ml.ClassificationController.delete(id: BSONObjectID)
+GET         /ml/classification/idAndNames                                           controllers.ml.ClassificationController.idAndNames
 
 # ML Regression
 GET         /ml/regression                                                          controllers.ml.RegressionController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[models.FilterCondition] ?= Nil)
 GET         /ml/regression/all                                                      controllers.ml.RegressionController.listAll(s: String ?= "concreteClass")
 GET         /ml/regression/new                                                      controllers.ml.RegressionController.create(concreteClassName: String)
 POST        /ml/regression/save                                                     controllers.ml.RegressionController.save
-GET         /ml/regression/:id/get                                                  controllers.ml.RegressionController.get(id: BSONObjectID)
-GET         /ml/regression/:id                                                      controllers.ml.RegressionController.edit(id: BSONObjectID)
+GET         /ml/regression/get/:id                                                  controllers.ml.RegressionController.get(id: BSONObjectID)
 POST        /ml/regression/:id                                                      controllers.ml.RegressionController.update(id: BSONObjectID)
 POST        /ml/regression/:id/delete                                               controllers.ml.RegressionController.delete(id: BSONObjectID)
+GET         /ml/regression/idAndNames                                               controllers.ml.RegressionController.idAndNames
 
 # Message
 GET         /messages/stream                                                        controllers.MessageController.stream

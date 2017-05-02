@@ -19,9 +19,12 @@ import play.api.i18n.Messages
 import play.api.mvc.{Action, Result}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
-import util.SecurityUtil.restrictAdmin
+import reactivemongo.play.json.BSONFormats._
+import util.SecurityUtil.{restrictAdmin, restrictSubjectPresent}
 import views.html.{layout, regression => view}
 import controllers.ml.routes.{RegressionController => regressionRoutes}
+import dataaccess.AscSort
+import play.api.libs.json.{JsArray, Json}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -211,4 +214,23 @@ class RegressionController @Inject()(
       (page, tree)
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
+
+  def idAndNames = restrictSubjectPresent(deadbolt) {
+    Action.async { implicit request =>
+      for {
+        regressions <- repo.find(
+          sort = Seq(AscSort("name"))
+//          projection = Seq("concreteClass", "name", "timeCreated")
+        )
+      } yield {
+        val idAndNames = regressions.map(regression =>
+          Json.obj(
+            "_id" -> regression._id,
+            "name" -> regression.name
+          )
+        )
+        Ok(JsArray(idAndNames.toSeq))
+      }
+    }
+  }
 }

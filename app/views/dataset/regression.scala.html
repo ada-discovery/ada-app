@@ -1,0 +1,124 @@
+@import models.Field
+@import reactivemongo.play.json.BSONFormats._
+@import views.html.layout.main
+@import views.html.dataset.{mlElements, datasetSubNavWithJs}
+@import play.api.i18n.Messages
+@import models.DataSpaceMetaInfo
+@import views.html.elements._
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+
+@(
+    dataSetName: String,
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@bottomResources = {
+    @typeaheadJsImport()
+
+    @helper.javascriptRouter("dataSetJsRoutes")(
+        dataSetJsRouter.regress
+    )
+
+    <script type="text/javascript">
+        $(function () {
+            populateFieldTypeahedFromUrl(
+                $('#outputFieldTypeahead'),
+                $('#outputFieldName'),
+                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date)).url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            )
+
+            populateFieldTypeahedFromUrl(
+                $('#inputFieldNameDiv #newItemTypeahead'),
+                $('#inputFieldNameDiv #newItem'),
+                '@Html(dataSetRouter.allFields.url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            )
+
+            $.ajax({
+                url: '@Html(controllers.ml.routes.RegressionController.idAndNames.url)',
+                success: function (data) {
+                    var typeaheadData = data.map(function (regression, index) {
+                        return {name: regression._id.$oid, label: regression.name};
+                    });
+                    populateFieldTypeahed(
+                        $('#mlModelTypeahead'),
+                        $('#mlModelId'),
+                        typeaheadData,
+                        @FilterShowFieldStyle.LabelsOnly.id
+                    );
+                }
+            });
+
+            function regress() {
+                var outputFieldName = $("#outputFieldName").val();
+                var outputFieldLabel = $("#outputFieldTypeahead").val();
+
+                var mlModelId = $("#mlModelId").val();
+                var mlModelName = $("#mlModelTypeahead").val();
+
+                $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
+                var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
+
+                $("#errorRate").val("");
+
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.regress(mlModelId, inputFieldNames, outputFieldName, "[]").ajax( {
+                    success: function(errorRate) {
+                        showMessage("Regression finished.")
+                        $("#errorRate").val(errorRate);
+                    },
+                    error: function(data){
+                        showError( data.responseText );
+                    }
+                });
+
+                showMessage("Regression for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
+            }
+
+            $('#fieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    regress();
+                }
+            });
+
+            $('#mlModelTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    regress();
+                }
+            });
+
+            $('#launchButton').on('click', function() {
+                regress();
+            })
+        });
+    </script>
+}
+
+@main(Messages("regression.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
+
+    <div class="page-header">
+        <h3>
+            @Messages("regression.title", dataSetName)
+        </h3>
+    </div>
+
+    @mlElements()
+
+    <hr/>
+
+    <div class="row">
+        <div class="col-md-12">
+            <form>
+                <fieldset>
+                @labelValue("errorRate", "Error Rate") {
+                    <input type="text" id="errorRate" name="errorRate" readonly="readonly" value=""/>
+                }
+                </fieldset>
+            </form>
+        </div>
+    </div>
+}
