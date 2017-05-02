@@ -480,3 +480,17 @@ function getModalValues(modalElementId) {
     })
     return values;
 }
+
+function showMLOutput(evalRates) {
+    $("#outputDiv").html("");
+    $.each(evalRates, function(i, data) {
+        var div = $("<div class='form-group'>")
+        var label = "<label for='' class='col-sm-2 control-label'>" + data.metricName + "</label>"
+        var output = "<div class='col-sm-10'><input type='text' readonly='readonly' value='" + data.evalRate + "'/></div>"
+        div.append(label)
+        div.append(output)
+        $("#outputDiv").append(div);
+        $('#outputDiv').fadeIn('2000');
+
+    });
+}
