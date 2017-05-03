@@ -45,9 +45,10 @@ GET         /admin/dataSetImport/new                                            
 GET         /admin/dataSetImport/execute/:id                                        controllers.dataset.DataSetImportController.execute(id: BSONObjectID)
 POST        /admin/dataSetImport/save                                               controllers.dataset.DataSetImportController.save
 GET         /admin/dataSetImport/:id/get                                            controllers.dataset.DataSetImportController.get(id: BSONObjectID)
-GET         /admin/dataSetImport/:id                                                controllers.dataset.DataSetImportController.edit(id: BSONObjectID)
 POST        /admin/dataSetImport/:id                                                controllers.dataset.DataSetImportController.update(id: BSONObjectID)
 POST        /admin/dataSetImport/:id/delete                                         controllers.dataset.DataSetImportController.delete(id: BSONObjectID)
+GET         /admin/dataSetImport/copy                                               controllers.dataset.DataSetImportController.copy(dataSetImportId: BSONObjectID)
+GET         /admin/dataSetImport/idAndNames                                         controllers.dataset.DataSetImportController.idAndNames
 
 # User Management
 GET         /users                                                                  controllers.UserController.find(p: Int ?= 0, s: String ?= "ldapDn", filter: Seq[models.FilterCondition] ?= Nil)

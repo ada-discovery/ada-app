@@ -1,5 +1,5 @@
 @(
-    modalName : String,
+    modalId : String,
     title: String,
     modalBody: Html,
     call: Option[Call],
@@ -20,7 +20,7 @@
     </div>
 }
 
-<div class="modal fade" id="@modalName" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+<div class="modal fade" id="@modalId" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
@@ -28,7 +28,7 @@
                 <h4 class="modal-title">@title</h4>
             </div>
             @if(call.isDefined) {
-                <form id="@{modalName}Form" action="@call">
+                <form id="@{modalId}Form" action="@call">
                     @modalInner
                 </form>
             } else {
@@ -42,10 +42,10 @@
     $(function () {
         // params passed to the form's action as a call (url) are ignored... need to add them manually
         var params = getQueryParams('@call')
-        addParams($("#@{modalName}Form"), params)
+        addParams($("#@{modalId}Form"), params)
 
-        $('#@{modalName}').find('button[type="submit"]').click(function(){
-            $('#@{modalName}').modal('hide');
+        $('#@{modalId}').find('button[type="submit"]').click(function(){
+            $('#@{modalId}').modal('hide');
         });
     })
 </script>

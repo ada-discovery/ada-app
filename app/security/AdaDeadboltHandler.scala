@@ -1,16 +1,15 @@
 package security
 
 import controllers.routes
-
 import play.api.mvc._
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import Results._
-
-import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
+import be.objectify.deadbolt.scala.{DeadboltHandler, DynamicResourceHandler}
 import be.objectify.deadbolt.core.models.Subject
+import io.netty.handler.codec.http.HttpHeaders.Names
 
 /**
   * Hooks for deadbolt
@@ -32,6 +31,8 @@ class AdaOnFailureRedirectDeadboltHandler(
     getSubject(request).map {
       _ match {
         case Some(subject) => {
+          println("Accepted encodings: " + getAcceptedEncodings(request).mkString(","))
+
           val username = subject.getIdentifier
           Logger.error(s"Unauthorized access by [$username].")
           val refererUrl = request.headers("referer")
@@ -42,6 +43,9 @@ class AdaOnFailureRedirectDeadboltHandler(
           Redirect(routes.AuthController.login).withSession("successfulLoginUrl" -> request.uri)
       }
     }
+
+  private def getAcceptedEncodings(request: Request[_]) =
+    request.headers.get(Names.ACCEPT_ENCODING).map(_.split(',').map(_.trim)).getOrElse(Array())
 }
 
 class AdaOnFailureUnauthorizedStatusDeadboltHandler(

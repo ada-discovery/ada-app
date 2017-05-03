@@ -7,6 +7,7 @@
 @import models.{DataSpaceMetaInfo, Field}
 @import controllers.core.WebContext._
 @import controllers.core.WebContext
+@import reactivemongo.bson.BSONObjectID
 
 @(
     page: Page[DataSetImport],
@@ -38,17 +39,27 @@
             )
         </div>
         <div class="dropdown pull-right">
-            <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-toggle="tooltip" title="Add Data Set Import">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                @importLink(classOf[CsvDataSetImport], "Csv Import")
-                @importLink(classOf[TranSmartDataSetImport], "TranSmart Import")
-                @importLink(classOf[RedCapDataSetImport], "Red Cap Import")
-                @importLink(classOf[SynapseDataSetImport], "Synapse Import")
-                @importLink(classOf[EGaitDataSetImport], "eGait Import")
+            <ul class="list-inline">
+                <li>
+                    <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-toggle="tooltip" title="Add Data Set Import">
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        @importLink(classOf[CsvDataSetImport], "Csv Import")
+                        @importLink(classOf[TranSmartDataSetImport], "TranSmart Import")
+                        @importLink(classOf[RedCapDataSetImport], "Red Cap Import")
+                        @importLink(classOf[SynapseDataSetImport], "Synapse Import")
+                        @importLink(classOf[EGaitDataSetImport], "eGait Import")
+                    </ul>
+                </li>
+                <li>
+                    <a class="btn btn-success btn-sm" href="#" data-toggle="modal" data-target="#dataSetImportSelectionModal" title="Copy Data Set Import">
+                        <span class="glyphicon glyphicon-duplicate"></span>
+                    </a>
+                </li>
             </ul>
+            @typeaheadSelectionModal("dataSetImportSelectionModal", "dataSetImport", "Data Set Import", dataSetImportRoutes.idAndNames, Some(dataSetImportRoutes.copy(BSONObjectID.generate)))
         </div>
     </div>
 }

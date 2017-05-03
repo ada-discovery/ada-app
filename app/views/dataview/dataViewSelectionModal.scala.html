@@ -1,46 +1,14 @@
 @import controllers.dataset.{DataViewRouter, DataViewJsRouter}
 @import controllers.core.WebContext
+@import views.html.typeaheadSelectionModal
 @import controllers.core.WebContext._
 
 @(
-    modalName: String,
+    modalId: String,
     dataViewRouter: DataViewRouter,
-    call: Option[Call] = None
+    submitCall: Option[Call] = None
 )(
     implicit context: WebContext
 )
 
-@dataViewSelectionModalBody = {
-    <input id="dataViewTypeahead" class="typeahead" style="width: 100%;" type="text" placeholder="Data View Name" value="">
-    <input id="dataViewId" name="dataViewId" type="hidden" value="">
-}
-
-@dataViewSelectionModalButtons = {
-    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    @if(call.isDefined) {
-        <button type="submit" id="submitButton" data-dismiss="modal" class="btn btn-primary">OK</button>
-    } else {
-        <button type="button" id="submitButton" data-dismiss="modal" class="btn btn-primary">OK</button>
-    }
-}
-
-@modal(modalName, "Choose Data View", dataViewSelectionModalBody, call, Some(dataViewSelectionModalButtons))
-
-<script type="text/javascript">
-    $(function () {
-        $.ajax({
-            url: '@Html(dataViewRouter.idAndNames.url)',
-            success: function (data) {
-                var typeaheadData = data.map(function (dataView, index) {
-                    return {name: dataView._id.$oid, label: dataView.name};
-                });
-                populateFieldTypeahed(
-                    $('#dataViewTypeahead'),
-                    $('#dataViewId'),
-                    typeaheadData,
-                    @FilterShowFieldStyle.LabelsOnly.id
-                );
-            }
-        });
-    })
-</script>
+@typeaheadSelectionModal(modalId, "dataView", "Data View", dataViewRouter.idAndNames, submitCall)

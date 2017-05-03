@@ -21,15 +21,16 @@ import play.api.data.{Form, Mapping}
 import play.api.data.Forms._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
+import play.api.libs.json.{JsArray, Json}
 import play.api.mvc._
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 import java.io.{File, FileInputStream, FileOutputStream}
 
 import controllers.core._
-import models.ml.classification.Classification
-import services.{DataSetImportScheduler, DataSetService, DeNoPaSetting}
+import dataaccess.AscSort
+import services.{DataSetImportScheduler, DataSetService}
 import util.SecurityUtil.restrictAdmin
 import views.html.{datasetimport => view}
 import views.html.layout
@@ -374,6 +375,37 @@ class DataSetImportController @Inject()(
     }
   }
 
+  def idAndNames = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      for {
+        imports <- repo.find(sort = Seq(AscSort("name")))
+      } yield {
+        val idAndNames = imports.map(dataView =>
+          Json.obj(
+            "_id" -> dataView._id,
+            "name" -> dataView.dataSetId
+          )
+        )
+        Ok(JsArray(idAndNames.toSeq))
+      }
+    }
+  }
+
+  def copy(id: BSONObjectID) = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      repo.get(id).flatMap(_.fold(
+        Future(NotFound(s"Entity #$id not found"))
+      ) { dataSetImport =>
+        // TODO: handle the timestamp and data set id/name
+        val newDataSetImport = DataSetImportIdentity.clear(dataSetImport)
+        super.saveCall(newDataSetImport).map { newId =>
+          scheduleOrCancel(newId, newDataSetImport)
+          Redirect(routes.DataSetImportController.get(newId)).flashing("success" -> s"Data Set import '${dataSetImport.dataSetId}' has been copied.")
+        }
+      }
+    )}
+  }
+
   private def handleImportFiles(importInfo: DataSetImport)(implicit request: Request[AnyContent]): DataSetImport = {
     val id = importInfo._id.get
 
@@ -423,7 +455,7 @@ class DataSetImportController @Inject()(
   }
 
   private def getFile(fileParamKey: String, request: Request[AnyContent]): Option[(String, java.io.File)] = {
-    val dataFileOption = request.body.asMultipartFormData.get.file(fileParamKey)
+    val dataFileOption = request.body.asMultipartFormData.flatMap(_.file(fileParamKey))
     dataFileOption.map { dataFile =>
       (dataFile.filename, dataFile.ref.file)
     }
