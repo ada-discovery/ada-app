@@ -108,19 +108,17 @@
 }
 
 @spec(widgetSpec: WidgetSpec) = {
-    <a href="#" class="widget-table-cell" onclick="showEditModal(this)">
-        <div class="row">
-            Fields: @fieldLabels(widgetSpec)
-        </div>
-        <div class="row">
-            @{widgetSpec match {
-                case x: DistributionWidgetSpec => x.numericBinCount.map( count => "Numeric Bin Count: " + count).getOrElse("")
-                case x: CumulativeCountWidgetSpec => x.numericBinCount.map( count => "Numeric Bin Count: " + count).getOrElse("")
-                case x: TemplateHtmlWidgetSpec => "Content: " + Html(util.shorten(x.content, 50))
-                case _ => ""
-            }}
-        </div>
-    </a>
+    <div class="row">
+        Fields: @fieldLabels(widgetSpec)
+    </div>
+    <div class="row">
+        @{widgetSpec match {
+            case x: DistributionWidgetSpec => x.numericBinCount.map( count => "Numeric Bin Count: " + count).getOrElse("")
+            case x: CumulativeCountWidgetSpec => x.numericBinCount.map( count => "Numeric Bin Count: " + count).getOrElse("")
+            case x: TemplateHtmlWidgetSpec => "Content: " + Html(util.shorten(x.content, 50))
+            case _ => ""
+        }}
+    </div>
 }
 
 @table = {
@@ -147,9 +145,6 @@
 @rowToModelJsFun = {
     function(row) {
         var model = widgetRowToModel(row);
-
-        model
-
         return JSON.stringify(model);
     }
 }
@@ -324,10 +319,15 @@
          $('#widgetSpecDiv').dynamicTable('replaceTableRow', values)
      })
 
+     $("#widgetSpecDiv table tbody tr").css('cursor', 'pointer');
+     $("#widgetSpecDiv table tbody tr").dblclick(function (event) {
+         showEditModal($(this))
+     });
+
      function setIfNotNull(item, fieldName, value) {
         if (value)
             item[fieldName] = value
-    }
+     }
 
     function widgetRowToModel(row) {
         function getValue(elementId) {
