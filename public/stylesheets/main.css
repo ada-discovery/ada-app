@@ -257,3 +257,7 @@ a.widget-table-cell:focus,
 a.widget-table-cell:hover {
     color: #7D7D7D;
 }
+
+#widgetSpecDiv > table > tr {
+    cursor: pointer;
+}
