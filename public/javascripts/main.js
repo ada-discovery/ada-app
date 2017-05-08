@@ -475,7 +475,11 @@ function getModalValues(modalElementId) {
     var values = {};
     $('#' + modalElementId +' input, #' + modalElementId +' select, #' + modalElementId +' textarea').each(function () {
         if (this.id) {
-            values[this.id] = $(this).val()
+            if ($(this).attr('type') != "checkbox") {
+                values[this.id] = $(this).val()
+            } else {
+                values[this.id] = $(this).is(':checked')
+            }
         }
     })
     return values;

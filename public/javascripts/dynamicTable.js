@@ -34,8 +34,12 @@ $.widget( "custom.dynamicTable", {
 
     openAddModal: function() {
         $('#' + this.modalName +' input, #' + this.modalName +' select, #' + this.modalName +' textarea').each(function () {
-            if (this.id)
+            if (this.id) {
                 $(this).val("");
+                if ($(this).attr('type') == "checkbox") {
+                    $(this).prop('checked', false);
+                }
+            }
         })
         $('#' + this.modalName).modal()
     },
@@ -62,8 +66,10 @@ $.widget( "custom.dynamicTable", {
         });
     },
 
-    replaceTableRow: function(values) {
-        this.tableBody.append(this.options.itemToRow(values))
+    replaceTableRow: function(rowIndex, values) {
+        var row = this.tableBody.find('tr').eq(rowIndex);
+        row.after(this.options.itemToRow(values));
+        row.remove();
     },
 
     removeTableModel: function() {

@@ -90,14 +90,19 @@ case class MultiChartDisplayOptions(
 ) extends DisplayOptions
 
 abstract class WidgetSpec {
-  def fieldNames: Traversable[String]
+  val fieldNames: Traversable[String]
+  val subFilterId: Option[BSONObjectID]
+//  val title: Option[String]
   val displayOptions: DisplayOptions
 }
 
 case class DistributionWidgetSpec(
   fieldName: String,
   groupFieldName: Option[String],
+  subFilterId: Option[BSONObjectID] = None,
+  relativeValues: Boolean = false,
   numericBinCount: Option[Int] = None,
+  useDateMonthBins: Boolean = false,
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends WidgetSpec {
   override val fieldNames = Seq(Some(fieldName), groupFieldName).flatten
@@ -106,7 +111,10 @@ case class DistributionWidgetSpec(
 case class CumulativeCountWidgetSpec(
   fieldName: String,
   groupFieldName: Option[String],
+  subFilterId: Option[BSONObjectID] = None,
+  relativeValues: Boolean = false,
   numericBinCount: Option[Int] = None,
+  useDateMonthBins: Boolean = false,
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends WidgetSpec {
   override val fieldNames = Seq(Some(fieldName), groupFieldName).flatten
@@ -114,6 +122,7 @@ case class CumulativeCountWidgetSpec(
 
 case class BoxWidgetSpec(
   fieldName: String,
+  subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec {
   override val fieldNames = Seq(fieldName)
@@ -123,6 +132,7 @@ case class ScatterWidgetSpec(
   xFieldName: String,
   yFieldName: String,
   groupFieldName: Option[String],
+  subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec {
   override val fieldNames = Seq(Some(xFieldName), Some(yFieldName), groupFieldName).flatten
@@ -130,11 +140,13 @@ case class ScatterWidgetSpec(
 
 case class CorrelationWidgetSpec(
   fieldNames: Seq[String],
+  subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec
 
 case class BasicStatsWidgetSpec(
   fieldName: String,
+  subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec {
   override val fieldNames = Seq(fieldName)
@@ -142,6 +154,7 @@ case class BasicStatsWidgetSpec(
 
 case class TemplateHtmlWidgetSpec(
   content: String,
+  subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec {
   override val fieldNames = Nil

@@ -252,12 +252,6 @@ tr.vertical-divider > td:last-child {
     border-right: none;
 }
 
-a.widget-table-cell,
-a.widget-table-cell:focus,
-a.widget-table-cell:hover {
-    color: #7D7D7D;
-}
-
 #widgetSpecDiv > table > tr {
     cursor: pointer;
 }
