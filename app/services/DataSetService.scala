@@ -552,6 +552,7 @@ class DataSetServiceImpl @Inject()(
       // get the existing fields
       referencedFields <-
         fieldRepo.find(Seq(FieldIdentity.name #-> newFieldNames))
+
       referencedNameFieldMap = referencedFields.map(field => (field.name, field)).toMap
 
       // get the non-existing fields

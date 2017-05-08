@@ -731,12 +731,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Future[Option[(Widget, Seq[String])]] = {
     val chartSpecFuture: Future[Option[Widget]] = widgetSpec match {
 
-      case DistributionWidgetSpec(fieldName, groupFieldName, binCount, displayOptions) =>
+      case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, relativePercentage, numericBinCount, useDateMonthBins, displayOptions) =>
         val field = nameFieldMap.get(fieldName)
         val groupField =  groupFieldName.map(nameFieldMap.get).flatten
 
         field.map { field =>
-          calcDistributionCounts(criteria, field, groupField, binCount).map { countSeries =>
+          calcDistributionCounts(criteria, field, groupField, numericBinCount).map { countSeries =>
             val chartTitle = getDistributionCountChartTitle(field, groupField)
             createDistributionChartSpec(countSeries, field, chartTitle, false, true, displayOptions)
           }
@@ -744,12 +744,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           Future(None)
         )
 
-      case CumulativeCountWidgetSpec(fieldName, groupFieldName, binCount, displayOptions) =>
+      case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, relativePercentage, numericBinCount, useDateMonthBins, displayOptions) =>
         val field = nameFieldMap.get(fieldName)
         val groupField =  groupFieldName.map(nameFieldMap.get).flatten
 
         field.map { field =>
-          calcCumulativeCounts(criteria, field, groupField, binCount).map { cumCountSeries =>
+          calcCumulativeCounts(criteria, field, groupField, numericBinCount).map { cumCountSeries =>
             val chartTitle = getCumulativeCountChartTitle(field, groupField)
             val nonZeroCountSeries = cumCountSeries.filter(_._2.exists(_._2 > 0))
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
@@ -759,7 +759,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           Future(None)
         )
 
-      case BoxWidgetSpec(fieldName, displayOptions) =>
+      case BoxWidgetSpec(fieldName, subFilter, displayOptions) =>
         val field = nameFieldMap.get(fieldName).get
         for {
           quantiles <- statsService.calcQuantiles(repo, criteria, field)
@@ -769,7 +769,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             BoxWidget(field.labelOrElseName, field.labelOrElseName, quants, None, None, displayOptions)
           }
 
-      case TemplateHtmlWidgetSpec(content, displayOptions) =>
+      case TemplateHtmlWidgetSpec(content, subFilter, displayOptions) =>
         val widget = HtmlWidget("", content, displayOptions)
         Future(Some(widget))
 
@@ -785,21 +785,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Option[(Widget, Seq[String])] = {
     val chartSpecOption: Option[Widget] = widgetSpec match {
 
-      case DistributionWidgetSpec(fieldName, groupFieldName, binCount, displayOptions) =>
+      case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, relativePercentage, numericBinCount, useDateMonthBins, displayOptions) =>
         val field = nameFieldMap.get(fieldName)
         val groupField =  groupFieldName.map(nameFieldMap.get).flatten
 
         field.map { field =>
-          val countSeries = calcDistributionCounts(items, field, groupField, binCount)
+          val countSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
           val chartTitle = getDistributionCountChartTitle(field, groupField)
           createDistributionChartSpec(countSeries, field, chartTitle, false, true, displayOptions)
         }.flatten
 
-      case CumulativeCountWidgetSpec(fieldName, groupFieldName, binCount, displayOptions) => {
+      case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, relativePercentage, numericBinCount, useDateMonthBins, displayOptions) =>
         val field = nameFieldMap.get(fieldName).get
         val groupField = groupFieldName.map(nameFieldMap.get).flatten
 
-        val series = calcCumulativeCounts(items, field, groupField, binCount)
+        val series = calcCumulativeCounts(items, field, groupField, numericBinCount)
         val nonZeroCountSeries = series.filter(_._2.exists(_._2 > 0))
 
         val chartTitle = getCumulativeCountChartTitle(field, groupField)
@@ -807,9 +807,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
         val chartSpec = NumericalCountWidget(chartTitle, field.labelOrElseName, nonZeroCountSeries, initializedDisplayOptions)
         Some(chartSpec)
-      }
 
-      case BoxWidgetSpec(fieldName, displayOptions) =>
+      case BoxWidgetSpec(fieldName, subFilter, displayOptions) =>
         nameFieldMap.get(fieldName).map { field =>
           statsService.calcQuantiles(items, field).map { quants =>
             implicit val ordering = quants.ordering
@@ -817,7 +816,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           }
         }.flatten
 
-      case ScatterWidgetSpec(xFieldName, yFieldName, groupFieldName, displayOptions) => {
+      case ScatterWidgetSpec(xFieldName, yFieldName, groupFieldName, subFilter, displayOptions) =>
         val xField = nameFieldMap.get(xFieldName).get
         val yField = nameFieldMap.get(yFieldName).get
         val shortXFieldLabel = shorten(xField.labelOrElseName, 20)
@@ -832,9 +831,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           displayOptions
         )
         Some(chartSpec)
-      }
 
-      case CorrelationWidgetSpec(fieldNames, displayOptions) => {
+      case CorrelationWidgetSpec(fieldNames, subFilter, displayOptions) =>
         val corrFields = fieldNames.map(nameFieldMap.get).flatten
 
         val chartSpec = createPearsonCorrelationChartSpec(
@@ -843,12 +841,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           displayOptions
         )
         Some(chartSpec)
-      }
 
-      case TemplateHtmlWidgetSpec(content, displayOptions) =>
+      case TemplateHtmlWidgetSpec(content, subFilter, displayOptions) =>
         val widget = HtmlWidget("", content, displayOptions)
         Some(widget)
     }
+
     chartSpecOption.map(chartSpec => (chartSpec, widgetSpec.fieldNames.toSeq))
   }
 
