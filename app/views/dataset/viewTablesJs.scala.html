@@ -11,24 +11,63 @@
 )
 
 <script type="text/javascript">
-    $(function () {
-        $(".jsonModalLink").click(function(event) {
-            event.stopPropagation();
-        })
-    })
-
-    function showFieldValue(id, fieldName) {
+    function showJsonFieldValue(id, fieldName, fieldLabel, isArray) {
         dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
             success: function(data) {
-                var json = JSON.stringify(data, null, "\t").replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;').replace(/\n/g, '</br>')
-                var size = data.length
-                var title = "JSON Browser"
-                if (size)
+                var title =  fieldLabel
+                var size = 0
+                var content = "<p>No data to show.</p>"
+
+                if (data) {
+                    content = JSON.stringify(data, null, "\t").replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;').replace(/\n/g, '</br>')
+                    size = data.length
+                }
+
+                if (isArray)
                     title = title + ": Array (Size " + size + ")"
 
-                $('#jsonModal #jsonModalBody').html(json)
+                $('#jsonModal #jsonModalBody').html(content)
                 $('#jsonModal .modal-title').html(title)
                 $('#jsonModal').modal();
+            },
+            error: function(data){
+                showError(data.responseText);
+            }
+        });
+    }
+
+    function showArrayFieldChart(id, fieldName, fieldLabel) {
+        dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
+            success: function(data) {
+                $("#lineChartDiv").html("")
+
+                var series = []
+                var pointFormat = '<span style="color:{point.color}">{point.x:.2f}</span>: <b>{point.y:.2f}</b><br/>'
+
+                if (data && data.length > 0) {
+                    var flattenData = $.map(data, function (item, i) {
+                        return flatten(item)
+                    });
+
+                    var firstItem = flattenData[0]
+
+                    var numericKeys = Object.keys(firstItem).filter(function(key) {
+                        return !isNaN(firstItem[key])
+                    });
+
+                    series = $.map(numericKeys, function (key, j) {
+                        var seriesData = $.map(flattenData, function (item, i) {
+                            return item[key];
+                        });
+                        return [{name: key, data: seriesData}]
+                    });
+                }
+
+                $('#lineChartArrayModal').modal("show");
+
+                $('#lineChartArrayModal').on('shown.bs.modal', function (e) {
+                    lineChart(fieldLabel, "lineChartDiv", null, series, 'Point', 'Value', true, false, pointFormat, null, null, false, false);
+                })
             },
             error: function(data){
                 showError(data.responseText);

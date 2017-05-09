@@ -22,7 +22,9 @@
 }
 
 @modalBody = {
-    <div id="jsonModalBody" class="no-rowClicked">
+    <div id="jsonModalChartDiv">
+    </div>
+    <div id="jsonModalBody">
         @json.map( value => Html(Json.prettyPrint(value).replaceAll("\n", "<br/>")))
     </div>
 }

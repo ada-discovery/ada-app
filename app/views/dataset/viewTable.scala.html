@@ -1,5 +1,5 @@
 @import views.html.table.paginatedJsonTable
-@import views.html.dataset.displayJsonModal
+@import views.html.dataset.jsonModal$
 @import reactivemongo.bson.BSONObjectID
 @import play.api.libs.json.{JsValue, JsObject}
 @import models.{Field, FieldTypeId}
@@ -19,39 +19,41 @@
     implicit request: Request[_]
 )
 
-@genJsonRender(id: BSONObjectID, fieldName: String)(linkTitle: Html) = {
-    <a href="#" onclick="showFieldValue('@id.stringify', '@fieldName');" class="jsonModalLink">
-        @linkTitle
+@jsonFieldLink(id: BSONObjectID, fieldName: String, fieldLabel: String, isArray: Boolean) = {
+    <a href="#" onclick="showJsonFieldValue('@id.stringify', '@fieldName', '@fieldLabel', @isArray);">
+        <span class="glyphicon glyphicon-list"></span>
     </a>
 }
 
-@jsonRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @genJsonRender(id, fieldName) {
-        <b>Json</b>
-    }
+@arrayFieldLink(id: BSONObjectID, fieldName: String, fieldLabel: String) = {
+    <a href="#" onclick="showArrayFieldChart('@id.stringify', '@fieldName', '@fieldLabel');">
+        <span class="glyphicon glyphicon-stats"></span>
+    </a>
 }
 
-@arrayRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @genJsonRender(id, fieldName) {
-        <b>Array</b>
-    }
+@jsonRender(fieldLabel: String)(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @jsonFieldLink(id, fieldName, fieldLabel, false)
 }
 
-@jsonArrayRender(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @genJsonRender(id, fieldName) {
-        <b>Json Array</b>
-    }
+@arrayRender(fieldLabel: String)(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @jsonFieldLink(id, fieldName, fieldLabel, true)
+    @arrayFieldLink(id, fieldName, fieldLabel)
+}
+
+@jsonArrayRender(fieldLabel: String)(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
+    @jsonFieldLink(id, fieldName, fieldLabel, true)
+    @arrayFieldLink(id, fieldName, fieldLabel)
 }
 
 @render(field: Field) = @{
     if (field.isArray) {
         if(field.fieldType == FieldTypeId.Json)
-            (field.name, jsonArrayRender(_, _, _))
+            (field.name, jsonArrayRender(field.labelOrElseName)_)
         else
-            (field.name, arrayRender(_, _, _))
+            (field.name, arrayRender(field.labelOrElseName)_)
     } else {
         if(field.fieldType == FieldTypeId.Json)
-            (field.name, jsonRender(_, _, _))
+            (field.name, jsonRender(field.labelOrElseName)_)
         else {
             val renderer = FieldTypeRenderer(field)
             (field.name, { (id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) => renderer(jsValue) })

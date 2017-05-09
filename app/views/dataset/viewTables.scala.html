@@ -1,4 +1,4 @@
-@import views.html.dataset.{displayJsonModal, viewTable}
+@import views.html.dataset.{jsonModal, lineChartArrayModal, viewTable}
 @import reactivemongo.bson.BSONObjectID
 @import controllers.dataset.DataSetViewData
 @import controllers.dataset.DataSetRouter
@@ -21,5 +21,6 @@
             )
         </div>
     }
-    @displayJsonModal("jsonModal", None)
+    @jsonModal("jsonModal", None)
+    @lineChartArrayModal("lineChartArrayModal")
 </div>

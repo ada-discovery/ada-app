@@ -106,7 +106,7 @@
         page,
         dictionaryRouter.list(_, _, page.filterConditions),
         typeColumns[Field](
-            (None, "", _ => {<input type="checkbox" class="no-rowClicked"/>}),
+            (None, "", _ => {<input type="checkbox" class="table-selection"/>}),
             (Some("name"), "Name", {field => util.JsonUtil.unescapeKey(field.name)}),
             (Some("label"), "Label", editableFieldLabelInput),
             (Some("fieldType"), "Type", _.fieldType),
