@@ -410,7 +410,7 @@ function getCheckedTableIds(tableId, objectIdName) {
   var ids = []
   $('#' + tableId + ' tbody tr').each(function() {
     var id = getRowId($(this), objectIdName)
-    var checked = $(this).find("td input[type=checkbox]").is(':checked');
+    var checked = $(this).find("td input.table-selection[type=checkbox]").is(':checked');
     if (checked) {
       ids.push(id)
     }
@@ -502,4 +502,28 @@ function showMLOutput(evalRates) {
 function getCookie(name) {
     match = document.cookie.match(new RegExp(name + '=([^;]+)'));
     if (match) return match[1];
+}
+
+function flatten(data) {
+    var result = {};
+    function recurse (cur, prop) {
+        if (Object(cur) !== cur) {
+            result[prop] = cur;
+        } else if (Array.isArray(cur)) {
+            for(var i=0, l=cur.length; i<l; i++)
+                recurse(cur[i], prop + "[" + i + "]");
+            if (l == 0)
+                result[prop] = [];
+        } else {
+            var isEmpty = true;
+            for (var p in cur) {
+                isEmpty = false;
+                recurse(cur[p], prop ? prop+"."+p : p);
+            }
+            if (isEmpty && prop)
+                result[prop] = {};
+        }
+    }
+    recurse(data, "");
+    return result;
 }

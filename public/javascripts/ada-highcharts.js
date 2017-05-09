@@ -237,6 +237,7 @@
         xAxisCaption,
         yAxisCaption,
         showLegend,
+        enableDataLabels,
         pointFormat,
         height,
         dataType,
@@ -290,7 +291,7 @@
             plotOptions: {
                 series: {
                     marker: {
-                        enabled: true,
+                        enabled: enableDataLabels,
                         states: {
                             hover: {
                                 enabled: true
@@ -602,7 +603,7 @@
             case 'Line':
                 var series = datas
 
-                lineChart(title, elementId, categories, series, '', 'Count', showLegendImpl, pointFormat, height, null, true, true);
+                lineChart(title, elementId, categories, series, '', 'Count', showLegendImpl, true, pointFormat, height, null, true, true);
                 break;
             case 'Polar':
                 var series = datas.map( function(data, index) {
@@ -644,7 +645,7 @@
             case 'Line':
                 var series = datas
 
-                lineChart(title, elementId, null, series, fieldLabel, 'Count', showLegend, pointFormat, height, dataType, false, true);
+                lineChart(title, elementId, null, series, fieldLabel, 'Count', showLegend, true, pointFormat, height, dataType, false, true);
                 break;
             case 'Polar':
                 var series = datas.map( function(data, index) {

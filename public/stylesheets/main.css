@@ -255,3 +255,7 @@ tr.vertical-divider > td:last-child {
 #widgetSpecDiv > table > tr {
     cursor: pointer;
 }
+
+.modal.large {
+    width: 80%;
+}
