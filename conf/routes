@@ -5,6 +5,7 @@
 # Default path
 GET         /                                                                       controllers.AppController.index
 GET         /studies                                                                controllers.AppController.studies
+GET         /contact                                                                controllers.AppController.contact
 
 # User profiles
 GET         /profile                                                                controllers.UserProfileController.profile
