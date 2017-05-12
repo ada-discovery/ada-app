@@ -4,7 +4,7 @@
 
 @(dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo])(implicit flash: Flash, request: Request[_])
 
-@main("NCER-PD Studies", Some(datasetMenu(dataSpaceMetaInfos))) {
+@main("Studies/Data Sets", Some(datasetMenu(dataSpaceMetaInfos))) {
 
     <div class="page-header">
         <h1>Studies</h1>

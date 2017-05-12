@@ -28,6 +28,10 @@ class AppController @Inject() (dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo) ext
     }
   }
 
+  def contact = Action { implicit request =>
+    Ok(layout.contact())
+  }
+
   def javascriptRoutes = Action { implicit request =>
     Ok(
       JavaScriptReverseRouter("jsRoutes")(

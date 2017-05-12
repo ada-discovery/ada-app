@@ -5,27 +5,27 @@
         <hr/>
         <ul class="list-inline">
             <li>
-                <a href="@current.configuration.getString("fnr.url").get">
+                <a target="_blank" href="@current.configuration.getString("fnr.url").get">
                     <img src="@routes.Assets.versioned("images/logos/fnr.png")" />
                 </a>
             </li>
             <li>
-                <a href="@current.configuration.getString("chl.url").get">
+                <a target="_blank" href="@current.configuration.getString("chl.url").get">
                     <img src="@routes.Assets.versioned("images/logos/chl.png")" />
                 </a>
             </li>
             <li>
-                <a href="@current.configuration.getString("lih.url").get">
+                <a target="_blank" href="@current.configuration.getString("lih.url").get">
                     <img src="@routes.Assets.versioned("images/logos/lih.png")" />
                 </a>
             </li>
             <li>
-                <a href="@current.configuration.getString("ibbl.url").get">
+                <a target="_blank" href="@current.configuration.getString("ibbl.url").get">
                     <img src="@routes.Assets.versioned("images/logos/ibbl.png")" />
                 </a>
             <li>
             <li>
-                <a href="@current.configuration.getString("lcsb.url").get">
+                <a target="_blank" href="@current.configuration.getString("lcsb.url").get">
                     <img src="@routes.Assets.versioned("images/logos/unilu-lcsb.png")" />
                 </a>
             </li>
@@ -35,7 +35,7 @@
             Ada (NCER-PD Reporting System), Version @current.configuration.getString("app.version").get
         </p>
         <p class="text-muted" align="center">
-            &copy; LCSB, Uni Lux 2016-@(new java.util.Date().format("yyyy"))
+            &copy; <a target="_blank" href="@current.configuration.getString("unilu.url").get">Université du Luxembourg</a> 2016-@(new java.util.Date().format("yyyy")). All rights reserved.
         </p>
     </div>
 </footer>

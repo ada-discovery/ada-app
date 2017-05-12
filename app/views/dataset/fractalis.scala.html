@@ -4,6 +4,7 @@
 @import views.html.dataset.datasetSubNavWithJs
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
+@import play.api.Play.current
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
 
@@ -76,7 +77,7 @@
 
             const fjs = fractal.init({
                 handler: 'ada',
-                thisBaseURL: 'http://10.79.2.192:8080',
+                thisBaseURL: "https://" + location.host,
                 fractalisBaseURL: 'http://10.240.6.46:8080',
                 getAuth () {
                     return {token: getCookie("PLAY2AUTH_SESS_ID")}

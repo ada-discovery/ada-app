@@ -1,0 +1,23 @@
+@import play.api.mvc.Flash
+@import views.html.dataset.datasetMenu
+@import models.DataSpaceMetaInfo
+
+@()(implicit flash: Flash, request: Request[_])
+
+@main("Contact") {
+
+    <div class="page-header">
+        <h1>Contact</h1>
+    </div>
+
+    <div class="row-fluid">
+        <address>
+            <strong>Dr. Peter Banda</strong><br>
+            BioCore Team</br>
+            Luxembourg Centre For Systems Biomedicine (LCSB)</br>
+            University of Luxembourg</br></br>
+            <i class="glyphicon glyphicon-envelope"></i> <a href="mailto:peter.banda@@uni.lu?Subject=Ada Question">peter.banda@@uni.lu</a><br>
+            <i class="glyphicon glyphicon-chevron-right"></i> <a target="_blank" href="http://www.uni.lu/lcsb">www.uni.lu/lcsb</a><br>
+        </address>
+    </div>
+}

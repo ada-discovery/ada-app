@@ -27,7 +27,9 @@
 
         <div id="navigation" class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
-                @listItem(routes.AppController.studies(), "Studies", Some(1))
+                @subjectPresent() {
+                    @listItem(routes.AppController.studies(), "Studies", Some(1))
+                }
                 @restrict(roles = List(Array(SecurityRole.admin))) {
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Extras<span class="caret"></span></a>
@@ -67,23 +69,28 @@
             </ul>
 
             <ul class="nav navbar-nav navbar-right">
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Links<span class="caret"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="@current.configuration.getString("redcap.testserver.url").get">RedCap Test Server</a></li>
-                        <li><a href="@current.configuration.getString("redcap.prodserver.url").get">NCER RedCap Server</a></li>
-                        <li role="separator" class="divider"></li>
-                        <li><a href="@current.configuration.getString("denopa.url").get">DeNoPa Home</a></li>
-                        <li><a href="@current.configuration.getString("ppmi.url").get">PPMI Home</a></li>
-                        <li><a href="@current.configuration.getString("mpower.url").get">mPower Home</a></li>
-                        <li><a href="@current.configuration.getString("mpower.app.url").get">mPower Hackathon App</a></li>
-                        <li><a href="@current.configuration.getString("icgc.url").get">ICGC Home</a></li>
-                    </ul>
-                </li>
 
-                <li>
-                    <a href="#">Contact</a>
-                </li>
+                @subjectPresent() {
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
+                            Links<span class="caret"></span></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="@current.configuration.getString("redcap.testserver.url").get">
+                                RedCap Test Server</a></li>
+                            <li><a href="@current.configuration.getString("redcap.prodserver.url").get">
+                                NCER RedCap Server</a></li>
+                            <li role="separator" class="divider"></li>
+                            <li><a href="@current.configuration.getString("denopa.url").get">DeNoPa Home</a></li>
+                            <li><a href="@current.configuration.getString("ppmi.url").get">PPMI Home</a></li>
+                            <li><a href="@current.configuration.getString("mpower.url").get">mPower Home</a></li>
+                            <li><a href="@current.configuration.getString("mpower.app.url").get">
+                                mPower Hackathon App</a></li>
+                            <li><a href="@current.configuration.getString("icgc.url").get">ICGC Home</a></li>
+                        </ul>
+                    </li>
+                }
+
+                @listItem(routes.AppController.contact(), "Contact", Some(1))
 
                 <li>
                     <!-- show login link, if no subject present; otherwise show user dropdown list -->
