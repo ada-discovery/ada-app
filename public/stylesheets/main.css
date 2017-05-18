@@ -257,20 +257,34 @@ tr.vertical-divider > td:last-child {
 }
 
 /* Carousel base class */
+
 .carousel {
     height: 500px;
-    margin-bottom: 60px;
+    margin-bottom: 30px;
 }
 /* Since positioning the image, we need to help out the caption */
 .carousel-caption {
     z-index: 10;
+    background: rgba(30, 144, 255, 0.7);
+    position: absolute;
+    top: 54%;
+    padding-top: 0px;
+    height:200px;
+    /*transform: translateY(-60%);*/
     /*color: gray;*/
 }
 
+/*.carousel-caption {*/
+    /*color: gray;*/
+/*}*/
+
+/*.carousel-caption > h1 {*/
+    /*color: white;*/
+/*}*/
+
 /* Declare heights because of positioning of img element */
 .carousel .item {
-    height: 500px;
-    background-color: #e8e8e8;
+    height: 500px
 }
 
 .carousel-inner > .item > img.carousel-img {
@@ -281,10 +295,13 @@ tr.vertical-divider > td:last-child {
 
 /*.child {*/
     position: absolute;
-    height: 470px;
-    top: 5%;  /* position the top  edge of the element at the middle of the parent */
+    top: 0%;  /* position the top  edge of the element at the middle of the parent */
     left: 50%; /* position the left edge of the element at the middle of the parent */
 
-    transform: translate(-50%, -5%); /* This is a shorthand of
+    transform: translate(-50%, -0%); /* This is a shorthand of
                                         translateX(-50%) and translateY(-50%) */
+}
+
+.homepage-jumbotron {
+    background-color:whitesmoke !important;
 }
