@@ -11,7 +11,7 @@ import dataaccess._
 import models._
 import models.DataSetFormattersAndIds._
 import persistence.RepoTypes._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import dataaccess.FieldRepo._
 import play.api.Logger
 import play.api.data.Form
@@ -20,7 +20,7 @@ import play.api.i18n.Messages
 import play.api.mvc.{Action, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, DeNoPaSetting, StatsService}
+import services.{DataSetService, DataSpaceService, DeNoPaSetting, StatsService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Json
 import views.html.{dataview, dictionary => view}
@@ -38,7 +38,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService,
     statsService: StatsService,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
+    dataSpaceService: DataSpaceService
   ) extends CrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo)
 
     with DictionaryController
@@ -141,10 +141,10 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   override protected def getFormEditViewData(
     id: String,
     form: Form[Field]
-  ): Future[EditViewData] = {
+  ) = { request =>
     val dataSetNameFuture = dsa.dataSetName
     val categoriesFuture = allCategoriesFuture
-    val treeFuture = dataSpaceTreeFuture
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
 
     for {
       // get the data set name
@@ -173,7 +173,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     Traversable[DataSpaceMetaInfo]
   )
 
-  override protected def getListViewData(page: Page[Field]): Future[ListViewData] = {
+  override protected def getListViewData(page: Page[Field]) = { request =>
     val fieldNameExtractors = Seq(
       ("Field Type", "fieldType", (field : Field) => field.fieldType)
       //      ("Enum", "isEnum", (field : Field) => field.isEnum)
@@ -187,7 +187,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     val newPage = page.copy(filter = Some(new models.Filter(newConditions)))
 
     // create futures as vals so they are executed in parallel
-    val treeFuture = dataSpaceTreeFuture
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
 
     val nameFuture = dsa.dataSetName
 
@@ -298,9 +298,6 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
         CategoricalCountWidget(chartTitle, fieldName, fieldName, false, true, Seq((chartTitle, counts)), MultiChartDisplayOptions(chartType = Some(ChartType.Pie)))
       }
     }
-
-  private def dataSpaceTreeFuture =
-    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 
   protected def allCategoriesFuture =
     categoryRepo.find(sort = Seq(AscSort("name")))

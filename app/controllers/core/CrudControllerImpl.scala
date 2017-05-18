@@ -71,7 +71,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
         viewData <- item.fold(
           Future(Option.empty[EditViewData])
         ) { entity =>
-          getEditViewData(id, entity).map(Some(_))
+          getEditViewData(id, entity)(request).map(Some(_))
         }
       } yield
         item match {
@@ -129,7 +129,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
   protected def update(id: ID, redirect: Result): Action[AnyContent] = Action.async { implicit request =>
     formFromRequest.fold(
       { formWithErrors =>
-        getFormEditViewData(id, formWithErrors).map { viewData =>
+        getFormEditViewData(id, formWithErrors)(request).map { viewData =>
           BadRequest(editViewWithContext(viewData))
         }
       },

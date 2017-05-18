@@ -63,14 +63,14 @@ private class UserManagerImpl @Inject()(
   ) extends UserManager {
 
   override def debugUsers: Traversable[User] =
-    if (ldapSettings.addDebugUsers)
-      Seq(adminUser, basicUser)
-    else
-      Nil
+    if (ldapSettings.addDebugUsers) {
+      // add admin and basic users
+      addUserIfNotPresent(adminUser)
+      addUserIfNotPresent(basicUser)
 
-  // add admin and basic users
-  addUserIfNotPresent(adminUser)
-  addUserIfNotPresent(basicUser)
+      Seq(adminUser, basicUser)
+    } else
+      Nil
 
   /**
     * Synchronize user entries of LDAP server and local database.

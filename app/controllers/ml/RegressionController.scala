@@ -11,7 +11,6 @@ import models.ml.TreeCore
 import models.ml.classification._
 import models.ml.regression._
 import persistence.RepoTypes._
-import persistence.dataset.DataSpaceMetaInfoRepo
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}
@@ -25,13 +24,14 @@ import views.html.{layout, regression => view}
 import controllers.ml.routes.{RegressionController => regressionRoutes}
 import dataaccess.AscSort
 import play.api.libs.json.{JsArray, Json}
+import services.DataSpaceService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class RegressionController @Inject()(
     repo: RegressionRepo,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
+    dataSpaceService: DataSpaceService
   ) extends CrudControllerImpl[Regression, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
     with HasCreateEditSubTypeFormViews[Regression, BSONObjectID]
@@ -207,11 +207,12 @@ class RegressionController @Inject()(
 
   override protected type ListViewData = (Page[Regression], Traversable[DataSpaceMetaInfo])
 
-  override protected def getListViewData(page: Page[Regression]): Future[ListViewData] =
+  override protected def getListViewData(page: Page[Regression]) = { request =>
     for {
-      tree <- DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
+      tree <- dataSpaceService.getTreeForCurrentUser(request)
     } yield
       (page, tree)
+  }
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
 

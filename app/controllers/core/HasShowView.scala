@@ -1,6 +1,7 @@
 package controllers.core
 
 import play.api.data.Form
+import play.api.mvc.Request
 import play.twirl.api.Html
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -12,7 +13,7 @@ trait HasShowView[E, ID] {
 
   protected type ShowView = WebContext => ShowViewData => Html
 
-  protected def getShowViewData(id: ID, item: E): Future[ShowViewData]
+  protected def getShowViewData(id: ID, item: E): Request[_] => Future[ShowViewData]
 
   protected[controllers] def showView: ShowView
 
@@ -24,7 +25,7 @@ trait HasShowView[E, ID] {
 
 trait HasFormShowView[E, ID] extends HasShowView[E, ID] {
 
-  protected def getFormShowViewData(id: ID, form: Form[E]): Future[ShowViewData]
+  protected def getFormShowViewData(id: ID, form: Form[E]): Request[_] => Future[ShowViewData]
 
   override protected def getShowViewData(id: ID, item: E) = getFormShowViewData(id, fillForm(item))
 
@@ -35,7 +36,7 @@ trait HasBasicFormShowView[E, ID] extends HasFormShowView[E, ID] {
 
   override protected type ShowViewData = IdForm[ID, E]
 
-  override protected def getFormShowViewData(id: ID, form: Form[E]) = Future(IdForm(id, form))
+  override protected def getFormShowViewData(id: ID, form: Form[E]) = { _ => Future(IdForm(id, form)) }
 }
 
 trait HasShowEqualEditView[E, ID] extends HasShowView[E, ID] {

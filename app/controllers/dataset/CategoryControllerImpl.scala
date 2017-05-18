@@ -12,7 +12,7 @@ import Criterion.Infix
 import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.FilterCondition.FilterOrId
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
@@ -22,6 +22,7 @@ import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+import services.DataSpaceService
 import util.getRequestParamMap
 import views.html.{category => view}
 
@@ -34,7 +35,7 @@ trait CategoryControllerFactory {
 protected[controllers] class CategoryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
+    dataSpaceService: DataSpaceService
   ) extends CrudControllerImpl[Category, BSONObjectID](dsaf(dataSetId).get.categoryRepo)
 
     with CategoryController
@@ -105,13 +106,13 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[Category]
-  ): Future[EditViewData] = {
+  ) = { request =>
     val assocfieldsFuture = fieldRepo.find(
       criteria = Seq("categoryId" #== Some(id)),
       sort = Seq(AscSort("name"))
     )
     val dataSetNameFuture = dsa.dataSetName
-    val treeFuture = dataSpaceTreeFuture
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val categoriesFuture = allCategoriesFuture
     val showFieldStyleFuture = dsa.setting.map(_.filterShowFieldStyle)
 
@@ -142,8 +143,10 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   override protected type ListViewData = (String, Page[Category], Traversable[DataSpaceMetaInfo])
 
-  override protected def getListViewData(page: Page[Category]): Future[ListViewData] = {
-    val treeFuture = dataSpaceTreeFuture
+  override protected def getListViewData(
+    page: Page[Category]
+  ) = { request =>
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val nameFuture = dsa.dataSetName
 
     for {
@@ -317,7 +320,4 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   protected def allCategoriesFuture =
     repo.find(sort = Seq(AscSort("name")))
-
-  private def dataSpaceTreeFuture: Future[Traversable[DataSpaceMetaInfo]] =
-    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 }

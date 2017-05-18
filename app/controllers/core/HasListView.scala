@@ -2,6 +2,7 @@ package controllers.core
 
 import models.Page
 import play.twirl.api.Html
+import play.api.mvc.Request
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -12,7 +13,7 @@ trait HasListView[E] {
 
   protected type ListView = WebContext => ListViewData => Html
 
-  protected def getListViewData(page: Page[E]): Future[ListViewData]
+  protected def getListViewData(page: Page[E]): Request[_] => Future[ListViewData]
 
   protected[controllers] def listView: ListView
 
@@ -27,5 +28,5 @@ trait HasBasicListView[E] extends HasListView[E] {
 
   override protected type ListViewData = Page[E]
 
-  override protected def getListViewData(page: Page[E]) = Future(page)
+  override protected def getListViewData(page: Page[E]) = { _ => Future(page)}
 }

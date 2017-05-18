@@ -13,7 +13,7 @@ import models.DataSetFormattersAndIds._
 import models.FilterCondition.filterFormat
 import models.security.UserManager
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
@@ -26,6 +26,7 @@ import reactivemongo.play.json.BSONFormats._
 import java.util.Date
 
 import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
+import services.DataSpaceService
 import views.html.{dataview => view}
 
 import scala.concurrent.Future
@@ -38,7 +39,7 @@ trait DataViewControllerFactory {
 protected[controllers] class DataViewControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
+    dataSpaceService: DataSpaceService,
     userRepo: UserRepo,
     val userManager: UserManager
   ) extends CrudControllerImpl[DataView, BSONObjectID](dsaf(dataSetId).get.dataViewRepo)
@@ -111,10 +112,10 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[DataView]
-  ): Future[EditViewData] = {
+  ) = { request =>
     val dataSetNameFuture = dsa.dataSetName
     val nameFieldMapFuture = getNameFieldMap
-    val treeFuture = dataSpaceTree
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val setCreatedByFuture =
       form.value match {
         case Some(dataView) => DataViewRepo.setCreatedBy(userRepo, Seq(dataView))
@@ -143,9 +144,9 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override protected def getListViewData(
     page: Page[DataView]
-  ): Future[ListViewData] = {
+  ) = { request =>
     val setCreatedByFuture = DataViewRepo.setCreatedBy(userRepo, page.items)
-    val dataSpaceTreeFuture = dataSpaceTree
+    val dataSpaceTreeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val dataSetNameFuture = dsa.dataSetName
 
     for {
@@ -218,7 +219,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Entity #$id not found"))
       ) { entity =>
-          getEditViewData(id, entity).map(viewData =>
+          getEditViewData(id, entity)(request).map(viewData =>
             render {
               case Accepts.Html() => Ok(
                 view.edit(
@@ -394,7 +395,4 @@ protected[controllers] class DataViewControllerImpl @Inject() (
         (field.name, field)
       ).toMap
     }
-
-  private def dataSpaceTree =
-    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 }

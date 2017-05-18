@@ -16,10 +16,8 @@
     <div class="row">
         @labelValue("dataSetPermission", "DS Id") {
             <select id="permission-dataSetId" name="permission-dataSetId" class="form-control">
-            @metaInfos.map { metaInfo =>
-                @metaInfo.dataSetMetaInfos.map { dataSet =>
-                    <option value="@{dataSet.id}">@{dataSet.id}</option>
-                }
+            @metaInfos.map(_.dataSetMetaInfos).flatten.toSeq.sortBy(_.id).map { dataSet =>
+                <option value="@{dataSet.id}">@{dataSet.id}</option>
             }
             </select>
         }
@@ -61,10 +59,10 @@
 @inputText("user", "name", form)
 @inputText("user", "email", form)
 @labelValue("user", "Roles"){
-    @dynamicStringTable("role", form.value.get.roles)
+    @dynamicStringTable("role", form.value.map(_.roles).getOrElse(Nil))
 }
 @labelValue("user", "Permissions"){
-    @dynamicStringTable("permission", form.value.get.permissions, false, None, Some(addDataSetPermissionButton))
+    @dynamicStringTable("permission", form.value.map(_.permissions).getOrElse(Nil), false, None, Some(addDataSetPermissionButton))
 }
 
 @actionNamesAsString(array: Array[String]) = @{

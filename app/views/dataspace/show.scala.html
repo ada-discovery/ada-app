@@ -5,8 +5,10 @@
 @import controllers.dataset.DataSetRouter
 @import util.typeColumns
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
+@import be.objectify.deadbolt.scala.views.html.{subjectPresent, subjectPresentOr, restrictOr}
 @import models.DataSpaceMetaInfo
 @import models.DataSetMetaInfo
+@import models.security.SecurityRole
 @import controllers.core.WebContext._
 @import controllers.core.WebContext
 
@@ -28,7 +30,7 @@
         typeColumns[DataSetMetaInfo](
             (None, "Name", _.name),
             (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
-            (None, "# Items", {info: DataSetMetaInfo => dataSetIdSizeMap.get(info.id).get.toString}),
+            (None, "# Items", {info: DataSetMetaInfo => dataSetIdSizeMap.get(info.id).map(_.toString).getOrElse("")}),
             (None, "Hide?", hideCheckbox)
         ),
         None,
@@ -43,7 +45,7 @@
             (None, "Name", _.name),
             (None, "Time Created", _.timeCreated.format("yyyy-MM-dd HH:mm:ss")),
             (None, "# Items", {info: DataSpaceMetaInfo =>
-                info.dataSetMetaInfos.map( setInfo => dataSetIdSizeMap.get(setInfo.id).get).sum.toString
+                info.dataSetMetaInfos.map( setInfo => dataSetIdSizeMap.get(setInfo.id).getOrElse(0)).sum.toString
             }),
             (None, "# Data Sets", {info: DataSpaceMetaInfo => info.dataSetMetaInfos.size.toString})
         ),

@@ -11,7 +11,6 @@ import models._
 import models.ml.TreeCore
 import models.ml.classification._
 import persistence.RepoTypes._
-import persistence.dataset.DataSpaceMetaInfoRepo
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}
@@ -21,6 +20,7 @@ import play.api.mvc.{Action, Result}
 import play.twirl.api.Html
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
+import services.DataSpaceService
 import util.SecurityUtil.{restrictAdmin, restrictSubjectPresent}
 import views.html.{layout, classification => view}
 
@@ -29,7 +29,7 @@ import scala.concurrent.Future
 
 class ClassificationController @Inject()(
     repo: ClassificationRepo,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
+    dataSpaceService: DataSpaceService
   ) extends CrudControllerImpl[Classification, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
     with HasCreateEditSubTypeFormViews[Classification, BSONObjectID]
@@ -226,11 +226,12 @@ class ClassificationController @Inject()(
 
   override protected type ListViewData = (Page[Classification], Traversable[DataSpaceMetaInfo])
 
-  override protected def getListViewData(page: Page[Classification]): Future[ListViewData] =
+  override protected def getListViewData(page: Page[Classification]) = { request =>
     for {
-      tree <- DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
+      tree <- dataSpaceService.getTreeForCurrentUser(request)
     } yield
       (page, tree)
+  }
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
 

@@ -35,8 +35,11 @@ class AdaOnFailureRedirectDeadboltHandler(
 
           val username = subject.getIdentifier
           Logger.error(s"Unauthorized access by [$username].")
-          val refererUrl = request.headers("referer")
-          Redirect(refererUrl).flashing("errors" -> "Access denied! We're sorry, but you are not authorized to perform the requested operation.")
+          val result = request.headers.get("referer") match {
+            case None => Redirect(routes.AppController.index())
+            case Some(refererUrl) => Redirect(refererUrl)
+          }
+          result.flashing("errors" -> "Access denied! We're sorry, but you are not authorized to perform the requested operation.")
         }
 
         case None =>

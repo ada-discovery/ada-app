@@ -6,7 +6,6 @@ import controllers.core.{CrudControllerImpl, HasBasicListView, HasFormShowEqualE
 import controllers.dataset._
 import dataaccess.User
 import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
-import persistence.dataset.DataSpaceMetaInfoRepo
 import play.api.data.Form
 import play.api.data.Forms.{email, ignored, mapping, nonEmptyText, seq, text}
 import models.{DataSpaceMetaInfo, Page}
@@ -56,9 +55,9 @@ class UserController @Inject() (
 
   override protected def getFormCreateViewData(form: Form[User]) =
     for {
-      tree <- dataSpaceTree
+      all <- dataSpaceMetaInfoRepo.find()
     } yield
-      (form, tree, controllerActionNames)
+      (form, all, controllerActionNames)
 
   override protected[controllers] def createView = { implicit ctx =>
     (view.create(_,_, _)).tupled
@@ -76,11 +75,12 @@ class UserController @Inject() (
   override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[User]
-  ): Future[EditViewData] =
+  ) = { request =>
     for {
-      tree <- dataSpaceTree
+      all <- dataSpaceMetaInfoRepo.find()
     } yield
-      (id, form, tree, controllerActionNames)
+      (id, form, all, controllerActionNames)
+  }
 
   override protected[controllers] def editView = { implicit ctx =>
     (view.edit(_, _, _, _)).tupled
@@ -106,8 +106,6 @@ class UserController @Inject() (
     mailer.send(mail)
     repo.save(item)
   }
-
-  protected def dataSpaceTree = DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 }
 
 case class DataSetControllerActionNames(

@@ -12,7 +12,7 @@ import models._
 import models.FilterShowFieldStyle
 import Criterion.Infix
 import controllers.core.{CrudControllerImpl, HasBasicFormCreateView, HasBasicListView, HasFormShowEqualEditView}
-import persistence.dataset.{DataSetAccessorFactory, DataSpaceMetaInfoRepo}
+import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
@@ -21,7 +21,7 @@ import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
-import services.DataSetService
+import services.{DataSetService, DataSpaceService}
 import views.html.{category, datasetsetting => view}
 import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 import controllers.dataset.routes.javascript.{DataSetSettingController => dataSetSettingJsRoutes}
@@ -31,7 +31,7 @@ import scala.reflect.ClassTag
 
 class DataSetSettingController @Inject() (
     repo: DataSetSettingRepo,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
+    dataSpaceService: DataSpaceService,
     dataSetService: DataSetService,
     dsaf: DataSetAccessorFactory
   ) extends CrudControllerImpl[DataSetSetting, BSONObjectID](repo)
@@ -86,7 +86,7 @@ class DataSetSettingController @Inject() (
   override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[DataSetSetting]
-  ): Future[EditViewData] = {
+  ) = { _ =>
     val settingFuture = form.value match {
       case Some(setting) => Future(Some(setting))
       case None => repo.get(id)
@@ -129,7 +129,7 @@ class DataSetSettingController @Inject() (
                 updateCall,
                 cancelCall,
                 fieldNamesCall,
-                result(DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)))
+                result(dataSpaceService.getTreeForCurrentUser(request)))
               )
             }
             case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")

@@ -4,7 +4,6 @@ import java.util.Date
 import java.util.concurrent.TimeoutException
 
 import models.DataSetSetting
-import persistence.dataset.DataSpaceMetaInfoRepo
 import services.datasetimporter.DataSetImporterCentral
 
 import scala.concurrent.duration._
@@ -30,7 +29,7 @@ import java.io.{File, FileInputStream, FileOutputStream}
 
 import controllers.core._
 import dataaccess.AscSort
-import services.{DataSetImportScheduler, DataSetService}
+import services.{DataSetImportScheduler, DataSetService, DataSpaceService}
 import util.SecurityUtil.restrictAdmin
 import views.html.{datasetimport => view}
 import views.html.layout
@@ -44,7 +43,7 @@ class DataSetImportController @Inject()(
     dataSetService: DataSetService,
     dataSetImporterCentral: DataSetImporterCentral,
     dataSetImportScheduler: DataSetImportScheduler,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
+    dataSpaceService: DataSpaceService,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
     configuration: Configuration
@@ -303,11 +302,14 @@ class DataSetImportController @Inject()(
 
   override protected type ListViewData = (Page[DataSetImport], Traversable[DataSpaceMetaInfo])
 
-  override protected def getListViewData(page: Page[DataSetImport]): Future[ListViewData] =
+  override protected def getListViewData(
+    page: Page[DataSetImport]
+  ) = { request =>
     for {
-      tree <- DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
+      tree <- dataSpaceService.getTreeForCurrentUser(request)
     } yield
       (page, tree)
+  }
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled}
 

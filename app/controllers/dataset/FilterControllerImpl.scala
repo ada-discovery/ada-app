@@ -11,7 +11,7 @@ import dataaccess._
 import models._
 import models.FilterCondition.{FilterIdentity, filterFormat}
 import models.security.UserManager
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
@@ -22,6 +22,7 @@ import reactivemongo.bson.BSONObjectID
 import java.util.Date
 
 import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
+import services.DataSpaceService
 import views.html.{dataview, filters => view}
 
 import scala.concurrent.Future
@@ -33,7 +34,7 @@ trait FilterControllerFactory {
 protected[controllers] class FilterControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
+    dataSpaceService: DataSpaceService,
     userRepo: UserRepo,
     val userManager: UserManager
   ) extends CrudControllerImpl[Filter, BSONObjectID](dsaf(dataSetId).get.filterRepo)
@@ -95,10 +96,9 @@ protected[controllers] class FilterControllerImpl @Inject() (
   override protected def getFormEditViewData(
     id: BSONObjectID,
     form: Form[Filter]
-  ): Future[EditViewData] = {
+  ) = { request =>
     val dataSetNameFuture = dsa.dataSetName
-
-    val treeFuture = dataSpaceTreeFuture
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
 
     val setCreatedByFuture =
       form.value match {
@@ -133,9 +133,9 @@ protected[controllers] class FilterControllerImpl @Inject() (
 
   override protected def getListViewData(
     page: Page[Filter]
-  ): Future[ListViewData] = {
+  ) = { request =>
     val setCreatedByFuture = FilterRepo.setCreatedBy(userRepo, page.items)
-    val treeFuture = dataSpaceTreeFuture
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val dataSetNameFuture = dsa.dataSetName
 
     for {
@@ -196,7 +196,4 @@ protected[controllers] class FilterControllerImpl @Inject() (
     } yield
       Ok(Json.toJson(filters))
   }
-
-  private def dataSpaceTreeFuture =
-    DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 }

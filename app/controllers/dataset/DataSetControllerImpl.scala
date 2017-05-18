@@ -8,7 +8,7 @@ import _root_.util.JsonUtil._
 import models.ConditionType._
 import util.{BasicStats, fieldLabel}
 import _root_.util.WebExportUtil._
-import _root_.util.{shorten, seqFutures, toHumanReadableCamel}
+import _root_.util.{seqFutures, shorten, toHumanReadableCamel}
 import dataaccess._
 import models.{MultiChartDisplayOptions, _}
 import com.google.inject.assistedinject.Assisted
@@ -22,12 +22,12 @@ import models.FilterCondition.FilterOrId
 import models.ml.classification.LogisticRegression
 import models.ml.regression.LinearRegression
 import persistence.RepoTypes.{ClassificationRepo, RegressionRepo}
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory, DataSpaceMetaInfoRepo}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.json._
 import play.api.mvc.Results._
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, StatsService, TranSMARTService}
+import services.{DataSetService, DataSpaceService, StatsService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
@@ -49,7 +49,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dataSetService: DataSetService,
     classificationRepo: ClassificationRepo,
     regressionRepo: RegressionRepo,
-    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
+    dataSpaceService: DataSpaceService
   ) extends ReadonlyControllerImpl[JsObject, BSONObjectID]
 
     with DataSetController
@@ -112,7 +112,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override protected def getListViewData(
     page: Page[JsObject]
-  ): Future[ListViewData] = {
+  ) = { request =>
     val dataSetNameFuture = dsa.dataSetName
     val fieldLabelMapFuture = getFieldLabelMap(listViewColumns.get)
 
@@ -141,23 +141,27 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override protected def getShowViewData(
     id: BSONObjectID,
     item: JsObject
-  ) =
+  ) = { request =>
+    val dataSetNameFuture = dsa.dataSetName
+    val dataSpaceTreeFuture = dataSpaceService.getTreeForCurrentUser(request)
+    val fieldsFuture = fieldRepo.find()
+
     for {
-      // get the data set name
-      dataSetName <- dsa.dataSetName
+    // get the data set name
+      dataSetName <- dataSetNameFuture
 
       // get the data space name
       dataSpaceTree <- dataSpaceTreeFuture
 
+      // get all the fields
+      fields <- fieldsFuture
+    } yield {
       // create a field name label / renderer map
-      fieldNameLabelAndRendererMap <-
-        fieldRepo.find().map(_.map
-          { field =>
-            val fieldType = ftf(field.fieldTypeSpec)
-            (field.name, (field.labelOrElseName, fieldType.jsonToDisplayString(_)))
-          }.toMap
-        )
-    } yield
+      val fieldNameLabelAndRendererMap = fields.map { field =>
+        val fieldType = ftf(field.fieldTypeSpec)
+        (field.name, (field.labelOrElseName, fieldType.jsonToDisplayString(_)))
+      }.toMap
+
       DataSetShowViewDataHolder(
         id,
         dataSetName + " Item",
@@ -167,6 +171,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         fieldNameLabelAndRendererMap,
         dataSpaceTree
       )
+    }
+  }
 
   override protected[controllers] def showView = { implicit ctx => dataset.show(_) }
 
@@ -309,7 +315,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val start = new ju.Date()
 
     val dataSetNameFuture = dsa.dataSetName
-    val treeFuture = dataSpaceTreeFuture
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val dataViewFuture = dataViewRepo.get(dataViewId)
     val settingFuture = dsa.setting
 
@@ -961,8 +967,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     implicit request: Request[_]
   ): Future[Result] = {
     val dataSetNameFuture = dsa.dataSetName
-
-    val treeFuture = dataSpaceTreeFuture
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
 
     // auxiliary function to retrieve a field definition
     def getField(fieldName: Option[String]): Future[Option[Field]] =
@@ -1076,7 +1081,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         dataSetName <- dsa.dataSetName
 
         // get the data space tree
-        dataSpaceTree <- dataSpaceTreeFuture
+        dataSpaceTree <- dataSpaceService.getTreeForCurrentUser(request)
 
         // use a given filter conditions or load one
         resolvedFilter <- resolveFilter(filterOrId)
@@ -1159,7 +1164,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         dataSetName <- dsa.dataSetName
 
         // get the data space tree
-        dataSpaceTree <- dataSpaceTreeFuture
+        dataSpaceTree <- dataSpaceService.getTreeForCurrentUser(request)
 
         // use a given filter conditions or load one
         resolvedFilter <- resolveFilter(filterOrId)
@@ -1235,7 +1240,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         dataSetName <- dsa.dataSetName
 
         // get the data space tree
-        dataSpaceTree <- dataSpaceTreeFuture
+        dataSpaceTree <- dataSpaceService.getTreeForCurrentUser(request)
 
         // initialize the field name
         fieldName = fieldNameOption.map(Some(_)).getOrElse(
@@ -1358,7 +1363,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     {
       for {
         // get the data set name, data space tree and the data set setting
-        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
+        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
 
         fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
 
@@ -1386,7 +1391,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     {
       for {
         // get the data set name, data space tree and the data set setting
-        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
+        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
       } yield {
         render {
           case Accepts.Html() => Ok(dataset.classification(
@@ -1408,7 +1413,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     {
       for {
         // get the data set name, data space tree and the data set setting
-        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
+        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
       } yield {
         render {
           case Accepts.Html() => Ok(dataset.regression(
@@ -1426,9 +1431,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  private def getDataSetNameTreeAndSetting: Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)]= {
+  private def getDataSetNameTreeAndSetting(request: Request[_]): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)]= {
     val dataSetNameFuture = dsa.dataSetName
-    val treeFuture = dataSpaceTreeFuture
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val settingFuture = dsa.setting
 
     for {
@@ -1575,8 +1580,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     Future.sequence(futureFieldLabelPairs).map{ _.flatten.toMap }
   }
-
-  private def dataSpaceTreeFuture = DataSpaceMetaInfoRepo.allAsTree(dataSpaceMetaInfoRepo)
 
   //////////////////////
   // Export Functions //

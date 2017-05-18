@@ -17,46 +17,44 @@
             </div>
         </div>
     </div>
-
-    <div class="row-fluid">
-        <h4>
+    @carousel()
+    <hr/>
+    <div class="row-fluid jumbotron homepage-jumbotron">
+        <p>
+            Ada provides key infrastructure for secured integration, visualization, and analysis of heterogeneous clinical and experimental data generated during the <a href="@current.configuration.getString("ncer-pd.url").get">NCER-PD project</a>.
+        </p>
+        <p>
             NCER-PD research project focuses on improving the diagnosis and stratification of Parkinson's disease (PD) by combining detailed clinical and molecular data of patients to develop novel disease biomarker signatures.
-            Ada, NCER-PD Reporting System, provides key infrastructure for secured integration, visualization, and analysis of heterogeneous clinical and experimental data generated during the project.
-        </h4>
-        <h4>
-            Ada allows users to conveniently explore and filter data sets and produce configurable and personalized "views" containing charts and widgets for various statistics (such as shown bellow).
-        </h4>
+        </p>
+        <p>
+            Ada allows users to conveniently explore and filter data sets and produce configurable and personalized "views" containing charts and widgets for various statistics.
+        </p>
         <button type="button" class="btn btn-default btn-sm" data-toggle="collapse" data-target="#more-info">Read More</button>
         <div id="more-info" class="collapse">
             <blockquote>
-                <small>
-                    <p>
-                        The platform currently manages anonymized data sets associated with clinical research pulled from NCER-PD REDCap system, biosample-related information provided by IBBL, and kinetic data from mPower mobile application and eGait shoe sensors. Also, Ada hosts DeNoPa study clinical data (three visits), which will be used for cross-study comparison.
-                    </p>
-                    <p>
-                        Ada's main features include a convenient web UI for data set exploration and filtering, and configurable views with tables and charts showing basic statistics, such as, distributions, scatters, correlations, and box plots. To define data set’s metadata Ada provides an editable dictionary, and a category (I2B2) tree with drag-and-drop manipulation. Furthermore, Ada facilitates robust access control through LDAP authentication, and in-house user management with fine-grained permissions.
-                    </p>
-                    <p>
-                        For post-processing filtered data can be exported into CSV, JSON, or tranSMART format. The data set import adapters currently support two file formats: plain CSV and tranSMART data and mapping files, and three secured RestFul APIs: REDCap, Synapse (Sage Bionetworks Data Provenance System), and eGait. Any data sets provided from these sources can be added to (or removed from) Ada on-the-fly without much effort. The data set imports can be also scheduled for periodic execution. As such, Ada has potential to be used beyond NCER-PD project for other translational medicine endeavours.
-                    </p>
-                    <p>
-                        For more advanced analysis, well-grounded machine learning and statistical approaches will be integrated using Spark ML library.
-                    </p>
-                </small>
+                <h4>
+                    The platform currently manages anonymized data sets associated with clinical research pulled from NCER-PD <a href="@current.configuration.getString("redcap.url").get">REDCap</a> system, biosample-related information provided by <a href="@current.configuration.getString("ibbl.url").get">IBBL</a>, and kinetic data from <a href="@current.configuration.getString("mpower.url").get">mPower</a> mobile application and <a href="@current.configuration.getString("egait.url").get">eGait</a> shoe sensors. Also, Ada hosts <a href="@current.configuration.getString("denopa.url").get">DeNoPa</a> study clinical data (three visits), which will be used for cross-study comparison.
+                </h4>
+                <h4>
+                    Ada's main features include a convenient web UI for data set exploration and filtering, and configurable views with tables and charts showing basic statistics, such as, distributions, scatters, correlations, and box plots. To define data set’s metadata Ada provides an editable dictionary, and a category (I2B2) tree with drag-and-drop manipulation. Furthermore, Ada facilitates robust access control through LDAP authentication, and in-house user management with fine-grained permissions.
+                </h4>
+                <h4>
+                    For post-processing filtered data can be exported into CSV, JSON, or tranSMART format. The data set import adapters currently support two file formats: plain CSV and <a href="@current.configuration.getString("transmart.url").get">tranSMART</a> data and mapping files, and three secured RestFul APIs: <a href="@current.configuration.getString("redcap.url").get">REDCap</a>, <a href="@current.configuration.getString("synapse.url").get">Synapse</a> (Sage Bionetworks Data Provenance System), and <a href="@current.configuration.getString("egait.url").get">eGait</a>. Any data sets provided from these sources can be added to (or removed from) Ada on-the-fly without much effort. The data set imports can be also scheduled for periodic execution. As such, Ada has potential to be used beyond NCER-PD project for other translational medicine endeavours.
+                </h4>
+                <h4>
+                    For more advanced analysis, well-grounded machine learning and statistical approaches were integrated using <a href="@current.configuration.getString("spark-ml.url").get">Spark ML</a> library.
+                </h4>
             </blockquote>
         </div>
         <br/>
         <br/>
     </div>
-    <div class="row-fluid" style="text-align:center;">
-        <hr/>
-        <img src="@routes.Assets.versioned("images/Ada-screenshot.png")" align="middle" style="width: 90%; height: 90%"/>
-        <hr/>
-    </div>
+
     <div class="row-fluid">
+        <hr/>
         <h4>
             If you want to try Ada <a class="btn btn-sm btn-primary" href="@routes.AppController.studies()">Login</a> or <a class="btn btn-sm btn-primary" href="@routes.AppController.contact()">Request an account</a>.<br/>
-            Note that accounts are provided only for the collaborating partners not for the general public.
+            Note that at the moment we provide accounts only for the collaborating partners, not for the general public.
         </h4>
     </div>
 }
