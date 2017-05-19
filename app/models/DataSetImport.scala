@@ -51,7 +51,7 @@ case class SynapseDataSetImport(
   dataSetName: String,
   tableId: String,
   downloadColumnFiles: Boolean,
-  downloadRecordBatchSize: Option[Int] = None,
+  batchSize: Option[Int] = None,
   bulkDownloadGroupNumber: Option[Int] = None,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,

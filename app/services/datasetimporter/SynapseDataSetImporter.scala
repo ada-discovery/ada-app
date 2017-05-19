@@ -49,12 +49,12 @@ private class SynapseDataSetImporter @Inject() (
             JsonUtil.escapeKey(fileColumn.name.replaceAll("\"", "").trim)
           }
           val fun = updateJsonsFileFields(synapseService, fileFieldNames, importInfo.tableId, importInfo.bulkDownloadGroupNumber) _
-          importDataSetAux(importInfo, synapseService, fileFieldNames, Some(fun), importInfo.downloadRecordBatchSize)
+          importDataSetAux(importInfo, synapseService, fileFieldNames, Some(fun), importInfo.batchSize)
         }
       } yield
         ()
     else
-      importDataSetAux(importInfo, synapseService, Nil, None, None).map(_ => ())
+      importDataSetAux(importInfo, synapseService, Nil, None, importInfo.batchSize).map(_ => ())
   }
 
   def importDataSetAux(
@@ -62,7 +62,7 @@ private class SynapseDataSetImporter @Inject() (
     synapseService: SynapseService,
     fileFieldNames: Traversable[String],
     transformJsonsFun: Option[Seq[JsObject] => Future[(Seq[JsObject])]],
-    transformBatchSize: Option[Int]
+    batchSize: Option[Int]
   ) = {
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
@@ -112,7 +112,7 @@ private class SynapseDataSetImporter @Inject() (
           else
             logger.info(s"Saving JSONs...")
 
-          dataSetService.saveOrUpdateRecords(dataRepo, jsons, Some(keyField), false, transformJsonsFun, transformBatchSize)
+          dataSetService.saveOrUpdateRecords(dataRepo, jsons, Some(keyField), false, transformJsonsFun, batchSize)
         }
 
         // remove the old records

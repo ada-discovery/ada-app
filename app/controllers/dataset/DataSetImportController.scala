@@ -137,7 +137,7 @@ class DataSetImportController @Inject()(
       "dataSetName" -> nonEmptyText,
       "tableId" -> nonEmptyText,
       "downloadColumnFiles" -> boolean,
-      "downloadRecordBatchSize" -> optional(number(min = 1)),
+      "batchSize" -> optional(number(min = 1)),
       "bulkDownloadGroupNumber" -> optional(number(min = 1)),
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),

@@ -27,16 +27,31 @@ class MessageController @Inject() (
     deadbolt: DeadboltActions
   ) extends Controller with AdaAuthConfig {
 
+//  private val SCRIPT_REGEX = """<script>(.*)</script>"""
+  private val SCRIPT_REGEX = """<script\b[^<]*(?:(?!<\/script\s*>)<[^<]*)*<\/script\s*>"""
+
   def saveUserMessage(message: String) = deadbolt.SubjectPresent() {
     Action.async { implicit request =>
       currentUser(request).flatMap(_.fold(
         Future(BadRequest("No logged user found"))
       ) { user =>
-        repo.save(Message(None, message, Some(user.ldapDn), user.roles.contains(SecurityRole.admin))).map(_=>
+        val escapedMessage = removeScriptTags(message)
+        repo.save(Message(None, escapedMessage, Some(user.ldapDn), user.roles.contains(SecurityRole.admin))).map(_=>
           Ok("Done")
         )
       })
     }
+  }
+
+  private def removeScriptTags(text: String): String = {
+    var result = text
+    var regexApplied = false
+    do {
+      val newResult = result.replaceAll(SCRIPT_REGEX, "")
+      regexApplied = !result.equals(newResult)
+      result = newResult
+    } while (regexApplied)
+    result
   }
 
   def listMostRecent(limit: Int) = deadbolt.SubjectPresent() {
