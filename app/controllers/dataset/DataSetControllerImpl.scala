@@ -1462,11 +1462,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         Nil
 
     val mlModelFuture = classificationRepo.get(mlModelId)
-    val dataAndFieldsFuture = dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads)
+    val criteriaFuture = resolveFilter(filterOrId).flatMap(filter => toCriteria(filter.conditions))
 
     for {
-      (jsons, fields) <- dataAndFieldsFuture
       mlModel <- mlModelFuture
+      criteria <- criteriaFuture
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
     } yield
       mlModel match {
         case Some(mlModel) =>
@@ -1496,11 +1497,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         Nil
 
     val mlModelFuture = regressionRepo.get(mlModelId)
-    val dataAndFieldsFuture = dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads)
+    val criteriaFuture = resolveFilter(filterOrId).flatMap(filter => toCriteria(filter.conditions))
 
     for {
-      (jsons, fields) <- dataAndFieldsFuture
       mlModel <- mlModelFuture
+      criteria <- criteriaFuture
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
     } yield
       mlModel match {
         case Some(mlModel) =>

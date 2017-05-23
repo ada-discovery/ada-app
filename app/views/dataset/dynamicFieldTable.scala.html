@@ -1,0 +1,54 @@
+@import views.html.table.{dynamicTable, displayTable}
+@import util.typeColumns
+@import models.Field
+
+@(
+    domainName: String,
+    items: Traversable[Field],
+    sortable: Boolean = false,
+    gridWidth: Int = 5
+)
+
+@modalInner = {
+    <input type="text" id="fieldTypeahead" class="typeahead">
+    <input type="hidden" id="fieldName">
+}
+
+@fieldNameElement(field: Field) = {
+    <input type="hidden" id="fieldName" value="@field.name">
+}
+
+@table = {
+    @displayTable(
+        items,
+        typeColumns[Field](
+            (None, "", _ => {<input type="checkbox" class="table-selection"/>}),
+            (None, "", fieldNameElement),
+            (Some("label"), "", _.labelOrElseName)
+        )
+    )
+}
+
+@rowToModelJsFun = {
+    function(row) {
+        return row.find('#fieldName').val().trim();
+    }
+}
+
+@itemToRowJsFun = {
+    function(values) {
+        var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
+        var fieldNameColumn = "<td><input type='hidden' id='fieldName' value='" + values["fieldName"] + "'/></td>";
+        var fieldLabelColumn = "<td>" + values["fieldTypeahead"] + "</td>";
+
+        // create row
+        var row = $("<tr></tr>")
+        row.append(checkboxColumn)
+        row.append(fieldNameColumn)
+        row.append(fieldLabelColumn)
+
+        return row;
+    }
+}
+
+@dynamicTable(domainName, table, sortable, rowToModelJsFun, itemToRowJsFun, modalInner, None, gridWidth)

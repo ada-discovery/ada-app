@@ -32,8 +32,8 @@
             )
 
             populateFieldTypeahedFromUrl(
-                $('#inputFieldNameDiv #newItemTypeahead'),
-                $('#inputFieldNameDiv #newItem'),
+                $('#inputFieldNameDiv #fieldTypeahead'),
+                $('#inputFieldNameDiv #fieldName'),
                 '@Html(dataSetRouter.allFields.url)',
                 @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
             )
@@ -53,6 +53,21 @@
                 }
             });
 
+            $.ajax({
+                url: '@Html(filterRouter.idAndNames.url)',
+                success: function (data) {
+                    var typeaheadData = data.map(function (item, index) {
+                        return {name: item._id.$oid, label: item.name};
+                    });
+                    populateFieldTypeahed(
+                        $('#filterNameTypeahead'),
+                        $('#filterId'),
+                        typeaheadData,
+                        @FilterShowFieldStyle.LabelsOnly.id
+                    );
+                }
+            });
+
             function regress() {
                 var outputFieldName = $("#outputFieldName").val();
                 var outputFieldLabel = $("#outputFieldTypeahead").val();
@@ -63,9 +78,12 @@
                 $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
                 var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
 
+                var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
+                var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
+
                 $('#outputDiv').hide();
 
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.regress(mlModelId, inputFieldNames, outputFieldName, "[]").ajax( {
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.regress(mlModelId, inputFieldNames, outputFieldName, filterOrId).ajax( {
                     success: function(evalRates) {
                         showMessage("'" + mlModelName + "' regression finished.")
                         showMLOutput(evalRates)
@@ -78,13 +96,19 @@
                 showMessage("Regression for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
             }
 
-            $('#fieldTypeahead').keypress(function (e) {
+            $('#outputFieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
                     regress();
                 }
             });
 
             $('#mlModelTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    regress();
+                }
+            });
+
+            $('#inputFieldNameDiv #fieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
                     regress();
                 }

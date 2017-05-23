@@ -3,4 +3,17 @@
 
 @(widget: Widget)
 
-<div id="@widgetElementId(widget)" class="chart-holder"></div>
+@basicWidget = {
+    <div id="@widgetElementId(widget)" class="chart-holder"></div>
+}
+
+@htmlWidget(widget: HtmlWidget) = {
+    <div id="@widgetElementId(widget)" class="chart-holder">
+        @Html(widget.content)
+    </div>
+}
+
+@{widget match {
+    case x: HtmlWidget => htmlWidget(x)
+    case _ => basicWidget
+}}

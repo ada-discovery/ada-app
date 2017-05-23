@@ -60,7 +60,7 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
   ): Traversable[(ClassificationEvalMetric.Value, Double)] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
-    val evaluators = ClassificationEvalMetric.values.map { metric =>
+    val evaluators = ClassificationEvalMetric.values.toSeq.map { metric =>
       val evaluator = new MulticlassClassificationEvaluator()
         .setLabelCol("label")
         .setPredictionCol("prediction")
@@ -70,7 +70,19 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
     }
 
     val dataFrame = jsonsToLearningDataFrame(data, fields, outputFieldName)
-    val Array(training, test) = dataFrame.randomSplit(Array(0.7, 0.3), seed = 11L)
+
+    // make sure the output is string
+
+    val finalDf = dataFrame.schema("label").dataType match {
+      case BooleanType =>
+        val newDf = dataFrame.withColumn("label", dataFrame("label").cast(StringType))
+        val indexer = new StringIndexer().setInputCol("label").setOutputCol("label_new_temp")
+        indexer.fit(newDf).transform(newDf).drop("label").withColumnRenamed("label_new_temp", "label")
+
+      case _ => dataFrame
+    }
+
+    val Array(training, test) = finalDf.randomSplit(Array(0.7, 0.3), seed = 11L)
 
     train(trainer, evaluators, training, test)
   }
@@ -83,7 +95,10 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
   ): Traversable[(RegressionEvalMetric.Value, Double)] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
-    val evaluators = RegressionEvalMetric.values.map { metric =>
+    val dataFrame = jsonsToLearningDataFrame(data, fields, outputFieldName)
+    val Array(training, test) = dataFrame.randomSplit(Array(0.7, 0.3), seed = 11L)
+
+    val evaluators = RegressionEvalMetric.values.toSeq.map { metric =>
 
       val evaluator = new RegressionEvaluator()
         .setLabelCol("label")
@@ -92,9 +107,6 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
 
       (metric, evaluator)
     }
-
-    val dataFrame = jsonsToLearningDataFrame(data, fields, outputFieldName)
-    val Array(training, test) = dataFrame.randomSplit(Array(0.7, 0.3), seed = 11L)
 
     train(trainer, evaluators, training, test)
   }

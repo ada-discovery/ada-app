@@ -1,12 +1,8 @@
 @import views.html.elements.labelValue
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
+@import views.html.dataset.dynamicFieldTable
 
 @dynamicTableJsImport()
-
-@fieldNamesAddModalInner = {
-    <input type="text" id="newItemTypeahead" class="typeahead">
-    <input type="hidden" id="newItem">
-}
 
 <div class="row">
     <div class="col-md-12">
@@ -21,7 +17,11 @@
                     <input id="outputFieldName" name="outputFieldName" type="hidden" value="">
                 }
                 @labelValue("inputFieldNames", "Input Field Names") {
-                    @dynamicStringTable("inputFieldName", Nil, true, Some(fieldNamesAddModalInner))
+                    @dynamicFieldTable("inputFieldName", Nil, false)
+                }
+                @labelValue("filterId", "Filter") {
+                    <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="Filter" value="">
+                    <input id="filterId" name="filterId" type="hidden" value="">
                 }
             </fieldset>
 

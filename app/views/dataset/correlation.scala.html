@@ -4,9 +4,9 @@
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.{widgetJs, widget}
-@import views.html.dataset.datasetSubNavWithJs
+@import views.html.dataset.{dynamicFieldTable, datasetSubNavWithJs}
 @import views.html.dataview.dataViewSelectionModal
-@import views.html.table.{dynamicStringTable, dynamicTableJsImport}
+@import views.html.table.dynamicTableJsImport
 @import views.html.filter.{filter, filterWithJs}
 @import play.api.libs.json.Json
 @import models.DataSpaceMetaInfo
@@ -51,11 +51,6 @@
     @chartSpec.map(widgetJs(_)).getOrElse("")
 }
 
-@fieldNamesAddModalInner = {
-    <input type="text" id="newItemTypeahead" class="typeahead">
-    <input type="hidden" id="newItem">
-}
-
 @main(Messages("correlation.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
@@ -75,7 +70,7 @@
     <div class="row">
         <div class="col-md-3">
             <div class="row">
-                @dynamicStringTable("fieldName", fields.map(_.name), true, Some(fieldNamesAddModalInner))
+                @dynamicFieldTable("fieldName", fields, true, 12)
             </div>
             <div class="row">
                 @helper.form(action=dataSetRouter.getCorrelations(Nil, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {
@@ -99,10 +94,10 @@
 <script type="text/javascript">
     $(function () {
         populateFieldTypeahedFromUrl(
-            $('#fieldNameDiv #newItemTypeahead'),
-            $('#fieldNameDiv #newItem'),
+            $('#fieldNameDiv #fieldTypeahead'),
+            $('#fieldNameDiv #fieldName'),
             '@Html(dataSetRouter.fields(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
-             @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         );
 
         $("#dataViewSelectionModal #submitButton").on("click", addCorrelationToView)

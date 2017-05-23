@@ -3,6 +3,7 @@
 @import models.{DataView, Field}
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataview.{widgetSpecTable, filterOrIdTable}
+@import views.html.dataset.dynamicFieldTable
 @import views.html.table.displayTable
 @import views.html.filters.displayConditions
 @import util.typeColumns
@@ -15,11 +16,6 @@
 
 @dynamicTableJsImport()
 
-@addModalInner = {
-    <input type="text" id="newItemTypeahead" class="typeahead">
-    <input type="hidden" id="newItem">
-}
-
 @inputText("dataView", "name", form)
 
 @form.value.map(_.createdBy.map ( user => value("dataView", "Created By", user.ldapDn))).flatten.getOrElse("")
@@ -27,7 +23,7 @@
 @checkbox("dataView", "default", form)
 
 @labelValue("tableColumnNames", attributeLabel("dataView", "tableColumnNames")){
-    @dynamicStringTable("tableColumnName", form.value.map(_.tableColumnNames).getOrElse(Nil), true, Some(addModalInner))
+    @dynamicFieldTable("tableColumnName", form.value.map(_.tableColumnNames.map(nameFieldMap.get).flatten).getOrElse(Nil), true)
 }
 
 @labelValue("widgetSpecs", attributeLabel("dataView", "widgetSpecs")){

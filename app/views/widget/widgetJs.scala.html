@@ -18,7 +18,7 @@
             case x: ScatterWidget => highcharts.scatterChart(widgetElementId(x), x)
             case x: BoxWidget[_] => highcharts.boxPlot(widgetElementId(x), x)
             case x: HeatmapWidget => highcharts.heatmap(widgetElementId(x), x)
-            case x: HtmlWidget => textual.templateHtml(widgetElementId(x), x)
+            case x: HtmlWidget => ""  // no-op
             case _ => throw new IllegalArgumentException(s"Widget '$widget' is unknown.")
         }
 }
