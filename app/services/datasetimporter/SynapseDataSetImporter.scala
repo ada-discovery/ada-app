@@ -72,21 +72,24 @@ private class SynapseDataSetImporter @Inject() (
     val delimiter = synapseDelimiter.toString
 
     try {
-      val lines = {
-        logger.info("Downloading CSV table from Synapse...")
-        val csvFuture = synapseService.getTableAsCsv(importInfo.tableId)
-        val lines = result(csvFuture, timeout).split(synapseEol)
-        lines.iterator
-      }
-
-      // collect the column names
-      val columnNames =  dataSetService.getColumnNames(delimiter, lines)
-
-      // parse lines
-      logger.info(s"Parsing lines...")
-      val values = dataSetService.parseLines(columnNames, lines, delimiter, true, prefixSuffixSeparators)
-
       for {
+        lines <- {
+          logger.info("Downloading CSV table from Synapse...")
+          synapseService.getTableAsCsv(importInfo.tableId).map { csv =>
+            val lines = csv.split(synapseEol)
+            lines.iterator
+          }
+        }
+
+        // collect the column names
+        columnNames = dataSetService.getColumnNames(delimiter, lines)
+
+        // parse lines
+        values = {
+          logger.info(s"Parsing lines...")
+          dataSetService.parseLines(columnNames, lines, delimiter, true, prefixSuffixSeparators)
+        }
+
         // get all the fields
         fields <- fieldRepo.find()
 

@@ -1,4 +1,4 @@
-import models.{AdaException, Widget}
+import models._
 import org.apache.commons.lang.StringUtils
 import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
@@ -105,6 +105,31 @@ package object util {
 
   def enumToValueString(enum: Enumeration): Seq[(String, String)] =
     enum.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString)))
+
+  def toChartData(widget: CategoricalCountWidget) =
+    widget.data.map { case (name, series) =>
+      val sum = if (widget.isCumulative) series.map(_.count).max else series.map(_.count).sum
+      val data = series.map { case Count(label, count, key) =>
+        (shorten(label), if (widget.useRelativeValues) 100 * count.toDouble / sum else count, key)
+      }
+      (name, data)
+    }
+
+  def toChartData(widget: NumericalCountWidget[_]) = {
+    def numericValue(x: Any) =
+      x match {
+        case x: java.util.Date => x.getTime.toString
+        case _ => x.toString
+      }
+
+    widget.data.map { case (name, series) =>
+      val sum = if (widget.isCumulative) series.map(_.count).max else series.map(_.count).sum
+      val data = series.map { case Count(value, count, _) =>
+        (numericValue(value), if (widget.useRelativeValues) 100 * count.toDouble / sum else count)
+      }
+      (name, data)
+    }
+  }
 
   def seqFutures[T, U](
     items: TraversableOnce[T])(

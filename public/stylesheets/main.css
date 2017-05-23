@@ -274,26 +274,12 @@ tr.vertical-divider > td:last-child {
     /*color: gray;*/
 }
 
-/*.carousel-caption {*/
-    /*color: gray;*/
-/*}*/
-
-/*.carousel-caption > h1 {*/
-    /*color: white;*/
-/*}*/
-
 /* Declare heights because of positioning of img element */
 .carousel .item {
     height: 500px
 }
 
 .carousel-inner > .item > img.carousel-img {
-    /*position: absolute;*/
-    /*top: 0;*/
-    /*left: 0;*/
-    /*height: 300px;*/
-
-/*.child {*/
     position: absolute;
     top: 0%;  /* position the top  edge of the element at the middle of the parent */
     left: 50%; /* position the left edge of the element at the middle of the parent */

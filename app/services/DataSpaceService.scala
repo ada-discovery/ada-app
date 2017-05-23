@@ -62,8 +62,11 @@ class DataSpaceServiceImpl @Inject() (
   ): Future[Option[DataSpaceMetaInfo]] =
     for {
       currentUser <- currentUser(request)
+      foundChildren <- dataSpaceMetaInfoRepo.find(Seq("parentId" #== dataSpace._id))
     } yield
       currentUser.map { user =>
+        dataSpace.children.clear()
+        dataSpace.children.appendAll(foundChildren)
         val isAdmin = user.roles.contains("admin")
         if (isAdmin)
           Some(dataSpace)

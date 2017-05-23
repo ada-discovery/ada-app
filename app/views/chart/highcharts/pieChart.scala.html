@@ -12,9 +12,7 @@
 <script type="text/javascript">
     (function() {
         var data = [ @elements.map { case Count(label, count, key) => {
-            name : '@shorten(label)',
-            y : @count,
-            key: '@key'
+            name : '@shorten(label)', y : @count, key: '@key'
         },}]
 
         var series = [{

@@ -737,29 +737,29 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Future[Option[(Widget, Seq[String])]] = {
     val chartSpecFuture: Future[Option[Widget]] = widgetSpec match {
 
-      case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, relativePercentage, numericBinCount, useDateMonthBins, displayOptions) =>
+      case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
         val field = nameFieldMap.get(fieldName)
         val groupField =  groupFieldName.map(nameFieldMap.get).flatten
 
         field.map { field =>
           calcDistributionCounts(criteria, field, groupField, numericBinCount).map { countSeries =>
             val chartTitle = getDistributionCountChartTitle(field, groupField)
-            createDistributionChartSpec(countSeries, field, chartTitle, false, true, displayOptions)
+            createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, displayOptions)
           }
         }.getOrElse(
           Future(None)
         )
 
-      case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, relativePercentage, numericBinCount, useDateMonthBins, displayOptions) =>
+      case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
         val field = nameFieldMap.get(fieldName)
         val groupField =  groupFieldName.map(nameFieldMap.get).flatten
 
         field.map { field =>
           calcCumulativeCounts(criteria, field, groupField, numericBinCount).map { cumCountSeries =>
             val chartTitle = getCumulativeCountChartTitle(field, groupField)
-            val nonZeroCountSeries = cumCountSeries.filter(_._2.exists(_._2 > 0))
+            val nonZeroCountSeries = cumCountSeries.filter(_._2.exists(_.count > 0))
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-            Some(NumericalCountWidget(chartTitle, field.labelOrElseName, nonZeroCountSeries, initializedDisplayOptions))
+            Some(NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, true, nonZeroCountSeries, initializedDisplayOptions))
           }
         }.getOrElse(
           Future(None)
@@ -791,27 +791,27 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Option[(Widget, Seq[String])] = {
     val chartSpecOption: Option[Widget] = widgetSpec match {
 
-      case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, relativePercentage, numericBinCount, useDateMonthBins, displayOptions) =>
+      case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
         val field = nameFieldMap.get(fieldName)
         val groupField =  groupFieldName.map(nameFieldMap.get).flatten
 
         field.map { field =>
           val countSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
           val chartTitle = getDistributionCountChartTitle(field, groupField)
-          createDistributionChartSpec(countSeries, field, chartTitle, false, true, displayOptions)
+          createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, displayOptions)
         }.flatten
 
-      case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, relativePercentage, numericBinCount, useDateMonthBins, displayOptions) =>
+      case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
         val field = nameFieldMap.get(fieldName).get
         val groupField = groupFieldName.map(nameFieldMap.get).flatten
 
         val series = calcCumulativeCounts(items, field, groupField, numericBinCount)
-        val nonZeroCountSeries = series.filter(_._2.exists(_._2 > 0))
+        val nonZeroCountSeries = series.filter(_._2.exists(_.count > 0))
 
         val chartTitle = getCumulativeCountChartTitle(field, groupField)
 
         val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-        val chartSpec = NumericalCountWidget(chartTitle, field.labelOrElseName, nonZeroCountSeries, initializedDisplayOptions)
+        val chartSpec = NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, true, nonZeroCountSeries, initializedDisplayOptions)
         Some(chartSpec)
 
       case BoxWidgetSpec(fieldName, subFilter, displayOptions) =>
@@ -1126,7 +1126,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // create a distribution chart and set the height
         val distributionChart = field.map { field =>
           val chartTitle = getDistributionCountChartTitle(field, groupField)
-          createDistributionChartSpec(distributionCountSeries, field, chartTitle, true, false, MultiChartDisplayOptions(height = Some(500)))
+          createDistributionChartSpec(distributionCountSeries, field, chartTitle, true, false, false, false, MultiChartDisplayOptions(height = Some(500)))
         }.flatten
 
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
@@ -1277,8 +1277,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val options = MultiChartDisplayOptions(chartType = Some(ChartType.Line), height = Some(500))
         val chartSpec = field.map { field =>
           val chartTitle = getCumulativeCountChartTitle(field, groupField)
-          val nonZeroCountSeries = series.filter(_._2.exists(_._2 > 0))
-          NumericalCountWidget(chartTitle, field.labelOrElseName, nonZeroCountSeries, options)
+          val nonZeroCountSeries = series.filter(_._2.exists(_.count > 0))
+          NumericalCountWidget(chartTitle, field.labelOrElseName, false, true, nonZeroCountSeries, options)
         }
 
         render {
@@ -1738,11 +1738,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def createDistributionChartSpec(
-    countSeries: Seq[(String, Seq[Count[_]])],
+    countSeries: Seq[(String, Seq[Count[Any]])],
     field: Field,
     chartTitle: String,
     showLabels: Boolean,
     showLegend: Boolean,
+    useRelativeValues: Boolean,
+    isCumulative: Boolean,
     displayOptions: MultiChartDisplayOptions
   ): Option[Widget] = {
     val fieldTypeId = field.fieldTypeSpec.fieldType
@@ -1775,16 +1777,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             val nonZeroCountSeriesSorted = countSeriesSorted.filter(_._2.exists(_.count > 0))
 
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Pie)))
-            CategoricalCountWidget(chartTitle, field.name, field.labelOrElseName, showLabels, showLegend, nonZeroCountSeriesSorted, initializedDisplayOptions)
+            CategoricalCountWidget(chartTitle, field.name, field.labelOrElseName, showLabels, showLegend, useRelativeValues, isCumulative, nonZeroCountSeriesSorted, initializedDisplayOptions)
           }
 
           case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date => {
-            val nonZeroNumCountSeries = countSeries.filter(_._2.nonEmpty).map { case (seriesName, counts) =>
-              (seriesName, counts.map ( count => (count.value, count.count)))
-            }
-
+            val nonZeroNumCountSeries = countSeries.filter(_._2.nonEmpty)
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-            NumericalCountWidget(chartTitle, field.labelOrElseName, nonZeroNumCountSeries, initializedDisplayOptions)
+            NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, isCumulative, nonZeroNumCountSeries, initializedDisplayOptions)
           }
         }
       )
@@ -1797,7 +1796,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Future[Seq[(String, Seq[Count[_]])]] =
+  ): Future[Seq[(String, Seq[Count[Any]])]] =
     groupField match {
       case Some(groupField) =>
         statsService.calcGroupedDistributionCounts(repo, criteria, field, groupField, numericBinCount)
@@ -1812,7 +1811,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Seq[(String, Seq[Count[_]])] =
+  ): Seq[(String, Seq[Count[Any]])] =
     groupField match {
       case Some(groupField) =>
         statsService.calcGroupedDistributionCounts(items, field, groupField, numericBinCount)
@@ -1827,7 +1826,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Future[Seq[(String, Seq[(Any, Int)])]] =
+  ): Future[Seq[(String, Seq[Count[Any]])]] =
     numericBinCount match {
       case Some(_) =>
         calcDistributionCounts(criteria, field, groupField, numericBinCount).map( distCountsSeries =>
@@ -1846,7 +1845,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Seq[(String, Seq[(Any, Int)])] =
+  ): Seq[(String, Seq[Count[Any]])] =
     numericBinCount match {
       case Some(_) =>
         val distCountsSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
@@ -1857,14 +1856,16 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
 
   // function that converts dist counts to cumulative counts by applying simple running sum
-  private def toCumCounts(
-    distCountsSeries: Seq[(String, Seq[Count[_]])]
-  ) =
+  private def toCumCounts[T](
+    distCountsSeries: Seq[(String, Seq[Count[T]])]
+  ): Seq[(String, Seq[Count[T]])] =
     distCountsSeries.map { case (seriesName, distCounts) =>
       val cumCounts = distCounts.scanLeft(0) { case (sum, count) =>
         sum + count.count
       }
-      val labeledDistCounts = distCounts.map(_.value).zip(cumCounts)
+      val labeledDistCounts: Seq[Count[T]] = distCounts.map(_.value).zip(cumCounts).map { case (value, count) =>
+        Count(value, count, None)
+      }
       (seriesName, labeledDistCounts)
     }
 

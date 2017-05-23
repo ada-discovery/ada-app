@@ -183,7 +183,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         _ <- metaInfoFuture
 
         // create a data set accessor (and data view repo)
-        dsa = createInstance(metaInfo.id)
+        dsa = cache.getOrElseUpdate(metaInfo.id, createInstance(metaInfo.id))
         dataViewRepo = dsa.dataViewRepo
 
         // check if the data view exist
@@ -195,7 +195,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
           else
             Future(())
       } yield
-        cache.getOrElseUpdate(metaInfo.id, dsa)
+        dsa
     }
   }
 

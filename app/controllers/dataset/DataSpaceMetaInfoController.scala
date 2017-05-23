@@ -23,6 +23,8 @@ import controllers.dataset.routes.javascript.{DataSpaceMetaInfoController => dat
 import dataaccess.User
 import services.DataSpaceService
 
+import scala.collection.mutable.Buffer
+
 class DataSpaceMetaInfoController @Inject() (
     repo: DataSpaceMetaInfoRepo,
     dsaf: DataSetAccessorFactory,
@@ -60,8 +62,10 @@ class DataSpaceMetaInfoController @Inject() (
     id: BSONObjectID,
     form: Form[DataSpaceMetaInfo]
   ) = { request =>
-    getFormEditViewData(id, form)(request).map { case (_, form, dataSetSizes, tree) =>
-      (form.get, dataSetSizes, tree)
+    getFormEditViewData(id, form)(request).map { case (_, newForm, dataSetSizes, tree) =>
+      val dataSpace = newForm.value.getOrElse(form.get.copy(dataSetMetaInfos = Nil))
+      dataSpace.children.clear()
+      (dataSpace, dataSetSizes, tree)
     }
   }
 

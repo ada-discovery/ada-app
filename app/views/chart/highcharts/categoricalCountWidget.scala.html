@@ -1,4 +1,5 @@
 @import util.shorten
+@import util.toChartData
 @import models.Count
 @import models.ChartType
 @import models.CategoricalCountWidget
@@ -10,20 +11,22 @@
 
 <script type="text/javascript">
     $(function () {
-        var categories = [ @widget.data.head._2.map { case Count(label, _, _) => '@label',}];
-        var datas = [@widget.data.map { singleSeries => {
+        var categories = [ @widget.data.head._2.map { count => '@count.value',}];
+        var datas = [@toChartData(widget).map { singleSeries => {
             name: '@singleSeries._1',
-            data: [@singleSeries._2.map { case Count(label, count, key) => {name: '@shorten(label)', y: @count, key: '@key' }, }]
+            data: [@singleSeries._2.map { case (name, y, key) => {name: '@name', y: @y, key: '@key' }, }]
         }, }];
-
+        var totalCounts = [@widget.data.map { series => @{if(widget.isCumulative) series._2.map(_.count).max else series._2.map(_.count).sum}, }];
         var seriesSize = datas.length
         var height = @widget.displayOptions.height.getOrElse(400)
-        var pointFormat = '<span style="color:{point.color}">{point.name} (Count)</span>: <b>{point.y:.0f}</b><br/>'
+        var pointFormat = function () {
+            return (@widget.useRelativeValues) ? categoricalPercentPointFormat(this) : categoricalCountPointFormat(totalCounts, this);
+        }
+        var yAxisCaption = (@widget.useRelativeValues) ? '%' : 'Count'
 
         $('#@elementId').on('chartTypeChanged', function(event, chartType) {
-            changeCategoricalCountChartType(chartType, categories, datas, seriesSize, '@widget.title', '@{elementId}', @widget.showLabels, @widget.showLegend, height, pointFormat);
+            changeCategoricalCountChartType(chartType, categories, datas, seriesSize, '@widget.title', yAxisCaption, '@{elementId}', @widget.showLabels, @widget.showLegend, height, pointFormat);
         });
-
-        changeCategoricalCountChartType('@widget.displayOptions.chartType', categories, datas, seriesSize, '@widget.title', '@{elementId}', @widget.showLabels, @widget.showLegend, height, pointFormat)
+        changeCategoricalCountChartType('@widget.displayOptions.chartType', categories, datas, seriesSize, '@widget.title', yAxisCaption, '@{elementId}', @widget.showLabels, @widget.showLegend, height, pointFormat)
     });
 </script>

@@ -16,6 +16,8 @@ case class CategoricalCountWidget(
   fieldLabel: String,
   showLabels: Boolean,
   showLegend: Boolean,
+  useRelativeValues: Boolean,
+  isCumulative: Boolean,
   data: Seq[(String, Seq[Count[String]])],
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends Widget
@@ -23,7 +25,9 @@ case class CategoricalCountWidget(
 case class NumericalCountWidget[T](
   title: String,
   fieldLabel: String,
-  data: Seq[(String, Seq[(T, Int)])],
+  useRelativeValues: Boolean,
+  isCumulative: Boolean,
+  data: Seq[(String, Seq[Count[T]])],
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends Widget
 
@@ -62,7 +66,7 @@ case class HtmlWidget(
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 
-case class Count[T](
+case class Count[+T](
   value: T,
   count: Int,
   key: Option[String]

@@ -17,12 +17,12 @@
     }
 }
 
-@countTableAux(groupName: String, data: Seq[(_, Int)]) = {
+@countTableAux(groupName: String, data: Seq[Count[_]]) = {
     @displayTable(
         data,
-        typeColumns[(_, Int)](
-            (None, shorten(widget.fieldLabel, 15), {x => displayValue(x._1)}),
-            (None, shorten(groupName, 15), _._2)
+        typeColumns[Count[_]](
+            (None, shorten(widget.fieldLabel, 15), {x => displayValue(x.value)}),
+            (None, shorten(groupName, 15), _.count)
         )
     )
 }
@@ -41,7 +41,7 @@
 
 <script type="text/javascript">
     $(document).ready(function() {
-        var isDate = @{widget.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
+        var isDate = @{widget.data.headOption.map(_._2.headOption.map(_.value.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
         var dataType = (isDate) ? 'datetime' : null;
 
         var header ="<h4 align='center'> @widget.title </h4>"

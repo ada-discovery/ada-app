@@ -295,7 +295,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       ).map { fields =>
         val values = fields.map(field => Some(fieldExtractor(field).toString))
         val counts = statsService.categoricalCountsWithFormatting(values, None)
-        CategoricalCountWidget(chartTitle, fieldName, fieldName, false, true, Seq((chartTitle, counts)), MultiChartDisplayOptions(chartType = Some(ChartType.Pie)))
+        CategoricalCountWidget(chartTitle, fieldName, fieldName, false, true, false, false, Seq((chartTitle, counts)), MultiChartDisplayOptions(chartType = Some(ChartType.Pie)))
       }
     }
 

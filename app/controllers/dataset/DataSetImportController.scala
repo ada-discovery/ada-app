@@ -13,7 +13,7 @@ import be.objectify.deadbolt.scala.DeadboltActions
 import controllers._
 import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
 import models._
-import persistence.RepoTypes.DataSetImportRepo
+import persistence.RepoTypes.{DataSetImportRepo, MessageRepo}
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import play.api.{Configuration, Logger}
 import play.api.data.{Form, Mapping}
@@ -33,7 +33,7 @@ import services.{DataSetImportScheduler, DataSetService, DataSpaceService}
 import util.SecurityUtil.restrictAdmin
 import views.html.{datasetimport => view}
 import views.html.layout
-import util.getRequestParamValue
+import util.{MessageLogger, getRequestParamValue}
 import play.api.data.format.Formats._
 
 import scala.concurrent.{Await, Future}
@@ -46,6 +46,7 @@ class DataSetImportController @Inject()(
     dataSpaceService: DataSpaceService,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
+    messageRepo: MessageRepo,
     configuration: Configuration
   ) extends CrudControllerImpl[DataSetImport, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
@@ -53,6 +54,8 @@ class DataSetImportController @Inject()(
     with HasFormShowEqualEditView[DataSetImport, BSONObjectID] {
 
   private val logger = Logger
+  private val messageLogger = MessageLogger(logger, messageRepo)
+
   // (this.getClass)
   private val importFolder = configuration.getString("datasetimport.import.folder").get
 
@@ -343,16 +346,15 @@ class DataSetImportController @Inject()(
           val successRedirect = home// Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
           dataSetImporterCentral(importInfo).map { _ =>
             val execTimeSec = (new Date().getTime - start.getTime) / 1000
+//            messageLogger.info()
             render {
-              case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '${importInfo.dataSetName}' has been imported in $execTimeSec sec(s).")
+              case Accepts.Html() => successRedirect.flashing("success" -> "Data set '${importInfo.dataSetName}' has been imported in $execTimeSec sec(s).")
               case Accepts.Json() => Created(Json.obj("message" -> s"Data set has been imported in $execTimeSec sec(s)", "name" -> importInfo.dataSetName))
             }
           }.recover {
             case e: AdaParseException => errorRedirect(s"Parsing problem occurred. ${e.getMessage}")
             case e: AdaException => errorRedirect(e.getMessage, Some(e))
-            case e: Exception => {
-              errorRedirect(s"Fatal problem detected. ${e.getMessage}. Contact your admin.", Some(e))
-            }
+            case e: Exception => errorRedirect(s"Fatal problem detected. ${e.getMessage}. Contact your admin.", Some(e))
           }
         }
       )

@@ -1,9 +1,10 @@
+@import util.toChartData
 @import models.ChartType
 @import models.NumericalCountWidget
 
 @(
     elementId : String,
-    chartSpec: NumericalCountWidget[_]
+    widget: NumericalCountWidget[_]
 )
 
 @numericValue(x: Any) = @{
@@ -15,27 +16,22 @@
 
 <script type="text/javascript">
     $(function () {
-        var isDate = @{chartSpec.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
-        var isDouble = @{chartSpec.data.headOption.map(_._2.headOption.map(_._1.isInstanceOf[Double])).flatten.getOrElse(false)};
+        var isDate = @{widget.data.headOption.map(_._2.headOption.map(_.value.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
+        var isDouble = @{widget.data.headOption.map(_._2.headOption.map(_.value.isInstanceOf[Double])).flatten.getOrElse(false)};
         var dataType = (isDate) ? 'datetime' : null;
-
-        var datas = [@chartSpec.data.map { singleSeries => {name: '@singleSeries._1', data: [@singleSeries._2.map { case (x, y) => [@{numericValue(x)}, @y], }]}, }];
-
+        var datas = [@toChartData(widget).map { singleSeries => {name: '@singleSeries._1', data: [@singleSeries._2.map { case (x, y) => [@x, @y], }]}, }];
+        var totalCounts = [@widget.data.map { series => @{if(widget.isCumulative) series._2.map(_.count).max else series._2.map(_.count).sum}, }];
         var seriesSize = datas.length
-        var height = @chartSpec.displayOptions.height.getOrElse(400)
-
-        var pointFormat = (isDate) ?
-            '<span style="color:{point.color}">{point.x:%Y-%m-%d} (Count)</span>: <b>{point.y:.0f}</b><br/>'
-            :
-            (isDouble) ?
-                '<span style="color:{point.color}">{point.x:.2f} (Count)</span>: <b>{point.y:.0f}</b><br/>'
-                :
-                '<span style="color:{point.color}">{point.x} (Count)</span>: <b>{point.y:.0f}</b><br/>'
+        var height = @widget.displayOptions.height.getOrElse(400)
+        var pointFormat = function () {
+            return (@widget.useRelativeValues) ? numericalPercentPointFormat(isDate, isDouble, this) : numericalCountPointFormat(isDate, isDouble, totalCounts, this);
+        }
+        var yAxisCaption = (@widget.useRelativeValues) ? '%' : 'Count'
 
         $('#@elementId').on('chartTypeChanged', function(event, chartType) {
-            changeNumericalCountChartType(chartType, datas, seriesSize, '@chartSpec.title', '@chartSpec.fieldLabel', '@{elementId}', height, pointFormat, dataType)
+            changeNumericalCountChartType(chartType, datas, seriesSize, '@widget.title', yAxisCaption, '@widget.fieldLabel', '@{elementId}', height, pointFormat, dataType)
         });
 
-        changeNumericalCountChartType('@chartSpec.displayOptions.chartType', datas, seriesSize, '@chartSpec.title', '@chartSpec.fieldLabel', '@{elementId}', height, pointFormat, dataType)
+        changeNumericalCountChartType('@widget.displayOptions.chartType', datas, seriesSize, '@widget.title', yAxisCaption, '@widget.fieldLabel', '@{elementId}', height, pointFormat, dataType)
     });
 </script>

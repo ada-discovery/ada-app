@@ -4,6 +4,7 @@
         series,
         showLabels,
         showLegend,
+        pointFormat,
         height,
         allowPointClick,
         allowChartTypeChange
@@ -17,6 +18,12 @@
         if (allowPointClick)
             cursor = 'pointer';
 
+        var pointFormatter = null
+        if (pointFormat && (typeof pointFormat === "function")) {
+            pointFormatter = pointFormat
+            pointFormat = null
+        }
+
         $('#' + chartElementId).highcharts({
             chart: {
                 plotBackgroundColor: null,
@@ -29,7 +36,9 @@
                 text: title
             },
             tooltip: {
-                pointFormat: 'Count: <b>{point.y}</b>'
+                headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+                pointFormat: pointFormat,
+                formatter: pointFormatter
             },
             plotOptions: {
                 pie: {
@@ -37,7 +46,7 @@
                     cursor: cursor,
                     dataLabels: {
                         enabled: showLabels,
-                        format: '<b>{point.x}</b>: {point.percentage:.1f}%',
+                        format: '<b>{point.name}</b>: {point.percentage:.1f}%',
                         style: {
                             color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
                         }
@@ -94,6 +103,12 @@
         if (allowPointClick)
             cursor = 'pointer';
 
+        var pointFormatter = null
+        if (pointFormat && (typeof pointFormat === "function")) {
+            pointFormatter = pointFormat
+            pointFormat = null
+        }
+
         var chartType = 'column'
         if (inverted)
             chartType = 'bar'
@@ -140,7 +155,10 @@
                     borderWidth: 0,
                     dataLabels: {
                         enabled: showLabels,
-                        format: '{point.y:.0f}'
+                        formatter: function() {
+                            var value = this.point.y
+                            return (value === parseInt(value, 10)) ? value : Highcharts.numberFormat(value, 1)
+                        }
                     },
                     allowPointSelect: allowPointClick,
                     cursor: cursor,
@@ -160,7 +178,8 @@
 
             tooltip: {
                 headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
-                pointFormat: pointFormat
+                pointFormat: pointFormat,
+                formatter: pointFormatter
             },
 
             series: series
@@ -253,6 +272,12 @@
         if (allowPointClick)
             cursor = 'pointer';
 
+        var pointFormatter = null
+        if (pointFormat && (typeof pointFormat === "function")) {
+            pointFormatter = pointFormat
+            pointFormat = null
+        }
+
         $('#' + chartElementId).highcharts({
             chart: {
                 height: height
@@ -317,7 +342,8 @@
 
             tooltip: {
                 headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
-                pointFormat: pointFormat
+                pointFormat: pointFormat,
+                formatter: pointFormatter
             },
 
             series: series
@@ -330,6 +356,7 @@
         categories,
         series,
         showLegend,
+        pointFormat,
         height,
         dataType,
         allowPointClick,
@@ -343,6 +370,12 @@
         var cursor = '';
         if (allowPointClick)
             cursor = 'pointer';
+
+        var pointFormatter = null
+        if (pointFormat && (typeof pointFormat === "function")) {
+            pointFormatter = pointFormat
+            pointFormat = null
+        }
 
         $('#' + chartElementId).highcharts({
             chart: {
@@ -405,7 +438,9 @@
                 }
             },
             tooltip: {
-                pointFormat: 'Count: <b>{point.y}</b>'
+                headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+                pointFormat: pointFormat,
+                formatter: pointFormatter
             },
             exporting: exporting,
             credits: {
@@ -569,7 +604,7 @@
         };
     }
 
-    function changeCategoricalCountChartType(chartType, categories, datas, seriesSize, title, elementId, showLabels, showLegend, height, pointFormat) {
+    function changeCategoricalCountChartType(chartType, categories, datas, seriesSize, title, yAxisCaption, elementId, showLabels, showLegend, height, pointFormat) {
         var showLegendImpl = seriesSize > 1
 
         switch (chartType) {
@@ -582,7 +617,7 @@
                     return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
                 });
 
-                pieChart(title, elementId, series, showLabels, showLegend, height, true, true);
+                pieChart(title, elementId, series, showLabels, showLegend, pointFormat, height, true, true);
                 break;
             case 'Column':
                 var colorByPoint = (seriesSize == 1)
@@ -590,7 +625,7 @@
                     return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                 });
 
-                columnChart(title, elementId, categories, series, false, '', 'Count', true, showLegendImpl, pointFormat, height, null, true, true);
+                columnChart(title, elementId, categories, series, false, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, true);
                 break;
             case 'Bar':
                 var colorByPoint = (seriesSize == 1)
@@ -598,24 +633,24 @@
                     return {name: data.name, data: data.data, colorByPoint: colorByPoint};
                 });
 
-                columnChart(title, elementId, categories, series, true, '', 'Count', true, showLegendImpl, pointFormat, height, null, true, true);
+                columnChart(title, elementId, categories, series, true, '', yAxisCaption, true, showLegendImpl, pointFormat, height, null, true, true);
                 break;
             case 'Line':
                 var series = datas
 
-                lineChart(title, elementId, categories, series, '', 'Count', showLegendImpl, true, pointFormat, height, null, true, true);
+                lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, true, true);
                 break;
             case 'Polar':
                 var series = datas.map( function(data, index) {
                     return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
                 });
 
-                polarChart(title, elementId, categories, series, showLegendImpl, height, null, true, true);
+                polarChart(title, elementId, categories, series, showLegendImpl,  pointFormat, height, null, true, true);
                 break;
         }
     }
 
-    function changeNumericalCountChartType(chartType, datas, seriesSize, title, fieldLabel, elementId, height, pointFormat, dataType) {
+    function changeNumericalCountChartType(chartType, datas, seriesSize, title, yAxisCaption, fieldLabel, elementId, height, pointFormat, dataType) {
         var showLegend = seriesSize > 1
 
         switch (chartType) {
@@ -626,33 +661,91 @@
                     return {name: data.name, data: data.data, size: size + '%', innerSize: innerSize + '%'};
                 });
 
-                pieChart(title, elementId, series, false, showLegend, height, false, true);
+                pieChart(title, elementId, series, false, showLegend, pointFormat, height, false, true);
                 break;
             case 'Column':
                 var series = datas.map( function(data, index) {
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                columnChart(title, elementId, null, series, false, fieldLabel, 'Count', false, showLegend, pointFormat, height, dataType, false, true);
+                columnChart(title, elementId, null, series, false, fieldLabel, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true);
                 break;
             case 'Bar':
                 var series = datas.map( function(data, index) {
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                columnChart(title, elementId, null, series, true, fieldLabel, 'Count', false, showLegend, pointFormat, height, dataType, false, true);
+                columnChart(title, elementId, null, series, true, fieldLabel, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true);
                 break;
             case 'Line':
                 var series = datas
 
-                lineChart(title, elementId, null, series, fieldLabel, 'Count', showLegend, true, pointFormat, height, dataType, false, true);
+                lineChart(title, elementId, null, series, fieldLabel, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true);
                 break;
             case 'Polar':
                 var series = datas.map( function(data, index) {
                     return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
                 });
 
-                polarChart(title, elementId, null, series, showLegend, height, dataType, false, true);
+                polarChart(title, elementId, null, series, showLegend, pointFormat, height, dataType, false, true);
                 break;
         }
+    }
+
+    function getPointFormatHeader(that) {
+        var seriesCount = that.series.chart.series.length
+        return (seriesCount > 1) ? '<span style="font-size:11px">' + that.series.name + '</span><br>' : ''
+    }
+
+    function getPointFormatPercent(that, totalCounts) {
+        return ' (<b>' + Highcharts.numberFormat(100 * that.y / totalCounts[that.series.index], 1) + '%</b>)'
+    }
+
+    function getPointFormatPercent2(that) {
+        return ': <b>' + Highcharts.numberFormat(that.y, 1) + '%</b>'
+    }
+
+    function getPointFormatCount(that) {
+        return ': <b>' + that.y + '</b>'
+    }
+
+    function getPointFormatNumericalValue(isDate, isDouble, that) {
+        var colorStartPart = '<span style="color:' + that.point.color + '">'
+        var valuePart =
+            (isDate) ?
+                Highcharts.dateFormat('%Y-%m-%d', that.point.x)
+                :
+                (isDouble) ?  Highcharts.numberFormat(that.point.x, 2) : that.point.x;
+
+        return colorStartPart + valuePart + '</span>'
+    }
+
+    function getPointFormatCategoricalValue(that) {
+        return '<span style="color:' + that.point.color + '">' + that.point.name + '</span>'
+    }
+
+    function numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
+        return getPointFormatHeader(that) +
+            getPointFormatNumericalValue(isDate, isDouble, that) +
+            getPointFormatCount(that) +
+            getPointFormatPercent(that, totalCounts);
+    }
+
+    function categoricalCountPointFormat(totalCounts, that) {
+        return getPointFormatHeader(that) +
+            getPointFormatCategoricalValue(that) +
+            getPointFormatCount(that) +
+            getPointFormatPercent(that, totalCounts)
+    }
+
+    function numericalPercentPointFormat(isDate, isDouble, that) {
+        return getPointFormatHeader(that) +
+            getPointFormatNumericalValue(isDate, isDouble, that) +
+            getPointFormatPercent2(that);
+    }
+
+    function categoricalPercentPointFormat(that) {
+        return getPointFormatHeader(that) +
+            getPointFormatCategoricalValue(that) +
+            getPointFormatPercent2(that)
     }

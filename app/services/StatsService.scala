@@ -27,13 +27,17 @@ trait StatsService {
     criteria: Seq[Criterion[Any]],
     field: Field,
     numericBinCount: Option[Int]
-  ): Future[Seq[Count[_]]]
+   ): Future[Seq[Count[_]]]
 
   def calcDistributionCounts(
     items: Traversable[JsObject],
     field: Field,
     numericBinCount: Option[Int]
   ): Seq[Count[_]]
+
+//  def toRelativeCounts(
+//    counts: Seq[Count[_]]
+//  ): Seq[Count[_]]
 
   def calcGroupedDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
@@ -59,7 +63,7 @@ trait StatsService {
     items: Traversable[JsObject],
     field: Field,
     groupField: Option[Field]
-  ): Seq[(String, Seq[(Any, Int)])]
+  ): Seq[(String, Seq[Count[Any]])]
 
   def calcQuantiles(
     items: Traversable[JsObject],
@@ -592,30 +596,31 @@ class StatsServiceImpl extends StatsService {
   private def formatCategoricalCounts[T](
     counts: Seq[(Option[T], Int)],
     renderer: Option[Option[T] => String]
-  ): Seq[Count[String]] =
+  ): Seq[Count[String]] = {
     counts.map {
       case (key, count) => {
         val stringKey = key.map(_.toString)
         val keyOrEmpty = stringKey.getOrElse("")
         val label = renderer.map(_.apply(key)).getOrElse(keyOrEmpty)
 
-        Count(
-          label,
-          count,
-          stringKey
-        )
+        Count(label, count, stringKey)
       }
     }
+  }
 
   private def convertNumericalCounts[T](
     counts: Seq[(BigDecimal, Int)],
     convert: Option[BigDecimal => T] = None
-  ): Seq[Count[_]] =
+  ): Seq[Count[_]] = {
+    val sum = counts.map(_._2).sum
+
     counts.sortBy(_._1).map {
       case (xValue, count) =>
         val convertedValue = convert.map(_.apply(xValue)).getOrElse(xValue.toDouble)
+
         Count(convertedValue, count, None)
     }
+  }
 
   override def collectScatterData(
     xyzItems: Traversable[JsObject],
@@ -667,7 +672,7 @@ class StatsServiceImpl extends StatsService {
     items: Traversable[JsObject],
     field: Field,
     groupField: Option[Field]
-  ): Seq[(String, Seq[(Any, Int)])] = {
+  ): Seq[(String, Seq[Count[Any]])] = {
     def calcCounts[T: Ordering] = calcCumulativeCountsAux[T](items, field, groupField)
 
     field.fieldType match {
@@ -692,7 +697,7 @@ class StatsServiceImpl extends StatsService {
     items: Traversable[JsObject],
     field: Field,
     groupField: Option[Field]
-  ): Seq[(String, Seq[(T, Int)])] = {
+  ): Seq[(String, Seq[Count[T]])] = {
     val fieldType = ftf(field.fieldTypeSpec).asInstanceOf[FieldType[T]]
 
     val itemsSeq = items.toSeq
@@ -701,7 +706,9 @@ class StatsServiceImpl extends StatsService {
 
     def sortValues(groupedValues: Seq[(String, Seq[T])]) =
       groupedValues.map{ case (name, values) =>
-        val counts = (values.sorted, Stream.from(1)).zipped.toSeq
+        val counts = (values.sorted, Stream.from(1)).zipped.map { case (value, count) =>
+          Count(value, count, None)
+        }
         (name, counts)
       }
 
