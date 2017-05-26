@@ -5,16 +5,21 @@ import java.{util => ju}
 
 import com.google.inject.ImplementedBy
 import dataaccess.{FieldType, FieldTypeHelper}
+import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{FieldTypeId, FieldTypeSpec}
 import models.ml.classification.Classification
 import models.ml.regression.Regression
+import models.ml.unsupervised.UnsupervisedLearning
 import org.apache.spark.ml.evaluation.{Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.sql.types.{Metadata, MetadataBuilder, _}
 import org.apache.spark.sql.{DataFrame, Row}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import org.apache.spark.ml.clustering._
+import org.apache.spark.ml.linalg.DenseVector
 import play.api.libs.json.{JsArray, JsObject, JsString, Json}
+import reactivemongo.bson.BSONObjectID
 import services.SparkApp
 
 import scala.concurrent.Await
@@ -39,7 +44,13 @@ trait MachineLearningService {
     mlModel: Regression
   ): Traversable[(RegressionEvalMetric.Value, Double)]
 
-  // AFTSurvivalRegression
+  def learnUnsupervised[M <: Model[M]](
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    mlModel: UnsupervisedLearning
+  ): Traversable[(String, Int)]
+
+    // AFTSurvivalRegression
   // IsotonicRegression
 }
 
@@ -69,7 +80,7 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
       (metric, evaluator)
     }
 
-    val dataFrame = jsonsToLearningDataFrame(data, fields, outputFieldName)
+    val dataFrame = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
 
     // make sure the output is string
 
@@ -95,7 +106,7 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
   ): Traversable[(RegressionEvalMetric.Value, Double)] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
-    val dataFrame = jsonsToLearningDataFrame(data, fields, outputFieldName)
+    val dataFrame = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
     val Array(training, test) = dataFrame.randomSplit(Array(0.7, 0.3), seed = 11L)
 
     val evaluators = RegressionEvalMetric.values.toSeq.map { metric =>
@@ -111,24 +122,127 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
     train(trainer, evaluators, training, test)
   }
 
+  override def learnUnsupervised[M <: Model[M]](
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    mlModel: UnsupervisedLearning
+  ): Traversable[(String, Int)] = {
+    val trainer = SparkMLEstimatorFactory[M](mlModel)
+
+    // prepare a data frame for learning
+    val featureFieldNames = fields.map(_._1)
+    val fieldsWithId = fields ++ Seq((JsObjectIdentity.name, FieldTypeSpec(FieldTypeId.String)))
+    val dataFrame = jsonsToLearningDataFrame(data, fieldsWithId, featureFieldNames)
+
+    val (model, predictions) = fit(trainer, dataFrame)
+
+    def extractClusterClasses(columnName: String): Traversable[(String, Int)] =
+      predictions.select(JsObjectIdentity.name, columnName).rdd.map { r =>
+        val id = r(0).asInstanceOf[String]
+        val clazz = r(1).asInstanceOf[Int]
+        (id, clazz)
+      }.collect
+
+    def extractClusterClasssedFromProbabilities(columnName: String): Traversable[(String, Int)] =
+      predictions.select(JsObjectIdentity.name, columnName).rdd.map { r =>
+        val id = r(0).asInstanceOf[String]
+        val clazz = r(1).asInstanceOf[DenseVector].values.zipWithIndex.maxBy(_._1)._2
+        (id, clazz)
+      }.collect
+
+    model match {
+      case m: KMeansModel =>
+        // Evaluate clustering by computing Within Set Sum of Squared Errors.
+//        val WSSSE = m.computeCost(dataFrame)
+//        println(s"Within Set Sum of Squared Errors = $WSSSE")
+
+//        // Shows the result.
+//        println("Cluster Centers:")
+//        m.clusterCenters.foreach(println)
+
+        // extract cluster classes
+        extractClusterClasses("prediction")
+
+      case m: LDAModel =>
+//        val ll = m.logLikelihood(dataFrame)
+//        val lp = m.logPerplexity(dataFrame)
+//        println(s"The lower bound on the log likelihood of the entire corpus: $ll")
+//        println(s"The upper bound bound on perplexity: $lp")
+//
+//        // Describe topics.
+//        val topics = m.describeTopics(3)
+//        println("The topics described by their top-weighted terms:")
+//        topics.show(false)
+
+//        // Shows the result.
+//        val transformed = model.transform(dataFrame)
+//        transformed.show(false)
+
+        // extract cluster classes
+        extractClusterClasssedFromProbabilities("topicDistribution")
+
+      case m: BisectingKMeansModel =>
+        // Evaluate clustering.
+//        val cost = m.computeCost(dataFrame)
+//        println(s"Within Set Sum of Squared Errors = $cost")
+//
+//        // Shows the result.
+//        println("Cluster Centers: ")
+//        val centers = m.clusterCenters
+//        centers.foreach(println)
+
+        // extract cluster classes
+        extractClusterClasses("prediction")
+
+      case m: GaussianMixtureModel =>
+        // output parameters of mixture model model
+//        for (i <- 0 until m.getK) {
+//          println(s"Gaussian $i:\nweight=${m.weights(i)}\n" +
+//            s"mu=${m.gaussians(i).mean}\nsigma=\n${m.gaussians(i).cov}\n")
+//        }
+
+        // extract cluster classes
+        extractClusterClasssedFromProbabilities("probability")
+    }
+  }
+
   private def jsonsToLearningDataFrame(
     jsons: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
-    outputFieldName: String
+    featureFieldNames: Seq[String]
+  ): DataFrame = {
+    // convert jsons to a data frame
+    val fieldNameAndTypes = fields.map { case (name, fieldTypeSpec) => (name, ftf(fieldTypeSpec))}
+    val stringFieldNames = fields.filter {_._2.fieldType == FieldTypeId.String }.map(_._1)
+    val stringFieldsNotToIndex = stringFieldNames.diff(featureFieldNames).toSet
+    val df = jsonsToDataFrame(jsons, fieldNameAndTypes, stringFieldsNotToIndex)
+
+    prepLearningDataFrame(df, featureFieldNames, None)
+  }
+
+  private def jsonsToLearningDataFrame(
+    jsons: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: Option[String]
   ): DataFrame = {
     // convert jsons to a data frame
     val fieldNameAndTypes = fields.map { case (name, fieldTypeSpec) => (name, ftf(fieldTypeSpec))}
     val df = jsonsToDataFrame(jsons, fieldNameAndTypes)
 
     // prep the data frame for learning
-    val featureFieldNames = fields.map(_._1).filterNot(_ == outputFieldName)
+    val featureFieldNames = outputFieldName.map( outputName =>
+      fields.map(_._1).filterNot(_ == outputName)
+    ).getOrElse(
+      fields.map(_._1)
+    )
+
     prepLearningDataFrame(df, featureFieldNames, outputFieldName)
   }
 
   private def prepLearningDataFrame(
     df: DataFrame,
     featureFieldNames: Seq[String],
-    outputFieldName: String
+    outputFieldName: Option[String]
   ): DataFrame = {
     //    df.printSchema()
 //    df.schema.fields.foreach(field =>
@@ -142,7 +256,13 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
       .setInputCols(nonNullDf.columns.filter(featureFieldNames.contains))
       .setOutputCol("features")
 
-    val data = assembler.transform(nonNullDf).withColumnRenamed(outputFieldName, "label")
+    val featuresDf = assembler.transform(nonNullDf)
+
+    outputFieldName.map(
+      featuresDf.withColumnRenamed(_, "label")
+    ).getOrElse(
+      featuresDf
+    )
 
     //    val data = new StringIndexer()
     //      .setInputCol(outputFieldName)
@@ -157,7 +277,6 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
     //    println(data0.count())
     //    println(data1.count())
     //    println(merged.count())
-    data
   }
 
   private def setParam[T, M](
@@ -247,18 +366,31 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
   //  }
 
   private def train[M <: Model[M], Q](
-    reg: Estimator[M],
+    estimator: Estimator[M],
     metricWithEvaluators: Traversable[(Q, Evaluator)],
     trainData: DataFrame,
     testData: DataFrame
   ): Traversable[(Q, Double)] = {
     // Fit the model
-    val lrModel = reg.fit(trainData)
+    val lrModel = estimator.fit(trainData)
 
     // Make predictions.
     val predictions = lrModel.transform(testData)
 
     metricWithEvaluators.map{ case (metric, evaluator) => (metric, evaluator.evaluate(predictions))}
+  }
+
+  private def fit[M <: Model[M], Q](
+    estimator: Estimator[M],
+    data: DataFrame
+  ): (M, DataFrame) = {
+    // Fit the model
+    val lrModel = estimator.fit(data)
+
+    // Make predictions.
+    val predictions = lrModel.transform(data)
+
+    (lrModel, predictions)
   }
 
 //  private def jsonsToDataFrameOld(
@@ -278,7 +410,8 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
 
   private def jsonsToDataFrame(
     jsons: Traversable[JsObject],
-    fieldNameAndTypes: Seq[(String, FieldType[_])]
+    fieldNameAndTypes: Seq[(String, FieldType[_])],
+    stringFieldsNotToIndex: Set[String] = Set()
   ): DataFrame = {
     val data = jsons.map { json =>
       val values = fieldNameAndTypes.map { case (fieldName, fieldType) =>
@@ -325,9 +458,13 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
     val df = session.createDataFrame(rdds, StructType(structTypes))
 
     stringTypes.foldLeft(df){ case (newDf, stringType) =>
-      val randomIndex = Random.nextLong()
-      val indexer = new StringIndexer().setInputCol(stringType.name).setOutputCol(stringType.name + randomIndex)
-      indexer.fit(newDf).transform(newDf).drop(stringType.name).withColumnRenamed(stringType.name + randomIndex, stringType.name)
+      if (!stringFieldsNotToIndex.contains(stringType.name)) {
+        val randomIndex = Random.nextLong()
+        val indexer = new StringIndexer().setInputCol(stringType.name).setOutputCol(stringType.name + randomIndex)
+        indexer.fit(newDf).transform(newDf).drop(stringType.name).withColumnRenamed(stringType.name + randomIndex, stringType.name)
+      } else {
+        newDf
+      }
     }
   }
 }

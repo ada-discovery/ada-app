@@ -82,7 +82,7 @@
 }
 
 @executeLink(dataSetImport: DataSetImport) = {
-    <a class="btn btn-default btn-xs btn-clean no-rowClicked" href="@dataSetImportRoutes.execute(dataSetImport._id.get)">
+    <a class="btn btn-default btn-xs btn-clean no-rowClicked" href="#" onclick="submit('post', '@dataSetImportRoutes.execute(dataSetImport._id.get)'); return false;">
         <span class="glyphicon glyphicon-play green" aria-hidden="true"></span>
     </a>
 }

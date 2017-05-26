@@ -93,3 +93,7 @@ object CategoricalCountWidget {
         }
     }
 }
+
+//object ScatterWidget {
+//  implicit val scatterWidgetFormat = Json.format[ScatterWidget]
+//}

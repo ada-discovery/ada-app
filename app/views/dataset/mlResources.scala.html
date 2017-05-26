@@ -1,0 +1,37 @@
+@import models.FilterShowFieldStyle.NamesAndLabels
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+
+@(
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value]
+)(
+    implicit context: DataSetWebContext
+)
+
+@typeaheadJsImport()
+
+<script type="text/javascript">
+    $(function () {
+        populateFieldTypeahedFromUrl(
+            $('#inputFieldNameDiv #fieldTypeahead'),
+            $('#inputFieldNameDiv #fieldName'),
+            '@Html(dataSetRouter.allFields.url)',
+            @filterShowFieldStyle.getOrElse(NamesAndLabels).id
+        )
+
+        $.ajax({
+            url: '@Html(filterRouter.idAndNames.url)',
+            success: function (data) {
+                var typeaheadData = data.map(function (item, index) {
+                    return {name: item._id.$oid, label: item.name};
+                });
+                populateFieldTypeahed(
+                    $('#filterNameTypeahead'),
+                    $('#filterId'),
+                    typeaheadData,
+                    @FilterShowFieldStyle.LabelsOnly.id
+                );
+            }
+        });
+    });
+</script>

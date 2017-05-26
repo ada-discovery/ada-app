@@ -65,6 +65,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getRegression: Action[AnyContent]
 
+  def getUnsupervisedLearning: Action[AnyContent]
+
   def classify(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
@@ -76,6 +78,12 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def learnUnsupervised(
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
     filterOrId: FilterOrId
   ): Action[AnyContent]
 

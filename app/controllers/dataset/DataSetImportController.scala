@@ -348,7 +348,7 @@ class DataSetImportController @Inject()(
             val execTimeSec = (new Date().getTime - start.getTime) / 1000
 //            messageLogger.info()
             render {
-              case Accepts.Html() => successRedirect.flashing("success" -> "Data set '${importInfo.dataSetName}' has been imported in $execTimeSec sec(s).")
+              case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '${importInfo.dataSetName}' has been imported in $execTimeSec sec(s).")
               case Accepts.Json() => Created(Json.obj("message" -> s"Data set has been imported in $execTimeSec sec(s)", "name" -> importInfo.dataSetName))
             }
           }.recover {

@@ -9,6 +9,7 @@ import reactivemongo.bson.BSONObjectID
 import dataaccess.mongo.MongoAsyncCrudExtraRepo
 import models.ml.classification.Classification
 import models.ml.regression.Regression
+import models.ml.unsupervised.UnsupervisedLearning
 
 /**
  * Common repo type shortcuts
@@ -24,6 +25,7 @@ object RepoTypes {
 
   type ClassificationRepo = AsyncCrudRepo[Classification, BSONObjectID]
   type RegressionRepo = AsyncCrudRepo[Regression, BSONObjectID]
+  type UnsupervisedLearningRepo = AsyncCrudRepo[UnsupervisedLearning, BSONObjectID]
 
   // experimental
   type StudentDistRepo = DistributedRepo[Student, BSONObjectID]

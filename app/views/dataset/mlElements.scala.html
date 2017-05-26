@@ -2,6 +2,8 @@
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataset.dynamicFieldTable
 
+@(includeOutputField: Boolean = true)
+
 @dynamicTableJsImport()
 
 <div class="row">
@@ -12,9 +14,11 @@
                     <input id="mlModelTypeahead" class="typeahead typeahead-large" type="text" placeholder="ML Model" value="">
                     <input id="mlModelId" name="mlModelId" type="hidden" value="">
                 }
-                @labelValue("outputField", "Output Field") {
-                    <input id="outputFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="">
-                    <input id="outputFieldName" name="outputFieldName" type="hidden" value="">
+                @if(includeOutputField) {
+                    @labelValue("outputField", "Output Field") {
+                        <input id="outputFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="">
+                        <input id="outputFieldName" name="outputFieldName" type="hidden" value="">
+                    }
                 }
                 @labelValue("inputFieldNames", "Input Field Names") {
                     @dynamicFieldTable("inputFieldName", Nil, false)

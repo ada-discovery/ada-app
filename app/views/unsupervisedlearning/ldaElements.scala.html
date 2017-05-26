@@ -1,0 +1,25 @@
+@import views.html.elements.{inputText, checkbox, select}
+@import play.api.i18n.Messages
+@import models.ml.unsupervised.LDA
+@import models.ml.unsupervised.LDAOptimizer
+
+@(form: Form[LDA])(implicit msg: Messages)
+
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[LDA].getName}">
+
+@inputText("lda", "name", form)
+
+<hr/>
+
+@inputText("lda", "k", form)
+@inputText("lda", "maxIteration", form)
+@inputText("lda", "seed", form)
+@inputText("lda", "checkpointInterval", form)
+@inputText("lda", "docConcentration", form)
+@inputText("lda", "topicConcentration", form)
+@select("lda", "optimizer", form, util.enumToValueString(LDAOptimizer), true)
+@inputText("lda", "learningOffset", form)
+@inputText("lda", "learningDecay", form)
+@inputText("lda", "subsamplingRate", form)
+@checkbox("lda", "optimizeDocConcentration", form)
+@checkbox("lda", "keepLastCheckpoint", form)

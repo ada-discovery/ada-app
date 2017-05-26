@@ -19,6 +19,8 @@ import persistence.RepoTypes._
 import com.google.inject.name.Names
 import models.ml.classification.Classification
 import models.ml.regression.Regression
+import models.ml.unsupervised.UnsupervisedLearning
+import models.ml.unsupervised.UnsupervisedLearning.unsupervisedLearningFormat
 import persistence.dataset._
 import reactivemongo.bson.BSONObjectID
 import persistence.RepoDef.Repo
@@ -57,6 +59,9 @@ private object RepoDef extends Enumeration {
 
   val RegressionRepo = Repo[RegressionRepo](
     new MongoAsyncCrudRepo[Regression, BSONObjectID]("regressions"))
+
+  val UnsupervisedLearningRepo = Repo[UnsupervisedLearningRepo](
+    new MongoAsyncCrudRepo[UnsupervisedLearning, BSONObjectID]("unsupervisedLearnings"))
 
   //  val DictionaryRootRepo = Repo[DictionaryRootRepo](
 //    new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))

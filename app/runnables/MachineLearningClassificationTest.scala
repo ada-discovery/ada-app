@@ -27,11 +27,12 @@ class MachineLearningClassificationTest @Inject()(
   override def run = {
     val dsa = dsaf(dataSetId).get
     val (jsons, fields) = result(dss.loadDataAndFields(dsa), 2 minutes)
+    val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
 
     // featureFieldNames,
 
     def classify(model: Classification) =
-      machineLearningService.classify(jsons, fields, outputField, model)
+      machineLearningService.classify(jsons, fieldNameAndSpecs, outputField, model)
 
     println("Logistic regression")
 

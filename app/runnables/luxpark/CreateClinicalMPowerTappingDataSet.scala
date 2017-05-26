@@ -1,6 +1,7 @@
 package runnables.luxpark
 
 import javax.inject.Inject
+import java.{util => ju}
 
 import dataaccess.{Criterion, FieldTypeHelper}
 import persistence.dataset.DataSetAccessorFactory
@@ -54,6 +55,11 @@ class CreateClinicalMPowerTappingDataSet @Inject()(
     val LeftFingerTapping = Value("u_q3_4_2")
     val RightToeTapping = Value("u_q3_7_1")
     val LeftToeTapping = Value("u_q3_7_2")
+    val BasicAssessmentStartDate = Value("sv_basic_date")
+    val UPSRSScorePart1 = Value("u_part1_score")
+    val UPSRSScorePart2 = Value("u_part2_score")
+    val UPSRSScorePart3 = Value("u_part3_score")
+    val UPSRSScorePart4 = Value("u_part4_score")
   }
 
   case class MPowerTappingData(
@@ -152,18 +158,43 @@ class CreateClinicalMPowerTappingDataSet @Inject()(
         criteria = Seq(ClinicalField.MPowerId.toString #-> tappingItems.map(_.externalId).toSeq),
         projection = ClinicalField.values.map(_.toString)
       )
+
+      Some(basicAssessmentStartDateField) <- luxParkFieldRepo.get(ClinicalField.BasicAssessmentStartDate.toString)
+
+      Some(ageField) <- luxParkFieldRepo.get(ClinicalField.Age.toString)
     } yield {
       import NewMPowerTappingField._
 
-      val mPowerIdClinicalJsonsMap: Map[String, Traversable[JsObject]] =
+      val basicAssessmentDateFieldType = ftf(basicAssessmentStartDateField.fieldTypeSpec).asValueOf[ju.Date]
+      val ageFieldType = ftf(ageField.fieldTypeSpec).asValueOf[Double]
+
+      val mPowerIdDataMap: Map[String, Traversable[(Option[ju.Date], Option[Double], JsObject)]] =
         clinicalJsons.map { clinicalJson =>
           val mPowerId = (clinicalJson \ ClinicalField.MPowerId.toString).get.as[String]
-          (mPowerId, clinicalJson)
+          val startDate = basicAssessmentDateFieldType.jsonToValue(clinicalJson \ ClinicalField.BasicAssessmentStartDate.toString)
+          val age = ageFieldType.jsonToValue(clinicalJson \ ClinicalField.Age.toString)
+
+          (mPowerId, (startDate, age, clinicalJson))
         }.groupBy(_._1).map{ case (key, keyJsons) => (key, keyJsons.map(_._2))}
 
       tappingItems.map { tappingItem =>
-        mPowerIdClinicalJsonsMap.get(tappingItem.externalId).map(_.map( clinicalJson =>
-            clinicalJson ++ Json.obj(
+        mPowerIdDataMap.get(tappingItem.externalId).map { clinicalDateJsons =>
+          val sortedDateClinicalJsons = clinicalDateJsons.filter(_._1.isDefined).map(x => (x._1.get, x._3)).toSeq.sortBy(_._1)
+
+          val clinicalJson: Option[JsObject] = if (sortedDateClinicalJsons.nonEmpty) {
+            val tappingCreatedOnDate = new ju.Date(tappingItem.createdOn)
+            val indexAfter = sortedDateClinicalJsons.zipWithIndex.find(_._1._1.after(tappingCreatedOnDate)).map(_._2)
+            val json = sortedDateClinicalJsons(indexAfter.map(i => Math.max(0, i-1)).getOrElse(sortedDateClinicalJsons.length - 1))._2
+            Some(json)
+          } else {
+            clinicalDateJsons.headOption.map(_._3)
+          }
+
+          val ageJson: JsValue = clinicalDateJsons.find(_._2.isDefined).map(x => ageFieldType.valueToJson(x._2)).getOrElse(JsNull)
+
+          clinicalJson.map( json =>
+            json ++ Json.obj(
+              ClinicalField.Age.toString -> ageJson,
               CreatedOn.toString -> tappingItem.createdOn,
               MedsMoment.toString -> tappingItem.medsMoment,
               LeftTappingCount.toString -> tappingItem.leftTappingCount,
@@ -172,7 +203,7 @@ class CreateClinicalMPowerTappingDataSet @Inject()(
               RightTappingScore.toString -> tappingItem.rightTappingScore
             )
           )
-        )
+        }
       }.flatten.flatten
     }
 

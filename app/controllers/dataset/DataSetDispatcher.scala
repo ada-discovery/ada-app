@@ -93,6 +93,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getRegression = dispatch(_.getRegression)
 
+  override def getUnsupervisedLearning = dispatch(_.getUnsupervisedLearning)
+
   override def classify(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
@@ -106,6 +108,12 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     outputFieldName: String,
     filterOrId: FilterOrId
   ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterOrId))
+
+  override def learnUnsupervised(
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ) = dispatch(_.learnUnsupervised(mlModelId, inputFieldNames, filterOrId))
 
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]

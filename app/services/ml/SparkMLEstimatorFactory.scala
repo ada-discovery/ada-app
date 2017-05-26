@@ -1,10 +1,12 @@
 package services.ml
 
 import models.ml.classification.{Classification, DecisionTree, GradientBoostTree, LogisticRegression, MultiLayerPerceptron, NaiveBayes, RandomForest}
+import models.ml.regression.{Regression, GeneralizedLinearRegression => GeneralizedLinearRegressionDef, GradientBoostRegressionTree => GradientBoostRegressionTreeDef, LinearRegression => LinearRegressionDef, RandomRegressionForest => RandomRegressionForestDef, RegressionTree => RegressionTreeDef}
+import models.ml.unsupervised.{UnsupervisedLearning, BisectingKMeans => BisectingKMeansDef, GaussianMixture => GaussianMixtureDef, KMeans => KMeansDef, LDA => LDADef}
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.ml.classification.{LogisticRegression => LogisticRegressionClassifier, NaiveBayes => NaiveBayesClassifier, _}
-import models.ml.regression.{Regression, GeneralizedLinearRegression => GeneralizedLinearRegressionDef, GradientBoostRegressionTree => GradientBoostRegressionTreeDef, LinearRegression => LinearRegressionDef, RandomRegressionForest => RandomRegressionForestDef, RegressionTree => RegressionTreeDef}
 import org.apache.spark.ml.regression.{DecisionTreeRegressor, GBTRegressor, RandomForestRegressor, GeneralizedLinearRegression => GeneralizedLinearRegressor, LinearRegression => LinearRegressor}
+import org.apache.spark.ml.clustering.{BisectingKMeans, GaussianMixture, KMeans, LDA}
 
 object SparkMLEstimatorFactory {
 
@@ -25,6 +27,14 @@ object SparkMLEstimatorFactory {
       case x: RegressionTreeDef => applyAux(x).asInstanceOf[Estimator[M]]
       case x: RandomRegressionForestDef => applyAux(x).asInstanceOf[Estimator[M]]
       case x: GradientBoostRegressionTreeDef => applyAux(x).asInstanceOf[Estimator[M]]
+    }
+
+  def apply[M <: Model[M]](model: UnsupervisedLearning): Estimator[M] =
+    model match {
+      case x: KMeansDef => applyAux(x).asInstanceOf[Estimator[M]]
+      case x: LDADef => applyAux(x).asInstanceOf[Estimator[M]]
+      case x: BisectingKMeansDef => applyAux(x).asInstanceOf[Estimator[M]]
+      case x: GaussianMixtureDef => applyAux(x).asInstanceOf[Estimator[M]]
     }
 
   private def applyAux(model: LogisticRegression): LogisticRegressionClassifier = {
@@ -186,6 +196,60 @@ object SparkMLEstimatorFactory {
       set(_.subsamplingRate, _.setSubsamplingRate)
       //      set(_.impurity.map(_.toString), _.setImpurity)
     )(new GBTRegressor())
+  }
+
+  private def applyAux(model: KMeansDef): KMeans = {
+    def set[T] = setSourceParam[T, KMeansDef, KMeans](model)_
+
+    chain(
+      set(_.initMode.map(_.toString), _.setInitMode),
+      set(_.initSteps, _.setInitSteps),
+      set({o => Some(o.k)}, _.setK),
+      set(_.maxIteration, _.setMaxIter),
+      set(_.tolerance, _.setTol),
+      set(_.seed, _.setSeed)
+    )(new KMeans())
+  }
+
+  private def applyAux(model: LDADef): LDA = {
+    def set[T] = setSourceParam[T, LDADef, LDA](model)_
+
+    chain(
+      set(_.checkpointInterval, _.setCheckpointInterval),
+      set(_.keepLastCheckpoint, _.setKeepLastCheckpoint),
+      set[Array[Double]](_.docConcentration.map(_.toArray), _.setDocConcentration),
+      set(_.optimizeDocConcentration, _.setOptimizeDocConcentration),
+      set(_.topicConcentration, _.setTopicConcentration),
+      set({o => Some(o.k)}, _.setK),
+      set(_.learningDecay, _.setLearningDecay),
+      set(_.learningOffset, _.setLearningOffset),
+      set(_.maxIteration, _.setMaxIter),
+      set(_.optimizer.map(_.toString), _.setOptimizer),
+      set(_.subsamplingRate, _.setSubsamplingRate),
+      set(_.seed, _.setSeed)
+    )(new LDA())
+  }
+
+  private def applyAux(model: BisectingKMeansDef): BisectingKMeans = {
+    def set[T] = setSourceParam[T, BisectingKMeansDef, BisectingKMeans](model)_
+
+    chain(
+      set({o => Some(o.k)}, _.setK),
+      set(_.maxIteration, _.setMaxIter),
+      set(_.seed, _.setSeed),
+      set(_.minDivisibleClusterSize, _.setMinDivisibleClusterSize)
+    )(new BisectingKMeans())
+  }
+
+  private def applyAux(model: GaussianMixtureDef): GaussianMixture = {
+    def set[T] = setSourceParam[T, GaussianMixtureDef, GaussianMixture](model)_
+
+    chain(
+      set({o => Some(o.k)}, _.setK),
+      set(_.maxIteration, _.setMaxIter),
+      set(_.tolerance, _.setTol),
+      set(_.seed, _.setSeed)
+    )(new GaussianMixture())
   }
 
   private def setParam[T, M](

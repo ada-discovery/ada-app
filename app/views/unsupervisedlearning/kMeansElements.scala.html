@@ -1,0 +1,19 @@
+@import views.html.elements.{inputText, checkbox, select}
+@import play.api.i18n.Messages
+@import models.ml.unsupervised.KMeans
+@import models.ml.unsupervised.KMeansInitMode
+
+@(form: Form[KMeans])(implicit msg: Messages)
+
+<input type="hidden" id="concreteClass" name="concreteClass" value="@{classOf[KMeans].getName}">
+
+@inputText("kMeans", "name", form)
+
+<hr/>
+
+@inputText("kMeans", "k", form)
+@inputText("kMeans", "maxIteration", form)
+@inputText("kMeans", "tolerance", form)
+@inputText("kMeans", "seed", form)
+@select("kMeans", "initMode", form, util.enumToValueString(KMeansInitMode), true)
+@inputText("kMeans", "initSteps", form)

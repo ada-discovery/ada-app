@@ -1,6 +1,6 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
-@import views.html.dataset.{mlElements, datasetSubNavWithJs}
+@import views.html.dataset.{mlElements, mlResources, datasetSubNavWithJs}
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
 @import views.html.elements._
@@ -16,7 +16,7 @@
 )
 
 @bottomResources = {
-    @typeaheadJsImport()
+    @mlResources(filterShowFieldStyle)
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.regress
@@ -28,13 +28,6 @@
                 $('#outputFieldTypeahead'),
                 $('#outputFieldName'),
                 '@Html(dataSetRouter.fields(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date)).url)',
-                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
-            )
-
-            populateFieldTypeahedFromUrl(
-                $('#inputFieldNameDiv #fieldTypeahead'),
-                $('#inputFieldNameDiv #fieldName'),
-                '@Html(dataSetRouter.allFields.url)',
                 @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
             )
 
@@ -53,20 +46,15 @@
                 }
             });
 
-            $.ajax({
-                url: '@Html(filterRouter.idAndNames.url)',
-                success: function (data) {
-                    var typeaheadData = data.map(function (item, index) {
-                        return {name: item._id.$oid, label: item.name};
-                    });
-                    populateFieldTypeahed(
-                        $('#filterNameTypeahead'),
-                        $('#filterId'),
-                        typeaheadData,
-                        @FilterShowFieldStyle.LabelsOnly.id
-                    );
+            $('#outputFieldTypeahead, #mlModelTypeahead, #filterNameTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    regress();
                 }
             });
+
+            $('#launchButton').on('click', function() {
+                regress();
+            })
 
             function regress() {
                 var outputFieldName = $("#outputFieldName").val();
@@ -95,28 +83,6 @@
 
                 showMessage("Regression for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
             }
-
-            $('#outputFieldTypeahead').keypress(function (e) {
-                if (e.which == 13) {
-                    regress();
-                }
-            });
-
-            $('#mlModelTypeahead').keypress(function (e) {
-                if (e.which == 13) {
-                    regress();
-                }
-            });
-
-            $('#inputFieldNameDiv #fieldTypeahead').keypress(function (e) {
-                if (e.which == 13) {
-                    regress();
-                }
-            });
-
-            $('#launchButton').on('click', function() {
-                regress();
-            })
         });
     </script>
 }

@@ -24,11 +24,12 @@ class MachineLearningRegressionTest @Inject()(
   override def run = {
     val dsa = dsaf(dataSetId).get
     val (jsons, fields) = result(dss.loadDataAndFields(dsa), 2 minutes)
+    val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
 
     // featureFieldNames,
 
     def regress(model: Regression) =
-      machineLearningService.regress(jsons, fields, outputField, model)
+      machineLearningService.regress(jsons, fieldNameAndSpecs, outputField, model)
 
     println("Linear regression")
 

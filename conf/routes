@@ -43,7 +43,7 @@ GET         /admin/runScript                                                    
 GET         /admin/dataSetImport                                                    controllers.dataset.DataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter: Seq[models.FilterCondition] ?= Nil)
 GET         /admin/dataSetImport/all                                                controllers.dataset.DataSetImportController.listAll(s: String ?= "dataSpaceName")
 GET         /admin/dataSetImport/new                                                controllers.dataset.DataSetImportController.create(concreteClassName: String)
-GET         /admin/dataSetImport/execute/:id                                        controllers.dataset.DataSetImportController.execute(id: BSONObjectID)
+POST        /admin/dataSetImport/execute/:id                                        controllers.dataset.DataSetImportController.execute(id: BSONObjectID)
 POST        /admin/dataSetImport/save                                               controllers.dataset.DataSetImportController.save
 GET         /admin/dataSetImport/:id/get                                            controllers.dataset.DataSetImportController.get(id: BSONObjectID)
 POST        /admin/dataSetImport/:id                                                controllers.dataset.DataSetImportController.update(id: BSONObjectID)
@@ -105,8 +105,10 @@ GET         /studies/correlations                                               
 GET         /studies/cumulativeCount                                                controllers.dataset.DataSetDispatcher.getCumulativeCount(fieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/classification                                                 controllers.dataset.DataSetDispatcher.getClassification
 GET         /studies/regression                                                     controllers.dataset.DataSetDispatcher.getRegression
+GET         /studies/unsupervisedLearning                                           controllers.dataset.DataSetDispatcher.getUnsupervisedLearning
 POST        /studies/classify                                                       controllers.dataset.DataSetDispatcher.classify(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
 POST        /studies/regress                                                        controllers.dataset.DataSetDispatcher.regress(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
+POST        /studies/learnUnsupervised                                              controllers.dataset.DataSetDispatcher.learnUnsupervised(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
 GET         /studies/fractalis                                                      controllers.dataset.DataSetDispatcher.getFractalis(fieldName: Option[String] ?= None)
 GET         /studies/table                                                          controllers.dataset.DataSetDispatcher.getTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
 GET         /studies/widgetPanelAndTable                                            controllers.dataset.DataSetDispatcher.getWidgetPanelAndTable(dataViewId: BSONObjectID, tablePage: Int, tableOrder: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
@@ -212,6 +214,16 @@ GET         /ml/regression/get/:id                                              
 POST        /ml/regression/:id                                                      controllers.ml.RegressionController.update(id: BSONObjectID)
 POST        /ml/regression/:id/delete                                               controllers.ml.RegressionController.delete(id: BSONObjectID)
 GET         /ml/regression/idAndNames                                               controllers.ml.RegressionController.idAndNames
+
+# ML UnsupervisedLearning
+GET         /ml/clustering                                                          controllers.ml.UnsupervisedLearningController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[models.FilterCondition] ?= Nil)
+GET         /ml/clustering/all                                                      controllers.ml.UnsupervisedLearningController.listAll(s: String ?= "concreteClass")
+GET         /ml/clustering/new                                                      controllers.ml.UnsupervisedLearningController.create(concreteClassName: String)
+POST        /ml/clustering/save                                                     controllers.ml.UnsupervisedLearningController.save
+GET         /ml/clustering/get/:id                                                  controllers.ml.UnsupervisedLearningController.get(id: BSONObjectID)
+POST        /ml/clustering/:id                                                      controllers.ml.UnsupervisedLearningController.update(id: BSONObjectID)
+POST        /ml/clustering/:id/delete                                               controllers.ml.UnsupervisedLearningController.delete(id: BSONObjectID)
+GET         /ml/clustering/idAndNames                                               controllers.ml.UnsupervisedLearningController.idAndNames
 
 # Message
 GET         /messages/stream                                                        controllers.MessageController.stream

@@ -125,7 +125,7 @@ trait DataSetService {
     dsa: DataSetAccessor,
     fieldNames: Seq[String] = Nil,
     criteria: Seq[Criterion[Any]] = Nil
-  ): Future[(Traversable[JsObject], Seq[(String, FieldTypeSpec)])]
+  ): Future[(Traversable[JsObject], Seq[Field])]
 }
 
 class DataSetServiceImpl @Inject()(
@@ -1131,7 +1131,7 @@ class DataSetServiceImpl @Inject()(
     dsa: DataSetAccessor,
     fieldNames: Seq[String],
     criteria: Seq[Criterion[Any]]
-  ): Future[(Traversable[JsObject], Seq[(String, FieldTypeSpec)])] = {
+  ): Future[(Traversable[JsObject], Seq[Field])] = {
     val fieldsFuture =
       if (fieldNames.nonEmpty)
         dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
@@ -1147,10 +1147,8 @@ class DataSetServiceImpl @Inject()(
     for {
       fields <- fieldsFuture
       jsons <- dataFuture
-    } yield {
-      val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-      (jsons, fieldNameAndSpecs.toSeq)
-    }
+    } yield
+      (jsons, fields.toSeq)
   }
 
   private def logProgress(index: Int, granularity: Double, total: Int) =
