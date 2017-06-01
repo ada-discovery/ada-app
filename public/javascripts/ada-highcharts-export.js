@@ -28,13 +28,16 @@ $(function () {
                         '" version="1.1" xmlns="http://www.w3.org/2000/svg">' + svgArr.join('') + '</svg>');
                 }
                 var chart = $("#" + charts[i]).highcharts()
-                // chart.setTitle({ text: 'Laalallaal'});
-                chart.getSVGForLocalExport(options, {}, function () {
-                    console.log("Failed to get SVG");
-                }, function (svg) {
-                    addSVG(svg);
-                    return exportChart(i + 1); // Export next only when this SVG is received
-                });
+                if (chart) {
+                    chart.getSVGForLocalExport(options, {}, function () {
+                        console.log("Failed to get SVG");
+                    }, function (svg) {
+                        addSVG(svg);
+                        return exportChart(i + 1); // Export next only when this SVG is received
+                    });
+                } else {
+                    return exportChart(i + 1);
+                }
             };
         exportChart(0);
     };
