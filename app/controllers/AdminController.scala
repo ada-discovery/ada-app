@@ -34,8 +34,8 @@ class AdminController @Inject() (deadbolt: DeadboltActions, messageRepo: Message
   def listRunnables = restrictAdmin(deadbolt) {
     Action { implicit request =>
       val classes = findClasses[Runnable](libPrefix, Some("runnables."), None)
-      val runnableNames = classes.map(_.getName).sorted
 
+      val runnableNames = classes.map(_.getName).sorted
       Ok(views.html.admin.runnables(runnableNames))
     }
   }

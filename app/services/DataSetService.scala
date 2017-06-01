@@ -121,6 +121,14 @@ trait DataSetService {
     jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]] = None
   ): Future[Unit]
 
+  def mergeDataSets(
+    newDataSetId: String,
+    newDataSetName: String,
+    newDataSetSetting: Option[DataSetSetting],
+    dataSetIds: Seq[String],
+    fieldNameMappings: Seq[Seq[String]]
+  ): Future[Unit]
+
   def loadDataAndFields(
     dsa: DataSetAccessor,
     fieldNames: Seq[String] = Nil,
@@ -507,6 +515,154 @@ class DataSetServiceImpl @Inject()(
           dataRepo.find(projection = groupFieldNames).map(
             inferFieldTypes(jfti, groupFieldNames)
           )
+        }.toList
+      )
+    } yield
+      fieldNameAndTypes.flatten
+  }
+
+  override def mergeDataSets(
+    newDataSetId: String,
+    newDataSetName: String,
+    newDataSetSetting: Option[DataSetSetting],
+    dataSetIds: Seq[String],
+    fieldNames: Seq[Seq[String]]
+  ): Future[Unit] = {
+    val dsafs = dataSetIds.map(dsaf(_).get)
+    val dataSetRepos = dsafs.map(_.dataSetRepo)
+    val fieldRepos = dsafs.map(_.fieldRepo)
+    val newFieldNames = fieldNames.map(_.head)
+
+    for {
+      metaInfo <- dsafs.head.metaInfo
+
+      fields <- dsafs.head.fieldRepo.find(Seq("name" #-> newFieldNames))
+      fieldNameMap = fields.map(field => (field.name, field)).toMap
+
+      newDsa <- dsaf.register(
+        DataSetMetaInfo(None, newDataSetId, newDataSetName, 0, false, metaInfo.dataSpaceId), newDataSetSetting, None
+      )
+
+      namedFieldTypes <- Future.sequence(
+        fieldRepos.zipWithIndex.map { case (fieldRepo, index) =>
+          val names = fieldNames.map(_(index))
+          fieldRepo.find(Seq("name" #-> names)).map { fields =>
+            val nameFieldMap = fields.map(field => (field.name, field)).toMap
+            names.map(name =>
+              (name, ftf(nameFieldMap.get(name).get.fieldTypeSpec))
+            )
+          }
+        }
+      )
+
+      fieldTypesWithNewNames = newFieldNames.zip(namedFieldTypes.transpose).map { case (newFieldName, namedFieldTypes) =>
+        (namedFieldTypes, newFieldName)
+      }
+
+      newFieldRepo = newDsa.fieldRepo
+
+      newFieldNameAndTypes <- inferMultiSourceFieldTypesInParallel(dataSetRepos, fieldTypesWithNewNames, 100, None)
+
+      // delete all the new fields
+      _ <- newFieldRepo.deleteAll
+
+      // save the new fields
+      _ <- {
+        val newFields = newFieldNameAndTypes.map { case (fieldName, fieldType) =>
+          val fieldTypeSpec = fieldType.spec
+          val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to)})
+
+          fieldNameMap.get(fieldName).map( field =>
+            Field(name = fieldName, label = field.label, fieldType = fieldTypeSpec.fieldType, isArray = fieldTypeSpec.isArray, numValues = stringEnums)
+          )
+        }.flatten
+
+        val dataSetIdEnumds = dataSetIds.zipWithIndex.map { case (dataSetId, index) => (index.toString, dataSetId) }.toMap
+        val sourceDataSetIdField = Field("source_data_set_id", Some("Source Data Set Id"), FieldTypeId.Enum, false, Some(dataSetIdEnumds))
+
+        newFieldRepo.save(newFields ++ Seq(sourceDataSetIdField))
+      }
+
+      // since we possible changed the dictionary (the data structure) we need to update the data set repo
+      _ <- newDsa.updateDataSetRepo
+
+      // get the new data set repo
+      newDataRepo = newDsa.dataSetRepo
+
+      // delete all the data
+      _ <- {
+        logger.info(s"Deleting all the data for '${newDataSetId}'.")
+        newDataRepo.deleteAll
+      }
+
+      // save the new items
+      _ <- {
+        logger.info("Saving new items")
+        val newFieldNameAndTypeMap: Map[String, FieldType[_]] = newFieldNameAndTypes.toMap
+
+        Future.sequence(
+         dataSetRepos.zipWithIndex.map { case (dataSetRepo, index) =>
+            val fieldNewFieldNames: Seq[(String, (FieldType[_], String))] = fieldTypesWithNewNames.map { case (fields, newFieldName) =>
+              (fields(index)._1, (fields(index)._2, newFieldName))
+            }
+            val fieldNewFieldNameMap = fieldNewFieldNames.toMap
+
+            dataSetRepo.find(projection = fieldNewFieldNameMap.map(_._1)).map { jsons =>
+              val newJsons = jsons.map { json =>
+                val newFieldValues = json.fields.map { case (fieldName, jsValue) =>
+                  val (fieldType, newFieldName) = fieldNewFieldNameMap.get(fieldName).get
+                  val newFieldType = newFieldNameAndTypeMap.get(newFieldName).get
+                  (newFieldName, newFieldType.displayStringToJson(fieldType.jsonToDisplayString(jsValue)))
+                }
+                JsObject(newFieldValues ++ Seq(("source_data_set_id", JsNumber(index))))
+              }
+              newDataRepo.save(newJsons)
+            }
+          }
+        )
+      }
+    } yield
+      ()
+  }
+
+  private def inferMultiSourceFieldTypesInParallel(
+    dataRepos: Seq[JsonCrudRepo],
+    fieldTypesWithNewNames: Traversable[(Seq[(String, FieldType[_])], String)],
+    groupSize: Int,
+    jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]] = None
+  ): Future[Traversable[(String, FieldType[_])]] = {
+    val groupedFieldTypesWithNewNames = fieldTypesWithNewNames.toSeq.grouped(groupSize).toSeq
+    val jfti = jsonFieldTypeInferrer.getOrElse(jsonFti)
+
+    def jsonToDisplayJson[T](fieldType: FieldType[T], jsValue: JsValue): JsValue =
+      fieldType.jsonToValue(jsValue).map(x =>
+        JsString(fieldType.valueToDisplayString(Some(x)))
+      ).getOrElse(JsNull)
+
+    for {
+      fieldNameAndTypes <- Future.sequence(
+        groupedFieldTypesWithNewNames.par.map { groupFields =>
+          Future.sequence(
+            dataRepos.zipWithIndex.map { case (dataRepo, index) =>
+              val fieldNewFieldNames: Seq[(String, (FieldType[_], String))] = groupFields.map { case (fields, newFieldName) =>
+                (fields(index)._1, (fields(index)._2, newFieldName))
+              }
+
+              val fieldNewFieldNameMap = fieldNewFieldNames.toMap
+              dataRepo.find(projection = fieldNewFieldNames.map(_._1)).map(_.map { json =>
+                val jsonFields = json.fields.map { case (fieldName, jsValue) =>
+                  val fieldTypeNewFieldName = fieldNewFieldNameMap.get(fieldName).get
+                  val newFieldName = fieldTypeNewFieldName._2
+                  val fieldType = fieldTypeNewFieldName._1
+                  (newFieldName, jsonToDisplayJson(fieldType, jsValue))
+                }
+                JsObject(jsonFields)
+              })
+            }
+          ).map { jsons =>
+            val newFieldNames = fieldTypesWithNewNames.map(_._2)
+            inferFieldTypes(jfti, newFieldNames)(jsons.flatten)
+          }
         }.toList
       )
     } yield

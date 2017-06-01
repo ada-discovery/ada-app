@@ -31,13 +31,26 @@ object ReflectionUtil {
     packageName: Option[String],
     className: Option[String]
   )(implicit m: ClassTag[T]): Stream[Class[T]] = {
+    val filteredClassInfos = findClassInfos[T](libPrefix, packageName, className)
+    filteredClassInfos.map{ classInfo =>
+      Class.forName(classInfo.name).asInstanceOf[Class[T]]
+    }
+  }
+
+  private def findClassInfos[T](
+    libPrefix: String,
+    packageName: Option[String],
+    className: Option[String]
+  )(implicit m: ClassTag[T]): Stream[ClassInfo] = {
     val clazz = m.runtimeClass
     val classInfos = streamClassInfos(libPrefix)
-    val filteredClassInfos = classInfos.filter{ classInfo =>
+    classInfos.filter{ classInfo =>
       try {
         packageName.map(classInfo.name.startsWith(_)).getOrElse(true) &&
           className.map(classInfo.name.endsWith(_)).getOrElse(true) &&
           classInfo.isConcrete &&
+          !classInfo.isSynthetic &&
+          !classInfo.name.contains("$") &&
           clazz.isAssignableFrom(Class.forName(classInfo.name))
       } catch {
         case _ : ClassNotFoundException => false
@@ -45,7 +58,6 @@ object ReflectionUtil {
         case _ : NoClassDefFoundError => false
       }
     }
-    filteredClassInfos.map{ classInfo => Class.forName(classInfo.name).asInstanceOf[Class[T]] }
   }
 
   def getMethodNames[T](implicit tag: ClassTag[T]): Array[String] =
