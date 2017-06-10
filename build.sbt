@@ -49,6 +49,7 @@ libraryDependencies ++= Seq(
   "org.webjars.bower" % "Autolinker.js" % "0.25.0", // to convert links to a-href elements
   "org.webjars" % "jquery-ui" % "1.11.1",
   "net.codingwell" %% "scala-guice" % "4.0.1",
+//  "com.google.inject.extensions" % "guice-spring" % "4.0", // so we can initialize spring container in Guice
   "org.clapper" % "classutil_2.11" % "1.0.6",
   "org.scalaz" % "scalaz-core_2.11" % "7.2.1",
   "org.apache.spark" % "spark-core_2.11" % "2.1.0", // exclude("asm", "asm")
@@ -61,7 +62,8 @@ libraryDependencies ++= Seq(
   "jp.t2v" %% "play2-auth" % "0.14.1",
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
   "com.typesafe.play" %% "play-mailer" % "4.0.0",
-  "org.apache.ignite" % "ignite-spark" % "1.6.0"
+  "org.apache.ignite" % "ignite-spark" % "1.6.0",
+  "com.banda" % "incal" % "0.1.1" exclude("org.springframework", "spring-context") exclude("org.springframework", "spring-test") exclude("org.springframework", "spring-web") exclude("org.springframework", "spring-webmvc")
 ).map(_.exclude("org.slf4j", "slf4j-log4j12" ))
 
 //  "com.typesafe.play" % "play-logback_2.11" % "2.5.1"
