@@ -42,10 +42,6 @@ $.widget( "custom.multiFilter", {
             that.repopulateFieldNameChoices();
         }
 
-        if (this.options.listFiltersUrl) {
-            that.loadFilterSelection();
-        }
-
         this.addEditConditionModalElement.on('shown.bs.modal', function () {
             if ($(this).find("#conditionIndex:first").val())
                 that.valueElement.focus();
@@ -86,23 +82,27 @@ $.widget( "custom.multiFilter", {
     },
 
     showAddConditionModal: function() {
-        this.initFilterIfNeeded();
-        this.addEditConditionModalElement.find("#conditionIndex").first().val("");
+        var that = this;
+        this.initFilterIfNeeded(function() {
+            that.addEditConditionModalElement.find("#conditionIndex").first().val("");
 
-        var condition = {conditionType : "="};
-        this.updateModalFromModel(condition, this.conditionFields);
+            var condition = {conditionType : "="};
+            that.updateModalFromModel(condition, that.conditionFields);
 
-        this.addEditConditionModalElement.modal('show');
+            that.addEditConditionModalElement.modal('show');
+        });
     },
 
     showEditConditionModal: function (index) {
-        this.initFilterIfNeeded();
-        this.addEditConditionModalElement.find("#conditionIndex").first().val(index);
+        var that = this;
+        this.initFilterIfNeeded(function() {
+            that.addEditConditionModalElement.find("#conditionIndex").first().val(index);
 
-        var condition = this.jsonConditions[index]
-        this.updateModalFromModel(condition, this.conditionFields);
+            var condition = this.jsonConditions[index]
+            that.updateModalFromModel(condition, that.conditionFields);
 
-        this.addEditConditionModalElement.modal('show');
+            that.addEditConditionModalElement.modal('show');
+        });
     },
 
     addEditConditionFinished: function () {
@@ -235,7 +235,7 @@ $.widget( "custom.multiFilter", {
         })
     },
 
-    initFilterIfNeeded: function () {
+    initFilterIfNeeded: function (successFun) {
         var that = this;
         if (!this.fieldNameAndLabels) {
                 if(this.options.getFieldsUrl) {
@@ -250,8 +250,9 @@ $.widget( "custom.multiFilter", {
                             }
                             that.initShowFieldNameLabelChoices();
                             that.repopulateFieldNameChoices();
-                        },
-                        async: false
+                            if (successFun)
+                                successFun()
+                        }
                     });
                 }
             }
@@ -325,11 +326,13 @@ $.widget( "custom.multiFilter", {
 
     loadFilterSelectionAndShowModal: function () {
         // always reload new (saved) filters before opening modal
-        this.loadFilterSelection();
-        this.loadFilterModalElement.modal('show');
+        var that = this;
+        this.loadFilterSelection(function() {
+            that.loadFilterModalElement.modal('show');
+        });
     },
 
-    loadFilterSelection: function () {
+    loadFilterSelection: function (successFun) {
         var that = this;
         if(this.options.listFiltersUrl) {
             $.ajax({
@@ -346,11 +349,12 @@ $.widget( "custom.multiFilter", {
                             filterTypeaheadData,
                             1
                         );
+                        if (successFun)
+                            successFun()
                     } else {
                         that.loadFilterButtonElement.hide();
                     }
-                },
-                async: false
+                }
             });
         }
     },

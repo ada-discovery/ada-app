@@ -1,8 +1,12 @@
 package services.ml
 
 import javax.inject.{Inject, Singleton}
-import java.{util => ju}
+import java.{lang => jl, util => ju}
 
+import com.banda.incal.domain.ReservoirLearningSetting
+import com.banda.incal.prediction.{ErrorMeasures, ReservoirTrainerFactory}
+import com.banda.math.business.learning.{IOStream, IOStreamFactory}
+import com.banda.network.domain.{TopologicalNode, Topology}
 import com.google.inject.ImplementedBy
 import dataaccess.{FieldType, FieldTypeHelper}
 import models.DataSetFormattersAndIds.JsObjectIdentity
@@ -10,6 +14,7 @@ import models.{FieldTypeId, FieldTypeSpec}
 import models.ml.classification.Classification
 import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
+import com.banda.incal.prediction.ErrorMeasures
 import org.apache.spark.ml.evaluation.{Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.ml.{Estimator, Model}
@@ -20,12 +25,15 @@ import org.apache.spark.ml.clustering._
 import org.apache.spark.ml.linalg.DenseVector
 import play.api.libs.json.{JsArray, JsObject, JsString, Json}
 import reactivemongo.bson.BSONObjectID
+import runnables.RCPredictionResults
 import services.SparkApp
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.util.Random
+import scala.collection.JavaConversions._
+
 
 @ImplementedBy(classOf[MachineLearningServiceImpl])
 trait MachineLearningService {
@@ -50,12 +58,27 @@ trait MachineLearningService {
     mlModel: UnsupervisedLearning
   ): Traversable[(String, Int)]
 
+  def predictRCTimeSeries(
+    reservoirSetting: ReservoirLearningSetting,
+    topology: Topology,
+    reservoirNodes: Seq[TopologicalNode],
+    outputNodes: Seq[TopologicalNode],
+    washoutPeriod: Int,
+    predictAhead: Int,
+    inputSeries: Seq[Seq[jl.Double]],
+    targetSeries: Seq[jl.Double]
+  ): Future[RCPredictionResults]
+
     // AFTSurvivalRegression
   // IsotonicRegression
 }
 
 @Singleton
-private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends MachineLearningService {
+private class MachineLearningServiceImpl @Inject() (
+    sparkApp: SparkApp,
+    ioStreamFactory: IOStreamFactory,
+    reservoirTrainerFactory: ReservoirTrainerFactory
+  ) extends MachineLearningService {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
 
@@ -465,6 +488,47 @@ private class MachineLearningServiceImpl @Inject() (sparkApp: SparkApp) extends 
       } else {
         newDf
       }
+    }
+  }
+
+  override def predictRCTimeSeries(
+    reservoirSetting: ReservoirLearningSetting,
+    topology: Topology,
+    reservoirNodes: Seq[TopologicalNode],
+    outputNodes: Seq[TopologicalNode],
+    washoutPeriod: Int,
+    predictAhead: Int,
+    inputSeries: Seq[Seq[jl.Double]],
+    targetSeries: Seq[jl.Double]
+  ): Future[RCPredictionResults] = {
+    reservoirSetting.setIterationNum(targetSeries.size - predictAhead - washoutPeriod)
+
+    def createIOStream = ioStreamFactory.createInstancePredict(predictAhead, washoutPeriod)(inputSeries, targetSeries)
+
+    val call = { ioStream: IOStream[jl.Double] =>
+      val (predictor, weightAccessor) = reservoirTrainerFactory(topology, reservoirSetting, ioStream)
+
+      predictor.train
+      val outputs = predictor.outputs
+      val desiredOutputs = (ioStream.outputStream take outputs.size).toList.map(_.head)
+
+      val squares = ErrorMeasures.calcSquares(outputs, desiredOutputs)
+      val samps = ErrorMeasures.calcSamps(outputs, desiredOutputs)
+
+      val weights: Seq[jl.Double] = {
+        for {
+          reservoirNode <- reservoirNodes;
+          outputNode <- outputNodes
+        } yield
+          weightAccessor.getWeight(reservoirNode, outputNode)
+      }.flatten
+
+      RCPredictionResults(squares, samps, outputs.toSeq, desiredOutputs, weights)
+    }
+
+    Future {
+      val ioStream = createIOStream
+      call(ioStream)
     }
   }
 }

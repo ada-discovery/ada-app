@@ -1,55 +1,213 @@
-package com.banda
+package com.banda.network.business
 
 import java.{lang => jl}
 
 import com.banda.core.metrics.MetricsFactory
-import com.banda.function.enumerator.ListEnumeratorFactory
-import com.banda.network.business.TopologyFactory
+import com.banda.function.business.FunctionEvaluatorFactoryImpl
+import com.banda.function.enumerator.{ListEnumeratorFactory, ListEnumeratorFactoryImpl}
+import com.banda.function.evaluator.FunctionEvaluatorFactory
+import com.banda.incal.prediction.ReservoirTrainerFactory
+import com.banda.math.business.learning.IOStreamFactory
+import com.banda.network.business.function.{ActivationFunctionFactory, DoubleActivationFunctionFactory, JavaDoubleActivationFunctionFactory}
+import com.banda.network.business.integrator.{DoubleConvertibleSWIntegratorFactory, MetaStatesWeightsIntegratorFactory, StatesWeightsIntegratorFactory}
 import com.banda.network.metrics.{DoubleConvertibleMetricsFactory, DoubleMetricsFactory}
-import com.google.inject.Provides
-import com.google.inject.spring.SpringIntegration
+import com.google.inject.name.Named
+import com.google.inject.{Provides, Singleton}
 import net.codingwell.scalaguice.ScalaModule
-import org.springframework.context.support.ClassPathXmlApplicationContext
+
+import collection.JavaConverters._
 
 class InCalSpringModule extends ScalaModule {
 
+  /////////////////
+  // Basic Stuff //
+  /////////////////
+
   @Provides @Singleton
-  def createDoubleMetricsFactory(listEnumeratorFactory: ListEnumeratorFactory): MetricsFactory[jl.Double] =
+  def listEnumeratorFactory: ListEnumeratorFactory =
+    new ListEnumeratorFactoryImpl()
+
+  @Provides @Singleton
+  def functionEvaluatorFactory(listEnumeratorFactory: ListEnumeratorFactory): FunctionEvaluatorFactory =
+    new FunctionEvaluatorFactoryImpl(listEnumeratorFactory)
+
+  @Provides @Singleton
+  def ioStreamFactory(functionEvaluatorFactory: FunctionEvaluatorFactory): IOStreamFactory =
+    new IOStreamFactory(functionEvaluatorFactory)
+
+  /////////////
+  // Metrics //
+  /////////////
+
+  @Provides @Singleton
+  def doubleMetricsFactory(listEnumeratorFactory: ListEnumeratorFactory): MetricsFactory[jl.Double] =
     new DoubleMetricsFactory(listEnumeratorFactory)
 
-  def createIntegerMetricsFactory(doubleMetricFactory: MetricsFactory[jl.Double]): MetricsFactory[jl.Integer]  =
+  @Provides @Singleton
+  def integerMetricsFactory(doubleMetricFactory: MetricsFactory[jl.Double]): MetricsFactory[jl.Integer]  =
     new DoubleConvertibleMetricsFactory[jl.Integer](doubleMetricFactory, classOf[jl.Integer])
 
-  def createTopologyFactory(integerMetricsFactory: MetricsFactory[jl.Integer]): TopologyFactory =
+  @Provides @Singleton
+  def topologyFactory(integerMetricsFactory: MetricsFactory[jl.Integer]): TopologyFactory =
     new TopologyFactoryImpl(integerMetricsFactory)
 
+  ////////////////////
+  // SW Integrators //
+  ////////////////////
 
-  //      <bean id="topologyFactory" class="com.banda.network.business.TopologyFactoryImpl">
-  //      <constructor-arg ref="integerMetricsFactory"/>
-  //    </bean>
+  @Provides @Singleton
+  def doubleSWIntegratorFactory: StatesWeightsIntegratorFactory[jl.Double] =
+    MetaStatesWeightsIntegratorFactory.createJavaDoubleInstance
 
-  override def configure = {
-//
-//      <bean id="listEnumeratorFactory" class="com.banda.function.enumerator.ListEnumeratorFactoryImpl"/>
-//
-//    bind[ListEnumeratorFactory].to[ListEnumeratorFactoryImpl].asEagerSingleton()
-//
-//    bind(classOf[IOStreamFactory]).asEagerSingleton()
-//
-//    <bean id="ioStreamFactory" class="com.banda.math.business.learning.IOStreamFactory">
-//      <constructor-arg ref="functionEvaluatorFactory"/>
-//    </bean>
-//
-//      <bean id="functionEvaluatorFactory" class="com.banda.function.business.FunctionEvaluatorFactoryImpl">
-//        <constructor-arg ref="listEnumeratorFactory"/>
-//      </bean>
-//
-//
+  @Provides @Singleton
+  def integerSWIntegratorFactory(
+    doubleSWIntegratorFactory: StatesWeightsIntegratorFactory[jl.Double]
+  ): StatesWeightsIntegratorFactory[jl.Integer] =
+    DoubleConvertibleSWIntegratorFactory(doubleSWIntegratorFactory, classOf[jl.Integer])
 
-    val applicationContext = new ClassPathXmlApplicationContext("math-conf.xml")
-    SpringIntegration.bindAll(binder(), applicationContext)
+  @Provides @Singleton
+  def booleanSWIntegratorFactory(
+    doubleSWIntegratorFactory: StatesWeightsIntegratorFactory[jl.Double]
+  ): StatesWeightsIntegratorFactory[jl.Boolean] =
+    DoubleConvertibleSWIntegratorFactory(doubleSWIntegratorFactory, classOf[jl.Boolean])
 
-//
+  @Provides @Singleton @Named("scalaBooleanSWIntegratorFactory")
+  def scalaBooleanSWIntegratorFactory: StatesWeightsIntegratorFactory[Boolean] =
+    MetaStatesWeightsIntegratorFactory.createBooleanInstance
 
+  @Provides @Singleton @Named("scalaDoubleSWIntegratorFactory")
+  def scalaDoubleSWIntegratorFactory: StatesWeightsIntegratorFactory[Double] =
+    MetaStatesWeightsIntegratorFactory.createAnyValInstance(classOf[Double])
+
+  ///////////////////////////////////
+  // Activation Function Factories //
+  ///////////////////////////////////
+
+  @Provides @Singleton
+  def scalaDoubleActivationFunctionFactory: ActivationFunctionFactory[Double] =
+    new DoubleActivationFunctionFactory()
+
+  @Provides @Singleton
+  def doubleActivationFunctionFactory: ActivationFunctionFactory[jl.Double] =
+    new JavaDoubleActivationFunctionFactory()
+
+  /////////////////////
+  // Weight Builders //
+  /////////////////////
+
+  @Provides @Singleton
+  def numberNetworkWeightBuilder: UntypedNetworkWeightBuilder[jl.Number] =
+    new NetworkWeightBuilderSwitch(new ComposedNetworkWeightBuilder(), new NumberFlatNetworkWeightBuilder())
+
+  @Provides @Singleton
+  def scalaNumberNetworkWeightBuilder: UntypedNetworkWeightBuilder[AnyVal] =
+    new NetworkWeightBuilderSwitch(new ComposedNetworkWeightBuilder(), new AnyValFlatNetworkWeightBuilder())
+
+  @Provides @Singleton @Named("noTemplateNetworkWeightBuilder")
+  def noTemplateNetworkWeightBuilder: UntypedNetworkWeightBuilder[Any] =
+    new NetworkWeightBuilderSwitch(new ComposedNetworkWeightBuilder(), new NoTemplateFlatNetworkWeightBuilder())
+
+  ///////////////////////
+  // Network Runnables //
+  ///////////////////////
+
+  @Provides @Singleton @Named("scalaBooleanNetworkRunnableFactory")
+  def scalaBooleanNetworkRunnableFactory(
+    functionEvaluatorFactory: FunctionEvaluatorFactory,
+    topologyFactory: TopologyFactory,
+    noTemplateNetworkWeightBuilder: UntypedNetworkWeightBuilder[Any],
+    @Named("scalaBooleanSWIntegratorFactory") scalaBooleanSWIntegratorFactory: StatesWeightsIntegratorFactory[Boolean]
+  ): NetworkRunnableFactory[Boolean] =
+    NetworkRunnableFactoryUtil.apply(
+      classOf[Boolean], functionEvaluatorFactory, topologyFactory, noTemplateNetworkWeightBuilder, scalaBooleanSWIntegratorFactory
+    )
+
+  @Provides @Singleton @Named("scalaDoubleNetworkRunnableFactory")
+  def scalaDoubleNetworkRunnableFactory(
+    functionEvaluatorFactory: FunctionEvaluatorFactory,
+    topologyFactory: TopologyFactory,
+    scalaNumberNetworkWeightBuilder: UntypedNetworkWeightBuilder[AnyVal],
+    @Named("scalaDoubleSWIntegratorFactory") scalaDoubleSWIntegratorFactory: StatesWeightsIntegratorFactory[Double],
+    scalaDoubleActivationFunctionFactory: ActivationFunctionFactory[Double]
+  ): NetworkRunnableFactory[Double] =
+    NetworkRunnableFactoryUtil.apply(
+      classOf[Double], functionEvaluatorFactory, topologyFactory, scalaNumberNetworkWeightBuilder, scalaDoubleSWIntegratorFactory, scalaDoubleActivationFunctionFactory
+    )
+
+  @Provides @Singleton
+  def booleanNetworkRunnableFactory(
+    functionEvaluatorFactory: FunctionEvaluatorFactory,
+    topologyFactory: TopologyFactory,
+    noTemplateNetworkWeightBuilder: UntypedNetworkWeightBuilder[Any],
+    booleanSWIntegratorFactory: StatesWeightsIntegratorFactory[jl.Boolean]
+  ): NetworkRunnableFactory[jl.Boolean] =
+    NetworkRunnableFactoryUtil.apply(
+      classOf[jl.Boolean], functionEvaluatorFactory, topologyFactory, noTemplateNetworkWeightBuilder, booleanSWIntegratorFactory
+    )
+
+  @Provides @Singleton
+  def doubleNetworkRunnableFactory(
+    functionEvaluatorFactory: FunctionEvaluatorFactory,
+    topologyFactory: TopologyFactory,
+    numberNetworkWeightBuilder: UntypedNetworkWeightBuilder[jl.Number],
+    doubleSWIntegratorFactory: StatesWeightsIntegratorFactory[jl.Double],
+    doubleActivationFunctionFactory: ActivationFunctionFactory[jl.Double]
+  ): NetworkRunnableFactory[jl.Double] =
+    NetworkRunnableFactoryUtil.apply(
+      classOf[jl.Double], functionEvaluatorFactory, topologyFactory, numberNetworkWeightBuilder, doubleSWIntegratorFactory, doubleActivationFunctionFactory
+    )
+
+  @Provides @Singleton
+  def metaNetworkRunnableFactory(
+    functionEvaluatorFactory: FunctionEvaluatorFactory,
+    topologyFactory: TopologyFactory,
+    numberNetworkWeightBuilder: UntypedNetworkWeightBuilder[jl.Number],
+    scalaNumberNetworkWeightBuilder: UntypedNetworkWeightBuilder[AnyVal],
+    noTemplateNetworkWeightBuilder: UntypedNetworkWeightBuilder[Any],
+    @Named("scalaBooleanSWIntegratorFactory") scalaBooleanSWIntegratorFactory: StatesWeightsIntegratorFactory[Boolean],
+    @Named("scalaDoubleSWIntegratorFactory") scalaDoubleSWIntegratorFactory: StatesWeightsIntegratorFactory[Double],
+    booleanSWIntegratorFactory: StatesWeightsIntegratorFactory[jl.Boolean],
+    doubleSWIntegratorFactory: StatesWeightsIntegratorFactory[jl.Double],
+    integerSWIntegratorFactory: StatesWeightsIntegratorFactory[jl.Integer],
+    scalaDoubleActivationFunctionFactory: ActivationFunctionFactory[Double],
+    doubleActivationFunctionFactory: ActivationFunctionFactory[jl.Double]
+  ): MetaNetworkRunnableFactory = {
+    val map1: Map[Class[_], UntypedNetworkWeightBuilder[_]] = Map(
+      classOf[jl.Number] -> numberNetworkWeightBuilder,
+      classOf[jl.Object] -> noTemplateNetworkWeightBuilder,
+      classOf[AnyVal] -> scalaNumberNetworkWeightBuilder,
+      classOf[Boolean] -> noTemplateNetworkWeightBuilder
+    )
+
+    val map2: Map[Class[_], StatesWeightsIntegratorFactory[_]] = Map(
+      classOf[jl.Boolean] -> booleanSWIntegratorFactory,
+      classOf[jl.Double] -> doubleSWIntegratorFactory,
+      classOf[jl.Integer] -> integerSWIntegratorFactory,
+      classOf[Boolean] -> scalaBooleanSWIntegratorFactory,
+      classOf[Double] -> scalaDoubleSWIntegratorFactory
+    )
+
+    val map3: Map[Class[_], ActivationFunctionFactory[_]] = Map(
+      classOf[jl.Double] -> doubleActivationFunctionFactory,
+      classOf[Double] -> scalaDoubleActivationFunctionFactory
+    )
+
+    new MetaNetworkRunnableFactoryImpl(
+      functionEvaluatorFactory,
+      topologyFactory,
+      map1.asJava,
+      map2.asJava,
+      map3.asJava
+    )
   }
+
+  @Provides @Singleton
+  def reservoirTrainerFactory(
+    metaNetworkRunnableFactory: MetaNetworkRunnableFactory,
+    topologyFactory: TopologyFactory,
+    doubleMetricsFactory: MetricsFactory[java.lang.Double]
+  ) =
+    new ReservoirTrainerFactory(metaNetworkRunnableFactory, topologyFactory, doubleMetricsFactory)
+
+  override def configure = {}
 }
