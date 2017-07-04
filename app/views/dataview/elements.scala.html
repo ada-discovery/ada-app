@@ -4,15 +4,16 @@
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataview.{widgetSpecTable, filterOrIdTable}
 @import views.html.dataset.dynamicFieldTable
-@import views.html.table.displayTable
-@import views.html.filters.displayConditions
-@import util.typeColumns
+@import controllers.dataset.FilterRouter
 @import reactivemongo.bson.BSONObjectID
 
 @(
     form: Form[DataView],
-    nameFieldMap: Map[String,  Field] = Map()
-)(implicit msg: play.api.i18n.Messages)
+    nameFieldMap: Map[String,  Field],
+    idFilterNameMap: Map[BSONObjectID, String]
+)(
+    implicit msg: play.api.i18n.Messages
+)
 
 @dynamicTableJsImport()
 
@@ -29,7 +30,8 @@
 @labelValue("widgetSpecs", attributeLabel("dataView", "widgetSpecs")){
     @widgetSpecTable(
         form.value.map(_.widgetSpecs).getOrElse(Nil),
-        nameFieldMap
+        nameFieldMap,
+        idFilterNameMap
     )
 }
 

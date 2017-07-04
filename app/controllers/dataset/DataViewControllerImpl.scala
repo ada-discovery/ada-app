@@ -10,9 +10,10 @@ import dataaccess.RepoTypes.UserRepo
 import dataaccess._
 import models._
 import models.DataSetFormattersAndIds._
-import models.FilterCondition.filterFormat
+import models.FilterCondition.{FilterIdentity, filterFormat}
 import models.security.UserManager
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
+import dataaccess.Criterion._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -106,6 +107,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     BSONObjectID,
     Form[DataView],
     Map[String, Field],
+    Map[BSONObjectID, String],
     Traversable[DataSpaceMetaInfo]
   )
 
@@ -115,23 +117,44 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   ) = { request =>
     val dataSetNameFuture = dsa.dataSetName
     val nameFieldMapFuture = getNameFieldMap
+
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
+
     val setCreatedByFuture =
       form.value match {
         case Some(dataView) => DataViewRepo.setCreatedBy(userRepo, Seq(dataView))
         case None => Future(())
       }
+
+    val filtersFuture =
+      form.value match {
+        case Some(dataView) =>
+          val filterIds = dataView.widgetSpecs.map(_.subFilterId).flatten
+          if (filterIds.nonEmpty) {
+            // TODO: IN criterion with BSONObjectID does not work here
+            dsa.filterRepo.find(
+//              criteria = Seq(FilterIdentity.name #-> filterIds),
+              projection = Seq("name")
+            )
+          } else
+            Future(Nil)
+        case None => Future(Nil)
+      }
+
     for {
       dataSetName <- dataSetNameFuture
       nameFieldMap <- nameFieldMapFuture
       tree <- treeFuture
+      filters <- filtersFuture
       _ <- setCreatedByFuture
-    } yield
-      (dataSetName + " Data View", id, form, nameFieldMap, tree)
+    } yield {
+      val idFilterNameMap = filters.map( filter => (filter._id.get, filter.name.getOrElse(""))).toMap
+      (dataSetName + " Data View", id, form, nameFieldMap, idFilterNameMap, tree)
+    }
   }
 
   override protected[controllers] def editView = { implicit ctx =>
-    (view.editNormal(_, _, _, _, _)).tupled
+    (view.editNormal(_, _, _, _, _, _)).tupled
   }
 
   // list view and data
@@ -228,6 +251,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
                   viewData._3,
                   viewData._4,
                   viewData._5,
+                  viewData._6,
                   router.updateAndShowView
                 )
               )

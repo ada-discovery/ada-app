@@ -112,8 +112,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     )
 
   override protected def getListViewData(
-                                          page: Page[JsObject]
-                                        ) = { request =>
+    page: Page[JsObject]
+  ) = { request =>
     val dataSetNameFuture = dsa.dataSetName
     val fieldLabelMapFuture = getFieldLabelMap(listViewColumns.get)
 
@@ -140,9 +140,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override type ShowViewData = DataSetShowViewDataHolder
 
   override protected def getShowViewData(
-                                          id: BSONObjectID,
-                                          item: JsObject
-                                        ) = { request =>
+    id: BSONObjectID,
+    item: JsObject
+  ) = { request =>
     val dataSetNameFuture = dsa.dataSetName
     val dataSpaceTreeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val fieldsFuture = fieldRepo.find()
@@ -178,8 +178,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override protected[controllers] def showView = { implicit ctx => dataset.show(_) }
 
   override protected def filterValueConverters(
-                                                fieldNames: Traversable[String]
-                                              ): Future[Map[String, String => Option[Any]]] =
+    fieldNames: Traversable[String]
+  ): Future[Map[String, String => Option[Any]]] =
     getFields(fieldNames).map(
       _.map { field =>
         val fieldType = ftf(field.fieldTypeSpec)
@@ -195,13 +195,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @return View for download.
     */
   override def exportRecordsAsCsv(
-                                   dataViewId: BSONObjectID,
-                                   delimiter: String,
-                                   replaceEolWithSpace: Boolean,
-                                   eol: Option[String],
-                                   filter: Seq[FilterCondition],
-                                   tableColumnsOnly: Boolean
-                                 ) = {
+    dataViewId: BSONObjectID,
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) = {
     val eolToUse = eol match {
       case Some(eol) => if (eol.trim.nonEmpty) eol.trim else csvEOL
       case None => csvEOL
@@ -227,10 +227,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @return View for download.
     */
   override def exportRecordsAsJson(
-                                    dataViewId: BSONObjectID,
-                                    filter: Seq[FilterCondition],
-                                    tableColumnsOnly: Boolean
-                                  ) =
+    dataViewId: BSONObjectID,
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) =
     exportToJson(
       jsonFileName)(
       result(dsa.setting).exportOrderByFieldName,
@@ -242,8 +242,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     )
 
   private def dataViewTableColumnNames(
-                                        dataViewId: BSONObjectID
-                                      ): Future[Seq[String]] =
+    dataViewId: BSONObjectID
+  ): Future[Seq[String]] =
     dataViewRepo.get(dataViewId).map {
       _ match {
         case Some(dataView) => dataView.tableColumnNames
@@ -280,12 +280,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private case class ViewResponse(
-                                   count: Int,
-                                   widgets: Traversable[Option[Widget]],
-                                   tableItems: Traversable[JsObject],
-                                   filter: Filter,
-                                   tableFields: Traversable[Field]
-                                 )
+    count: Int,
+    widgets: Traversable[Option[Widget]],
+    tableItems: Traversable[JsObject],
+    filter: Filter,
+    tableFields: Traversable[Field]
+  )
 
   override def getDefaultView = Action.async { implicit request =>
     for {
@@ -308,11 +308,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def getView(
-                        dataViewId: BSONObjectID,
-                        tablePages: Seq[PageOrder],
-                        filterOrIds: Seq[FilterOrId],
-                        filterChanged: Boolean
-                      ) = Action.async { implicit request =>
+    dataViewId: BSONObjectID,
+    tablePages: Seq[PageOrder],
+    filterOrIds: Seq[FilterOrId],
+    filterChanged: Boolean
+  ) = Action.async { implicit request =>
     val start = new ju.Date()
 
     val dataSetNameFuture = dsa.dataSetName
@@ -425,11 +425,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def getWidgetPanelAndTable(
-                                       dataViewId: BSONObjectID,
-                                       tablePage: Int,
-                                       tableOrder: String,
-                                       filterOrId: FilterOrId
-                                     ) = Action.async { implicit request =>
+    dataViewId: BSONObjectID,
+    tablePage: Int,
+    tableOrder: String,
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
     val start = new ju.Date()
 
     val dataViewFuture = dataViewRepo.get(dataViewId)
@@ -475,11 +475,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def getTable(
-                         page: Int,
-                         orderBy: String,
-                         fieldNames: Seq[String],
-                         filterOrId: FilterOrId
-                       ) = Action.async { implicit request =>
+    page: Int,
+    orderBy: String,
+    fieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
     val filterFuture = resolveFilter(filterOrId)
 
     val fieldsFuture = getFields(fieldNames)
@@ -511,8 +511,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def setBoxPlotMinMax(
-                                widgets: Seq[Traversable[Option[Widget]]]
-                              ): Seq[Traversable[Option[Widget]]] = {
+    widgets: Seq[Traversable[Option[Widget]]]
+  ): Seq[Traversable[Option[Widget]]] = {
     val widgetsSeqs = widgets.map(_.toSeq)
     val chartCount = widgets.head.size
 
@@ -532,9 +532,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
 
     def setMinMax[T: Ordering](
-                                boxWidget: BoxWidget[T],
-                                minMax: (Any, Any)
-                              ): BoxWidget[T] =
+      boxWidget: BoxWidget[T],
+      minMax: (Any, Any)
+    ): BoxWidget[T] =
       boxWidget.copy(min = Some(minMax._1.asInstanceOf[T]), max = Some(minMax._2.asInstanceOf[T]))
 
     val indexMinMaxWhiskers =
@@ -560,15 +560,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def getViewResponse(
-                               page: Int,
-                               orderBy: String,
-                               filterOrId: FilterOrId,
-                               tableFieldNames: Seq[String],
-                               widgetSpecs: Seq[WidgetSpec],
-                               useOptimizedRepoChartCalcMethod: Boolean
-                             ): Future[ViewResponse] =
+    page: Int,
+    orderBy: String,
+    filterOrId: FilterOrId,
+    tableFieldNames: Seq[String],
+    widgetSpecs: Seq[WidgetSpec],
+    useOptimizedRepoChartCalcMethod: Boolean
+  ): Future[ViewResponse] =
     for {
-    // use a given filter conditions or load one
+      // use a given filter conditions or load one
       resolvedFilter <- resolveFilter(filterOrId)
 
       // get the conditions
@@ -576,6 +576,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
       // generate criteria
       criteria <- toCriteria(conditions)
+
+      // get the widgets' sub criteria
+      filterSubCriteria <- Future.sequence(
+        widgetSpecs.map(_.subFilterId).flatten.toSet.map { subFilterId: BSONObjectID =>
+
+          resolveFilter(Right(subFilterId)).flatMap(resolvedFilter =>
+            toCriteria(resolvedFilter.conditions).map(criteria =>
+              (subFilterId, criteria)
+            )
+          )
+        }
+      )
 
       // create a name -> field map of all the referenced fields for a quick lookup
       nameFieldMap <- {
@@ -589,27 +601,28 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
 
       response <- getViewResponseAux(
-        page, orderBy, resolvedFilter, criteria, nameFieldMap, tableFieldNames, widgetSpecs, useOptimizedRepoChartCalcMethod
+        page, orderBy, resolvedFilter, criteria, filterSubCriteria.toMap, nameFieldMap, tableFieldNames, widgetSpecs, useOptimizedRepoChartCalcMethod
       )
     } yield
       response
 
   private def getViewResponseAux(
-                                  page: Int,
-                                  orderBy: String,
-                                  filter: Filter,
-                                  criteria: Seq[Criterion[Any]],
-                                  nameFieldMap: Map[String, Field],
-                                  tableFieldNames: Seq[String],
-                                  widgetSpecs: Seq[WidgetSpec],
-                                  useOptimizedRepoChartCalcMethod: Boolean
-                                ): Future[ViewResponse] = {
+    page: Int,
+    orderBy: String,
+    filter: Filter,
+    criteria: Seq[Criterion[Any]],
+    widgetSubCriteria: Map[BSONObjectID, Seq[Criterion[Any]]],
+    nameFieldMap: Map[String, Field],
+    tableFieldNames: Seq[String],
+    widgetSpecs: Seq[WidgetSpec],
+    useOptimizedRepoChartCalcMethod: Boolean
+  ): Future[ViewResponse] = {
 
     // total count
     val countFuture = repo.count(criteria)
 
     // widgets
-    val widgetsFuture = generateWidgets(useOptimizedRepoChartCalcMethod, criteria, widgetSpecs, nameFieldMap)
+    val widgetsFuture = generateWidgets(useOptimizedRepoChartCalcMethod, criteria, widgetSubCriteria, widgetSpecs, nameFieldMap)
 
     // table items
     val tableItemsFuture = getTableItems(page, orderBy, criteria, nameFieldMap, tableFieldNames)
@@ -632,12 +645,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def getTableItems(
-                             page: Int,
-                             orderBy: String,
-                             criteria: Seq[Criterion[Any]],
-                             nameFieldMap: Map[String, Field],
-                             tableFieldNames: Seq[String]
-                           ): Future[Traversable[JsObject]] = {
+    page: Int,
+    orderBy: String,
+    criteria: Seq[Criterion[Any]],
+    nameFieldMap: Map[String, Field],
+    tableFieldNames: Seq[String]
+  ): Future[Traversable[JsObject]] = {
     val tableFieldNamesToLoad = tableFieldNames.filterNot { tableFieldName =>
       nameFieldMap.get(tableFieldName).map(field => field.isArray || field.fieldType == FieldTypeId.Json).getOrElse(false)
     }
@@ -650,12 +663,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def findCustom(
-                           filterOrId: FilterOrId,
-                           orderBy: String,
-                           projection: Seq[String],
-                           limit: Option[Int],
-                           skip: Option[Int]
-                         ) = Action.async { implicit request =>
+    filterOrId: FilterOrId,
+    orderBy: String,
+    projection: Seq[String],
+    limit: Option[Int],
+    skip: Option[Int]
+  ) = Action.async { implicit request =>
     for {
     // use a given filter conditions or load one
       resolvedFilter <- resolveFilter(filterOrId)
@@ -676,11 +689,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def generateWidgets(
-                               perChartRepoMethod: Boolean,
-                               criteria: Seq[Criterion[Any]],
-                               widgetSpecs: Traversable[WidgetSpec],
-                               nameFieldMap: Map[String, Field]
-                             ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
+    perChartRepoMethod: Boolean,
+    criteria: Seq[Criterion[Any]],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
+    widgetSpecs: Traversable[WidgetSpec],
+    nameFieldMap: Map[String, Field]
+  ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
+
+    // a helper function to get the sub criteria for the widget
+    def getSubCriteria(filterId: Option[BSONObjectID]): Seq[Criterion[Any]] =
+      filterId.map(subFilterId =>
+        widgetFilterSubCriteriaMap.get(subFilterId).getOrElse(Nil)
+      ).getOrElse(Nil)
+
     val splitWidgetSpecs: Traversable[Either[WidgetSpec, WidgetSpec]] =
       if (perChartRepoMethod)
         widgetSpecs.collect {
@@ -701,41 +722,52 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     println("Loaded chart field names: " + fullDataFieldNames.mkString(", "))
 
-    val repoChartSpecsFuture =
+    val repoWidgetSpecsFuture =
       Future.sequence(
-        repoWidgetSpecs.par.map { calcSpec =>
-          generateChartFromRepo(criteria, nameFieldMap)(calcSpec).map { chartSpec =>
-            (calcSpec, chartSpec)
-          }
+        repoWidgetSpecs.par.map { widgetSpec =>
+
+          generateChartFromRepo(
+            criteria ++ getSubCriteria(widgetSpec.subFilterId),
+            nameFieldMap)(
+            widgetSpec
+          ).map(
+            chartSpec =>(widgetSpec, chartSpec)
+          )
         }.toList
       )
 
-    val fullDataChartSpecsFuture =
-      if (fullDataFieldNames.nonEmpty)
-        repo.find(criteria, Nil, fullDataFieldNames).map { chartData =>
-          fullDataWidgetSpecs.par.map { calcSpec =>
-            val chartSpec = generateChart(chartData, nameFieldMap)(calcSpec)
-            (calcSpec, chartSpec)
-          }.toList
-        }
-      else
+    val fullDataWidgetSpecsFuture =
+      if (fullDataWidgetSpecs.nonEmpty) {
+        Future.sequence(
+          fullDataWidgetSpecs.groupBy(_.subFilterId).map { case (subFilterId, widgetSpecs) =>
+            val fieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
+
+            repo.find(criteria ++ getSubCriteria(subFilterId), Nil, fieldNames).map { chartData =>
+              widgetSpecs.par.map { widgetSpec =>
+                val widget = generateChart(chartData, nameFieldMap)(widgetSpec)
+                (widgetSpec, widget)
+              }.toList
+            }
+          }
+        )
+      } else
         Future(Nil)
 
     for {
-      chartSpecs1 <- repoChartSpecsFuture
-      chartSpecs2 <- fullDataChartSpecsFuture
+      chartSpecs1 <- repoWidgetSpecsFuture
+      chartSpecs2 <- fullDataWidgetSpecsFuture
     } yield {
-      val calcSpecChartMap = (chartSpecs1 ++ chartSpecs2).toMap
-      // return charts in the specified order
-      widgetSpecs.map(calcSpecChartMap.get).flatten
+      val specWidgetMap = (chartSpecs1 ++ chartSpecs2.flatten).toMap
+      // return widgets in the specified order
+      widgetSpecs.map(specWidgetMap.get).flatten
     }
   }
 
   private def generateChartFromRepo(
-                                     criteria: Seq[Criterion[Any]],
-                                     nameFieldMap: Map[String, Field])(
-                                     widgetSpec: WidgetSpec
-                                   ): Future[Option[(Widget, Seq[String])]] = {
+    criteria: Seq[Criterion[Any]],
+    nameFieldMap: Map[String, Field])(
+    widgetSpec: WidgetSpec
+  ): Future[Option[(Widget, Seq[String])]] = {
     val chartSpecFuture: Future[Option[Widget]] = widgetSpec match {
 
       case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
@@ -858,8 +890,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def resolveFilter(
-                             filterOrId: FilterOrId
-                           ): Future[Filter] = {
+    filterOrId: FilterOrId
+  ): Future[Filter] = {
     // use a given filter conditions or load one
     filterOrId match {
       case Right(id) =>
@@ -871,13 +903,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def setFilterLabels(
-                               filter: Filter,
-                               fieldNameMap: Map[String, Field]
-                             ): Filter = {
+    filter: Filter,
+    fieldNameMap: Map[String, Field]
+  ): Filter = {
     def valueStringToDisplayString[T](
-                                       fieldType: FieldType[T],
-                                       text: String
-                                     ): String = {
+      fieldType: FieldType[T],
+      text: String
+    ): String = {
       val value = fieldType.valueStringToValue(text.trim)
       fieldType.valueToDisplayString(value)
     }
@@ -909,14 +941,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
 
   private def getFields(
-                         fieldNames: Traversable[String]
-                       ): Future[Traversable[Field]] =
+    fieldNames: Traversable[String]
+  ): Future[Traversable[Field]] =
     fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
 
   private def getValues[T](
-                            field: Field,
-                            jsons: Traversable[JsObject]
-                          ): Traversable[Option[T]] = {
+    field: Field,
+    jsons: Traversable[JsObject]
+  ): Traversable[Option[T]] = {
     val typedFieldType = ftf(field.fieldTypeSpec).asValueOf[T]
     val jsonValues = project(jsons, field.name)
     jsonValues.map(typedFieldType.jsonToValue)
@@ -932,11 +964,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @return View with scatterplot and selection option for different xFieldName and yFieldName.
     */
   override def getScatterStats(
-                                xFieldNameOption: Option[String],
-                                yFieldNameOption: Option[String],
-                                groupFieldNameOption: Option[String],
-                                filterOrId: FilterOrId
-                              ) = Action.async { implicit request =>
+    xFieldNameOption: Option[String],
+    yFieldNameOption: Option[String],
+    groupFieldNameOption: Option[String],
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
     dsa.setting.flatMap { setting =>
       // initialize the x, y, and group field names
       val xFieldName: Option[String] =
@@ -960,13 +992,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def getScatterStatsAux(
-                                  xFieldName: Option[String],
-                                  yFieldName: Option[String],
-                                  groupFieldName: Option[String],
-                                  filterOrId: FilterOrId,
-                                  setting: DataSetSetting)(
-                                  implicit request: Request[_]
-                                ): Future[Result] = {
+    xFieldName: Option[String],
+    yFieldName: Option[String],
+    groupFieldName: Option[String],
+    filterOrId: FilterOrId,
+    setting: DataSetSetting)(
+    implicit request: Request[_]
+  ): Future[Result] = {
     val dataSetNameFuture = dsa.dataSetName
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
 
@@ -1065,10 +1097,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def getDistribution(
-                                fieldNameOption: Option[String],
-                                groupFieldNameOption: Option[String],
-                                filterOrId: FilterOrId
-                              ) = Action.async { implicit request =>
+    fieldNameOption: Option[String],
+    groupFieldNameOption: Option[String],
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
 
     val groupFieldName: Option[String] =
       groupFieldNameOption.map { fieldName =>
@@ -1153,9 +1185,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   def getCorrelations(
-                       fieldNames: Seq[String],
-                       filterOrId: FilterOrId
-                     ) = Action.async { implicit request => {
+    fieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request => {
     for {
     // get the setting
       setting <- dsa.setting
@@ -1214,10 +1246,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def getCumulativeCount(
-                                   fieldNameOption: Option[String],
-                                   groupFieldNameOption: Option[String],
-                                   filterOrId: FilterOrId
-                                 ) = Action.async { implicit request =>
+    fieldNameOption: Option[String],
+    groupFieldNameOption: Option[String],
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     // initialize the group name
@@ -1302,8 +1334,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   def getCategoriesWithFieldsAsTreeNodes(
-                                          filterOrId: FilterOrId
-                                        ) = Action.async { implicit request =>
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
     val start = new ju.Date()
 
     val settingFuture = dsa.setting
@@ -1358,8 +1390,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def getFractalis(
-                             fieldNameOption: Option[String]
-                           ) = Action.async { implicit request => {
+    fieldNameOption: Option[String]
+  ) = Action.async { implicit request => {
     for {
     // get the data set name, data space tree and the data set setting
       (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
@@ -1468,11 +1500,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def classify(
-                         mlModelId: BSONObjectID,
-                         inputFieldNames: Seq[String],
-                         outputFieldName: String,
-                         filterOrId: FilterOrId
-                       ) = Action.async { implicit request =>
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
     val explFieldNamesToLoads =
       if (inputFieldNames.nonEmpty)
         (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
@@ -1504,11 +1536,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def regress(
-                        mlModelId: BSONObjectID,
-                        inputFieldNames: Seq[String],
-                        outputFieldName: String,
-                        filterOrId: FilterOrId
-                      ) = Action.async { implicit request =>
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
     val explFieldNamesToLoads =
       if (inputFieldNames.nonEmpty)
         (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
@@ -1540,10 +1572,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def learnUnsupervised(
-                                  mlModelId: BSONObjectID,
-                                  inputFieldNames: Seq[String],
-                                  filterOrId: FilterOrId
-                                ) = Action.async { implicit request =>
+    mlModelId: BSONObjectID,
+    inputFieldNames: Seq[String],
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
     val explFieldNamesToLoads =
       if (inputFieldNames.nonEmpty)
         (inputFieldNames ++ Seq(JsObjectIdentity.name)).toSet.toSeq

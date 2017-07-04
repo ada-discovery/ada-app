@@ -1,4 +1,7 @@
-@(fieldsCall: Call)
+@(
+    fieldsCall: Call,
+    filtersCall: Call
+)
 
 @typeaheadJsImport()
 
@@ -33,6 +36,21 @@
                     ],
                     data,
                     showOption
+                );
+            }
+        });
+
+        $.ajax({
+            url: '@Html(filtersCall.url)',
+            success: function (data) {
+                var typeaheadData = data.map(function (item, index) {
+                    return {name: item._id.$oid, label: item.name};
+                });
+                populateFieldTypeahed(
+                    $('#subFilterTypeahead'),
+                    $('#subFilterId'),
+                    typeaheadData,
+                    @FilterShowFieldStyle.LabelsOnly.id
                 );
             }
         });

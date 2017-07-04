@@ -37,7 +37,7 @@ GET         /ldap/:id/get                                                       
 
 # Admin
 GET         /admin/runnables                                                        controllers.AdminController.listRunnables
-GET         /admin/runScript                                                        controllers.AdminController.runScript(className : String)
+POST        /admin/runScript                                                        controllers.AdminController.runScript(className : String)
 
 # Data Set Import
 GET         /admin/dataSetImport                                                    controllers.dataset.DataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter: Seq[models.FilterCondition] ?= Nil)

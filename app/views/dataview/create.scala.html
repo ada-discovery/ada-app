@@ -17,9 +17,9 @@
 @layout.create(
     domainName,
 	form,
-    elements(form),
+    elements(form, Map(), Map()),
     dataViewRouter.save,
     dataViewRouter.plainList
 )
 
-@activateTypeahead(dataSetRouter.allFields)
+@activateTypeahead(dataSetRouter.allFields, filterRouter.idAndNames)

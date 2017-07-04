@@ -2,17 +2,21 @@
 @import views.html.elements.labelValue
 @import util.typeColumns
 @import models.ChartType
-@import models.{WidgetSpec, Field}
+@import models.{WidgetSpec, Field, Filter}
 @import models.DataSetFormattersAndIds.{widgetSpecFormat, widgetSpecClasses}
 @import dataaccess.ReflectionUtil.getCaseClassMethodNamesAndTypes
 @import play.api.libs.json.Json
 @import play.api.libs.json.JsObject
+@import reactivemongo.play.json.BSONFormats._
 @import util.JsonUtil
 @import play.api.libs.json.JsArray
+@import controllers.dataset.FilterRouter
+@import reactivemongo.bson.BSONObjectID
 
 @(
     items: Traversable[WidgetSpec],
-    nameFieldMap: Map[String,  Field]
+    nameFieldMap: Map[String,  Field],
+    idFilterNameMap: Map[BSONObjectID, String]
 )
 
 @editableChartType(chartType: Option[ChartType.Value]) = {
@@ -79,10 +83,14 @@
 @dataHiddenElement(widgetSpec: WidgetSpec) = {
     @{
         Json.toJson(widgetSpec).as[JsObject].-("displayOptions").fields.map {
-            case (fieldName, jsValue) => jsValue match {
-                case JsArray(seq) => hiddenElement(fieldName, seq.map(JsonUtil.toString).flatten.mkString(", "))
-                case _ => hiddenElement(fieldName, JsonUtil.toString(jsValue))
-            }
+            case (fieldName, jsValue) =>
+                if (fieldName == "subFilterId") {
+                    hiddenElement(fieldName, jsValue.asOpt[JsObject].map(json => JsonUtil.toString(json \ "$oid")))
+                } else
+                    jsValue match {
+                        case JsArray(seq) => hiddenElement(fieldName, seq.map(JsonUtil.toString).flatten.mkString(", "))
+                        case _ => hiddenElement(fieldName, JsonUtil.toString(jsValue))
+                    }
         } ++ Seq(fieldTypeaheadElements(widgetSpec))
     }
 }
@@ -112,15 +120,30 @@
         Fields: @fieldLabels(widgetSpec)
     </div>
     <div class="row">
-        @{widgetSpec match {
-            case x: DistributionWidgetSpec =>
-                x.numericBinCount.map( count => "Numeric Bin Count: " + count).getOrElse("")
-                s"Show Relative Values: ${x.relativeValues}, Date Month Bins: ${x.useDateMonthBins}"
-            case x: CumulativeCountWidgetSpec => x.numericBinCount.map( count => "Numeric Bin Count: " + count).getOrElse("")
-                s"Show Relative Values: ${x.relativeValues}, Date Month Bins: ${x.useDateMonthBins}"
-            case x: TemplateHtmlWidgetSpec => "Content: " + Html(util.shorten(x.content, 50))
-            case _ => ""
-        }}
+        @{  {
+                {widgetSpec match {
+                    case x: DistributionWidgetSpec =>
+                        Seq(
+                            x.numericBinCount.map( count => "Numeric Bin Count: " + count),
+                            Some(s"Show Relative Values: ${x.relativeValues}"),
+                            Some(s"Date Month Bins: ${x.useDateMonthBins}")
+                        )
+                    case x: CumulativeCountWidgetSpec =>
+                        Seq(
+                            x.numericBinCount.map( count => "Numeric Bin Count: " + count),
+                            Some(s"Show Relative Values: ${x.relativeValues}"),
+                            Some(s"Date Month Bins: ${x.useDateMonthBins}")
+                        )
+                    case x: TemplateHtmlWidgetSpec =>
+                        Seq(
+                            Some("Content: " + Html(util.shorten(x.content, 50)))
+                        )
+                    case _ =>
+                        Nil
+                }} ++
+                    Seq(widgetSpec.subFilterId.map(id => s"Sub Filter: ${idFilterNameMap.get(id).get}"))
+            }.flatten.mkString(", ")
+        }
     </div>
 }
 
@@ -169,7 +192,6 @@
                 dataColumn.append("<input type='hidden' id='" + fieldName + "' value='" + value + "'/>");
         });
 
-
         // display content column
         var fieldLabels = labelFields.map(function(labelField) {
             return values[labelField];
@@ -178,6 +200,8 @@
         var contentDisplayColumn = $("<td></td>")
         if (fieldLabels.length > 0)
             contentDisplayColumn.append("<div class='row'>Fields: " + fieldLabels + "</div>")
+
+        var subFilterIdValue = "Sub Filter Id: " + values["subFilterId"]
 
         // distribution and cumulative count
         var isDistributionOrCumulativeCountType = concreteClass == "@{classOf[DistributionWidgetSpec].getName}" || concreteClass == "@{classOf[CumulativeCountWidgetSpec].getName}"
@@ -197,9 +221,9 @@
 
         // correlation
         var isCorrelationType = concreteClass == "@{classOf[CorrelationWidgetSpec].getName}"
-        var fieldNamesValue =  (isCorrelationType) ? ("Fields: " + values["fieldNames"]) : "";
+        var fieldNamesValue = (isCorrelationType) ? ("Fields: " + values["fieldNames"]) : "";
 
-        contentDisplayColumn.append("<div class='row'>" + numericBinCountLabelValue + relativeValuesValue + useDateMonthBinsValue + contentLabelValue + fieldNamesValue + "</div>")
+        contentDisplayColumn.append("<div class='row'>" + numericBinCountLabelValue + relativeValuesValue + useDateMonthBinsValue + contentLabelValue + fieldNamesValue + subFilterIdValue + "</div>")
 
         // display options
         var displayOptions = values["displayOptions"]
@@ -350,6 +374,11 @@
                 <input type="checkbox" id="useDateMonthBins"/>
             }
         </div>
+
+        @labelValueAux("subFilterId", "Sub Filter") {
+            <input type="text" id="subFilterTypeahead" class="typeahead">
+            <input type="hidden" id="subFilterId">
+        }
     </div>
 }
 
@@ -373,6 +402,10 @@
          var groupFieldTypeahedVal = $('#edit_widgetSpecModal #groupFieldNameTypeahead').val();
          if (!groupFieldTypeahedVal)
              $('#edit_widgetSpecModal #groupFieldName').val("")
+
+         var subFilterTypeaheadVal = $('#edit_widgetSpecModal #subFilterTypeahead').val();
+         if (!subFilterTypeaheadVal)
+             $('#edit_widgetSpecModal #subFilterId').val("")
 
          var values = getModalValues("edit_widgetSpecModal");
          var rowIndex = values["rowIndex"]
@@ -466,6 +499,11 @@
         // fieldNames (of correlation widget) is array  hence we need to do the setting again
         setIfNotNull(output, "fieldNames", getArray("fieldNames"))
 
+        var subFilterId = getValue("subFilterId")
+        if (subFilterId) {
+            setIfNotNull(output, "subFilterId", {"$oid": subFilterId})
+        }
+
         // display options
         var displayOptions = {};
         setIfNotNull(displayOptions, "gridOffset", getIntValue('gridOffset', 0))
@@ -515,6 +553,11 @@
         $('#edit_widgetSpecModal #relativeValues').prop('checked', model["relativeValues"]);
         $('#edit_widgetSpecModal #useDateMonthBins').prop('checked', model["useDateMonthBins"]);
         $('#edit_widgetSpecModal #content').val(model["content"]);
+
+        var subFilterId = model["subFilterId"]
+        if (subFilterId)
+            subFilterId = subFilterId["$oid"];
+        $('#edit_widgetSpecModal #subFilterId').val(subFilterId);
 
         $("#edit_widgetSpecModal").modal("show");
     }

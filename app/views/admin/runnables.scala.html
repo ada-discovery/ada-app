@@ -34,7 +34,9 @@
                             @name
                         </td>
                         <td>
-                            <a href="@routes.AdminController.runScript(name)">Run</a>
+                            <a href="#" onclick="submit('post', '@routes.AdminController.runScript(name)'); return false;">
+                                Run
+                            </a>
                         </td>
                     </tr>
                 }

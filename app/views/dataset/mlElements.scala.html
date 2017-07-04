@@ -2,9 +2,18 @@
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataset.dynamicFieldTable
 
-@(includeOutputField: Boolean = true)
+@(
+    allFieldsCall: Call,
+    includeOutputField: Boolean = true
+)
 
 @dynamicTableJsImport()
+
+@addAllFieldButton = {
+    <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
+        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
+    </a>
+}
 
 <div class="row">
     <div class="col-md-12">
@@ -21,7 +30,7 @@
                     }
                 }
                 @labelValue("inputFieldNames", "Input Field Names") {
-                    @dynamicFieldTable("inputFieldName", Nil, false)
+                    @dynamicFieldTable("inputFieldName", Nil, false, 5, Some(addAllFieldButton))
                 }
                 @labelValue("filterId", "Filter") {
                     <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="Filter" value="">
@@ -48,3 +57,22 @@
         </form>
     </div>
 </div>
+
+<script>
+    function addAllFields() {
+        $.ajax({
+            url: '@Html(allFieldsCall.url)',
+            success: function (data) {
+                $.each(data, function(index, field) {
+                    console.log(field)
+
+                    var values = {};
+                    values["fieldName"] = field.name;
+                    values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+                    $('#inputFieldNameDiv').dynamicTable('addTableRow', values)
+                });
+            }
+        });
+    }
+</script>

@@ -6,7 +6,8 @@
     domainName: String,
     items: Traversable[Field],
     sortable: Boolean = false,
-    gridWidth: Int = 5
+    gridWidth: Int = 5,
+    extraActions: Option[Html] = None
 )
 
 @modalInner = {
@@ -51,4 +52,4 @@
     }
 }
 
-@dynamicTable(domainName, table, sortable, rowToModelJsFun, itemToRowJsFun, modalInner, None, gridWidth)
+@dynamicTable(domainName, table, sortable, rowToModelJsFun, itemToRowJsFun, modalInner, extraActions, gridWidth)

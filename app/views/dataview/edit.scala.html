@@ -14,6 +14,7 @@
     id : BSONObjectID,
     form: Form[DataView],
     nameFieldMap: Map[String,  Field],
+    idFilterNameMap: Map[BSONObjectID, String],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo],
     updateCall: BSONObjectID => Call
 )(
@@ -21,14 +22,14 @@
 )
 
 @bottomResources = {
-    @activateTypeahead(dataSetRouter.allFields)
+    @activateTypeahead(dataSetRouter.allFields, filterRouter.idAndNames)
     @datasetSubNavJs()
 }
 
 @layout.edit(
     domainName,
 	form.errors,
-    elements(form, nameFieldMap),
+    elements(form, nameFieldMap, idFilterNameMap),
     updateCall(id),
     dataViewRouter.plainList,
     Some(dataViewRouter.delete(id)),

@@ -20,12 +20,16 @@ import com.banda.network.domain._
 import dataaccess.AscSort
 import org.junit.Test
 import persistence.dataset.DataSetAccessorFactory
-import play.api.libs.json.{JsArray, JsObject, Json}
+import play.api.libs.json.{util => _, _}
 import dataaccess.Criterion.Infix
-import models.{Field, FieldTypeId, FieldTypeSpec}
+import models.DataSetFormattersAndIds.JsObjectIdentity
+import models._
+import reactivemongo.bson.BSONObjectID
+import runnables.DataSetId.denopa_raw_clinical_baseline
 import services.DataSetService
 import services.ml.MachineLearningService
-import util.seqFutures
+import _root_.util.seqFutures
+import reactivemongo.play.json.BSONFormats._
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -42,12 +46,44 @@ class MPowerWalkingRCPrediction @Inject()(
     dataSetService: DataSetService
   ) extends Runnable {
 
-  private val dataSetId = "lux_park.mpower_walking_activity"
   private val timeSeriesFieldName = "accel_walking_outboundu002ejsonu002eitems"
-  private val otherFieldNames = Seq("recordId", "dataGroups")
+//  private val timeSeriesFieldName = "accel_walking_outboundjsonitems"
 
-  private val resultDataSetId = "lux_park.mpower_walking_activity_rc_weights"
-  private val resultDataSetName = "mPower Walking Activity (RC) Weights"
+//  private val dataSetId = "lux_park.mpower_walking_activity"
+//  private val resultDataSetId = "lux_park.mpower_walking_activity_rc_weights"
+//  private val resultDataSetName = "mPower Walking Activity (RC) Weights"
+//  private val otherFieldNames = Seq("recordId", "dataGroups", "healthCode")
+
+  private val dataSetId = "mpower_challenge.walking_activity_training"
+  private val resultDataSetId = "mpower_challenge.walking_activity_training_rc_weights"
+  private val resultDataSetName = "Walking Activity Training (RC) Weights"
+  private val otherFieldNames = Seq("recordId", "medTimepoint", "healthCode")
+
+//  private val dataSetId = "mpower_challenge.walking_activity_testing"
+//  private val resultDataSetId = "mpower_challenge.walking_activity_testing_rc_weights"
+//  private val resultDataSetName = "Walking Activity Testing (RC) Weights"
+//  private val otherFieldNames = Seq("recordId", "healthCode")
+
+  private val demographicsDataSetId = "mpower_challenge.demographics_training"
+  private val demographicsDsa = dsaf(demographicsDataSetId).get
+  private val professionalDiagnosisFieldNameSpec = ("professional-diagnosis", FieldTypeSpec(FieldTypeId.Boolean))
+
+  private val resultDataSetSetting = DataSetSetting(
+    None,
+    resultDataSetId,
+    "resultId",
+    None,
+    None,
+    None,
+    "rc_w_",
+    None,
+    None,
+    false,
+    None,
+    Map(("\r", " "), ("\n", " ")),
+    StorageType.ElasticSearch,
+    false
+  )
 
   private val plotter = Plotter.createExportInstance("svg")
   private val fileUtil = FileUtil.getInstance
@@ -56,6 +92,7 @@ class MPowerWalkingRCPrediction @Inject()(
 
   private val weightRdp = RandomDistributionProviderFactory(RandomDistribution.createNormalDistribution[jl.Double](classOf[jl.Double], 0d, 1d))
   private val washoutPeriod = 500
+  private val dropRightLength = 500
   private val predictAhead = 1
 
   private def createReservoirSetting = new ReservoirLearningSetting {
@@ -74,7 +111,7 @@ class MPowerWalkingRCPrediction @Inject()(
     setReservoirEdgesNum(None) // Some((0.02 * (250 * 250)).toInt)
     setReservoirPreferentialAttachment(false)
     setReservoirBias(false)
-    setInputReservoirConnectivity(0.5d)
+    setInputReservoirConnectivity(1d)
     setReservoirSpectralRadius(1)
     setReservoirFunctionType(ActivationFunctionType.Tanh)
     setReservoirFunctionParams(None) // Some(Seq(0.5d : jl.Double, 0.25 * math.Pi : jl.Double, 0d : jl.Double))
@@ -108,38 +145,54 @@ class MPowerWalkingRCPrediction @Inject()(
     Collections.sort(outputNodes)
 
     val batchSize = 20
+    val idName = JsObjectIdentity.name
     val future = for {
       count <- dataSetRepo.count()
 
+      ids <- dataSetRepo.find(
+        projection = Seq(idName),
+        sort = Seq(AscSort(idName))
+      ).map(_.map(json => (json \ idName).as[BSONObjectID]))
+
       // predict
       resultVarianceAndJsons <-
-        seqFutures(0 to count / batchSize) {
-          groupIndex: Int =>
+//        seqFutures(0 to Math.ceil(count.toDouble / batchSize).toInt) {
+      seqFutures(ids.toSeq.grouped(batchSize).zipWithIndex) {
+//          groupIndex: Int =>
+        case (ids, groupIndex) =>
             dataSetRepo.find(
+//              skip = Some(groupIndex * batchSize),
+              criteria = Seq(idName #>= ids.head),
               limit = Some(batchSize),
-              skip = Some(groupIndex * batchSize),
-              sort = Seq(AscSort("_id")),
+              sort = Seq(AscSort(idName)),
               projection = otherFieldNames ++ Seq(timeSeriesFieldName)
             ).flatMap { jsons =>
-              println(s"Processing time series ${groupIndex * batchSize} to ${jsons.size + groupIndex * batchSize}")
+              println(s"Processing time series ${groupIndex * batchSize} to ${jsons.size + (groupIndex * batchSize)}")
               Future.sequence(
                 jsons.map { json =>
                   // TODO: here we pass a new instance of reservoir setting because the iteration num is set inside
-                  predictSeries(initializedTopology, reservoirNodes, outputNodes, createReservoirSetting)(json).map { case (results, variance) =>
-                    val otherDataJson = json.-(timeSeriesFieldName)
-                    (results, variance, otherDataJson)
-                  }
+                  predictSeries(initializedTopology, reservoirNodes, outputNodes, createReservoirSetting)(json).map(
+                    _.map { case (results, variance) =>
+                        val otherDataJson = json.-(timeSeriesFieldName)
+                        (results, variance, otherDataJson)
+                    }
+                  )
                 }
               )
             }
         }
+
+      allResults = resultVarianceAndJsons.flatten.flatten
+
+      fields <- dsa.fieldRepo.find(Seq("name" #-> otherFieldNames))
+
+      _ <- saveWeightDataSet(fields, allResults)
     } yield {
-      val allResults = resultVarianceAndJsons.flatten
       println(allResults.size)
       reportResults(setting, allResults)
     }
 
-    Await.result(future, 10 minutes)
+    Await.result(future, 1200 minutes)
   }
 
   def predictSeries(
@@ -148,21 +201,23 @@ class MPowerWalkingRCPrediction @Inject()(
     outputNodes: Seq[TopologicalNode],
     setting: ReservoirLearningSetting)(
     json: JsObject
-  ): Future[(RCPredictionResults, Double)] = {
-    val xyzSeries = (json \ timeSeriesFieldName).as[JsArray].value.map { jsValue =>
-      val jsObject = jsValue.as[JsObject]
-      Seq((jsObject \ "x").as[Double]: jl.Double, (jsObject \ "y").as[Double]: jl.Double, (jsObject \ "z").as[Double]: jl.Double)
-    }
+  ): Future[Option[(RCPredictionResults, Double)]] = {
+    val xyzSeries = (json \ timeSeriesFieldName).asOpt[JsArray].map( jsonArray =>
+      jsonArray.value.dropRight(dropRightLength).map { jsValue =>
+        val jsObject = jsValue.as[JsObject]
+        Seq((jsObject \ "x").as[Double]: jl.Double, (jsObject \ "y").as[Double]: jl.Double, (jsObject \ "z").as[Double]: jl.Double)
+      }
+    )
 
-    if (xyzSeries.isEmpty) {
-      throw new IllegalArgumentException("Series cannot be empty")
-    }
-    val targetSeries = xyzSeries.map(_ (1))
-    val targetVariance = MathUtil.calcStats(0, targetSeries).getVariance.toDouble
+    if (xyzSeries.isDefined && xyzSeries.get.nonEmpty) {
+      val targetSeries = xyzSeries.get.map(_ (1))
+      val targetVariance = MathUtil.calcStats(0, targetSeries).getVariance.toDouble
 
-    mlService.predictRCTimeSeries(
-      setting, topology, reservoirNodes, outputNodes, washoutPeriod, predictAhead, xyzSeries, targetSeries
-    ).map(result => (result, targetVariance))
+      mlService.predictRCTimeSeries(
+        setting, topology, reservoirNodes, outputNodes, washoutPeriod, predictAhead, xyzSeries.get, targetSeries
+      ).map(result => Some((result, targetVariance)))
+    } else
+      Future(None)
   }
 
 //    val targetVariance = MathUtil.calcStats(0, targetSeries).getVariance
@@ -206,20 +261,61 @@ class MPowerWalkingRCPrediction @Inject()(
     checkResultsAux("outputs", _.outputs.map(_.doubleValue))
   }
 
-  private def saveWeights(results: Traversable[RCPredictionResults]) = {
-    val weightsCount = results.head.finalWeights.size
-    (0 to weightsCount).map( index =>
-      ("W_" + index, FieldTypeSpec(FieldTypeId.Double))
+  private def saveWeightDataSet(
+    fields: Traversable[Field],
+    resultVarianceAndJsons: Traversable[(RCPredictionResults, Double, JsObject)]
+  ): Future[Unit] = {
+    val weightsCount = resultVarianceAndJsons.head._1.finalWeights.size
+
+    val weightFieldNameTypeSpecs = (0 to weightsCount).map( index =>
+      ("rc_w_" + index, FieldTypeSpec(FieldTypeId.Double))
     )
+
     for {
       metaInfo <- dsa.metaInfo
 
       newDsa <- dsaf.register(
-        metaInfo.copy(_id = None, id = resultDataSetId, name = resultDataSetName, timeCreated = new ju.Date()), None, None
+        metaInfo.copy(_id = None, id = resultDataSetId, name = resultDataSetName, timeCreated = new ju.Date()),
+        Some(resultDataSetSetting),
+        None
       )
 
-//      _ <- dataSetService.
+      healthCodeDiagnosisJsonMap <- demographicsDsa.dataSetRepo.find(
+        projection = Seq("healthCode", "professional-diagnosis")
+      ).map(_.map{ json =>
+        val healthCode = (json \ "healthCode").as[String]
+        val diagnosisJson = (json \ "professional-diagnosis").getOrElse(JsNull)
+        (healthCode, diagnosisJson)
+      }.toMap)
 
+      _ <- {
+        val originalFieldTypeSpecs = fields.map( field => (field.name, field.fieldTypeSpec))
+
+        val fieldSpecs = originalFieldTypeSpecs ++ weightFieldNameTypeSpecs ++ Seq(professionalDiagnosisFieldNameSpec)
+
+        dataSetService.updateDictionary(
+          resultDataSetId, fieldSpecs, false, true
+        )
+      }
+
+      _ <- newDsa.dataSetRepo.deleteAll
+
+      _ <- {
+        val newJsons = resultVarianceAndJsons.map { case (results, _, json) =>
+          val weightJson = JsObject(
+            results.finalWeights.zipWithIndex.map { case (weight, index) =>
+              ("rc_w_" + index, JsNumber(BigDecimal.valueOf(weight)))
+            }
+          )
+          val jsonWithWeights = json ++ weightJson
+
+          val healthCode = (json \ "healthCode").as[String]
+          val diagnosisJson = healthCodeDiagnosisJsonMap.get(healthCode).getOrElse(JsNull)
+          jsonWithWeights + ("professional-diagnosis", diagnosisJson)
+        }
+
+        dataSetService.saveOrUpdateRecords(newDsa.dataSetRepo, newJsons.toSeq, None, false, None, Some(100))
+      }
     } yield
       ()
   }
@@ -232,12 +328,20 @@ class MPowerWalkingRCPrediction @Inject()(
 
     val results = resultVarianceAndJsons.map(_._1)
 
-    val meanSamps = results.map(_.sampErrors.takeRight(lastNum)).transpose.map(s => s.sum / s.size)
+    val meanSamps = results.map { x =>
+      if (x.sampErrors.size >= lastNum)
+        Some(x.sampErrors.takeRight(lastNum))
+      else
+        None
+    }.flatten.transpose.map(s => s.sum / s.size)
 
     val lastRnmses = resultVarianceAndJsons.map { case (result, variance, _) =>
-      val meanSquare = result.squareErrors.takeRight(lastNum).sum / lastNum
-      math.sqrt(meanSquare / variance)
-    }
+      if (result.squareErrors.size >= lastNum) {
+        val meanSquare = result.squareErrors.takeRight(lastNum).sum / lastNum
+        Some(math.sqrt(meanSquare / variance))
+      } else
+        None
+    }.flatten
 
     val meanRnmseLast = lastRnmses.sum / lastRnmses.size
     val meanSampLast = meanSamps.sum / lastNum
