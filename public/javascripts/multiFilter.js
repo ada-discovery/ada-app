@@ -98,7 +98,7 @@ $.widget( "custom.multiFilter", {
         this.initFilterIfNeeded(function() {
             that.addEditConditionModalElement.find("#conditionIndex").first().val(index);
 
-            var condition = this.jsonConditions[index]
+            var condition = that.jsonConditions[index]
             that.updateModalFromModel(condition, that.conditionFields);
 
             that.addEditConditionModalElement.modal('show');
@@ -255,8 +255,11 @@ $.widget( "custom.multiFilter", {
                         }
                     });
                 }
-            }
-        },
+        } else {
+            if (successFun)
+                successFun()
+        }
+    },
 
     disableShowChoice: function (value) {
         var showChoiceElement = $("input[name='showChoice'][value='" + value + "']")

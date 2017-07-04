@@ -58,16 +58,49 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     limit: Option[Int],
     skip: Option[Int]
   ): Future[Traversable[E]] = {
+    findAsCursor(criteria, sort, projection, limit, skip).flatMap ( cursor =>
+      // handle the limit
+      limit match {
+        case Some(limit) => cursor.collect[List](limit)
+        case None => cursor.collect[List]()
+      }
+    )
+  }
+
+  // TODO
+  def findIterable(
+    criteria: Seq[Criterion[Any]],
+    sort: Seq[Sort],
+    projection: Traversable[String],
+    limit: Option[Int],
+    skip: Option[Int]
+  ): Future[Traversable[E]] = {
+    findAsCursor(criteria, sort, projection, limit, skip).flatMap ( cursor =>
+      // handle the limit
+      limit match {
+        case Some(limit) => cursor.collect[List](limit)
+        case None => cursor.collect[List]()
+      }
+    )
+  }
+
+  protected def findAsCursor(
+    criteria: Seq[Criterion[Any]],
+    sort: Seq[Sort],
+    projection: Traversable[String],
+    limit: Option[Int],
+    skip: Option[Int]
+  ): Future[CursorProducer[E]#ProducedCursor] = {
     val sortedProjection = projection.toSeq.sorted
     val jsonProjection = JsObject(
       sortedProjection.map(fieldName => (fieldName, JsNumber(1)))
         ++
-      (
-        if (sortedProjection.nonEmpty && !sortedProjection.contains(identityName))
-          Seq((identityName, JsNumber(0)))
-        else
-          Seq()
-      )
+        (
+          if (sortedProjection.nonEmpty && !sortedProjection.contains(identityName))
+            Seq((identityName, JsNumber(0)))
+          else
+            Seq()
+          )
     )
     val jsonCriteria = toMongoCriteria(criteria)
 
@@ -104,9 +137,9 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
       case _ => queryBuilder2.map(_.sort(toJsonSort(sort)))
     }
 
-    finalQueryBuilderFuture.flatMap { finalQueryBuilder =>
+    finalQueryBuilderFuture.map { finalQueryBuilder =>
       // handle pagination (if requested)
-      val cursor: CursorProducer[E]#ProducedCursor = limit match {
+      limit match {
         case Some(limit) =>
           finalQueryBuilder.options(QueryOpts(skip.getOrElse(0), limit)).cursor[E]()
 
@@ -115,13 +148,6 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
             throw new IllegalArgumentException("Limit is expected when skip is provided.")
           else
             finalQueryBuilder.cursor[E]()
-      }
-      // TODO: What about cursor[E](readPreference = ReadPreference.primary)
-
-      // handle the limit
-      limit match {
-        case Some(limit) => cursor.collect[List](limit)
-        case None => cursor.collect[List]()
       }
     }
   }
