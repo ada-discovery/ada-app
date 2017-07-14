@@ -487,16 +487,25 @@ function getModalValues(modalElementId) {
 
 function showMLOutput(evalRates) {
     $("#outputDiv").html("");
-    $.each(evalRates, function(i, data) {
-        var div = $("<div class='form-group'>")
-        var label = "<label for='' class='col-sm-2 control-label'>" + data.metricName + "</label>"
-        var output = "<div class='col-sm-10'><input type='text' readonly='readonly' value='" + data.evalRate + "'/></div>"
-        div.append(label)
-        div.append(output)
-        $("#outputDiv").append(div);
-        $('#outputDiv').fadeIn('2000');
 
+    var table = $("<table class='table table-striped'>")
+    var thead = $("<thead>")
+    thead.append("<th class='col header'>Metrics</th>")
+    thead.append("<th class='col header'>Training</th>")
+    thead.append("<th class='col header'>Testing</th>")
+    table.append(thead)
+    var tbody = $("<tbody>")
+    table.append(tbody)
+
+    $.each(evalRates, function(i, data) {
+        var tr = $("<tr>")
+        var tds = "<td>" + data.metricName + "</td><td>" + data.trainEvalRate.toFixed(3) + "</td><td>" + data.testEvalRate.toFixed(3) + "</td>"
+        tr.append(tds)
+        tbody.append(tr)
     });
+
+    $("#outputDiv").append(table);
+    $('#outputDiv').fadeIn('2000');
 }
 
 function getCookie(name) {
