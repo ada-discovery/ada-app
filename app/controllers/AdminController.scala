@@ -1,22 +1,67 @@
 package controllers
 
 import javax.inject.Inject
+import java.{lang => jl}
 
 import be.objectify.deadbolt.scala.DeadboltActions
+import com.banda.incal.domain.ReservoirLearningSetting
+import com.banda.math.business.rand.RandomDistributionProviderFactory
+import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
+import com.banda.network.domain.ActivationFunctionType
 import controllers.core.WebContext
+import models.{DataSetMetaInfo, Field, FieldTypeId}
+import models.ml.RCPredictionSetting
+import play.api.data.Forms._
 import persistence.RepoTypes.MessageRepo
+import persistence.dataset.DataSetAccessorFactory
+import play.api.Configuration
 import play.api.Logger
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller, Request}
 import play.api.Play.current
+import play.api.data.Form
+import play.api.data.Forms.{ignored, mapping}
+import play.api.data.format.Formats.doubleFormat
+import play.api.libs.json.{JsNull, JsObject, JsValue}
+import reactivemongo.bson.BSONObjectID
+import services.{DataSpaceService, RCPredictionService}
 import util.MessageLogger
 import util.ReflectionUtil._
 import util.SecurityUtil.restrictAdmin
 
-class AdminController @Inject() (deadbolt: DeadboltActions, messageRepo: MessageRepo) extends Controller {
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+class AdminController @Inject() (
+    deadbolt: DeadboltActions,
+    messageRepo: MessageRepo,
+    dsaf: DataSetAccessorFactory,
+    dataSpaceService: DataSpaceService,
+    configuration: Configuration,
+    mPowerWalkingRCPredictionService: RCPredictionService
+  ) extends Controller {
 
   private val logger = Logger
   private val messageLogger = MessageLogger(logger, messageRepo)
+
+  private val mergeMPowerWithDemographics = configuration.getBoolean("mpower.merge_with_demographics").get
+  private implicit val seqFormatter = SeqFormatter.apply
+
+  private val form = Form(
+    mapping(
+      "reservoirNodeNum" -> number(min = 1, max = 2000),
+      "reservoirInDegree" -> number(min = 1, max = 2000),
+      "inputReservoirConnectivity" -> of(doubleFormat),
+      "reservoirSpectralRadius" -> of(doubleFormat),
+      "washoutPeriod"  -> number(min = 0, max = 2000),
+      "dropRightLength" -> number(min = 0, max = 2000),
+      "inputSeriesFieldPaths" -> of[Seq[String]],
+      "outputSeriesFieldPaths" -> of[Seq[String]],
+      "sourceDataSetId" -> nonEmptyText,
+      "resultDataSetId" -> nonEmptyText,
+      "resultDataSetName" -> nonEmptyText,
+      "batchSize" -> optional(number(min = 1, max = 200))
+    )(RCPredictionSetting.apply)(RCPredictionSetting.unapply))
 
   @Inject var messagesApi: MessagesApi = _
 
@@ -70,5 +115,107 @@ class AdminController @Inject() (deadbolt: DeadboltActions, messageRepo: Message
         }
       }
     }
+  }
+
+  private val weightRdp = RandomDistributionProviderFactory(RandomDistribution.createNormalDistribution[jl.Double](classOf[jl.Double], 0d, 1d))
+
+  private def createReservoirSetting(
+    reservoirNodeNum: Int,
+    reservoirInDegree: Int,
+    inputReservoirConnectivity: Double,
+    reservoirSpectralRadius: Double
+  ) = new ReservoirLearningSetting {
+    setWeightAdaptationIterationNum(2)
+    setSingleIterationLength(1d)
+    setInitialDelay(0d)
+    setInputTimeLength(1d)
+    setOutputInterpretationRelativeTime(1d)
+    setInScale(1d)
+    setOutScale(1d)
+    setBias(1d)
+    setNonBiasInitial(0d)
+    setReservoirNodeNum(reservoirNodeNum)
+    setReservoirInDegree(Some(reservoirInDegree))
+    setReservoirInDegreeDistribution(None) // Some(RandomDistribution.createPositiveNormalDistribution(classOf[Integer], 50d, 0d))
+    setReservoirEdgesNum(None) // Some((0.02 * (250 * 250)).toInt)
+    setReservoirPreferentialAttachment(false)
+    setReservoirBias(false)
+    setInputReservoirConnectivity(inputReservoirConnectivity)
+    setReservoirSpectralRadius(reservoirSpectralRadius)
+    setReservoirFunctionType(ActivationFunctionType.Tanh)
+    setReservoirFunctionParams(None) // Some(Seq(0.5d : jl.Double, 0.25 * math.Pi : jl.Double, 0d : jl.Double))
+    setWeightDistribution(new RepeatedDistribution(weightRdp.nextList(5000).toArray(Array[jl.Double]())))
+  }
+
+  def showRCPrediction = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      for {
+        tree <- dataSpaceService.getTreeForCurrentUser(request)
+      } yield
+        Ok(views.html.admin.mPowerRCPrediction(tree))
+    }
+  }
+
+  def runRCPrediction = restrictAdmin(deadbolt) {
+    Action.async { implicit request =>
+      form.bindFromRequest.fold(
+        { formWithErrors =>
+          Future(BadRequest("Bad bad"))
+        },
+        item =>
+          for {
+            codeDiagnosisJsonMap <- if (mergeMPowerWithDemographics) createHealthCodeDiagnosisJsonMap else Future(Map[String, JsValue]())
+
+            _ <- mPowerWalkingRCPredictionService.predictAndStoreResults(
+              createReservoirSetting(
+                item.reservoirNodeNum,
+                item.reservoirInDegree,
+                item.inputReservoirConnectivity,
+                item.reservoirSpectralRadius
+              ),
+              item.washoutPeriod,
+              item.dropRightLength,
+              item.inputSeriesFieldPaths,
+              item.outputSeriesFieldPaths,
+              item.sourceDataSetId,
+              item.resultDataSetId,
+              item.resultDataSetName,
+              item.batchSize,
+              if (mergeMPowerWithDemographics) Some(transform(codeDiagnosisJsonMap)) else None
+            )
+          } yield {
+            Ok("Hooray")
+          }
+      )
+    }
+  }
+
+  private val demographicsDataSetId = "mpower_challenge.demographics_training"
+  private val demographicsDsa = dsaf(demographicsDataSetId).get
+  private val professionalDiagnosisField = Field("professional-diagnosis", None, FieldTypeId.Boolean)
+
+  def createHealthCodeDiagnosisJsonMap =
+    demographicsDsa.dataSetRepo.find(
+      projection = Seq("healthCode", professionalDiagnosisField.name)
+    ).map(_.map { json =>
+      val healthCode = (json \ "healthCode").as[String]
+      val diagnosisJson = (json \ professionalDiagnosisField.name).getOrElse(JsNull)
+      (healthCode, diagnosisJson)
+      }.toMap
+    )
+
+  private def transform(
+    codeDiagnosisJsonMap: Map[String, JsValue])(
+    jsonsAndFields: (Seq[JsObject], Traversable[Field])
+  ) = {
+      val newJsons = jsonsAndFields._1.map { json =>
+      val healthCode = (json \ "healthCode").as[String]
+      val diagnosisJson = codeDiagnosisJsonMap.get(healthCode).getOrElse(JsNull)
+
+      json + ("professional-diagnosis", diagnosisJson)
+    }
+
+    val newFields = jsonsAndFields._2 ++ Seq(professionalDiagnosisField)
+    (newJsons, newFields)
   }
 }

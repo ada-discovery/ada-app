@@ -818,10 +818,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def generateChart(
-                             items: Traversable[JsObject],
-                             nameFieldMap: Map[String, Field])(
-                             widgetSpec: WidgetSpec
-                           ): Option[(Widget, Seq[String])] = {
+    items: Traversable[JsObject],
+    nameFieldMap: Map[String, Field])(
+    widgetSpec: WidgetSpec
+  ): Option[(Widget, Seq[String])] = {
     val chartSpecOption: Option[Widget] = widgetSpec match {
 
       case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
@@ -1523,10 +1523,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Some(mlModel) =>
           val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
           val evalRates = mlService.classify(jsons, fieldNameAndSpecs, outputFieldName, mlModel)
-          val evalJsons = evalRates.map { case (metric, evalRate) =>
+          val evalJsons = evalRates.map { case (metric, trainEvalRate, testEvalRate) =>
             Json.obj(
               "metricName" -> toHumanReadableCamel(metric.toString),
-              "evalRate" -> evalRate
+              "trainEvalRate" -> trainEvalRate,
+              "testEvalRate" -> testEvalRate
             )
           }
           Ok(JsArray(evalJsons.toSeq))
@@ -1559,10 +1560,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Some(mlModel) =>
           val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
           val evalRates = mlService.regress(jsons, fieldNameAndSpecs, outputFieldName, mlModel)
-          val evalJsons = evalRates.map { case (metric, evalRate) =>
+          val evalJsons = evalRates.map { case (metric, trainEvalRate, testEvalRate) =>
             Json.obj(
               "metricName" -> toHumanReadableCamel(metric.toString),
-              "evalRate" -> evalRate
+              "trainEvalRate" -> trainEvalRate,
+              "testEvalRate" -> testEvalRate
             )
           }
           Ok(JsArray(evalJsons.toSeq))

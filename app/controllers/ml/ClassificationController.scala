@@ -134,11 +134,11 @@ class ClassificationController @Inject()(
 
 
   protected case class ClassificationCreateEditViews[E <: Classification](
-                                                                           name: String,
-                                                                           val form: Form[E],
-                                                                           viewElements: (Form[E], Messages) => Html)(
-                                                                           implicit manifest: Manifest[E]
-                                                                         ) extends CreateEditFormViews[E, BSONObjectID] {
+    name: String,
+    val form: Form[E],
+    viewElements: (Form[E], Messages) => Html)(
+    implicit manifest: Manifest[E]
+  ) extends CreateEditFormViews[E, BSONObjectID] {
 
     override protected[controllers] def fillForm(item: E) =
       form.fill(item)

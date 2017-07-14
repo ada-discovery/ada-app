@@ -1,36 +1,34 @@
 package services.ml
 
+import java.util.Collections
 import javax.inject.{Inject, Singleton}
 import java.{lang => jl, util => ju}
 
 import com.banda.incal.domain.ReservoirLearningSetting
 import com.banda.incal.prediction.{ErrorMeasures, ReservoirTrainerFactory}
 import com.banda.math.business.learning.{IOStream, IOStreamFactory}
-import com.banda.network.domain.{TopologicalNode, Topology}
+import com.banda.network.domain.{ActivationFunctionType, TopologicalNode, Topology}
 import com.google.inject.ImplementedBy
-import dataaccess.{FieldType, FieldTypeHelper}
+import dataaccess.{AscSort, FieldType, FieldTypeHelper}
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{FieldTypeId, FieldTypeSpec}
 import models.ml.classification.Classification
 import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
 import com.banda.incal.prediction.ErrorMeasures
+import com.banda.math.business.MathUtil
 import org.apache.spark.ml.evaluation.{Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.ml.{Estimator, Model}
 import org.apache.spark.sql.types.{Metadata, MetadataBuilder, _}
 import org.apache.spark.sql.{DataFrame, Row}
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import org.apache.spark.ml.clustering._
 import org.apache.spark.ml.linalg.DenseVector
-import play.api.libs.json.{JsArray, JsObject, JsString, Json}
-import reactivemongo.bson.BSONObjectID
-import runnables.RCPredictionResults
-import services.SparkApp
+import play.api.libs.json.JsObject
+import services.{RCPredictionResults, SparkApp}
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 import scala.util.Random
 import scala.collection.JavaConversions._
 
@@ -43,14 +41,14 @@ trait MachineLearningService {
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Classification
-  ): Traversable[(ClassificationEvalMetric.Value, Double)]
+  ): Traversable[(ClassificationEvalMetric.Value, Double, Double)]
 
   def regress(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression
-  ): Traversable[(RegressionEvalMetric.Value, Double)]
+  ): Traversable[(RegressionEvalMetric.Value, Double, Double)]
 
   def learnUnsupervised[M <: Model[M]](
     data: Traversable[JsObject],
@@ -91,7 +89,7 @@ private class MachineLearningServiceImpl @Inject() (
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Classification
-  ): Traversable[(ClassificationEvalMetric.Value, Double)] = {
+  ): Traversable[(ClassificationEvalMetric.Value, Double, Double)] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
     val evaluators = ClassificationEvalMetric.values.toSeq.map { metric =>
@@ -126,7 +124,7 @@ private class MachineLearningServiceImpl @Inject() (
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression
-  ): Traversable[(RegressionEvalMetric.Value, Double)] = {
+  ): Traversable[(RegressionEvalMetric.Value, Double, Double)] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
     val dataFrame = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
@@ -393,14 +391,16 @@ private class MachineLearningServiceImpl @Inject() (
     metricWithEvaluators: Traversable[(Q, Evaluator)],
     trainData: DataFrame,
     testData: DataFrame
-  ): Traversable[(Q, Double)] = {
+  ): Traversable[(Q, Double, Double)] = {
     // Fit the model
     val lrModel = estimator.fit(trainData)
 
-    // Make predictions.
-    val predictions = lrModel.transform(testData)
+    val trainPredictions = lrModel.transform(trainData)
+    val testPredictions = lrModel.transform(testData)
 
-    metricWithEvaluators.map{ case (metric, evaluator) => (metric, evaluator.evaluate(predictions))}
+    metricWithEvaluators.map { case (metric, evaluator) =>
+      (metric, evaluator.evaluate(trainPredictions), evaluator.evaluate(testPredictions))
+    }
   }
 
   private def fit[M <: Model[M], Q](
@@ -523,7 +523,9 @@ private class MachineLearningServiceImpl @Inject() (
           weightAccessor.getWeight(reservoirNode, outputNode)
       }.flatten
 
-      RCPredictionResults(squares, samps, outputs.toSeq, desiredOutputs, weights)
+      val targetVariance = MathUtil.calcStats(0, targetSeries).getVariance.toDouble
+
+      RCPredictionResults(squares, samps, outputs.toSeq, desiredOutputs, weights, targetVariance)
     }
 
     Future {
@@ -540,4 +542,3 @@ object ClassificationEvalMetric extends Enumeration {
 object RegressionEvalMetric extends Enumeration {
   val mse, rmse, r2, mae = Value
 }
-

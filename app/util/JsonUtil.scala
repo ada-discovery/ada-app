@@ -60,6 +60,27 @@ object JsonUtil {
     sb.toString
   }
 
+  def traverse(json: JsObject, path: String): Seq[JsValue] = {
+    // helper function to extract JS values from an JS object
+    def extractJsValues(jsObject: JsObject, fieldName: String) =
+      (jsObject \ fieldName).toOption.map ( jsValue =>
+        jsValue match {
+          case x: JsArray => x.value
+          case _ => Seq(jsValue)
+        }
+      )
+
+    path.split('.').foldLeft(Seq(json: JsValue)) {
+      case (jsons: Seq[JsValue], fieldName) =>
+        jsons.map { json =>
+          json match {
+            case x: JsObject => extractJsValues(x, fieldName)
+            case _ => None
+          }
+        }.flatten.flatten
+    }
+  }
+
   private def replaceAll(
     replacements: Traversable[(String, String)])(
     value : String

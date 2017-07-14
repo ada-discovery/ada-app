@@ -38,6 +38,8 @@ GET         /ldap/:id/get                                                       
 # Admin
 GET         /admin/runnables                                                        controllers.AdminController.listRunnables
 POST        /admin/runScript                                                        controllers.AdminController.runScript(className : String)
+GET         /admin/showRCPrediction                                                 controllers.AdminController.showRCPrediction
+POST        /admin/runRCPrediction                                                  controllers.AdminController.runRCPrediction
 
 # Data Set Import
 GET         /admin/dataSetImport                                                    controllers.dataset.DataSetImportController.find(p: Int ?= 0, s: String ?= "dataSpaceName", filter: Seq[models.FilterCondition] ?= Nil)
