@@ -779,7 +779,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           calcDistributionCounts(criteria, field, groupField, numericBinCount).map { countSeries =>
             val chartTitle = title.getOrElse(getDistributionCountChartTitle(field, groupField))
 
-            createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, displayOptions)
+            createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, numericBinCount, displayOptions)
           }
         }.getOrElse(
           Future(None)
@@ -837,7 +837,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         field.map { field =>
           val countSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
           val chartTitle = title.getOrElse(getDistributionCountChartTitle(field, groupField))
-          createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, displayOptions)
+          createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, numericBinCount, displayOptions)
         }.flatten
 
       case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
@@ -1171,7 +1171,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // create a distribution chart and set the height
         val distributionChart = field.map { field =>
           val chartTitle = getDistributionCountChartTitle(field, groupField)
-          createDistributionChartSpec(distributionCountSeries, field, chartTitle, true, false, false, false, MultiChartDisplayOptions(height = Some(500)))
+          createDistributionChartSpec(distributionCountSeries, field, chartTitle, true, false, false, false, None, MultiChartDisplayOptions(height = Some(500)))
         }.flatten
 
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
@@ -1904,6 +1904,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     showLegend: Boolean,
     useRelativeValues: Boolean,
     isCumulative: Boolean,
+    maxCategoricalBinCount: Option[Int],
     displayOptions: MultiChartDisplayOptions
   ): Option[Widget] = {
     val fieldTypeId = field.fieldTypeSpec.fieldType
@@ -1920,6 +1921,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             }.filter(_._2 > 0)
 
             val sortedLabels: Seq[String] = nonZeroLabelSumCounts.toSeq.sortBy(_._2).map(_._1.toString)
+            val topSortedLabels  = maxCategoricalBinCount match {
+              case Some(maxCategoricalBinCount) => sortedLabels.takeRight(maxCategoricalBinCount)
+              case None => sortedLabels
+            }
 
             val countSeriesSorted = countSeries.map { case (seriesName, counts) =>
 
@@ -1928,7 +1933,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 (label, Count(label, count.count, count.key))
               }.toMap
 
-              val newCounts = sortedLabels.map ( label =>
+              val newCounts = topSortedLabels.map ( label =>
                 labelCountMap.get(label).getOrElse(Count(label, 0, None))
               )
               (seriesName, newCounts)
