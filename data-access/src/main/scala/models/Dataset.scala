@@ -72,13 +72,15 @@ sealed trait DisplayOptions {
   val gridOffset: Option[Int]
   val height: Option[Int]
   val isTextualForm: Boolean
+  val title: Option[String]
 }
 
 case class BasicDisplayOptions(
   gridWidth: Option[Int] = None,
   gridOffset: Option[Int] = None,
   height: Option[Int] = None,
-  isTextualForm: Boolean = false
+  isTextualForm: Boolean = false,
+  title: Option[String] = None
 ) extends DisplayOptions
 
 case class MultiChartDisplayOptions(
@@ -86,13 +88,13 @@ case class MultiChartDisplayOptions(
   gridOffset: Option[Int] = None,
   height: Option[Int] = None,
   chartType: Option[ChartType.Value] = None,
-  isTextualForm: Boolean = false
+  isTextualForm: Boolean = false,
+  title: Option[String] = None
 ) extends DisplayOptions
 
 abstract class WidgetSpec {
   val fieldNames: Traversable[String]
   val subFilterId: Option[BSONObjectID]
-//  val title: Option[String]
   val displayOptions: DisplayOptions
 }
 

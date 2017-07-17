@@ -115,6 +115,10 @@
     <input type="checkbox" id="isTextualForm" name="isTextualForm" @if(widgetSpec.displayOptions.isTextualForm) { checked="checked"}/>
 }
 
+@titleElement(widgetSpec: WidgetSpec) = {
+    <input type="text" id="title" style="width:90px" value="@widgetSpec.displayOptions.title.getOrElse("")">
+}
+
 @spec(widgetSpec: WidgetSpec) = {
     <div class="row">
         Fields: @fieldLabels(widgetSpec)
@@ -159,6 +163,7 @@
             (None, "Grid Width", gridWidthElement),
             (None, "Height", heightElement),
             (None, "Textual?", isTextualFormElement),
+            (None, "Title", titleElement),
             (None, "Chart Type", {x =>
                 if(x.displayOptions.isInstanceOf[MultiChartDisplayOptions]) {
                     editableChartType(x.displayOptions.asInstanceOf[MultiChartDisplayOptions].chartType)
@@ -232,6 +237,7 @@
         var gridWidthValue = "";
         var heightValue = "";
         var isTextualFormValue = false;
+        var titleValue = "";
         var chartTypeValue = "";
 
         if (displayOptions) {
@@ -250,6 +256,9 @@
             if (displayOptions["chartType"]) {
                 chartTypeValue = displayOptions["chartType"];
             }
+            if (displayOptions["title"]) {
+                titleValue = displayOptions["title"];
+            }
         }
         var textualFormChecked = (isTextualFormValue) ? "checked='checked'" : ""
 
@@ -257,6 +266,7 @@
         var gridWidthColumn = "<td><input type='text' id='gridWidth' style='width:40px' value='" + gridWidthValue + "'/></td>";
         var heightColumn = "<td><input type='text' id='height' style='width:60px' value='" + heightValue + "'/></td>";
         var isTextualFormColumn = "<td><input type='checkbox' id='isTextualForm' name='isTextualForm'" + textualFormChecked + "'/></td>";
+        var titleColumn = "<td><td><input type='text' id='height' style='width:60px' value='" + titleValue + "'/></td>";
         var chartTypeColumn = (isDistributionOrCumulativeCountType) ? `<td>@editableChartType(None)</td>` : "<td></td>";
 
         // concrete class name and check box columns
@@ -274,6 +284,7 @@
         row.append(gridWidthColumn)
         row.append(heightColumn)
         row.append(isTextualFormColumn)
+        row.append(titleColumn)
         row.append(chartTypeColumn)
 
         if (chartTypeValue) {
@@ -510,6 +521,7 @@
         setIfNotNull(displayOptions, "gridWidth", getIntValue('gridWidth', 4))
         setIfNotNull(displayOptions, "height", getIntValue('height', 400))
         setIfNotNull(displayOptions, "chartType", getValue('chartType'))
+        setIfNotNull(displayOptions, "title", getValue('title'))
         displayOptions["isTextualForm"] = row.find('#isTextualForm').is(':checked')
         output["displayOptions"] = displayOptions;
 

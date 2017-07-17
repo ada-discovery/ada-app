@@ -768,6 +768,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     nameFieldMap: Map[String, Field])(
     widgetSpec: WidgetSpec
   ): Future[Option[(Widget, Seq[String])]] = {
+    val title = widgetSpec.displayOptions.title
     val chartSpecFuture: Future[Option[Widget]] = widgetSpec match {
 
       case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
@@ -776,7 +777,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         field.map { field =>
           calcDistributionCounts(criteria, field, groupField, numericBinCount).map { countSeries =>
-            val chartTitle = getDistributionCountChartTitle(field, groupField)
+            val chartTitle = title.getOrElse(getDistributionCountChartTitle(field, groupField))
+
             createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, displayOptions)
           }
         }.getOrElse(
@@ -789,7 +791,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         field.map { field =>
           calcCumulativeCounts(criteria, field, groupField, numericBinCount).map { cumCountSeries =>
-            val chartTitle = getCumulativeCountChartTitle(field, groupField)
+            val chartTitle = title.getOrElse(getCumulativeCountChartTitle(field, groupField))
+
             val nonZeroCountSeries = cumCountSeries.filter(_._2.exists(_.count > 0))
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
             Some(NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, true, nonZeroCountSeries, initializedDisplayOptions))
@@ -805,7 +808,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         } yield
           quantiles.map { quants =>
             implicit val ordering = quants.ordering
-            BoxWidget(field.labelOrElseName, field.labelOrElseName, quants, None, None, displayOptions)
+            val chartTitle = title.getOrElse(field.labelOrElseName)
+            BoxWidget(chartTitle, field.labelOrElseName, quants, None, None, displayOptions)
           }
 
       case TemplateHtmlWidgetSpec(content, subFilter, displayOptions) =>
@@ -822,6 +826,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     nameFieldMap: Map[String, Field])(
     widgetSpec: WidgetSpec
   ): Option[(Widget, Seq[String])] = {
+    val title = widgetSpec.displayOptions.title
+
     val chartSpecOption: Option[Widget] = widgetSpec match {
 
       case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
@@ -830,7 +836,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         field.map { field =>
           val countSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
-          val chartTitle = getDistributionCountChartTitle(field, groupField)
+          val chartTitle = title.getOrElse(getDistributionCountChartTitle(field, groupField))
           createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, displayOptions)
         }.flatten
 
@@ -841,7 +847,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val series = calcCumulativeCounts(items, field, groupField, numericBinCount)
         val nonZeroCountSeries = series.filter(_._2.exists(_.count > 0))
 
-        val chartTitle = getCumulativeCountChartTitle(field, groupField)
+        val chartTitle = title.getOrElse(getCumulativeCountChartTitle(field, groupField))
 
         val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
         val chartSpec = NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, true, nonZeroCountSeries, initializedDisplayOptions)
@@ -851,7 +857,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         nameFieldMap.get(fieldName).map { field =>
           statsService.calcQuantiles(items, field).map { quants =>
             implicit val ordering = quants.ordering
-            BoxWidget(field.labelOrElseName, field.labelOrElseName, quants, None, None, displayOptions)
+            val chartTitle = title.getOrElse(field.labelOrElseName)
+            BoxWidget(chartTitle, field.labelOrElseName, quants, None, None, displayOptions)
           }
         }.flatten
 
@@ -861,12 +868,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val shortXFieldLabel = shorten(xField.labelOrElseName, 20)
         val shortYFieldLabel = shorten(yField.labelOrElseName, 20)
 
+        val chartTitle = title.getOrElse(s"$shortXFieldLabel vs. $shortYFieldLabel")
+
         val chartSpec = createScatterChartSpec(
+          Some(chartTitle),
           items,
           xField,
           yField,
           groupFieldName.map(nameFieldMap.get).flatten,
-          Some(s"$shortXFieldLabel vs. $shortYFieldLabel"),
           displayOptions
         )
         Some(chartSpec)
@@ -874,7 +883,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       case CorrelationWidgetSpec(fieldNames, subFilter, displayOptions) =>
         val corrFields = fieldNames.map(nameFieldMap.get).flatten
 
+        val chartTitle = title.getOrElse("Correlations")
+
         val chartSpec = createPearsonCorrelationChartSpec(
+          Some(chartTitle),
           items,
           corrFields,
           displayOptions
@@ -1045,11 +1057,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val chartSpec: Option[ScatterWidget] =
         (xField zip yField).headOption.map { case (xField, yField) =>
           createScatterChartSpec(
+            None,
             xyzItems,
             xField,
             yField,
             groupField,
-            None,
             BasicDisplayOptions(height = Some(500))
           )
         }
@@ -1214,7 +1226,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       chartFields <- getFields(fieldNames)
 
       // generate the correlation chart
-      correlationChartSpec = createPearsonCorrelationChartSpec(chartItems, chartFields.toSeq, BasicDisplayOptions(height = Some(500)))
+      correlationChartSpec = createPearsonCorrelationChartSpec(None, chartItems, chartFields.toSeq, BasicDisplayOptions(height = Some(500)))
 
       // get the current fields
       currentFields <- fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
@@ -1620,11 +1632,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
             val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Integer, false)
             val scatter = createScatterChartSpec(
+              None,
               jsonsWithClasses,
               xField,
               yField,
               Some(clusterClassField),
-              None,
               BasicDisplayOptions(height = Some(500))
             )
 
@@ -2043,11 +2055,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def createScatterChartSpec(
+    title: Option[String],
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
     groupField: Option[Field],
-    title: Option[String] = None,
     displayOptions: DisplayOptions = BasicDisplayOptions()
   ): ScatterWidget = {
     val data = statsService.collectScatterData(xyzItems, xField, yField, groupField)
@@ -2064,6 +2076,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def createPearsonCorrelationChartSpec(
+    title: Option[String],
     items: Traversable[JsObject],
     fields: Seq[Field],
     displayOptions: DisplayOptions
@@ -2071,7 +2084,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val correlations = statsService.calcPearsonCorrelations(items, fields)
 
     val fieldLabels = fields.map(_.labelOrElseName)
-    HeatmapWidget("Correlations", fieldLabels, fieldLabels, correlations, Some(-1), Some(1), displayOptions)
+    HeatmapWidget(
+      title.getOrElse("Correlations"),
+      fieldLabels,
+      fieldLabels,
+      correlations,
+      Some(-1),
+      Some(1),
+      displayOptions
+    )
   }
 }
 
