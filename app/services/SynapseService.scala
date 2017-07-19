@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import models.synapse.JsonFormat._
-import util.ZipFileIterator
+import util.{JsonUtil, ZipFileIterator}
 
 trait SynapseServiceFactory {
   def apply(@Assisted("username") username: String, @Assisted("password") password: String): SynapseService
@@ -117,7 +117,19 @@ trait SynapseService {
     * @param tableId
     * @return
     */
-  def downloadTableFilesInBulk(fileHandleIds: Traversable[String], tableId: String, attemptNum: Option[Int] = None): Future[Iterator[(String, String)]]
+  def downloadTableFilesInBulk(
+    fileHandleIds: Traversable[String],
+    tableId: String,
+    attemptNum: Option[Int] = None
+  ): Future[Iterator[(String, String)]]
+
+  def updateJsonsFileFields(
+    fileFieldNames: Seq[String],
+    tableId: String,
+    bulkDownloadGroupNumber: Int,
+    bulkDownloadAttemptNumber: Option[Int])(
+    jsons: Seq[JsObject]
+  ): Future[Seq[JsObject]]
 }
 
 protected[services] class SynapseServiceWSImpl @Inject() (
@@ -355,6 +367,55 @@ protected[services] class SynapseServiceWSImpl @Inject() (
         case None => downloadAux
       }
     }
+
+  override def updateJsonsFileFields(
+    fileFieldNames: Seq[String],
+    tableId: String,
+    bulkDownloadGroupNumber: Int,
+    bulkDownloadAttemptNumber: Option[Int])(
+    jsons: Seq[JsObject]
+  ): Future[Seq[JsObject]] = {
+    val fileHandleIds = fileFieldNames.map { fieldName =>
+      jsons.map(json =>
+        JsonUtil.toString(json \ fieldName)
+      )
+    }.flatten.flatten
+
+    if (fileHandleIds.nonEmpty) {
+      val groupSize = Math.max(fileHandleIds.size / bulkDownloadGroupNumber, 1)
+      val groups = {
+        if (fileHandleIds.size.toDouble / groupSize > bulkDownloadGroupNumber)
+          fileHandleIds.grouped(groupSize + 1)
+        else
+          fileHandleIds.grouped(groupSize)
+      }.toSeq
+
+      logger.info(s"Bulk download of Synapse column data for ${fileHandleIds.size} file handles (split into ${groups.size} groups) initiated.")
+
+      // download the files in a bulk
+      val fileHandleIdContentsFutures = groups.par.map { groupFileHandleIds =>
+        downloadTableFilesInBulk(groupFileHandleIds, tableId, bulkDownloadAttemptNumber)
+      }
+
+      Future.sequence(fileHandleIdContentsFutures.toList).map(_.flatten).map { fileHandleIdContents =>
+        logger.info(s"Download of ${fileHandleIdContents.size} Synapse column data finished. Updating JSONs with Synapse column data...")
+        val fileHandleIdContentMap = fileHandleIdContents.toMap
+        // update jsons with new file contents
+        val newJsons = jsons.map { json =>
+          val fieldNameJsons = fileFieldNames.map { fieldName =>
+            JsonUtil.toString(json \ fieldName).map(fileHandleId =>
+              (fieldName, Json.parse(fileHandleIdContentMap.get(fileHandleId).get))
+            )
+          }.flatten
+          json ++ JsObject(fieldNameJsons)
+        }
+
+        newJsons
+      }
+    } else
+    // no update
+      Future(jsons)
+  }
 
   def retry[T](failureMessage: String, maxAttemptNum: Int)(f: => Future[T]): Future[T] = {
     def retryAux(attempt: Int): Future[T] =

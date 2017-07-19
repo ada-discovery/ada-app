@@ -48,7 +48,16 @@ private class SynapseDataSetImporter @Inject() (
           val fileFieldNames = fileColumns.map { fileColumn =>
             JsonUtil.escapeKey(fileColumn.name.replaceAll("\"", "").trim)
           }
-          val fun = updateJsonsFileFields(synapseService, fileFieldNames, importInfo.tableId, importInfo.bulkDownloadGroupNumber) _
+
+          val bulkDownloadGroupNumber = importInfo.bulkDownloadGroupNumber.getOrElse(synapseDefaultBulkDownloadGroupNumber)
+
+          val fun = synapseService.updateJsonsFileFields(
+            fileFieldNames,
+            importInfo.tableId,
+            bulkDownloadGroupNumber,
+            Some(synapseBulkDownloadAttemptNumber)
+          ) _
+
           importDataSetAux(importInfo, synapseService, fileFieldNames, Some(fun), importInfo.batchSize)
         }
       } yield
@@ -131,56 +140,6 @@ private class SynapseDataSetImporter @Inject() (
     } catch {
       case e: Exception => Future.failed(e)
     }
-  }
-
-  private def updateJsonsFileFields(
-    synapseService: SynapseService,
-    fileFieldNames: Seq[String],
-    tableId: String,
-    bulkDownloadGroupNumber: Option[Int])(
-    jsons: Seq[JsObject]
-  ): Future[Seq[JsObject]] = {
-    val fileHandleIds = fileFieldNames.map { fieldName =>
-      jsons.map(json =>
-        JsonUtil.toString(json \ fieldName)
-      )
-    }.flatten.flatten
-
-    val groupNumber = bulkDownloadGroupNumber.getOrElse(synapseDefaultBulkDownloadGroupNumber)
-    if (fileHandleIds.nonEmpty) {
-      val groupSize = Math.max(fileHandleIds.size / groupNumber, 1)
-      val groups = {
-        if (fileHandleIds.size.toDouble / groupSize > groupNumber)
-          fileHandleIds.grouped(groupSize + 1)
-        else
-          fileHandleIds.grouped(groupSize)
-      }.toSeq
-
-      logger.info(s"Bulk download of Synapse column data for ${fileHandleIds.size} file handles (split into ${groups.size} groups) initiated.")
-
-      // download the files in a bulk
-      val fileHandleIdContentsFutures = groups.par.map { groupFileHandleIds =>
-        synapseService.downloadTableFilesInBulk(groupFileHandleIds, tableId, Some(synapseBulkDownloadAttemptNumber))
-      }
-
-      Future.sequence(fileHandleIdContentsFutures.toList).map(_.flatten).map { fileHandleIdContents =>
-        logger.info(s"Download of ${fileHandleIdContents.size} Synapse column data finished. Updating JSONs with Synapse column data...")
-        val fileHandleIdContentMap = fileHandleIdContents.toMap
-        // update jsons with new file contents
-        val newJsons = jsons.map { json =>
-          val fieldNameJsons = fileFieldNames.map { fieldName =>
-            JsonUtil.toString(json \ fieldName).map(fileHandleId =>
-              (fieldName, Json.parse(fileHandleIdContentMap.get(fileHandleId).get))
-            )
-          }.flatten
-          json ++ JsObject(fieldNameJsons)
-        }
-
-        newJsons
-      }
-    } else
-      // no update
-      Future(jsons)
   }
 
   protected def createSynapseJsonsWithFieldTypes(

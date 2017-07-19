@@ -222,6 +222,8 @@ class RCPredictionServiceImpl @Inject()(
           setting.getWeightAdaptationIterationNum
         )
 
+        println(s"Mean RNMSE $meanRnmse, mean SAMP $meanSamp")
+
         val settingAndResults = RCPredictionSettingAndResults(
           None,
           setting.getReservoirNodeNum,
