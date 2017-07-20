@@ -391,13 +391,25 @@ class RCPredictionServiceImpl @Inject()(
     val lastRnmses = results.map { result =>
       if (result.squareErrors.size >= lastNum) {
         val meanSquare = result.squareErrors.takeRight(lastNum).sum / lastNum
-        Some(math.sqrt(meanSquare / result.targetVariance))
+        if (meanSquare.isNaN || meanSquare.isInfinity) {
+          println("Mean MSE is NaN or infinite")
+          None
+        } else if (result.targetVariance.isNaN || result.targetVariance.isInfinity) {
+          println("Variance is NaN or infinite")
+          None
+        } else
+          Some(math.sqrt(meanSquare / result.targetVariance))
       } else
         None
     }.flatten
 
     // TODO: check the calculation
-    val meanRnmseLast = lastRnmses.sum / lastRnmses.size
+
+    val lastRnmsesFinite = lastRnmses.filterNot(x => x.isNaN || x.isInfinity)
+    if (lastRnmsesFinite.size != lastRnmses.size) {
+      println(s" ${lastRnmses.size - lastRnmsesFinite.size} NaN or infinite RNMSEs found")
+    }
+    val meanRnmseLast = lastRnmsesFinite.sum / lastRnmsesFinite.size
     val meanSampLast = meanSamps.sum / lastNum
 
     (meanRnmseLast, meanSampLast)

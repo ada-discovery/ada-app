@@ -207,6 +207,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       case None => csvEOL
     }
 
+    val fieldNames = result(dataViewTableColumnNames(dataViewId))
+
     exportToCsv(
       csvFileName,
       delimiter,
@@ -214,10 +216,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       if (replaceEolWithSpace) csvCharReplacements else Nil)(
       result(dsa.setting).exportOrderByFieldName,
       filter,
-      if (tableColumnsOnly)
-        result(dataViewTableColumnNames(dataViewId))
-      else
-        Nil
+      if (tableColumnsOnly) fieldNames else Nil,
+      if (tableColumnsOnly) Some(fieldNames) else None
     )
   }
 

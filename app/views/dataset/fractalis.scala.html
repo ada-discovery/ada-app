@@ -50,12 +50,18 @@
 
                 dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getField(fieldName).ajax( {
                     success: function(field) {
+                        console.log(field)
                         fjs.loadData([
                             {
-                                data_type: field.fieldType,
-                                data_set: '@context.dataSetId',
-                                projection: fieldName,
-                                label: fieldLabel
+                                dictionary: {
+                                    name: fieldName,
+                                    projection: fieldName,
+                                    label: fieldLabel,
+                                    fieldType: field.fieldType,
+                                    numValues: field.numValues,
+                                    isArray: field.isArray
+                                },
+                                data_set: '@context.dataSetId'
                             }
                         ])
                     },
