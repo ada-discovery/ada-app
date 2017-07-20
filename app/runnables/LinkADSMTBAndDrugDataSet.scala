@@ -7,6 +7,7 @@ import dataaccess.Criterion.Infix
 import dataaccess.{FieldTypeHelper, NotEqualsNullCriterion}
 import models._
 import persistence.dataset.DataSetAccessorFactory
+import play.api.libs.json.{JsNull, JsNumber}
 import services.DataSetService
 
 import scala.concurrent.Await
@@ -31,14 +32,14 @@ class LinkADSMTBAndDrugDataSet @Inject()(
   private val linkedDataSetId = "adsm-tb.global_w_drugs"
   private val linkedDataSetName = "Global with Drugs"
 
-  private def normDataSetSetting = DataSetSetting(
+  private def linkedDataSetSetting = DataSetSetting(
     None,
     linkedDataSetId,
     "_id",
     None,
     None,
     None,
-    "sampletypeid",
+    "country",
     None,
     None,
     false,
@@ -54,7 +55,7 @@ class LinkADSMTBAndDrugDataSet @Inject()(
   private val drugCodeFieldName2 = "id"
   private val drugFieldName2 = "name"
 
-  private val newDrugField = Field("drug_harmonized_name", Some("Harmonized Drug Name"), FieldTypeId.Enum)
+  private val harmonizedDrugField = Field("drug_harmonized_name", Some("Harmonized Drug Name"), FieldTypeId.Enum)
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
 
@@ -64,9 +65,9 @@ class LinkADSMTBAndDrugDataSet @Inject()(
       globalMetaInfo <- globalDsa.metaInfo
 
       // register the linked data set (if not registered already)
-      mergedDsa <- dsaf.register(
+      linkedDsa <- dsaf.register(
         globalMetaInfo.copy(_id = None, id = linkedDataSetId, name = linkedDataSetName, timeCreated = new ju.Date()),
-        Some(normDataSetSetting),
+        Some(linkedDataSetSetting),
         None
       )
 
@@ -80,18 +81,18 @@ class LinkADSMTBAndDrugDataSet @Inject()(
       // get all the drug fields
       drugFields <- drugFieldRepo.find()
 
-      // group the global items by drug code
-      drugCodeGrouppedGlobalItems <- globalDataSetRepo.find().map { jsons =>
+      // get the global items with drug codes
+      drugCodeGlobalItems <- globalDataSetRepo.find().map { jsons =>
         jsons.map { json =>
           val drugCode = globalDrugCodeFieldType.jsonToDisplayString(json \ drugCodeFieldName1)
           (drugCode, json)
-        }.groupBy(_._1)
+        }
       }
 
-      refDrugCodes = drugCodeGrouppedGlobalItems.map(_._1)
+      refDrugCodes = drugCodeGlobalItems.map(_._1).filter(_.nonEmpty).toSet
 
       // clinical items
-      drugCodeHarmonizedNameMap <- drugDataSetRepo.find(
+      drugCodeHarmonizedNames <- drugDataSetRepo.find(
         criteria = Seq(drugCodeFieldName2 #-> refDrugCodes.toSeq),
         projection = Seq(drugCodeFieldName2, drugFieldName2)
       ).map { jsons =>
@@ -99,30 +100,43 @@ class LinkADSMTBAndDrugDataSet @Inject()(
           val drugCode = (json \ drugCodeFieldName2).as[String]
           val drugName = (json \ drugFieldName2).as[String]
           (drugCode, drugName)
-        }.toMap
+        }.toSeq.sortBy(_._1).zipWithIndex.map { case ((drugCode, drugName), index) =>
+          (drugCode, (drugName, index))
+        }
       }
 
-      // update the merged dictionary
+      // update the linked dictionary
       _ <- {
-        val fieldNameAndTypes = (globalFields ++ Seq(newDrugField)).map( field => (field.name, field.fieldTypeSpec))
+        val drugEnumMap = drugCodeHarmonizedNames.map { case (_, (drugName, index)) => (index.toString, drugName)}.toMap
+        val fullHarmonizedDrugField = harmonizedDrugField.copy(numValues = Some(drugEnumMap))
+
+        val fieldNameAndTypes = (globalFields ++ Seq(fullHarmonizedDrugField)).map( field => (field.name, field.fieldTypeSpec))
         dataSetService.updateDictionary(linkedDataSetId, fieldNameAndTypes, false, true)
       }
 
-//      mergedJsons = {
-//        drugCodeGrouppedGlobalItems.map { case (bloodKit, clinicalJson) =>
-//          biosampleKitMap.get(bloodKit).map( biosampleJsons =>
-//            biosampleJsons.map { case (_, biosampleJson) =>
-//              clinicalJson.++(biosampleJson)
-//            }
-//          )
-//        }.flatten.flatten
-//      }
+      linkedJsons = {
+        val drugCodeHarmonizedNameMap = drugCodeHarmonizedNames.toMap
+        drugCodeGlobalItems.map { case (drugCode, globalJson) =>
+
+          val drugIndexJsValue =
+            if (drugCode.nonEmpty) {
+              drugCodeHarmonizedNameMap.get(drugCode).map { case (_, enumIndex) =>
+                JsNumber(enumIndex)
+              }.getOrElse(
+                JsNull
+              )
+            } else
+              JsNull
+
+          globalJson.+(harmonizedDrugField.name -> drugIndexJsValue)
+        }
+      }
 
       // delete all from the old data set
-      _ <- mergedDsa.dataSetRepo.deleteAll
+      _ <- linkedDsa.dataSetRepo.deleteAll
 
       // process and save jsons
-//      _ <- dataSetService.saveOrUpdateRecords(mergedDsa.dataSetRepo, mergedJsons.toSeq, None, false, None, Some(100))
+      _ <- dataSetService.saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(100))
     } yield
       ()
 

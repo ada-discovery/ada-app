@@ -37,7 +37,7 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
   private val linkedDataSetId = "lux_park.ibbl_biosamples_blood_patient"
   private val linkedDataSetName = "Patient Blood Biosample"
 
-  private def normDataSetSetting = DataSetSetting(
+  private def linkedDataSetSetting = DataSetSetting(
     None,
     linkedDataSetId,
     "_id",
@@ -73,7 +73,7 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
       // register the merged data set (if not registered already)
       linkedDsa <- dsaf.register(
         biosampleMetaInfo.copy(_id = None, id = linkedDataSetId, name = linkedDataSetName, timeCreated = new ju.Date()),
-        Some(normDataSetSetting),
+        Some(linkedDataSetSetting),
         None
       )
 
@@ -104,9 +104,12 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
       biosampleKitMap <- biosampleDataSetRepo.find().map { jsons =>
         jsons.map { json =>
           val aliquotId = (json \ biosampleAliquotFieldName).as[String]
-          val kitId = aliquotId.substring(0, Math.min(aliquotId.size, 15))
-          (kitId, json)
-        }.groupBy(_._1)
+          if (aliquotId.size >= 15) {
+            val kitId = aliquotId.substring(0, 15)
+            Some((kitId, json))
+          } else
+            None
+        }.flatten.groupBy(_._1)
       }
 
       linkedJsons = {

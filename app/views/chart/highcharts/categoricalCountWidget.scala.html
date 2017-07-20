@@ -11,7 +11,11 @@
 
 <script type="text/javascript">
     $(function () {
-        var categories = [ @widget.data.head._2.map { count => '@count.value',}];
+        var categories = @if(widget.data.isEmpty) {
+            []
+        } else {
+            [ @widget.data.head._2.map { count => '@count.value',}];
+        }
         var datas = [@toChartData(widget).map { singleSeries => {
             name: '@singleSeries._1',
             data: [@singleSeries._2.map { case (name, y, key) => {name: '@name', y: @y, key: '@key' }, }]

@@ -10,7 +10,7 @@ import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
 import controllers.core.WebContext
 import models.{DataSetMetaInfo, Field, FieldTypeId}
-import models.ml.RCPredictionSetting
+import models.ml.{RCPredictionSetting, RCPredictionSettings}
 import play.api.data.Forms._
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory
@@ -45,23 +45,26 @@ class AdminController @Inject() (
   private val messageLogger = MessageLogger(logger, messageRepo)
 
   private val mergeMPowerWithDemographics = configuration.getBoolean("mpower.merge_with_demographics").get
-  private implicit val seqFormatter = SeqFormatter.apply
+  private implicit val stringSeqFormatter = SeqFormatter.apply
+  private implicit val intSeqFormatter = SeqFormatter.applyInt
+  private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
 
   private val form = Form(
     mapping(
-      "reservoirNodeNum" -> number(min = 1, max = 2000),
-      "reservoirInDegree" -> number(min = 1, max = 2000),
-      "inputReservoirConnectivity" -> of(doubleFormat),
-      "reservoirSpectralRadius" -> of(doubleFormat),
-      "washoutPeriod"  -> number(min = 0, max = 2000),
-      "dropRightLength" -> number(min = 0, max = 2000),
+      "reservoirNodeNums" -> of[Seq[Int]],
+      "reservoirInDegrees" -> of[Seq[Int]],
+      "inputReservoirConnectivities" -> of[Seq[Double]],
+      "reservoirSpectralRadiuses" -> of[Seq[Double]],
+      "washoutPeriods" -> of[Seq[Int]],
+      "dropRightLengths" -> of[Seq[Int]],
       "inputSeriesFieldPaths" -> of[Seq[String]],
       "outputSeriesFieldPaths" -> of[Seq[String]],
       "sourceDataSetId" -> nonEmptyText,
       "resultDataSetId" -> nonEmptyText,
       "resultDataSetName" -> nonEmptyText,
+      "resultDataSetIndex" -> optional(number(min = 0, max = 2000)),
       "batchSize" -> optional(number(min = 1, max = 200))
-    )(RCPredictionSetting.apply)(RCPredictionSetting.unapply))
+    )(RCPredictionSettings.apply)(RCPredictionSettings.unapply))
 
   @Inject var messagesApi: MessagesApi = _
 
@@ -162,31 +165,76 @@ class AdminController @Inject() (
         { formWithErrors =>
           Future(BadRequest("Bad bad"))
         },
-        item =>
+        settings =>
           for {
             codeDiagnosisJsonMap <- if (mergeMPowerWithDemographics) createHealthCodeDiagnosisJsonMap else Future(Map[String, JsValue]())
 
-            _ <- mPowerWalkingRCPredictionService.predictAndStoreResults(
-              createReservoirSetting(
-                item.reservoirNodeNum,
-                item.reservoirInDegree,
-                item.inputReservoirConnectivity,
-                item.reservoirSpectralRadius
-              ),
-              item.washoutPeriod,
-              item.dropRightLength,
-              item.inputSeriesFieldPaths,
-              item.outputSeriesFieldPaths,
-              item.sourceDataSetId,
-              item.resultDataSetId,
-              item.resultDataSetName,
-              item.batchSize,
-              if (mergeMPowerWithDemographics) Some(transform(codeDiagnosisJsonMap)) else None
-            )
+            util.seqFutures(toRCSettings(settings)) { item =>
+              mPowerWalkingRCPredictionService.predictAndStoreResults(
+                createReservoirSetting(
+                  item.reservoirNodeNum,
+                  item.reservoirInDegree,
+                  item.inputReservoirConnectivity,
+                  item.reservoirSpectralRadius
+                ),
+                item.washoutPeriod,
+                item.dropRightLength,
+                item.inputSeriesFieldPaths,
+                item.outputSeriesFieldPaths,
+                item.sourceDataSetId,
+                item.resultDataSetId,
+                item.resultDataSetName,
+                item.batchSize,
+                if (mergeMPowerWithDemographics) Some(transform(codeDiagnosisJsonMap)) else None
+              )
+            }
           } yield {
             Ok("Hooray")
           }
       )
+    }
+  }
+
+  private def toRCSettings(
+    settings: RCPredictionSettings
+  ): Seq[RCPredictionSetting] = {
+
+    // get the maximum size of the param seqs
+    val maxSize = Seq(
+      settings.reservoirNodeNums,
+      settings.inputReservoirConnectivities,
+      settings.reservoirSpectralRadiuses,
+      settings.washoutPeriods,
+      settings.dropRightLengths
+    ).foldLeft(0) { case (minSize, seq) => Math.max(minSize, seq.size) }
+
+    def stream[T](xs: Seq[T]) = Stream.continually(xs).flatten.take(maxSize)
+
+    stream(settings.reservoirNodeNums).zip(
+    stream(settings.reservoirInDegrees).zip(
+    stream(settings.inputReservoirConnectivities).zip(
+    stream(settings.reservoirSpectralRadiuses).zip(
+    stream(settings.washoutPeriods).zip(
+    stream(settings.dropRightLengths)))))).zipWithIndex.map {
+
+      case ((reservoirNodeNum, (reservoirInDegree, (inputReservoirConnectivity, (reservoirSpectralRadius, (washoutPeriod, dropRightLength))))), index) =>
+        val resultDataSetIdSuffix = settings.resultDataSetIndex.map(x => "_" + (x + index)).getOrElse("")
+        val resultDataSetNameSuffix = settings.resultDataSetIndex.map(x => " [" + (x + index) + "]").getOrElse("")
+
+        RCPredictionSetting(
+          reservoirNodeNum,
+          reservoirInDegree,
+          inputReservoirConnectivity,
+          reservoirSpectralRadius,
+          washoutPeriod,
+          dropRightLength,
+          settings.inputSeriesFieldPaths,
+          settings.outputSeriesFieldPaths,
+          settings.sourceDataSetId,
+          settings.resultDataSetId + resultDataSetIdSuffix,
+          settings.resultDataSetName + resultDataSetNameSuffix,
+          settings.batchSize
+        )
     }
   }
 

@@ -30,17 +30,18 @@
         <div class="col-md-12">
             @helper.form(action = routes.AdminController.runRCPrediction()) {
                 <fieldset>
-                    @paramElement("reservoirNodeNum", "Reservoir Node Num", Some(50))
-                    @paramElement("reservoirInDegree", "Reservoir In Degree", Some(50))
-                    @paramElement("inputReservoirConnectivity", "Input Reservoir Connectivity", Some(0.5))
-                    @paramElement("reservoirSpectralRadius", "Reservoir Spectral Radius", Some(1))
-                    @paramElement("washoutPeriod", "Washout Period", Some(500))
-                    @paramElement("dropRightLength", "Drop Right Length", Some(500))
+                    @paramElement("reservoirNodeNums", "Reservoir Node Num(s)", Some(50))
+                    @paramElement("reservoirInDegrees", "Reservoir In Degree(s)", Some(50))
+                    @paramElement("inputReservoirConnectivities", "Input Reservoir Connectivity(ies)", Some(0.5))
+                    @paramElement("reservoirSpectralRadiuses", "Reservoir Spectral Radius(es)", Some(1))
+                    @paramElement("washoutPeriods", "Washout Period(s)", Some(500))
+                    @paramElement("dropRightLengths", "Drop Right Length(s)", Some(500))
                     @paramElement("inputSeriesFieldPaths", "Input Series Field Paths", Some("accel_walking_outboundu002ejsonu002eitems.x, accel_walking_outboundu002ejsonu002eitems.y, accel_walking_outboundu002ejsonu002eitems.z"))
                     @paramElement("outputSeriesFieldPaths", "Output Series Field Paths", Some("accel_walking_outboundu002ejsonu002eitems.x"))
                     @paramElement("sourceDataSetId", "Source Data Set Id", Some("mpower_challenge.walking_activity_training"))
                     @paramElement("resultDataSetId", "Result Data Set Id", Some("mpower_challenge.walking_activity_training_rc_weights"))
                     @paramElement("resultDataSetName", "Result Data Set Name", Some("Walking Activity Training (RC) Weights"))
+                    @paramElement("resultDataSetIndex", "Result Data Set Index", Some(1))
                     @paramElement("batchSize", "Batch Size", Some(20))
                 </fieldset>
 
