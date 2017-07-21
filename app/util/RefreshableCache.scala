@@ -18,11 +18,25 @@ abstract class RefreshableCache[ID, T](eagerLoad: Boolean) {
   def apply(id: ID) =
     cache.get(id)
 
+  protected def cacheMissGet(id: ID): Option[T] = None
+
   private def refresh(map : MMap[ID, T]): Unit = this.synchronized {
     map.clear()
-    val future = getAllIds.map(_.map(id =>
-      map.put(id, createInstance(id))
-    ))
+    val future =
+      for {
+        // collect all ids
+        ids <- getAllIds
+
+        // create all instances
+        idInstances <-
+          Future.sequence(
+            ids.map(id =>
+              createInstance(id).map(instance => (id, instance))
+            )
+          )
+      } yield
+        idInstances.toMap
+
     Await.result(future, 10 minutes)
   }
 
@@ -32,5 +46,5 @@ abstract class RefreshableCache[ID, T](eagerLoad: Boolean) {
 
   protected def getAllIds: Future[Traversable[ID]]
 
-  protected def createInstance(id: ID): T
+  protected def createInstance(id: ID): Future[T]
 }

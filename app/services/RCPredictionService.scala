@@ -341,8 +341,12 @@ class RCPredictionServiceImpl @Inject()(
       // register the weight output data set
       weightDsa <- dsaf.register(
         sourceDataSetMetaInfo.copy(_id = None, id = resultDataSetId, name = resultDataSetName, timeCreated = new ju.Date()),
-        Some(resultWeightDataSetSetting(resultDataSetId)),
-        None
+        Some(
+          resultWeightDataSetSetting(resultDataSetId)
+        ),
+        Some(
+          mainDataView(resultsAndJsons.head._1.finalWeights.size)
+        )
       )
 
       // update the dictionary
@@ -376,6 +380,27 @@ class RCPredictionServiceImpl @Inject()(
       }
     } yield
       ()
+
+  private def mainDataView(weightsCount: Int): DataView = {
+    val weightFieldNames = (0 until weightsCount).map( index => ("rc_w_" + index) )
+
+    val distributionWidgets = weightFieldNames.take(6).map(DistributionWidgetSpec(_, None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))))
+
+    val boxPlotWidgets = weightFieldNames.take(6).map(BoxWidgetSpec(_))
+
+    val correlationWidget = CorrelationWidgetSpec(
+      fieldNames = weightFieldNames.take(15),
+      displayOptions = BasicDisplayOptions(gridWidth = Some(6))
+    )
+
+    DataView(
+      None, "Main", Nil,
+      Seq("recordId") ++ weightFieldNames.take(5),
+      distributionWidgets ++ boxPlotWidgets ++ Seq(correlationWidget),
+      2,
+      true
+    )
+  }
 
   private def calcErrors(
     results: Traversable[RCPredictionResults],

@@ -169,7 +169,7 @@ class AdminController @Inject() (
           for {
             codeDiagnosisJsonMap <- if (mergeMPowerWithDemographics) createHealthCodeDiagnosisJsonMap else Future(Map[String, JsValue]())
 
-            util.seqFutures(toRCSettings(settings)) { item =>
+            _ <- util.seqFutures(toRCSettings(settings)) { item =>
               mPowerWalkingRCPredictionService.predictAndStoreResults(
                 createReservoirSetting(
                   item.reservoirNodeNum,

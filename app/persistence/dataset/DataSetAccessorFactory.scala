@@ -50,14 +50,14 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
 
   println("Creating DataSetAccessorFactoryImpl!!!")
 
-  override protected def createInstance(dataSetId: String): DataSetAccessor = {
+  override protected def createInstance(dataSetId: String): Future[DataSetAccessor] = {
     val fieldRepo = fieldRepoFactory(dataSetId)
     val categoryRepo = categoryRepoFactory(dataSetId)
     val filterRepo = filterRepoFactory(dataSetId)
     val dataViewRepo = dataViewRepoFactory(dataSetId)
     val collectionName = dataCollectionName(dataSetId)
 
-    val dataSetAccessorFuture = for {
+    for {
       dataSpaceId <-
       // TODO: dataSpaceMetaInfoRepo is cached and so querying nested objects "dataSetMetaInfos.id" does not work properly
 //        dataSpaceMetaInfoRepo.find(
@@ -83,8 +83,6 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         dataSetSettingRepo
       )
     }
-
-    result(dataSetAccessorFuture, 2 minutes)
   }
 
   protected def dataSetRepoCreate(
@@ -183,7 +181,14 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         _ <- metaInfoFuture
 
         // create a data set accessor (and data view repo)
-        dsa = cache.getOrElseUpdate(metaInfo.id, createInstance(metaInfo.id))
+        dsa <- cache.get(metaInfo.id).map(
+          Future(_)
+        ).getOrElse(
+          createInstance(metaInfo.id).map { dsa =>
+            cache.update(metaInfo.id, dsa)
+            dsa
+          }
+        )
         dataViewRepo = dsa.dataViewRepo
 
         // check if the data view exist
@@ -198,6 +203,8 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         dsa
     }
   }
+
+  override protected def cacheMissGet(id: String): Option[DataSetAccessor] = None
 
   override def register(
     dataSpaceName: String,
