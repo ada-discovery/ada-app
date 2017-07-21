@@ -452,7 +452,9 @@ private class MachineLearningServiceImpl @Inject() (
       Row.fromSeq(values)
     }
 
-    val rdds = sparkContext.parallelize(data.toSeq)
+//    val dataBroadcast = sparkContext.broadcast(data.toSeq)
+//    val rdds = sparkContext.parallelize(dataBroadcast.value)
+//    val rdds = sparkContext.parallelize(data.toSeq)
 
     val structTypes = fieldNameAndTypes.map { case (fieldName, fieldType) =>
       val sparkFieldType: DataType = fieldType.spec.fieldType match {
@@ -478,7 +480,8 @@ private class MachineLearningServiceImpl @Inject() (
 
     val stringTypes = structTypes.filter(_.dataType.equals(StringType))
 
-    val df = session.createDataFrame(rdds, StructType(structTypes))
+//    df = session.createDataFrame(rdd_of_rows)
+    val df = session.createDataFrame(data.toSeq, StructType(structTypes))
 
     stringTypes.foldLeft(df){ case (newDf, stringType) =>
       if (!stringFieldsNotToIndex.contains(stringType.name)) {

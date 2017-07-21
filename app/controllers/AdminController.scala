@@ -239,11 +239,11 @@ class AdminController @Inject() (
   }
 
   private val demographicsDataSetId = "mpower_challenge.demographics_training"
-  private val demographicsDsa = dsaf(demographicsDataSetId).get
+  private val demographicsDsa = dsaf(demographicsDataSetId)
   private val professionalDiagnosisField = Field("professional-diagnosis", None, FieldTypeId.Boolean)
 
   def createHealthCodeDiagnosisJsonMap =
-    demographicsDsa.dataSetRepo.find(
+    demographicsDsa.get.dataSetRepo.find(
       projection = Seq("healthCode", professionalDiagnosisField.name)
     ).map(_.map { json =>
       val healthCode = (json \ "healthCode").as[String]

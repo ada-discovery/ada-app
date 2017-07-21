@@ -50,7 +50,7 @@ class CacheFactory @Inject()(ignite: Ignite) extends Serializable {
     cacheConfig.setSqlFunctionClasses(classOf[CustomSqlFunctions])
     cacheConfig.setName(cacheName)
     cacheConfig.setQueryEntities(Seq(queryEntity))
-    cacheConfig.setCacheMode(CacheMode.PARTITIONED) //  REPLICATED
+    cacheConfig.setCacheMode(CacheMode.LOCAL) //  PARTITIONED
     cacheConfig.setAtomicityMode(CacheAtomicityMode.ATOMIC)
 
     cacheStoreFactoryOption.foreach{ cacheStoreFactory =>

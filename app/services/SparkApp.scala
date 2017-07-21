@@ -19,6 +19,7 @@ class SparkApp {
     .setMaster("local[*]")
     .setAppName("NCER-PD")
     .set("spark.logConf", "true")
+    .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
 
   val session = SparkSession
     .builder()

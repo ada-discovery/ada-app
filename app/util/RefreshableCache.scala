@@ -15,10 +15,19 @@ abstract class RefreshableCache[ID, T](eagerLoad: Boolean) {
     map
   }
 
-  def apply(id: ID) =
-    cache.get(id)
+  def apply(id: ID): Option[T] =
+    cache.get(id) match {
+      case Some(item) => Some(item)
+      case None =>
+        val future = createInstance(id).map { instance =>
+          if (instance.isDefined)
+            cache.put(id, instance.get)
+          instance
+        }
+        Await.result(future, 10 minutes)
+    }
 
-  protected def cacheMissGet(id: ID): Option[T] = None
+  protected def cacheMissGet(id: ID): Future[Option[T]] = Future(None)
 
   private def refresh(map : MMap[ID, T]): Unit = this.synchronized {
     map.clear()
@@ -28,14 +37,11 @@ abstract class RefreshableCache[ID, T](eagerLoad: Boolean) {
         ids <- getAllIds
 
         // create all instances
-        idInstances <-
-          Future.sequence(
-            ids.map(id =>
-              createInstance(id).map(instance => (id, instance))
-            )
-          )
+        idInstances <- createInstances(ids)
       } yield
-        idInstances.toMap
+        idInstances.map { case (id, instance) =>
+          map.put(id, instance)
+        }
 
     Await.result(future, 10 minutes)
   }
@@ -46,5 +52,14 @@ abstract class RefreshableCache[ID, T](eagerLoad: Boolean) {
 
   protected def getAllIds: Future[Traversable[ID]]
 
-  protected def createInstance(id: ID): Future[T]
+  protected def createInstance(id: ID): Future[Option[T]]
+
+  protected def createInstances(
+    ids: Traversable[ID]
+  ): Future[Traversable[(ID, T)]] =
+    Future.sequence(
+      ids.map(id =>
+        createInstance(id).map(_.map(instance => (id, instance)))
+      )
+    ).map(_.flatten)
 }

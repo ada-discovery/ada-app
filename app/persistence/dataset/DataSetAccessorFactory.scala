@@ -1,6 +1,6 @@
 package persistence.dataset
 
-import javax.inject.{Singleton, Named, Inject}
+import javax.inject.{Inject, Named, Singleton}
 
 import dataaccess._
 import models.DataSetFormattersAndIds.DataSetMetaInfoIdentity
@@ -11,8 +11,9 @@ import play.api.Logger
 import play.api.libs.json.JsObject
 import util.RefreshableCache
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.duration._
+import reactivemongo.bson.BSONObjectID
 
+import scala.concurrent.duration._
 import scala.concurrent.Future
 import scala.concurrent.Await._
 
@@ -46,43 +47,67 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo
-  ) extends RefreshableCache[String, DataSetAccessor](true) with DataSetAccessorFactory {
+  ) extends RefreshableCache[String, DataSetAccessor](false) with DataSetAccessorFactory {
 
   println("Creating DataSetAccessorFactoryImpl!!!")
 
-  override protected def createInstance(dataSetId: String): Future[DataSetAccessor] = {
+  override protected def createInstance(
+    dataSetId: String
+  ): Future[Option[DataSetAccessor]] =
+    for {
+      dataSpaceId <-
+      // TODO: dataSpaceMetaInfoRepo is cached and so querying nested objects "dataSetMetaInfos.id" does not work properly
+      //        dataSpaceMetaInfoRepo.find(
+      //          Seq("dataSetMetaInfos.id" #== dataSetId)
+      //        ).map(_.headOption.map(_._id.get))
+      dataSpaceMetaInfoRepo.find().map ( dataSpaceMetaInfos =>
+        dataSpaceMetaInfos.find(_.dataSetMetaInfos.map(_.id).contains(dataSetId)).map(_._id.get)
+      )
+    } yield
+      dataSpaceId.map( spaceId =>
+        createInstanceAux(dataSetId, spaceId)
+      )
+
+  override protected def createInstances(
+    dataSetIds: Traversable[String]
+  ): Future[Traversable[(String, DataSetAccessor)]] =
+    for {
+      dataSetSpaceIds <-
+        dataSpaceMetaInfoRepo.find().map( dataSpaceMetaInfos =>
+          dataSetIds.map( dataSetId =>
+            dataSpaceMetaInfos.find(_.dataSetMetaInfos.map(_.id).contains(dataSetId)).map( dataSpace =>
+              (dataSetId, dataSpace._id.get)
+            )
+          ).flatten
+        )
+    } yield
+      dataSetSpaceIds.map { case (dataSetId, spaceId) =>
+        val accessor = createInstanceAux(dataSetId, spaceId)
+        (dataSetId, accessor)
+      }
+
+  private def createInstanceAux(
+    dataSetId: String,
+    dataSpaceId: BSONObjectID
+  ): DataSetAccessor = {
     val fieldRepo = fieldRepoFactory(dataSetId)
     val categoryRepo = categoryRepoFactory(dataSetId)
     val filterRepo = filterRepoFactory(dataSetId)
     val dataViewRepo = dataViewRepoFactory(dataSetId)
     val collectionName = dataCollectionName(dataSetId)
 
-    for {
-      dataSpaceId <-
-      // TODO: dataSpaceMetaInfoRepo is cached and so querying nested objects "dataSetMetaInfos.id" does not work properly
-//        dataSpaceMetaInfoRepo.find(
-//          Seq("dataSetMetaInfos.id" #== dataSetId)
-//        ).map(_.headOption.map(_._id.get))
-        dataSpaceMetaInfoRepo.find().map ( dataSpaceMetaInfos =>
-          dataSpaceMetaInfos.find(_.dataSetMetaInfos.map(_.id).contains(dataSetId)).map(_._id.get)
-        )
-    } yield {
-      val dataSetMetaInfoRepo =
-        dataSpaceId.map(dataSetMetaInfoRepoFactory(_)).getOrElse(
-          throw new IllegalArgumentException(s"No data set with id '${dataSetId}' found.")
-        )
+    val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(dataSpaceId)
 
-      new DataSetAccessorImpl(
-        dataSetId,
-        fieldRepo,
-        categoryRepo,
-        filterRepo,
-        dataViewRepo,
-        dataSetRepoCreate(collectionName, dataSetId),
-        dataSetMetaInfoRepo,
-        dataSetSettingRepo
-      )
-    }
+    new DataSetAccessorImpl(
+      dataSetId,
+      fieldRepo,
+      categoryRepo,
+      filterRepo,
+      dataViewRepo,
+      dataSetRepoCreate(collectionName, dataSetId),
+      dataSetMetaInfoRepo,
+      dataSetSettingRepo
+    )
   }
 
   protected def dataSetRepoCreate(
@@ -173,6 +198,16 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
           // if already exists update the name
           dataSetMetaInfoRepo.update(metaInfos.head.copy(name = metaInfo.name))
 
+      val dsaFuture =
+        cache.get(metaInfo.id).map(
+          Future(_)
+        ).getOrElse(
+          createInstance(metaInfo.id).map { case Some(dsa) =>
+            cache.update(metaInfo.id, dsa)
+            dsa
+          }
+        )
+
       for {
         // execute the setting registration
         _ <- settingFuture
@@ -181,14 +216,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         _ <- metaInfoFuture
 
         // create a data set accessor (and data view repo)
-        dsa <- cache.get(metaInfo.id).map(
-          Future(_)
-        ).getOrElse(
-          createInstance(metaInfo.id).map { dsa =>
-            cache.update(metaInfo.id, dsa)
-            dsa
-          }
-        )
+        dsa <- dsaFuture
         dataViewRepo = dsa.dataViewRepo
 
         // check if the data view exist
@@ -203,8 +231,6 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         dsa
     }
   }
-
-  override protected def cacheMissGet(id: String): Option[DataSetAccessor] = None
 
   override def register(
     dataSpaceName: String,

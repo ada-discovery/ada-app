@@ -69,23 +69,21 @@ protected class DataSetAccessorImpl(
     } yield
       _dataSetRepo = newDataSetRepo
 
-  override def metaInfo = {
-    val metaInfosFuture = dataSetMetaInfoRepo.find(Seq("id" #== dataSetId))
-    metaInfosFuture.map {
-      _.headOption.getOrElse(
+  override def metaInfo =
+    for {
+      metaInfos <- dataSetMetaInfoRepo.find(Seq("id" #== dataSetId))
+    } yield
+      metaInfos.headOption.getOrElse(
         throw new IllegalStateException("Meta info not available for data set '" + dataSetId + "'.")
       )
-    }
-  }
 
-  override def setting = {
-    val settingsFuture = dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId))
-    settingsFuture.map {
-      _.headOption.getOrElse {
+  override def setting =
+    for {
+      settings <- dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId))
+    } yield
+      settings.headOption.getOrElse(
         throw new IllegalStateException("Setting not available for data set '" + dataSetId + "'.")
-      }
-    }
-  }
+      )
 
   override def updateSetting(setting: DataSetSetting) =
     dataSetSettingRepo.update(setting)
