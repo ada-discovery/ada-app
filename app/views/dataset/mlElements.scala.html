@@ -4,7 +4,8 @@
 
 @(
     allFieldsCall: Call,
-    includeOutputField: Boolean = true
+    includeOutputField: Boolean = true,
+    includeTrainingSettingFields: Boolean = true
 )
 
 @dynamicTableJsImport()
@@ -35,6 +36,21 @@
                 @labelValue("filterId", "Filter") {
                     <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="Filter" value="">
                     <input id="filterId" name="filterId" type="hidden" value="">
+                }
+                <hr/>
+                @labelValue("pcaDims", "PCA Dims") {
+                    <input id="pcaDims" type="text" class="input-lg" placeholder="PCA Dims" value="">
+                }
+                @if(includeTrainingSettingFields) {
+                    @labelValue("trainingTestingSplit", "Training Testing Split") {
+                        <input id="trainingTestingSplit" type="text" class="input-lg" placeholder="Training Testing Split" value="">
+                    }
+                    @labelValue("repetitions", "Repetitions") {
+                        <input id="repetitions" type="text" class="input-lg" placeholder="Repetitions" value="">
+                    }
+                    @labelValue("crossValidationFolds", "Cross Validation Folds") {
+                        <input id="crossValidationFolds" type="text" class="input-lg" placeholder="Cross Validation Folds" value="">
+                    }
                 }
             </fieldset>
 

@@ -17,13 +17,15 @@ import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
 import com.banda.incal.prediction.ErrorMeasures
 import com.banda.math.business.MathUtil
-import org.apache.spark.ml.evaluation.{Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
-import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
-import org.apache.spark.ml.{Estimator, Model}
+import models.ml.{LearningSetting, VectorTransformType}
+import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
+import org.apache.spark.ml.feature._
+import org.apache.spark.ml.{Estimator, Model, Pipeline}
 import org.apache.spark.sql.types.{Metadata, MetadataBuilder, _}
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.ml.clustering._
 import org.apache.spark.ml.linalg.DenseVector
+import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import play.api.libs.json.JsObject
 import services.{RCPredictionResults, SparkApp}
 
@@ -32,7 +34,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
 import scala.collection.JavaConversions._
 
-
 @ImplementedBy(classOf[MachineLearningServiceImpl])
 trait MachineLearningService {
 
@@ -40,20 +41,23 @@ trait MachineLearningService {
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
-    mlModel: Classification
-  ): Traversable[(ClassificationEvalMetric.Value, Double, Double)]
+    mlModel: Classification,
+    setting: LearningSetting = LearningSetting()
+  ): Traversable[ClassificationPerformance]
 
   def regress(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
-    mlModel: Regression
-  ): Traversable[(RegressionEvalMetric.Value, Double, Double)]
+    mlModel: Regression,
+    setting: LearningSetting = LearningSetting()
+  ): Traversable[RegressionPerformance]
 
   def learnUnsupervised[M <: Model[M]](
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
-    mlModel: UnsupervisedLearning
+    mlModel: UnsupervisedLearning,
+    pcaDim: Option[Int] = None
   ): Traversable[(String, Int)]
 
   def predictRCTimeSeries(
@@ -67,7 +71,12 @@ trait MachineLearningService {
     targetSeries: Seq[jl.Double]
   ): Future[RCPredictionResults]
 
-    // AFTSurvivalRegression
+  def transformVectors(
+    data: DataFrame,
+    transformType: VectorTransformType.Value
+  ): DataFrame
+
+  // AFTSurvivalRegression
   // IsotonicRegression
 }
 
@@ -84,15 +93,20 @@ private class MachineLearningServiceImpl @Inject() (
   private val sparkContext = sparkApp.sc
   private implicit val sqlContext = sparkApp.sqlContext
 
+  private val defaultTrainingTestingSplit = 0.8
+
   override def classify(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
-    mlModel: Classification
-  ): Traversable[(ClassificationEvalMetric.Value, Double, Double)] = {
+    mlModel: Classification,
+    setting: LearningSetting
+  ): Traversable[ClassificationPerformance] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
-    val evaluators = ClassificationEvalMetric.values.toSeq.map { metric =>
+    val evaluators = ClassificationEvalMetric.values.filter(metric =>
+      metric != ClassificationEvalMetric.areaUnderPR && metric != ClassificationEvalMetric.areaUnderROC
+    ).toSeq.map { metric =>
       val evaluator = new MulticlassClassificationEvaluator()
         .setLabelCol("label")
         .setPredictionCol("prediction")
@@ -101,7 +115,26 @@ private class MachineLearningServiceImpl @Inject() (
       (metric, evaluator)
     }
 
-    val dataFrame = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
+    val binEvaluators = fields.find(_._1 == outputFieldName).map { case (_, outputFieldType) =>
+      if (outputFieldType.fieldType == FieldTypeId.Boolean || (outputFieldType.fieldType == FieldTypeId.Enum && outputFieldType.enumValues.get.size == 2)) {
+        Seq(ClassificationEvalMetric.areaUnderPR, ClassificationEvalMetric.areaUnderROC).map { metric =>
+          val evaluator = new BinaryClassificationEvaluator()
+            .setLabelCol("label")
+            .setRawPredictionCol("rawPrediction")
+            .setMetricName(metric.toString)
+
+          (metric, evaluator)
+        }
+      } else
+        Nil
+    }.getOrElse(Nil)
+
+    val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
+
+    // reduce the dimensionality if needed
+    val dataFrame = setting.pcaDims.map( pcaDims =>
+      principalFeatureComponents(df, pcaDims)
+    ).getOrElse(df)
 
     // make sure the output is string
 
@@ -114,21 +147,42 @@ private class MachineLearningServiceImpl @Inject() (
       case _ => dataFrame
     }
 
-    val Array(training, test) = finalDf.randomSplit(Array(0.7, 0.3), seed = 11L)
+    val cachedDf = finalDf.cache()
 
-    train(trainer, evaluators, training, test)
+    // split the data into training and test parts
+    val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
+
+    val results = (0  until setting.repetitions.getOrElse(1)).map { _ =>
+      val Array(training, test) = cachedDf.randomSplit(Array(split, 1 - split))
+
+      // run the trainer (with folds) on the given training and test data sets
+      trainWithFolds(trainer, evaluators ++ binEvaluators, setting.crossValidationFolds, training, test)
+    }
+
+    // uncache
+    cachedDf.unpersist()
+
+    // create performance results
+    results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
+      ClassificationPerformance(evalMetric, results.map( x => (x._2, x._3)))
+    }
   }
 
   override def regress(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
-    mlModel: Regression
-  ): Traversable[(RegressionEvalMetric.Value, Double, Double)] = {
+    mlModel: Regression,
+    setting: LearningSetting
+  ): Traversable[RegressionPerformance] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
-    val dataFrame = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
-    val Array(training, test) = dataFrame.randomSplit(Array(0.7, 0.3), seed = 11L)
+    val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
+
+    // reduce the dimensionality if needed
+    val dataFrame = setting.pcaDims.map(pcaDims =>
+      principalFeatureComponents(df, pcaDims)
+    ).getOrElse(df)
 
     val evaluators = RegressionEvalMetric.values.toSeq.map { metric =>
 
@@ -140,22 +194,49 @@ private class MachineLearningServiceImpl @Inject() (
       (metric, evaluator)
     }
 
-    train(trainer, evaluators, training, test)
+    val cachedDf = dataFrame.cache()
+
+    // split the data into training and test parts
+    val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
+
+    val results = (0  until setting.repetitions.getOrElse(1)).map { _ =>
+      val Array(training, test) = cachedDf.randomSplit(Array(split, 1 - split))
+
+      // run the trainer (with folds) on the given training and test data sets
+      trainWithFolds(trainer, evaluators, setting.crossValidationFolds, training, test)
+    }
+
+    // uncache
+    cachedDf.unpersist()
+
+    // create performance results
+    results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
+      RegressionPerformance(evalMetric, results.map( x => (x._2, x._3)))
+    }
   }
 
   override def learnUnsupervised[M <: Model[M]](
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
-    mlModel: UnsupervisedLearning
+    mlModel: UnsupervisedLearning,
+    pcaDim: Option[Int]
   ): Traversable[(String, Int)] = {
     val trainer = SparkMLEstimatorFactory[M](mlModel)
 
     // prepare a data frame for learning
     val featureFieldNames = fields.map(_._1)
     val fieldsWithId = fields ++ Seq((JsObjectIdentity.name, FieldTypeSpec(FieldTypeId.String)))
-    val dataFrame = jsonsToLearningDataFrame(data, fieldsWithId, featureFieldNames)
+    val df = jsonsToLearningDataFrame(data, fieldsWithId, featureFieldNames)
 
-    val (model, predictions) = fit(trainer, dataFrame)
+    // reduce the dimensionality if needed
+    val dataFrame = if (pcaDim.isDefined)
+      principalFeatureComponents(df, pcaDim.get)
+    else
+      df
+
+    val cachedDf = dataFrame.cache()
+
+    val (model, predictions) = fit(trainer, cachedDf)
 
     def extractClusterClasses(columnName: String): Traversable[(String, Int)] =
       predictions.select(JsObjectIdentity.name, columnName).rdd.map { r =>
@@ -174,7 +255,7 @@ private class MachineLearningServiceImpl @Inject() (
     model match {
       case m: KMeansModel =>
         // Evaluate clustering by computing Within Set Sum of Squared Errors.
-//        val WSSSE = m.computeCost(dataFrame)
+//        val WSSSE = m.computeCost(cachedDf)
 //        println(s"Within Set Sum of Squared Errors = $WSSSE")
 
 //        // Shows the result.
@@ -185,8 +266,8 @@ private class MachineLearningServiceImpl @Inject() (
         extractClusterClasses("prediction")
 
       case m: LDAModel =>
-//        val ll = m.logLikelihood(dataFrame)
-//        val lp = m.logPerplexity(dataFrame)
+//        val ll = m.logLikelihood(cachedDf)
+//        val lp = m.logPerplexity(cachedDf)
 //        println(s"The lower bound on the log likelihood of the entire corpus: $ll")
 //        println(s"The upper bound bound on perplexity: $lp")
 //
@@ -196,7 +277,7 @@ private class MachineLearningServiceImpl @Inject() (
 //        topics.show(false)
 
 //        // Shows the result.
-//        val transformed = model.transform(dataFrame)
+//        val transformed = model.transform(cachedDf)
 //        transformed.show(false)
 
         // extract cluster classes
@@ -204,7 +285,7 @@ private class MachineLearningServiceImpl @Inject() (
 
       case m: BisectingKMeansModel =>
         // Evaluate clustering.
-//        val cost = m.computeCost(dataFrame)
+//        val cost = m.computeCost(cachedDf)
 //        println(s"Within Set Sum of Squared Errors = $cost")
 //
 //        // Shows the result.
@@ -225,6 +306,53 @@ private class MachineLearningServiceImpl @Inject() (
         // extract cluster classes
         extractClusterClasssedFromProbabilities("probability")
     }
+  }
+
+  private def principalFeatureComponents(
+    df: DataFrame,
+    k: Int
+  ) = {
+    val pca = new PCA()
+      .setInputCol("features")
+      .setOutputCol("pcaFeatures")
+      .setK(k)
+      .fit(df)
+
+    // replace in-place
+    pca.transform(df).drop("features").withColumnRenamed("pcaFeatures", "features")
+  }
+
+  override def transformVectors(
+    data: DataFrame,
+    transformType: VectorTransformType.Value
+  ) = {
+    val transformer = transformType match {
+      case VectorTransformType.Normalizer =>
+        // Normalize each Vector using $L^1$ norm.
+        new Normalizer()
+          .setInputCol("features")
+          .setOutputCol("scaledFeatures")
+          .setP(1.0)
+
+      case VectorTransformType.StandardScaler =>
+        new StandardScaler()
+          .setInputCol("features")
+          .setOutputCol("scaledFeatures")
+          .setWithStd(true)
+          .setWithMean(true).fit(data)
+
+      case VectorTransformType.MinMaxScaler =>
+        new MinMaxScaler()
+          .setInputCol("features")
+          .setOutputCol("scaledFeatures").fit(data)
+
+      case VectorTransformType.MaxAbsScaler =>
+        new MaxAbsScaler()
+          .setInputCol("features")
+          .setOutputCol("scaledFeatures").fit(data)
+    }
+
+    transformer.transform(data)
   }
 
   private def jsonsToLearningDataFrame(
@@ -399,8 +527,44 @@ private class MachineLearningServiceImpl @Inject() (
     val testPredictions = lrModel.transform(testData)
 
     metricWithEvaluators.map { case (metric, evaluator) =>
-      (metric, evaluator.evaluate(trainPredictions), evaluator.evaluate(testPredictions))
-    }
+      try {
+        val trainValue = evaluator.evaluate(trainPredictions)
+        val testValue = evaluator.evaluate(testPredictions)
+        Some((metric, trainValue, testValue))
+      } catch {
+        case e: Exception =>
+          println(s"Evaluator for metric '$metric' failed.")
+          None
+      }
+    }.flatten
+  }
+
+  private def trainWithFolds[M <: Model[M], Q](
+    trainer: Estimator[M],
+    metricWithEvaluators: Traversable[(Q, Evaluator)],
+    folds: Option[Int],
+    training: DataFrame,
+    test: DataFrame
+  ) = {
+    def trainAux[MM <: Model[MM]](estimator: Estimator[MM]) =
+      train(estimator, metricWithEvaluators, training, test)
+
+    // TODO: since we are not selecting a model cross validation here is useless
+    // use cross-validation if the folds specified (without parameter optimization) and train
+    folds.map { folds =>
+//      val pipeline = new Pipeline().setStages(Array(trainer))
+      val paramGrid = new ParamGridBuilder().build() // No parameter search
+
+      val cv = new CrossValidator()
+        .setEstimator(trainer)
+        .setEstimatorParamMaps(paramGrid)
+        .setEvaluator(metricWithEvaluators.head._2) // by default use the first evaluator for cross-validation
+        .setNumFolds(folds)
+
+      trainAux(cv)
+    }.getOrElse(
+      trainAux(trainer)
+    )
   }
 
   private def fit[M <: Model[M], Q](
@@ -539,9 +703,29 @@ private class MachineLearningServiceImpl @Inject() (
 }
 
 object ClassificationEvalMetric extends Enumeration {
-  val f1, weightedPrecision, weightedRecall, accuracy = Value
+  val f1, weightedPrecision, weightedRecall, accuracy, areaUnderROC, areaUnderPR = Value
 }
 
 object RegressionEvalMetric extends Enumeration {
   val mse, rmse, r2, mae = Value
+}
+
+abstract class Performance {
+  type T <: Enumeration#Value
+  def evalMetric: T
+  def trainingTestingResults: Traversable[(Double, Double)]
+}
+
+case class ClassificationPerformance (
+  val evalMetric: ClassificationEvalMetric.Value,
+  val trainingTestingResults: Traversable[(Double, Double)]
+) extends Performance {
+  override type T = ClassificationEvalMetric.Value
+}
+
+case class RegressionPerformance(
+  val evalMetric: RegressionEvalMetric.Value,
+  val trainingTestingResults: Traversable[(Double, Double)]
+) extends Performance {
+  override type T = RegressionEvalMetric.Value
 }

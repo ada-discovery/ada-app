@@ -62,9 +62,13 @@
             var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
             var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
 
+            var pcaDims = $("#pcaDims").val()
+            if (!pcaDims)
+                pcaDims = null
+
             $('#chartPanelDiv').hide();
 
-            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.learnUnsupervised(mlModelId, inputFieldNames, filterOrId).ajax( {
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.learnUnsupervised(mlModelId, inputFieldNames, filterOrId, pcaDims).ajax( {
                 success: function(scatters) {
                     showMessage("'" + mlModelName + "' unsupervised learning finished.")
 
@@ -95,7 +99,7 @@
         </h3>
     </div>
 
-    @mlElements(dataSetRouter.allFields, false)
+    @mlElements(dataSetRouter.allFields, false, false)
 
     <div id="chartPanelDiv" class="row">
 

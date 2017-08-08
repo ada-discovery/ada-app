@@ -70,9 +70,25 @@
             var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
             var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
 
+            var pcaDims = $("#pcaDims").val()
+            if (!pcaDims)
+                pcaDims = null
+
+            var trainingTestingSplit = $("#trainingTestingSplit").val()
+            if (!trainingTestingSplit)
+                trainingTestingSplit = null
+
+            var crossValidationFolds = $("#crossValidationFolds").val()
+            if (!crossValidationFolds)
+                crossValidationFolds = null
+
+            var repetitions = $("#repetitions").val()
+            if (!repetitions)
+                repetitions = null
+
             $('#outputDiv').hide();
 
-            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.classify(mlModelId, inputFieldNames, outputFieldName, filterOrId).ajax( {
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.classify(mlModelId, inputFieldNames, outputFieldName, filterOrId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds).ajax( {
                 success: function(evalRates) {
                     showMessage("'" + mlModelName + "' classification finished.")
                     showMLOutput(evalRates)

@@ -11,7 +11,7 @@ import reactivemongo.bson.BSONObjectID
 
 class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) extends Runnable {
 
-  private val dataSetId = "mpower_challenge.walking_activity_training_results"
+  private val dataSetId = "mpower_challenge.walking_activity_training_norms_results"
   private val dataSetRepo = dsaf(dataSetId).get.dataSetRepo
 
   private val timeout = 120000 millis
@@ -30,7 +30,7 @@ class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) ext
     val future = for {
 //      jsons <- dataSetRepo.find()
 
-      Some(json) <- dataSetRepo.get(BSONObjectID.apply("596aceaef500003403f278d8"))
+      Some(json) <- dataSetRepo.get(BSONObjectID.apply("5970fd04f6000080036aec20"))
 
 //      _ <- {
 //        val newJsons = jsons.map ( json =>
@@ -43,14 +43,13 @@ class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) ext
 //        dataSetRepo.update(newJsons)
 //      }
 
-
       _ <- {
-        val newJson = json.+("resultDataSetName", JsString("Walking Activity Training (RC) Weights [26]"))
+        val newJson = json.+("resultDataSetId", JsString("mpower_challenge.walking_activity_training_norms_rc_weights_11"))
 
         dataSetRepo.update(newJson)
       }
 
-      _ <- dataSetRepo.delete(Seq(BSONObjectID.apply("596a16fef700001803fbe1f4"), BSONObjectID.apply("596a1858f70000fe02fc6918")))
+//      _ <- dataSetRepo.delete(Seq(BSONObjectID.apply("596a16fef700001803fbe1f4"), BSONObjectID.apply("596a1858f70000fe02fc6918")))
     } yield
       ()
 

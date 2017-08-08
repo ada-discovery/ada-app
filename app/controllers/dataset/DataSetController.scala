@@ -71,20 +71,29 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    filterOrId: FilterOrId
+    filterOrId: FilterOrId,
+    pcaDims: Option[Int],
+    trainingTestingSplit: Option[Double],
+    repetitions: Option[Int],
+    crossValidationFolds: Option[Int]
   ): Action[AnyContent]
 
   def regress(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    filterOrId: FilterOrId
+    filterOrId: FilterOrId,
+    pcaDims: Option[Int],
+    trainingTestingSplit: Option[Double],
+    repetitions: Option[Int],
+    crossValidationFolds: Option[Int]
   ): Action[AnyContent]
 
   def learnUnsupervised(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
-    filterOrId: FilterOrId
+    filterOrId: FilterOrId,
+    pcaDims: Option[Int]
   ): Action[AnyContent]
 
   def getFieldNames: Action[AnyContent]

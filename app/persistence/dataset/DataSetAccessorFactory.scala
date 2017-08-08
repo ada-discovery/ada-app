@@ -198,16 +198,6 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
           // if already exists update the name
           dataSetMetaInfoRepo.update(metaInfos.head.copy(name = metaInfo.name))
 
-      val dsaFuture =
-        cache.get(metaInfo.id).map(
-          Future(_)
-        ).getOrElse(
-          createInstance(metaInfo.id).map { case Some(dsa) =>
-            cache.update(metaInfo.id, dsa)
-            dsa
-          }
-        )
-
       for {
         // execute the setting registration
         _ <- settingFuture
@@ -216,7 +206,15 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
         _ <- metaInfoFuture
 
         // create a data set accessor (and data view repo)
-        dsa <- dsaFuture
+        dsa <- cache.get(metaInfo.id).map(
+          Future(_)
+        ).getOrElse(
+          createInstance(metaInfo.id).map { case Some(dsa) =>
+            cache.update(metaInfo.id, dsa)
+            dsa
+          }
+        )
+
         dataViewRepo = dsa.dataViewRepo
 
         // check if the data view exist

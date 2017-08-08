@@ -99,21 +99,30 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    filterOrId: FilterOrId
-  ) = dispatch(_.classify(mlModelId, inputFieldNames, outputFieldName, filterOrId))
+    filterOrId: FilterOrId,
+    pcaDims: Option[Int],
+    trainingTestingSplit: Option[Double],
+    repetitions: Option[Int],
+    crossValidationFolds: Option[Int]
+  ) = dispatch(_.classify(mlModelId, inputFieldNames, outputFieldName, filterOrId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds))
 
   override def regress(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    filterOrId: FilterOrId
-  ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterOrId))
+    filterOrId: FilterOrId,
+    pcaDims: Option[Int],
+    trainingTestingSplit: Option[Double],
+    repetitions: Option[Int],
+    crossValidationFolds: Option[Int]
+  ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterOrId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds))
 
   override def learnUnsupervised(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
-    filterOrId: FilterOrId
-  ) = dispatch(_.learnUnsupervised(mlModelId, inputFieldNames, filterOrId))
+    filterOrId: FilterOrId,
+    pcaDims: Option[Int]
+  ) = dispatch(_.learnUnsupervised(mlModelId, inputFieldNames, filterOrId, pcaDims))
 
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]

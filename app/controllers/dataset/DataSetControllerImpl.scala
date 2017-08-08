@@ -19,8 +19,9 @@ import controllers.core.{ReadonlyControllerImpl, WebContext}
 import org.apache.commons.lang3.StringEscapeUtils
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.FilterCondition.FilterOrId
+import models.ml.LearningSetting
 import models.ml.classification.LogisticRegression
-import models.ml.regression.LinearRegression
+import models.ml.regression.{LinearRegression, Regression}
 import persistence.RepoTypes.{ClassificationRepo, RegressionRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -31,7 +32,7 @@ import services.{DataSetService, DataSpaceService, StatsService, TranSMARTServic
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
-import services.ml.{ClassificationEvalMetric, MachineLearningService, RegressionEvalMetric}
+import services.ml.{ClassificationEvalMetric, MachineLearningService, Performance, RegressionEvalMetric}
 import views.html.dataset
 
 import scala.math.Ordering.Implicits._
@@ -1515,34 +1516,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    filterOrId: FilterOrId
+    filterOrId: FilterOrId,
+    pcaDims: Option[Int],
+    trainingTestingSplit: Option[Double],
+    repetitions: Option[Int],
+    crossValidationFolds: Option[Int]
   ) = Action.async { implicit request =>
-    val explFieldNamesToLoads =
-      if (inputFieldNames.nonEmpty)
-        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
-      else
-        Nil
-
-    val mlModelFuture = classificationRepo.get(mlModelId)
-    val criteriaFuture = resolveFilter(filterOrId).flatMap(filter => toCriteria(filter.conditions))
+    val learningSetting = LearningSetting(pcaDims, trainingTestingSplit, repetitions, crossValidationFolds)
 
     for {
-      mlModel <- mlModelFuture
-      criteria <- criteriaFuture
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
+      result <- runMLAux(
+        classificationRepo.get(mlModelId),
+        mlService.classify)(
+        inputFieldNames, outputFieldName, filterOrId, learningSetting
+      )
     } yield
-      mlModel match {
-        case Some(mlModel) =>
-          val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-          val evalRates = mlService.classify(jsons, fieldNameAndSpecs, outputFieldName, mlModel)
-          val evalJsons = evalRates.map { case (metric, trainEvalRate, testEvalRate) =>
-            Json.obj(
-              "metricName" -> toHumanReadableCamel(metric.toString),
-              "trainEvalRate" -> trainEvalRate,
-              "testEvalRate" -> testEvalRate
-            )
-          }
-          Ok(JsArray(evalJsons.toSeq))
+      result match {
+        case Some(result) =>
+          logger.info("Classification finished with the following results: " + Json.stringify(result))
+          Ok(result)
         case None =>
           BadRequest(s"ML classification model with id ${mlModelId.stringify} not found.")
       }
@@ -1552,43 +1544,72 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    filterOrId: FilterOrId
+    filterOrId: FilterOrId,
+    pcaDims: Option[Int],
+    trainingTestingSplit: Option[Double],
+    repetitions: Option[Int],
+    crossValidationFolds: Option[Int]
   ) = Action.async { implicit request =>
+    val learningSetting = LearningSetting(pcaDims, trainingTestingSplit, repetitions, crossValidationFolds)
+
+    for {
+      result <- runMLAux(
+        regressionRepo.get(mlModelId),
+        mlService.regress)(
+        inputFieldNames, outputFieldName, filterOrId, learningSetting
+      )
+    } yield
+      result match {
+        case Some(result) =>
+          logger.info("Regression finished with the following results: " + Json.stringify(result))
+          Ok(result)
+        case None =>
+          BadRequest(s"ML regression model with id ${mlModelId.stringify} not found.")
+      }
+  }
+
+  private def runMLAux[M](
+    getModel: => Future[Option[M]],
+    runML: (Traversable[JsObject], Seq[(String, FieldTypeSpec)], String, M, LearningSetting) => Traversable[Performance])(
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId,
+    learningSetting: LearningSetting
+  ): Future[Option[JsArray]] = {
     val explFieldNamesToLoads =
       if (inputFieldNames.nonEmpty)
         (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
       else
         Nil
 
-    val mlModelFuture = regressionRepo.get(mlModelId)
     val criteriaFuture = resolveFilter(filterOrId).flatMap(filter => toCriteria(filter.conditions))
 
     for {
-      mlModel <- mlModelFuture
+      mlModel <- getModel
       criteria <- criteriaFuture
       (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
     } yield
-      mlModel match {
-        case Some(mlModel) =>
-          val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-          val evalRates = mlService.regress(jsons, fieldNameAndSpecs, outputFieldName, mlModel)
-          val evalJsons = evalRates.map { case (metric, trainEvalRate, testEvalRate) =>
+      mlModel.map { mlModel =>
+        val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
+        val evalRates = runML(jsons, fieldNameAndSpecs, outputFieldName, mlModel, learningSetting)
+        val evalJsons = evalRates.toSeq.sortBy(_.evalMetric.id).map { performance =>
+          val results = performance.trainingTestingResults
             Json.obj(
-              "metricName" -> toHumanReadableCamel(metric.toString),
-              "trainEvalRate" -> trainEvalRate,
-              "testEvalRate" -> testEvalRate
+              "metricName" -> toHumanReadableCamel(performance.evalMetric.toString),
+              "trainEvalRate" -> results.map(_._1).sum / results.size, // mean
+              "testEvalRate" -> results.map(_._2).sum / results.size   // mean
             )
-          }
-          Ok(JsArray(evalJsons.toSeq))
-        case None =>
-          BadRequest(s"ML regression model with id ${mlModelId.stringify} not found.")
+        }
+
+        JsArray(evalJsons)
       }
   }
 
   override def learnUnsupervised(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
-    filterOrId: FilterOrId
+    filterOrId: FilterOrId,
+    pcaDims: Option[Int]
   ) = Action.async { implicit request =>
     val explFieldNamesToLoads =
       if (inputFieldNames.nonEmpty)
@@ -1612,7 +1633,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             json.+(JsObjectIdentity.name, JsString(id.stringify))
           }
 
-          val idClasses = mlService.learnUnsupervised(jsonsWithStringIds, fieldNameAndSpecs, mlModel)
+          val idClasses = mlService.learnUnsupervised(jsonsWithStringIds, fieldNameAndSpecs, mlModel, pcaDims)
 
           val numericTypes = Set(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Double)
           val numericFields = fields.filter(field => !field.fieldTypeSpec.isArray && numericTypes.contains(field.fieldType))
