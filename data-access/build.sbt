@@ -2,7 +2,7 @@ organization := "ada"
 
 name := "ada-dataaccess"
 
-version := "0.4.1-alpha"
+version := "0.5.0-alpha"
 
 scalaVersion := "2.11.7"
 
