@@ -4,6 +4,7 @@ import java.util.Collections
 import javax.inject.{Inject, Singleton}
 import java.{lang => jl, util => ju}
 
+import com.banda.core.util.ObjectUtil
 import com.banda.incal.domain.ReservoirLearningSetting
 import com.banda.incal.prediction.{ErrorMeasures, ReservoirTrainerFactory}
 import com.banda.math.business.learning.{IOStream, IOStreamFactory}
@@ -17,6 +18,7 @@ import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
 import com.banda.incal.prediction.ErrorMeasures
 import com.banda.math.business.MathUtil
+import com.banda.network.business.TopologyFactory
 import models.ml.{LearningSetting, VectorTransformType}
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature._
@@ -64,8 +66,6 @@ trait MachineLearningService {
   def predictRCTimeSeries(
     reservoirSetting: ReservoirLearningSetting,
     topology: Topology,
-    reservoirNodes: Seq[TopologicalNode],
-    outputNodes: Seq[TopologicalNode],
     washoutPeriod: Int,
     predictAhead: Int,
     inputSeries: Seq[Seq[jl.Double]],
@@ -86,7 +86,8 @@ trait MachineLearningService {
 private class MachineLearningServiceImpl @Inject() (
     sparkApp: SparkApp,
     ioStreamFactory: IOStreamFactory,
-    reservoirTrainerFactory: ReservoirTrainerFactory
+    reservoirTrainerFactory: ReservoirTrainerFactory,
+    topologyFactory: TopologyFactory
   ) extends MachineLearningService {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory
@@ -698,8 +699,6 @@ private class MachineLearningServiceImpl @Inject() (
   override def predictRCTimeSeries(
     reservoirSetting: ReservoirLearningSetting,
     topology: Topology,
-    reservoirNodes: Seq[TopologicalNode],
-    outputNodes: Seq[TopologicalNode],
     washoutPeriod: Int,
     predictAhead: Int,
     inputSeries: Seq[Seq[jl.Double]],
@@ -707,10 +706,23 @@ private class MachineLearningServiceImpl @Inject() (
   ): Future[RCPredictionResults] = {
     reservoirSetting.setIterationNum(targetSeries.size - predictAhead - washoutPeriod)
 
+    // get reservoir and output nodes
+    val initializedTopology =
+      if (topology.hasLayers && !topology.isTemplate && !topology.isSpatial)
+        topology
+      else
+        topologyFactory(topology)
+
+    val layers = initializedTopology.getLayers.toSeq
+    val reservoirNodes = new ju.ArrayList(layers(1).getAllNodes)
+    Collections.sort(reservoirNodes)
+    val outputNodes = new ju.ArrayList(layers(2).getAllNodes)
+    Collections.sort(outputNodes)
+
     def createIOStream = ioStreamFactory.createInstancePredict(predictAhead, washoutPeriod)(inputSeries, targetSeries)
 
     val call = { ioStream: IOStream[jl.Double] =>
-      val (predictor, weightAccessor) = reservoirTrainerFactory(topology, reservoirSetting, ioStream)
+      val (predictor, weightAccessor) = reservoirTrainerFactory(initializedTopology, reservoirSetting, ioStream)
 
       predictor.train
       val outputs = predictor.outputs

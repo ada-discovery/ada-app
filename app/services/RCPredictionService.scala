@@ -48,8 +48,6 @@ trait RCPredictionService {
 
   def predictSeries(
     topology: Topology,
-    reservoirNodes: Seq[TopologicalNode],
-    outputNodes: Seq[TopologicalNode],
     setting: ReservoirLearningSetting,
     washoutPeriod: Int,
     dropRightLength: Int)(
@@ -144,7 +142,7 @@ class RCPredictionServiceImpl @Inject()(
     val inputDim = inputSeriesFieldPaths.size
     val outputDim = outputSeriesFieldPaths.size
 
-    val (initializedTopology, reservoirNodes, outputNodes) = createTopology(setting, inputDim, outputDim)
+    val topology = createTopology(setting, inputDim, outputDim)
 
     val otherFieldNames = if (transformWeightResultJsonsAndFields.isDefined) otherFieldNames1 else otherFieldNames2
     val seriesFieldNames = inputSeriesFieldPaths.map(_.split('.').head) ++ outputSeriesFieldPaths.map(_.split('.').head)
@@ -153,7 +151,7 @@ class RCPredictionServiceImpl @Inject()(
     def predict(json: JsObject): Future[Option[(RCPredictionResults, JsObject)]] =
       // TODO: here we pass a new instance of reservoir setting because the iteration num is set inside
       for {
-        results <- predictSeries(initializedTopology, reservoirNodes, outputNodes, createReservoirSetting, washoutPeriod, dropRightLength)(
+        results <- predictSeries(topology, createReservoirSetting, washoutPeriod, dropRightLength)(
           json,
           inputSeriesFieldPaths,
           outputSeriesFieldPaths
@@ -253,7 +251,7 @@ class RCPredictionServiceImpl @Inject()(
     setting: ReservoirLearningSetting,
     inputDim: Int,
     outputDim: Int
-  ): (Topology, Seq[TopologicalNode], Seq[TopologicalNode]) = {
+  ): Topology = {
     val topology = reservoirTrainerFactory.createThreeLayerReservoirTopology(
       inputDim,
       outputDim,
@@ -268,20 +266,11 @@ class RCPredictionServiceImpl @Inject()(
       false
     )
 
-    val initializedTopology = topologyFactory(topology)
-    val layers = initializedTopology.getLayers.toSeq
-    val reservoirNodes = new ju.ArrayList(layers(1).getAllNodes)
-    Collections.sort(reservoirNodes)
-    val outputNodes = new ju.ArrayList(layers(2).getAllNodes)
-    Collections.sort(outputNodes)
-
-    (initializedTopology, reservoirNodes, outputNodes)
+    topologyFactory(topology)
   }
 
   override def predictSeries(
     topology: Topology,
-    reservoirNodes: Seq[TopologicalNode],
-    outputNodes: Seq[TopologicalNode],
     setting: ReservoirLearningSetting,
     washoutPeriod: Int,
     dropRightLength: Int)(
@@ -304,8 +293,6 @@ class RCPredictionServiceImpl @Inject()(
       mlService.predictRCTimeSeries(
         setting,
         topology,
-        reservoirNodes,
-        outputNodes,
         washoutPeriod,
         predictAhead,
         inputSeries,
@@ -313,21 +300,6 @@ class RCPredictionServiceImpl @Inject()(
       ).map(result => Some(result))
     } else
       Future(None)
-  }
-
-  private def checkResults(results: Traversable[RCPredictionResults]) = {
-    def checkResultsAux(name: String, fun: RCPredictionResults => Seq[Double]): Unit =
-      results.map(fun).toSeq.transpose.zipWithIndex.foreach { case (nums, index) =>
-        val element = nums.head
-          if (!nums.forall(x => (Math.abs(x - element) / x) < 0.000001))
-            throw new IllegalArgumentException(s"The $name expected to be the same but at $index the values differ: ${nums.mkString(", ")}")
-        }
-
-    checkResultsAux("square errors", _.squareErrors)
-    checkResultsAux("samp errors", _.sampErrors)
-    checkResultsAux("desired outputs", _.desiredOutputs.map(_.doubleValue))
-    checkResultsAux("final weights", _.finalWeights.map(_.doubleValue))
-    checkResultsAux("outputs", _.outputs.map(_.doubleValue))
   }
 
   private def saveWeightDataSet(

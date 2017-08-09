@@ -10,7 +10,7 @@ import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
 import controllers.core.WebContext
 import models.{DataSetMetaInfo, Field, FieldTypeId}
-import models.ml.{RCPredictionSetting, RCPredictionSettings}
+import models.ml.{RCPredictionSetting, RCPredictionSettings, VectorTransformType}
 import play.api.data.Forms._
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory
@@ -48,6 +48,7 @@ class AdminController @Inject() (
   private implicit val stringSeqFormatter = SeqFormatter.apply
   private implicit val intSeqFormatter = SeqFormatter.applyInt
   private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
+  private implicit val vectorTransformTypeFormatter = EnumFormatter(VectorTransformType)
 
   private val form = Form(
     mapping(
@@ -55,6 +56,7 @@ class AdminController @Inject() (
       "reservoirInDegrees" -> of[Seq[Int]],
       "inputReservoirConnectivities" -> of[Seq[Double]],
       "reservoirSpectralRadiuses" -> of[Seq[Double]],
+      "seriesPreprocessingType" -> of[VectorTransformType.Value],
       "washoutPeriods" -> of[Seq[Int]],
       "dropRightLengths" -> of[Seq[Int]],
       "inputSeriesFieldPaths" -> of[Seq[String]],
@@ -126,7 +128,8 @@ class AdminController @Inject() (
     reservoirNodeNum: Int,
     reservoirInDegree: Int,
     inputReservoirConnectivity: Double,
-    reservoirSpectralRadius: Double
+    reservoirSpectralRadius: Double,
+    weightRd: RandomDistribution[jl.Double]
   ) = new ReservoirLearningSetting {
     setWeightAdaptationIterationNum(2)
     setSingleIterationLength(1d)
@@ -147,7 +150,7 @@ class AdminController @Inject() (
     setReservoirSpectralRadius(reservoirSpectralRadius)
     setReservoirFunctionType(ActivationFunctionType.Tanh)
     setReservoirFunctionParams(None) // Some(Seq(0.5d : jl.Double, 0.25 * math.Pi : jl.Double, 0d : jl.Double))
-    setWeightDistribution(new RepeatedDistribution(weightRdp.nextList(5000).toArray(Array[jl.Double]())))
+    setWeightDistribution(weightRd)
   }
 
   def showRCPrediction = restrictAdmin(deadbolt) {
@@ -155,7 +158,7 @@ class AdminController @Inject() (
       for {
         tree <- dataSpaceService.getTreeForCurrentUser(request)
       } yield
-        Ok(views.html.admin.mPowerRCPrediction(tree))
+        Ok(views.html.admin.mPowerRCPrediction(form, tree))
     }
   }
 
@@ -163,9 +166,16 @@ class AdminController @Inject() (
     Action.async { implicit request =>
       form.bindFromRequest.fold(
         { formWithErrors =>
-          Future(BadRequest("Bad bad"))
+          for {
+            tree <- dataSpaceService.getTreeForCurrentUser(request)
+          } yield {
+            BadRequest(views.html.admin.mPowerRCPrediction(form, tree))
+          }
         },
-        settings =>
+        settings => {
+          // important!!! generate a new fixed-value weight RD to be used for all RC calls
+          val weightRd = new RepeatedDistribution(weightRdp.nextList(5000).toArray[jl.Double](Array[jl.Double]()))
+
           for {
             codeDiagnosisJsonMap <- if (mergeMPowerWithDemographics) createHealthCodeDiagnosisJsonMap else Future(Map[String, JsValue]())
 
@@ -175,7 +185,8 @@ class AdminController @Inject() (
                   item.reservoirNodeNum,
                   item.reservoirInDegree,
                   item.inputReservoirConnectivity,
-                  item.reservoirSpectralRadius
+                  item.reservoirSpectralRadius,
+                  weightRd
                 ),
                 item.washoutPeriod,
                 item.dropRightLength,
@@ -191,6 +202,7 @@ class AdminController @Inject() (
           } yield {
             Ok("Hooray")
           }
+        }
       )
     }
   }
@@ -226,6 +238,7 @@ class AdminController @Inject() (
           reservoirInDegree,
           inputReservoirConnectivity,
           reservoirSpectralRadius,
+          settings.seriesPreprocessingType,
           washoutPeriod,
           dropRightLength,
           settings.inputSeriesFieldPaths,

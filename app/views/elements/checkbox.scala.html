@@ -1,14 +1,19 @@
 @import helper.FieldConstructor
+@import elements.twitterBootstrapInput
 
 @(
     domainName: String,
     attribute: String,
     form: Form[_],
-    args: (Symbol,Any)*
+    args: Seq[(Symbol,Any)] = Nil,
+    labelGridWidth: Int = 2
 )(
     implicit msg: play.api.i18n.Messages
 )
 
-@implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapInput.f) }
+@implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapInput.f(labelGridWidth)) }
 
-@helper.checkbox(form(attribute), List('_label -> attributeLabel(domainName, attribute)) ++ args.toList : _*)
+@helper.checkbox(
+    form(attribute),
+    List('_label -> attributeLabel(domainName, attribute)) ++ args : _*
+)

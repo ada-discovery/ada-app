@@ -1,4 +1,5 @@
 @import helper.{options, FieldConstructor}
+@import elements.twitterBootstrapInput
 
 @(
     domainName : String,
@@ -6,12 +7,13 @@
     form: Form[_],
     values: Seq[(String, String)],
     optional: Boolean,
-    args: (Symbol,Any)*
+    args: Seq[(Symbol, Any)] = Nil,
+    labelGridWidth: Int = 2
 )(
     implicit msg: play.api.i18n.Messages
 )
 
-@implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapInput.f) }
+@implicitFieldConstructor = @{ FieldConstructor(twitterBootstrapInput.f(labelGridWidth)) }
 
 @helper.select(
     form(attribute),
@@ -21,5 +23,5 @@
         'class -> "form-control"
     ) ++
       (if (optional) List('_default -> "") else List()) ++
-      args.toList : _*
+      args: _*
 )

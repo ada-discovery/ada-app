@@ -5,8 +5,11 @@
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import controllers.core.WebContext
 @import controllers.core.WebContext._
+@import models.ml.RCPredictionSettings
+@import models.ml.VectorTransformType
 
 @(
+    form: Form[RCPredictionSettings],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit context: WebContext
@@ -42,6 +45,8 @@
                     @paramElement("resultDataSetId", "Result Data Set Id", Some("mpower_challenge.walking_activity_training_rc_weights"))
                     @paramElement("resultDataSetName", "Result Data Set Name", Some("Walking Activity Training (RC) Weights"))
                     @paramElement("resultDataSetIndex", "Result Data Set Index", Some(1))
+                    @select("rcPredictionSettings", "seriesPreprocessingType", form, util.enumToValueString(VectorTransformType), true, Nil, 3)
+                    @paramElement("vectorTransformType", "Series Preprocessing", Some(20))
                     @paramElement("batchSize", "Batch Size", Some(20))
                 </fieldset>
 

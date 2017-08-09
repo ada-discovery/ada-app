@@ -14,10 +14,10 @@
     <label class="radio-inline"><input type="radio" name="@sourceChoiceElName" value="2">Server-side path</label>
 }
 <div id="importFileDiv">
-    @inputFile(domainName, form(fileElName), '_label -> "")
+    @inputFile(domainName, form(fileElName), Seq('_label -> ""))
 </div>
 <div id="pathDiv">
-    @inputText(domainName, pathElName, form, '_label -> "", 'style -> "display:none")
+    @inputText(domainName, pathElName, form, Seq('_label -> "", 'style -> "display:none"))
 </div>
 
 <script type="text/javascript">
