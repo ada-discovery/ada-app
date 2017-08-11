@@ -17,6 +17,7 @@ import services.ml.MachineLearningService
 
 import scala.collection.JavaConversions._
 import dataaccess.Criterion.Infix
+import models.ml.{ExtendedReservoirLearningSetting, VectorTransformType}
 import play.api.libs.json.JsObject
 import services.{RCPredictionResults, RCPredictionService}
 
@@ -44,6 +45,9 @@ class MPowerPredictAcceleration @Inject() (
 
   private val inputDim = 3
   private val outputDim = 1
+  private val inScale = 1
+  private val preprocessingType = None // Some(VectorTransformType.StandardScaler)
+  private val _predictAhead = 1
   private val washoutPeriod = 500
   private val dropRight = 200
   private val weightAdaptationIterationNum = 100
@@ -70,7 +74,7 @@ class MPowerPredictAcceleration @Inject() (
     val initializedTopology = topologyFactory(topology)
 
     def resultsFuture(json: JsObject) = mPowerWalkingRCPredictionService.predictSeries(
-      initializedTopology, setting, dropRight)(
+      initializedTopology, setting, dropRight,
       json,
       Seq(fieldName + ".x", fieldName + ".y", fieldName + ".z"),
       Seq(fieldName + ".y")
@@ -134,13 +138,13 @@ class MPowerPredictAcceleration @Inject() (
     reservoirInDegree: Int,
     inputReservoirConnectivity: Double,
     reservoirSpectralRadius: Double
-  ) = new ReservoirLearningSetting {
+  ) = new ExtendedReservoirLearningSetting {
     setWeightAdaptationIterationNum(weightAdaptationIterationNum)
     setSingleIterationLength(1d)
     setInitialDelay(0d)
     setInputTimeLength(1d)
     setOutputInterpretationRelativeTime(1d)
-    setInScale(1d)
+    setInScale(inScale)
     setOutScale(1d)
     setBias(1d)
     setNonBiasInitial(0d)
@@ -157,6 +161,8 @@ class MPowerPredictAcceleration @Inject() (
 //    setWeightDistribution(RandomDistribution.createNormalDistribution[jl.Double](classOf[jl.Double], 0d, 1d))
     setWeightDistribution(weightRd)
     setWashoutPeriod(washoutPeriod)
+    predictAhead = _predictAhead
+    seriesPreprocessingType = preprocessingType
   }
 }
 

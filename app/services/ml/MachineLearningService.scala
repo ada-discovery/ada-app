@@ -19,14 +19,14 @@ import models.ml.unsupervised.UnsupervisedLearning
 import com.banda.incal.prediction.ErrorMeasures
 import com.banda.math.business.MathUtil
 import com.banda.network.business.TopologyFactory
-import models.ml.{LearningSetting, VectorTransformType}
+import models.ml.{ExtendedReservoirLearningSetting, LearningSetting, VectorTransformType}
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature._
 import org.apache.spark.ml.{Estimator, Model, Pipeline}
-import org.apache.spark.sql.types.{Metadata, MetadataBuilder, _}
+import org.apache.spark.sql.types.{Metadata, MetadataBuilder, StructType, _}
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.ml.clustering._
-import org.apache.spark.ml.linalg.DenseVector
+import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import play.api.libs.json.JsObject
 import services.{RCPredictionResults, SparkApp, SparkUtil}
@@ -64,9 +64,8 @@ trait MachineLearningService {
   ): Traversable[(String, Int)]
 
   def predictRCTimeSeries(
-    reservoirSetting: ReservoirLearningSetting,
+    reservoirSetting: ExtendedReservoirLearningSetting,
     topology: Topology,
-    predictAhead: Int,
     inputSeries: Seq[Seq[jl.Double]],
     targetSeries: Seq[jl.Double]
   ): Future[RCPredictionResults]
@@ -76,6 +75,11 @@ trait MachineLearningService {
     transformType: VectorTransformType.Value,
     inRow: Boolean = false
   ): DataFrame
+
+  def transformSeries(
+    series: Seq[Seq[jl.Double]],
+    transformType: VectorTransformType.Value
+  ): Seq[Seq[jl.Double]]
 
   // AFTSurvivalRegression
   // IsotonicRegression
@@ -392,6 +396,28 @@ private class MachineLearningServiceImpl @Inject() (
       transformedDf
   }
 
+  override def transformSeries(
+    series: Seq[Seq[jl.Double]],
+    transformType: VectorTransformType.Value
+  ): Seq[Seq[jl.Double]] = {
+    val inRow = transformType == VectorTransformType.L1Normalizer || transformType == VectorTransformType.L2Normalizer
+
+    val inputSeries = if (inRow) series.transpose else series
+
+    val rows = inputSeries.zipWithIndex.map { case (oneSeries, index) =>
+      (index, Vectors.dense(oneSeries.map(_.toDouble).toArray))
+    }
+
+    val df = session.createDataFrame(rows).toDF("id", "features")
+    val newDf = transformVectors(df, transformType, inRow)
+
+    val outputSeries: Seq[Seq[jl.Double]] = newDf.select("scaledFeatures").collect.map ( row =>
+      row.getAs[Vector](0).toArray.map(jl.Double.valueOf(_)) : Seq[jl.Double]
+    )
+
+    if (inRow) outputSeries.transpose else outputSeries
+  }
+
   private def jsonsToLearningDataFrame(
     jsons: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
@@ -696,13 +722,12 @@ private class MachineLearningServiceImpl @Inject() (
   }
 
   override def predictRCTimeSeries(
-    reservoirSetting: ReservoirLearningSetting,
+    setting: ExtendedReservoirLearningSetting,
     topology: Topology,
-    predictAhead: Int,
     inputSeries: Seq[Seq[jl.Double]],
     targetSeries: Seq[jl.Double]
   ): Future[RCPredictionResults] = {
-    val iterationNum = targetSeries.size - predictAhead - reservoirSetting.getWashoutPeriod
+    val iterationNum = targetSeries.size - setting.predictAhead - setting.getWashoutPeriod
 
     // get reservoir and output nodes
     val initializedTopology =
@@ -717,10 +742,18 @@ private class MachineLearningServiceImpl @Inject() (
     val outputNodes = new ju.ArrayList(layers(2).getAllNodes)
     Collections.sort(outputNodes)
 
-    def createIOStream = ioStreamFactory.createInstancePredict(predictAhead, reservoirSetting.getWashoutPeriod)(inputSeries, targetSeries)
+    val (input, output) = setting.seriesPreprocessingType.map { transformType =>
+      val input = transformSeries(inputSeries, transformType)
+      val output = transformSeries(targetSeries.map(Seq(_)), transformType)
+      (input, output.map(_.head))
+    }.getOrElse {
+      (inputSeries, targetSeries)
+    }
+
+    def createIOStream = ioStreamFactory.createInstancePredict(setting.predictAhead, setting.getWashoutPeriod)(input, output)
 
     val call = { ioStream: IOStream[jl.Double] =>
-      val (predictor, weightAccessor) = reservoirTrainerFactory(initializedTopology, reservoirSetting, ioStream, iterationNum)
+      val (predictor, weightAccessor) = reservoirTrainerFactory(initializedTopology, setting, ioStream, iterationNum)
 
       predictor.train(iterationNum)
       val outputs = predictor.outputs
@@ -737,7 +770,7 @@ private class MachineLearningServiceImpl @Inject() (
           weightAccessor.getWeight(reservoirNode, outputNode)
       }.flatten
 
-      val targetVariance = MathUtil.calcStats(0, targetSeries).getVariance.toDouble
+      val targetVariance = MathUtil.calcStats(0, output).getVariance.toDouble
 
       RCPredictionResults(squares, samps, outputs.toSeq, desiredOutputs, weights, targetVariance)
     }

@@ -9,6 +9,8 @@ import reactivemongo.bson.BSONObjectID
 import util.FieldUtil
 import java.{util => ju}
 
+import com.banda.incal.domain.ReservoirLearningSetting
+
 case class RCPredictionSettings(
   reservoirNodeNums: Seq[Int],
   reservoirInDegrees: Seq[Int],
@@ -17,6 +19,7 @@ case class RCPredictionSettings(
   inScales: Seq[Double],
   seriesPreprocessingType: Option[VectorTransformType.Value],
   washoutPeriods: Seq[Int],
+  predictAheads: Seq[Int],
   dropRightLengths: Seq[Int],
   inputSeriesFieldPaths: Seq[String],
   outputSeriesFieldPaths: Seq[String],
@@ -27,15 +30,20 @@ case class RCPredictionSettings(
   batchSize: Option[Int]
 )
 
-case class RCPredictionSetting(
-  reservoirNodeNum: Int,
-  reservoirInDegree: Int,
-  inputReservoirConnectivity: Double,
-  reservoirSpectralRadius: Double,
-  inScale: Double,
-  seriesPreprocessingType: Option[VectorTransformType.Value],
-  washoutPeriod: Int
-)
+class ExtendedReservoirLearningSetting extends ReservoirLearningSetting {
+
+  private[this] var _predictAhead: Int = _
+
+  private[this] var _seriesPreprocessingType: Option[_root_.models.ml.VectorTransformType.Value] = None
+
+  def predictAhead: Int = _predictAhead
+
+  def predictAhead_=(value: Int) = _predictAhead = value
+
+  def seriesPreprocessingType = _seriesPreprocessingType
+
+  def seriesPreprocessingType_=(value: Option[VectorTransformType.Value]) =_seriesPreprocessingType = value
+}
 
 case class RCPredictionInputOutputSpec(
   inputSeriesFieldPaths: Seq[String],
@@ -44,6 +52,17 @@ case class RCPredictionInputOutputSpec(
   sourceDataSetId: String,
   resultDataSetId: String,
   resultDataSetName: String
+)
+
+case class RCPredictionSetting(
+  reservoirNodeNum: Int,
+  reservoirInDegree: Int,
+  inputReservoirConnectivity: Double,
+  reservoirSpectralRadius: Double,
+  inScale: Double,
+  seriesPreprocessingType: Option[VectorTransformType.Value],
+  washoutPeriod: Int,
+  predictAhead: Int
 )
 
 case class RCPredictionSettingAndResults(
@@ -64,7 +83,7 @@ object RCPredictionSettingAndResults {
 
 object XXX extends App {
 
-  val setting = RCPredictionSetting(20, 20, 0.1, 0.5, 10, Some(VectorTransformType.MinMaxPlusMinusOneScaler), 10)
+  val setting = RCPredictionSetting(20, 20, 0.1, 0.5, 10, Some(VectorTransformType.MinMaxPlusMinusOneScaler), 10, 1)
 
   val ioSpec = RCPredictionInputOutputSpec(Seq("lla", "lll"), Seq("a", "bb"), 3, "dataset1", "dataset2", "datasetname")
 

@@ -7,6 +7,7 @@ import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.DataFrame
 import services.SparkApp
 import services.ml.MachineLearningService
+import java.{lang => jl}
 
 class TestVectorTransformer @Inject()(
     mlService: MachineLearningService,
@@ -27,7 +28,18 @@ class TestVectorTransformer @Inject()(
     (2, Vectors.dense(5.0, 11.0, 6.0))
   )).toDF("id", "features")
 
+  private val series: Seq[Seq[jl.Double]] = Seq(
+    Seq(1d, 2d, 3d),
+    Seq(-8d, 2.5d, 9.4d),
+    Seq(0.2d, 0.8d, -1.5d)
+  )
+
   override def run = {
+    val newSeries = mlService.transformSeries(series, VectorTransformType.MinMaxPlusMinusOneScaler)
+
+    println(series)
+    println(newSeries)
+
     runAux(dataFrame1, true)
     runAux(dataFrame2, false)
   }

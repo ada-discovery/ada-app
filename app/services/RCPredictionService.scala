@@ -17,7 +17,7 @@ import dataaccess.AscSort
 import dataaccess.Criterion.Infix
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models._
-import models.ml.{RCPredictionInputOutputSpec, RCPredictionSetting, RCPredictionSettingAndResults}
+import models.ml.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec, RCPredictionSetting, RCPredictionSettingAndResults}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.{util => _, _}
 import reactivemongo.bson.BSONObjectID
@@ -35,7 +35,7 @@ trait RCPredictionService {
   type JsonsAndFields = (Seq[JsObject], Traversable[Field])
 
   def predictAndStoreResults(
-    setting: ReservoirLearningSetting,
+    setting: ExtendedReservoirLearningSetting,
     ioSpec: RCPredictionInputOutputSpec,
     batchSize: Option[Int] = None,
     transformWeightResultJsonsAndFields: Option[JsonsAndFields => JsonsAndFields] = None
@@ -43,8 +43,8 @@ trait RCPredictionService {
 
   def predictSeries(
     topology: Topology,
-    setting: ReservoirLearningSetting,
-    dropRightLength: Int)(
+    setting: ExtendedReservoirLearningSetting,
+    dropRightLength: Int,
     json: JsObject,
     inputSeriesFieldPaths: Seq[String],
     outputSeriesFieldPaths: Seq[String]
@@ -99,11 +99,10 @@ class RCPredictionServiceImpl @Inject()(
     false
   )
 
-  private val predictAhead = 1
   private val defaultBatchSize = 20
 
   override def predictAndStoreResults(
-    setting: ReservoirLearningSetting,
+    setting: ExtendedReservoirLearningSetting,
     ioSpec: RCPredictionInputOutputSpec,
     batchSize: Option[Int] = None,
     transformWeightResultJsonsAndFields: Option[JsonsAndFields => JsonsAndFields] = None
@@ -123,7 +122,8 @@ class RCPredictionServiceImpl @Inject()(
     // helper method to execute prediction on a given json
     def predict(json: JsObject): Future[Option[(RCPredictionResults, JsObject)]] =
       for {
-        results <- predictSeries(topology, setting, ioSpec.dropRightLength)(
+        results <- predictSeries(
+          topology, setting, ioSpec.dropRightLength,
           json,
           ioSpec.inputSeriesFieldPaths,
           ioSpec.outputSeriesFieldPaths
@@ -202,8 +202,9 @@ class RCPredictionServiceImpl @Inject()(
             setting.getInputReservoirConnectivity,
             setting.getReservoirSpectralRadius,
             setting.getInScale,
-            None,
-            setting.getWashoutPeriod
+            setting.seriesPreprocessingType,
+            setting.getWashoutPeriod,
+            setting.predictAhead
           ),
           ioSpec,
           meanSamp,
@@ -242,8 +243,8 @@ class RCPredictionServiceImpl @Inject()(
 
   override def predictSeries(
     topology: Topology,
-    setting: ReservoirLearningSetting,
-    dropRightLength: Int)(
+    setting: ExtendedReservoirLearningSetting,
+    dropRightLength: Int,
     json: JsObject,
     inputSeriesFieldPaths: Seq[String],
     outputSeriesFieldPaths: Seq[String]
@@ -263,7 +264,6 @@ class RCPredictionServiceImpl @Inject()(
       mlService.predictRCTimeSeries(
         setting,
         topology,
-        predictAhead,
         inputSeries,
         outputSeries
       ).map(result => Some(result))
@@ -290,10 +290,11 @@ class RCPredictionServiceImpl @Inject()(
         )
       )
 
+      weightsCount = resultsAndJsons.head._1.finalWeights.size
+
       // update the dictionary
       _ <- {
         val originalFieldTypeSpecs = fields.map( field => (field.name, field.fieldTypeSpec))
-        val weightsCount = resultsAndJsons.head._1.finalWeights.size
         val weightFieldNameTypeSpecs = (0 until weightsCount).map( index =>
           ("rc_w_" + index, FieldTypeSpec(FieldTypeId.Double))
         )
@@ -319,6 +320,11 @@ class RCPredictionServiceImpl @Inject()(
 
         dataSetService.saveOrUpdateRecords(weightDsa.dataSetRepo, newJsons.toSeq, None, false, None, Some(100))
       }
+
+      // save filters
+      _ <- weightDsa.filterRepo.save(
+        Seq(1, 10, 100, 1000).map(filter(_, weightsCount))
+      )
     } yield
       ()
 
@@ -340,6 +346,21 @@ class RCPredictionServiceImpl @Inject()(
       distributionWidgets ++ boxPlotWidgets ++ Seq(correlationWidget),
       2,
       true
+    )
+  }
+
+  private def filter(maxWeight: Int, weightsCount: Int): Filter = {
+    val conditions = (0 until weightsCount).map { index =>
+      val fieldName = "rc_w_" + index
+      val gtCondition = FilterCondition(fieldName, None, ConditionType.Greater, (-maxWeight).toString, None)
+      val ltCondition = FilterCondition(fieldName, None, ConditionType.Less, maxWeight.toString, None)
+      Seq(gtCondition, ltCondition)
+    }.flatten
+
+    Filter(
+      None,
+      Some(s"Diagnosis Not Null (RC_W -$maxWeight to $maxWeight)"),
+      conditions ++ Seq(FilterCondition("professional-diagnosis", None, ConditionType.NotEquals, "", None))
     )
   }
 

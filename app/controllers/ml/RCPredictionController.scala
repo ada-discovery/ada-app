@@ -10,7 +10,7 @@ import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
 import controllers.{EnumFormatter, SeqFormatter}
 import controllers.core.WebContext
-import models.ml.{RCPredictionInputOutputSpec, RCPredictionSettings, VectorTransformType}
+import models.ml.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec, RCPredictionSettings, VectorTransformType}
 import models.{Field, FieldTypeId}
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory
@@ -57,6 +57,7 @@ class RCPredictionController @Inject()(
       "inScales" -> of[Seq[Double]],
       "seriesPreprocessingType" -> optional(of[VectorTransformType.Value]),
       "washoutPeriods" -> of[Seq[Int]],
+      "predictAheads" -> of[Seq[Int]],
       "dropRightLengths" -> of[Seq[Int]],
       "inputSeriesFieldPaths" -> of[Seq[String]],
       "outputSeriesFieldPaths" -> of[Seq[String]],
@@ -78,8 +79,10 @@ class RCPredictionController @Inject()(
     reservoirSpectralRadius: Double,
     inScale: Double,
     washoutPeriod: Int,
+    _predictAhead: Int,
+    _seriesPreprocessingType: Option[VectorTransformType.Value],
     weightRd: RandomDistribution[jl.Double]
-  ) = new ReservoirLearningSetting {
+  ) = new ExtendedReservoirLearningSetting {
     setWeightAdaptationIterationNum(2)
     setSingleIterationLength(1d)
     setInitialDelay(0d)
@@ -101,6 +104,8 @@ class RCPredictionController @Inject()(
     setReservoirFunctionParams(None) // Some(Seq(0.5d : jl.Double, 0.25 * math.Pi : jl.Double, 0d : jl.Double))
     setWeightDistribution(weightRd)
     setWashoutPeriod(washoutPeriod)
+    predictAhead = _predictAhead
+    seriesPreprocessingType = _seriesPreprocessingType
   }
 
   def showRCPrediction = restrictAdmin(deadbolt) {
@@ -142,7 +147,7 @@ class RCPredictionController @Inject()(
 
   private def toRCSettings(
     settings: RCPredictionSettings
-  ): Seq[(ReservoirLearningSetting, RCPredictionInputOutputSpec, Option[Int])] = {
+  ): Seq[(ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec, Option[Int])] = {
 
     // get the maximum size of the param seqs
     val maxSize = Seq(
@@ -151,6 +156,7 @@ class RCPredictionController @Inject()(
       settings.reservoirSpectralRadiuses,
       settings.inScales,
       settings.washoutPeriods,
+      settings.predictAheads,
       settings.dropRightLengths
     ).foldLeft(0) { case (minSize, seq) => Math.max(minSize, seq.size) }
 
@@ -162,9 +168,10 @@ class RCPredictionController @Inject()(
     stream(settings.reservoirSpectralRadiuses).zip(
     stream(settings.inScales).zip(
     stream(settings.washoutPeriods).zip(
-    stream(settings.dropRightLengths))))))).zipWithIndex.map {
+    stream(settings.predictAheads).zip(
+    stream(settings.dropRightLengths)))))))).zipWithIndex.map {
 
-      case ((reservoirNodeNum, (reservoirInDegree, (inputReservoirConnectivity, (reservoirSpectralRadius, (inScale, (washoutPeriod, dropRightLength)))))), index) =>
+      case ((reservoirNodeNum, (reservoirInDegree, (inputReservoirConnectivity, (reservoirSpectralRadius, (inScale, (washoutPeriod, (predictAhead, dropRightLength))))))), index) =>
         val resultDataSetIdSuffix = settings.resultDataSetIndex.map(x => "_" + (x + index)).getOrElse("")
         val resultDataSetNameSuffix = settings.resultDataSetIndex.map(x => " [" + (x + index) + "]").getOrElse("")
 
@@ -187,6 +194,8 @@ class RCPredictionController @Inject()(
           reservoirSpectralRadius,
           inScale,
           washoutPeriod,
+          predictAhead,
+          settings.seriesPreprocessingType,
           weightRd
         )
 
