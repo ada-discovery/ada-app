@@ -52,7 +52,7 @@ class MPowerPredictAcceleration @Inject() (
   private val fileUtil = FileUtil.getInstance
 
   override def runAsFuture = {
-    def setting = createReservoirSetting(75, 75, 0.5, 0.8)
+    val setting = createReservoirSetting(75, 75, 0.5, 0.8)
     val topology = reservoirTrainerFactory.createThreeLayerReservoirTopology(
       inputDim,
       outputDim,
@@ -70,7 +70,7 @@ class MPowerPredictAcceleration @Inject() (
     val initializedTopology = topologyFactory(topology)
 
     def resultsFuture(json: JsObject) = mPowerWalkingRCPredictionService.predictSeries(
-      initializedTopology, setting, washoutPeriod, dropRight)(
+      initializedTopology, setting, dropRight)(
       json,
       Seq(fieldName + ".x", fieldName + ".y", fieldName + ".z"),
       Seq(fieldName + ".y")
@@ -156,6 +156,7 @@ class MPowerPredictAcceleration @Inject() (
     setReservoirFunctionParams(None) // Some(Seq(0.5d : jl.Double, 0.25 * math.Pi : jl.Double, 0d : jl.Double))
 //    setWeightDistribution(RandomDistribution.createNormalDistribution[jl.Double](classOf[jl.Double], 0d, 1d))
     setWeightDistribution(weightRd)
+    setWashoutPeriod(washoutPeriod)
   }
 }
 

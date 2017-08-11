@@ -66,7 +66,6 @@ trait MachineLearningService {
   def predictRCTimeSeries(
     reservoirSetting: ReservoirLearningSetting,
     topology: Topology,
-    washoutPeriod: Int,
     predictAhead: Int,
     inputSeries: Seq[Seq[jl.Double]],
     targetSeries: Seq[jl.Double]
@@ -699,12 +698,11 @@ private class MachineLearningServiceImpl @Inject() (
   override def predictRCTimeSeries(
     reservoirSetting: ReservoirLearningSetting,
     topology: Topology,
-    washoutPeriod: Int,
     predictAhead: Int,
     inputSeries: Seq[Seq[jl.Double]],
     targetSeries: Seq[jl.Double]
   ): Future[RCPredictionResults] = {
-    reservoirSetting.setIterationNum(targetSeries.size - predictAhead - washoutPeriod)
+    val iterationNum = targetSeries.size - predictAhead - reservoirSetting.getWashoutPeriod
 
     // get reservoir and output nodes
     val initializedTopology =
@@ -719,12 +717,12 @@ private class MachineLearningServiceImpl @Inject() (
     val outputNodes = new ju.ArrayList(layers(2).getAllNodes)
     Collections.sort(outputNodes)
 
-    def createIOStream = ioStreamFactory.createInstancePredict(predictAhead, washoutPeriod)(inputSeries, targetSeries)
+    def createIOStream = ioStreamFactory.createInstancePredict(predictAhead, reservoirSetting.getWashoutPeriod)(inputSeries, targetSeries)
 
     val call = { ioStream: IOStream[jl.Double] =>
-      val (predictor, weightAccessor) = reservoirTrainerFactory(initializedTopology, reservoirSetting, ioStream)
+      val (predictor, weightAccessor) = reservoirTrainerFactory(initializedTopology, reservoirSetting, ioStream, iterationNum)
 
-      predictor.train
+      predictor.train(iterationNum)
       val outputs = predictor.outputs
       val desiredOutputs = (ioStream.outputStream take outputs.size).toList.map(_.head)
 

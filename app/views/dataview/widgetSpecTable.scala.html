@@ -4,7 +4,7 @@
 @import models.ChartType
 @import models.{WidgetSpec, Field, Filter}
 @import models.DataSetFormattersAndIds.{widgetSpecFormat, widgetSpecClasses}
-@import dataaccess.ReflectionUtil.getCaseClassMethodNamesAndTypes
+@import dataaccess.ReflectionUtil.getCaseClassMemberAndTypeNames
 @import play.api.libs.json.Json
 @import play.api.libs.json.JsObject
 @import reactivemongo.play.json.BSONFormats._
@@ -590,7 +590,7 @@
         switch (concreteClass) {
             @widgetSpecClasses.map { clazz =>
                 case "@{clazz.getName}" :
-                    fieldNames = [@getCaseClassMethodNamesAndTypes(clazz.getName).map{ case (name, _) => "@name", } ];
+                    fieldNames = [@getCaseClassMemberAndTypeNames(clazz.getName).map{ case (name, _) => "@name", } ];
                     break;
 
             }

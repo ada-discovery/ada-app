@@ -3,9 +3,10 @@ package util
 import java.text.{ParseException, SimpleDateFormat}
 
 import com.fasterxml.jackson.core.JsonParseException
-import play.api.libs.json._
+import play.api.libs.json.{JsObject, _}
 import play.api.mvc.QueryStringBindable
 import java.util.Date
+import java.util.regex.Pattern
 
 object JsonUtil {
 
@@ -79,6 +80,51 @@ object JsonUtil {
           }
         }.flatten.flatten
     }
+  }
+
+  def flatten(
+    json: JsObject,
+    delimiter: String = ".",
+    prefix: Option[String] = None
+  ): JsObject =
+    json.fields.foldLeft(Json.obj()) {
+      case (acc, (fieldName, v)) =>
+        val newPrefix = prefix.map(prefix => s"$prefix$delimiter$fieldName").getOrElse(fieldName)
+        v match {
+          case jsObject: JsObject => acc.deepMerge(flatten(jsObject, delimiter, Some(newPrefix)))
+          case _ => acc + (newPrefix -> v)
+        }
+    }
+
+  def deflatten(
+    json: JsObject,
+    delimiter: String = "."
+  ): JsObject = {
+
+    // helper function to extract prefix and non-prefix fields
+    def deflattenFields(
+      fields: Seq[(String, JsValue)]
+    ): Seq[(String, JsValue)] = {
+      val prefixNonPrefixFields = fields.map { case (fieldName, jsValue) =>
+        val prefixRest = fieldName.split(Pattern.quote(delimiter), 2)
+        if (prefixRest.length < 2)
+          Right((fieldName, jsValue))
+        else
+          Left((prefixRest(0), (prefixRest(1), jsValue)))
+      }
+
+      val prefixFields = prefixNonPrefixFields.flatMap(_.left.toOption)
+      val nonPrefixFields = prefixNonPrefixFields.flatMap(_.right.toOption)
+
+      val deflattedPrefixFields = prefixFields.groupBy(_._1).map { case (prefix, fields) =>
+        val newFields = deflattenFields(fields.map(_._2))
+        (prefix, JsObject(newFields))
+      }
+
+      nonPrefixFields ++ deflattedPrefixFields
+    }
+
+    JsObject(deflattenFields(json.fields))
   }
 
   private def replaceAll(

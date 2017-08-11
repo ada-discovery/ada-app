@@ -1,7 +1,8 @@
 package models
 
 import models.{DataSetFormattersAndIds, DataSetSetting}
-import dataaccess.{BSONObjectIdentity, ManifestedFormat, SubTypeFormat}
+import dataaccess.BSONObjectIdentity
+import models.json.{ManifestedFormat, SubTypeFormat}
 import reactivemongo.bson.BSONObjectID
 import java.util.Date
 import reactivemongo.play.json.BSONFormats._

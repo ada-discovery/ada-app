@@ -4,7 +4,8 @@ import java.util.Collections
 import java.{lang => jl, util => ju}
 import javax.inject.Inject
 
-import _root_.util.{JsonUtil, seqFutures}
+import _root_.util.{FieldUtil, JsonUtil, seqFutures}
+import FieldUtil.caseClassToFlatFieldTypes
 import com.banda.core.plotter.Plotter
 import com.banda.incal.domain.ReservoirLearningSetting
 import com.banda.incal.prediction.ReservoirTrainerFactory
@@ -16,7 +17,7 @@ import dataaccess.AscSort
 import dataaccess.Criterion.Infix
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models._
-import models.ml.RCPredictionSettingAndResults
+import models.ml.{RCPredictionInputOutputSpec, RCPredictionSetting, RCPredictionSettingAndResults}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.{util => _, _}
 import reactivemongo.bson.BSONObjectID
@@ -34,14 +35,8 @@ trait RCPredictionService {
   type JsonsAndFields = (Seq[JsObject], Traversable[Field])
 
   def predictAndStoreResults(
-    createReservoirSetting : => ReservoirLearningSetting,
-    washoutPeriod: Int,
-    dropRightLength: Int,
-    inputSeriesFieldPaths: Seq[String],
-    outputSeriesFieldPaths: Seq[String],
-    sourceDataSetId: String,
-    resultDataSetId: String,
-    resultDataSetName: String,
+    setting: ReservoirLearningSetting,
+    ioSpec: RCPredictionInputOutputSpec,
     batchSize: Option[Int] = None,
     transformWeightResultJsonsAndFields: Option[JsonsAndFields => JsonsAndFields] = None
   ): Future[Unit]
@@ -49,7 +44,6 @@ trait RCPredictionService {
   def predictSeries(
     topology: Topology,
     setting: ReservoirLearningSetting,
-    washoutPeriod: Int,
     dropRightLength: Int)(
     json: JsObject,
     inputSeriesFieldPaths: Seq[String],
@@ -69,21 +63,7 @@ class RCPredictionServiceImpl @Inject()(
   private val otherFieldNames1 = Seq("recordId", "medTimepoint", "healthCode")
   private val otherFieldNames2 = Seq("recordId")
 
-  private val settingAndResultsFields = Seq(
-    ("reservoirNodeNum", FieldTypeSpec(FieldTypeId.Integer)),
-    ("reservoirInDegree", FieldTypeSpec(FieldTypeId.Integer)),
-    ("inputReservoirConnectivity", FieldTypeSpec(FieldTypeId.Double)),
-    ("reservoirSpectralRadius", FieldTypeSpec(FieldTypeId.Double)),
-    ("washoutPeriod", FieldTypeSpec(FieldTypeId.Integer)),
-    ("dropRightLength", FieldTypeSpec(FieldTypeId.Integer)),
-    ("sourceDataSetId", FieldTypeSpec(FieldTypeId.String)),
-    ("resultDataSetId", FieldTypeSpec(FieldTypeId.String)),
-    ("resultDataSetName", FieldTypeSpec(FieldTypeId.String)),
-    ("inputSeriesFieldPaths", FieldTypeSpec(FieldTypeId.String, true)),
-    ("outputSeriesFieldPaths", FieldTypeSpec(FieldTypeId.String, true)),
-    ("meanSampLast", FieldTypeSpec(FieldTypeId.Double)),
-    ("meanRnmseLast", FieldTypeSpec(FieldTypeId.Double))
-  )
+  private val settingAndResultsFields = caseClassToFlatFieldTypes[RCPredictionSettingAndResults]("-").filter(_._1 != "_id")
 
   private def resultWeightDataSetSetting(resultDataSetId: String) = DataSetSetting(
     None,
@@ -123,38 +103,30 @@ class RCPredictionServiceImpl @Inject()(
   private val defaultBatchSize = 20
 
   override def predictAndStoreResults(
-    createReservoirSetting : => ReservoirLearningSetting,
-    washoutPeriod: Int,
-    dropRightLength: Int,
-    inputSeriesFieldPaths: Seq[String],
-    outputSeriesFieldPaths: Seq[String],
-    sourceDataSetId: String,
-    resultDataSetId: String,
-    resultDataSetName: String,
+    setting: ReservoirLearningSetting,
+    ioSpec: RCPredictionInputOutputSpec,
     batchSize: Option[Int] = None,
     transformWeightResultJsonsAndFields: Option[JsonsAndFields => JsonsAndFields] = None
   ): Future[Unit] = {
-    val setting = createReservoirSetting
     val idName = JsObjectIdentity.name
-    val dsa = dsaf(sourceDataSetId).get
+    val dsa = dsaf(ioSpec.sourceDataSetId).get
     val dataSetRepo = dsa.dataSetRepo
 
-    val inputDim = inputSeriesFieldPaths.size
-    val outputDim = outputSeriesFieldPaths.size
+    val inputDim = ioSpec.inputSeriesFieldPaths.size
+    val outputDim = ioSpec.outputSeriesFieldPaths.size
 
     val topology = createTopology(setting, inputDim, outputDim)
 
     val otherFieldNames = if (transformWeightResultJsonsAndFields.isDefined) otherFieldNames1 else otherFieldNames2
-    val seriesFieldNames = inputSeriesFieldPaths.map(_.split('.').head) ++ outputSeriesFieldPaths.map(_.split('.').head)
+    val seriesFieldNames = ioSpec.inputSeriesFieldPaths.map(_.split('.').head) ++ ioSpec.outputSeriesFieldPaths.map(_.split('.').head)
 
     // helper method to execute prediction on a given json
     def predict(json: JsObject): Future[Option[(RCPredictionResults, JsObject)]] =
-      // TODO: here we pass a new instance of reservoir setting because the iteration num is set inside
       for {
-        results <- predictSeries(topology, createReservoirSetting, washoutPeriod, dropRightLength)(
+        results <- predictSeries(topology, setting, ioSpec.dropRightLength)(
           json,
-          inputSeriesFieldPaths,
-          outputSeriesFieldPaths
+          ioSpec.inputSeriesFieldPaths,
+          ioSpec.outputSeriesFieldPaths
         )
       } yield
         results.map { results =>
@@ -210,7 +182,7 @@ class RCPredictionServiceImpl @Inject()(
             (allResults, fields)
           )
 
-        saveWeightDataSet(metaInfo, resultDataSetId, resultDataSetName, transformedFields, transformedResults)
+        saveWeightDataSet(metaInfo, ioSpec.resultDataSetId, ioSpec.resultDataSetName, transformedFields, transformedResults)
       }
 
       // calc the errors and save the results
@@ -224,22 +196,21 @@ class RCPredictionServiceImpl @Inject()(
 
         val settingAndResults = RCPredictionSettingAndResults(
           None,
-          setting.getReservoirNodeNum,
-          setting.getReservoirInDegree.get,
-          setting.getInputReservoirConnectivity,
-          setting.getReservoirSpectralRadius,
-          washoutPeriod,
-          dropRightLength,
-          inputSeriesFieldPaths,
-          outputSeriesFieldPaths,
-          sourceDataSetId,
-          resultDataSetId,
-          resultDataSetName,
+          RCPredictionSetting(
+            setting.getReservoirNodeNum,
+            setting.getReservoirInDegree.get,
+            setting.getInputReservoirConnectivity,
+            setting.getReservoirSpectralRadius,
+            setting.getInScale,
+            None,
+            setting.getWashoutPeriod
+          ),
+          ioSpec,
           meanSamp,
           meanRnmse
         )
 
-        saveResults(metaInfo, settingAndResults, sourceDataSetId + "_results", metaInfo.name + " Results")
+        saveResults(metaInfo, settingAndResults, ioSpec.sourceDataSetId + "_results", metaInfo.name + " Results")
       }
     } yield {
       println(allResults.size)
@@ -272,7 +243,6 @@ class RCPredictionServiceImpl @Inject()(
   override def predictSeries(
     topology: Topology,
     setting: ReservoirLearningSetting,
-    washoutPeriod: Int,
     dropRightLength: Int)(
     json: JsObject,
     inputSeriesFieldPaths: Seq[String],
@@ -293,7 +263,6 @@ class RCPredictionServiceImpl @Inject()(
       mlService.predictRCTimeSeries(
         setting,
         topology,
-        washoutPeriod,
         predictAhead,
         inputSeries,
         outputSeries

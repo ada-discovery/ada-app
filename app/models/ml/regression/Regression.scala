@@ -2,7 +2,8 @@ package models.ml.regression
 
 import java.util.Date
 
-import dataaccess.{BSONObjectIdentity, EnumFormat, ManifestedFormat, SubTypeFormat}
+import dataaccess.BSONObjectIdentity
+import models.json.{EnumFormat, ManifestedFormat, SubTypeFormat}
 import models.ml.TreeCore
 import play.api.libs.json.{Format, Json}
 import reactivemongo.bson.BSONObjectID

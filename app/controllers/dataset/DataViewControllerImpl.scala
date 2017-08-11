@@ -10,6 +10,7 @@ import dataaccess.RepoTypes.UserRepo
 import dataaccess._
 import models._
 import models.DataSetFormattersAndIds._
+import models.json.EitherFormat
 import models.FilterCondition.{FilterIdentity, filterFormat}
 import models.security.UserManager
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo

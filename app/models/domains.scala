@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonParseException
 import controllers.BSONObjectIDQueryStringBindable
 import play.api.mvc.QueryStringBindable
 import util.JsonUtil
-import dataaccess.{BSONObjectIdentity, EnumFormat}
+import dataaccess.BSONObjectIdentity
 import models.FilterCondition.{FilterOrId, filterConditionFormat, filterFormat}
 import models.DataSetFormattersAndIds.enumTypeFormat
 import play.api.libs.json.Json
@@ -13,7 +13,8 @@ import java.util.{Date, UUID}
 
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
-import dataaccess.EitherFormat._
+import models.json.EnumFormat
+import models.json.EitherFormat._
 
 case class Message(
   _id: Option[BSONObjectID],

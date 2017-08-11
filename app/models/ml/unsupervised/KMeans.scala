@@ -3,7 +3,8 @@ package models.ml.unsupervised
 import reactivemongo.bson.BSONObjectID
 import java.util.Date
 import reactivemongo.play.json.BSONFormats._
-import dataaccess.{BSONObjectIdentity, EnumFormat, ManifestedFormat, SubTypeFormat}
+import dataaccess.BSONObjectIdentity
+import models.json.{EnumFormat, ManifestedFormat, SubTypeFormat}
 import play.api.libs.json.{Format, Json}
 
 abstract class UnsupervisedLearning {
