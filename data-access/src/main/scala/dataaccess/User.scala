@@ -1,5 +1,6 @@
 package dataaccess
 
+import models.json.SerializableFormat
 import play.api.libs.json.{Json, _}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat

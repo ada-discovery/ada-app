@@ -1,6 +1,6 @@
 package dataaccess.elastic
 
-import dataaccess.RenameFieldFormat
+import models.json.RenameFieldFormat
 import play.api.libs.json._
 
 class ElasticIdRenameFormat[T](format: Format[T]) extends  Format[T] {

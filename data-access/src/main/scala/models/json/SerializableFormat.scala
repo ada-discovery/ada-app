@@ -1,4 +1,4 @@
-package dataaccess
+package models.json
 
 import play.api.libs.json.{Format, JsResult, JsValue}
 

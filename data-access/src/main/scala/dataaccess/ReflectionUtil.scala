@@ -14,20 +14,25 @@ object ReflectionUtil {
   def getMethodNames[T](implicit tag: ClassTag[T]): Traversable[String] =
     tag.runtimeClass.getMethods.map(_.getName)
 
-  def getCaseMethodNamesAndTypes[T: TypeTag]: Traversable[(String, String)] =
-    getCaseMethodNamesAndTypes(typeOf[T])
+  def getCaseClassMemberAndTypeNames[T: TypeTag]: Traversable[(String, String)] =
+    getCaseClassMemberAndTypeNames(typeOf[T])
 
-  private def getCaseMethodNamesAndTypes(runType: ru.Type): Traversable[(String, String)] =
-    runType.members.collect {
-      case m: MethodSymbol if m.isCaseAccessor => {
-        (shortName(m), m.returnType.typeSymbol.asClass.fullName)
-      }
-    }.toList
-
-  def getCaseClassMethodNamesAndTypes(className: String) = {
+  def getCaseClassMemberAndTypeNames(className: String): Traversable[(String, String)] = {
     val runtimeType = classNameToRuntimeType(className)
-    getCaseMethodNamesAndTypes(runtimeType)
+    getCaseClassMemberAndTypeNames(runtimeType)
   }
+
+  private def getCaseClassMemberAndTypeNames(runType: ru.Type): Traversable[(String, String)] =
+    getCaseClassMemberNamesAndTypes(runType).map { case (name, ruType) =>
+      (name, ruType.typeSymbol.asClass.fullName)
+    }
+
+  def getCaseClassMemberNamesAndTypes(
+    runType: ru.Type
+  ): Traversable[(String, ru.Type)] =
+    runType.members.collect {
+      case m: MethodSymbol if m.isCaseAccessor => (shortName(m), m.returnType)
+    }
 
   def shortName(symbol: Symbol): String = {
     val paramFullName = symbol.fullName

@@ -2,15 +2,17 @@ package dataaccess.ignite
 
 import models.FieldTypeId
 import FieldTypeId._
-import dataaccess.EnumFormat
 import org.apache.ignite.IgniteBinary
-import org.apache.ignite.binary.{BinaryType, BinaryObject}
+import org.apache.ignite.binary.{BinaryObject, BinaryType}
 import org.apache.ignite.internal.binary.BinaryObjectImpl
 import play.api.libs.json.Json
 import java.util.Date
+
+import models.json.EnumFormat
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+
 import scala.collection.JavaConversions._
 
 object BinaryJsonUtil {

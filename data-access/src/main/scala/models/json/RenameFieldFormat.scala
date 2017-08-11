@@ -1,9 +1,10 @@
-package dataaccess
+package models.json
 
 import play.api.libs.json._
-import collection.mutable.{Map => MMap}
 
-protected class RenameFieldFormat(
+import scala.collection.mutable.{Map => MMap}
+
+class RenameFieldFormat(
     originalFieldName: String,
     newFieldName: String
   ) extends Format[JsValue] {

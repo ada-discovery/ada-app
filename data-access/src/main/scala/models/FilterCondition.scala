@@ -2,7 +2,8 @@ package models
 
 import java.util.Date
 
-import dataaccess.{EitherFormat, BSONObjectIdentity, EnumFormat, User}
+import dataaccess.{BSONObjectIdentity, User}
+import models.json.{EitherFormat, EnumFormat}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID

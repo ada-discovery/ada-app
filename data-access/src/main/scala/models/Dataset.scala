@@ -2,7 +2,7 @@ package models
 
 import java.util.{Date, UUID}
 
-import dataaccess.{ManifestedFormat, SubTypeFormat}
+import models.json.ManifestedFormat
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
@@ -10,6 +10,7 @@ import reactivemongo.play.json.BSONFormats._
 import dataaccess._
 import models.FilterCondition.filterFormat
 import models.DataView.dataViewFormat
+import models.json.{EnumFormat, ManifestedFormat, SerializableFormat, SubTypeFormat}
 
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.ListBuffer

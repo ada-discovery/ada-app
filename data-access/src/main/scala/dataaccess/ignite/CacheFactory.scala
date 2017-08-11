@@ -36,7 +36,7 @@ class CacheFactory @Inject()(ignite: Ignite) extends Serializable {
   ): IgniteCache[ID, E] = {
     val cacheConfig = new CacheConfiguration[ID, E]()
 
-    val fieldNamesAndTypes = getCaseMethodNamesAndTypes[E]
+    val fieldNamesAndTypes = getCaseClassMemberAndTypeNames[E]
     val fieldNames = fieldNamesAndTypes.map(_._1)
     val fields = fieldNamesAndTypes.toMap
 

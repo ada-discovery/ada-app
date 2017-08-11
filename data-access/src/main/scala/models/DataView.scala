@@ -5,6 +5,8 @@ import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
 import models.DataSetFormattersAndIds.widgetSpecFormat
 import java.util.Date
+
+import models.json.EitherFormat
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
 
