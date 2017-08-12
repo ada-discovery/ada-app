@@ -33,6 +33,13 @@ trait DataSetAccessorFactory {
   ): Future[DataSetAccessor]
 
   def apply(dataSetId: String): Option[DataSetAccessor]
+
+  @Deprecated
+  def dataSetRepoCreate(
+    dataSetId: String)(
+    fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
+    dataSetSetting: Option[DataSetSetting] = None
+  ): Future[JsonCrudRepo]
 }
 
 @Singleton
@@ -94,7 +101,6 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     val categoryRepo = categoryRepoFactory(dataSetId)
     val filterRepo = filterRepoFactory(dataSetId)
     val dataViewRepo = dataViewRepoFactory(dataSetId)
-    val collectionName = dataCollectionName(dataSetId)
 
     val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(dataSpaceId)
 
@@ -104,18 +110,19 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
       categoryRepo,
       filterRepo,
       dataViewRepo,
-      dataSetRepoCreate(collectionName, dataSetId),
+      dataSetRepoCreate(dataSetId),
       dataSetMetaInfoRepo,
       dataSetSettingRepo
     )
   }
 
-  protected def dataSetRepoCreate(
-    collectionName: String,
+  def dataSetRepoCreate(
     dataSetId: String)(
     fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
     dataSetSetting: Option[DataSetSetting] = None
   ): Future[JsonCrudRepo] = {
+    val collectionName = dataCollectionName(dataSetId)
+
     for {
       dataSetSetting <-
         dataSetSetting match {

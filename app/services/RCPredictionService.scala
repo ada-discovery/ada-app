@@ -323,7 +323,7 @@ class RCPredictionServiceImpl @Inject()(
 
       // save filters
       _ <- weightDsa.filterRepo.save(
-        Seq(1, 10, 100, 1000).map(filter(_, weightsCount))
+        Seq(mainFilter) ++ Seq(1, 10, 100, 1000).map(filter(_, weightsCount))
       )
     } yield
       ()
@@ -363,6 +363,13 @@ class RCPredictionServiceImpl @Inject()(
       conditions ++ Seq(FilterCondition("professional-diagnosis", None, ConditionType.NotEquals, "", None))
     )
   }
+
+  private def mainFilter =
+    Filter(
+      None,
+      Some("Diagnosis Not Null"),
+      Seq(FilterCondition("professional-diagnosis", None, ConditionType.NotEquals, "", None))
+    )
 
   private def calcErrors(
     results: Traversable[RCPredictionResults],

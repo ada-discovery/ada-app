@@ -9,12 +9,10 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsArray, JsString, Json}
 import reactivemongo.bson.BSONObjectID
 
-class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) extends Runnable {
+class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
-  private val dataSetId = "mpower_challenge.walking_activity_training_norms_results"
+  private val dataSetId = "mpower_challenge.walking_activity_training_results"
   private val dataSetRepo = dsaf(dataSetId).get.dataSetRepo
-
-  private val timeout = 120000 millis
 
   private val inputFieldPaths = Seq(
     "accel_walking_outboundu002ejsonu002eitems.x",
@@ -26,11 +24,11 @@ class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) ext
     "accel_walking_outboundu002ejsonu002eitems.y"
   )
 
-  override def run = {
-    val future = for {
+  override def runAsFuture =
+    for {
 //      jsons <- dataSetRepo.find()
 
-      Some(json) <- dataSetRepo.get(BSONObjectID.apply("5970fd04f6000080036aec20"))
+//      Some(json) <- dataSetRepo.get(BSONObjectID.apply("5970fd04f6000080036aec20"))
 
 //      _ <- {
 //        val newJsons = jsons.map ( json =>
@@ -43,18 +41,15 @@ class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) ext
 //        dataSetRepo.update(newJsons)
 //      }
 
-      _ <- {
-        val newJson = json.+("resultDataSetId", JsString("mpower_challenge.walking_activity_training_norms_rc_weights_11"))
+//      _ <- {
+//        val newJson = json.+("resultDataSetId", JsString("mpower_challenge.walking_activity_training_norms_rc_weights_11"))
+//
+//        dataSetRepo.update(newJson)
+//      }
 
-        dataSetRepo.update(newJson)
-      }
-
-//      _ <- dataSetRepo.delete(Seq(BSONObjectID.apply("596a16fef700001803fbe1f4"), BSONObjectID.apply("596a1858f70000fe02fc6918")))
+      _ <- dataSetRepo.delete(Seq(BSONObjectID.apply("598b35e0f6000088014065e9"), BSONObjectID.apply("598b69faf600006b0440edff")))
     } yield
       ()
-
-    Await.result(future, timeout)
-  }
 }
 
 object UpdateMPowerPredictionResults extends GuiceBuilderRunnable[UpdateMPowerPredictionResults] with App { run }
