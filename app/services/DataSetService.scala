@@ -148,7 +148,7 @@ class DataSetServiceImpl @Inject()(
   private val dataSetIdFieldName = JsObjectIdentity.name
   private val reportLineFreq = 0.1
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
   private val fti = FieldTypeHelper.fieldTypeInferrer
   private val jsonFti = FieldTypeHelper.jsonFieldTypeInferrer
 

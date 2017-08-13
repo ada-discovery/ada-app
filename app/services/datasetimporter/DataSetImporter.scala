@@ -32,7 +32,7 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
   protected lazy val messageLogger = MessageLogger(logger, messageRepo)
 
   protected val defaultFti = FieldTypeHelper.fieldTypeInferrer
-  protected val ftf = FieldTypeHelper.fieldTypeFactory
+  protected val ftf = FieldTypeHelper.fieldTypeFactory()
   protected val defaultCharset = "UTF-8"
   protected val timeout = 2 minutes
 

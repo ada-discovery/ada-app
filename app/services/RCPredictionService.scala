@@ -285,9 +285,7 @@ class RCPredictionServiceImpl @Inject()(
         Some(
           resultWeightDataSetSetting(resultDataSetId)
         ),
-        Some(
-          mainDataView(resultsAndJsons.head._1.finalWeights.size)
-        )
+        None
       )
 
       weightsCount = resultsAndJsons.head._1.finalWeights.size
@@ -323,7 +321,12 @@ class RCPredictionServiceImpl @Inject()(
 
       // save filters
       _ <- weightDsa.filterRepo.save(
-        Seq(mainFilter) ++ Seq(1, 10, 100, 1000).map(filter(_, weightsCount))
+        Seq(mainFilter) ++ Seq(1, 10, 100, 1000).flatMap(filters(_, weightsCount))
+      )
+
+      // save views
+      _ <- weightDsa.dataViewRepo.save(
+        Seq(mainDataView(weightsCount), pdVsControlDataView(weightsCount))
       )
     } yield
       ()
@@ -349,7 +352,30 @@ class RCPredictionServiceImpl @Inject()(
     )
   }
 
-  private def filter(maxWeight: Int, weightsCount: Int): Filter = {
+  private def pdVsControlDataView(weightsCount: Int): DataView = {
+    val weightFieldNames = (0 until weightsCount).map( index => ("rc_w_" + index) )
+
+    val distributionWidgets = weightFieldNames.take(10).map(DistributionWidgetSpec(_, None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))))
+
+    val boxPlotWidgets = weightFieldNames.take(10).map(BoxWidgetSpec(_))
+
+    val correlationWidget = CorrelationWidgetSpec(fieldNames = weightFieldNames.take(15))
+
+    DataView(
+      None,
+      "PD vs Control",
+      Seq(
+        Left(Seq(diagnosisCondition(ConditionType.Equals, "true"))),
+        Left(Seq(diagnosisCondition(ConditionType.Equals, "false")))
+      ),
+      Seq("recordId") ++ weightFieldNames.take(2),
+      distributionWidgets ++ boxPlotWidgets ++ Seq(correlationWidget),
+      12,
+      false
+    )
+  }
+
+  private def filters(maxWeight: Int, weightsCount: Int): Seq[Filter] = {
     val conditions = (0 until weightsCount).map { index =>
       val fieldName = "rc_w_" + index
       val gtCondition = FilterCondition(fieldName, None, ConditionType.Greater, (-maxWeight).toString, None)
@@ -357,12 +383,27 @@ class RCPredictionServiceImpl @Inject()(
       Seq(gtCondition, ltCondition)
     }.flatten
 
-    Filter(
-      None,
-      Some(s"Diagnosis Not Null (RC_W -$maxWeight to $maxWeight)"),
-      conditions ++ Seq(FilterCondition("professional-diagnosis", None, ConditionType.NotEquals, "", None))
+    Seq(
+      Filter(
+        None,
+        Some(s"Diagnosis Not Null (RC_W -$maxWeight to $maxWeight)"),
+        conditions ++ Seq(diagnosisCondition(ConditionType.NotEquals, ""))
+      ),
+      Filter(
+        None,
+        Some(s"Diagnosis True (RC_W -$maxWeight to $maxWeight)"),
+        conditions ++ Seq(diagnosisCondition(ConditionType.Equals, "true"))
+      ),
+      Filter(
+        None,
+        Some(s"Diagnosis False (RC_W -$maxWeight to $maxWeight)"),
+        conditions ++ Seq(diagnosisCondition(ConditionType.Equals, "false"))
+      )
     )
   }
+
+  private def diagnosisCondition(conditionType: ConditionType.Value, value: String) =
+    FilterCondition("professional-diagnosis", None, conditionType, value, None)
 
   private def mainFilter =
     Filter(

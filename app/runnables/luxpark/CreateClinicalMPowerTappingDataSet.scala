@@ -117,7 +117,7 @@ class CreateClinicalMPowerTappingDataSet @Inject()(
   private val luxParkFieldRepo = luxParkDsa.fieldRepo
   private val mergedFieldRepo = mergedDsa.fieldRepo
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def run = {
     val future = for {

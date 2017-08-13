@@ -62,7 +62,7 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
       if (importInfo.inferenceMaxEnumValuesCount.isDefined || importInfo.inferenceMinAvgValuesPerEnum.isDefined) {
         Some(
           FieldTypeInferrerFactory(
-            FieldTypeHelper.fieldTypeFactory,
+            FieldTypeHelper.fieldTypeFactory(),
             importInfo.inferenceMaxEnumValuesCount.getOrElse(FieldTypeHelper.maxEnumValuesCount),
             importInfo.inferenceMinAvgValuesPerEnum.getOrElse(FieldTypeHelper.minAvgValuesPerEnum),
             FieldTypeHelper.arrayDelimiter

@@ -4,6 +4,7 @@ import java.io._
 import java.util.zip.{ZipEntry, ZipFile, ZipInputStream}
 import javax.inject.Inject
 
+import com.google.inject.Singleton
 import com.google.inject.assistedinject.Assisted
 import models.synapse._
 import org.apache.commons.io.IOUtils
@@ -11,7 +12,7 @@ import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.{Configuration, Logger}
 import play.api.libs.json.{JsObject, Json}
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
@@ -28,6 +29,13 @@ trait SynapseService {
     * (Re)logins and refreshes a session token
     */
   def login: Future[Unit]
+
+  /**
+    * Closes the connection
+    *
+    * @return
+    */
+  def close: Unit
 
   /**
     * Prolonges a current session token for another 24 hours
@@ -123,13 +131,17 @@ trait SynapseService {
     attemptNum: Option[Int] = None
   ): Future[Iterator[(String, String)]]
 
-  def updateJsonsFileFields(
-    fileFieldNames: Seq[String],
-    tableId: String,
-    bulkDownloadGroupNumber: Int,
-    bulkDownloadAttemptNumber: Option[Int])(
-    jsons: Seq[JsObject]
-  ): Future[Seq[JsObject]]
+  /**
+    * Downloads files of custom types (file, table, attachment) for given handle assocations in a bulk by combining startBulkDownload, getBulkDownloadResultWait, and downloadFileAsBytes
+    *
+    * @param fileHandleAssociations
+    * @param attemptNum
+    * @return
+    */
+  def downloadFilesInBulk(
+    fileHandleAssociations: Traversable[FileHandleAssociation],
+    attemptNum: Option[Int] = None
+  ): Future[Iterator[(String, String)]]
 }
 
 protected[services] class SynapseServiceWSImpl @Inject() (
@@ -344,14 +356,25 @@ protected[services] class SynapseServiceWSImpl @Inject() (
     res.left.get
   }
 
-  override def downloadTableFilesInBulk(fileHandleIds: Traversable[String], tableId: String, attemptNum: Option[Int] = None): Future[Iterator[(String, String)]] =
-    if (fileHandleIds.isEmpty) {
+  override def downloadTableFilesInBulk(
+    fileHandleIds: Traversable[String],
+    tableId: String,
+    attemptNum: Option[Int]
+  ): Future[Iterator[(String, String)]] = {
+    val assocs = fileHandleIds.map(FileHandleAssociation(FileHandleAssociateType.TableEntity, _, tableId))
+    downloadFilesInBulk(assocs,  attemptNum)
+  }
+
+  override def downloadFilesInBulk(
+    fileHandleAssociations: Traversable[FileHandleAssociation],
+    attemptNum: Option[Int]
+  ): Future[Iterator[(String, String)]] =
+    if (fileHandleAssociations.isEmpty) {
       Future(Iterator[(String, String)]())
     } else {
       def downloadAux = for {
         bulkDownloadToken <- {
-          val requestedFiles = fileHandleIds.map(FileHandleAssociation(FileHandleAssociateType.TableEntity, _, tableId))
-          startBulkDownload(BulkFileDownloadRequest(requestedFiles.toSeq))
+          startBulkDownload(BulkFileDownloadRequest(fileHandleAssociations.toSeq))
         }
         bulkDownloadResponse <- getBulkDownloadResultWait(bulkDownloadToken)
         bulkDownloadContentBytes <- downloadFileAsBytes(bulkDownloadResponse.resultZipFileHandleId)
@@ -367,55 +390,6 @@ protected[services] class SynapseServiceWSImpl @Inject() (
         case None => downloadAux
       }
     }
-
-  override def updateJsonsFileFields(
-    fileFieldNames: Seq[String],
-    tableId: String,
-    bulkDownloadGroupNumber: Int,
-    bulkDownloadAttemptNumber: Option[Int])(
-    jsons: Seq[JsObject]
-  ): Future[Seq[JsObject]] = {
-    val fileHandleIds = fileFieldNames.map { fieldName =>
-      jsons.map(json =>
-        JsonUtil.toString(json \ fieldName)
-      )
-    }.flatten.flatten
-
-    if (fileHandleIds.nonEmpty) {
-      val groupSize = Math.max(fileHandleIds.size / bulkDownloadGroupNumber, 1)
-      val groups = {
-        if (fileHandleIds.size.toDouble / groupSize > bulkDownloadGroupNumber)
-          fileHandleIds.grouped(groupSize + 1)
-        else
-          fileHandleIds.grouped(groupSize)
-      }.toSeq
-
-      logger.info(s"Bulk download of Synapse column data for ${fileHandleIds.size} file handles (split into ${groups.size} groups) initiated.")
-
-      // download the files in a bulk
-      val fileHandleIdContentsFutures = groups.par.map { groupFileHandleIds =>
-        downloadTableFilesInBulk(groupFileHandleIds, tableId, bulkDownloadAttemptNumber)
-      }
-
-      Future.sequence(fileHandleIdContentsFutures.toList).map(_.flatten).map { fileHandleIdContents =>
-        logger.info(s"Download of ${fileHandleIdContents.size} Synapse column data finished. Updating JSONs with Synapse column data...")
-        val fileHandleIdContentMap = fileHandleIdContents.toMap
-        // update jsons with new file contents
-        val newJsons = jsons.map { json =>
-          val fieldNameJsons = fileFieldNames.map { fieldName =>
-            JsonUtil.toString(json \ fieldName).map(fileHandleId =>
-              (fieldName, Json.parse(fileHandleIdContentMap.get(fileHandleId).get))
-            )
-          }.flatten
-          json ++ JsObject(fieldNameJsons)
-        }
-
-        newJsons
-      }
-    } else
-    // no update
-      Future(jsons)
-  }
 
   def retry[T](failureMessage: String, maxAttemptNum: Int)(f: => Future[T]): Future[T] = {
     def retryAux(attempt: Int): Future[T] =
@@ -440,4 +414,11 @@ protected[services] class SynapseServiceWSImpl @Inject() (
 
   def withRequestTimeout(timeout: Duration)(request: WSRequest): WSRequest =
     request.withRequestTimeout(timeout.toMillis)
+
+  /**
+    * Closes the connection
+    *
+    * @return
+    */
+  override def close = ws.close()
 }

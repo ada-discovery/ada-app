@@ -57,7 +57,7 @@ class LinkADSMTBAndDrugDataSet @Inject()(
 
   private val harmonizedDrugField = Field("drug_harmonized_name", Some("Harmonized Drug Name"), FieldTypeId.Enum)
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def run = {
     val future = for {

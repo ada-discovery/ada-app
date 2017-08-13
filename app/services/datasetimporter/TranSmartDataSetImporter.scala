@@ -136,7 +136,7 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
       if (importInfo.inferenceMaxEnumValuesCount.isDefined || importInfo.inferenceMinAvgValuesPerEnum.isDefined) {
         Some(
           FieldTypeInferrerFactory(
-            FieldTypeHelper.fieldTypeFactory,
+            FieldTypeHelper.fieldTypeFactory(),
             importInfo.inferenceMaxEnumValuesCount.getOrElse(FieldTypeHelper.maxEnumValuesCount),
             importInfo.inferenceMinAvgValuesPerEnum.getOrElse(FieldTypeHelper.minAvgValuesPerEnum),
             FieldTypeHelper.arrayDelimiter

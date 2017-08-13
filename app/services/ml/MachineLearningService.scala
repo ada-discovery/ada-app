@@ -93,7 +93,7 @@ private class MachineLearningServiceImpl @Inject() (
     topologyFactory: TopologyFactory
   ) extends MachineLearningService {
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   private val session = sparkApp.session
   private val sparkContext = sparkApp.sc

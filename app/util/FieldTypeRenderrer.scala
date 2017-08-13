@@ -10,7 +10,7 @@ trait FieldTypeRenderer {
 }
 
 private class FieldTypeRendererImpl(field: Field) extends FieldTypeRenderer {
-  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
   private val fieldType = ftf(field.fieldTypeSpec)
 
   override def apply(json: Option[JsValue]): Html = {

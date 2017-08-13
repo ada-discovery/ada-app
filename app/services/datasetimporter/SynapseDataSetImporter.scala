@@ -3,18 +3,18 @@ package services.datasetimporter
 import java.util.Date
 import javax.inject.Inject
 
-import models.{FieldTypeSpec, FieldTypeId, Field}
-import dataaccess.FieldType
-import models.synapse.ColumnType
+import models.{Field, FieldTypeId, FieldTypeSpec}
+import dataaccess.{FieldType, FieldTypeHelper}
+import models.synapse._
 import models.SynapseDataSetImport
 import play.api.Configuration
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import services.{SynapseService, SynapseServiceFactory}
 import util.JsonUtil
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await._
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 
 private class SynapseDataSetImporter @Inject() (
     synapseServiceFactory: SynapseServiceFactory,
@@ -29,6 +29,9 @@ private class SynapseDataSetImporter @Inject() (
   private val synapseDefaultBulkDownloadGroupNumber = 5
   private val keyField = "ROW_ID"
 
+  private val synapseFtf = FieldTypeHelper.fieldTypeFactory(FieldTypeHelper.nullAliases ++ Set("nan"))
+  private val fti = FieldTypeHelper.fieldTypeInferrerFactory(synapseFtf).apply
+
   private val prefixSuffixSeparators = Seq(
     ("\"[\"\"", "\"\"]\""),
     ("\"[", "]\""),
@@ -38,25 +41,29 @@ private class SynapseDataSetImporter @Inject() (
   override def apply(importInfo: SynapseDataSetImport): Future[Unit] = {
     val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
 
-    if (importInfo.downloadColumnFiles)
-      for {
-        // get the columns of the "file" type
-        fileColumns <- synapseService.getTableColumnModels(importInfo.tableId).map(
-          _.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(_.toSelectColumn)
-        )
-        _ <- {
-          val fileFieldNames = fileColumns.map { fileColumn =>
-            JsonUtil.escapeKey(fileColumn.name.replaceAll("\"", "").trim)
-          }
+    def escapedColumnName(column: ColumnModel) =
+      JsonUtil.escapeKey(column.name.replaceAll("\"", "").trim)
 
+    val futureImport = if (importInfo.downloadColumnFiles)
+      for {
+        // get the columns of the "file" and "entity" type (max 1)
+        (entityColumnName, fileFieldNames) <- synapseService.getTableColumnModels(importInfo.tableId).map { columnModels =>
+          val fileColumns = columnModels.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(escapedColumnName)
+          val entityColumn = columnModels.results.find(_.columnType == ColumnType.ENTITYID).map(escapedColumnName)
+          (entityColumn, fileColumns)
+        }
+
+        _ <- {
           val bulkDownloadGroupNumber = importInfo.bulkDownloadGroupNumber.getOrElse(synapseDefaultBulkDownloadGroupNumber)
 
-          val fun = synapseService.updateJsonsFileFields(
+          val fun = updateJsonsFileFields(
+            synapseService,
             fileFieldNames,
+            entityColumnName,
             importInfo.tableId,
             bulkDownloadGroupNumber,
             Some(synapseBulkDownloadAttemptNumber)
-          ) _
+          )_
 
           importDataSetAux(importInfo, synapseService, fileFieldNames, Some(fun), importInfo.batchSize)
         }
@@ -64,6 +71,8 @@ private class SynapseDataSetImporter @Inject() (
         ()
     else
       importDataSetAux(importInfo, synapseService, Nil, None, importInfo.batchSize).map(_ => ())
+
+    futureImport.map(_ => synapseService.close)
   }
 
   def importDataSetAux(
@@ -82,28 +91,19 @@ private class SynapseDataSetImporter @Inject() (
 
     try {
       for {
-        lines <- {
+        csv <- {
           logger.info("Downloading CSV table from Synapse...")
-          synapseService.getTableAsCsv(importInfo.tableId).map { csv =>
-            val lines = csv.split(synapseEol)
-            lines.iterator
-          }
-        }
-
-        // collect the column names
-        columnNames = dataSetService.getColumnNames(delimiter, lines)
-
-        // parse lines
-        values = {
-          logger.info(s"Parsing lines...")
-          dataSetService.parseLines(columnNames, lines, delimiter, true, prefixSuffixSeparators)
+          synapseService.getTableAsCsv(importInfo.tableId)
         }
 
         // get all the fields
         fields <- fieldRepo.find()
 
         // create jsons and field types
-        (jsons, fieldNameAndTypes) = createSynapseJsonsWithFieldTypes(fields, columnNames, fileFieldNames.toSet, values.toSeq)
+        (jsons, fieldNameAndTypes) = {
+          logger.info(s"Parsing lines and infering types...")
+          extractJsonsAndInferFieldsFromCSV(csv, delimiter, fields, fileFieldNames)
+        }
 
         // save, or update the dictionary
         _ <- {
@@ -142,17 +142,105 @@ private class SynapseDataSetImporter @Inject() (
     }
   }
 
-  protected def createSynapseJsonsWithFieldTypes(
+  private def extractJsonsAndInferFieldsFromCSV(
+    csv: String,
+    delimiter: String,
     fields: Traversable[Field],
+    fileFieldNames: Traversable[String]
+  ): (Seq[JsObject], Seq[(String, FieldType[_])]) = {
+    // split by lines
+    val lines = csv.split(synapseEol).iterator
+
+    // collect the column names
+    val columnNames = dataSetService.getColumnNames(delimiter, lines)
+
+    // parse lines
+    val values = dataSetService.parseLines(columnNames, lines, delimiter, true, prefixSuffixSeparators)
+
+    // create jsons and field types
+    createSynapseJsonsWithFieldTypes(columnNames, fileFieldNames.toSet, values.toSeq, fields)
+  }
+
+  protected def updateJsonsFileFields(
+    synapseService: SynapseService,
+    fileFieldNames: Seq[String],
+    entityColumnName: Option[String],
+    tableId: String,
+    bulkDownloadGroupNumber: Int,
+    bulkDownloadAttemptNumber: Option[Int])(
+    jsons: Seq[JsObject]
+  ): Future[Seq[JsObject]] = {
+    val fileHandleEntityIds = fileFieldNames.flatMap( fieldName =>
+      jsons.flatMap { json =>
+        JsonUtil.toString(json \ fieldName).map { fileHandleId =>
+          val entityId = entityColumnName.flatMap(name => JsonUtil.toString(json \ name))
+          (fileHandleId, entityId)
+        }
+      }
+    )
+
+    if (fileHandleEntityIds.nonEmpty) {
+      val groupSize = Math.max(fileHandleEntityIds.size / bulkDownloadGroupNumber, 1)
+      val groups = {
+        if (fileHandleEntityIds.size.toDouble / groupSize > bulkDownloadGroupNumber)
+          fileHandleEntityIds.grouped(groupSize + 1)
+        else
+          fileHandleEntityIds.grouped(groupSize)
+      }.toSeq
+
+      logger.info(s"Bulk download of Synapse column data for ${fileHandleEntityIds.size} file handles (split into ${groups.size} groups) initiated.")
+
+      // download the files in a bulk
+      val fileHandleIdContentsFutures = groups.par.map { groupFileHandleEntityIds =>
+        val assocs = groupFileHandleEntityIds.map { case (handleId, entityId) =>
+          entityId match {
+            case None => FileHandleAssociation(FileHandleAssociateType.TableEntity, handleId, tableId)
+            case Some(entityId) =>  FileHandleAssociation(FileHandleAssociateType.FileEntity, handleId, entityId)
+          }
+
+        }
+        synapseService.downloadFilesInBulk(assocs, bulkDownloadAttemptNumber)
+      }
+
+      Future.sequence(fileHandleIdContentsFutures.toList).map(_.flatten).map { fileHandleIdContents =>
+        logger.info(s"Download of ${fileHandleIdContents.size} Synapse column data finished. Updating JSONs with Synapse column data...")
+        val fileHandleIdContentMap = fileHandleIdContents.toMap
+        // update jsons with new file contents
+        val newJsons = jsons.map { json =>
+          val fieldNameJsons = fileFieldNames.flatMap( fieldName =>
+            JsonUtil.toString(json \ fieldName).map { fileHandleId =>
+              val fileContent = fileHandleIdContentMap.get(fileHandleId).get
+              val columnJson =
+                if (entityColumnName.isDefined) {
+                  val (jsons, _) = extractJsonsAndInferFieldsFromCSV(fileContent, "\t", Nil, Nil)
+                  JsArray(jsons)
+                } else
+                  Json.parse(fileContent)
+
+              (fieldName, columnJson)
+            }
+          )
+          json ++ JsObject(fieldNameJsons)
+        }
+
+        newJsons
+      }
+    } else
+    // no update
+      Future(jsons)
+  }
+
+  private def createSynapseJsonsWithFieldTypes(
     fieldNames: Seq[String],
     fileFieldNames: Set[String],
-    values: Seq[Seq[String]]
+    values: Seq[Seq[String]],
+    fields: Traversable[Field]
   ): (Seq[JsObject], Seq[(String, FieldType[_])]) = {
     // get the existing types
     val existingFieldTypeMap: Map[String, FieldType[_]] = fields.map ( field => (field.name, ftf(field.fieldTypeSpec))).toMap
 
     // infer the new types
-    val newFieldTypes = values.transpose.par.map(defaultFti.apply).toList
+    val newFieldTypes = values.transpose.par.map(fti.apply).toList
 
     // merge the old and new field types
     val fieldNameAndTypesForParsing = fieldNames.zip(newFieldTypes).map { case (fieldName, newFieldType) =>

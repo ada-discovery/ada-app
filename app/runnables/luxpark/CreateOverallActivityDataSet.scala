@@ -23,7 +23,7 @@ class CreateOverallActivityDataSet  @Inject()(
     dsaf: DataSetAccessorFactory
   ) extends Runnable {
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
   private val timeout = 120000 millis
 
   val dataSetIdWithActivityEnums = Seq(

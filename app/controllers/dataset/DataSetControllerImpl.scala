@@ -93,7 +93,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
   private val csvEOL = "\n"
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 

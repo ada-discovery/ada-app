@@ -124,7 +124,7 @@ trait TranSMARTService {
 @Singleton
 class TranSMARTServiceImpl extends TranSMARTService {
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def createClinicalMapping(
     dataFileName: String,

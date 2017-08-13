@@ -207,7 +207,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
             )
           )
 
-        request.post(logoffInfoXML).map(_ => ())
+        request.post(logoffInfoXML).map(_ => ws.close())
       }
     } yield ()
   }

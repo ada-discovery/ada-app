@@ -35,7 +35,7 @@ class LogisticRegressionExample @Inject() (
   ) extends Runnable {
 
   private val dsa = dsaf("ppmi.ppmi_si").get
-  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   private val rootFolder = "/home/peter/Downloads/spark-master/"
 

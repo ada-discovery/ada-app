@@ -14,7 +14,7 @@ class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends
   override def run = {
 
     val fieldTypeInferrerFactory = FieldTypeInferrerFactory(
-      FieldTypeHelper.fieldTypeFactory,
+      FieldTypeHelper.fieldTypeFactory(),
       50,
       10,
       FieldTypeHelper.arrayDelimiter

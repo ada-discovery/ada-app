@@ -91,7 +91,7 @@ trait StatsService {
 
 class StatsServiceImpl extends StatsService {
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
   protected val timeout = 200000 millis
   private val defaultNumericBinCount = 20
 
