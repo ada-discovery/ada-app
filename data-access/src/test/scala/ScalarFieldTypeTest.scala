@@ -8,7 +8,7 @@ import java.{util => ju}
 
 class ScalarFieldTypeTest extends FlatSpec with Matchers {
 
-  val ftf = FieldTypeHelper.fieldTypeFactory
+  val ftf = FieldTypeHelper.fieldTypeFactory()
 
   "Null field type" should "should treat all non-null values with exception" in {
     val fieldType = ftf.apply(FieldTypeSpec(FieldTypeId.Null, false)).asInstanceOf[FieldType[Nothing]]

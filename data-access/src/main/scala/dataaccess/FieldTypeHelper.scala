@@ -1,7 +1,7 @@
 package dataaccess
 
 object FieldTypeHelper {
-  val nullAliases = Seq("", "na", "n/a", "null")
+  val nullAliases = Set("", "na", "n/a", "null")
   val dateFormats = Seq(
     "yyyy-MM-dd HH:mm:ss",
     "yyyy-MM-dd HH:mm",
@@ -27,9 +27,20 @@ object FieldTypeHelper {
 
   val arrayDelimiter = ","
 
-  val fieldTypeFactory = FieldTypeFactory(nullAliases.toSet, dateFormats, displayDateFormat, arrayDelimiter)
-  val fieldTypeInferrerFactory = FieldTypeInferrerFactory(fieldTypeFactory, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter)
+  def fieldTypeFactory(
+    nullAliases: Set[String] = nullAliases,
+    dateFormats: Traversable[String] = dateFormats,
+    displayDateFormat: String = displayDateFormat,
+    arrayDelimiter: String = arrayDelimiter
+  ) = FieldTypeFactory(nullAliases, dateFormats, displayDateFormat, arrayDelimiter)
 
-  val fieldTypeInferrer = fieldTypeInferrerFactory.apply
-  val jsonFieldTypeInferrer = fieldTypeInferrerFactory.applyJson
+  def fieldTypeInferrerFactory(
+    ftf: FieldTypeFactory = fieldTypeFactory(),
+    maxEnumValuesCount: Int = maxEnumValuesCount,
+    minAvgValuesPerEnum: Double = minAvgValuesPerEnum,
+    arrayDelimiter: String = arrayDelimiter
+  ) = FieldTypeInferrerFactory(ftf, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter)
+
+  val fieldTypeInferrer = fieldTypeInferrerFactory().apply
+  val jsonFieldTypeInferrer = fieldTypeInferrerFactory().applyJson
 }

@@ -5,7 +5,7 @@ import play.api.libs.json.{JsString, Json}
 
 class FieldTypeInferrerTest extends FlatSpec with Matchers {
 
-  private val fti = FieldTypeHelper.fieldTypeInferrer
+  private val fti = FieldTypeHelper.fieldTypeInferrerFactory().apply
 
   "Null field type" should "should be inferred only for null values" in {
     val shouldBeNullType = shouldBeInferredType(FieldTypeSpec(FieldTypeId.Null, false))_

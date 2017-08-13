@@ -8,7 +8,7 @@ import play.api.libs.json._
 
 class ArrayFieldTypeTest extends FlatSpec with Matchers {
 
-  val ftf = FieldTypeHelper.fieldTypeFactory
+  val ftf = FieldTypeHelper.fieldTypeFactory()
 
   "Null array field type" should "should treat all non-null values with exception" in {
     val fieldType = ftf.apply(FieldTypeSpec(FieldTypeId.Null, true)).asInstanceOf[FieldType[Array[Option[Nothing]]]]
