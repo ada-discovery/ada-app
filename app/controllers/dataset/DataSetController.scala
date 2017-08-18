@@ -3,8 +3,11 @@ package controllers.dataset
 import controllers.core.{CrudController, ReadonlyController}
 import models.FilterCondition.FilterOrId
 import models.{FieldTypeId, FilterCondition, PageOrder}
+import play.api.libs.json.JsArray
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
+
+import scala.concurrent.Future
 
 trait DataSetController extends ReadonlyController[BSONObjectID] {
 
@@ -94,6 +97,14 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     inputFieldNames: Seq[String],
     filterOrId: FilterOrId,
     pcaDims: Option[Int]
+  ): Action[AnyContent]
+
+  def selectFeaturesAsChiSquare(
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId,
+    featuresToSelectNum: Int,
+    discretizerBucketsNum: Int
   ): Action[AnyContent]
 
   def getFieldNames: Action[AnyContent]

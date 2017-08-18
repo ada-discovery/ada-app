@@ -1605,6 +1605,32 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
   }
 
+  override def selectFeaturesAsChiSquare(
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId,
+    featuresToSelectNum: Int,
+    discretizerBucketsNum: Int
+  ) = Action.async { implicit request =>
+    val explFieldNamesToLoads =
+      if (inputFieldNames.nonEmpty)
+        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
+      else
+        Nil
+
+    val criteriaFuture = resolveFilter(filterOrId).flatMap(filter => toCriteria(filter.conditions))
+
+    for {
+      criteria <- criteriaFuture
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
+    } yield {
+      val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
+      val fieldNames = mlService.selectFeaturesAsChiSquare(jsons, fieldNameAndSpecs, outputFieldName, featuresToSelectNum, discretizerBucketsNum)
+      val json = JsArray(fieldNames.map(JsString(_)).toSeq)
+      Ok(json)
+    }
+  }
+
   override def learnUnsupervised(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],

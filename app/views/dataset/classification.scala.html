@@ -19,7 +19,8 @@
     @mlResources(filterShowFieldStyle)
 
     @helper.javascriptRouter("dataSetJsRoutes")(
-        dataSetJsRouter.classify
+        dataSetJsRouter.classify,
+        dataSetJsRouter.selectFeaturesAsChiSquare
     )
 
     <script type="text/javascript">
@@ -100,6 +101,45 @@
 
             showMessage("Classification for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
         }
+
+        function selectFeaturesAsChiSquare() {
+            var outputFieldName = $("#outputFieldName").val();
+            var outputFieldLabel = $("#outputFieldTypeahead").val();
+
+            $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
+            var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
+
+            var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
+            var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
+
+            var featuresToSelectNum = $("#featuresToSelectNum").val();
+            var discretizerBucketsNum = $("#discretizerBucketsNum").val();
+
+            if (!outputFieldName) {
+                showError("Output field name must be defined");
+                return
+            }
+
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.selectFeaturesAsChiSquare(inputFieldNames, outputFieldName, filterOrId, featuresToSelectNum, discretizerBucketsNum).ajax( {
+                success: function(selectedFieldNames) {
+                    showMessage("Chi-Square feature selection finished.")
+                    console.log(selectedFieldNames)
+                    var tableBody = $("#inputFieldNameDiv").find("table tbody")
+                    tableBody.find('tr').each(function() {
+                        var fieldName = $(this).find("#fieldName").val();
+                        if (selectedFieldNames.indexOf(fieldName) == -1) {
+                            console.log("Removing " + fieldName)
+                            $(this).remove()
+                        }
+                     });
+                },
+                error: function(data){
+                    showError( data.responseText );
+                }
+            });
+
+            showMessage("Chi-Square feature selection for the field '" + outputFieldLabel + "' launched.")
+        }
     </script>
 }
 
@@ -111,5 +151,5 @@
         </h3>
     </div>
 
-    @mlElements(dataSetRouter.allFields)
+    @mlElements(dataSetRouter.allFields, true)
 }

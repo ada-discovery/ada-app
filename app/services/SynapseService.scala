@@ -380,7 +380,13 @@ protected[services] class SynapseServiceWSImpl @Inject() (
         bulkDownloadContentBytes <- downloadFileAsBytes(bulkDownloadResponse.resultZipFileHandleId)
       } yield {
         val fileNameHandleIdMap = bulkDownloadResponse.fileSummary.map { fileSummary =>
-          (fileSummary.zipEntryName.get, fileSummary.fileHandleId)
+          fileSummary.failureCode.map { failureCode =>
+            val fileHandleIds = fileHandleAssociations.map(_.fileHandleId).mkString(", ")
+            val failureMessage = fileSummary.failureMessage.getOrElse("")
+            throw new AdaRestException(s"Synapse bulk download of $fileHandleIds failed due to: $failureCode; $failureMessage.")
+          }.getOrElse(
+            (fileSummary.zipEntryName.get, fileSummary.fileHandleId)
+          )
         }.toMap
         ZipFileIterator(bulkDownloadContentBytes).map(pair => (fileNameHandleIdMap.get(pair._1).get, pair._2))
       }

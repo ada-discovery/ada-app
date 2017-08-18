@@ -44,4 +44,5 @@ final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.ja
   val classify = routeFun(_.classify)
   val regress = routeFun(_.regress)
   val learnUnsupervised = routeFun(_.learnUnsupervised)
+  val selectFeaturesAsChiSquare = routeFun(_.selectFeaturesAsChiSquare)
 }

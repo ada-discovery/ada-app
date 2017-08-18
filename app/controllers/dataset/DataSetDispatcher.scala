@@ -5,9 +5,12 @@ import javax.inject.Inject
 import controllers.{ControllerDispatcher, SecureControllerDispatcher}
 import models.FilterCondition.FilterOrId
 import models.{FieldTypeId, FilterCondition, PageOrder}
+import play.api.libs.json.JsArray
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil._
+
+import scala.concurrent.Future
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
 
@@ -123,6 +126,14 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: FilterOrId,
     pcaDims: Option[Int]
   ) = dispatch(_.learnUnsupervised(mlModelId, inputFieldNames, filterOrId, pcaDims))
+
+  override def selectFeaturesAsChiSquare(
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterOrId: FilterOrId,
+    featuresToSelectNum: Int,
+    discretizerBucketsNum: Int
+  ) = dispatch(_.selectFeaturesAsChiSquare(inputFieldNames, outputFieldName, filterOrId, featuresToSelectNum, discretizerBucketsNum))
 
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]

@@ -4,16 +4,39 @@
 
 @(
     allFieldsCall: Call,
+    includeChiSquareSelector: Boolean = false,
     includeOutputField: Boolean = true,
     includeTrainingSettingFields: Boolean = true
 )
 
 @dynamicTableJsImport()
 
+@modalBody(defaultFeaturesToSelectNum: Int, defaultDiscretizerBucketsNum: Int) = {
+    <fieldset>
+        @labelValue("featuresToSelectNum", "Features Num", false, None, 4) {
+            <input id="featuresToSelectNum" name="featuresToSelectNum" value="@defaultFeaturesToSelectNum">
+        }
+        @labelValue("discretizerBucketsNum", "Discretizer Buckets Num", false, None, 4) {
+            <input id="discretizerBucketsNum" name="discretizerBucketsNum" value="@defaultDiscretizerBucketsNum">
+        }
+    </fieldset>
+}
+
+@buttons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" id="submitButton" class="btn btn-primary" data-dismiss="modal" onclick="selectFeaturesAsChiSquare(); return false;">OK</button>
+}
+
 @addAllFieldButton = {
     <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
     </a>
+    @if(includeChiSquareSelector) {
+        <a id="chiSquareFieldSelectionButton" class="btn btn-info btn-sm" data-toggle="modal" data-target="#chiSquareFeatureSelectionModal" title="Chi-Square Feature Selection">
+            <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> Chi-Square
+        </a>
+        @modal("chiSquareFeatureSelectionModal", "Chi-Square Feature Selection", modalBody(4, 10), None, Some(buttons))
+    }
 }
 
 <div class="row">
@@ -76,8 +99,6 @@
             url: '@Html(allFieldsCall.url)',
             success: function (data) {
                 $.each(data, function(index, field) {
-                    console.log(field)
-
                     var values = {};
                     values["fieldName"] = field.name;
                     values["fieldTypeahead"] = field.label ? field.label : field.name;

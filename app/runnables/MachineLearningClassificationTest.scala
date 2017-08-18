@@ -31,6 +31,8 @@ class MachineLearningClassificationTest @Inject()(
 
     // featureFieldNames,
 
+    val selectedFeatures = machineLearningService.selectFeaturesAsChiSquare(jsons, fieldNameAndSpecs, outputField, 3, 10)
+
     def classify(model: Classification) =
       machineLearningService.classify(jsons, fieldNameAndSpecs, outputField, model)
 

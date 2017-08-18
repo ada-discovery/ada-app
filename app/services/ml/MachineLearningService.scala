@@ -81,6 +81,25 @@ trait MachineLearningService {
     transformType: VectorTransformType.Value
   ): Seq[Seq[jl.Double]]
 
+  def discretizeAsQuantiles(
+    data: DataFrame,
+    bucketsNum: Int,
+    columnName: String
+  ): DataFrame
+
+  def selectFeaturesAsChiSquare(
+    data: DataFrame,
+    featuresToSelectNum: Int
+  ): DataFrame
+
+  def selectFeaturesAsChiSquare(
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: String,
+    featuresToSelectNum: Int,
+    discretizerBucketsNum: Int
+  ): Traversable[String]
+
   // AFTSurvivalRegression
   // IsotonicRegression
 }
@@ -143,15 +162,7 @@ private class MachineLearningServiceImpl @Inject() (
     ).getOrElse(df)
 
     // make sure the output is string
-
-    val finalDf = dataFrame.schema("label").dataType match {
-      case BooleanType =>
-        val newDf = dataFrame.withColumn("label", dataFrame("label").cast(StringType))
-        val indexer = new StringIndexer().setInputCol("label").setOutputCol("label_new_temp")
-        indexer.fit(newDf).transform(newDf).drop("label").withColumnRenamed("label_new_temp", "label")
-
-      case _ => dataFrame
-    }
+    val finalDf = indexBooleanLabel(dataFrame)
 
     val cachedDf = finalDf.cache()
 
@@ -173,6 +184,16 @@ private class MachineLearningServiceImpl @Inject() (
       ClassificationPerformance(evalMetric, results.map( x => (x._2, x._3)))
     }
   }
+
+  private def indexBooleanLabel(dataFrame: DataFrame) =
+    dataFrame.schema("label").dataType match {
+      case BooleanType =>
+        val newDf = dataFrame.withColumn("label", dataFrame("label").cast(StringType))
+        val indexer = new StringIndexer().setInputCol("label").setOutputCol("label_new_temp")
+        indexer.fit(newDf).transform(newDf).drop("label").withColumnRenamed("label_new_temp", "label")
+
+      case _ => dataFrame
+    }
 
   override def regress(
     data: Traversable[JsObject],
@@ -435,21 +456,41 @@ private class MachineLearningServiceImpl @Inject() (
   private def jsonsToLearningDataFrame(
     jsons: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
-    outputFieldName: Option[String]
+    outputFieldName: Option[String],
+    discretizerBucketNum: Option[Int] = None
   ): DataFrame = {
     // convert jsons to a data frame
     val fieldNameAndTypes = fields.map { case (name, fieldTypeSpec) => (name, ftf(fieldTypeSpec))}
     val df = jsonsToDataFrame(jsons, fieldNameAndTypes)
 
     // prep the data frame for learning
-    val featureFieldNames = outputFieldName.map( outputName =>
+    val featureNames = featureFieldNames(fields, outputFieldName)
+
+    val numericFieldNames = df.schema.fields.flatMap { field =>
+      if (field.dataType == IntegerType || field.dataType == DoubleType)
+        Some(field.name)
+      else
+        None
+    }
+
+    val discretizedDf = discretizerBucketNum.map( discretizerBucketNum =>
+      numericFieldNames.foldLeft(df) { case (newDf, fieldName) =>
+        discretizeAsQuantiles(newDf, discretizerBucketNum, fieldName)
+      }
+    ).getOrElse(df)
+
+    prepLearningDataFrame(discretizedDf, featureNames, outputFieldName)
+  }
+
+  private def featureFieldNames(
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: Option[String]
+  ): Seq[String] =
+    outputFieldName.map( outputName =>
       fields.map(_._1).filterNot(_ == outputName)
     ).getOrElse(
       fields.map(_._1)
     )
-
-    prepLearningDataFrame(df, featureFieldNames, outputFieldName)
-  }
 
   private def prepLearningDataFrame(
     df: DataFrame,
@@ -779,6 +820,61 @@ private class MachineLearningServiceImpl @Inject() (
       val ioStream = createIOStream
       call(ioStream)
     }
+  }
+
+  override def discretizeAsQuantiles(
+    df: DataFrame,
+    bucketsNum: Int,
+    columnName: String
+  ): DataFrame = {
+    val outputColumnName = columnName + "_" + Random.nextLong()
+    val discretizer = new QuantileDiscretizer()
+      .setInputCol(columnName)
+      .setOutputCol(outputColumnName)
+      .setNumBuckets(bucketsNum)
+
+    val result = discretizer.fit(df).transform(df)
+
+    result.drop(columnName).withColumnRenamed(outputColumnName, columnName)
+  }
+
+  override def selectFeaturesAsChiSquare(
+    data: DataFrame,
+    featuresToSelectNum: Int
+  ): DataFrame = {
+    val model = selectFeaturesAsChiSquareModel(data, featuresToSelectNum)
+
+    model.transform(data)
+  }
+
+  override def selectFeaturesAsChiSquare(
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: String,
+    featuresToSelectNum: Int,
+    discretizerBucketsNum: Int
+  ): Traversable[String] = {
+    val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName), Some(discretizerBucketsNum))
+    val inputDf = indexBooleanLabel(df)
+
+    val model = selectFeaturesAsChiSquareModel(inputDf, featuresToSelectNum)
+
+    val featureNames = featureFieldNames(fields, Some(outputFieldName))
+
+    model.selectedFeatures.map(featureNames(_))
+  }
+
+  private def selectFeaturesAsChiSquareModel(
+    data: DataFrame,
+    featuresToSelectNum: Int
+  ) = {
+    val selector = new ChiSqSelector()
+      .setFeaturesCol("features")
+      .setLabelCol("label")
+      .setOutputCol("selectedFeatures")
+      .setNumTopFeatures(featuresToSelectNum)
+
+    selector.fit(data)
   }
 }
 
