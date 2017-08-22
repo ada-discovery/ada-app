@@ -1,13 +1,12 @@
-package runnables
+package runnables.mpower
 
 import javax.inject.Inject
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.Await
 import persistence.dataset.DataSetAccessorFactory
-import play.api.libs.json.{JsArray, JsString, Json}
 import reactivemongo.bson.BSONObjectID
+import runnables.{FutureRunnable, GuiceBuilderRunnable}
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
@@ -47,7 +46,7 @@ class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) ext
 //        dataSetRepo.update(newJson)
 //      }
 
-      _ <- dataSetRepo.delete(Seq(BSONObjectID.apply("598b35e0f6000088014065e9"), BSONObjectID.apply("598b69faf600006b0440edff")))
+      _ <- dataSetRepo.delete(Seq(BSONObjectID("59900e89f800008b013435a7"), BSONObjectID("59928d55f70000b701261406"), BSONObjectID("599043ccf80000210734c059")))
     } yield
       ()
 }

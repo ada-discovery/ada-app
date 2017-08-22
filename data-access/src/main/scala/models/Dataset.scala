@@ -46,20 +46,28 @@ case class DataSetSetting(
   _id: Option[BSONObjectID],
   dataSetId: String,
   keyFieldName: String,
-  exportOrderByFieldName: Option[String],
-  defaultScatterXFieldName: Option[String],
-  defaultScatterYFieldName: Option[String],
+  exportOrderByFieldName: Option[String] = None,
+  defaultScatterXFieldName: Option[String] = None,
+  defaultScatterYFieldName: Option[String] = None,
   defaultDistributionFieldName: String,
-  defaultCumulativeCountFieldName: Option[String],
-  filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
-  filterShowNonNullCount: Boolean,
-  tranSMARTVisitFieldName: Option[String],
+  defaultCumulativeCountFieldName: Option[String] = None,
+  filterShowFieldStyle: Option[FilterShowFieldStyle.Value] = None,
+  filterShowNonNullCount: Boolean = false,
+  tranSMARTVisitFieldName: Option[String] = None,
   tranSMARTReplacements: Map[String, String],
   storageType: StorageType.Value,
   mongoAutoCreateIndexForProjection: Boolean = false,
   cacheDataSet: Boolean = false
 ) {
-  def this(dataSetId: String) = this(None, dataSetId, "", None, None, None, "", None, None, false, None, Map[String, String](), StorageType.Mongo)
+  def this(
+    dataSetId: String,
+    storageType: StorageType.Value,
+    defaultDistributionFieldName: String
+  ) =
+    this(None, dataSetId, "_id", None, None, None, defaultDistributionFieldName, None, None, false, None, Map(("\r", " "), ("\n", " ")), storageType)
+
+  def this(dataSetId: String) =
+    this(dataSetId, StorageType.Mongo, "")
 }
 
 @Deprecated

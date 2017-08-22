@@ -1,5 +1,6 @@
 import models._
 import org.apache.commons.lang.StringUtils
+import play.api.{Logger, LoggerLike}
 import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
 
@@ -140,5 +141,20 @@ package object util {
         x => fun(item).map(_ :: x)
       }
     } map (_.reverse)
+  }
+
+  def retry[T](failureMessage: String, logger: LoggerLike, maxAttemptNum: Int)(f: => Future[T]): Future[T] = {
+    def retryAux(attempt: Int): Future[T] =
+      f.recoverWith {
+        case e: Exception => {
+          if (attempt < maxAttemptNum) {
+            logger.warn(s"${failureMessage}. ${e.getMessage}. Attempt ${attempt}. Retrying...")
+            retryAux(attempt + 1)
+          } else
+            throw e
+        }
+      }
+
+    retryAux(1)
   }
 }

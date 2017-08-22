@@ -37,22 +37,7 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
   private val linkedDataSetId = "lux_park.ibbl_biosamples_blood_patient"
   private val linkedDataSetName = "Patient Blood Biosample"
 
-  private def linkedDataSetSetting = DataSetSetting(
-    None,
-    linkedDataSetId,
-    "_id",
-    None,
-    None,
-    None,
-    "sampletypeid",
-    None,
-    None,
-    false,
-    None,
-    Map(("\r", " "), ("\n", " ")),
-    StorageType.ElasticSearch,
-    false
-  )
+  private def linkedDataSetSetting = new DataSetSetting(linkedDataSetId, StorageType.ElasticSearch, "sampletypeid")
 
   private val timeout = 10 minutes
 

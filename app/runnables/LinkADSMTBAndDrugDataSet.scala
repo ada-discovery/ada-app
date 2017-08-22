@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 class LinkADSMTBAndDrugDataSet @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
   private val globalDataSetId = "adsm-tb.global"
   private val globalDsa = dsaf(globalDataSetId).get
@@ -32,24 +32,7 @@ class LinkADSMTBAndDrugDataSet @Inject()(
   private val linkedDataSetId = "adsm-tb.global_w_drugs"
   private val linkedDataSetName = "Global with Drugs"
 
-  private def linkedDataSetSetting = DataSetSetting(
-    None,
-    linkedDataSetId,
-    "_id",
-    None,
-    None,
-    None,
-    "country",
-    None,
-    None,
-    false,
-    None,
-    Map(("\r", " "), ("\n", " ")),
-    StorageType.ElasticSearch,
-    false
-  )
-
-  private val timeout = 10 minutes
+  private def linkedDataSetSetting = new DataSetSetting(linkedDataSetId, StorageType.ElasticSearch, "country")
 
   private val drugCodeFieldName1 = "drug_coded"
   private val drugCodeFieldName2 = "id"
@@ -59,8 +42,8 @@ class LinkADSMTBAndDrugDataSet @Inject()(
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  override def run = {
-    val future = for {
+  override def runAsFuture =
+    for {
       // get the data set meta info
       globalMetaInfo <- globalDsa.metaInfo
 
@@ -107,10 +90,10 @@ class LinkADSMTBAndDrugDataSet @Inject()(
 
       // update the linked dictionary
       _ <- {
-        val drugEnumMap = drugCodeHarmonizedNames.map { case (_, (drugName, index)) => (index.toString, drugName)}.toMap
+        val drugEnumMap = drugCodeHarmonizedNames.map { case (_, (drugName, index)) => (index.toString, drugName) }.toMap
         val fullHarmonizedDrugField = harmonizedDrugField.copy(numValues = Some(drugEnumMap))
 
-        val fieldNameAndTypes = (globalFields ++ Seq(fullHarmonizedDrugField)).map( field => (field.name, field.fieldTypeSpec))
+        val fieldNameAndTypes = (globalFields ++ Seq(fullHarmonizedDrugField)).map(field => (field.name, field.fieldTypeSpec))
         dataSetService.updateDictionary(linkedDataSetId, fieldNameAndTypes, false, true)
       }
 
@@ -139,9 +122,6 @@ class LinkADSMTBAndDrugDataSet @Inject()(
       _ <- dataSetService.saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(100))
     } yield
       ()
-
-    Await.result(future, timeout)
-  }
 }
 
 object LinkADSMTBAndDrugDataSet extends GuiceBuilderRunnable[LinkADSMTBAndDrugDataSet] with App { run }

@@ -1,12 +1,12 @@
-package runnables
+package runnables.mpower
 
 import javax.inject.Inject
 
+import runnables.GuiceBuilderRunnable
 import services.DataSetService
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.concurrent.{Await}
 
 class MPowerChallengeMergeDemographicsDataSets @Inject() (
     dataSetService: DataSetService

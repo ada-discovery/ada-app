@@ -1,18 +1,14 @@
-package runnables
+package runnables.mpower
 
 import javax.inject.Inject
 
-import dataaccess.AscSort
 import persistence.dataset.DataSetAccessorFactory
-import reactivemongo.play.json.BSONFormats._
-import reactivemongo.bson.BSONObjectID
+import runnables.FutureRunnable
+import services.DataSetService
 import util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import dataaccess.Criterion._
-import models.DataSetSetting
-import services.DataSetService
 
 class CopyOldMPowerDataSets @Inject() (
     dataSetService: DataSetService,

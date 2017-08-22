@@ -1,15 +1,16 @@
-package runnables
+package runnables.ml
 
 import javax.inject.Inject
 
 import models.ml.TreeCore
 import models.ml.regression._
 import persistence.dataset.DataSetAccessorFactory
+import runnables.GuiceBuilderRunnable
 import services.DataSetService
 import services.ml.MachineLearningService
-import scala.concurrent.duration._
 
 import scala.concurrent.Await.result
+import scala.concurrent.duration._
 
 class MachineLearningRegressionTest @Inject()(
     machineLearningService: MachineLearningService,

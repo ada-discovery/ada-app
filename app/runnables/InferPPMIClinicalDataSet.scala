@@ -10,9 +10,9 @@ import services.DataSetService
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 
-class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends Runnable {
-  override def run = {
+class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends FutureRunnable {
 
+  override def runAsFuture = {
     val fieldTypeInferrerFactory = FieldTypeInferrerFactory(
       FieldTypeHelper.fieldTypeFactory(),
       50,
@@ -20,17 +20,14 @@ class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends
       FieldTypeHelper.arrayDelimiter
     )
 
-    result(
-      dataSetService.translateDataAndDictionaryOptimal(
-        "ppmi.raw_clinical_visit",
-        "ppmi.clinical_visit",
-        "Clinical Visit",
-        None,
-        None,
-        Some(100),
-        Some(fieldTypeInferrerFactory.applyJson)
-      ),
-      30 minutes
+    dataSetService.translateDataAndDictionaryOptimal(
+      "ppmi.raw_clinical_visit",
+      "ppmi.clinical_visit",
+      "Clinical Visit",
+      None,
+      None,
+      Some(100),
+      Some(fieldTypeInferrerFactory.applyJson)
     )
   }
 }

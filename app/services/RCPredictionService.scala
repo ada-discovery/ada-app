@@ -63,41 +63,14 @@ class RCPredictionServiceImpl @Inject()(
   private val otherFieldNames1 = Seq("recordId", "medTimepoint", "healthCode")
   private val otherFieldNames2 = Seq("recordId")
 
-  private val settingAndResultsFields = caseClassToFlatFieldTypes[RCPredictionSettingAndResults]("-").filter(_._1 != "_id")
+  private val settingAndResultsFields =
+    caseClassToFlatFieldTypes[RCPredictionSettingAndResults]("-").filter(_._1 != "_id")
 
-  private def resultWeightDataSetSetting(resultDataSetId: String) = DataSetSetting(
-    None,
-    resultDataSetId,
-    "resultId",
-    None,
-    None,
-    None,
-    "rc_w_0",
-    None,
-    None,
-    false,
-    None,
-    Map(("\r", " "), ("\n", " ")),
-    StorageType.ElasticSearch,
-    false
-  )
+  private def resultWeightDataSetSetting(resultDataSetId: String) =
+    new DataSetSetting(resultDataSetId, StorageType.ElasticSearch, "rc_w_0")
 
-  private def resultDataSetSetting(resultDataSetId: String) = DataSetSetting(
-    None,
-    resultDataSetId,
-    "_id",
-    None,
-    None,
-    None,
-    "reservoirNodeNum",
-    None,
-    None,
-    false,
-    None,
-    Map(("\r", " "), ("\n", " ")),
-    StorageType.ElasticSearch,
-    false
-  )
+  private def resultDataSetSetting(resultDataSetId: String) =
+    new DataSetSetting(resultDataSetId, StorageType.ElasticSearch, "reservoirNodeNum")
 
   private val defaultBatchSize = 20
 
@@ -253,6 +226,7 @@ class RCPredictionServiceImpl @Inject()(
     def extractSeries(path: String) = {
       val jsValues = JsonUtil.traverse(json, path)
       jsValues.dropRight(dropRightLength).map(_.as[Double]: jl.Double)
+//      series.zip(series.tail).map { case (value, next) => ((next - value) / value): jl.Double }
     }
 
     val inputSeries = inputSeriesFieldPaths.map(extractSeries).transpose

@@ -1,13 +1,14 @@
-package runnables
+package runnables.ml
 
+import java.{lang => jl}
 import javax.inject.Inject
 
 import models.ml.VectorTransformType
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.DataFrame
+import runnables.GuiceBuilderRunnable
 import services.SparkApp
 import services.ml.MachineLearningService
-import java.{lang => jl}
 
 class TestVectorTransformer @Inject()(
     mlService: MachineLearningService,

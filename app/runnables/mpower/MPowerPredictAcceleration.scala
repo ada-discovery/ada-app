@@ -1,29 +1,23 @@
-package runnables
+package runnables.mpower
 
-import java.util.Collections
 import java.{lang => jl, util => ju}
 import javax.inject.Inject
 
 import com.banda.core.plotter.{Plotter, TimeSeriesPlotSetting}
 import com.banda.core.util.FileUtil
-import com.banda.incal.domain.ReservoirLearningSetting
 import com.banda.incal.prediction.ReservoirTrainerFactory
 import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.business.TopologyFactory
 import com.banda.network.domain.ActivationFunctionType
-import persistence.dataset.DataSetAccessorFactory
-import services.ml.MachineLearningService
-
-import scala.collection.JavaConversions._
 import dataaccess.Criterion.Infix
-import models.ml.{ExtendedReservoirLearningSetting, VectorTransformType}
+import models.ml.ExtendedReservoirLearningSetting
+import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
+import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.{RCPredictionResults, RCPredictionService}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import scala.concurrent.Await
 
 class MPowerPredictAcceleration @Inject() (
     mPowerWalkingRCPredictionService: RCPredictionService,

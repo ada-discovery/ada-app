@@ -100,7 +100,12 @@ object FieldUtil {
 
       // array/seq
       case t if t subMatches (typeOf[Seq[_]], typeOf[Set[_]]) =>
-        toFieldTypeSpec(t.typeArgs.head).copy(isArray = true)
+        val innerType = t.typeArgs.head
+        try {
+          toFieldTypeSpec(innerType).copy(isArray = true)
+        } catch {
+          case e: AdaException => FieldTypeSpec(FieldTypeId.Json, true)
+        }
 
       // otherwise
       case _ => throw new AdaException(s"Type ${typ.typeSymbol.fullName} unknown.")

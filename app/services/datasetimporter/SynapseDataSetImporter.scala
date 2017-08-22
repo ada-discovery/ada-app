@@ -72,7 +72,8 @@ private class SynapseDataSetImporter @Inject() (
     else
       importDataSetAux(importInfo, synapseService, Nil, None, importInfo.batchSize).map(_ => ())
 
-    futureImport.map(_ => synapseService.close)
+    futureImport
+//    futureImport.map(_ => synapseService.close)
   }
 
   def importDataSetAux(

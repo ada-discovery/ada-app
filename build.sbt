@@ -11,13 +11,13 @@ scalaVersion := "2.11.7"
 
 Play2WarPlugin.play2WarSettings
 
-Play2WarKeys.servletVersion := "3.0"
+Play2WarKeys.servletVersion := "3.1"
 
 lazy val dataaccess = project in file("data-access")
 
 lazy val root = (project in file(".")).enablePlugins(PlayScala,SbtWeb) // .aggregate(dataaccess).dependsOn(dataaccess)
 
-libraryDependencies ++= Seq(cache, ws)
+libraryDependencies ++= Seq(cache, ws, filters)
 
 resolvers ++= Seq(
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
@@ -35,6 +35,7 @@ routesImport ++= Seq(
 
 libraryDependencies ++= Seq(
   "ada" % "ada-dataaccess_2.11" % "0.5.0-alpha",
+  "nioc-bot" % "nioc-bot_2.11" % "0.2.3",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
   "org.webjars" %% "webjars-play" % "2.4.0",

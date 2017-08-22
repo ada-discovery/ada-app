@@ -18,6 +18,7 @@ import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import models.synapse.JsonFormat._
 import util.{JsonUtil, ZipFileIterator}
+import _root_.util.retry
 
 trait SynapseServiceFactory {
   def apply(@Assisted("username") username: String, @Assisted("password") password: String): SynapseService
@@ -392,25 +393,10 @@ protected[services] class SynapseServiceWSImpl @Inject() (
       }
 
       attemptNum match {
-        case Some(attemptNum) => retry("Synapse bulk download failed:", attemptNum)(downloadAux)
+        case Some(attemptNum) => retry("Synapse bulk download failed:", logger, attemptNum)(downloadAux)
         case None => downloadAux
       }
     }
-
-  def retry[T](failureMessage: String, maxAttemptNum: Int)(f: => Future[T]): Future[T] = {
-    def retryAux(attempt: Int): Future[T] =
-      f.recoverWith {
-        case e: Exception => {
-          if (attempt < maxAttemptNum) {
-            logger.warn(s"${failureMessage}. ${e.getMessage}. Attempt ${attempt}. Retrying...")
-            retryAux(attempt + 1)
-          } else
-            throw e
-        }
-      }
-
-    retryAux(1)
-  }
 
   def withSessionToken(request: WSRequest): WSRequest =
     request.withHeaders("sessionToken" -> getSessionToken)

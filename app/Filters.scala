@@ -1,6 +1,8 @@
-/**
-  * Created by peter on 22.08.17.
-  */
-class Filters {
+import javax.inject.Inject
 
+import play.api.http.HttpFilters
+import play.filters.gzip.GzipFilter
+
+class Filters @Inject() (gzipFilter: GzipFilter) extends HttpFilters {
+  def filters = Seq(gzipFilter)
 }

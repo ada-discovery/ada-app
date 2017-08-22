@@ -1,28 +1,26 @@
-package runnables
+package runnables.mpower
 
-import java.{lang, util => ju}
+import java.{util => ju}
 import javax.inject.Inject
 
+import _root_.util.{JsonUtil, seqFutures}
 import dataaccess.AscSort
 import models.DataSetFormattersAndIds.JsObjectIdentity
-
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
-import _root_.util.{JsonUtil, seqFutures}
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import dataaccess.Criterion.Infix
 import models._
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json._
-import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
+import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class CreateMPowerDistanceDataSet @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
   private val dataSetId = "mpower_challenge.walking_activity_training"
   private val dsa = dsaf(dataSetId).get
@@ -31,25 +29,7 @@ class CreateMPowerDistanceDataSet @Inject() (
 
   private val normDataSetId = "mpower_challenge.walking_activity_training_norms"
   private val normDataSetName = "Walking Activity Training Norms"
-
-  private def normDataSetSetting = DataSetSetting(
-    None,
-    normDataSetId,
-    "_id",
-    None,
-    None,
-    None,
-    "medTimepoint",
-    None,
-    None,
-    false,
-    None,
-    Map(("\r", " "), ("\n", " ")),
-    StorageType.Mongo,
-    false
-  )
-
-  private val timeout = 30 hours
+  private def normDataSetSetting = new DataSetSetting(normDataSetId, StorageType.Mongo, "medTimepoint")
 
   private val motionFields = Seq("attitude", "rotationRate", "userAcceleration", "gravity")
 
@@ -75,8 +55,8 @@ class CreateMPowerDistanceDataSet @Inject() (
   private val idName = JsObjectIdentity.name
   private val batchSize = 10
 
-  override def run = {
-    val future = for {
+  override def runAsFuture =
+    for {
       // get the data set meta info
       metaInfo <- dsa.metaInfo
 
@@ -121,9 +101,6 @@ class CreateMPowerDistanceDataSet @Inject() (
       _ <- createNormsAndSaveDataSet(newDsa, ids.toSeq)
     } yield
       ()
-
-    Await.result(future, timeout)
-  }
 
   private def createNormsAndSaveDataSet(
     newDsa: DataSetAccessor,

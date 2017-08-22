@@ -5,33 +5,29 @@ import javax.inject.{Inject, Named}
 import models.Translation
 import persistence.RepoTypes._
 import play.api.Configuration
-import runnables.GuiceBuilderRunnable
+import runnables.{FutureRunnable, GuiceBuilderRunnable}
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.io.Source
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class ImportDeNoPaTranslations @Inject()(
     configuration: Configuration,
     translationRepo: TranslationRepo
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
-  val folder = configuration.getString("denopa.translation.import.folder").get
+  private val folder = configuration.getString("denopa.translation.import.folder").get
 
-  val filename_de = folder + "DeNoPa_dictionary_de"
-  val filename_en = folder + "DeNoPa_dictionary_en-utf8"
+  private val filename_de = folder + "DeNoPa_dictionary_de"
+  private val filename_en = folder + "DeNoPa_dictionary_en-utf8"
 
-  val filename_extra_de = folder + "DeNoPa_dictionary_extra_de-utf8"
-  val filename_extra_en = folder + "DeNoPa_dictionary_extra_en-utf8"
+  private val filename_extra_de = folder + "DeNoPa_dictionary_extra_de-utf8"
+  private val filename_extra_en = folder + "DeNoPa_dictionary_extra_en-utf8"
 
-  val timeout = 120000 millis
+  private val truthValues = List("na", "ja", "nein", "falsch", "richtig", "fehlend")
 
-  val truthValues = List("na", "ja", "nein", "falsch", "richtig", "fehlend")
-
-  override def run = {
-    // remove all items from the collection
-    Await.result(translationRepo.deleteAll, timeout)
-
+  override def runAsFuture = {
     // read all the lines
     val oldTextsDe = getRecords(filename_de)
     val oldTextsEn = getRecords(filename_en)
@@ -52,9 +48,17 @@ class ImportDeNoPaTranslations @Inject()(
     println(newTextsDe.size)
     println(newTextsEn.size)
 
-    (oldTexts ++ newTexts).sortBy(_.original).foreach{ translation =>
-      Await.result(translationRepo.save(translation), timeout)
-    }
+    for {
+      // remove all items from the collection
+      _ <- translationRepo.deleteAll
+
+      _ <- Future.sequence(
+        (oldTexts ++ newTexts).sortBy(_.original).map { translation =>
+          translationRepo.save(translation)
+        }
+      )
+    } yield
+      ()
   }
 
   private def getRecords(filename : String) : Seq[String] = {
@@ -63,6 +67,4 @@ class ImportDeNoPaTranslations @Inject()(
   }
 }
 
-object ImportDeNoPaTranslations extends GuiceBuilderRunnable[ImportDeNoPaTranslations] with App {
-  run
-}
+object ImportDeNoPaTranslations extends GuiceBuilderRunnable[ImportDeNoPaTranslations] with App { run }

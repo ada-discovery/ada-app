@@ -1,32 +1,23 @@
-package runnables
+package runnables.ml
 
 import javax.inject.Inject
 
 import dataaccess.{FieldType, FieldTypeHelper}
 import models.FieldTypeId
-import org.apache.spark
-import org.apache.spark.SparkConf
 import org.apache.spark.ml._
 import org.apache.spark.ml.classification._
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, MulticlassClassificationEvaluator}
-import org.apache.spark.ml.feature.{LabeledPoint, StringIndexer, VectorAssembler}
-import org.apache.spark.ml.tuning.CrossValidator
-import org.apache.spark.sql.catalyst.json.JacksonParser
-import org.apache.spark.sql.execution.LogicalRDD
-import org.apache.spark.sql.execution.datasources.json.InferSchema
+import org.apache.spark.ml.feature.{StringIndexer, VectorAssembler}
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.encoders.RowEncoder
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
-import services.SparkApp
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
+import runnables.GuiceBuilderRunnable
+import services.SparkApp
 
-import scala.concurrent.duration._
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 // import org.apache.ignite.spark.IgniteContext
 
 class LogisticRegressionExample @Inject() (
