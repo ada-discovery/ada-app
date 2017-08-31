@@ -23,6 +23,7 @@ correlation.title = {0} Correlations
 classification.title = Classification of {0}
 regression.title = Regression of {0}
 unsupervisedLearning.title = Unsupervised Learning of {0}
+seriesProcessing.title = Series Processing of {0}
 fractalis.title = Fractalis ({0})
 
 dataSetSetting.keyFieldName.label = Key Field

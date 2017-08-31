@@ -38,6 +38,7 @@ GET         /ldap/:id/get                                                       
 # Admin
 GET         /admin/runnables                                                        controllers.AdminController.listRunnables
 POST        /admin/runScript                                                        controllers.AdminController.runScript(className : String)
+
 GET         /admin/showRCPrediction                                                 controllers.ml.RCPredictionController.showRCPrediction
 POST        /admin/runRCPrediction                                                  controllers.ml.RCPredictionController.runRCPrediction
 
@@ -108,6 +109,8 @@ GET         /studies/cumulativeCount                                            
 GET         /studies/classification                                                 controllers.dataset.DataSetDispatcher.getClassification
 GET         /studies/regression                                                     controllers.dataset.DataSetDispatcher.getRegression
 GET         /studies/unsupervisedLearning                                           controllers.dataset.DataSetDispatcher.getUnsupervisedLearning
+GET         /studies/getSeriesProcessingSpec                                        controllers.dataset.DataSetDispatcher.getSeriesProcessingSpec
+POST        /studies/runSeriesProcessing                                            controllers.dataset.DataSetDispatcher.runSeriesProcessing
 POST        /studies/classify                                                       controllers.dataset.DataSetDispatcher.classify(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID], pcaDims: Option[Int], trainingTestingSplit: Option[Double], repetitions: Option[Int], crossValidationFolds: Option[Int])
 POST        /studies/regress                                                        controllers.dataset.DataSetDispatcher.regress(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID], pcaDims: Option[Int], trainingTestingSplit: Option[Double], repetitions: Option[Int], crossValidationFolds: Option[Int])
 POST        /studies/learnUnsupervised                                              controllers.dataset.DataSetDispatcher.learnUnsupervised(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID], pcaDims: Option[Int])

@@ -1,22 +1,25 @@
 @import views.html.layout.main
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
+@import models.FilterShowFieldStyle.NamesAndLabels
 @import views.html.elements._
 @import views.html.layout
-@import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs, seriesProcessingFieldTable}
 @import views.html.table.dynamicTableJsImport
-@import controllers.core.WebContext
-@import controllers.core.WebContext._
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 @import models.ml.DataSetSeriesProcessingSpec
 @import models.StorageType
 @import views.html.dataset.dynamicFieldTable
-@import controllers.dataset.DataSetRouter
+@import views.html.layout.formErrors
 
 @(
+    dataSetName: String,
     form: Form[DataSetSeriesProcessingSpec],
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit context: WebContext
+    implicit context: DataSetWebContext
 )
 
 @inputTextAux(fieldName: String, defaultValue: Option[Any] = None) = @{
@@ -44,22 +47,28 @@
 }
 
 @bottomResources = {
-    <script>
+    @typeaheadJsImport()
+
+    <script type="text/javascript">
+        $(function () {
+            populateFieldTypeahedFromUrl(
+                $('#preserveFieldNameDiv #fieldTypeahead'),
+                $('#preserveFieldNameDiv #fieldName'),
+                '@Html(dataSetRouter.allFields.url)',
+                @filterShowFieldStyle.getOrElse(NamesAndLabels).id
+            )
+        })
+
         function addAllFields() {
-            var sourceDataSetId = $("#sourceDataSetId").val()
-            console.log(sourceDataSetId)
-            var coreUrl = getCoreURL('@Html(new DataSetRouter("").allFields.url)')
-            var url = addUrlParm(coreUrl, "dataSet", sourceDataSetId)
-            console.log(coreUrl)
             $.ajax({
-                url: url,
+                url: '@Html(context.dataSetRouter.allFields.url)',
                 success: function (data) {
                     $.each(data, function (index, field) {
                         var values = {};
                         values["fieldName"] = field.name;
                         values["fieldTypeahead"] = field.label ? field.label : field.name;
 
-                        $('#inputFieldNameDiv').dynamicTable('addTableRow', values)
+                        $('#preserveFieldNameDiv').dynamicTable('addTableRow', values)
                     });
                 }
             });
@@ -67,11 +76,11 @@
     </script>
 }
 
-@main("Process Series", Some(datasetMenu(dataSpaceMetaInfos)), None, None, Some(bottomResources)) {
+@main(Messages("seriesProcessing.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources), Some(formErrors("processSeries", form.errors))) {
 
     <div class="page-header">
         <h3>
-            Process Series
+            @Messages("seriesProcessing.title", dataSetName)
         </h3>
     </div>
 
@@ -79,17 +88,18 @@
 
     <div class="row">
         <div class="col-md-12">
-            @helper.form(action = controllers.ml.routes.RCPredictionController.runRCPrediction()) {
+            @helper.form(action = dataSetRouter.runSeriesProcessing) {
                 <fieldset>
-                    @selectAux(
-                        "sourceDataSetId",
-                        dataSpaceMetaInfos.map(_.dataSetMetaInfos).flatten.toSeq.sortBy(_.id).map { dataSet => (dataSet.id, dataSet.id)}
-                    )
-                    @inputTextAux("resultDataSetId", Some("mpower_challenge.walking_activity_training_processed"))
-                    @inputTextAux("resultDataSetName", Some("Walking Activity Training Processed"))
+                    @inputTextAux("resultDataSetId", Some(context.dataSetId + "_derived"))
+                    @inputTextAux("resultDataSetName", Some(dataSetName + " (Derived)"))
                     @selectAux("resultStorageType", util.enumToValueString(StorageType))
-                    @labelValue("inputFieldNames", "Input Field Names") {
-                        @dynamicFieldTable("inputFieldName", Nil, false, 5, Some(extraFieldButtons))
+                    @labelValue("seriesProcessingSpecs", "Series Processing Specs", false, None, 3){
+                        @seriesProcessingFieldTable(
+                            form.value.map(_.seriesProcessingSpecs).getOrElse(Nil)
+                        )
+                    }
+                    @labelValue("preserveFieldNames", "Preserve Field Names", false, None, 3) {
+                        @dynamicFieldTable("preserveFieldName", Nil, false, 5, Some(extraFieldButtons))
                     }
                     @inputTextAux("processingBatchSize", Some(20))
                     @inputTextAux("saveBatchSize", Some(5))

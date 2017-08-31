@@ -14,12 +14,13 @@ import scala.reflect.runtime.universe._
 
 object ReflectionUtil {
 
-  private val tomcatLibFolder = "../webapps/ROOT/WEB-INF/lib/"
+//  private val tomcatLibFolder = "../webapps/ROOT/WEB-INF/lib/"
+  private val nettyLibFolder = "../lib/"
 
   def streamClassInfos(libPrefix: String): Stream[ClassInfo] = {
     val defaultClasspath = List(".").map(new File(_))
 
-    val tomcatLibFiles = new File(tomcatLibFolder).listFiles
+    val tomcatLibFiles = new File(nettyLibFolder).listFiles
     val classpath : List[File] =
       if (tomcatLibFiles != null) {
         val tomcatClasspath = tomcatLibFiles.filter(file =>

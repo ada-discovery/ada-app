@@ -27,7 +27,7 @@
     <button type="button" id="submitButton" class="btn btn-primary" data-dismiss="modal" onclick="selectFeaturesAsChiSquare(); return false;">OK</button>
 }
 
-@addAllFieldButton = {
+@extraFieldButtons = {
     <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
     </a>
@@ -54,7 +54,7 @@
                     }
                 }
                 @labelValue("inputFieldNames", "Input Field Names") {
-                    @dynamicFieldTable("inputFieldName", Nil, false, 5, Some(addAllFieldButton))
+                    @dynamicFieldTable("inputFieldName", Nil, false, 5, Some(extraFieldButtons))
                 }
                 @labelValue("filterId", "Filter") {
                     <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="Filter" value="">

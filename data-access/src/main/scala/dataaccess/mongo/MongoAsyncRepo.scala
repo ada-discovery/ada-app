@@ -273,6 +273,9 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
       (doc, id)
     }
   }
+
+//  protected def flushOps: Future[Unit] =
+//    collection.runCommand(FSyncCommand())
 }
 
 class MongoAsyncCrudRepo[E: Format, ID: Format](

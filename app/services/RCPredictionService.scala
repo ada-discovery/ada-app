@@ -4,7 +4,7 @@ import java.util.Collections
 import java.{lang => jl, util => ju}
 import javax.inject.Inject
 
-import _root_.util.{FieldUtil, JsonUtil, seqFutures}
+import _root_.util.{FieldUtil, JsonUtil, seqFutures, retry}
 import FieldUtil.caseClassToFlatFieldTypes
 import com.banda.core.plotter.Plotter
 import com.banda.incal.domain.ReservoirLearningSetting
@@ -24,6 +24,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import services.ml.MachineLearningService
 import models.ml.RCPredictionSettingAndResults.rcPredictionSettingAndResultsFormat
+import play.api.Logger
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -74,6 +75,8 @@ class RCPredictionServiceImpl @Inject()(
 
   private val defaultBatchSize = 20
 
+  private val logger = Logger
+
   override def predictAndStoreResults(
     setting: ExtendedReservoirLearningSetting,
     ioSpec: RCPredictionInputOutputSpec,
@@ -109,6 +112,15 @@ class RCPredictionServiceImpl @Inject()(
 
     val actualBatchSize = batchSize.getOrElse(defaultBatchSize)
 
+    // helper function to get a single json batch
+    def getJsons(ids: Traversable[BSONObjectID]) =
+      dataSetRepo.find(
+        criteria = Seq(idName #>= ids.head),
+        limit = Some(actualBatchSize),
+        sort = Seq(AscSort(idName)),
+        projection = otherFieldNames ++ seriesFieldNames.toSet
+      )
+
     for {
       // get the data set meta info
       metaInfo <- dsa.metaInfo
@@ -127,13 +139,8 @@ class RCPredictionServiceImpl @Inject()(
         seqFutures(ids.toSeq.grouped(actualBatchSize).zipWithIndex) {
 
           case (ids, groupIndex) =>
-            dataSetRepo.find(
-              criteria = Seq(idName #>= ids.head),
-              limit = Some(actualBatchSize),
-              sort = Seq(AscSort(idName)),
-              projection = otherFieldNames ++ seriesFieldNames.toSet
-            ).flatMap { jsons =>
-              println(s"Processing time series ${groupIndex * actualBatchSize} to ${(jsons.size - 1) + (groupIndex * actualBatchSize)}")
+            retry("Retrieving of JSONs (in a batch) failed:", logger, 5)(getJsons(ids)).flatMap { jsons =>
+              logger.info(s"Processing time series ${groupIndex * actualBatchSize} to ${(jsons.size - 1) + (groupIndex * actualBatchSize)}")
               Future.sequence(jsons.map(predict))
             }
         }
@@ -158,15 +165,14 @@ class RCPredictionServiceImpl @Inject()(
         saveWeightDataSet(metaInfo, ioSpec.resultDataSetId, ioSpec.resultDataSetName, transformedFields, transformedResults)
       }
 
-      // calc the errors and save the results
+      // calc the errors
+      (meanRnmse, meanSamp) = calcErrors(
+        allResults.map(_._1),
+        setting.getWeightAdaptationIterationNum
+      )
+
+      // save the results
       _ <- {
-        val (meanRnmse, meanSamp) = calcErrors(
-          allResults.map(_._1),
-          setting.getWeightAdaptationIterationNum
-        )
-
-        println(s"Mean RNMSE $meanRnmse, mean SAMP $meanSamp")
-
         val settingAndResults = RCPredictionSettingAndResults(
           None,
           RCPredictionSetting(
@@ -186,10 +192,8 @@ class RCPredictionServiceImpl @Inject()(
 
         saveResults(metaInfo, settingAndResults, ioSpec.sourceDataSetId + "_results", metaInfo.name + " Results")
       }
-    } yield {
-      println(allResults.size)
-      reportResults(setting, allResults)
-    }
+    } yield
+      reportResults(setting, meanRnmse, meanSamp)
   }
 
   private def createTopology(
@@ -205,6 +209,7 @@ class RCPredictionServiceImpl @Inject()(
       setting.getReservoirInDegreeDistribution,
       setting.getReservoirEdgesNum,
       setting.getReservoirBias,
+      setting.getReservoirCircularInEdges,
       setting.getInputReservoirConnectivity,
       setting.getReservoirPreferentialAttachment,
       true,
@@ -226,7 +231,6 @@ class RCPredictionServiceImpl @Inject()(
     def extractSeries(path: String) = {
       val jsValues = JsonUtil.traverse(json, path)
       jsValues.dropRight(dropRightLength).map(_.as[Double]: jl.Double)
-//      series.zip(series.tail).map { case (value, next) => ((next - value) / value): jl.Double }
     }
 
     val inputSeries = inputSeriesFieldPaths.map(extractSeries).transpose
@@ -416,7 +420,7 @@ class RCPredictionServiceImpl @Inject()(
 
     val lastRnmsesFinite = lastRnmses.filterNot(x => x.isNaN || x.isInfinity)
     if (lastRnmsesFinite.size != lastRnmses.size) {
-      println(s" ${lastRnmses.size - lastRnmsesFinite.size} NaN or infinite RNMSEs found")
+      logger.warn(s" ${lastRnmses.size - lastRnmsesFinite.size} NaN or infinite RNMSEs found")
     }
     val meanRnmseLast = lastRnmsesFinite.sum / lastRnmsesFinite.size
     val meanSampLast = meanSamps.sum / lastNum
@@ -448,59 +452,40 @@ class RCPredictionServiceImpl @Inject()(
 
   private def reportResults(
     setting: ReservoirLearningSetting,
-    resultVarianceAndJsons: Traversable[(RCPredictionResults, JsObject)]
+    meanRnmse: Double,
+    meanSamp: Double
   ) = {
     val lastNum = setting.getWeightAdaptationIterationNum
 
-    val results = resultVarianceAndJsons.map(_._1)
-
-    val meanSamps = results.map { x =>
-      if (x.sampErrors.size >= lastNum)
-        Some(x.sampErrors.takeRight(lastNum))
-      else
-        None
-    }.flatten.transpose.map(s => s.sum / s.size)
-
-    val lastRnmses = resultVarianceAndJsons.map { case (result, _) =>
-      if (result.squareErrors.size >= lastNum) {
-        val meanSquare = result.squareErrors.takeRight(lastNum).sum / lastNum
-        Some(math.sqrt(meanSquare / result.targetVariance))
-      } else
-        None
-    }.flatten
-
-    val meanRnmseLast = lastRnmses.sum / lastRnmses.size
-    val meanSampLast = meanSamps.sum / lastNum
-
-    println("In scale                      : " + setting.getInScale)
-    println("Reservoir node #              : " + setting.getReservoirNodeNum)
+    logger.info("In scale                      : " + setting.getInScale)
+    logger.info("Reservoir node #              : " + setting.getReservoirNodeNum)
 
     if (setting.getReservoirInDegree.isDefined)
-      println("Reservoir in-degree           : " + setting.getReservoirInDegree.get)
+      logger.info("Reservoir in-degree           : " + setting.getReservoirInDegree.get)
 
     if (setting.getReservoirPreferentialAttachment)
-      println("Reservoir pref attachment     : " + setting.getReservoirPreferentialAttachment)
+      logger.info("Reservoir pref attachment     : " + setting.getReservoirPreferentialAttachment)
 
-    println("Reservoir bias                : " + setting.getReservoirBias)
+    logger.info("Reservoir bias                : " + setting.getReservoirBias)
 
     if (setting.getReservoirInDegreeDistribution.isDefined) {
       val distribution = setting.getReservoirInDegreeDistribution.get.asInstanceOf[ShapeLocationDistribution[jl.Double]]
-      println("Reservoir in-degree dist    : " + distribution.getLocation + ", " + distribution.getShape)
+      logger.info("Reservoir in-degree dist    : " + distribution.getLocation + ", " + distribution.getShape)
     }
 
     if (setting.getReservoirEdgesNum.isDefined)
-      println("Reservoir edges num           : " + setting.getReservoirEdgesNum.get)
+      logger.info("Reservoir edges num           : " + setting.getReservoirEdgesNum.get)
 
-    println("Input-Reservoir Connect       : " + setting.getInputReservoirConnectivity)
+    logger.info("Input-Reservoir Connect       : " + setting.getInputReservoirConnectivity)
 
     if (setting.getWeightDistribution.isInstanceOf[ShapeLocationDistribution[jl.Double]])
       println("Weight Distribution STD       : " + setting.getWeightDistribution.asInstanceOf[ShapeLocationDistribution[jl.Double]].getShape)
 
-    println("Spectral radius               : " + setting.getReservoirSpectralRadius)
-    println("Reservoir function            : " + setting.getReservoirFunctionType)
-    println("---------------------------------------------")
-    println("Mean SAMP                     : " + meanSampLast)
-    println("Mean RNMSE                    : " + meanRnmseLast)
+    logger.info("Spectral radius               : " + setting.getReservoirSpectralRadius)
+    logger.info("Reservoir function            : " + setting.getReservoirFunctionType)
+    logger.info("---------------------------------------------")
+    logger.info("Mean RNMSE                    : " + meanRnmse)
+    logger.info("Mean SAMP                     : " + meanSamp)
   }
 }
 

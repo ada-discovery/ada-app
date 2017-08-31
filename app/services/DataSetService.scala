@@ -1,5 +1,6 @@
 package services
 
+import java.{util => ju}
 import javax.inject.Inject
 
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
@@ -21,8 +22,9 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import play.api.Configuration
 import _root_.util.JsonUtil._
-import _root_.util.seqFutures
+import _root_.util.{retry, seqFutures}
 import models.FilterCondition.FilterOrId
+import models.ml.{DataSetSeriesProcessingSpec, SeriesProcessingSpec, SeriesProcessingType}
 
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
@@ -134,6 +136,10 @@ trait DataSetService {
     fieldNames: Seq[String] = Nil,
     criteria: Seq[Criterion[Any]] = Nil
   ): Future[(Traversable[JsObject], Seq[Field])]
+
+  def processSeriesAndSaveDataSet(
+    spec: DataSetSeriesProcessingSpec
+  ): Future[Unit]
 }
 
 class DataSetServiceImpl @Inject()(
@@ -188,10 +194,12 @@ class DataSetServiceImpl @Inject()(
 //            )
 //          }
 //        ).map(_ => ())
-        dataRepo.save(transformedJsons).map { _ =>
-          logProgress(startIndex + transformedJsons.size, reportLineSize, size)
-          ()
-        }
+        retry(s"Data saving failed:", logger, 3)(
+          dataRepo.save(transformedJsons).map { _ =>
+            logProgress(startIndex + transformedJsons.size, reportLineSize, size)
+            ()
+          }
+        )
       }
     }
 
@@ -1305,6 +1313,138 @@ class DataSetServiceImpl @Inject()(
       jsons <- dataFuture
     } yield
       (jsons, fields.toSeq)
+  }
+
+  override def processSeriesAndSaveDataSet(
+    spec: DataSetSeriesProcessingSpec
+  ): Future[Unit] = {
+    val dsa = dsaf(spec.sourceDataSetId).getOrElse(
+      throw new AdaException(s"Data set id ${spec.sourceDataSetId} not found."))
+
+    val idName = JsObjectIdentity.name
+    val processingBatchSize = spec.processingBatchSize.getOrElse(20)
+    val saveBatchSize = spec.saveBatchSize.getOrElse(5)
+    val preserveFieldNameSet = spec.preserveFieldNames.toSet
+
+    for {
+    // get the data set meta info
+      metaInfo <- dsa.metaInfo
+
+      // get the data set setting
+      setting <- dsa.setting
+
+      // get the data set setting
+      dataViews <- dsa.dataViewRepo.find()
+
+      // register the norm data set (if not registered already)
+      newDsa <- dsaf.register(
+        metaInfo.copy(_id = None, id = spec.resultDataSetId, name = spec.resultDataSetName, timeCreated = new ju.Date()),
+        Some(setting.copy(_id = None, dataSetId = spec.resultDataSetId, storageType = spec.resultStorageType)),
+        dataViews.find(_.default)
+      )
+
+      // get all the fields
+      fields <- dsa.fieldRepo.find()
+
+      // update the dictionary
+      _ <- {
+        val preservedFields = fields.filter(field => preserveFieldNameSet.contains(field.name))
+
+        val newFields = spec.seriesProcessingSpecs.map(spec =>
+          Field(spec.toString.replace('.', '_'), None, FieldTypeId.Double, true)
+        )
+
+        val fieldNameAndTypes = (preservedFields ++ newFields).map(field => (field.name, field.fieldTypeSpec))
+        updateDictionary(spec.resultDataSetId, fieldNameAndTypes, false, true)
+      }
+
+      // delete all from the old data set
+      _ <- newDsa.dataSetRepo.deleteAll
+
+      // get all the ids
+      ids <- dsa.dataSetRepo.find(
+        projection = Seq(idName),
+        sort = Seq(AscSort(idName))
+      ).map(_.map(json => (json \ idName).as[BSONObjectID]))
+
+      // process and save jsons
+      _ <- seqFutures(ids.toSeq.grouped(processingBatchSize).zipWithIndex) {
+
+        case (ids, groupIndex) =>
+          Future.sequence(
+            ids.map(dsa.dataSetRepo.get)
+          ).map(_.flatten).flatMap { jsons =>
+
+            logger.info(s"Processing series ${groupIndex * processingBatchSize} to ${(jsons.size - 1) + (groupIndex * processingBatchSize)}")
+            val newJsons = jsons.par.map(processSeries(spec.seriesProcessingSpecs, preserveFieldNameSet)).toList
+
+            // save the norm data set jsons
+            saveOrUpdateRecords(newDsa.dataSetRepo, newJsons, None, false, None, Some(saveBatchSize))
+          }
+      }
+    } yield
+      ()
+  }
+
+  private def processSeries(
+    processingSpecs: Seq[SeriesProcessingSpec],
+    preserveFieldNames: Set[String])(
+    json: JsObject
+  ): JsObject = {
+    val newValues = processingSpecs.par.map { spec =>
+      val series = JsonUtil.traverse(json, spec.fieldPath).map(_.as[Double])
+      val newSeries: Seq[Double] = processSeries(series, spec)
+
+      spec.toString.replace('.','_') -> JsArray(newSeries.map( value =>
+        if (value == null)
+          throw new AdaException(s"Found a null value at the path ${spec.fieldPath}.")
+        else
+          try {
+            JsNumber(value)
+          } catch {
+            case e: NumberFormatException => throw new AdaException(s"Found a non-numeric value ${value} at the path ${spec.fieldPath}.")
+          }
+      ))
+    }.toList
+
+    val preservedValues: Seq[(String, JsValue)] =
+      json.fields.filter { case (fieldName, jsValue) => preserveFieldNames.contains(fieldName)}
+
+    JsObject(preservedValues ++ newValues)
+  }
+
+  private def processSeries(
+    series: Seq[Double],
+    spec: SeriesProcessingSpec
+  ): Seq[Double] = {
+    val newSeries = series.sliding(spec.pastValuesCount + 1).map { values =>
+
+      def process(seq: Seq[Double]): Seq[Double] = {
+        if (seq.size == 1)
+          seq
+        else {
+          val newSeq = spec.processingType match {
+            case SeriesProcessingType.Diff => values.zip(values.tail).map { case (a, b) => b - a }
+            case SeriesProcessingType.RelativeDiff => values.zip(values.tail).map { case (a, b) => (b - a) / a }
+            case SeriesProcessingType.Ratio => values.zip(values.tail).map { case (a, b) => b / a }
+            case SeriesProcessingType.LogRatio => values.zip(values.tail).map { case (a, b) => Math.log(b / a) }
+            case SeriesProcessingType.Min => Seq(values.min)
+            case SeriesProcessingType.Max => Seq(values.max)
+            case SeriesProcessingType.Mean => Seq(values.sum / values.size)
+          }
+          process(newSeq)
+        }
+      }
+
+      process(values).head
+    }.toSeq
+
+    // add an initial padding if needed
+    if (spec.addInitPaddingWithZeroes)
+      Seq.fill(spec.pastValuesCount)(0d) ++ newSeries
+    else
+      newSeries
+
   }
 
   private def logProgress(index: Int, granularity: Double, total: Int) =

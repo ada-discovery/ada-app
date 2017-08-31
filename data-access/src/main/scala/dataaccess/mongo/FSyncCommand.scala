@@ -1,8 +1,8 @@
 package dataaccess.mongo
 
-/**
-  * Created by peter on 23.08.17.
-  */
-class FSyncCommand {
+import reactivemongo.api.commands.{Command, CommandWithResult, UnitBox}
 
-}
+case class FSyncCommand(
+    async: Boolean = true,
+    lock: Boolean = false
+  ) extends Command with CommandWithResult[UnitBox.type]

@@ -235,6 +235,11 @@ abstract protected class ElasticAsyncRepo[E, ID](
         (id, identity.set(entity, id))
       }
     }
+
+  protected def flushOps: Future[Unit] =
+    client.execute {
+      flushIndex(indexName)
+    }.map(_ => ())
 }
 
 abstract protected class ElasticAsyncCrudRepo[E, ID](
