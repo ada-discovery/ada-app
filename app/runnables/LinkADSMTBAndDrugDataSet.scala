@@ -119,7 +119,7 @@ class LinkADSMTBAndDrugDataSet @Inject()(
       _ <- linkedDsa.dataSetRepo.deleteAll
 
       // process and save jsons
-      _ <- dataSetService.saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(100))
+      _ <- dataSetService.saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(10))
     } yield
       ()
 }

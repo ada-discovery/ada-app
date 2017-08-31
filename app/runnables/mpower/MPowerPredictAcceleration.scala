@@ -59,6 +59,7 @@ class MPowerPredictAcceleration @Inject() (
       setting.getReservoirInDegreeDistribution,
       setting.getReservoirEdgesNum,
       setting.getReservoirBias,
+      setting.getReservoirCircularInEdges,
       setting.getInputReservoirConnectivity,
       setting.getReservoirPreferentialAttachment,
       true,
