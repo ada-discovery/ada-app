@@ -107,6 +107,10 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     discretizerBucketsNum: Int
   ): Action[AnyContent]
 
+  def getSeriesProcessingSpec: Action[AnyContent]
+
+  def runSeriesProcessing: Action[AnyContent]
+
   def getFieldNames: Action[AnyContent]
 
   def getFields(

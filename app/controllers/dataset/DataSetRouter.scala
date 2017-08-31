@@ -23,6 +23,8 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getClassification = routeFun(_.getClassification)
   val getRegression = routeFun(_.getRegression)
   val getUnsupervisedLearning = routeFun(_.getUnsupervisedLearning)
+  val getSeriesProcessingSpec = routeFun(_.getSeriesProcessingSpec)
+  val runSeriesProcessing = routeFun(_.runSeriesProcessing)
   val getFractalis = routes.getFractalis _ map route
   val getTable = routes.getTable _ map route
   val fields = routes.getFields _ map route

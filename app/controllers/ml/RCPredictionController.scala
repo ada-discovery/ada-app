@@ -8,10 +8,10 @@ import com.banda.incal.domain.ReservoirLearningSetting
 import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
-import controllers.{EnumFormatter, SeqFormatter}
+import controllers.{EnumFormatter, JsonFormatter, SeqFormatter}
 import controllers.core.WebContext
-import models.ml.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec, RCPredictionSettings, VectorTransformType}
-import models.{Field, FieldTypeId}
+import models.ml._
+import models.{Field, FieldTypeId, StorageType}
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory
 import play.api.{Configuration, Logger}
@@ -48,7 +48,7 @@ class RCPredictionController @Inject()(
   private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
   private implicit val vectorTransformTypeFormatter = EnumFormatter(VectorTransformType)
 
-  private val form = Form(
+  private val rcPredictionSettingsForm = Form(
     mapping(
       "reservoirNodeNums" -> of[Seq[Int]],
       "reservoirInDegrees" -> of[Seq[Int]],
@@ -113,13 +113,13 @@ class RCPredictionController @Inject()(
       for {
         tree <- dataSpaceService.getTreeForCurrentUser(request)
       } yield
-        Ok(views.html.admin.rcPrediction(form, tree))
+        Ok(views.html.admin.rcPrediction(rcPredictionSettingsForm, tree))
     }
   }
 
   def runRCPrediction = restrictAdmin(deadbolt) {
     Action.async { implicit request =>
-      form.bindFromRequest.fold(
+      rcPredictionSettingsForm.bindFromRequest.fold(
         { formWithErrors =>
           for {
             tree <- dataSpaceService.getTreeForCurrentUser(request)

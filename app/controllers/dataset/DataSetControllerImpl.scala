@@ -19,14 +19,17 @@ import controllers.core.{ReadonlyControllerImpl, WebContext}
 import org.apache.commons.lang3.StringEscapeUtils
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.FilterCondition.FilterOrId
-import models.ml.LearningSetting
+import models.ml.{DataSetSeriesProcessingSpec, LearningSetting, SeriesProcessingSpec}
 import models.ml.classification.LogisticRegression
 import models.ml.regression.{LinearRegression, Regression}
 import persistence.RepoTypes.{ClassificationRepo, RegressionRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
+import play.api.data.Form
+import play.api.data.Forms.{mapping, number, of, optional}
 import play.api.libs.json._
 import play.api.mvc.Results._
+import play.api.data.Forms.{mapping, _}
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DataSpaceService, StatsService, TranSMARTService}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -34,6 +37,7 @@ import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
 import services.ml.{ClassificationEvalMetric, MachineLearningService, Performance, RegressionEvalMetric}
 import views.html.dataset
+import models.ml.SeriesProcessingSpec._
 
 import scala.math.Ordering.Implicits._
 import scala.collection.mutable.ArrayBuffer
@@ -96,6 +100,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
+
+  private implicit val storageTypeFormatter =  EnumFormatter(StorageType)
+  private implicit val seriesProcessingSpecType = JsonFormatter[SeriesProcessingSpec]
+
+  private val dataSetSeriesProcessingSpecForm = Form(
+    mapping(
+      "sourceDataSetId" -> ignored(dataSetId),
+      "resultDataSetId" -> nonEmptyText,
+      "resultDataSetName" -> nonEmptyText,
+      "resultStorageType" -> of[StorageType.Value],
+      "seriesProcessingSpecs" -> seq(of[SeriesProcessingSpec]),
+      "preserveFieldNames" -> seq(nonEmptyText),
+      "processingBatchSize" -> optional(number(min = 1, max = 200)),
+      "saveBatchSize" -> optional(number(min = 1, max = 200))
+    )(DataSetSeriesProcessingSpec.apply)(DataSetSeriesProcessingSpec.unapply))
 
   override protected def listViewColumns = result(
     dataViewRepo.find().map {
@@ -1475,7 +1494,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getUnsupervisedLearning = Action.async { implicit request => {
     for {
-    // get the data set name, data space tree and the data set setting
+      // get the data set name, data space tree and the data set setting
       (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
     } yield {
       render {
@@ -1774,6 +1793,33 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Some(item) => Ok((item \ fieldName).get)
         case None => BadRequest(s"Item '${id.stringify}' not found.")
       }
+  }
+
+  override def getSeriesProcessingSpec = Action.async { implicit request =>
+    for {
+      // get the data set name, data space tree and the data set setting
+      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+    } yield
+      Ok(dataset.processSeries(dataSetName, dataSetSeriesProcessingSpecForm, setting.filterShowFieldStyle, tree))
+  }
+
+  override def runSeriesProcessing = Action.async { implicit request =>
+    dataSetSeriesProcessingSpecForm.bindFromRequest.fold(
+      { formWithErrors =>
+        for {
+          // get the data set name, data space tree and the data set setting
+          (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+        } yield {
+          BadRequest(dataset.processSeries(dataSetName, formWithErrors, setting.filterShowFieldStyle, tree))
+        }
+      },
+      spec =>
+        for {
+          _ <- dataSetService.processSeriesAndSaveDataSet(spec)
+        } yield {
+          Redirect(router.getSeriesProcessingSpec).flashing("success" -> s"Series processing finished.")
+        }
+    )
   }
 
   private def getFieldLabelMap(fieldNames : Traversable[String]): Future[Map[String, String]] = {

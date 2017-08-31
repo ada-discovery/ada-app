@@ -1,0 +1,104 @@
+@import views.html.layout.main
+@import play.api.i18n.Messages
+@import models.DataSpaceMetaInfo
+@import views.html.elements._
+@import views.html.layout
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
+@import views.html.table.dynamicTableJsImport
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
+@import models.ml.DataSetSeriesProcessingSpec
+@import models.StorageType
+@import views.html.dataset.dynamicFieldTable
+@import controllers.dataset.DataSetRouter
+
+@(
+    form: Form[DataSetSeriesProcessingSpec],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: WebContext
+)
+
+@inputTextAux(fieldName: String, defaultValue: Option[Any] = None) = @{
+    defining(form(fieldName)) { field =>
+        inputFieldText(
+            "dataSetSeriesProcessingSpec",
+            if (field.value.isEmpty && defaultValue.isDefined)
+                field.copy(value = Some(defaultValue.get.toString))
+            else
+                field,
+            Nil,
+            3
+        )
+    }
+}
+
+@selectAux(fieldName: String, values: Seq[(String, String)]) = {
+    @select("dataSetSeriesProcessingSpec", fieldName, form, values, true, Nil, 3)
+}
+
+@extraFieldButtons = {
+    <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
+        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
+    </a>
+}
+
+@bottomResources = {
+    <script>
+        function addAllFields() {
+            var sourceDataSetId = $("#sourceDataSetId").val()
+            console.log(sourceDataSetId)
+            var coreUrl = getCoreURL('@Html(new DataSetRouter("").allFields.url)')
+            var url = addUrlParm(coreUrl, "dataSet", sourceDataSetId)
+            console.log(coreUrl)
+            $.ajax({
+                url: url,
+                success: function (data) {
+                    $.each(data, function (index, field) {
+                        var values = {};
+                        values["fieldName"] = field.name;
+                        values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+                        $('#inputFieldNameDiv').dynamicTable('addTableRow', values)
+                    });
+                }
+            });
+        }
+    </script>
+}
+
+@main("Process Series", Some(datasetMenu(dataSpaceMetaInfos)), None, None, Some(bottomResources)) {
+
+    <div class="page-header">
+        <h3>
+            Process Series
+        </h3>
+    </div>
+
+    @dynamicTableJsImport()
+
+    <div class="row">
+        <div class="col-md-12">
+            @helper.form(action = controllers.ml.routes.RCPredictionController.runRCPrediction()) {
+                <fieldset>
+                    @selectAux(
+                        "sourceDataSetId",
+                        dataSpaceMetaInfos.map(_.dataSetMetaInfos).flatten.toSeq.sortBy(_.id).map { dataSet => (dataSet.id, dataSet.id)}
+                    )
+                    @inputTextAux("resultDataSetId", Some("mpower_challenge.walking_activity_training_processed"))
+                    @inputTextAux("resultDataSetName", Some("Walking Activity Training Processed"))
+                    @selectAux("resultStorageType", util.enumToValueString(StorageType))
+                    @labelValue("inputFieldNames", "Input Field Names") {
+                        @dynamicFieldTable("inputFieldName", Nil, false, 5, Some(extraFieldButtons))
+                    }
+                    @inputTextAux("processingBatchSize", Some(20))
+                    @inputTextAux("saveBatchSize", Some(5))
+                </fieldset>
+
+                <div class="actions pull-right">
+                    <input type="submit" value="Submit" class="btn btn-primary">
+                </div>
+            }
+        </div>
+    </div>
+}

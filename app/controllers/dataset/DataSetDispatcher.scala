@@ -135,6 +135,10 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     discretizerBucketsNum: Int
   ) = dispatch(_.selectFeaturesAsChiSquare(inputFieldNames, outputFieldName, filterOrId, featuresToSelectNum, discretizerBucketsNum))
 
+  override def getSeriesProcessingSpec = dispatch(_.getSeriesProcessingSpec)
+
+  override def runSeriesProcessing = dispatch(_.runSeriesProcessing)
+
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ) = dispatch(_.getFields(fieldTypeIds))
