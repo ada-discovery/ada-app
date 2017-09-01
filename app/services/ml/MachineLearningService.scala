@@ -28,6 +28,7 @@ import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.ml.clustering._
 import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
+import org.apache.spark.rdd.RDD
 import play.api.libs.json.JsObject
 import services.{RCPredictionResults, SparkApp, SparkUtil}
 import org.apache.spark.sql.functions.monotonically_increasing_id
@@ -155,29 +156,36 @@ private class MachineLearningServiceImpl @Inject() (
     }.getOrElse(Nil)
 
     val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
+    df.cache
 
     // reduce the dimensionality if needed
-    val dataFrame = setting.pcaDims.map( pcaDims =>
-      principalFeatureComponents(df, pcaDims)
-    ).getOrElse(df)
+    val reduceDim = new SchemaUnchangedTransformer(pcaComponentsOptional(setting.pcaDims))
 
     // make sure the output is string
-    val finalDf = indexBooleanLabel(dataFrame)
+    val makeIndexBooleanLabel = new SchemaUnchangedTransformer(indexBooleanLabel)
 
-    val cachedDf = finalDf.cache()
+    val pipeline = new Pipeline().setStages(Array(reduceDim, makeIndexBooleanLabel))
+
+    val finalDf = pipeline.fit(df).transform(df)
+
+    finalDf.cache
 
     // split the data into training and test parts
     val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
 
     val results = (0  until setting.repetitions.getOrElse(1)).map { _ =>
-      val Array(training, test) = cachedDf.randomSplit(Array(split, 1 - split))
+      val Array(training, test) = finalDf.randomSplit(Array(split, 1 - split))
 
       // run the trainer (with folds) on the given training and test data sets
-      trainWithFolds(trainer, evaluators ++ binEvaluators, setting.crossValidationFolds, training, test)
+      val results = trainWithFolds(trainer, evaluators ++ binEvaluators, setting.crossValidationFolds, training.cache, test.cache)
+      training.unpersist
+      test.unpersist
+      results
     }
 
     // uncache
-    cachedDf.unpersist()
+    finalDf.unpersist
+    df.unpersist
 
     // create performance results
     results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
@@ -207,9 +215,7 @@ private class MachineLearningServiceImpl @Inject() (
     val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
 
     // reduce the dimensionality if needed
-    val dataFrame = setting.pcaDims.map(pcaDims =>
-      principalFeatureComponents(df, pcaDims)
-    ).getOrElse(df)
+    val dataFrame = df.transform(pcaComponentsOptional(setting.pcaDims))
 
     val evaluators = RegressionEvalMetric.values.toSeq.map { metric =>
 
@@ -221,20 +227,23 @@ private class MachineLearningServiceImpl @Inject() (
       (metric, evaluator)
     }
 
-    val cachedDf = dataFrame.cache()
+   dataFrame.cache()
 
     // split the data into training and test parts
     val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
 
     val results = (0  until setting.repetitions.getOrElse(1)).map { _ =>
-      val Array(training, test) = cachedDf.randomSplit(Array(split, 1 - split))
+      val Array(training, test) = dataFrame.randomSplit(Array(split, 1 - split))
 
       // run the trainer (with folds) on the given training and test data sets
-      trainWithFolds(trainer, evaluators, setting.crossValidationFolds, training, test)
+      val results = trainWithFolds(trainer, evaluators, setting.crossValidationFolds, training.cache, test.cache)
+      training.unpersist
+      test.unpersist
+      results
     }
 
     // uncache
-    cachedDf.unpersist()
+    dataFrame.unpersist()
 
     // create performance results
     results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
@@ -256,10 +265,7 @@ private class MachineLearningServiceImpl @Inject() (
     val df = jsonsToLearningDataFrame(data, fieldsWithId, featureFieldNames)
 
     // reduce the dimensionality if needed
-    val dataFrame = if (pcaDim.isDefined)
-      principalFeatureComponents(df, pcaDim.get)
-    else
-      df
+    val dataFrame = df.transform(pcaComponentsOptional(pcaDim))
 
     val cachedDf = dataFrame.cache()
 
@@ -335,9 +341,17 @@ private class MachineLearningServiceImpl @Inject() (
     }
   }
 
-  private def principalFeatureComponents(
-    df: DataFrame,
-    k: Int
+  private def pcaComponentsOptional(
+    k: Option[Int])(
+    df: DataFrame
+  ) =
+    k.map( pcaDims =>
+      df.transform(pcaComponents(pcaDims))
+    ).getOrElse(df)
+
+  private def pcaComponents(
+    k: Int)(
+    df: DataFrame
   ) = {
     val pca = new PCA()
       .setInputCol("features")
@@ -450,7 +464,9 @@ private class MachineLearningServiceImpl @Inject() (
     val stringFieldsNotToIndex = stringFieldNames.diff(featureFieldNames).toSet
     val df = jsonsToDataFrame(jsons, fieldNameAndTypes, stringFieldsNotToIndex)
 
-    prepLearningDataFrame(df, featureFieldNames, None)
+    df.transform(
+      prepLearningDataFrame(featureFieldNames, None)
+    )
   }
 
   private def jsonsToLearningDataFrame(
@@ -479,7 +495,9 @@ private class MachineLearningServiceImpl @Inject() (
       }
     ).getOrElse(df)
 
-    prepLearningDataFrame(discretizedDf, featureNames, outputFieldName)
+    discretizedDf.transform(
+      prepLearningDataFrame(featureNames, outputFieldName)
+    )
   }
 
   private def featureFieldNames(
@@ -493,9 +511,9 @@ private class MachineLearningServiceImpl @Inject() (
     )
 
   private def prepLearningDataFrame(
-    df: DataFrame,
     featureFieldNames: Seq[String],
-    outputFieldName: Option[String]
+    outputFieldName: Option[String])(
+    df: DataFrame
   ): DataFrame = {
     //    df.printSchema()
 //    df.schema.fields.foreach(field =>
@@ -704,25 +722,27 @@ private class MachineLearningServiceImpl @Inject() (
     fieldNameAndTypes: Seq[(String, FieldType[_])],
     stringFieldsNotToIndex: Set[String] = Set()
   ): DataFrame = {
-    val data = jsons.map { json =>
-      val values = fieldNameAndTypes.map { case (fieldName, fieldType) =>
+    val values = jsons.toSeq.map( json =>
+      fieldNameAndTypes.map { case (fieldName, fieldType) =>
         fieldType.spec.fieldType match {
           case FieldTypeId.Enum =>
             fieldType.jsonToDisplayString(json \ fieldName)
 
           case FieldTypeId.Date =>
-            fieldType.asValueOf[ju.Date].jsonToValue(json \ fieldName).map( date => new java.sql.Date(date.getTime)).getOrElse(null)
+            fieldType.asValueOf[ju.Date].jsonToValue(json \ fieldName).map(date => new java.sql.Date(date.getTime)).getOrElse(null)
 
           case _ =>
             fieldType.jsonToValue(json \ fieldName).getOrElse(null)
         }
       }
-      Row.fromSeq(values)
-    }
+    )
 
-//    val dataBroadcast = sparkContext.broadcast(data.toSeq)
-//    val rdds = sparkContext.parallelize(dataBroadcast.value)
-//    val rdds = sparkContext.parallelize(data.toSeq)
+    val valueBroadVar = sparkContext.broadcast(values)
+    val size = values.size
+
+    val data: RDD[Row] = sparkContext.range(0, size).map { index =>
+      Row.fromSeq(valueBroadVar.value(index.toInt))
+    }
 
     val structTypes = fieldNameAndTypes.map { case (fieldName, fieldType) =>
       val sparkFieldType: DataType = fieldType.spec.fieldType match {
@@ -749,7 +769,7 @@ private class MachineLearningServiceImpl @Inject() (
     val stringTypes = structTypes.filter(_.dataType.equals(StringType))
 
 //    df = session.createDataFrame(rdd_of_rows)
-    val df = session.createDataFrame(data.toSeq, StructType(structTypes))
+    val df = session.createDataFrame(data, StructType(structTypes))
 
     stringTypes.foldLeft(df){ case (newDf, stringType) =>
       if (!stringFieldsNotToIndex.contains(stringType.name)) {
