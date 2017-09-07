@@ -236,7 +236,7 @@ abstract protected class ElasticAsyncRepo[E, ID](
       }
     }
 
-  protected def flushOps: Future[Unit] =
+  override def flushOps =
     client.execute {
       flushIndex(indexName)
     }.map(_ => ())

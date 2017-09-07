@@ -43,7 +43,7 @@ case class LessEqualCriterion[T](fieldName: String, value: T) extends Criterion[
 }
 
 object Criterion {
-  implicit class Infix(val fieldName: String) {
+  implicit class Infix(val fieldName: String) extends AnyVal {
 
     def #==[T](value: T) = EqualsCriterion(fieldName, value)
     def #=@[T] = EqualsNullCriterion(fieldName)

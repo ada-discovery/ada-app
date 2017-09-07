@@ -47,6 +47,8 @@ trait AsyncRepo[E, ID] extends AsyncReadonlyRepo[E, ID] {
   def save(entity: E): Future[ID]
   def save(entities: Traversable[E]): Future[Traversable[ID]] =
     Future.sequence(entities.map(save))
+  def flushOps: Future[Unit] =
+    throw new AdaDataAccessException("Flush not supported.")
 }
 
 trait AsyncCrudRepo[E, ID] extends AsyncRepo[E, ID] {

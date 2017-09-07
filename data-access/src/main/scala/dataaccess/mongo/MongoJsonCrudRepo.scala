@@ -4,18 +4,21 @@ import javax.cache.configuration.Factory
 
 import com.google.inject.assistedinject.Assisted
 import models.FieldTypeSpec
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{JsObject, Json}
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
-import play.modules.reactivemongo.{ReactiveMongoApi, DefaultReactiveMongoApi}
+import play.modules.reactivemongo.{DefaultReactiveMongoApi, ReactiveMongoApi}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json._
 import dataaccess.RepoTypes.JsonCrudRepo
-import dataaccess.{AsyncCrudRepo, SerializableApplicationLifecycle, RepoException}
+import dataaccess.{AsyncCrudRepo, RepoException, SerializableApplicationLifecycle}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
+
 import scala.concurrent.Future
 import javax.inject.Inject
+
+import reactivemongo.core.commands.RawCommand
 
 class MongoJsonCrudRepo @Inject()(
     @Assisted collectionName : String,
@@ -59,6 +62,12 @@ class MongoJsonCrudRepo @Inject()(
 
   override def deleteAll : Future[Unit] =
     collection.remove(Json.obj()) map handleResult
+
+  override def flushOps = {
+    val rawCommand = RawCommand(FSyncCommand().toBSON)
+    reactiveMongoApi.db.command(rawCommand).map(_ => ())
+    //    collection.runCommand(FSyncCommand()).map(_ => ())
+  }
 }
 
 class MongoJsonRepoFactory(

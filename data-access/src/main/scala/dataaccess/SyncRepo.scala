@@ -29,6 +29,7 @@ trait SyncRepo[E, ID] extends SyncReadonlyRepo[E, ID] {
   def save(entity: E): ID
   def save(entities: Traversable[E]): Traversable[ID] =
     entities.map(save)
+  def flushOps
 }
 
 trait SyncCrudRepo[E, ID] extends SyncRepo[E, ID] {
@@ -79,6 +80,9 @@ private class SyncRepoAdapter[E, ID](
 
   override def save(entities: Traversable[E]) =
     wait(asyncRepo.save(entities))
+
+  override def flushOps =
+    wait(asyncRepo.flushOps)
 }
 
 private class SyncCrudRepoAdapter[E, ID](

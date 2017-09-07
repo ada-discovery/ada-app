@@ -6,20 +6,22 @@ import dataaccess._
 import dataaccess.ignite.BinaryJsonUtil.toJson
 import org.apache.commons.lang3.StringUtils
 import play.api.Logger
-import play.api.libs.iteratee.{ Concurrent, Enumerator }
+import play.api.libs.iteratee.{Concurrent, Enumerator}
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoApi
 import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.commands.WriteResult
-import reactivemongo.api.indexes.{ IndexType, Index }
+import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
 import reactivemongo.core.errors.{DatabaseException, DetailedDatabaseException}
+
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import models._
 import reactivemongo.api._
+import reactivemongo.core.commands.RawCommand
 
 import scala.util.Random
 
@@ -274,8 +276,11 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
     }
   }
 
-//  protected def flushOps: Future[Unit] =
-//    collection.runCommand(FSyncCommand())
+  override def flushOps = {
+    val rawCommand = RawCommand(FSyncCommand().toBSON)
+    reactiveMongoApi.db.command(rawCommand).map(_ => ())
+    //    collection.runCommand(FSyncCommand()).map(_ => ())
+  }
 }
 
 class MongoAsyncCrudRepo[E: Format, ID: Format](
