@@ -19,13 +19,13 @@ import controllers.core.{ReadonlyControllerImpl, WebContext}
 import org.apache.commons.lang3.StringEscapeUtils
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.FilterCondition.FilterOrId
-import models.ml.{DataSetSeriesProcessingSpec, LearningSetting, SeriesProcessingSpec}
+import models.ml.{DataSetSeriesProcessingSpec, DataSetTransformationCore, LearningSetting, SeriesProcessingSpec}
 import models.ml.classification.LogisticRegression
 import models.ml.regression.{LinearRegression, Regression}
 import persistence.RepoTypes.{ClassificationRepo, RegressionRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
-import play.api.data.Form
+import play.api.data.{Form, Mapping}
 import play.api.data.Forms.{mapping, number, of, optional}
 import play.api.libs.json._
 import play.api.mvc.Results._
@@ -104,16 +104,20 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private implicit val storageTypeFormatter =  EnumFormatter(StorageType)
   private implicit val seriesProcessingSpecType = JsonFormatter[SeriesProcessingSpec]
 
+  private val coreMapping: Mapping[DataSetTransformationCore] = mapping(
+    "resultDataSetId" -> nonEmptyText,
+    "resultDataSetName" -> nonEmptyText,
+    "resultStorageType" -> of[StorageType.Value],
+    "processingBatchSize" -> optional(number(min = 1, max = 200)),
+    "saveBatchSize" -> optional(number(min = 1, max = 200))
+  )(DataSetTransformationCore.apply)(DataSetTransformationCore.unapply)
+
   private val dataSetSeriesProcessingSpecForm = Form(
     mapping(
       "sourceDataSetId" -> ignored(dataSetId),
-      "resultDataSetId" -> nonEmptyText,
-      "resultDataSetName" -> nonEmptyText,
-      "resultStorageType" -> of[StorageType.Value],
+      "core" -> coreMapping,
       "seriesProcessingSpecs" -> seq(of[SeriesProcessingSpec]),
-      "preserveFieldNames" -> seq(nonEmptyText),
-      "processingBatchSize" -> optional(number(min = 1, max = 200)),
-      "saveBatchSize" -> optional(number(min = 1, max = 200))
+      "preserveFieldNames" -> seq(nonEmptyText)
     )(DataSetSeriesProcessingSpec.apply)(DataSetSeriesProcessingSpec.unapply))
 
   override protected def listViewColumns = result(

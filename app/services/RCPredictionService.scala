@@ -1,10 +1,9 @@
 package services
 
-import java.util.Collections
 import java.{lang => jl, util => ju}
 import javax.inject.Inject
 
-import _root_.util.{FieldUtil, JsonUtil, seqFutures, retry}
+import _root_.util.{FieldUtil, JsonUtil, retry, seqFutures}
 import FieldUtil.caseClassToFlatFieldTypes
 import com.banda.core.plotter.Plotter
 import com.banda.incal.domain.ReservoirLearningSetting
@@ -14,6 +13,7 @@ import com.banda.network.business._
 import com.banda.network.domain._
 import com.google.inject.{ImplementedBy, Singleton}
 import dataaccess.AscSort
+import dataaccess.JsonCrudRepoExtra.InfixOps
 import dataaccess.Criterion.Infix
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models._
@@ -114,11 +114,10 @@ class RCPredictionServiceImpl @Inject()(
 
     // helper function to get a single json batch
     def getJsons(ids: Traversable[BSONObjectID]) =
-      dataSetRepo.find(
-        criteria = Seq(idName #>= ids.head),
-        limit = Some(actualBatchSize),
-        sort = Seq(AscSort(idName)),
-        projection = otherFieldNames ++ seriesFieldNames.toSet
+      dataSetRepo.findByIds(
+        ids.head,
+        actualBatchSize,
+        otherFieldNames ++ seriesFieldNames.toSet
       )
 
     for {
@@ -129,10 +128,7 @@ class RCPredictionServiceImpl @Inject()(
       count <- dataSetRepo.count()
 
       // get all the ids
-      ids <- dataSetRepo.find(
-        projection = Seq(idName),
-        sort = Seq(AscSort(idName))
-      ).map(_.map(json => (json \ idName).as[BSONObjectID]))
+      ids <- dataSetRepo.allIds
 
       // predict the time series in batches and retrieve the results with jsons
       resultsAndJsons <-

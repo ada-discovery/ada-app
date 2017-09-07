@@ -90,9 +90,9 @@
         <div class="col-md-12">
             @helper.form(action = dataSetRouter.runSeriesProcessing) {
                 <fieldset>
-                    @inputTextAux("resultDataSetId", Some(context.dataSetId + "_derived"))
-                    @inputTextAux("resultDataSetName", Some(dataSetName + " (Derived)"))
-                    @selectAux("resultStorageType", util.enumToValueString(StorageType))
+                    @inputTextAux("core.resultDataSetId", Some(context.dataSetId + "_derived"))
+                    @inputTextAux("core.resultDataSetName", Some(dataSetName + " (Derived)"))
+                    @selectAux("core.resultStorageType", util.enumToValueString(StorageType))
                     @labelValue("seriesProcessingSpecs", "Series Processing Specs", false, None, 3){
                         @seriesProcessingFieldTable(
                             form.value.map(_.seriesProcessingSpecs).getOrElse(Nil)
@@ -101,8 +101,8 @@
                     @labelValue("preserveFieldNames", "Preserve Field Names", false, None, 3) {
                         @dynamicFieldTable("preserveFieldName", Nil, false, 5, Some(extraFieldButtons))
                     }
-                    @inputTextAux("processingBatchSize", Some(20))
-                    @inputTextAux("saveBatchSize", Some(5))
+                    @inputTextAux("core.processingBatchSize", Some(20))
+                    @inputTextAux("core.saveBatchSize", Some(5))
                 </fieldset>
 
                 <div class="actions pull-right">

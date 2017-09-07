@@ -2,24 +2,20 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import runnables.GuiceBuilderRunnable
+import models.StorageType
+import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
-
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
 class MPowerChallengeMergeDemographicsDataSets @Inject() (
     dataSetService: DataSetService
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
-  private val timeout = 120000 millis
+  private val mergedDataSetId = "mpower_challenge.demographics"
+  private val mergedDataSetName = "Demographics"
+  private val demographicsDataSetId1 = "mpower_challenge.demographics_testing"
+  private val demographicsDataSetId2 = "mpower_challenge.demographics_training"
 
-  val mergedDataSetId = "mpower_challenge.demographics"
-  val mergedDataSetName = "Demographics"
-  val demographicsDataSetId1 = "mpower_challenge.demographics_testing"
-  val demographicsDataSetId2 = "mpower_challenge.demographics_training"
-
-  val fieldNameMappings = Seq(
+  private val fieldNameMappings = Seq(
     Seq("ROW_ID", "ROW_ID"),
     Seq("ROW_VERSION", "ROW_VERSION"),
     Seq("age", "age"),
@@ -45,16 +41,14 @@ class MPowerChallengeMergeDemographicsDataSets @Inject() (
     Seq("yearssmoking", "years-smoking")
   )
 
-  override def run() = {
-    val future = dataSetService.mergeDataSets(
+  override def runAsFuture =
+    dataSetService.mergeDataSets(
       mergedDataSetId,
       mergedDataSetName,
-      None,
+      StorageType.ElasticSearch,
       Seq(demographicsDataSetId1, demographicsDataSetId2),
       fieldNameMappings
     )
-    Await.result(future, timeout)
-  }
 }
 
 object MPowerChallengeMergeDemographicsDataSets extends GuiceBuilderRunnable[MPowerChallengeMergeDemographicsDataSets] with App { run }

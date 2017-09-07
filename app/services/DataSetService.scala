@@ -6,11 +6,11 @@ import javax.inject.Inject
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import dataaccess._
 import dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, JsonCrudRepo}
-import _root_.util.{JsonUtil, MessageLogger}
+import dataaccess.JsonCrudRepoExtra.InfixOps
+import _root_.util.{GroupMapList, JsonUtil, MessageLogger}
 import com.google.inject.ImplementedBy
 import models._
 import Criterion.Infix
-import org.apache.commons.lang.StringUtils
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -24,7 +24,7 @@ import play.api.Configuration
 import _root_.util.JsonUtil._
 import _root_.util.{retry, seqFutures}
 import models.FilterCondition.FilterOrId
-import models.ml.{DataSetSeriesProcessingSpec, SeriesProcessingSpec, SeriesProcessingType}
+import models.ml.{DataSetLink, DataSetSeriesProcessingSpec, SeriesProcessingSpec, SeriesProcessingType}
 
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
@@ -124,11 +124,19 @@ trait DataSetService {
   ): Future[Unit]
 
   def mergeDataSets(
-    newDataSetId: String,
-    newDataSetName: String,
-    newDataSetSetting: Option[DataSetSetting],
+    resultDataSetId: String,
+    resultDataSetName: String,
+    resultStorageType: StorageType.Value,
     dataSetIds: Seq[String],
     fieldNameMappings: Seq[Seq[String]]
+  ): Future[Unit]
+
+  def linkDataSets(
+    spec: DataSetLink
+  ): Future[Unit]
+
+  def processSeriesAndSaveDataSet(
+    spec: DataSetSeriesProcessingSpec
   ): Future[Unit]
 
   def loadDataAndFields(
@@ -136,10 +144,6 @@ trait DataSetService {
     fieldNames: Seq[String] = Nil,
     criteria: Seq[Criterion[Any]] = Nil
   ): Future[(Traversable[JsObject], Seq[Field])]
-
-  def processSeriesAndSaveDataSet(
-    spec: DataSetSeriesProcessingSpec
-  ): Future[Unit]
 }
 
 class DataSetServiceImpl @Inject()(
@@ -197,7 +201,8 @@ class DataSetServiceImpl @Inject()(
         retry(s"Data saving failed:", logger, 3)(
           dataRepo.save(transformedJsons).map { _ =>
             logProgress(startIndex + transformedJsons.size, reportLineSize, size)
-            ()
+            // TODO: flush??
+            dataRepo.flushOps
           }
         )
       }
@@ -530,9 +535,9 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def mergeDataSets(
-    newDataSetId: String,
-    newDataSetName: String,
-    newDataSetSetting: Option[DataSetSetting],
+    resultDataSetId: String,
+    resultDataSetName: String,
+    resultStorageType: StorageType.Value,
     dataSetIds: Seq[String],
     fieldNames: Seq[Seq[String]]
   ): Future[Unit] = {
@@ -542,14 +547,13 @@ class DataSetServiceImpl @Inject()(
     val newFieldNames = fieldNames.map(_.head)
 
     for {
-      metaInfo <- dsafs.head.metaInfo
+      // register the result data set (if not registered already)
+      newDsa <- registerDerivedDataSet(dsafs.head, resultDataSetId, resultDataSetName, resultStorageType)
+
+      newFieldRepo = newDsa.fieldRepo
 
       fields <- dsafs.head.fieldRepo.find(Seq("name" #-> newFieldNames))
       fieldNameMap = fields.map(field => (field.name, field)).toMap
-
-      newDsa <- dsaf.register(
-        DataSetMetaInfo(None, newDataSetId, newDataSetName, 0, false, metaInfo.dataSpaceId), newDataSetSetting, None
-      )
 
       namedFieldTypes <- Future.sequence(
         fieldRepos.zipWithIndex.map { case (fieldRepo, index) =>
@@ -566,8 +570,6 @@ class DataSetServiceImpl @Inject()(
       fieldTypesWithNewNames = newFieldNames.zip(namedFieldTypes.transpose).map { case (newFieldName, namedFieldTypes) =>
         (namedFieldTypes, newFieldName)
       }
-
-      newFieldRepo = newDsa.fieldRepo
 
       newFieldNameAndTypes <- inferMultiSourceFieldTypesInParallel(dataSetRepos, fieldTypesWithNewNames, 100, None)
 
@@ -599,7 +601,7 @@ class DataSetServiceImpl @Inject()(
 
       // delete all the data
       _ <- {
-        logger.info(s"Deleting all the data for '${newDataSetId}'.")
+        logger.info(s"Deleting all the data for '${resultDataSetId}'.")
         newDataRepo.deleteAll
       }
 
@@ -675,6 +677,256 @@ class DataSetServiceImpl @Inject()(
       )
     } yield
       fieldNameAndTypes.flatten
+  }
+
+  override def linkDataSets(
+    spec: DataSetLink
+  ) = {
+    val leftDsa = dsaf(spec.leftSourceDataSetId).getOrElse(throw new AdaException(s"Data Set ${spec.leftSourceDataSetId} not found."))
+    val rightDsa = dsaf(spec.rightSourceDataSetId).getOrElse(throw new AdaException(s"Data Set ${spec.rightSourceDataSetId} not found."))
+
+    val leftLinkFieldNameSet = spec.linkFieldNames.map(_._1).toSet
+    val rightLinkFieldNameSet = spec.linkFieldNames.map(_._2).toSet
+
+    val leftFieldNames =
+      spec.leftPreserveFieldNames match {
+        case Nil => Nil
+        case _ => (spec.leftPreserveFieldNames ++ leftLinkFieldNameSet).toSet
+      }
+
+    val rightFieldNames =
+      spec.rightPreserveFieldNames match {
+        case Nil => Nil
+        case _ => (spec.rightPreserveFieldNames ++ rightLinkFieldNameSet).toSet
+      }
+
+    def fieldTypeMap(
+      fieldRepo: FieldRepo,
+      fieldNames: Traversable[String]
+    ): Future[Map[String, FieldType[_]]] =
+      for {
+        fields <- fieldNames match {
+          case Nil => fieldRepo.find()
+          case _ => fieldRepo.find(Seq("name" #-> fieldNames.toSeq))
+        }
+      } yield
+        fields.map( field => (field.name, ftf(field.fieldTypeSpec))).toMap
+
+    val processingBatchSize = spec.processingBatchSize.getOrElse(20)
+    val saveBatchSize = spec.saveBatchSize.getOrElse(10)
+
+    for {
+      // register the result data set (if not registered already)
+      linkedDsa <- registerDerivedDataSet(leftDsa, spec.resultDataSetId, spec.resultDataSetName, spec.resultStorageType)
+
+      // get all the left data set fields
+      leftFieldTypeMap <- fieldTypeMap(leftDsa.fieldRepo, leftFieldNames)
+
+      // get all the right data set fields
+      rightFieldTypeMap <- fieldTypeMap(rightDsa.fieldRepo, rightFieldNames)
+
+      // update the linked dictionary
+      _ <- {
+        val leftFieldNameAndTypes = leftFieldTypeMap.map { case (fieldName, fieldType) => (fieldName, fieldType.spec) }
+        val rightFieldNameAndTypes = rightFieldTypeMap.map { case (fieldName, fieldType) => (fieldName, fieldType.spec) }.filterNot { case (fieldName, _)  => rightLinkFieldNameSet.contains(fieldName) }
+        updateDictionary(spec.resultDataSetId, leftFieldNameAndTypes ++ rightFieldNameAndTypes, false, true)
+      }
+
+      // the right data set link->jsons
+      linkRightJsonsMap <-
+        for {
+          jsons <- rightDsa.dataSetRepo.find(projection = rightFieldNames)
+        } yield {
+          jsons.map { json =>
+            val linkAsString = spec.linkFieldNames.map { case (_, fieldName) =>
+              val fieldType = rightFieldTypeMap.get(fieldName).getOrElse(
+                throw new AdaException(s"Field $fieldName not found.")
+              )
+              fieldType.jsonToDisplayString(json \ fieldName)
+            }
+            val strippedJson = json.fields.filterNot { case (fieldName, _)  => rightLinkFieldNameSet.contains(fieldName) }
+            (linkAsString, JsObject(strippedJson))
+          }.toGroupMap
+        }
+
+      // get all the left ids
+      ids <- leftDsa.dataSetRepo.allIds
+
+      // delete all items from the linked data set
+      _ <- linkedDsa.dataSetRepo.deleteAll
+
+      // link left and right data sets
+      _ <-
+        seqFutures(ids.toSeq.grouped(processingBatchSize)) { ids =>
+          for {
+            // get the jsons
+            jsons <- leftDsa.dataSetRepo.findByIds(ids.head, processingBatchSize, leftFieldNames)
+
+            // save the new linked jsons
+            _ <- {
+              val linkedJsons = jsons.map { json =>
+                val linkAsString = spec.linkFieldNames.map { case (fieldName, _) =>
+                  val fieldType = leftFieldTypeMap.get(fieldName).getOrElse(
+                    throw new AdaException(s"Field $fieldName not found.")
+                  )
+                  fieldType.jsonToDisplayString(json \ fieldName)
+                }
+                linkRightJsonsMap.get(linkAsString).map( rightJsons => rightJsons.map(json ++ _)).getOrElse(Seq(json))
+              }.flatten
+
+              saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(saveBatchSize))
+            }
+          } yield
+            ()
+        }
+    } yield
+      ()
+  }
+
+  override def processSeriesAndSaveDataSet(
+    spec: DataSetSeriesProcessingSpec
+  ): Future[Unit] = {
+    val dsa = dsaf(spec.sourceDataSetId).getOrElse(
+      throw new AdaException(s"Data set id ${spec.sourceDataSetId} not found."))
+
+    val idName = JsObjectIdentity.name
+    val processingBatchSize = spec.processingBatchSize.getOrElse(20)
+    val saveBatchSize = spec.core.saveBatchSize.getOrElse(5)
+    val preserveFieldNameSet = spec.preserveFieldNames.toSet
+
+    for {
+      // register the result data set (if not registered already)
+      newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetId, spec.resultDataSetName, spec.resultStorageType)
+
+      // get all the fields
+      fields <- dsa.fieldRepo.find()
+
+      // update the dictionary
+      _ <- {
+        val preservedFields = fields.filter(field => preserveFieldNameSet.contains(field.name))
+
+        val newFields = spec.seriesProcessingSpecs.map(spec =>
+          Field(spec.toString.replace('.', '_'), None, FieldTypeId.Double, true)
+        )
+
+        val fieldNameAndTypes = (preservedFields ++ newFields).map(field => (field.name, field.fieldTypeSpec))
+        updateDictionary(spec.resultDataSetId, fieldNameAndTypes, false, true)
+      }
+
+      // delete all from the old data set
+      _ <- newDsa.dataSetRepo.deleteAll
+
+      // get all the ids
+      ids <- dsa.dataSetRepo.allIds
+
+      // process and save jsons
+      _ <- seqFutures(ids.toSeq.grouped(processingBatchSize).zipWithIndex) {
+
+        case (ids, groupIndex) =>
+          Future.sequence(
+            ids.map(dsa.dataSetRepo.get)
+          ).map(_.flatten).flatMap { jsons =>
+
+            logger.info(s"Processing series ${groupIndex * processingBatchSize} to ${(jsons.size - 1) + (groupIndex * processingBatchSize)}")
+            val newJsons = jsons.par.map(processSeries(spec.seriesProcessingSpecs, preserveFieldNameSet)).toList
+
+            // save the norm data set jsons
+            saveOrUpdateRecords(newDsa.dataSetRepo, newJsons, None, false, None, Some(saveBatchSize))
+          }
+      }
+    } yield
+      ()
+  }
+
+  private def processSeries(
+    processingSpecs: Seq[SeriesProcessingSpec],
+    preserveFieldNames: Set[String])(
+    json: JsObject
+  ): JsObject = {
+    val newValues = processingSpecs.par.map { spec =>
+      val series = JsonUtil.traverse(json, spec.fieldPath).map(_.as[Double])
+      val newSeries: Seq[Double] = processSeries(series, spec)
+
+      spec.toString.replace('.','_') -> JsArray(newSeries.map( value =>
+        if (value == null)
+          throw new AdaException(s"Found a null value at the path ${spec.fieldPath}. \nSeries: ${series.mkString(",")}")
+        else
+          try {
+            JsNumber(value)
+          } catch {
+            case e: NumberFormatException => throw new AdaException(s"Found a non-numeric value ${value} at the path ${spec.fieldPath}. \nSeries: ${series.mkString(",")}")
+          }
+      ))
+    }.toList
+
+    val preservedValues: Seq[(String, JsValue)] =
+      json.fields.filter { case (fieldName, jsValue) => preserveFieldNames.contains(fieldName)}
+
+    JsObject(preservedValues ++ newValues)
+  }
+
+  private def processSeries(
+    series: Seq[Double],
+    spec: SeriesProcessingSpec
+  ): Seq[Double] = {
+    val newSeries = series.sliding(spec.pastValuesCount + 1).map { values =>
+
+      def process(seq: Seq[Double]): Seq[Double] = {
+        if (seq.size == 1)
+          seq
+        else {
+          val newSeq = spec.processingType match {
+            case SeriesProcessingType.Diff => values.zip(values.tail).map { case (a, b) => b - a }
+            case SeriesProcessingType.RelativeDiff => values.zip(values.tail).map { case (a, b) => (b - a) / a }
+            case SeriesProcessingType.Ratio => values.zip(values.tail).map { case (a, b) => b / a }
+            case SeriesProcessingType.LogRatio => values.zip(values.tail).map { case (a, b) => Math.log(b / a) }
+            case SeriesProcessingType.Min => Seq(values.min)
+            case SeriesProcessingType.Max => Seq(values.max)
+            case SeriesProcessingType.Mean => Seq(values.sum / values.size)
+          }
+          process(newSeq)
+        }
+      }
+
+      process(values).head
+    }.toSeq
+
+    // add an initial padding if needed
+    if (spec.addInitPaddingWithZeroes)
+      Seq.fill(spec.pastValuesCount)(0d) ++ newSeries
+    else
+      newSeries
+
+  }
+
+  private def registerDerivedDataSet(
+    sourceDsa: DataSetAccessor,
+    resultDataSetId: String,
+    resultDataSetName: String,
+    resultStorageType: StorageType.Value
+  ): Future[DataSetAccessor] = {
+    val metaInfoFuture = sourceDsa.metaInfo
+    val settingFuture = sourceDsa.setting
+    val dataViewsFuture = sourceDsa.dataViewRepo.find()
+
+    for {
+      // get the data set meta info
+      metaInfo <- metaInfoFuture
+
+      // get the data set setting
+      setting <- settingFuture
+
+      // get the data set setting
+      dataViews <- dataViewsFuture
+
+      // register the norm data set (if not registered already)
+      newDsa <- dsaf.register(
+        metaInfo.copy(_id = None, id = resultDataSetId, name = resultDataSetName, timeCreated = new ju.Date()),
+        Some(setting.copy(_id = None, dataSetId = resultDataSetId, storageType = resultStorageType)),
+        dataViews.find(_.default)
+      )
+    } yield
+      newDsa
   }
 
   private def inferFieldTypes(
@@ -1313,138 +1565,6 @@ class DataSetServiceImpl @Inject()(
       jsons <- dataFuture
     } yield
       (jsons, fields.toSeq)
-  }
-
-  override def processSeriesAndSaveDataSet(
-    spec: DataSetSeriesProcessingSpec
-  ): Future[Unit] = {
-    val dsa = dsaf(spec.sourceDataSetId).getOrElse(
-      throw new AdaException(s"Data set id ${spec.sourceDataSetId} not found."))
-
-    val idName = JsObjectIdentity.name
-    val processingBatchSize = spec.processingBatchSize.getOrElse(20)
-    val saveBatchSize = spec.saveBatchSize.getOrElse(5)
-    val preserveFieldNameSet = spec.preserveFieldNames.toSet
-
-    for {
-    // get the data set meta info
-      metaInfo <- dsa.metaInfo
-
-      // get the data set setting
-      setting <- dsa.setting
-
-      // get the data set setting
-      dataViews <- dsa.dataViewRepo.find()
-
-      // register the norm data set (if not registered already)
-      newDsa <- dsaf.register(
-        metaInfo.copy(_id = None, id = spec.resultDataSetId, name = spec.resultDataSetName, timeCreated = new ju.Date()),
-        Some(setting.copy(_id = None, dataSetId = spec.resultDataSetId, storageType = spec.resultStorageType)),
-        dataViews.find(_.default)
-      )
-
-      // get all the fields
-      fields <- dsa.fieldRepo.find()
-
-      // update the dictionary
-      _ <- {
-        val preservedFields = fields.filter(field => preserveFieldNameSet.contains(field.name))
-
-        val newFields = spec.seriesProcessingSpecs.map(spec =>
-          Field(spec.toString.replace('.', '_'), None, FieldTypeId.Double, true)
-        )
-
-        val fieldNameAndTypes = (preservedFields ++ newFields).map(field => (field.name, field.fieldTypeSpec))
-        updateDictionary(spec.resultDataSetId, fieldNameAndTypes, false, true)
-      }
-
-      // delete all from the old data set
-      _ <- newDsa.dataSetRepo.deleteAll
-
-      // get all the ids
-      ids <- dsa.dataSetRepo.find(
-        projection = Seq(idName),
-        sort = Seq(AscSort(idName))
-      ).map(_.map(json => (json \ idName).as[BSONObjectID]))
-
-      // process and save jsons
-      _ <- seqFutures(ids.toSeq.grouped(processingBatchSize).zipWithIndex) {
-
-        case (ids, groupIndex) =>
-          Future.sequence(
-            ids.map(dsa.dataSetRepo.get)
-          ).map(_.flatten).flatMap { jsons =>
-
-            logger.info(s"Processing series ${groupIndex * processingBatchSize} to ${(jsons.size - 1) + (groupIndex * processingBatchSize)}")
-            val newJsons = jsons.par.map(processSeries(spec.seriesProcessingSpecs, preserveFieldNameSet)).toList
-
-            // save the norm data set jsons
-            saveOrUpdateRecords(newDsa.dataSetRepo, newJsons, None, false, None, Some(saveBatchSize))
-          }
-      }
-    } yield
-      ()
-  }
-
-  private def processSeries(
-    processingSpecs: Seq[SeriesProcessingSpec],
-    preserveFieldNames: Set[String])(
-    json: JsObject
-  ): JsObject = {
-    val newValues = processingSpecs.par.map { spec =>
-      val series = JsonUtil.traverse(json, spec.fieldPath).map(_.as[Double])
-      val newSeries: Seq[Double] = processSeries(series, spec)
-
-      spec.toString.replace('.','_') -> JsArray(newSeries.map( value =>
-        if (value == null)
-          throw new AdaException(s"Found a null value at the path ${spec.fieldPath}.")
-        else
-          try {
-            JsNumber(value)
-          } catch {
-            case e: NumberFormatException => throw new AdaException(s"Found a non-numeric value ${value} at the path ${spec.fieldPath}.")
-          }
-      ))
-    }.toList
-
-    val preservedValues: Seq[(String, JsValue)] =
-      json.fields.filter { case (fieldName, jsValue) => preserveFieldNames.contains(fieldName)}
-
-    JsObject(preservedValues ++ newValues)
-  }
-
-  private def processSeries(
-    series: Seq[Double],
-    spec: SeriesProcessingSpec
-  ): Seq[Double] = {
-    val newSeries = series.sliding(spec.pastValuesCount + 1).map { values =>
-
-      def process(seq: Seq[Double]): Seq[Double] = {
-        if (seq.size == 1)
-          seq
-        else {
-          val newSeq = spec.processingType match {
-            case SeriesProcessingType.Diff => values.zip(values.tail).map { case (a, b) => b - a }
-            case SeriesProcessingType.RelativeDiff => values.zip(values.tail).map { case (a, b) => (b - a) / a }
-            case SeriesProcessingType.Ratio => values.zip(values.tail).map { case (a, b) => b / a }
-            case SeriesProcessingType.LogRatio => values.zip(values.tail).map { case (a, b) => Math.log(b / a) }
-            case SeriesProcessingType.Min => Seq(values.min)
-            case SeriesProcessingType.Max => Seq(values.max)
-            case SeriesProcessingType.Mean => Seq(values.sum / values.size)
-          }
-          process(newSeq)
-        }
-      }
-
-      process(values).head
-    }.toSeq
-
-    // add an initial padding if needed
-    if (spec.addInitPaddingWithZeroes)
-      Seq.fill(spec.pastValuesCount)(0d) ++ newSeries
-    else
-      newSeries
-
   }
 
   private def logProgress(index: Int, granularity: Double, total: Int) =

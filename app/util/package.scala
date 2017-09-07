@@ -4,6 +4,7 @@ import play.api.{Logger, LoggerLike}
 import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
 
+import scala.collection.TraversableLike
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -156,5 +157,10 @@ package object util {
       }
 
     retryAux(1)
+  }
+
+  implicit class GroupMapList[A, B](list: Traversable[(A, B)]) {
+    def toGroupMap: Map[A, Traversable[B]] =
+      list.groupBy(_._1).map(x => (x._1, x._2.map(_._2)))
   }
 }

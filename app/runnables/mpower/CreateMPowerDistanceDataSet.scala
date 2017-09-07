@@ -13,6 +13,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
+import dataaccess.JsonCrudRepoExtra.InfixOps
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -92,10 +93,7 @@ class CreateMPowerDistanceDataSet @Inject() (
       _ <- newDsa.dataSetRepo.deleteAll
 
       // get all the ids
-      ids <- dataSetRepo.find(
-        projection = Seq(idName),
-        sort = Seq(AscSort(idName))
-      ).map(_.map(json => (json \ idName).as[BSONObjectID]))
+      ids <- dataSetRepo.allIds
 
       // process and save jsons
       _ <- createNormsAndSaveDataSet(newDsa, ids.toSeq)
