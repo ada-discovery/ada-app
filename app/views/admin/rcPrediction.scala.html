@@ -56,12 +56,13 @@
                     @inputTextAux("dropRightLengths", Some(200))
                     @inputTextAux("inputSeriesFieldPaths", Some("accel_walking_outboundu002ejsonu002eitems.x, accel_walking_outboundu002ejsonu002eitems.y, accel_walking_outboundu002ejsonu002eitems.z"))
                     @inputTextAux("outputSeriesFieldPaths", Some("accel_walking_outboundu002ejsonu002eitems.x"))
-                    @inputTextAux("sourceDataSetId", Some("mpower_challenge.walking_activity_training"))
+                    @inputTextAux("sourceDataSetId", Some("mpower_challenge.walking_activity_training_w_demographics"))
                     @inputTextAux("resultDataSetId", Some("mpower_challenge.walking_activity_training_rc_weights"))
                     @inputTextAux("resultDataSetName", Some("Walking Activity Training (RC) Weights"))
                     @inputTextAux("resultDataSetIndex", Some(1))
                     @selectAux("seriesPreprocessingType", VectorTransformType)
                     @inputTextAux("batchSize", Some(20))
+                    @inputTextAux("preserveWeightFieldNames", Some("recordId, medTimepoint, healthCode"))
                 </fieldset>
 
                 <div class="actions pull-right">

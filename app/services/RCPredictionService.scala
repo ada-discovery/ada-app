@@ -39,7 +39,7 @@ trait RCPredictionService {
     setting: ExtendedReservoirLearningSetting,
     ioSpec: RCPredictionInputOutputSpec,
     batchSize: Option[Int] = None,
-    transformWeightResultJsonsAndFields: Option[JsonsAndFields => JsonsAndFields] = None
+    preserveWeightFieldNames: Seq[String]
   ): Future[Unit]
 
   def predictSeries(
@@ -61,9 +61,6 @@ class RCPredictionServiceImpl @Inject()(
     dataSetService: DataSetService
   ) extends RCPredictionService {
 
-  private val otherFieldNames1 = Seq("recordId", "medTimepoint", "healthCode")
-  private val otherFieldNames2 = Seq("recordId")
-
   private val settingAndResultsFields =
     caseClassToFlatFieldTypes[RCPredictionSettingAndResults]("-").filter(_._1 != "_id")
 
@@ -80,8 +77,8 @@ class RCPredictionServiceImpl @Inject()(
   override def predictAndStoreResults(
     setting: ExtendedReservoirLearningSetting,
     ioSpec: RCPredictionInputOutputSpec,
-    batchSize: Option[Int] = None,
-    transformWeightResultJsonsAndFields: Option[JsonsAndFields => JsonsAndFields] = None
+    batchSize: Option[Int],
+    preserveWeightFieldNames: Seq[String]
   ): Future[Unit] = {
     val idName = JsObjectIdentity.name
     val dsa = dsaf(ioSpec.sourceDataSetId).get
@@ -92,7 +89,6 @@ class RCPredictionServiceImpl @Inject()(
 
     val topology = createTopology(setting, inputDim, outputDim)
 
-    val otherFieldNames = if (transformWeightResultJsonsAndFields.isDefined) otherFieldNames1 else otherFieldNames2
     val seriesFieldNames = ioSpec.inputSeriesFieldPaths.map(_.split('.').head) ++ ioSpec.outputSeriesFieldPaths.map(_.split('.').head)
 
     // helper method to execute prediction on a given json
@@ -117,7 +113,7 @@ class RCPredictionServiceImpl @Inject()(
       dataSetRepo.findByIds(
         ids.head,
         actualBatchSize,
-        otherFieldNames ++ seriesFieldNames.toSet
+        (preserveWeightFieldNames ++ seriesFieldNames).toSet
       )
 
     for {
@@ -145,21 +141,10 @@ class RCPredictionServiceImpl @Inject()(
       allResults = resultsAndJsons.flatten.flatten
 
       // get the info about the fields we want to save alongside the trained weights
-      fields <- dsa.fieldRepo.find(Seq("name" #-> otherFieldNames))
+      weightFields <- dsa.fieldRepo.find(Seq("name" #-> preserveWeightFieldNames))
 
       // save the weight matrix
-      _ <- {
-        val (transformedResults, transformedFields) =
-          transformWeightResultJsonsAndFields.map { transform =>
-            val (newJsons, newFields) = transform(allResults.map(_._2), fields)
-            val newResultsWithJsons = allResults.map(_._1).zip(newJsons)
-            (newResultsWithJsons, newFields)
-          }.getOrElse(
-            (allResults, fields)
-          )
-
-        saveWeightDataSet(metaInfo, ioSpec.resultDataSetId, ioSpec.resultDataSetName, transformedFields, transformedResults)
-      }
+      _ <- saveWeightDataSet(metaInfo, ioSpec.resultDataSetId, ioSpec.resultDataSetName, weightFields, allResults)
 
       // calc the errors
       (meanRnmse, meanSamp) = calcErrors(

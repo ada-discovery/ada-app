@@ -34,9 +34,7 @@ class CopyOldMPowerDataSets @Inject() (
     (
       seqFutures(
         Seq(
-          ("mpower_challenge.walking_activity_training_results", "mpower_challenge_old.walking_activity_training_results"),
-          ("mpower_challenge.walking_activity_testing_results", "mpower_challenge_old.walking_activity_testing_results"),
-          ("mpower_challenge.walking_activity_training_norms_results", "mpower_challenge_old.walking_activity_training_norms_results")
+          ("mpower_challenge.walking_activity_training_results", "mpower_challenge.walking_activity_training_w_demographics_results")
         )) { case (from, to) =>
           println(to)
           copy(from, to)

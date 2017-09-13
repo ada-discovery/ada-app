@@ -206,23 +206,7 @@ object Widget {
           Json.format[CategoricalCountWidget].writes(e)
 
         case e: NumericalCountWidget[T]  =>
-          val fieldType = fieldTypes.head
-          // TODO: this is ugly... fix it by providing a correct field type
-          val value = e.data.headOption.map(_._2.headOption.map(_.value)).flatten
-          val fieldTypeToUse =
-            if (value.isDefined && value.get.isInstanceOf[Double]) {
-              val doubleFieldTypeSpec = fieldType.spec.copy(fieldType = FieldTypeId.Double)
-              val ftf = FieldTypeHelper.fieldTypeFactory()
-              ftf(doubleFieldTypeSpec).asInstanceOf[FieldType[T]]
-            } else {
-              fieldType
-            }
-
-          try {
-            numericalCountWidgetFormat(fieldTypeToUse).writes(e)
-          } catch {
-            case e: AdaConversionException => throw e
-          }
+          numericalCountWidgetFormat(fieldTypes.head).writes(e)
 
         case e: ScatterWidget[T, T] =>
           scatterWidgetFormat(fieldTypes.head, fieldTypes.tail.head).writes(e)

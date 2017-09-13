@@ -492,7 +492,24 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val fields = widgetSpec.fieldNames.map(widgetFieldMap.get).flatten
       val fieldTypes = fields.map(field => ftf(field.fieldTypeSpec).asValueOf[Any])
       widget.map { widget =>
-        implicit val writes = new WidgetWrites[Any](fieldTypes.toSeq)
+        // fixing integer->double field type for a numerical count widget
+        val fieldTypesToUse =
+          widget match {
+            case e: NumericalCountWidget[Any] =>
+              val fieldType = fieldTypes.head
+              val fieldTypeToUse =
+                if (fieldType.spec.fieldType == FieldTypeId.Integer) {
+                  val doubleFieldTypeSpec = fieldType.spec.copy(fieldType = FieldTypeId.Double)
+                  ftf(doubleFieldTypeSpec).asInstanceOf[FieldType[Any]]
+                } else {
+                  fieldType
+                }
+              Seq(fieldTypeToUse) ++ fieldTypes.tail
+
+            case _ => fieldTypes
+        }
+
+        implicit val writes = new WidgetWrites[Any](fieldTypesToUse.toSeq)
         Json.toJson(widget)
       }
     }.flatten
@@ -998,7 +1015,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         field.map { field =>
           calcDistributionCounts(criteria, field, groupField, numericBinCount).map { countSeries =>
             val chartTitle = title.getOrElse(getDistributionCountChartTitle(field, groupField))
-
             createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, numericBinCount, displayOptions)
           }
         }.getOrElse(
@@ -1015,7 +1031,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
             val nonZeroCountSeries = cumCountSeries.filter(_._2.exists(_.count > 0))
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-            Some(NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, true, nonZeroCountSeries, initializedDisplayOptions))
+            if (nonZeroCountSeries.nonEmpty) {
+              val widget = NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, true, nonZeroCountSeries, initializedDisplayOptions)
+              Some(widget)
+            } else
+              None
           }
         }.getOrElse(
           Future(None)
@@ -1090,28 +1110,34 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         val chartTitle = title.getOrElse(s"$shortXFieldLabel vs. $shortYFieldLabel")
 
-        val chartSpec = createScatterChartSpec(
-          Some(chartTitle),
-          items,
-          xField,
-          yField,
-          groupFieldName.map(nameFieldMap.get).flatten,
-          displayOptions
-        )
-        Some(chartSpec)
+        if (items.nonEmpty) {
+          val widget = createScatterChartSpec(
+            Some(chartTitle),
+            items,
+            xField,
+            yField,
+            groupFieldName.map(nameFieldMap.get).flatten,
+            displayOptions
+          )
+          Some(widget)
+        } else
+          None
 
       case CorrelationWidgetSpec(fieldNames, subFilter, displayOptions) =>
         val corrFields = fieldNames.map(nameFieldMap.get).flatten
 
         val chartTitle = title.getOrElse("Correlations")
 
-        val chartSpec = createPearsonCorrelationChartSpec(
-          Some(chartTitle),
-          items,
-          corrFields,
-          displayOptions
-        )
-        Some(chartSpec)
+        if (items.nonEmpty) {
+          val widget = createPearsonCorrelationChartSpec(
+            Some(chartTitle),
+            items,
+            corrFields,
+            displayOptions
+          )
+          Some(widget)
+        } else
+          None
 
       case TemplateHtmlWidgetSpec(content, subFilter, displayOptions) =>
         val widget = HtmlWidget("", content, displayOptions)
@@ -2210,8 +2236,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Option[Widget] = {
     val fieldTypeId = field.fieldTypeSpec.fieldType
 
-    val nonZeroExists = countSeries.exists(_._2.nonEmpty)
-    if (nonZeroExists)
+    val nonZeroCountExists = countSeries.exists(_._2.exists(_.count > 0))
+    if (nonZeroCountExists)
       Some(
         fieldTypeId match {
           case FieldTypeId.String | FieldTypeId.Enum | FieldTypeId.Boolean | FieldTypeId.Null | FieldTypeId.Json => {

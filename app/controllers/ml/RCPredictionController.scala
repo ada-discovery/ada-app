@@ -42,7 +42,6 @@ class RCPredictionController @Inject()(
   private val logger = Logger
   private val messageLogger = MessageLogger(logger, messageRepo)
 
-  private val mergeMPowerWithDemographics = configuration.getBoolean("mpower.merge_with_demographics").get
   private implicit val stringSeqFormatter = SeqFormatter.apply
   private implicit val intSeqFormatter = SeqFormatter.applyInt
   private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
@@ -65,7 +64,8 @@ class RCPredictionController @Inject()(
       "resultDataSetId" -> nonEmptyText,
       "resultDataSetName" -> nonEmptyText,
       "resultDataSetIndex" -> optional(number(min = 0, max = 2000)),
-      "batchSize" -> optional(number(min = 1, max = 200))
+      "batchSize" -> optional(number(min = 1, max = 200)),
+      "preserveWeightFieldNames" -> of[Seq[String]]
     )(RCPredictionSettings.apply)(RCPredictionSettings.unapply))
 
   private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
@@ -129,14 +129,8 @@ class RCPredictionController @Inject()(
         },
         settings =>
           for {
-            codeDiagnosisJsonMap <- if (mergeMPowerWithDemographics) createHealthCodeDiagnosisJsonMap else Future(Map[String, JsValue]())
-
-            _ <- util.seqFutures(toRCSettings(settings)) { case (setting, ioSpec, batchSize) =>
-
-              mPowerWalkingRCPredictionService.predictAndStoreResults(
-                setting, ioSpec, batchSize,
-                if (mergeMPowerWithDemographics) Some(transform(codeDiagnosisJsonMap)) else None
-              )
+            _ <- util.seqFutures(toRCSettings(settings)) {
+              (mPowerWalkingRCPredictionService.predictAndStoreResults(_,_,_,_)).tupled
             }
           } yield {
             Ok("Hooray")
@@ -147,7 +141,7 @@ class RCPredictionController @Inject()(
 
   private def toRCSettings(
     settings: RCPredictionSettings
-  ): Seq[(ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec, Option[Int])] = {
+  ): Seq[(ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec, Option[Int], Seq[String])] = {
 
     // get the maximum size of the param seqs
     val maxSize = Seq(
@@ -199,36 +193,7 @@ class RCPredictionController @Inject()(
           weightRd
         )
 
-        (setting, ioSpec, settings.batchSize)
+        (setting, ioSpec, settings.batchSize, settings.preserveWeightFieldNames)
     }
-  }
-
-  private val demographicsDataSetId = "mpower_challenge.demographics_training"
-  private val demographicsDsa = dsaf(demographicsDataSetId)
-  private val professionalDiagnosisField = Field("professional-diagnosis", None, FieldTypeId.Boolean)
-
-  private def createHealthCodeDiagnosisJsonMap =
-    demographicsDsa.get.dataSetRepo.find(
-      projection = Seq("healthCode", professionalDiagnosisField.name)
-    ).map(_.map { json =>
-      val healthCode = (json \ "healthCode").as[String]
-      val diagnosisJson = (json \ professionalDiagnosisField.name).getOrElse(JsNull)
-      (healthCode, diagnosisJson)
-      }.toMap
-    )
-
-  private def transform(
-    codeDiagnosisJsonMap: Map[String, JsValue])(
-    jsonsAndFields: (Seq[JsObject], Traversable[Field])
-  ) = {
-      val newJsons = jsonsAndFields._1.map { json =>
-      val healthCode = (json \ "healthCode").as[String]
-      val diagnosisJson = codeDiagnosisJsonMap.get(healthCode).getOrElse(JsNull)
-
-      json + ("professional-diagnosis", diagnosisJson)
-    }
-
-    val newFields = jsonsAndFields._2 ++ Seq(professionalDiagnosisField)
-    (newJsons, newFields)
   }
 }

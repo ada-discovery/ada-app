@@ -27,7 +27,8 @@ case class RCPredictionSettings(
   resultDataSetId: String,
   resultDataSetName: String,
   resultDataSetIndex: Option[Int],
-  batchSize: Option[Int]
+  batchSize: Option[Int],
+  preserveWeightFieldNames: Seq[String]
 )
 
 class ExtendedReservoirLearningSetting extends ReservoirLearningSetting {
