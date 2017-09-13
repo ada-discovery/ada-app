@@ -313,6 +313,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     tableFields: Traversable[Field]
   )
 
+  private case class InitViewResponse(
+    count: Int,
+    tableItems: Traversable[JsObject],
+    filter: Filter,
+    tableFields: Traversable[Field]
+  )
+
   override def getDefaultView = Action.async { implicit request =>
     for {
     //      // get the default view
@@ -404,7 +411,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           Future.sequence(
             filterOrIdsToUse.zip(tablePagesToUse).map { case (filterOrId, tablePage) =>
               getViewResponseWoWidgets(tablePage.page, tablePage.orderBy, filterOrId, columnNames, widgetFieldMap)
-//              getViewResponse(tablePage.page, tablePage.orderBy, filterOrId, columnNames, widgetSpecs, widgetFieldMap, useChartRepoMethod)
             }
           )
         }
@@ -413,30 +419,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val renderingStart = new ju.Date()
         render {
           case Accepts.Html() => {
-
             val callbackId = UUID.randomUUID.toString
-
-//            val widgets =
-//              if (viewResponses.size > 1)
-//                setBoxPlotMinMax(viewResponses.map(_.widgets))
-//              else
-//                viewResponses.map(_.widgets)
-//
-//            val viewPartsJsons = (viewResponses, widgets, tablePagesToUse).zipped.map {
-//              case (viewResponse, widgets, tablePage) =>
-//                val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
-//                val viewData = DataSetViewData(newPage, widgets.flatten, viewResponse.tableFields)
-//                val futureJson = widgetsToJsons(widgets.toSeq, widgetSpecs, widgetFieldMap)
-//
-//                (viewData, futureJson)
-//            }
 
             val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
 
             val viewPartsWidgetFutures = (viewResponses, tablePagesToUse, filterOrIdsToUse).zipped.map {
               case (viewResponse, tablePage, filterOrId) =>
                 val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
-                val viewData = DataSetViewData(newPage, Nil, viewResponse.tableFields)
+                val viewData = DataSetViewData(newPage, viewResponse.tableFields)
                 val widgetsFuture = getViewWidgets(filterOrId, widgetSpecs, widgetFieldMap, useChartRepoMethod)
 
                 (viewData, widgetsFuture)
@@ -780,7 +770,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: FilterOrId,
     tableFieldNames: Seq[String],
     widgetFieldMap: Map[String, Field]
-  ): Future[ViewResponse] =
+  ): Future[InitViewResponse] =
     for {
       // use a given filter conditions or load one
       resolvedFilter <- resolveFilter(filterOrId)
@@ -860,7 +850,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     nameFieldMap: Map[String, Field],
     tableFieldNames: Seq[String]
-  ): Future[ViewResponse] = {
+  ): Future[InitViewResponse] = {
 
     // total count
     val countFuture = repo.count(criteria)
@@ -877,7 +867,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     } yield {
       val tableFields = tableFieldNames.map(nameFieldMap.get).flatten
       val newFilter = setFilterLabels(filter, nameFieldMap)
-      ViewResponse(count, Nil, tableItems, newFilter, tableFields)
+      InitViewResponse(count, tableItems, newFilter, tableFields)
     }
   }
 

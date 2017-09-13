@@ -1,6 +1,6 @@
 @import views.html.layout
-@import views.html.dataset.{viewWidgets, datasetSubNav, datasetSubNavJs, datasetMenu}
-@import views.html.widget.{widgetPanelJs, widgetPanelNewJs}
+@import views.html.dataset.{datasetSubNav, datasetSubNavJs, datasetMenu}
+@import views.html.widget.{widgetPanelJs, widgetPanelAjaxLoadJs}
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
 @import views.html.dataset.{viewTables, viewTablesJs}
 @import views.html.dataset.exportDataSetDropdown
@@ -137,26 +137,20 @@
     </div>
 }
 
-@widgets = {
-    @viewWidgets(viewParts.map(_.widgets), widgetGridElementWidth)
+@widgetsDiv = {
+    <div id="widgetsDiv" class="row vertical-divider"></div>
 }
 
 @filtersAndWidgets = {
     @filters
     <hr/>
-    @widgets
+    @widgetsDiv
 }
 
 @bottomResources = {
     @highchartsJsImport()
 
-    @{
-        // viewParts.map { viewPart =>
-        //     @widgetPanelJs(viewPart.widgets)
-        // }
-    }
-
-    @widgetPanelNewJs(widgetCallbackId, widgetGridElementWidth, dataSetJsRouter)
+    @widgetPanelAjaxLoadJs(widgetCallbackId, widgetGridElementWidth, dataSetJsRouter)
 
     @highchartsJsImportForBulkExport()
     @datasetSubNavJs()
@@ -207,7 +201,7 @@
     Some(actions),
     viewTables(dataViewId, viewParts, dataSetRouter),
     if (viewParts.size == 1) {
-        Some(widgets)
+        Some(widgetsDiv)
     } else {
         Some(filtersAndWidgets)
     },
