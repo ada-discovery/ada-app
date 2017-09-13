@@ -1,9 +1,11 @@
 package controllers.dataset
 
+import java.util.UUID
 import java.util.concurrent.TimeoutException
 import java.{util => ju}
 import javax.inject.Inject
 
+import scala.collection.mutable.{Map => MMap}
 import _root_.util.JsonUtil._
 import models.ConditionType._
 import util.{BasicStats, fieldLabel}
@@ -19,9 +21,8 @@ import controllers.core.{ReadonlyControllerImpl, WebContext}
 import org.apache.commons.lang3.StringEscapeUtils
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.FilterCondition.FilterOrId
+import models.Widget.WidgetWrites
 import models.ml.{DataSetSeriesProcessingSpec, DataSetTransformationCore, LearningSetting, SeriesProcessingSpec}
-import models.ml.classification.LogisticRegression
-import models.ml.regression.{LinearRegression, Regression}
 import persistence.RepoTypes.{ClassificationRepo, RegressionRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -70,14 +71,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private val logger = Logger // (this.getClass())
 
-  // not that the associated data set repo could be updated (by calling updateDataSetRepo)
+  // note that the associated data set repo could be updated (by calling updateDataSetRepo)
   // therefore it should not be stored as val
   override protected def repo = dsa.dataSetRepo
 
   @Inject protected var tranSMARTService: TranSMARTService = _
   @Inject protected var statsService: StatsService = _
 
-  // hooks
+  // TODO: replace with a proper cache
+  private val jsonWidgetResponseCache = MMap[String, Future[Seq[JsArray]]]()
 
   // auto-generated filename for csv files
   protected def csvFileName: String = dataSetId.replace(" ", "-") + ".csv"
@@ -360,25 +362,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // initialize filters
         filterOrIdsToUse: Seq[FilterOrId] =
-        if (!filterChanged) {
-          dataView.map(_.filterOrIds) match {
-            case Some(viewFilterOrIds) =>
-              val initViewFilterOrIds = if (viewFilterOrIds.nonEmpty) viewFilterOrIds else Seq(Left(Nil))
+          if (!filterChanged) {
+            dataView.map(_.filterOrIds) match {
+              case Some(viewFilterOrIds) =>
+                val initViewFilterOrIds = if (viewFilterOrIds.nonEmpty) viewFilterOrIds else Seq(Left(Nil))
 
-              val padding = Seq.fill(Math.max(initViewFilterOrIds.size - filterOrIds.size, 0))(Left(Nil))
+                val padding = Seq.fill(Math.max(initViewFilterOrIds.size - filterOrIds.size, 0))(Left(Nil))
 
-              (filterOrIds ++ padding).zip(initViewFilterOrIds).map { case (filterOrId, viewFilterOrId) =>
-                if (filterOrId.isLeft && filterOrId.left.get.isEmpty) {
-                  viewFilterOrId
-                } else
-                  filterOrId
-              }
+                (filterOrIds ++ padding).zip(initViewFilterOrIds).map { case (filterOrId, viewFilterOrId) =>
+                  if (filterOrId.isLeft && filterOrId.left.get.isEmpty) {
+                    viewFilterOrId
+                  } else
+                    filterOrId
+                }
 
-            case None =>
-              filterOrIds
-          }
-        } else
-          filterOrIds
+              case None =>
+                filterOrIds
+            }
+          } else
+            filterOrIds
 
         // initialize table pages
         tablePagesToUse = {
@@ -386,18 +388,23 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           tablePages ++ padding
         }
 
+        // table column names and widget specs
+        (columnNames, widgetSpecs) = dataView.map(view => (view.tableColumnNames, view.widgetSpecs)).getOrElse((Nil, Nil))
+
+        // widget field Map
+        widgetFieldMap <-
+          getFields(widgetSpecs.map(_.fieldNames).flatten.toSet).map {
+            _.map(field => (field.name, field)).toMap
+          }
+
         // get the response data
         viewResponses <- {
-          val (columnNames, widgetSpecs) =
-            dataView.map(view =>
-              (view.tableColumnNames, view.widgetSpecs)
-            ).getOrElse((Nil, Nil))
-
           val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
 
           Future.sequence(
             filterOrIdsToUse.zip(tablePagesToUse).map { case (filterOrId, tablePage) =>
-              getViewResponse(tablePage.page, tablePage.orderBy, filterOrId, columnNames, widgetSpecs, useChartRepoMethod)
+              getViewResponseWoWidgets(tablePage.page, tablePage.orderBy, filterOrId, columnNames, widgetFieldMap)
+//              getViewResponse(tablePage.page, tablePage.orderBy, filterOrId, columnNames, widgetSpecs, widgetFieldMap, useChartRepoMethod)
             }
           )
         }
@@ -406,17 +413,44 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val renderingStart = new ju.Date()
         render {
           case Accepts.Html() => {
-            val fieldChartsSpecs =
-              if (viewResponses.size > 1)
-                setBoxPlotMinMax(viewResponses.map(_.widgets))
-              else
-                viewResponses.map(_.widgets)
 
-            val viewParts = (viewResponses, fieldChartsSpecs, tablePagesToUse).zipped.map {
-              case (viewResponse, fieldChartSpecs, tablePage) =>
+            val callbackId = UUID.randomUUID.toString
+
+//            val widgets =
+//              if (viewResponses.size > 1)
+//                setBoxPlotMinMax(viewResponses.map(_.widgets))
+//              else
+//                viewResponses.map(_.widgets)
+//
+//            val viewPartsJsons = (viewResponses, widgets, tablePagesToUse).zipped.map {
+//              case (viewResponse, widgets, tablePage) =>
+//                val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
+//                val viewData = DataSetViewData(newPage, widgets.flatten, viewResponse.tableFields)
+//                val futureJson = widgetsToJsons(widgets.toSeq, widgetSpecs, widgetFieldMap)
+//
+//                (viewData, futureJson)
+//            }
+
+            val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
+
+            val viewPartsWidgetFutures = (viewResponses, tablePagesToUse, filterOrIdsToUse).zipped.map {
+              case (viewResponse, tablePage, filterOrId) =>
                 val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
-                DataSetViewData(newPage, fieldChartSpecs.flatten, viewResponse.tableFields)
+                val viewData = DataSetViewData(newPage, Nil, viewResponse.tableFields)
+                val widgetsFuture = getViewWidgets(filterOrId, widgetSpecs, widgetFieldMap, useChartRepoMethod)
+
+                (viewData, widgetsFuture)
             }
+
+            val viewParts = viewPartsWidgetFutures.map(_._1)
+            val jsonsFuture = Future.sequence(viewPartsWidgetFutures.map(_._2)).map { allWidgets =>
+              val minMaxWidgets = if (allWidgets.size > 1) setBoxPlotMinMax(allWidgets) else allWidgets
+              minMaxWidgets.map( widgets =>
+                widgetsToJsons(widgets.toSeq, widgetSpecs, widgetFieldMap)
+              )
+            }
+
+            jsonWidgetResponseCache.put(callbackId, jsonsFuture)
 
             val response = Ok(
               dataset.showView(
@@ -424,6 +458,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 dataViewId,
                 dataView.map(_.name).getOrElse("N/A"),
                 viewParts,
+                callbackId,
                 dataView.map(_.elementGridWidth).getOrElse(3),
                 setting.filterShowFieldStyle,
                 dataSpaceTree
@@ -441,11 +476,38 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         InternalServerError(t.getMessage)
       case e: AdaConversionException => {
         request.headers.get("Referer") match {
-          case Some(refererUrl) => Redirect(refererUrl).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
-          case None => Redirect(router.getDefaultView).flashing("errors" -> s"Filter definition problem: ${e.getMessage}")
+          case Some(refererUrl) => Redirect(refererUrl).flashing("errors" -> s"Conversion problem: ${e.getMessage}")
+          case None => Redirect(router.getDefaultView).flashing("errors" -> s"Conversion problem: ${e.getMessage}")
         }
       }
     }
+  }
+
+  private def widgetsToJsons(
+    widgets: Seq[Option[Widget]],
+    widgetSpecs: Seq[WidgetSpec],
+    widgetFieldMap: Map[String, Field]
+  ): JsArray = {
+    val jsons = widgetSpecs.zip(widgets).map { case (widgetSpec, widget) =>
+      val fields = widgetSpec.fieldNames.map(widgetFieldMap.get).flatten
+      val fieldTypes = fields.map(field => ftf(field.fieldTypeSpec).asValueOf[Any])
+      widget.map { widget =>
+        implicit val writes = new WidgetWrites[Any](fieldTypes.toSeq)
+        Json.toJson(widget)
+      }
+    }.flatten
+    JsArray(jsons)
+  }
+
+  override def getWidgets(
+    callbackId: String
+  ) = Action.async { implicit request =>
+    jsonWidgetResponseCache.get(callbackId).map { jsonWidgets =>
+      jsonWidgetResponseCache.remove(callbackId)
+      jsonWidgets.map(jsons => Ok(JsArray(jsons)))
+    }.getOrElse(
+      Future(NotFound(s"Widget response callback $callbackId not found."))
+    )
   }
 
   override def getWidgetPanelAndTable(
@@ -460,7 +522,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
-      // load the view
+        // load the view
         dataView <- dataViewFuture
 
         // get the response data
@@ -470,7 +532,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
           val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
 
-          getViewResponse(tablePage, tableOrder, filterOrId, columnNames, widgetSpecs, useChartRepoMethod)
+          getViewResponse(tablePage, tableOrder, filterOrId, columnNames, widgetSpecs, Map(), useChartRepoMethod)
         }
       } yield {
         Logger.info(s"Data loading of a widget panel and a table for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
@@ -589,6 +651,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: FilterOrId,
     tableFieldNames: Seq[String],
     widgetSpecs: Seq[WidgetSpec],
+    widgetFieldMap: Map[String, Field],
     useOptimizedRepoChartCalcMethod: Boolean
   ): Future[ViewResponse] =
     for {
@@ -615,18 +678,123 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
       // create a name -> field map of all the referenced fields for a quick lookup
       nameFieldMap <- {
-        val chartFieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
-        val filterFieldNames = conditions.map(_.fieldName.trim)
-        val requiredFieldNames: Set[String] = (chartFieldNames ++ tableFieldNames ++ filterFieldNames)
+        val filterFieldNames = conditions.map(_.fieldName.trim).toSet
 
-        getFields(requiredFieldNames).map {
-          _.map(field => (field.name, field)).toMap
+        if (widgetFieldMap.nonEmpty) {
+          val requiredFieldNames =
+            (filterFieldNames ++ tableFieldNames).diff(widgetFieldMap.keySet)
+
+          getFields(requiredFieldNames).map { fields =>
+            val newMap = fields.map(field => (field.name, field)).toMap
+            newMap ++ widgetFieldMap
+          }
+        } else {
+          val widgetFieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
+          val requiredFieldNames = widgetFieldNames ++ tableFieldNames ++ filterFieldNames
+          getFields(requiredFieldNames).map {
+            _.map(field => (field.name, field)).toMap
+          }
         }
       }
 
       response <- getViewResponseAux(
         page, orderBy, resolvedFilter, criteria, filterSubCriteria.toMap, nameFieldMap, tableFieldNames, widgetSpecs, useOptimizedRepoChartCalcMethod
       )
+    } yield
+      response
+
+  private def getViewWidgets(
+    filterOrId: FilterOrId,
+    widgetSpecs: Seq[WidgetSpec],
+    widgetFieldMap: Map[String, Field],
+    useOptimizedRepoChartCalcMethod: Boolean
+  ): Future[Traversable[Option[Widget]]] =
+    for {
+      // use a given filter conditions or load one
+      resolvedFilter <- resolveFilter(filterOrId)
+
+      // get the conditions
+      conditions = resolvedFilter.conditions
+
+      // generate criteria
+      criteria <- toCriteria(conditions)
+
+      // get the widgets' sub criteria
+      filterSubCriteria <- Future.sequence(
+        widgetSpecs.map(_.subFilterId).flatten.toSet.map { subFilterId: BSONObjectID =>
+
+          resolveFilter(Right(subFilterId)).flatMap(resolvedFilter =>
+            toCriteria(resolvedFilter.conditions).map(criteria =>
+              (subFilterId, criteria)
+            )
+          )
+        }
+      )
+
+      // create a name -> field map of all the referenced fields for a quick lookup
+      nameFieldMap <- {
+        val filterFieldNames = conditions.map(_.fieldName.trim).toSet
+
+        if (widgetFieldMap.nonEmpty) {
+          val requiredFieldNames =
+            filterFieldNames.diff(widgetFieldMap.keySet)
+
+          getFields(requiredFieldNames).map { fields =>
+            val newMap = fields.map(field => (field.name, field)).toMap
+            newMap ++ widgetFieldMap
+          }
+        } else {
+          val widgetFieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
+          val requiredFieldNames = widgetFieldNames ++ filterFieldNames
+          getFields(requiredFieldNames).map {
+            _.map(field => (field.name, field)).toMap
+          }
+        }
+      }
+
+      widgetFields <- generateWidgets(useOptimizedRepoChartCalcMethod, criteria, filterSubCriteria.toMap, widgetSpecs, nameFieldMap)
+    } yield {
+      widgetFields.map(_.map(_._1))
+    }
+
+  private def getViewResponseWoWidgets(
+    page: Int,
+    orderBy: String,
+    filterOrId: FilterOrId,
+    tableFieldNames: Seq[String],
+    widgetFieldMap: Map[String, Field]
+  ): Future[ViewResponse] =
+    for {
+      // use a given filter conditions or load one
+      resolvedFilter <- resolveFilter(filterOrId)
+
+      // get the conditions
+      conditions = resolvedFilter.conditions
+
+      // generate criteria
+      criteria <- toCriteria(conditions)
+
+      // create a name -> field map of all the referenced fields for a quick lookup
+      nameFieldMap <- {
+        val filterFieldNames = conditions.map(_.fieldName.trim).toSet
+
+        if (widgetFieldMap.nonEmpty) {
+          val requiredFieldNames =
+            (filterFieldNames ++ tableFieldNames).diff(widgetFieldMap.keySet)
+
+          getFields(requiredFieldNames).map { fields =>
+            val newMap = fields.map(field => (field.name, field)).toMap
+            newMap ++ widgetFieldMap
+          }
+        } else {
+          val requiredFieldNames = filterFieldNames ++ tableFieldNames
+          getFields(requiredFieldNames).map {
+            _.map(field => (field.name, field)).toMap
+          }
+        }
+      }
+
+      response <- getViewResponseWoWidgetsAux(page, orderBy, resolvedFilter, criteria, nameFieldMap, tableFieldNames)
     } yield
       response
 
@@ -652,7 +820,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val tableItemsFuture = getTableItems(page, orderBy, criteria, nameFieldMap, tableFieldNames)
 
     for {
-    // obtain the total item count satisfying the resolved filter
+      // obtain the total item count satisfying the resolved filter
       count <- countFuture
 
       // generate the charts
@@ -665,6 +833,34 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val widgets = chartSpecs.map(_.map(_._1))
       val newFilter = setFilterLabels(filter, nameFieldMap)
       ViewResponse(count, widgets, tableItems, newFilter, tableFields)
+    }
+  }
+
+  private def getViewResponseWoWidgetsAux(
+    page: Int,
+    orderBy: String,
+    filter: Filter,
+    criteria: Seq[Criterion[Any]],
+    nameFieldMap: Map[String, Field],
+    tableFieldNames: Seq[String]
+  ): Future[ViewResponse] = {
+
+    // total count
+    val countFuture = repo.count(criteria)
+
+    // table items
+    val tableItemsFuture = getTableItems(page, orderBy, criteria, nameFieldMap, tableFieldNames)
+
+    for {
+      // obtain the total item count satisfying the resolved filter
+      count <- countFuture
+
+      // load the table items
+      tableItems <- tableItemsFuture
+    } yield {
+      val tableFields = tableFieldNames.map(nameFieldMap.get).flatten
+      val newFilter = setFilterLabels(filter, nameFieldMap)
+      ViewResponse(count, Nil, tableItems, newFilter, tableFields)
     }
   }
 
@@ -979,7 +1175,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private def getFields(
     fieldNames: Traversable[String]
   ): Future[Traversable[Field]] =
-    fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
+    if (fieldNames.isEmpty)
+      Future(Nil)
+    else
+      fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
 
   private def getValues[T](
     field: Field,
@@ -1078,7 +1277,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // create a name -> field map of the filter referenced fields
       fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
     } yield {
-      val chartSpec: Option[ScatterWidget] =
+      val chartSpec: Option[ScatterWidget[_, _]] =
         (xField zip yField).headOption.map { case (xField, yField) =>
           createScatterChartSpec(
             None,
@@ -1724,21 +1923,26 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   // TODO: this is ugly... fix by introducing a proper JSON formatter
-  private def scatterToJson(scatter: ScatterWidget): JsValue = {
+  private def scatterToJson(scatter: ScatterWidget[_, _]): JsValue = {
     val seriesJsons = scatter.data.map { case (name, color, data) =>
       Json.obj(
         "name" -> shorten(name),
         "data" -> JsArray(
-          data.map { point =>
-            JsArray(point.map(value =>
-              value match {
-                case x: Double => JsNumber(x)
-                case x: Long => JsNumber(x)
-                case x: ju.Date => JsNumber(x.getTime)
-                case _ => JsString(value.toString)
-              }
-            ))
-          }.toSeq
+          data.map { case (point1, point2) =>
+            val json1 = point1 match {
+              case x: Double => JsNumber(x)
+              case x: Long => JsNumber(x)
+              case x: ju.Date => JsNumber(x.getTime)
+              case _ => JsString(point1.toString)
+            }
+            val json2 = point1 match {
+              case x: Double => JsNumber(x)
+              case x: Long => JsNumber(x)
+              case x: ju.Date => JsNumber(x.getTime)
+              case _ => JsString(point1.toString)
+            }
+            JsArray(Seq(json1, json2))
+          }
         )
       )
     }
@@ -2163,7 +2367,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     yField: Field,
     groupField: Option[Field],
     displayOptions: DisplayOptions = BasicDisplayOptions()
-  ): ScatterWidget = {
+  ): ScatterWidget[_, _] = {
     val data = statsService.collectScatterData(xyzItems, xField, yField, groupField)
     ScatterWidget(
       title.getOrElse("Comparison"),
@@ -2171,7 +2375,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       yField.labelOrElseName,
       data.map { case (name, values) =>
         val initName = if (name.isEmpty) "Undefined" else name
-        (initName, "rgba(223, 83, 83, .5)", values.map(pair => Seq(pair._1, pair._2)))
+        (initName, "rgba(223, 83, 83, .5)", values)
       },
       displayOptions
     )

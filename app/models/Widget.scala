@@ -1,6 +1,12 @@
 package models
 
 import _root_.util.BasicStats.Quantiles
+import controllers.{FieldTypeFormat, TupleFormat}
+import dataaccess.{AdaConversionException, FieldType, FieldTypeHelper}
+import play.api.libs.json._
+import reactivemongo.play.json.BSONFormats._
+import play.api.libs.functional.syntax._
+import models.json.{EnumFormat, ManifestedFormat, OptionFormat, SubTypeFormat}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 
@@ -31,11 +37,11 @@ case class NumericalCountWidget[T](
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends Widget
 
-case class ScatterWidget(
+case class ScatterWidget[T1, T2](
   title: String,
   xAxisCaption: String,
   yAxisCaption: String,
-  data: Seq[(String, String, Traversable[Seq[Any]])],
+  data: Seq[(String, String, Seq[(T1, T2)])],
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 
@@ -72,6 +78,175 @@ case class Count[+T](
   key: Option[String]
 )
 
+object Widget {
+
+  implicit val chartTypeFormat = EnumFormat.enumFormat(ChartType)
+  implicit val basicDisplayOptionsFormat = Json.format[BasicDisplayOptions]
+  implicit val multiChartDisplayOptionsFormat = Json.format[MultiChartDisplayOptions]
+
+  implicit val displayOptionsFormat: Format[DisplayOptions] = new SubTypeFormat[DisplayOptions](
+    Seq(
+      ManifestedFormat(basicDisplayOptionsFormat),
+      ManifestedFormat(multiChartDisplayOptionsFormat)
+    )
+  )
+
+  implicit val stringCountFormat: Format[Count[String]] = (
+    (__ \ "value").format[String] and
+    (__ \ "count").format[Int] and
+    (__ \ "key").formatNullable[String]
+  )(Count[String](_, _, _), {x => (x.value, x.count, x.key)})
+
+  def countFormat[T](fieldType: FieldType[T]): Format[Count[T]] = {
+    implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
+
+    (
+      (__ \ "value").format[T] and
+      (__ \ "count").format[Int] and
+      (__ \ "key").formatNullable[String]
+    )(Count[T](_, _, _), {x => (x.value, x.count, x.key)})
+  }
+
+  implicit val tupleFormat = TupleFormat[String, Seq[Count[String]]]
+  implicit val tuple2Format = TupleFormat[String, String, Seq[Seq[Double]]]
+  implicit val optionFormat = new OptionFormat[Double]
+
+  def quantilesFormat[T <% Ordered[T]](fieldType: FieldType[T]): Format[Quantiles[T]] = {
+    implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
+
+    (
+      (__ \ "lowerWhisker").format[T] and
+      (__ \ "lowerQuantile").format[T] and
+      (__ \ "median").format[T] and
+      (__ \ "upperQuantile").format[T] and
+      (__ \ "upperWhisker").format[T]
+    )(Quantiles[T](_, _, _, _, _), {x => (x.lowerWhisker, x.lowerQuantile, x.median, x.upperQuantile, x.upperWhisker)})
+  }
+
+  def quantilesWrites[T](fieldType: FieldType[T]): Writes[Quantiles[T]] = {
+    implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
+
+    (
+      (__ \ "lowerWhisker").write[T] and
+      (__ \ "lowerQuantile").write[T] and
+      (__ \ "median").write[T] and
+      (__ \ "upperQuantile").write[T] and
+      (__ \ "upperWhisker").write[T]
+    ){x => (x.lowerWhisker, x.lowerQuantile, x.median, x.upperQuantile, x.upperWhisker)}
+  }
+
+  def boxWidgetFormat[T <% Ordered[T]](fieldType: FieldType[T]): Format[BoxWidget[T]] = {
+    implicit val valueFormat = FieldTypeFormat.applyOptional[T](fieldType)
+
+    (
+      (__ \ "title").format[String] and
+      (__ \ "yAxisCaption").format[String] and
+      (__ \ "data").format[Quantiles[T]](quantilesFormat[T](fieldType)) and
+      (__ \ "min").format[Option[T]] and
+      (__ \ "max").format[Option[T]] and
+      (__ \ "displayOptions").format[DisplayOptions]
+    )(BoxWidget[T](_, _, _, _, _, _), {x => (x.title, x.yAxisCaption, x.data, x.min, x.max, x.displayOptions)})
+  }
+
+  def boxWidgetWrites[T](fieldType: FieldType[T]): Writes[BoxWidget[T]] = {
+    implicit val valueFormat = FieldTypeFormat.applyOptional[T](fieldType)
+
+    (
+      (__ \ "title").write[String] and
+      (__ \ "yAxisCaption").write[String] and
+      (__ \ "data").write[Quantiles[T]](quantilesWrites[T](fieldType)) and
+      (__ \ "min").write[Option[T]] and
+      (__ \ "max").write[Option[T]] and
+      (__ \ "displayOptions").write[DisplayOptions]
+    ){x => (x.title, x.yAxisCaption, x.data, x.min, x.max, x.displayOptions)}
+  }
+
+  def numericalCountWidgetFormat[T](fieldType: FieldType[T]): Format[NumericalCountWidget[T]] = {
+    implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
+    implicit val countFormatVal = countFormat[T](fieldType)
+    implicit val tupleFormat = TupleFormat[String, Seq[Count[T]]]
+
+    (
+      (__ \ "title").format[String] and
+      (__ \ "fieldLabel").format[String] and
+      (__ \ "useRelativeValues").format[Boolean] and
+      (__ \ "isCumulative").format[Boolean] and
+      (__ \ "data").format[Seq[(String, Seq[Count[T]])]] and
+      (__ \ "displayOptions").format[MultiChartDisplayOptions]
+    )(NumericalCountWidget[T](_, _, _, _, _, _), {x => (x.title, x.fieldLabel, x.useRelativeValues, x.isCumulative, x.data, x.displayOptions)})
+  }
+
+  implicit def scatterWidgetFormat[T1, T2](
+    fieldType1: FieldType[T1],
+    fieldType2: FieldType[T2]
+  ): Format[ScatterWidget[T1, T2]] = {
+    implicit val value1Format = FieldTypeFormat.apply[T1](fieldType1)
+    implicit val value2Format = FieldTypeFormat.apply[T2](fieldType2)
+
+    implicit val tuple1Format = TupleFormat[T1, T2]
+    implicit val tuple2Format = TupleFormat[String, String, Seq[(T1, T2)]]
+
+    (
+      (__ \ "title").format[String] and
+      (__ \ "xAxisCaption").format[String] and
+      (__ \ "yAxisCaption").format[String] and
+      (__ \ "data").format[Seq[(String, String, Seq[(T1, T2)])]] and
+      (__ \ "displayOptions").format[DisplayOptions]
+    )(ScatterWidget[T1, T2](_, _, _, _, _), {x => (x.title, x.xAxisCaption, x.yAxisCaption, x.data, x.displayOptions)})
+  }
+
+  class WidgetWrites[T](fieldTypes: Seq[FieldType[T]]) extends Writes[Widget] {
+
+    private val concreteClassFieldName = "concreteClass"
+
+    override def writes(o: Widget): JsValue = {
+      val concreteClassName = o.getClass.getName
+
+      val json = o match {
+        case e: CategoricalCountWidget =>
+          Json.format[CategoricalCountWidget].writes(e)
+
+        case e: NumericalCountWidget[T]  =>
+          val fieldType = fieldTypes.head
+          // TODO: this is ugly... fix it by providing a correct field type
+          val value = e.data.headOption.map(_._2.headOption.map(_.value)).flatten
+          val fieldTypeToUse =
+            if (value.isDefined && value.get.isInstanceOf[Double]) {
+              val doubleFieldTypeSpec = fieldType.spec.copy(fieldType = FieldTypeId.Double)
+              val ftf = FieldTypeHelper.fieldTypeFactory()
+              ftf(doubleFieldTypeSpec).asInstanceOf[FieldType[T]]
+            } else {
+              fieldType
+            }
+
+          try {
+            numericalCountWidgetFormat(fieldTypeToUse).writes(e)
+          } catch {
+            case e: AdaConversionException => throw e
+          }
+
+        case e: ScatterWidget[T, T] =>
+          scatterWidgetFormat(fieldTypes.head, fieldTypes.tail.head).writes(e)
+
+        case e: BoxWidget[T] =>
+          boxWidgetWrites(fieldTypes.head).writes(e)
+
+        case e: HeatmapWidget =>
+          Json.format[HeatmapWidget].writes(e)
+
+        case e: HtmlWidget =>
+          Json.format[HtmlWidget].writes(e)
+      }
+
+      json.asInstanceOf[JsObject] ++ Json.obj(
+        concreteClassFieldName -> JsString(concreteClassName),
+        "_id" -> o._id,
+        "fieldType" -> fieldTypes.headOption.map(fieldType => JsString(fieldType.spec.fieldType.toString))
+      )
+    }
+  }
+}
+
 // TODO: move elsewhere
 object CategoricalCountWidget {
 
@@ -93,7 +268,3 @@ object CategoricalCountWidget {
         }
     }
 }
-
-//object ScatterWidget {
-//  implicit val scatterWidgetFormat = Json.format[ScatterWidget]
-//}

@@ -61,9 +61,9 @@ class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extend
     DataSetTransformationCore(
       "harvard_ldopa.walking_data_w_scores",
       "Walking Data with Score",
-      StorageType.ElasticSearch,
-      Some(6),
-      Some(2)
+      StorageType.Mongo,
+      Some(4),
+      Some(1)
     )
   )
 

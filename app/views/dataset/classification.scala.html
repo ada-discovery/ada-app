@@ -123,12 +123,10 @@
             dataSetJsRoutes.controllers.dataset.DataSetDispatcher.selectFeaturesAsChiSquare(inputFieldNames, outputFieldName, filterOrId, featuresToSelectNum, discretizerBucketsNum).ajax( {
                 success: function(selectedFieldNames) {
                     showMessage("Chi-Square feature selection finished.")
-                    console.log(selectedFieldNames)
                     var tableBody = $("#inputFieldNameDiv").find("table tbody")
                     tableBody.find('tr').each(function() {
                         var fieldName = $(this).find("#fieldName").val();
                         if (selectedFieldNames.indexOf(fieldName) == -1) {
-                            console.log("Removing " + fieldName)
                             $(this).remove()
                         }
                      });

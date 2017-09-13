@@ -1,84 +1,17 @@
-@import util.shorten
-
 @(
-    chartElementName: String,
-    chartSpec: HeatmapWidget
+    elementId: String,
+    widget: HeatmapWidget
 )
 
 <script type="text/javascript">
-        $(function () {
-            $('#@{chartElementName}').highcharts({
-                chart: {
-                    type: 'heatmap',
-                    height: @chartSpec.displayOptions.height.getOrElse(400)
-                },
-                title: {
-                    text:  "@chartSpec.title"
-                },
-                xAxis: {
-                    categories: [ @chartSpec.xCategories.map { cat => '@cat', } ],
-                    labels: {
-                        formatter: function() {
-                            return shorten(this.value, 10);
+    $(function () {
+        var xCategories =  [ @widget.xCategories.map { cat => '@cat', } ]
+        var yCategories =  [ @widget.yCategories.map { cat => '@cat', } ]
+        var data = [ @widget.data.zipWithIndex.map { case (seq, i) =>
+            @seq.zipWithIndex.map { case (value, j) => [@i, @j, @value.getOrElse(0)],}
+        }]
 
-                        }
-                    }
-                },
-                yAxis: {
-                    categories: [ @chartSpec.xCategories.map { cat => '@cat', } ],
-                    title: null,
-                    labels: {
-                        formatter: function() {
-                            return shorten(this.value, 10);
-
-                        }
-                    }
-                },
-                credits: {
-                    enabled: false
-                },
-                colorAxis: {
-                    stops: [
-                        [0, Highcharts.getOptions().colors[5]],
-                        [0.5, '#FFFFFF'],
-                        [1, Highcharts.getOptions().colors[0]]
-                    ],
-                    min: -1,
-                    max: 1,
-
-//                    minColor: '#FFFFFF',
-//                    maxColor: Highcharts.getOptions().colors[0]
-                },
-                legend: {
-                    align: 'right',
-                    layout: 'vertical',
-                    margin: 0,
-                    verticalAlign: 'top',
-                    y: 25,
-                    symbolHeight: 280
-                },
-                tooltip: {
-                    formatter: function () {
-                        return '<b>' + this.series.xAxis.categories[this.point.x] + '</b><br><b>' +
-                                this.series.yAxis.categories[this.point.y] + '</b><br>' + Highcharts.numberFormat(this.point.value, 3, '.');
-                    },
-                    valueDecimals: 2
-                },
-                series: [{
-                    name: "@chartSpec.title",
-                    borderWidth: 1,
-                    data: [
-                        @chartSpec.data.zipWithIndex.map { case (seq, i) =>
-                            @seq.zipWithIndex.map { case (value, j) =>
-                                [@i, @j, @value.getOrElse(0)],
-                            }
-                        }
-                    ],
-                    dataLabels: {
-                        enabled: false,
-                        color: '#000000'
-                    }
-                }]
-            });
-        });
+        var height = @widget.displayOptions.height.getOrElse(400)
+        heatmapChart('@widget.title', '@elementId', xCategories, yCategories, data, height)
+    });
 </script>

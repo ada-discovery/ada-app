@@ -64,6 +64,10 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: FilterOrId
   ) = dispatch(_.getTable(page, orderBy, fieldNames, filterOrId))
 
+  override def getWidgets(
+    callbackId: String
+  ) = dispatch(_.getWidgets(callbackId))
+
   override def getScatterStats(
     xFieldName: Option[String],
     yFieldName: Option[String],

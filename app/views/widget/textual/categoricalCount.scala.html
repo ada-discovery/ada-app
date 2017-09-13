@@ -42,8 +42,6 @@
 
 <script type="text/javascript">
     $(document).ready(function() {
-        var categories = [ @widget.data.head._2.map { count =>'@count.value',}];
-
         var header ="<h4 align='center'> @widget.title </h4>"
         var table = "@Html(countTable.toString().replaceAll("\n","").replaceAll("\"","\'"))";
 

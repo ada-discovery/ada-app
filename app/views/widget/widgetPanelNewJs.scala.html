@@ -1,0 +1,38 @@
+@import controllers.dataset.DataSetJsRouter
+
+@(
+    widgetCallbackId: String,
+    widgetGridElementWidth: Int,
+    dataSetJsRouter: DataSetJsRouter
+)(
+    implicit request: Request[_]
+)
+
+@helper.javascriptRouter("dataSetJsRoutes")(
+    dataSetJsRouter.getWidgets
+)
+
+<script type="text/javascript">
+    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getWidgets('@widgetCallbackId').ajax( {
+        success: function(data) {
+            $.each(data, function (i, widgets) {
+                var div = $("<div class='col-md-" + (12 / data.length) + "'>")
+                var row = $("<div class='row'>")
+                $.each(widgets, function (j, widget) {
+                    row.append(widgetDiv(widget, @widgetGridElementWidth))
+                })
+                div.append(row)
+                $("#widgetsDiv").append(div)
+            })
+            $.each(data, function (i, widgets) {
+                var filterId = "filter" + i
+                $.each(widgets, function (j, widget) {
+                    genericWidget(widget, filterId)
+                })
+            })
+        },
+        error: function(data){
+            showError(data.responseText);
+        }
+    });
+</script>

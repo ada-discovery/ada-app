@@ -81,7 +81,7 @@ trait StatsService {
     xField: Field,
     yField: Field,
     groupField: Option[Field]
-  ): Seq[(String, Traversable[(Any, Any)])]
+  ): Seq[(String, Seq[(Any, Any)])]
 
   def calcPearsonCorrelations(
     items: Traversable[JsObject],
@@ -161,11 +161,12 @@ class StatsServiceImpl extends StatsService {
               field.name, fieldType.asValueOf[Long], dataRepo, criteria, numericBinCount, true, None, None
             )
         } yield {
-          val convert =
-            if (numCounts.length < 20)
-              Some { value: BigDecimal => value.toInt }
-            else
-              None
+          // TODO: fix this
+          val convert = None
+//            if (numCounts.length < 20)
+//              Some { value: BigDecimal => value.toLong }
+//            else
+//              None
 
           convertNumericalCounts(numCounts, convert)
         }
@@ -307,11 +308,12 @@ class StatsServiceImpl extends StatsService {
         val max = if (values.nonEmpty) values.max else 0
         val valueCount = Math.abs(max - min)
 
-        val convert =
-          if (valueCount < numericBinCount)
-            Some { value: BigDecimal => value.toInt }
-          else
-            None
+        // TODO: fix this
+        val convert = None
+//          if (valueCount < numericBinCount)
+//            Some { value: BigDecimal => value.toLong }
+//          else
+//            None
 
         val numCounts = numericalCounts(values, Math.min(numericBinCount, valueCount + 1).toInt, valueCount < numericBinCount, None, None)
         convertNumericalCounts(numCounts, convert)
@@ -627,7 +629,7 @@ class StatsServiceImpl extends StatsService {
     xField: Field,
     yField: Field,
     groupField: Option[Field]
-  ): Seq[(String, Traversable[(Any, Any)])] = {
+  ): Seq[(String, Seq[(Any, Any)])] = {
     val xFieldName = xField.name
     val yFieldName = yField.name
 
@@ -638,13 +640,37 @@ class StatsServiceImpl extends StatsService {
     val xJsons = project(xyzSeq, xFieldName).toSeq
     val yJsons = project(xyzSeq, yFieldName).toSeq
 
-    val xValues = xJsons.map(xFieldType.jsonToValue)
-    val yValues = yJsons.map(yFieldType.jsonToValue)
+    def values(
+      jsons: Seq[JsReadable],
+      fieldType: FieldType[_]
+    ) =
+      jsons.map(fieldType.jsonToValue)
+
+//
+//      fieldType.spec.fieldType match {
+//
+//        case FieldTypeId.Double =>
+//          val doubleType = fieldType.asValueOf[Double]
+//          jsons.map(doubleType.jsonToValue)
+//
+//        case FieldTypeId.Integer =>
+//          val longType = fieldType.asValueOf[Long]
+//          jsons.map(x => longType.jsonToValue(x).map(_.toDouble))
+//
+//        case FieldTypeId.Date =>
+//          val dateType = fieldType.asValueOf[ju.Date]
+//          jsons.map(x => dateType.jsonToValue(x).map(_.getTime.toDouble))
+//
+//        case _ => Nil
+//      }
+
+    val xValues = values(xJsons, xFieldType)
+    val yValues = values(yJsons, yFieldType)
 
     def flattenTupples[A, B](
       tupples: Traversable[(Option[A], Option[B])]
-    ): Traversable[(A, B)] =
-      tupples.map(_.zipped).flatten
+    ): Seq[(A, B)] =
+      tupples.map(_.zipped).flatten.toSeq
 
     groupField match {
       case Some(groupField) =>
@@ -661,10 +687,8 @@ class StatsServiceImpl extends StatsService {
         groupedValues.filter(_._2.nonEmpty).toSeq
 
       case None =>
-        val lala = (xValues, yValues).zipped
-        val xys = flattenTupples(lala)
+        val xys = flattenTupples(xValues.zip(yValues))
         Seq(("all", xys))
-
     }
   }
 

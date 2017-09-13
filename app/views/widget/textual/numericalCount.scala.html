@@ -41,9 +41,6 @@
 
 <script type="text/javascript">
     $(document).ready(function() {
-        var isDate = @{widget.data.headOption.map(_._2.headOption.map(_.value.isInstanceOf[java.util.Date])).flatten.getOrElse(false)};
-        var dataType = (isDate) ? 'datetime' : null;
-
         var header ="<h4 align='center'> @widget.title </h4>"
         var table = "@Html(countTable.toString().replaceAll("\n","").replaceAll("\"","\'"))";
 
@@ -51,6 +48,6 @@
         div.append(header)
         div.append(table)
 
-        $('#' + '@elementId').html(header + table);
+        $('#' + '@elementId').html(div);
     });
 </script>

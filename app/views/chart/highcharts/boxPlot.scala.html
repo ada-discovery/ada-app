@@ -1,53 +1,53 @@
 @(
-    chartElementName: String,
-    chartSpec: BoxWidget[_]
+    elementId: String,
+    widget: BoxWidget[_]
 )
 
 <script type="text/javascript">
-        $(function () {
-            var isDate = @{chartSpec.data.median.isInstanceOf[java.util.Date]};
-            var dataType = (isDate) ? 'datetime' : null;
+    $(function () {
+        var isDate = @{widget.data.median.isInstanceOf[java.util.Date]};
+        var dataType = (isDate) ? 'datetime' : null;
 
-            var data = [[
-                @chartSpec.data.toSeq.map( x => x match {
-                    case x: java.util.Date => x.getTime.toString
-                    case _ => x.toString
-                }).mkString(",")
-            ]];
+        var data = [[
+            @widget.data.toSeq.map( x => x match {
+                case x: java.util.Date => x.getTime.toString
+                case _ => x.toString
+            }).mkString(",")
+        ]];
 
-            var min = @if(chartSpec.min.isDefined) {
-                        @if(chartSpec.min.get.isInstanceOf[java.util.Date]) {
-                            @{chartSpec.min.get.asInstanceOf[java.util.Date].getTime}
-                        } else {
-                            @{chartSpec.min.get}
-                        }
-                     } else {
-                        null
-                     }
+        var min = @if(widget.min.isDefined) {
+            @if(widget.min.get.isInstanceOf[java.util.Date]) {
+                @{widget.min.get.asInstanceOf[java.util.Date].getTime}
+            } else {
+                @{widget.min.get}
+            }
+        } else {
+            null
+        }
 
-            var max = @if(chartSpec.max.isDefined) {
-                        @if(chartSpec.max.get.isInstanceOf[java.util.Date]) {
-                            @{chartSpec.max.get.asInstanceOf[java.util.Date].getTime}
-                        } else {
-                            @{chartSpec.max.get}
-                        }
-                    } else {
-                        null
-                    }
+        var max = @if(widget.max.isDefined) {
+            @if(widget.max.get.isInstanceOf[java.util.Date]) {
+                @{widget.max.get.asInstanceOf[java.util.Date].getTime}
+            } else {
+                @{widget.max.get}
+            }
+        } else {
+            null
+        }
 
-            var pointFormat = (isDate) ?
-                '- Upper 1.5 IQR: {point.high:%Y-%m-%d}<br/>' +
-                '- Q3: {point.q3:%Y-%m-%d}<br/>' +
-                '- Median: {point.median:%Y-%m-%d}<br/>' +
-                '- Q1: {point.q1:%Y-%m-%d}<br/>' +
-                '- Lower 1.5 IQR: {point.low:%Y-%m-%d}<br/>'
+        var pointFormat = (isDate) ?
+            '- Upper 1.5 IQR: {point.high:%Y-%m-%d}<br/>' +
+            '- Q3: {point.q3:%Y-%m-%d}<br/>' +
+            '- Median: {point.median:%Y-%m-%d}<br/>' +
+            '- Q1: {point.q1:%Y-%m-%d}<br/>' +
+            '- Lower 1.5 IQR: {point.low:%Y-%m-%d}<br/>'
                 :
-                '- Upper 1.5 IQR: {point.high}<br/>' +
-                '- Q3: {point.q3}<br/>' +
-                '- Median: {point.median}<br/>' +
-                '- Q1: {point.q1}<br/>' +
-                '- Lower 1.5 IQR: {point.low}<br/>'
+            '- Upper 1.5 IQR: {point.high}<br/>' +
+            '- Q3: {point.q3}<br/>' +
+            '- Median: {point.median}<br/>' +
+            '- Q1: {point.q1}<br/>' +
+            '- Lower 1.5 IQR: {point.low}<br/>'
 
-            boxPlot("@chartSpec.title", "@{chartElementName}", '@chartSpec.yAxisCaption', data, min, max, pointFormat, @chartSpec.displayOptions.height.getOrElse(400), dataType)
-        });
+        boxPlot("@widget.title", "@{elementId}", '@widget.yAxisCaption', data, min, max, pointFormat, @widget.displayOptions.height.getOrElse(400), dataType)
+    });
 </script>

@@ -771,7 +771,11 @@ class DataSetServiceImpl @Inject()(
                   )
                   fieldType.jsonToDisplayString(json \ fieldName)
                 }
-                linkRightJsonsMap.get(linkAsString).map( rightJsons => rightJsons.map(json ++ _)).getOrElse(Seq(json))
+                linkRightJsonsMap.get(linkAsString).map(
+                  rightJsons => rightJsons.map(json ++ _)
+                ).getOrElse(
+                  Seq(json)
+                )
               }.flatten
 
               saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(saveBatchSize))

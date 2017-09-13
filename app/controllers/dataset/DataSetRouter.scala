@@ -42,6 +42,7 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
 final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.DataSetDispatcher, "dataSet", dataSetId) {
   val getFieldValue = routeFun(_.getFieldValue)
   val getField = routeFun(_.getField)
+  val getWidgets = routeFun(_.getWidgets)
   val getView = routeFun(_.getView)
   val classify = routeFun(_.classify)
   val regress = routeFun(_.regress)

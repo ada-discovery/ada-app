@@ -36,6 +36,10 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
+  def getWidgets(
+    callbackId: String
+  ): Action[AnyContent]
+
   def getDistribution(
     fieldName: Option[String],
     groupFieldName: Option[String],

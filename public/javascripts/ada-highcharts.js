@@ -63,7 +63,7 @@
                 },
                 series: {
                     animation: {
-                        duration: 600
+                        duration: 400
                     }
                 }
             },
@@ -171,7 +171,7 @@
                         }
                     },
                     animation: {
-                        duration: 600
+                        duration: 400
                     }
                 }
             },
@@ -335,7 +335,7 @@
                         }
                     },
                     animation: {
-                        duration: 600
+                        duration: 400
                     }
                 }
             },
@@ -433,7 +433,7 @@
                         }
                     },
                     animation: {
-                        duration: 600
+                        duration: 400
                     }
                 }
             },
@@ -520,6 +520,80 @@
                 }
             },
             series: series
+        });
+    }
+
+    function heatmapChart(
+        title,
+        chartElementId,
+        xCategories,
+        yCategories,
+        data,
+        height
+    ) {
+        $('#' + chartElementId).highcharts({
+            chart: {
+                type: 'heatmap',
+                height: height
+            },
+            title: {
+                text: title
+            },
+            xAxis: {
+                categories: xCategories,
+                labels: {
+                    formatter: function() {
+                        return shorten(this.value, 10);
+                    }
+                }
+            },
+            yAxis: {
+                categories: yCategories,
+                title: null,
+                labels: {
+                    formatter: function() {
+                        return shorten(this.value, 10);
+                    }
+                }
+            },
+            credits: {
+                enabled: false
+            },
+            colorAxis: {
+                stops: [
+                    [0, Highcharts.getOptions().colors[5]],
+                    [0.5, '#FFFFFF'],
+                    [1, Highcharts.getOptions().colors[0]]
+                ],
+                min: -1,
+                max: 1
+//                    minColor: '#FFFFFF',
+//                    maxColor: Highcharts.getOptions().colors[0]
+            },
+            legend: {
+                align: 'right',
+                layout: 'vertical',
+                margin: 0,
+                verticalAlign: 'top',
+                y: 25,
+                symbolHeight: 280
+            },
+            tooltip: {
+                formatter: function () {
+                    return '<b>' + this.series.xAxis.categories[this.point.x] + '</b><br><b>' +
+                        this.series.yAxis.categories[this.point.y] + '</b><br>' + Highcharts.numberFormat(this.point.value, 3, '.');
+                },
+                valueDecimals: 2
+            },
+            series: [{
+                name: title,
+                borderWidth: 1,
+                data: data,
+                dataLabels: {
+                    enabled: false,
+                    color: '#000000'
+                }
+            }]
         });
     }
 
