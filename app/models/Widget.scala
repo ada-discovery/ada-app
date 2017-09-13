@@ -1,12 +1,11 @@
 package models
 
 import _root_.util.BasicStats.Quantiles
-import controllers.{FieldTypeFormat, TupleFormat}
 import dataaccess.{AdaConversionException, FieldType, FieldTypeHelper}
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.functional.syntax._
-import models.json.{EnumFormat, ManifestedFormat, OptionFormat, SubTypeFormat}
+import models.json._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 

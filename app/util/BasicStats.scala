@@ -62,36 +62,39 @@ package object BasicStats {
     val elementsCount = if (values.nonEmpty) values.head.size else 0
 
     def calc(index1: Int, index2: Int) = {
-      val els = (values.map(_(index1)).toSeq, values.map(_(index2)).toSeq).zipped.map {
+      val els = (values.map(_ (index1)).toSeq, values.map(_ (index2)).toSeq).zipped.map {
         case (el1: Option[Double], el2: Option[Double]) =>
           if ((el1.isDefined) && (el2.isDefined)) {
             Some((el1.get, el2.get))
           } else
             None
-        }.flatten
+      }.flatten
 
-      val length = els.size
+      if (els.nonEmpty) {
+        val length = els.size
 
-      val mean1 = els.map(_._1).sum / length
-      val mean2 = els.map(_._2).sum / length
+        val mean1 = els.map(_._1).sum / length
+        val mean2 = els.map(_._2).sum / length
 
-      // sum up the squares
-      val mean1Sq = els.map(_._1).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
-      val mean2Sq = els.map(_._2).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
+        // sum up the squares
+        val mean1Sq = els.map(_._1).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
+        val mean2Sq = els.map(_._2).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
 
-      // sum up the products
-      val pMean = els.foldLeft(0.0) { case (accum, pair) => accum + pair._1 * pair._2 } / length
+        // sum up the products
+        val pMean = els.foldLeft(0.0) { case (accum, pair) => accum + pair._1 * pair._2 } / length
 
-      // calculate the pearson score
-      val numerator = pMean - mean1 * mean2
+        // calculate the pearson score
+        val numerator = pMean - mean1 * mean2
 
-      val denominator = Math.sqrt(
-        (mean1Sq - Math.pow(mean1, 2)) * (mean2Sq - Math.pow(mean2, 2))
-      )
-      if (denominator == 0)
+        val denominator = Math.sqrt(
+          (mean1Sq - Math.pow(mean1, 2)) * (mean2Sq - Math.pow(mean2, 2))
+        )
+        if (denominator == 0)
+          None
+        else
+          Some(numerator / denominator)
+      } else
         None
-      else
-        Some(numerator / denominator)
     }
 
     (0 until elementsCount).par.map { i =>
