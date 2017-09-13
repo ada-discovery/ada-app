@@ -11,8 +11,6 @@ import scala.concurrent.Future
 
 trait DataSetController extends ReadonlyController[BSONObjectID] {
 
-  def overviewFieldTypes: Action[AnyContent]
-
   def getView(
     dataViewId: BSONObjectID,
     tablePages: Seq[PageOrder],

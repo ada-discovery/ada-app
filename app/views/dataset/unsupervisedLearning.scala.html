@@ -74,9 +74,10 @@
 
                     $('#chartPanelDiv').html();
                     $.each(scatters, function(i, scatter) {
+                        console.log(scatter)
                         var div = "<div class='col-md-6'><div id='scatterDiv" + i + "' class='chart-holder'></div></div>"
                         $("#chartPanelDiv").append(div);
-                        scatterChart("Scatter " + (i + 1), 'scatterDiv' + i, scatter.xAxisCaption, scatter.yAxisCaption, scatter.data, 500);
+                        scatterChart(scatter.title, 'scatterDiv' + i, scatter.xAxisCaption, scatter.yAxisCaption, scatter.data, 500);
                     });
 
                     $('#chartPanelDiv').fadeIn('2000');

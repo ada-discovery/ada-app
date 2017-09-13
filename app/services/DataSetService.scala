@@ -33,21 +33,6 @@ import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 trait DataSetService {
 
   @Deprecated
-  def inferDictionary(
-    dataSetId: String,
-    fieldGroupSize: Int = 150
-  ): Future[Unit]
-
-  @Deprecated
-  def inferDictionary(
-    fieldNames: Traversable[String],
-    dataRepo: JsonCrudRepo,
-    fieldRepo: FieldRepo,
-    fieldGroupSize: Int,
-    maxSize: Int
-  ): Future[Unit]
-
-  @Deprecated
   def inferDictionaryAndUpdateRecords(
     dataSetId: String,
     fieldGroupSize: Int,
@@ -392,65 +377,6 @@ class DataSetServiceImpl @Inject()(
         Some(values)
       }
     }.flatten
-  }
-
-  override def inferDictionary(
-    dataSetId: String,
-    fieldGroupSize: Int
-  ): Future[Unit] = {
-    logger.info(s"Dictionary inference for data set '${dataSetId}' initiated.")
-
-    val dsa = dsaf(dataSetId).get
-    val dataRepo = dsa.dataSetRepo
-    val fieldRepo = dsa.fieldRepo
-
-    for {
-      // get the field names
-      fieldNames <- getFieldNames(dataRepo)
-
-      // infer field types
-      fieldNameAndTypes <-
-        inferFieldTypesInParallel(dataRepo, fieldNames.filter(_ != dataSetIdFieldName), fieldGroupSize)
-
-      // save, update, or delete the fields
-      _ <- {
-        val fieldNameAndTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-        updateDictionary(fieldRepo, fieldNameAndTypeSpecs, false, true)
-      }
-    } yield
-      messageLogger.info(s"Dictionary inference for data set '${dataSetId}' successfully finished.")
-  }
-
-  override def inferDictionary(
-    fieldNames: Traversable[String],
-    dataRepo: JsonCrudRepo,
-    fieldRepo: FieldRepo,
-    fieldGroupSize: Int,
-    maxSize: Int
-  ): Future[Unit] = {
-    for {
-      existingFields <- fieldRepo.find()
-
-      // infer field types
-      fieldNameAndTypes <- {
-        val existingFieldNames = existingFields.map(_.name).toSet
-
-        val remainingFieldNames = fieldNames.filterNot(existingFieldNames.contains)
-
-        inferFieldTypesInParallel(
-          dataRepo,
-          remainingFieldNames.take(maxSize),
-          fieldGroupSize
-        )
-      }
-
-      // save, update, or delete the fields
-      _ <- {
-        val fieldNameAndTypeSpecs = fieldNameAndTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}
-        updateDictionary(fieldRepo, fieldNameAndTypeSpecs, false, false)
-      }
-    } yield
-      messageLogger.info(s"Dictionary inference for data set successfully finished.")
   }
 
   @Deprecated

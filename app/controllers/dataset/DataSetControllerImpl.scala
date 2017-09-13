@@ -277,34 +277,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
     }
 
-  /**
-    *
-    * Generates a view showing the field types of the records.
-    * Repo with inferred type dictionaries required!
-    *
-    * @return View with piechart showing field types.
-    */
-  override def overviewFieldTypes = Action.async { implicit request =>
-    fieldRepo.find().map { fields =>
-      if (fields.isEmpty)
-        throw new IllegalStateException(s"Empty dictionary found. Pls. create one by running 'runnables.InferXXXDictionary' script.")
-
-      val fieldTypeCounts = ArrayBuffer.fill(FieldTypeId.values.size)(0)
-      fields.foreach { field =>
-        fieldTypeCounts(field.fieldType.id) += 1
-      }
-
-      render {
-        case Accepts.Html() => Ok(dataset.typeOverview(result(dsa.dataSetName), (FieldTypeId.values, fieldTypeCounts).zipped.toList))
-        case Accepts.Json() => Ok(JsObject(
-          (FieldTypeId.values, fieldTypeCounts).zipped.map { case (fieldType, count) =>
-            (fieldType.toString, JsNumber(count))
-          }.toSeq
-        ))
-      }
-    }
-  }
-
   private case class ViewResponse(
     count: Int,
     widgets: Traversable[Option[Widget]],
@@ -1916,8 +1888,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             }.flatten
 
             val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Integer, false)
+            val shortXFieldLabel = shorten(xField.labelOrElseName, 20)
+            val shortYFieldLabel = shorten(yField.labelOrElseName, 20)
+            val chartTitle = s"$shortXFieldLabel vs. $shortYFieldLabel"
+
             val scatter = createScatterChartSpec(
-              None,
+              Some(chartTitle),
               jsonsWithClasses,
               xField,
               yField,
@@ -1940,24 +1916,20 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   // TODO: this is ugly... fix by introducing a proper JSON formatter
   private def scatterToJson(scatter: ScatterWidget[_, _]): JsValue = {
+    def toJson(point: Any) =
+      point match {
+        case x: Double => JsNumber(x)
+        case x: Long => JsNumber(x)
+        case x: ju.Date => JsNumber(x.getTime)
+        case _ => JsString(point.toString)
+      }
+
     val seriesJsons = scatter.data.map { case (name, color, data) =>
       Json.obj(
         "name" -> shorten(name),
         "data" -> JsArray(
           data.map { case (point1, point2) =>
-            val json1 = point1 match {
-              case x: Double => JsNumber(x)
-              case x: Long => JsNumber(x)
-              case x: ju.Date => JsNumber(x.getTime)
-              case _ => JsString(point1.toString)
-            }
-            val json2 = point1 match {
-              case x: Double => JsNumber(x)
-              case x: Long => JsNumber(x)
-              case x: ju.Date => JsNumber(x.getTime)
-              case _ => JsString(point1.toString)
-            }
-            JsArray(Seq(json1, json2))
+            JsArray(Seq(toJson(point1), toJson(point2)))
           }
         )
       )

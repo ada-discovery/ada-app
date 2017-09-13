@@ -6,8 +6,6 @@ import play.api.mvc.{Action, AnyContent}
 
 trait DictionaryController extends CrudController[String] {
 
-  def inferDictionary: Action[AnyContent]
-
   def updateLabel(id: String, label: String): Action[AnyContent]
 
   def jsRoutes: Action[AnyContent]
