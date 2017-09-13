@@ -91,7 +91,6 @@ GET         /redcap/records/exportTranSMARTMapping                              
 # DataSetDispatcher
 GET         /studies/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter: Seq[models.FilterCondition] ?= Nil)
 GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
-GET         /studies/records/fieldTypes                                             controllers.dataset.DataSetDispatcher.overviewFieldTypes
 GET         /studies/fields                                                         controllers.dataset.DataSetDispatcher.getFields(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 GET         /studies/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
@@ -129,7 +128,6 @@ GET         /studies/dictionary/get/:name                                       
 POST        /studies/dictionary/save                                                controllers.dataset.DictionaryDispatcher.save
 GET         /studies/dictionary/edit/:name                                          controllers.dataset.DictionaryDispatcher.edit(name: String)
 POST        /studies/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.update(name: String)
-GET         /studies/dictionary/infer/                                              controllers.dataset.DictionaryDispatcher.inferDictionary
 POST        /studies/dictionary/updateLabel/:id/:label                              controllers.dataset.DictionaryDispatcher.updateLabel(id: String, label: String)
 GET         /studies/dictionary/jsRoutes                                            controllers.dataset.DictionaryDispatcher.jsRoutes
 GET         /studies/dictionary/exportAsCsv                                         controllers.dataset.DictionaryDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)

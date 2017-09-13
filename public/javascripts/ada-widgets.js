@@ -254,8 +254,7 @@ function categoricalTableWidget(elementId, widget) {
 
 
 function numericalTableWidget(elementId, widget) {
-    var allCategories = widget.data.map(function(series){ return series[1].map(function(count){ return count.value })});
-    var categories = removeDuplicates([].concat.apply([], allCategories))
+    var isDate = widget.fieldType == "Date"
 
     var groups = widget.data.map(function(series){ return shorten(series[0], 15) });
     var fieldLabel = shorten(widget.fieldLabel, 15)
@@ -264,7 +263,11 @@ function numericalTableWidget(elementId, widget) {
     var rowData = Array.from(Array(valueLength).keys()).map(function(index){
         var row = widget.data.map(function(series){
             var item = series[1]
-            return [item[index].value, item[index].count]
+            var value = item[index].value
+            if (isDate) {
+                value = new Date(value).toISOString()
+            }
+            return [value, item[index].count]
         })
         return [].concat.apply([], row)
     })
@@ -323,7 +326,6 @@ function createTable(columnNames, rows) {
     return table
 }
 
-
 function widgetDiv(widget, gridWidth) {
     var elementIdVal = elementId(widget)
     var initGridWidth = widget.displayOptions.gridWidth || gridWidth
@@ -332,11 +334,7 @@ function widgetDiv(widget, gridWidth) {
     var gridOffset = widget.displayOptions.gridOffset
     var gridOffsetElement = gridOffset ? "col-md-offset-" + gridOffset : ""
 
-    var innerDiv = (widget.concreteClass == "models.HtmlWidget") ?
-        '<div id="' + elementIdVal + '" class="chart-holder">' + widget.content + '</div>'
-        :
-        '<div id="' + elementIdVal + '" class="chart-holder"></div>'
-
+    var innerDiv = '<div id="' + elementIdVal + '" class="chart-holder"></div>'
     var div = $("<div class='" + gridWidthElement + " " + gridOffsetElement + "'>")
     div.append(innerDiv)
     return div
