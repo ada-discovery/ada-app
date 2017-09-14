@@ -252,7 +252,6 @@ function categoricalTableWidget(elementId, widget) {
     $('#' + elementId).html(div)
 }
 
-
 function numericalTableWidget(elementId, widget) {
     var isDate = widget.fieldType == "Date"
 
