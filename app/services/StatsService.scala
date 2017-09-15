@@ -11,6 +11,7 @@ import scala.collection.mutable.{Map => MMap}
 import util._
 import util.JsonUtil.project
 import java.{util => ju}
+import javax.inject.Singleton
 
 import Criterion.Infix
 
@@ -89,6 +90,7 @@ trait StatsService {
   ): Seq[Seq[Option[Double]]]
 }
 
+@Singleton
 class StatsServiceImpl extends StatsService {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()

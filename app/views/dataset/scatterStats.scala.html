@@ -16,7 +16,7 @@
     xField: Option[Field],
     yField: Option[Field],
     groupField: Option[Field],
-    chartSpec: Option[ScatterWidget[_, _]],
+    widgetOption: Option[Widget],
     xMean: Option[Double],
     yMean: Option[Double],
     filterSpec: models.Filter,
@@ -93,7 +93,7 @@
 
 @bottomResources =  {
     @highchartsJsImport()
-    @chartSpec.map(widgetJs(_)).getOrElse("")
+    @widgetOption.map(widgetJs(_)).getOrElse("")
 }
 
 @main(Messages("scatterAnalysis.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
@@ -110,7 +110,7 @@
 
     @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
 
-    @chartSpec.map(widget(_)).getOrElse("")
+    @widgetOption.map(widget(_)).getOrElse("")
 }
 
 @helper.javascriptRouter("dataViewJsRoutes")(

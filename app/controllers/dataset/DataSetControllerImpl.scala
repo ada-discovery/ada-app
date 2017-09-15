@@ -32,7 +32,7 @@ import play.api.libs.json._
 import play.api.mvc.Results._
 import play.api.data.Forms.{mapping, _}
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, DataSpaceService, StatsService, TranSMARTService}
+import services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
@@ -53,6 +53,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
     dataSetService: DataSetService,
+    widgetService: WidgetGenerationService,
     classificationRepo: ClassificationRepo,
     regressionRepo: RegressionRepo,
     unsupervisedLearningRepo: UnsupervisedLearningRepo,
@@ -686,7 +687,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: FilterOrId,
     widgetSpecs: Seq[WidgetSpec],
     widgetFieldMap: Map[String, Field],
-    useOptimizedRepoChartCalcMethod: Boolean
+    useOptimizedRepoWidgetCalcMethod: Boolean
   ): Future[Traversable[Option[Widget]]] =
     for {
       // use a given filter conditions or load one
@@ -711,7 +712,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       )
 
       // create a name -> field map of all the referenced fields for a quick lookup
-      nameFieldMap <- {
+      fields <- {
         val filterFieldNames = conditions.map(_.fieldName.trim).toSet
 
         if (widgetFieldMap.nonEmpty) {
@@ -719,22 +720,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             filterFieldNames.diff(widgetFieldMap.keySet)
 
           getFields(requiredFieldNames).map { fields =>
-            val newMap = fields.map(field => (field.name, field)).toMap
-            newMap ++ widgetFieldMap
+//            val newMap = fields.map(field => (field.name, field)).toMap
+            fields ++ widgetFieldMap.values
           }
         } else {
           val widgetFieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
           val requiredFieldNames = widgetFieldNames ++ filterFieldNames
-          getFields(requiredFieldNames).map {
-            _.map(field => (field.name, field)).toMap
-          }
+          getFields(requiredFieldNames)
         }
       }
 
-      widgetFields <- generateWidgets(useOptimizedRepoChartCalcMethod, criteria, filterSubCriteria.toMap, widgetSpecs, nameFieldMap)
-    } yield {
+      widgetFields <- widgetService(widgetSpecs, repo, criteria, filterSubCriteria.toMap, fields, useOptimizedRepoWidgetCalcMethod)
+    } yield
       widgetFields.map(_.map(_._1))
-    }
 
   private def getViewResponseWoWidgets(
     page: Int,
@@ -793,7 +791,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val countFuture = repo.count(criteria)
 
     // widgets
-    val widgetsFuture = generateWidgets(useOptimizedRepoChartCalcMethod, criteria, widgetSubCriteria, widgetSpecs, nameFieldMap)
+    val widgetsFuture = widgetService(widgetSpecs, repo, criteria, widgetSubCriteria, nameFieldMap.values, useOptimizedRepoChartCalcMethod)
 
     // table items
     val tableItemsFuture = getTableItems(page, orderBy, criteria, nameFieldMap, tableFieldNames)
@@ -802,14 +800,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // obtain the total item count satisfying the resolved filter
       count <- countFuture
 
-      // generate the charts
-      chartSpecs <- widgetsFuture
+      // generate the widgets
+      widgetsFields <- widgetsFuture
 
       // load the table items
       tableItems <- tableItemsFuture
     } yield {
       val tableFields = tableFieldNames.map(nameFieldMap.get).flatten
-      val widgets = chartSpecs.map(_.map(_._1))
+      val widgets = widgetsFields.map(_.map(_._1))
       val newFilter = setFilterLabels(filter, nameFieldMap)
       ViewResponse(count, widgets, tableItems, newFilter, tableFields)
     }
@@ -885,228 +883,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Accepts.Html() => BadRequest("Html version of the service is not available.")
         case Accepts.Json() => Ok(Json.toJson(items))
       }
-  }
-
-  private def generateWidgets(
-    perChartRepoMethod: Boolean,
-    criteria: Seq[Criterion[Any]],
-    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
-    widgetSpecs: Traversable[WidgetSpec],
-    nameFieldMap: Map[String, Field]
-  ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
-
-    // a helper function to get the sub criteria for the widget
-    def getSubCriteria(filterId: Option[BSONObjectID]): Seq[Criterion[Any]] =
-      filterId.map(subFilterId =>
-        widgetFilterSubCriteriaMap.get(subFilterId).getOrElse(Nil)
-      ).getOrElse(Nil)
-
-    val splitWidgetSpecs: Traversable[Either[WidgetSpec, WidgetSpec]] =
-      if (perChartRepoMethod)
-        widgetSpecs.collect {
-          case p: DistributionWidgetSpec => Left(p)
-          case p: BoxWidgetSpec => Left(p)
-          case p: CumulativeCountWidgetSpec => if (p.numericBinCount.isDefined) Left(p) else Right(p)
-          case p: ScatterWidgetSpec => Right(p)
-          case p: CorrelationWidgetSpec => Right(p)
-          case p: BasicStatsWidgetSpec => Right(p)
-          case p: TemplateHtmlWidgetSpec => Left(p)
-        }
-      else
-        widgetSpecs.map(Right(_))
-
-    val repoWidgetSpecs = splitWidgetSpecs.map(_.left.toOption).flatten
-    val fullDataWidgetSpecs = splitWidgetSpecs.map(_.right.toOption).flatten
-    val fullDataFieldNames = fullDataWidgetSpecs.map(_.fieldNames).flatten.toSet
-
-    println("Loaded chart field names: " + fullDataFieldNames.mkString(", "))
-
-    val repoWidgetSpecsFuture =
-      Future.sequence(
-        repoWidgetSpecs.par.map { widgetSpec =>
-
-          generateChartFromRepo(
-            criteria ++ getSubCriteria(widgetSpec.subFilterId),
-            nameFieldMap)(
-            widgetSpec
-          ).map(
-            chartSpec =>(widgetSpec, chartSpec)
-          )
-        }.toList
-      )
-
-    val fullDataWidgetSpecsFuture =
-      if (fullDataWidgetSpecs.nonEmpty) {
-        Future.sequence(
-          fullDataWidgetSpecs.groupBy(_.subFilterId).map { case (subFilterId, widgetSpecs) =>
-            val fieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
-
-            repo.find(criteria ++ getSubCriteria(subFilterId), Nil, fieldNames).map { chartData =>
-              widgetSpecs.par.map { widgetSpec =>
-                val widget = generateChart(chartData, nameFieldMap)(widgetSpec)
-                (widgetSpec, widget)
-              }.toList
-            }
-          }
-        )
-      } else
-        Future(Nil)
-
-    for {
-      chartSpecs1 <- repoWidgetSpecsFuture
-      chartSpecs2 <- fullDataWidgetSpecsFuture
-    } yield {
-      val specWidgetMap = (chartSpecs1 ++ chartSpecs2.flatten).toMap
-      // return widgets in the specified order
-      widgetSpecs.map(specWidgetMap.get).flatten
-    }
-  }
-
-  private def generateChartFromRepo(
-    criteria: Seq[Criterion[Any]],
-    nameFieldMap: Map[String, Field])(
-    widgetSpec: WidgetSpec
-  ): Future[Option[(Widget, Seq[String])]] = {
-    val title = widgetSpec.displayOptions.title
-    val chartSpecFuture: Future[Option[Widget]] = widgetSpec match {
-
-      case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
-        val field = nameFieldMap.get(fieldName)
-        val groupField = groupFieldName.map(nameFieldMap.get).flatten
-
-        field.map { field =>
-          calcDistributionCounts(criteria, field, groupField, numericBinCount).map { countSeries =>
-            val chartTitle = title.getOrElse(getDistributionCountChartTitle(field, groupField))
-            createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, numericBinCount, displayOptions)
-          }
-        }.getOrElse(
-          Future(None)
-        )
-
-      case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
-        val field = nameFieldMap.get(fieldName)
-        val groupField = groupFieldName.map(nameFieldMap.get).flatten
-
-        field.map { field =>
-          calcCumulativeCounts(criteria, field, groupField, numericBinCount).map { cumCountSeries =>
-            val chartTitle = title.getOrElse(getCumulativeCountChartTitle(field, groupField))
-
-            val nonZeroCountSeries = cumCountSeries.filter(_._2.exists(_.count > 0))
-            val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-            if (nonZeroCountSeries.nonEmpty) {
-              val widget = NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, true, nonZeroCountSeries, initializedDisplayOptions)
-              Some(widget)
-            } else
-              None
-          }
-        }.getOrElse(
-          Future(None)
-        )
-
-      case BoxWidgetSpec(fieldName, subFilter, displayOptions) =>
-        val field = nameFieldMap.get(fieldName).get
-        for {
-          quantiles <- statsService.calcQuantiles(repo, criteria, field)
-        } yield
-          quantiles.map { quants =>
-            implicit val ordering = quants.ordering
-            val chartTitle = title.getOrElse(field.labelOrElseName)
-            BoxWidget(chartTitle, field.labelOrElseName, quants, None, None, displayOptions)
-          }
-
-      case TemplateHtmlWidgetSpec(content, subFilter, displayOptions) =>
-        val widget = HtmlWidget("", content, displayOptions)
-        Future(Some(widget))
-
-      case _ => Future(None)
-    }
-    chartSpecFuture.map(_.map(chartSpec => (chartSpec, widgetSpec.fieldNames.toSeq)))
-  }
-
-  private def generateChart(
-    items: Traversable[JsObject],
-    nameFieldMap: Map[String, Field])(
-    widgetSpec: WidgetSpec
-  ): Option[(Widget, Seq[String])] = {
-    val title = widgetSpec.displayOptions.title
-
-    val chartSpecOption: Option[Widget] = widgetSpec match {
-
-      case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
-        val field = nameFieldMap.get(fieldName)
-        val groupField = groupFieldName.map(nameFieldMap.get).flatten
-
-        field.map { field =>
-          val countSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
-          val chartTitle = title.getOrElse(getDistributionCountChartTitle(field, groupField))
-          createDistributionChartSpec(countSeries, field, chartTitle, false, true, useRelativeValues, false, numericBinCount, displayOptions)
-        }.flatten
-
-      case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
-        val field = nameFieldMap.get(fieldName).get
-        val groupField = groupFieldName.map(nameFieldMap.get).flatten
-
-        val series = calcCumulativeCounts(items, field, groupField, numericBinCount)
-        val nonZeroCountSeries = series.filter(_._2.exists(_.count > 0))
-
-        val chartTitle = title.getOrElse(getCumulativeCountChartTitle(field, groupField))
-
-        val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-        val chartSpec = NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, true, nonZeroCountSeries, initializedDisplayOptions)
-        Some(chartSpec)
-
-      case BoxWidgetSpec(fieldName, subFilter, displayOptions) =>
-        nameFieldMap.get(fieldName).map { field =>
-          statsService.calcQuantiles(items, field).map { quants =>
-            implicit val ordering = quants.ordering
-            val chartTitle = title.getOrElse(field.labelOrElseName)
-            BoxWidget(chartTitle, field.labelOrElseName, quants, None, None, displayOptions)
-          }
-        }.flatten
-
-      case ScatterWidgetSpec(xFieldName, yFieldName, groupFieldName, subFilter, displayOptions) =>
-        val xField = nameFieldMap.get(xFieldName).get
-        val yField = nameFieldMap.get(yFieldName).get
-        val shortXFieldLabel = shorten(xField.labelOrElseName, 20)
-        val shortYFieldLabel = shorten(yField.labelOrElseName, 20)
-
-        val chartTitle = title.getOrElse(s"$shortXFieldLabel vs. $shortYFieldLabel")
-
-        if (items.nonEmpty) {
-          val widget = createScatterChartSpec(
-            Some(chartTitle),
-            items,
-            xField,
-            yField,
-            groupFieldName.map(nameFieldMap.get).flatten,
-            displayOptions
-          )
-          Some(widget)
-        } else
-          None
-
-      case CorrelationWidgetSpec(fieldNames, subFilter, displayOptions) =>
-        val corrFields = fieldNames.map(nameFieldMap.get).flatten
-
-        val chartTitle = title.getOrElse("Correlations")
-
-        if (items.nonEmpty) {
-          val widget = createPearsonCorrelationChartSpec(
-            Some(chartTitle),
-            items,
-            corrFields,
-            displayOptions
-          )
-          Some(widget)
-        } else
-          None
-
-      case TemplateHtmlWidgetSpec(content, subFilter, displayOptions) =>
-        val widget = HtmlWidget("", content, displayOptions)
-        Some(widget)
-    }
-
-    chartSpecOption.map(chartSpec => (chartSpec, widgetSpec.fieldNames.toSeq))
   }
 
   private def resolveFilter(
@@ -1252,29 +1028,28 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // use a given filter conditions or load one
       resolvedFilter <- resolveFilter(filterOrId)
 
+      // get the criteria
       criteria <- toCriteria(resolvedFilter.conditions)
 
+      // collect all the fields
+      fields = Seq(xField, yField, groupField).flatten
+
       xyzItems <-
-      (xField zip yField).headOption.map { case (xField, yField) =>
-        val projection = (Seq(xField, yField) ++ groupField).map(_.name)
-        repo.find(criteria, Nil, projection.toSet)
-      }.getOrElse(
-        Future(Nil)
-      )
+        (xField zip yField).headOption.map { case (xField, yField) =>
+          repo.find(criteria, Nil, fields.map(_.name).toSet)
+        }.getOrElse(
+          Future(Nil)
+        )
 
       // create a name -> field map of the filter referenced fields
       fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
     } yield {
-      val chartSpec: Option[ScatterWidget[_, _]] =
-        (xField zip yField).headOption.map { case (xField, yField) =>
-          createScatterChartSpec(
-            None,
-            xyzItems,
-            xField,
-            yField,
-            groupField,
-            BasicDisplayOptions(height = Some(500))
-          )
+      val widget: Option[Widget] =
+        (xField zip yField).headOption.flatMap { case (xField, yField) =>
+          val displayOptions = BasicDisplayOptions(height = Some(500))
+          val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, groupField.map(_.name), None, displayOptions)
+
+          widgetService(widgetSpec, xyzItems, fields)
         }
 
       def mean(field: Field): Option[Double] = {
@@ -1307,7 +1082,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           xField,
           yField,
           groupField,
-          chartSpec,
+          widget,
           xMean,
           yMean,
           newFilter,
@@ -1333,7 +1108,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
-      // get the data set name
+        // get the data set name
         dataSetName <- dsa.dataSetName
 
         // get the data space tree
@@ -1356,35 +1131,28 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // get the group field
         groupField <- groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
 
-        // calc distribution/counts
-        distributionCountSeries <- field match {
-          case Some(field) => calcDistributionCounts(criteria, field, groupField, None)
-          case None => Future(Nil)
+        // generate widgets - distribution and box
+        widgets <- field match {
+          case Some(field) =>
+            val widgetSpecs: Seq[WidgetSpec] = Seq(
+              DistributionWidgetSpec(
+                fieldName = field.name,
+                groupFieldName = groupField.map(_.name),
+                displayOptions = MultiChartDisplayOptions(height = Some(500))
+              ),
+              BoxWidgetSpec(
+                fieldName = field.name,
+                displayOptions = BasicDisplayOptions(height = Some(500))
+              )
+            )
+            widgetService(widgetSpecs, repo, criteria, Map(), Seq(field) ++ groupField, false)
+          case None =>
+            Future(Nil)
         }
-
-        // generate the box chart (if possible)
-        boxChartSpec <- field.map(field =>
-          for {
-            quantiles <- statsService.calcQuantiles(repo, criteria, field)
-          } yield
-            quantiles.map { quants =>
-              implicit val ordering = quants.ordering
-              BoxWidget(field.labelOrElseName, field.labelOrElseName, quants, None, None, BasicDisplayOptions(height = Some(500)))
-            }
-        ).getOrElse(
-          Future(None)
-        )
 
         // create a name -> field map of the filter referenced fields
         fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
-
       } yield {
-        // create a distribution chart and set the height
-        val distributionChart = field.map { field =>
-          val chartTitle = getDistributionCountChartTitle(field, groupField)
-          createDistributionChartSpec(distributionCountSeries, field, chartTitle, true, false, false, false, None, MultiChartDisplayOptions(height = Some(500)))
-        }.flatten
-
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
 
         render {
@@ -1392,7 +1160,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             dataSetName,
             field,
             groupField,
-            Seq(distributionChart, boxChartSpec).flatten,
+            widgets.flatMap(_.map(_._1)).toSeq,
             newFilter,
             setting.filterShowFieldStyle,
             dataSpaceTree
@@ -1434,26 +1202,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         Future(Nil)
 
       // chart fields
-      chartFields <- getFields(fieldNames)
-
-      // generate the correlation chart
-      correlationChartSpec = createPearsonCorrelationChartSpec(None, chartItems, chartFields.toSeq, BasicDisplayOptions(height = Some(500)))
-
-      // get the current fields
-      currentFields <- fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
+      fields <- getFields(fieldNames)
 
       // create a name -> field map of the filter referenced fields
       fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
 
     } yield {
-      // set the height of the charts
+      // generate the correlation widget
+      val displayOptions = BasicDisplayOptions(height = Some(500))
+      val widgetSpec = CorrelationWidgetSpec(fieldNames, None, displayOptions)
+      val widget = widgetService(widgetSpec, chartItems, fields)
+
+      // get a new fileter
       val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
 
       render {
         case Accepts.Html() => Ok(dataset.correlation(
           dataSetName,
-          currentFields,
-          Some(correlationChartSpec),
+          fields,
+          widget,
           newFilter,
           setting.filterShowFieldStyle,
           dataSpaceTree
@@ -1488,7 +1255,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
-      // get the data set setting
+        // get the data set setting
         setting <- dsa.setting
 
         // get the data set name
@@ -1511,37 +1278,38 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // use a given filter conditions or load one
         resolvedFilter <- resolveFilter(filterOrId)
 
+        // get the criteria
         criteria <- toCriteria(resolvedFilter.conditions)
 
-        // retrieve the jsons/items with or without a group field and collect the cumulative counts
-        series <-
-        field.map { field =>
-          val projection = Seq(field.name) ++ groupField.map(_.name)
-          repo.find(criteria, Nil, projection.toSet).map(jsons =>
-            calcCumulativeCounts(jsons, field, groupField, None)
+        // retrieve the jsons/items with or without a group field and generate the widget
+        widget <-
+          field.map { field =>
+            val projection = Seq(field.name) ++ groupField.map(_.name)
+            repo.find(criteria, Nil, projection.toSet).map { items =>
+
+              val widgetSpec = CumulativeCountWidgetSpec(
+                fieldName = field.name,
+                groupFieldName = groupFieldName,
+                displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Line), height = Some(500))
+              )
+
+              widgetService(widgetSpec, items, Seq(field) ++ groupField)
+            }
+          }.getOrElse(
+            Future(None)
           )
-        }.getOrElse(
-          Future(Nil)
-        )
 
         // create a name -> field map of the filter referenced fields
         fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
       } yield {
         val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
 
-        val options = MultiChartDisplayOptions(chartType = Some(ChartType.Line), height = Some(500))
-        val chartSpec = field.map { field =>
-          val chartTitle = getCumulativeCountChartTitle(field, groupField)
-          val nonZeroCountSeries = series.filter(_._2.exists(_.count > 0))
-          NumericalCountWidget(chartTitle, field.labelOrElseName, false, true, nonZeroCountSeries, options)
-        }
-
         render {
           case Accepts.Html() => Ok(dataset.cumulativeCount(
             dataSetName,
             field,
             groupField,
-            chartSpec,
+            widget,
             newFilter,
             setting.filterShowFieldStyle,
             dataSpaceTree
@@ -1871,7 +1639,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
           val idClasses = mlService.learnUnsupervised(jsonsWithStringIds, fieldNameAndSpecs, mlModel, pcaDims)
 
-          val numericTypes = Set(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Double)
+          val numericTypes = Set(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
           val numericFields = fields.filter(field => !field.fieldTypeSpec.isArray && numericTypes.contains(field.fieldType))
 
           val xField = numericFields.headOption
@@ -1879,32 +1647,26 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
           val idClassMap = idClasses.toMap
 
-          def createScatterJson(xField: Field, yField: Field): JsValue = {
-            val jsonsWithClasses = jsonsWithStringIds.map { json =>
+          def createScatterJson(xField: Field, yField: Field): Option[JsValue] = {
+            val jsonsWithClasses = jsonsWithStringIds.flatMap { json =>
               val stringId = (json \ JsObjectIdentity.name).as[String]
-              idClassMap.get(stringId).map(clazz =>
-                json.+("cluster_class", JsNumber(clazz))
-              )
-            }.flatten
+              idClassMap.get(stringId).map(clazz =>  json.+("cluster_class", JsNumber(clazz)))
+            }
 
             val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Integer, false)
-            val shortXFieldLabel = shorten(xField.labelOrElseName, 20)
-            val shortYFieldLabel = shorten(yField.labelOrElseName, 20)
-            val chartTitle = s"$shortXFieldLabel vs. $shortYFieldLabel"
 
-            val scatter = createScatterChartSpec(
-              Some(chartTitle),
-              jsonsWithClasses,
-              xField,
-              yField,
-              Some(clusterClassField),
-              BasicDisplayOptions(height = Some(500))
+            val displayOptions = BasicDisplayOptions(height = Some(500))
+            val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, Some(clusterClassField.name), None, displayOptions)
+
+            // generate a scatter widget
+            val widgetOption = widgetService(widgetSpec, jsonsWithClasses, Seq(xField, yField, clusterClassField))
+
+            widgetOption.map( widget =>
+              scatterToJson(widget.asInstanceOf[ScatterWidget[_, _]])
             )
-
-            scatterToJson(scatter)
           }
 
-          val scatterJsons = numericFields.combinations(2).take(4).map ( fields =>
+          val scatterJsons = numericFields.combinations(2).take(4).flatMap ( fields =>
             createScatterJson(fields(0), fields(1))
           ).toSeq
 
@@ -2183,210 +1945,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val layerOneCategories = categories.filter(_.parentId.isEmpty).toSeq
 
     new Category("").setChildren(layerOneCategories)
-  }
-
-  private def createDistributionChartSpec(
-    countSeries: Seq[(String, Seq[Count[Any]])],
-    field: Field,
-    chartTitle: String,
-    showLabels: Boolean,
-    showLegend: Boolean,
-    useRelativeValues: Boolean,
-    isCumulative: Boolean,
-    maxCategoricalBinCount: Option[Int],
-    displayOptions: MultiChartDisplayOptions
-  ): Option[Widget] = {
-    val fieldTypeId = field.fieldTypeSpec.fieldType
-
-    val nonZeroCountExists = countSeries.exists(_._2.exists(_.count > 0))
-    if (nonZeroCountExists)
-      Some(
-        fieldTypeId match {
-          case FieldTypeId.String | FieldTypeId.Enum | FieldTypeId.Boolean | FieldTypeId.Null | FieldTypeId.Json => {
-            // enforce the same categories in all the series
-            val labelGroupedCounts = countSeries.map(_._2).flatten.groupBy(_.value)
-            val nonZeroLabelSumCounts = labelGroupedCounts.map { case (label, counts) =>
-              (label, counts.map(_.count).sum)
-            }.filter(_._2 > 0)
-
-            val sortedLabels: Seq[String] = nonZeroLabelSumCounts.toSeq.sortBy(_._2).map(_._1.toString)
-            val topSortedLabels  = maxCategoricalBinCount match {
-              case Some(maxCategoricalBinCount) => sortedLabels.takeRight(maxCategoricalBinCount)
-              case None => sortedLabels
-            }
-
-            val countSeriesSorted = countSeries.map { case (seriesName, counts) =>
-
-              val labelCountMap = counts.map { count =>
-                val label = count.value.toString
-                (label, Count(label, count.count, count.key))
-              }.toMap
-
-              val newCounts = topSortedLabels.map ( label =>
-                labelCountMap.get(label).getOrElse(Count(label, 0, None))
-              )
-              (seriesName, newCounts)
-            }
-            val nonZeroCountSeriesSorted = countSeriesSorted.filter(_._2.exists(_.count > 0))
-
-            val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Pie)))
-            CategoricalCountWidget(chartTitle, field.name, field.labelOrElseName, showLabels, showLegend, useRelativeValues, isCumulative, nonZeroCountSeriesSorted, initializedDisplayOptions)
-          }
-
-          case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date => {
-            val nonZeroNumCountSeries = countSeries.filter(_._2.nonEmpty)
-            val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-            NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, isCumulative, nonZeroNumCountSeries, initializedDisplayOptions)
-          }
-        }
-      )
-    else
-      Option.empty[Widget]
-  }
-
-  private def calcDistributionCounts(
-    criteria: Seq[Criterion[Any]],
-    field: Field,
-    groupField: Option[Field],
-    numericBinCount: Option[Int]
-  ): Future[Seq[(String, Seq[Count[Any]])]] =
-    groupField match {
-      case Some(groupField) =>
-        statsService.calcGroupedDistributionCounts(repo, criteria, field, groupField, numericBinCount)
-      case None =>
-        statsService.calcDistributionCounts(repo, criteria, field, numericBinCount).map(counts =>
-          Seq(("All", counts))
-        )
-    }
-
-  private def calcDistributionCounts(
-    items: Traversable[JsObject],
-    field: Field,
-    groupField: Option[Field],
-    numericBinCount: Option[Int]
-  ): Seq[(String, Seq[Count[Any]])] =
-    groupField match {
-      case Some(groupField) =>
-        statsService.calcGroupedDistributionCounts(items, field, groupField, numericBinCount)
-
-      case None =>
-        val counts = statsService.calcDistributionCounts(items, field, numericBinCount)
-        Seq(("All", counts))
-    }
-
-  private def calcCumulativeCounts(
-    criteria: Seq[Criterion[Any]],
-    field: Field,
-    groupField: Option[Field],
-    numericBinCount: Option[Int]
-  ): Future[Seq[(String, Seq[Count[Any]])]] =
-    numericBinCount match {
-      case Some(_) =>
-        calcDistributionCounts(criteria, field, groupField, numericBinCount).map( distCountsSeries =>
-          toCumCounts(distCountsSeries)
-        )
-
-      case None =>
-        val projection = Seq(field.name) ++ groupField.map(_.name)
-        repo.find(criteria, Nil, projection.toSet).map( jsons =>
-          statsService.calcCumulativeCounts(jsons, field, groupField)
-        )
-    }
-
-  private def calcCumulativeCounts(
-    items: Traversable[JsObject],
-    field: Field,
-    groupField: Option[Field],
-    numericBinCount: Option[Int]
-  ): Seq[(String, Seq[Count[Any]])] =
-    numericBinCount match {
-      case Some(_) =>
-        val distCountsSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
-        toCumCounts(distCountsSeries)
-
-      case None =>
-        statsService.calcCumulativeCounts(items, field, groupField)
-    }
-
-  // function that converts dist counts to cumulative counts by applying simple running sum
-  private def toCumCounts[T](
-    distCountsSeries: Seq[(String, Seq[Count[T]])]
-  ): Seq[(String, Seq[Count[T]])] =
-    distCountsSeries.map { case (seriesName, distCounts) =>
-      val cumCounts = distCounts.scanLeft(0) { case (sum, count) =>
-        sum + count.count
-      }
-      val labeledDistCounts: Seq[Count[T]] = distCounts.map(_.value).zip(cumCounts).map { case (value, count) =>
-        Count(value, count, None)
-      }
-      (seriesName, labeledDistCounts)
-    }
-
-  private def getDistributionCountChartTitle(
-    field: Field,
-    groupField: Option[Field]
-  ): String = {
-    val label = field.label.getOrElse(fieldLabel(field.name))
-    groupField.map { groupField =>
-      val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 25)
-      shorten(label, 25) + " by " + groupShortLabel
-    }.getOrElse(
-      label
-    )
-  }
-
-  private def getCumulativeCountChartTitle(
-    field: Field,
-    groupField: Option[Field]
-  ): String = {
-    val label = field.label.getOrElse(fieldLabel(field.name))
-    groupField match {
-      case Some(groupField) =>
-        val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 25)
-        shorten(label, 25) + " by " + groupShortLabel
-      case None => label
-    }
-  }
-
-  private def createScatterChartSpec(
-    title: Option[String],
-    xyzItems: Traversable[JsObject],
-    xField: Field,
-    yField: Field,
-    groupField: Option[Field],
-    displayOptions: DisplayOptions = BasicDisplayOptions()
-  ): ScatterWidget[_, _] = {
-    val data = statsService.collectScatterData(xyzItems, xField, yField, groupField)
-    ScatterWidget(
-      title.getOrElse("Comparison"),
-      xField.labelOrElseName,
-      yField.labelOrElseName,
-      data.map { case (name, values) =>
-        val initName = if (name.isEmpty) "Undefined" else name
-        (initName, "rgba(223, 83, 83, .5)", values)
-      },
-      displayOptions
-    )
-  }
-
-  private def createPearsonCorrelationChartSpec(
-    title: Option[String],
-    items: Traversable[JsObject],
-    fields: Seq[Field],
-    displayOptions: DisplayOptions
-  ): HeatmapWidget = {
-    val correlations = statsService.calcPearsonCorrelations(items, fields)
-
-    val fieldLabels = fields.map(_.labelOrElseName)
-    HeatmapWidget(
-      title.getOrElse("Correlations"),
-      fieldLabels,
-      fieldLabels,
-      correlations,
-      Some(-1),
-      Some(1),
-      displayOptions
-    )
   }
 }
 
