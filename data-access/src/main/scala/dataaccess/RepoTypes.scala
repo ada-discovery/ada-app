@@ -6,6 +6,7 @@ import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 
 object RepoTypes {
+  type JsonReadonlyRepo = AsyncReadonlyRepo[JsObject, BSONObjectID]
   type JsonCrudRepo = AsyncCrudRepo[JsObject, BSONObjectID]
 
   type DictionaryRootRepo = MongoAsyncCrudExtraRepo[Dictionary, BSONObjectID]
