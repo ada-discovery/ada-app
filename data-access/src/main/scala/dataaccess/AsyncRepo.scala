@@ -11,7 +11,7 @@ import scala.concurrent.Future
   * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
-trait AsyncReadonlyRepo[E, ID] {
+trait AsyncReadonlyRepo[+E, ID] {
   def get(id: ID): Future[Option[E]]
 
   /**

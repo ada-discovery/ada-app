@@ -6,10 +6,9 @@ import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-private[dataaccess] abstract class AbstractJsonFormatReadonlyRepoAdapter[E: Format] extends JsonReadonlyRepo {
+private[dataaccess] abstract class AbstractJsonFormatReadonlyRepoAdapter[E: Format, ID] extends JsonReadonlyRepo {
 
   // hooks
-  type ID
   type REPO <: AsyncReadonlyRepo[E, ID]
   def repo: REPO
 
@@ -34,11 +33,9 @@ private[dataaccess] abstract class AbstractJsonFormatReadonlyRepoAdapter[E: Form
 
 private[dataaccess] class JsonFormatReadonlyRepoAdapter[E: Format](
     val repo: AsyncReadonlyRepo[E, BSONObjectID]
-  ) extends AbstractJsonFormatReadonlyRepoAdapter[E] {
+  ) extends AbstractJsonFormatReadonlyRepoAdapter[E, BSONObjectID] {
 
   override type REPO = AsyncReadonlyRepo[E, BSONObjectID]
-
-  override type ID = BSONObjectID
 
   override def get(id: BSONObjectID) =
     for {
@@ -47,20 +44,18 @@ private[dataaccess] class JsonFormatReadonlyRepoAdapter[E: Format](
       item.map(asJson)
 }
 
-private[dataaccess] class NoIdJsonFormatReadonlyRepoAdapter[E: Format](
-    val repo: AsyncReadonlyRepo[E, Any]
-  ) extends AbstractJsonFormatReadonlyRepoAdapter[E] {
+private[dataaccess] class NoIdJsonFormatReadonlyRepoAdapter[E: Format, ID](
+    val repo: AsyncReadonlyRepo[E, ID]
+  ) extends AbstractJsonFormatReadonlyRepoAdapter[E, ID] {
 
-  override type REPO = AsyncReadonlyRepo[E, Any]
-
-  override type ID = Any
+  override type REPO = AsyncReadonlyRepo[E, ID]
 
   override def get(id: BSONObjectID) =
     throw new AdaDataAccessException("This instance of JSON format readonly adapter does not support id-based operations such as \"get(id)\"")
 }
 
-private[dataaccess] abstract class AbstractJsonFormatCrudRepoAdapter[E: Format]
-  extends AbstractJsonFormatReadonlyRepoAdapter[E] with JsonCrudRepo {
+private[dataaccess] abstract class AbstractJsonFormatCrudRepoAdapter[E: Format, ID]
+  extends AbstractJsonFormatReadonlyRepoAdapter[E, ID] with JsonCrudRepo {
 
   override type REPO <: AsyncCrudRepo[E, ID]
 
@@ -78,11 +73,9 @@ private[dataaccess] abstract class AbstractJsonFormatCrudRepoAdapter[E: Format]
 
 private[dataaccess] class JsonFormatCrudRepoAdapter[E: Format](
     val repo: AsyncCrudRepo[E, BSONObjectID]
-  ) extends AbstractJsonFormatCrudRepoAdapter[E] {
+  ) extends AbstractJsonFormatCrudRepoAdapter[E, BSONObjectID] {
 
   override type REPO = AsyncCrudRepo[E, BSONObjectID]
-
-  override type ID = BSONObjectID
 
   override def get(id: BSONObjectID) =
     for {
@@ -96,13 +89,11 @@ private[dataaccess] class JsonFormatCrudRepoAdapter[E: Format](
   override protected def toOutputId(id: BSONObjectID) = id
 }
 
-private[dataaccess] class NoIdJsonFormatCrudRepoAdapter[E: Format](
-    val repo: AsyncCrudRepo[E, Any]
-  ) extends AbstractJsonFormatCrudRepoAdapter[E] {
+private[dataaccess] class NoIdJsonFormatCrudRepoAdapter[E: Format, ID](
+    val repo: AsyncCrudRepo[E, ID]
+  ) extends AbstractJsonFormatCrudRepoAdapter[E, ID] {
 
-  override type REPO = AsyncCrudRepo[E, Any]
-
-  override type ID = Any
+  override type REPO = AsyncCrudRepo[E, ID]
 
   override def get(id: BSONObjectID) =
     throw new AdaDataAccessException("This instance of JSON format crud adapter does not support id-based operations such as \"get(id)\"")
@@ -111,7 +102,7 @@ private[dataaccess] class NoIdJsonFormatCrudRepoAdapter[E: Format](
     throw new AdaDataAccessException("This instance of JSON format crud adapter does not support id-based operations such as \"delete(id)\"")
 
   // TODO: this should be returned with a warning since the BSON object id is generated randomly
-  override protected def toOutputId(id: Any): BSONObjectID =
+  override protected def toOutputId(id: ID): BSONObjectID =
     BSONObjectID.generate
 }
 
@@ -122,9 +113,9 @@ object JsonFormatRepoAdapter {
   def apply[T: Format](repo: AsyncCrudRepo[T, BSONObjectID]): JsonCrudRepo =
     new JsonFormatCrudRepoAdapter(repo)
 
-  def applyNoId[T: Format](repo: AsyncReadonlyRepo[T, Any]): JsonReadonlyRepo =
+  def applyNoId[T: Format](repo: AsyncReadonlyRepo[T, _]): JsonReadonlyRepo =
     new NoIdJsonFormatReadonlyRepoAdapter(repo)
 
-  def applyNoId[T: Format](repo: AsyncCrudRepo[T, Any]): JsonCrudRepo =
+  def applyNoId[T: Format](repo: AsyncCrudRepo[T, _]): JsonCrudRepo =
     new NoIdJsonFormatCrudRepoAdapter(repo)
 }
