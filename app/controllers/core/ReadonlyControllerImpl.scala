@@ -157,11 +157,15 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
 
     for {
       criteria <- toCriteria(filter)
-      items <- repo.find(criteria, sort, projection, limit, skip)
-      count <- repo.count(criteria)
-    } yield {
-      (items, count)
-    }
+      itemsCount <- {
+        val itemsFuture = repo.find(criteria, sort, projection, limit, skip)
+        val countFuture = repo.count(criteria)
+
+        for { items <- itemsFuture; count <- countFuture} yield
+          (items, count)
+      }
+    } yield
+      itemsCount
   }
 
   protected def getFutureItems(

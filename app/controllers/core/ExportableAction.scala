@@ -1,14 +1,15 @@
-package controllers
+package controllers.core
 
-import dataaccess.{Sort, AsyncReadonlyRepo, Criterion}
+import dataaccess.{AsyncReadonlyRepo, Criterion, Sort}
 import models.FilterCondition
-import play.api.libs.json.{Json, Format, JsObject}
-import util.WebExportUtil.{jsonsToCsvFile, jsonsToJsonFile}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc._
+import util.WebExportUtil.{jsonsToCsvFile, jsonsToJsonFile}
+
 import scala.concurrent.Future
 
-protected trait ExportableAction[E] {
+trait ExportableAction[E] {
 
   protected def repoHook: AsyncReadonlyRepo[E, _]
 

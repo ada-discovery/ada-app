@@ -13,8 +13,13 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object CaseClassFieldRepo {
-  def apply[T: TypeTag]: FieldRepo = {
-    val fieldTypes = caseClassToFlatFieldTypes[T]("-").filter(_._1 != "_id")
+
+  def apply[T: TypeTag](
+    excludedFieldNames: Traversable[String] = Nil,
+    treatEnumAsString: Boolean = false
+  ): FieldRepo = {
+    val excludedFieldSet = excludedFieldNames.toSet ++ Set("_id")
+    val fieldTypes = caseClassToFlatFieldTypes[T]("-", excludedFieldSet, treatEnumAsString)
     val fields = fieldTypes.map { case (name, spec) =>
       val enumValues = spec.enumValues.map(_.map { case (a, b) => (a.toString, b)})
       Field(name, Some(util.toHumanReadableCamel(name)), spec.fieldType, spec.isArray, enumValues)
@@ -26,7 +31,7 @@ object CaseClassFieldRepo {
 
 object TestCaseClassFieldRepo extends App {
 
-  private val fieldRepo = CaseClassFieldRepo[RCPredictionSettingAndResults]
+  private val fieldRepo = CaseClassFieldRepo[RCPredictionSettingAndResults]()
 
   val future = for {
     all <- fieldRepo.find()

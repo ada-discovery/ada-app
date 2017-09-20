@@ -1,11 +1,12 @@
 package controllers.dataset
 
-import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
+import models.DistributionWidgetSpec
+import scala.reflect.runtime.universe.TypeTag
 import com.google.inject.assistedinject.Assisted
 import controllers._
-import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
+import controllers.core._
 import dataaccess.RepoTypes.{CategoryRepo, DataSpaceMetaInfoRepo}
 import dataaccess._
 import models._
@@ -20,14 +21,11 @@ import play.api.i18n.Messages
 import play.api.mvc.{Action, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, DataSpaceService, DeNoPaSetting, StatsService}
+import services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.Json
 import views.html.{dataview, dictionary => view}
 
-import scala.concurrent.duration._
 import scala.concurrent.Future
-import scala.concurrent.Await.result
 
 trait DictionaryControllerFactory {
   def apply(dataSetId: String): DictionaryController
@@ -38,11 +36,13 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService,
     statsService: StatsService,
-    dataSpaceService: DataSpaceService
+    dataSpaceService: DataSpaceService,
+    val wgs: WidgetGenerationService
   ) extends CrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo)
 
     with DictionaryController
     with ExportableAction[Field]
+    with WidgetRepoController[Field]
     with HasFormShowEqualEditView[Field, String] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
@@ -61,6 +61,10 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   implicit val mapFormatter = MapJsonFormatter.apply
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
+
+  override protected val typeTag = implicitly[TypeTag[Field]]
+  override protected val format = fieldFormat
+  override protected val excludedFieldNames = Set("category", "numValues")
 
   private val fieldNameLabels = Seq(
     ("fieldType", Some("Field Type")),
@@ -173,12 +177,11 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     Traversable[DataSpaceMetaInfo]
   )
 
-  override protected def getListViewData(page: Page[Field]) = { request =>
-    val fieldNameExtractors = Seq(
-      ("Field Type", "fieldType", (field : Field) => field.fieldType)
-      //      ("Enum", "isEnum", (field : Field) => field.isEnum)
-    )
+  private val widgetSpecs = Seq(
+    DistributionWidgetSpec("fieldType", None)
+  )
 
+  override protected def getListViewData(page: Page[Field]) = { request =>
     val newConditions = page.filterConditions.map { condition =>
       val label = fieldNameLabelMap.get(condition.fieldName.trim)
       condition.copy(fieldLabel = label.flatten)
@@ -191,11 +194,10 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
     val nameFuture = dsa.dataSetName
 
-    val widgetsFuture = Future.sequence(
-      fieldNameExtractors.map { case (title, fieldName, fieldExtractor) =>
-        getDictionaryWidget(title, newConditions, fieldName, fieldExtractor)
-      }
+    val widgetsFuture = toCriteria(newConditions).flatMap( criteria =>
+      widgets(widgetSpecs, criteria)
     )
+
     val setCategoriesFuture = setCategoriesById(categoryRepo, newPage.items)
 
     for {
@@ -211,7 +213,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       // set categories
       _ <- setCategoriesFuture
     } yield
-      (dataSetName + " Field", newPage, widgets, fieldNameLabels, tree)
+      (dataSetName + " Field", newPage, widgets.flatten, fieldNameLabels, tree)
   }
 
   override protected[controllers] def listView = { implicit ctx =>
@@ -274,23 +276,6 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       )
     ).as("text/javascript")
   }
-
-  private def getDictionaryWidget(
-    chartTitle : String,
-    filter: Seq[FilterCondition],
-    fieldName : String,
-    fieldExtractor : Field => Any
-  ) : Future[Widget] =
-    toCriteria(filter).flatMap { criteria =>
-      repo.find(
-        criteria = criteria,
-        projection = Seq(fieldName)
-      ).map { fields =>
-        val values = fields.map(field => Some(fieldExtractor(field).toString))
-        val counts = statsService.categoricalCountsWithFormatting(values, None)
-        CategoricalCountWidget(chartTitle, fieldName, fieldName, false, true, false, false, Seq((chartTitle, counts)), MultiChartDisplayOptions(chartType = Some(ChartType.Pie)))
-      }
-    }
 
   protected def allCategoriesFuture =
     categoryRepo.find(sort = Seq(AscSort("name")))

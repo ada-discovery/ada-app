@@ -11,19 +11,28 @@ import scala.collection.Traversable
 
 object FieldUtil {
 
-  def caseClassToFlatFieldTypes[T: TypeTag](delimiter: String = "."): Traversable[(String, FieldTypeSpec)] =
-    caseClassToFlatFieldTypesAux(typeOf[T], delimiter)
+  def caseClassToFlatFieldTypes[T: TypeTag](
+    delimiter: String = ".",
+    excludedFieldSet: Set[String] = Set(),
+    treatEnumAsString: Boolean = false
+  ): Traversable[(String, FieldTypeSpec)] =
+    caseClassToFlatFieldTypesAux(typeOf[T], delimiter, excludedFieldSet, treatEnumAsString)
 
-  private def caseClassToFlatFieldTypesAux(typ: Type, delimiter: String): Traversable[(String, FieldTypeSpec)] = {
-    val memberNamesAndTypes = dataaccess.ReflectionUtil.getCaseClassMemberNamesAndTypes(typ)
+  private def caseClassToFlatFieldTypesAux(
+    typ: Type,
+    delimiter: String,
+    excludedFieldSet: Set[String],
+    treatEnumAsString: Boolean
+  ): Traversable[(String, FieldTypeSpec)] = {
+    val memberNamesAndTypes = dataaccess.ReflectionUtil.getCaseClassMemberNamesAndTypes(typ).filter(x => !excludedFieldSet.contains(x._1))
 
     memberNamesAndTypes.map { case (fieldName, memberType) =>
       try {
-        val fieldTypeSpec = toFieldTypeSpec(memberType)
+        val fieldTypeSpec = toFieldTypeSpec(memberType, treatEnumAsString)
         Seq((fieldName, fieldTypeSpec))
       } catch {
         case e: AdaException => {
-          val subFieldNameAndTypeSpecs = caseClassToFlatFieldTypesAux(memberType, delimiter)
+          val subFieldNameAndTypeSpecs = caseClassToFlatFieldTypesAux(memberType, delimiter, excludedFieldSet, treatEnumAsString)
           if (subFieldNameAndTypeSpecs.isEmpty)
             throw e
           else
@@ -66,7 +75,10 @@ object FieldUtil {
   }
 
   @throws(classOf[AdaException])
-  private def toFieldTypeSpec(typ: Type): FieldTypeSpec =
+  private def toFieldTypeSpec(
+    typ: Type,
+    treatEnumAsString: Boolean
+  ): FieldTypeSpec =
     typ match {
       // double
       case t if t matches (typeOf[Double], typeOf[Float], typeOf[BigDecimal]) =>
@@ -82,9 +94,13 @@ object FieldUtil {
 
       // enum
       case t if t subMatches typeOf[Enumeration#Value] =>
-        val valueNames = getEnumValueNames(t).toSeq.sorted
-        val enumMap = valueNames.zipWithIndex.map(_.swap).toMap
-        FieldTypeSpec(FieldTypeId.Enum, false, Some(enumMap))
+        if (treatEnumAsString)
+          FieldTypeSpec(FieldTypeId.String)
+        else {
+          val valueNames = getEnumValueNames(t).toSeq.sorted
+          val enumMap = valueNames.zipWithIndex.map(_.swap).toMap
+          FieldTypeSpec(FieldTypeId.Enum, false, Some(enumMap))
+        }
 
       // string
       case t if t matches typeOf[String] =>
@@ -94,7 +110,7 @@ object FieldUtil {
       case t if t matches typeOf[ju.Date] =>
         FieldTypeSpec(FieldTypeId.Date)
 
-      // string
+      // json
       case t if t subMatches (typeOf[JsValue], typeOf[BSONObjectID]) =>
         FieldTypeSpec(FieldTypeId.Json)
 
@@ -102,12 +118,18 @@ object FieldUtil {
       case t if t subMatches (typeOf[Seq[_]], typeOf[Set[_]]) =>
         val innerType = t.typeArgs.head
         try {
-          toFieldTypeSpec(innerType).copy(isArray = true)
+          toFieldTypeSpec(innerType, treatEnumAsString).copy(isArray = true)
         } catch {
           case e: AdaException => FieldTypeSpec(FieldTypeId.Json, true)
         }
 
       // otherwise
-      case _ => throw new AdaException(s"Type ${typ.typeSymbol.fullName} unknown.")
+      case _ =>
+        val typeName =
+          if (typ <:< typeOf[Option[_]])
+            s"Option[${typ.typeArgs.head.typeSymbol.fullName}]"
+          else
+            typ.typeSymbol.fullName
+        throw new AdaException(s"Type ${typeName} unknown.")
     }
 }

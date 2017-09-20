@@ -17,7 +17,7 @@ import com.google.inject.assistedinject.Assisted
 import controllers._
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import Criterion.Infix
-import controllers.core.{ReadonlyControllerImpl, WebContext}
+import controllers.core.{ExportableAction, ReadonlyControllerImpl, WebContext}
 import org.apache.commons.lang3.StringEscapeUtils
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.FilterCondition.FilterOrId
@@ -57,7 +57,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     classificationRepo: ClassificationRepo,
     regressionRepo: RegressionRepo,
     unsupervisedLearningRepo: UnsupervisedLearningRepo,
-    dataSpaceService: DataSpaceService
+    dataSpaceService: DataSpaceService,
+    tranSMARTService: TranSMARTService
   ) extends ReadonlyControllerImpl[JsObject, BSONObjectID]
 
     with DataSetController
@@ -75,9 +76,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   // note that the associated data set repo could be updated (by calling updateDataSetRepo)
   // therefore it should not be stored as val
   override protected def repo = dsa.dataSetRepo
-
-  @Inject protected var tranSMARTService: TranSMARTService = _
-  @Inject protected var statsService: StatsService = _
 
   // TODO: replace with a proper cache
   private val jsonWidgetResponseCache = MMap[String, Future[Seq[JsArray]]]()
