@@ -1,5 +1,7 @@
 import models._
 import org.apache.commons.lang.StringUtils
+import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
 import play.api.{Logger, LoggerLike}
 import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
@@ -7,6 +9,7 @@ import play.twirl.api.Html
 import scala.collection.TraversableLike
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.reflect.ClassTag
 
 package object util {
 
@@ -143,6 +146,22 @@ package object util {
       }
     } map (_.reverse)
   }
+
+//  def sparkParallelize[T: ClassTag, U](
+//    sparkContext: SparkContext,
+//    items: Seq[T])(
+//    fun: T => Future[U]
+//  ): Future[Seq[U]] = {
+//    sparkContext.parallelize(items).map( item =>
+//      fun(item).map(Seq(_))
+//    ).reduce { case (fut1, fut2) =>
+//      for {
+//        seq <- fut1
+//        res <- fut2
+//      } yield
+//        seq ++ res
+//    }
+//  }
 
   def retry[T](failureMessage: String, logger: LoggerLike, maxAttemptNum: Int)(f: => Future[T]): Future[T] = {
     def retryAux(attempt: Int): Future[T] =

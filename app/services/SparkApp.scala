@@ -1,24 +1,26 @@
 package services
 
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
 
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
 import org.apache.spark.sql.functions.{monotonically_increasing_id, struct, udf}
 import org.apache.spark.sql.types.StructType
+import play.api.Configuration
 import play.api.libs.json._
 
 import scala.util.Random
 
 @Singleton
-class SparkApp {
+class SparkApp @Inject() (configuration: Configuration) {
 
   private val conf = new SparkConf(false)
-    .setMaster("local[*]")
-    .setAppName("NCER-PD")
+    .setMaster(configuration.getString("spark.master.url").get) // "local[*]"
+    .setAppName("Ada-Cluster")
     .set("spark.logConf", "true")
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    .set("spark.worker.cleanup.enabled", "true")
 
   val session = SparkSession
     .builder()

@@ -11,7 +11,7 @@ import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.business.TopologyFactory
 import com.banda.network.domain._
 import dataaccess.Criterion.Infix
-import models.ml.{ExtendedReservoirLearningSetting, VectorTransformType}
+import models.ml.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec, VectorTransformType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
@@ -27,19 +27,23 @@ class PoloniexPrediction @Inject()(
     dsaf: DataSetAccessorFactory
   ) extends FutureRunnable {
 
-  private val dataSetId = "btc.poloniex"
   private val fieldName = "series"
   private val id = BSONObjectID("599897a2c500009402a379fd") // BSONObjectID("599897a3c500009402a379fe")
-  private val inputElements = Seq("weightedAverage", "high", "low", "volume")
-  private val outputElements = Seq("weightedAverage")
+  private val ioSpec = RCPredictionInputOutputSpec(
+    inputSeriesFieldPaths = Seq("weightedAverage", "high", "low", "volume").map(fieldName + "." + _),
+    outputSeriesFieldPaths = Seq("weightedAverage").map(fieldName + "." + _),
+    dropRightLength = 0,
+    sourceDataSetId = "btc.poloniex",
+    resultDataSetId = "",
+    resultDataSetName = ""
+  )
 
-  private val dsa = dsaf(dataSetId).get
+  private val dsa = dsaf(ioSpec.sourceDataSetId).get
 
   private val inScale = 1
   private val preprocessingType = Some(VectorTransformType.StandardScaler)
   private val _predictAhead = 1
   private val washoutPeriod = 20
-  private val dropRight = 0
   private val adaptationLength = 100
   private val repetitions = 40
 
@@ -48,8 +52,8 @@ class PoloniexPrediction @Inject()(
   override def runAsFuture = {
     val setting = createReservoirSetting(200, 1, 0.95, None, Some(Seq(0,1)))
     val topology = reservoirTrainerFactory.createThreeLayerReservoirTopology(
-      inputElements.size,
-      outputElements.size,
+      ioSpec.inputSeriesFieldPaths.size,
+      ioSpec.outputSeriesFieldPaths.size,
       setting.getReservoirNodeNum,
       setting.getReservoirInDegree,
       setting.getReservoirInDegreeDistribution,
@@ -62,12 +66,7 @@ class PoloniexPrediction @Inject()(
       false
     )
 
-    def resultFuture(topology: Topology, json: JsObject) = mPowerWalkingRCPredictionService.predictSeries(
-      topology, setting, dropRight,
-      json,
-      inputElements.map(fieldName + "." + _),
-      outputElements.map(fieldName + "." + _)
-    )
+    def resultFuture(topology: Topology, json: JsObject) = mPowerWalkingRCPredictionService.predictSeries(topology, setting, json, ioSpec)
 
     def calcMatches(result: RCPredictionResults, fromLastNum: Int, length: Int) = {
       def takeLast[T](seq: Seq[T]) = seq.takeRight(fromLastNum).take(length)

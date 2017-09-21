@@ -11,7 +11,7 @@ import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.business.TopologyFactory
 import com.banda.network.domain.ActivationFunctionType
 import dataaccess.Criterion.Infix
-import models.ml.ExtendedReservoirLearningSetting
+import models.ml.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
@@ -43,11 +43,19 @@ class MPowerPredictAcceleration @Inject() (
   private val preprocessingType = None // Some(VectorTransformType.StandardScaler)
   private val _predictAhead = 1
   private val washoutPeriod = 500
-  private val dropRight = 200
   private val weightAdaptationIterationNum = 100
 
   private val plotter = Plotter.createExportInstance("svg")
   private val fileUtil = FileUtil.getInstance
+
+  private val ioSpec = RCPredictionInputOutputSpec(
+    inputSeriesFieldPaths = Seq(fieldName + ".x", fieldName + ".y", fieldName + ".z"),
+    outputSeriesFieldPaths = Seq(fieldName + ".y"),
+    dropRightLength = 200,
+    sourceDataSetId = dataSetId,
+    resultDataSetId = "",
+    resultDataSetName = ""
+  )
 
   override def runAsFuture = {
     val setting = createReservoirSetting(75, 75, 0.5, 0.8)
@@ -68,12 +76,7 @@ class MPowerPredictAcceleration @Inject() (
 
     val initializedTopology = topologyFactory(topology)
 
-    def resultsFuture(json: JsObject) = mPowerWalkingRCPredictionService.predictSeries(
-      initializedTopology, setting, dropRight,
-      json,
-      Seq(fieldName + ".x", fieldName + ".y", fieldName + ".z"),
-      Seq(fieldName + ".y")
-    )
+    def resultsFuture(json: JsObject) = mPowerWalkingRCPredictionService.predictSeries(initializedTopology, setting, json, ioSpec)
 
     for {
       // retrieve jsons for a given record id

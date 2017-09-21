@@ -7,12 +7,11 @@ import models.ml.VectorTransformType
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.DataFrame
 import runnables.GuiceBuilderRunnable
-import services.SparkApp
-import services.ml.MachineLearningService
+import services.{RCPredictionService, SparkApp}
 
 class TestVectorTransformer @Inject()(
-    mlService: MachineLearningService,
-    sparkApp: SparkApp
+  rcPredictionService: RCPredictionService,
+  sparkApp: SparkApp
   ) extends Runnable {
 
   private val session = sparkApp.session
@@ -36,7 +35,7 @@ class TestVectorTransformer @Inject()(
   )
 
   override def run = {
-    val newSeries = mlService.transformSeries(series, VectorTransformType.MinMaxPlusMinusOneScaler)
+    val newSeries = rcPredictionService.transformSeries(series, VectorTransformType.MinMaxPlusMinusOneScaler)
 
     println(series)
     println(newSeries)
@@ -46,12 +45,12 @@ class TestVectorTransformer @Inject()(
   }
 
   private def runAux(df: DataFrame, inRow: Boolean) = {
-    val l1NormalizedDf = mlService.transformVectors(df, VectorTransformType.L1Normalizer, inRow)
-    val l2NormalizedDf = mlService.transformVectors(df, VectorTransformType.L2Normalizer, inRow)
-    val standardScaledDf = mlService.transformVectors(df, VectorTransformType.StandardScaler, inRow)
-    val minMaxZeroOneScaledDf = mlService.transformVectors(df, VectorTransformType.MinMaxZeroOneScaler, inRow)
-    val minMaxPlusMinusOneScaledDf = mlService.transformVectors(df, VectorTransformType.MinMaxPlusMinusOneScaler, inRow)
-    val maxAbsScaledDf = mlService.transformVectors(df, VectorTransformType.MaxAbsScaler, inRow)
+    val l1NormalizedDf = rcPredictionService.transformVectors(df, VectorTransformType.L1Normalizer, inRow)
+    val l2NormalizedDf = rcPredictionService.transformVectors(df, VectorTransformType.L2Normalizer, inRow)
+    val standardScaledDf = rcPredictionService.transformVectors(df, VectorTransformType.StandardScaler, inRow)
+    val minMaxZeroOneScaledDf = rcPredictionService.transformVectors(df, VectorTransformType.MinMaxZeroOneScaler, inRow)
+    val minMaxPlusMinusOneScaledDf = rcPredictionService.transformVectors(df, VectorTransformType.MinMaxPlusMinusOneScaler, inRow)
+    val maxAbsScaledDf = rcPredictionService.transformVectors(df, VectorTransformType.MaxAbsScaler, inRow)
 
     println("Original")
     df.show(20, false)

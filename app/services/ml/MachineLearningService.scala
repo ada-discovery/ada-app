@@ -64,24 +64,6 @@ trait MachineLearningService {
     pcaDim: Option[Int] = None
   ): Traversable[(String, Int)]
 
-  def predictRCTimeSeries(
-    reservoirSetting: ExtendedReservoirLearningSetting,
-    topology: Topology,
-    inputSeries: Seq[Seq[jl.Double]],
-    targetSeries: Seq[jl.Double]
-  ): Future[RCPredictionResults]
-
-  def transformVectors(
-    data: DataFrame,
-    transformType: VectorTransformType.Value,
-    inRow: Boolean = false
-  ): DataFrame
-
-  def transformSeries(
-    series: Seq[Seq[jl.Double]],
-    transformType: VectorTransformType.Value
-  ): Seq[Seq[jl.Double]]
-
   def discretizeAsQuantiles(
     data: DataFrame,
     bucketsNum: Int,
@@ -107,10 +89,7 @@ trait MachineLearningService {
 
 @Singleton
 private class MachineLearningServiceImpl @Inject() (
-    sparkApp: SparkApp,
-    ioStreamFactory: IOStreamFactory,
-    reservoirTrainerFactory: ReservoirTrainerFactory,
-    topologyFactory: TopologyFactory
+    sparkApp: SparkApp
   ) extends MachineLearningService {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
@@ -361,96 +340,6 @@ private class MachineLearningServiceImpl @Inject() (
 
     // replace in-place
     pca.transform(df).drop("features").withColumnRenamed("pcaFeatures", "features")
-  }
-
-  override def transformVectors(
-    data: DataFrame,
-    transformType: VectorTransformType.Value,
-    inRow: Boolean = false
-  ) = {
-    // aux function to transpose features
-    def transpose(columnNames: Traversable[String], df: DataFrame) =
-      SparkUtil.transposeVectors(session, columnNames, df)
-
-    // for normalizers we have to switch rows wth columns
-    val isNormalizer = transformType == VectorTransformType.L1Normalizer || transformType == VectorTransformType.L2Normalizer
-
-    // check if transpose is needed
-    val transposeNeeded = (isNormalizer && !inRow) || (!isNormalizer && inRow)
-
-    // create input df (apply transpose optionally)
-    val inputDf = if (transposeNeeded) transpose(Seq("features"), data) else data
-
-    val transformer = transformType match {
-      case VectorTransformType.L1Normalizer =>
-        new Normalizer()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures")
-          .setP(1.0)
-
-      case VectorTransformType.L2Normalizer =>
-        new Normalizer()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures")
-          .setP(2.0)
-
-      case VectorTransformType.StandardScaler =>
-        new StandardScaler()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures")
-          .setWithStd(true)
-          .setWithMean(true).fit(inputDf)
-
-      case VectorTransformType.MinMaxPlusMinusOneScaler =>
-        new MinMaxScaler()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures")
-          .setMin(-1)
-          .setMax(1).fit(inputDf)
-
-      case VectorTransformType.MinMaxZeroOneScaler =>
-        new MinMaxScaler()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures")
-          .setMin(0)
-          .setMax(1).fit(inputDf)
-
-      case VectorTransformType.MaxAbsScaler =>
-        new MaxAbsScaler()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures").fit(inputDf)
-    }
-
-    val transformedDf = transformer.transform(inputDf)
-
-    // apply transpose to the output (if applied for the input df)
-    if (transposeNeeded) {
-      val newDf = transpose(Seq("features", "scaledFeatures"), transformedDf)
-      SparkUtil.joinByOrder(data.drop("features"), newDf)
-    } else
-      transformedDf
-  }
-
-  override def transformSeries(
-    series: Seq[Seq[jl.Double]],
-    transformType: VectorTransformType.Value
-  ): Seq[Seq[jl.Double]] = {
-    val inRow = transformType == VectorTransformType.L1Normalizer || transformType == VectorTransformType.L2Normalizer
-
-    val inputSeries = if (inRow) series.transpose else series
-
-    val rows = inputSeries.zipWithIndex.map { case (oneSeries, index) =>
-      (index, Vectors.dense(oneSeries.map(_.toDouble).toArray))
-    }
-
-    val df = session.createDataFrame(rows).toDF("id", "features")
-    val newDf = transformVectors(df, transformType, inRow)
-
-    val outputSeries: Seq[Seq[jl.Double]] = newDf.select("scaledFeatures").collect.map ( row =>
-      row.getAs[Vector](0).toArray.map(jl.Double.valueOf(_)) : Seq[jl.Double]
-    )
-
-    if (inRow) outputSeries.transpose else outputSeries
   }
 
   private def jsonsToLearningDataFrame(
@@ -779,66 +668,6 @@ private class MachineLearningServiceImpl @Inject() (
       } else {
         newDf
       }
-    }
-  }
-
-  override def predictRCTimeSeries(
-    setting: ExtendedReservoirLearningSetting,
-    topology: Topology,
-    inputSeries: Seq[Seq[jl.Double]],
-    targetSeries: Seq[jl.Double]
-  ): Future[RCPredictionResults] = {
-    val iterationNum = targetSeries.size - setting.predictAhead - setting.getWashoutPeriod
-
-    // get reservoir and output nodes
-    val initializedTopology =
-      if (topology.hasLayers && !topology.isTemplate && !topology.isSpatial)
-        topology
-      else
-        topologyFactory(topology)
-
-    val layers = initializedTopology.getLayers.toSeq
-    val reservoirNodes = new ju.ArrayList(layers(1).getAllNodes)
-    Collections.sort(reservoirNodes)
-    val outputNodes = new ju.ArrayList(layers(2).getAllNodes)
-    Collections.sort(outputNodes)
-
-    val (input, output) = setting.seriesPreprocessingType.map { transformType =>
-      val input = transformSeries(inputSeries, transformType)
-      val output = transformSeries(targetSeries.map(Seq(_)), transformType)
-      (input, output.map(_.head))
-    }.getOrElse {
-      (inputSeries, targetSeries)
-    }
-
-    def createIOStream = ioStreamFactory.createInstancePredict(setting.predictAhead, setting.getWashoutPeriod)(input, output)
-
-    val call = { ioStream: IOStream[jl.Double] =>
-      val (predictor, weightAccessor) = reservoirTrainerFactory(initializedTopology, setting, ioStream, iterationNum)
-
-      predictor.train(iterationNum)
-      val outputs = predictor.outputs
-      val desiredOutputs = (ioStream.outputStream take outputs.size).toList.map(_.head)
-
-      val squares = ErrorMeasures.calcSquares(outputs, desiredOutputs)
-      val samps = ErrorMeasures.calcSamps(outputs, desiredOutputs)
-
-      val weights: Seq[jl.Double] = {
-        for {
-          reservoirNode <- reservoirNodes;
-          outputNode <- outputNodes
-        } yield
-          weightAccessor.getWeight(reservoirNode, outputNode)
-      }.flatten
-
-      val targetVariance = MathUtil.calcStats(0, output).getVariance.toDouble
-
-      RCPredictionResults(squares, samps, outputs.toSeq, desiredOutputs, weights, targetVariance)
-    }
-
-    Future {
-      val ioStream = createIOStream
-      call(ioStream)
     }
   }
 
