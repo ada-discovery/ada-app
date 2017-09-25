@@ -139,28 +139,15 @@ class RCPredictionServiceImpl @Inject()(
     def prepJobDataAndContext(
       json: JsObject,
       index: Int
-    ): Future[Option[(Int, (RCPredictionJobData, Broadcast[RCPredictionJobContext]), JsObject)]] = {
-      val (inputSeries, outputSeries) = extractIOSeries(json, ioSpec)
-      if (inputSeries.nonEmpty) {
-        val inputOutputFuture =
-          setting.seriesPreprocessingType.map { transformType =>
-            for {
-              input <- RCPredictionStaticHelper.transformSeries(sparkApp.session) (inputSeries, transformType)
-              output <- RCPredictionStaticHelper.transformSeries(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
-            } yield {
-              (input, output.map(_.head))
-            }
-          }.getOrElse {
-            Future((inputSeries, outputSeries))
-          }
-
-        inputOutputFuture.map { case (input, output) =>
+    ): Future[Option[(Int, (RCPredictionJobData, Broadcast[RCPredictionJobContext]), JsObject)]] =
+      for {
+        inputOutputOption <- extractAndTransformIOSeries(json, ioSpec, setting.seriesPreprocessingType)
+      } yield {
+        inputOutputOption.map { case (input, output) =>
           val jobData = RCPredictionJobData(index, input, output)
-          Some((index, (jobData, jobContext), json))
+          (index, (jobData, jobContext), json)
         }
-      } else
-        Future(None)
-    }
+      }
 
     def runPredictions(
       jobDataContexts: Seq[(RCPredictionJobData, Broadcast[RCPredictionJobContext])],
@@ -196,27 +183,29 @@ class RCPredictionServiceImpl @Inject()(
         seqFutures(ids.toSeq.grouped(actualBatchSize).zipWithIndex) {
 
           case (ids, groupIndex) =>
-            retry("Retrieving of JSONs (in a batch) failed:", logger, 5)(getJsons(ids)).flatMap { jsons =>
-              logger.info(s"Processing time series ${groupIndex * actualBatchSize} to ${(jsons.size - 1) + (groupIndex * actualBatchSize)}")
+            for {
+              jsons <- retry("Retrieving of JSONs (in a batch) failed:", logger, 5)(getJsons(ids))
 
-              for {
-                // create a sequence of job data/contexts
-                indexedJobData <- Future.sequence(
+              // create a sequence of job data/contexts
+              indexedJobData <- {
+                logger.info(s"Processing time series ${groupIndex * actualBatchSize} to ${(jsons.size - 1) + (groupIndex * actualBatchSize)}")
+
+                Future.sequence(
                   jsons.toSeq.zipWithIndex.map { case (json, index) =>
                     prepJobDataAndContext(json, index)
                   }
                 ).map(_.flatten)
+              }
 
-                // run RC prediction simulations and collect the results
-                resultsWithJsons <- {
-                  val jobData = indexedJobData.map(_._2)
-                  val jobIndexJsonMap = indexedJobData.map(x => (x._1, x._3)).toMap
+              // run RC prediction simulations and collect the results
+              resultsWithJsons <- {
+                val jobData = indexedJobData.map(_._2)
+                val jobIndexJsonMap = indexedJobData.map(x => (x._1, x._3)).toMap
 
-                  runPredictions(jobData, jobIndexJsonMap)
-                }
-              } yield
+                runPredictions(jobData, jobIndexJsonMap)
+              }
+            } yield
                 resultsWithJsons
-            }
         }
 
       // flatten the results
@@ -289,30 +278,17 @@ class RCPredictionServiceImpl @Inject()(
     setting: ExtendedReservoirLearningSetting,
     json: JsObject,
     ioSpec: RCPredictionInputOutputSpec
-  ): Future[Option[RCPredictionResults]] = {
-    val (inputSeries, outputSeries) = extractIOSeries(json, ioSpec)
-
-    if (inputSeries.nonEmpty) {
-      val inputOutputFuture = setting.seriesPreprocessingType.map { transformType =>
-        for {
-          input <- transformSeries(inputSeries, transformType)
-          output <- transformSeries(outputSeries.map(Seq(_)), transformType)
-        } yield {
-          (input, output.map(_.head))
-        }
-      }.getOrElse {
-        Future((inputSeries, outputSeries))
-      }
-
-      inputOutputFuture.map { inputOutput =>
-        val result = RCPredictionStaticHelper.predictTimeSeriesWithoutPreprocessing(
+  ): Future[Option[RCPredictionResults]] =
+    for {
+      // prepare input and output for the prediction task
+      inputOutputOption <- extractAndTransformIOSeries(json, ioSpec, setting.seriesPreprocessingType)
+    } yield
+      // run the prediction
+      inputOutputOption.map { inputOutput =>
+        RCPredictionStaticHelper.predictTimeSeriesWithoutPreprocessing(
           topologyFactory, ioStreamFactory, reservoirTrainerFactory, setting, topology, inputOutput._1, inputOutput._2
         )
-        Some(result)
       }
-    } else
-      Future(None)
-  }
 
   private def extractIOSeries(
     json: JsObject,
@@ -330,6 +306,44 @@ class RCPredictionServiceImpl @Inject()(
     val outputSeries = extractSeries(ioSpec.outputSeriesFieldPaths.head)
 
     (inputSeries, outputSeries)
+  }
+
+  // note that empty input or output series are return as None
+  private def extractAndTransformIOSeries(
+    json: JsObject,
+    ioSpec: RCPredictionInputOutputSpec,
+    seriesPreprocessingType: Option[VectorTransformType.Value]
+  ): Future[Option[(Seq[Seq[jl.Double]], Seq[jl.Double])]] = {
+    val (inputSeries, outputSeries) = extractIOSeries(json, ioSpec)
+
+    // check the overlap between input and output paths to see if the output transformation can be skipped
+    val inputFieldPathIndexMap = ioSpec.inputSeriesFieldPaths.zipWithIndex.toMap
+    val outputInputIndexes: Seq[Int] = ioSpec.outputSeriesFieldPaths.flatMap(inputFieldPathIndexMap.get(_))
+    val outputIncludedInInput = outputInputIndexes.size == ioSpec.outputSeriesFieldPaths.size
+
+    if (inputSeries.nonEmpty) {
+      val inputOutputFuture =
+        seriesPreprocessingType.map { transformType =>
+          for {
+            input <-
+            RCPredictionStaticHelper.transformSeries(sparkApp.session)(inputSeries, transformType)
+
+            output <-
+            if (outputIncludedInInput) {
+              val output = input.map(seq => outputInputIndexes.map(seq(_)))
+              Future(output)
+            } else
+              RCPredictionStaticHelper.transformSeries(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
+          } yield {
+            (input, output.map(_.head))
+          }
+        }.getOrElse {
+          Future((inputSeries, outputSeries))
+        }
+
+      inputOutputFuture.map(Some(_))
+    } else
+      Future(None)
   }
 
   private def saveWeightDataSet(

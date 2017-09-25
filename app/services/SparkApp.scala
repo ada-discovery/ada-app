@@ -15,12 +15,22 @@ import scala.util.Random
 @Singleton
 class SparkApp @Inject() (configuration: Configuration) {
 
+  private val settings = Seq(
+    "spark.executor.memory",
+    "spark.network.timeout"
+  ).flatMap( key =>
+    configuration.getString(key).map((key, _))
+  )
+
   private val conf = new SparkConf(false)
-    .setMaster(configuration.getString("spark.master.url").get) // "local[*]"
-    .setAppName("Ada-Cluster")
+    .setMaster(configuration.getString("spark.master.url").getOrElse("local[*]"))
+    .setAppName("Ada")
     .set("spark.logConf", "true")
     .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     .set("spark.worker.cleanup.enabled", "true")
+    .set("spark.worker.cleanup.interval", "900")
+    .setJars(configuration.getStringSeq("spark.driver.jars").getOrElse(Nil))
+    .setAll(settings)
 
   val session = SparkSession
     .builder()
@@ -29,7 +39,8 @@ class SparkApp @Inject() (configuration: Configuration) {
     .config(conf)
     .getOrCreate()
 
-  val sc = SparkContext.getOrCreate(conf)
+  val sc = session.sparkContext
+
   val sqlContext = new SQLContext(sc)
 }
 
