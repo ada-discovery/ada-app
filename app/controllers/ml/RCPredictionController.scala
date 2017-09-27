@@ -55,11 +55,13 @@ class RCPredictionController @Inject()(
       "reservoirSpectralRadiuses" -> of[Seq[Double]],
       "inScales" -> of[Seq[Double]],
       "seriesPreprocessingType" -> optional(of[VectorTransformType.Value]),
-      "washoutPeriods" -> of[Seq[Int]],
       "predictAheads" -> of[Seq[Int]],
-      "dropRightLengths" -> of[Seq[Int]],
       "inputSeriesFieldPaths" -> of[Seq[String]],
       "outputSeriesFieldPaths" -> of[Seq[String]],
+      "washoutPeriod" -> number(min = 0),
+      "dropLeftLength" -> optional(number(min = 0)),
+      "dropRightLength" -> optional(number(min = 0)),
+      "seriesLength" -> optional(number(min = 0)),
       "sourceDataSetId" -> nonEmptyText,
       "resultDataSetId" -> nonEmptyText,
       "resultDataSetName" -> nonEmptyText,
@@ -149,9 +151,7 @@ class RCPredictionController @Inject()(
       settings.inputReservoirConnectivities,
       settings.reservoirSpectralRadiuses,
       settings.inScales,
-      settings.washoutPeriods,
-      settings.predictAheads,
-      settings.dropRightLengths
+      settings.predictAheads
     ).foldLeft(0) { case (minSize, seq) => Math.max(minSize, seq.size) }
 
     def stream[T](xs: Seq[T]) = Stream.continually(xs).flatten.take(maxSize)
@@ -161,20 +161,18 @@ class RCPredictionController @Inject()(
     stream(settings.inputReservoirConnectivities).zip(
     stream(settings.reservoirSpectralRadiuses).zip(
     stream(settings.inScales).zip(
-    stream(settings.washoutPeriods).zip(
-    stream(settings.predictAheads).zip(
-    stream(settings.dropRightLengths)))))))).zipWithIndex.map {
+    stream(settings.predictAheads)))))).zipWithIndex.map {
 
-      case ((reservoirNodeNum, (reservoirInDegree, (inputReservoirConnectivity, (reservoirSpectralRadius, (inScale, (washoutPeriod, (predictAhead, dropRightLength))))))), index) =>
+      case ((reservoirNodeNum, (reservoirInDegree, (inputReservoirConnectivity, (reservoirSpectralRadius, (inScale, predictAhead))))), index) =>
         val resultDataSetIdSuffix = settings.resultDataSetIndex.map(x => "_" + (x + index)).getOrElse("")
         val resultDataSetNameSuffix = settings.resultDataSetIndex.map(x => " [" + (x + index) + "]").getOrElse("")
 
         val ioSpec = RCPredictionInputOutputSpec(
           settings.inputSeriesFieldPaths,
           settings.outputSeriesFieldPaths,
-          None,
-          Some(dropRightLength),
-          None,
+          settings.dropLeftLength,
+          settings.dropRightLength,
+          settings.seriesLength,
           settings.sourceDataSetId,
           settings.resultDataSetId + resultDataSetIdSuffix,
           settings.resultDataSetName + resultDataSetNameSuffix
@@ -189,7 +187,7 @@ class RCPredictionController @Inject()(
           inputReservoirConnectivity,
           reservoirSpectralRadius,
           inScale,
-          washoutPeriod,
+          settings.washoutPeriod,
           predictAhead,
           settings.seriesPreprocessingType,
           weightRd

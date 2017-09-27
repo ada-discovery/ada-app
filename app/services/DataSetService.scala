@@ -129,6 +129,12 @@ trait DataSetService {
     fieldNames: Seq[String] = Nil,
     criteria: Seq[Criterion[Any]] = Nil
   ): Future[(Traversable[JsObject], Seq[Field])]
+
+  def extractPeaks(
+    series: Seq[Double],
+    peakNum: Int,
+    peakSelectionRatio: Option[Double]
+  ): Option[Seq[Double]]
 }
 
 class DataSetServiceImpl @Inject()(
@@ -828,13 +834,25 @@ class DataSetServiceImpl @Inject()(
       newSeries
   }
 
-  private def extractPeaks(
+  override def extractPeaks(
     series: Seq[Double],
-    peakNum: Int
+    peakNum: Int,
+    peakSelectionRatio: Option[Double]
   ): Option[Seq[Double]] = {
-    val (mins, maxes) = localMinMaxIndeces(series)
-    if (mins.size > peakNum)
-      Some(series.drop(mins(0)).take(mins(peakNum)))
+    val (minIndeces, maxIndeces) = localMinMaxIndeces(series)
+//    val maxIndecesWithValues = maxIndeces.zip(maxIndeces.map(series(_)))
+
+    val selectedMinIndeces =
+      peakSelectionRatio.map { ratio =>
+        val minIndecesWithValues = minIndeces.zip(minIndeces.map(series(_)))
+        val topMins = minIndecesWithValues.sortBy(_._2).take((minIndeces.size * ratio).floor.toInt)
+        topMins.map(_._1).sorted
+      }.getOrElse(
+        minIndeces
+      )
+
+    if (selectedMinIndeces.size > peakNum)
+      Some(series.take(selectedMinIndeces(peakNum)).drop(selectedMinIndeces(0)))
     else
       None
   }
@@ -846,7 +864,7 @@ class DataSetServiceImpl @Inject()(
     val maxima = diffs.sliding(2).zipWithIndex.filter { case (diff, index) =>
       diff(0) > 0 && diff(1) <= 0
     }
-    val minima = series.sliding(2).zipWithIndex.filter { case (diff, index) =>
+    val minima = diffs.sliding(2).zipWithIndex.filter { case (diff, index) =>
       diff(0) < 0 && diff(1) >= 0
     }
     (minima.map(_._2 + 1).toSeq, maxima.map(_._2 + 1).toSeq)

@@ -373,17 +373,17 @@ class RCPredictionServiceImpl @Inject()(
         val inputOutputFuture =
           seriesPreprocessingType.map { transformType =>
             for {
-            // transform input
+              // transform input
               input <-
-              RCPredictionStaticHelper.transformSeries(sparkApp.session)(inputSeries, transformType)
+                RCPredictionStaticHelper.transformSeries(sparkApp.session)(inputSeries, transformType)
 
               // transform output
               output <-
-              if (outputIncludedInInput) {
-                val output = input.map(seq => outputInputIndexes.map(seq(_)))
-                Future(output)
-              } else
-                RCPredictionStaticHelper.transformSeries(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
+                if (outputIncludedInInput) {
+                  val output = input.map(seq => outputInputIndexes.map(seq(_)))
+                  Future(output)
+                } else
+                  RCPredictionStaticHelper.transformSeries(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
             } yield {
               (input, output.map(_.head))
             }
