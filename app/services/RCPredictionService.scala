@@ -94,6 +94,7 @@ class RCPredictionServiceImpl @Inject()(
     batchSize: Option[Int],
     preserveWeightFieldNames: Seq[String]
   ): Future[Unit] = {
+    val start = new ju.Date
     val idName = JsObjectIdentity.name
     val dsa = dsaf(ioSpec.sourceDataSetId).get
     val dataSetRepo = dsa.dataSetRepo
@@ -168,6 +169,26 @@ class RCPredictionServiceImpl @Inject()(
       })
     }
 
+    import SparkUtil.kryoEncoder
+
+    def runPredictions2(
+      jobDatas: Seq[RCPredictionJobData],
+      jobContextBroadcast: Broadcast[RCPredictionJobContext],
+      jobIndexJsonMap: Map[Int, JsObject]
+    ): Seq[(RCPredictionResults, JsObject)] = {
+      sparkApp.session.createDataset(jobDatas).map { jobData =>
+        val jobContext = jobContextBroadcast.value
+        val result = RCPredictionStaticHelper.predictTimeSeriesWithoutPreprocessing(
+          jobContext.topologyFactory, jobContext.ioStreamFactory, jobContext.reservoirTrainerFactory, jobContext.setting, jobContext.topology, jobData.input, jobData.output
+        )
+        (jobData.index, result)
+      }.collect.map { case (index, results) =>
+        val json = jobIndexJsonMap.get(index).get
+        val otherDataJson = seriesFieldNames.foldLeft(json) { case (json, fieldName) => json.-(fieldName) }
+        (results, otherDataJson)
+      }
+    }
+
     for {
       // get the data set meta info
       metaInfo <- dsa.metaInfo
@@ -204,8 +225,13 @@ class RCPredictionServiceImpl @Inject()(
 
                 runPredictions(jobData, jobIndexJsonMap)
               }
-            } yield
-                resultsWithJsons
+            } yield {
+              resultsWithJsons
+//              val jobData = indexedJobData.map(_._2._1)
+//              val jobIndexJsonMap = indexedJobData.map(x => (x._1, x._3)).toMap
+//
+//              runPredictions2(jobData, jobContext, jobIndexJsonMap)
+            }
         }
 
       // flatten the results
@@ -245,6 +271,7 @@ class RCPredictionServiceImpl @Inject()(
         saveResults(metaInfo, settingAndResults, ioSpec.sourceDataSetId + "_results", metaInfo.name + " Results")
       }
     } yield {
+      println(s"RC prediction finished in ${new ju.Date().getTime - start.getTime} ms.")
       jobContext.unpersist()
       reportResults(setting, meanRnmse, meanSamp)
     }
@@ -293,19 +320,41 @@ class RCPredictionServiceImpl @Inject()(
   private def extractIOSeries(
     json: JsObject,
     ioSpec: RCPredictionInputOutputSpec
-  ): (Seq[Seq[jl.Double]], Seq[jl.Double]) = {
+  ): Option[(Seq[Seq[jl.Double]], Seq[jl.Double])] = {
     // helper method to extract series for a given path
-    def extractSeries(path: String) = {
+    def extractSeries(path: String): Option[Seq[jl.Double]] = {
       val jsValues = JsonUtil.traverse(json, path)
-      jsValues.dropRight(ioSpec.dropRightLength).map(_.as[Double]: jl.Double)
+
+      val leftTrimmedJsValues =
+        ioSpec.dropLeftLength.map(jsValues.drop).getOrElse(jsValues)
+
+      val trimmedJsValues = ioSpec.seriesLength match {
+        case Some(length) =>
+          val series = leftTrimmedJsValues.take(length)
+          if (series.size == length) Some(series) else None
+
+        case None =>
+          val series = ioSpec.dropRightLength.map(leftTrimmedJsValues.dropRight).getOrElse(leftTrimmedJsValues)
+          Some(series)
+      }
+
+      trimmedJsValues.map(_.map(_.as[Double]: jl.Double))
     }
 
-    val inputSeries = ioSpec.inputSeriesFieldPaths.map(extractSeries).transpose
+    // extract input series
+    val inputSeriesAux = ioSpec.inputSeriesFieldPaths.flatMap(extractSeries)
 
+    val inputSeries =
+      if (inputSeriesAux.size == ioSpec.inputSeriesFieldPaths.size)
+        Some(inputSeriesAux.transpose)
+      else
+        None
+
+    // extract output series
     // TODO: only the first output field is taken
     val outputSeries = extractSeries(ioSpec.outputSeriesFieldPaths.head)
 
-    (inputSeries, outputSeries)
+    (inputSeries, outputSeries).zipped.headOption
   }
 
   // note that empty input or output series are return as None
@@ -313,38 +362,41 @@ class RCPredictionServiceImpl @Inject()(
     json: JsObject,
     ioSpec: RCPredictionInputOutputSpec,
     seriesPreprocessingType: Option[VectorTransformType.Value]
-  ): Future[Option[(Seq[Seq[jl.Double]], Seq[jl.Double])]] = {
-    val (inputSeries, outputSeries) = extractIOSeries(json, ioSpec)
+  ): Future[Option[(Seq[Seq[jl.Double]], Seq[jl.Double])]] =
+    extractIOSeries(json, ioSpec).map { case (inputSeries, outputSeries) =>
+      // check the overlap between input and output paths to see if the output transformation can be skipped
+      val inputFieldPathIndexMap = ioSpec.inputSeriesFieldPaths.zipWithIndex.toMap
+      val outputInputIndexes: Seq[Int] = ioSpec.outputSeriesFieldPaths.flatMap(inputFieldPathIndexMap.get(_))
+      val outputIncludedInInput = outputInputIndexes.size == ioSpec.outputSeriesFieldPaths.size
 
-    // check the overlap between input and output paths to see if the output transformation can be skipped
-    val inputFieldPathIndexMap = ioSpec.inputSeriesFieldPaths.zipWithIndex.toMap
-    val outputInputIndexes: Seq[Int] = ioSpec.outputSeriesFieldPaths.flatMap(inputFieldPathIndexMap.get(_))
-    val outputIncludedInInput = outputInputIndexes.size == ioSpec.outputSeriesFieldPaths.size
+      if (inputSeries.nonEmpty) {
+        val inputOutputFuture =
+          seriesPreprocessingType.map { transformType =>
+            for {
+            // transform input
+              input <-
+              RCPredictionStaticHelper.transformSeries(sparkApp.session)(inputSeries, transformType)
 
-    if (inputSeries.nonEmpty) {
-      val inputOutputFuture =
-        seriesPreprocessingType.map { transformType =>
-          for {
-            input <-
-            RCPredictionStaticHelper.transformSeries(sparkApp.session)(inputSeries, transformType)
-
-            output <-
-            if (outputIncludedInInput) {
-              val output = input.map(seq => outputInputIndexes.map(seq(_)))
-              Future(output)
-            } else
-              RCPredictionStaticHelper.transformSeries(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
-          } yield {
-            (input, output.map(_.head))
+              // transform output
+              output <-
+              if (outputIncludedInInput) {
+                val output = input.map(seq => outputInputIndexes.map(seq(_)))
+                Future(output)
+              } else
+                RCPredictionStaticHelper.transformSeries(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
+            } yield {
+              (input, output.map(_.head))
+            }
+          }.getOrElse {
+            Future((inputSeries, outputSeries))
           }
-        }.getOrElse {
-          Future((inputSeries, outputSeries))
-        }
 
-      inputOutputFuture.map(Some(_))
-    } else
+        inputOutputFuture.map(Some(_))
+      } else
+        Future(None)
+    }.getOrElse(
       Future(None)
-  }
+    )
 
   private def saveWeightDataSet(
     sourceDataSetMetaInfo: DataSetMetaInfo,
@@ -584,68 +636,6 @@ class RCPredictionServiceImpl @Inject()(
     logger.info("Mean RNMSE                    : " + meanRnmse)
     logger.info("Mean SAMP                     : " + meanSamp)
   }
-
-//  private def predictRCTimeSeries(
-//    setting: ExtendedReservoirLearningSetting,
-//    topology: Topology,
-//    inputSeries: Seq[Seq[jl.Double]],
-//    targetSeries: Seq[jl.Double]
-//  ): RCPredictionResults = {
-//    val (input, output) = setting.seriesPreprocessingType.map { transformType =>
-//      val input = transformSeries(inputSeries, transformType)
-//      val output = transformSeries(targetSeries.map(Seq(_)), transformType)
-//      (input, output.map(_.head))
-//    }.getOrElse {
-//      (inputSeries, targetSeries)
-//    }
-//
-//    RCPredictionStaticHelper.predictTimeSeriesWithoutPreprocessing()
-//
-//    val iterationNum = targetSeries.size - setting.predictAhead - setting.getWashoutPeriod
-//
-//    // get reservoir and output nodes
-//    val initializedTopology =
-//      if (topology.hasLayers && !topology.isTemplate && !topology.isSpatial)
-//        topology
-//      else
-//        topologyFactory(topology)
-//
-//    val layers = initializedTopology.getLayers.toSeq
-//    val reservoirNodes = new ju.ArrayList(layers(1).getAllNodes)
-//    Collections.sort(reservoirNodes)
-//    val outputNodes = new ju.ArrayList(layers(2).getAllNodes)
-//    Collections.sort(outputNodes)
-//
-//    def createIOStream = ioStreamFactory.createInstancePredict(setting.predictAhead, setting.getWashoutPeriod)(input, output)
-//
-//    val call = { ioStream: IOStream[jl.Double] =>
-//      val (predictor, weightAccessor) = reservoirTrainerFactory(initializedTopology, setting, ioStream, iterationNum)
-//
-//      predictor.train(iterationNum)
-//      val outputs = predictor.outputs
-//      val desiredOutputs = (ioStream.outputStream take outputs.size).toList.map(_.head)
-//
-//      val squares = ErrorMeasures.calcSquares(outputs, desiredOutputs)
-//      val samps = ErrorMeasures.calcSamps(outputs, desiredOutputs)
-//
-//      val weights: Seq[jl.Double] = {
-//        for {
-//          reservoirNode <- reservoirNodes;
-//          outputNode <- outputNodes
-//        } yield
-//          weightAccessor.getWeight(reservoirNode, outputNode)
-//      }.flatten
-//
-//      val targetVariance = MathUtil.calcStats(0, output).getVariance.toDouble
-//
-//      RCPredictionResults(squares, samps, outputs.toSeq, desiredOutputs, weights, targetVariance)
-//    }
-//
-////    Future {
-//      val ioStream = createIOStream
-//      call(ioStream)
-////    }
-//  }
 
   override def transformVectors(
     data: DataFrame,

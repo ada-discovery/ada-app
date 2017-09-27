@@ -51,7 +51,7 @@ class MPowerPredictAcceleration @Inject() (
   private val ioSpec = RCPredictionInputOutputSpec(
     inputSeriesFieldPaths = Seq(fieldName + ".x", fieldName + ".y", fieldName + ".z"),
     outputSeriesFieldPaths = Seq(fieldName + ".y"),
-    dropRightLength = 200,
+    dropRightLength = Some(200),
     sourceDataSetId = dataSetId,
     resultDataSetId = "",
     resultDataSetName = ""

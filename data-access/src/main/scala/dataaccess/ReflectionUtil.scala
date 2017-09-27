@@ -1,11 +1,15 @@
 package dataaccess
 
+import java.lang.reflect.InvocationTargetException
+
 import dataaccess.ReflectionUtil._
 import play.api.Logger
+import java.{lang => jl}
+
+import scala.collection.Traversable
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 import scala.reflect.runtime.{universe => ru}
-import java.util.Date
 
 object ReflectionUtil {
 
@@ -27,10 +31,20 @@ object ReflectionUtil {
       (name, ruType.typeSymbol.asClass.fullName)
     }
 
+  def isCaseClass(runType: ru.Type): Boolean =
+    runType.members.exists( m => m.isMethod && m.asMethod.isCaseAccessor )
+
   def getCaseClassMemberNamesAndTypes(
     runType: ru.Type
   ): Traversable[(String, ru.Type)] =
-    runType.members.collect {
+    runType.decls.sorted.collect {
+      case m: MethodSymbol if m.isCaseAccessor => (shortName(m), m.returnType)
+    }
+
+  def getCaseClassMemberNamesAndTypesInOrder(
+    runType: ru.Type
+  ): Traversable[(String, ru.Type)] =
+    runType.decls.sorted.collect {
       case m: MethodSymbol if m.isCaseAccessor => (shortName(m), m.returnType)
     }
 
@@ -43,10 +57,81 @@ object ReflectionUtil {
     mirror.reflectClass(classSymbol)
 
   def classNameToRuntimeType(name: String): ru.Type = {
-    val c = Class.forName(name)
     val sym = mirror.staticClass(name)
     sym.selfType
   }
+
+  def typeToClass(typ: ru.Type): Class[_] =
+    mirror.runtimeClass(typ.typeSymbol.asClass)
+
+  def enumValueNames(typ: ru.Type): Traversable[String] =
+    typ match {
+      case TypeRef(enumType, _, _) => {
+        val values = enumType.members.filter(sym => !sym.isMethod && sym.typeSignature.baseType(typ.typeSymbol) =:= typ)
+        values.map(_.fullName.split('.').last)
+      }
+    }
+
+  def enum(typ: ru.Type): Enumeration =
+    typ match {
+      case TypeRef(enumType, _, _) =>
+        mirror.reflectModule(enumType.termSymbol.asModule).instance.asInstanceOf[Enumeration]
+    }
+
+  def construct[T](typ: Type, values: Seq[Any]): T =
+    construct(typeToClass(typ).asInstanceOf[Class[T]], values)
+
+  def construct[T](clazz: Class[T], values: Seq[Any]): T = {
+    val boxedValues = values.map(box)
+
+    def tryConstruct(index: Int): Option[T] = {
+      try {
+        val constructor = clazz.getConstructors()(index)
+        val instance = constructor.newInstance(boxedValues: _*).asInstanceOf[T]
+        Some(instance)
+      } catch {
+        case e: InstantiationException => None
+        case e: IllegalAccessException => None
+        case e: IllegalArgumentException => None
+        case e: InvocationTargetException => None
+      }
+    }
+
+    val num = clazz.getConstructors.length
+    var instance: Option[T] = None
+    var index = 0
+    while (instance.isEmpty && index < num) {
+      instance = tryConstruct(index)
+      index += 1
+    }
+
+    instance.getOrElse(throwNoConstructorException(clazz, values))
+  }
+
+  private def throwNoConstructorException(clazz: Class[_], values: Seq[Any]) =
+    throw new IllegalArgumentException(s"No suitable constructor could be found for the class ${clazz.getName} matching given params ${values.mkString(",")}.")
+
+  def construct2[T](clazz: Class[T], values: Seq[Any]): T =
+    try {
+      val constructor = clazz.getDeclaredConstructor(values.map(_.getClass): _*)
+      constructor.newInstance(values.map(box): _*)
+    } catch {
+      case e: NoSuchElementException => throwNoConstructorException(clazz, values)
+      case e: SecurityException => throwNoConstructorException(clazz, values)
+    }
+
+  private def box(value: Any): AnyRef =
+    value match {
+      case x: AnyRef => x
+      case x: Boolean => new jl.Boolean(x)
+      case x: Double => new jl.Double(x)
+      case x: Float => new jl.Float(x)
+      case x: Short => new jl.Short(x)
+      case x: Byte => new jl.Byte(x)
+      case x: Int => new jl.Integer(x)
+      case x: Long => new jl.Long(x)
+      case _ => throw new IllegalArgumentException(s"Don't know how to box $value of type ${value.getClass.getName}.")
+    }
 }
 
 trait DynamicConstructor[E] {
@@ -71,6 +156,9 @@ object DynamicConstructorFinder {
 
   def apply[E](className: String): DynamicConstructorFinder[E] =
     new DynamicConstructorFinderImpl[E](classNameToRuntimeType(className))
+
+  def apply[E](typ: Type): DynamicConstructorFinder[E] =
+    new DynamicConstructorFinderImpl[E](typ)
 }
 
 private class DynamicConstructorFinderImpl[E](runtimeType: ru.Type) extends DynamicConstructorFinder[E] {

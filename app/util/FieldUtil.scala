@@ -16,13 +16,13 @@ object FieldUtil {
     excludedFieldSet: Set[String] = Set(),
     treatEnumAsString: Boolean = false
   ): Traversable[(String, FieldTypeSpec)] =
-    caseClassToFlatFieldTypesAux(typeOf[T], delimiter, excludedFieldSet, treatEnumAsString)
+    caseClassTypeToFlatFieldTypes(typeOf[T], delimiter, excludedFieldSet, treatEnumAsString)
 
-  private def caseClassToFlatFieldTypesAux(
+  def caseClassTypeToFlatFieldTypes(
     typ: Type,
-    delimiter: String,
-    excludedFieldSet: Set[String],
-    treatEnumAsString: Boolean
+    delimiter: String = ".",
+    excludedFieldSet: Set[String] = Set(),
+    treatEnumAsString: Boolean = false
   ): Traversable[(String, FieldTypeSpec)] = {
     val memberNamesAndTypes = dataaccess.ReflectionUtil.getCaseClassMemberNamesAndTypes(typ).filter(x => !excludedFieldSet.contains(x._1))
 
@@ -32,7 +32,7 @@ object FieldUtil {
         Seq((fieldName, fieldTypeSpec))
       } catch {
         case e: AdaException => {
-          val subFieldNameAndTypeSpecs = caseClassToFlatFieldTypesAux(memberType, delimiter, excludedFieldSet, treatEnumAsString)
+          val subFieldNameAndTypeSpecs = caseClassTypeToFlatFieldTypes(memberType, delimiter, excludedFieldSet, treatEnumAsString)
           if (subFieldNameAndTypeSpecs.isEmpty)
             throw e
           else

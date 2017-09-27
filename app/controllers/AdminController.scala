@@ -3,15 +3,19 @@ package controllers
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import controllers.core.WebContext
+import controllers.core.{GenericMapping, WebContext}
 import persistence.RepoTypes.MessageRepo
 import play.api.Logger
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller, Request}
 import play.api.Play.current
+import play.api.data.Form
+import runnables.InputRunnable
 import util.MessageLogger
-import util.ReflectionUtil._
+import util.ReflectionUtil.findClasses
 import util.SecurityUtil.restrictAdmin
+import views.html.{admin => adminviews}
+import java.{util => ju}
 
 class AdminController @Inject() (
     deadbolt: DeadboltActions,
@@ -35,33 +39,37 @@ class AdminController @Inject() (
     */
   def listRunnables = restrictAdmin(deadbolt) {
     Action { implicit request =>
-      val classes = findClasses[Runnable](libPrefix, Some("runnables."), None)
+      val classes1 = findClasses[Runnable](libPrefix, Some("runnables."), None)
+      val classes2 = findClasses[InputRunnable[_]](libPrefix, Some("runnables."), None)
 
-      val runnableNames = classes.map(_.getName).sorted
-      Ok(views.html.admin.runnables(runnableNames))
+      val runnableNames = (classes1 ++ classes2).map(_.getName).sorted
+      Ok(adminviews.runnables(runnableNames))
     }
   }
 
   private val runnablesRedirect = Redirect(routes.AdminController.listRunnables())
 
-  /**
-    * Runs the script given its path (i.e. "runnables.denopa.DeNoPaCleanup").
-    *
-    * @param className Path of runnable to launch.
-    * @return Redirects to listRunnables()
-    */
-  def runScript(className : String) = restrictAdmin(deadbolt) {
+  def runScript(className: String) = restrictAdmin(deadbolt) {
     Action { implicit request =>
       implicit val msg = messagesApi.preferred(request)
       try {
-        val clazz = Class.forName(className)
-        val runnable = current.injector.instanceOf(clazz).asInstanceOf[Runnable]
-        val start = new java.util.Date()
-        runnable.run()
-        val execTimeSec = (new java.util.Date().getTime - start.getTime) / 1000
-        val message = s"Script ${className} was successfully executed in ${execTimeSec} sec."
-        messageLogger.info(message)
-        runnablesRedirect.flashing("success" -> message)
+        val clazz = Class.forName(className, true, this.getClass.getClassLoader)
+        val instance = current.injector.instanceOf(clazz)
+
+        if (instance.isInstanceOf[InputRunnable[_]]) {
+           val inputRunnable = instance.asInstanceOf[InputRunnable[_]]
+ //          val fields = FieldUtil.caseClassTypeToFlatFieldTypes(inputRunnable.typ)
+           val mapping = GenericMapping[Any](inputRunnable.inputType)
+           Ok(adminviews.formFieldsInput(className, Form(mapping), routes.AdminController.runInputScript(className)))
+        } else {
+          val start = new ju.Date()
+          instance.asInstanceOf[Runnable].run()
+          val execTimeSec = (new java.util.Date().getTime - start.getTime) / 1000
+          val message = s"Script ${className} was successfully executed in ${execTimeSec} sec."
+
+          messageLogger.info(message)
+          runnablesRedirect.flashing("success" -> message)
+        }
       } catch {
         case e: ClassNotFoundException => {
           runnablesRedirect.flashing("errors" -> s"Script ${className} does not exist.")
@@ -70,6 +78,39 @@ class AdminController @Inject() (
           logger.error(s"Script ${className} failed", e)
           runnablesRedirect.flashing("errors" -> s"Script ${className} failed due to: ${e.getMessage}")
         }
+      }
+    }
+  }
+
+  def runInputScript(className: String) = restrictAdmin(deadbolt) {
+    Action { implicit request =>
+      implicit val msg = messagesApi.preferred(request)
+      try {
+        println(className)
+        val clazz = Class.forName(className, true, this.getClass.getClassLoader)
+        val start = new ju.Date()
+        val inputRunnable = current.injector.instanceOf(clazz).asInstanceOf[InputRunnable[Any]]
+        val mapping = GenericMapping[Any](inputRunnable.inputType)
+
+        Form(mapping).bindFromRequest().fold(
+          { formWithErrors =>
+            BadRequest(adminviews.formFieldsInput(className, formWithErrors, routes.AdminController.runInputScript(className)))
+          },
+          input => {
+            inputRunnable.run(input)
+            val execTimeSec = (new java.util.Date().getTime - start.getTime) / 1000
+            val message = s"Script ${className} was successfully executed in ${execTimeSec} sec."
+            messageLogger.info(message)
+            runnablesRedirect.flashing("success" -> message)
+          }
+        )
+      } catch {
+        case e: ClassNotFoundException =>
+          runnablesRedirect.flashing("errors" -> s"Script ${className} does not exist.")
+
+        case e: Exception =>
+          logger.error(s"Script ${className} failed", e)
+          runnablesRedirect.flashing("errors" -> s"Script ${className} failed due to: ${e.getMessage}")
       }
     }
   }

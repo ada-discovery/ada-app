@@ -9,6 +9,8 @@ import org.apache.spark.sql.functions.{monotonically_increasing_id, struct, udf}
 import org.apache.spark.sql.types.StructType
 import play.api.Configuration
 import play.api.libs.json._
+import scala.reflect.ClassTag
+import org.apache.spark.sql.Encoders
 
 import scala.util.Random
 
@@ -92,4 +94,6 @@ object SparkUtil {
 
     withOrderColumn(df1).join(withOrderColumn(df2), joinColumnName).drop(joinColumnName)
   }
+
+  implicit def kryoEncoder[A](implicit ct: ClassTag[A]) = Encoders.kryo[A](ct)
 }

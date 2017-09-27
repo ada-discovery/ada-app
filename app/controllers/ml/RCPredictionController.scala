@@ -172,7 +172,9 @@ class RCPredictionController @Inject()(
         val ioSpec = RCPredictionInputOutputSpec(
           settings.inputSeriesFieldPaths,
           settings.outputSeriesFieldPaths,
-          dropRightLength,
+          None,
+          Some(dropRightLength),
+          None,
           settings.sourceDataSetId,
           settings.resultDataSetId + resultDataSetIdSuffix,
           settings.resultDataSetName + resultDataSetNameSuffix

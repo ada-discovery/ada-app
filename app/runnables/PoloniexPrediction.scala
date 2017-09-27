@@ -32,7 +32,6 @@ class PoloniexPrediction @Inject()(
   private val ioSpec = RCPredictionInputOutputSpec(
     inputSeriesFieldPaths = Seq("weightedAverage", "high", "low", "volume").map(fieldName + "." + _),
     outputSeriesFieldPaths = Seq("weightedAverage").map(fieldName + "." + _),
-    dropRightLength = 0,
     sourceDataSetId = "btc.poloniex",
     resultDataSetId = "",
     resultDataSetName = ""

@@ -826,7 +826,30 @@ class DataSetServiceImpl @Inject()(
       Seq.fill(spec.pastValuesCount)(0d) ++ newSeries
     else
       newSeries
+  }
 
+  private def extractPeaks(
+    series: Seq[Double],
+    peakNum: Int
+  ): Option[Seq[Double]] = {
+    val (mins, maxes) = localMinMaxIndeces(series)
+    if (mins.size > peakNum)
+      Some(series.drop(mins(0)).take(mins(peakNum)))
+    else
+      None
+  }
+
+  private def localMinMaxIndeces(
+    series: Seq[Double]
+  ): (Seq[Int], Seq[Int]) = {
+    val diffs = series.zip(series.tail).map { case (a, b) => b - a}
+    val maxima = diffs.sliding(2).zipWithIndex.filter { case (diff, index) =>
+      diff(0) > 0 && diff(1) <= 0
+    }
+    val minima = series.sliding(2).zipWithIndex.filter { case (diff, index) =>
+      diff(0) < 0 && diff(1) >= 0
+    }
+    (minima.map(_._2 + 1).toSeq, maxima.map(_._2 + 1).toSeq)
   }
 
   private def registerDerivedDataSet(

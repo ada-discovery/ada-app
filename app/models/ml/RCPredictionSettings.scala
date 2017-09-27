@@ -49,7 +49,9 @@ class ExtendedReservoirLearningSetting extends ReservoirLearningSetting {
 case class RCPredictionInputOutputSpec(
   inputSeriesFieldPaths: Seq[String],
   outputSeriesFieldPaths: Seq[String],
-  dropRightLength: Int,
+  dropLeftLength: Option[Int] = None,
+  dropRightLength: Option[Int] = None,
+  seriesLength: Option[Int] = None,
   sourceDataSetId: String,
   resultDataSetId: String,
   resultDataSetName: String
@@ -86,7 +88,7 @@ object XXX extends App {
 
   val setting = RCPredictionSetting(20, 20, 0.1, 0.5, 10, Some(VectorTransformType.MinMaxPlusMinusOneScaler), 10, 1)
 
-  val ioSpec = RCPredictionInputOutputSpec(Seq("lla", "lll"), Seq("a", "bb"), 3, "dataset1", "dataset2", "datasetname")
+  val ioSpec = RCPredictionInputOutputSpec(Seq("lla", "lll"), Seq("a", "bb"), Some(3), None, Some(100), "dataset1", "dataset2", "datasetname")
 
   val settingAndResults = RCPredictionSettingAndResults(None, setting, ioSpec, 0.9, 0.87)
 

@@ -1,27 +1,23 @@
 package runnables
+
 import javax.inject.Inject
 
 import dataaccess.{AsyncReadonlyRepo, Criterion, EqualsCriterion, NotEqualsNullCriterion}
-import models.DataSetFormattersAndIds.FieldIdentity
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import services.StatsService
 import dataaccess.Criterion._
 import models.{ConditionType, Field, Filter, FilterCondition}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
+import scala.reflect.runtime.universe._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class CreateOutlierFilter @Inject() (
+class CreateWeightOutlierDiagnosisFilter @Inject()(
     dsaf: DataSetAccessorFactory,
     statsService: StatsService
-  ) extends FutureRunnable {
-
-  private val dataSetIds =
-    (7 to 61).map (index =>
-      "mpower_challenge.walking_activity_training_norms_rc_weights_" + index
-    )
+  ) extends InputFutureRunnable[CreateWeightOutlierDiagnosisFilterSpec] {
 
   private val conditionCriterionNames = Seq(
     (
@@ -41,9 +37,16 @@ class CreateOutlierFilter @Inject() (
     )
   )
 
-  override def runAsFuture =
+  override def runAsFuture(spec: CreateWeightOutlierDiagnosisFilterSpec) = {
+    val dataSetIds =
+      (spec.suffixFrom, spec.suffixTo).zipped.headOption.map { case (from, to) =>
+        (from to to).map(spec.dataSetId + _)
+      }.getOrElse(
+        Seq(spec.dataSetId)
+      )
+
     for {
-      _<- util.seqFutures(dataSetIds) { dataSetId =>
+      _ <- util.seqFutures(dataSetIds) { dataSetId =>
         val dsa = dsaf(dataSetId).get
         Future.sequence(
           conditionCriterionNames.map { case (name, condition, criterion) =>
@@ -53,6 +56,7 @@ class CreateOutlierFilter @Inject() (
       }
     } yield
       ()
+  }
 
   private def createFilter(
     dsa: DataSetAccessor,
@@ -83,9 +87,6 @@ class CreateOutlierFilter @Inject() (
     criteria: Seq[Criterion[Any]]
   ): Future[Traversable[FilterCondition]] =
     for {
-//      // get the fields
-//      fields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
-
       // calc the quantiles
       fieldQuantiles <- Future.sequence(
         fields.map { field =>
@@ -102,6 +103,8 @@ class CreateOutlierFilter @Inject() (
           FilterCondition(field.name, None, ConditionType.LessEqual, quantiles.upperWhisker.toString, None)
         )
       }
+
+  override def inputType = typeOf[CreateWeightOutlierDiagnosisFilterSpec]
 }
 
-object CreateOutlierFilter extends GuiceBuilderRunnable[CreateOutlierFilter] with App { run }
+case class CreateWeightOutlierDiagnosisFilterSpec(dataSetId: String, suffixFrom: Option[Int], suffixTo: Option[Int])
