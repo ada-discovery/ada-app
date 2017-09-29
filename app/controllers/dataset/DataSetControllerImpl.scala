@@ -469,8 +469,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
             case _ => fieldTypes
         }
-
-        implicit val writes = new WidgetWrites[Any](fieldTypesToUse.toSeq)
+        // make a scalar type out of it
+        val scalarFieldTypesToUse = fieldTypesToUse.map(fieldType => ftf(fieldType.spec.copy(isArray = false)).asInstanceOf[FieldType[Any]])
+        implicit val writes = new WidgetWrites[Any](scalarFieldTypesToUse.toSeq)
         Json.toJson(widget)
       }
     }.flatten

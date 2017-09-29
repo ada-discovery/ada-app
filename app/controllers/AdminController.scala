@@ -60,7 +60,9 @@ class AdminController @Inject() (
            val inputRunnable = instance.asInstanceOf[InputRunnable[_]]
  //          val fields = FieldUtil.caseClassTypeToFlatFieldTypes(inputRunnable.typ)
            val mapping = GenericMapping[Any](inputRunnable.inputType)
-           Ok(adminviews.formFieldsInput(className, Form(mapping), routes.AdminController.runInputScript(className)))
+           Ok(adminviews.formFieldsInput(
+             className.split('.').last, Form(mapping), routes.AdminController.runInputScript(className)
+           ))
         } else {
           val start = new ju.Date()
           instance.asInstanceOf[Runnable].run()
@@ -94,7 +96,9 @@ class AdminController @Inject() (
 
         Form(mapping).bindFromRequest().fold(
           { formWithErrors =>
-            BadRequest(adminviews.formFieldsInput(className, formWithErrors, routes.AdminController.runInputScript(className)))
+            BadRequest(adminviews.formFieldsInput(
+              className.split('.').last, formWithErrors, routes.AdminController.runInputScript(className)
+            ))
           },
           input => {
             inputRunnable.run(input)

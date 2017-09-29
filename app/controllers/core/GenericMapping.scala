@@ -1,6 +1,6 @@
 package controllers.core
 
-import controllers.EnumFormatter
+import controllers.{BSONObjectIDStringFormatter, EnumFormatter, JsonFormatter}
 import models.{AdaException, StorageType}
 import play.api.data._
 import play.api.data.Forms.{mapping, _}
@@ -12,6 +12,7 @@ import play.api.data._
 import java.{util => ju}
 
 import dataaccess.ReflectionUtil
+import reactivemongo.bson.BSONObjectID
 
 import scala.collection.Traversable
 
@@ -133,6 +134,8 @@ object GenericMapping {
     def subMatches(types: Type*) = types.exists(typ <:< _)
   }
 
+  private implicit val bsonObjectIDFormatter = BSONObjectIDStringFormatter
+
   @throws(classOf[AdaException])
   private def genericMapping(typ: Type): Mapping[Any] = {
     val mapping = typ match {
@@ -189,6 +192,10 @@ object GenericMapping {
       // date
       case t if t matches typeOf[ju.Date] =>
         date
+
+      // BSON Object Id
+      case t if t matches typeOf[BSONObjectID] =>
+        of[BSONObjectID]
 
       // optional
       case t if t <:< typeOf[Option[_]] =>
