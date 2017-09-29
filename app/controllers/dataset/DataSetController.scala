@@ -70,7 +70,7 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getRegression: Action[AnyContent]
 
-  def getUnsupervisedLearning: Action[AnyContent]
+  def getClusterization: Action[AnyContent]
 
   def classify(
     mlModelId: BSONObjectID,
@@ -94,7 +94,7 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     crossValidationFolds: Option[Int]
   ): Action[AnyContent]
 
-  def learnUnsupervised(
+  def cluster(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     filterOrId: FilterOrId,

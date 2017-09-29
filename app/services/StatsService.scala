@@ -648,24 +648,6 @@ class StatsServiceImpl extends StatsService {
     ) =
       jsons.map(fieldType.jsonToValue)
 
-//
-//      fieldType.spec.fieldType match {
-//
-//        case FieldTypeId.Double =>
-//          val doubleType = fieldType.asValueOf[Double]
-//          jsons.map(doubleType.jsonToValue)
-//
-//        case FieldTypeId.Integer =>
-//          val longType = fieldType.asValueOf[Long]
-//          jsons.map(x => longType.jsonToValue(x).map(_.toDouble))
-//
-//        case FieldTypeId.Date =>
-//          val dateType = fieldType.asValueOf[ju.Date]
-//          jsons.map(x => dateType.jsonToValue(x).map(_.getTime.toDouble))
-//
-//        case _ => Nil
-//      }
-
     val xValues = values(xJsons, xFieldType)
     val yValues = values(yJsons, yFieldType)
 

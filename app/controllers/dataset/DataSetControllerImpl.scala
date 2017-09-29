@@ -6,6 +6,7 @@ import java.{util => ju}
 import javax.inject.Inject
 
 import scala.collection.mutable.{Map => MMap}
+import _root_.util.GroupMapList
 import _root_.util.JsonUtil._
 import models.ConditionType._
 import util.{BasicStats, fieldLabel}
@@ -1450,13 +1451,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
   }
 
-  override def getUnsupervisedLearning = Action.async { implicit request => {
+  override def getClusterization = Action.async { implicit request => {
     for {
       // get the data set name, data space tree and the data set setting
       (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
     } yield {
       render {
-        case Accepts.Html() => Ok(dataset.unsupervisedLearning(
+        case Accepts.Html() => Ok(dataset.cluster(
           dataSetName,
           setting.filterShowFieldStyle,
           tree
@@ -1608,7 +1609,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def learnUnsupervised(
+  override def cluster(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     filterOrId: FilterOrId,
@@ -1636,7 +1637,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             json.+(JsObjectIdentity.name, JsString(id.stringify))
           }
 
-          val idClasses = mlService.learnUnsupervised(jsonsWithStringIds, fieldNameAndSpecs, mlModel, pcaDims)
+          val (idClasses, idPCA12s) = mlService.clusterAndGetPCA12(jsonsWithStringIds, fieldNameAndSpecs, mlModel, pcaDims)
 
           val numericTypes = Set(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
           val numericFields = fields.filter(field => !field.fieldTypeSpec.isArray && numericTypes.contains(field.fieldType))
@@ -1646,7 +1647,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
           val idClassMap = idClasses.toMap
 
-          def createScatterJson(xField: Field, yField: Field): Option[JsValue] = {
+          // PCA 1-2 Scatter
+          val displayOptions = BasicDisplayOptions(height = Some(500))
+
+          val classPCA12s = idPCA12s.map { case (id, pca12) =>
+            (idClassMap.get(id).get, pca12)
+          }.toGroupMap.toSeq
+
+          val pca12WidgetData = classPCA12s.map { case (clazz, values) =>
+            (clazz.toString, "rgba(223, 83, 83, .5)", values.toSeq)
+          }
+
+          val pca12Scatter = ScatterWidget("PCA", "PCA 1", "PCA 2", pca12WidgetData, displayOptions)
+
+          // Other scatters (fields pairwise_
+          def createScatter(xField: Field, yField: Field): Option[Widget] = {
             val jsonsWithClasses = jsonsWithStringIds.flatMap { json =>
               val stringId = (json \ JsObjectIdentity.name).as[String]
               idClassMap.get(stringId).map(clazz =>  json.+("cluster_class", JsNumber(clazz)))
@@ -1654,22 +1669,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
             val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Integer, false)
 
-            val displayOptions = BasicDisplayOptions(height = Some(500))
             val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, Some(clusterClassField.name), None, displayOptions)
 
             // generate a scatter widget
-            val widgetOption = widgetService(widgetSpec, jsonsWithClasses, Seq(xField, yField, clusterClassField))
-
-            widgetOption.map( widget =>
-              scatterToJson(widget.asInstanceOf[ScatterWidget[_, _]])
-            )
+            widgetService(widgetSpec, jsonsWithClasses, Seq(xField, yField, clusterClassField))
           }
 
-          val scatterJsons = numericFields.combinations(2).take(4).flatMap ( fields =>
-            createScatterJson(fields(0), fields(1))
-          ).toSeq
+          // Transform Scatters into JSONs
+          val scatters = numericFields.combinations(2).take(4).flatMap { fields => createScatter(fields(0), fields(1)) }
+
+          val scatterJsons = (Seq(pca12Scatter) ++ scatters).map( scatter =>
+            scatterToJson(scatter.asInstanceOf[ScatterWidget[_, _]])
+          )
 
           Ok(JsArray(scatterJsons))
+
         case None =>
           BadRequest(s"ML unsupervised learning model with id ${mlModelId.stringify} not found.")
       }

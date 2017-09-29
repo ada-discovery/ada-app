@@ -21,7 +21,7 @@
     @highchartsJsImport()
 
     @helper.javascriptRouter("dataSetJsRoutes")(
-        dataSetJsRouter.learnUnsupervised
+        dataSetJsRouter.cluster
     )
 
     <script type="text/javascript">
@@ -66,43 +66,59 @@
             if (!pcaDims)
                 pcaDims = null
 
-            $('#chartPanelDiv').hide();
+            $('#scatterPanelDiv').html();
+            $('#pcaScatterDiv').html()
 
-            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.learnUnsupervised(mlModelId, inputFieldNames, filterOrId, pcaDims).ajax( {
+//            $('#scatterPanelDiv').hide();
+
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.cluster(mlModelId, inputFieldNames, filterOrId, pcaDims).ajax( {
                 success: function(scatters) {
-                    showMessage("'" + mlModelName + "' unsupervised learning finished.")
+                    showMessage("'" + mlModelName + "'clusterization finished.")
 
-                    $('#chartPanelDiv').html();
-                    $.each(scatters, function(i, scatter) {
-                        console.log(scatter)
-                        var div = "<div class='col-md-6'><div id='scatterDiv" + i + "' class='chart-holder'></div></div>"
-                        $("#chartPanelDiv").append(div);
-                        scatterChart(scatter.title, 'scatterDiv' + i, scatter.xAxisCaption, scatter.yAxisCaption, scatter.data, 500);
-                    });
+                    var i
+                    for(i = 1; i < scatters.length; i++) {
+                        var divClass = 'col-md-4 col-md-offset-1'
+                        var div = "<div class='" + divClass + "'><div id='scatterDiv" + i + "' class='chart-holder'></div></div>"
+                        $("#scatterPanelDiv").append(div);
+                    }
 
-                    $('#chartPanelDiv').fadeIn('2000');
+                    drawScatter(scatters[0], 'pcaScatterDiv', 600);
+
+                    for(i = 1; i < scatters.length; i++) {
+                        drawScatter(scatters[i], 'scatterDiv' + i, 350);
+                    };
+
+//                    $('#scatterPanelDiv').fadeIn('2000');
                 },
                 error: function(data){
                     showError( data.responseText );
                 }
             });
 
-            showMessage("Unsupervised learning using the ML model '" + mlModelName + "' launched.")
+            showMessage("Clusterization using the ML model '" + mlModelName + "' launched.")
+        }
+
+        function drawScatter(scatter, divId, height) {
+            scatterChart(scatter.title, divId, scatter.xAxisCaption, scatter.yAxisCaption, scatter.data, height);
         }
     </script>
 }
 
-@main(Messages("unsupervisedLearning.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
+@main(Messages("clusterization.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
         <h3>
-            @Messages("unsupervisedLearning.title", dataSetName)
+        @Messages("clusterization.title", dataSetName)
         </h3>
     </div>
 
     @mlElements(dataSetRouter.allFields, false, false, false)
 
-    <div id="chartPanelDiv" class="row">
+    <div class="row">
+        <div id='pcaScatterDiv' class='col-md-10 col-md-offset-1 chart-holder'>
+        </div>
+    </div>
 
+    <div id="scatterPanelDiv" class="row">
     </div>
 }

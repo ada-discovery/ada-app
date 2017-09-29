@@ -57,17 +57,29 @@ trait MachineLearningService {
     setting: LearningSetting = LearningSetting()
   ): Traversable[RegressionPerformance]
 
-  def learnUnsupervised[M <: Model[M]](
+  def cluster[M <: Model[M]](
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
     pcaDim: Option[Int] = None
   ): Traversable[(String, Int)]
 
+  def clusterAndGetPCA12[M <: Model[M]](
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    mlModel: UnsupervisedLearning,
+    pcaDim: Option[Int] = None
+  ): (Traversable[(String, Int)], Traversable[(String, (Double, Double))])
+
   def discretizeAsQuantiles(
     data: DataFrame,
     bucketsNum: Int,
     columnName: String
+  ): DataFrame
+
+  def pcaComponents(
+    k: Int)(
+    df: DataFrame
   ): DataFrame
 
   def selectFeaturesAsChiSquare(
@@ -230,12 +242,44 @@ private class MachineLearningServiceImpl @Inject() (
     }
   }
 
-  override def learnUnsupervised[M <: Model[M]](
+  override def cluster[M <: Model[M]](
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
     pcaDim: Option[Int]
   ): Traversable[(String, Int)] = {
+    val (df, idClusters) = clusterAux(data, fields, mlModel, pcaDim)
+    idClusters
+  }
+
+  override def clusterAndGetPCA12[M <: Model[M]](
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    mlModel: UnsupervisedLearning,
+    pcaDim: Option[Int]
+  ): (Traversable[(String, Int)], Traversable[(String, (Double, Double))]) = {
+    val (df, idClusters) = clusterAux(data, fields, mlModel, pcaDim)
+
+    // reduce the dimensionality if needed
+    val pca12Df = df.transform(pcaComponents(2))
+
+    import sparkApp.session.implicits._
+
+    val idPca12Values = pca12Df.select(JsObjectIdentity.name, "features").map { r =>
+      val id = r(0).asInstanceOf[String]
+      val values = r(1).asInstanceOf[DenseVector].values
+      (id, (values(0), values(1)))
+    }.collect
+
+    (idClusters, idPca12Values)
+  }
+
+  private def clusterAux[M <: Model[M]](
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    mlModel: UnsupervisedLearning,
+    pcaDim: Option[Int]
+  ): (DataFrame, Traversable[(String, Int)]) = {
     val trainer = SparkMLEstimatorFactory[M](mlModel)
 
     // prepare a data frame for learning
@@ -250,74 +294,80 @@ private class MachineLearningServiceImpl @Inject() (
 
     val (model, predictions) = fit(trainer, cachedDf)
 
+    import sparkApp.session.implicits._
+
     def extractClusterClasses(columnName: String): Traversable[(String, Int)] =
-      predictions.select(JsObjectIdentity.name, columnName).rdd.map { r =>
+      predictions.select(JsObjectIdentity.name, columnName).map { r =>
         val id = r(0).asInstanceOf[String]
         val clazz = r(1).asInstanceOf[Int]
         (id, clazz)
       }.collect
 
     def extractClusterClasssedFromProbabilities(columnName: String): Traversable[(String, Int)] =
-      predictions.select(JsObjectIdentity.name, columnName).rdd.map { r =>
+      predictions.select(JsObjectIdentity.name, columnName).map { r =>
         val id = r(0).asInstanceOf[String]
         val clazz = r(1).asInstanceOf[DenseVector].values.zipWithIndex.maxBy(_._1)._2
         (id, clazz)
       }.collect
 
-    model match {
+    val result = model match {
       case m: KMeansModel =>
         // Evaluate clustering by computing Within Set Sum of Squared Errors.
-//        val WSSSE = m.computeCost(cachedDf)
-//        println(s"Within Set Sum of Squared Errors = $WSSSE")
+        //        val WSSSE = m.computeCost(cachedDf)
+        //        println(s"Within Set Sum of Squared Errors = $WSSSE")
 
-//        // Shows the result.
-//        println("Cluster Centers:")
-//        m.clusterCenters.foreach(println)
+        //        // Shows the result.
+        //        println("Cluster Centers:")
+        //        m.clusterCenters.foreach(println)
 
         // extract cluster classes
         extractClusterClasses("prediction")
 
       case m: LDAModel =>
-//        val ll = m.logLikelihood(cachedDf)
-//        val lp = m.logPerplexity(cachedDf)
-//        println(s"The lower bound on the log likelihood of the entire corpus: $ll")
-//        println(s"The upper bound bound on perplexity: $lp")
-//
-//        // Describe topics.
-//        val topics = m.describeTopics(3)
-//        println("The topics described by their top-weighted terms:")
-//        topics.show(false)
+        //        val ll = m.logLikelihood(cachedDf)
+        //        val lp = m.logPerplexity(cachedDf)
+        //        println(s"The lower bound on the log likelihood of the entire corpus: $ll")
+        //        println(s"The upper bound bound on perplexity: $lp")
+        //
+        //        // Describe topics.
+        //        val topics = m.describeTopics(3)
+        //        println("The topics described by their top-weighted terms:")
+        //        topics.show(false)
 
-//        // Shows the result.
-//        val transformed = model.transform(cachedDf)
-//        transformed.show(false)
+        //        // Shows the result.
+        //        val transformed = model.transform(cachedDf)
+        //        transformed.show(false)
 
         // extract cluster classes
         extractClusterClasssedFromProbabilities("topicDistribution")
 
       case m: BisectingKMeansModel =>
         // Evaluate clustering.
-//        val cost = m.computeCost(cachedDf)
-//        println(s"Within Set Sum of Squared Errors = $cost")
-//
-//        // Shows the result.
-//        println("Cluster Centers: ")
-//        val centers = m.clusterCenters
-//        centers.foreach(println)
+        //        val cost = m.computeCost(cachedDf)
+        //        println(s"Within Set Sum of Squared Errors = $cost")
+        //
+        //        // Shows the result.
+        //        println("Cluster Centers: ")
+        //        val centers = m.clusterCenters
+        //        centers.foreach(println)
 
         // extract cluster classes
         extractClusterClasses("prediction")
 
       case m: GaussianMixtureModel =>
         // output parameters of mixture model model
-//        for (i <- 0 until m.getK) {
-//          println(s"Gaussian $i:\nweight=${m.weights(i)}\n" +
-//            s"mu=${m.gaussians(i).mean}\nsigma=\n${m.gaussians(i).cov}\n")
-//        }
+        //        for (i <- 0 until m.getK) {
+        //          println(s"Gaussian $i:\nweight=${m.weights(i)}\n" +
+        //            s"mu=${m.gaussians(i).mean}\nsigma=\n${m.gaussians(i).cov}\n")
+        //        }
 
         // extract cluster classes
         extractClusterClasssedFromProbabilities("probability")
     }
+
+    cachedDf.unpersist
+
+    (df, result)
   }
 
   private def pcaComponentsOptional(
@@ -328,10 +378,10 @@ private class MachineLearningServiceImpl @Inject() (
       df.transform(pcaComponents(pcaDims))
     ).getOrElse(df)
 
-  private def pcaComponents(
+  override def pcaComponents(
     k: Int)(
     df: DataFrame
-  ) = {
+  ): DataFrame = {
     val pca = new PCA()
       .setInputCol("features")
       .setOutputCol("pcaFeatures")

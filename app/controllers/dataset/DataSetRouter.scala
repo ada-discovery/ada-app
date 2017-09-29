@@ -22,7 +22,7 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getCorrelations = routes.getCorrelations _ map route
   val getClassification = routeFun(_.getClassification)
   val getRegression = routeFun(_.getRegression)
-  val getUnsupervisedLearning = routeFun(_.getUnsupervisedLearning)
+  val getClusterization = routeFun(_.getClusterization)
   val getSeriesProcessingSpec = routeFun(_.getSeriesProcessingSpec)
   val runSeriesProcessing = routeFun(_.runSeriesProcessing)
   val getFractalis = routes.getFractalis _ map route
@@ -46,6 +46,6 @@ final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.ja
   val getView = routeFun(_.getView)
   val classify = routeFun(_.classify)
   val regress = routeFun(_.regress)
-  val learnUnsupervised = routeFun(_.learnUnsupervised)
+  val cluster = routeFun(_.cluster)
   val selectFeaturesAsChiSquare = routeFun(_.selectFeaturesAsChiSquare)
 }

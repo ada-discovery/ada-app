@@ -98,7 +98,7 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getRegression = dispatch(_.getRegression)
 
-  override def getUnsupervisedLearning = dispatch(_.getUnsupervisedLearning)
+  override def getClusterization = dispatch(_.getClusterization)
 
   override def classify(
     mlModelId: BSONObjectID,
@@ -122,12 +122,12 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     crossValidationFolds: Option[Int]
   ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterOrId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds))
 
-  override def learnUnsupervised(
+  override def cluster(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     filterOrId: FilterOrId,
     pcaDims: Option[Int]
-  ) = dispatch(_.learnUnsupervised(mlModelId, inputFieldNames, filterOrId, pcaDims))
+  ) = dispatch(_.cluster(mlModelId, inputFieldNames, filterOrId, pcaDims))
 
   override def selectFeaturesAsChiSquare(
     inputFieldNames: Seq[String],
