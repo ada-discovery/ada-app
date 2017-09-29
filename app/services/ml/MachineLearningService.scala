@@ -354,7 +354,7 @@ private class MachineLearningServiceImpl @Inject() (
     val df = jsonsToDataFrame(jsons, fieldNameAndTypes, stringFieldsNotToIndex)
 
     df.transform(
-      prepLearningDataFrame(featureFieldNames, None)
+      prepLearningDataFrame(featureFieldNames.toSet, None)
     )
   }
 
@@ -392,15 +392,15 @@ private class MachineLearningServiceImpl @Inject() (
   private def featureFieldNames(
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: Option[String]
-  ): Seq[String] =
+  ): Set[String] =
     outputFieldName.map( outputName =>
       fields.map(_._1).filterNot(_ == outputName)
     ).getOrElse(
       fields.map(_._1)
-    )
+    ).toSet
 
   private def prepLearningDataFrame(
-    featureFieldNames: Seq[String],
+    featureFieldNames: Set[String],
     outputFieldName: Option[String])(
     df: DataFrame
   ): DataFrame = {
@@ -706,10 +706,11 @@ private class MachineLearningServiceImpl @Inject() (
     val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName), Some(discretizerBucketsNum))
     val inputDf = indexBooleanLabel(df)
 
+    // get the Chi-Square model
     val model = selectFeaturesAsChiSquareModel(inputDf, featuresToSelectNum)
 
-    val featureNames = featureFieldNames(fields, Some(outputFieldName))
-
+    // extract the features
+    val featureNames = inputDf.columns.filterNot(columnName => columnName.equals("features") || columnName.equals("label"))
     model.selectedFeatures.map(featureNames(_))
   }
 
