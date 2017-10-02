@@ -4,14 +4,12 @@ import java.{lang => jl}
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltActions
-import com.banda.incal.domain.ReservoirLearningSetting
 import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
-import controllers.{EnumFormatter, JsonFormatter, SeqFormatter}
+import controllers.{EnumFormatter, JavaEnumFormatter, JsonFormatter, SeqFormatter}
 import controllers.core.WebContext
 import models.ml._
-import models.{Field, FieldTypeId, StorageType}
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory
 import play.api.{Configuration, Logger}
@@ -27,7 +25,6 @@ import util.MessageLogger
 import util.SecurityUtil.restrictAdmin
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class RCPredictionController @Inject()(
     deadbolt: DeadboltActions,
@@ -46,16 +43,20 @@ class RCPredictionController @Inject()(
   private implicit val intSeqFormatter = SeqFormatter.applyInt
   private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
   private implicit val vectorTransformTypeFormatter = EnumFormatter(VectorTransformType)
+  private implicit val activationFunctionTypeFormatter = JavaEnumFormatter[ActivationFunctionType]
 
   private val rcPredictionSettingsForm = Form(
     mapping(
       "reservoirNodeNums" -> of[Seq[Int]],
-      "reservoirInDegrees" -> of[Seq[Int]],
       "inputReservoirConnectivities" -> of[Seq[Double]],
       "reservoirSpectralRadiuses" -> of[Seq[Double]],
       "inScales" -> of[Seq[Double]],
-      "seriesPreprocessingType" -> optional(of[VectorTransformType.Value]),
       "predictAheads" -> of[Seq[Int]],
+      "reservoirInDegrees" -> optional(of[Seq[Int]]),
+      "reservoirCircularInEdges" -> optional(of[Seq[Int]]),
+      "reservoirFunctionType" -> of[ActivationFunctionType],
+      "reservoirFunctionParams" -> optional(of[Seq[Double]]),
+      "seriesPreprocessingType" -> optional(of[VectorTransformType.Value]),
       "inputSeriesFieldPaths" -> of[Seq[String]],
       "outputSeriesFieldPaths" -> of[Seq[String]],
       "washoutPeriod" -> number(min = 0),
@@ -76,7 +77,10 @@ class RCPredictionController @Inject()(
 
   private def createReservoirSetting(
     reservoirNodeNum: Int,
-    reservoirInDegree: Int,
+    reservoirInDegree: Option[Int],
+    reservoirCircularInEdges: Option[Seq[Int]],
+    reservoirFunctionType: ActivationFunctionType,
+    reservoirFunctionParams: Option[Seq[Double]],
     inputReservoirConnectivity: Double,
     reservoirSpectralRadius: Double,
     inScale: Double,
@@ -95,15 +99,16 @@ class RCPredictionController @Inject()(
     setBias(1d)
     setNonBiasInitial(0d)
     setReservoirNodeNum(reservoirNodeNum)
-    setReservoirInDegree(Some(reservoirInDegree))
+    setReservoirInDegree(reservoirInDegree)
+    setReservoirCircularInEdges(reservoirCircularInEdges)
     setReservoirInDegreeDistribution(None) // Some(RandomDistribution.createPositiveNormalDistribution(classOf[Integer], 50d, 0d))
     setReservoirEdgesNum(None) // Some((0.02 * (250 * 250)).toInt)
     setReservoirPreferentialAttachment(false)
     setReservoirBias(false)
     setInputReservoirConnectivity(inputReservoirConnectivity)
     setReservoirSpectralRadius(reservoirSpectralRadius)
-    setReservoirFunctionType(ActivationFunctionType.Tanh)
-    setReservoirFunctionParams(None) // Some(Seq(0.5d : jl.Double, 0.25 * math.Pi : jl.Double, 0d : jl.Double))
+    setReservoirFunctionType(reservoirFunctionType)
+    setReservoirFunctionParams(reservoirFunctionParams.map(_.map(x => x: jl.Double))) // Some(Seq(0.5d : jl.Double, 0.25 * math.Pi : jl.Double, 0d : jl.Double))
     setWeightDistribution(weightRd)
     setWashoutPeriod(washoutPeriod)
     predictAhead = _predictAhead
@@ -148,6 +153,7 @@ class RCPredictionController @Inject()(
     // get the maximum size of the param seqs
     val maxSize = Seq(
       settings.reservoirNodeNums,
+      settings.reservoirInDegrees.getOrElse(Nil),
       settings.inputReservoirConnectivities,
       settings.reservoirSpectralRadiuses,
       settings.inScales,
@@ -156,8 +162,10 @@ class RCPredictionController @Inject()(
 
     def stream[T](xs: Seq[T]) = Stream.continually(xs).flatten.take(maxSize)
 
+    val reservoirInDegreesInit: Seq[Option[Int]] = settings.reservoirInDegrees.map(_.map(Some(_))).getOrElse(Seq(None))
+
     stream(settings.reservoirNodeNums).zip(
-    stream(settings.reservoirInDegrees).zip(
+    stream(reservoirInDegreesInit).zip(
     stream(settings.inputReservoirConnectivities).zip(
     stream(settings.reservoirSpectralRadiuses).zip(
     stream(settings.inScales).zip(
@@ -184,6 +192,9 @@ class RCPredictionController @Inject()(
         val setting = createReservoirSetting(
           reservoirNodeNum,
           reservoirInDegree,
+          settings.reservoirCircularInEdges,
+          settings.reservoirFunctionType,
+          settings.reservoirFunctionParams,
           inputReservoirConnectivity,
           reservoirSpectralRadius,
           inScale,

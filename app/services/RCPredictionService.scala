@@ -255,7 +255,10 @@ class RCPredictionServiceImpl @Inject()(
           None,
           RCPredictionSetting(
             setting.getReservoirNodeNum,
-            setting.getReservoirInDegree.get,
+            setting.getReservoirInDegree,
+            setting.getReservoirCircularInEdges,
+            setting.getReservoirFunctionType,
+            setting.getReservoirFunctionParams.map(_.map(_.toDouble)),
             setting.getInputReservoirConnectivity,
             setting.getReservoirSpectralRadius,
             setting.getInScale,
@@ -595,7 +598,7 @@ class RCPredictionServiceImpl @Inject()(
       _ <- dataSetService.updateDictionary(resultDataSetId, settingAndResultsFields, false, true)
 
       // save the results
-      _ <- newDsa.dataSetRepo.save(Seq(Json.toJson(item).as[JsObject]))
+      _ <- newDsa.dataSetRepo.save(Json.toJson(item).as[JsObject])
     } yield
       ()
 

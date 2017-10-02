@@ -78,6 +78,11 @@ object ReflectionUtil {
         mirror.reflectModule(enumType.termSymbol.asModule).instance.asInstanceOf[Enumeration]
     }
 
+  def javaEnumOrdinalValues[E <: Enum[E]](clazz: Class[E]): Map[Int, E] = {
+    val enumValues = clazz.getEnumConstants()
+    enumValues.map( value => (value.ordinal, value)).toMap
+  }
+
   def construct[T](typ: Type, values: Seq[Any]): T =
     construct(typeToClass(typ).asInstanceOf[Class[T]], values)
 

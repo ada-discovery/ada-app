@@ -1,24 +1,28 @@
 package models.ml
 
 import dataaccess._
-import models.json.{EnumFormat, OrdinalSortedEnumFormat}
+import models.json.{EnumFormat, JavaOrdinalEnumFormat, OrdinalSortedEnumFormat}
 import controllers.FlattenFormat
 import reactivemongo.play.json.BSONFormats._
-import play.api.libs.json.{Format, JsValue, Json}
+import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import util.FieldUtil
 import java.{util => ju}
 
 import com.banda.incal.domain.ReservoirLearningSetting
+import com.banda.network.domain.ActivationFunctionType
 
 case class RCPredictionSettings(
   reservoirNodeNums: Seq[Int],
-  reservoirInDegrees: Seq[Int],
   inputReservoirConnectivities: Seq[Double],
   reservoirSpectralRadiuses: Seq[Double],
   inScales: Seq[Double],
-  seriesPreprocessingType: Option[VectorTransformType.Value],
   predictAheads: Seq[Int],
+  reservoirInDegrees: Option[Seq[Int]],
+  reservoirCircularInEdges: Option[Seq[Int]],
+  reservoirFunctionType: ActivationFunctionType,
+  reservoirFunctionParams: Option[Seq[Double]],
+  seriesPreprocessingType: Option[VectorTransformType.Value],
   inputSeriesFieldPaths: Seq[String],
   outputSeriesFieldPaths: Seq[String],
   washoutPeriod: Int,
@@ -61,7 +65,10 @@ case class RCPredictionInputOutputSpec(
 
 case class RCPredictionSetting(
   reservoirNodeNum: Int,
-  reservoirInDegree: Int,
+  reservoirInDegree: Option[Int],
+  reservoirCircularInEdges: Option[Seq[Int]],
+  reservoirFunctionType: ActivationFunctionType,
+  reservoirFunctionParams: Option[Seq[Double]],
   inputReservoirConnectivity: Double,
   reservoirSpectralRadius: Double,
   inScale: Double,
@@ -82,13 +89,14 @@ case class RCPredictionSettingAndResults(
 object RCPredictionSettingAndResults {
   implicit val rcPredictionInputOutputSpecFormat = Json.format[RCPredictionInputOutputSpec]
   implicit val vectorTransformTypeFormat = OrdinalSortedEnumFormat.enumFormat(VectorTransformType)
+  implicit val activationFunctionTypeFormat = JavaOrdinalEnumFormat[ActivationFunctionType]
   implicit val rcPredictionSettingFormat = Json.format[RCPredictionSetting]
   implicit val rcPredictionSettingAndResultsFormat = new FlattenFormat(Json.format[RCPredictionSettingAndResults], "-")
 }
 
 object XXX extends App {
 
-  val setting = RCPredictionSetting(20, 20, 0.1, 0.5, 10, Some(VectorTransformType.MinMaxPlusMinusOneScaler), 10, 1)
+  val setting = RCPredictionSetting(20, Some(20), None, ActivationFunctionType.Tanh, None, 0.1, 0.5, 10, Some(VectorTransformType.MinMaxPlusMinusOneScaler), 10, 1)
 
   val ioSpec = RCPredictionInputOutputSpec(Seq("lla", "lll"), Seq("a", "bb"), Some(3), None, Some(100), "dataset1", "dataset2", "datasetname")
 

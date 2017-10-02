@@ -9,6 +9,7 @@
 @import models.ml.RCPredictionSettings
 @import models.ml.VectorTransformType
 
+@import com.banda.network.domain.ActivationFunctionType
 @(
     form: Form[RCPredictionSettings],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -30,8 +31,12 @@
     }
 }
 
-@selectAux(fieldName: String, enum: Enumeration) = {
+@selectEnumAux(fieldName: String, enum: Enumeration) = {
     @select("rcPredictionSettings", fieldName, form, util.enumToValueString(enum), true, Nil, 3)
+}
+
+@selectJavaEnumAux(fieldName: String, clazz: Class[_]) = {
+    @select("rcPredictionSettings", fieldName, form, clazz.getEnumConstants.map( x => (x.toString, x.toString)), true, Nil, 3)
 }
 
 @main("RC Prediction", Some(datasetMenu(dataSpaceMetaInfos))) {
@@ -48,8 +53,12 @@
                 <fieldset>
                     @inputTextAux("reservoirNodeNums", Some(50))
                     @inputTextAux("reservoirInDegrees", Some(50))
+                    @inputTextAux("reservoirCircularInEdges")
+                    @selectJavaEnumAux("reservoirFunctionType", classOf[ActivationFunctionType])
+                    @inputTextAux("reservoirFunctionParams")
                     @inputTextAux("inputReservoirConnectivities", Some(0.5))
                     @inputTextAux("reservoirSpectralRadiuses", Some(1))
+                    <hr/>
                     @inputTextAux("inScales", Some(1))
                     @inputTextAux("predictAheads", Some(1))
                     @inputTextAux("washoutPeriod", Some(500))
@@ -62,7 +71,7 @@
                     @inputTextAux("resultDataSetId", Some("mpower_challenge.walking_activity_training_rc_weights"))
                     @inputTextAux("resultDataSetName", Some("Walking Activity Training (RC) Weights"))
                     @inputTextAux("resultDataSetIndex", Some(1))
-                    @selectAux("seriesPreprocessingType", VectorTransformType)
+                    @selectEnumAux("seriesPreprocessingType", VectorTransformType)
                     @inputTextAux("batchSize", Some(20))
                     @inputTextAux("preserveWeightFieldNames", Some("recordId, medTimepoint, healthCode"))
                 </fieldset>

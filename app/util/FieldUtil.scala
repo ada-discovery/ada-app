@@ -4,6 +4,7 @@ import scala.reflect.runtime.universe._
 import models.{AdaException, FieldTypeId, FieldTypeSpec}
 import play.api.libs.json.JsValue
 import java.{util => ju}
+import dataaccess.{ReflectionUtil => CoreReflectionUtil}
 
 import reactivemongo.bson.BSONObjectID
 
@@ -24,7 +25,7 @@ object FieldUtil {
     excludedFieldSet: Set[String] = Set(),
     treatEnumAsString: Boolean = false
   ): Traversable[(String, FieldTypeSpec)] = {
-    val memberNamesAndTypes = dataaccess.ReflectionUtil.getCaseClassMemberNamesAndTypes(typ).filter(x => !excludedFieldSet.contains(x._1))
+    val memberNamesAndTypes = CoreReflectionUtil.getCaseClassMemberNamesAndTypes(typ).filter(x => !excludedFieldSet.contains(x._1))
 
     memberNamesAndTypes.map { case (fieldName, memberType) =>
       try {
@@ -60,11 +61,7 @@ object FieldUtil {
   }
 
   private def getEnumValueNames(typ: Type): Traversable[String] = {
-    val enumValueType =
-      if (typ <:< typeOf[Option[_]])
-        typ.typeArgs.head
-      else
-        typ
+    val enumValueType = unwrapIfOption(typ)
 
     enumValueType match {
       case TypeRef(enumType, _, _) => {
@@ -73,6 +70,16 @@ object FieldUtil {
       }
     }
   }
+
+  private def getJavaEnumOrdinalValues[E <: Enum[E]](typ: Type): Map[Int, String] = {
+    val enumType = unwrapIfOption(typ)
+    val clazz = CoreReflectionUtil.typeToClass(enumType).asInstanceOf[Class[E]]
+    val enumValues = CoreReflectionUtil.javaEnumOrdinalValues(clazz)
+    enumValues.map { case (ordinal, value) => (ordinal, value.toString) }
+  }
+
+  private def unwrapIfOption(typ: Type) =
+    if (typ <:< typeOf[Option[_]]) typ.typeArgs.head else typ
 
   @throws(classOf[AdaException])
   private def toFieldTypeSpec(
@@ -99,6 +106,15 @@ object FieldUtil {
         else {
           val valueNames = getEnumValueNames(t).toSeq.sorted
           val enumMap = valueNames.zipWithIndex.map(_.swap).toMap
+          FieldTypeSpec(FieldTypeId.Enum, false, Some(enumMap))
+        }
+
+      // Java enum
+      case t if t subMatches typeOf[Enum[_]] =>
+        if (treatEnumAsString)
+          FieldTypeSpec(FieldTypeId.String)
+        else {
+          val enumMap = getJavaEnumOrdinalValues(t)
           FieldTypeSpec(FieldTypeId.Enum, false, Some(enumMap))
         }
 
