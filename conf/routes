@@ -107,15 +107,12 @@ GET         /studies/scatter                                                    
 GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/correlations                                                   controllers.dataset.DataSetDispatcher.getCorrelations(fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/cumulativeCount                                                controllers.dataset.DataSetDispatcher.getCumulativeCount(fieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
-GET         /studies/classification                                                 controllers.dataset.DataSetDispatcher.getClassification
 GET         /studies/regression                                                     controllers.dataset.DataSetDispatcher.getRegression
 GET         /studies/clusterization                                                 controllers.dataset.DataSetDispatcher.getClusterization
 GET         /studies/getSeriesProcessingSpec                                        controllers.dataset.DataSetDispatcher.getSeriesProcessingSpec
 POST        /studies/runSeriesProcessing                                            controllers.dataset.DataSetDispatcher.runSeriesProcessing
-POST        /studies/classify                                                       controllers.dataset.DataSetDispatcher.classify(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID], pcaDims: Option[Int], trainingTestingSplit: Option[Double], repetitions: Option[Int], crossValidationFolds: Option[Int])
-POST        /studies/regress                                                        controllers.dataset.DataSetDispatcher.regress(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID], pcaDims: Option[Int], trainingTestingSplit: Option[Double], repetitions: Option[Int], crossValidationFolds: Option[Int])
-POST        /studies/cluster                                                        controllers.dataset.DataSetDispatcher.cluster(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID], pcaDims: Option[Int])
-POST        /studies/selectFeaturesAsChiSquare                                      controllers.dataset.DataSetDispatcher.selectFeaturesAsChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID], featuresToSelectNum: Int, discretizerBucketsNum: Int)
+POST        /studies/regress                                                        controllers.dataset.DataSetDispatcher.regress(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], pcaDims: Option[Int], trainingTestingSplit: Option[Double], repetitions: Option[Int], crossValidationFolds: Option[Int])
+POST        /studies/cluster                                                        controllers.dataset.DataSetDispatcher.cluster(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterId: Option[BSONObjectID], pcaDims: Option[Int])
 GET         /studies/fractalis                                                      controllers.dataset.DataSetDispatcher.getFractalis(fieldName: Option[String] ?= None)
 GET         /studies/table                                                          controllers.dataset.DataSetDispatcher.getTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
 GET         /studies/widgetPanelAndTable                                            controllers.dataset.DataSetDispatcher.getWidgetPanelAndTable(dataViewId: BSONObjectID, tablePage: Int, tableOrder: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
@@ -180,6 +177,7 @@ GET         /studies/dataviews/addCorrelation                                   
 GET         /studies/dataviews/addTableFields                                       controllers.dataset.DataViewDispatcher.addTableFields(dataViewId: BSONObjectID, fieldNames: Seq[String])
 GET         /studies/dataviews/saveFilter                                           controllers.dataset.DataViewDispatcher.saveFilter(dataViewId: BSONObjectID, filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]])
 
+# DataSetSetting
 GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: String ?= "dataSetId")
 GET         /studies/setting/new                                                    controllers.dataset.DataSetSettingController.create
@@ -191,6 +189,7 @@ POST        /studies/setting/:id                                                
 POST        /studies/setting/update/:id                                             controllers.dataset.DataSetSettingController.updateForDataSet(id: BSONObjectID)
 POST        /studies/setting/:id/delete                                             controllers.dataset.DataSetSettingController.delete(id: BSONObjectID)
 
+# Data SpaceMeta info
 GET         /studies/metainfo                                                       controllers.dataset.DataSpaceMetaInfoController.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/metainfo/all                                                   controllers.dataset.DataSpaceMetaInfoController.listAll(s: String ?= "name")
 GET         /studies/metainfo/new                                                   controllers.dataset.DataSpaceMetaInfoController.create
@@ -200,6 +199,13 @@ GET         /studies/metainfo/:id                                               
 POST        /studies/metainfo/:id                                                   controllers.dataset.DataSpaceMetaInfoController.update(id: BSONObjectID)
 POST        /studies/metainfo/:id/delete                                            controllers.dataset.DataSpaceMetaInfoController.delete(id: BSONObjectID)
 POST        /studies/metainfo/deleteDataSet/:id                                     controllers.dataset.DataSpaceMetaInfoController.deleteDataSet(id: BSONObjectID)
+
+# ClasificationRunDispatcher
+GET         /studies/classificationRuns                                             controllers.dataset.ClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /studies/classificationRuns/get/:id                                     controllers.dataset.ClassificationRunDispatcher.get(id: BSONObjectID)
+GET         /studies/classificationRuns/new                                         controllers.dataset.ClassificationRunDispatcher.create
+POST        /studies/classify                                                       controllers.dataset.ClassificationRunDispatcher.classify(setting: models.ml.ClassificationSetting, saveResults: Boolean)
+POST        /studies/selectFeaturesAsChiSquare                                      controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int, discretizerBucketsNum: Int)
 
 # ML Classification
 GET         /ml/classification                                                      controllers.ml.ClassificationController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[models.FilterCondition] ?= Nil)
