@@ -16,6 +16,7 @@ trait DataSetAccessor {
   def categoryRepo: CategoryRepo
   def filterRepo: FilterRepo
   def dataViewRepo: DataViewRepo
+  def classificationResultRepo: ClassificationResultRepo
 
   // following attributes are dynamically created, i.e., each time the respective function is called
 
@@ -38,6 +39,7 @@ protected class DataSetAccessorImpl(
     val categoryRepo: CategoryRepo,
     val filterRepo: FilterRepo,
     val dataViewRepo: DataViewRepo,
+    val classificationResultRepo: ClassificationResultRepo,
     dataSetRepoCreate: (Seq[(String, FieldTypeSpec)], Option[DataSetSetting]) => Future[JsonCrudRepo],
     dataSetMetaInfoRepo: DataSetMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo

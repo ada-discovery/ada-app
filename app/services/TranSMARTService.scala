@@ -2,7 +2,7 @@ package services
 
 import javax.inject.{Inject, Singleton}
 
-import _root_.util.JsonUtil.jsonObjectsToCsv
+import dataaccess.JsonUtil.jsonObjectsToCsv
 import com.google.inject.ImplementedBy
 import models.Category
 import dataaccess.{FieldTypeHelper, FieldType}

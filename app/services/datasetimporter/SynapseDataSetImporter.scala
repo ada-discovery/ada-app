@@ -10,7 +10,7 @@ import models.SynapseDataSetImport
 import play.api.Configuration
 import play.api.libs.json.{JsArray, JsObject, Json}
 import services.{SynapseService, SynapseServiceFactory}
-import util.JsonUtil
+import dataaccess.JsonUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await._

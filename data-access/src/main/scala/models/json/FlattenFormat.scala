@@ -1,9 +1,13 @@
-package controllers
+package models.json
 
+import dataaccess.JsonUtil
 import play.api.libs.json._
-import _root_.util.JsonUtil
 
-class FlattenFormat[T](val format: Format[T], delimiter: String = ".") extends Format[T] {
+class FlattenFormat[T](
+    val format: Format[T],
+    delimiter: String = ".",
+    excludedFieldNames: Set[String] = Set()
+  ) extends Format[T] {
 
   override def reads(json: JsValue): JsResult[T] = {
     val newJson = json match {
@@ -16,7 +20,7 @@ class FlattenFormat[T](val format: Format[T], delimiter: String = ".") extends F
 
   override def writes(json: T): JsValue =
     format.writes(json) match {
-      case jsObject: JsObject => JsonUtil.flatten(jsObject, delimiter)
+      case jsObject: JsObject => JsonUtil.flatten(jsObject, delimiter, excludedFieldNames)
       case json => json
     }
 }

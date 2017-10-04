@@ -1,13 +1,13 @@
 @import views.html.layout.jsonShow
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import controllers.dataset.DataSetShowViewDataHolder
-@import controllers.core.WebContext._
-@import controllers.core.WebContext
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     data: DataSetShowViewDataHolder
 )(
-    implicit context: WebContext
+    implicit context: DataSetWebContext
 )
 
 @jsonShow(

@@ -1,14 +1,7 @@
-@import views.html.table.paginatedJsonTable
-@import views.html.dataset.jsonModal$
-@import reactivemongo.bson.BSONObjectID
-@import play.api.libs.json.{JsValue, JsObject}
-@import models.{Field, FieldTypeId}
-@import util.FieldTypeRenderer
-@import controllers.dataset.DataSetViewData
+@import views.html.dataset.jsonTable
+@import play.api.libs.json.JsObject
+@import models.Field
 @import controllers.dataset.DataSetRouter
-@import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-@import models.FilterCondition.FilterOrId
-@import models.DataSetFormattersAndIds.JsObjectIdentity
 
 @(
     page: Page[JsObject],
@@ -19,68 +12,14 @@
     implicit request: Request[_]
 )
 
-@jsonFieldLink(id: BSONObjectID, fieldName: String, fieldLabel: String, isArray: Boolean) = {
-    <a href="#" onclick="showJsonFieldValue('@id.stringify', '@fieldName', '@fieldLabel', @isArray);">
-        <span class="glyphicon glyphicon-list"></span>
-    </a>
-}
-
-@arrayFieldLink(id: BSONObjectID, fieldName: String, fieldLabel: String) = {
-    <a href="#" onclick="showArrayFieldChart('@id.stringify', '@fieldName', '@fieldLabel');">
-        <span class="glyphicon glyphicon-stats"></span>
-    </a>
-}
-
-@jsonRender(fieldLabel: String)(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @jsonFieldLink(id, fieldName, fieldLabel, false)
-}
-
-@arrayRender(fieldLabel: String)(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @jsonFieldLink(id, fieldName, fieldLabel, true)
-    @arrayFieldLink(id, fieldName, fieldLabel)
-}
-
-@jsonArrayRender(fieldLabel: String)(id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) = {
-    @jsonFieldLink(id, fieldName, fieldLabel, true)
-    @arrayFieldLink(id, fieldName, fieldLabel)
-}
-
-@render(field: Field) = @{
-    if (field.isArray) {
-        if(field.fieldType == FieldTypeId.Json)
-            (field.name, jsonArrayRender(field.labelOrElseName)_)
-        else
-            (field.name, arrayRender(field.labelOrElseName)_)
-    } else {
-        if(field.fieldType == FieldTypeId.Json)
-            (field.name, jsonRender(field.labelOrElseName)_)
-        else {
-            val renderer = FieldTypeRenderer(field)
-            (field.name, { (id: BSONObjectID, fieldName: String, jsValue: Option[JsValue]) => renderer(jsValue) })
-        }
-    }
-}
-
-@paginatedJsonTable(
+@jsonTable(
     page,
-    dataSetRouter.getTable(
-        _, _,
+    tableFields,
+    dataSetRouter.getTable(_, _,
         tableFields.map(_.name).toSeq,
         page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))
     ),
-    Some(
-        tableFields.map( field =>
-            field.label.map( fieldLabel => (field.name, fieldLabel))
-        ).flatten.toMap
-    ),
-    Some(tableFields.map(_.name).toSeq),
-    Some({ item : JsObject => dataSetRouter.get((item \ JsObjectIdentity.name).as[BSONObjectID])}),
-    Some(tableFields.map(render).toMap),
+    Some(dataSetRouter.get),
+    withRowClickableJs,
     true
 )
-
-@if(withRowClickableJs) {
-    <script type="text/javascript">
-        activateRowClickable();
-    </script>
-}

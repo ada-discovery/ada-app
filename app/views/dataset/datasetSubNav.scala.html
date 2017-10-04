@@ -3,57 +3,47 @@
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import reactivemongo.bson.BSONObjectID
 @import views.html.dataset.{datasetSubNavJs, datasetSubNav}
+@import controllers.DataSetWebContext._
 
-@()(implicit request: Request[_])
+@()(implicit context: DataSetWebContext)
 
 @listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
-    <li @if(matchesPath(call.url, request.uri, matchPrefixDepth)) {class="active"}>
+    <li @if(matchesPath(call.url, toRequest.uri, matchPrefixDepth)) {class="active"}>
         <a href="@call">@text</a>
     </li>
 }
 
-@defining(getParamValue(request.uri, "dataSet").get) { dataSetId =>
-    @defining((
-        new DataSetRouter(dataSetId),
-        new DictionaryRouter(dataSetId),
-        new CategoryRouter(dataSetId),
-        new FilterRouter(dataSetId),
-        new DataViewRouter(dataSetId),
-        new DataSetJsRouter(dataSetId)
-    )) { case (dataSetRouter, dictionaryRouter, categoryRouter, filterRouter, dataViewRouter, dataSetJsRouter) =>
-        <ul class="nav nav-tabs">
-            <li id="viewsDiv" class="dropdown">
-                <a class="dropdown-toggle" data-toggle="dropdown" href="#">Views<span class="caret"></span></a>
-                <ul id="viewsDropdownDiv" class="dropdown-menu">
-                </ul>
-            </li>
-            <li class="dropdown">
-                <a class="dropdown-toggle" data-toggle="dropdown" href="#">Analytics<span class="caret"></span></a>
-                <ul class="dropdown-menu">
-                    @listItem(dataSetRouter.plainGetDistribution, "Distribution", Some(2))
-                    @listItem(dataSetRouter.getCumulativeCount(None, None, Left(Nil)), "Cumulative Count", Some(2))
-                    @listItem(dataSetRouter.plainGetScatterStats, "Scatter", Some(2))
-                    @listItem(dataSetRouter.getCorrelations(Nil, Left(Nil)), "Correlation", Some(2))
-                    <li role="separator" class="divider"></li>
-                    @listItem(dataSetRouter.getClassification, "ML Classification", Some(2))
-                    @listItem(dataSetRouter.getRegression, "ML Regression", Some(2))
-                    @listItem(dataSetRouter.getClusterization, "ML Clusterization", Some(2))
-                    <li role="separator" class="divider"></li>
-                    @listItem(dataSetRouter.getSeriesProcessingSpec, "Series Processing", Some(2))
-                    <li role="separator" class="divider"></li>
-                    @listItem(dataSetRouter.getFractalis(None), "Fractalis", Some(2))
-                </ul>
-            </li>
-            @listItem(dictionaryRouter.plainList, "Dictionary", Some(2))
-            @listItem(categoryRouter.plainList, "Category Tree", Some(2))
-            <li class="dropdown">
-                <a class="dropdown-toggle" data-toggle="dropdown" href="#">Setting<span class="caret"></span></a>
-                <ul class="dropdown-menu">
-                    @listItem(dataSetSettingRoutes.editForDataSet(dataSetId), "General", Some(2))
-                    @listItem(filterRouter.plainList, "Filters", Some(2))
-                    @listItem(dataViewRouter.plainList, "Views", Some(2))
-                </ul>
-            </li>
+<ul class="nav nav-tabs">
+    <li id="viewsDiv" class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Views<span class="caret"></span></a>
+        <ul id="viewsDropdownDiv" class="dropdown-menu">
         </ul>
-    }
-}
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Analytics<span class="caret"></span></a>
+        <ul class="dropdown-menu">
+            @listItem(dataSetRouter.plainGetDistribution, "Distribution", Some(2))
+            @listItem(dataSetRouter.getCumulativeCount(None, None, Left(Nil)), "Cumulative Count", Some(2))
+            @listItem(dataSetRouter.plainGetScatterStats, "Scatter", Some(2))
+            @listItem(dataSetRouter.getCorrelations(Nil, Left(Nil)), "Correlation", Some(2))
+            <li role="separator" class="divider"></li>
+            @listItem(classificationRunRouter.plainList, "ML Classification", Some(2))
+            @listItem(dataSetRouter.getRegression, "ML Regression", Some(2))
+            @listItem(dataSetRouter.getClusterization, "ML Clusterization", Some(2))
+            <li role="separator" class="divider"></li>
+            @listItem(dataSetRouter.getSeriesProcessingSpec, "Series Processing", Some(2))
+            <li role="separator" class="divider"></li>
+            @listItem(dataSetRouter.getFractalis(None), "Fractalis", Some(2))
+        </ul>
+    </li>
+    @listItem(dictionaryRouter.plainList, "Dictionary", Some(2))
+    @listItem(categoryRouter.plainList, "Category Tree", Some(2))
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">Setting<span class="caret"></span></a>
+        <ul class="dropdown-menu">
+            @listItem(dataSetSettingRoutes.editForDataSet(context.dataSetId), "General", Some(2))
+            @listItem(filterRouter.plainList, "Filters", Some(2))
+            @listItem(dataViewRouter.plainList, "Views", Some(2))
+        </ul>
+    </li>
+</ul>

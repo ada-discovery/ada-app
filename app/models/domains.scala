@@ -3,7 +3,7 @@ package models
 import com.fasterxml.jackson.core.JsonParseException
 import controllers.BSONObjectIDQueryStringBindable
 import play.api.mvc.QueryStringBindable
-import util.JsonUtil
+import dataaccess.JsonUtil
 import dataaccess.BSONObjectIdentity
 import models.FilterCondition.{FilterOrId, filterConditionFormat, filterFormat}
 import models.DataSetFormattersAndIds.enumTypeFormat
@@ -15,6 +15,8 @@ import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
 import models.json.EnumFormat
 import models.json.EitherFormat._
+import models.ml.ClassificationSetting
+import models.ml.ClassificationResult.classificationSettingFormat
 
 case class Message(
   _id: Option[BSONObjectID],
@@ -82,4 +84,5 @@ object QueryStringBinders {
   implicit val FilterOrIdBinder = createQueryStringBinder[FilterOrId]
   implicit val FilterOrIdSeqBinder = createQueryStringBinder[Seq[FilterOrId]]
   implicit val TablePageSeqBinder = createQueryStringBinder[Seq[PageOrder]]
+  implicit val ClassificationSettingBinder = createQueryStringBinder[ClassificationSetting]
 }

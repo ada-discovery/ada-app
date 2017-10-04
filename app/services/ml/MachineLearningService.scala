@@ -584,8 +584,18 @@ private class MachineLearningServiceImpl @Inject() (
     // Fit the model
     val lrModel = estimator.fit(trainData)
 
-    val trainPredictions = lrModel.transform(trainData)
-    val testPredictions = lrModel.transform(testData)
+    val predictionVectorizer = new IndexVectorizer
+    predictionVectorizer.setInputCol("prediction")
+    predictionVectorizer.setOutputCol("rawPrediction")
+
+    def getPredictions(df: DataFrame): DataFrame = {
+      val predictions = lrModel.transform(df)
+      val hasRawPrediction = predictions.columns.contains("rawPrediction")
+      if (hasRawPrediction) predictions else predictionVectorizer.transform(predictions)
+    }
+
+    val trainPredictions = getPredictions(trainData)
+    val testPredictions = getPredictions(testData)
 
     metricWithEvaluators.map { case (metric, evaluator) =>
       try {
@@ -789,19 +799,19 @@ object RegressionEvalMetric extends Enumeration {
 abstract class Performance {
   type T <: Enumeration#Value
   def evalMetric: T
-  def trainingTestingResults: Traversable[(Double, Double)]
+  def trainingTestResults: Traversable[(Double, Double)]
 }
 
 case class ClassificationPerformance (
   val evalMetric: ClassificationEvalMetric.Value,
-  val trainingTestingResults: Traversable[(Double, Double)]
+  val trainingTestResults: Traversable[(Double, Double)]
 ) extends Performance {
   override type T = ClassificationEvalMetric.Value
 }
 
 case class RegressionPerformance(
   val evalMetric: RegressionEvalMetric.Value,
-  val trainingTestingResults: Traversable[(Double, Double)]
+  val trainingTestResults: Traversable[(Double, Double)]
 ) extends Performance {
   override type T = RegressionEvalMetric.Value
 }

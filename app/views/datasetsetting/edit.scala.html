@@ -3,8 +3,8 @@
 @import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import models.DataSpaceMetaInfo
 @import models.DataSetSetting
-@import controllers.core.WebContext._
-@import controllers.core.WebContext
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     form: Form[DataSetSetting],
@@ -13,7 +13,7 @@
     fieldNamesCall: Call,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
-    implicit context: WebContext
+    implicit context: DataSetWebContext
 )
 
 @layout.edit(

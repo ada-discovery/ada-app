@@ -4,7 +4,7 @@ import org.apache.commons.lang3.StringEscapeUtils
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.JsObject
 import play.api.http.HeaderNames._
-import JsonUtil.jsonObjectsToCsv
+import dataaccess.JsonUtil.jsonObjectsToCsv
 import play.api.mvc.{ResponseHeader, Result}
 
 object WebExportUtil {

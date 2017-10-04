@@ -94,48 +94,27 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     fieldNameOption: Option[String]
   ) = dispatch(_.getFractalis(fieldNameOption))
 
-  override def getClassification = dispatch(_.getClassification)
-
   override def getRegression = dispatch(_.getRegression)
 
   override def getClusterization = dispatch(_.getClusterization)
-
-  override def classify(
-    mlModelId: BSONObjectID,
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterOrId: FilterOrId,
-    pcaDims: Option[Int],
-    trainingTestingSplit: Option[Double],
-    repetitions: Option[Int],
-    crossValidationFolds: Option[Int]
-  ) = dispatch(_.classify(mlModelId, inputFieldNames, outputFieldName, filterOrId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds))
 
   override def regress(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    filterOrId: FilterOrId,
+    filterId: Option[BSONObjectID],
     pcaDims: Option[Int],
     trainingTestingSplit: Option[Double],
     repetitions: Option[Int],
     crossValidationFolds: Option[Int]
-  ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterOrId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds))
+  ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds))
 
   override def cluster(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
-    filterOrId: FilterOrId,
+    filterId: Option[BSONObjectID],
     pcaDims: Option[Int]
-  ) = dispatch(_.cluster(mlModelId, inputFieldNames, filterOrId, pcaDims))
-
-  override def selectFeaturesAsChiSquare(
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterOrId: FilterOrId,
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
-  ) = dispatch(_.selectFeaturesAsChiSquare(inputFieldNames, outputFieldName, filterOrId, featuresToSelectNum, discretizerBucketsNum))
+  ) = dispatch(_.cluster(mlModelId, inputFieldNames, filterId, pcaDims))
 
   override def getSeriesProcessingSpec = dispatch(_.getSeriesProcessingSpec)
 

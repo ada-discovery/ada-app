@@ -26,5 +26,9 @@ class ControllerModule extends AbstractModule {
     install(new FactoryModuleBuilder()
       .implement(classOf[DataViewController], classOf[DataViewControllerImpl])
       .build(classOf[DataViewControllerFactory]))
+
+    install(new FactoryModuleBuilder()
+      .implement(classOf[ClassificationRunController], classOf[ClassificationRunControllerImpl])
+      .build(classOf[ClassificationRunControllerFactory]))
   }
 }

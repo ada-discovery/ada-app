@@ -1,7 +1,7 @@
 @import views.html.layout.main
 @import views.html.elements.{value => elementValue}
 @import play.api.libs.json.{JsObject, JsNull, JsValue}
-@import util.JsonUtil
+@import dataaccess.JsonUtil
 @import play.api.libs.json.JsReadable
 
 @(
@@ -37,7 +37,9 @@
                         fieldNameLabelAndRendererMap.get(fieldName).map(_._2.apply(value)).getOrElse(
                             JsonUtil.toString(value).getOrElse("")
                         ),
-                        false
+                        false,
+						None,
+						3
                     )
 				}
 			}

@@ -20,8 +20,8 @@ trait WidgetRepoController[E] {
   protected def excludedFieldNames: Traversable[String] = Nil
   protected def wgs: WidgetGenerationService
 
-  private lazy val fieldRepo = CaseClassFieldRepo[E](excludedFieldNames, true)(typeTag)
-  private lazy val jsonRepo = JsonFormatRepoAdapter.applyNoId(repo)(format)
+  protected lazy val fieldCaseClassRepo = CaseClassFieldRepo[E](excludedFieldNames, true)(typeTag)
+  protected lazy val jsonCaseClassRepo = JsonFormatRepoAdapter.applyNoId(repo)(format)
 
   def widgets(
     widgetSpecs: Traversable[WidgetSpec],
@@ -30,13 +30,10 @@ trait WidgetRepoController[E] {
     for {
       fields <- {
         val fieldNames = (criteria.map(_.fieldName) ++ widgetSpecs.flatMap(_.fieldNames)).toSet
-        if (fieldRepo == null) {
-          println("Field Repo is NULL!!!!!!!")
-        }
-        fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
+        fieldCaseClassRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
       }
 
-      widgets <- wgs.apply(widgetSpecs, jsonRepo, criteria, Map(), fields, true)
+      widgets <- wgs.apply(widgetSpecs, jsonCaseClassRepo, criteria, Map(), fields, true)
   } yield
       widgets.map(_.map(_._1))
 }

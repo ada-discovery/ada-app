@@ -74,7 +74,11 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   // create view and data
 
-  override protected type CreateViewData = (String, Form[Category], Traversable[Category])
+  override protected type CreateViewData = (
+    String,
+    Form[Category],
+    Traversable[Category]
+  )
 
   override protected def getFormCreateViewData(form: Form[Category]) = {
     val dataSetNameFuture = dsa.dataSetName
@@ -84,7 +88,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       dataSetName <- dataSetNameFuture
       allCategories <- categoriesFuture
     } yield
-      (dataSetName + " Categoy", form, allCategories)
+      (dataSetName + " Category", form, allCategories)
   }
 
   override protected[controllers] def createView = { implicit ctx =>
@@ -141,7 +145,11 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   // list view and data
 
-  override protected type ListViewData = (String, Page[Category], Traversable[DataSpaceMetaInfo])
+  override protected type ListViewData = (
+    String,
+    Page[Category],
+    Traversable[DataSpaceMetaInfo]
+  )
 
   override protected def getListViewData(
     page: Page[Category]

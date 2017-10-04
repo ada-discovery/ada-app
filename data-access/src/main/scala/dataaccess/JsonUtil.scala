@@ -1,12 +1,9 @@
-package util
+package dataaccess
 
-import java.text.{ParseException, SimpleDateFormat}
-
-import com.fasterxml.jackson.core.JsonParseException
-import play.api.libs.json.{JsObject, _}
-import play.api.mvc.QueryStringBindable
-import java.util.Date
+import java.text.SimpleDateFormat
 import java.util.regex.Pattern
+
+import play.api.libs.json.{JsObject, _}
 
 object JsonUtil {
 
@@ -85,14 +82,19 @@ object JsonUtil {
   def flatten(
     json: JsObject,
     delimiter: String = ".",
+    excludedFieldNames: Set[String] = Set(),
     prefix: Option[String] = None
   ): JsObject =
     json.fields.foldLeft(Json.obj()) {
       case (acc, (fieldName, v)) =>
         val newPrefix = prefix.map(prefix => s"$prefix$delimiter$fieldName").getOrElse(fieldName)
-        v match {
-          case jsObject: JsObject => acc.deepMerge(flatten(jsObject, delimiter, Some(newPrefix)))
-          case _ => acc + (newPrefix -> v)
+        if (excludedFieldNames.contains(fieldName)) {
+          acc + (newPrefix -> v)
+        } else {
+          v match {
+            case jsObject: JsObject => acc.deepMerge(flatten(jsObject, delimiter, excludedFieldNames, Some(newPrefix)))
+            case _ => acc + (newPrefix -> v)
+          }
         }
     }
 

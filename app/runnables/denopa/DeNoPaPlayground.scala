@@ -13,7 +13,7 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.io.Source
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
-import util.JsonUtil
+import dataaccess.JsonUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

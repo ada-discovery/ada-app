@@ -1,6 +1,7 @@
 @import views.html.dataset.{datasetSubNav, datasetSubNavJs}
+@import controllers.DataSetWebContext._
 
-@()(implicit request: Request[_])
+@()(implicit context: DataSetWebContext)
 
 @datasetSubNav()
 @datasetSubNavJs()

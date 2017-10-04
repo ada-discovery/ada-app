@@ -15,7 +15,7 @@ import runnables.DataSetId._
 import runnables.GuiceBuilderRunnable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import dataaccess.CategoryRepo.saveRecursively
-import util.JsonUtil.escapeKey
+import dataaccess.JsonUtil.escapeKey
 import scala.concurrent.duration._
 
 import scala.concurrent.Await.result

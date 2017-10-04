@@ -1,0 +1,39 @@
+@import views.html.table.paginatedJsonTable
+@import reactivemongo.bson.BSONObjectID
+@import play.api.libs.json.{JsValue, JsObject}
+@import models.Field
+@import controllers.dataset.DataSetRouter
+@import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+@import models.DataSetFormattersAndIds.JsObjectIdentity
+@import util.FieldTypeFullRenderer
+
+@(
+    page: Page[JsObject],
+    tableFields: Traversable[Field],
+    refreshCall: (Int, String) => Call,
+    rowClickCall: Option[BSONObjectID => Call] = None,
+    withRowClickableJs: Boolean = false,
+    isAjaxRefresh: Boolean = false
+)(
+    implicit request: Request[_]
+)
+
+@paginatedJsonTable(
+    page,
+    refreshCall,
+    Some(
+        tableFields.map( field =>
+            field.label.map( fieldLabel => (field.name, fieldLabel))
+        ).flatten.toMap
+    ),
+    Some(tableFields.map(_.name).toSeq),
+    rowClickCall.map( rowClick => { item : JsObject => rowClick((item \ JsObjectIdentity.name).as[BSONObjectID]) }),
+    Some(tableFields.map(field => (field.name, FieldTypeFullRenderer(field))).toMap),
+    isAjaxRefresh
+)
+
+@if(withRowClickableJs) {
+    <script type="text/javascript">
+        activateRowClickable();
+    </script>
+}

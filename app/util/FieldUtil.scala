@@ -1,16 +1,27 @@
 package util
 
 import scala.reflect.runtime.universe._
-import models.{AdaException, FieldTypeId, FieldTypeSpec}
+import models.{AdaException, Field, FieldTypeId, FieldTypeSpec}
 import play.api.libs.json.JsValue
 import java.{util => ju}
-import dataaccess.{ReflectionUtil => CoreReflectionUtil}
 
+import dataaccess.{FieldTypeHelper, ReflectionUtil => CoreReflectionUtil}
 import reactivemongo.bson.BSONObjectID
 
 import scala.collection.Traversable
 
 object FieldUtil {
+
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
+
+  def valueConverters(
+    fields: Traversable[Field]
+  ): Map[String, String => Option[Any]] =
+    fields.map { field =>
+      val fieldType = ftf(field.fieldTypeSpec)
+      val converter = { text: String => fieldType.valueStringToValue(text) }
+      (field.name, converter)
+    }.toMap
 
   def caseClassToFlatFieldTypes[T: TypeTag](
     delimiter: String = ".",
@@ -33,7 +44,9 @@ object FieldUtil {
         Seq((fieldName, fieldTypeSpec))
       } catch {
         case e: AdaException => {
-          val subFieldNameAndTypeSpecs = caseClassTypeToFlatFieldTypes(memberType, delimiter, excludedFieldSet, treatEnumAsString)
+          val subType = unwrapIfOption(memberType)
+
+          val subFieldNameAndTypeSpecs = caseClassTypeToFlatFieldTypes(subType, delimiter, excludedFieldSet, treatEnumAsString)
           if (subFieldNameAndTypeSpecs.isEmpty)
             throw e
           else

@@ -4,7 +4,8 @@ import java.util.Collections
 import java.{lang => jl, util => ju}
 import javax.inject.Inject
 
-import _root_.util.{FieldUtil, JsonUtil, retry, seqFutures}
+import _root_.util.{FieldUtil, retry, seqFutures}
+import dataaccess.JsonUtil
 import FieldUtil.caseClassToFlatFieldTypes
 import com.banda.incal.domain.ReservoirLearningSetting
 import com.banda.incal.prediction.{ErrorMeasures, ReservoirTrainerFactory}

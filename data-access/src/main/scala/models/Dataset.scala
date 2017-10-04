@@ -11,6 +11,7 @@ import dataaccess._
 import models.FilterCondition.filterFormat
 import models.DataView.dataViewFormat
 import models.json.{EnumFormat, ManifestedFormat, SerializableFormat, SubTypeFormat}
+import models.ml.ClassificationResult
 
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.ListBuffer
@@ -181,7 +182,8 @@ case class Dictionary(
   fields: Seq[Field],
   categories: Seq[Category],
   filters: Seq[Filter],
-  dataviews: Seq[DataView]
+  dataviews: Seq[DataView],
+  classificationResults: Seq[ClassificationResult]
 //  parents : Seq[Dictionary],
 )
 

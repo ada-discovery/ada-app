@@ -19,7 +19,7 @@ protected[dataaccess] class DictionarySubordinateMongoAsyncCrudRepo[E: Format, I
   ) extends SubordinateObjectMongoAsyncCrudRepo[E, ID, Dictionary, BSONObjectID](listName, dictionaryRepo) {
 
     override protected def getDefaultRoot =
-      Dictionary(None, dataSetId, Nil, Nil, Nil, Nil)
+      Dictionary(None, dataSetId, Nil, Nil, Nil, Nil, Nil)
 
     override protected def getRootObject =
       dictionaryRepo.find(Seq("dataSetId" #== dataSetId)).map(_.headOption)

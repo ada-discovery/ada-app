@@ -215,7 +215,7 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
     )
   }
 
-  private def toCriterion(
+  protected def toCriterion(
     valueConverters: Map[String, String => Option[Any]])(
     filterCondition: FilterCondition
   ): Option[Criterion[Any]] = {

@@ -66,28 +66,15 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     fieldName: Option[String]
   ): Action[AnyContent]
 
-  def getClassification: Action[AnyContent]
-
   def getRegression: Action[AnyContent]
 
   def getClusterization: Action[AnyContent]
-
-  def classify(
-    mlModelId: BSONObjectID,
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterOrId: FilterOrId,
-    pcaDims: Option[Int],
-    trainingTestingSplit: Option[Double],
-    repetitions: Option[Int],
-    crossValidationFolds: Option[Int]
-  ): Action[AnyContent]
 
   def regress(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    filterOrId: FilterOrId,
+    ffilterId: Option[BSONObjectID],
     pcaDims: Option[Int],
     trainingTestingSplit: Option[Double],
     repetitions: Option[Int],
@@ -97,16 +84,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def cluster(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
-    filterOrId: FilterOrId,
+    filterId: Option[BSONObjectID],
     pcaDims: Option[Int]
-  ): Action[AnyContent]
-
-  def selectFeaturesAsChiSquare(
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterOrId: FilterOrId,
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
   ): Action[AnyContent]
 
   def getSeriesProcessingSpec: Action[AnyContent]

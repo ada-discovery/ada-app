@@ -51,7 +51,11 @@ class UserController @Inject() (
 
   // create view and data
 
-  override protected type CreateViewData = (Form[User], Traversable[DataSpaceMetaInfo], DataSetControllerActionNames)
+  override protected type CreateViewData = (
+    Form[User],
+    Traversable[DataSpaceMetaInfo],
+    DataSetControllerActionNames
+  )
 
   override protected def getFormCreateViewData(form: Form[User]) =
     for {

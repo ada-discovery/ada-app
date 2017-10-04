@@ -1,0 +1,26 @@
+@import views.html.layout.jsonShow
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
+@import controllers.DataSetWebContext._
+@import controllers.DataSetWebContext
+@import models.ml.ClassificationResult
+@import models.ml.ClassificationResult._
+@import play.api.libs.json.Json
+@import play.api.libs.json.JsObject
+
+@(
+    title: String,
+    item: ClassificationResult,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@jsonShow(
+    title,
+    Json.toJson(item).as[JsObject],
+    classificationRunRouter.plainList,
+    false,
+    Map(),
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNavWithJs())
+)

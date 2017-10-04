@@ -1,0 +1,83 @@
+@import views.html.layout
+@import views.html.dataset.{filterWidgetPanel, datasetSubNavWithJs, datasetMenu}
+@import views.html.chart.highcharts.highchartsJsImport
+@import views.html.table.paginatedTable
+@import views.html.filter.{filter, filterWithJs}
+@import views.html.widget.widgetPanelJs
+@import util.typeColumns
+@import models.DataSpaceMetaInfo
+@import models.Field
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+@import models.ml.ClassificationResult
+@import reactivemongo.bson.BSONObjectID
+
+@(
+    domainName : String,
+    page: Page[ClassificationResult],
+    widgets: Traversable[Widget],
+    fieldNameLabelMap: Map[String, String],
+    allClassificationRunFields: Traversable[Field],
+    mlModelIdNameMap: Map[BSONObjectID, String],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@actions = {
+    <div class="row">
+        <div class="col-md-10">
+            @filterWithJs(
+                page.filter,
+                classificationRunRouter.plainList,
+                Left(allClassificationRunFields),
+                None,
+                Some(FilterShowFieldStyle.LabelsOnly)
+            )
+        </div>
+        <div class="pull-right">
+            <ul class="list-inline">
+                <li>
+                    <a class="btn btn-success btn-sm pull-right" href="@classificationRunRouter.create" data-toggle="tooltip" title="Launch New Classification">
+                        <span class="glyphicon glyphicon-plus"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+}
+
+@table = {
+    @paginatedTable(
+        page,
+        classificationRunRouter.list(_, _, page.filterConditions),
+        typeColumns[ClassificationResult](
+            (Some("mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.setting.mlModelId).get),
+            (Some("outputFieldName"), "Output Field", result => fieldNameLabelMap.get(result.setting.outputFieldName).get),
+            (Some("trainingStats-accuracy-mean"), "Training Accuracy Mean", _.trainingStats.accuracy.mean),
+            (Some("trainingStats-weightedPrecision-mean"), "Training Precision Mean", _.trainingStats.weightedPrecision.mean),
+            (Some("testStats-accuracy-mean"), "Test Accuracy Mean", _.testStats.accuracy.mean),
+            (Some("testStats-weightedPrecision-mean"), "Test Precision Mean", _.testStats.weightedPrecision.mean),
+            (Some("timeCreated"), "Time Created", _.timeCreated.toString)
+        ),
+        Some({ item : Any => classificationRunRouter.get(item.asInstanceOf[ClassificationResult]._id.get)})
+    )
+}
+
+@bottomResources = {
+    @highchartsJsImport()
+    @widgetPanelJs(widgets)
+}
+
+@layout.list(
+    domainName,
+    None,
+    page.total,
+    Some(actions),
+    table,
+    Some(filterWidgetPanel("filterDiv", widgets, 6)),
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNavWithJs()),
+    None,
+    Some(bottomResources)
+)

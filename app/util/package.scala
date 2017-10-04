@@ -1,8 +1,7 @@
 import models._
 import org.apache.commons.lang.StringUtils
-import org.apache.spark.SparkContext
-import org.apache.spark.rdd.RDD
 import play.api.{Logger, LoggerLike}
+import dataaccess.JsonUtil
 import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
 

@@ -3,7 +3,8 @@ package runnables.mpower
 import java.{util => ju}
 import javax.inject.Inject
 
-import _root_.util.{JsonUtil, seqFutures}
+import _root_.util.seqFutures
+import dataaccess.JsonUtil
 import dataaccess.AscSort
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models._

@@ -8,7 +8,7 @@ import play.api.libs.json.{JsObject, JsArray}
 import play.api.libs.ws.{WSResponse, WSRequest, WSClient}
 import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import util.JsonUtil._
+import dataaccess.JsonUtil._
 
 import models.redcap.JsonFormat._
 import models.redcap._
@@ -95,24 +95,22 @@ protected[services] class RedCapServiceWSImpl @Inject() (
     configuration: Configuration
   ) extends RedCapService {
 
-  val req: WSRequest = ws.url(url) // configuration.getString("redcap.prodserver.api.url").get
+  private val req: WSRequest = ws.url(url).withRequestTimeout(360000) // configuration.getString("redcap.prodserver.api.url").get
 
-  val baseRequestData = Map(
+  private val baseRequestData = Map(
     "token" -> token,   // configuration.getString("redcap.prodserver.token").get
     "format" -> "json"
   )
 
-  val recordRequestData = baseRequestData ++ Map("content" -> "record", "type" -> "flat")
-  val metadataRequestData = baseRequestData ++ Map("content" -> "metadata")
-  val fieldNamesRequestData = baseRequestData ++ Map("content" -> "exportFieldNames")
+  private val recordRequestData = baseRequestData ++ Map("content" -> "record", "type" -> "flat")
+  private val metadataRequestData = baseRequestData ++ Map("content" -> "metadata")
+  private val fieldNamesRequestData = baseRequestData ++ Map("content" -> "exportFieldNames")
 
-  // Primitive cache
+  private def jsonRecords = runRedCapQuery(recordRequestData)
 
-  lazy val jsonRecords = runRedCapQuery(recordRequestData)
+  private def jsonMetadatas = runRedCapQuery(metadataRequestData)
 
-  lazy val jsonMetadatas = runRedCapQuery(metadataRequestData)
-
-  lazy val jsonFieldNames = runRedCapQuery(fieldNamesRequestData)
+  private def jsonFieldNames = runRedCapQuery(fieldNamesRequestData)
 
   // Services
 

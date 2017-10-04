@@ -10,10 +10,8 @@
 @import views.html.category.categorySelectionModal
 @import views.html.filter.{filter, filterWithJs}
 @import util.typeColumns
-@import controllers.dataset.{DataViewRouter, DataViewJsRouter, DictionaryRouter, DictionaryJsRouter, CategoryRouter, CategoryJsRouter}
 @import models.DataSpaceMetaInfo
-@import be.objectify.deadbolt.scala.views.html.restrict
-@import models.security.SecurityRole
+@import dataaccess.JsonUtil
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
 
@@ -107,7 +105,7 @@
         dictionaryRouter.list(_, _, page.filterConditions),
         typeColumns[Field](
             (None, "", _ => {<input type="checkbox" class="table-selection"/>}),
-            (Some("name"), "Name", {field => util.JsonUtil.unescapeKey(field.name)}),
+            (Some("name"), "Name", {field => JsonUtil.unescapeKey(field.name)}),
             (Some("label"), "Label", editableFieldLabelInput),
             (Some("fieldType"), "Type", _.fieldType),
             (Some("isArray"), "Is Array?", isArrayCheckbox),

@@ -3,13 +3,13 @@ package services
 import com.google.inject.ImplementedBy
 import dataaccess._
 import models.{Count, Field, FieldTypeId, FilterCondition}
-import play.api.libs.json.{JsLookupResult, JsNull, JsObject, JsReadable}
+import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import util.BasicStats.Quantiles
+import _root_.util.BasicStats.Quantiles
 
 import scala.collection.mutable.{Map => MMap}
-import util._
-import util.JsonUtil.project
+import _root_.util._
+import dataaccess.JsonUtil.project
 import java.{util => ju}
 import javax.inject.Singleton
 
@@ -174,13 +174,13 @@ class StatsServiceImpl extends StatsService {
         }
 
       case FieldTypeId.Date => {
-        def convert(ms: BigDecimal) = new ju.Date(ms.toLongExact)
+        def convert(ms: BigDecimal) = new ju.Date(ms.setScale(0, BigDecimal.RoundingMode.CEILING).toLongExact)
 
         for {
           numCounts <-
             numericalCountsRepo(
               {x : ju.Date => BigDecimal(x.getTime)},
-              {x : BigDecimal => new ju.Date(x.toLongExact)},
+              convert,
               field.name, fieldType.asValueOf[ju.Date], dataRepo, criteria, numericBinCount, false, None, None
             )
         } yield
@@ -218,7 +218,7 @@ class StatsServiceImpl extends StatsService {
             jsons <- dataRepo.find(criteria = criteria, projection = Seq(groupField.name))
           } yield {
             val typedFieldType = groupFieldType.asValueOf[String]
-            val values = jsons.map(json => typedFieldType.jsonToValue(json \ groupField.name)).flatten
+            val values = jsons.flatMap(json => typedFieldType.jsonToValue(json \ groupField.name))
             values.toSet.toSeq.sorted.map(string => (string, string))
           }
 
@@ -235,6 +235,15 @@ class StatsServiceImpl extends StatsService {
             (groupFieldSpec.displayFalseValue.getOrElse("False"), false)
           )
           Future(values)
+
+        case FieldTypeId.Json =>
+          for {
+            jsons <- dataRepo.find(criteria = criteria, projection = Seq(groupField.name))
+          } yield {
+            val typedFieldType = groupFieldType.asValueOf[JsObject]
+            val values = jsons.flatMap(json => typedFieldType.jsonToValue(json \ groupField.name))
+            values.toSet.toSeq.map { json: JsObject => (Json.stringify(json), json) }.sortBy(_._1)
+          }
       }
 
       seriesCounts <- {

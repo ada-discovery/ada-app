@@ -22,11 +22,9 @@ import views.html
 import play.api.mvc._
 
 import collection.mutable.{Map => MMap}
-import _root_.util.JsonUtil.jsonObjectsToCsv
 import _root_.util.SecurityUtil.restrictAdmin
 import controllers.core.WebContext
-
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 
 class RedCapController @Inject() (
     redCapServiceFactory: RedCapServiceFactory,

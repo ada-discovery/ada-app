@@ -7,7 +7,8 @@ import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import dataaccess._
 import dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, JsonCrudRepo}
 import dataaccess.JsonCrudRepoExtra.InfixOps
-import _root_.util.{GroupMapList, JsonUtil, MessageLogger}
+import dataaccess.JsonUtil
+import _root_.util.{GroupMapList, MessageLogger}
 import com.google.inject.ImplementedBy
 import models._
 import Criterion.Infix
@@ -21,7 +22,7 @@ import reactivemongo.bson.BSONObjectID
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import play.api.Configuration
-import _root_.util.JsonUtil._
+import dataaccess.JsonUtil._
 import _root_.util.{retry, seqFutures}
 import models.FilterCondition.FilterOrId
 import models.ml.{DataSetLink, DataSetSeriesProcessingSpec, SeriesProcessingSpec, SeriesProcessingType}

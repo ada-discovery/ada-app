@@ -67,7 +67,7 @@
                 var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
 
                 var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
-                var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
+//                var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
 
                 var pcaDims = $("#pcaDims").val()
                 if (!pcaDims)
@@ -87,7 +87,7 @@
 
                 $('#outputDiv').hide();
 
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.regress(mlModelId, inputFieldNames, outputFieldName, filterOrId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds).ajax( {
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.regress(mlModelId, inputFieldNames, outputFieldName, filterId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds).ajax( {
                     success: function(evalRates) {
                         showMessage("'" + mlModelName + "' regression finished.")
                         showMLOutput(evalRates)

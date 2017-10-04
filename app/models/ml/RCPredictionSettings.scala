@@ -1,8 +1,7 @@
 package models.ml
 
 import dataaccess._
-import models.json.{EnumFormat, JavaOrdinalEnumFormat, OrdinalSortedEnumFormat}
-import controllers.FlattenFormat
+import models.json.{EnumFormat, FlattenFormat, JavaOrdinalEnumFormat, OrdinalSortedEnumFormat}
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID

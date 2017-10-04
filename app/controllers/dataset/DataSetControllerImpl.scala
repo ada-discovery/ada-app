@@ -1,18 +1,18 @@
 package controllers.dataset
 
 import java.util.UUID
-import java.util.concurrent.TimeoutException
 import java.{util => ju}
 import javax.inject.Inject
 
 import scala.collection.mutable.{Map => MMap}
-import _root_.util.GroupMapList
-import _root_.util.JsonUtil._
+import _root_.util.{FieldUtil, GroupMapList}
+import dataaccess.JsonUtil._
 import models.ConditionType._
 import util.{BasicStats, fieldLabel}
 import _root_.util.WebExportUtil._
 import _root_.util.{seqFutures, shorten, toHumanReadableCamel}
 import dataaccess._
+import dataaccess.FilterRepoExtra._
 import models.{MultiChartDisplayOptions, _}
 import com.google.inject.assistedinject.Assisted
 import controllers._
@@ -43,7 +43,7 @@ import models.ml.SeriesProcessingSpec._
 
 import scala.math.Ordering.Implicits._
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Future
+import scala.concurrent.{Future, TimeoutException}
 
 trait GenericDataSetControllerFactory {
   def apply(dataSetId: String): DataSetController
@@ -206,13 +206,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
   ): Future[Map[String, String => Option[Any]]] =
-    getFields(fieldNames).map(
-      _.map { field =>
-        val fieldType = ftf(field.fieldTypeSpec)
-        val converter = { text: String => fieldType.valueStringToValue(text) }
-        (field.name, converter)
-      }.toMap
-    )
+    getFields(fieldNames).map(FieldUtil.valueConverters)
 
   /**
     * Generate content of csv export file and create download.
@@ -546,7 +540,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldNames: Seq[String],
     filterOrId: FilterOrId
   ) = Action.async { implicit request =>
-    val filterFuture = resolveFilter(filterOrId)
+    val filterFuture = filterRepo.resolve(filterOrId)
 
     val fieldsFuture = getFields(fieldNames)
 
@@ -636,7 +630,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Future[ViewResponse] =
     for {
       // use a given filter conditions or load one
-      resolvedFilter <- resolveFilter(filterOrId)
+      resolvedFilter <- filterRepo.resolve(filterOrId)
 
       // get the conditions
       conditions = resolvedFilter.conditions
@@ -648,7 +642,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       filterSubCriteria <- Future.sequence(
         widgetSpecs.map(_.subFilterId).flatten.toSet.map { subFilterId: BSONObjectID =>
 
-          resolveFilter(Right(subFilterId)).flatMap(resolvedFilter =>
+          filterRepo.resolve(Right(subFilterId)).flatMap(resolvedFilter =>
             toCriteria(resolvedFilter.conditions).map(criteria =>
               (subFilterId, criteria)
             )
@@ -691,7 +685,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Future[Traversable[Option[Widget]]] =
     for {
       // use a given filter conditions or load one
-      resolvedFilter <- resolveFilter(filterOrId)
+      resolvedFilter <- filterRepo.resolve(filterOrId)
 
       // get the conditions
       conditions = resolvedFilter.conditions
@@ -703,7 +697,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       filterSubCriteria <- Future.sequence(
         widgetSpecs.map(_.subFilterId).flatten.toSet.map { subFilterId: BSONObjectID =>
 
-          resolveFilter(Right(subFilterId)).flatMap(resolvedFilter =>
+          filterRepo.resolve(Right(subFilterId)).flatMap(resolvedFilter =>
             toCriteria(resolvedFilter.conditions).map(criteria =>
               (subFilterId, criteria)
             )
@@ -743,7 +737,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Future[InitViewResponse] =
     for {
       // use a given filter conditions or load one
-      resolvedFilter <- resolveFilter(filterOrId)
+      resolvedFilter <- filterRepo.resolve(filterOrId)
 
       // get the conditions
       conditions = resolvedFilter.conditions
@@ -867,8 +861,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     skip: Option[Int]
   ) = Action.async { implicit request =>
     for {
-    // use a given filter conditions or load one
-      resolvedFilter <- resolveFilter(filterOrId)
+      // use a given filter conditions or load one
+      resolvedFilter <- filterRepo.resolve(filterOrId)
 
       // get the conditions
       conditions = resolvedFilter.conditions
@@ -883,19 +877,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Accepts.Html() => BadRequest("Html version of the service is not available.")
         case Accepts.Json() => Ok(Json.toJson(items))
       }
-  }
-
-  private def resolveFilter(
-    filterOrId: FilterOrId
-  ): Future[Filter] = {
-    // use a given filter conditions or load one
-    filterOrId match {
-      case Right(id) =>
-        filterRepo.get(id).map(
-          _.getOrElse(new Filter(Nil))
-        )
-      case Left(filter) => Future(new models.Filter(filter))
-    }
   }
 
   private def setFilterLabels(
@@ -1026,7 +1007,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       groupField <- groupFieldFuture
 
       // use a given filter conditions or load one
-      resolvedFilter <- resolveFilter(filterOrId)
+      resolvedFilter <- filterRepo.resolve(filterOrId)
 
       // get the criteria
       criteria <- toCriteria(resolvedFilter.conditions)
@@ -1115,7 +1096,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         dataSpaceTree <- dataSpaceService.getTreeForCurrentUser(request)
 
         // use a given filter conditions or load one
-        resolvedFilter <- resolveFilter(filterOrId)
+        resolvedFilter <- filterRepo.resolve(filterOrId)
 
         // get the criteria
         criteria <- toCriteria(resolvedFilter.conditions)
@@ -1190,7 +1171,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       dataSpaceTree <- dataSpaceService.getTreeForCurrentUser(request)
 
       // use a given filter conditions or load one
-      resolvedFilter <- resolveFilter(filterOrId)
+      resolvedFilter <- filterRepo.resolve(filterOrId)
 
       // get the criteria
       criteria <- toCriteria(resolvedFilter.conditions)
@@ -1276,7 +1257,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         groupField <- getField(groupFieldName)
 
         // use a given filter conditions or load one
-        resolvedFilter <- resolveFilter(filterOrId)
+        resolvedFilter <- filterRepo.resolve(filterOrId)
 
         // get the criteria
         criteria <- toCriteria(resolvedFilter.conditions)
@@ -1331,7 +1312,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     val settingFuture = dsa.setting
 
-    val filterFuture = resolveFilter(filterOrId)
+    val filterFuture = filterRepo.resolve(filterOrId)
 
     val allCategoriesFuture = categoryRepo.find()
 
@@ -1383,51 +1364,30 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getFractalis(
     fieldNameOption: Option[String]
   ) = Action.async { implicit request => {
-    for {
-    // get the data set name, data space tree and the data set setting
-      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+      for {
+      // get the data set name, data space tree and the data set setting
+        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
 
-      fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
+        fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
 
-      // field
-      field <- fieldRepo.get(fieldName)
-    } yield {
-      render {
-        case Accepts.Html() => Ok(dataset.fractalis(
-          dataSetName,
-          field,
-          setting.filterShowFieldStyle,
-          tree
-        ))
-        case Accepts.Json() => BadRequest("getFractalis function doesn't support JSON response.")
+        // field
+        field <- fieldRepo.get(fieldName)
+      } yield {
+        render {
+          case Accepts.Html() => Ok(dataset.fractalis(
+            dataSetName,
+            field,
+            setting.filterShowFieldStyle,
+            tree
+          ))
+          case Accepts.Json() => BadRequest("getFractalis function doesn't support JSON response.")
+        }
       }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the getFractalis process")
+        InternalServerError(t.getMessage)
     }
-  }.recover {
-    case t: TimeoutException =>
-      Logger.error("Problem found in the getFractalis process")
-      InternalServerError(t.getMessage)
-  }
-  }
-
-  override def getClassification = Action.async { implicit request => {
-    for {
-    // get the data set name, data space tree and the data set setting
-      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
-    } yield {
-      render {
-        case Accepts.Html() => Ok(dataset.classification(
-          dataSetName,
-          setting.filterShowFieldStyle,
-          tree
-        ))
-        case Accepts.Json() => BadRequest("getClassification function doesn't support JSON response.")
-      }
-    }
-  }.recover {
-    case t: TimeoutException =>
-      Logger.error("Problem found in the getClassification process")
-      InternalServerError(t.getMessage)
-  }
   }
 
   override def getRegression = Action.async { implicit request => {
@@ -1490,39 +1450,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       (dataSetName, dataSpaceTree, setting)
   }
 
-  override def classify(
-    mlModelId: BSONObjectID,
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterOrId: FilterOrId,
-    pcaDims: Option[Int],
-    trainingTestingSplit: Option[Double],
-    repetitions: Option[Int],
-    crossValidationFolds: Option[Int]
-  ) = Action.async { implicit request =>
-    val learningSetting = LearningSetting(pcaDims, trainingTestingSplit, repetitions, crossValidationFolds)
-
-    for {
-      result <- runMLAux(
-        classificationRepo.get(mlModelId),
-        mlService.classify)(
-        inputFieldNames, outputFieldName, filterOrId, learningSetting
-      )
-    } yield
-      result match {
-        case Some(result) =>
-          logger.info("Classification finished with the following results: " + Json.stringify(result))
-          Ok(result)
-        case None =>
-          BadRequest(s"ML classification model with id ${mlModelId.stringify} not found.")
-      }
-  }
-
   override def regress(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    filterOrId: FilterOrId,
+    filterId: Option[BSONObjectID],
     pcaDims: Option[Int],
     trainingTestingSplit: Option[Double],
     repetitions: Option[Int],
@@ -1534,7 +1466,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       result <- runMLAux(
         regressionRepo.get(mlModelId),
         mlService.regress)(
-        inputFieldNames, outputFieldName, filterOrId, learningSetting
+        inputFieldNames, outputFieldName, filterId, learningSetting
       )
     } yield
       result match {
@@ -1551,7 +1483,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     runML: (Traversable[JsObject], Seq[(String, FieldTypeSpec)], String, M, LearningSetting) => Traversable[Performance])(
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    filterOrId: FilterOrId,
+    filterId: Option[BSONObjectID],
     learningSetting: LearningSetting
   ): Future[Option[JsArray]] = {
     val explFieldNamesToLoads =
@@ -1560,7 +1492,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       else
         Nil
 
-    val criteriaFuture = resolveFilter(filterOrId).flatMap(filter => toCriteria(filter.conditions))
+    val criteriaFuture = loadCriteria(filterId)
 
     for {
       mlModel <- getModel
@@ -1571,7 +1503,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
         val evalRates = runML(jsons, fieldNameAndSpecs, outputFieldName, mlModel, learningSetting)
         val evalJsons = evalRates.toSeq.sortBy(_.evalMetric.id).map { performance =>
-          val results = performance.trainingTestingResults
+          val results = performance.trainingTestResults
             Json.obj(
               "metricName" -> toHumanReadableCamel(performance.evalMetric.toString),
               "trainEvalRate" -> results.map(_._1).sum / results.size, // mean
@@ -1583,36 +1515,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
   }
 
-  override def selectFeaturesAsChiSquare(
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterOrId: FilterOrId,
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
-  ) = Action.async { implicit request =>
-    val explFieldNamesToLoads =
-      if (inputFieldNames.nonEmpty)
-        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
-      else
-        Nil
-
-    val criteriaFuture = resolveFilter(filterOrId).flatMap(filter => toCriteria(filter.conditions))
-
-    for {
-      criteria <- criteriaFuture
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
-    } yield {
-      val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-      val fieldNames = mlService.selectFeaturesAsChiSquare(jsons, fieldNameAndSpecs, outputFieldName, featuresToSelectNum, discretizerBucketsNum)
-      val json = JsArray(fieldNames.map(JsString(_)).toSeq)
-      Ok(json)
-    }
-  }
-
   override def cluster(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
-    filterOrId: FilterOrId,
+    filterId: Option[BSONObjectID],
     pcaDims: Option[Int]
   ) = Action.async { implicit request =>
     val explFieldNamesToLoads =
@@ -1622,7 +1528,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         Nil
 
     val mlModelFuture = unsupervisedLearningRepo.get(mlModelId)
-    val criteriaFuture = resolveFilter(filterOrId).flatMap(filter => toCriteria(filter.conditions))
+    val criteriaFuture = loadCriteria(filterId)
 
     for {
       mlModel <- mlModelFuture
@@ -1688,6 +1594,20 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           BadRequest(s"ML unsupervised learning model with id ${mlModelId.stringify} not found.")
       }
   }
+
+  private def loadCriteria(filterId: Option[BSONObjectID]) =
+    for {
+      filter <- filterId match {
+        case Some(filterId) => filterRepo.get(filterId)
+        case None => Future(None)
+      }
+
+      criteria <- filter match {
+        case Some(filter) => toCriteria(filter.conditions)
+        case None => Future(Nil)
+      }
+    } yield
+      criteria
 
   // TODO: this is ugly... fix by introducing a proper JSON formatter
   private def scatterToJson(scatter: ScatterWidget[_, _]): JsValue = {

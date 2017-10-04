@@ -7,7 +7,6 @@ import javax.inject.Inject
 import com.google.inject.Singleton
 import com.google.inject.assistedinject.Assisted
 import models.synapse._
-import org.apache.commons.io.IOUtils
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.{Configuration, Logger}
 import play.api.libs.json.{JsObject, Json}
@@ -17,7 +16,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import models.synapse.JsonFormat._
-import util.{JsonUtil, ZipFileIterator}
+import util.ZipFileIterator
+import dataaccess.JsonUtil
 import _root_.util.retry
 
 trait SynapseServiceFactory {

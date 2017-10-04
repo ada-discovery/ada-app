@@ -1,7 +1,7 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.elements._
-@import views.html.dataset.{mlElements, mlResources, datasetSubNavWithJs}
+@import views.html.dataset.{datasetMenu, mlElements, mlResources, datasetSubNavWithJs}
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
 @import controllers.DataSetWebContext
@@ -18,9 +18,9 @@
 @bottomResources = {
     @mlResources(filterShowFieldStyle)
 
-    @helper.javascriptRouter("dataSetJsRoutes")(
-        dataSetJsRouter.classify,
-        dataSetJsRouter.selectFeaturesAsChiSquare
+    @helper.javascriptRouter("classificationRunJsRoutes")(
+        classificationRunJsRouter.classify,
+        classificationRunJsRouter.selectFeaturesAsChiSquare
     )
 
     <script type="text/javascript">
@@ -63,33 +63,39 @@
             var outputFieldLabel = $("#outputFieldTypeahead").val();
 
             var mlModelId = $("#mlModelId").val();
+            var mlModelIdJson = (mlModelId) ? {'$oid': mlModelId} : null
+
             var mlModelName = $("#mlModelTypeahead").val();
 
             $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
             var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
 
             var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
-            var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
+            var filterIdJson = (filterId) ? {'$oid': filterId} : null
 
             var pcaDims = $("#pcaDims").val()
-            if (!pcaDims)
-                pcaDims = null
-
             var trainingTestingSplit = $("#trainingTestingSplit").val()
-            if (!trainingTestingSplit)
-                trainingTestingSplit = null
-
-            var crossValidationFolds = $("#crossValidationFolds").val()
-            if (!crossValidationFolds)
-                crossValidationFolds = null
-
             var repetitions = $("#repetitions").val()
-            if (!repetitions)
-                repetitions = null
+            var crossValidationFolds = $("#crossValidationFolds").val()
+
+            var saveResults = $("#saveResults").is(":checked")
+
+            var setting = {
+                "mlModelId": mlModelIdJson,
+                "outputFieldName": outputFieldName,
+                "inputFieldNames": inputFieldNames,
+                "filterId": filterIdJson,
+                "pcaDims": intValue(pcaDims),
+                "trainingTestingSplit": floatValue(trainingTestingSplit),
+                "repetitions": intValue(repetitions),
+                "crossValidationFolds": intValue(crossValidationFolds)
+            };
+
+            var settingJSON = JSON.stringify(setting)
 
             $('#outputDiv').hide();
 
-            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.classify(mlModelId, inputFieldNames, outputFieldName, filterOrId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds).ajax( {
+            classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.classify(settingJSON, saveResults).ajax( {
                 success: function(evalRates) {
                     showMessage("'" + mlModelName + "' classification finished.")
                     showMLOutput(evalRates)
@@ -102,6 +108,28 @@
             showMessage("Classification for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
         }
 
+        function intValue(value) {
+            var intValue = null;
+            if (value && value.length > 0) {
+                intValue = parseInt(value)
+                if (isNaN(intValue)) {
+                    intValue = null
+                }
+            }
+            return intValue;
+        }
+
+        function floatValue(value) {
+            var floatValue = null;
+            if (value && value.length > 0) {
+                floatValue = parseFloat(value)
+                if (isNaN(floatValue)) {
+                    floatValue = null
+                }
+            }
+            return floatValue;
+        }
+
         function selectFeaturesAsChiSquare() {
             var outputFieldName = $("#outputFieldName").val();
             var outputFieldLabel = $("#outputFieldTypeahead").val();
@@ -110,7 +138,7 @@
             var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
 
             var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
-            var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
+//            var filterIdJson = (filterId) ? JSON.stringify({'$oid': filterId}) : []
 
             var featuresToSelectNum = $("#featuresToSelectNum").val();
             var discretizerBucketsNum = $("#discretizerBucketsNum").val();
@@ -120,7 +148,7 @@
                 return
             }
 
-            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.selectFeaturesAsChiSquare(inputFieldNames, outputFieldName, filterOrId, featuresToSelectNum, discretizerBucketsNum).ajax( {
+            classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsChiSquare(inputFieldNames, outputFieldName, filterId, featuresToSelectNum, discretizerBucketsNum).ajax( {
                 success: function(selectedFieldNames) {
                     showMessage("Chi-Square feature selection finished.")
                     var tableBody = $("#inputFieldNameDiv").find("table tbody")

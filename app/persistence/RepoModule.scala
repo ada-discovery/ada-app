@@ -8,7 +8,7 @@ import com.sksamuel.elastic4s.ElasticClient
 import dataaccess.RepoTypes.CategoryRepo
 import dataaccess.elastic.{ElasticClientProvider, ElasticFormatAsyncCrudRepo, ElasticJsonCrudRepo}
 import dataaccess.ignite.{CacheAsyncCrudRepoFactory, CacheAsyncCrudRepoProvider, JsonBinaryCacheAsyncCrudRepoFactory}
-import dataaccess.mongo.dataset.{CategoryMongoAsyncCrudRepo, FieldMongoAsyncCrudRepo}
+import dataaccess.mongo.dataset.{CategoryMongoAsyncCrudRepo, ClassificationResultMongoAsyncCrudRepo, FieldMongoAsyncCrudRepo}
 import dataaccess._
 import dataaccess.mongo._
 import models.DataSetFormattersAndIds._
@@ -45,9 +45,6 @@ private object RepoDef extends Enumeration {
   val TranslationRepo = Repo[TranslationRepo](
     new MongoAsyncCrudRepo[Translation, BSONObjectID]("translations"))
 
-//  val UserRepo = Repo[UserRepo](
-//    new MongoAsyncCrudRepo[User, BSONObjectID]("users"))
-
   val MessageRepo = Repo[MessageRepo](
     new MongoAsyncStreamRepo[Message, BSONObjectID]("messages"))
 
@@ -63,8 +60,8 @@ private object RepoDef extends Enumeration {
   val UnsupervisedLearningRepo = Repo[UnsupervisedLearningRepo](
     new MongoAsyncCrudRepo[UnsupervisedLearning, BSONObjectID]("unsupervisedLearnings"))
 
-  //  val DictionaryRootRepo = Repo[DictionaryRootRepo](
-//    new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
+    val DictionaryRootRepo = Repo[DictionaryRootRepo](
+      new MongoAsyncCrudRepo[Dictionary, BSONObjectID]("dictionaries"))
 
 //  val MongoDataSpaceMetaInfoRepo = Repo[MongoAsyncCrudExtraRepo[DataSpaceMetaInfo, BSONObjectID]](
 //    new MongoAsyncCrudRepo[DataSpaceMetaInfo, BSONObjectID]("dataspace_meta_infos"), true)
@@ -130,6 +127,10 @@ class RepoModule extends ScalaModule {
     bind[MongoJsonCrudRepoFactory]
       .annotatedWith(Names.named("CachedJsonCrudRepoFactory"))
       .to(classOf[JsonBinaryCacheAsyncCrudRepoFactory])
+
+    install(new FactoryModuleBuilder()
+      .implement(new TypeLiteral[ClassificationResultRepo]{}, classOf[ClassificationResultMongoAsyncCrudRepo])
+      .build(classOf[ClassificationResultRepoFactory]))
 
     // install data set meta info repo factory
 //    install(new FactoryModuleBuilder()

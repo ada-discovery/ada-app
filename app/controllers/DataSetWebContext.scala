@@ -19,6 +19,8 @@ class DataSetWebContext(
   val filterJsRouter = new FilterJsRouter(dataSetId)
   val dataViewRouter = new DataViewRouter(dataSetId)
   val dataViewJsRouter = new DataViewJsRouter(dataSetId)
+  val classificationRunRouter = new ClassificationRunRouter(dataSetId)
+  val classificationRunJsRouter = new ClassificationRunJsRouter(dataSetId)
 }
 
 object DataSetWebContext {
@@ -83,4 +85,12 @@ object DataSetWebContext {
   def dataViewJsRouter(
     implicit webContext: DataSetWebContext
   ) = webContext.dataViewJsRouter
+
+  def classificationRunRouter(
+    implicit webContext: DataSetWebContext
+  ) = webContext.classificationRunRouter
+
+  def classificationRunJsRouter(
+    implicit webContext: DataSetWebContext
+  ) = webContext.classificationRunJsRouter
 }

@@ -122,8 +122,10 @@ class DataSetSettingController @Inject() (
 
           render {
             case Accepts.Html() => {
+              implicit val context = DataSetWebContext(dataSet)
               val updateCall = dataSetSettingRoutes.updateForDataSet(entity._id.get)
-              val cancelCall = new DataSetRouter(dataSet).getDefaultView
+              val cancelCall = context.dataSetRouter.getDefaultView
+
               Ok(view.edit(
                 fillForm(entity),
                 updateCall,

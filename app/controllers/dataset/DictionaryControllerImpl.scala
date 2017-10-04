@@ -3,12 +3,14 @@ package controllers.dataset
 import javax.inject.Inject
 
 import models.DistributionWidgetSpec
+
 import scala.reflect.runtime.universe.TypeTag
 import com.google.inject.assistedinject.Assisted
 import controllers._
 import controllers.core._
-import dataaccess.RepoTypes.{CategoryRepo, DataSpaceMetaInfoRepo}
+import dataaccess.RepoTypes.CategoryRepo
 import dataaccess._
+import dataaccess.Criterion._
 import models._
 import models.DataSetFormattersAndIds._
 import persistence.RepoTypes._
@@ -23,6 +25,7 @@ import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import util.FieldUtil
 import views.html.{dataview, dictionary => view}
 
 import scala.concurrent.Future
@@ -279,4 +282,12 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   protected def allCategoriesFuture =
     categoryRepo.find(sort = Seq(AscSort("name")))
+
+  override protected def filterValueConverters(
+    fieldNames: Traversable[String]
+  ): Future[Map[String, String => Option[Any]]] =
+    for {
+      fields <- fieldCaseClassRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
+    } yield
+      FieldUtil.valueConverters(fields)
 }

@@ -60,7 +60,7 @@
             var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
 
             var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
-            var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
+//            var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
 
             var pcaDims = $("#pcaDims").val()
             if (!pcaDims)
@@ -71,7 +71,7 @@
 
 //            $('#scatterPanelDiv').hide();
 
-            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.cluster(mlModelId, inputFieldNames, filterOrId, pcaDims).ajax( {
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.cluster(mlModelId, inputFieldNames, filterId, pcaDims).ajax( {
                 success: function(scatters) {
                     showMessage("'" + mlModelName + "'clusterization finished.")
 
