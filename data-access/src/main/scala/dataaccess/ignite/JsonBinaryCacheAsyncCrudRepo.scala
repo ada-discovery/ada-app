@@ -45,7 +45,7 @@ class JsonBinaryCacheAsyncCrudRepoFactory @Inject()(
     configuration: Configuration
   ) extends MongoJsonCrudRepoFactory {
 
-  private val ftf = FieldTypeFactory(Set[String](""), Seq[String](), "", ",")
+  private val ftf = FieldTypeFactory(Set[String](""), Seq[String](), "", ",", true)
 
   override def apply(
     collectionName: String,

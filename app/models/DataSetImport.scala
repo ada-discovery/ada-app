@@ -36,6 +36,8 @@ case class CsvDataSetImport(
   inferFieldTypes: Boolean,
   inferenceMaxEnumValuesCount: Option[Int] = None,
   inferenceMinAvgValuesPerEnum: Option[Double] = None,
+  arrayDelimiter: Option[String] = None,
+  booleanIncludeNumbers: Boolean = true,
   saveBatchSize: Option[Int] = None,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,

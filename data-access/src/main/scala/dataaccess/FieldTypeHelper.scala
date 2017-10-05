@@ -31,8 +31,9 @@ object FieldTypeHelper {
     nullAliases: Set[String] = nullAliases,
     dateFormats: Traversable[String] = dateFormats,
     displayDateFormat: String = displayDateFormat,
-    arrayDelimiter: String = arrayDelimiter
-  ) = FieldTypeFactory(nullAliases, dateFormats, displayDateFormat, arrayDelimiter)
+    arrayDelimiter: String = arrayDelimiter,
+    booleanIncludeNumbers: Boolean = true
+  ) = FieldTypeFactory(nullAliases, dateFormats, displayDateFormat, arrayDelimiter, booleanIncludeNumbers)
 
   def fieldTypeInferrerFactory(
     ftf: FieldTypeFactory = fieldTypeFactory(),

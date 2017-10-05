@@ -18,7 +18,7 @@ object ConversionUtil {
 
   def toFloat = convert(_.toFloat)_
 
-  def toBoolean = convert(toBooleanAux)_
+  def toBoolean(includeNumbers: Boolean = true) = convert(toBooleanAux(includeNumbers))_
 
   def toDate(dateFormats: Traversable[String]) = convert(toDateAux(dateFormats))_
 
@@ -70,16 +70,19 @@ object ConversionUtil {
       typeExpectedException(ms.toString, classOf[Date])
   }
 
-  private def toBooleanAux(text: String) = {
+  private def toBooleanAux(includeNumbers: Boolean)(text: String) = {
     try {
       text.toBoolean
     } catch {
       case e: IllegalArgumentException =>
+        if (includeNumbers)
           text match {
             case "0" => false
             case "1" => true
             case _ => typeExpectedException(text, classOf[Boolean])
           }
+        else
+          typeExpectedException(text, classOf[Boolean])
     }
   }
 
@@ -91,7 +94,7 @@ object ConversionUtil {
 
   def isFloat = isConvertible(_.toFloat)_
 
-  def isBoolean = isConvertible(toBooleanAux)_
+  def isBoolean = isConvertible(toBooleanAux(true))_
 
   def isDate(dateFormats: Traversable[String]) = isConvertible(toDateAux(dateFormats))_
 

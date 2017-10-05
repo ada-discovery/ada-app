@@ -50,6 +50,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       None,
       false,
       None,
+      false,
+      None,
       Some(LuxParkDataSetSettings.IBBLBiosamples),
       Some(LuxParkDataViews.IBBLBiosamples)
     ),
@@ -67,6 +69,8 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
       false,
       None,
       None,
+      None,
+      false,
       None,
       false,
       None,

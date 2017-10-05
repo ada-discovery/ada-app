@@ -58,19 +58,13 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
     // infer field types and create JSONSs
     logger.info(s"Inferring field types and creating JSONs...")
 
-    val fti =
-      if (importInfo.inferenceMaxEnumValuesCount.isDefined || importInfo.inferenceMinAvgValuesPerEnum.isDefined) {
-        Some(
-          FieldTypeInferrerFactory(
-            FieldTypeHelper.fieldTypeFactory(),
-            importInfo.inferenceMaxEnumValuesCount.getOrElse(FieldTypeHelper.maxEnumValuesCount),
-            importInfo.inferenceMinAvgValuesPerEnum.getOrElse(FieldTypeHelper.minAvgValuesPerEnum),
-            FieldTypeHelper.arrayDelimiter
-          ).apply
-        )
-      } else
-        None
+    val arrayDelimiter = importInfo.arrayDelimiter.getOrElse(FieldTypeHelper.arrayDelimiter)
+    val maxEnumValuesCount = importInfo.inferenceMaxEnumValuesCount.getOrElse(FieldTypeHelper.maxEnumValuesCount)
+    val minAvgValuesPerEnum = importInfo.inferenceMinAvgValuesPerEnum.getOrElse(FieldTypeHelper.minAvgValuesPerEnum)
 
-    saveStringsAndDictionaryWithTypeInference(dsa, columnNames, values, importInfo.saveBatchSize, fti)
+    val ftf = FieldTypeHelper.fieldTypeFactory(arrayDelimiter = arrayDelimiter, booleanIncludeNumbers = importInfo.booleanIncludeNumbers)
+    val ftif = FieldTypeInferrerFactory(ftf, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter)
+
+    saveStringsAndDictionaryWithTypeInference(dsa, columnNames, values, importInfo.saveBatchSize, Some(ftif.apply))
   }
 }

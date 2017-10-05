@@ -121,6 +121,7 @@ private case class DoubleFieldType(
 // Boolean
 private case class BooleanFieldType(
     val nullAliases: Set[String],
+    includeNumbers: Boolean = true,
     displayTrueValue: Option[String] = None,
     displayFalseValue: Option[String] = None
   ) extends FormatFieldType[Boolean] {
@@ -132,7 +133,7 @@ private case class BooleanFieldType(
   override val classTag = Some(implicitly[ClassTag[Boolean]])
 
   override protected def displayStringToValueWoNull(text: String) =
-    toBoolean(text)
+    toBoolean(includeNumbers)(text)
 
   override protected def valueToDisplayStringNonEmpty(value: Boolean) = {
     val displayValue = if (value)
@@ -146,7 +147,7 @@ private case class BooleanFieldType(
   override protected def displayJsonToValueWoString(json: JsReadable) =
     json match {
       case JsBoolean(boolean) => boolean
-      case JsNumber(number) => toBoolean(number.toString)  // we accept also number as a display Json
+      case JsNumber(number) => toBoolean(includeNumbers)(number.toString)  // we accept also number as a display Json
       case  _ => throw new AdaConversionException(s"Json $json cannot be converted to a Boolean.")
     }
 
@@ -220,15 +221,17 @@ object FieldTypeFactory {
     nullAliases: Set[String],
     dateFormats: Traversable[String],
     displayDateFormat: String,
-    arrayDelimiter: String
-  ): FieldTypeFactory = new FieldTypeFactoryImpl(nullAliases, dateFormats, displayDateFormat, arrayDelimiter)
+    arrayDelimiter: String,
+    booleanIncludeNumbers: Boolean
+  ): FieldTypeFactory = new FieldTypeFactoryImpl(nullAliases, dateFormats, displayDateFormat, arrayDelimiter, booleanIncludeNumbers)
 }
 
 private class FieldTypeFactoryImpl(
     nullValues: Set[String],
     dateFormats: Traversable[String],
     displayDateFormat: String,
-    arrayDelimiter: String
+    arrayDelimiter: String,
+    booleanIncludeNumbers: Boolean
   ) extends FieldTypeFactory {
 
   private val staticScalarTypes: Seq[FieldType[_]] = Seq(
@@ -476,7 +479,7 @@ private class FieldTypeFactoryImpl(
       }
 
       case FieldTypeId.Boolean => {
-        val scalarType = BooleanFieldType(nullValues, fieldTypeSpec.displayTrueValue, fieldTypeSpec.displayFalseValue)
+        val scalarType = BooleanFieldType(nullValues, booleanIncludeNumbers, fieldTypeSpec.displayTrueValue, fieldTypeSpec.displayFalseValue)
         arrayOrElseScalar(scalarType)
       }
 

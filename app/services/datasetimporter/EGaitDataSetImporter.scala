@@ -3,8 +3,7 @@ package services.datasetimporter
 import java.util.Date
 import javax.inject.Inject
 
-import dataaccess.{FieldTypeFactory, FieldTypeInferrerFactory}
-import dataaccess.FieldTypeHelper._
+import dataaccess.{FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
 import models.{EGaitDataSetImport, FieldTypeId, FieldTypeSpec}
 import models.egait.EGaitKineticData
 import play.api.Configuration
@@ -35,10 +34,9 @@ private class EGaitDataSetImporter @Inject()(
   )
 
   // Field type inferrer
-  private val nullValueAliases = Set("", "-")
   private val fti = {
-    val ftf = FieldTypeFactory(nullValueAliases, dateFormats, displayDateFormat, arrayDelimiter)
-    val ftif = FieldTypeInferrerFactory(ftf, maxEnumValuesCount, minAvgValuesPerEnum, arrayDelimiter)
+    val ftf = FieldTypeHelper.fieldTypeFactory(nullAliases = Set("", "-"))
+    val ftif = FieldTypeHelper.fieldTypeInferrerFactory(ftf = ftf)
     ftif.apply
   }
 

@@ -17,7 +17,7 @@ import persistence.RepoTypes.{DataSetImportRepo, MessageRepo}
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import play.api.{Configuration, Logger}
 import play.api.data.{Form, Mapping}
-import play.api.data.Forms._
+import play.api.data.Forms.{optional, _}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{JsArray, Json}
@@ -118,6 +118,8 @@ class DataSetImportController @Inject()(
       "inferFieldTypes" -> boolean,
       "inferenceMaxEnumValuesCount" -> optional(number(min = 1)),
       "inferenceMinAvgValuesPerEnum" -> optional(of[Double]),
+      "arrayDelimiter" -> optional(text),
+      "booleanIncludeNumbers" -> boolean,
       "saveBatchSize" -> optional(number(min = 1)),
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),

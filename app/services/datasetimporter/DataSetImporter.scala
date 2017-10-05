@@ -7,7 +7,7 @@ import dataaccess._
 import models.{AdaParseException, CsvDataSetImport, DataSetImport, FieldTypeSpec}
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, Json}
 import play.api.Logger
 import services.DataSetService
 import util.{MessageLogger, seqFutures}
@@ -57,6 +57,9 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
         (fieldNames, fieldTypes, vals).zipped.map {
           case (fieldName, fieldType, text) =>
             val jsonValue = fieldType.displayStringToJson(text)
+//            if (fieldName.equals("b_CRF_concomitant_medication35_dose")) { // a_SonoRestharn
+//              println(text + " -> " + Json.stringify(jsonValue))
+//            }
             (fieldName, jsonValue)
         })
     )

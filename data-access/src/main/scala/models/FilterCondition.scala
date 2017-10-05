@@ -8,9 +8,6 @@ import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import util.FieldUtil
-
-import scala.concurrent.Future
 
 case class FilterCondition(
   fieldName: String,
