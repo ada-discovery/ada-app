@@ -1,11 +1,12 @@
-package runnables
+package runnables.core
 
 import models.AdaException
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import reactivemongo.bson.BSONObjectID
+import runnables.DsaInputFutureRunnable
 
-import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.reflect.runtime.universe.typeOf
 
 class CopyRecord extends DsaInputFutureRunnable[RecordSpec] {
 

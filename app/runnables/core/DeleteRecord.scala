@@ -1,4 +1,6 @@
-package runnables
+package runnables.core
+
+import runnables.DsaInputFutureRunnable
 
 import scala.reflect.runtime.universe.typeOf
 
