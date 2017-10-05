@@ -19,6 +19,7 @@
     fieldNameLabelMap: Map[String, String],
     allClassificationRunFields: Traversable[Field],
     mlModelIdNameMap: Map[BSONObjectID, String],
+    filterIdNameMap: Map[BSONObjectID, String],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit context: DataSetWebContext
@@ -52,12 +53,13 @@
         page,
         classificationRunRouter.list(_, _, page.filterConditions),
         typeColumns[ClassificationResult](
-            (Some("mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.setting.mlModelId).get),
-            (Some("outputFieldName"), "Output Field", result => fieldNameLabelMap.get(result.setting.outputFieldName).get),
-            (Some("trainingStats-accuracy-mean"), "Training Accuracy Mean", _.trainingStats.accuracy.mean),
-            (Some("trainingStats-weightedPrecision-mean"), "Training Precision Mean", _.trainingStats.weightedPrecision.mean),
-            (Some("testStats-accuracy-mean"), "Test Accuracy Mean", _.testStats.accuracy.mean),
-            (Some("testStats-weightedPrecision-mean"), "Test Precision Mean", _.testStats.weightedPrecision.mean),
+            (Some("setting-mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.setting.mlModelId).get),
+            (Some("setting-filterId"), "Filter", _.setting.filterId.map(filterId => filterIdNameMap.get(filterId).get).getOrElse("")),
+            (Some("setting-outputFieldName"), "Output Field", result => fieldNameLabelMap.get(result.setting.outputFieldName).get),
+            (Some("trainingStats-accuracy-mean"), "Training Accuracy Mean", result => "%.3f".format(result.trainingStats.accuracy.mean)),
+            (Some("trainingStats-weightedPrecision-mean"), "Training Precision Mean", result => "%.3f".format(result.trainingStats.weightedPrecision.mean)),
+            (Some("testStats-accuracy-mean"), "Test Accuracy Mean", result => "%.3f".format(result.testStats.accuracy.mean)),
+            (Some("testStats-weightedPrecision-mean"), "Test Precision Mean", result => "%.3f".format(result.testStats.weightedPrecision.mean)),
             (Some("timeCreated"), "Time Created", _.timeCreated.toString)
         ),
         Some({ item : Any => classificationRunRouter.get(item.asInstanceOf[ClassificationResult]._id.get)})

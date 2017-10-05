@@ -65,7 +65,7 @@ class CreateWeightOutlierDiagnosisFilter @Inject()(
     conditionsToInclude: Seq[FilterCondition]
   ) =
     for {
-    // get all the fields
+      // get all the fields
       allFields <- dsa.fieldRepo.find()
 
       // filter the weight fields

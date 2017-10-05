@@ -12,14 +12,15 @@ import com.banda.network.domain.{ActivationFunctionType, TopologicalNode, Topolo
 import com.google.inject.ImplementedBy
 import dataaccess.{AscSort, FieldType, FieldTypeHelper}
 import models.DataSetFormattersAndIds.JsObjectIdentity
-import models.{FieldTypeId, FieldTypeSpec}
+import models.{AdaException, FieldTypeId, FieldTypeSpec}
 import models.ml.classification.Classification
 import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
 import com.banda.incal.prediction.ErrorMeasures
 import com.banda.math.business.MathUtil
 import com.banda.network.business.TopologyFactory
-import models.ml.{ExtendedReservoirLearningSetting, LearningSetting, VectorTransformType}
+import models.ml._
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature._
 import org.apache.spark.ml.{Estimator, Model, Pipeline}
@@ -814,4 +815,82 @@ case class RegressionPerformance(
   val trainingTestResults: Traversable[(Double, Double)]
 ) extends Performance {
   override type T = RegressionEvalMetric.Value
+}
+
+object MachineLearningUtil {
+
+  def calcClassificationMetricStats(results: Traversable[ClassificationPerformance]) = {
+    def toStats(summaryStatistics: SummaryStatistics) =
+      MetricStatsValues(summaryStatistics.getMean, summaryStatistics.getMin, summaryStatistics.getMax, summaryStatistics.getVariance)
+
+    results.map { result =>
+      val trainingStats = new SummaryStatistics
+      val testStats = new SummaryStatistics
+
+      result.trainingTestResults.foreach { case (trainValue, testValue) =>
+        trainingStats.addValue(trainValue)
+        testStats.addValue(testValue)
+      }
+
+      (result.evalMetric, (toStats(trainingStats), toStats(testStats)))
+    }.toMap
+  }
+
+  def createClassificationResult(
+    results: Traversable[ClassificationPerformance],
+    setting: ClassificationSetting
+  ): ClassificationResult =
+    createClassificationResult(
+      calcClassificationMetricStats(results),
+      setting
+    )
+
+  def createClassificationResult(
+    evalMetricStatsMap: Map[ClassificationEvalMetric.Value, (MetricStatsValues, MetricStatsValues)],
+    setting: ClassificationSetting
+  ): ClassificationResult = {
+    // helper functions
+    def trainingStatsOptional(metric: ClassificationEvalMetric.Value) =
+      evalMetricStatsMap.get(metric).map(_._1)
+
+    def testStatsOptional(metric: ClassificationEvalMetric.Value) =
+      evalMetricStatsMap.get(metric).map(_._2)
+
+    def trainingStats(metric: ClassificationEvalMetric.Value) =
+      trainingStatsOptional(metric).getOrElse(
+        throw new AdaException(s"Classification stats for metics '${metric.toString}' not found.")
+      )
+
+    def testStats(metric: ClassificationEvalMetric.Value) =
+      testStatsOptional(metric).getOrElse(
+        throw new AdaException(s"Classification stats for metics '${metric.toString}' not found.")
+      )
+
+    import ClassificationEvalMetric._
+
+    val trainingMetricStats = ClassificationMetricStats(
+      f1 = trainingStats(f1),
+      weightedPrecision = trainingStats(weightedPrecision),
+      weightedRecall = trainingStats(weightedRecall),
+      accuracy = trainingStats(accuracy),
+      areaUnderROC = trainingStatsOptional(areaUnderROC),
+      areaUnderPR = trainingStatsOptional(areaUnderPR)
+    )
+
+    val testMetricStats = ClassificationMetricStats(
+      f1 = testStats(f1),
+      weightedPrecision = testStats(weightedPrecision),
+      weightedRecall = testStats(weightedRecall),
+      accuracy = testStats(accuracy),
+      areaUnderROC = testStatsOptional(areaUnderROC),
+      areaUnderPR = testStatsOptional(areaUnderPR)
+    )
+
+    ClassificationResult(
+      None,
+      setting.copy(inputFieldNames = setting.inputFieldNames.sorted),
+      trainingMetricStats,
+      testMetricStats
+    )
+  }
 }

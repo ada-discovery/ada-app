@@ -12,6 +12,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
 
+import models.FilterCondition.toCriterion
+
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -203,8 +205,6 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
   protected def getFutureCount(filter: Seq[FilterCondition]): Future[Int] =
     toCriteria(filter).flatMap(repo.count)
 
-  import ConditionType._
-
   protected def toCriteria(
     filter: Seq[FilterCondition]
   ): Future[Seq[Criterion[Any]]] = {
@@ -213,57 +213,6 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
     filterValueConverters(fieldNames).map( valueConverters =>
       filter.map(toCriterion(valueConverters)).flatten
     )
-  }
-
-  protected def toCriterion(
-    valueConverters: Map[String, String => Option[Any]])(
-    filterCondition: FilterCondition
-  ): Option[Criterion[Any]] = {
-    val fieldName = filterCondition.fieldName
-
-    // convert values if any converters provided
-    def convertValue(text: String): Option[Any] = valueConverters.get(fieldName).map(converter =>
-      converter.apply(text.trim)
-    ).getOrElse(Some(text.trim)) // if no converter found use a provided string value
-
-    val value =  filterCondition.value
-
-    def convertedValue = convertValue(value)
-    def convertedValues = {
-      value.split(",").map(convertValue).flatten
-    }
-
-    filterCondition.conditionType match {
-      case Equals => Some(
-        convertedValue.map(
-          EqualsCriterion(fieldName, _)
-        ).getOrElse(
-          EqualsNullCriterion(fieldName)
-        )
-      )
-
-      case RegexEquals => Some(RegexEqualsCriterion(fieldName, value))            // string expected
-
-      case NotEquals => Some(
-        convertedValue.map(
-          NotEqualsCriterion(fieldName, _)
-        ).getOrElse(
-          NotEqualsNullCriterion(fieldName)
-        )
-      )
-
-      case In => Some(InCriterion(fieldName, convertedValues))
-
-      case NotIn => Some(NotInCriterion(fieldName, convertedValues))
-
-      case Greater => convertedValue.map(GreaterCriterion(fieldName, _))
-
-      case GreaterEqual => convertedValue.map(GreaterEqualCriterion(fieldName, _))
-
-      case Less => convertedValue.map(LessCriterion(fieldName, _))
-
-      case LessEqual => convertedValue.map(LessEqualCriterion(fieldName, _))
-    }
   }
 
   protected def filterValueConverters(

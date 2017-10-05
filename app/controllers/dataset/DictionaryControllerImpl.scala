@@ -285,9 +285,5 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
-  ): Future[Map[String, String => Option[Any]]] =
-    for {
-      fields <- fieldCaseClassRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
-    } yield
-      FieldUtil.valueConverters(fields)
+  ) = FieldUtil.valueConverters(fieldCaseClassRepo, fieldNames)
 }

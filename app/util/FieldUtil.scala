@@ -4,11 +4,16 @@ import scala.reflect.runtime.universe._
 import models.{AdaException, Field, FieldTypeId, FieldTypeSpec}
 import play.api.libs.json.JsValue
 import java.{util => ju}
+import dataaccess.Criterion._
 
+import dataaccess.RepoTypes.FieldRepo
 import dataaccess.{FieldTypeHelper, ReflectionUtil => CoreReflectionUtil}
+import models.DataSetFormattersAndIds.FieldIdentity
 import reactivemongo.bson.BSONObjectID
 
 import scala.collection.Traversable
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object FieldUtil {
 
@@ -22,6 +27,18 @@ object FieldUtil {
       val converter = { text: String => fieldType.valueStringToValue(text) }
       (field.name, converter)
     }.toMap
+
+  def valueConverters(
+    fieldRepo: FieldRepo,
+    fieldNames: Traversable[String]
+  ): Future[Map[String, String => Option[Any]]] =
+    for {
+      fields <- if (fieldNames.nonEmpty)
+        fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
+      else
+        Future(Nil)
+    } yield
+      valueConverters(fields)
 
   def caseClassToFlatFieldTypes[T: TypeTag](
     delimiter: String = ".",
@@ -56,7 +73,7 @@ object FieldUtil {
     }.flatten
   }
 
-  implicit class Infix(val typ: Type) {
+  implicit class InfixOp(val typ: Type) {
 
     private val optionInnerType =
       if (typ <:< typeOf[Option[_]])

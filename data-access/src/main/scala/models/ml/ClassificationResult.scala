@@ -43,7 +43,13 @@ case class ClassificationSetting(
   trainingTestingSplit: Option[Double],
   repetitions: Option[Int],
   crossValidationFolds: Option[Int]
-)
+) {
+  def fieldNamesToLoads =
+    if (inputFieldNames.nonEmpty) (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq else Nil
+
+  def learningSetting =
+    LearningSetting(pcaDims, trainingTestingSplit, repetitions, crossValidationFolds)
+}
 
 object ClassificationResult {
   implicit val filterOrIdFormat = new EitherFormat[Seq[models.FilterCondition], BSONObjectID]

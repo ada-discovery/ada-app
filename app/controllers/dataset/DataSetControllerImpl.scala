@@ -206,7 +206,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
   ): Future[Map[String, String => Option[Any]]] =
-    getFields(fieldNames).map(FieldUtil.valueConverters)
+    FieldUtil.valueConverters(fieldRepo, fieldNames)
 
   /**
     * Generate content of csv export file and create download.

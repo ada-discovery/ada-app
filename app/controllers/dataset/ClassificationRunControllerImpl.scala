@@ -9,10 +9,10 @@ import controllers.DataSetWebContext
 import dataaccess.Criterion
 import dataaccess.Criterion._
 import models.{DistributionWidgetSpec, _}
+import models.FilterCondition.{FilterIdentity, FilterOrId, toCriterion}
 import models.DataSetFormattersAndIds._
 import dataaccess.FilterRepoExtra._
 import controllers.core._
-import models.FilterCondition.FilterOrId
 import models.ml.{ClassificationSetting, _}
 import models.ml.ClassificationResult.{classificationResultFormat, classificationSettingFormat}
 import persistence.RepoTypes.ClassificationRepo
@@ -25,7 +25,7 @@ import play.api.libs.json._
 import play.api.mvc.{Action, Request}
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DataSpaceService, WidgetGenerationService}
-import services.ml.{ClassificationEvalMetric, ClassificationPerformance, MachineLearningService, Performance}
+import services.ml._
 import _root_.util.toHumanReadableCamel
 import _root_.util.FieldUtil
 import models.ml.classification.Classification.ClassificationIdentity
@@ -111,6 +111,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     Map[String, String],
     Traversable[Field],
     Map[BSONObjectID, String],
+    Map[BSONObjectID, String],
     Traversable[DataSpaceMetaInfo]
   )
 
@@ -125,13 +126,17 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       setting.inputFieldNames ++ Seq(setting.outputFieldName)
     }.toSet
 
-    val fieldsFuture = getFields(fieldNames)
+    val fieldsFuture = getDataSetFields(fieldNames)
 
     val allClassificationRunFieldsFuture = fieldCaseClassRepo.find()
 
     val mlModelIds = page.items.map(_.setting.mlModelId).toSet
 
     val mlModelsFuture = classificationRepo.find(Seq(ClassificationIdentity.name #-> mlModelIds.toSeq))
+
+    val filterIds = page.items.map(_.setting.filterId).toSet
+
+    val filtersFuture = dsa.filterRepo.find(Seq(FilterIdentity.name #-> filterIds.toSeq))
 
     val widgetsFuture = toCriteria(page.filterConditions).flatMap( criteria =>
       widgets(widgetSpecs, criteria)
@@ -148,16 +153,20 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
       mlModels <- mlModelsFuture
 
+      filters <- filtersFuture
+
       widgets <- widgetsFuture
     } yield {
       val fieldNameLabelMap = fields.map(field => (field.name, field.labelOrElseName)).toMap
       val mlModelIdNameMap = mlModels.map(mlModel => (mlModel._id.get, mlModel.name.get)).toMap
-      (dataSetName + " Classification Run", page, widgets.flatten, fieldNameLabelMap, allClassificationRunFields, mlModelIdNameMap, tree)
+      val filterIdNameMap = filters.map(filter => (filter._id.get, filter.name.get)).toMap
+
+      (dataSetName + " Classification Run", page, widgets.flatten, fieldNameLabelMap, allClassificationRunFields, mlModelIdNameMap, filterIdNameMap, tree)
     }
   }
 
   override protected[controllers] def listView = { implicit ctx =>
-    (view.list(_, _, _, _, _, _, _)).tupled
+    (view.list(_, _, _, _, _, _, _, _)).tupled
   }
 
   // run
@@ -188,31 +197,23 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     setting: ClassificationSetting,
     saveResults: Boolean
   ) = Action.async { implicit request =>
-    val learningSetting = LearningSetting(setting.pcaDims, setting.trainingTestingSplit, setting.repetitions, setting.crossValidationFolds)
-
-    val explFieldNamesToLoads =
-      if (setting.inputFieldNames.nonEmpty)
-        (setting.inputFieldNames ++ Seq(setting.outputFieldName)).toSet.toSeq
-      else
-        Nil
-
     val mlModelFuture = classificationRepo.get(setting.mlModelId)
     val criteriaFuture = loadCriteria(setting.filterId)
 
     for {
       mlModel <- mlModelFuture
       criteria <- criteriaFuture
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, setting.fieldNamesToLoads, criteria)
     } yield
       mlModel.map { mlModel =>
         val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-        val results = mlService.classify(jsons, fieldNameAndSpecs, setting.outputFieldName, mlModel, learningSetting)
+        val results = mlService.classify(jsons, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting)
 
         // prepare the results stats
-        val metricStatsMap = createMetricStatsMap(results.toSeq)
+        val metricStatsMap = MachineLearningUtil.calcClassificationMetricStats(results.toSeq)
 
         if (saveResults) {
-          val finalResult = mergeResults(metricStatsMap, setting)
+          val finalResult = MachineLearningUtil.createClassificationResult(metricStatsMap, setting)
           repo.save(finalResult)
         }
 
@@ -239,72 +240,6 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     }
 
     JsArray(metricJsons)
-  }
-
-  private def createMetricStatsMap(results: Traversable[ClassificationPerformance]) = {
-    def toStats(summaryStatistics: SummaryStatistics) =
-      MetricStatsValues(summaryStatistics.getMean, summaryStatistics.getMin, summaryStatistics.getMax, summaryStatistics.getVariance)
-
-    results.map { result =>
-      val trainingStats = new SummaryStatistics
-      val testStats = new SummaryStatistics
-
-      result.trainingTestResults.foreach { case (trainValue, testValue) =>
-        trainingStats.addValue(trainValue)
-        testStats.addValue(testValue)
-      }
-
-      (result.evalMetric, (toStats(trainingStats), toStats(testStats)))
-    }.toMap
-  }
-
-  private def mergeResults(
-    evalMetricStatsMap: Map[ClassificationEvalMetric.Value, (MetricStatsValues, MetricStatsValues)],
-    setting: ClassificationSetting
-  ): ClassificationResult = {
-    // helper functions
-    def trainingStatsOptional(metric: ClassificationEvalMetric.Value) =
-      evalMetricStatsMap.get(metric).map(_._1)
-
-    def testStatsOptional(metric: ClassificationEvalMetric.Value) =
-      evalMetricStatsMap.get(metric).map(_._2)
-
-    def trainingStats(metric: ClassificationEvalMetric.Value) =
-      trainingStatsOptional(metric).getOrElse(
-        throw new AdaException(s"Classification stats for metics '${metric.toString}' not found.")
-      )
-
-    def testStats(metric: ClassificationEvalMetric.Value) =
-      testStatsOptional(metric).getOrElse(
-        throw new AdaException(s"Classification stats for metics '${metric.toString}' not found.")
-      )
-
-    import ClassificationEvalMetric._
-
-    val trainingMetricStats = ClassificationMetricStats(
-      f1 = trainingStats(f1),
-      weightedPrecision = trainingStats(weightedPrecision),
-      weightedRecall = trainingStats(weightedRecall),
-      accuracy = trainingStats(accuracy),
-      areaUnderROC = trainingStatsOptional(areaUnderROC),
-      areaUnderPR = trainingStatsOptional(areaUnderPR)
-    )
-
-    val testMetricStats = ClassificationMetricStats(
-      f1 = testStats(f1),
-      weightedPrecision = testStats(weightedPrecision),
-      weightedRecall = testStats(weightedRecall),
-      accuracy = testStats(accuracy),
-      areaUnderROC = testStatsOptional(areaUnderROC),
-      areaUnderPR = testStatsOptional(areaUnderPR)
-    )
-
-    ClassificationResult(
-      None,
-      setting.copy(inputFieldNames = setting.inputFieldNames.sorted),
-      trainingMetricStats,
-      testMetricStats
-    )
   }
 
   override def selectFeaturesAsChiSquare(
@@ -349,18 +284,16 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
   private def toDataSetCriteria(
     conditions: Seq[FilterCondition]
-  ): Future[Seq[Criterion[Any]]] = {
-    val fieldNames = conditions.seq.map(_.fieldName)
-
+  ): Future[Seq[Criterion[Any]]] =
     for {
-      fields <- getFields(fieldNames)
-    } yield {
-      val valueConverters = FieldUtil.valueConverters(fields)
+      valueConverters <- {
+        val fieldNames = conditions.map(_.fieldName)
+        FieldUtil.valueConverters(dsa.fieldRepo, fieldNames)
+      }
+    } yield
       conditions.map(toCriterion(valueConverters)).flatten
-    }
-  }
 
-  private def getFields(fieldNames: Traversable[String]) =
+  private def getDataSetFields(fieldNames: Traversable[String]) =
     if (fieldNames.nonEmpty)
       dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
     else
@@ -386,9 +319,5 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
-  ): Future[Map[String, String => Option[Any]]] =
-    for {
-      fields <- fieldCaseClassRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
-    } yield
-      FieldUtil.valueConverters(fields)
+  ) = FieldUtil.valueConverters(fieldCaseClassRepo, fieldNames)
 }
