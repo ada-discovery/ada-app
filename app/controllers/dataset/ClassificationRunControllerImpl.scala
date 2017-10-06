@@ -202,13 +202,19 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
     for {
       mlModel <- mlModelFuture
-      criteria <- criteriaFuture
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, setting.fieldNamesToLoads, criteria)
-    } yield
-      mlModel.map { mlModel =>
-        val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-        val results = mlService.classify(jsons, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting)
 
+      criteria <- criteriaFuture
+
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, setting.fieldNamesToLoads, criteria)
+
+      results <- mlModel.map { mlModel =>
+        val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
+        mlService.classify(jsons, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting)
+      }.getOrElse(
+        Future(Nil)
+      )
+    } yield
+      mlModel.map { _ =>
         // prepare the results stats
         val metricStatsMap = MachineLearningUtil.calcClassificationMetricStats(results.toSeq)
 

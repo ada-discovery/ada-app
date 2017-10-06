@@ -1480,7 +1480,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private def runMLAux[M](
     getModel: => Future[Option[M]],
-    runML: (Traversable[JsObject], Seq[(String, FieldTypeSpec)], String, M, LearningSetting) => Traversable[Performance])(
+    runML: (Traversable[JsObject], Seq[(String, FieldTypeSpec)], String, M, LearningSetting) => Future[Traversable[Performance]])(
     inputFieldNames: Seq[String],
     outputFieldName: String,
     filterId: Option[BSONObjectID],
@@ -1496,12 +1496,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     for {
       mlModel <- getModel
+
       criteria <- criteriaFuture
+
       (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
+
+      evalRates <- mlModel.map { mlModel =>
+        val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
+        runML(jsons, fieldNameAndSpecs, outputFieldName, mlModel, learningSetting)
+      }.getOrElse(
+        Future(Nil)
+      )
     } yield
       mlModel.map { mlModel =>
-        val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-        val evalRates = runML(jsons, fieldNameAndSpecs, outputFieldName, mlModel, learningSetting)
         val evalJsons = evalRates.toSeq.sortBy(_.evalMetric.id).map { performance =>
           val results = performance.trainingTestResults
             Json.obj(

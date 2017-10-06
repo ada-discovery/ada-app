@@ -1,14 +1,8 @@
 package services.ml
 
-import java.util.Collections
 import javax.inject.{Inject, Singleton}
 import java.{lang => jl, util => ju}
 
-import com.banda.core.util.ObjectUtil
-import com.banda.incal.domain.ReservoirLearningSetting
-import com.banda.incal.prediction.{ErrorMeasures, ReservoirTrainerFactory}
-import com.banda.math.business.learning.{IOStream, IOStreamFactory}
-import com.banda.network.domain.{ActivationFunctionType, TopologicalNode, Topology}
 import com.google.inject.ImplementedBy
 import dataaccess.{AscSort, FieldType, FieldTypeHelper}
 import models.DataSetFormattersAndIds.JsObjectIdentity
@@ -16,9 +10,6 @@ import models.{AdaException, FieldTypeId, FieldTypeSpec}
 import models.ml.classification.Classification
 import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
-import com.banda.incal.prediction.ErrorMeasures
-import com.banda.math.business.MathUtil
-import com.banda.network.business.TopologyFactory
 import models.ml._
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
@@ -33,10 +24,12 @@ import org.apache.spark.rdd.RDD
 import play.api.libs.json.JsObject
 import services.{RCPredictionResults, SparkApp, SparkUtil}
 import org.apache.spark.sql.functions.monotonically_increasing_id
+import play.api.Configuration
+import play.api.Configuration._
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{Await, Future}
 import scala.util.Random
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.JavaConversions._
 
 @ImplementedBy(classOf[MachineLearningServiceImpl])
@@ -48,7 +41,7 @@ trait MachineLearningService {
     outputFieldName: String,
     mlModel: Classification,
     setting: LearningSetting = LearningSetting()
-  ): Traversable[ClassificationPerformance]
+  ): Future[Traversable[ClassificationPerformance]]
 
   def regress(
     data: Traversable[JsObject],
@@ -56,7 +49,7 @@ trait MachineLearningService {
     outputFieldName: String,
     mlModel: Regression,
     setting: LearningSetting = LearningSetting()
-  ): Traversable[RegressionPerformance]
+  ): Future[Traversable[RegressionPerformance]]
 
   def cluster[M <: Model[M]](
     data: Traversable[JsObject],
@@ -102,7 +95,8 @@ trait MachineLearningService {
 
 @Singleton
 private class MachineLearningServiceImpl @Inject() (
-    sparkApp: SparkApp
+    sparkApp: SparkApp,
+    configuration: Configuration
   ) extends MachineLearningService {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
@@ -112,6 +106,7 @@ private class MachineLearningServiceImpl @Inject() (
   private implicit val sqlContext = sparkApp.sqlContext
 
   private val defaultTrainingTestingSplit = 0.8
+  private val repetitionParallelism = configuration.getInt("ml.repetition_parallelism").getOrElse(2)
 
   override def classify(
     data: Traversable[JsObject],
@@ -119,7 +114,7 @@ private class MachineLearningServiceImpl @Inject() (
     outputFieldName: String,
     mlModel: Classification,
     setting: LearningSetting
-  ): Traversable[ClassificationPerformance] = {
+  ): Future[Traversable[ClassificationPerformance]] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
     val evaluators = ClassificationEvalMetric.values.filter(metric =>
@@ -165,23 +160,26 @@ private class MachineLearningServiceImpl @Inject() (
     // split the data into training and test parts
     val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
 
-    val results = (0  until setting.repetitions.getOrElse(1)).map { _ =>
+    val resultsFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
+      println(s"Execution of repetition $index started.")
       val Array(training, test) = finalDf.randomSplit(Array(split, 1 - split))
 
-      // run the trainer (with folds) on the given training and test data sets
+        // run the trainer (with folds) on the given training and test data sets
       val results = trainWithFolds(trainer, evaluators ++ binEvaluators, setting.crossValidationFolds, training.cache, test.cache)
       training.unpersist
       test.unpersist
       results
     }
 
-    // uncache
-    finalDf.unpersist
-    df.unpersist
+    resultsFuture.map { results =>
+      // uncache
+      finalDf.unpersist
+      df.unpersist
 
-    // create performance results
-    results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
-      ClassificationPerformance(evalMetric, results.map( x => (x._2, x._3)))
+      // create performance results
+      results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
+        ClassificationPerformance(evalMetric, results.map( x => (x._2, x._3)))
+      }
     }
   }
 
@@ -201,7 +199,7 @@ private class MachineLearningServiceImpl @Inject() (
     outputFieldName: String,
     mlModel: Regression,
     setting: LearningSetting
-  ): Traversable[RegressionPerformance] = {
+  ): Future[Traversable[RegressionPerformance]] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
     val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
@@ -224,7 +222,8 @@ private class MachineLearningServiceImpl @Inject() (
     // split the data into training and test parts
     val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
 
-    val results = (0  until setting.repetitions.getOrElse(1)).map { _ =>
+    val resultsFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
+      println(s"Execution of repetition $index started.")
       val Array(training, test) = dataFrame.randomSplit(Array(split, 1 - split))
 
       // run the trainer (with folds) on the given training and test data sets
@@ -234,12 +233,14 @@ private class MachineLearningServiceImpl @Inject() (
       results
     }
 
-    // uncache
-    dataFrame.unpersist()
+    resultsFuture.map { results =>
+      // uncache
+      dataFrame.unpersist()
 
-    // create performance results
-    results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
-      RegressionPerformance(evalMetric, results.map( x => (x._2, x._3)))
+      // create performance results
+      results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
+        RegressionPerformance(evalMetric, results.map( x => (x._2, x._3)))
+      }
     }
   }
 

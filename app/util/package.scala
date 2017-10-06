@@ -1,14 +1,13 @@
+import java.util.concurrent.Executors
+
 import models._
 import org.apache.commons.lang.StringUtils
 import play.api.{Logger, LoggerLike}
 import dataaccess.JsonUtil
 import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
-
-import scala.collection.TraversableLike
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect.ClassTag
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.blocking
 
 package object util {
 
@@ -139,11 +138,47 @@ package object util {
     items: TraversableOnce[T])(
     fun: T => Future[U]
   ): Future[Seq[U]] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     items.foldLeft(Future.successful[List[U]](Nil)) {
       (f, item) => f.flatMap {
         x => fun(item).map(_ :: x)
       }
     } map (_.reverse)
+  }
+
+//  def parallelize[T](
+//    futures: Traversable[Future[T]],
+//    threadsNum: Int
+//  ): Future[Traversable[T]] = {
+//    println("Threads: " + threadsNum)
+//    val threadPool = Executors.newFixedThreadPool(threadsNum)
+//    implicit val ec = ExecutionContext.fromExecutor(threadPool)
+//
+////    val newFutures = futures.map( future =>
+////      future.transform(identity, identity)
+//////      Future.successful(()).flatMap(_ => future)
+////    )
+//
+//    val resultFuture = Future.sequence(futures)
+//
+//    threadPool.shutdown()
+//    resultFuture
+//  }
+
+  def parallelize[T, U](
+    inputs: Traversable[T],
+    threadsNum: Int)(
+    fun: T => U
+  ): Future[Traversable[U]] = {
+    val threadPool = Executors.newFixedThreadPool(threadsNum)
+    implicit val ec = ExecutionContext.fromExecutor(threadPool)
+
+    val futures = inputs.map(input => Future { fun(input) })
+    val resultFuture = Future.sequence(futures)
+
+//    threadPool.shutdown()
+    resultFuture
   }
 
 //  def sparkParallelize[T: ClassTag, U](
@@ -163,6 +198,8 @@ package object util {
 //  }
 
   def retry[T](failureMessage: String, logger: LoggerLike, maxAttemptNum: Int)(f: => Future[T]): Future[T] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+
     def retryAux(attempt: Int): Future[T] =
       f.recoverWith {
         case e: Exception => {

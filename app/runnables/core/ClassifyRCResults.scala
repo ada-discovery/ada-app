@@ -7,7 +7,7 @@ import dataaccess.{Criterion, DataSetMetaInfoRepoFactory}
 import dataaccess.Criterion._
 import models.FilterCondition.toCriterion
 import models.{AdaException, Filter, FilterCondition}
-import models.ml.{ClassificationSetting, LearningSetting}
+import models.ml.ClassificationSetting
 import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -33,21 +33,41 @@ class ClassifyRCResults @Inject() (
 
   private val dataSetFieldName = "inputOutputSpec-resultDataSetId"
 
-  override def runAsFuture(input: ClassifyRCResultsSpec) = {
-    val dsa = dsaf(input.resultsDataSetId).getOrElse(
-      throw new AdaException(s"Data set ${input.resultsDataSetId} not found.")
-    )
-
+  override def runAsFuture(input: ClassifyRCResultsSpec) =
     for {
-      jsons <- dsa.dataSetRepo.find(projection = Seq(dataSetFieldName))
+      // get the data set ids
+      dataSetIds <- dataSetIds(input)
 
-      dataSetIds = jsons.map { json =>
-        (json \ dataSetFieldName).get.as[String]
-      }.toSeq.sorted
-
+      // clasify data sets one-by-one
       _ <- seqFutures(dataSetIds) { classify(_, input) }
     } yield
       ()
+
+  private def dataSetIds(input: ClassifyRCResultsSpec) = {
+    def resultsDataSetIds(dataSetId: String) = {
+      val dsa = dsaf(dataSetId).getOrElse(
+        throw new AdaException(s"Data set ${dataSetId} not found.")
+      )
+
+      for {
+        jsons <- dsa.dataSetRepo.find(projection = Seq(dataSetFieldName))
+      } yield
+        jsons.map { json =>
+          (json \ dataSetFieldName).get.as[String]
+        }.toSeq.sorted
+      }
+
+    (
+      input.rcWeightDataSetIdPrefix,
+      input.rcWeightDataSetIdSuffixFrom,
+      input.rcWeightDataSetIdSuffixTo
+    ).zipped.headOption.map { case (dataSetIdPrefix, from, to) =>
+      Future((from to to).map(dataSetIdPrefix + _).sorted)
+    }.getOrElse(
+      resultsDataSetIds(input.resultsDataSetId.getOrElse(
+        throw new AdaException("Results data set id or RC weight data set id (with suffix from-to) expected.")
+      ))
+    )
   }
 
   private def classify(dataSetId: String, input: ClassifyRCResultsSpec): Future[Unit] = {
@@ -100,9 +120,10 @@ class ClassifyRCResults @Inject() (
           )
 
           val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-          val results = mlService.classify(jsons, fieldNameAndSpecs, input.outputFieldName, mlModel, setting.learningSetting)
-          val finalResult = MachineLearningUtil.createClassificationResult(results, setting)
-          dsa.classificationResultRepo.save(finalResult)
+          mlService.classify(jsons, fieldNameAndSpecs, input.outputFieldName, mlModel, setting.learningSetting).flatMap { results =>
+            val finalResult = MachineLearningUtil.createClassificationResult(results, setting)
+            dsa.classificationResultRepo.save(finalResult)
+          }
 
         case None => Future(())
       }
@@ -132,7 +153,10 @@ class ClassifyRCResults @Inject() (
 }
 
 case class ClassifyRCResultsSpec(
-  resultsDataSetId: String,
+  resultsDataSetId: Option[String],
+  rcWeightDataSetIdPrefix: Option[String],
+  rcWeightDataSetIdSuffixFrom: Option[Int],
+  rcWeightDataSetIdSuffixTo: Option[Int],
   mlModelId: BSONObjectID,
   outputFieldName: String,
   filterName: Option[String],

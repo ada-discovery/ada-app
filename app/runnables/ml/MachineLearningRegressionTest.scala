@@ -29,8 +29,10 @@ class MachineLearningRegressionTest @Inject()(
 
     // featureFieldNames,
 
-    def regress(model: Regression) =
-      machineLearningService.regress(jsons, fieldNameAndSpecs, outputField, model)
+    def regress(model: Regression) = {
+      val resultFuture = machineLearningService.regress(jsons, fieldNameAndSpecs, outputField, model)
+      result(resultFuture, 1 hour)
+    }
 
     println("Linear regression")
 

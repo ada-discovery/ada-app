@@ -9,6 +9,7 @@ import runnables.GuiceBuilderRunnable
 import services.DataSetService
 import services.ml.MachineLearningService
 
+import scala.concurrent.Await
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 
@@ -35,8 +36,10 @@ class MachineLearningClassificationTest @Inject()(
 
     val selectedFeatures = machineLearningService.selectFeaturesAsChiSquare(jsons, fieldNameAndSpecs, outputField, 3, 10)
 
-    def classify(model: Classification) =
-      machineLearningService.classify(jsons, fieldNameAndSpecs, outputField, model)
+    def classify(model: Classification) = {
+      val resultFuture = machineLearningService.classify(jsons, fieldNameAndSpecs, outputField, model)
+      result(resultFuture, 1 hour)
+    }
 
     println("Logistic regression")
 
