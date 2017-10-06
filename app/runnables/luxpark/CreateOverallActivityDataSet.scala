@@ -163,9 +163,6 @@ class CreateOverallActivityDataSet  @Inject()(
 
   def createJsons: Future[Traversable[JsObject]] =
     for {
-      // register a new data set and object dsa
-      newDsa <- dsaf.register(mergedDataSetInfo, None, None)
-
       // collect all the items from mPower activity data sets
       externalIdMPowerItemsItems <- Future.sequence(
         dataSetIds.map { dataSetId =>

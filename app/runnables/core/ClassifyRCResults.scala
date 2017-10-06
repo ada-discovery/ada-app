@@ -3,7 +3,7 @@ package runnables.core
 import javax.inject.Inject
 
 import dataaccess.RepoTypes.FieldRepo
-import dataaccess.{Criterion, DataSetMetaInfoRepoFactory}
+import dataaccess.Criterion
 import dataaccess.Criterion._
 import models.FilterCondition.toCriterion
 import models.{AdaException, Filter, FilterCondition}
@@ -22,7 +22,6 @@ import scala.concurrent.Future
 import scala.reflect.runtime.universe.typeOf
 
 class ClassifyRCResults @Inject() (
-    dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory,
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
     dataSetService: DataSetService,

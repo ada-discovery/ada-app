@@ -79,12 +79,6 @@ class RCPredictionServiceImpl @Inject()(
   private val settingAndResultsFields =
     caseClassToFlatFieldTypes[RCPredictionSettingAndResults]("-").filter(_._1 != "_id")
 
-  private def resultWeightDataSetSetting(resultDataSetId: String) =
-    new DataSetSetting(resultDataSetId, StorageType.ElasticSearch, "rc_w_0")
-
-  private def resultDataSetSetting(resultDataSetId: String) =
-    new DataSetSetting(resultDataSetId, StorageType.ElasticSearch, "reservoirNodeNum")
-
   private val defaultBatchSize = 20
 
   private val logger = Logger
@@ -191,9 +185,6 @@ class RCPredictionServiceImpl @Inject()(
     }
 
     for {
-      // get the data set meta info
-      metaInfo <- dsa.metaInfo
-
       // retrieve the total count
       count <- dataSetRepo.count()
 
@@ -242,13 +233,16 @@ class RCPredictionServiceImpl @Inject()(
       weightFields <- dsa.fieldRepo.find(Seq("name" #-> preserveWeightFieldNames))
 
       // save the weight matrix
-      _ <- saveWeightDataSet(metaInfo, ioSpec.resultDataSetId, ioSpec.resultDataSetName, weightFields, allResults)
+      _ <- saveWeightDataSet(dsa, ioSpec.resultDataSetId, ioSpec.resultDataSetName, weightFields, allResults)
 
       // calc the errors
       (meanRnmse, meanSamp) = calcErrors(
         allResults.map(_._1),
         setting.getWeightAdaptationIterationNum
       )
+
+      // get the data set name
+      dataSetName <- dsa.dataSetName
 
       // save the results
       _ <- {
@@ -272,7 +266,7 @@ class RCPredictionServiceImpl @Inject()(
           meanRnmse
         )
 
-        saveResults(metaInfo, settingAndResults, ioSpec.sourceDataSetId + "_results", metaInfo.name + " Results")
+        saveResults(dsa, settingAndResults, ioSpec.sourceDataSetId + "_results", dataSetName + " Results")
       }
     } yield {
       println(s"RC prediction finished in ${new ju.Date().getTime - start.getTime} ms.")
@@ -403,7 +397,7 @@ class RCPredictionServiceImpl @Inject()(
     )
 
   private def saveWeightDataSet(
-    sourceDataSetMetaInfo: DataSetMetaInfo,
+    sourceDsa: DataSetAccessor,
     resultDataSetId: String,
     resultDataSetName: String,
     fields: Traversable[Field],
@@ -411,13 +405,7 @@ class RCPredictionServiceImpl @Inject()(
   ): Future[Unit] =
     for {
       // register the weight output data set
-      weightDsa <- dsaf.register(
-        sourceDataSetMetaInfo.copy(_id = None, id = resultDataSetId, name = resultDataSetName, timeCreated = new ju.Date()),
-        Some(
-          resultWeightDataSetSetting(resultDataSetId)
-        ),
-        None
-      )
+      weightDsa <- dataSetService.register(sourceDsa, resultDataSetId, resultDataSetName, StorageType.ElasticSearch, "rc_w_0")
 
       weightsCount = resultsAndJsons.head._1.finalWeights.size
 
@@ -582,18 +570,14 @@ class RCPredictionServiceImpl @Inject()(
   }
 
   private def saveResults(
-    sourceDataSetMetaInfo: DataSetMetaInfo,
+    sourceDsa: DataSetAccessor,
     item: RCPredictionSettingAndResults,
     resultDataSetId: String,
     resultDataSetName: String
   ): Future[Unit] =
     for {
       // register the results data set (if not registered already)
-      newDsa <- dsaf.register(
-        sourceDataSetMetaInfo.copy(_id = None, id = resultDataSetId, name = resultDataSetName, timeCreated = new ju.Date()),
-        Some(resultDataSetSetting(resultDataSetId)),
-        None
-      )
+      newDsa <- dataSetService.register(sourceDsa, resultDataSetId, resultDataSetName, StorageType.ElasticSearch, "reservoirNodeNum")
 
       // update the dictionary
       _ <- dataSetService.updateDictionary(resultDataSetId, settingAndResultsFields, false, true)

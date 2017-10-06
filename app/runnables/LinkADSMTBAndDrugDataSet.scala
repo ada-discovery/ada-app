@@ -32,8 +32,6 @@ class LinkADSMTBAndDrugDataSet @Inject()(
   private val linkedDataSetId = "adsm-tb.global_w_drugs"
   private val linkedDataSetName = "Global with Drugs"
 
-  private def linkedDataSetSetting = new DataSetSetting(linkedDataSetId, StorageType.ElasticSearch, "country")
-
   private val drugCodeFieldName1 = "drug_coded"
   private val drugCodeFieldName2 = "id"
   private val drugFieldName2 = "name"
@@ -44,15 +42,8 @@ class LinkADSMTBAndDrugDataSet @Inject()(
 
   override def runAsFuture =
     for {
-      // get the data set meta info
-      globalMetaInfo <- globalDsa.metaInfo
-
       // register the linked data set (if not registered already)
-      linkedDsa <- dsaf.register(
-        globalMetaInfo.copy(_id = None, id = linkedDataSetId, name = linkedDataSetName, timeCreated = new ju.Date()),
-        Some(linkedDataSetSetting),
-        None
-      )
+      linkedDsa <- dataSetService.register(globalDsa, linkedDataSetId, linkedDataSetName, StorageType.ElasticSearch, "country")
 
       // get all the global fields
       globalFields <- globalFieldRepo.find()

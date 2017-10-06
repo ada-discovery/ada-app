@@ -109,6 +109,14 @@ trait DataSetService {
     jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]] = None
   ): Future[Unit]
 
+  def register(
+    sourceDsa: DataSetAccessor,
+    newDataSetId: String,
+    newDataSetName: String,
+    newStorageType: StorageType.Value,
+    newDefaultDistributionFieldName: String
+  ): Future[DataSetAccessor]
+
   def mergeDataSets(
     resultDataSetId: String,
     resultDataSetName: String,
@@ -901,6 +909,27 @@ class DataSetServiceImpl @Inject()(
       newDsa
   }
 
+  override def register(
+    sourceDsa: DataSetAccessor,
+    newDataSetId: String,
+    newDataSetName: String,
+    newStorageType: StorageType.Value,
+    newDefaultDistributionFieldName: String
+  ): Future[DataSetAccessor] = {
+    for {
+      // get the data set meta info
+      metaInfo <- sourceDsa.metaInfo
+
+      // register the norm data set (if not registered already)
+      newDsa <- dsaf.register(
+        metaInfo.copy(_id = None, id = newDataSetId, name = newDataSetName, timeCreated = new ju.Date()),
+        Some(new DataSetSetting(newDataSetId, newStorageType, newDefaultDistributionFieldName)),
+        None
+      )
+    } yield
+      newDsa
+  }
+
   private def inferFieldTypes(
     jsonFieldTypeInferrer: FieldTypeInferrer[JsReadable],
     fieldNames: Traversable[String])(
@@ -1125,7 +1154,9 @@ class DataSetServiceImpl @Inject()(
       // get the accessor (data repo and field repo) for the newly registered data set
       originalDataSetInfo <- originalDsa.metaInfo
       newDsa <- dsaf.register(
-        DataSetMetaInfo(None, newDataSetId, newDataSetName, 0, false, originalDataSetInfo.dataSpaceId), newDataSetSetting, newDataView
+        DataSetMetaInfo(None, newDataSetId, newDataSetName, 0, false, originalDataSetInfo.dataSpaceId),
+        newDataSetSetting,
+        newDataView
       )
       newDataRepo = newDsa.dataSetRepo
       newFieldRepo = newDsa.fieldRepo

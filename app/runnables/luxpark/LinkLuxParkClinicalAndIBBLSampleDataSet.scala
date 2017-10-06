@@ -13,7 +13,7 @@ import play.api.libs.json._
 import dataaccess.Criterion.Infix
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import runnables.GuiceBuilderRunnable
+import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -23,7 +23,7 @@ import scala.concurrent.{Await, Future}
 class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
   private val clinicalDataSetId = "lux_park.clinical"
   private val clinicalDsa = dsaf(clinicalDataSetId).get
@@ -38,10 +38,6 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
   private val linkedDataSetId = "lux_park.ibbl_biosamples_blood_patient"
   private val linkedDataSetName = "Patient Blood Biosample"
 
-  private def linkedDataSetSetting = new DataSetSetting(linkedDataSetId, StorageType.ElasticSearch, "sampletypeid")
-
-  private val timeout = 10 minutes
-
   private val clinicalBloodKitFieldName = "ibbl_kit_blood"
   private val clinicalFieldNames = Seq(
     "cdisc_dm_usubjd",
@@ -51,17 +47,10 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
 
   private val biosampleAliquotFieldName = "sampleid"
 
-  override def run = {
-    val future = for {
-      // get the data set meta info
-      biosampleMetaInfo <- biosampleDsa.metaInfo
-
+  override def runAsFuture =
+    for {
       // register the merged data set (if not registered already)
-      linkedDsa <- dsaf.register(
-        biosampleMetaInfo.copy(_id = None, id = linkedDataSetId, name = linkedDataSetName, timeCreated = new ju.Date()),
-        Some(linkedDataSetSetting),
-        None
-      )
+      linkedDsa <- dataSetService.register(biosampleDsa, linkedDataSetId, linkedDataSetName, StorageType.ElasticSearch, "sampletypeid")
 
       // get the selected clinical fields
       clinicalFields <- clinicalFieldRepo.find(Seq(FieldIdentity.name #-> clinicalFieldNames))
@@ -71,7 +60,7 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
 
       // update the merged dictionary
       _ <- {
-        val fieldNameAndTypes = (clinicalFields ++ biosampleFields).map( field => (field.name, field.fieldTypeSpec))
+        val fieldNameAndTypes = (clinicalFields ++ biosampleFields).map(field => (field.name, field.fieldTypeSpec))
         dataSetService.updateDictionary(linkedDataSetId, fieldNameAndTypes, true, true)
       }
 
@@ -100,7 +89,7 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
 
       linkedJsons = {
         clinicalItems.map { case (bloodKit, clinicalJson) =>
-          biosampleKitMap.get(bloodKit).map( biosampleJsons =>
+          biosampleKitMap.get(bloodKit).map(biosampleJsons =>
             biosampleJsons.map { case (_, biosampleJson) =>
               clinicalJson.++(biosampleJson)
             }
@@ -115,9 +104,6 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
       _ <- dataSetService.saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(100))
     } yield
       ()
-
-    Await.result(future, timeout)
-  }
 }
 
 object LinkLuxParkClinicalAndIBBLSampleDataSet extends GuiceBuilderRunnable[LinkLuxParkClinicalAndIBBLSampleDataSet] with App { run }

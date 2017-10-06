@@ -31,8 +31,6 @@ class CreateMPowerDistanceDataSet @Inject() (
 
   private val normDataSetId = "mpower_challenge.walking_activity_training_norms"
   private val normDataSetName = "Walking Activity Training Norms"
-  private def normDataSetSetting = new DataSetSetting(normDataSetId, StorageType.Mongo, "medTimepoint")
-
   private val motionFields = Seq("attitude", "rotationRate", "userAcceleration", "gravity")
 
   private val acceleremoterPaths = Seq(
@@ -59,15 +57,8 @@ class CreateMPowerDistanceDataSet @Inject() (
 
   override def runAsFuture =
     for {
-      // get the data set meta info
-      metaInfo <- dsa.metaInfo
-
       // register the norm data set (if not registered already)
-      newDsa <- dsaf.register(
-        metaInfo.copy(_id = None, id = normDataSetId, name = normDataSetName, timeCreated = new ju.Date()),
-        Some(normDataSetSetting),
-        None
-      )
+      newDsa <- dataSetService.register(dsa, normDataSetId, normDataSetName, StorageType.Mongo, "medTimepoint")
 
       // get all the fields
       fields <- fieldRepo.find()
