@@ -47,8 +47,8 @@
             @helper.form(action = call) {
                 <fieldset>
                     @if(form.mapping.mappings.nonEmpty) {
-                        @form.mapping.mappings.map(_.key).filter(key => !key.isEmpty).map { key =>
-                            @inputTextAux(key)
+                        @form.mapping.mappings.filter(mapping => !mapping.key.isEmpty).map { mapping =>
+                            @inputTextAux(mapping.key)
                         }
                     } else {
                         @inputTextAux("")

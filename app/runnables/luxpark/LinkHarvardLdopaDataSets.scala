@@ -50,12 +50,8 @@ class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extend
   private val dataSetLinkSpec = DataSetLink(
     "harvard_ldopa.walking_data",
     "harvard_ldopa.scores",
-    Seq(
-      ("patient", "patient"),
-      ("visit", "visit"),
-      ("session", "session"),
-      ("task", "task")
-    ),
+    Seq("patient", "visit", "session", "task"),
+    Seq("patient", "visit", "session", "task"),
     walkingFieldNames,
     scoreFieldNames,
     DataSetTransformationCore(

@@ -45,11 +45,14 @@ case class DataSetSeriesProcessingSpec(
 case class DataSetLink(
   leftSourceDataSetId: String,
   rightSourceDataSetId: String,
-  linkFieldNames: Seq[(String, String)],
+  leftLinkFieldNames: Seq[String],
+  rightLinkFieldNames: Seq[String],
   leftPreserveFieldNames: Traversable[String],
   rightPreserveFieldNames: Traversable[String],
   core: DataSetTransformationCore
-) extends DataSetTransformation
+) extends DataSetTransformation {
+  def linkFieldNames = leftLinkFieldNames.zip(rightLinkFieldNames)
+}
 
 object SeriesProcessingType extends Enumeration {
   val Diff, RelativeDiff, Ratio, LogRatio, Min, Max, Mean = Value

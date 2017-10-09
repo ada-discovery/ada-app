@@ -30,6 +30,9 @@ class DeNoPaPlayground @Inject() (
   private val filename_de = folder + "DeNoPa_dictionary_de"
   private val filename_en = folder + "DeNoPa_dictionary_en-utf8"
 
+  private val filename_extra_de = folder + "DeNoPa_dictionary_extra_de-utf8"
+  private val filename_extra_en = folder + "DeNoPa_dictionary_extra_en-utf8"
+
 //  val filename_de = "/Users/peter.banda/Documents/DeNoPa/translations/DeNoPa_dictionary_de"
 //  val filename_en = "/Users/peter.banda/Documents/DeNoPa/translations/DeNoPa_dictionary_en2"
 
@@ -62,6 +65,9 @@ class DeNoPaPlayground @Inject() (
       // read all the lines
       val oldTextsDe = getRecords(filename_de)
       val oldTextsEn = getRecords(filename_en)
+
+      val newTextsDe = getRecords(filename_extra_de)
+      val newTextsEn = getRecords(filename_extra_en)
 
       //    val oldTexts = (oldTextsDe, oldTextsEn).zipped.map{ case (de, en) => de + "," + en}
       //    println(oldTexts.mkString("\n"))

@@ -69,9 +69,8 @@ class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSe
   private val dataSetLinkSpec = DataSetLink(
     "mpower_challenge.walking_activity_training",
     "mpower_challenge.demographics_training",
-    Seq(
-      ("healthCode", "healthCode")
-    ),
+    Seq("healthCode"),
+    Seq("healthCode"),
     walkingFieldNames,
     demographicsFieldNames,
     DataSetTransformationCore(

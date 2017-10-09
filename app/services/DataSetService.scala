@@ -712,9 +712,15 @@ class DataSetServiceImpl @Inject()(
                   )
                   fieldType.jsonToDisplayString(json \ fieldName)
                 }
-                linkRightJsonsMap.get(linkAsString).map(
-                  rightJsons => rightJsons.map(json ++ _)
-                ).getOrElse(
+                linkRightJsonsMap.get(linkAsString).map { rightJsons =>
+                  val jsonId = (json \ JsObjectIdentity.name).as[BSONObjectID]
+
+                  rightJsons.map { rightJson =>
+                    val id = if (rightJsons.size > 1) JsObjectIdentity.next else jsonId
+
+                    json ++ rightJson ++ Json.obj(JsObjectIdentity.name -> id)
+                  }
+                }.getOrElse(
                   Seq(json)
                 )
               }.flatten
@@ -734,7 +740,6 @@ class DataSetServiceImpl @Inject()(
     val dsa = dsaf(spec.sourceDataSetId).getOrElse(
       throw new AdaException(s"Data set id ${spec.sourceDataSetId} not found."))
 
-    val idName = JsObjectIdentity.name
     val processingBatchSize = spec.processingBatchSize.getOrElse(20)
     val saveBatchSize = spec.core.saveBatchSize.getOrElse(5)
     val preserveFieldNameSet = spec.preserveFieldNames.toSet

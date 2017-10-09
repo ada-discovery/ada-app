@@ -1,6 +1,6 @@
 package controllers.core
 
-import controllers.{BSONObjectIDStringFormatter, EnumFormatter, JsonFormatter}
+import controllers.{BSONObjectIDStringFormatter, EnumFormatter, JsonFormatter, SeqFormatter}
 import models.{AdaException, StorageType}
 import play.api.data._
 import play.api.data.Forms.{mapping, _}
@@ -24,10 +24,10 @@ private class GenericMapping[R, A](
     val constraints: Seq[Constraint[R]] = Nil
   ) extends Mapping[R] with ObjectMapping {
 
-  val fields = fs.map(f => f._2.withPrefix(f._1).withPrefix(key))
+  private val fieldMappings = fs.map(f => f._2.withPrefix(f._1).withPrefix(key))
 
   def bind(data: Map[String, String]): Either[Seq[FormError], R] = {
-    merge(fields.map(_.bind(data)).toSeq :_*) match {
+    merge(fieldMappings.map(_.bind(data)).toSeq :_*) match {
       case Left(errors) => Left(errors)
       case Right(values) => {
         applyConstraints(apply(values.map(_.asInstanceOf[A])))
@@ -37,7 +37,7 @@ private class GenericMapping[R, A](
 
   def unbind(value: R): Map[String, String] = {
     unapply(value).map { values =>
-      val maps = (fields.toSeq, values.toSeq).zipped.map { case (field, value) =>
+      val maps = (fieldMappings.toSeq, values.toSeq).zipped.map { case (field, value) =>
         field.unbind(value)
       }
       maps.fold(Map[String, String]()){ _ ++ _}
@@ -46,7 +46,7 @@ private class GenericMapping[R, A](
 
   def unbindAndValidate(value: R): (Map[String, String], Seq[FormError]) = {
     unapply(value).map { values =>
-      val maps = (fields.toSeq, values.toSeq).zipped.map { case (field, value) =>
+      val maps = (fieldMappings.toSeq, values.toSeq).zipped.map { case (field, value) =>
         field.unbindAndValidate(value)
       }
       maps.fold((Map[String, String](), Seq[FormError]())){ case (a, b) =>
@@ -63,7 +63,13 @@ private class GenericMapping[R, A](
     new GenericMapping(apply, unapply, fs, key, constraints ++ addConstraints.toSeq)
   }
 
-  val mappings = Seq(this) ++ fields.flatMap(_.mappings)
+  override val mappings: Seq[Mapping[_]] = // Seq(this) ++
+    fieldMappings.flatMap { field =>
+      if (field.isInstanceOf[GenericMapping[_, _]])
+        field.mappings
+      else
+        Seq(field)
+    }.toSeq
 }
 
 object GenericMapping {
@@ -135,6 +141,7 @@ object GenericMapping {
   }
 
   private implicit val bsonObjectIDFormatter = BSONObjectIDStringFormatter
+  private implicit val stringSeqFormatter = SeqFormatter.apply
 
   @throws(classOf[AdaException])
   private def genericMapping(typ: Type): Mapping[Any] = {
@@ -173,17 +180,8 @@ object GenericMapping {
 
       // enum
       case t if t subMatches typeOf[Enumeration#Value] =>
- //       val enumNames = ReflectionUtil.enumValueNames(t)
         val enum = ReflectionUtil.enum(t)
         of(EnumFormatter(enum))
-//        t match {
-//          case TypeRef(enumType, _, _) => {
-//            val withNameMethod = enumType.member(newTermName("withName"))
-//            val lalla = withNameMethod.asMethod
-//          }
-//        }
-//        boolean
-//        of(EnumFormatter(t)) // TODO
 
       // string
       case t if t matches typeOf[String] =>
@@ -201,6 +199,10 @@ object GenericMapping {
       case t if t <:< typeOf[Option[_]] =>
         optional(genericMapping(t.typeArgs.head))
 
+      // string seq
+      case t if t subMatches typeOf[Seq[String]] =>
+        of[Seq[String]]
+
       // seq
       case t if t subMatches typeOf[Seq[_]] =>
         val innerType = t.typeArgs.head
@@ -215,6 +217,22 @@ object GenericMapping {
       case t if t subMatches typeOf[List[_]] =>
         val innerType = t.typeArgs.head
         list(genericMapping(innerType))
+
+      // traversable seq
+      case t if t subMatches typeOf[Traversable[String]] =>
+        of[Seq[String]]
+
+      // traversable
+      case t if t subMatches typeOf[Traversable[_]] =>
+        val innerType = t.typeArgs.head
+        seq(genericMapping(innerType))
+
+      // tuple2
+      case t if t subMatches typeOf[Tuple2[_, _]] =>
+        val typeArgs = t.typeArgs
+        val mapping1 = genericMapping(typeArgs(0))
+        val mapping2 = genericMapping(typeArgs(1))
+        tuple(("1" -> mapping1), ("2" -> mapping2))
 
       // otherwise
       case _ =>

@@ -2,6 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
+import dataaccess.{ClassificationResultRepoFactory, FilterRepoFactory}
 import models.{AdaException, StorageType}
 import models.ml.ClassificationResult
 import models.ml.ClassificationResult.classificationResultFormat
@@ -20,6 +21,8 @@ import scala.reflect.runtime.universe.typeOf
 class MergeRCClassificationResults @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService,
+    classificationResultRepoFactory: ClassificationResultRepoFactory,
+    filterRepoFactory: FilterRepoFactory,
     classificationRepo: ClassificationRepo
   ) extends InputFutureRunnable[MergeRCClassificationResultsSpec] {
 
@@ -80,15 +83,12 @@ class MergeRCClassificationResults @Inject() (
   }
 
   private def classificationResults(dataSetId: String): Future[Traversable[(ClassificationResult, ClassificationResultExtra)]] = {
-    val dsa = dsaf(dataSetId).getOrElse(
-      throw new AdaException(s"Data set ${dataSetId} not found.")
-    )
-
-    val filterRepo = dsa.filterRepo
+    val classificationResultRepo = classificationResultRepoFactory(dataSetId)
+    val filterRepo = filterRepoFactory(dataSetId)
 
     for {
       // get the results
-      results <- dsa.classificationResultRepo.find()
+      results <- classificationResultRepo.find()
 
       // add some extra stuff for easier reference (model and filter name)
       resultsWithExtra <- Future.sequence(
