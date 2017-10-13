@@ -369,29 +369,42 @@ class DataSetServiceImpl @Inject()(
 
     val lineBuffer = ListBuffer[String]()
 
-    // read all the lines
-    contentLines.zipWithIndex.map { case (line, index) =>
-      // parse the line
-      val values =
-        if (lineBuffer.isEmpty) {
-          parseLine(delimiter, line, prefixSuffixSeparators)
-        } else {
-          val bufferedLine = lineBuffer.mkString("") + line
-          parseLine(delimiter, bufferedLine, prefixSuffixSeparators)
-        }
+    // helper function to parse a line and handle a parse exception by returning None
+    def parse(line: String): Option[Seq[String]] =
+      try {
+        val values =
+          if (lineBuffer.isEmpty) {
+            parseLine(delimiter, line, prefixSuffixSeparators)
+          } else {
+            val bufferedLine = lineBuffer.mkString("") + line
+            parseLine(delimiter, bufferedLine, prefixSuffixSeparators)
+          }
+        Some(values)
+      } catch {
+        case e: AdaParseException => None
+      }
 
-      if (values.size < columnCount) {
-        logger.info(s"Buffered line ${index} has an unexpected count '${values.size}' vs '${columnCount}'. Buffering...")
+    // read all the lines
+    contentLines.zipWithIndex.flatMap { case (line, index) =>
+      // parse the line
+      val values = parse(line)
+
+      if (values.isEmpty) {
+        logger.info(s"Buffered line ${index} could not be parse due to the unmatched prefix and suffix $prefixSuffixSeparators. Buffering...")
         lineBuffer.+=(line)
         Option.empty[Seq[String]]
-      } else if (values.size > columnCount) {
-        throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.size}' vs '${columnCount}'. Parsing terminated.")
+      } else if (values.get.size < columnCount) {
+        logger.info(s"Buffered line ${index} has an unexpected count '${values.get.size}' vs '${columnCount}'. Buffering...")
+        lineBuffer.+=(line)
+        Option.empty[Seq[String]]
+      } else if (values.get.size > columnCount) {
+        throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.get.size}' vs '${columnCount}'. Parsing terminated.")
       } else {
         // reset the buffer
         lineBuffer.clear()
-        Some(values)
+        values
       }
-    }.flatten
+    }
   }
 
   @Deprecated
@@ -684,7 +697,7 @@ class DataSetServiceImpl @Inject()(
                 throw new AdaException(s"Field $fieldName not found.")
               )
               fieldType.jsonToDisplayString(json \ fieldName)
-            }
+            }.mkString(",")
             val strippedJson = json.fields.filterNot { case (fieldName, _)  => rightLinkFieldNameSet.contains(fieldName) }
             (linkAsString, JsObject(strippedJson))
           }.toGroupMap
@@ -711,7 +724,7 @@ class DataSetServiceImpl @Inject()(
                     throw new AdaException(s"Field $fieldName not found.")
                   )
                   fieldType.jsonToDisplayString(json \ fieldName)
-                }
+                }.mkString(",")
                 linkRightJsonsMap.get(linkAsString).map { rightJsons =>
                   val jsonId = (json \ JsObjectIdentity.name).as[BSONObjectID]
 
@@ -724,6 +737,16 @@ class DataSetServiceImpl @Inject()(
                   Seq(json)
                 )
               }.flatten
+
+              linkedJsons.foreach { json =>
+                val linkAsString = spec.linkFieldNames.map { case (fieldName, _) =>
+                  val fieldType = leftFieldTypeMap.get(fieldName).getOrElse(
+                    throw new AdaException(s"Field $fieldName not found.")
+                  )
+                  fieldType.jsonToDisplayString(json \ fieldName)
+                }.mkString(",")
+                println(linkAsString)
+              }
 
               saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(saveBatchSize))
             }

@@ -41,11 +41,14 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
   private val clinicalBloodKitFieldName = "ibbl_kit_blood"
   private val clinicalFieldNames = Seq(
     "cdisc_dm_usubjd",
+    "cdisc_dm_sex",
     "redcap_event_name",
     clinicalBloodKitFieldName
   )
 
   private val biosampleAliquotFieldName = "sampleid"
+
+  private val saveBatchSize = 50
 
   override def runAsFuture =
     for {
@@ -101,7 +104,7 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
       _ <- linkedDsa.dataSetRepo.deleteAll
 
       // process and save jsons
-      _ <- dataSetService.saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(100))
+      _ <- dataSetService.saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(saveBatchSize))
     } yield
       ()
 }

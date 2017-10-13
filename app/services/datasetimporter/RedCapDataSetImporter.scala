@@ -144,7 +144,7 @@ private class RedCapDataSetImporter @Inject() (
         )
 
       // save the records
-      _ <- dataSetService.saveOrUpdateRecords(dataRepo, inheritedRecords.toSeq)
+      _ <- dataSetService.saveOrUpdateRecords(dataRepo, inheritedRecords.toSeq, batchSize = Some(20))
     } yield
       if (importInfo.importDictionaryFlag)
         messageLogger.info(s"Import of data set and dictionary '${importInfo.dataSetName}' successfully finished.")

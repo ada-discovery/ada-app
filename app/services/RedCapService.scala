@@ -4,14 +4,15 @@ import javax.inject.{Inject, Singleton}
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.google.inject.assistedinject.Assisted
-import play.api.libs.json.{JsObject, JsArray}
-import play.api.libs.ws.{WSResponse, WSRequest, WSClient}
+import com.ning.http.client.{AsyncHttpClientConfig, AsyncHttpClientConfigBean}
+import play.api.libs.json.{JsArray, JsObject}
+import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.Configuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import dataaccess.JsonUtil._
-
 import models.redcap.JsonFormat._
 import models.redcap._
+import play.api.libs.ws.ning.{NingAsyncHttpClientConfigBuilder, NingWSClient, NingWSClientConfig}
 
 import scala.concurrent.{Await, Future}
 
@@ -95,10 +96,22 @@ protected[services] class RedCapServiceWSImpl @Inject() (
     configuration: Configuration
   ) extends RedCapService {
 
-  private val req: WSRequest = ws.url(url).withRequestTimeout(360000) // configuration.getString("redcap.prodserver.api.url").get
+  private val timeout = configuration.getLong("redcap.request.timeout").get
+  private val createUnsecuredClient = configuration.getBoolean("redcap.create_unsecured_client").getOrElse(false)
+
+  private val wsClient: WSClient =
+    if (createUnsecuredClient) {
+      val config = new AsyncHttpClientConfigBean()
+      config.setAcceptAnyCertificate(true)
+      config.setFollowRedirect(true)
+      new NingWSClient(config)
+    } else
+      ws
+
+  private val req: WSRequest = wsClient.url(url).withRequestTimeout(timeout)
 
   private val baseRequestData = Map(
-    "token" -> token,   // configuration.getString("redcap.prodserver.token").get
+    "token" -> token,
     "format" -> "json"
   )
 

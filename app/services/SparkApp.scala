@@ -17,12 +17,14 @@ import scala.util.Random
 @Singleton
 class SparkApp @Inject() (configuration: Configuration) {
 
-  private val settings = Seq(
-    "spark.executor.memory",
-    "spark.network.timeout"
-  ).flatMap( key =>
+  private val reservedKeys = Set("spark.master.url", "spark.driver.jars")
+
+  private val settings = configuration.keys.filter(key =>
+    key.startsWith("spark.") && !reservedKeys.contains(key)
+  ).flatMap { key =>
+    println(key)
     configuration.getString(key).map((key, _))
-  )
+  }
 
   private val conf = new SparkConf(false)
     .setMaster(configuration.getString("spark.master.url").getOrElse("local[*]"))
@@ -36,8 +38,6 @@ class SparkApp @Inject() (configuration: Configuration) {
 
   val session = SparkSession
     .builder()
-//    .appName("Spark SQL basic example")
-//    .config("spark.some.config.option", "some-value")
     .config(conf)
     .getOrCreate()
 

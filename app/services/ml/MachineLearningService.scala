@@ -145,6 +145,9 @@ private class MachineLearningServiceImpl @Inject() (
     val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
     df.cache
 
+    // downsampling
+//    df.sample()
+
     // reduce the dimensionality if needed
     val reduceDim = new SchemaUnchangedTransformer(pcaComponentsOptional(setting.pcaDims))
 

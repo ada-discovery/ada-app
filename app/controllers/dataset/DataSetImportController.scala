@@ -36,6 +36,8 @@ import views.html.layout
 import util.{MessageLogger, getRequestParamValue}
 import play.api.data.format.Formats._
 
+import _root_.util.retry
+
 import scala.concurrent.{Await, Future}
 
 class DataSetImportController @Inject()(
@@ -58,6 +60,7 @@ class DataSetImportController @Inject()(
 
   // (this.getClass)
   private val importFolder = configuration.getString("datasetimport.import.folder").get
+  private val importRetryNum = configuration.getInt("datasetimport.retrynum").getOrElse(3)
 
   // Forms
 
@@ -346,7 +349,9 @@ class DataSetImportController @Inject()(
             home.flashing("errors" -> fullMessage)
           }
           val successRedirect = home// Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
-          dataSetImporterCentral(importInfo).map { _ =>
+          retry(s"Data set '${importInfo.dataSetName}' import failed: ", logger, importRetryNum)(
+            dataSetImporterCentral(importInfo)
+          ).map { _ =>
             val execTimeSec = (new Date().getTime - start.getTime) / 1000
 //            messageLogger.info()
             render {

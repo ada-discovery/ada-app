@@ -68,8 +68,8 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 //    FieldUtil.caseClassToFlatFieldTypes[ClassificationResult]("-").filter(_._1 != "_id")
 
   private val widgetSpecs = Seq(
-    DistributionWidgetSpec("timeCreated", None),
-    DistributionWidgetSpec("testStats-accuracy-mean", None),
+    DistributionWidgetSpec("timeCreated", None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))),
+    DistributionWidgetSpec("testStats-accuracy-mean", None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))),
     DistributionWidgetSpec("testStats-accuracy-mean", Some("setting-mlModelId")),
     ScatterWidgetSpec("trainingStats-accuracy-mean", "testStats-accuracy-mean", None)
   )
