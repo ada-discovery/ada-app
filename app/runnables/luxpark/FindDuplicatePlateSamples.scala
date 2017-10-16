@@ -5,10 +5,10 @@ import javax.inject.Inject
 import runnables.FutureRunnable
 import runnables.core.{FindDuplicates, FindDuplicatesSpec}
 
-class FindDuplicateIBBLSamples @Inject()(findDuplicates: FindDuplicates) extends FutureRunnable {
+class FindDuplicatePlateSamples @Inject()(findDuplicates: FindDuplicates) extends FutureRunnable {
 
-  private val dataSetId = "lux_park.ibbl_biosamples"
-  private val sampleIdField = "sampleid"
+  private val dataSetId = "lux_park.plate_sample_with_subject_oct_17"
+  private val sampleIdField = "SampleId"
 
   override def runAsFuture =
     findDuplicates.runAsFuture(FindDuplicatesSpec(dataSetId, Seq(sampleIdField)))
