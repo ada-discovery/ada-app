@@ -22,17 +22,17 @@ class CreateWeightOutlierDiagnosisFilter @Inject()(
   private val conditionCriterionNames = Seq(
     (
       "Diagnosis Not Null (RC_W wo Outliers)",
-      FilterCondition("professional-diagnosis", None, ConditionType.NotEquals, "", None),
+      FilterCondition("professional-diagnosis", None, ConditionType.NotEquals, None, None),
       NotEqualsNullCriterion("professional-diagnosis")
     ),
     (
       "Diagnosis True (RC_W wo Outliers)",
-      FilterCondition("professional-diagnosis", None, ConditionType.Equals, "true", None),
+      FilterCondition("professional-diagnosis", None, ConditionType.Equals, Some("true"), None),
       EqualsCriterion("professional-diagnosis", true)
     ),
     (
       "Diagnosis False (RC_W wo Outliers)",
-      FilterCondition("professional-diagnosis", None, ConditionType.Equals, "false", None),
+      FilterCondition("professional-diagnosis", None, ConditionType.Equals, Some("false"), None),
       EqualsCriterion("professional-diagnosis", false)
     )
   )
@@ -99,8 +99,8 @@ class CreateWeightOutlierDiagnosisFilter @Inject()(
     } yield
       fieldQuantiles.flatten.flatMap { case (field, quantiles) =>
         Seq(
-          FilterCondition(field.name, None, ConditionType.GreaterEqual, quantiles.lowerWhisker.toString, None),
-          FilterCondition(field.name, None, ConditionType.LessEqual, quantiles.upperWhisker.toString, None)
+          FilterCondition(field.name, None, ConditionType.GreaterEqual, Some(quantiles.lowerWhisker.toString), None),
+          FilterCondition(field.name, None, ConditionType.LessEqual, Some(quantiles.upperWhisker.toString), None)
         )
       }
 

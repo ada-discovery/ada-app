@@ -28,6 +28,8 @@ private class RedCapDataSetImporter @Inject() (
   private val visitPrefix = "visit"
   private val armPrefix = "arm"
 
+  private val defaultSaveBatchSize = 20
+
   override def apply(importInfo: RedCapDataSetImport): Future[Unit] = {
     logger.info(new Date().toString)
 
@@ -45,6 +47,8 @@ private class RedCapDataSetImporter @Inject() (
     val categoryRepo = dsa.categoryRepo
 
     val stringFieldType = ftf.stringScalar
+
+    val batchSize = importInfo.saveBatchSize.getOrElse(defaultSaveBatchSize)
 
     // helper functions to parse jsons
     def displayJsonToJson[T](fieldType: FieldType[T], json: JsReadable): JsValue = {
@@ -144,7 +148,7 @@ private class RedCapDataSetImporter @Inject() (
         )
 
       // save the records
-      _ <- dataSetService.saveOrUpdateRecords(dataRepo, inheritedRecords.toSeq, batchSize = Some(20))
+      _ <- dataSetService.saveOrUpdateRecords(dataRepo, inheritedRecords.toSeq, batchSize = Some(batchSize))
     } yield
       if (importInfo.importDictionaryFlag)
         messageLogger.info(s"Import of data set and dictionary '${importInfo.dataSetName}' successfully finished.")

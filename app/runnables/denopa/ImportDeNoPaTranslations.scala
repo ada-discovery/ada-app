@@ -19,44 +19,30 @@ class ImportDeNoPaTranslations @Inject()(
 
   private val folder = configuration.getString("denopa.translation.import.folder").get
 
-  private val filename_de = folder + "DeNoPa_dictionary_de"
-  private val filename_en = folder + "DeNoPa_dictionary_en-utf8"
+  private val filename_de = folder + "DeNoPa_all_translations_de"
+  private val filename_en = folder + "DeNoPa_all_translations_en"
 
-  private val filename_extra_de = folder + "DeNoPa_dictionary_extra_de-utf8"
-  private val filename_extra_en = folder + "DeNoPa_dictionary_extra_en-utf8"
-
-  private val truthValues = List("na", "ja", "nein", "falsch", "richtig", "fehlend")
+  private val filename_de_extra = folder + "DeNoPa_all_translations_de-extra"
+  private val filename_en_extra = folder + "DeNoPa_all_translations_en-extra"
 
   override def runAsFuture = {
     // read all the lines
-    val oldTextsDe = getRecords(filename_de)
-    val oldTextsEn = getRecords(filename_en)
-    val newTextsDe = getRecords(filename_extra_de)
-    val newTextsEn = getRecords(filename_extra_en)
+    val textsDe = getRecords(filename_de)
+    val textsEn = getRecords(filename_en)
 
-    val oldTexts = (oldTextsDe, oldTextsEn).zipped.map{ case (de, en) => Translation(None, de, en)}
-    println(oldTexts.mkString("\n"))
+    val extraTextsDe = getRecords(filename_de_extra)
+    val extraTextsEn = getRecords(filename_en_extra)
 
+    val translations = (textsDe.zip(textsEn) ++ extraTextsDe.zip(extraTextsEn)).map{ case (de, en) => Translation(None, de, en)}.sortBy(_.original)
+    println(translations.mkString("\n"))
     println("\n-------------------------------------------\n")
 
-    val newTexts = (newTextsDe, newTextsEn).zipped.map{ case (de, en) => Translation(None, de, en)}
-    println(newTexts.mkString("\n"))
-
-    println(oldTextsDe.size)
-    println(oldTextsEn.size)
-
-    println(newTextsDe.size)
-    println(newTextsEn.size)
-
     for {
-      // remove all items from the collection
+      // remove the old translations
       _ <- translationRepo.deleteAll
 
-      _ <- Future.sequence(
-        (oldTexts ++ newTexts).sortBy(_.original).map { translation =>
-          translationRepo.save(translation)
-        }
-      )
+      // save the new ones
+      _ <- translationRepo.save(translations)
     } yield
       ()
   }

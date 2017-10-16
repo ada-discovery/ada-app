@@ -484,8 +484,8 @@ class RCPredictionServiceImpl @Inject()(
       None,
       "PD vs Control",
       Seq(
-        Left(Seq(diagnosisCondition(ConditionType.Equals, "true"))),
-        Left(Seq(diagnosisCondition(ConditionType.Equals, "false")))
+        Left(Seq(diagnosisCondition(ConditionType.Equals, Some("true")))),
+        Left(Seq(diagnosisCondition(ConditionType.Equals, Some("false"))))
       ),
       Seq("recordId") ++ weightFieldNames.take(2),
       distributionWidgets ++ boxPlotWidgets ++ Seq(correlationWidget),
@@ -497,8 +497,8 @@ class RCPredictionServiceImpl @Inject()(
   private def filters(maxWeight: Int, weightsCount: Int): Seq[Filter] = {
     val conditions = (0 until weightsCount).map { index =>
       val fieldName = "rc_w_" + index
-      val gtCondition = FilterCondition(fieldName, None, ConditionType.Greater, (-maxWeight).toString, None)
-      val ltCondition = FilterCondition(fieldName, None, ConditionType.Less, maxWeight.toString, None)
+      val gtCondition = FilterCondition(fieldName, None, ConditionType.Greater, Some((-maxWeight).toString), None)
+      val ltCondition = FilterCondition(fieldName, None, ConditionType.Less, Some(maxWeight.toString), None)
       Seq(gtCondition, ltCondition)
     }.flatten
 
@@ -506,29 +506,29 @@ class RCPredictionServiceImpl @Inject()(
       Filter(
         None,
         Some(s"Diagnosis Not Null (RC_W -$maxWeight to $maxWeight)"),
-        conditions ++ Seq(diagnosisCondition(ConditionType.NotEquals, ""))
+        conditions ++ Seq(diagnosisCondition(ConditionType.NotEquals, None))
       ),
       Filter(
         None,
         Some(s"Diagnosis True (RC_W -$maxWeight to $maxWeight)"),
-        conditions ++ Seq(diagnosisCondition(ConditionType.Equals, "true"))
+        conditions ++ Seq(diagnosisCondition(ConditionType.Equals, Some("true")))
       ),
       Filter(
         None,
         Some(s"Diagnosis False (RC_W -$maxWeight to $maxWeight)"),
-        conditions ++ Seq(diagnosisCondition(ConditionType.Equals, "false"))
+        conditions ++ Seq(diagnosisCondition(ConditionType.Equals, Some("false")))
       )
     )
   }
 
-  private def diagnosisCondition(conditionType: ConditionType.Value, value: String) =
+  private def diagnosisCondition(conditionType: ConditionType.Value, value: Option[String]) =
     FilterCondition("professional-diagnosis", None, conditionType, value, None)
 
   private def mainFilter =
     Filter(
       None,
       Some("Diagnosis Not Null"),
-      Seq(FilterCondition("professional-diagnosis", None, ConditionType.NotEquals, "", None))
+      Seq(FilterCondition("professional-diagnosis", None, ConditionType.NotEquals, None, None))
     )
 
   private def calcErrors(

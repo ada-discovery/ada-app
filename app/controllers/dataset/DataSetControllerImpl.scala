@@ -42,7 +42,6 @@ import views.html.dataset
 import models.ml.SeriesProcessingSpec._
 
 import scala.math.Ordering.Implicits._
-import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.{Future, TimeoutException}
 
 trait GenericDataSetControllerFactory {
@@ -885,11 +884,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): Filter = {
     def valueStringToDisplayString[T](
       fieldType: FieldType[T],
-      text: String
-    ): String = {
-      val value = fieldType.valueStringToValue(text.trim)
-      fieldType.valueToDisplayString(value)
-    }
+      text: Option[String]
+    ): Option[String] =
+      text.map { text =>
+        val value = fieldType.valueStringToValue(text.trim)
+        fieldType.valueToDisplayString(value)
+      }
 
     val newConditions = filter.conditions.map { condition =>
       fieldNameMap.get(condition.fieldName.trim) match {
@@ -899,11 +899,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
           val valueLabel = condition.conditionType match {
             case In | NotIn =>
-              value.split(",").map(valueStringToDisplayString(fieldType, _)).mkString(", ")
+              value.map(
+                _.split(",").flatMap(x => valueStringToDisplayString(fieldType, Some(x))).mkString(", ")
+              )
 
             case _ => valueStringToDisplayString(fieldType, value)
           }
-          condition.copy(fieldLabel = field.label, valueLabel = Some(valueLabel))
+          condition.copy(fieldLabel = field.label, valueLabel = valueLabel)
         }
         case None => condition
       }

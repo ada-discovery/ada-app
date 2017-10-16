@@ -94,6 +94,7 @@ case class RedCapDataSetImport(
   token: String,
   importDictionaryFlag: Boolean,
   categoriesToInheritFromFirstVisit: Seq[String] = Nil,
+  saveBatchSize: Option[Int] = None,
   scheduled: Boolean = false,
   scheduledTime: Option[ScheduledTime] = None,
   setting: Option[DataSetSetting] = None,

@@ -28,6 +28,7 @@ class LuxParkDataSetImports @Inject() (configuration: Configuration) {
         "a_rfqu_risk_factor_questionnaire_subset",
         "a_rfqu_risk_factor_questionnaire_family_history"
       ),
+      None,
       false,
       None,
       Some(LuxParkDataSetSettings.Clinical),

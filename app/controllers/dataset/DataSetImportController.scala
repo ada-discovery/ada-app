@@ -197,6 +197,7 @@ class DataSetImportController @Inject()(
       "token" -> nonEmptyText,
       "importDictionaryFlag" -> boolean,
       "categoriesToInheritFromFirstVisit" -> of[Seq[String]],
+      "saveBatchSize" -> optional(number(min = 1)),
       "scheduled" -> boolean,
       "scheduledTime" -> optional(scheduledTimeMapping),
       "setting" -> optional(dataSetSettingMapping),

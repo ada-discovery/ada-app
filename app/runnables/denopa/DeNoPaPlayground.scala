@@ -1,5 +1,6 @@
 package runnables.denopa
 
+import java.io.{File, PrintWriter}
 import javax.inject.Inject
 
 import models.FieldTypeId
@@ -82,8 +83,16 @@ class DeNoPaPlayground @Inject() (
       val secondVisitTextsDe = getRecords(filename_second_visit_de)
       val secondVisitTextsEn = getRecords(filename_second_visit_en)
 
-      val mergedFileTextsDe = (oldTextsDe ++ newTextsDe ++ secondVisitTextsDe).toSet.toSeq.sorted
-      val mergedFileTextsEn = (oldTextsEn ++ newTextsEn ++ secondVisitTextsEn).toSet.toSeq.sorted
+      val mergedFileTexts = oldTextsDe.zip(oldTextsEn) ++ newTextsDe.zip(newTextsEn) ++ secondVisitTextsDe.zip(secondVisitTextsEn)
+      val mergedFileTextsDe = mergedFileTexts.map(_._1)
+
+
+      //
+      //      val fileTextDeDuplicates = mergedFileTextsDeAll.groupBy(identity).collect { case (x, Seq(_,_,_*)) => x }
+      //
+      //      println("File DE Duplicates:")
+      //      println(fileTextDeDuplicates.mkString("\n"))
+
 
       // calc  the diffs
 
@@ -91,47 +100,37 @@ class DeNoPaPlayground @Inject() (
       val stringDiffTexts = mergedStringTexts.diff(mergedFileTextsDe)
 
       val mergedEnumStringTexts = mergedEnumTexts.toSet ++ mergedStringTexts.toSet
-      val fileDiffTexts = mergedFileTextsDe.diff(mergedEnumStringTexts.toSeq)
+      val extraFileTextsDe = mergedFileTextsDe.diff(mergedEnumStringTexts.toSeq).toSet
 
-      val extraTranslations = translations.map(_.original).toSeq.diff(mergedEnumStringTexts.toSeq).sorted
 
-      println("Extra translations: " + extraTranslations.size)
-      println("----------------------------------------------")
-      println(extraTranslations.mkString("\n"))
-      println
+      //      val extraTranslations = translations.map(_.original).toSeq.diff(mergedEnumStringTexts.toSeq).sorted
+      //
+      //      println("Extra translations: " + extraTranslations.size)
+      //      println("----------------------------------------------")
+      //      println(extraTranslations.mkString("\n"))
+      //      println
 
       println("The number of enums not included in text file(s)             : " + enumDiffTexts.size)
       println("The number of strings not included in text file(s)           : " + stringDiffTexts.size)
-      println("The number of translations not included in enums or strings  : " + fileDiffTexts.size)
+      println("The number of translations not included in enums or strings  : " + extraFileTextsDe.size)
 
-      println
-      println("Translations to drop:")
-      println("---------------------")
-      fileDiffTexts.foreach(println)
-      println
 
-      //      println(mergedEnumTexts.size)
-//      println(oldTextsDe.size)
-//      println(newDiffTexts.size)
-//      println(oldDiffTexts.size)
+      // removing the extra translations
 
-      //    println("NEW")
-      //    println(mergedTexts.mkString("\n"))
-      //    println
-      //    println
-      //    println("OLD")
-      //    println(oldTextsDe.mkString("\n"))
-      //    println
+      val cleanedMergedFileTexts = mergedFileTexts.filterNot(x => extraFileTextsDe.contains(x._1))
 
-//      println
-//      println("NEW DIFF")
-//      println
-//      println(newDiffTexts.mkString("\n"))
+      println("The number of translations (in the files)                          : " + mergedFileTexts.size)
+      println("The number of translations (in the files) after dropping extra ones: " + cleanedMergedFileTexts.size)
 
-      //    println
-      //    println
-      //    println("OLD DIFF")
-      //    println(oldDiffTexts.mkString("\n"))
+      println("Export cleaned merged translations")
+
+      val pw = new PrintWriter(new File("all_translations_de"))
+      pw.write(cleanedMergedFileTexts.map(_._1).mkString("\n"))
+      pw.close
+
+      val pw2 = new PrintWriter(new File("all_translations_en"))
+      pw2.write(cleanedMergedFileTexts.map(_._2).mkString("\n"))
+      pw2.close
     }
 
   private def getRecords(filename : String) : Seq[String] = {
