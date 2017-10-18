@@ -33,7 +33,7 @@
         items,
         typeColumns[SeriesProcessingSpec](
             (None, "", _ => {<input type="checkbox" class="table-selection"/>}),
-            (None, "Field Path", pastValuesCountElement),
+            (None, "Field Path", fieldPathElement),
             (None, "Processing Type", {x => processingTypeElement(Some(x.processingType))}),
             (None, "Past Values Count", pastValuesCountElement),
             (None, "Pad With Zeroes?", padWithZeroesElement)

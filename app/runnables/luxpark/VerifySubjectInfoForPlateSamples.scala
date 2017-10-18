@@ -64,12 +64,12 @@ class VerifySubjectInfoForPlateSamples @Inject()(dsaf: DataSetAccessorFactory) e
           val visit2 = (sampleJson \ visitField).as[Int]
 
           if (!subjectId1.equals(subjectId2) || !gender1.equals(gender2) || !visit1.equals(visit2)) {
-            println(s"Inconsistent blood kit num '$bloodKitNum'.")
+            logger.info(s"Inconsistent blood kit num '$bloodKitNum'.")
           } else {
-            println(s"OK: blood kit num '$bloodKitNum': $subjectId1 = $subjectId2, $gender1 = $gender2, $visit1 = $visit2, .")
+            logger.info(s"OK: blood kit num '$bloodKitNum': $subjectId1 = $subjectId2, $gender1 = $gender2, $visit1 = $visit2, .")
           }
         }.getOrElse {
-          println(s"Missing blood kit num '$bloodKitNum'.")
+          logger.info(s"Missing blood kit num '$bloodKitNum'.")
         }
       }
     }

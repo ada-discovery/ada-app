@@ -282,9 +282,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
             case _ => {
               nameFieldTypeMap.get(fieldName).map { fieldType =>
                 JsString(fieldType.jsonToDisplayString(json))
-              }.getOrElse(
-                json
-              )
+              }.getOrElse(json)
             }
           }
 

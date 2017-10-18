@@ -120,6 +120,10 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def runSeriesProcessing = dispatch(_.runSeriesProcessing)
 
+  override def getSeriesTransformationSpec = dispatch(_.getSeriesTransformationSpec)
+
+  override def runSeriesTransformation = dispatch(_.runSeriesTransformation)
+
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ) = dispatch(_.getFields(fieldTypeIds))

@@ -60,10 +60,15 @@ trait RCPredictionService {
     inRow: Boolean = false
   ): DataFrame
 
-  def transformSeries(
+  def transformSeriesJava(
     series: Seq[Seq[jl.Double]],
     transformType: VectorTransformType.Value
   ): Future[Seq[Seq[jl.Double]]]
+
+  def transformSeries(
+    series: Seq[Seq[Double]],
+    transformType: VectorTransformType.Value
+  ): Future[Seq[Seq[Double]]]
 }
 
 @Singleton
@@ -373,7 +378,7 @@ class RCPredictionServiceImpl @Inject()(
             for {
               // transform input
               input <-
-                RCPredictionStaticHelper.transformSeries(sparkApp.session)(inputSeries, transformType)
+                RCPredictionStaticHelper.transformSeriesJava(sparkApp.session)(inputSeries, transformType)
 
               // transform output
               output <-
@@ -381,7 +386,7 @@ class RCPredictionServiceImpl @Inject()(
                   val output = input.map(seq => outputInputIndexes.map(seq(_)))
                   Future(output)
                 } else
-                  RCPredictionStaticHelper.transformSeries(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
+                  RCPredictionStaticHelper.transformSeriesJava(sparkApp.session)(outputSeries.map(Seq(_)), transformType)
             } yield {
               (input, output.map(_.head))
             }
@@ -632,10 +637,16 @@ class RCPredictionServiceImpl @Inject()(
   ): DataFrame =
     RCPredictionStaticHelper.transformVectors(sparkApp.session)(data, transformType, inRow)
 
-  override def transformSeries(
+  override def transformSeriesJava(
     series: Seq[Seq[jl.Double]],
     transformType: VectorTransformType.Value
   ): Future[Seq[Seq[jl.Double]]] =
+    RCPredictionStaticHelper.transformSeriesJava(sparkApp.session)(series, transformType)
+
+  override def transformSeries(
+    series: Seq[Seq[Double]],
+    transformType: VectorTransformType.Value
+  ): Future[Seq[Seq[Double]]] =
     RCPredictionStaticHelper.transformSeries(sparkApp.session)(series, transformType)
 }
 
@@ -763,17 +774,30 @@ object RCPredictionStaticHelper extends Serializable {
       transformedDf
   }
 
-  def transformSeries(
+  def transformSeriesJava(
     session: SparkSession)(
     series: Seq[Seq[jl.Double]],
     transformType: VectorTransformType.Value
   ): Future[Seq[Seq[jl.Double]]] = {
+    val javaSeries: Seq[Seq[Double]] = series.map(_.map(_.toDouble))
+
+    for {
+      outputSeries <- transformSeries(session)(javaSeries, transformType)
+    } yield
+      outputSeries.map(_.map(jl.Double.valueOf(_)))
+  }
+
+  def transformSeries(
+    session: SparkSession)(
+    series: Seq[Seq[Double]],
+    transformType: VectorTransformType.Value
+  ): Future[Seq[Seq[Double]]] = {
     val inRow = transformType == VectorTransformType.L1Normalizer || transformType == VectorTransformType.L2Normalizer
 
     val inputSeries = if (inRow) series.transpose else series
 
     val rows = inputSeries.zipWithIndex.map { case (oneSeries, index) =>
-      (index, Vectors.dense(oneSeries.map(_.toDouble).toArray))
+      (index, Vectors.dense(oneSeries.toArray))
     }
 
     val df = session.createDataFrame(rows).toDF("id", "features")
@@ -785,8 +809,8 @@ object RCPredictionStaticHelper extends Serializable {
       newDf.unpersist()
       df.unpersist()
 
-      val outputSeries: Seq[Seq[jl.Double]] = rows.map(row =>
-        row.getAs[Vector](0).toArray.map(jl.Double.valueOf(_)): Seq[jl.Double]
+      val outputSeries: Seq[Seq[Double]] = rows.map(row =>
+        row.getAs[Vector](0).toArray: Seq[Double]
       )
 
       if (inRow) outputSeries.transpose else outputSeries

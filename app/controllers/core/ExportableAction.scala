@@ -1,11 +1,11 @@
 package controllers.core
 
-import dataaccess.{AsyncReadonlyRepo, Criterion, Sort}
+import dataaccess.{AsyncReadonlyRepo, Criterion, FieldType, Sort}
 import models.FilterCondition
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{Format, JsObject, Json}
+import play.api.libs.json._
 import play.api.mvc._
-import util.WebExportUtil.{jsonsToCsvFile, jsonsToJsonFile}
+import _root_.util.WebExportUtil.{jsonsToCsvFile, jsonsToJsonFile}
 
 import scala.concurrent.Future
 
@@ -25,24 +25,44 @@ trait ExportableAction[E] {
     orderBy: Option[String],
     filter: Seq[FilterCondition] = Nil,
     projection: Traversable[String] = Nil,
-    fieldNames: Option[Seq[String]] = None)(
+    fieldNames: Option[Seq[String]] = None,
+    nameFieldTypeMap: Map[String, FieldType[_]] = Map()
+  )(
     implicit ev: Format[E]
   ) = Action.async { implicit request =>
-    getJsons(filter, orderBy, projection).map(
-      jsonsToCsvFile(filename, delimiter, eol, charReplacements, fieldNames)(_)
-    )
+    for {
+      jsons <- getJsons(filter, orderBy, projection)
+    } yield {
+      val finalJsons =
+        if (nameFieldTypeMap.nonEmpty)
+          toDisplayJsons(jsons, nameFieldTypeMap)
+        else
+          jsons
+
+      jsonsToCsvFile(filename, delimiter, eol, charReplacements, fieldNames)(finalJsons)
+    }
   }
 
   def exportToJson(
     filename: String)(
     orderBy: Option[String],
     filter: Seq[FilterCondition] = Nil,
-    projection: Traversable[String] = Nil)(
+    projection: Traversable[String] = Nil,
+    nameFieldTypeMap: Map[String, FieldType[_]] = Map()
+  )(
     implicit ev: Format[E]
   ) = Action.async { implicit request =>
-    getJsons(filter, orderBy, projection).map(
-      jsonsToJsonFile(filename)(_)
-    )
+    for {
+      jsons <- getJsons(filter, orderBy, projection)
+    } yield {
+      val finalJsons =
+        if (nameFieldTypeMap.nonEmpty)
+          toDisplayJsons(jsons, nameFieldTypeMap)
+        else
+          jsons
+
+      jsonsToJsonFile(filename)(finalJsons)
+    }
   }
 
   private def getJsons(
@@ -63,5 +83,24 @@ trait ExportableAction[E] {
         records.asInstanceOf[Traversable[JsObject]]
       } else
         Json.toJson(records).as[Traversable[JsObject]]
+    }
+
+  private def toDisplayJsons(
+    jsons: Traversable[JsObject],
+    nameFieldTypeMap: Map[String, FieldType[_]]
+  ) =
+    jsons.map { item =>
+      val displayJsonFields = item.fields.map { case (fieldName, json) =>
+        val displayJson = json match {
+          case JsNull => JsNull
+          case _ =>
+            nameFieldTypeMap.get(fieldName).map { fieldType =>
+              JsString(fieldType.jsonToDisplayString(json))
+            }.getOrElse(json)
+        }
+
+        (fieldName, displayJson)
+      }
+      JsObject(displayJsonFields)
     }
 }

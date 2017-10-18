@@ -6,6 +6,7 @@ import models.{FieldTypeId, FilterCondition, PageOrder}
 import play.api.libs.json.JsArray
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
+import views.html.dataset
 
 import scala.concurrent.Future
 
@@ -91,6 +92,10 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def getSeriesProcessingSpec: Action[AnyContent]
 
   def runSeriesProcessing: Action[AnyContent]
+
+  def getSeriesTransformationSpec: Action[AnyContent]
+
+  def runSeriesTransformation: Action[AnyContent]
 
   def getFieldNames: Action[AnyContent]
 

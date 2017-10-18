@@ -20,10 +20,9 @@ import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import Criterion.Infix
 import controllers.core.{ExportableAction, ReadonlyControllerImpl, WebContext}
 import org.apache.commons.lang3.StringEscapeUtils
-import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.FilterCondition.FilterOrId
 import models.Widget.WidgetWrites
-import models.ml.{DataSetSeriesProcessingSpec, DataSetTransformationCore, LearningSetting, SeriesProcessingSpec}
+import models.ml._
 import persistence.RepoTypes.{ClassificationRepo, RegressionRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -37,9 +36,9 @@ import services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
-import services.ml.{ClassificationEvalMetric, MachineLearningService, Performance, RegressionEvalMetric}
+import services.ml.{MachineLearningService, Performance}
 import views.html.dataset
-import models.ml.SeriesProcessingSpec._
+import models.ml.DataSetTransformation._
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -103,7 +102,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   private implicit val storageTypeFormatter =  EnumFormatter(StorageType)
-  private implicit val seriesProcessingSpecType = JsonFormatter[SeriesProcessingSpec]
+  private implicit val seriesProcessingSpec = JsonFormatter[SeriesProcessingSpec]
+  private implicit val seriesTransformationSpec = JsonFormatter[SeriesTransformationSpec]
 
   private val coreMapping: Mapping[DataSetTransformationCore] = mapping(
     "resultDataSetId" -> nonEmptyText,
@@ -113,13 +113,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     "saveBatchSize" -> optional(number(min = 1, max = 200))
   )(DataSetTransformationCore.apply)(DataSetTransformationCore.unapply)
 
-  private val dataSetSeriesProcessingSpecForm = Form(
+  private val seriesProcessingSpecForm = Form(
     mapping(
       "sourceDataSetId" -> ignored(dataSetId),
       "core" -> coreMapping,
       "seriesProcessingSpecs" -> seq(of[SeriesProcessingSpec]),
       "preserveFieldNames" -> seq(nonEmptyText)
     )(DataSetSeriesProcessingSpec.apply)(DataSetSeriesProcessingSpec.unapply))
+
+  private val seriesTransformationSpecForm = Form(
+    mapping(
+      "sourceDataSetId" -> ignored(dataSetId),
+      "core" -> coreMapping,
+      "seriesTransformationSpecs" -> seq(of[SeriesTransformationSpec]),
+      "preserveFieldNames" -> seq(nonEmptyText)
+    )(DataSetSeriesTransformationSpec.apply)(DataSetSeriesTransformationSpec.unapply))
 
   override protected def listViewColumns = result(
     dataViewRepo.find().map {
@@ -228,6 +236,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     val fieldNames = result(dataViewTableColumnNames(dataViewId))
 
+    // TODO: introduce a flag for field type conversion (raw vs labels)
+    val nameFieldTypeMap: Map[String, FieldType[_]] =
+      if (fieldNames.nonEmpty && tableColumnsOnly) {
+        val fields = result(getFields(fieldNames))
+        fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap
+      } else
+        Map[String, FieldType[_]]()
+
     exportToCsv(
       csvFileName,
       delimiter,
@@ -236,7 +252,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       result(dsa.setting).exportOrderByFieldName,
       filter,
       if (tableColumnsOnly) fieldNames else Nil,
-      if (tableColumnsOnly) Some(fieldNames) else None
+      if (tableColumnsOnly) Some(fieldNames) else None,
+      nameFieldTypeMap
     )
   }
 
@@ -249,16 +266,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dataViewId: BSONObjectID,
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean
-  ) =
+  ) = {
+    val fieldNames = result(dataViewTableColumnNames(dataViewId))
+
+    // TODO: introduce a flag for field type conversion (raw vs labels)
+    val nameFieldTypeMap: Map[String, FieldType[_]] =
+      if (fieldNames.nonEmpty && tableColumnsOnly) {
+        val fields = result(getFields(fieldNames))
+        fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap
+      } else
+        Map[String, FieldType[_]]()
+
     exportToJson(
       jsonFileName)(
       result(dsa.setting).exportOrderByFieldName,
       filter,
-      if (tableColumnsOnly)
-        result(dataViewTableColumnNames(dataViewId))
-      else
-        Nil
+      if (tableColumnsOnly) fieldNames else Nil,
+      nameFieldTypeMap
     )
+  }
 
   private def dataViewTableColumnNames(
     dataViewId: BSONObjectID
@@ -1700,11 +1726,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // get the data set name, data space tree and the data set setting
       (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
     } yield
-      Ok(dataset.processSeries(dataSetName, dataSetSeriesProcessingSpecForm, setting.filterShowFieldStyle, tree))
+      Ok(dataset.processSeries(dataSetName, seriesProcessingSpecForm, setting.filterShowFieldStyle, tree))
   }
 
   override def runSeriesProcessing = Action.async { implicit request =>
-    dataSetSeriesProcessingSpecForm.bindFromRequest.fold(
+    seriesProcessingSpecForm.bindFromRequest.fold(
       { formWithErrors =>
         for {
           // get the data set name, data space tree and the data set setting
@@ -1718,6 +1744,33 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           _ <- dataSetService.processSeriesAndSaveDataSet(spec)
         } yield {
           Redirect(router.getSeriesProcessingSpec).flashing("success" -> s"Series processing finished.")
+        }
+    )
+  }
+
+  override def getSeriesTransformationSpec = Action.async { implicit request =>
+    for {
+    // get the data set name, data space tree and the data set setting
+      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+    } yield
+      Ok(dataset.transformSeries(dataSetName, seriesTransformationSpecForm, setting.filterShowFieldStyle, tree))
+  }
+
+  override def runSeriesTransformation = Action.async { implicit request =>
+    seriesTransformationSpecForm.bindFromRequest.fold(
+      { formWithErrors =>
+        for {
+        // get the data set name, data space tree and the data set setting
+          (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+        } yield {
+          BadRequest(dataset.transformSeries(dataSetName, formWithErrors, setting.filterShowFieldStyle, tree))
+        }
+      },
+      spec =>
+        for {
+          _ <- dataSetService.transformSeriesAndSaveDataSet(spec)
+        } yield {
+          Redirect(router.getSeriesTransformationSpec).flashing("success" -> s"Series transformation finished.")
         }
     )
   }

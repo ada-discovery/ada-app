@@ -25,7 +25,7 @@ import play.api.Configuration
 import dataaccess.JsonUtil._
 import _root_.util.{retry, seqFutures}
 import models.FilterCondition.FilterOrId
-import models.ml.{DataSetLink, DataSetSeriesProcessingSpec, SeriesProcessingSpec, SeriesProcessingType}
+import models.ml._
 
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
@@ -133,6 +133,10 @@ trait DataSetService {
     spec: DataSetSeriesProcessingSpec
   ): Future[Unit]
 
+  def transformSeriesAndSaveDataSet(
+    spec: DataSetSeriesTransformationSpec
+  ): Future[Unit]
+
   def loadDataAndFields(
     dsa: DataSetAccessor,
     fieldNames: Seq[String] = Nil,
@@ -150,6 +154,7 @@ class DataSetServiceImpl @Inject()(
     dsaf: DataSetAccessorFactory,
     translationRepo: TranslationRepo,
     messageRepo: MessageRepo,
+    rcPredictionService: RCPredictionService,
     configuration: Configuration
   ) extends DataSetService {
 
@@ -745,7 +750,6 @@ class DataSetServiceImpl @Inject()(
                   )
                   fieldType.jsonToDisplayString(json \ fieldName)
                 }.mkString(",")
-                println(linkAsString)
               }
 
               saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(saveBatchSize))
@@ -809,6 +813,103 @@ class DataSetServiceImpl @Inject()(
       }
     } yield
       ()
+  }
+
+  override def transformSeriesAndSaveDataSet(
+    spec: DataSetSeriesTransformationSpec
+  ) = {
+    val dsa = dsaf(spec.sourceDataSetId).getOrElse(
+      throw new AdaException(s"Data set id ${spec.sourceDataSetId} not found."))
+
+    val processingBatchSize = spec.processingBatchSize.getOrElse(20)
+    val saveBatchSize = spec.core.saveBatchSize.getOrElse(5)
+    val preserveFieldNameSet = spec.preserveFieldNames.toSet
+
+    for {
+    // register the result data set (if not registered already)
+      newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetId, spec.resultDataSetName, spec.resultStorageType)
+
+      // get all the fields
+      fields <- dsa.fieldRepo.find()
+
+      // update the dictionary
+      _ <- {
+        val preservedFields = fields.filter(field => preserveFieldNameSet.contains(field.name))
+
+        val newFields = spec.seriesTransformationSpecs.map(spec =>
+          Field(spec.toString.replace('.', '_'), None, FieldTypeId.Double, true)
+        )
+
+        val fieldNameAndTypes = (preservedFields ++ newFields).map(field => (field.name, field.fieldTypeSpec))
+        updateDictionary(spec.resultDataSetId, fieldNameAndTypes, false, true)
+      }
+
+      // delete all from the old data set
+      _ <- newDsa.dataSetRepo.deleteAll
+
+      // get all the ids
+      ids <- dsa.dataSetRepo.allIds
+
+      // transform and save jsons
+      _ <- seqFutures(ids.toSeq.grouped(processingBatchSize).zipWithIndex) {
+
+        case (ids, groupIndex) =>
+          Future.sequence(
+            ids.map(dsa.dataSetRepo.get)
+          ).map(_.flatten).flatMap { jsons =>
+
+            logger.info(s"Processing series ${groupIndex * processingBatchSize} to ${(jsons.size - 1) + (groupIndex * processingBatchSize)}")
+
+            for {
+              // transform jsons
+              newJsons <- Future.sequence(
+                jsons.map(transformSeries(spec.seriesTransformationSpecs, preserveFieldNameSet))
+              )
+
+              // save the norm data set jsons
+              _ <- saveOrUpdateRecords(newDsa.dataSetRepo, newJsons, None, false, None, Some(saveBatchSize))
+            } yield
+              ()
+          }
+      }
+    } yield
+      ()
+  }
+
+  private def transformSeries(
+    transformationSpecs: Seq[SeriesTransformationSpec],
+    preserveFieldNames: Set[String])(
+    json: JsObject
+  ): Future[JsObject] = {
+    def transform(spec: SeriesTransformationSpec) = {
+      val series = JsonUtil.traverse(json, spec.fieldPath).map(_.as[Double])
+
+      for {
+        newSeries <- rcPredictionService.transformSeries(series.map(Seq(_)), spec.transformType)
+      } yield {
+        val jsonSeries = newSeries.map(_.head).map(value =>
+          if (value == null)
+            throw new AdaException(s"Found a null value at the path ${spec.fieldPath}. \nSeries: ${series.mkString(",")}")
+          else
+            try {
+              JsNumber(value)
+            } catch {
+              case e: NumberFormatException => throw new AdaException(s"Found a non-numeric value ${value} at the path ${spec.fieldPath}. \nSeries: ${series.mkString(",")}")
+            }
+        )
+
+        spec.toString.replace('.', '_') -> JsArray(jsonSeries)
+      }
+    }
+
+    for {
+      newValues <- Future.sequence(transformationSpecs.map(transform))
+    } yield {
+      val preservedValues: Seq[(String, JsValue)] =
+        json.fields.filter { case (fieldName, jsValue) => preserveFieldNames.contains(fieldName) }
+
+      JsObject(preservedValues ++ newValues)
+    }
   }
 
   private def processSeries(
@@ -1290,7 +1391,7 @@ class DataSetServiceImpl @Inject()(
     val (convertedJsons, newFieldTypes) = translateFields(items, stringOrEnumScalarFieldTypes, translationMap)
 
     val convertedJsItems = (items, convertedJsons).zipped.map {
-      case (json, converterJson: JsObject) =>
+      case (json, convertedJson: JsObject) =>
         // remove null columns
         val nonNullValues =
           if (removeNullColumns) {
@@ -1299,14 +1400,16 @@ class DataSetServiceImpl @Inject()(
             json.fields.filter { case (fieldName, _) => !fieldName.equals(dataSetIdFieldName)}
 
         // merge with String-converted Jsons
-        JsObject(nonNullValues) ++ (converterJson)
+        JsObject(nonNullValues) ++ convertedJson
     }
 
     // remove all items without any content
     val finalJsons = if (removeNullRows) {
-      convertedJsItems.filter(item => item.fields.exists { case (fieldName, value) =>
-        fieldName != dataSetIdFieldName && value != JsNull
-      })
+      convertedJsItems.filter(item =>
+        item.fields.exists { case (fieldName, value) =>
+          fieldName != dataSetIdFieldName && value != JsNull
+        }
+      )
     } else
       convertedJsItems
 
@@ -1331,9 +1434,10 @@ class DataSetServiceImpl @Inject()(
 
   protected def createJsonsWithFieldTypes(
     fieldNames: Seq[String],
-    values: Seq[Seq[String]]
+    values: Seq[Seq[String]],
+    fieldTypeInferrer: FieldTypeInferrer[String]
   ): (Seq[JsObject], Seq[(String, FieldType[_])]) = {
-    val fieldTypes = values.transpose.par.map(fti.apply).toList
+    val fieldTypes = values.transpose.par.map(fieldTypeInferrer.apply).toList
 
     val jsons = values.map( vals =>
       JsObject(
@@ -1345,30 +1449,6 @@ class DataSetServiceImpl @Inject()(
     )
 
     (jsons, fieldNames.zip(fieldTypes))
-  }
-
-  @Deprecated
-  private def translateStringFields(
-    items: Traversable[JsObject],
-    stringFieldNames: Traversable[String],
-    translationMap: Map[String, String]
-  ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
-
-    def translate(json: JsObject) = stringFieldNames.map { fieldName =>
-      val valueOption = JsonUtil.toString(json \ fieldName)
-      valueOption match {
-        case Some(value) => translationMap.get(value).getOrElse(value)
-        case None => null
-      }
-    }.toSeq
-
-    val convertedStringValues = items.map(translate)
-    val (jsons, fieldTypes) = createJsonsWithFieldTypes(
-      stringFieldNames.toSeq,
-      convertedStringValues.toSeq
-    )
-
-    (jsons, fieldTypes.map(_._2.spec))
   }
 
   private def translateFields(
@@ -1390,60 +1470,17 @@ class DataSetServiceImpl @Inject()(
 
     val convertedStringValues = items.map(translate)
 
+    val noCommaFtf = FieldTypeHelper.fieldTypeFactory(arrayDelimiter = ",,,")
+    val noCommanFti = FieldTypeHelper.fieldTypeInferrerFactory(ftf = noCommaFtf, arrayDelimiter = ",,,").apply
+
     // infer new types
     val (jsons, fieldTypes) = createJsonsWithFieldTypes(
       fieldNameAndTypeSpecs.map(_._1),
-      convertedStringValues.toSeq
+      convertedStringValues.toSeq,
+      noCommanFti
     )
 
     (jsons, fieldTypes.map(_._2.spec))
-  }
-
-  // TODO: enum inference depends of frequency, therefore we need to check the values as well
-  @Deprecated
-  private def translateEnumsFieldsOld(
-    items: Traversable[JsObject],
-    enumFieldNameAndTypes: Seq[(String, FieldTypeSpec)],
-    translationMap: Map[String, String]
-  ): (Seq[JsObject], Seq[FieldTypeSpec]) = {
-    val newFieldNameTypeValueMaps: Seq[(String, FieldTypeSpec, Map[String, JsValue])] =
-      enumFieldNameAndTypes.map { case (fieldName, enumFieldTypeSpec) =>
-        enumFieldTypeSpec.enumValues.map { enumMap =>
-
-          val newValueKeyGroupMap = enumMap.map { case (from, to) =>
-            (from, translationMap.get(to).getOrElse(to))
-          }.toSeq.groupBy(_._2)
-
-          val newValueOldKeys: Seq[(String, Seq[String])] =
-            newValueKeyGroupMap.map { case (value, oldKeyValues) => (value, oldKeyValues.map(_._1.toString)) }.toSeq
-
-          val newFieldType = fti(newValueOldKeys.map(_._1))
-
-          val oldKeyNewJsonMap: Map[String, JsValue] = newValueOldKeys.map { case (newValue, oldKeys) =>
-            val newJsonValue = newFieldType.displayStringToJson(newValue)
-            oldKeys.map((_, newJsonValue))
-          }.flatten.toMap
-
-          (fieldName, newFieldType.spec, oldKeyNewJsonMap)
-        }
-      }.flatten
-
-    def translate(json: JsObject): JsObject = {
-      val fieldJsValues = newFieldNameTypeValueMaps.map { case (fieldName, _, jsonValueMap) =>
-        val originalJsValue = (json \ fieldName).get
-        val valueOption = JsonUtil.toString(originalJsValue)
-        val newJsonValue = valueOption match {
-          case Some(value) => jsonValueMap.get(value).getOrElse(originalJsValue)
-          case None => JsNull
-        }
-        (fieldName, newJsonValue)
-      }
-      JsObject(fieldJsValues)
-    }
-
-    val convertedEnumJsons = items.map(translate).toSeq
-    val convertedEnumFieldSpecs = newFieldNameTypeValueMaps.map(_._2)
-    (convertedEnumJsons, convertedEnumFieldSpecs)
   }
 
   def getColumnNames(

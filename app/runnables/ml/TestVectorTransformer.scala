@@ -35,7 +35,7 @@ class TestVectorTransformer @Inject()(
   )
 
   override def run = {
-    val newSeries = rcPredictionService.transformSeries(series, VectorTransformType.MinMaxPlusMinusOneScaler)
+    val newSeries = rcPredictionService.transformSeriesJava(series, VectorTransformType.MinMaxPlusMinusOneScaler)
 
     println(series)
     println(newSeries)
