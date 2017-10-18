@@ -111,6 +111,8 @@ GET         /studies/regression                                                 
 GET         /studies/clusterization                                                 controllers.dataset.DataSetDispatcher.getClusterization
 GET         /studies/getSeriesProcessingSpec                                        controllers.dataset.DataSetDispatcher.getSeriesProcessingSpec
 POST        /studies/runSeriesProcessing                                            controllers.dataset.DataSetDispatcher.runSeriesProcessing
+GET         /studies/getSeriesTransformationSpec                                    controllers.dataset.DataSetDispatcher.getSeriesTransformationSpec
+POST        /studies/runSeriesTransformation                                        controllers.dataset.DataSetDispatcher.runSeriesTransformation
 POST        /studies/regress                                                        controllers.dataset.DataSetDispatcher.regress(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], pcaDims: Option[Int], trainingTestingSplit: Option[Double], repetitions: Option[Int], crossValidationFolds: Option[Int])
 POST        /studies/cluster                                                        controllers.dataset.DataSetDispatcher.cluster(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterId: Option[BSONObjectID], pcaDims: Option[Int])
 GET         /studies/fractalis                                                      controllers.dataset.DataSetDispatcher.getFractalis(fieldName: Option[String] ?= None)
