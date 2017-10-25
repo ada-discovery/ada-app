@@ -53,9 +53,9 @@ libraryDependencies ++= Seq(
 //  "com.google.inject.extensions" % "guice-spring" % "4.0", // so we can initialize spring container in Guice
   "org.clapper" % "classutil_2.11" % "1.0.6",
   "org.scalaz" % "scalaz-core_2.11" % "7.2.1",
-  "org.apache.spark" % "spark-core_2.11" % "2.1.0", // exclude("asm", "asm")
-  "org.apache.spark" % "spark-sql_2.11" % "2.1.0", // exclude("asm", "asm")
-  "org.apache.spark" % "spark-mllib_2.11" % "2.1.0",
+  "org.apache.spark" % "spark-core_2.11" % "2.2.0", // exclude("asm", "asm")
+  "org.apache.spark" % "spark-sql_2.11" % "2.2.0", // exclude("asm", "asm")
+  "org.apache.spark" % "spark-mllib_2.11" % "2.2.0",
   "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.2", // exclude("asm", "asm")
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",

@@ -543,3 +543,14 @@ function removeDuplicates(array) {
         return a;
     },[]);
 }
+
+function getRowValue(row, elementId) {
+    var element = row.find('#' + elementId);
+    var value = null;
+    if (element.length > 0) {
+        value = element.val().trim()
+        if (!value)
+            value = null
+    }
+    return value;
+}
