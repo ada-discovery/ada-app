@@ -10,7 +10,8 @@
 @(
     form: Form[DataView],
     nameFieldMap: Map[String,  Field],
-    idFilterNameMap: Map[BSONObjectID, String]
+    idFilterNameMap: Map[BSONObjectID, String],
+    allFieldsCall: Call
 )(
     implicit msg: play.api.i18n.Messages
 )
@@ -23,8 +24,20 @@
 
 @checkbox("dataView", "default", form)
 
+@extraFieldButtons = {
+    <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
+        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
+    </a>
+}
+
 @labelValue("tableColumnNames", attributeLabel("dataView", "tableColumnNames")){
-    @dynamicFieldTable("tableColumnName", form.value.map(_.tableColumnNames.map(nameFieldMap.get).flatten).getOrElse(Nil), true)
+    @dynamicFieldTable(
+        "tableColumnName",
+        form.value.map(_.tableColumnNames.map(nameFieldMap.get).flatten).getOrElse(Nil),
+        true,
+        5,
+        Some(extraFieldButtons)
+    )
 }
 
 @labelValue("widgetSpecs", attributeLabel("dataView", "widgetSpecs")){
@@ -42,3 +55,20 @@
 @inputText("dataView", "elementGridWidth", form)
 
 @checkbox("dataView", "useOptimizedRepoChartCalcMethod", form)
+
+<script>
+    function addAllFields() {
+        $.ajax({
+            url: '@Html(allFieldsCall.url)',
+            success: function (data) {
+                $.each(data, function(index, field) {
+                    var values = {};
+                    values["fieldName"] = field.name;
+                    values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+                    $('#tableColumnNameDiv').dynamicTable('addTableRow', values)
+                });
+            }
+        });
+    }
+</script>

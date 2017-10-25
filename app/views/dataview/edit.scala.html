@@ -29,7 +29,7 @@
 @layout.edit(
     domainName,
 	form.errors,
-    elements(form, nameFieldMap, idFilterNameMap),
+    elements(form, nameFieldMap, idFilterNameMap, dataSetRouter.allFields),
     updateCall(id),
     dataViewRouter.plainList,
     Some(dataViewRouter.delete(id)),

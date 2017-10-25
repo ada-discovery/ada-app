@@ -1,0 +1,147 @@
+@import reactivemongo.play.json.BSONFormats._
+@import views.html.layout.main
+@import views.html.dataset.{inputFieldAndFilterResources, datasetMenu, datasetSubNavWithJs}
+@import views.html.table.{dynamicStringTable, dynamicTableJsImport}
+@import views.html.dataset.dynamicFieldTable
+@import play.api.i18n.Messages
+@import models.DataSpaceMetaInfo
+@import views.html.elements._
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+
+@(
+    dataSetName: String,
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@bottomResources = {
+    @inputFieldAndFilterResources(filterShowFieldStyle)
+
+    @helper.javascriptRouter("dataSetJsRoutes")(
+        dataSetJsRouter.testIndependence
+    )
+
+    <script type="text/javascript">
+        $(function () {
+            populateFieldTypeahedFromUrl(
+                $('#targetFieldTypeahead'),
+                $('#targetFieldName'),
+                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+            )
+
+            $('#outputFieldTypeahead, #filterNameTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    testIndependence();
+                }
+            });
+
+            $('#launchButton').on('click', function() {
+                testIndependence();
+            })
+
+            function testIndependence() {
+                var targetFieldName = $("#targetFieldName").val();
+                var targetFieldLabel = $("#targetFieldTypeahead").val();
+
+                $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
+                var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
+
+                var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
+
+                $('#outputDiv').hide();
+
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.testIndependence(targetFieldName, inputFieldNames, filterId).ajax( {
+                    success: function(results) {
+                        showMessage("Independence test finished.")
+                        console.log(results)
+                        showResults(results)
+                    },
+                    error: function(data){
+                        showError( data.responseText );
+                    }
+                });
+
+                showMessage("Independence test for the field '" + targetFieldLabel + "' launched.")
+            }
+
+            function showResults(results) {
+                $("#outputDiv").html("");
+
+                var table = $("<table class='table table-striped'>")
+                var thead = $("<thead>")
+                thead.append("<th class='col header'>Field</th>")
+                thead.append("<th class='col header'>p-Value</th>")
+                thead.append("<th class='col header'>Degree of Freedom</th>")
+                thead.append("<th class='col header'>Statistics</th>")
+                table.append(thead)
+                var tbody = $("<tbody>")
+                table.append(tbody)
+
+                $.each(results, function(i, item) {
+                    var tr = $("<tr>")
+                    var tds = "<td>" + item.fieldLabel + "</td><td>" + item.result.pValue.toExponential(5) + "</td><td>" + item.result.degreeOfFreedom + "</td><td>" + item.result.statistics.toFixed(2) + "</td>"
+                    tr.append(tds)
+                    tbody.append(tr)
+                });
+
+                $("#outputDiv").append(table);
+                $('#outputDiv').fadeIn('2000');
+            }
+
+        });
+    </script>
+}
+
+@extraFieldButtons = {
+    <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
+        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
+    </a>
+}
+
+@main(Messages("independenceTest.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
+
+    <div class="page-header">
+        <h3>
+            @Messages("independenceTest.title", dataSetName)
+        </h3>
+    </div>
+
+    @dynamicTableJsImport()
+
+    <div class="row">
+        <div class="col-md-12">
+            <form>
+                <fieldset>
+                    @labelValue("targetField", "Target Field") {
+                        <input id="targetFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="">
+                        <input id="targetFieldName" name="targetFieldName" type="hidden" value="">
+                    }
+                    @labelValue("inputFieldNames", "Input Field Names") {
+                        @dynamicFieldTable("inputFieldName", Nil, false, 5, Some(extraFieldButtons))
+                    }
+                    @labelValue("filterId", "Filter") {
+                        <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="Filter" value="">
+                        <input id="filterId" name="filterId" type="hidden" value="">
+                    }
+                </fieldset>
+
+                <div class="actions pull-right">
+                    <button id="launchButton" type="button" class="btn btn-primary">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <hr/>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div id="outputDiv">
+            </div>
+        </div>
+    </div>
+}

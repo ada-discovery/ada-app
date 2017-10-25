@@ -114,6 +114,7 @@ class ClassifyRCResults @Inject() (
             filter.map(_._id.get),
             input.pcaDims,
             input.trainingTestingSplit,
+            input.samplingOutputValues.zip(input.samplingRatios),
             input.repetitions,
             input.crossValidationFolds
           )
@@ -161,6 +162,8 @@ case class ClassifyRCResultsSpec(
   filterName: Option[String],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
+  samplingOutputValues: Seq[String],
+  samplingRatios: Seq[Double],
   repetitions: Option[Int],
   crossValidationFolds: Option[Int]
 )

@@ -60,18 +60,18 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   override protected val typeTag = implicitly[TypeTag[ClassificationResult]]
   override protected val format = classificationResultFormat
 
-  //  protected override val listViewColumns = Some(Seq(CategoryIdentity.name, "name", "label"))
-
-  //  override protected[controllers] val form = Form(GenericMapping(typeOf[ClassificationSetting]))
-
-//  private val settingAndResultsFields =
-//    FieldUtil.caseClassToFlatFieldTypes[ClassificationResult]("-").filter(_._1 != "_id")
+  private val distributionDisplayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column), gridWidth = Some(3))
 
   private val widgetSpecs = Seq(
+    DistributionWidgetSpec("testStats-accuracy-mean", None, displayOptions = distributionDisplayOptions),
+    DistributionWidgetSpec("testStats-weightedPrecision-mean", None, displayOptions = distributionDisplayOptions),
+    DistributionWidgetSpec("testStats-weightedRecall-mean", None, displayOptions = distributionDisplayOptions),
+    DistributionWidgetSpec("testStats-f1-mean", None, displayOptions = distributionDisplayOptions),
+    DistributionWidgetSpec("testStats-areaUnderROC-mean", None, displayOptions = distributionDisplayOptions),
+    DistributionWidgetSpec("testStats-areaUnderPR-mean", None, displayOptions = distributionDisplayOptions),
     DistributionWidgetSpec("timeCreated", None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))),
-    DistributionWidgetSpec("testStats-accuracy-mean", None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))),
-    DistributionWidgetSpec("testStats-accuracy-mean", Some("setting-mlModelId")),
-    ScatterWidgetSpec("trainingStats-accuracy-mean", "testStats-accuracy-mean", None)
+    ScatterWidgetSpec("trainingStats-accuracy-mean", "testStats-accuracy-mean", Some("setting-mlModelId")),
+    ScatterWidgetSpec("testStats-areaUnderROC-mean", "testStats-accuracy-mean", Some("setting-mlModelId"))
   )
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)

@@ -334,7 +334,7 @@ class StatsServiceImpl extends StatsService {
         val dates = getValues[ju.Date].flatten
         val values = dates.map(_.getTime)
 
-        def convert(ms: BigDecimal) = new ju.Date(ms.toLongExact)
+        def convert(ms: BigDecimal) = new ju.Date(ms.setScale(0, BigDecimal.RoundingMode.CEILING).toLongExact)
 
         val numCounts = numericalCounts(values, numericBinCount, false, None, None)
         convertNumericalCounts(numCounts, Some(convert(_)))
@@ -372,15 +372,14 @@ class StatsServiceImpl extends StatsService {
 
     val groupedValues = groupFieldTypeId match {
 
-      case FieldTypeId.String => {
+      case FieldTypeId.String =>
         val groupedJsons = groupValues[String].filter(_._1.isDefined).map {
           case (option, jsons) => (option.get, jsons)
         }.toSeq.sortBy(_._1)
         val undefinedGroupJsons = groupValues[String].find(_._1.isEmpty).map(_._2).getOrElse(Nil)
         groupedJsons ++ Seq(("Undefined", undefinedGroupJsons))
-      }
 
-      case FieldTypeId.Enum => {
+      case FieldTypeId.Enum =>
         val jsonsMap = groupValues[Int].toMap
         def getJsons(groupValue: Option[Int]) = jsonsMap.get(groupValue).getOrElse(Nil)
 
@@ -389,9 +388,8 @@ class StatsServiceImpl extends StatsService {
         }).getOrElse(Nil)
 
         groupedJsons ++ Seq(("Undefined", getJsons(None)))
-      }
 
-      case FieldTypeId.Boolean => {
+      case FieldTypeId.Boolean =>
         val jsonsMap = groupValues[Boolean].toMap
         def getJsons(groupValue: Option[Boolean]) = jsonsMap.get(groupValue).getOrElse(Nil)
 
@@ -400,7 +398,12 @@ class StatsServiceImpl extends StatsService {
           (groupFieldSpec.displayFalseValue.getOrElse("False"), getJsons(Some(false))),
           ("Undefined", getJsons(None))
         )
-      }
+
+      case FieldTypeId.Json =>
+        val values = groupValues[JsObject]
+        val groupedJsons = values.collect { case (Some(value), jsons) => (Json.stringify(value), jsons)}.toSeq.sortBy(_._1)
+        val undefinedGroupJsons = values.find(_._1.isEmpty).map(_._2).getOrElse(Nil)
+        groupedJsons ++ Seq(("Undefined", undefinedGroupJsons))
     }
 
     groupedValues.map { case (groupName, jsons) =>

@@ -39,6 +39,7 @@ import reactivemongo.play.json.BSONFormats._
 import services.ml.{MachineLearningService, Performance}
 import views.html.dataset
 import models.ml.DataSetTransformation._
+import services.ml.ChiSquareResult.chiSquareResultFormat
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -234,15 +235,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       case None => csvEOL
     }
 
-    val fieldNames = result(dataViewTableColumnNames(dataViewId))
+    // TODO: don't use results but stay in future
+
+    val tableFieldNames = result(dataViewTableColumnNames(dataViewId))
 
     // TODO: introduce a flag for field type conversion (raw vs labels)
     val nameFieldTypeMap: Map[String, FieldType[_]] =
-      if (fieldNames.nonEmpty && tableColumnsOnly) {
-        val fields = result(getFields(fieldNames))
+      if (tableFieldNames.nonEmpty && tableColumnsOnly) {
+        val fields = result(getFields(tableFieldNames))
         fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap
       } else
         Map[String, FieldType[_]]()
+
+    val projection =
+      if (tableColumnsOnly) tableFieldNames else Nil
+
+    val headerFieldNames =
+      if (tableColumnsOnly)
+        tableFieldNames
+      else result(fieldRepo.find().map(_.map(_.name).toSeq))
 
     exportToCsv(
       csvFileName,
@@ -251,8 +262,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       if (replaceEolWithSpace) csvCharReplacements else Nil)(
       result(dsa.setting).exportOrderByFieldName,
       filter,
-      if (tableColumnsOnly) fieldNames else Nil,
-      if (tableColumnsOnly) Some(fieldNames) else None,
+      projection,
+      Some(headerFieldNames.sorted),
       nameFieldTypeMap
     )
   }
@@ -1460,6 +1471,28 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
   }
 
+  override def getIndependenceTest = Action.async { implicit request =>
+    {
+      for {
+      // get the data set name, data space tree and the data set setting
+        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+      } yield {
+        render {
+          case Accepts.Html() => Ok(dataset.independenceTest(
+            dataSetName,
+            setting.filterShowFieldStyle,
+            tree
+          ))
+          case Accepts.Json() => BadRequest("getIndependenceTest function doesn't support JSON response.")
+        }
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the getIndependenceTest process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
   private def getDataSetNameTreeAndSetting(request: Request[_]): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
     val dataSetNameFuture = dsa.dataSetName
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
@@ -1488,7 +1521,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     repetitions: Option[Int],
     crossValidationFolds: Option[Int]
   ) = Action.async { implicit request =>
-    val learningSetting = LearningSetting(pcaDims, trainingTestingSplit, repetitions, crossValidationFolds)
+    val learningSetting = LearningSetting(pcaDims, trainingTestingSplit, Nil, repetitions, crossValidationFolds)
 
     for {
       result <- runMLAux(
@@ -1628,6 +1661,32 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case None =>
           BadRequest(s"ML unsupervised learning model with id ${mlModelId.stringify} not found.")
       }
+  }
+
+  override def testIndependence(
+    targetFieldName: String,
+    inputFieldNames: Seq[String],
+    filterId: Option[BSONObjectID]
+  ) = Action.async { implicit request =>
+    val explFieldNamesToLoads =
+      if (inputFieldNames.nonEmpty)
+        (inputFieldNames ++ Seq(targetFieldName)).toSet.toSeq
+      else
+        Nil
+
+    for {
+      criteria <- loadCriteria(filterId)
+
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
+    } yield {
+      val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
+      val fieldNameLabelMap = fields.map(field => (field.name, field.labelOrElseName)).toMap
+      val results = mlService.independenceTest(jsons, fieldNameAndSpecs, targetFieldName)
+      val resultJsons = results.map { case (fieldName, result) =>
+        Json.obj("fieldLabel" -> fieldNameLabelMap.get(fieldName).get, "result" -> Json.toJson(result))
+      }
+      Ok(JsArray(resultJsons))
+    }
   }
 
   private def loadCriteria(filterId: Option[BSONObjectID]) =

@@ -35,9 +35,11 @@ object JsonCrudRepoExtra {
 
     def allIds: Future[Traversable[BSONObjectID]] =
       dataSetRepo.find(
-        projection = Seq(idName),
-        sort = Seq(AscSort(idName))
-      ).map(_.map(json => (json \ idName).as[BSONObjectID]))
+        projection = Seq(idName)
+      ).map { jsons =>
+        val ids  = jsons.map(json => (json \ idName).as[BSONObjectID])
+        ids.toSeq.sortBy(_.stringify)
+      }
 
     def findByIds(
       firstId: BSONObjectID,

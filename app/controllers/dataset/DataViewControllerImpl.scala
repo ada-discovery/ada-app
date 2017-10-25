@@ -1,6 +1,7 @@
 package controllers.dataset
 
 import java.util.concurrent.TimeoutException
+import java.{util => ju}
 import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
@@ -276,7 +277,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Entity #$id not found"))
       ) { dataView =>
-        val newDataView = dataView.copy(_id = None, name = dataView.name + " copy", default = false)
+        val newDataView = dataView.copy(_id = None, name = dataView.name + " copy", default = false, timeCreated = new ju.Date)
         saveCall(newDataView).map { newId =>
           Redirect(router.get(newId)).flashing("success" -> s"Data view '${dataView.name}' has been copied.")
         }

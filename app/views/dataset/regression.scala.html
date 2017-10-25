@@ -1,6 +1,6 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
-@import views.html.dataset.{mlElements, mlResources, datasetSubNavWithJs}
+@import views.html.dataset.{mlElements, inputFieldAndFilterResources, datasetSubNavWithJs, trainingSettingFields}
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
 @import views.html.elements._
@@ -16,7 +16,7 @@
 )
 
 @bottomResources = {
-    @mlResources(filterShowFieldStyle)
+    @inputFieldAndFilterResources(filterShowFieldStyle)
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.regress
@@ -111,5 +111,9 @@
         </h3>
     </div>
 
-    @mlElements(dataSetRouter.allFields, false)
+    @mlElements(
+        includeChiSquareSelector = false,
+        includeOutputField = true,
+        extraFields = Some(trainingSettingFields())
+    )
 }

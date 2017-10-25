@@ -17,7 +17,7 @@
 @layout.create(
     domainName,
 	form,
-    elements(form, Map(), Map()),
+    elements(form, Map(), Map(), dataSetRouter.allFields),
     dataViewRouter.save,
     dataViewRouter.plainList
 )

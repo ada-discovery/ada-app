@@ -167,6 +167,8 @@ class DataSetServiceImpl @Inject()(
   private val fti = FieldTypeHelper.fieldTypeInferrer
   private val jsonFti = FieldTypeHelper.jsonFieldTypeInferrer
 
+  private val idName = JsObjectIdentity.name
+
   private type CreateJsonsWithFieldTypes =
     (Seq[String], Seq[Seq[String]]) => (Seq[JsObject], Seq[FieldType[_]])
 
@@ -712,7 +714,11 @@ class DataSetServiceImpl @Inject()(
       ids <- leftDsa.dataSetRepo.allIds
 
       // delete all items from the linked data set
-      _ <- linkedDsa.dataSetRepo.deleteAll
+      _ <- {
+        println(ids.size)
+        println(ids.map(_.stringify).mkString("\n"))
+        linkedDsa.dataSetRepo.deleteAll
+      }
 
       // link left and right data sets
       _ <-
@@ -723,25 +729,34 @@ class DataSetServiceImpl @Inject()(
 
             // save the new linked jsons
             _ <- {
-              val linkedJsons = jsons.map { json =>
+//              println("Searched ids:")
+//              println(ids.map(_.stringify).mkString("\n"))
+//
+//              val foundIds = jsons.map { json =>
+//                (json \ JsObjectIdentity.name).as[BSONObjectID]
+//              }
+//              println("Found ids  :")
+//              println(foundIds.map(_.stringify).mkString("\n"))
+
+              val linkedJsons = jsons.flatMap { json =>
                 val linkAsString = spec.linkFieldNames.map { case (fieldName, _) =>
                   val fieldType = leftFieldTypeMap.get(fieldName).getOrElse(
                     throw new AdaException(s"Field $fieldName not found.")
                   )
                   fieldType.jsonToDisplayString(json \ fieldName)
                 }.mkString(",")
+
                 linkRightJsonsMap.get(linkAsString).map { rightJsons =>
-                  val jsonId = (json \ JsObjectIdentity.name).as[BSONObjectID]
+                  val jsonId = (json \ JsObjectIdentity.name).asOpt[BSONObjectID]
+                  val id = if (rightJsons.size > 1 || jsonId.isEmpty) JsObjectIdentity.next else jsonId.get
 
                   rightJsons.map { rightJson =>
-                    val id = if (rightJsons.size > 1) JsObjectIdentity.next else jsonId
-
                     json ++ rightJson ++ Json.obj(JsObjectIdentity.name -> id)
                   }
                 }.getOrElse(
                   Seq(json)
                 )
-              }.flatten
+              }
 
               linkedJsons.foreach { json =>
                 val linkAsString = spec.linkFieldNames.map { case (fieldName, _) =>
@@ -807,7 +822,7 @@ class DataSetServiceImpl @Inject()(
             logger.info(s"Processing series ${groupIndex * processingBatchSize} to ${(jsons.size - 1) + (groupIndex * processingBatchSize)}")
             val newJsons = jsons.par.map(processSeries(spec.seriesProcessingSpecs, preserveFieldNameSet)).toList
 
-            // save the norm data set jsons
+            // save the processed data set jsons
             saveOrUpdateRecords(newDsa.dataSetRepo, newJsons, None, false, None, Some(saveBatchSize))
           }
       }
@@ -824,6 +839,13 @@ class DataSetServiceImpl @Inject()(
     val processingBatchSize = spec.processingBatchSize.getOrElse(20)
     val saveBatchSize = spec.core.saveBatchSize.getOrElse(5)
     val preserveFieldNameSet = spec.preserveFieldNames.toSet
+
+    def getDeltaIds(existingNewRecordIds : Traversable[String], oldRecordIdIds: Traversable[(String, BSONObjectID)]) = {
+      val existingNewRecordIdSet = existingNewRecordIds.toSet
+      val deltaIds = oldRecordIdIds.filterNot { case (recordId, _) => existingNewRecordIdSet.contains(recordId)}.map(_._2)
+      logger.info(s"Obtained ${deltaIds.size} ids for a series transformation.")
+      deltaIds
+    }
 
     for {
     // register the result data set (if not registered already)
@@ -844,11 +866,26 @@ class DataSetServiceImpl @Inject()(
         updateDictionary(spec.resultDataSetId, fieldNameAndTypes, false, true)
       }
 
-      // delete all from the old data set
-      _ <- newDsa.dataSetRepo.deleteAll
+//      // delete all from the old data set
+//      _ <- newDsa.dataSetRepo.deleteAll
 
-      // get all the ids
-      ids <- dsa.dataSetRepo.allIds
+      // TODO: quick fix that should be removed
+
+      existingNewRecordIds <- newDsa.dataSetRepo.find(
+        projection = Seq("recordId")
+      ).map(_.map(json =>
+        (json \ "recordId").as[String]
+      ))
+
+      oldRecordIdIds <- dsa.dataSetRepo.find(
+        projection = Seq(idName, "recordId"),
+        sort = Seq(AscSort(idName))
+      ).map(_.map(json =>
+        ((json \ "recordId").as[String], (json \ idName).as[BSONObjectID])
+      ))
+
+      ids = getDeltaIds(existingNewRecordIds, oldRecordIdIds)
+      //      ids <- dsa.dataSetRepo.allIds
 
       // transform and save jsons
       _ <- seqFutures(ids.toSeq.grouped(processingBatchSize).zipWithIndex) {
@@ -858,7 +895,7 @@ class DataSetServiceImpl @Inject()(
             ids.map(dsa.dataSetRepo.get)
           ).map(_.flatten).flatMap { jsons =>
 
-            logger.info(s"Processing series ${groupIndex * processingBatchSize} to ${(jsons.size - 1) + (groupIndex * processingBatchSize)}")
+            logger.info(s"Transforming series ${groupIndex * processingBatchSize} to ${(jsons.size - 1) + (groupIndex * processingBatchSize)}")
 
             for {
               // transform jsons
@@ -866,7 +903,7 @@ class DataSetServiceImpl @Inject()(
                 jsons.map(transformSeries(spec.seriesTransformationSpecs, preserveFieldNameSet))
               )
 
-              // save the norm data set jsons
+              // save the transformed data set jsons
               _ <- saveOrUpdateRecords(newDsa.dataSetRepo, newJsons, None, false, None, Some(saveBatchSize))
             } yield
               ()
@@ -885,7 +922,10 @@ class DataSetServiceImpl @Inject()(
       val series = JsonUtil.traverse(json, spec.fieldPath).map(_.as[Double])
 
       for {
-        newSeries <- rcPredictionService.transformSeries(series.map(Seq(_)), spec.transformType)
+        newSeries <- if (series.nonEmpty)
+          rcPredictionService.transformSeries(series.map(Seq(_)), spec.transformType)
+        else
+          Future(series.map(Seq(_)))
       } yield {
         val jsonSeries = newSeries.map(_.head).map(value =>
           if (value == null)
@@ -1287,7 +1327,6 @@ class DataSetServiceImpl @Inject()(
         newDataSetSetting,
         newDataView
       )
-      newDataRepo = newDsa.dataSetRepo
       newFieldRepo = newDsa.fieldRepo
       newCategoryRepo = newDsa.categoryRepo
 
@@ -1387,6 +1426,9 @@ class DataSetServiceImpl @Inject()(
       (!fieldTypeSpec.isArray && (fieldTypeSpec.fieldType == FieldTypeId.String || fieldTypeSpec.fieldType == FieldTypeId.Enum))
     }
 
+    val stringFieldNames = stringOrEnumScalarFieldTypes.filter(_._2.fieldType == FieldTypeId.String).map(_._1)
+    val enumFieldNames = stringOrEnumScalarFieldTypes.filter(_._2.fieldType == FieldTypeId.Enum).map(_._1)
+
     // translate strings and enums
     val (convertedJsons, newFieldTypes) = translateFields(items, stringOrEnumScalarFieldTypes, translationMap)
 
@@ -1422,6 +1464,56 @@ class DataSetServiceImpl @Inject()(
 
     // merge string and enum field name type maps
     val newFieldNameTypeMap = (stringOrEnumScalarFieldTypes.map(_._1), newFieldTypes).zipped.toMap
+
+    def countFromOld(fieldTypeId: FieldTypeId.Value) =
+      newFieldNameTypeMap.count { case (name, fieldTypeSpec) => fieldTypeSpec.fieldType == fieldTypeId}
+
+    def countFromOldEnum(fieldTypeId: FieldTypeId.Value) =
+      newFieldNameTypeMap.count { case (name, fieldTypeSpec) =>
+        enumFieldNames.contains(name) && fieldTypeSpec.fieldType == fieldTypeId
+      }
+
+    def countFromOldString(fieldTypeId: FieldTypeId.Value) =
+      newFieldNameTypeMap.count { case (name, fieldTypeSpec) =>
+        stringFieldNames.contains(name) && fieldTypeSpec.fieldType == fieldTypeId
+      }
+
+
+    println("Old strings and enums : " + stringOrEnumScalarFieldTypes.size)
+    println("--------------------------")
+    println("Strings   : " + stringFieldNames.size)
+    println("Enums     : " + enumFieldNames.size)
+    println()
+    println("Total new types: " + newFieldTypes.size)
+    println("-----------------")
+    println("Strings   : " + countFromOld(FieldTypeId.String))
+    println("Enums     : " + countFromOld(FieldTypeId.Enum))
+    println("Booleans  : " + countFromOld(FieldTypeId.Boolean))
+    println("Integers  : " + countFromOld(FieldTypeId.Integer))
+    println("Doubles   : " + countFromOld(FieldTypeId.Double))
+    println("Nulls     : " + countFromOld(FieldTypeId.Null))
+    println("Dates     : " + countFromOld(FieldTypeId.Date))
+    println()
+    println("String -> ...")
+    println("-------------")
+    println("Strings   : " + countFromOldString(FieldTypeId.String))
+    println("Enums     : " + countFromOldString(FieldTypeId.Enum))
+    println("Booleans  : " + countFromOldString(FieldTypeId.Boolean))
+    println("Integers  : " + countFromOldString(FieldTypeId.Integer))
+    println("Doubles   : " + countFromOldString(FieldTypeId.Double))
+    println("Nulls     : " + countFromOldString(FieldTypeId.Null))
+    println("Dates     : " + countFromOldString(FieldTypeId.Date))
+    println()
+    println("Enum -> ...")
+    println("-----------")
+    println("Strings   : " + countFromOldEnum(FieldTypeId.String))
+    println("Enums     : " + countFromOldEnum(FieldTypeId.Enum))
+    println("Booleans  : " + countFromOldEnum(FieldTypeId.Boolean))
+    println("Integers  : " + countFromOldEnum(FieldTypeId.Integer))
+    println("Doubles   : " + countFromOldEnum(FieldTypeId.Double))
+    println("Nulls     : " + countFromOldEnum(FieldTypeId.Null))
+    println("Dates     : " + countFromOldEnum(FieldTypeId.Date))
+    println()
 
     // update the field types with the new ones
     val finalFieldNameAndTypes = nonNullFieldNameAndTypes.map { case (fieldName, fieldType) =>
@@ -1470,7 +1562,7 @@ class DataSetServiceImpl @Inject()(
 
     val convertedStringValues = items.map(translate)
 
-    val noCommaFtf = FieldTypeHelper.fieldTypeFactory(arrayDelimiter = ",,,")
+    val noCommaFtf = FieldTypeHelper.fieldTypeFactory(arrayDelimiter = ",,,", booleanIncludeNumbers = false)
     val noCommanFti = FieldTypeHelper.fieldTypeInferrerFactory(ftf = noCommaFtf, arrayDelimiter = ",,,").apply
 
     // infer new types

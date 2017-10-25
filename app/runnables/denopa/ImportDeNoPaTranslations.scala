@@ -19,11 +19,11 @@ class ImportDeNoPaTranslations @Inject()(
 
   private val folder = configuration.getString("denopa.translation.import.folder").get
 
-  private val filename_de = folder + "DeNoPa_all_translations_de"
-  private val filename_en = folder + "DeNoPa_all_translations_en"
+  private val filename_de = folder + "DeNoPa_translations_de"
+  private val filename_en = folder + "DeNoPa_translations_en"
 
-  private val filename_de_extra = folder + "DeNoPa_all_translations_de-extra"
-  private val filename_en_extra = folder + "DeNoPa_all_translations_en-extra"
+  private val filename_de_extra = folder + "DeNoPa_translations_de-extra"
+  private val filename_en_extra = folder + "DeNoPa_translations_en-extra"
 
   override def runAsFuture = {
     // read all the lines

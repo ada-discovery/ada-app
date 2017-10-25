@@ -71,11 +71,13 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getClusterization: Action[AnyContent]
 
+  def getIndependenceTest: Action[AnyContent]
+
   def regress(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     outputFieldName: String,
-    ffilterId: Option[BSONObjectID],
+    filterId: Option[BSONObjectID],
     pcaDims: Option[Int],
     trainingTestingSplit: Option[Double],
     repetitions: Option[Int],
@@ -87,6 +89,12 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID],
     pcaDims: Option[Int]
+  ): Action[AnyContent]
+
+  def testIndependence(
+    targetFieldName: String,
+    inputFieldNames: Seq[String],
+    filterId: Option[BSONObjectID]
   ): Action[AnyContent]
 
   def getSeriesProcessingSpec: Action[AnyContent]

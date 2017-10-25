@@ -366,8 +366,8 @@ object DeNoPaBaselineTranSMARTMapping {
     "a_PD_NMS_28" -> "NMS PD 28",
     "a_PD_NMS_29" -> "NMS PD 29",
     "a_PD_NMS_30" -> "NMS PD 30",
-    "a_PD_NMS_sum" -> "NMS PD 31",
-    "a_PD_NMS_mean" -> "NMS PD 32",
+    "a_PD_NMS_sum" -> "NMS PD Sum",
+    "a_PD_NMS_mean" -> "NMS PD Mean",
 
     "a_MoCa_Exekutiv" -> "MoCa Executive",
     "a_MoCa_Benennen" -> "MoCa Name",

@@ -56,10 +56,12 @@
             (Some("setting-mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.setting.mlModelId).get),
             (Some("setting-filterId"), "Filter", _.setting.filterId.map(filterId => filterIdNameMap.get(filterId).get).getOrElse("")),
             (Some("setting-outputFieldName"), "Output Field", result => fieldNameLabelMap.get(result.setting.outputFieldName).get),
-            (Some("trainingStats-accuracy-mean"), "Training Accuracy Mean", result => "%.3f".format(result.trainingStats.accuracy.mean)),
-            (Some("trainingStats-weightedPrecision-mean"), "Training Precision Mean", result => "%.3f".format(result.trainingStats.weightedPrecision.mean)),
             (Some("testStats-accuracy-mean"), "Test Accuracy Mean", result => "%.3f".format(result.testStats.accuracy.mean)),
-            (Some("testStats-weightedPrecision-mean"), "Test Precision Mean", result => "%.3f".format(result.testStats.weightedPrecision.mean)),
+            (Some("testStats-weightedPrecision-mean"), "Test Weighted Precision Mean", result => "%.3f".format(result.testStats.weightedPrecision.mean)),
+            (Some("testStats-weightedRecall-mean"), "Test Weighted Recall Mean", result => "%.3f".format(result.testStats.weightedRecall.mean)),
+            (Some("testStats-f1-mean"), "Test F1 Mean", result => "%.3f".format(result.testStats.f1.mean)),
+            (Some("testStats-areaUnderROC-mean"), "Test Area Under ROC Mean", _.testStats.areaUnderROC.map(x => "%.3f".format(x.mean)).getOrElse("")),
+            (Some("testStats-areaUnderPR-mean"), "Test Area Under PR Mean", _.testStats.areaUnderPR.map(x => "%.3f".format(x.mean)).getOrElse("")),
             (Some("timeCreated"), "Time Created", _.timeCreated.toString)
         ),
         Some({ item : Any => classificationRunRouter.get(item.asInstanceOf[ClassificationResult]._id.get)})

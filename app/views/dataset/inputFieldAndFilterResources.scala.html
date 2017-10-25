@@ -34,4 +34,19 @@
             }
         });
     });
+
+    function addAllFields() {
+        $.ajax({
+            url: '@Html(dataSetRouter.allFields.url)',
+            success: function (data) {
+                $.each(data, function(index, field) {
+                    var values = {};
+                    values["fieldName"] = field.name;
+                    values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+                    $('#inputFieldNameDiv').dynamicTable('addTableRow', values)
+                });
+            }
+        });
+    }
 </script>

@@ -19,7 +19,8 @@ object FieldTypeHelper {
     "dd.MM.yyyy HH:mm",
     "dd.MM.yyyy HH",
     "dd.MM.yyyy",
-    "MM.yyyy"
+    "MM.yyyy",
+    "MM/dd/yyyy"
   )
   val displayDateFormat = "yyyy-MM-dd HH:mm:ss"
   val maxEnumValuesCount = 20

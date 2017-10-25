@@ -142,6 +142,8 @@ object GenericMapping {
 
   private implicit val bsonObjectIDFormatter = BSONObjectIDStringFormatter
   private implicit val stringSeqFormatter = SeqFormatter.apply
+  private implicit val intSeqFormatter = SeqFormatter.applyInt
+  private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
 
   @throws(classOf[AdaException])
   private def genericMapping(typ: Type): Mapping[Any] = {
@@ -202,6 +204,14 @@ object GenericMapping {
       // string seq
       case t if t subMatches typeOf[Seq[String]] =>
         of[Seq[String]]
+
+      // int seq
+      case t if t subMatches typeOf[Seq[Int]] =>
+        of[Seq[Int]]
+
+      // double seq
+      case t if t subMatches typeOf[Seq[Double]] =>
+        of[Seq[Double]]
 
       // seq
       case t if t subMatches typeOf[Seq[_]] =>

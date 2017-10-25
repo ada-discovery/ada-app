@@ -1,5 +1,6 @@
 package services.ml
 
+import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import java.{lang => jl, util => ju}
 
@@ -12,20 +13,21 @@ import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
 import models.ml._
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
+import org.apache.spark.ml.attribute.NominalAttribute
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature._
-import org.apache.spark.ml.{Estimator, Model, Pipeline}
+import org.apache.spark.ml.{Estimator, Model, Pipeline, Transformer}
 import org.apache.spark.sql.types.{Metadata, MetadataBuilder, StructType, _}
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.ml.clustering._
 import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
+import org.apache.spark.ml.param.ParamMap
+import org.apache.spark.ml.stat.ChiSquareTest
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import org.apache.spark.rdd.RDD
-import play.api.libs.json.JsObject
-import services.{RCPredictionResults, SparkApp, SparkUtil}
-import org.apache.spark.sql.functions.monotonically_increasing_id
-import play.api.Configuration
-import play.api.Configuration._
+import play.api.libs.json.{JsObject, Json}
+import services.SparkApp
+import play.api.{Configuration, Logger}
 
 import scala.concurrent.{Await, Future}
 import scala.util.Random
@@ -89,6 +91,16 @@ trait MachineLearningService {
     discretizerBucketsNum: Int
   ): Traversable[String]
 
+  def independenceTest(
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    targetFieldName: String
+  ): Seq[(String, ChiSquareResult)]
+
+  def independenceTest(
+    df: DataFrame
+  ): Seq[ChiSquareResult]
+
   // AFTSurvivalRegression
   // IsotonicRegression
 }
@@ -98,6 +110,8 @@ private class MachineLearningServiceImpl @Inject() (
     sparkApp: SparkApp,
     configuration: Configuration
   ) extends MachineLearningService {
+
+  private val logger = Logger // (this.getClass())
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
@@ -145,39 +159,85 @@ private class MachineLearningServiceImpl @Inject() (
     val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
     df.cache
 
-    // downsampling
-//    df.sample()
-
     // reduce the dimensionality if needed
     val reduceDim = new SchemaUnchangedTransformer(pcaComponentsOptional(setting.pcaDims))
 
     // make sure the output is string
-    val makeIndexBooleanLabel = new SchemaUnchangedTransformer(indexBooleanLabel)
+    val makeIndexBooleanLabel = BooleanLabelIndexer
 
-    val pipeline = new Pipeline().setStages(Array(reduceDim, makeIndexBooleanLabel))
+    // keep the label as string for sampling (if needed)
+    val keepLabelString = new IndexToString()
+      .setInputCol("label")
+      .setOutputCol("labelString")
+
+    // create the stages and run a pipeline
+    val preStages = Seq(reduceDim, makeIndexBooleanLabel)
+
+    val samplingNeeded = setting.samplingRatios.nonEmpty
+
+    val stages = if (samplingNeeded) preStages ++ Seq(keepLabelString) else preStages
+
+    val pipeline = new Pipeline().setStages(stages.toArray)
 
     val finalDf = pipeline.fit(df).transform(df)
 
     finalDf.cache
 
+    import sparkApp.sqlContext.implicits._
+
+    val labelStrings: Traversable[String] =
+      if (samplingNeeded)
+        finalDf.select("labelString").distinct().map(_.getString(0)).collect()
+      else
+        Nil
+
     // split the data into training and test parts
     val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
 
-    val resultsFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
-      println(s"Execution of repetition $index started.")
-      val Array(training, test) = finalDf.randomSplit(Array(split, 1 - split))
+    val resultsWithCountsFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
+      logger.info(s"Execution of repetition $index started.")
+
+      // sampling
+      val sampledDf =
+        if (samplingNeeded) {
+          val labelSamplingRatioMap = setting.samplingRatios.toMap
+
+          val sampledDfs = labelStrings.map { label =>
+            val pdf = finalDf.filter($"labelString" === label)
+
+            labelSamplingRatioMap.get(label).map { samplingRatio =>
+              val newPdf = pdf.sample(false, samplingRatio)
+              logger.info(label + ": " + pdf.count() + " -> " + newPdf.count())
+              newPdf
+            }.getOrElse(pdf)
+          }
+
+          if (sampledDfs.nonEmpty)
+            sampledDfs.tail.foldLeft(sampledDfs.head)(_.union(_))
+          else
+            finalDf
+        } else
+        finalDf
+
+      val count = sampledDf.count()
+
+      logger.info("Total count : " + count)
+
+      val Array(training, test) = sampledDf.randomSplit(Array(split, 1 - split))
 
         // run the trainer (with folds) on the given training and test data sets
       val results = trainWithFolds(trainer, evaluators ++ binEvaluators, setting.crossValidationFolds, training.cache, test.cache)
       training.unpersist
       test.unpersist
-      results
+      (results, count)
     }
 
-    resultsFuture.map { results =>
+    resultsWithCountsFuture.map { resultsWithCounts =>
       // uncache
       finalDf.unpersist
       df.unpersist
+
+      val results = resultsWithCounts.map(_._1)
 
       // create performance results
       results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
@@ -185,16 +245,6 @@ private class MachineLearningServiceImpl @Inject() (
       }
     }
   }
-
-  private def indexBooleanLabel(dataFrame: DataFrame) =
-    dataFrame.schema("label").dataType match {
-      case BooleanType =>
-        val newDf = dataFrame.withColumn("label", dataFrame("label").cast(StringType))
-        val indexer = new StringIndexer().setInputCol("label").setOutputCol("label_new_temp")
-        indexer.fit(newDf).transform(newDf).drop("label").withColumnRenamed("label_new_temp", "label")
-
-      case _ => dataFrame
-    }
 
   override def regress(
     data: Traversable[JsObject],
@@ -426,12 +476,24 @@ private class MachineLearningServiceImpl @Inject() (
     // prep the data frame for learning
     val featureNames = featureFieldNames(fields, outputFieldName)
 
-    val numericFieldNames = df.schema.fields.flatMap { field =>
-      if (field.dataType == IntegerType || field.dataType == DoubleType)
-        Some(field.name)
-      else
+//    val numericFieldNames = df.schema.fields.flatMap { field =>
+//      if (field.dataType == LongType || field.dataType == DoubleType)
+//        Some(field.name)
+//      else
+//        None
+//    }
+
+    val numericFieldNames = fields.flatMap { case (name, fieldTypeSpec) =>
+      if (featureNames.contains(name)) {
+        if (fieldTypeSpec.fieldType == FieldTypeId.Integer || fieldTypeSpec.fieldType == FieldTypeId.Double)
+          Some(name)
+        else
+          None
+      } else
         None
-    }
+     }
+
+    println("Numeric field  names: " + numericFieldNames.mkString(","))
 
     val discretizedDf = discretizerBucketNum.map( discretizerBucketNum =>
       numericFieldNames.foldLeft(df) { case (newDf, fieldName) =>
@@ -769,7 +831,7 @@ private class MachineLearningServiceImpl @Inject() (
     discretizerBucketsNum: Int
   ): Traversable[String] = {
     val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName), Some(discretizerBucketsNum))
-    val inputDf = indexBooleanLabel(df)
+    val inputDf = BooleanLabelIndexer.transform(df)
 
     // get the Chi-Square model
     val model = selectFeaturesAsChiSquareModel(inputDf, featuresToSelectNum)
@@ -790,6 +852,38 @@ private class MachineLearningServiceImpl @Inject() (
       .setNumTopFeatures(featuresToSelectNum)
 
     selector.fit(data)
+  }
+
+  override def independenceTest(
+    df: DataFrame
+  ): Seq[ChiSquareResult] = {
+    val resultDf = ChiSquareTest.test(df, "features", "label")
+
+    val chi = resultDf.head
+
+    val pValues = chi.getAs[Vector](0).toArray.toSeq
+    val degreesOfFreedom = chi.getSeq[Int](1)
+    val statistics = chi.getAs[Vector](2).toArray.toSeq
+
+    (pValues, degreesOfFreedom, statistics).zipped.map(
+      ChiSquareResult(_, _, _)
+    )
+  }
+
+  override def independenceTest(
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    targetFieldName: String
+  ): Seq[(String, ChiSquareResult)] = {
+    // prepare the features->label data frame
+    val df = jsonsToLearningDataFrame(data, fields, Some(targetFieldName), Some(10))
+    val inputDf = BooleanLabelIndexer.transform(df)
+
+    // run the chi-square independence test
+    val results = independenceTest(inputDf)
+
+    val featureNames = inputDf.columns.filterNot(columnName => columnName.equals("features") || columnName.equals("label"))
+    featureNames.zip(results)
   }
 }
 
@@ -897,4 +991,12 @@ object MachineLearningUtil {
       testMetricStats
     )
   }
+}
+
+case class ChiSquareResult(
+  pValue: Double, degreeOfFreedom: Int, statistics: Double
+)
+
+object ChiSquareResult {
+  implicit val chiSquareResultFormat = Json.format[ChiSquareResult]
 }

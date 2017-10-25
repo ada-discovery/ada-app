@@ -1,7 +1,8 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.elements._
-@import views.html.dataset.{datasetMenu, mlElements, mlResources, datasetSubNavWithJs}
+@import views.html.dataset.{datasetMenu, mlElements, inputFieldAndFilterResources, datasetSubNavWithJs, trainingSettingFields}
+@import views.html.classificationrun.samplingTable
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
 @import controllers.DataSetWebContext
@@ -16,7 +17,7 @@
 )
 
 @bottomResources = {
-    @mlResources(filterShowFieldStyle)
+    @inputFieldAndFilterResources(filterShowFieldStyle)
 
     @helper.javascriptRouter("classificationRunJsRoutes")(
         classificationRunJsRouter.classify,
@@ -78,6 +79,13 @@
             var repetitions = $("#repetitions").val()
             var crossValidationFolds = $("#crossValidationFolds").val()
 
+            $('#samplingRatioDiv').dynamicTable('updateModelFromTable');
+            var samplingJsons = $("#samplingRatioDiv").dynamicTable('getModel')
+            var samplingTuples = samplingJsons.map(function(item) {
+                var json = JSON.parse(item)
+                return [json.outputValue, parseFloat(json.samplingRatio)]
+            })
+
             var saveResults = $("#saveResults").is(":checked")
 
             var setting = {
@@ -87,6 +95,7 @@
                 "filterId": filterIdJson,
                 "pcaDims": intValue(pcaDims),
                 "trainingTestingSplit": floatValue(trainingTestingSplit),
+                "samplingRatios": samplingTuples,
                 "repetitions": intValue(repetitions),
                 "crossValidationFolds": intValue(crossValidationFolds)
             };
@@ -169,6 +178,16 @@
     </script>
 }
 
+@extraFields = {
+    @trainingSettingFields()
+    @labelValue("saveResults", "Save Results?") {
+        <input id="saveResults" type="checkbox"/>
+    }
+    @labelValue("samplings", "Samplings"){
+        @samplingTable(Nil)
+    }
+}
+
 @main(Messages("classification.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
@@ -177,5 +196,9 @@
         </h3>
     </div>
 
-    @mlElements(dataSetRouter.allFields, true)
+    @mlElements(
+        includeChiSquareSelector = true,
+        includeOutputField = true,
+        extraFields = Some(extraFields)
+    )
 }

@@ -98,6 +98,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getClusterization = dispatch(_.getClusterization)
 
+  override def getIndependenceTest = dispatch(_.getIndependenceTest)
+
   override def regress(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
@@ -115,6 +117,12 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterId: Option[BSONObjectID],
     pcaDims: Option[Int]
   ) = dispatch(_.cluster(mlModelId, inputFieldNames, filterId, pcaDims))
+
+  override def testIndependence(
+    targetFieldName: String,
+    inputFieldNames: Seq[String],
+    filterId: Option[BSONObjectID]
+  ) = dispatch(_.testIndependence(targetFieldName, inputFieldNames, filterId))
 
   override def getSeriesProcessingSpec = dispatch(_.getSeriesProcessingSpec)
 

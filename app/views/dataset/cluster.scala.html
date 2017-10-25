@@ -2,7 +2,7 @@
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.elements._
-@import views.html.dataset.{mlElements, mlResources, datasetSubNavWithJs}
+@import views.html.dataset.{mlElements, inputFieldAndFilterResources, datasetSubNavWithJs}
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
 @import controllers.DataSetWebContext
@@ -17,7 +17,7 @@
 )
 
 @bottomResources = {
-    @mlResources(filterShowFieldStyle)
+    @inputFieldAndFilterResources(filterShowFieldStyle)
     @highchartsJsImport()
 
     @helper.javascriptRouter("dataSetJsRoutes")(
@@ -112,7 +112,10 @@
         </h3>
     </div>
 
-    @mlElements(dataSetRouter.allFields, false, false, false)
+    @mlElements(
+        includeChiSquareSelector = false,
+        includeOutputField = false
+    )
 
     <div class="row">
         <div id='pcaScatterDiv' class='col-md-10 col-md-offset-1 chart-holder'>

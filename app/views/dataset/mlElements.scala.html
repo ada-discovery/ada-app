@@ -3,10 +3,9 @@
 @import views.html.dataset.dynamicFieldTable
 
 @(
-    allFieldsCall: Call,
     includeChiSquareSelector: Boolean = false,
     includeOutputField: Boolean = true,
-    includeTrainingSettingFields: Boolean = true
+    extraFields: Option[Html] = None
 )
 
 @dynamicTableJsImport()
@@ -64,19 +63,8 @@
                 @labelValue("pcaDims", "PCA Dims") {
                     <input id="pcaDims" type="text" class="input-lg" placeholder="PCA Dims" value="">
                 }
-                @if(includeTrainingSettingFields) {
-                    @labelValue("trainingTestingSplit", "Training Testing Split") {
-                        <input id="trainingTestingSplit" type="text" class="input-lg" placeholder="Training Testing Split" value="">
-                    }
-                    @labelValue("repetitions", "Repetitions") {
-                        <input id="repetitions" type="text" class="input-lg" placeholder="Repetitions" value="">
-                    }
-                    @labelValue("crossValidationFolds", "Cross Validation Folds") {
-                        <input id="crossValidationFolds" type="text" class="input-lg" placeholder="Cross Validation Folds" value="">
-                    }
-                }
-                @labelValue("saveResults", "Save Results?") {
-                    <input id="saveResults" type="checkbox"/>
+                @if(extraFields.isDefined) {
+                    @extraFields.get
                 }
             </fieldset>
 
@@ -95,20 +83,3 @@
         </div>
     </div>
 </div>
-
-<script>
-    function addAllFields() {
-        $.ajax({
-            url: '@Html(allFieldsCall.url)',
-            success: function (data) {
-                $.each(data, function(index, field) {
-                    var values = {};
-                    values["fieldName"] = field.name;
-                    values["fieldTypeahead"] = field.label ? field.label : field.name;
-
-                    $('#inputFieldNameDiv').dynamicTable('addTableRow', values)
-                });
-            }
-        });
-    }
-</script>
