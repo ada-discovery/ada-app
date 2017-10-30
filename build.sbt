@@ -6,7 +6,7 @@ name := "ncer-pd"
 
 version := "0.5.0-alpha"
 
-scalaVersion := "2.11.7"
+scalaVersion := "2.11.11"
 
 
 Play2WarPlugin.play2WarSettings
@@ -36,7 +36,7 @@ routesImport ++= Seq(
 libraryDependencies ++= Seq(
   "ada" % "ada-dataaccess_2.11" % "0.5.0-alpha",
   "nioc-bot" % "nioc-bot_2.11" % "0.2.3",
-  "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
+  "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
   "org.webjars" %% "webjars-play" % "2.4.0",
   "org.webjars" % "bootstrap" % "3.3.5",
