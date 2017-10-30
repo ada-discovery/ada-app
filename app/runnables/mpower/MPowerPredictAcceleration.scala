@@ -15,7 +15,7 @@ import models.ml.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
-import services.{RCPredictionResults, RCPredictionService}
+import services.ml.{RCPredictionResults, RCPredictionService}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

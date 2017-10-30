@@ -78,6 +78,9 @@
             var trainingTestingSplit = $("#trainingTestingSplit").val()
             var repetitions = $("#repetitions").val()
             var crossValidationFolds = $("#crossValidationFolds").val()
+            var featuresNormalizationType = $("#featuresNormalizationType").val()
+            if (!featuresNormalizationType)
+                featuresNormalizationType = null
 
             $('#samplingRatioDiv').dynamicTable('updateModelFromTable');
             var samplingJsons = $("#samplingRatioDiv").dynamicTable('getModel')
@@ -93,6 +96,7 @@
                 "outputFieldName": outputFieldName,
                 "inputFieldNames": inputFieldNames,
                 "filterId": filterIdJson,
+                "featuresNormalizationType": featuresNormalizationType,
                 "pcaDims": intValue(pcaDims),
                 "trainingTestingSplit": floatValue(trainingTestingSplit),
                 "samplingRatios": samplingTuples,

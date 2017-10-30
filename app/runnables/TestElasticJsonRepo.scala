@@ -24,6 +24,8 @@ class TestElasticJsonRepo @Inject() (dsaf: DataSetAccessorFactory) extends Futur
 
   def runAsFuture =
     for {
+      idsAndSampleTypeIds <- dataSetRepo.find(projection = Seq("__id.$oid", "sampletypeid"))
+
       firstTwo <- dataSetRepo.find(limit = Some(2))
       firstTwoIds = firstTwo.map(jsObject => (jsObject \ idName).as[BSONObjectID])
 

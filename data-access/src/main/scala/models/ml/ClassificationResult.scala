@@ -4,7 +4,7 @@ import java.{util => ju}
 
 import dataaccess.BSONObjectIdentity
 import models.FilterCondition.FilterOrId
-import models.json.{EitherFormat, FlattenFormat, TupleFormat}
+import models.json.{EitherFormat, EnumFormat, FlattenFormat, TupleFormat}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
@@ -39,6 +39,7 @@ case class ClassificationSetting(
   outputFieldName: String,
   inputFieldNames: Seq[String],
   filterId: Option[BSONObjectID],
+  featuresNormalizationType: Option[VectorTransformType.Value],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
   samplingRatios: Seq[(String, Double)],
@@ -49,13 +50,14 @@ case class ClassificationSetting(
     if (inputFieldNames.nonEmpty) (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq else Nil
 
   def learningSetting =
-    LearningSetting(pcaDims, trainingTestingSplit, samplingRatios, repetitions, crossValidationFolds)
+    LearningSetting(featuresNormalizationType, pcaDims, trainingTestingSplit, samplingRatios, repetitions, crossValidationFolds)
 }
 
 object ClassificationResult {
   implicit val filterOrIdFormat = new EitherFormat[Seq[models.FilterCondition], BSONObjectID]
 
   implicit val tuppleFormat = TupleFormat[String, Double]
+  implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
   implicit val classificationSettingFormat = Json.format[ClassificationSetting]
   implicit val classificationMetricStatsValuesFormat = Json.format[MetricStatsValues]
   implicit val classificationMetricStatsFormat = Json.format[ClassificationMetricStats]

@@ -88,7 +88,10 @@ private class RedCapDataSetImporter @Inject() (
 
       // get the ids of the categories that need to be inherited from the first visit
       categoryIdsToInherit <-
-        categoryRepo.find(Seq("name" #-> importInfo.categoriesToInheritFromFirstVisit)).map(_.map(_._id.get))
+        if (importInfo.categoriesToInheritFromFirstVisit.nonEmpty)
+          categoryRepo.find(Seq("name" #-> importInfo.categoriesToInheritFromFirstVisit)).map(_.map(_._id.get))
+        else
+          Future(Nil)
 
       // obtain the names of the fiels that need to be inherited
       fieldNamesToInherit = {

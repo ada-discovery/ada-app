@@ -66,12 +66,16 @@
             if (!pcaDims)
                 pcaDims = null
 
+            var featuresNormalizationType = $("#featuresNormalizationType").val()
+            if (!featuresNormalizationType)
+                featuresNormalizationType = null
+
             $('#scatterPanelDiv').html();
             $('#pcaScatterDiv').html()
 
 //            $('#scatterPanelDiv').hide();
 
-            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.cluster(mlModelId, inputFieldNames, filterId, pcaDims).ajax( {
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.cluster(mlModelId, inputFieldNames, filterId, featuresNormalizationType, pcaDims).ajax( {
                 success: function(scatters) {
                     showMessage("'" + mlModelName + "'clusterization finished.")
 

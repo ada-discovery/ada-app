@@ -31,7 +31,7 @@ class MongoJsonCrudRepo @Inject()(
 
     collection.insert(entity).map {
       case le if le.ok => id
-      case le => throw new RepoException(le.message)
+      case le => throw new RepoException(le.writeErrors.map(_.errmsg).mkString(". "))
     }
   }
 
@@ -53,7 +53,7 @@ class MongoJsonCrudRepo @Inject()(
     val id = (entity \ identityName).as[BSONObjectID]
     collection.update(Json.obj(identityName -> id), entity) map {
       case le if le.ok => id
-      case le => throw new RepoException(le.message)
+      case le => throw new RepoException(le.writeErrors.map(_.errmsg).mkString(". "))
     }
   }
 

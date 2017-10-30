@@ -7,7 +7,8 @@ import models.ml.VectorTransformType
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.DataFrame
 import runnables.GuiceBuilderRunnable
-import services.{RCPredictionService, SparkApp}
+import services.SparkApp
+import services.ml.RCPredictionService
 
 class TestVectorTransformer @Inject()(
   rcPredictionService: RCPredictionService,

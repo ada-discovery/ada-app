@@ -2,6 +2,7 @@ package controllers.dataset
 
 import controllers.core.{CrudController, ReadonlyController}
 import models.FilterCondition.FilterOrId
+import models.ml.VectorTransformType
 import models.{FieldTypeId, FilterCondition, PageOrder}
 import play.api.libs.json.JsArray
 import play.api.mvc.{Action, AnyContent}
@@ -78,6 +79,7 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     inputFieldNames: Seq[String],
     outputFieldName: String,
     filterId: Option[BSONObjectID],
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDims: Option[Int],
     trainingTestingSplit: Option[Double],
     repetitions: Option[Int],
@@ -88,6 +90,7 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID],
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDims: Option[Int]
   ): Action[AnyContent]
 

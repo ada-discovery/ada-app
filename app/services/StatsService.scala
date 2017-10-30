@@ -7,7 +7,6 @@ import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import _root_.util.BasicStats.Quantiles
 
-import scala.collection.mutable.{Map => MMap}
 import _root_.util._
 import dataaccess.JsonUtil.project
 import java.{util => ju}
@@ -414,14 +413,8 @@ class StatsServiceImpl extends StatsService {
 
   private def categoricalCounts[T](
     values: Traversable[Option[T]]
-  ): Seq[(Option[T], Int)] = {
-    val countMap = MMap[Option[T], Int]()
-    values.foreach { value =>
-      val count = countMap.getOrElse(value, 0)
-      countMap.update(value, count + 1)
-    }
-    countMap.toSeq
-  }
+  ): Seq[(Option[T], Int)] =
+    values.groupBy(identity).map { case (value, seq) => (value, seq.size) }.toSeq
 
   private def categoricalCountsRepo[T](
     fieldName: String,
@@ -479,26 +472,19 @@ class StatsServiceImpl extends StatsService {
         else
           (max - min) / columnCount
 
-      val countMap = MMap[Int, Int]()
-
-      // initialize counts to zero
-      (0 until columnCount).foreach { index =>
-        countMap.update(index, 0)
-      }
-      doubles.map { value =>
-        val bucketIndex =
-          if (stepSize.equals(BigDecimal(0)))
-            0
-          else if (value == max)
-            columnCount - 1
-          else
-            ((value - min) / stepSize).setScale(0, RoundingMode.FLOOR).toInt
-
-        val count = countMap.get(bucketIndex).get
-        countMap.update(bucketIndex, count + 1)
+      val bucketIndeces = doubles.map { value =>
+        if (stepSize.equals(BigDecimal(0)))
+          0
+        else if (value == max)
+          columnCount - 1
+        else
+          ((value - min) / stepSize).setScale(0, RoundingMode.FLOOR).toInt
       }
 
-      countMap.toSeq.sortBy(_._1).map { case (index, count) =>
+      val countMap = bucketIndeces.groupBy(identity).map { case (index, values) => (index, values.size) }
+
+      (0 until columnCount).map { index =>
+        val count = countMap.get(index).getOrElse(0)
         val xValue = min + (index * stepSize)
         (xValue, count)
       }

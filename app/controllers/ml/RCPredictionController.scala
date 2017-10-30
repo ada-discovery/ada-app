@@ -20,7 +20,8 @@ import play.api.data.format.Formats.doubleFormat
 import play.api.i18n.MessagesApi
 import play.api.libs.json.{JsNull, JsObject, JsValue}
 import play.api.mvc.{Action, Controller, Request}
-import services.{DataSpaceService, RCPredictionService}
+import services.DataSpaceService
+import services.ml.RCPredictionService
 import util.MessageLogger
 import util.SecurityUtil.restrictAdmin
 

@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import controllers.{ControllerDispatcher, SecureControllerDispatcher}
 import models.FilterCondition.FilterOrId
+import models.ml.VectorTransformType
 import models.{FieldTypeId, FilterCondition, PageOrder}
 import play.api.libs.json.JsArray
 import play.api.mvc.{Action, AnyContent}
@@ -105,18 +106,20 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     inputFieldNames: Seq[String],
     outputFieldName: String,
     filterId: Option[BSONObjectID],
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDims: Option[Int],
     trainingTestingSplit: Option[Double],
     repetitions: Option[Int],
     crossValidationFolds: Option[Int]
-  ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds))
+  ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterId, featuresNormalizationType, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds))
 
   override def cluster(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID],
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDims: Option[Int]
-  ) = dispatch(_.cluster(mlModelId, inputFieldNames, filterId, pcaDims))
+  ) = dispatch(_.cluster(mlModelId, inputFieldNames, filterId, featuresNormalizationType, pcaDims))
 
   override def testIndependence(
     targetFieldName: String,

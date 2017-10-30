@@ -1,7 +1,7 @@
 package models
 
 import com.fasterxml.jackson.core.JsonParseException
-import controllers.BSONObjectIDQueryStringBindable
+import controllers.{BSONObjectIDQueryStringBindable, EnumStringBindable}
 import play.api.mvc.QueryStringBindable
 import dataaccess.JsonUtil
 import dataaccess.BSONObjectIdentity
@@ -15,7 +15,7 @@ import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
 import models.json.EnumFormat
 import models.json.EitherFormat._
-import models.ml.ClassificationSetting
+import models.ml.{ClassificationSetting, VectorTransformType}
 import models.ml.ClassificationResult.classificationSettingFormat
 
 case class Message(
@@ -50,7 +50,7 @@ object Translation {
 
 object QueryStringBinders {
 
-  def createQueryStringBinder[E:Format](implicit stringBinder: QueryStringBindable[String]) = new QueryStringBindable[E] {
+  class JsonQueryStringBinder[E:Format](implicit stringBinder: QueryStringBindable[String]) extends QueryStringBindable[E] {
 
     override def bind(
       key: String,
@@ -77,12 +77,14 @@ object QueryStringBinders {
       stringBinder.unbind(key, Json.stringify(Json.toJson(filterSpec)))
   }
 
-  implicit val FilterConditionQueryStringBinder = createQueryStringBinder[Seq[FilterCondition]]
-  implicit val FilterQueryStringBinder = createQueryStringBinder[Filter]
-  implicit val FieldTypeIdsQueryStringBinder = createQueryStringBinder[Seq[FieldTypeId.Value]]
+  implicit val FilterConditionQueryStringBinder = new JsonQueryStringBinder[Seq[FilterCondition]]
+  implicit val FilterQueryStringBinder = new JsonQueryStringBinder[Filter]
+  implicit val FieldTypeIdsQueryStringBinder = new JsonQueryStringBinder[Seq[FieldTypeId.Value]]
   implicit val BSONObjectIDQueryStringBinder = BSONObjectIDQueryStringBindable
-  implicit val FilterOrIdBinder = createQueryStringBinder[FilterOrId]
-  implicit val FilterOrIdSeqBinder = createQueryStringBinder[Seq[FilterOrId]]
-  implicit val TablePageSeqBinder = createQueryStringBinder[Seq[PageOrder]]
-  implicit val ClassificationSettingBinder = createQueryStringBinder[ClassificationSetting]
+  implicit val FilterOrIdBinder = new JsonQueryStringBinder[FilterOrId]
+  implicit val FilterOrIdSeqBinder = new JsonQueryStringBinder[Seq[FilterOrId]]
+  implicit val TablePageSeqBinder = new JsonQueryStringBinder[Seq[PageOrder]]
+  implicit val ClassificationSettingBinder = new JsonQueryStringBinder[ClassificationSetting]
+  implicit val vectorTransformTypeQueryStringBinder = new EnumStringBindable(VectorTransformType)
+
 }

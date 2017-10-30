@@ -104,6 +104,7 @@ protected[services] class RedCapServiceWSImpl @Inject() (
       val config = new AsyncHttpClientConfigBean()
       config.setAcceptAnyCertificate(true)
       config.setFollowRedirect(true)
+      config.setReadTimeout(timeout.toInt)
       new NingWSClient(config)
     } else
       ws

@@ -1516,12 +1516,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     inputFieldNames: Seq[String],
     outputFieldName: String,
     filterId: Option[BSONObjectID],
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDims: Option[Int],
     trainingTestingSplit: Option[Double],
     repetitions: Option[Int],
     crossValidationFolds: Option[Int]
   ) = Action.async { implicit request =>
-    val learningSetting = LearningSetting(pcaDims, trainingTestingSplit, Nil, repetitions, crossValidationFolds)
+    val learningSetting = LearningSetting(featuresNormalizationType, pcaDims, trainingTestingSplit, Nil, repetitions, crossValidationFolds)
 
     for {
       result <- runMLAux(
@@ -1587,6 +1588,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID],
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDims: Option[Int]
   ) = Action.async { implicit request =>
     val explFieldNamesToLoads =
@@ -1611,7 +1613,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             json.+(JsObjectIdentity.name, JsString(id.stringify))
           }
 
-          val (idClasses, idPCA12s) = mlService.clusterAndGetPCA12(jsonsWithStringIds, fieldNameAndSpecs, mlModel, pcaDims)
+          val (idClasses, idPCA12s) = mlService.clusterAndGetPCA12(jsonsWithStringIds, fieldNameAndSpecs, mlModel, featuresNormalizationType, pcaDims)
 
           val numericTypes = Set(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
           val numericFields = fields.filter(field => !field.fieldTypeSpec.isArray && numericTypes.contains(field.fieldType))
@@ -1650,7 +1652,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           }
 
           // Transform Scatters into JSONs
-          val scatters = numericFields.combinations(2).take(4).flatMap { fields => createScatter(fields(0), fields(1)) }
+          val scatters = numericFields.combinations(2).take(32).flatMap { fields => createScatter(fields(0), fields(1)) }
 
           val scatterJsons = (Seq(pca12Scatter) ++ scatters).map( scatter =>
             scatterToJson(scatter.asInstanceOf[ScatterWidget[_, _]])

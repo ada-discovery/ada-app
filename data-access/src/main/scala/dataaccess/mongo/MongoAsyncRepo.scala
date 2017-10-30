@@ -14,7 +14,7 @@ import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
-import play.modules.reactivemongo.json.collection.JSONBatchCommands.JSONCountCommand.Count
+import reactivemongo.play.json.collection.JSONBatchCommands.JSONCountCommand.Count
 import reactivemongo.core.errors.{DatabaseException, DetailedDatabaseException}
 
 import scala.concurrent.duration._
@@ -92,7 +92,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     projection: Traversable[String],
     limit: Option[Int],
     skip: Option[Int]
-  ): Future[CursorProducer[E]#ProducedCursor] = {
+  ): Future[Cursor[E]] = {
     val sortedProjection = projection.toSeq.sorted
     val jsonProjection = JsObject(
       sortedProjection.map(fieldName => (fieldName, JsNumber(1)))
@@ -235,7 +235,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     }
 
   protected def handleResult(result : WriteResult) =
-    if (!result.ok) throw new RepoException(result.message)
+    if (!result.ok) throw new RepoException(result.writeErrors.map(_.errmsg).mkString(". "))
 }
 
 protected class MongoAsyncRepo[E: Format, ID: Format](
@@ -251,7 +251,7 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
 
     collection.insert(doc).map {
       case le if le.ok => id
-      case le => throw new RepoException(le.message)
+      case le => throw new RepoException(le.writeErrors.map(_.errmsg).mkString(". "))
     }
   }
 
@@ -297,7 +297,7 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
     identity.of(entity).map{ id =>
       collection.update(Json.obj(identity.name -> id), doc) map {
         case le if le.ok => id
-        case le => throw new RepoException(le.message)
+        case le => throw new RepoException(le.writeErrors.map(_.errmsg).mkString(". "))
       }
     }.getOrElse(
       throw new RepoException("Id required for update.")

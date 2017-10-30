@@ -1,12 +1,10 @@
-package services
+package services.ml
 
 import java.util.Collections
 import java.{lang => jl, util => ju}
 import javax.inject.Inject
 
-import _root_.util.{FieldUtil, retry, seqFutures}
-import dataaccess.JsonUtil
-import FieldUtil.caseClassToFlatFieldTypes
+import _root_.util.{retry, seqFutures}
 import com.banda.incal.domain.ReservoirLearningSetting
 import com.banda.incal.prediction.{ErrorMeasures, ReservoirTrainerFactory}
 import com.banda.math.business.MathUtil
@@ -15,21 +13,22 @@ import com.banda.math.domain.rand._
 import com.banda.network.business._
 import com.banda.network.domain._
 import com.google.inject.{ImplementedBy, Singleton}
-import dataaccess.JsonCrudRepoExtra.InfixOps
 import dataaccess.Criterion.Infix
+import dataaccess.JsonCrudRepoExtra.InfixOps
+import dataaccess.JsonUtil
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models._
-import models.ml._
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import models.ml.RCPredictionSettingAndResults.rcPredictionSettingAndResultsFormat
+import models.ml._
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.ml.feature.{MaxAbsScaler, MinMaxScaler, Normalizer, StandardScaler}
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
+import util.FieldUtil.caseClassToFlatFieldTypes
+import play.api.libs.json._
+import reactivemongo.bson.BSONObjectID
+import services.{DataSetService, SparkApp, SparkUtil}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -150,6 +149,8 @@ class RCPredictionServiceImpl @Inject()(
         }
       }
 
+    import sparkApp.sqlContext.implicits._
+
     def runPredictions(
       jobDataContexts: Seq[(RCPredictionJobData, Broadcast[RCPredictionJobContext])],
       jobIndexJsonMap: Map[Int, JsObject]
@@ -168,8 +169,6 @@ class RCPredictionServiceImpl @Inject()(
         (results, otherDataJson)
       })
     }
-
-    import SparkUtil.kryoEncoder
 
     def runPredictions2(
       jobDatas: Seq[RCPredictionJobData],
@@ -635,7 +634,7 @@ class RCPredictionServiceImpl @Inject()(
     transformType: VectorTransformType.Value,
     inRow: Boolean = false
   ): DataFrame =
-    RCPredictionStaticHelper.transformVectors(sparkApp.session)(data, transformType, inRow)
+    FeatureTransformer(sparkApp.session)(data, transformType, inRow)
 
   override def transformSeriesJava(
     series: Seq[Seq[jl.Double]],
@@ -705,75 +704,6 @@ object RCPredictionStaticHelper extends Serializable {
     call(ioStream)
   }
 
-  def transformVectors(
-    session: SparkSession)(
-    data: DataFrame,
-    transformType: VectorTransformType.Value,
-    inRow: Boolean = false
-  ): DataFrame = {
-    // aux function to transpose features
-    def transpose(columnNames: Traversable[String], df: DataFrame) =
-      SparkUtil.transposeVectors(session, columnNames, df)
-
-    // for normalizers we have to switch rows wth columns
-    val isNormalizer = transformType == VectorTransformType.L1Normalizer || transformType == VectorTransformType.L2Normalizer
-
-    // check if transpose is needed
-    val transposeNeeded = (isNormalizer && !inRow) || (!isNormalizer && inRow)
-
-    // create input df (apply transpose optionally)
-    val inputDf = if (transposeNeeded) transpose(Seq("features"), data) else data
-
-    val transformer = transformType match {
-      case VectorTransformType.L1Normalizer =>
-        new Normalizer()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures")
-          .setP(1.0)
-
-      case VectorTransformType.L2Normalizer =>
-        new Normalizer()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures")
-          .setP(2.0)
-
-      case VectorTransformType.StandardScaler =>
-        new StandardScaler()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures")
-          .setWithStd(true)
-          .setWithMean(true).fit(inputDf)
-
-      case VectorTransformType.MinMaxPlusMinusOneScaler =>
-        new MinMaxScaler()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures")
-          .setMin(-1)
-          .setMax(1).fit(inputDf)
-
-      case VectorTransformType.MinMaxZeroOneScaler =>
-        new MinMaxScaler()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures")
-          .setMin(0)
-          .setMax(1).fit(inputDf)
-
-      case VectorTransformType.MaxAbsScaler =>
-        new MaxAbsScaler()
-          .setInputCol("features")
-          .setOutputCol("scaledFeatures").fit(inputDf)
-    }
-
-    val transformedDf = transformer.transform(inputDf)
-
-    // apply transpose to the output (if applied for the input df)
-    if (transposeNeeded) {
-      val newDf = transpose(Seq("features", "scaledFeatures"), transformedDf)
-      SparkUtil.joinByOrder(data.drop("features"), newDf)
-    } else
-      transformedDf
-  }
-
   def transformSeriesJava(
     session: SparkSession)(
     series: Seq[Seq[jl.Double]],
@@ -801,7 +731,7 @@ object RCPredictionStaticHelper extends Serializable {
     }
 
     val df = session.createDataFrame(rows).toDF("id", "features")
-    val newDf = transformVectors(session)(df, transformType, inRow)
+    val newDf = FeatureTransformer(session)(df, transformType, inRow)
 
     for {
       rows <- newDf.select("scaledFeatures").rdd.collectAsync()

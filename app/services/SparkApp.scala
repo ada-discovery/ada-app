@@ -4,7 +4,7 @@ import javax.inject.{Inject, Singleton}
 
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
+import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.functions.{monotonically_increasing_id, struct, udf}
 import org.apache.spark.sql.types.StructType
 import play.api.Configuration
@@ -62,7 +62,7 @@ object SparkUtil {
     }
 
     // vectors for different columns are expected to have same size, otherwise transpose wouldn't work
-    val vectorSize = df.select(columnNames.head).head().getAs[DenseVector](0).size
+    val vectorSize = df.select(columnNames.head).head().getAs[Vector](0).size
 
     val columns = columnNames.map { columnName =>
       for (i <- 0 until vectorSize) yield {

@@ -7,7 +7,7 @@ import dataaccess.Criterion
 import dataaccess.Criterion._
 import models.FilterCondition.toCriterion
 import models.{AdaException, Filter, FilterCondition}
-import models.ml.ClassificationSetting
+import models.ml.{ClassificationSetting, VectorTransformType}
 import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -112,6 +112,7 @@ class ClassifyRCResults @Inject() (
             input.outputFieldName,
             weightsFieldNames,
             filter.map(_._id.get),
+            input.featuresNormalizationType,
             input.pcaDims,
             input.trainingTestingSplit,
             input.samplingOutputValues.zip(input.samplingRatios),
@@ -160,6 +161,7 @@ case class ClassifyRCResultsSpec(
   mlModelId: BSONObjectID,
   outputFieldName: String,
   filterName: Option[String],
+  featuresNormalizationType: Option[VectorTransformType.Value],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
   samplingOutputValues: Seq[String],

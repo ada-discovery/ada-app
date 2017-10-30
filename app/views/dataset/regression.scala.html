@@ -73,6 +73,10 @@
                 if (!pcaDims)
                     pcaDims = null
 
+                var featuresNormalizationType = $("#featuresNormalizationType").val()
+                if (!featuresNormalizationType)
+                    featuresNormalizationType = null
+
                 var trainingTestingSplit = $("#trainingTestingSplit").val()
                 if (!trainingTestingSplit)
                     trainingTestingSplit = null
@@ -87,7 +91,7 @@
 
                 $('#outputDiv').hide();
 
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.regress(mlModelId, inputFieldNames, outputFieldName, filterId, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds).ajax( {
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.regress(mlModelId, inputFieldNames, outputFieldName, filterId, featuresNormalizationType, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds).ajax( {
                     success: function(evalRates) {
                         showMessage("'" + mlModelName + "' regression finished.")
                         showMLOutput(evalRates)

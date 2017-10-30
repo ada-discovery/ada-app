@@ -234,7 +234,7 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
 
     result.map { result =>
       if (result.nonEmpty) {
-        val jsonFields = (result.head \ listName).as[JsArray].value
+        val jsonFields = (result.head \ listName).as[JsArray].value // .asInstanceOf[Stream[JsValue]].force.toList
         jsonFields.map(_.as[E])
       } else
         Seq[E]()

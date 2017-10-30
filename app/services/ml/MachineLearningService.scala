@@ -57,6 +57,7 @@ trait MachineLearningService {
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDim: Option[Int] = None
   ): Traversable[(String, Int)]
 
@@ -64,6 +65,7 @@ trait MachineLearningService {
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDim: Option[Int] = None
   ): (Traversable[(String, Int)], Traversable[(String, (Double, Double))])
 
@@ -159,6 +161,9 @@ private class MachineLearningServiceImpl @Inject() (
     val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
     df.cache
 
+    // normalize the features
+    val normalizeFeatures = new SchemaUnchangedTransformer(normalizeFeaturesOptional(setting.featuresNormalizationType))
+
     // reduce the dimensionality if needed
     val reduceDim = new SchemaUnchangedTransformer(pcaComponentsOptional(setting.pcaDims))
 
@@ -171,7 +176,7 @@ private class MachineLearningServiceImpl @Inject() (
       .setOutputCol("labelString")
 
     // create the stages and run a pipeline
-    val preStages = Seq(reduceDim, makeIndexBooleanLabel)
+    val preStages = Seq(normalizeFeatures, reduceDim, makeIndexBooleanLabel)
 
     val samplingNeeded = setting.samplingRatios.nonEmpty
 
@@ -226,7 +231,7 @@ private class MachineLearningServiceImpl @Inject() (
       val Array(training, test) = sampledDf.randomSplit(Array(split, 1 - split))
 
         // run the trainer (with folds) on the given training and test data sets
-      val results = trainWithFolds(trainer, evaluators ++ binEvaluators, setting.crossValidationFolds, training.cache, test.cache)
+      val results = trainWithFolds(trainer, evaluators ++ binEvaluators, setting.crossValidationFolds, training.cache, test.cache, true)
       training.unpersist
       test.unpersist
       (results, count)
@@ -257,8 +262,15 @@ private class MachineLearningServiceImpl @Inject() (
 
     val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
 
+    // normalize the features
+    val normalizeFeatures = new SchemaUnchangedTransformer(normalizeFeaturesOptional(setting.featuresNormalizationType))
+
     // reduce the dimensionality if needed
-    val dataFrame = df.transform(pcaComponentsOptional(setting.pcaDims))
+    val reduceDim = new SchemaUnchangedTransformer(pcaComponentsOptional(setting.pcaDims))
+
+    // execute the pipeline
+    val pipeline = new Pipeline().setStages(Array(normalizeFeatures, reduceDim))
+    val dataFrame = pipeline.fit(df).transform(df)
 
     val evaluators = RegressionEvalMetric.values.toSeq.map { metric =>
 
@@ -270,7 +282,7 @@ private class MachineLearningServiceImpl @Inject() (
       (metric, evaluator)
     }
 
-   dataFrame.cache()
+    dataFrame.cache()
 
     // split the data into training and test parts
     val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
@@ -280,7 +292,7 @@ private class MachineLearningServiceImpl @Inject() (
       val Array(training, test) = dataFrame.randomSplit(Array(split, 1 - split))
 
       // run the trainer (with folds) on the given training and test data sets
-      val results = trainWithFolds(trainer, evaluators, setting.crossValidationFolds, training.cache, test.cache)
+      val results = trainWithFolds(trainer, evaluators, setting.crossValidationFolds, training.cache, test.cache, false)
       training.unpersist
       test.unpersist
       results
@@ -301,9 +313,10 @@ private class MachineLearningServiceImpl @Inject() (
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDim: Option[Int]
   ): Traversable[(String, Int)] = {
-    val (df, idClusters) = clusterAux(data, fields, mlModel, pcaDim)
+    val (df, idClusters) = clusterAux(data, fields, mlModel, featuresNormalizationType, pcaDim)
     idClusters
   }
 
@@ -311,9 +324,10 @@ private class MachineLearningServiceImpl @Inject() (
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDim: Option[Int]
   ): (Traversable[(String, Int)], Traversable[(String, (Double, Double))]) = {
-    val (df, idClusters) = clusterAux(data, fields, mlModel, pcaDim)
+    val (df, idClusters) = clusterAux(data, fields, mlModel, featuresNormalizationType, pcaDim)
 
     // reduce the dimensionality if needed
     val pca12Df = df.transform(pcaComponents(2))
@@ -333,6 +347,7 @@ private class MachineLearningServiceImpl @Inject() (
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
+    featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDim: Option[Int]
   ): (DataFrame, Traversable[(String, Int)]) = {
     val trainer = SparkMLEstimatorFactory[M](mlModel)
@@ -342,8 +357,10 @@ private class MachineLearningServiceImpl @Inject() (
     val fieldsWithId = fields ++ Seq((JsObjectIdentity.name, FieldTypeSpec(FieldTypeId.String)))
     val df = jsonsToLearningDataFrame(data, fieldsWithId, featureFieldNames)
 
+    val normalizedDf = normalizeFeaturesOptional(featuresNormalizationType)(df)
+
     // reduce the dimensionality if needed
-    val dataFrame = df.transform(pcaComponentsOptional(pcaDim))
+    val dataFrame = normalizedDf.transform(pcaComponentsOptional(pcaDim))
 
     val cachedDf = dataFrame.cache()
 
@@ -422,7 +439,7 @@ private class MachineLearningServiceImpl @Inject() (
 
     cachedDf.unpersist
 
-    (df, result)
+    (normalizedDf, result)
   }
 
   private def pcaComponentsOptional(
@@ -446,6 +463,20 @@ private class MachineLearningServiceImpl @Inject() (
     // replace in-place
     pca.transform(df).drop("features").withColumnRenamed("pcaFeatures", "features")
   }
+
+  private def normalizeFeaturesOptional(
+    featuresNormalizationType: Option[VectorTransformType.Value])(
+    df: DataFrame
+  ): DataFrame =
+    if (featuresNormalizationType.isDefined) {
+      val featureTransformer = new SchemaUnchangedTransformer(
+        FeatureTransformer(session)(_, featuresNormalizationType.get)
+      )
+
+      // replace in-place
+      featureTransformer.transform(df).drop("features").withColumnRenamed("scaledFeatures", "features")
+    } else
+      df
 
   private def jsonsToLearningDataFrame(
     jsons: Traversable[JsObject],
@@ -646,7 +677,8 @@ private class MachineLearningServiceImpl @Inject() (
     estimator: Estimator[M],
     metricWithEvaluators: Traversable[(Q, Evaluator)],
     trainData: DataFrame,
-    testData: DataFrame
+    testData: DataFrame,
+    vectorizeRawPredictions: Boolean
   ): Traversable[(Q, Double, Double)] = {
     // Fit the model
     val lrModel = estimator.fit(trainData)
@@ -658,7 +690,10 @@ private class MachineLearningServiceImpl @Inject() (
     def getPredictions(df: DataFrame): DataFrame = {
       val predictions = lrModel.transform(df)
       val hasRawPrediction = predictions.columns.contains("rawPrediction")
-      if (hasRawPrediction) predictions else predictionVectorizer.transform(predictions)
+      if (hasRawPrediction || !vectorizeRawPredictions)
+        predictions
+      else
+        predictionVectorizer.transform(predictions)
     }
 
     val trainPredictions = getPredictions(trainData)
@@ -682,10 +717,11 @@ private class MachineLearningServiceImpl @Inject() (
     metricWithEvaluators: Traversable[(Q, Evaluator)],
     folds: Option[Int],
     training: DataFrame,
-    test: DataFrame
+    test: DataFrame,
+    vectorizeRawPredictions: Boolean
   ) = {
     def trainAux[MM <: Model[MM]](estimator: Estimator[MM]) =
-      train(estimator, metricWithEvaluators, training, test)
+      train(estimator, metricWithEvaluators, training, test, vectorizeRawPredictions)
 
     // TODO: since we are not selecting a model cross validation here is useless
     // use cross-validation if the folds specified (without parameter optimization) and train

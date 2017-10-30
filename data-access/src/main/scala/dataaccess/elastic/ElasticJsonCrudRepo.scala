@@ -3,7 +3,7 @@ package dataaccess.elastic
 import com.google.inject.assistedinject.Assisted
 import com.sksamuel.elastic4s._
 import com.sksamuel.elastic4s.mappings.FieldType._
-import com.sksamuel.elastic4s.mappings.TypedFieldDefinition
+import com.sksamuel.elastic4s.mappings.{FieldType, StringFieldDefinition, TypedFieldDefinition}
 import com.sksamuel.elastic4s.source.JsonDocumentSource
 import dataaccess.ignite.BinaryJsonUtil
 import models.DataSetFormattersAndIds.JsObjectIdentity
@@ -88,14 +88,17 @@ class ElasticJsonCrudRepo @Inject()(
     }
 
   private def toElasticFieldType(fieldName: String, fieldTypeSpec: FieldTypeSpec): TypedFieldDefinition =
-    fieldTypeSpec.fieldType match {
-      case FieldTypeId.Integer => fieldName typed LongType store true
-      case FieldTypeId.Double => new CoerceDoubleFieldDefinition(fieldName) store true
-      case FieldTypeId.Boolean => fieldName typed BooleanType  store true
-      case FieldTypeId.Enum => fieldName typed IntegerType  store true
-      case FieldTypeId.String => fieldName typed StringType index NotAnalyzed  store true
-      case FieldTypeId.Date => fieldName typed LongType  store true
-      case FieldTypeId.Json => fieldName typed NestedType
-      case FieldTypeId.Null => fieldName typed ShortType // doesnt matter which type since it's always null
-    }
+    if (fieldName.equals(ElasticIdRenameUtil.newIdName)) {
+      fieldName typed NestedType as ("$oid" typed StringType) //  store true
+    } else
+      fieldTypeSpec.fieldType match {
+        case FieldTypeId.Integer => fieldName typed LongType store true
+        case FieldTypeId.Double => new CoerceDoubleFieldDefinition(fieldName) store true
+        case FieldTypeId.Boolean => fieldName typed BooleanType store true
+        case FieldTypeId.Enum => fieldName typed IntegerType store true
+        case FieldTypeId.String => fieldName typed StringType index NotAnalyzed store true
+        case FieldTypeId.Date => fieldName typed LongType store true
+        case FieldTypeId.Json => fieldName typed NestedType
+        case FieldTypeId.Null => fieldName typed ShortType // doesn't matter which type since it's always null
+      }
 }

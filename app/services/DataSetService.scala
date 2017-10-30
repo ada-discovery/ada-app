@@ -29,6 +29,7 @@ import models.ml._
 
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+import services.ml.RCPredictionService
 
 @ImplementedBy(classOf[DataSetServiceImpl])
 trait DataSetService {
@@ -673,8 +674,37 @@ class DataSetServiceImpl @Inject()(
       } yield
         fields.map( field => (field.name, ftf(field.fieldTypeSpec))).toMap
 
-    val processingBatchSize = spec.processingBatchSize.getOrElse(20)
     val saveBatchSize = spec.saveBatchSize.getOrElse(10)
+
+    def linkAndSave(
+      leftJsons: Traversable[JsObject],
+      linkRightJsonsMap: Map[Seq[String], Traversable[JsObject]],
+      leftFieldTypeMap: Map[String, FieldType[_]],
+      rightFieldTypeMap: Map[String, FieldType[_]],
+      linkedDsa: DataSetAccessor
+    ) = {
+      val linkedJsons = leftJsons.flatMap { json =>
+        val link = spec.linkFieldNames.map { case (fieldName, _) =>
+          val fieldType = leftFieldTypeMap.get(fieldName).getOrElse(
+            throw new AdaException(s"Field $fieldName not found.")
+          )
+          fieldType.jsonToDisplayString(json \ fieldName)
+        }
+
+        linkRightJsonsMap.get(link).map { rightJsons =>
+          val jsonId = (json \ JsObjectIdentity.name).asOpt[BSONObjectID]
+          val id = if (rightJsons.size > 1 || jsonId.isEmpty) JsObjectIdentity.next else jsonId.get
+
+          rightJsons.map { rightJson =>
+            json ++ rightJson ++ Json.obj(JsObjectIdentity.name -> id)
+          }
+        }.getOrElse(
+          Seq(json)
+        )
+      }
+
+      saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(saveBatchSize))
+    }
 
     for {
       // register the result data set (if not registered already)
@@ -699,81 +729,50 @@ class DataSetServiceImpl @Inject()(
           jsons <- rightDsa.dataSetRepo.find(projection = rightFieldNames)
         } yield {
           jsons.map { json =>
-            val linkAsString = spec.linkFieldNames.map { case (_, fieldName) =>
+            val link = spec.linkFieldNames.map { case (_, fieldName) =>
               val fieldType = rightFieldTypeMap.get(fieldName).getOrElse(
                 throw new AdaException(s"Field $fieldName not found.")
               )
               fieldType.jsonToDisplayString(json \ fieldName)
-            }.mkString(",")
+            }
             val strippedJson = json.fields.filterNot { case (fieldName, _)  => rightLinkFieldNameSet.contains(fieldName) }
-            (linkAsString, JsObject(strippedJson))
+            (link, JsObject(strippedJson))
           }.toGroupMap
         }
 
-      // get all the left ids
-      ids <- leftDsa.dataSetRepo.allIds
-
       // delete all items from the linked data set
-      _ <- {
-        println(ids.size)
-        println(ids.map(_.stringify).mkString("\n"))
-        linkedDsa.dataSetRepo.deleteAll
-      }
+      _ <- linkedDsa.dataSetRepo.deleteAll
 
-      // link left and right data sets
-      _ <-
-        seqFutures(ids.toSeq.grouped(processingBatchSize)) { ids =>
-          for {
-            // get the jsons
-            jsons <- leftDsa.dataSetRepo.findByIds(ids.head, processingBatchSize, leftFieldNames)
+      _ <- spec.processingBatchSize.map { processingBatchSize =>
+        for {
+          // get all the left ids
+          leftIds <- leftDsa.dataSetRepo.allIds
 
-            // save the new linked jsons
-            _ <- {
-//              println("Searched ids:")
-//              println(ids.map(_.stringify).mkString("\n"))
-//
-//              val foundIds = jsons.map { json =>
-//                (json \ JsObjectIdentity.name).as[BSONObjectID]
-//              }
-//              println("Found ids  :")
-//              println(foundIds.map(_.stringify).mkString("\n"))
+          // link left and right data sets
+          _ <- seqFutures(leftIds.toSeq.grouped(processingBatchSize)) { ids =>
+            for {
+              // get the jsons
+              leftJsons <- leftDsa.dataSetRepo.findByIds(ids.head, processingBatchSize, leftFieldNames)
 
-              val linkedJsons = jsons.flatMap { json =>
-                val linkAsString = spec.linkFieldNames.map { case (fieldName, _) =>
-                  val fieldType = leftFieldTypeMap.get(fieldName).getOrElse(
-                    throw new AdaException(s"Field $fieldName not found.")
-                  )
-                  fieldType.jsonToDisplayString(json \ fieldName)
-                }.mkString(",")
+              // link and save the jsons
+              _ <- linkAndSave(leftJsons, linkRightJsonsMap, leftFieldTypeMap, rightFieldTypeMap, linkedDsa)
+            } yield
+              ()
+          }
+        } yield
+          ()
+      }.getOrElse(
+        for {
+          // get ALL the jsons
+          leftJsons <- leftDsa.dataSetRepo.find(projection = leftFieldNames)
 
-                linkRightJsonsMap.get(linkAsString).map { rightJsons =>
-                  val jsonId = (json \ JsObjectIdentity.name).asOpt[BSONObjectID]
-                  val id = if (rightJsons.size > 1 || jsonId.isEmpty) JsObjectIdentity.next else jsonId.get
-
-                  rightJsons.map { rightJson =>
-                    json ++ rightJson ++ Json.obj(JsObjectIdentity.name -> id)
-                  }
-                }.getOrElse(
-                  Seq(json)
-                )
-              }
-
-              linkedJsons.foreach { json =>
-                val linkAsString = spec.linkFieldNames.map { case (fieldName, _) =>
-                  val fieldType = leftFieldTypeMap.get(fieldName).getOrElse(
-                    throw new AdaException(s"Field $fieldName not found.")
-                  )
-                  fieldType.jsonToDisplayString(json \ fieldName)
-                }.mkString(",")
-              }
-
-              saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(saveBatchSize))
-            }
-          } yield
-            ()
-        }
+          // link and save the jsons
+          _ <- linkAndSave(leftJsons, linkRightJsonsMap, leftFieldTypeMap, rightFieldTypeMap, linkedDsa)
+        } yield
+          ()
+      )
     } yield
-      ()
+        ()
   }
 
   override def processSeriesAndSaveDataSet(
