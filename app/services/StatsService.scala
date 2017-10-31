@@ -2,18 +2,23 @@ package services
 
 import com.google.inject.ImplementedBy
 import dataaccess._
-import models.{Count, Field, FieldTypeId, FilterCondition}
+import models._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import _root_.util.BasicStats.Quantiles
-
 import _root_.util._
 import dataaccess.JsonUtil.project
 import java.{util => ju}
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
 
 import Criterion.Infix
+import org.apache.commons.math3.stat.inference.{OneWayAnova, TestUtils}
+import org.apache.spark.ml.linalg.Vector
+import org.apache.spark.ml.stat.ChiSquareTest
+import org.apache.spark.sql.DataFrame
+import services.ml.BooleanLabelIndexer
 
+import scala.collection.JavaConversions._
 import scala.concurrent.Future
 import scala.math.BigDecimal.RoundingMode
 import scala.concurrent.duration._
@@ -87,14 +92,27 @@ trait StatsService {
     items: Traversable[JsObject],
     fields: Seq[Field]
   ): Seq[Seq[Option[Double]]]
+
+  def testChiSquare(
+    data: Traversable[JsObject],
+    inputFields: Seq[Field],
+    targetField: Field
+  ): Seq[ChiSquareResult]
+
+  def testOneWayAnova(
+    items: Traversable[JsObject],
+    inputFields: Seq[Field],
+    targetField: Field
+  ): Seq[Option[AnovaResult]]
 }
 
 @Singleton
-class StatsServiceImpl extends StatsService {
+class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
 
+  private val session = sparkApp.session
   private val ftf = FieldTypeHelper.fieldTypeFactory()
-  protected val timeout = 200000 millis
   private val defaultNumericBinCount = 20
+  private val anovaTest = new CommonsOneWayAnovaAdjusted()
 
   override def calcDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
@@ -947,7 +965,7 @@ class StatsServiceImpl extends StatsService {
     }
   }
 
-  def calcPearsonCorrelations(
+  override def calcPearsonCorrelations(
     items: Traversable[JsObject],
     fields: Seq[Field]
   ): Seq[Seq[Option[Double]]] = {
@@ -974,22 +992,157 @@ class StatsServiceImpl extends StatsService {
 
     val data: Seq[Seq[Option[Double]]] = fieldsWithValues.map(_._2).transpose
 
-    //    val filteredData = data.filter(!_.contains(None)).map(_.flatten)
-    //
-    //    println("First")
-    //    println
-    //    println(filteredData.map(x => x(0)).mkString("\n"))
-    //
-    //    println
-    //    println("Second")
-    //    println
-    //    println(filteredData.map(x => x(1)).mkString("\n"))
-    //    println
+    pearsonCorrelationAux(data)
+  }
 
-    //    println("Correlations")
-    //    println(correlations.map(_.mkString(",")).mkString("\n"))
+  private def pearsonCorrelationAux(
+    values: Traversable[Seq[Option[Double]]]
+  ): Seq[Seq[Option[Double]]] = {
+    val elementsCount = if (values.nonEmpty) values.head.size else 0
 
-    BasicStats.pearsonCorrelation(data)
+    def calc(index1: Int, index2: Int) = {
+      val els = (values.map(_ (index1)).toSeq, values.map(_ (index2)).toSeq).zipped.map {
+        case (el1: Option[Double], el2: Option[Double]) =>
+          if ((el1.isDefined) && (el2.isDefined)) {
+            Some((el1.get, el2.get))
+          } else
+            None
+      }.flatten
+
+      if (els.nonEmpty) {
+        val length = els.size
+
+        val mean1 = els.map(_._1).sum / length
+        val mean2 = els.map(_._2).sum / length
+
+        // sum up the squares
+        val mean1Sq = els.map(_._1).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
+        val mean2Sq = els.map(_._2).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
+
+        // sum up the products
+        val pMean = els.foldLeft(0.0) { case (accum, pair) => accum + pair._1 * pair._2 } / length
+
+        // calculate the pearson score
+        val numerator = pMean - mean1 * mean2
+
+        val denominator = Math.sqrt(
+          (mean1Sq - Math.pow(mean1, 2)) * (mean2Sq - Math.pow(mean2, 2))
+        )
+        if (denominator == 0)
+          None
+        else
+          Some(numerator / denominator)
+      } else
+        None
+    }
+
+    (0 until elementsCount).par.map { i =>
+      (0 until elementsCount).par.map { j =>
+        if (i != j)
+          calc(i, j)
+        else
+          Some(1d)
+      }.toList
+    }.toList
+  }
+
+
+  override def testChiSquare(
+    data: Traversable[JsObject],
+    inputFields: Seq[Field],
+    targetField: Field
+  ): Seq[ChiSquareResult] = {
+    val fieldTypeSpces = (inputFields ++ Seq(targetField)).map(field => (field.name, field.fieldTypeSpec))
+
+    // prepare the features->label data frame
+    val df = FeaturesDataFrameFactory(session, data, fieldTypeSpces, Some(targetField.name), Some(10), true)
+
+    val inputDf = BooleanLabelIndexer.transform(df)
+
+    // run the chi-square independence test
+    val results = testChiSquareAux(inputDf)
+
+    // collect the results in the order prescribed by the inout fields sequence
+    val featureNames = inputDf.columns.filterNot(columnName => columnName.equals("features") || columnName.equals("label"))
+    val featureNameResultMap = featureNames.zip(results).toMap
+    inputFields.map(field =>
+      featureNameResultMap.get(field.name).get
+    )
+  }
+
+  private def testChiSquareAux(
+    df: DataFrame
+  ): Seq[ChiSquareResult] = {
+    val resultDf = ChiSquareTest.test(df, "features", "label")
+
+    val chi = resultDf.head
+
+    val pValues = chi.getAs[Vector](0).toArray.toSeq
+    val degreesOfFreedom = chi.getSeq[Int](1)
+    val statistics = chi.getAs[Vector](2).toArray.toSeq
+
+    (pValues, degreesOfFreedom, statistics).zipped.map(
+      ChiSquareResult(_, _, _)
+    )
+  }
+
+  override def testOneWayAnova(
+    items: Traversable[JsObject],
+    inputFields: Seq[Field],
+    targetField: Field
+  ): Seq[Option[AnovaResult]] = {
+
+    val fieldNameTypeMap: Map[String, FieldType[_]] = (inputFields ++ Seq(targetField)).map { field => (field.name, ftf(field.fieldTypeSpec))}.toMap
+
+    def doubleValue[T](fieldName: String, json: JsObject): Option[Double] = {
+      val fieldType: FieldType[_] = fieldNameTypeMap.get(fieldName).getOrElse(throw new IllegalArgumentException(s"Field name $fieldName not found."))
+
+      fieldType.spec.fieldType match {
+        case FieldTypeId.Double => fieldType.asValueOf[Double].jsonToValue(json \ fieldName)
+
+        case FieldTypeId.Integer => fieldType.asValueOf[Long].jsonToValue(json \ fieldName).map(_.toDouble)
+
+        case FieldTypeId.Date => fieldType.asValueOf[ju.Date].jsonToValue(json \ fieldName).map(_.getTime.toDouble)
+
+        case _ => None
+      }
+    }
+
+    val labeledFeatures = items.map { json =>
+      val features = inputFields.map(field => doubleValue(field.name, json))
+      val label = fieldNameTypeMap.get(targetField.name).get.jsonToDisplayString(json \ targetField.name)
+      (label, features)
+    }
+
+    anovaTestAux(labeledFeatures)
+  }
+
+  private def anovaTestAux(
+    labeledValues: Traversable[(String, Seq[Option[Double]])]
+  ): Seq[Option[AnovaResult]] = {
+    val featuresNum = labeledValues.head._2.size
+
+    val groupedLabelFeatureValues = labeledValues.toGroupMap.map {
+      case (label, values) => (label, values.toSeq.transpose)
+    }.toSeq
+
+    (0 until featuresNum).map { featureIndex =>
+      val featureValues: Seq[Array[Double]] =
+        groupedLabelFeatureValues.map { case (_, featureValues) =>
+          featureValues(featureIndex).flatten.toArray[Double]
+        }
+
+//      println("Feature: " + featureIndex)
+//      featureValues.foreach(array => println(array.mkString(", ")))
+//      println
+
+      if (featureValues.size > 1 && featureValues.forall(_.size > 1)) {
+        val anovaStats = anovaTest.anovaStats(featureValues)
+        val pValue = anovaTest.anovaPValue(anovaStats)
+        Some(AnovaResult(pValue, anovaStats.F, anovaStats.dfbg, anovaStats.dfwg))
+      } else
+        None
+    }
   }
 
   def jsonsToValues[T](
@@ -1007,4 +1160,16 @@ class StatsServiceImpl extends StatsService {
 
       jsons.map(typedFieldType.jsonToValue)
     }
+}
+
+case class ChiSquareResult(pValue: Double, degreeOfFreedom: Int, statistics: Double)
+
+object ChiSquareResult {
+  implicit val chiSquareResultFormat = Json.format[ChiSquareResult]
+}
+
+case class AnovaResult(pValue: Double, fValue: Double, degreeOfFreedomBetweenGroups: Int, degreeOfFreedomWithinGroups: Int)
+
+object AnovaResult {
+  implicit val anovaResultFormat = Json.format[AnovaResult]
 }

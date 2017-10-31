@@ -76,15 +76,25 @@
                 thead.append("<th class='col header'>Field</th>")
                 thead.append("<th class='col header'>p-Value</th>")
                 thead.append("<th class='col header'>Degree of Freedom</th>")
-                thead.append("<th class='col header'>Statistics</th>")
+                thead.append("<th class='col header'>Statistics/F-Value</th>")
+                thead.append("<th class='col header'>Test Type</th>")
                 table.append(thead)
                 var tbody = $("<tbody>")
                 table.append(tbody)
 
                 $.each(results, function(i, item) {
                     var tr = $("<tr>")
-                    var tds = "<td>" + item.fieldLabel + "</td><td>" + item.result.pValue.toExponential(5) + "</td><td>" + item.result.degreeOfFreedom + "</td><td>" + item.result.statistics.toFixed(2) + "</td>"
-                    tr.append(tds)
+                    var significantStyle = (item.result.pValue < 0.05) ? "style='color: green; font-weight: bold'" : ""
+                    var isAnovaTest = (item.result.fValue != null)
+
+                    var labelPValueTds = "<td>" + item.fieldLabel + "</td><td " + significantStyle + ">" + item.result.pValue.toExponential(3).replace("e", " E") + "</td>"
+
+                    var otherTds = (isAnovaTest) ?
+                            "<td>" + item.result.degreeOfFreedomWithinGroups + "</td><td>" + item.result.fValue.toFixed(2) + "</td><td>ANOVA</td>"
+                            :
+                            "<td>" + item.result.degreeOfFreedom + "</td><td>" + item.result.statistics.toFixed(2) + "</td><td>Chi-Square</td>"
+
+                    tr.append(labelPValueTds + otherTds)
                     tbody.append(tr)
                 });
 
@@ -120,7 +130,7 @@
                         <input id="targetFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="">
                         <input id="targetFieldName" name="targetFieldName" type="hidden" value="">
                     }
-                    @labelValue("inputFieldNames", "Input Field Names") {
+                    @labelValue("inputFieldNames", "Input Field") {
                         @dynamicFieldTable("inputFieldName", Nil, false, 5, Some(extraFieldButtons))
                     }
                     @labelValue("filterId", "Filter") {
@@ -139,7 +149,7 @@
     <hr/>
 
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-9">
             <div id="outputDiv">
             </div>
         </div>

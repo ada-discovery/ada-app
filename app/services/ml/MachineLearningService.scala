@@ -12,7 +12,9 @@ import models.ml.classification.Classification
 import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
 import models.ml._
+import util.GroupMapList
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
+import org.apache.commons.math3.stat.inference.OneWayAnova
 import org.apache.spark.ml.attribute.NominalAttribute
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature._
@@ -26,7 +28,7 @@ import org.apache.spark.ml.stat.ChiSquareTest
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import org.apache.spark.rdd.RDD
 import play.api.libs.json.{JsObject, Json}
-import services.SparkApp
+import services.{FeaturesDataFrameFactory, SparkApp}
 import play.api.{Configuration, Logger}
 
 import scala.concurrent.{Await, Future}
@@ -69,12 +71,6 @@ trait MachineLearningService {
     pcaDim: Option[Int] = None
   ): (Traversable[(String, Int)], Traversable[(String, (Double, Double))])
 
-  def discretizeAsQuantiles(
-    data: DataFrame,
-    bucketsNum: Int,
-    columnName: String
-  ): DataFrame
-
   def pcaComponents(
     k: Int)(
     df: DataFrame
@@ -93,16 +89,6 @@ trait MachineLearningService {
     discretizerBucketsNum: Int
   ): Traversable[String]
 
-  def independenceTest(
-    data: Traversable[JsObject],
-    fields: Seq[(String, FieldTypeSpec)],
-    targetFieldName: String
-  ): Seq[(String, ChiSquareResult)]
-
-  def independenceTest(
-    df: DataFrame
-  ): Seq[ChiSquareResult]
-
   // AFTSurvivalRegression
   // IsotonicRegression
 }
@@ -115,10 +101,7 @@ private class MachineLearningServiceImpl @Inject() (
 
   private val logger = Logger // (this.getClass())
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
-
   private val session = sparkApp.session
-  private val sparkContext = sparkApp.sc
   private implicit val sqlContext = sparkApp.sqlContext
 
   private val defaultTrainingTestingSplit = 0.8
@@ -158,7 +141,7 @@ private class MachineLearningServiceImpl @Inject() (
         Nil
     }.getOrElse(Nil)
 
-    val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
+    val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName))
     df.cache
 
     // normalize the features
@@ -260,7 +243,7 @@ private class MachineLearningServiceImpl @Inject() (
   ): Future[Traversable[RegressionPerformance]] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
-    val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName))
+    val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName))
 
     // normalize the features
     val normalizeFeatures = new SchemaUnchangedTransformer(normalizeFeaturesOptional(setting.featuresNormalizationType))
@@ -355,7 +338,7 @@ private class MachineLearningServiceImpl @Inject() (
     // prepare a data frame for learning
     val featureFieldNames = fields.map(_._1)
     val fieldsWithId = fields ++ Seq((JsObjectIdentity.name, FieldTypeSpec(FieldTypeId.String)))
-    val df = jsonsToLearningDataFrame(data, fieldsWithId, featureFieldNames)
+    val df = FeaturesDataFrameFactory(session, data, fieldsWithId, featureFieldNames)
 
     val normalizedDf = normalizeFeaturesOptional(featuresNormalizationType)(df)
 
@@ -477,115 +460,6 @@ private class MachineLearningServiceImpl @Inject() (
       featureTransformer.transform(df).drop("features").withColumnRenamed("scaledFeatures", "features")
     } else
       df
-
-  private def jsonsToLearningDataFrame(
-    jsons: Traversable[JsObject],
-    fields: Seq[(String, FieldTypeSpec)],
-    featureFieldNames: Seq[String]
-  ): DataFrame = {
-    // convert jsons to a data frame
-    val fieldNameAndTypes = fields.map { case (name, fieldTypeSpec) => (name, ftf(fieldTypeSpec))}
-    val stringFieldNames = fields.filter {_._2.fieldType == FieldTypeId.String }.map(_._1)
-    val stringFieldsNotToIndex = stringFieldNames.diff(featureFieldNames).toSet
-    val df = jsonsToDataFrame(jsons, fieldNameAndTypes, stringFieldsNotToIndex)
-
-    df.transform(
-      prepLearningDataFrame(featureFieldNames.toSet, None)
-    )
-  }
-
-  private def jsonsToLearningDataFrame(
-    jsons: Traversable[JsObject],
-    fields: Seq[(String, FieldTypeSpec)],
-    outputFieldName: Option[String],
-    discretizerBucketNum: Option[Int] = None
-  ): DataFrame = {
-    // convert jsons to a data frame
-    val fieldNameAndTypes = fields.map { case (name, fieldTypeSpec) => (name, ftf(fieldTypeSpec))}
-    val df = jsonsToDataFrame(jsons, fieldNameAndTypes)
-
-    // prep the data frame for learning
-    val featureNames = featureFieldNames(fields, outputFieldName)
-
-//    val numericFieldNames = df.schema.fields.flatMap { field =>
-//      if (field.dataType == LongType || field.dataType == DoubleType)
-//        Some(field.name)
-//      else
-//        None
-//    }
-
-    val numericFieldNames = fields.flatMap { case (name, fieldTypeSpec) =>
-      if (featureNames.contains(name)) {
-        if (fieldTypeSpec.fieldType == FieldTypeId.Integer || fieldTypeSpec.fieldType == FieldTypeId.Double)
-          Some(name)
-        else
-          None
-      } else
-        None
-     }
-
-    println("Numeric field  names: " + numericFieldNames.mkString(","))
-
-    val discretizedDf = discretizerBucketNum.map( discretizerBucketNum =>
-      numericFieldNames.foldLeft(df) { case (newDf, fieldName) =>
-        discretizeAsQuantiles(newDf, discretizerBucketNum, fieldName)
-      }
-    ).getOrElse(df)
-
-    discretizedDf.transform(
-      prepLearningDataFrame(featureNames, outputFieldName)
-    )
-  }
-
-  private def featureFieldNames(
-    fields: Seq[(String, FieldTypeSpec)],
-    outputFieldName: Option[String]
-  ): Set[String] =
-    outputFieldName.map( outputName =>
-      fields.map(_._1).filterNot(_ == outputName)
-    ).getOrElse(
-      fields.map(_._1)
-    ).toSet
-
-  private def prepLearningDataFrame(
-    featureFieldNames: Set[String],
-    outputFieldName: Option[String])(
-    df: DataFrame
-  ): DataFrame = {
-    //    df.printSchema()
-//    df.schema.fields.foreach(field =>
-//      println(s"${field.name}: ${field.dataType.typeName} (nullable = ${field.nullable}), metadata = ${field.metadata.toString()}")
-//    )
-
-    // drop null values
-    val nonNullDf = df.na.drop
-
-    val assembler = new VectorAssembler()
-      .setInputCols(nonNullDf.columns.filter(featureFieldNames.contains))
-      .setOutputCol("features")
-
-    val featuresDf = assembler.transform(nonNullDf)
-
-    outputFieldName.map(
-      featuresDf.withColumnRenamed(_, "label")
-    ).getOrElse(
-      featuresDf
-    )
-
-    //    val data = new StringIndexer()
-    //      .setInputCol(outputFieldName)
-    //      .setOutputCol("label")
-    //      .fit(data2).transform(data2)
-    //    data.printSchema()
-
-    //    val data1 = data.filter(data("label").===(1))
-    //    val data0 = data.filter(data("label").===(0)).limit(data1.count().toInt)
-    //    val merged = data0.union(data1)
-    //
-    //    println(data0.count())
-    //    println(data1.count())
-    //    println(merged.count())
-  }
 
   private def setParam[T, M](
     paramValue: Option[T],
@@ -754,102 +628,6 @@ private class MachineLearningServiceImpl @Inject() (
     (lrModel, predictions)
   }
 
-//  private def jsonsToDataFrameOld(
-//    jsons: Traversable[JsObject],
-//    fieldNameAndTypes: Seq[(String, FieldType[_])]
-//  ): DataFrame = {
-//    val data = jsons.map { json =>
-//      val values = fieldNameAndTypes.map { case (fieldName, fieldType) =>
-//        fieldType.jsonToDisplayString(json \ fieldName)
-//      }
-//      //      Row.fromSeq(values)
-//      values
-//    }
-//
-//    sparkContext.parallelize(data.toSeq).toDF(fieldNameAndTypes.map(_._1) :_*)
-//  }
-
-  private def jsonsToDataFrame(
-    jsons: Traversable[JsObject],
-    fieldNameAndTypes: Seq[(String, FieldType[_])],
-    stringFieldsNotToIndex: Set[String] = Set()
-  ): DataFrame = {
-    val values = jsons.toSeq.map( json =>
-      fieldNameAndTypes.map { case (fieldName, fieldType) =>
-        fieldType.spec.fieldType match {
-          case FieldTypeId.Enum =>
-            fieldType.jsonToDisplayString(json \ fieldName)
-
-          case FieldTypeId.Date =>
-            fieldType.asValueOf[ju.Date].jsonToValue(json \ fieldName).map(date => new java.sql.Date(date.getTime)).getOrElse(null)
-
-          case _ =>
-            fieldType.jsonToValue(json \ fieldName).getOrElse(null)
-        }
-      }
-    )
-
-    val valueBroadVar = sparkContext.broadcast(values)
-    val size = values.size
-
-    val data: RDD[Row] = sparkContext.range(0, size).map { index =>
-      Row.fromSeq(valueBroadVar.value(index.toInt))
-    }
-
-    val structTypes = fieldNameAndTypes.map { case (fieldName, fieldType) =>
-      val sparkFieldType: DataType = fieldType.spec.fieldType match {
-        case FieldTypeId.Integer => LongType
-        case FieldTypeId.Double => DoubleType
-        case FieldTypeId.Boolean => BooleanType
-        case FieldTypeId.Enum => StringType
-        case FieldTypeId.String => StringType
-        case FieldTypeId.Date => DateType
-        case FieldTypeId.Json => NullType // TODO
-        case FieldTypeId.Null => NullType
-      }
-
-      // TODO: we can perhaps create our own metadata for enums without StringIndexer
-//      val jsonMetadata = Json.obj("ml_attr" -> Json.obj(
-//        "vals" -> JsArray(Seq(JsString("lala"), JsString("lili"))),
-//        "type" -> "nominal"
-//      ))
-//      val metadata = Metadata.fromJson(Json.stringify(jsonMetadata))
-
-      StructField(fieldName, sparkFieldType, true)
-    }
-
-    val stringTypes = structTypes.filter(_.dataType.equals(StringType))
-
-//    df = session.createDataFrame(rdd_of_rows)
-    val df = session.createDataFrame(data, StructType(structTypes))
-
-    stringTypes.foldLeft(df){ case (newDf, stringType) =>
-      if (!stringFieldsNotToIndex.contains(stringType.name)) {
-        val randomIndex = Random.nextLong()
-        val indexer = new StringIndexer().setInputCol(stringType.name).setOutputCol(stringType.name + randomIndex)
-        indexer.fit(newDf).transform(newDf).drop(stringType.name).withColumnRenamed(stringType.name + randomIndex, stringType.name)
-      } else {
-        newDf
-      }
-    }
-  }
-
-  override def discretizeAsQuantiles(
-    df: DataFrame,
-    bucketsNum: Int,
-    columnName: String
-  ): DataFrame = {
-    val outputColumnName = columnName + "_" + Random.nextLong()
-    val discretizer = new QuantileDiscretizer()
-      .setInputCol(columnName)
-      .setOutputCol(outputColumnName)
-      .setNumBuckets(bucketsNum)
-
-    val result = discretizer.fit(df).transform(df)
-
-    result.drop(columnName).withColumnRenamed(outputColumnName, columnName)
-  }
-
   override def selectFeaturesAsChiSquare(
     data: DataFrame,
     featuresToSelectNum: Int
@@ -866,7 +644,7 @@ private class MachineLearningServiceImpl @Inject() (
     featuresToSelectNum: Int,
     discretizerBucketsNum: Int
   ): Traversable[String] = {
-    val df = jsonsToLearningDataFrame(data, fields, Some(outputFieldName), Some(discretizerBucketsNum))
+    val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName), Some(discretizerBucketsNum))
     val inputDf = BooleanLabelIndexer.transform(df)
 
     // get the Chi-Square model
@@ -888,38 +666,6 @@ private class MachineLearningServiceImpl @Inject() (
       .setNumTopFeatures(featuresToSelectNum)
 
     selector.fit(data)
-  }
-
-  override def independenceTest(
-    df: DataFrame
-  ): Seq[ChiSquareResult] = {
-    val resultDf = ChiSquareTest.test(df, "features", "label")
-
-    val chi = resultDf.head
-
-    val pValues = chi.getAs[Vector](0).toArray.toSeq
-    val degreesOfFreedom = chi.getSeq[Int](1)
-    val statistics = chi.getAs[Vector](2).toArray.toSeq
-
-    (pValues, degreesOfFreedom, statistics).zipped.map(
-      ChiSquareResult(_, _, _)
-    )
-  }
-
-  override def independenceTest(
-    data: Traversable[JsObject],
-    fields: Seq[(String, FieldTypeSpec)],
-    targetFieldName: String
-  ): Seq[(String, ChiSquareResult)] = {
-    // prepare the features->label data frame
-    val df = jsonsToLearningDataFrame(data, fields, Some(targetFieldName), Some(10))
-    val inputDf = BooleanLabelIndexer.transform(df)
-
-    // run the chi-square independence test
-    val results = independenceTest(inputDf)
-
-    val featureNames = inputDf.columns.filterNot(columnName => columnName.equals("features") || columnName.equals("label"))
-    featureNames.zip(results)
   }
 }
 
@@ -1027,12 +773,4 @@ object MachineLearningUtil {
       testMetricStats
     )
   }
-}
-
-case class ChiSquareResult(
-  pValue: Double, degreeOfFreedom: Int, statistics: Double
-)
-
-object ChiSquareResult {
-  implicit val chiSquareResultFormat = Json.format[ChiSquareResult]
 }

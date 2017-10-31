@@ -39,7 +39,7 @@ import reactivemongo.play.json.BSONFormats._
 import services.ml.{MachineLearningService, Performance}
 import views.html.dataset
 import models.ml.DataSetTransformation._
-import services.ml.ChiSquareResult.chiSquareResultFormat
+import services.ChiSquareResult.chiSquareResultFormat
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -52,6 +52,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
+    statsService: StatsService,
     dataSetService: DataSetService,
     widgetService: WidgetGenerationService,
     classificationRepo: ClassificationRepo,
@@ -1679,15 +1680,39 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     for {
       criteria <- loadCriteria(filterId)
 
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria ++ Seq(NotEqualsNullCriterion(targetFieldName)))
     } yield {
-      val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
       val fieldNameLabelMap = fields.map(field => (field.name, field.labelOrElseName)).toMap
-      val results = mlService.independenceTest(jsons, fieldNameAndSpecs, targetFieldName)
-      val resultJsons = results.map { case (fieldName, result) =>
-        Json.obj("fieldLabel" -> fieldNameLabelMap.get(fieldName).get, "result" -> Json.toJson(result))
-      }
-      Ok(JsArray(resultJsons))
+
+      val inputFields = fields.filterNot(_.name.equals(targetFieldName))
+      val outputField = fields.find(_.name.equals(targetFieldName)).get
+
+      // ANOVA
+      val numericalTypes = Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
+      val numericalInputFields = inputFields.filter(field => numericalTypes.contains(field.fieldTypeSpec.fieldType))
+      val anovaResults = statsService.testOneWayAnova(jsons, numericalInputFields, outputField)
+
+      val numericalResultJsonMap = numericalInputFields.zip(anovaResults).flatMap { case (field, result) =>
+        result.map { result =>
+          val resultJson = Json.obj("fieldLabel" -> fieldNameLabelMap.get(field.name).get, "result" -> Json.toJson(result))
+          (field.name, resultJson)
+        }
+      }.toMap
+
+      // Chi-Square
+      val categoricalTypes = Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)
+      val categoricalInputFields = inputFields.filter(field => categoricalTypes.contains(field.fieldTypeSpec.fieldType))
+      val chiSquareResults = statsService.testChiSquare(jsons, categoricalInputFields, outputField)
+
+      val categoricalResultJsonMap = categoricalInputFields.zip(chiSquareResults).map { case (field, result) =>
+        val resultJson = Json.obj("fieldLabel" -> fieldNameLabelMap.get(field.name).get, "result" -> Json.toJson(result))
+        (field.name, resultJson)
+      }.toMap
+
+      // Combine the results
+      val fieldNameResultJsonMap = numericalResultJsonMap ++ categoricalResultJsonMap
+      val results = inputFieldNames.flatMap( fieldName => fieldNameResultJsonMap.get(fieldName))
+      Ok(JsArray(results))
     }
   }
 
