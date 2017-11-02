@@ -70,16 +70,25 @@
             if (!featuresNormalizationType)
                 featuresNormalizationType = null
 
+
             $('#scatterPanelDiv').html();
             $('#pcaScatterDiv').html()
 
 //            $('#scatterPanelDiv').hide();
 
             dataSetJsRoutes.controllers.dataset.DataSetDispatcher.cluster(mlModelId, inputFieldNames, filterId, featuresNormalizationType, pcaDims).ajax( {
-                success: function(scatters) {
+                success: function(data) {
                     showMessage("'" + mlModelName + "'clusterization finished.")
 
-                    var i
+                    var scatters = data.scatters;
+                    var classSizes = data.classSizes;
+
+                    var rowData = classSizes.map(function(item, index){return [index, item]});
+
+                    var table = createTable(["Class", "Count"], rowData);
+                    $("#countDiv").html(table);
+
+                    var i;
                     for(i = 1; i < scatters.length; i++) {
                         var divClass = 'col-md-4 col-md-offset-1'
                         var div = "<div class='" + divClass + "'><div id='scatterDiv" + i + "' class='chart-holder'></div></div>"
@@ -120,6 +129,11 @@
         includeChiSquareSelector = false,
         includeOutputField = false
     )
+
+    <div class="row">
+        <div id='countDiv' class='col-md-4 col-md-offset-4'>
+        </div>
+    </div>
 
     <div class="row">
         <div id='pcaScatterDiv' class='col-md-10 col-md-offset-1 chart-holder'>

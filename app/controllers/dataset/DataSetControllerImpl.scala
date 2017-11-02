@@ -1659,7 +1659,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             scatterToJson(scatter.asInstanceOf[ScatterWidget[_, _]])
           )
 
-          Ok(JsArray(scatterJsons))
+          val classSizeJsons = idClasses.groupBy(_._2).toSeq.sortBy(_._1).map { case (_, values) => JsNumber(values.size) }
+
+          Ok(Json.obj("classSizes" -> JsArray(classSizeJsons), "scatters" -> JsArray(scatterJsons)))
 
         case None =>
           BadRequest(s"ML unsupervised learning model with id ${mlModelId.stringify} not found.")
