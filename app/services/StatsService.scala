@@ -104,6 +104,12 @@ trait StatsService {
     inputFields: Seq[Field],
     targetField: Field
   ): Seq[Option[AnovaResult]]
+
+  def testIndependence(
+    items: Traversable[JsObject],
+    inputFields: Seq[Field],
+    targetField: Field
+  ): Seq[Option[Either[ChiSquareResult, AnovaResult]]]
 }
 
 @Singleton
@@ -1160,6 +1166,36 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
 
       jsons.map(typedFieldType.jsonToValue)
     }
+
+  override def testIndependence(
+    items: Traversable[JsObject],
+    inputFields: Seq[Field],
+    targetField: Field
+  ): Seq[Option[Either[ChiSquareResult, AnovaResult]]] = {
+    // ANOVA
+    val numericalTypes = Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
+    val numericalInputFields = inputFields.filter(field => numericalTypes.contains(field.fieldTypeSpec.fieldType))
+    val anovaResults = testOneWayAnova(items, numericalInputFields, targetField)
+    val anovaFieldNameResultMap = numericalInputFields.map(_.name).zip(anovaResults).toMap
+
+    // Chi-Square
+    val categoricalTypes = Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)
+    val categoricalInputFields = inputFields.filter(field => categoricalTypes.contains(field.fieldTypeSpec.fieldType))
+    val chiSquareResults = testChiSquare(items, categoricalInputFields, targetField)
+    val chiSquareFieldNameResultMap = categoricalInputFields.map(_.name).zip(chiSquareResults).toMap
+
+    inputFields.map { field =>
+      val name = field.name
+
+      chiSquareFieldNameResultMap.get(name) match {
+        case Some(chiSquareResult) => Some(Left(chiSquareResult))
+        case None => anovaFieldNameResultMap.get(name).flatMap {
+          case Some(anovaResult) => Some(Right(anovaResult))
+          case None => None
+        }
+      }
+    }
+  }
 }
 
 case class ChiSquareResult(pValue: Double, degreeOfFreedom: Int, statistics: Double)

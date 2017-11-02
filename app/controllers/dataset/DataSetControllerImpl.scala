@@ -1619,9 +1619,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           val numericTypes = Set(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
           val numericFields = fields.filter(field => !field.fieldTypeSpec.isArray && numericTypes.contains(field.fieldType))
 
-          val xField = numericFields.headOption
-          val yField = numericFields.tail.headOption
-
           val idClassMap = idClasses.toMap
 
           // PCA 1-2 Scatter
@@ -1629,21 +1626,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
           val classPCA12s = idPCA12s.map { case (id, pca12) =>
             (idClassMap.get(id).get, pca12)
-          }.toGroupMap.toSeq
+          }.toGroupMap.toSeq.sortBy(_._1)
 
           val pca12WidgetData = classPCA12s.map { case (clazz, values) =>
             (clazz.toString, "rgba(223, 83, 83, .5)", values.toSeq)
           }
 
-          val pca12Scatter = ScatterWidget("PCA", "PCA 1", "PCA 2", pca12WidgetData, displayOptions)
+          val pca12Scatter = ScatterWidget("PCA", "PC1", "PC2", pca12WidgetData, displayOptions)
+
+          val jsonsWithClasses = jsonsWithStringIds.flatMap { json =>
+            val stringId = (json \ JsObjectIdentity.name).as[String]
+            idClassMap.get(stringId).map(clazz =>  json.+("cluster_class", JsNumber(clazz)))
+          }
 
           // Other scatters (fields pairwise_
           def createScatter(xField: Field, yField: Field): Option[Widget] = {
-            val jsonsWithClasses = jsonsWithStringIds.flatMap { json =>
-              val stringId = (json \ JsObjectIdentity.name).as[String]
-              idClassMap.get(stringId).map(clazz =>  json.+("cluster_class", JsNumber(clazz)))
-            }
-
             val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Integer, false)
 
             val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, Some(clusterClassField.name), None, displayOptions)
@@ -1653,7 +1650,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           }
 
           // Transform Scatters into JSONs
-          val scatters = numericFields.combinations(2).take(32).flatMap { fields => createScatter(fields(0), fields(1)) }
+          val scatters = numericFields.combinations(2).take(64).flatMap { fields => createScatter(fields(0), fields(1)) }
 
           val scatterJsons = (Seq(pca12Scatter) ++ scatters).map( scatter =>
             scatterToJson(scatter.asInstanceOf[ScatterWidget[_, _]])
@@ -1661,7 +1658,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
           val classSizeJsons = idClasses.groupBy(_._2).toSeq.sortBy(_._1).map { case (_, values) => JsNumber(values.size) }
 
-          Ok(Json.obj("classSizes" -> JsArray(classSizeJsons), "scatters" -> JsArray(scatterJsons)))
+          // Independence Test
+          val numValues = idClassMap.values.map ( classId => (classId.toString, classId.toString)).toMap
+          val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Enum, false, Some(numValues))
+          val fieldNameLabelMap = fields.map(field => (field.name, field.labelOrElseName)).toMap
+
+          val testResults = statsService.testIndependence(jsonsWithClasses, fields, clusterClassField)
+          val fieldNameResultMap = fields.map(_.name).zip(testResults).toMap
+
+          // Combine the results
+          val jsonResults = inputFieldNames.flatMap { fieldName =>
+            val result = fieldNameResultMap.get(fieldName).flatten
+            testResultToJson(fieldName, result, fieldNameLabelMap)
+          }
+
+          Ok(Json.obj(
+            "classSizes" -> JsArray(classSizeJsons),
+            "scatters" -> JsArray(scatterJsons),
+            "testResults" -> JsArray(jsonResults)
+          ))
 
         case None =>
           BadRequest(s"ML unsupervised learning model with id ${mlModelId.stringify} not found.")
@@ -1689,32 +1704,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val inputFields = fields.filterNot(_.name.equals(targetFieldName))
       val outputField = fields.find(_.name.equals(targetFieldName)).get
 
-      // ANOVA
-      val numericalTypes = Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
-      val numericalInputFields = inputFields.filter(field => numericalTypes.contains(field.fieldTypeSpec.fieldType))
-      val anovaResults = statsService.testOneWayAnova(jsons, numericalInputFields, outputField)
-
-      val numericalResultJsonMap = numericalInputFields.zip(anovaResults).flatMap { case (field, result) =>
-        result.map { result =>
-          val resultJson = Json.obj("fieldLabel" -> fieldNameLabelMap.get(field.name).get, "result" -> Json.toJson(result))
-          (field.name, resultJson)
-        }
-      }.toMap
-
-      // Chi-Square
-      val categoricalTypes = Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)
-      val categoricalInputFields = inputFields.filter(field => categoricalTypes.contains(field.fieldTypeSpec.fieldType))
-      val chiSquareResults = statsService.testChiSquare(jsons, categoricalInputFields, outputField)
-
-      val categoricalResultJsonMap = categoricalInputFields.zip(chiSquareResults).map { case (field, result) =>
-        val resultJson = Json.obj("fieldLabel" -> fieldNameLabelMap.get(field.name).get, "result" -> Json.toJson(result))
-        (field.name, resultJson)
-      }.toMap
+      val results = statsService.testIndependence(jsons, inputFields, outputField)
+      val fieldNameResultMap = inputFields.map(_.name).zip(results).toMap
 
       // Combine the results
-      val fieldNameResultJsonMap = numericalResultJsonMap ++ categoricalResultJsonMap
-      val results = inputFieldNames.flatMap( fieldName => fieldNameResultJsonMap.get(fieldName))
-      Ok(JsArray(results))
+      val jsonResults = inputFieldNames.flatMap { fieldName =>
+        val result = fieldNameResultMap.get(fieldName).flatten
+        testResultToJson(fieldName, result, fieldNameLabelMap)
+      }
+      Ok(JsArray(jsonResults))
     }
   }
 
@@ -1754,6 +1752,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
 
     Json.obj("title" -> scatter.title, "xAxisCaption" -> scatter.xAxisCaption, "yAxisCaption" -> scatter.yAxisCaption, "data" -> JsArray(seriesJsons))
+  }
+
+  // TODO: this is ugly... fix by introducing a proper JSON formatter
+  private def testResultToJson(
+    fieldName: String,
+    result: Option[Either[ChiSquareResult, AnovaResult]],
+    fieldNameLabelMap: Map[String, String]
+  ): Option[JsObject] = {
+    val fieldLabel = fieldNameLabelMap.get(fieldName).get
+
+    result.map {
+      _ match {
+        case Left(chiSquareResult) =>
+          Json.obj("fieldLabel" -> fieldLabel, "result" -> Json.toJson(chiSquareResult))
+
+        case Right(anovaResult) =>
+          Json.obj("fieldLabel" -> fieldLabel, "result" -> Json.toJson(anovaResult))
+      }
+    }
   }
 
   override def getFields(

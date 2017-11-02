@@ -355,14 +355,14 @@ private class MachineLearningServiceImpl @Inject() (
       predictions.select(JsObjectIdentity.name, columnName).map { r =>
         val id = r(0).asInstanceOf[String]
         val clazz = r(1).asInstanceOf[Int]
-        (id, clazz)
+        (id, clazz + 1)
       }.collect
 
     def extractClusterClasssedFromProbabilities(columnName: String): Traversable[(String, Int)] =
       predictions.select(JsObjectIdentity.name, columnName).map { r =>
         val id = r(0).asInstanceOf[String]
         val clazz = r(1).asInstanceOf[DenseVector].values.zipWithIndex.maxBy(_._1)._2
-        (id, clazz)
+        (id, clazz + 1)
       }.collect
 
     val result = model match {

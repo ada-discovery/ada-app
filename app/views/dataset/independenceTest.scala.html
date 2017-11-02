@@ -57,8 +57,7 @@
                 dataSetJsRoutes.controllers.dataset.DataSetDispatcher.testIndependence(targetFieldName, inputFieldNames, filterId).ajax( {
                     success: function(results) {
                         showMessage("Independence test finished.")
-                        console.log(results)
-                        showResults(results)
+                        showTestResults(results)
                     },
                     error: function(data){
                         showError( data.responseText );
@@ -68,37 +67,30 @@
                 showMessage("Independence test for the field '" + targetFieldLabel + "' launched.")
             }
 
-            function showResults(results) {
+            function showTestResults(results) {
                 $("#outputDiv").html("");
 
-                var table = $("<table class='table table-striped'>")
-                var thead = $("<thead>")
-                thead.append("<th class='col header'>Field</th>")
-                thead.append("<th class='col header'>p-Value</th>")
-                thead.append("<th class='col header'>Degree of Freedom</th>")
-                thead.append("<th class='col header'>Statistics/F-Value</th>")
-                thead.append("<th class='col header'>Test Type</th>")
-                table.append(thead)
-                var tbody = $("<tbody>")
-                table.append(tbody)
+                var header = ["Field", "p-Value", "Degree of Freedom", "Statistics/F-Value", "Test Type"]
+                var rowData = results.map(function(item) {
+                    var color =
+                        (item.result.pValue >= 0.05) ? "black":
+                        (item.result.pValue >= 0.01) ? "forestGreen":
+                        (item.result.pValue >= 0.001) ? "green" : "darkGreen"
 
-                $.each(results, function(i, item) {
-                    var tr = $("<tr>")
-                    var significantStyle = (item.result.pValue < 0.05) ? "style='color: green; font-weight: bold'" : ""
+                    var significantStyleDivStart = (item.result.pValue < 0.05) ? ("<div style='color: " + color + "; font-weight: bold'>") : "<div>"
                     var isAnovaTest = (item.result.fValue != null)
+                    var rowStart = [item.fieldLabel,  significantStyleDivStart + item.result.pValue.toExponential(3).replace("e", " E") + "</div>"]
 
-                    var labelPValueTds = "<td>" + item.fieldLabel + "</td><td " + significantStyle + ">" + item.result.pValue.toExponential(3).replace("e", " E") + "</td>"
+                    var rowEnd = (isAnovaTest) ?
+                        [item.result.degreeOfFreedomWithinGroups, item.result.fValue.toFixed(2), "ANOVA"]
+                        :
+                        [item.result.degreeOfFreedom, item.result.statistics.toFixed(2), "Chi-Square"]
 
-                    var otherTds = (isAnovaTest) ?
-                            "<td>" + item.result.degreeOfFreedomWithinGroups + "</td><td>" + item.result.fValue.toFixed(2) + "</td><td>ANOVA</td>"
-                            :
-                            "<td>" + item.result.degreeOfFreedom + "</td><td>" + item.result.statistics.toFixed(2) + "</td><td>Chi-Square</td>"
-
-                    tr.append(labelPValueTds + otherTds)
-                    tbody.append(tr)
+                    return rowStart.concat(rowEnd)
                 });
 
-                $("#outputDiv").append(table);
+                var table = createTable(header, rowData);
+                $("#outputDiv").html(table);
                 $('#outputDiv').fadeIn('2000');
             }
 

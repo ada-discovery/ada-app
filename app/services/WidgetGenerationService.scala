@@ -458,7 +458,7 @@ class WidgetGenerationServiceImpl @Inject() (
     groupField: Option[Field],
     displayOptions: DisplayOptions
   ): ScatterWidget[_, _] = {
-    val data = statsService.collectScatterData(xyzItems, xField, yField, groupField)
+    val data = statsService.collectScatterData(xyzItems, xField, yField, groupField).sortBy(_._1)
     ScatterWidget(
       title.getOrElse("Comparison"),
       xField.labelOrElseName,
