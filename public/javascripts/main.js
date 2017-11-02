@@ -554,3 +554,33 @@ function getRowValue(row, elementId) {
     }
     return value;
 }
+
+function createTable(columnNames, rows) {
+    var table = $("<table class='table table-striped'>")
+
+    // head
+    var thead = $("<thead>")
+    var theadTr = $("<tr>")
+
+    $.each(columnNames, function(index, columnName) {
+        var th = "<th class='col header'>" + columnName + "</th>"
+        theadTr.append(th)
+    })
+    thead.append(theadTr)
+    table.append(thead)
+
+    // body
+    var tbody = $("<tbody>")
+
+    $.each(rows, function(index, row) {
+        var tr = $("<tr>")
+        $.each(row, function(index, item) {
+            var td = "<td>" + item + "</td>"
+            tr.append(td)
+        })
+        tbody.append(tr)
+    })
+    table.append(tbody)
+
+    return table
+}
