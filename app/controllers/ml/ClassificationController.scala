@@ -132,6 +132,20 @@ class ClassificationController @Inject()(
       "timeCreated" -> ignored(new Date())
     )(NaiveBayes.apply)(NaiveBayes.unapply))
 
+  protected val linearSVMForm = Form(
+    mapping(
+      "id" -> ignored(Option.empty[BSONObjectID]),
+      "aggregationDepth" -> optional(number(min = 1)),
+      "fitIntercept" -> optional(boolean),
+      "maxIteration" -> optional(number(min = 1)),
+      "regularization" -> optional(of(doubleFormat)),
+      "standardization" -> optional(boolean),
+      "threshold" -> optional(of(doubleFormat)),
+      "tolerance" -> optional(of(doubleFormat)),
+      "name" -> optional(nonEmptyText),
+      "createdById" -> ignored(Option.empty[BSONObjectID]),
+      "timeCreated" -> ignored(new Date())
+    )(LinearSupportVectorMachine.apply)(LinearSupportVectorMachine.unapply))
 
   protected case class ClassificationCreateEditViews[E <: Classification](
     name: String,
@@ -204,6 +218,12 @@ class ClassificationController @Inject()(
         "Naive Bayes (Classification)",
         naiveBayesForm,
         view.naiveBayesElements(_)(_)
+      ),
+
+      ClassificationCreateEditViews[LinearSupportVectorMachine](
+        "Linear SVM (Classification)",
+        linearSVMForm,
+        view.linearSupportVectorMachineElements(_)(_)
       )
     )
 

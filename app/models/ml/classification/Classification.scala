@@ -117,6 +117,22 @@ case class NaiveBayes(
   timeCreated: Date = new Date()
 ) extends Classification
 
+case class LinearSupportVectorMachine(
+  _id: Option[BSONObjectID] = None,
+  aggregationDepth: Option[Int],
+  fitIntercept: Option[Boolean],
+  maxIteration: Option[Int],
+  regularization: Option[Double],
+  standardization: Option[Boolean],
+  threshold: Option[Double],
+  tolerance: Option[Double],
+// TODO weightColumn: String
+  name: Option[String] = None,
+  createdById: Option[BSONObjectID] = None,
+  timeCreated: Date = new Date()
+) extends Classification
+
+
 object Classification {
   implicit val logisticModelFamilyEnumTypeFormat = EnumFormat.enumFormat(LogisticModelFamily)
   implicit val mlpSolverEnumTypeFormat = EnumFormat.enumFormat(MLPSolver)
@@ -134,7 +150,8 @@ object Classification {
       ManifestedFormat(Json.format[DecisionTree]),
       ManifestedFormat(Json.format[RandomForest]),
       ManifestedFormat(Json.format[GradientBoostTree]),
-      ManifestedFormat(Json.format[NaiveBayes])
+      ManifestedFormat(Json.format[NaiveBayes]),
+      ManifestedFormat(Json.format[LinearSupportVectorMachine])
     )
   )
 
@@ -149,6 +166,7 @@ object Classification {
         case x: RandomForest => x.copy(_id = id)
         case x: GradientBoostTree => x.copy(_id = id)
         case x: NaiveBayes => x.copy(_id = id)
+        case x: LinearSupportVectorMachine => x.copy(_id = id)
       }
   }
 }

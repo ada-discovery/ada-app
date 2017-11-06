@@ -1,6 +1,6 @@
 package services.ml
 
-import models.ml.classification.{Classification, DecisionTree, GradientBoostTree, LogisticRegression, MultiLayerPerceptron, NaiveBayes, RandomForest}
+import models.ml.classification.{Classification, DecisionTree, GradientBoostTree, LogisticRegression, MultiLayerPerceptron, NaiveBayes, RandomForest, LinearSupportVectorMachine}
 import models.ml.regression.{Regression, GeneralizedLinearRegression => GeneralizedLinearRegressionDef, GradientBoostRegressionTree => GradientBoostRegressionTreeDef, LinearRegression => LinearRegressionDef, RandomRegressionForest => RandomRegressionForestDef, RegressionTree => RegressionTreeDef}
 import models.ml.unsupervised.{UnsupervisedLearning, BisectingKMeans => BisectingKMeansDef, GaussianMixture => GaussianMixtureDef, KMeans => KMeansDef, LDA => LDADef}
 import org.apache.spark.ml.{Estimator, Model}
@@ -18,6 +18,7 @@ object SparkMLEstimatorFactory {
       case x: RandomForest => applyAux(x).asInstanceOf[Estimator[M]]
       case x: GradientBoostTree => applyAux(x).asInstanceOf[Estimator[M]]
       case x: NaiveBayes => applyAux(x).asInstanceOf[Estimator[M]]
+      case x: LinearSupportVectorMachine => applyAux(x).asInstanceOf[Estimator[M]]
     }
 
   def apply[M <: Model[M]](model: Regression): Estimator[M] =
@@ -121,6 +122,20 @@ object SparkMLEstimatorFactory {
       set(_.smoothing, _.setSmoothing),
       set(_.modelType.map(_.toString), _.setModelType)
     )(new NaiveBayesClassifier())
+  }
+
+  private def applyAux(model: LinearSupportVectorMachine): LinearSVC = {
+    def set[T] = setSourceParam[T, LinearSupportVectorMachine, LinearSVC](model)_
+
+    chain(
+      set(_.aggregationDepth, _.setAggregationDepth),
+      set(_.fitIntercept, _.setFitIntercept),
+      set(_.maxIteration, _.setMaxIter),
+      set(_.regularization, _.setRegParam),
+      set(_.standardization, _.setStandardization),
+      set(_.threshold, _.setThreshold),
+      set(_.tolerance, _.setTol)
+    )(new LinearSVC())
   }
 
   private def applyAux(model: LinearRegressionDef): LinearRegressor = {

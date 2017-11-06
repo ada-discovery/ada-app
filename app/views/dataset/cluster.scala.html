@@ -71,8 +71,9 @@
                 featuresNormalizationType = null
 
 
-            $('#scatterPanelDiv').html();
-            $('#pcaScatterDiv').html()
+            $('#scatterPanelDiv').html("");
+            $('#pcaScatterDiv').html("")
+            $("#independenceTestPanelDiv").html("");
 
 //            $('#scatterPanelDiv').hide();
 
@@ -84,8 +85,12 @@
                     var classSizes = data.classSizes;
 
                     var rowData = classSizes.map(function(item, index){return [index + 1, item]});
+                    var total = classSizes.reduce(function (a, b) {
+                        return a + b;
+                    });
+                    var rowDataWithTotal = rowData.concat([["Total", total]])
 
-                    var table = createTable(["Class", "Count"], rowData);
+                    var table = createTable(["Class", "Count"], rowDataWithTotal);
                     $("#countDiv").html(table);
 
                     var i;
@@ -116,8 +121,6 @@
         }
 
         function showTestResults(results) {
-            $("#independenceTestPanelDiv").html("");
-
             var header = ["Field", "p-Value", "Degree of Freedom", "Statistics/F-Value", "Test Type"]
             var rowData = results.map(function(item) {
                 var color =
@@ -170,6 +173,8 @@
     <div id="scatterPanelDiv" class="row">
     </div>
 
-    <div id="independenceTestPanelDiv" class="row">
+    <div class="row">
+        <div id="independenceTestPanelDiv" class='col-md-8 col-md-offset-2'>
+        </div>
     </div>
 }

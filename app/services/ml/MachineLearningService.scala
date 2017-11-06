@@ -443,6 +443,7 @@ private class MachineLearningServiceImpl @Inject() (
       .setK(k)
       .fit(df)
 
+    PCAModel
     // replace in-place
     pca.transform(df).drop("features").withColumnRenamed("pcaFeatures", "features")
   }
