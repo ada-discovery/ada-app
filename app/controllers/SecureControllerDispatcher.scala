@@ -5,23 +5,30 @@ import javax.inject.Inject
 import be.objectify.deadbolt.core.PatternType
 import be.objectify.deadbolt.scala.DeadboltActions
 import be.objectify.deadbolt.scala.cache.HandlerCache
+import controllers.dataset.DataViewController
+import dataaccess.User
+import models.AdaException
 import models.security.SecurityRole
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.mvc.{Action, AnyContent, Result}
-import play.api.routing.Router.Tags._
-import security.HandlerKeys
-import util.SecurityUtil
-import collection.mutable.{Map => MMap}
+import persistence.dataset.DataSetAccessorFactory
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.mvc.{Action, AnyContent, Request, Result}
+import play.api.routing.Router.Tags._
+import security.{AdaAuthConfig, HandlerKeys}
+import util.SecurityUtil
+
+import collection.mutable.{Map => MMap}
 import scala.concurrent.Future
 import play.api.http.{Status => HttpStatus}
+import reactivemongo.bson.BSONObjectID
+import util.SecurityUtil.restrictChainFuture
 
 abstract class SecureControllerDispatcher[C](controllerParamId: String) extends ControllerDispatcher[C](controllerParamId) {
 
   @Inject protected var deadbolt: DeadboltActions = _
   @Inject protected var deadboltHandlerCache: HandlerCache = _
 
-  private val actionNameMap = MMap[(String, String), (C => Action[AnyContent]) => Action[AnyContent]]()
+  protected val actionNameMap = MMap[(String, String), (C => Action[AnyContent]) => Action[AnyContent]]()
 
   protected def getAllowedRoleGroups(
     controllerId:
@@ -44,7 +51,7 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
     restrictedAction(action).apply(request)
   }
 
-  private def createRestrictedAction(
+  protected def createRestrictedAction(
     controllerId: String,
     actionName: String)(
     action: C => Action[AnyContent]
@@ -89,17 +96,63 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
     actionTransform(super.dispatch(action)).apply(request)
   }
 
-  private def RestrictOrPattern[A](roleGroups: List[Array[String]], permission: String)(action: Action[A]): Action[A] = {
-    Action.async(action.parser) { implicit request =>
-      val resultFuture: Future[Result] =
-        deadbolt.Restrict[A](roleGroups, deadboltHandlerCache.apply(HandlerKeys.unauthorizedStatus))(action)(request)
-      resultFuture.flatMap(result =>
-        if (result.header.status == HttpStatus.UNAUTHORIZED)
-          deadbolt.Pattern[A](permission, PatternType.REGEX)(action)(request)
-        else
-          Future(result)
+  private def RestrictOrPattern[A](
+    roleGroups: List[Array[String]],
+    permission: String)(
+    action: Action[A]
+  ): Action[A] =
+    SecurityUtil.restrictChain(Seq(
+      deadbolt.Restrict[A](roleGroups, unauthorizedDeadboltHandler)_,
+      deadbolt.Pattern[A](permission, PatternType.REGEX)_
+    ))(action)
+
+  protected def unauthorizedDeadboltHandler =
+    deadboltHandlerCache.apply(HandlerKeys.unauthorizedStatus)
+
+  protected def defaultDeadboltHandler =
+    deadboltHandlerCache.apply(HandlerKeys.default)
+
+  protected def dispatchIsAdminOrOwnerAux(
+    objectOwnerId: Request[AnyContent] => Future[Option[BSONObjectID]],
+    currentUser: Request[_] => Future[Option[User]])(
+    action: C => Action[AnyContent]
+  ) = Action.async { implicit request =>
+    val originalAction = dispatch(action)
+
+    // check if the view owner matches a currently logged user
+    def checkOwner = { action: Action[AnyContent] =>
+      val unauthorizedAction = Action.async { req => defaultDeadboltHandler.onAuthFailure(req) }
+
+      val accessingUserFuture = currentUser(request)
+      val objectOwnerIdFuture = objectOwnerId((request))
+
+      for {
+        objectOwnerId <- objectOwnerIdFuture
+        accessingUser <- accessingUserFuture
+      } yield {
+        objectOwnerId match {
+          case Some(createdById) =>
+            accessingUser.map { accessingUser =>
+              // if the user accessing the data view is the owner process, otherwise "unauthorized"
+              if (accessingUser._id.get.equals(createdById)) action else unauthorizedAction
+            }.getOrElse(
+              // if we cannot determine the currently logged user for some reason return "unauthorized"
+              unauthorizedAction
+            )
+          case None => unauthorizedAction
+        }
+      }
+    }
+
+    // is admin?
+    def isAdmin = { action: Action[AnyContent] =>
+      Future(
+        deadbolt.Restrict[AnyContent](List(Array(SecurityRole.admin)), unauthorizedDeadboltHandler)(action)
       )
     }
+
+    val extraRestrictions = restrictChainFuture[AnyContent](Seq(isAdmin, checkOwner))_
+    extraRestrictions(originalAction)(request)
   }
 }
 

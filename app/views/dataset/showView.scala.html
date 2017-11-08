@@ -11,17 +11,18 @@
 @import models.security.SecurityRole
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
-@import controllers.dataset.DataSetViewData
+@import controllers.dataset.TableViewData
 @import play.api.libs.json.Json
 
 @(
     dataSetName : String,
     dataViewId: BSONObjectID,
     dataViewName: String,
-    viewParts: Seq[DataSetViewData],
+    tableViewParts: Seq[TableViewData],
     widgetCallbackId: String,
     widgetGridElementWidth: Int,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
+    canEditView: Boolean = false,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit context: DataSetWebContext
@@ -30,17 +31,17 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @if(viewParts.size == 1) {
-                @viewFilter(viewParts.head, 0)
+            @if(tableViewParts.size == 1) {
+                @viewFilter(tableViewParts.head, 0)
             }
         </div>
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
-                    @exportMenu(viewParts.head)
+                    @exportMenu(tableViewParts.head)
                 </li>
                 <li>
-                    @restrict(roles = List(Array(SecurityRole.admin))) {
+                    @if(canEditView) {
                         <div class="dropdown">
                             <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
@@ -67,10 +68,10 @@
 }
 
 @inputFilterConditionsOrIds = @{
-    viewParts.map(_.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)))
+    tableViewParts.map(_.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)))
 }
 
-@exportMenu(viewData: DataSetViewData) = @{
+@exportMenu(viewData: TableViewData) = @{
     exportDataSetDropdown(
         viewData.page.filterConditions,
         dataSetRouter.exportCsv(dataViewId, _, true, None, _, _),
@@ -90,7 +91,7 @@
     }
 }
 
-@viewFilter(viewPart: DataSetViewData, index: Int) = {
+@viewFilter(viewPart: TableViewData, index: Int) = {
     @filter(
         viewPart.page.filter,
         Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(viewPart.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))))),
@@ -101,7 +102,7 @@
     )
 }
 
-@viewFilterJs(viewPart: DataSetViewData, index: Int) = {
+@viewFilterJs(viewPart: TableViewData, index: Int) = {
     @filterJs(
         viewPart.page.filter,
         dataSetRouter.getView(dataViewId, Nil, Nil, true),
@@ -117,8 +118,8 @@
 
 @filters = {
     <div class="row vertical-divider">
-        @viewParts.zipWithIndex.map { case (viewPart, index) =>
-            <div class="col-md-@{12 / viewParts.size}">
+        @tableViewParts.zipWithIndex.map { case (viewPart, index) =>
+            <div class="col-md-@{12 / tableViewParts.size}">
                 <div class="row">
                     <div class="col-md-7">
                         <ul class="list-inline">
@@ -159,7 +160,7 @@
         dataViewJsRouter.saveFilter
     )
 
-    @viewParts.zipWithIndex.map { case (viewPart, index) =>
+    @tableViewParts.zipWithIndex.map { case (viewPart, index) =>
         @viewFilterJs(viewPart, index)
     }
 
@@ -176,7 +177,7 @@
 
         function saveFilterToView() {
             var filterOrIds = [
-                @viewParts.zipWithIndex.map{ case (viewPart, index) => getFilterOrId(@index)}.mkString(",")
+                @tableViewParts.zipWithIndex.map{ case (viewPart, index) => getFilterOrId(@index)}.mkString(",")
             ];
 
             dataViewJsRoutes.controllers.dataset.DataViewDispatcher.saveFilter(
@@ -197,10 +198,10 @@
 @layout.list(
     dataSetName + " Item",
     Some(dataSetName + " ("+ dataViewName + ")"),
-    viewParts.map(_.page.total).sum,
+    tableViewParts.map(_.page.total).sum,
     Some(actions),
-    viewTables(dataViewId, viewParts, dataSetRouter),
-    if (viewParts.size == 1) {
+    viewTables(dataViewId, tableViewParts, dataSetRouter),
+    if (tableViewParts.size == 1) {
         Some(widgetsDiv)
     } else {
         Some(filtersAndWidgets)

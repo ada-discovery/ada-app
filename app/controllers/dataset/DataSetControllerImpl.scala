@@ -4,6 +4,7 @@ import java.util.UUID
 import java.{util => ju}
 import javax.inject.Inject
 
+import security.AdaAuthConfig
 import scala.collection.mutable.{Map => MMap}
 import _root_.util.{FieldUtil, GroupMapList}
 import dataaccess.JsonUtil._
@@ -39,6 +40,7 @@ import reactivemongo.play.json.BSONFormats._
 import services.ml.{MachineLearningService, Performance}
 import views.html.dataset
 import models.ml.DataSetTransformation._
+import models.security.{SecurityRole, UserManager}
 import services.ChiSquareResult.chiSquareResultFormat
 
 import scala.math.Ordering.Implicits._
@@ -59,11 +61,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     regressionRepo: RegressionRepo,
     unsupervisedLearningRepo: UnsupervisedLearningRepo,
     dataSpaceService: DataSpaceService,
-    tranSMARTService: TranSMARTService
+    tranSMARTService: TranSMARTService,
+    val userManager: UserManager
   ) extends ReadonlyControllerImpl[JsObject, BSONObjectID]
 
     with DataSetController
-    with ExportableAction[JsObject] {
+    with ExportableAction[JsObject]
+    with AdaAuthConfig {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
 
@@ -358,7 +362,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     {
       for {
-      // get the data set name
+        // get the data set name
         dataSetName <- dataSetNameFuture
 
         // get the data space tree
@@ -369,6 +373,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         // setting
         setting <- settingFuture
+
+        // check if the user can edit the view
+        canEditView <- dataView.map(canEditView(_, request)).getOrElse(Future(false))
 
         // initialize filters
         filterOrIdsToUse: Seq[FilterOrId] =
@@ -429,7 +436,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             val viewPartsWidgetFutures = (viewResponses, tablePagesToUse, filterOrIdsToUse).zipped.map {
               case (viewResponse, tablePage, filterOrId) =>
                 val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
-                val viewData = DataSetViewData(newPage, viewResponse.tableFields)
+                val viewData = TableViewData(newPage, viewResponse.tableFields)
                 val widgetsFuture = getViewWidgets(filterOrId, widgetSpecs, widgetFieldMap, useChartRepoMethod)
 
                 (viewData, widgetsFuture)
@@ -454,6 +461,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 callbackId,
                 dataView.map(_.elementGridWidth).getOrElse(3),
                 setting.filterShowFieldStyle,
+                canEditView,
                 dataSpaceTree
               )
             )
@@ -509,6 +517,28 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }.flatten
     JsArray(jsons)
   }
+
+  private def canEditView(
+    dataView: DataView,
+    request: Request[_]
+  ): Future[Boolean] =
+    for {
+      currentUser <- currentUser(request)
+    } yield {
+      currentUser.map { user =>
+        val isAdmin = user.roles.contains(SecurityRole.admin)
+
+        val isOwner =
+          dataView.createdById match {
+            case Some(createdById) => user._id.get.equals(createdById)
+            case None => false
+          }
+
+        isAdmin || isOwner
+      }.getOrElse(
+        false
+      )
+    }
 
   override def getWidgets(
     callbackId: String

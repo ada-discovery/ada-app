@@ -38,7 +38,7 @@ class ConvertZeroToNull extends DsaInputFutureRunnable[ConvertZeroToNullSpec] {
 
       // get zero with null in the records
       idReplacedJsValues = idJsons.map { json =>
-        val jsValue = (json \ spec.fieldName).get
+        val jsValue = (json \ spec.fieldName)
 
         val isZero =
           field.fieldTypeSpec.fieldType match {
@@ -55,7 +55,7 @@ class ConvertZeroToNull extends DsaInputFutureRunnable[ConvertZeroToNullSpec] {
           }
 
         val id = (json \ JsObjectIdentity.name).as[BSONObjectID]
-        (id, if (isZero) JsNull else jsValue)
+        (id, if (isZero) JsNull else jsValue.getOrElse(JsNull))
       }
 
       // replace the values and update the records

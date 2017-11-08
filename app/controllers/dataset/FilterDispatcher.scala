@@ -3,14 +3,21 @@ package controllers.dataset
 import javax.inject.Inject
 
 import controllers.SecureControllerDispatcher
-import models.FilterCondition
-import play.api.mvc.{AnyContent, Action}
+import models.security.UserManager
+import models.{AdaException, Filter, FilterCondition}
+import persistence.dataset.DataSetAccessorFactory
+import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
-import models.Filter
+import security.AdaAuthConfig
 import util.SecurityUtil.createDataSetPermission
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class FilterDispatcher @Inject()(dscf: DataSetControllerFactory, fcf: FilterControllerFactory)
-  extends SecureControllerDispatcher[FilterController]("dataSet") with FilterController {
+class FilterDispatcher @Inject()(
+    dscf: DataSetControllerFactory,
+    fcf: FilterControllerFactory,
+    dsaf: DataSetAccessorFactory,
+    val userManager: UserManager
+  ) extends SecureControllerDispatcher[FilterController]("dataSet") with FilterController with AdaAuthConfig {
 
   override protected def getController(id: String) =
     dscf(id).map(_ => fcf(id)).getOrElse(
@@ -27,7 +34,7 @@ class FilterDispatcher @Inject()(dscf: DataSetControllerFactory, fcf: FilterCont
     actionName: String
   ) = Some(createDataSetPermission(controllerId, "filter", actionName))
 
-  override def get(id: BSONObjectID) = dispatch(_.get(id))
+  override def get(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.get(id))
 
   override def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) = dispatch(_.find(page, orderBy, filter))
 
@@ -35,15 +42,35 @@ class FilterDispatcher @Inject()(dscf: DataSetControllerFactory, fcf: FilterCont
 
   override def create = dispatch(_.create)
 
-  override def update(id: BSONObjectID) = dispatch(_.update(id))
+  override def update(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.update(id))
 
-  override def edit(id: BSONObjectID) = dispatch(_.edit(id))
+  override def edit(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.edit(id))
 
-  override def delete(id: BSONObjectID) = dispatch(_.delete(id))
+  override def delete(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.delete(id))
 
   override def save = dispatch(_.save)
 
   override def saveAjax(filter: Filter): Action[AnyContent] = dispatch(_.saveAjax(filter))
 
   override def getIdAndNames: Action[AnyContent] = dispatch(_.getIdAndNames)
+
+  protected def dispatchIsAdminOrOwner(
+    id: BSONObjectID,
+    action: FilterController => Action[AnyContent]
+  ): Action[AnyContent] = {
+    val currentUserFun = {
+      request: Request[_] => currentUser(request)
+    }
+
+    val objectOwnerFun = {
+      request: Request[AnyContent] =>
+        val dataSetId = getControllerId(request)
+        val dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data set id $dataSetId not found."))
+        dsa.filterRepo.get(id).map { filter =>
+          filter.flatMap(_.createdById)
+        }
+    }
+
+    dispatchIsAdminOrOwnerAux(objectOwnerFun, currentUserFun)(action)
+  }
 }

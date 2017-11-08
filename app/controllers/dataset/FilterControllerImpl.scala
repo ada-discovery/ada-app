@@ -187,6 +187,22 @@ protected[controllers] class FilterControllerImpl @Inject() (
     }
   }
 
+  override protected def updateCall(
+    filter: Filter)(
+    implicit request: Request[AnyContent]
+  ): Future[BSONObjectID] =
+    for {
+      existingFilterOption <- repo.get(filter._id.get)
+      id <- {
+        val mergedFilter =
+          existingFilterOption.fold(filter) { existingFilter =>
+            filter.copy(createdById = existingFilter.createdById, timeCreated = existingFilter.timeCreated, conditions = existingFilter.conditions)
+          }
+        repo.update(mergedFilter)
+      }
+    } yield
+      id
+
   override def getIdAndNames = Action.async { implicit request =>
     for {
       filters <- filterRepo.find(

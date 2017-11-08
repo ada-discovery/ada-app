@@ -4,8 +4,12 @@ import java.security.MessageDigest
 
 import be.objectify.deadbolt.scala.DeadboltActions
 import models.security.SecurityRole
-import dataaccess.User
-import play.api.mvc.Action
+import play.api.http.{Status => HttpStatus}
+import play.api.mvc.{Action, Result}
+import play.api.mvc.Results._
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import scala.concurrent.Future
 import scala.util.Random
 
 /**
@@ -66,4 +70,44 @@ object SecurityUtil {
 
   def restrictSubjectPresent[A](deadbolt: DeadboltActions)(action: Action[A]): Action[A] =
     deadbolt.SubjectPresent()(action)
+
+  def restrictChain[A](
+    restrictions: Seq[Action[A] => Action[A]]
+  ) = restrictChainFuture(
+    restrictions.map {
+      restriction => action: Action[A] => Future(restriction(action))
+    }
+  )(_)
+
+  def restrictChainFuture[A](
+    restrictions: Seq[Action[A] => Future[Action[A]]])(
+    action: Action[A]
+  ): Action[A] =
+    Action.async(action.parser) { implicit request =>
+      def isAuthorized(result: Result) = result.header.status != HttpStatus.UNAUTHORIZED
+
+      val authorizedResultFuture =
+        restrictions.foldLeft(
+          Future((false, BadRequest("No restriction found")))
+        ) {
+          (resultFuture, restriction) =>
+            for {
+              (authorized, result) <- resultFuture
+
+              nextResult <-
+                if (authorized)
+                  Future((authorized, result))
+                else
+                  restriction(action).flatMap {
+                    _.apply(request).map( newResult =>
+                      (isAuthorized(newResult), newResult)
+                    )
+                  }
+            } yield {
+              nextResult
+            }
+        }
+
+      authorizedResultFuture.map { case (_, result) => result }
+    }
 }

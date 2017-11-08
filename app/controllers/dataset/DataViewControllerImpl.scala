@@ -210,11 +210,13 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   ): Future[BSONObjectID] =
     for {
       existingDataViewOption <- repo.get(dataView._id.get)
-      id <- existingDataViewOption.map(existingDataView =>
-          repo.update(dataView) // .copy(filterOrIds = existingDataView.filterOrIds)
-        ).getOrElse(
-          Future(dataView._id.get)
-        )
+      id <- {
+        val mergedDataView =
+          existingDataViewOption.fold(dataView) { existingDataView =>
+            dataView.copy(createdById = existingDataView.createdById, timeCreated = existingDataView.timeCreated)
+          }
+        repo.update(mergedDataView)
+      }
     } yield
       id
 
@@ -274,15 +276,24 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override def copy(id: BSONObjectID) =
     Action.async { implicit request =>
-      repo.get(id).flatMap(_.fold(
-        Future(NotFound(s"Entity #$id not found"))
-      ) { dataView =>
-        val newDataView = dataView.copy(_id = None, name = dataView.name + " copy", default = false, timeCreated = new ju.Date)
-        saveCall(newDataView).map { newId =>
-          Redirect(router.get(newId)).flashing("success" -> s"Data view '${dataView.name}' has been copied.")
+      for {
+        // get the data view
+        dataView <- repo.get(id)
+
+        // copy and save the new view
+        newId <- dataView.fold(
+          Future(Option.empty[BSONObjectID])
+        ) { dataView =>
+          val newDataView = dataView.copy(_id = None, name = dataView.name + " copy", default = false, timeCreated = new ju.Date)
+          saveCall(newDataView).map(Some(_))
+        }
+      } yield {
+        newId.fold(
+          NotFound(s"Entity #$id not found")
+        ) { newId =>
+          Redirect(router.get(newId)).flashing("success" -> s"Data view '${dataView.get.name}' has been copied.")
         }
       }
-    )
   }
 
   override def addDistributions(

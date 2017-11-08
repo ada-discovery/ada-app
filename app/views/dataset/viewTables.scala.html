@@ -1,11 +1,11 @@
 @import views.html.dataset.{jsonModal, lineChartArrayModal, viewTable}
 @import reactivemongo.bson.BSONObjectID
-@import controllers.dataset.DataSetViewData
+@import controllers.dataset.TableViewData
 @import controllers.dataset.DataSetRouter
 
 @(
     dataViewId: BSONObjectID,
-    viewParts: Seq[DataSetViewData],
+    viewParts: Seq[TableViewData],
     dataSetRouter: DataSetRouter
 )(
     implicit request: Request[_]
