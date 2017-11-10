@@ -18,7 +18,10 @@
 )
 
 @bottomResources = {
-    @inputFieldAndFilterResources(filterShowFieldStyle)
+    @inputFieldAndFilterResources(
+        Seq("filter"),
+        filterShowFieldStyle
+    )
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.testIndependence

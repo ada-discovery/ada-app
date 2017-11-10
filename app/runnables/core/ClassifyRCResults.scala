@@ -115,6 +115,7 @@ class ClassifyRCResults @Inject() (
             input.featuresNormalizationType,
             input.pcaDims,
             input.trainingTestingSplit,
+            input.replicationFilterId,
             input.samplingOutputValues.zip(input.samplingRatios),
             input.repetitions,
             input.crossValidationFolds
@@ -164,6 +165,7 @@ case class ClassifyRCResultsSpec(
   featuresNormalizationType: Option[VectorTransformType.Value],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
+  replicationFilterId: Option[BSONObjectID],
   samplingOutputValues: Seq[String],
   samplingRatios: Seq[Double],
   repetitions: Option[Int],

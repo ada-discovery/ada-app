@@ -2,7 +2,7 @@
 @import views.html.layout.main
 @import views.html.dataset.{mlElements, inputFieldAndFilterResources, datasetSubNavWithJs, trainingSettingFields}
 @import play.api.i18n.Messages
-@import models.DataSpaceMetaInfo
+@import models.{DataSpaceMetaInfo, FilterShowFieldStyle}
 @import views.html.elements._
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
@@ -16,7 +16,10 @@
 )
 
 @bottomResources = {
-    @inputFieldAndFilterResources(filterShowFieldStyle)
+    @inputFieldAndFilterResources(
+        Seq("filter"),
+        filterShowFieldStyle
+    )
 
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.regress

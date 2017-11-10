@@ -177,8 +177,10 @@ package object util {
     val futures = inputs.map(input => Future { fun(input) })
     val resultFuture = Future.sequence(futures)
 
-//    threadPool.shutdown()
-    resultFuture
+    resultFuture.map { results =>
+      threadPool.shutdown()
+      results
+    }
   }
 
 //  def sparkParallelize[T: ClassTag, U](

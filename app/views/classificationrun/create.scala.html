@@ -4,7 +4,7 @@
 @import views.html.dataset.{datasetMenu, mlElements, inputFieldAndFilterResources, datasetSubNavWithJs, trainingSettingFields}
 @import views.html.classificationrun.samplingTable
 @import play.api.i18n.Messages
-@import models.DataSpaceMetaInfo
+@import models.{DataSpaceMetaInfo, FieldTypeId, FilterShowFieldStyle}
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
 
@@ -17,7 +17,10 @@
 )
 
 @bottomResources = {
-    @inputFieldAndFilterResources(filterShowFieldStyle)
+    @inputFieldAndFilterResources(
+        Seq("filter", "replicationFilter"),
+        filterShowFieldStyle
+    )
 
     @helper.javascriptRouter("classificationRunJsRoutes")(
         classificationRunJsRouter.classify,
@@ -75,12 +78,15 @@
             var filterIdJson = (filterId) ? {'$oid': filterId} : null
 
             var pcaDims = $("#pcaDims").val()
-            var trainingTestingSplit = $("#trainingTestingSplit").val()
             var repetitions = $("#repetitions").val()
             var crossValidationFolds = $("#crossValidationFolds").val()
             var featuresNormalizationType = $("#featuresNormalizationType").val()
             if (!featuresNormalizationType)
                 featuresNormalizationType = null
+
+            var trainingTestingSplit = $("#trainingTestingSplit").val()
+            var replicationFilterId = ($('#replicationFilterNameTypeahead').val()) ? $("#replicationFilterId").val() : null
+            var replicationFilterIdJson = (replicationFilterId) ? {'$oid': replicationFilterId} : null
 
             $('#samplingRatioDiv').dynamicTable('updateModelFromTable');
             var samplingJsons = $("#samplingRatioDiv").dynamicTable('getModel')
@@ -99,6 +105,7 @@
                 "featuresNormalizationType": featuresNormalizationType,
                 "pcaDims": intValue(pcaDims),
                 "trainingTestingSplit": floatValue(trainingTestingSplit),
+                "replicationFilterId": replicationFilterIdJson,
                 "samplingRatios": samplingTuples,
                 "repetitions": intValue(repetitions),
                 "crossValidationFolds": intValue(crossValidationFolds)
@@ -182,13 +189,21 @@
     </script>
 }
 
+@labelValueAux(key: String, label: Any)(valueElement : Any) = @{
+    labelValue(key, label, false, None, 4)(valueElement)
+}
+
 @extraFields = {
     @trainingSettingFields()
-    @labelValue("saveResults", "Save Results?") {
-        <input id="saveResults" type="checkbox"/>
+    @labelValueAux("replicationFilterId", "Replication Data") {
+        <input id="replicationFilterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="filter" value="">
+        <input id="replicationFilterId" name="replicationFilterId" type="hidden" value="">
     }
-    @labelValue("samplings", "Samplings"){
+    @labelValueAux("samplings", "Samplings"){
         @samplingTable(Nil)
+    }
+    @labelValueAux("saveResults", "Save Results?") {
+        <input id="saveResults" type="checkbox"/>
     }
 }
 

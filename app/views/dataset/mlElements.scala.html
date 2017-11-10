@@ -1,8 +1,8 @@
 @import views.html.elements.{labelValue, selectEnum}
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataset.dynamicFieldTable
-
 @import models.ml.VectorTransformType
+
 @(
     includeChiSquareSelector: Boolean = false,
     includeOutputField: Boolean = true,
@@ -39,44 +39,50 @@
     }
 }
 
+@labelValueAux(key: String, label: Any)(valueElement : Any) = @{
+    labelValue(key, label, false, None, 4)(valueElement)
+}
+
 <div class="row">
-    <div class="col-md-12">
-        <form>
-            <fieldset>
-                @labelValue("mlModel", "ML Model") {
-                    <input id="mlModelTypeahead" class="typeahead typeahead-large" type="text" placeholder="ML Model" value="">
+    <form>
+        <fieldset>
+            <div class="col-md-6">
+                @labelValueAux("mlModel", "ML Model") {
+                    <input id="mlModelTypeahead" class="typeahead typeahead-large" type="text" placeholder="" value="">
                     <input id="mlModelId" name="mlModelId" type="hidden" value="">
                 }
                 @if(includeOutputField) {
-                    @labelValue("outputField", "Output Field") {
-                        <input id="outputFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="">
+                    @labelValueAux("outputField", "Output Field") {
+                        <input id="outputFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="" value="">
                         <input id="outputFieldName" name="outputFieldName" type="hidden" value="">
                     }
                 }
-                @labelValue("inputFieldNames", "Input Field Names") {
-                    @dynamicFieldTable("inputFieldName", Nil, false, 5, Some(extraFieldButtons))
+                @labelValueAux("inputFieldNames", "Input Fields") {
+                    @dynamicFieldTable("inputFieldName", Nil, false, 12, Some(extraFieldButtons))
                 }
-                @labelValue("filterId", "Filter") {
-                    <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="Filter" value="">
+                @labelValueAux("filterId", "Input Data") {
+                    <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="filter" value="">
                     <input id="filterId" name="filterId" type="hidden" value="">
                 }
                 <hr/>
-                @labelValue("featuresNormalizationType", "Feature Normalization") {
+                @labelValueAux("featuresNormalizationType", "Feature Normalization") {
                     @selectEnum("featuresNormalizationType", VectorTransformType, true, Some("input-lg"))
                 }
-                @labelValue("pcaDims", "PCA Dims") {
-                    <input id="pcaDims" type="text" class="input-lg" placeholder="PCA Dims" value="">
+                @labelValueAux("pcaDims", "PCA Dims") {
+                    <input id="pcaDims" type="text" class="input-lg" placeholder="2 to number of features" value="">
                 }
+            </div>
+            <div class="col-md-6">
                 @if(extraFields.isDefined) {
                     @extraFields.get
                 }
-            </fieldset>
-
-            <div class="actions pull-right">
-                <button id="launchButton" type="button" class="btn btn-primary">Submit</button>
             </div>
-        </form>
-    </div>
+        </fieldset>
+
+        <div class="actions pull-right">
+                <button id="launchButton" type="button" class="btn btn-primary">Submit</button>
+        </div>
+    </form>
 </div>
 
 <hr/>

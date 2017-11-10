@@ -1,8 +1,10 @@
 @import models.FilterShowFieldStyle.NamesAndLabels
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
+@import models.FilterShowFieldStyle
 
 @(
+    filterElementIds: Seq[String],
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value]
 )(
     implicit context: DataSetWebContext
@@ -25,12 +27,14 @@
                 var typeaheadData = data.map(function (item, index) {
                     return {name: item._id.$oid, label: item.name};
                 });
-                populateFieldTypeahed(
-                    $('#filterNameTypeahead'),
-                    $('#filterId'),
-                    typeaheadData,
-                    @FilterShowFieldStyle.LabelsOnly.id
-                );
+                @filterElementIds.map { filterElementId =>
+                    populateFieldTypeahed(
+                        $('#@{filterElementId}NameTypeahead'),
+                        $('#@{filterElementId}Id'),
+                        typeaheadData,
+                        @FilterShowFieldStyle.LabelsOnly.id
+                    );
+                }
             }
         });
     });

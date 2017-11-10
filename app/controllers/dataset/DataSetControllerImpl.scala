@@ -1553,7 +1553,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     repetitions: Option[Int],
     crossValidationFolds: Option[Int]
   ) = Action.async { implicit request =>
-    val learningSetting = LearningSetting(featuresNormalizationType, pcaDims, trainingTestingSplit, Nil, repetitions, crossValidationFolds)
+    val learningSetting = LearningSetting(featuresNormalizationType, pcaDims, trainingTestingSplit, None, Nil, repetitions, crossValidationFolds)
 
     for {
       result <- runMLAux(

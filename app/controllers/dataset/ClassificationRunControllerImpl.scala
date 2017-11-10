@@ -197,19 +197,48 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     setting: ClassificationSetting,
     saveResults: Boolean
   ) = Action.async { implicit request =>
+    println(Json.prettyPrint(Json.toJson(setting)))
+
     val mlModelFuture = classificationRepo.get(setting.mlModelId)
     val criteriaFuture = loadCriteria(setting.filterId)
+    val replicationCriteriaFuture = loadCriteria(setting.replicationFilterId)
+
+    val fieldNames = setting.fieldNamesToLoads
+    val fieldsFuture =
+      if (fieldNames.nonEmpty)
+        dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
+      else
+        dsa.fieldRepo.find()
+
+    def findData(criteria: Seq[Criterion[Any]]) =
+      if (fieldNames.nonEmpty)
+        dsa.dataSetRepo.find(criteria, projection = fieldNames)
+      else
+        dsa.dataSetRepo.find(criteria)
 
     for {
+      // load a ML model
       mlModel <- mlModelFuture
 
+      // criteria
       criteria <- criteriaFuture
 
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, setting.fieldNamesToLoads, criteria)
+      // replication criteria
+      replicationCriteria <- replicationCriteriaFuture
 
+      // fields
+      fields <- fieldsFuture
+
+      // main data
+      mainData <- findData(criteria)
+
+      // replication data
+      replicationData <- if (replicationCriteria.nonEmpty) findData(replicationCriteria) else Future(Nil)
+
+      // run the selected classifier (ML model)
       results <- mlModel.map { mlModel =>
-        val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-        mlService.classify(jsons, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting)
+        val fieldNameAndSpecs = fields.toSeq.map(field => (field.name, field.fieldTypeSpec))
+        mlService.classify(mainData, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting, replicationData)
       }.getOrElse(
         Future(Nil)
       )
@@ -233,14 +262,15 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   }
 
   private def resultsToJson(
-    evalMetricStatsMap: Map[ClassificationEvalMetric.Value, (MetricStatsValues, MetricStatsValues)]
+    evalMetricStatsMap: Map[ClassificationEvalMetric.Value, (MetricStatsValues, MetricStatsValues, Option[MetricStatsValues])]
   ): JsArray = {
     val metricJsons = ClassificationEvalMetric.values.toSeq.sorted.flatMap { metric =>
-      evalMetricStatsMap.get(metric).map { case (trainingStats, testStats) =>
+      evalMetricStatsMap.get(metric).map { case (trainingStats, testStats, replicationStats) =>
         Json.obj(
           "metricName" -> toHumanReadableCamel(metric.toString),
           "trainEvalRate" -> trainingStats.mean,
-          "testEvalRate" -> testStats.mean
+          "testEvalRate" -> testStats.mean,
+          "replicationEvalRate" -> replicationStats.map(_.mean)
         )
       }
     }
