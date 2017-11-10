@@ -486,25 +486,27 @@ function getModalValues(modalElementId) {
 }
 
 function showMLOutput(evalRates) {
+    console.log(evalRates)
     $("#outputDiv").html("");
 
-    var table = $("<table class='table table-striped'>")
-    var thead = $("<thead>")
-    thead.append("<th class='col header'>Metrics</th>")
-    thead.append("<th class='col header'>Training</th>")
-    thead.append("<th class='col header'>Testing</th>")
-    table.append(thead)
-    var tbody = $("<tbody>")
-    table.append(tbody)
+    var header = ["Metrics", "Training", "Test"]
+    var showReplicationRates = evalRates[0].replicationEvalRate != null
+    if (showReplicationRates)
+        header = header.concat("Replication")
 
-    $.each(evalRates, function(i, data) {
-        var tr = $("<tr>")
-        var tds = "<td>" + data.metricName + "</td><td>" + data.trainEvalRate.toFixed(3) + "</td><td>" + data.testEvalRate.toFixed(3) + "</td>"
-        tr.append(tds)
-        tbody.append(tr)
+    function float3(value) {
+        return (value) ? value.toFixed(3) : ""
+    }
+
+    var rowData = evalRates.map(function(item) {
+        var data = [item.metricName, float3(item.trainEvalRate), float3(item.testEvalRate)]
+        if (showReplicationRates)
+            data = data.concat(float3(item.replicationEvalRate))
+        return data
     });
 
-    $("#outputDiv").append(table);
+    var table = createTable(header, rowData);
+    $("#outputDiv").html(table);
     $('#outputDiv').fadeIn('2000');
 }
 

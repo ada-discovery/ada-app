@@ -15,6 +15,7 @@ case class ClassificationResult(
   setting: ClassificationSetting,
   trainingStats: ClassificationMetricStats,
   testStats: ClassificationMetricStats,
+  replicationStats: Option[ClassificationMetricStats] = None,
   timeCreated: ju.Date = new ju.Date()
 )
 
@@ -42,6 +43,7 @@ case class ClassificationSetting(
   featuresNormalizationType: Option[VectorTransformType.Value],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
+  replicationFilterId: Option[BSONObjectID],
   samplingRatios: Seq[(String, Double)],
   repetitions: Option[Int],
   crossValidationFolds: Option[Int]
@@ -50,7 +52,7 @@ case class ClassificationSetting(
     if (inputFieldNames.nonEmpty) (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq else Nil
 
   def learningSetting =
-    LearningSetting(featuresNormalizationType, pcaDims, trainingTestingSplit, samplingRatios, repetitions, crossValidationFolds)
+    LearningSetting(featuresNormalizationType, pcaDims, trainingTestingSplit, replicationFilterId, samplingRatios, repetitions, crossValidationFolds)
 }
 
 object ClassificationResult {

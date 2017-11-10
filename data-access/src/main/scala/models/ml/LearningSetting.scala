@@ -1,9 +1,12 @@
 package models.ml
 
+import reactivemongo.bson.BSONObjectID
+
 case class LearningSetting(
   featuresNormalizationType: Option[VectorTransformType.Value] = None,
   pcaDims: Option[Int] = None,
   trainingTestingSplit: Option[Double] = None,
+  replicationFilterId: Option[BSONObjectID] = None,
   samplingRatios: Seq[(String, Double)] = Nil,
   repetitions: Option[Int] = None,
   crossValidationFolds: Option[Int] = None
