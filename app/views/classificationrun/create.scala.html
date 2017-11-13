@@ -1,5 +1,6 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
+@import views.html.chart.highcharts.highchartsJsImport
 @import views.html.elements._
 @import views.html.dataset.{datasetMenu, mlElements, inputFieldAndFilterResources, datasetSubNavWithJs, trainingSettingFields}
 @import views.html.classificationrun.samplingTable
@@ -21,6 +22,7 @@
         Seq("filter", "replicationFilter"),
         filterShowFieldStyle
     )
+    @highchartsJsImport()
 
     @helper.javascriptRouter("classificationRunJsRoutes")(
         classificationRunJsRouter.classify,
@@ -88,6 +90,8 @@
             var replicationFilterId = ($('#replicationFilterNameTypeahead').val()) ? $("#replicationFilterId").val() : null
             var replicationFilterIdJson = (replicationFilterId) ? {'$oid': replicationFilterId} : null
 
+            var binCurvesNumBins = $("#binCurvesNumBins").val()
+
             $('#samplingRatioDiv').dynamicTable('updateModelFromTable');
             var samplingJsons = $("#samplingRatioDiv").dynamicTable('getModel')
             var samplingTuples = samplingJsons.map(function(item) {
@@ -108,17 +112,30 @@
                 "replicationFilterId": replicationFilterIdJson,
                 "samplingRatios": samplingTuples,
                 "repetitions": intValue(repetitions),
-                "crossValidationFolds": intValue(crossValidationFolds)
+                "crossValidationFolds": intValue(crossValidationFolds),
+                "binCurvesNumBins": intValue(binCurvesNumBins)
             };
 
             var settingJSON = JSON.stringify(setting)
 
             $('#outputDiv').hide();
+//            $("#binCurvesPanelDiv").hide();
+            $("#binCurvesPanelDiv").html("");
 
             classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.classify(settingJSON, saveResults).ajax( {
-                success: function(evalRates) {
+                success: function(data) {
                     showMessage("'" + mlModelName + "' classification finished.")
-                    showMLOutput(evalRates)
+                    showMLOutput(data.results)
+
+                    if (data.trainingCurves.length > 0) {
+                        var columnWidth = (data.replicationCurves.length > 0) ? 4 : 6
+
+                        addBinCurves("Training", data.trainingCurves, columnWidth)
+                        addBinCurves("Test", data.testCurves, columnWidth)
+
+                        if (data.replicationCurves.length > 0)
+                            addBinCurves("Replication", data.replicationCurves, columnWidth)
+                    }
                 },
                 error: function(data){
                     showError( data.responseText );
@@ -126,6 +143,23 @@
             });
 
             showMessage("Classification for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
+        }
+
+        function addBinCurves(name, binCurves, columnWidth) {
+            var header ="<h4 align='center'><b>" + name + "</b></h4><hr/>"
+
+            var div = $("<div class='col-md-" + columnWidth + "'>")
+            var row = $("<div class='row'>")
+            $.each(binCurves, function (i, widget) {
+                row.append(widgetDiv(widget))
+            })
+            div.append(header)
+            div.append(row)
+            $("#binCurvesPanelDiv").append(div)
+
+            $.each(binCurves, function (i, widget) {
+                genericWidget(widget)
+            })
         }
 
         function intValue(value) {
@@ -202,6 +236,9 @@
     @labelValueAux("samplings", "Samplings"){
         @samplingTable(Nil)
     }
+    @labelValueAux("binCurvesNumBins", "Bins for Binary Classification Curves") {
+        <input id="binCurvesNumBins" type="text" class="input-lg" placeholder="" value="">
+    }
     @labelValueAux("saveResults", "Save Results?") {
         <input id="saveResults" type="checkbox"/>
     }
@@ -220,4 +257,7 @@
         includeOutputField = true,
         extraFields = Some(extraFields)
     )
+
+    <div id="binCurvesPanelDiv" class="row vertical-divider">
+    </div>
 }

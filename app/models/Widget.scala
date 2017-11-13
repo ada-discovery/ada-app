@@ -44,6 +44,18 @@ case class ScatterWidget[T1, T2](
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 
+case class LineWidget[T](
+  title: String,
+  xAxisCaption: String,
+  yAxisCaption: String,
+  data: Seq[(String, Seq[(T,T)])],
+  xMin: Option[T] = None,
+  xMax: Option[T] = None,
+  yMin: Option[T] = None,
+  yMax: Option[T] = None,
+  displayOptions: DisplayOptions = BasicDisplayOptions()
+) extends Widget
+
 case class BoxWidget[T <% Ordered[T]](
   title: String,
   yAxisCaption: String,
@@ -175,6 +187,25 @@ object Widget {
     )(NumericalCountWidget[T](_, _, _, _, _, _), {x => (x.title, x.fieldLabel, x.useRelativeValues, x.isCumulative, x.data, x.displayOptions)})
   }
 
+  def lineWidgetFormat[T](fieldType: FieldType[T]): Format[LineWidget[T]] = {
+    implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
+    implicit val valueOptionalFormat = FieldTypeFormat.applyOptional[T](fieldType)
+    implicit val tuple1Format = TupleFormat[T, T]
+    implicit val tuple2Format = TupleFormat[String, Seq[(T, T)]]
+
+    (
+      (__ \ "title").format[String] and
+      (__ \ "xAxisCaption").format[String] and
+      (__ \ "yAxisCaption").format[String] and
+      (__ \ "data").format[Seq[(String, Seq[(T,T)])]] and
+      (__ \ "xMin").format[Option[T]] and
+      (__ \ "xMax").format[Option[T]] and
+      (__ \ "yMin").format[Option[T]] and
+      (__ \ "yMax").format[Option[T]] and
+      (__ \ "displayOptions").format[DisplayOptions]
+    )(LineWidget[T](_, _, _, _, _, _, _, _, _), {x => (x.title, x.xAxisCaption, x.yAxisCaption, x.data, x.xMin, x.xMax, x.yMin, x.yMax, x.displayOptions)})
+  }
+
   implicit def scatterWidgetFormat[T1, T2](
     fieldType1: FieldType[T1],
     fieldType2: FieldType[T2]
@@ -207,6 +238,9 @@ object Widget {
 
         case e: NumericalCountWidget[T]  =>
           numericalCountWidgetFormat(fieldTypes.head).writes(e)
+
+        case e: LineWidget[T]  =>
+          lineWidgetFormat(fieldTypes.head).writes(e)
 
         case e: ScatterWidget[T, T] =>
           scatterWidgetFormat(fieldTypes.head, fieldTypes.tail.head).writes(e)

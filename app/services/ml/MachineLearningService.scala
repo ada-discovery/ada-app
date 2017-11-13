@@ -11,7 +11,7 @@ import models.ml.classification.Classification
 import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
 import models.ml._
-import util.GroupMapList
+import util.{GroupMapList, STuple3}
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature._
@@ -41,8 +41,9 @@ trait MachineLearningService {
     outputFieldName: String,
     mlModel: Classification,
     setting: LearningSetting = LearningSetting(),
-    replicationData: Traversable[JsObject] = Nil
-  ): Future[Traversable[ClassificationPerformance]]
+    replicationData: Traversable[JsObject] = Nil,
+    binCurvesNumBins: Option[Int] = None
+  ): Future[ClassificationResultsHolder]
 
   def regress(
     data: Traversable[JsObject],
@@ -104,6 +105,7 @@ private class MachineLearningServiceImpl @Inject() (
   private val defaultTrainingTestingSplit = 0.8
   private val repetitionParallelism = configuration.getInt("ml.repetition_parallelism").getOrElse(2)
   private val binaryClassifierInputName = configuration.getString("ml.binary_classifier.input").getOrElse("probability")
+  private val binaryPredictionVectorizer = new IndexVectorizer() { setInputCol("prediction"); setOutputCol(binaryClassifierInputName)}
 
   private val classificationEvaluators =
     ClassificationEvalMetric.values.filter(metric =>
@@ -150,8 +152,9 @@ private class MachineLearningServiceImpl @Inject() (
     outputFieldName: String,
     mlModel: Classification,
     setting: LearningSetting,
-    replicationData: Traversable[JsObject]
-  ): Future[Traversable[ClassificationPerformance]] = {
+    replicationData: Traversable[JsObject],
+    binCurvesNumBins: Option[Int]
+  ): Future[ClassificationResultsHolder] = {
     val trainer = SparkMLEstimatorFactory(mlModel)
 
     // TRAINING AND TEST DATA
@@ -182,7 +185,7 @@ private class MachineLearningServiceImpl @Inject() (
     }
 
 
-    // REPEAT TRAIN AND TEST
+    // REPEAT THE TRAINING-TEST CYCLE
 
     val samplingNeeded = setting.samplingRatios.nonEmpty
 
@@ -216,19 +219,37 @@ private class MachineLearningServiceImpl @Inject() (
       val Array(training, test) = sampledDf.randomSplit(Array(split, 1 - split))
 
       // run the trainer (with folds) on the given training and test data sets (replication df is treated as "another" test data set if provided)
+
       val testSets = Seq(Some(test.cache), finalReplicationDf).flatten
-      val results = trainWithFolds(trainer, evaluators, setting.crossValidationFolds, training.cache, testSets, true)
+      val (trainingPredictions, testPredictions) = trainWithCrossValidation(trainer, evaluators.head.evaluator, setting.crossValidationFolds, training.cache, testSets)
+
+      // evaluate the performance
+
+      def withBinaryEvaluationCol(df: DataFrame) =
+        if (df.columns.contains(binaryClassifierInputName))
+          df
+        else
+          binaryPredictionVectorizer.transform(df)
+
+      val trainingPredictionsExt = withBinaryEvaluationCol(trainingPredictions)
+      val testPredictionsExt = testPredictions.map(withBinaryEvaluationCol)
+      val results = evaluate(evaluators, trainingPredictionsExt, testPredictionsExt)
+
+      val binTrainingCurves = binaryMetricsCurves(trainingPredictions, binCurvesNumBins)
+      val binTestCurves = testPredictions.map(binaryMetricsCurves(_, binCurvesNumBins))
 
       // unpersist and return the results
+
       training.unpersist
       test.unpersist
-      (results, count)
+
+      ClassificationResultsAuxHolder(results, count, binTrainingCurves, binTestCurves)
     }
 
 
     // EVALUATE PERFORMANCE
 
-    resultsWithCountsFuture.map { resultsWithCounts =>
+    resultsWithCountsFuture.map { resultHolders =>
       // uncache
       finalDf.unpersist
       df.unpersist
@@ -237,17 +258,37 @@ private class MachineLearningServiceImpl @Inject() (
       if (replicationDf.isDefined)
         replicationDf.get.unpersist
 
-      val results = resultsWithCounts.map(_._1)
-
       // create performance results
-      results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
+      val results = resultHolders.flatMap(_.evalResults)
+      val performanceResults = results.groupBy(_._1).map { case (evalMetric, results) =>
         ClassificationPerformance(evalMetric, results.map { case (_, trainResult, testResults) =>
           val replicationResult = testResults.tail.headOption
           (trainResult, testResults.head, replicationResult)
         })
       }
+
+      // counts
+      val counts = resultHolders.map(_.count)
+
+      // curves
+      val curves = resultHolders.map { resultHolder =>
+        (
+          resultHolder.binTrainingCurves,
+          resultHolder.binTestCurves.head,
+          resultHolder.binTestCurves.tail.headOption.flatten
+        )
+      }
+
+      ClassificationResultsHolder(performanceResults, counts, curves)
     }
   }
+
+  case class ClassificationResultsAuxHolder(
+    evalResults: Traversable[(ClassificationEvalMetric.Value, Double, Seq[Double])],
+    count: Long,
+    binTrainingCurves: Option[BinaryClassificationCurves],
+    binTestCurves: Seq[Option[BinaryClassificationCurves]]
+  )
 
   private def transformToClassificationDataFrame(
     df: DataFrame,
@@ -330,7 +371,11 @@ private class MachineLearningServiceImpl @Inject() (
       val Array(training, test) = dataFrame.randomSplit(Array(split, 1 - split))
 
       // run the trainer (with folds) on the given training and test data sets
-      val results = trainWithFolds(trainer, regressionEvaluators, setting.crossValidationFolds, training.cache, Seq(test.cache), false)
+      val (trainPredictions, testPredictions) = trainWithCrossValidation(trainer, regressionEvaluators.head.evaluator, setting.crossValidationFolds, training.cache, Seq(test.cache))
+
+      // evaluate the performance
+      val results = evaluate(regressionEvaluators, trainPredictions, testPredictions)
+
       training.unpersist
       test.unpersist
       results
@@ -517,70 +562,27 @@ private class MachineLearningServiceImpl @Inject() (
     } else
       df
 
-  private def setParam[T, M](
-    paramValue: Option[T],
-    setModelParam: M => (T => M))(
-    model: M
-  ): M =
-    paramValue.map(setModelParam(model)).getOrElse(model)
-
-  private def setSourceParam[T, S, M](
-    source: S)(
-    getParamValue: S => Option[T],
-    setParamValue: M => (T => M))(
-    target: M
-  ): M =
-    setParam(getParamValue(source), setParamValue)(target)
-
-  private def chain[T](trans: (T => T)*)(init: T) =
-    trans.foldLeft(init){case (a, trans) => trans(a)}
-
-  private def train[M <: Model[M], Q](
+  private def train[M <: Model[M]](
     estimator: Estimator[M],
-    evaluatorWrappers: Traversable[EvaluatorWrapper[Q]],
     trainingDf: DataFrame,
-    testDfs: Seq[DataFrame],
-    vectorizePrediction: Boolean
-  ): Traversable[(Q, Double, Seq[Double])] = {
-    // Fit the model
+    testDfs: Seq[DataFrame]
+  ): (DataFrame, Seq[DataFrame]) = {
+    // fit the model
     val lrModel = estimator.fit(trainingDf)
 
-    val predictionVectorizer = new IndexVectorizer
-    predictionVectorizer.setInputCol("prediction")
-    predictionVectorizer.setOutputCol(binaryClassifierInputName)
-
-    def getPredictions(df: DataFrame): DataFrame = {
-      val predictions = lrModel.transform(df)
-      val hasRawPrediction = predictions.columns.contains(binaryClassifierInputName)
-      if (hasRawPrediction || !vectorizePrediction)
-        predictions
-      else
-        predictionVectorizer.transform(predictions)
-    }
+    // get the predictions for the training and test data sets
+    def getPredictions(df: DataFrame) = lrModel.transform(df)
 
     val trainPredictions = getPredictions(trainingDf)
     val testPredictions = testDfs.map(getPredictions)
+    (trainPredictions, testPredictions)
+  }
 
-//    val trainMetricsWithProbability = binaryMetrics(trainPredictions, "probability")
-//    val trainMetricsWithRawPrediction = binaryMetrics(trainPredictions, "rawPrediction")
-//
-//    println("ROC: " + trainMetricsWithProbability.areaUnderROC() + " vs " + trainMetricsWithRawPrediction.areaUnderROC())
-//    println("PR : " + trainMetricsWithProbability.areaUnderPR() + " vs " + trainMetricsWithRawPrediction.areaUnderPR())
-
-     // ROC - FPR vs TPR (false positive rate vs true positive rate)
-//    println(trainMetrics.roc().collect().map(x => x._1 + "," + x._2).mkString("\n"))
-//    // PR - recall vs precision
-//    trainMetrics.pr().collect()
-//    // fMeasureThreshold - (threshold, F-Measure) curve with beta = 1.0.
-//    trainMetrics.fMeasureByThreshold().collect()
-//    // threshold, precision
-//    trainMetrics.precisionByThreshold().collect()
-//    // threshold, recall.
-//    trainMetrics.recallByThreshold().collect()
-
-//    verifyRocAndPrResults(trainPredictions)
-//    testPredictions.foreach(verifyRocAndPrResults)
-
+  private def evaluate[Q](
+    evaluatorWrappers: Traversable[EvaluatorWrapper[Q]],
+    trainPredictions: DataFrame,
+    testPredictions: Seq[DataFrame]
+  ): Traversable[(Q, Double, Seq[Double])] =
     evaluatorWrappers.flatMap { case EvaluatorWrapper(metric, evaluator, isApplicable) =>
       if (isApplicable(trainPredictions) && testPredictions.forall(isApplicable)) {
         try {
@@ -594,46 +596,63 @@ private class MachineLearningServiceImpl @Inject() (
       } else
         None
     }
-  }
 
   private def verifyRocAndPrResults(predictionDf: DataFrame) = {
-    val probabilityMetrics = binaryMetrics(predictionDf, "probability")
-    val rawPredictionMetrics = binaryMetrics(predictionDf, "rawPrediction")
+    val probabilityMetrics = binaryMetrics(predictionDf, None, "probability")
+    val rawPredictionMetrics = binaryMetrics(predictionDf, None, "rawPrediction")
 
-    def areMoreLessEqual(val1: Double, val2: Double): Boolean =
-      ((val1 == 0 && val2 == 0) || (val2 != 0 && Math.abs((val1 - val2) / val2) < 0.001))
+    if (probabilityMetrics.isDefined && rawPredictionMetrics.isDefined) {
+      def areMoreLessEqual(val1: Double, val2: Double): Boolean =
+        ((val1 == 0 && val2 == 0) || (val2 != 0 && Math.abs((val1 - val2) / val2) < 0.001))
 
-    if (!areMoreLessEqual(probabilityMetrics.areaUnderROC(), rawPredictionMetrics.areaUnderROC()))
-      throw new AdaException("ROC values do not match: " + probabilityMetrics.areaUnderROC() + " vs " + rawPredictionMetrics.areaUnderROC())
-    if (!areMoreLessEqual(probabilityMetrics.areaUnderPR(), rawPredictionMetrics.areaUnderPR()))
-      throw new AdaException("PR values do not match: " + probabilityMetrics.areaUnderPR() + " vs " + rawPredictionMetrics.areaUnderPR())
+      if (!areMoreLessEqual(probabilityMetrics.get.areaUnderROC(), rawPredictionMetrics.get.areaUnderROC()))
+        throw new AdaException("ROC values do not match: " + probabilityMetrics.get.areaUnderROC() + " vs " + rawPredictionMetrics.get.areaUnderROC())
+      if (!areMoreLessEqual(probabilityMetrics.get.areaUnderPR(), rawPredictionMetrics.get.areaUnderPR()))
+        throw new AdaException("PR values do not match: " + probabilityMetrics.get.areaUnderPR() + " vs " + rawPredictionMetrics.get.areaUnderPR())
+    }
   }
+
+  private def binaryMetricsCurves(
+    predictions: DataFrame,
+    numBins: Option[Int] = None
+  ) =
+    binaryMetrics(predictions, numBins).map { metrics =>
+      BinaryClassificationCurves(
+        metrics.roc().collect(),
+        metrics.pr().collect(),
+        metrics.fMeasureByThreshold().collect(),
+        metrics.precisionByThreshold().collect(),
+        metrics.recallByThreshold().collect()
+      )
+    }
 
   private def binaryMetrics(
     predictions: DataFrame,
-    probabilityCol: String = "probability",
-    labelCol: String = "label",
-    numBins: Int = 0
-  ) = {
-    println(probabilityCol)
-    // TODO: check if predications[probability] vector length == 2
-    new BinaryClassificationMetrics(
-      predictions.select(col(probabilityCol), col(labelCol).cast(DoubleType)).rdd.map {
-        case Row(score: Vector, label: Double) => (score(1), label)
-      }, numBins
-    )
+    numBins: Option[Int] = None,
+    probabilityCol: String = binaryClassifierInputName,
+    labelCol: String = "label"
+  ): Option[BinaryClassificationMetrics] = {
+    val topRow = predictions.select(binaryClassifierInputName).head()
+    if (topRow.getAs[Vector](0).size == 2) {
+      val metrics = new BinaryClassificationMetrics(
+        predictions.select(col(probabilityCol), col(labelCol).cast(DoubleType)).rdd.map {
+          case Row(score: Vector, label: Double) => (score(1), label)
+        }, numBins.getOrElse(0)
+      )
+      Some(metrics)
+    } else
+      None
   }
 
-  private def trainWithFolds[M <: Model[M], Q](
+  private def trainWithCrossValidation[M <: Model[M]](
     trainer: Estimator[M],
-    evaluatorWrappers: Traversable[EvaluatorWrapper[Q]],
+    crossValidationEvaluator: Evaluator,
     folds: Option[Int],
     trainingDf: DataFrame,
-    testDfs: Seq[DataFrame],
-    vectorizeRawPredictions: Boolean
-  ) = {
+    testDfs: Seq[DataFrame]
+  ): (DataFrame, Seq[DataFrame]) = {
     def trainAux[MM <: Model[MM]](estimator: Estimator[MM]) =
-      train(estimator, evaluatorWrappers, trainingDf, testDfs, vectorizeRawPredictions)
+      train(estimator, trainingDf, testDfs)
 
     // TODO: since we are not selecting a model cross validation here is useless
     // use cross-validation if the folds specified (without parameter optimization) and train
@@ -644,7 +663,7 @@ private class MachineLearningServiceImpl @Inject() (
       val cv = new CrossValidator()
         .setEstimator(trainer)
         .setEstimatorParamMaps(paramGrid)
-        .setEvaluator(evaluatorWrappers.head.evaluator) // by default use the first evaluator for cross-validation
+        .setEvaluator(crossValidationEvaluator)
         .setNumFolds(folds)
 
       trainAux(cv)
@@ -775,13 +794,15 @@ object MachineLearningUtil {
     setting: ClassificationSetting
   ): ClassificationResult =
     createClassificationResult(
+      setting,
       calcClassificationMetricStats(results),
-      setting
+      Nil
     )
 
   def createClassificationResult(
+    setting: ClassificationSetting,
     evalMetricStatsMap: Map[ClassificationEvalMetric.Value, (MetricStatsValues, MetricStatsValues, Option[MetricStatsValues])],
-    setting: ClassificationSetting
+    binCurves: Traversable[STuple3[Option[BinaryClassificationCurves]]]
   ): ClassificationResult = {
     // helper functions
     def trainingStatsOptional(metric: ClassificationEvalMetric.Value) =
@@ -844,12 +865,17 @@ object MachineLearningUtil {
       else
         None
 
+    val binCurvesSeq = binCurves.toSeq
+
     ClassificationResult(
       None,
       setting.copy(inputFieldNames = setting.inputFieldNames.sorted),
       trainingMetricStats,
       testMetricStats,
-      replicationMetricStats
+      replicationMetricStats,
+      binCurvesSeq.flatMap(_._1),
+      binCurvesSeq.flatMap(_._2),
+      binCurvesSeq.flatMap(_._3)
     )
   }
 
@@ -921,3 +947,9 @@ object MachineLearningUtil {
   //    println("Test Error = " + (1.0 - accuracy))
   //  }
 }
+
+case class ClassificationResultsHolder(
+  performanceResults: Traversable[ClassificationPerformance],
+  counts: Traversable[Long],
+  binCurves: Traversable[STuple3[Option[BinaryClassificationCurves]]]
+)

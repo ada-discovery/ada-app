@@ -29,9 +29,9 @@
         var yAxisCaption = (@widget.useRelativeValues) ? '%' : 'Count'
 
         $('#@elementId').on('chartTypeChanged', function(event, chartType) {
-            changeNumericalCountChartType(chartType, datas, seriesSize, '@widget.title', yAxisCaption, '@widget.fieldLabel', '@{elementId}', height, pointFormat, dataType)
+            plotNumericalChart(chartType, datas, seriesSize, '@widget.title', '@widget.fieldLabel', yAxisCaption, '@{elementId}', height, pointFormat, dataType)
         });
 
-        changeNumericalCountChartType('@widget.displayOptions.chartType', datas, seriesSize, '@widget.title', yAxisCaption, '@widget.fieldLabel', '@{elementId}', height, pointFormat, dataType)
+        plotNumericalChart('@widget.displayOptions.chartType', datas, seriesSize, '@widget.title', '@widget.fieldLabel', yAxisCaption, '@{elementId}', height, pointFormat, dataType)
     });
 </script>

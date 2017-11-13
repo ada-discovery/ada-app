@@ -220,4 +220,6 @@ package object util {
     def toGroupMap: Map[A, Traversable[B]] =
       list.groupBy(_._1).map(x => (x._1, x._2.map(_._2)))
   }
+
+  type STuple3[T] = (T, T, T)
 }

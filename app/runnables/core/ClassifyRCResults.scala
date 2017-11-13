@@ -118,12 +118,13 @@ class ClassifyRCResults @Inject() (
             input.replicationFilterId,
             input.samplingOutputValues.zip(input.samplingRatios),
             input.repetitions,
-            input.crossValidationFolds
+            input.crossValidationFolds,
+            input.binCurvesNumBins
           )
 
           val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-          mlService.classify(jsons, fieldNameAndSpecs, input.outputFieldName, mlModel, setting.learningSetting).flatMap { results =>
-            val finalResult = MachineLearningUtil.createClassificationResult(results, setting)
+          mlService.classify(jsons, fieldNameAndSpecs, input.outputFieldName, mlModel, setting.learningSetting).map { resultsHolder =>
+            val finalResult = MachineLearningUtil.createClassificationResult(resultsHolder.performanceResults, setting)
             dsa.classificationResultRepo.save(finalResult)
           }
 
@@ -169,5 +170,6 @@ case class ClassifyRCResultsSpec(
   samplingOutputValues: Seq[String],
   samplingRatios: Seq[Double],
   repetitions: Option[Int],
-  crossValidationFolds: Option[Int]
+  crossValidationFolds: Option[Int],
+  binCurvesNumBins: Option[Int]
 )

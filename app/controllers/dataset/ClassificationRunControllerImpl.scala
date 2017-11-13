@@ -3,10 +3,9 @@ package controllers.dataset
 import javax.inject.Inject
 import java.{util => ju}
 
-import controllers.core.GenericMapping
 import com.google.inject.assistedinject.Assisted
 import controllers.DataSetWebContext
-import dataaccess.Criterion
+import dataaccess.{Criterion, FieldTypeHelper}
 import dataaccess.Criterion._
 import models.{DistributionWidgetSpec, _}
 import models.FilterCondition.{FilterIdentity, FilterOrId, toCriterion}
@@ -15,6 +14,7 @@ import dataaccess.FilterRepoExtra._
 import controllers.core._
 import models.ml.{ClassificationSetting, _}
 import models.ml.ClassificationResult.{classificationResultFormat, classificationSettingFormat}
+import models.Widget.{WidgetWrites, scatterWidgetFormat}
 import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -54,6 +54,9 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
   protected val dsa = dsaf(dataSetId).get
   override protected val repo = dsa.classificationResultRepo
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
+  private val doubleFieldType = ftf.apply(FieldTypeSpec(FieldTypeId.Double)).asValueOf[Any]
+  private implicit val doubleScatterWidgetWrites = new WidgetWrites[Any](Seq(doubleFieldType, doubleFieldType))
 
   private val logger = Logger // (this.getClass())
 
@@ -197,7 +200,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     setting: ClassificationSetting,
     saveResults: Boolean
   ) = Action.async { implicit request =>
-    println(Json.prettyPrint(Json.toJson(setting)))
+//    println(Json.prettyPrint(Json.toJson(setting)))
 
     val mlModelFuture = classificationRepo.get(setting.mlModelId)
     val criteriaFuture = loadCriteria(setting.filterId)
@@ -236,25 +239,37 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       replicationData <- if (replicationCriteria.nonEmpty) findData(replicationCriteria) else Future(Nil)
 
       // run the selected classifier (ML model)
-      results <- mlModel.map { mlModel =>
+      resultsHolder <- mlModel.map { mlModel =>
         val fieldNameAndSpecs = fields.toSeq.map(field => (field.name, field.fieldTypeSpec))
-        mlService.classify(mainData, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting, replicationData)
+        val results = mlService.classify(mainData, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting, replicationData, setting.binCurvesNumBins)
+        results.map(Some(_))
       }.getOrElse(
-        Future(Nil)
+        Future(None)
       )
     } yield
-      mlModel.map { _ =>
+      resultsHolder.map { resultsHolder =>
         // prepare the results stats
-        val metricStatsMap = MachineLearningUtil.calcClassificationMetricStats(results.toSeq)
+        val metricStatsMap = MachineLearningUtil.calcClassificationMetricStats(resultsHolder.performanceResults)
 
         if (saveResults) {
-          val finalResult = MachineLearningUtil.createClassificationResult(metricStatsMap, setting)
+          val finalResult = MachineLearningUtil.createClassificationResult(setting, metricStatsMap, resultsHolder.binCurves)
           repo.save(finalResult)
         }
 
-        val json = resultsToJson(metricStatsMap)
+        val resultsJson = resultsToJson(metricStatsMap)
+        val replicationCurves = binCurvesToWidgets(resultsHolder.binCurves.flatMap(_._3), 350)
+        val height = if (replicationCurves.nonEmpty) 350 else 500
+        val trainingCurves = binCurvesToWidgets(resultsHolder.binCurves.flatMap(_._1), height)
+        val testCurves = binCurvesToWidgets(resultsHolder.binCurves.flatMap(_._2), height)
 
-        logger.info("Classification finished with the following results:\n" + Json.prettyPrint(json))
+        logger.info("Classification finished with the following results:\n" + Json.prettyPrint(resultsJson))
+
+        val json = Json.obj(
+          "results" -> resultsJson,
+          "trainingCurves" -> Json.toJson(trainingCurves.toSeq),
+          "testCurves" -> Json.toJson(testCurves.toSeq),
+          "replicationCurves" -> Json.toJson(replicationCurves.toSeq)
+        )
         Ok(json)
       }.getOrElse(
         BadRequest(s"ML classification model with id ${setting.mlModelId.stringify} not found.")
@@ -276,6 +291,35 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     }
 
     JsArray(metricJsons)
+  }
+
+  private def binCurvesToWidgets(
+    binCurves: Traversable[BinaryClassificationCurves],
+    height: Int
+  ): Traversable[Widget] = {
+    def widget(title: String, xCaption: String, yCaption: String, series: Traversable[Seq[(Double, Double)]]) = {
+      if (series.exists(_.nonEmpty)) {
+        val data = series.toSeq.zipWithIndex.map { case (data, index) =>
+          ("Run " + (index + 1).toString, data)
+        }
+        val displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(height))
+        val widget = LineWidget[Double](
+          title, xCaption, yCaption, data, Some(0), Some(1), Some(0), Some(1), displayOptions)
+        Some(widget)
+        //      ScatterWidget(title, xCaption, yCaption, data, BasicDisplayOptions(gridWidth = Some(6), height = Some(450)))
+      } else
+        None
+    }
+
+    val rocWidget = widget("ROC", "FPR", "TPR", binCurves.map(_.roc))
+    val prWidget = widget("PR", "Recall", "Precision", binCurves.map(_.precisionRecall))
+    val fMeasureThresholdWidget = widget("FMeasure by Threshold", "Threshold", "F-Measure", binCurves.map(_.fMeasureThreshold))
+    val precisionThresholdWidget = widget("Precision by Threshold", "Threshold", "Precision", binCurves.map(_.precisionThreshold))
+    val recallThresholdWidget = widget("Recall by Threshold", "Threshold", "Recall", binCurves.map(_.recallThreshold))
+
+    Seq(
+      rocWidget, prWidget, fMeasureThresholdWidget, precisionThresholdWidget, recallThresholdWidget
+    ).flatten
   }
 
   override def selectFeaturesAsChiSquare(

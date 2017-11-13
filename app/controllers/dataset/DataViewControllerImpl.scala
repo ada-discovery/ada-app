@@ -69,7 +69,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       "filterOrIds" -> seq(of[Either[Seq[models.FilterCondition], BSONObjectID]]),
       "tableColumnNames" -> seq(text),
       "widgetSpecs" -> seq(of[WidgetSpec]),
-      "elementGridWidth" -> number(min = 1, max = 12),
+      "elementGridWidth" -> default(number(min = 1, max = 12), 3),
       "default" -> boolean,
       "useOptimizedRepoChartCalcMethod" -> boolean
     ) {
