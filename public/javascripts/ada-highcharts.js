@@ -261,7 +261,11 @@
         height,
         dataType,
         allowPointClick,
-        allowChartTypeChange
+        allowChartTypeChange,
+        xMin,
+        xMax,
+        yMin,
+        yMax
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
         var exporting = {};
@@ -278,6 +282,10 @@
             pointFormat = null
         }
 
+        console.log(xMin)
+        console.log(xMax)
+        console.log(yMin)
+        console.log(yMax)
         $('#' + chartElementId).highcharts({
             chart: {
                 height: height
@@ -290,12 +298,16 @@
                 title: {
                     text: xAxisCaption
                 },
+                min: xMin,
+                max: xMax,
                 categories: categories
             },
             yAxis: {
                 title: {
                     text: yAxisCaption
-                }
+                },
+                min: xMin,
+                max: xMax
             },
             legend: {
                 layout: 'vertical',
@@ -317,6 +329,7 @@
                 series: {
                     marker: {
                         enabled: enableDataLabels,
+                        radius: 4,
                         states: {
                             hover: {
                                 enabled: true
@@ -470,7 +483,7 @@
             xAxis: {
                 title: {
                     enabled: true,
-                        text: xAxisCaption
+                    text: xAxisCaption
                 },
                 startOnTick: true,
                 endOnTick: true,
@@ -498,11 +511,11 @@
             plotOptions: {
                 scatter: {
                     marker: {
-                        radius: 5,
-                            states: {
+                        radius: 4,
+                        states: {
                             hover: {
                                 enabled: true,
-                                    lineColor: 'rgb(100,100,100)'
+                                lineColor: 'rgb(100,100,100)'
                             }
                         }
                     },
@@ -515,7 +528,7 @@
                     },
                     tooltip: {
                         headerFormat: '<b>{series.name}</b><br>',
-                            pointFormat: '{point.x}, {point.y}'
+                        pointFormat: '{point.x}, {point.y}'
                     }
                 }
             },
@@ -678,7 +691,7 @@
         };
     }
 
-    function changeCategoricalCountChartType(chartType, categories, datas, seriesSize, title, yAxisCaption, elementId, showLabels, showLegend, height, pointFormat) {
+    function plotCategoricalChart(chartType, categories, datas, seriesSize, title, yAxisCaption, elementId, showLabels, showLegend, height, pointFormat) {
         var showLegendImpl = seriesSize > 1
 
         switch (chartType) {
@@ -724,7 +737,7 @@
         }
     }
 
-    function changeNumericalCountChartType(chartType, datas, seriesSize, title, yAxisCaption, fieldLabel, elementId, height, pointFormat, dataType) {
+    function plotNumericalChart(chartType, datas, seriesSize, title, xAxisCaption, yAxisCaption, elementId, height, pointFormat, dataType) {
         var showLegend = seriesSize > 1
 
         switch (chartType) {
@@ -742,19 +755,19 @@
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                columnChart(title, elementId, null, series, false, fieldLabel, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true);
+                columnChart(title, elementId, null, series, false, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true);
                 break;
             case 'Bar':
                 var series = datas.map( function(data, index) {
                     return {name: data.name, data: data.data, colorByPoint: false};
                 });
 
-                columnChart(title, elementId, null, series, true, fieldLabel, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true);
+                columnChart(title, elementId, null, series, true, xAxisCaption, yAxisCaption, false, showLegend, pointFormat, height, dataType, false, true);
                 break;
             case 'Line':
                 var series = datas
 
-                lineChart(title, elementId, null, series, fieldLabel, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true);
+                lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true);
                 break;
             case 'Polar':
                 var series = datas.map( function(data, index) {
@@ -779,17 +792,21 @@
         return ': <b>' + Highcharts.numberFormat(that.y, 1) + '%</b>'
     }
 
-    function getPointFormatCount(that) {
-        return ': <b>' + that.y + '</b>'
+    function getPointFormatY(that, yFloatingPoints) {
+        var yValue = (yFloatingPoints) ? Highcharts.numberFormat(that.y, yFloatingPoints) : that.y
+        return ': <b>' + yValue + '</b>'
     }
 
-    function getPointFormatNumericalValue(isDate, isDouble, that) {
+    function getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) {
         var colorStartPart = '<span style="color:' + that.point.color + '">'
         var valuePart =
             (isDate) ?
                 Highcharts.dateFormat('%Y-%m-%d', that.point.x)
                 :
-                (isDouble) ?  Highcharts.numberFormat(that.point.x, 2) : that.point.x;
+                (isDouble) ?
+                    ((xFloatingPoints) ? Highcharts.numberFormat(that.point.x, xFloatingPoints) : that.point.x)
+                 :
+                    that.point.x;
 
         return colorStartPart + valuePart + '</span>'
     }
@@ -798,23 +815,29 @@
         return '<span style="color:' + that.point.color + '">' + that.point.name + '</span>'
     }
 
+    function numericalPointFormat(isDate, isDouble, that, xFloatingPoints, yFloatingPoints) {
+        return getPointFormatHeader(that) +
+            getPointFormatNumericalValue(isDate, isDouble, that, xFloatingPoints) +
+            getPointFormatY(that, yFloatingPoints)
+    }
+
     function numericalCountPointFormat(isDate, isDouble, totalCounts, that) {
         return getPointFormatHeader(that) +
-            getPointFormatNumericalValue(isDate, isDouble, that) +
-            getPointFormatCount(that) +
+            getPointFormatNumericalValue(isDate, isDouble, that, 2) +
+            getPointFormatY(that) +
             getPointFormatPercent(that, totalCounts);
     }
 
     function categoricalCountPointFormat(totalCounts, that) {
         return getPointFormatHeader(that) +
             getPointFormatCategoricalValue(that) +
-            getPointFormatCount(that) +
+            getPointFormatY(that) +
             getPointFormatPercent(that, totalCounts)
     }
 
     function numericalPercentPointFormat(isDate, isDouble, that) {
         return getPointFormatHeader(that) +
-            getPointFormatNumericalValue(isDate, isDouble, that) +
+            getPointFormatNumericalValue(isDate, isDouble, that, 2) +
             getPointFormatPercent2(that);
     }
 

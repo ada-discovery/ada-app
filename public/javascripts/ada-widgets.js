@@ -63,9 +63,9 @@ function categoricalCountWidget(elementId, widget, filterElementId) {
     var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
     $('#' + elementId).on('chartTypeChanged', function(event, chartType) {
-        changeCategoricalCountChartType(chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat);
+        plotCategoricalChart(chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat);
     });
-    changeCategoricalCountChartType(widget.displayOptions.chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat)
+    plotCategoricalChart(widget.displayOptions.chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat)
 
     if (filterElementId) {
         $('#' + elementId).on('pointClick', function (event, data) {
@@ -107,10 +107,34 @@ function numericalCountWidget(elementId, widget) {
     var yAxisCaption = (widget.useRelativeValues) ? '%' : 'Count'
 
     $('#' + elementId).on('chartTypeChanged', function(event, chartType) {
-        changeNumericalCountChartType(chartType, datas, seriesSize, widget.title, yAxisCaption, widget.fieldLabel, elementId, height, pointFormat, dataType)
+        plotNumericalChart(chartType, datas, seriesSize, widget.title, widget.fieldLabel, yAxisCaption, elementId, height, pointFormat, dataType)
     });
 
-    changeNumericalCountChartType(widget.displayOptions.chartType, datas, seriesSize, widget.title, yAxisCaption, widget.fieldLabel, elementId, height, pointFormat, dataType)
+    plotNumericalChart(widget.displayOptions.chartType, datas, seriesSize, widget.title, widget.fieldLabel, yAxisCaption, elementId, height, pointFormat, dataType)
+}
+
+function lineWidget(elementId, widget) {
+    var isDate = widget.fieldType == "Date"
+    var isDouble = widget.fieldType == "Double"
+    var dataType = (isDate) ? 'datetime' : null;
+
+    var datas = widget.data.map(function(nameSeries){
+        return {name: nameSeries[0], data: nameSeries[1]}
+    })
+
+    var seriesSize = datas.length
+    var showLegend = seriesSize > 1
+
+    var height = widget.displayOptions.height || 400
+    var pointFormat = function () {
+        return numericalPointFormat(isDate, isDouble, this, 3, 3);
+    }
+
+    // $('#' + elementId).on('chartTypeChanged', function(event, chartType) {
+    //     plotNumericalChart(chartType, datas, seriesSize, widget.title, widget.xAxisCaption, yAxisCaption, elementId, height, pointFormat, dataType)
+    // });
+
+    lineChart(widget.title, elementId, null, datas, widget.xAxisCaption, widget.yAxisCaption, showLegend, true, pointFormat, height, dataType, false, false, widget.xMin, widget.xMax, widget.yMin, widget.yMax);
 }
 
 function boxWidget(elementId, widget) {
@@ -183,6 +207,7 @@ function genericWidget(widget, filterElementId) {
             case "models.ScatterWidget": scatterWidget(elementIdVal, widget); break;
             case "models.HeatmapWidget": heatmapWidget(elementIdVal, widget); break;
             case "models.HtmlWidget": htmlWidget(elementIdVal, widget); break;
+            case 'models.LineWidget': lineWidget(elementIdVal, widget); break;
             default: console.log("Widget type" + widget.concreteClass + " unrecognized.")
         }
 }
