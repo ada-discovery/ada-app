@@ -1,6 +1,6 @@
 package dataaccess
 
-abstract class Sort{
+trait Sort{
   val fieldName : String
 }
 case class AscSort(fieldName : String) extends Sort
