@@ -24,7 +24,7 @@ import play.api.data.Forms._
 import play.api.libs.json._
 import play.api.mvc.{Action, Request}
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, DataSpaceService, WidgetGenerationService}
+import services.{DataSetService, DataSpaceService, StatsService, WidgetGenerationService}
 import services.ml._
 import _root_.util.toHumanReadableCamel
 import _root_.util.FieldUtil
@@ -45,6 +45,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     dsaf: DataSetAccessorFactory,
     classificationRepo: ClassificationRepo,
     mlService: MachineLearningService,
+    statsService: StatsService,
     dataSetService: DataSetService,
     dataSpaceService: DataSpaceService,
     val wgs: WidgetGenerationService
@@ -342,7 +343,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
     } yield {
       val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-      val fieldNames = mlService.selectFeaturesAsChiSquare(jsons, fieldNameAndSpecs, outputFieldName, featuresToSelectNum, discretizerBucketsNum)
+      val fieldNames = statsService.selectFeaturesAsChiSquare(jsons, fieldNameAndSpecs, outputFieldName, featuresToSelectNum, discretizerBucketsNum)
       val json = JsArray(fieldNames.map(JsString(_)).toSeq)
       Ok(json)
     }

@@ -13,6 +13,7 @@ import javax.inject.{Inject, Singleton}
 
 import Criterion.Infix
 import org.apache.commons.math3.stat.inference.{OneWayAnova, TestUtils}
+import org.apache.spark.ml.feature.ChiSqSelector
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.stat.ChiSquareTest
 import org.apache.spark.sql.DataFrame
@@ -110,6 +111,19 @@ trait StatsService {
     inputFields: Seq[Field],
     targetField: Field
   ): Seq[Option[Either[ChiSquareResult, AnovaResult]]]
+
+  def selectFeaturesAsChiSquare(
+    data: DataFrame,
+    featuresToSelectNum: Int
+  ): DataFrame
+
+  def selectFeaturesAsChiSquare(
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: String,
+    featuresToSelectNum: Int,
+    discretizerBucketsNum: Int
+  ): Traversable[String]
 }
 
 @Singleton
@@ -1195,6 +1209,46 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         }
       }
     }
+  }
+
+  override def selectFeaturesAsChiSquare(
+    data: DataFrame,
+    featuresToSelectNum: Int
+  ): DataFrame = {
+    val model = selectFeaturesAsChiSquareModel(data, featuresToSelectNum)
+
+    model.transform(data)
+  }
+
+  override def selectFeaturesAsChiSquare(
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: String,
+    featuresToSelectNum: Int,
+    discretizerBucketsNum: Int
+  ): Traversable[String] = {
+    val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName), Some(discretizerBucketsNum))
+    val inputDf = BooleanLabelIndexer.transform(df)
+
+    // get the Chi-Square model
+    val model = selectFeaturesAsChiSquareModel(inputDf, featuresToSelectNum)
+
+    // extract the features
+    val featureNames = inputDf.columns.filterNot(columnName => columnName.equals("features") || columnName.equals("label"))
+    model.selectedFeatures.map(featureNames(_))
+  }
+
+  private def selectFeaturesAsChiSquareModel(
+    data: DataFrame,
+    featuresToSelectNum: Int
+  ) = {
+    val selector = new ChiSqSelector()
+      .setFeaturesCol("features")
+      .setLabelCol("label")
+      .setOutputCol("selectedFeatures")
+      .setNumTopFeatures(featuresToSelectNum)
+
+    selector.fit(data)
   }
 }
 

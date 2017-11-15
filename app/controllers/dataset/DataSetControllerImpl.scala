@@ -1737,6 +1737,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val results = statsService.testIndependence(jsons, inputFields, outputField)
       val fieldNameResultMap = inputFields.map(_.name).zip(results).toMap
 
+//      fieldNameResultMap.toSeq.sortBy(_._2.map(
+//        _ match {
+//          case Left(result) =>
+//          case Right(result) =>
+//        }))
+
       // Combine the results
       val jsonResults = inputFieldNames.flatMap { fieldName =>
         val result = fieldNameResultMap.get(fieldName).flatten

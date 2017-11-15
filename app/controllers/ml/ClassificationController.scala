@@ -74,7 +74,7 @@ class ClassificationController @Inject()(
   protected val multiLayerPerceptronForm = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
-      "layers" -> of[Seq[Int]],
+      "hiddenLayers" -> of[Seq[Int]],
       "maxIteration" -> optional(number(min = 1)),
       "tolerance" -> optional(of(doubleFormat)),
       "blockSize" -> optional(number(min = 1)),

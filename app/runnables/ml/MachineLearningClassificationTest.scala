@@ -6,7 +6,7 @@ import models.ml.TreeCore
 import models.ml.classification._
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable
-import services.DataSetService
+import services.{DataSetService, StatsService}
 import services.ml.MachineLearningService
 
 import scala.concurrent.Await
@@ -15,6 +15,7 @@ import scala.concurrent.duration._
 
 class MachineLearningClassificationTest @Inject()(
     machineLearningService: MachineLearningService,
+    statsService: StatsService,
     dsaf: DataSetAccessorFactory,
     dss: DataSetService
   ) extends Runnable {
@@ -34,7 +35,7 @@ class MachineLearningClassificationTest @Inject()(
 
     // featureFieldNames,
 
-    val selectedFeatures = machineLearningService.selectFeaturesAsChiSquare(jsons, fieldNameAndSpecs, outputField, 3, 10)
+    val selectedFeatures = statsService.selectFeaturesAsChiSquare(jsons, fieldNameAndSpecs, outputField, 3, 10)
 
     def classify(model: Classification) = {
       val resultFuture = machineLearningService.classify(jsons, fieldNameAndSpecs, outputField, model)
@@ -88,7 +89,7 @@ class MachineLearningClassificationTest @Inject()(
 
     val accuracy6 = classify(
         MultiLayerPerceptron(
-          layers = Seq(featureFieldNames.size, 10, 10, 3),
+          hiddenLayers = Seq(featureFieldNames.size, 10, 10, 3),
           blockSize = Some(100),
           seed = Some(1234),
           maxIteration = Some(1000)

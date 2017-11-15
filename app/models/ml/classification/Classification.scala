@@ -46,7 +46,7 @@ object MLPSolver extends Enumeration {
 
 case class MultiLayerPerceptron(
   _id: Option[BSONObjectID] = None,
-  layers: Seq[Int],
+  hiddenLayers: Seq[Int],
   maxIteration: Option[Int] = None,
   tolerance: Option[Double] = None,
   blockSize: Option[Int] = None,

@@ -74,19 +74,6 @@ trait MachineLearningService {
     df: DataFrame
   ): DataFrame
 
-  def selectFeaturesAsChiSquare(
-    data: DataFrame,
-    featuresToSelectNum: Int
-  ): DataFrame
-
-  def selectFeaturesAsChiSquare(
-    data: Traversable[JsObject],
-    fields: Seq[(String, FieldTypeSpec)],
-    outputFieldName: String,
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
-  ): Traversable[String]
-
   // AFTSurvivalRegression
   // IsotonicRegression
 }
@@ -155,8 +142,6 @@ private class MachineLearningServiceImpl @Inject() (
     replicationData: Traversable[JsObject],
     binCurvesNumBins: Option[Int]
   ): Future[ClassificationResultsHolder] = {
-    val trainer = SparkMLEstimatorFactory(mlModel)
-
     // TRAINING AND TEST DATA
 
     // create a data frame with all the features
@@ -184,6 +169,16 @@ private class MachineLearningServiceImpl @Inject() (
       df.cache
     }
 
+    // CREATE A TRAINER
+
+    val originalFeaturesType = df.schema.fields.find(_.name == "features").get
+    val originalInputSize = originalFeaturesType.metadata.getMetadata("ml_attr").getLong("num_attrs").toInt
+    val inputSize = setting.pcaDims.getOrElse(originalInputSize)
+
+    val outputLabelType = finalDf.schema.fields.find(_.name == "label").get
+    val outputSize = outputLabelType.metadata.getMetadata("ml_attr").getStringArray("vals").length
+
+    val trainer = SparkMLEstimatorFactory(mlModel, inputSize, outputSize)
 
     // REPEAT THE TRAINING-TEST CYCLE
 
@@ -226,7 +221,7 @@ private class MachineLearningServiceImpl @Inject() (
       // evaluate the performance
 
       def withBinaryEvaluationCol(df: DataFrame) =
-        if (df.columns.contains(binaryClassifierInputName))
+        if (outputSize == 2 && df.columns.contains(binaryClassifierInputName))
           df
         else
           binaryPredictionVectorizer.transform(df)
@@ -235,8 +230,15 @@ private class MachineLearningServiceImpl @Inject() (
       val testPredictionsExt = testPredictions.map(withBinaryEvaluationCol)
       val results = evaluate(evaluators, trainingPredictionsExt, testPredictionsExt)
 
-      val binTrainingCurves = binaryMetricsCurves(trainingPredictions, binCurvesNumBins)
-      val binTestCurves = testPredictions.map(binaryMetricsCurves(_, binCurvesNumBins))
+      // generate binary classification curves (roc, pr, etc.) if the output is binary
+      val (binTrainingCurves,  binTestCurves) =
+        if (outputSize == 2) {
+          // is binary
+          val trainingCurves = binaryMetricsCurves(trainingPredictionsExt, binCurvesNumBins)
+          val testCurves = testPredictionsExt.map(binaryMetricsCurves(_, binCurvesNumBins))
+          (trainingCurves, testCurves)
+        } else
+          (None, testPredictionsExt.map(_ => None))
 
       // unpersist and return the results
 
@@ -689,46 +691,6 @@ private class MachineLearningServiceImpl @Inject() (
     val predictions = lrModel.transform(data)
 
     (lrModel, predictions)
-  }
-
-  override def selectFeaturesAsChiSquare(
-    data: DataFrame,
-    featuresToSelectNum: Int
-  ): DataFrame = {
-    val model = selectFeaturesAsChiSquareModel(data, featuresToSelectNum)
-
-    model.transform(data)
-  }
-
-  override def selectFeaturesAsChiSquare(
-    data: Traversable[JsObject],
-    fields: Seq[(String, FieldTypeSpec)],
-    outputFieldName: String,
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
-  ): Traversable[String] = {
-    val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName), Some(discretizerBucketsNum))
-    val inputDf = BooleanLabelIndexer.transform(df)
-
-    // get the Chi-Square model
-    val model = selectFeaturesAsChiSquareModel(inputDf, featuresToSelectNum)
-
-    // extract the features
-    val featureNames = inputDf.columns.filterNot(columnName => columnName.equals("features") || columnName.equals("label"))
-    model.selectedFeatures.map(featureNames(_))
-  }
-
-  private def selectFeaturesAsChiSquareModel(
-    data: DataFrame,
-    featuresToSelectNum: Int
-  ) = {
-    val selector = new ChiSqSelector()
-      .setFeaturesCol("features")
-      .setLabelCol("label")
-      .setOutputCol("selectedFeatures")
-      .setNumTopFeatures(featuresToSelectNum)
-
-    selector.fit(data)
   }
 }
 

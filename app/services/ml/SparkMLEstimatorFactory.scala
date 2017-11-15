@@ -10,10 +10,14 @@ import org.apache.spark.ml.clustering.{BisectingKMeans, GaussianMixture, KMeans,
 
 object SparkMLEstimatorFactory {
 
-  def apply[M <: Model[M]](model: Classification): Estimator[M] =
+  def apply[M <: Model[M]](
+    model: Classification,
+    inputSize: Int,
+    outputSize: Int
+  ): Estimator[M] =
     model match {
       case x: LogisticRegression => applyAux(x).asInstanceOf[Estimator[M]]
-      case x: MultiLayerPerceptron => applyAux(x).asInstanceOf[Estimator[M]]
+      case x: MultiLayerPerceptron => applyAux(x, inputSize, outputSize).asInstanceOf[Estimator[M]]
       case x: DecisionTree => applyAux(x).asInstanceOf[Estimator[M]]
       case x: RandomForest => applyAux(x).asInstanceOf[Estimator[M]]
       case x: GradientBoostTree => applyAux(x).asInstanceOf[Estimator[M]]
@@ -55,7 +59,11 @@ object SparkMLEstimatorFactory {
     )(new LogisticRegressionClassifier())
   }
 
-  private def applyAux(model: MultiLayerPerceptron): MultilayerPerceptronClassifier = {
+  private def applyAux(
+    model: MultiLayerPerceptron,
+    inputSize: Int,
+    outputSize: Int
+  ): MultilayerPerceptronClassifier = {
     def set[T] = setSourceParam[T, MultiLayerPerceptron, MultilayerPerceptronClassifier](model)_
 
     chain(
@@ -65,7 +73,7 @@ object SparkMLEstimatorFactory {
       set(_.solver.map(_.toString), _.setSolver),
       set(_.stepSize, _.setStepSize),
       set(_.tolerance, _.setTol),
-      set(o => Some(o.layers.toArray), _.setLayers)
+      set(o => Some((Seq(inputSize) ++ o.hiddenLayers ++ Seq(outputSize)).toArray), _.setLayers)
     )(new MultilayerPerceptronClassifier())
   }
 
