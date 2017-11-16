@@ -57,6 +57,7 @@ case class ClassificationSetting(
   inputFieldNames: Seq[String],
   filterId: Option[BSONObjectID],
   featuresNormalizationType: Option[VectorTransformType.Value],
+  featuresSelectionNum: Option[Int],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
   replicationFilterId: Option[BSONObjectID],
