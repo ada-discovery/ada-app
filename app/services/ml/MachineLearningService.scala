@@ -25,7 +25,7 @@ import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.col
 import play.api.libs.json.{JsObject, Json}
-import services.{FeaturesDataFrameFactory, SparkApp}
+import services.{FeaturesDataFrameFactory, SparkApp, StatsService}
 import play.api.{Configuration, Logger}
 
 import scala.concurrent.{Await, Future}
@@ -81,7 +81,8 @@ trait MachineLearningService {
 @Singleton
 private class MachineLearningServiceImpl @Inject() (
     sparkApp: SparkApp,
-    configuration: Configuration
+    configuration: Configuration,
+    statsService: StatsService
   ) extends MachineLearningService {
 
   private val logger = Logger // (this.getClass())
@@ -115,12 +116,7 @@ private class MachineLearningServiceImpl @Inject() (
 
       EvaluatorWrapper(
         metric,
-        evaluator,
-        {
-          dataset: Dataset[_] =>
-          val topRow = dataset.select(binaryClassifierInputName).head()
-          topRow.getAs[Vector](0).size == 2
-        }
+        evaluator
       )
     }
 
@@ -196,7 +192,7 @@ private class MachineLearningServiceImpl @Inject() (
     val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
 
     // evaluators
-    val evaluators = classificationEvaluators ++ binClassificationEvaluators
+    val evaluators = classificationEvaluators ++ (if (outputSize == 2) binClassificationEvaluators else Nil)
 
     val resultsWithCountsFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
       logger.info(s"Execution of repetition $index started.")
@@ -585,18 +581,15 @@ private class MachineLearningServiceImpl @Inject() (
     trainPredictions: DataFrame,
     testPredictions: Seq[DataFrame]
   ): Traversable[(Q, Double, Seq[Double])] =
-    evaluatorWrappers.flatMap { case EvaluatorWrapper(metric, evaluator, isApplicable) =>
-      if (isApplicable(trainPredictions) && testPredictions.forall(isApplicable)) {
-        try {
-          val trainValue = evaluator.evaluate(trainPredictions)
-          val testValues = testPredictions.map(evaluator.evaluate)
-          Some((metric, trainValue, testValues))
-        } catch {
-          case e: Exception =>
-            logger.error(s"Evaluation of metric '$metric' failed."); None
-        }
-      } else
-        None
+    evaluatorWrappers.flatMap { case EvaluatorWrapper(metric, evaluator) =>
+      try {
+        val trainValue = evaluator.evaluate(trainPredictions)
+        val testValues = testPredictions.map(evaluator.evaluate)
+        Some((metric, trainValue, testValues))
+      } catch {
+        case e: Exception =>
+        logger.error(s"Evaluation of metric '$metric' failed."); None
+      }
     }
 
   private def verifyRocAndPrResults(predictionDf: DataFrame) = {
@@ -676,8 +669,7 @@ private class MachineLearningServiceImpl @Inject() (
 
   case class EvaluatorWrapper[Q](
     metric: Q,
-    evaluator: Evaluator,
-    isApplicable: Dataset[_] => Boolean = _ => true
+    evaluator: Evaluator
   )
 
   private def fit[M <: Model[M], Q](
@@ -752,13 +744,14 @@ object MachineLearningUtil {
   }
 
   def createClassificationResult(
+    setting: ClassificationSetting,
     results: Traversable[ClassificationPerformance],
-    setting: ClassificationSetting
+    binCurves: Traversable[STuple3[Option[BinaryClassificationCurves]]]
   ): ClassificationResult =
     createClassificationResult(
       setting,
       calcClassificationMetricStats(results),
-      Nil
+      binCurves
     )
 
   def createClassificationResult(

@@ -159,7 +159,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
     deleteCall(id).map { _ =>
       render {
         case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been deleted")
-        case Accepts.Json() => Ok(Json.obj("message" -> "Item successly deleted", "id" -> id.toString))
+        case Accepts.Json() => Ok(Json.obj("message" -> "Item successfully deleted", "id" -> id.toString))
       }
     }.recover {
       case e: AdaException =>

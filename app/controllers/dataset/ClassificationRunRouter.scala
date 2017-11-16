@@ -9,9 +9,11 @@ class ClassificationRunRouter(dataSetId: String) extends GenericRouter(routes.Cl
   val plainList = routeFun(_.find())
   val get = routes.get _ map route
   val create = routeFun(_.create)
+  val delete = routes.delete _ map route
 }
 
 final class ClassificationRunJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.ClassificationRunDispatcher, "dataSet", dataSetId) {
   val classify = routeFun(_.classify)
   val selectFeaturesAsChiSquare = routeFun(_.selectFeaturesAsChiSquare)
+  val selectFeaturesAsAnovaChiSquare = routeFun(_.selectFeaturesAsAnovaChiSquare)
 }

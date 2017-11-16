@@ -8,6 +8,7 @@
 	domainName : String,
 	item: JsObject,
 	listCall: Call,
+	deleteCall: Option[Call] = None,
 	nonNullOnly: Boolean = true,
     fieldNameLabelAndRendererMap: Map[String, (String, JsReadable => String)] = Map(),
 	sideBar: Option[Html] = None,
@@ -47,6 +48,9 @@
 
 		<div class="actions" align="center">
 			<a href="@listCall" class="btn btn-default">Go Back</a>
+			@if(deleteCall.isDefined) {
+				<a href="#" class="btn btn-danger" onclick='submit("post", "@deleteCall.get")'>Delete</a>
+			}
 		</div>
 	<!--
 		<div class="col-md-3">

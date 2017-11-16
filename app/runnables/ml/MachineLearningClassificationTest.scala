@@ -26,19 +26,19 @@ class MachineLearningClassificationTest @Inject()(
 
   private val dataSetId = "ml.iris"
   private val featureFieldNames = Seq("petal-length", "petal-width", "sepal-length", "sepal-width")
-  private val outputField = "class"
+  private val outputFieldName = "class"
 
   override def run = {
     val dsa = dsaf(dataSetId).get
     val (jsons, fields) = result(dss.loadDataAndFields(dsa), 2 minutes)
-    val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
+    val fieldNameSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
 
     // featureFieldNames,
 
-    val selectedFeatures = statsService.selectFeaturesAsChiSquare(jsons, fieldNameAndSpecs, outputField, 3, 10)
+    val selectedFeatures = statsService.selectFeaturesAsChiSquare(jsons, fields, outputFieldName, 3, 10)
 
     def classify(model: Classification) = {
-      val resultFuture = machineLearningService.classify(jsons, fieldNameAndSpecs, outputField, model)
+      val resultFuture = machineLearningService.classify(jsons, fieldNameSpecs, outputFieldName, model)
       result(resultFuture, 1 hour)
     }
 

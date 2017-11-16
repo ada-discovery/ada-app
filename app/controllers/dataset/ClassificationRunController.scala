@@ -21,4 +21,13 @@ trait ClassificationRunController extends ReadonlyController[BSONObjectID]{
     featuresToSelectNum: Int,
     discretizerBucketsNum: Int
   ): Action[AnyContent]
+
+  def selectFeaturesAsAnovaChiSquare(
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterId: Option[BSONObjectID],
+    featuresToSelectNum: Int
+  ): Action[AnyContent]
+
+  def delete(id: BSONObjectID): Action[AnyContent]
 }

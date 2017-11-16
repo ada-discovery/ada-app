@@ -48,4 +48,13 @@ class ClassificationRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf
     featuresToSelectNum: Int,
     discretizerBucketsNum: Int
   ) = dispatch(_.selectFeaturesAsChiSquare(inputFieldNames, outputFieldName, filterId, featuresToSelectNum, discretizerBucketsNum))
+
+  override def selectFeaturesAsAnovaChiSquare(
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterId: Option[BSONObjectID],
+    featuresToSelectNum: Int
+  ) = dispatch(_.selectFeaturesAsAnovaChiSquare(inputFieldNames, outputFieldName, filterId, featuresToSelectNum))
+
+  override def delete(id: BSONObjectID) = dispatch(_.delete(id))
 }

@@ -26,7 +26,8 @@
 
     @helper.javascriptRouter("classificationRunJsRoutes")(
         classificationRunJsRouter.classify,
-        classificationRunJsRouter.selectFeaturesAsChiSquare
+        classificationRunJsRouter.selectFeaturesAsChiSquare,
+        classificationRunJsRouter.selectFeaturesAsAnovaChiSquare
     )
 
     <script type="text/javascript">
@@ -80,6 +81,7 @@
             var filterIdJson = (filterId) ? {'$oid': filterId} : null
 
             var pcaDims = $("#pcaDims").val()
+            var featuresSelectionNum = $("#featuresSelectionNum").val()
             var repetitions = $("#repetitions").val()
             var crossValidationFolds = $("#crossValidationFolds").val()
             var featuresNormalizationType = $("#featuresNormalizationType").val()
@@ -107,6 +109,7 @@
                 "inputFieldNames": inputFieldNames,
                 "filterId": filterIdJson,
                 "featuresNormalizationType": featuresNormalizationType,
+                "featuresSelectionNum": intValue(featuresSelectionNum),
                 "pcaDims": intValue(pcaDims),
                 "trainingTestingSplit": floatValue(trainingTestingSplit),
                 "replicationFilterId": replicationFilterIdJson,
@@ -194,7 +197,7 @@
             var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
 //            var filterIdJson = (filterId) ? JSON.stringify({'$oid': filterId}) : []
 
-            var featuresToSelectNum = $("#featuresToSelectNum").val();
+            var featuresToSelectNum = $("#chiSquareFeaturesToSelectNum").val();
             var discretizerBucketsNum = $("#discretizerBucketsNum").val();
 
             if (!outputFieldName) {
@@ -220,6 +223,41 @@
 
             showMessage("Chi-Square feature selection for the field '" + outputFieldLabel + "' launched.")
         }
+
+        function selectFeaturesAsAnovaChiSquare() {
+            var outputFieldName = $("#outputFieldName").val();
+            var outputFieldLabel = $("#outputFieldTypeahead").val();
+
+            $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
+            var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
+
+            var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
+
+            var featuresToSelectNum = $("#featuresToSelectNum").val();
+
+            if (!outputFieldName) {
+                showError("Output field name must be defined");
+                return
+            }
+
+            classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsAnovaChiSquare(inputFieldNames, outputFieldName, filterId, featuresToSelectNum).ajax( {
+                success: function(selectedFieldNames) {
+                    showMessage("ANOVA/Chi-Square feature selection finished.")
+                    var tableBody = $("#inputFieldNameDiv").find("table tbody")
+                    tableBody.find('tr').each(function() {
+                        var fieldName = $(this).find("#fieldName").val();
+                        if (selectedFieldNames.indexOf(fieldName) == -1) {
+                            $(this).remove()
+                        }
+                    });
+                },
+                error: function(data){
+                    showError( data.responseText );
+                }
+            });
+
+            showMessage("ANOVA/Chi-Square feature selection for the field '" + outputFieldLabel + "' launched.")
+        }
     </script>
 }
 
@@ -244,6 +282,46 @@
     }
 }
 
+@chiSquareModalBody(defaultFeaturesToSelectNum: Int, defaultDiscretizerBucketsNum: Int) = {
+    <fieldset>
+        @labelValue("chiSquareFeaturesToSelectNum", "Features Num", false, None, 4) {
+            <input id="chiSquareFeaturesToSelectNum" name="chiSquareFeaturesToSelectNum" value="@defaultFeaturesToSelectNum">
+        }
+        @labelValue("discretizerBucketsNum", "Discretizer Buckets Num", false, None, 4) {
+            <input id="discretizerBucketsNum" name="discretizerBucketsNum" value="@defaultDiscretizerBucketsNum">
+        }
+    </fieldset>
+}
+
+@chiSquareButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" id="submitButton" class="btn btn-primary" data-dismiss="modal" onclick="selectFeaturesAsChiSquare(); return false;">OK</button>
+}
+
+@anovaChiSquareModalBody(defaultFeaturesToSelectNum: Int) = {
+    <fieldset>
+        @labelValue("featuresToSelectNum", "Features Num", false, None, 4) {
+            <input id="featuresToSelectNum" name="featuresToSelectNum" value="@defaultFeaturesToSelectNum">
+        }
+    </fieldset>
+}
+
+@anovaChiSquareButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+    <button type="button" id="submitButton" class="btn btn-primary" data-dismiss="modal" onclick="selectFeaturesAsAnovaChiSquare(); return false;">OK</button>
+}
+
+@extraFieldButtons =  {
+    <a id="anovaChiSquareFieldSelectionButton" class="btn btn-info btn-sm" data-toggle="modal" data-target="#anovaChiSquareFeatureSelectionModal" title="ANOVA/Chi-Square Feature Selection">
+        <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>ANOVA/Chi-&#9724;
+    </a>
+    <a id="chiSquareFieldSelectionButton" class="btn btn-info btn-sm" data-toggle="modal" data-target="#chiSquareFeatureSelectionModal" title="Chi-Square Feature Selection">
+        <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>Chi-&#9724;
+    </a>
+    @modal("anovaChiSquareFeatureSelectionModal", "ANOVA/Chi-Square Feature Selection", anovaChiSquareModalBody(4), None, Some(anovaChiSquareButtons))
+    @modal("chiSquareFeatureSelectionModal", "Chi-Square Feature Selection", chiSquareModalBody(4, 10), None, Some(chiSquareButtons))
+}
+
 @main(Messages("classification.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
@@ -253,8 +331,9 @@
     </div>
 
     @mlElements(
-        includeChiSquareSelector = true,
         includeOutputField = true,
+        includeFeatureSelectionNum = true,
+        extraFieldButtons = Some(extraFieldButtons),
         extraFields = Some(extraFields)
     )
 

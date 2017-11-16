@@ -1693,13 +1693,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           val clusterClassField = Field("cluster_class", Some("Cluster Class"), FieldTypeId.Enum, false, Some(numValues))
           val fieldNameLabelMap = fields.map(field => (field.name, field.labelOrElseName)).toMap
 
-          val testResults = statsService.testIndependence(jsonsWithClasses, fields, clusterClassField)
-          val fieldNameResultMap = fields.map(_.name).zip(testResults).toMap
+          val testResults = statsService.testIndependenceSorted(jsonsWithClasses, fields, clusterClassField)
 
-          // Combine the results
-          val jsonResults = inputFieldNames.flatMap { fieldName =>
-            val result = fieldNameResultMap.get(fieldName).flatten
-            testResultToJson(fieldName, result, fieldNameLabelMap)
+          // Create JSON results
+          val jsonResults = testResults.flatMap { case (field, result) =>
+            testResultToJson(field.name, result, fieldNameLabelMap)
           }
 
           Ok(Json.obj(
@@ -1734,19 +1732,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val inputFields = fields.filterNot(_.name.equals(targetFieldName))
       val outputField = fields.find(_.name.equals(targetFieldName)).get
 
-      val results = statsService.testIndependence(jsons, inputFields, outputField)
-      val fieldNameResultMap = inputFields.map(_.name).zip(results).toMap
+      val resultsSorted = statsService.testIndependenceSorted(jsons, inputFields, outputField)
 
-//      fieldNameResultMap.toSeq.sortBy(_._2.map(
-//        _ match {
-//          case Left(result) =>
-//          case Right(result) =>
-//        }))
-
-      // Combine the results
-      val jsonResults = inputFieldNames.flatMap { fieldName =>
-        val result = fieldNameResultMap.get(fieldName).flatten
-        testResultToJson(fieldName, result, fieldNameLabelMap)
+      // create jsons
+      val jsonResults = resultsSorted.flatMap { case (field, result) =>
+        testResultToJson(field.name, result, fieldNameLabelMap)
       }
       Ok(JsArray(jsonResults))
     }

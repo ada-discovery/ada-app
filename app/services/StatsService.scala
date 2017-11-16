@@ -112,6 +112,12 @@ trait StatsService {
     targetField: Field
   ): Seq[Option[Either[ChiSquareResult, AnovaResult]]]
 
+  def testIndependenceSorted(
+    items: Traversable[JsObject],
+    inputFields: Seq[Field],
+    targetField: Field
+  ): Seq[(Field, Option[Either[ChiSquareResult, AnovaResult]])]
+
   def selectFeaturesAsChiSquare(
     data: DataFrame,
     featuresToSelectNum: Int
@@ -119,11 +125,18 @@ trait StatsService {
 
   def selectFeaturesAsChiSquare(
     data: Traversable[JsObject],
-    fields: Seq[(String, FieldTypeSpec)],
+    inputAndOutputFields: Seq[Field],
     outputFieldName: String,
     featuresToSelectNum: Int,
     discretizerBucketsNum: Int
   ): Traversable[String]
+
+  def selectFeaturesAsAnovaChiSquare(
+    data: Traversable[JsObject],
+    inputFields: Seq[Field],
+    targetField: Field,
+    featuresToSelectNum: Int
+  ): Seq[Field]
 }
 
 @Singleton
@@ -1181,6 +1194,30 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       jsons.map(typedFieldType.jsonToValue)
     }
 
+  override def testIndependenceSorted(
+    items: Traversable[JsObject],
+    inputFields: Seq[Field],
+    targetField: Field
+  ): Seq[(Field, Option[Either[ChiSquareResult, AnovaResult]])] = {
+    val results = testIndependence(items, inputFields, targetField)
+
+    // Sort and combine the results
+    def pValueAndStat(result: Option[Either[ChiSquareResult, AnovaResult]]): (Double, Double) =
+      result.map {
+        _ match {
+          case Left(chiSquareResult) => (chiSquareResult.pValue, chiSquareResult.statistics)
+          case Right(anovaResult) => (anovaResult.pValue, anovaResult.fValue)
+        }
+      }.getOrElse((Double.PositiveInfinity, 0d))
+
+    inputFields.zip(results).sortWith { case ((fieldName1, result1), (fieldName2, result2)) =>
+      val (pValue1, stat1) = pValueAndStat(result1)
+      val (pValue2, stat2) = pValueAndStat(result2)
+
+      (pValue1 < pValue2) || (pValue1 == pValue2 && stat1 > stat2)
+    }
+  }
+
   override def testIndependence(
     items: Traversable[JsObject],
     inputFields: Seq[Field],
@@ -1211,6 +1248,16 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     }
   }
 
+  override def selectFeaturesAsAnovaChiSquare(
+    data: Traversable[JsObject],
+    inputFields: Seq[Field],
+    targetField: Field,
+    featuresToSelectNum: Int
+  ): Seq[Field] = {
+    val results = testIndependenceSorted(data, inputFields, targetField)
+    results.map(_._1).take(featuresToSelectNum)
+  }
+
   override def selectFeaturesAsChiSquare(
     data: DataFrame,
     featuresToSelectNum: Int
@@ -1222,12 +1269,13 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
 
   override def selectFeaturesAsChiSquare(
     data: Traversable[JsObject],
-    fields: Seq[(String, FieldTypeSpec)],
+    inputAndOutputFields: Seq[Field],
     outputFieldName: String,
     featuresToSelectNum: Int,
     discretizerBucketsNum: Int
   ): Traversable[String] = {
-    val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName), Some(discretizerBucketsNum))
+    val fieldNameSpecs = inputAndOutputFields.map(field => (field.name, field.fieldTypeSpec))
+    val df = FeaturesDataFrameFactory(session, data, fieldNameSpecs, Some(outputFieldName), Some(discretizerBucketsNum))
     val inputDf = BooleanLabelIndexer.transform(df)
 
     // get the Chi-Square model

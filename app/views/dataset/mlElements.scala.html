@@ -4,38 +4,20 @@
 @import models.ml.VectorTransformType
 
 @(
-    includeChiSquareSelector: Boolean = false,
     includeOutputField: Boolean = true,
+    includeFeatureSelectionNum: Boolean = true,
+    extraFieldButtons: Option[Html] = None,
     extraFields: Option[Html] = None
 )
 
 @dynamicTableJsImport()
 
-@modalBody(defaultFeaturesToSelectNum: Int, defaultDiscretizerBucketsNum: Int) = {
-    <fieldset>
-        @labelValue("featuresToSelectNum", "Features Num", false, None, 4) {
-            <input id="featuresToSelectNum" name="featuresToSelectNum" value="@defaultFeaturesToSelectNum">
-        }
-        @labelValue("discretizerBucketsNum", "Discretizer Buckets Num", false, None, 4) {
-            <input id="discretizerBucketsNum" name="discretizerBucketsNum" value="@defaultDiscretizerBucketsNum">
-        }
-    </fieldset>
-}
-
-@buttons = {
-    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" id="submitButton" class="btn btn-primary" data-dismiss="modal" onclick="selectFeaturesAsChiSquare(); return false;">OK</button>
-}
-
-@extraFieldButtons = {
+@fieldButtons = {
     <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
     </a>
-    @if(includeChiSquareSelector) {
-        <a id="chiSquareFieldSelectionButton" class="btn btn-info btn-sm" data-toggle="modal" data-target="#chiSquareFeatureSelectionModal" title="Chi-Square Feature Selection">
-            <span class="glyphicon glyphicon-minus" aria-hidden="true"></span> Chi-Square
-        </a>
-        @modal("chiSquareFeatureSelectionModal", "Chi-Square Feature Selection", modalBody(4, 10), None, Some(buttons))
+    @if(extraFieldButtons.isDefined) {
+        @extraFieldButtons.get
     }
 }
 
@@ -58,7 +40,7 @@
                     }
                 }
                 @labelValueAux("inputFieldNames", "Input Fields") {
-                    @dynamicFieldTable("inputFieldName", Nil, false, 12, Some(extraFieldButtons))
+                    @dynamicFieldTable("inputFieldName", Nil, false, 12, Some(fieldButtons))
                 }
                 @labelValueAux("filterId", "Input Data") {
                     <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="filter" value="">
@@ -67,6 +49,11 @@
                 <hr/>
                 @labelValueAux("featuresNormalizationType", "Feature Normalization") {
                     @selectEnum("featuresNormalizationType", VectorTransformType, true, Some("input-lg"))
+                }
+                @if(includeFeatureSelectionNum) {
+                    @labelValueAux("featuresSelectionNum", "Feature Selection  Num") {
+                        <input id="featuresSelectionNum" type="text" class="input-lg" placeholder="1 to number of features" value="">
+                    }
                 }
                 @labelValueAux("pcaDims", "PCA Dims") {
                     <input id="pcaDims" type="text" class="input-lg" placeholder="1 to number of features" value="">

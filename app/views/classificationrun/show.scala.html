@@ -6,6 +6,7 @@
 @import models.ml.ClassificationResult._
 @import play.api.libs.json.Json
 @import play.api.libs.json.JsObject
+@import reactivemongo.bson.BSONObjectID
 
 @(
     title: String,
@@ -19,6 +20,7 @@
     title,
     Json.toJson(item).as[JsObject],
     classificationRunRouter.plainList,
+    Some(classificationRunRouter.delete(item._id.get)),
     false,
     Map(),
     Some(datasetMenu(dataSpaceMetaInfos)),

@@ -208,8 +208,10 @@ POST        /studies/metainfo/deleteDataSet/:id                                 
 GET         /studies/classificationRuns                                             controllers.dataset.ClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/classificationRuns/get/:id                                     controllers.dataset.ClassificationRunDispatcher.get(id: BSONObjectID)
 GET         /studies/classificationRuns/new                                         controllers.dataset.ClassificationRunDispatcher.create
+POST        /studies/classificationRuns/:id/delete                                  controllers.dataset.ClassificationRunDispatcher.delete(id: BSONObjectID)
 POST        /studies/classify                                                       controllers.dataset.ClassificationRunDispatcher.classify(setting: models.ml.ClassificationSetting, saveResults: Boolean)
 POST        /studies/selectFeaturesAsChiSquare                                      controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int, discretizerBucketsNum: Int)
+POST        /studies/selectFeaturesAsAnovaChiSquare                                 controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsAnovaChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int)
 
 # ML Classification
 GET         /ml/classification                                                      controllers.ml.ClassificationController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[models.FilterCondition] ?= Nil)

@@ -13,7 +13,7 @@ import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import runnables.InputFutureRunnable
-import services.DataSetService
+import services.{DataSetService, StatsService}
 import services.ml.{MachineLearningService, MachineLearningUtil}
 import util.{FieldUtil, seqFutures}
 
@@ -24,6 +24,7 @@ import scala.reflect.runtime.universe.typeOf
 class ClassifyRCResults @Inject() (
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
+    statsService: StatsService,
     dataSetService: DataSetService,
     classificationRepo: ClassificationRepo
   ) extends InputFutureRunnable[ClassifyRCResultsSpec] {
@@ -69,15 +70,15 @@ class ClassifyRCResults @Inject() (
     )
   }
 
-  private def classify(dataSetId: String, input: ClassifyRCResultsSpec): Future[Unit] = {
+  private def classify(dataSetId: String, spec: ClassifyRCResultsSpec): Future[Unit] = {
     val dsa = dsaf(dataSetId).getOrElse(
       throw new AdaException(s"Data set $dataSetId not found.")
     )
 
     logger.info(s"Classifying RC weight data set $dataSetId.")
 
-    val mlModelFuture = classificationRepo.get(input.mlModelId)
-    val filterFuture = input.filterName match {
+    val mlModelFuture = classificationRepo.get(spec.mlModelId)
+    val filterFuture = spec.filterName match {
       case Some(filterName) =>
         dsa.filterRepo.find(Seq("name" #== Some(filterName))).map(_.headOption)
       case None =>
@@ -102,29 +103,39 @@ class ClassifyRCResults @Inject() (
       criteria <- loadCriteria(dsa, filter)
 
       // load the data
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, weightsFieldNames ++ Seq(input.outputFieldName), criteria)
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, weightsFieldNames ++ Seq(spec.outputFieldName), criteria)
 
       // classify and save the result
       _ <- mlModel match {
         case Some(mlModel) =>
           val setting = ClassificationSetting(
-            input.mlModelId,
-            input.outputFieldName,
+            spec.mlModelId,
+            spec.outputFieldName,
             weightsFieldNames,
             filter.map(_._id.get),
-            input.featuresNormalizationType,
-            input.pcaDims,
-            input.trainingTestingSplit,
-            input.replicationFilterId,
-            input.samplingOutputValues.zip(input.samplingRatios),
-            input.repetitions,
-            input.crossValidationFolds,
-            input.binCurvesNumBins
+            spec.featuresNormalizationType,
+            spec.featuresSelectionNum,
+            spec.pcaDims,
+            spec.trainingTestingSplit,
+            spec.replicationFilterId,
+            spec.samplingOutputValues.zip(spec.samplingRatios),
+            spec.repetitions,
+            spec.crossValidationFolds,
+            spec.binCurvesNumBins
           )
 
-          val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-          mlService.classify(jsons, fieldNameAndSpecs, input.outputFieldName, mlModel, setting.learningSetting).map { resultsHolder =>
-            val finalResult = MachineLearningUtil.createClassificationResult(resultsHolder.performanceResults, setting)
+          val selectedFields = spec.featuresSelectionNum.map { featuresSelectionNum =>
+            val inputFields = fields.filter(!_.name.equals(setting.outputFieldName))
+            val outputField = fields.find(_.name.equals(setting.outputFieldName)).get
+            val selectedInputFields = statsService.selectFeaturesAsAnovaChiSquare(jsons, inputFields, outputField, featuresSelectionNum)
+            selectedInputFields ++ Seq(outputField)
+          }.getOrElse(
+            fields
+          )
+
+          val fieldNameAndSpecs = selectedFields.map(field => (field.name, field.fieldTypeSpec))
+          mlService.classify(jsons, fieldNameAndSpecs, spec.outputFieldName, mlModel, setting.learningSetting).map { resultsHolder =>
+            val finalResult = MachineLearningUtil.createClassificationResult(setting, resultsHolder.performanceResults, resultsHolder.binCurves)
             dsa.classificationResultRepo.save(finalResult)
           }
 
@@ -164,6 +175,7 @@ case class ClassifyRCResultsSpec(
   outputFieldName: String,
   filterName: Option[String],
   featuresNormalizationType: Option[VectorTransformType.Value],
+  featuresSelectionNum: Option[Int],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
   replicationFilterId: Option[BSONObjectID],

@@ -12,6 +12,7 @@ import play.api.i18n.MessagesApi
 import play.api.mvc.Request
 import security.AdaAuthConfig
 import dataaccess.Criterion.Infix
+import dataaccess.User
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -21,6 +22,10 @@ trait DataSpaceService {
 
   def getTreeForCurrentUser(
     request: Request[_]
+  ): Future[Traversable[DataSpaceMetaInfo]]
+
+  def getTreeForUser(
+     user: User
   ): Future[Traversable[DataSpaceMetaInfo]]
 
   def getDataSpaceForCurrentUser(
@@ -43,15 +48,22 @@ class DataSpaceServiceImpl @Inject() (
       currentUser <- currentUser(request)
       dataSpaces <- currentUser match {
         case None => Future(Traversable[DataSpaceMetaInfo]())
-        case Some(user) =>
-          val isAdmin = user.roles.contains(SecurityRole.admin)
+        case Some(user) => getTreeForUser(user)
+      }
+    } yield
+      dataSpaces
 
-          if (isAdmin)
-            allAsTree
-          else {
-            val dataSetIds = getUsersDataSetIds(user)
-            allAsTree.map(_.map(filterRecursively(dataSetIds)).flatten)
-          }
+  override def getTreeForUser(user: User) =
+    for {
+      dataSpaces <- {
+        val isAdmin = user.roles.contains(SecurityRole.admin)
+
+        if (isAdmin)
+          allAsTree
+        else {
+          val dataSetIds = getUsersDataSetIds(user)
+          allAsTree.map(_.map(filterRecursively(dataSetIds)).flatten)
+        }
       }
     } yield
       dataSpaces

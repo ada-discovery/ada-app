@@ -5,7 +5,7 @@ import java.{util => ju}
 
 import com.google.inject.assistedinject.Assisted
 import controllers.DataSetWebContext
-import dataaccess.{Criterion, FieldTypeHelper}
+import dataaccess.{Criterion, FieldTypeHelper, RepoException}
 import dataaccess.Criterion._
 import models.{DistributionWidgetSpec, _}
 import models.FilterCondition.{FilterIdentity, FilterOrId, toCriterion}
@@ -79,6 +79,8 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   )
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
+
+  protected val router = new ClassificationRunRouter(dataSetId)
 
   // show view and data
 
@@ -201,7 +203,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     setting: ClassificationSetting,
     saveResults: Boolean
   ) = Action.async { implicit request =>
-//    println(Json.prettyPrint(Json.toJson(setting)))
+    println(Json.prettyPrint(Json.toJson(setting)))
 
     val mlModelFuture = classificationRepo.get(setting.mlModelId)
     val criteriaFuture = loadCriteria(setting.filterId)
@@ -230,18 +232,27 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       // replication criteria
       replicationCriteria <- replicationCriteriaFuture
 
-      // fields
-      fields <- fieldsFuture
-
       // main data
       mainData <- findData(criteria)
+
+      // fields
+      fields <- fieldsFuture
 
       // replication data
       replicationData <- if (replicationCriteria.nonEmpty) findData(replicationCriteria) else Future(Nil)
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
-        val fieldNameAndSpecs = fields.toSeq.map(field => (field.name, field.fieldTypeSpec))
+        val selectedFields = setting.featuresSelectionNum.map { featuresSelectionNum =>
+          val inputFields = fields.filter(!_.name.equals(setting.outputFieldName))
+          val outputField = fields.find(_.name.equals(setting.outputFieldName)).get
+          val selectedInputFields = statsService.selectFeaturesAsAnovaChiSquare(mainData, inputFields.toSeq, outputField, featuresSelectionNum)
+          selectedInputFields ++ Seq(outputField)
+        }.getOrElse(
+          fields
+        )
+
+        val fieldNameAndSpecs = selectedFields.toSeq.map(field => (field.name, field.fieldTypeSpec))
         val results = mlService.classify(mainData, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting, replicationData, setting.binCurvesNumBins)
         results.map(Some(_))
       }.getOrElse(
@@ -342,9 +353,34 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       criteria <- criteriaFuture
       (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
     } yield {
-      val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-      val fieldNames = statsService.selectFeaturesAsChiSquare(jsons, fieldNameAndSpecs, outputFieldName, featuresToSelectNum, discretizerBucketsNum)
+      val fieldNames = statsService.selectFeaturesAsChiSquare(jsons, fields, outputFieldName, featuresToSelectNum, discretizerBucketsNum)
       val json = JsArray(fieldNames.map(JsString(_)).toSeq)
+      Ok(json)
+    }
+  }
+
+  override def selectFeaturesAsAnovaChiSquare(
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    filterId: Option[BSONObjectID],
+    featuresToSelectNum: Int
+  ) = Action.async { implicit request =>
+    val explFieldNamesToLoads =
+      if (inputFieldNames.nonEmpty)
+        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
+      else
+        Nil
+
+    val criteriaFuture = loadCriteria(filterId)
+
+    for {
+      criteria <- criteriaFuture
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
+    } yield {
+      val inputFields = fields.filter(!_.name.equals(outputFieldName))
+      val outputField = fields.find(_.name.equals(outputFieldName)).get
+      val selectedFields = statsService.selectFeaturesAsAnovaChiSquare(jsons, inputFields, outputField, featuresToSelectNum)
+      val json = JsArray(selectedFields.map(field => JsString(field.name)))
       Ok(json)
     }
   }
@@ -401,4 +437,23 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   override protected def filterValueConverters(
     fieldNames: Traversable[String]
   ) = FieldUtil.valueConverters(fieldCaseClassRepo, fieldNames)
+
+  override def delete(id: BSONObjectID) = Action.async { implicit request =>
+    repo.delete(id).map { _ =>
+      render {
+        case Accepts.Html() => Redirect(router.plainList).flashing("success" -> s"Item ${id.stringify} has been deleted")
+        case Accepts.Json() => Ok(Json.obj("message" -> "Item successfully deleted", "id" -> id.toString))
+      }
+    }.recover {
+      case e: AdaException =>
+        Logger.error(s"Problem deleting the item ${id}")
+        BadRequest(e.getMessage)
+      case t: TimeoutException =>
+        Logger.error(s"Problem deleting the item ${id}")
+        InternalServerError(t.getMessage)
+      case i: RepoException =>
+        Logger.error(s"Problem deleting the item ${id}")
+        InternalServerError(i.getMessage)
+    }
+  }
 }
