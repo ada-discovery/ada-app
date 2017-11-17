@@ -47,6 +47,26 @@ case class CsvDataSetImport(
   var timeLastExecuted: Option[Date] = None
 ) extends DataSetImport
 
+case class JsonDataSetImport(
+  _id: Option[BSONObjectID],
+  dataSpaceName: String,
+  dataSetId: String,
+  dataSetName: String,
+  path: Option[String],
+  charsetName: Option[String],
+  inferFieldTypes: Boolean,
+  inferenceMaxEnumValuesCount: Option[Int] = None,
+  inferenceMinAvgValuesPerEnum: Option[Double] = None,
+  booleanIncludeNumbers: Boolean = true,
+  saveBatchSize: Option[Int] = None,
+  scheduled: Boolean = false,
+  scheduledTime: Option[ScheduledTime] = None,
+  setting: Option[DataSetSetting] = None,
+  dataView: Option[DataView] = None,
+  timeCreated: Date = new Date(),
+  var timeLastExecuted: Option[Date] = None
+) extends DataSetImport
+
 case class SynapseDataSetImport(
   _id: Option[BSONObjectID],
   dataSpaceName: String,
@@ -125,6 +145,7 @@ object DataSetImportFormattersAndIds {
   implicit val dataSetImportFormat: Format[DataSetImport] = new SubTypeFormat[DataSetImport](
     Seq(
       ManifestedFormat(Json.format[CsvDataSetImport]),
+      ManifestedFormat(Json.format[JsonDataSetImport]),
       ManifestedFormat(Json.format[SynapseDataSetImport]),
       ManifestedFormat(Json.format[TranSmartDataSetImport]),
       ManifestedFormat(Json.format[RedCapDataSetImport]),
@@ -138,6 +159,7 @@ object DataSetImportFormattersAndIds {
     protected def set(entity: DataSetImport, id: Option[BSONObjectID]) =
       entity match {
         case x: CsvDataSetImport => x.copy(_id = id)
+        case x: JsonDataSetImport => x.copy(_id = id)
         case x: SynapseDataSetImport => x.copy(_id = id)
         case x: TranSmartDataSetImport => x.copy(_id = id)
         case x: RedCapDataSetImport => x.copy(_id = id)

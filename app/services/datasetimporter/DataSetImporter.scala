@@ -57,9 +57,6 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
         (fieldNames, fieldTypes, vals).zipped.map {
           case (fieldName, fieldType, text) =>
             val jsonValue = fieldType.displayStringToJson(text)
-//            if (fieldName.equals("b_CRF_concomitant_medication35_dose")) { // a_SonoRestharn
-//              println(text + " -> " + Json.stringify(jsonValue))
-//            }
             (fieldName, jsonValue)
         })
     )

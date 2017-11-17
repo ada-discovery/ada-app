@@ -137,6 +137,32 @@ class DataSetImportController @Inject()(
       )
   )
 
+  protected val jsonForm = Form(
+    mapping(
+      "id" -> ignored(Option.empty[BSONObjectID]),
+      "dataSpaceName" -> nonEmptyText,
+      "dataSetId" -> nonEmptyText.verifying("Data Set Id should not contain any spaces", dataSetId => !dataSetId.contains(" ")),
+      "dataSetName" -> nonEmptyText,
+      "path" -> optional(text),
+      "charsetName" -> optional(text),
+      "inferFieldTypes" -> boolean,
+      "inferenceMaxEnumValuesCount" -> optional(number(min = 1)),
+      "inferenceMinAvgValuesPerEnum" -> optional(of[Double]),
+      "booleanIncludeNumbers" -> boolean,
+      "saveBatchSize" -> optional(number(min = 1)),
+      "scheduled" -> boolean,
+      "scheduledTime" -> optional(scheduledTimeMapping),
+      "setting" -> optional(dataSetSettingMapping),
+      "dataView" -> optional(dataViewMapping),
+      "timeCreated" -> default(date("yyyy-MM-dd HH:mm:ss"), new Date()),
+      "timeLastExecuted" -> optional(date("yyyy-MM-dd HH:mm:ss"))
+    )(JsonDataSetImport.apply)(JsonDataSetImport.unapply)
+      .verifying(
+        "Import is marked as 'scheduled' but no time provided",
+        importInfo => (!importInfo.scheduled) || (importInfo.scheduledTime.isDefined)
+      )
+  )
+
   protected val synapseForm = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
@@ -276,6 +302,12 @@ class DataSetImportController @Inject()(
         "CSV Data Set Import",
         csvForm,
         view.csvTypeElements(_)(_)
+      ),
+
+      DataSetImportCreateEditViews[JsonDataSetImport](
+        "JSON Data Set Import",
+        jsonForm,
+        view.jsonTypeElements(_)(_)
       ),
 
       DataSetImportCreateEditViews[SynapseDataSetImport](
@@ -436,6 +468,16 @@ class DataSetImportController @Inject()(
             getRequestParamValue("path"))
         importInfo.copy(path = Some(path))
       }
+
+      case importInfo: JsonDataSetImport => {
+        val path =
+          getFile("dataFile", request).map(dataFile =>
+            copyImportFile(dataFile._1, dataFile._2)
+          ).getOrElse(
+            getRequestParamValue("path"))
+        importInfo.copy(path = Some(path))
+      }
+
       case importInfo: TranSmartDataSetImport => {
         val dataPath =
           getFile("dataFile", request).map(dataFile =>

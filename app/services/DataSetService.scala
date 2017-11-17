@@ -1105,7 +1105,6 @@ class DataSetServiceImpl @Inject()(
   ): Traversable[(String, FieldType[_])] =
     fieldNames.map { fieldName =>
       val jsons = project(items, fieldName)
-      println("Inferring " + fieldName)
       (fieldName, jsonFieldTypeInferrer(jsons))
     }
 

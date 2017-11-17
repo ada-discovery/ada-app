@@ -102,7 +102,7 @@ private class SynapseDataSetImporter @Inject() (
 
         // create jsons and field types
         (jsons, fieldNameAndTypes) = {
-          logger.info(s"Parsing lines and infering types...")
+          logger.info(s"Parsing lines and inferring types...")
           extractJsonsAndInferFieldsFromCSV(csv, delimiter, fields, fileFieldNames)
         }
 

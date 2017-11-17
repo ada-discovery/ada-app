@@ -135,7 +135,7 @@ class ClassifyRCResults @Inject() (
 
           val fieldNameAndSpecs = selectedFields.map(field => (field.name, field.fieldTypeSpec))
           mlService.classify(jsons, fieldNameAndSpecs, spec.outputFieldName, mlModel, setting.learningSetting).map { resultsHolder =>
-            val finalResult = MachineLearningUtil.createClassificationResult(setting, resultsHolder.performanceResults, resultsHolder.binCurves)
+            val finalResult = MachineLearningUtil.createClassificationResult(setting, resultsHolder.performanceResults, Nil)
             dsa.classificationResultRepo.save(finalResult)
           }
 
