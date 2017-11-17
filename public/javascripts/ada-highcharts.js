@@ -282,10 +282,6 @@
             pointFormat = null
         }
 
-        console.log(xMin)
-        console.log(xMax)
-        console.log(yMin)
-        console.log(yMax)
         $('#' + chartElementId).highcharts({
             chart: {
                 height: height

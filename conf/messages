@@ -76,6 +76,9 @@ csvDataSetImport.matchQuotes.label = Match Quotes?
 csvDataSetImport.inferenceMaxEnumValuesCount.label = Inference Max Enum Values Count
 csvDataSetImport.inferenceMinAvgValuesPerEnum.label = Inference Min Avg Values Per Enum
 
+jsonDataSetImport.inferenceMaxEnumValuesCount.label = Inference Max Enum Values Count
+jsonDataSetImport.inferenceMinAvgValuesPerEnum.label = Inference Min Avg Values Per Enum
+
 synapseDataSetImport.downloadColumnFiles.label = Download Column Files?
 redCapDataSetImport.importDictionaryFlag.label = Import Dictionary?
 
