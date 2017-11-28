@@ -279,9 +279,11 @@ function registerMessageEventSource(url) {
  if (!window.messageSource)
     window.messageSource = new self.EventSource(url);
     window.messageSource.onmessage = function (e) {
-      var json = $.parseJSON(e.data);
-      prependTrollboxJsonMessage(json, true);
-      $("#trollmessagebox").scrollTop($(document).height());
+      if (e.data) {
+        var json = $.parseJSON(e.data);
+        prependTrollboxJsonMessage(json, true);
+        $("#trollmessagebox").scrollTop($(document).height());
+      }
     };
 
     window.messageSource.addEventListener('error', function (e) {

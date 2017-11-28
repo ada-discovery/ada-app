@@ -4,7 +4,7 @@ import dataaccess.Criterion.Infix
 import dataaccess._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
-import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Push, SumValue}
+import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Push, PushField, SumValue}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -226,7 +226,7 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
       sort = fullSort,
       projection = None, //fullProjection,
       idGroup = Some(JsNull),
-      groups = Some(Seq(listName -> Push(listName))),
+      groups = Some(Seq(listName -> PushField(listName))),  // Push(listName)
       unwindFieldName = Some(listName),
       limit = limit,
       skip = skip

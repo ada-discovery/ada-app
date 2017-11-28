@@ -8,7 +8,6 @@ version := "0.5.0-alpha"
 
 scalaVersion := "2.11.11"
 
-
 Play2WarPlugin.play2WarSettings
 
 Play2WarKeys.servletVersion := "3.1"
@@ -36,9 +35,10 @@ routesImport ++= Seq(
 libraryDependencies ++= Seq(
   "ada" % "ada-dataaccess_2.11" % "0.5.0-alpha",
   "nioc-bot" % "nioc-bot_2.11" % "0.2.3",
-  "org.reactivemongo" %% "play2-reactivemongo" % "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
+  "org.reactivemongo" %% "play2-reactivemongo" % "0.12.6-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"), // "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
+  "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
-  "org.webjars" %% "webjars-play" % "2.4.0",
+  "org.webjars" %% "webjars-play" % "2.5.0",
   "org.webjars" % "bootstrap" % "3.3.5",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
   "org.webjars" % "typeaheadjs" % "0.11.1",
@@ -53,13 +53,13 @@ libraryDependencies ++= Seq(
 //  "com.google.inject.extensions" % "guice-spring" % "4.0", // so we can initialize spring container in Guice
   "org.clapper" % "classutil_2.11" % "1.0.6",
   "org.scalaz" % "scalaz-core_2.11" % "7.2.1",
-  "org.apache.spark" % "spark-core_2.11" % "2.2.0", // exclude("asm", "asm")
-  "org.apache.spark" % "spark-sql_2.11" % "2.2.0", // exclude("asm", "asm")
-  "org.apache.spark" % "spark-mllib_2.11" % "2.2.0",
-  "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.2", // exclude("asm", "asm")
+  "org.apache.spark" % "spark-core_2.11" % "2.2.0" exclude("com.fasterxml.jackson.core", "jackson-databind"), // exclude("asm", "asm")
+  "org.apache.spark" % "spark-sql_2.11" % "2.2.0" exclude("com.fasterxml.jackson.core", "jackson-databind"), // exclude("asm", "asm") exclude("com.fasterxml.jackson.module", "jackson-module-scala_2.11")
+  "org.apache.spark" % "spark-mllib_2.11" % "2.2.0" exclude("com.fasterxml.jackson.core", "jackson-databind"),
+//    "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.2", // exclude("asm", "asm")
   "commons-net" % "commons-net" % "3.5",   // for ftp access
-  "com.typesafe.play" % "play-java-ws_2.11" % "2.4.6",
-  "be.objectify" % "deadbolt-scala_2.11" % "2.4.3",
+  "com.typesafe.play" % "play-java-ws_2.11" % "2.5.6",
+  "be.objectify" % "deadbolt-scala_2.11" % "2.5.1",
   "jp.t2v" %% "play2-auth" % "0.14.1",
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
   "com.typesafe.play" %% "play-mailer" % "4.0.0",
@@ -76,6 +76,11 @@ libraryDependencies ++= Seq(
 // "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.4.4"
 // )
 
+dependencyOverrides ++= Set(
+  "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.7.6"
+)
+
+// TODO: could be removed in Play 2.5 (since it's considered by default)
 routesGenerator := InjectedRoutesGenerator
 
 // RequireJS

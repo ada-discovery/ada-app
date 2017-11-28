@@ -2,6 +2,9 @@ package dataaccess.mongo
 
 import javax.inject.Inject
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
 import dataaccess._
 import dataaccess.ignite.BinaryJsonUtil.toJson
 import org.apache.commons.lang3.StringUtils
@@ -16,10 +19,12 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.collection.JSONBatchCommands.JSONCountCommand.Count
 import reactivemongo.core.errors.{DatabaseException, DetailedDatabaseException}
+import reactivemongo.play.json.collection.JSONCollection
 
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import models._
+import reactivemongo.akkastream.State
 import reactivemongo.api._
 import reactivemongo.core.commands.RawCommand
 
@@ -35,8 +40,10 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
   import play.modules.reactivemongo.json._
   import play.modules.reactivemongo.json.collection.JSONCollection
 
-  private val indexNameMaxSize = 70
+  private val indexNameMaxSize = 40
   private val logger = Logger
+  private implicit val system = ActorSystem()
+  private val materializer = ActorMaterializer()
 
   @Inject var reactiveMongoApi : ReactiveMongoApi = _
 
@@ -69,22 +76,23 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     )
   }
 
+  import reactivemongo.akkastream.cursorProducer
+
   // TODO
-  def findIterable(
+  def findAsStream(
     criteria: Seq[Criterion[Any]],
     sort: Seq[Sort],
     projection: Traversable[String],
     limit: Option[Int],
     skip: Option[Int]
-  ): Future[Traversable[E]] = {
-    findAsCursor(criteria, sort, projection, limit, skip).flatMap ( cursor =>
+  ): Future[Source[E, Future[State]]] =
+    findAsCursor(criteria, sort, projection, limit, skip).map(cursor =>
       // handle the limit
       limit match {
-        case Some(limit) => cursor.collect[List](limit)
-        case None => cursor.collect[List]()
+        case Some(limit) => cursorProducer.produce(cursor).documentSource(limit)(materializer)
+        case None => cursorProducer.produce(cursor).documentSource()(materializer)
       }
     )
-  }
 
   protected def findAsCursor(
     criteria: Seq[Criterion[Any]],
@@ -347,10 +355,10 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
     result.map(_.documents)
 
     // TODO: once "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24" is release use the following aggregate call, which uses cursor and should be more optimal
-    //    val cursor = AggCursor(batchSize = 1)
-    //
-    //    val result = collection.aggregate1[JsObject](params.head, params.tail, cursor)
-    //    result.flatMap(_.collect[List]())
+//        val cursor = AggCursor(batchSize = 1)
+//
+//        val result = collection.aggregate1[JsObject](params.head, params.tail, cursor)
+//        result.flatMap(_.collect[List]())
   }
 
   private def toAggregateSort(sorts: Seq[Sort]) =

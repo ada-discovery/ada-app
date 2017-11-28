@@ -7,8 +7,8 @@ import scala.concurrent.{Future, Await, Awaitable}
 
 /**
  * Generic sync repo trait
-  *
-  * @param E type of entity
+ *
+ * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
 trait SyncReadonlyRepo[E, ID] {
@@ -105,7 +105,6 @@ private class SyncCrudRepoAdapter[E, ID](
   override def deleteAll =
     wait(asyncRepo.deleteAll)
 }
-
 
 private class SyncStreamRepoAdapter[E, ID](
     asyncRepo : AsyncStreamRepo[E, ID],
