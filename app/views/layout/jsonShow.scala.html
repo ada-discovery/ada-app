@@ -3,6 +3,8 @@
 @import play.api.libs.json.{JsObject, JsNull, JsValue}
 @import dataaccess.JsonUtil
 @import play.api.libs.json.JsReadable
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
 
 @(
 	domainName : String,
@@ -14,7 +16,7 @@
 	sideBar: Option[Html] = None,
     topContentBar: Option[Html] = None
 )(
-	implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+	implicit context: WebContext
 )
 
 @main(Messages("show.title", domainName), sideBar, topContentBar) {

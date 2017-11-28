@@ -1,6 +1,6 @@
 @import views.html.elements.{inputText, labelValue}
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
-
+@import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
 @import dataaccess.User
 
@@ -8,7 +8,9 @@
     form: Form[User],
     metaInfos: Traversable[DataSpaceMetaInfo],
     controllerActionNames: DataSetControllerActionNames
-)(implicit msg: play.api.i18n.Messages)
+)(
+    implicit msg: Messages, webJarAssets: WebJarAssets
+)
 
 @dynamicTableJsImport()
 

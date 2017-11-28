@@ -1,7 +1,8 @@
 @import be.objectify.deadbolt.scala.views.html.restrict
 @import models.security.SecurityRole
+@import be.objectify.deadbolt.scala.AuthenticatedRequest
 
-@(active: Int = 0)(implicit request: Request[Any])
+@(active: Int = 0)(implicit request: AuthenticatedRequest[Any])
 
 <h2>My Profile</h2>
 <ul class="nav nav-tabs">

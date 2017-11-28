@@ -244,7 +244,6 @@ POST        /ml/clustering/:id/delete                                           
 GET         /ml/clustering/idAndNames                                               controllers.ml.UnsupervisedLearningController.idAndNames
 
 # Message
-GET         /messages/stream                                                        controllers.MessageController.stream
 GET         /messages/eventStream                                                   controllers.MessageController.eventStream
 POST        /messages/saveUserMessage                                               controllers.MessageController.saveUserMessage(message: String)
 GET         /message/listMostRecent                                                 controllers.MessageController.listMostRecent(limit: Int)

@@ -29,7 +29,7 @@ import models.ml._
 
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-import services.ml.RCPredictionService
+import services.ml.{RCPredictionService, RCPredictionStaticHelper}
 
 @ImplementedBy(classOf[DataSetServiceImpl])
 trait DataSetService {
@@ -126,6 +126,17 @@ trait DataSetService {
     fieldNameMappings: Seq[Seq[String]]
   ): Future[Unit]
 
+  def mergeDataSetsWoInference(
+    resultDataSetId: String,
+    resultDataSetName: String,
+    resultStorageType: StorageType.Value,
+    dataSetIds: Seq[String],
+    fieldNames: Seq[Seq[Option[String]]],
+    keyField: Option[String] = None,
+    processingBatchSize: Option[Int] = None,
+    saveBatchSize: Option[Int] = None
+  ): Future[Unit]
+
   def linkDataSets(
     spec: DataSetLink
   ): Future[Unit]
@@ -154,8 +165,8 @@ trait DataSetService {
 class DataSetServiceImpl @Inject()(
     dsaf: DataSetAccessorFactory,
     translationRepo: TranslationRepo,
+    sparkApp: SparkApp,
     messageRepo: MessageRepo,
-    rcPredictionService: RCPredictionService,
     configuration: Configuration
   ) extends DataSetService {
 
@@ -597,6 +608,132 @@ class DataSetServiceImpl @Inject()(
       ()
   }
 
+  override def mergeDataSetsWoInference(
+    resultDataSetId: String,
+    resultDataSetName: String,
+    resultStorageType: StorageType.Value,
+    dataSetIds: Seq[String],
+    fieldNames: Seq[Seq[Option[String]]],
+    keyField: Option[String] = None,
+    processingBatchSize: Option[Int] = None,
+    saveBatchSize: Option[Int] = None
+  ): Future[Unit] = {
+    val dsafs = dataSetIds.map(dsaf(_).get)
+    val dataSetRepos = dsafs.map(_.dataSetRepo)
+    val fieldRepos = dsafs.map(_.fieldRepo)
+
+    val processingSize = processingBatchSize.getOrElse(10)
+
+    for {
+      // register the result data set (if not registered already)
+      newDsa <- registerDerivedDataSet(dsafs.head, resultDataSetId, resultDataSetName, resultStorageType)
+
+      newFieldRepo = newDsa.fieldRepo
+
+      allFields <- Future.sequence(
+        fieldRepos.zipWithIndex.map { case (fieldRepo, index) =>
+          val names = fieldNames.map(_(index))
+          fieldRepo.find(Seq("name" #-> names.flatten)).map { fields =>
+            val nameFieldMap = fields.map(field => (field.name, field)).toMap
+            names.map(_.flatMap( fieldName =>
+              nameFieldMap.get(fieldName)
+            ))
+          }
+        }
+      )
+
+      // new fields
+      newFields = allFields.transpose.map { case fields =>
+        // check if all the field specs are the same
+        def equalFieldTypes(field1: Field)(field2: Field): Boolean = {
+          val enums1 = field1.numValues.map(_.toSeq.sortBy(_._1)).getOrElse(Map())
+          val enums2 = field2.numValues.map(_.toSeq.sortBy(_._1)).getOrElse(Map())
+
+          field1.fieldType == field2.fieldType &&
+            field1.isArray == field2.isArray &&
+            enums1.size == enums2.size &&
+            enums1.zip(enums2).forall { case ((a1, b1), (a2, b2)) => a1.equals(a2) && b1.equals(b2) }
+        }
+
+        val nonEmptyFields = fields.flatten
+        val headField = nonEmptyFields.head
+        val equalFieldSpecTypes = nonEmptyFields.tail.forall(equalFieldTypes(headField))
+        if (!equalFieldSpecTypes)
+          throw new AdaException(s"The data types for the field ${headField.name} differ: ${nonEmptyFields.mkString(",")}")
+
+        headField
+      }
+
+      // delete all the new fields
+      _ <- newFieldRepo.deleteAll
+
+      // save the new fields
+      _ <- {
+        val dataSetIdEnums = dataSetIds.zipWithIndex.map { case (dataSetId, index) => (index.toString, dataSetId) }.toMap
+        val sourceDataSetIdField = Field("source_data_set_id", Some("Source Data Set Id"), FieldTypeId.Enum, false, Some(dataSetIdEnums))
+
+        newFieldRepo.save(newFields ++ Seq(sourceDataSetIdField))
+      }
+
+      // since we possible changed the dictionary (the data structure) we need to update the data set repo
+      _ <- newDsa.updateDataSetRepo
+
+      // get the new data set repo
+      newDataRepo = newDsa.dataSetRepo
+
+      // delete all the data if a key field is not defined
+      _ <- if (keyField.isEmpty) {
+        logger.info(s"Deleting all the data for '${resultDataSetId}'.")
+        newDataRepo.deleteAll
+      } else
+        Future(())
+
+      // save the new items
+      _ <- {
+        logger.info("Saving new items")
+        seqFutures(dataSetRepos.zip(allFields).zipWithIndex) { case ((dataSetRepo, fields), index) =>
+          // create a map of old to new field names
+          val fieldNewFieldNameMap = fields.zip(newFields).flatMap { case (fieldOption, newField) =>
+            fieldOption.map(field => (field.name, newField.name))
+          }.toMap
+
+          val fieldNames = fieldNewFieldNameMap.map(_._1)
+
+          for {
+            // get all the ids or delta ids
+            ids <- keyField.map(
+              deltaIds(dataSetRepo, newDataRepo, _)
+            ).getOrElse(
+              dataSetRepo.allIds
+            )
+
+            _ <- {
+              logger.info(s"Processing ${ids.size} items for the data set ${dataSetIds(index)}")
+
+              seqFutures(ids.toSeq.grouped(processingSize).zipWithIndex) { case (ids, groupIndex) =>
+                dataSetRepo.findByIds(ids.head, processingSize, fieldNames).flatMap { jsons =>
+                  logger.info(s"Processing series ${groupIndex * processingSize} to ${(jsons.size - 1) + (groupIndex * processingSize)}")
+
+                  val newJsons = jsons.map { json =>
+                    val newFieldValues = json.fields.map { case (fieldName, jsValue) =>
+                      val newFieldName = fieldNewFieldNameMap.get(fieldName).get
+                      (newFieldName, jsValue)
+                    }
+                    JsObject(newFieldValues ++ Seq(("source_data_set_id", JsNumber(index))))
+                  }
+
+                  saveOrUpdateRecords(newDataRepo, newJsons.toSeq, None, false, None, saveBatchSize)
+                }
+              }
+            }
+          } yield
+            ()
+        }
+      }
+    } yield
+      ()
+  }
+
   private def inferMultiSourceFieldTypesInParallel(
     dataRepos: Seq[JsonCrudRepo],
     fieldTypesWithNewNames: Traversable[(Seq[(String, FieldType[_])], String)],
@@ -839,13 +976,6 @@ class DataSetServiceImpl @Inject()(
     val saveBatchSize = spec.core.saveBatchSize.getOrElse(5)
     val preserveFieldNameSet = spec.preserveFieldNames.toSet
 
-    def getDeltaIds(existingNewRecordIds : Traversable[String], oldRecordIdIds: Traversable[(String, BSONObjectID)]) = {
-      val existingNewRecordIdSet = existingNewRecordIds.toSet
-      val deltaIds = oldRecordIdIds.filterNot { case (recordId, _) => existingNewRecordIdSet.contains(recordId)}.map(_._2)
-      logger.info(s"Obtained ${deltaIds.size} ids for a series transformation.")
-      deltaIds
-    }
-
     for {
     // register the result data set (if not registered already)
       newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetId, spec.resultDataSetName, spec.resultStorageType)
@@ -867,24 +997,14 @@ class DataSetServiceImpl @Inject()(
 
 //      // delete all from the old data set
 //      _ <- newDsa.dataSetRepo.deleteAll
+//      ids <- dsa.dataSetRepo.allIds
 
       // TODO: quick fix that should be removed
 
-      existingNewRecordIds <- newDsa.dataSetRepo.find(
-        projection = Seq("recordId")
-      ).map(_.map(json =>
-        (json \ "recordId").as[String]
-      ))
-
-      oldRecordIdIds <- dsa.dataSetRepo.find(
-        projection = Seq(idName, "recordId"),
-        sort = Seq(AscSort(idName))
-      ).map(_.map(json =>
-        ((json \ "recordId").as[String], (json \ idName).as[BSONObjectID])
-      ))
-
-      ids = getDeltaIds(existingNewRecordIds, oldRecordIdIds)
-      //      ids <- dsa.dataSetRepo.allIds
+      ids <- deltaIds(dsa.dataSetRepo, newDsa.dataSetRepo, "recordId").map { ids =>
+        logger.info(s"Obtained ${ids.size} ids for a series transformation.")
+        ids
+      }
 
       // transform and save jsons
       _ <- seqFutures(ids.toSeq.grouped(processingBatchSize).zipWithIndex) {
@@ -912,6 +1032,30 @@ class DataSetServiceImpl @Inject()(
       ()
   }
 
+  private def deltaIds(
+    sourceDataSetRepo: JsonCrudRepo,
+    targetDataSetRepo: JsonCrudRepo,
+    keyField: String
+  ): Future[Traversable[BSONObjectID]] =
+    for {
+      existingNewRecordIds <- targetDataSetRepo.find(
+        projection = Seq(keyField)
+      ).map(_.map(json =>
+        (json \ keyField).as[String]
+      ))
+
+      oldRecordIdIds <- sourceDataSetRepo.find(
+        projection = Seq(idName, keyField),
+        sort = Seq(AscSort(idName))
+      ).map(_.map(json =>
+        ((json \ keyField).as[String], (json \ idName).as[BSONObjectID])
+      ))
+    } yield {
+      val existingNewRecordIdSet = existingNewRecordIds.toSet
+      val deltaIds = oldRecordIdIds.filterNot { case (recordId, _) => existingNewRecordIdSet.contains(recordId) }.map(_._2)
+      deltaIds.toSeq.sortBy(_.stringify)
+    }
+
   private def transformSeries(
     transformationSpecs: Seq[SeriesTransformationSpec],
     preserveFieldNames: Set[String])(
@@ -922,7 +1066,7 @@ class DataSetServiceImpl @Inject()(
 
       for {
         newSeries <- if (series.nonEmpty)
-          rcPredictionService.transformSeries(series.map(Seq(_)), spec.transformType)
+          RCPredictionStaticHelper.transformSeries(sparkApp.session)(series.map(Seq(_)), spec.transformType)
         else
           Future(series.map(Seq(_)))
       } yield {

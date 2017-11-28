@@ -7,7 +7,7 @@ import models.ml.{DataSetLink, DataSetTransformationCore}
 import runnables.FutureRunnable
 import services.DataSetService
 
-class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends FutureRunnable {
+class LinkMPowerSupplementTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends FutureRunnable {
 
   private val walkingFieldNames =
     Seq(

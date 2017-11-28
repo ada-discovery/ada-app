@@ -1,2 +1,4 @@
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
+@()(implicit webJarAssets: WebJarAssets)
+
+<script src="@routes.WebJarAssets.at(webJarAssets.locate("jquery-ui.min.js"))"></script>
 <script type="text/javascript" src="@routes.Assets.versioned("javascripts/dynamicTable.min.js")"></script>

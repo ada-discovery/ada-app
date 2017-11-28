@@ -6,7 +6,7 @@ import models.StorageType
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
 
-class MPowerChallengeMergeDemographicsDataSets @Inject() (
+class MergeMPowerChallengeDemographicsDataSets @Inject()(
     dataSetService: DataSetService
   ) extends FutureRunnable {
 
@@ -51,4 +51,4 @@ class MPowerChallengeMergeDemographicsDataSets @Inject() (
     )
 }
 
-object MPowerChallengeMergeDemographicsDataSets extends GuiceBuilderRunnable[MPowerChallengeMergeDemographicsDataSets] with App { run }
+object MergeMPowerChallengeDemographicsDataSets extends GuiceBuilderRunnable[MergeMPowerChallengeDemographicsDataSets] with App { run }

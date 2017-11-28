@@ -13,7 +13,7 @@
     createSubmissionJson: Option[Html],
     categoryTreeElementName: Option[String]
 )(
-    implicit request: Request[_]
+    implicit request: Request[_], webJarAssets: WebJarAssets
 )
 
 @fieldNameLabelsAsString = @{
@@ -47,7 +47,7 @@
 <!-- need to import css and js first -->
 @typeaheadJsImport()
 
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
+<script src="@routes.WebJarAssets.at(webJarAssets.locate("jquery-ui.min.js"))"></script>
 <script type="text/javascript" src="@routes.Assets.versioned("javascripts/multiFilter.min.js")"></script>
 
 <script type="text/javascript">

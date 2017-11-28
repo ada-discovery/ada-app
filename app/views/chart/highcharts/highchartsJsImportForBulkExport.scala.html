@@ -1,2 +1,4 @@
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("highcharts", "offline-exporting.js"))"></script>
+@()(implicit webJarAssets: WebJarAssets)
+
+<script src="@routes.WebJarAssets.at(webJarAssets.locate("highcharts", "offline-exporting.js"))"></script>
 <script type="text/javascript" src="@routes.Assets.versioned("javascripts/ada-highcharts-export.min.js")"></script>

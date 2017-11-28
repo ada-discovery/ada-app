@@ -492,11 +492,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val jsons = widgetSpecs.zip(widgets).map { case (widgetSpec, widget) =>
       val fields = widgetSpec.fieldNames.map(widgetFieldMap.get).flatten
       val fieldTypes = fields.map(field => ftf(field.fieldTypeSpec).asValueOf[Any])
+      val isCumulativeBinnedWidget = (widgetSpec.isInstanceOf[CumulativeCountWidgetSpec]) && (widgetSpec.asInstanceOf[CumulativeCountWidgetSpec].numericBinCount.isDefined)
       widget.map { widget =>
         // fixing integer->double field type for a numerical count widget
         val fieldTypesToUse =
           widget match {
-            case e: NumericalCountWidget[Any] =>
+            case e: NumericalCountWidget[Any] if (!e.isCumulative || isCumulativeBinnedWidget) =>
               val fieldType = fieldTypes.head
               val fieldTypeToUse =
                 if (fieldType.spec.fieldType == FieldTypeId.Integer) {

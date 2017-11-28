@@ -35,7 +35,7 @@ class TestBinaryIgnite @Inject() (ignite: Ignite, cacheFactory: BinaryCacheFacto
     val repo = new JsonBinaryCacheAsyncCrudRepo(cache, cacheName, ignite, identity)
     cache.loadCache(null)
 
-    val key = BSONObjectID("577e18bc669401942c5fd71f")
+    val key = BSONObjectID.parse("577e18bc669401942c5fd71f").get
     val item = repo.get(key)
     println(Await.result(item, 2 minutes))
 

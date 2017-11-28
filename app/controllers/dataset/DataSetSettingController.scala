@@ -110,7 +110,7 @@ class DataSetSettingController @Inject() (
 
   override protected[controllers] def listView = { implicit ctx => view.list(_) }
 
-  def editForDataSet(dataSet: String) = restrict {
+  def editForDataSet(dataSet: String) = restrictAny {
     Action.async { implicit request =>
       val foundSettingFuture = repo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
       foundSettingFuture.map { setting =>
@@ -145,7 +145,7 @@ class DataSetSettingController @Inject() (
     }
   }
 
-  def updateForDataSet(id: BSONObjectID) = restrict {
+  def updateForDataSet(id: BSONObjectID) = restrictAny {
     Action.async { implicit request =>
       val dataSetIdFuture = repo.get(id).map(_.get.dataSetId)
       dataSetIdFuture.flatMap { dataSetId =>

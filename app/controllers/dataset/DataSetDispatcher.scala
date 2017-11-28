@@ -2,16 +2,12 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.{ControllerDispatcher, SecureControllerDispatcher}
+import controllers.SecureControllerDispatcher
 import models.FilterCondition.FilterOrId
 import models.ml.VectorTransformType
 import models.{FieldTypeId, FilterCondition, PageOrder}
-import play.api.libs.json.JsArray
-import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil._
-
-import scala.concurrent.Future
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
 

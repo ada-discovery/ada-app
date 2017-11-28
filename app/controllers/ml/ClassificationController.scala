@@ -16,12 +16,12 @@ import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsArray, Json}
-import play.api.mvc.{Action, Result}
+import play.api.mvc.{Action, AnyContent, Result}
 import play.twirl.api.Html
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
 import services.DataSpaceService
-import util.SecurityUtil.{restrictAdmin, restrictSubjectPresent}
+import util.SecurityUtil.{restrictAdminAny, restrictSubjectPresentAny}
 import views.html.{layout, classification => view}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -232,8 +232,8 @@ class ClassificationController @Inject()(
   // default form... unused
   override protected[controllers] val form = logisticRegressionForm.asInstanceOf[Form[Classification]]
 
-  def create(concreteClassName: String) = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
+  def create(concreteClassName: String) = restrictAdminAny(deadbolt) {
+    implicit request =>
 
       def createAux[E <: Classification](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =
         x.getCreateViewData.map { viewData =>
@@ -241,7 +241,6 @@ class ClassificationController @Inject()(
         }
 
       createAux(getFormWithViews(concreteClassName))
-    }
   }
 
   override protected type ListViewData = (Page[Classification], Traversable[DataSpaceMetaInfo])
@@ -255,8 +254,8 @@ class ClassificationController @Inject()(
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
 
-  def idAndNames = restrictSubjectPresent(deadbolt) {
-    Action.async { implicit request =>
+  def idAndNames = restrictSubjectPresentAny(deadbolt) {
+    implicit request =>
       for {
         classifications <- repo.find(
           sort = Seq(AscSort("name"))
@@ -271,6 +270,5 @@ class ClassificationController @Inject()(
         )
         Ok(JsArray(idAndNames.toSeq))
       }
-    }
   }
 }

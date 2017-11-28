@@ -1,6 +1,12 @@
 @import views.html.layout.formErrors
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
 
-@(form: Form[(String, String)])(implicit request: Request[_], flash: Flash, messages: Messages)
+@(
+    form: Form[(String, String)]
+)(
+    implicit context: WebContext
+)
 
 @layout.main("Ada Login", None, None, None, None, Some(formErrors("login", form.errors))) {
 

@@ -53,7 +53,7 @@ class CreateOverallActivityDataSet  @Inject()(
     "Overall Activity",
     0,
     false,
-    BSONObjectID("5845702f5399e2561261c662")
+    BSONObjectID.parse("5845702f5399e2561261c662").get
   )
 
   val createdOnField =

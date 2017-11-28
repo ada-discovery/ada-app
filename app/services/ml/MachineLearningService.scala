@@ -20,6 +20,7 @@ import org.apache.spark.sql.types.{Metadata, MetadataBuilder, StructType, _}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.ml.clustering._
 import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
+import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.rdd.RDD
@@ -654,6 +655,10 @@ private class MachineLearningServiceImpl @Inject() (
     folds.map { folds =>
 //      val pipeline = new Pipeline().setStages(Array(trainer))
       val paramGrid = new ParamGridBuilder().build() // No parameter search
+
+//      ParamMap.
+//        .addGrid(hashingTF.numFeatures, Array(10, 100, 1000))
+//        .addGrid(lr.regParam, Array(0.1, 0.01))
 
       val cv = new CrossValidator()
         .setEstimator(trainer)

@@ -19,7 +19,7 @@
     filterElementName: String = "filterDiv",
     createSubmissionJson: Option[Html] = None
 )(
-    implicit request: Request[_]
+    implicit request: Request[_], webJarAssets: WebJarAssets
 )
 
 @filterUI(

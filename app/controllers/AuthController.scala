@@ -2,13 +2,16 @@ package controllers
 
 import javax.inject.Inject
 
+import be.objectify.deadbolt.scala.AuthenticatedRequest
+import controllers.core.WebContext
 import models.FieldTypeId
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json._
-import play.api.mvc.{Action, Controller, Request, Result}
+import play.api.mvc._
 import play.api.data.Forms._
 import play.api.data._
+import play.api.i18n.MessagesApi
 import services.MailClientProvider
 import views.html.dataset
 
@@ -24,7 +27,9 @@ import security.AdaAuthConfig
 
 class AuthController @Inject() (
     val userManager: UserManager,
-    mailClientProvider: MailClientProvider
+    mailClientProvider: MailClientProvider,
+    messagesApi: MessagesApi,
+    webJarAssets: WebJarAssets
   ) extends Controller with LoginLogout with AdaAuthConfig {
 
   /**
@@ -41,10 +46,16 @@ class AuthController @Inject() (
 //      )
   }
 
+  private implicit def webContext(implicit request: Request[_]) = {
+    implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
+    WebContext(messagesApi, webJarAssets)
+  }
+
   /**
     * Redirect to login page.
     */
   def login = Action { implicit request =>
+
     Ok(views.html.auth.login(loginForm))
   }
 
@@ -68,6 +79,8 @@ class AuthController @Inject() (
     * Redirect to logout message page
     */
   def loggedOut = Action { implicit request =>
+    implicit val authenticatedRequest = new AuthenticatedRequest[AnyContent](request, None)
+
     Ok(views.html.auth.loggedOut())
   }
 
@@ -77,6 +90,8 @@ class AuthController @Inject() (
     * @return Redirect to success page (if successful) or redirect back to login form (if failed).
     */
   def authenticate = Action.async { implicit request =>
+    implicit val authenticatedRequest = new AuthenticatedRequest[AnyContent](request, None)
+
     render.async {
       case Accepts.Html() =>
         authenticateAux(
@@ -127,6 +142,8 @@ class AuthController @Inject() (
     * Redirect user on authorization failure.
     */
   def unauthorized = Action { implicit request =>
+    implicit val authenticatedRequest = new AuthenticatedRequest[AnyContent](request, None)
+
     val message = "It appears that you don't have sufficient rights for access. Please login to proceed."
     Ok(views.html.auth.login(loginForm)).flashing("errors" -> message)
   }

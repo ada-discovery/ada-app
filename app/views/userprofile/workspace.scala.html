@@ -1,7 +1,9 @@
 @import dataaccess.User
 @import models.workspace.Workspace
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
 
-@(user: User, workspace: Workspace)(implicit request: Request[_], flash: Flash)
+@(user: User, workspace: Workspace)(implicit webContext: WebContext))
 
 @layout.main("NCER-PD Home") {
     <!-- user profile header; move to designated template -->

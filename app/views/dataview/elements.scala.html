@@ -13,7 +13,7 @@
     idFilterNameMap: Map[BSONObjectID, String],
     allFieldsCall: Call
 )(
-    implicit msg: play.api.i18n.Messages
+    implicit msg: play.api.i18n.Messages, webJarAssets: WebJarAssets
 )
 
 @dynamicTableJsImport()

@@ -45,9 +45,14 @@ protected class DataSetAccessorImpl(
     dataSetSettingRepo: DataSetSettingRepo
   ) extends DataSetAccessor {
 
-  private var _dataSetRepo = result(createDataSetRepo(None), 10 seconds)
+  private var _dataSetRepo: Option[JsonCrudRepo] = None
 
-  override def dataSetRepo = _dataSetRepo
+  override def dataSetRepo = {
+    if (_dataSetRepo.isEmpty) {
+      _dataSetRepo = Some(result(createDataSetRepo(None), 10 seconds))
+    }
+    _dataSetRepo.get
+  }
 
   private def createDataSetRepo(dataSetSetting: Option[DataSetSetting]) =
     for {
@@ -63,13 +68,13 @@ protected class DataSetAccessorImpl(
     for {
       newDataSetRepo <- createDataSetRepo(Some(setting))
     } yield
-      _dataSetRepo = newDataSetRepo
+      _dataSetRepo = Some(newDataSetRepo)
 
   override def updateDataSetRepo =
     for {
       newDataSetRepo <- createDataSetRepo(None)
     } yield
-      _dataSetRepo = newDataSetRepo
+      _dataSetRepo = Some(newDataSetRepo)
 
   override def metaInfo =
     for {

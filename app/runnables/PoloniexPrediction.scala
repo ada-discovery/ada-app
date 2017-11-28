@@ -28,7 +28,7 @@ class PoloniexPrediction @Inject()(
   ) extends FutureRunnable {
 
   private val fieldName = "series"
-  private val id = BSONObjectID("599897a2c500009402a379fd") // BSONObjectID("599897a3c500009402a379fe")
+  private val id = BSONObjectID.parse("599897a2c500009402a379fd").get // BSONObjectID("599897a3c500009402a379fe")
   private val ioSpec = RCPredictionInputOutputSpec(
     inputSeriesFieldPaths = Seq("weightedAverage", "high", "low", "volume").map(fieldName + "." + _),
     outputSeriesFieldPaths = Seq("weightedAverage").map(fieldName + "." + _),

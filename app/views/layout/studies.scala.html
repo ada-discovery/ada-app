@@ -1,13 +1,16 @@
-@import play.api.mvc.Flash
 @import views.html.dataset.datasetMenu
 @import models.DataSpaceMetaInfo
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
 
 @(
     userName: String,
     dataSpacesNum: Int,
     dataSetsNum: Int,
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
-)(implicit flash: Flash, request: Request[_])
+)(
+    implicit context: WebContext
+)
 
 @badge(text: Int) = {
     <span class="badge badge-success"><b><h5>@text</h5></b></span>

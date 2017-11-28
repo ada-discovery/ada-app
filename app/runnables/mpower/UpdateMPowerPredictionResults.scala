@@ -46,7 +46,7 @@ class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) ext
 //        dataSetRepo.update(newJson)
 //      }
 
-//      _ <- dataSetRepo.delete(Seq(BSONObjectID("59900e89f800008b013435a7"), BSONObjectID("59928d55f70000b701261406"), BSONObjectID("599043ccf80000210734c059")))
+//      _ <- dataSetRepo.delete(Seq(BSONObjectID.parse("59900e89f800008b013435a7").get, BSONObjectID.parse("59928d55f70000b701261406").get, BSONObjectID.parse("599043ccf80000210734c059").get))
     } yield
       ()
 }

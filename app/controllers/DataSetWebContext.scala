@@ -1,5 +1,6 @@
 package controllers
 
+import be.objectify.deadbolt.scala.AuthenticatedRequest
 import controllers.core.WebContext
 import controllers.dataset._
 import play.api.mvc.{Flash, Request}
@@ -7,7 +8,7 @@ import play.api.i18n.Messages
 
 class DataSetWebContext(
   val dataSetId: String)(
-  implicit val flash: Flash, val msg: Messages, val request: Request[_]) {
+  implicit val flash: Flash, val msg: Messages, val request: AuthenticatedRequest[_], val webJarAssets: WebJarAssets) {
 
   val dataSetRouter = new DataSetRouter(dataSetId)
   val dataSetJsRouter = new DataSetJsRouter(dataSetId)
@@ -28,7 +29,7 @@ object DataSetWebContext {
     dataSetId: String)(
     implicit context: WebContext
   ) =
-    new DataSetWebContext(dataSetId)(context.flash, context.msg, context.request)
+    new DataSetWebContext(dataSetId)(context.flash, context.msg, context.request, context.webJarAssets)
 
   implicit def toFlash(
     implicit webContext: DataSetWebContext
@@ -40,7 +41,11 @@ object DataSetWebContext {
 
   implicit def toRequest(
     implicit webContext: DataSetWebContext
-  ): Request[_] = webContext.request
+  ): AuthenticatedRequest[_] = webContext.request
+
+  implicit def toWebJarAssets(
+    implicit webContext: DataSetWebContext
+  ): WebJarAssets = webContext.webJarAssets
 
   implicit def toWebContext(
     implicit webContext: DataSetWebContext

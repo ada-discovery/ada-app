@@ -2,11 +2,13 @@ package controllers
 
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.DeadboltActions
+import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
+import controllers.core.WebContext
 import models.DataSpaceMetaInfo
 import models.security.UserManager
+import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{Action, Controller}
+import play.api.mvc.{Action, AnyContent, Controller, Request}
 import play.api.routing.JavaScriptReverseRouter
 import security.AdaAuthConfig
 import services.DataSpaceService
@@ -17,18 +19,25 @@ import scala.concurrent.Future
 
 class AppController @Inject() (
     dataSpaceService: DataSpaceService,
-    val userManager: UserManager
+    val userManager: UserManager,
+    messagesApi: MessagesApi,
+    webJarAssets: WebJarAssets
   ) extends Controller with AdaAuthConfig {
 
   @Inject var deadbolt: DeadboltActions = _
+
+  private implicit def webContext(implicit request: Request[_]) = {
+    implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
+    WebContext(messagesApi, webJarAssets)
+  }
 
   def index = Action { implicit request =>
     Ok(layout.home())
   }
 
   // TODO: move elsewhere
-  def studies = restrictSubjectPresent(deadbolt) {
-    Action.async { implicit request =>
+  def studies = restrictSubjectPresentAny(deadbolt) {
+    implicit request =>
       for {
         user <- currentUser(request)
         metaInfos <- user match {
@@ -46,7 +55,6 @@ class AppController @Inject() (
           BadRequest("No logged user.")
         )
       }
-    }
   }
 
   private def countDataSetsNumRecursively(dataSpace: DataSpaceMetaInfo): Int =

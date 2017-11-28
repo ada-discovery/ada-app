@@ -19,6 +19,7 @@ import models.synapse.JsonFormat._
 import util.ZipFileIterator
 import dataaccess.JsonUtil
 import _root_.util.retry
+import akka.util.ByteString
 
 trait SynapseServiceFactory {
   def apply(@Assisted("username") username: String, @Assisted("password") password: String): SynapseService
@@ -78,7 +79,7 @@ trait SynapseService {
     * @param fileHandleId
     * @return
     */
-  def downloadFileAsBytes(fileHandleId: String): Future[Array[Byte]]
+  def downloadFileAsBytes(fileHandleId: String): Future[ByteString]
 
   /**
     * Gets a table as csv by combining runCsvTableQuery, getCsvTableResults, and downloadFile
@@ -253,7 +254,7 @@ protected[services] class SynapseServiceWSImpl @Inject() (
     }
   }
 
-  override def downloadFileAsBytes(fileHandleId: String): Future[Array[Byte]] = {
+  override def downloadFileAsBytes(fileHandleId: String): Future[ByteString] = {
     val request = withSessionToken(
       ws.url(baseUrl + fileDownloadSubUrl1 + fileHandleId + fileDownloadSubUrl2)).withFollowRedirects(true)
 
@@ -389,7 +390,7 @@ protected[services] class SynapseServiceWSImpl @Inject() (
             (fileSummary.zipEntryName.get, fileSummary.fileHandleId)
           )
         }.toMap
-        ZipFileIterator(bulkDownloadContentBytes).map(pair => (fileNameHandleIdMap.get(pair._1).get, pair._2))
+        ZipFileIterator(bulkDownloadContentBytes.toStream.toArray).map(pair => (fileNameHandleIdMap.get(pair._1).get, pair._2))
       }
 
       attemptNum match {
@@ -405,7 +406,7 @@ protected[services] class SynapseServiceWSImpl @Inject() (
     request.withHeaders("Content-Type" -> "application/json")
 
   def withRequestTimeout(timeout: Duration)(request: WSRequest): WSRequest =
-    request.withRequestTimeout(timeout.toMillis)
+    request.withRequestTimeout(timeout)
 
   /**
     * Closes the connection

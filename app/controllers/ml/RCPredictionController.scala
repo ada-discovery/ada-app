@@ -3,37 +3,35 @@ package controllers.ml
 import java.{lang => jl}
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.DeadboltActions
+import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
-import controllers.{EnumFormatter, JavaEnumFormatter, JsonFormatter, SeqFormatter}
+import controllers._
 import controllers.core.WebContext
 import models.ml._
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory
 import play.api.{Configuration, Logger}
-import play.api.Play.current
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
-import play.api.data.format.Formats.doubleFormat
 import play.api.i18n.MessagesApi
-import play.api.libs.json.{JsNull, JsObject, JsValue}
-import play.api.mvc.{Action, Controller, Request}
+import play.api.mvc.{Action, AnyContent, Controller, Request}
 import services.DataSpaceService
 import services.ml.RCPredictionService
 import util.MessageLogger
-import util.SecurityUtil.restrictAdmin
+import util.SecurityUtil.restrictAdminAny
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class RCPredictionController @Inject()(
-    deadbolt: DeadboltActions,
-    messageRepo: MessageRepo,
     dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService,
-    configuration: Configuration,
     mPowerWalkingRCPredictionService: RCPredictionService,
+    deadbolt: DeadboltActions,
+    messageRepo: MessageRepo,
+    webJarAssets: WebJarAssets,
+    configuration: Configuration,
     messagesApi: MessagesApi
   ) extends Controller {
 
@@ -72,7 +70,7 @@ class RCPredictionController @Inject()(
       "preserveWeightFieldNames" -> of[Seq[String]]
     )(RCPredictionSettings.apply)(RCPredictionSettings.unapply))
 
-  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
+  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)
 
   private val weightRdp = RandomDistributionProviderFactory(RandomDistribution.createNormalDistribution[jl.Double](classOf[jl.Double], 0d, 1d))
 
@@ -116,17 +114,16 @@ class RCPredictionController @Inject()(
     seriesPreprocessingType = _seriesPreprocessingType
   }
 
-  def showRCPrediction = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
+  def showRCPrediction = restrictAdminAny(deadbolt) {
+    implicit request =>
       for {
         tree <- dataSpaceService.getTreeForCurrentUser(request)
       } yield
         Ok(views.html.admin.rcPrediction(rcPredictionSettingsForm, tree))
-    }
   }
 
-  def runRCPrediction = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
+  def runRCPrediction = restrictAdminAny(deadbolt) {
+    implicit request =>
       rcPredictionSettingsForm.bindFromRequest.fold(
         { formWithErrors =>
           for {
@@ -144,7 +141,6 @@ class RCPredictionController @Inject()(
             Ok("Hooray")
           }
       )
-    }
   }
 
   private def toRCSettings(

@@ -19,7 +19,7 @@ import dataaccess.JsonCrudRepoExtra.InfixOps
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class CreateMPowerDistanceDataSet @Inject() (
+class CreateMPowerTrainingDistanceDataSet @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
   ) extends FutureRunnable {
@@ -77,9 +77,6 @@ class CreateMPowerDistanceDataSet @Inject() (
         val fieldNameAndTypes = (strippedFields ++ newFields).map( field => (field.name, field.fieldTypeSpec))
         dataSetService.updateDictionary(normDataSetId, fieldNameAndTypes, false, true)
       }
-
-      // retrieve the total count
-      count <- dataSetRepo.count()
 
       // delete all from the old data set
       _ <- newDsa.dataSetRepo.deleteAll
@@ -150,4 +147,4 @@ class CreateMPowerDistanceDataSet @Inject() (
     }
 }
 
-object CreateMPowerDistanceDataSet extends GuiceBuilderRunnable[CreateMPowerDistanceDataSet] with App { run }
+object CreateMPowerTrainingDistanceDataSet extends GuiceBuilderRunnable[CreateMPowerTrainingDistanceDataSet] with App { run }

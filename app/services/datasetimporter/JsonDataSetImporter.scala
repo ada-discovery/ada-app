@@ -70,6 +70,9 @@ private class JsonDataSetImporter extends AbstractDataSetImporter[JsonDataSetImp
               dataSetService.updateDictionary(importInfo.dataSetId, fieldNameTypeSpecs, false, true)
             }
 
+            // since we possible changed the dictionary (the data structure) we need to update the data set repo
+            _ <- dsa.updateDataSetRepo
+
             // delete the old data
             _ <- dsa.dataSetRepo.deleteAll
 

@@ -2,25 +2,29 @@ package controllers
 
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.DeadboltActions
+import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import controllers.core.{GenericMapping, WebContext}
 import persistence.RepoTypes.MessageRepo
 import play.api.Logger
 import play.api.i18n.MessagesApi
-import play.api.mvc.{Action, Controller, Request}
+import play.api.mvc.{Action, AnyContent, Controller, Request}
 import play.api.Play.current
 import play.api.data.Form
 import runnables.InputRunnable
 import util.MessageLogger
 import util.ReflectionUtil.findClasses
-import util.SecurityUtil.restrictAdmin
+import _root_.util.SecurityUtil.{restrictAdmin, restrictAdminAny}
 import views.html.{admin => adminviews}
 import java.{util => ju}
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class AdminController @Inject() (
     deadbolt: DeadboltActions,
     messageRepo: MessageRepo,
-    messagesApi: MessagesApi
+    messagesApi: MessagesApi,
+    webJarAssets: WebJarAssets
   ) extends Controller {
 
   private val logger = Logger
@@ -29,7 +33,8 @@ class AdminController @Inject() (
   // we scan only the jars starting with this prefix to speed up the class search
   private val libPrefix = "ncer-pd"
 
-  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
+//  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
+  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)(request)
 
   /**
     * Creates view showing all runnables.
@@ -37,8 +42,8 @@ class AdminController @Inject() (
     *
     * @return View listing all runnables in directory "runnables".
     */
-  def listRunnables = restrictAdmin(deadbolt) {
-    Action { implicit request =>
+  def listRunnables = restrictAdminAny(deadbolt) {
+    implicit request => Future {
       val classes1 = findClasses[Runnable](libPrefix, Some("runnables."), None)
       val classes2 = findClasses[InputRunnable[_]](libPrefix, Some("runnables."), None)
 
@@ -49,8 +54,8 @@ class AdminController @Inject() (
 
   private val runnablesRedirect = Redirect(routes.AdminController.listRunnables())
 
-  def runScript(className: String) = restrictAdmin(deadbolt) {
-    Action { implicit request =>
+  def runScript(className: String) = restrictAdminAny(deadbolt) {
+    implicit request => Future {
       implicit val msg = messagesApi.preferred(request)
       try {
         val clazz = Class.forName(className, true, this.getClass.getClassLoader)
@@ -73,19 +78,18 @@ class AdminController @Inject() (
           runnablesRedirect.flashing("success" -> message)
         }
       } catch {
-        case e: ClassNotFoundException => {
+        case e: ClassNotFoundException =>
           runnablesRedirect.flashing("errors" -> s"Script ${className} does not exist.")
-        }
-        case e: Exception => {
+
+        case e: Exception =>
           logger.error(s"Script ${className} failed", e)
           runnablesRedirect.flashing("errors" -> s"Script ${className} failed due to: ${e.getMessage}")
-        }
       }
     }
   }
 
-  def runInputScript(className: String) = restrictAdmin(deadbolt) {
-    Action { implicit request =>
+  def runInputScript(className: String) = restrictAdminAny(deadbolt) {
+    implicit request => Future {
       implicit val msg = messagesApi.preferred(request)
       try {
         println(className)

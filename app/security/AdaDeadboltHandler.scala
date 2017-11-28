@@ -7,8 +7,8 @@ import play.api.Logger
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import Results._
-import be.objectify.deadbolt.scala.{DeadboltHandler, DynamicResourceHandler}
-import be.objectify.deadbolt.core.models.Subject
+import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltHandler, DynamicResourceHandler}
+import be.objectify.deadbolt.scala.models.Subject
 import io.netty.handler.codec.http.HttpHeaders.Names
 
 /**
@@ -27,13 +27,13 @@ class AdaOnFailureRedirectDeadboltHandler(
     * @param request request leading to failure.
     * @return Redirect to login form.
     */
-  override def onAuthFailure[A](request: Request[A]): Future[Result] =
+  override def onAuthFailure[A](request: AuthenticatedRequest[A]): Future[Result] =
     getSubject(request).map {
       _ match {
         case Some(subject) => {
           println("Accepted encodings: " + getAcceptedEncodings(request).mkString(","))
 
-          val username = subject.getIdentifier
+          val username = subject.identifier
           Logger.error(s"Unauthorized access by [$username].")
           val result = request.headers.get("referer") match {
             case None => Redirect(routes.AppController.index())
@@ -56,7 +56,7 @@ class AdaOnFailureUnauthorizedStatusDeadboltHandler(
     dynamicResourceHandler: Option[DynamicResourceHandler] = None
   ) extends AdaDeadboltHandler(getCurrentUser, dynamicResourceHandler) {
 
-  override def onAuthFailure[A](request: Request[A]): Future[Result] =
+  override def onAuthFailure[A](request: AuthenticatedRequest[A]): Future[Result] =
     Future(Unauthorized)
 }
 
@@ -72,9 +72,8 @@ protected abstract class AdaDeadboltHandler(
     * @param request
     * @return
     */
-  override def beforeAuthCheck[A](request: Request[A]): Future[Option[Result]] = {
+  override def beforeAuthCheck[A](request: Request[A]): Future[Option[Result]] =
     Future(None)
-  }
 
   /**
     * Hook for dynamic constraint types.
@@ -92,7 +91,6 @@ protected abstract class AdaDeadboltHandler(
     * @param request Current request.
     * @return Current user, if logged in. None otherwise.
     */
-  override def getSubject[A](request: Request[A]): Future[Option[Subject]] = {
+  override def getSubject[A](request: AuthenticatedRequest[A]): Future[Option[Subject]] =
     getCurrentUser(request)
-  }
 }

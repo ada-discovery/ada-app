@@ -2,12 +2,15 @@ package controllers
 
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.DeadboltActions
+import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import controllers.core.WebContext
 import play.api.i18n.MessagesApi
-import play.api.mvc.{Action, Controller, Request}
+import play.api.mvc.{Action, AnyContent, Controller, Request}
 import util.SecurityUtil._
 import ldap.{LdapConnector, LdapSettings}
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import scala.concurrent.Future
 
 /**
   * Controller for inspecting active ldap settings.
@@ -16,19 +19,21 @@ class LdapController @Inject() (
     ldapConnector: LdapConnector,
     ldapSettings: LdapSettings,
     deadbolt: DeadboltActions,
-    messagesApi: MessagesApi
+    messagesApi: MessagesApi,
+    webJarAssets: WebJarAssets
   ) extends Controller{
 
-  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
+  //  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
+  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)
 
-  def settings = restrictAdmin(deadbolt) {
-    Action{ implicit request =>
+  def settings = restrictAdminAny(deadbolt) {
+    implicit request => Future (
       Ok(views.html.ldapviews.viewSettings(ldapSettings))
-    }
+    )
   }
 
-  def ldapList = restrictAdmin(deadbolt) {
-    Action { implicit request =>
+  def ldapList = restrictAdminAny(deadbolt) {
+    implicit request => Future {
       val entries: Traversable[String] = ldapConnector.getEntryList
       val content = "ldap entry list (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)
       Ok(content)

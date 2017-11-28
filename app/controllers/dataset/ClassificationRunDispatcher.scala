@@ -2,11 +2,9 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.{ControllerDispatcher, SecureControllerDispatcher}
+import controllers.SecureControllerDispatcher
 import models.FilterCondition
-import models.FilterCondition.FilterOrId
 import models.ml.ClassificationSetting
-import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil.createDataSetPermission
 

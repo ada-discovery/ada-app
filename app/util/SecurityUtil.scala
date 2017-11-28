@@ -2,13 +2,14 @@ package util
 
 import java.security.MessageDigest
 
-import be.objectify.deadbolt.scala.DeadboltActions
+import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import models.security.SecurityRole
 import play.api.http.{Status => HttpStatus}
-import play.api.mvc.{Action, Result}
+import play.api.mvc.BodyParsers.parse
+import play.api.mvc._
 import play.api.mvc.Results._
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Random
 
@@ -65,11 +66,44 @@ object SecurityUtil {
     actionName: String
   ) = "\\bDS:" + dataSetId.replaceAll("\\.","\\\\.") + "(\\." + controllerName + "(\\." + actionName + ")?)?\\b"
 
-  def restrictAdmin[A](deadbolt: DeadboltActions)(action: Action[A]): Action[A] =
-    deadbolt.Restrict[A](List(Array(SecurityRole.admin)))(action)
+  type AuthenticatedAction[A] =
+    AuthenticatedRequest[A] => Future[Result]
 
-  def restrictSubjectPresent[A](deadbolt: DeadboltActions)(action: Action[A]): Action[A] =
-    deadbolt.SubjectPresent()(action)
+  def restrictAdmin[A](
+    deadbolt: DeadboltActions,
+    bodyParser: BodyParser[A])(
+    action: AuthenticatedAction[A]
+  ): Action[A] =
+    deadbolt.Restrict[A](List(Array(SecurityRole.admin)))(bodyParser)(action)
+
+  def restrictSubjectPresent[A](
+    deadbolt: DeadboltActions,
+    bodyParser: BodyParser[A])(
+    action: AuthenticatedAction[A]
+  ): Action[A] =
+    deadbolt.SubjectPresent[A]()(bodyParser)(action)
+
+  def restrictAdminAny(
+    deadbolt: DeadboltActions)(
+    action: AuthenticatedAction[AnyContent]
+  ): Action[AnyContent] =
+    restrictAdmin(deadbolt, parse.anyContent)(action)
+
+  def restrictSubjectPresentAny(
+    deadbolt: DeadboltActions)(
+    action: AuthenticatedAction[AnyContent]
+  ): Action[AnyContent] =
+    restrictSubjectPresent(deadbolt, parse.anyContent)(action)
+
+  def toAuthenticatedAction[A](action: Action[A]): AuthenticatedAction[A] = {
+    implicit request => action.apply(request)
+  }
+
+  def toAction[A](bodyParser: BodyParser[A])(action: AuthenticatedAction[A]): Action[A] = Action.async(bodyParser) {
+    implicit request => action.apply(new AuthenticatedRequest[A](request, None))
+  }
+
+  def toActionAny(action: AuthenticatedAction[AnyContent]): Action[AnyContent] = toAction(BodyParsers.parse.anyContent)(action)
 
   def restrictChain[A](
     restrictions: Seq[Action[A] => Action[A]]
@@ -84,6 +118,46 @@ object SecurityUtil {
     action: Action[A]
   ): Action[A] =
     Action.async(action.parser) { implicit request =>
+      def isAuthorized(result: Result) = result.header.status != HttpStatus.UNAUTHORIZED
+
+      val authorizedResultFuture =
+        restrictions.foldLeft(
+          Future((false, BadRequest("No restriction found")))
+        ) {
+          (resultFuture, restriction) =>
+            for {
+              (authorized, result) <- resultFuture
+
+              nextResult <-
+                if (authorized)
+                  Future((authorized, result))
+                else
+                  restriction(action).flatMap {
+                    _.apply(request).map( newResult =>
+                      (isAuthorized(newResult), newResult)
+                    )
+                  }
+            } yield {
+              nextResult
+            }
+        }
+
+      authorizedResultFuture.map { case (_, result) => result }
+    }
+
+  def restrictChain2(
+    restrictions: Seq[AuthenticatedAction[AnyContent] => Action[AnyContent]]
+  ) = restrictChainFuture2(
+    restrictions.map {
+      restriction => action: AuthenticatedAction[AnyContent] => Future(restriction(action))
+    }
+  )(_)
+
+  def restrictChainFuture2(
+    restrictions: Seq[AuthenticatedAction[AnyContent] => Future[Action[AnyContent]]])(
+    action: AuthenticatedAction[AnyContent]
+  ): Action[AnyContent] =
+    Action.async { implicit request => // action.parser)
       def isAuthorized(result: Result) = result.header.status != HttpStatus.UNAUTHORIZED
 
       val authorizedResultFuture =

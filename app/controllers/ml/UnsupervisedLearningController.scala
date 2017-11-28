@@ -15,13 +15,13 @@ import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsArray, Json}
-import play.api.mvc.{Action, Result}
+import play.api.mvc.{Action, AnyContent, Result}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import services.DataSpaceService
 import controllers.ml.routes.{UnsupervisedLearningController => route}
-import util.SecurityUtil.{restrictAdmin, restrictSubjectPresent}
+import util.SecurityUtil.{restrictAdminAny, restrictSubjectPresentAny}
 import views.html.{layout, unsupervisedlearning => view}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -164,8 +164,8 @@ class UnsupervisedLearningController @Inject()(
   // default form... unused
   override protected[controllers] val form = kMeansForm.asInstanceOf[Form[UnsupervisedLearning]]
 
-  def create(concreteClassName: String) = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
+  def create(concreteClassName: String) = restrictAdminAny(deadbolt) {
+    implicit request =>
 
       def createAux[E <: UnsupervisedLearning](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =
         x.getCreateViewData.map { viewData =>
@@ -173,7 +173,6 @@ class UnsupervisedLearningController @Inject()(
         }
 
       createAux(getFormWithViews(concreteClassName))
-    }
   }
 
   override protected type ListViewData = (Page[UnsupervisedLearning], Traversable[DataSpaceMetaInfo])
@@ -187,8 +186,8 @@ class UnsupervisedLearningController @Inject()(
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
 
-  def idAndNames = restrictSubjectPresent(deadbolt) {
-    Action.async { implicit request =>
+  def idAndNames = restrictSubjectPresentAny(deadbolt) {
+    implicit request =>
       for {
         regressions <- repo.find(
           sort = Seq(AscSort("name"))
@@ -203,6 +202,5 @@ class UnsupervisedLearningController @Inject()(
         )
         Ok(JsArray(idAndNames.toSeq))
       }
-    }
   }
 }

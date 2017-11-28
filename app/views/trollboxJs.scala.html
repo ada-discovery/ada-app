@@ -1,12 +1,12 @@
 @import controllers.routes.javascript.{MessageController => messageJsRoutes}
 
-@()(implicit req: play.api.mvc.RequestHeader)
+@()(implicit req: play.api.mvc.RequestHeader, webJarAssets: WebJarAssets)
 
 @helper.javascriptRouter("jsMessageRoutes")(
     messageJsRoutes.saveUserMessage,
     messageJsRoutes.listMostRecent
 )
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("Autolinker.js", "Autolinker.min.js"))"></script>
+<script src="@routes.WebJarAssets.at(webJarAssets.locate("Autolinker.js", "Autolinker.min.js"))"></script>
 <script type="text/javascript" defer="defer">
     $(function() {
         $('.trollmessagebox').css('max-height',$(window).height() - 220);

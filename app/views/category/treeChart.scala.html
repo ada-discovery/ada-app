@@ -2,11 +2,11 @@
 @import play.api.mvc.Flash
 @import play.api.i18n.Messages
 
-@(router : CategoryRouter)
+@(router : CategoryRouter)(implicit webJarAssets: WebJarAssets)
 
 <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/tree.min.css")">
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("d3.min.js"))"></script>
-<script src="@routes.WebJarAssets.at(WebJarAssets.locate("jquery-ui.min.js"))"></script>
+<script src="@routes.WebJarAssets.at(webJarAssets.locate("d3.min.js"))"></script>
+<script src="@routes.WebJarAssets.at(webJarAssets.locate("jquery-ui.min.js"))"></script>
 <script type="text/javascript" src="@routes.Assets.versioned("javascripts/tree.min.js")"></script>
 <script type="text/javascript" src="@router.jsRoutes"></script>
 <div id="treeDiv" name="treeDiv" class="treeDiv"></div>

@@ -88,7 +88,7 @@ class CreateClinicalMPowerTappingDataSet @Inject()(
           "Tapping Activity & Clinical",
           0,
           false,
-          BSONObjectID("5845702f5399e2561261c662")
+          BSONObjectID.parse("5845702f5399e2561261c662").get
         ),
         Some(DataSetSetting(
           None,

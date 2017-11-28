@@ -1,15 +1,13 @@
 package models.security
 
-import be.objectify.deadbolt.core.models.Role
+import be.objectify.deadbolt.scala.models.Role
 
 /**
   * Implementation of the security role interface.
   * SecurityRole is just a wrapper for a String.
   *
   */
-case class SecurityRole(val roleName: String) extends Role {
-  override def getName: String = roleName
-}
+case class SecurityRole(val name: String) extends Role
 
 /**
   * Definitions of predefined security roles.

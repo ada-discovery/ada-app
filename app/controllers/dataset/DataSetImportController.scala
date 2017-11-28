@@ -30,7 +30,7 @@ import java.io.{File, FileInputStream, FileOutputStream}
 import controllers.core._
 import dataaccess.AscSort
 import services.{DataSetImportScheduler, DataSetService, DataSpaceService}
-import util.SecurityUtil.restrictAdmin
+import util.SecurityUtil.restrictAdminAny
 import views.html.{datasetimport => view}
 import views.html.layout
 import util.{MessageLogger, getRequestParamValue}
@@ -354,8 +354,8 @@ class DataSetImportController @Inject()(
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled}
 
-  def create(concreteClassName: String) = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
+  def create(concreteClassName: String) = restrictAdminAny(deadbolt) {
+    implicit request =>
 
       def createAux[E <: DataSetImport](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =
         x.getCreateViewData.map { viewData =>
@@ -363,11 +363,10 @@ class DataSetImportController @Inject()(
         }
 
       createAux(getFormWithViews(concreteClassName))
-    }
   }
 
-  def execute(id: BSONObjectID) = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
+  def execute(id: BSONObjectID) = restrictAdminAny(deadbolt) {
+    implicit request =>
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Data set import #$id not found"))
       ) { importInfo =>
@@ -398,7 +397,6 @@ class DataSetImportController @Inject()(
           }
         }
       )
-    }
   }
 
   override protected def saveCall(importInfo: DataSetImport)(implicit request: Request[AnyContent]): Future[BSONObjectID] = {
@@ -419,8 +417,8 @@ class DataSetImportController @Inject()(
     }
   }
 
-  def idAndNames = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
+  def idAndNames = restrictAdminAny(deadbolt) {
+    implicit request =>
       for {
         imports <- repo.find(sort = Seq(AscSort("name")))
       } yield {
@@ -432,11 +430,10 @@ class DataSetImportController @Inject()(
         )
         Ok(JsArray(idAndNames.toSeq))
       }
-    }
   }
 
-  def copy(id: BSONObjectID) = restrictAdmin(deadbolt) {
-    Action.async { implicit request =>
+  def copy(id: BSONObjectID) = restrictAdminAny(deadbolt) {
+    implicit request =>
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Entity #$id not found"))
       ) { dataSetImport =>
@@ -447,7 +444,7 @@ class DataSetImportController @Inject()(
           Redirect(routes.DataSetImportController.get(newId)).flashing("success" -> s"Data Set import '${dataSetImport.dataSetId}' has been copied.")
         }
       }
-    )}
+    )
   }
 
   private def handleImportFiles(importInfo: DataSetImport)(implicit request: Request[AnyContent]): DataSetImport = {

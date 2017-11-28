@@ -1,6 +1,6 @@
 package security
 
-import be.objectify.deadbolt.core.models.Role
+import be.objectify.deadbolt.scala.models.Role
 import controllers.routes
 import jp.t2v.lab.play2.auth.{AuthConfig, _}
 import models.security.UserManager
@@ -118,7 +118,7 @@ trait AdaAuthConfig extends AuthConfig {
     * Maps users to permissions.
     */
   def authorize(user: User, authority: Authority)(implicit ctx: ExecutionContext): Future[Boolean] = Future.successful {
-    user.roles.contains(authority.getName)
+    user.roles.contains(authority.name)
   }
 
   /**

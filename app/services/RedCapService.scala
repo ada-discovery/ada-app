@@ -2,9 +2,10 @@ package services
 
 import javax.inject.{Inject, Singleton}
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import com.fasterxml.jackson.core.JsonParseException
 import com.google.inject.assistedinject.Assisted
-import com.ning.http.client.{AsyncHttpClientConfig, AsyncHttpClientConfigBean}
 import play.api.libs.json.{JsArray, JsObject}
 import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.Configuration
@@ -12,7 +13,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import dataaccess.JsonUtil._
 import models.redcap.JsonFormat._
 import models.redcap._
-import play.api.libs.ws.ning.{NingAsyncHttpClientConfigBuilder, NingWSClient, NingWSClientConfig}
+import org.asynchttpclient.DefaultAsyncHttpClientConfig
+import play.api.libs.ws.ahc.AhcWSClient
+import scala.concurrent.duration._
 
 import scala.concurrent.{Await, Future}
 
@@ -101,15 +104,25 @@ protected[services] class RedCapServiceWSImpl @Inject() (
 
   private val wsClient: WSClient =
     if (createUnsecuredClient) {
-      val config = new AsyncHttpClientConfigBean()
+      implicit val system = ActorSystem()
+      implicit val materializer = ActorMaterializer()
+
+      val config = new DefaultAsyncHttpClientConfig.Builder()
       config.setAcceptAnyCertificate(true)
       config.setFollowRedirect(true)
       config.setReadTimeout(timeout.toInt)
-      new NingWSClient(config)
+      // DefaultAsyncHttpClient(config.build
+      AhcWSClient(config.build)
+
+//      val config = new AsyncHttpClientConfigBean()
+//      config.setAcceptAnyCertificate(true)
+//      config.setFollowRedirect(true)
+//      config.setReadTimeout(timeout.toInt)
+//      new NingWSClient(config)
     } else
       ws
 
-  private val req: WSRequest = wsClient.url(url).withRequestTimeout(timeout)
+  private val req: WSRequest = wsClient.url(url).withRequestTimeout(timeout millis)
 
   private val baseRequestData = Map(
     "token" -> token,

@@ -79,8 +79,8 @@ private object RepoDef extends Enumeration {
     new MongoAsyncCrudRepo[DataSetImport, BSONObjectID]("dataset_imports"))
 
   // experimental distributed repos
-  val StudentDistRepo = Repo[StudentDistRepo](
-    new SparkMongoDistributedRepo[Student, BSONObjectID]("students"))
+//  val StudentDistRepo = Repo[StudentDistRepo](
+//    new SparkMongoDistributedRepo[Student, BSONObjectID]("students"))
 
 //  val LuxDistParkRepo = Repo[JsObjectDistRepo](
 //    new SparkMongoDistributedRepo[JsObject, BSONObjectID]("luxpark"), true)

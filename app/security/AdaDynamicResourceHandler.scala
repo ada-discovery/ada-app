@@ -1,51 +1,54 @@
 package security
 
-import be.objectify.deadbolt.core.models.Subject
-import be.objectify.deadbolt.scala.{DynamicResourceHandler, DeadboltHandler}
+import be.objectify.deadbolt.scala.models.Subject
+import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltHandler, DynamicResourceHandler}
 
 import collection.immutable.Map
 import play.api.mvc.Request
 import play.api.Logger
 
-
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 /**
- *
  * @author Steve Chaloner (steve@objectify.be)
  */
-class AdaDynamicResourceHandler extends DynamicResourceHandler
-{
-  def isAllowed[A](name: String, meta: String, handler: DeadboltHandler, request: Request[A]): Future[Boolean] = {
-    val successFuture : Future[Boolean] = AdaDynamicResourceHandler.handlers(name).isAllowed(name, meta, handler, request)
-    successFuture.map((success: Boolean) =>
-      if(!success){
-        Logger.error(s"Unallowed access by [$name].")
-      }
-    )
-    successFuture
-  }
+class AdaDynamicResourceHandler extends DynamicResourceHandler {
 
-  def checkPermission[A](permissionValue: String, deadboltHandler: DeadboltHandler, request: Request[A]): Future[Boolean] = {
-    val subjOpFuture: Future[Option[Subject]] = deadboltHandler.getSubject(request)
-    subjOpFuture.map{subjOp =>
-      if(subjOp.isDefined){
-        val success: Boolean = (subjOp.get.getPermissions.contains(permissionValue))
-        if(!success){
-          val username = subjOp.get.getIdentifier
-          Logger.error(s"Unauthorized access; user [$username] is missing permission [$permissionValue].")
-        }
-        success
-      }else{
-        Logger.error("Unauthorized access by unregistered user.")
-        false
+  override def isAllowed[A](
+    name: String,
+    meta: Option[Any] = None,
+    deadboltHandler: DeadboltHandler,
+    request: AuthenticatedRequest[A]
+  ): Future[Boolean] =
+    for {
+      success <- AdaDynamicResourceHandler.handlers(name).isAllowed(name, meta, deadboltHandler, request)
+    } yield {
+      if (!success)
+        Logger.error(s"Unallowed access by [$name].")
+      success
+    }
+
+  override def checkPermission[A](
+    permissionValue: String,
+    meta: Option[Any] = None,
+    deadboltHandler: DeadboltHandler,
+    request: AuthenticatedRequest[A]
+  ): Future[Boolean] = Future {
+    request.subject.map { subject =>
+      val success = subject.permissions.contains(permissionValue)
+      if (!success) {
+        val username = subject.identifier
+        Logger.error(s"Unauthorized access; user [$username] is missing permission [$permissionValue].")
       }
+      success
+    }.getOrElse {
+      Logger.error("Unauthorized access by unregistered user.")
+      false
     }
   }
 }
 
 object AdaDynamicResourceHandler {
-  val handlers: Map[String, DynamicResourceHandler] =
-    Map( )
+  val handlers: Map[String, DynamicResourceHandler] = Map( )
 }

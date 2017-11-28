@@ -3,15 +3,19 @@ package services
 import javax.inject.Inject
 import javax.net.ssl.SSLContext
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.util.ByteString
 import com.google.inject.assistedinject.Assisted
-import com.ning.http.client.AsyncHttpClientConfigBean
 import dataaccess.ConversionUtil
 import models.egait.{EGaitKineticData, SpatialPoint}
-import play.api.libs.ws.{WSAuthScheme, WSClient, WSRequest, WSResponse}
+import play.api.libs.ws._
 import play.api.{Configuration, Logger}
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.ws.ning.NingWSClient
 import org.apache.commons.codec.binary.{Base64, Hex}
+import org.asynchttpclient.DefaultAsyncHttpClientConfig
+import play.api.libs.ws.ahc.{AhcConfigBuilder, AhcWSClient}
 import util.ZipFileIterator
 
 import scala.concurrent.Future
@@ -76,7 +80,7 @@ trait EGaitService {
     sessionToken: String,
     userSessionId: String,
     searchSessionId: String
-  ): Future[Array[Byte]]
+  ): Future[ByteString]
 
   def downloadRawDataStructured(
     sessionToken: String,
@@ -113,10 +117,19 @@ protected[services] class EGaitServiceWSImpl @Inject() (
   private val dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
 
   private val ws = {
-    val config = new AsyncHttpClientConfigBean
-    config.setAcceptAnyCertificate (true)
-    config.setFollowRedirect (true)
-    NingWSClient(config)
+    implicit val system = ActorSystem()
+    implicit val materializer = ActorMaterializer()
+
+    val config = new DefaultAsyncHttpClientConfig.Builder()
+    config.setAcceptAnyCertificate(true)
+    config.setFollowRedirect(true)
+    // DefaultAsyncHttpClient(config.build
+    AhcWSClient(config.build)
+
+//    val config = new AsyncHttpClientConfigBean
+//    config.setAcceptAnyCertificate(true)
+//    config.setFollowRedirect(true)
+//    NingWSClient(config)
   }
 
   private val logger = Logger
@@ -274,7 +287,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
     sessionToken: String,
     userSessionId: String,
     searchSessionId: String
-  ): Future[Array[Byte]] =
+  ): Future[ByteString] =
     for {
       // get the connection token for the authentication service
       connectionToken <-
@@ -304,7 +317,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
     for {
       rawData <- downloadRawData(sessionToken, userSessionId, searchSessionId)
     } yield {
-      val files = ZipFileIterator.asBytes(rawData).toSeq
+      val files = ZipFileIterator.asBytes(rawData.toSeq.toArray).toSeq
 
       val rightSensorKineticData = extractKineticData(files(1)._2).toSeq
       val leftSensorKineticData = extractKineticData(files(2)._2).toSeq
@@ -390,7 +403,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
     request.withHeaders("user-session" -> userSessionId)
 
   private def withRequestTimeout(timeout: Duration)(request: WSRequest): WSRequest =
-    request.withRequestTimeout(timeout.toMillis)
+    request.withRequestTimeout(timeout)
 
   private def loadFileAsBase64(fileName : String):String = {
     val source = scala.io.Source.fromFile(fileName, "ISO-8859-1")

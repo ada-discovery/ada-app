@@ -117,8 +117,10 @@ class DataSpaceMetaInfoController @Inject() (
     (view.edit(_, _, _, _)).tupled
   }
 
-  override def edit(id: BSONObjectID) = restrictAdmin(deadbolt) (
-    super.edit(id)
+  override def edit(id: BSONObjectID) = restrictAdminAny(deadbolt) (
+    toAuthenticatedAction(
+      super.edit(id)
+    )
   )
 
   // list view
@@ -171,12 +173,14 @@ class DataSpaceMetaInfoController @Inject() (
       id
 
   // if update successful redirect to get/show instead of list
-  override def update(id: BSONObjectID) = restrictAdmin(deadbolt) (
-    update(id, Redirect(routes.DataSpaceMetaInfoController.get(id)))
+  override def update(id: BSONObjectID) = restrictAdminAny(deadbolt) (
+    toAuthenticatedAction(
+      update(id, Redirect(routes.DataSpaceMetaInfoController.get(id)))
+    )
   )
 
-  def deleteDataSet(id: BSONObjectID) = restrictAdmin(deadbolt) {
-    Action.async{ implicit request =>
+  def deleteDataSet(id: BSONObjectID) = restrictAdminAny(deadbolt) {
+    implicit request =>
       implicit val msg = messagesApi.preferred(request)
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Entity #$id not found"))
@@ -241,18 +245,16 @@ class DataSpaceMetaInfoController @Inject() (
           Redirect(routes.DataSpaceMetaInfoController.edit(id))
         )
       })
-    }
   }
 
-  private def getDataSetSizes(spaceMetaInfo: DataSpaceMetaInfo): Future[Map[String, Int]] = {
-    val futures = spaceMetaInfo.dataSetMetaInfos.map { setMetaInfo =>
-      val dsa = dsaf(setMetaInfo.id).get
-      dsa.dataSetRepo.count().map(size => (setMetaInfo.id, size))
-    }
+  private def getDataSetSizesRecurrently(
+    spaceMetaInfo: DataSpaceMetaInfo
+  ): Future[Map[String, Int]] = {
+    val singleMapfuture = getDataSetSizes(spaceMetaInfo)
     val recFutures = spaceMetaInfo.children.map(getDataSetSizes)
 
     for {
-      simpleMap <- Future.sequence(futures).map(_.toMap)
+      simpleMap <- singleMapfuture
       mergeSubMap <-
         Future.sequence(recFutures).map { maps =>
         maps.foldLeft(Map[String, Int]()) { case (a, b) =>
@@ -264,6 +266,16 @@ class DataSpaceMetaInfoController @Inject() (
     }
   }
 
-//  // get is allowed for all logged users
+  private def getDataSetSizes(
+    spaceMetaInfo: DataSpaceMetaInfo
+  ): Future[Map[String, Int]] = {
+    val futures = spaceMetaInfo.dataSetMetaInfos.map { setMetaInfo =>
+      val dsa = dsaf(setMetaInfo.id).get
+      dsa.dataSetRepo.count().map(size => (setMetaInfo.id, size))
+    }
+    Future.sequence(futures).map(_.toMap)
+  }
+
+  //  // get is allowed for all logged users
 //  override def get(id: BSONObjectID) = deadbolt.SubjectPresent()(super.get(id))
 }

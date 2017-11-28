@@ -1,7 +1,9 @@
 @import play.api.Play.current
 @import views.html.layout.carousel
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
 
-@()(implicit request: Request[_], flash: Flash)
+@()(implicit context: WebContext)
 
 @main("Ada, the NCER-PD Reporting System") {
 

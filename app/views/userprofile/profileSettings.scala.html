@@ -1,8 +1,10 @@
 @import views.html.layout
 @import views.html.userprofile.editableUserProfileForm
 @import dataaccess.User
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
 
-@(form: Form[User])(implicit request: Request[Any], flash: Flash, msg: Messages)
+@(form: Form[User])(implicit webContext: WebContext))
 
 @layout.main("NCER-PD Home") {
     <div class="container" style="padding-bottom: 190px;" xmlns="http://www.w3.org/1999/html">

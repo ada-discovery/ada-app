@@ -21,7 +21,7 @@ class TestIgnite @Inject() (cacheRepoFactory: CacheAsyncCrudRepoFactory) extends
     println(getAll.map(x => s"${x._id.toString} ${x.dataSetId}, ${x.exportOrderByFieldName}").mkString("\n"))
 
     val updateFuture =
-      repo.get(BSONObjectID("577e09dc8e0000d00093fc06")).flatMap{ setting =>
+      repo.get(BSONObjectID.parse("577e09dc8e0000d00093fc06").get).flatMap{ setting =>
         val updatedSetting = setting.get.copy(exportOrderByFieldName = Some("lala"))
         repo.update(updatedSetting)
       }
@@ -30,7 +30,7 @@ class TestIgnite @Inject() (cacheRepoFactory: CacheAsyncCrudRepoFactory) extends
     Await.result(updateFuture, 2 minutes)
 
     val saveFuture =
-      repo.get(BSONObjectID("577e09dc8e0000d00093fc06")).flatMap{ setting =>
+      repo.get(BSONObjectID.parse("577e09dc8e0000d00093fc06").get).flatMap{ setting =>
         val newSetting = setting.get.copy(exportOrderByFieldName = Some("lili"), dataSetId = "Testxx", _id = None)
         repo.save(newSetting)
       }

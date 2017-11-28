@@ -2,8 +2,9 @@
 @import util.matchesPath
 @import be.objectify.deadbolt.scala.views.html.{subjectPresent, subjectPresentOr, restrict}
 @import models.security.SecurityRole
+@import be.objectify.deadbolt.scala.AuthenticatedRequest
 
-@(implicit request: Request[_])
+@(implicit request: AuthenticatedRequest[_])
 
 @listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
 

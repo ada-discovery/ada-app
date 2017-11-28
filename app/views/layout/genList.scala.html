@@ -1,3 +1,6 @@
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
+
 @(
     domainName:  String,
     count: Long,
@@ -9,7 +12,7 @@
     topResources: Option[Html] = None,
     bottomResources: Option[Html] = None
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit context: WebContext)
 )
 
 @main(Messages("overviewList.title", domainName), sideBar, topContentBar, topResources, bottomResources) {

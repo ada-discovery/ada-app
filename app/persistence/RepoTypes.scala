@@ -28,6 +28,6 @@ object RepoTypes {
   type UnsupervisedLearningRepo = AsyncCrudRepo[UnsupervisedLearning, BSONObjectID]
 
   // experimental
-  type StudentDistRepo = DistributedRepo[Student, BSONObjectID]
-  type JsObjectDistRepo = DistributedRepo[JsObject, BSONObjectID]
+//  type StudentDistRepo = DistributedRepo[Student, BSONObjectID]
+//  type JsObjectDistRepo = DistributedRepo[JsObject, BSONObjectID]
 }

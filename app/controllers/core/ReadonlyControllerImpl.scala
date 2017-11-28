@@ -3,7 +3,8 @@ package controllers.core
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.DeadboltActions
+import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
+import controllers.WebJarAssets
 import dataaccess._
 import models._
 import play.api.Logger
@@ -11,7 +12,6 @@ import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
-
 import models.FilterCondition.toCriterion
 
 import scala.concurrent.duration._
@@ -39,6 +39,7 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
 
   @Inject var messagesApi: MessagesApi = _
   @Inject var deadbolt: DeadboltActions = _
+  @Inject var webJarAssets: WebJarAssets = _
 
   protected val pageLimit = 20
 
@@ -50,7 +51,13 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
 
   protected def listViewColumns: Option[Seq[String]] = None
 
-  protected implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
+//  protected implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi)
+  protected implicit def webContext(implicit request: Request[_]) = {
+    implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
+    WebContext(messagesApi, webJarAssets)
+  }
+
+  //  protected implicit def authenticatedRequest[A](implicit request: Request[A]) = new AuthenticatedRequest(request, None)
 
   /**
    * Retrieve single object by its Id.
