@@ -41,6 +41,20 @@ trait DataSetService {
     fieldTypeIdsToExclude: Traversable[FieldTypeId.Value] = Nil
   ): Future[Unit]
 
+  def updateDictionaryFields(
+    dataSetId: String,
+    newFields: Traversable[Field],
+    deleteAndSave: Boolean,
+    deleteNonReferenced: Boolean
+  ): Future[Unit]
+
+  def updateDictionaryFields(
+    fieldRepo: FieldRepo,
+    newFields: Traversable[Field],
+    deleteAndSave: Boolean,
+    deleteNonReferenced: Boolean
+  ): Future[Unit]
+
   def updateDictionary(
     dataSetId: String,
     fieldNameAndTypes: Traversable[(String, FieldTypeSpec)],
@@ -1268,13 +1282,42 @@ class DataSetServiceImpl @Inject()(
     )
   }
 
+  override def updateDictionaryFields(
+    dataSetId: String,
+    newFields: Traversable[Field],
+    deleteAndSave: Boolean,
+    deleteNonReferenced: Boolean
+  ): Future[Unit] = {
+    logger.info(s"Dictionary update for data set '${dataSetId}' initiated.")
+
+    val dsa = dsaf(dataSetId).get
+    val fieldRepo = dsa.fieldRepo
+
+    updateDictionaryFields(fieldRepo, newFields, deleteAndSave, deleteNonReferenced).map(_ =>
+      messageLogger.info(s"Dictionary update for '${dataSetId}' successfully finished.")
+    )
+  }
+
   override def updateDictionary(
     fieldRepo: FieldRepo,
     fieldNameAndTypes: Traversable[(String, FieldTypeSpec)],
     deleteAndSave: Boolean,
     deleteNonReferenced: Boolean
   ): Future[Unit] = {
-    val newFieldNames = fieldNameAndTypes.map(_._1).toSeq
+    val newFields = fieldNameAndTypes.map { case (fieldName, fieldType) =>
+      val stringEnums = fieldType.enumValues.map(_.map { case (from, to) => (from.toString, to)})
+      Field(fieldName, None, fieldType.fieldType, fieldType.isArray, stringEnums)
+    }
+    updateDictionaryFields(fieldRepo, newFields, deleteAndSave, deleteNonReferenced)
+  }
+
+  override def updateDictionaryFields(
+    fieldRepo: FieldRepo,
+    newFields: Traversable[Field],
+    deleteAndSave: Boolean,
+    deleteNonReferenced: Boolean
+  ): Future[Unit] = {
+    val newFieldNames = newFields.map(_.name).toSeq
 
     for {
       // get the existing fields
@@ -1289,13 +1332,22 @@ class DataSetServiceImpl @Inject()(
 
       // fields to save or update
       fieldsToSaveAndUpdate: Traversable[Either[Field, Field]] =
-        fieldNameAndTypes.map { case (fieldName, fieldType) =>
+        newFields.map { newField =>
+          referencedNameFieldMap.get(newField.name) match {
 
-          val stringEnums = fieldType.enumValues.map(_.map { case (from, to) => (from.toString, to)})
+            case None => Left(newField)
 
-          referencedNameFieldMap.get(fieldName) match {
-            case None => Left(Field(fieldName, None, fieldType.fieldType, fieldType.isArray, stringEnums))
-            case Some(field) => Right(field.copy(fieldType = fieldType.fieldType, isArray = fieldType.isArray, numValues = stringEnums))
+            case Some(oldField) => Right(
+              oldField.copy(
+                fieldType = newField.fieldType,
+                isArray = newField.isArray,
+                numValues = newField.numValues,
+                label = oldField.label match {
+                  case Some(label) => Some(label)
+                  case None => newField.label
+                }
+              )
+            )
           }
         }
 
@@ -1310,17 +1362,17 @@ class DataSetServiceImpl @Inject()(
 
       // update the existing fields
       _ <- if (deleteAndSave)
-          fieldRepo.delete(fieldsToUpdate.map(_.name)).flatMap { _ =>
-            fieldRepo.save(fieldsToUpdate)
-          }
-        else
-          fieldRepo.update(fieldsToUpdate)
+        fieldRepo.delete(fieldsToUpdate.map(_.name)).flatMap { _ =>
+          fieldRepo.save(fieldsToUpdate)
+        }
+      else
+        fieldRepo.update(fieldsToUpdate)
 
       // remove the non-referenced fields if needed
       _ <- if (deleteNonReferenced)
-          fieldRepo.delete(nonReferencedFields.map(_.name))
-        else
-          Future(())
+        fieldRepo.delete(nonReferencedFields.map(_.name))
+      else
+        Future(())
 
     } yield
       ()

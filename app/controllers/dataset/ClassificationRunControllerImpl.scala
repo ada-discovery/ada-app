@@ -203,8 +203,6 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     setting: ClassificationSetting,
     saveResults: Boolean
   ) = Action.async { implicit request =>
-    println(Json.prettyPrint(Json.toJson(setting)))
-
     val mlModelFuture = classificationRepo.get(setting.mlModelId)
     val criteriaFuture = loadCriteria(setting.filterId)
     val replicationCriteriaFuture = loadCriteria(setting.replicationFilterId)

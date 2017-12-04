@@ -1,38 +1,40 @@
 @import play.api.Play.current
 
+@()(implicit msg: Messages)
+
 <footer>
     <div align="center">
         <hr/>
         <ul class="list-inline">
             <li>
-                <a target="_blank" href="@current.configuration.getString("fnr.url").get">
+                <a target="_blank" href="http://www.fnr.lu">
                     <img src="@routes.Assets.versioned("images/logos/fnr.png")" />
                 </a>
             </li>
             <li>
-                <a target="_blank" href="@current.configuration.getString("chl.url").get">
+                <a target="_blank" href="https://www.chl.lu">
                     <img src="@routes.Assets.versioned("images/logos/chl.png")" />
                 </a>
             </li>
             <li>
-                <a target="_blank" href="@current.configuration.getString("lih.url").get">
+                <a target="_blank" href="https://www.lih.lu">
                     <img src="@routes.Assets.versioned("images/logos/lih.png")" />
                 </a>
             </li>
             <li>
-                <a target="_blank" href="@current.configuration.getString("ibbl.url").get">
+                <a target="_blank" href="http://www.ibbl.lu">
                     <img src="@routes.Assets.versioned("images/logos/ibbl.png")" />
                 </a>
             <li>
             <li>
-                <a target="_blank" href="@current.configuration.getString("lcsb.url").get">
+                <a target="_blank" href="http://wwwen.uni.lu/lcsb">
                     <img src="@routes.Assets.versioned("images/logos/unilu-lcsb.png")" />
                 </a>
             </li>
         </ul>
         <hr/>
         <p class="text-muted" align="center">
-            Ada (NCER-PD Reporting System), Version @current.configuration.getString("app.version").get
+            Ada (@Messages("project.name") Reporting System), Version @current.configuration.getString("app.version").get
         </p>
         <p class="text-muted" align="center">
             &copy; <a target="_blank" href="@current.configuration.getString("unilu.url").get">Université du Luxembourg</a> 2016-@(new java.util.Date().format("yyyy")). All rights reserved.

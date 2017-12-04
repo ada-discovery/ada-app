@@ -1,6 +1,6 @@
-@import play.api.mvc.Flash
 @import be.objectify.deadbolt.scala.views.html.subjectPresent
-@import be.objectify.deadbolt.scala.AuthenticatedRequest
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
 
 @(
     title: String,
@@ -8,8 +8,11 @@
     topContentBar: Option[Html] = None,
     topResources: Option[Html] = None,
     bottomResources: Option[Html] = None,
-    extraMessages: Option[Html] = None
-)(content: Html)(implicit flash: Flash, request: AuthenticatedRequest[_], webJarAssets: WebJarAssets)
+    extraMessages: Option[Html] = None)(
+    content: Html
+)(
+    implicit context: WebContext
+)
 
 <!DOCTYPE html>
 
@@ -17,14 +20,14 @@
     <head>
         <title>@title</title>
         <!-- Latest compiled and minified CSS -->
-        <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(webJarAssets.locate("bootswatch-united", "bootstrap.min.css"))">
+        <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(context.webJarAssets.locate("bootswatch-united", "bootstrap.min.css"))">
         <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/main.min.css")">
 
         @* Optional theme *@
 		@* <link rel="stylesheet" media="screen" href="@routes.WebJarAssets.at(WebJarAssets.locate("bootstrap", "bootstrap-theme.min.css"))"> *@
         
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
-        <script src="@routes.WebJarAssets.at(webJarAssets.locate("jquery.min.js"))"></script>
+        <script src="@routes.WebJarAssets.at(context.webJarAssets.locate("jquery.min.js"))"></script>
         <script type="text/javascript" src="@routes.Assets.versioned("javascripts/main.min.js")"></script>
 
         @if(topResources.isDefined) {
@@ -33,13 +36,13 @@
 
         <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
 	    <!--[if lt IE 9]>
-	      <script src="@routes.WebJarAssets.at(webJarAssets.locate("html5shiv.js"))"></script>
-	      <script src="@routes.WebJarAssets.at(webJarAssets.locate("respond.min.js"))"></script>
+	      <script src="@routes.WebJarAssets.at(context.webJarAssets.locate("html5shiv.js"))"></script>
+	      <script src="@routes.WebJarAssets.at(context.webJarAssets.locate("respond.min.js"))"></script>
 	    <![endif]-->
 		
     </head>
     <body>
-        @navbar(request)
+        @navbar()
 
         <div class="container-fluid">
             <div class="row-fluid">
@@ -77,7 +80,7 @@
 	    ================================================== -->
 	    <!-- Placed at the end of the document so the pages load faster -->
 	    <!-- Latest compiled and minified JavaScript -->
-		<script src="@routes.WebJarAssets.at(webJarAssets.locate("bootswatch-united", "bootstrap.min.js"))"></script>
+		<script src="@routes.WebJarAssets.at(context.webJarAssets.locate("bootswatch-united", "bootstrap.min.js"))"></script>
 
         @if(bottomResources.isDefined) {
             @bottomResources.get

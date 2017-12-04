@@ -20,7 +20,7 @@ import org.apache.spark.sql.types.{Metadata, MetadataBuilder, StructType, _}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.ml.clustering._
 import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
-import org.apache.spark.ml.param.ParamMap
+import org.apache.spark.ml.param._
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.rdd.RDD
@@ -641,7 +641,7 @@ private class MachineLearningServiceImpl @Inject() (
   }
 
   private def trainWithCrossValidation[M <: Model[M]](
-    trainer: Estimator[M],
+    trainer: Estimator[M] with Params,
     crossValidationEvaluator: Evaluator,
     folds: Option[Int],
     trainingDf: DataFrame,
@@ -653,16 +653,26 @@ private class MachineLearningServiceImpl @Inject() (
     // TODO: since we are not selecting a model cross validation here is useless
     // use cross-validation if the folds specified (without parameter optimization) and train
     folds.map { folds =>
-//      val pipeline = new Pipeline().setStages(Array(trainer))
-      val paramGrid = new ParamGridBuilder().build() // No parameter search
+      val paramGrid = new ParamGridBuilder()
 
-//      ParamMap.
-//        .addGrid(hashingTF.numFeatures, Array(10, 100, 1000))
-//        .addGrid(lr.regParam, Array(0.1, 0.01))
+      trainer.params.foreach { param =>
+        // if value of a param not specified add to the grid search
+        if (trainer.get(param).isEmpty)
+          param match {
+            case x: BooleanParam => paramGrid.addGrid(x)
+            case x: IntParam => paramGrid.addGrid(x, Array(2, 3))
+            case x: LongParam => paramGrid.addGrid(x, Array(2l, 3l))
+            case x: FloatParam => paramGrid.addGrid(x, Array(0.5f, 0.7f, 0.9f))
+            case x: DoubleParam => paramGrid.addGrid(x, Array(0.5d, 0.7d, 0.9d))
+            case _ => ()
+          }
+      }
+
+      println(paramGrid.build().mkString("\n"))
 
       val cv = new CrossValidator()
         .setEstimator(trainer)
-        .setEstimatorParamMaps(paramGrid)
+        .setEstimatorParamMaps(paramGrid.build())
         .setEvaluator(crossValidationEvaluator)
         .setNumFolds(folds)
 

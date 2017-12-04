@@ -5,7 +5,7 @@
 
 @(user: User, workspace: Workspace)(implicit webContext: WebContext))
 
-@layout.main("NCER-PD Home") {
+@layout.main(Messages("project.name") + " Home") {
     <!-- user profile header; move to designated template -->
     <div class="container" style="padding-bottom: 190px;" xmlns="http://www.w3.org/1999/html">
         @userprofile.profileHeader(2)
