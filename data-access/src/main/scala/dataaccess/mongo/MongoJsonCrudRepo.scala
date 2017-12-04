@@ -18,13 +18,14 @@ import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
 import scala.concurrent.Future
 import javax.inject.Inject
 
+import models.DataSetFormattersAndIds.JsObjectIdentity
 import reactivemongo.core.commands.RawCommand
 
 class MongoJsonCrudRepo @Inject()(
     @Assisted collectionName : String,
     @Assisted fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
     @Assisted mongoAutoCreateIndexForProjection: Boolean
-  ) extends MongoAsyncReadonlyRepo[JsObject, BSONObjectID](collectionName, "_id", mongoAutoCreateIndexForProjection) with JsonCrudRepo {
+  ) extends MongoAsyncReadonlyRepo[JsObject, BSONObjectID](collectionName, JsObjectIdentity.name, mongoAutoCreateIndexForProjection) with JsonCrudRepo {
 
   override def save(entity: JsObject): Future[BSONObjectID] = {
     val (doc, id) = addId(entity)

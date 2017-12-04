@@ -24,7 +24,7 @@ import reactivemongo.play.json.collection.JSONCollection
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import models._
-import reactivemongo.akkastream.State
+import reactivemongo.akkastream.{AkkaStreamCursor, State}
 import reactivemongo.api._
 import reactivemongo.core.commands.RawCommand
 
@@ -76,8 +76,6 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     )
   }
 
-  import reactivemongo.akkastream.cursorProducer
-
   // TODO
   def findAsStream(
     criteria: Seq[Criterion[Any]],
@@ -86,13 +84,15 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     limit: Option[Int],
     skip: Option[Int]
   ): Future[Source[E, Future[State]]] =
-    findAsCursor(criteria, sort, projection, limit, skip).map(cursor =>
+    findAsCursor(criteria, sort, projection, limit, skip).map { cursor =>
       // handle the limit
       limit match {
-        case Some(limit) => cursorProducer.produce(cursor).documentSource(limit)(materializer)
-        case None => cursorProducer.produce(cursor).documentSource()(materializer)
+        case Some(limit) => cursor.documentSource(limit)(materializer)
+        case None => cursor.documentSource()(materializer)
       }
-    )
+    }
+
+  import reactivemongo.akkastream.cursorProducer
 
   protected def findAsCursor(
     criteria: Seq[Criterion[Any]],
@@ -100,7 +100,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     projection: Traversable[String],
     limit: Option[Int],
     skip: Option[Int]
-  ): Future[Cursor[E]] = {
+  ): Future[AkkaStreamCursor[E]] = {
     val sortedProjection = projection.toSeq.sorted
     val jsonProjection = JsObject(
       sortedProjection.map(fieldName => (fieldName, JsNumber(1)))
