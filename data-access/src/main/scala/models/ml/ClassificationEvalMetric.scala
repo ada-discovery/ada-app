@@ -1,8 +1,5 @@
 package models.ml
 
-/**
-  * Created by peter on 06.12.17.
-  */
-object ClassificationEvalMetric {
-
+object ClassificationEvalMetric extends Enumeration {
+  val f1, weightedPrecision, weightedRecall, accuracy, areaUnderROC, areaUnderPR = Value
 }

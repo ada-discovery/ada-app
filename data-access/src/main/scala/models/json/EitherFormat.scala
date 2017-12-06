@@ -2,7 +2,7 @@ package models.json
 
 import play.api.libs.json._
 
-class EitherFormat[L, R](
+private class EitherFormat[L, R](
     implicit val leftFormat: Format[L], rightFormat: Format[R]
   ) extends Format[Either[L, R]] {
 

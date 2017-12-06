@@ -26,7 +26,7 @@ case class DataView(
 
 object DataView {
 
-  implicit val eitherFormat = new EitherFormat[Seq[models.FilterCondition], BSONObjectID]
+  implicit val eitherFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
 
   implicit val dataViewFormat : Format[DataView] = (
     (__ \ "_id").formatNullable[BSONObjectID] and

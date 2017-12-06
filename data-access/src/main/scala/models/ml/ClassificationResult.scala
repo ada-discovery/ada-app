@@ -64,20 +64,22 @@ case class ClassificationSetting(
   samplingRatios: Seq[(String, Double)],
   repetitions: Option[Int],
   crossValidationFolds: Option[Int],
+  crossValidationEvalMetric: Option[ClassificationEvalMetric.Value],
   binCurvesNumBins: Option[Int]
 ) {
   def fieldNamesToLoads =
     if (inputFieldNames.nonEmpty) (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq else Nil
 
   def learningSetting =
-    LearningSetting(featuresNormalizationType, pcaDims, trainingTestingSplit, replicationFilterId, samplingRatios, repetitions, crossValidationFolds)
+    LearningSetting[ClassificationEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, replicationFilterId, samplingRatios, repetitions, crossValidationFolds, crossValidationEvalMetric)
 }
 
 object ClassificationResult {
-  implicit val filterOrIdFormat = new EitherFormat[Seq[models.FilterCondition], BSONObjectID]
+  implicit val filterOrIdFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
 
   implicit val tuppleFormat = TupleFormat[String, Double]
   implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
+  implicit val classificationEvalMetricFormat = EnumFormat.enumFormat(ClassificationEvalMetric)
   implicit val classificationSettingFormat = Json.format[ClassificationSetting]
   implicit val classificationMetricStatsValuesFormat = Json.format[MetricStatsValues]
   implicit val classificationMetricStatsFormat = Json.format[ClassificationMetricStats]

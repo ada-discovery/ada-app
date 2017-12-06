@@ -45,6 +45,7 @@ libraryDependencies ++= Seq(
   "org.webjars" % "html5shiv" % "3.7.0",
   "org.webjars" % "respond" % "1.4.2",
   "org.webjars" % "highcharts" % "4.2.7",
+//  "org.webjars.npm" % "fractalis" % "0.1.6",
   "org.webjars.bower" % "plotly.js" % "1.5.1",
   "org.webjars.bower" % "d3" % "3.5.16",
   "org.webjars.bower" % "Autolinker.js" % "0.25.0", // to convert links to a-href elements
