@@ -59,7 +59,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   protected override val listViewColumns = None // Some(Seq("name"))
 
   private implicit val widgetSpecFormatter = JsonFormatter[WidgetSpec]
-  private implicit val eitherFormat = new EitherFormat[Seq[models.FilterCondition], BSONObjectID]
+  private implicit val eitherFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
   private implicit val eitherFormatter = JsonFormatter[Either[Seq[models.FilterCondition], BSONObjectID]]
 
   override protected[controllers] val form = Form(

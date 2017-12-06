@@ -41,7 +41,7 @@ trait MachineLearningService {
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Classification,
-    setting: LearningSetting = LearningSetting(),
+    setting: LearningSetting[ClassificationEvalMetric.Value] = LearningSetting[ClassificationEvalMetric.Value](),
     replicationData: Traversable[JsObject] = Nil,
     binCurvesNumBins: Option[Int] = None
   ): Future[ClassificationResultsHolder]
@@ -51,7 +51,7 @@ trait MachineLearningService {
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression,
-    setting: LearningSetting = LearningSetting()
+    setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value]()
   ): Future[Traversable[RegressionPerformance]]
 
   def cluster[M <: Model[M]](
@@ -92,9 +92,14 @@ private class MachineLearningServiceImpl @Inject() (
   private implicit val sqlContext = sparkApp.sqlContext
 
   private val defaultTrainingTestingSplit = 0.8
+  private val defaultClassificationCrossValidationEvalMetric = ClassificationEvalMetric.accuracy
+  private val defaultRegressionCrossValidationEvalMetric = RegressionEvalMetric.rmse
+
   private val repetitionParallelism = configuration.getInt("ml.repetition_parallelism").getOrElse(2)
   private val binaryClassifierInputName = configuration.getString("ml.binary_classifier.input").getOrElse("probability")
-  private val binaryPredictionVectorizer = new IndexVectorizer() { setInputCol("prediction"); setOutputCol(binaryClassifierInputName)}
+  private val binaryPredictionVectorizer = new IndexVectorizer() {
+    setInputCol("prediction"); setOutputCol(binaryClassifierInputName)
+  }
 
   private val classificationEvaluators =
     ClassificationEvalMetric.values.filter(metric =>
@@ -135,7 +140,7 @@ private class MachineLearningServiceImpl @Inject() (
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Classification,
-    setting: LearningSetting,
+    setting: LearningSetting[ClassificationEvalMetric.Value],
     replicationData: Traversable[JsObject],
     binCurvesNumBins: Option[Int]
   ): Future[ClassificationResultsHolder] = {
@@ -175,7 +180,7 @@ private class MachineLearningServiceImpl @Inject() (
     val outputLabelType = finalDf.schema.fields.find(_.name == "label").get
     val outputSize = outputLabelType.metadata.getMetadata("ml_attr").getStringArray("vals").length
 
-    val trainer = SparkMLEstimatorFactory(mlModel, inputSize, outputSize)
+    val (trainer, paramMaps) = SparkMLEstimatorFactory(mlModel, inputSize, outputSize)
 
     // REPEAT THE TRAINING-TEST CYCLE
 
@@ -195,6 +200,14 @@ private class MachineLearningServiceImpl @Inject() (
     // evaluators
     val evaluators = classificationEvaluators ++ (if (outputSize == 2) binClassificationEvaluators else Nil)
 
+    // cross-validation evaluator
+    val crossValidationEvaluator =
+      setting.crossValidationEvalMetric.flatMap(metric =>
+        evaluators.find(_.metric == metric)
+      ).getOrElse(
+        evaluators.find(_.metric == defaultClassificationCrossValidationEvalMetric).get
+      )
+
     val resultsWithCountsFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
       logger.info(s"Execution of repetition $index started.")
 
@@ -213,7 +226,8 @@ private class MachineLearningServiceImpl @Inject() (
       // run the trainer (with folds) on the given training and test data sets (replication df is treated as "another" test data set if provided)
 
       val testSets = Seq(Some(test.cache), finalReplicationDf).flatten
-      val (trainingPredictions, testPredictions) = trainWithCrossValidation(trainer, evaluators.head.evaluator, setting.crossValidationFolds, training.cache, testSets)
+
+      val (trainingPredictions, testPredictions) = trainWithCrossValidation(trainer, paramMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training.cache, testSets)
 
       // evaluate the performance
 
@@ -228,7 +242,7 @@ private class MachineLearningServiceImpl @Inject() (
       val results = evaluate(evaluators, trainingPredictionsExt, testPredictionsExt)
 
       // generate binary classification curves (roc, pr, etc.) if the output is binary
-      val (binTrainingCurves,  binTestCurves) =
+      val (binTrainingCurves, binTestCurves) =
         if (outputSize == 2) {
           // is binary
           val trainingCurves = binaryMetricsCurves(trainingPredictionsExt, binCurvesNumBins)
@@ -291,7 +305,7 @@ private class MachineLearningServiceImpl @Inject() (
 
   private def transformToClassificationDataFrame(
     df: DataFrame,
-    setting: LearningSetting
+    setting: LearningSetting[_]
   ): DataFrame = {
     // normalize the features
     val normalizeFeatures = new SchemaUnchangedTransformer(normalizeFeaturesOptional(setting.featuresNormalizationType))
@@ -344,9 +358,9 @@ private class MachineLearningServiceImpl @Inject() (
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression,
-    setting: LearningSetting
+    setting: LearningSetting[RegressionEvalMetric.Value]
   ): Future[Traversable[RegressionPerformance]] = {
-    val trainer = SparkMLEstimatorFactory(mlModel)
+    val (trainer, paramMaps) = SparkMLEstimatorFactory(mlModel)
 
     val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName))
 
@@ -365,12 +379,20 @@ private class MachineLearningServiceImpl @Inject() (
     // split the data into training and test parts
     val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
 
+    // cross-validation evaluator
+    val crossValidationEvaluator =
+      setting.crossValidationEvalMetric.flatMap(metric =>
+        regressionEvaluators.find(_.metric == metric)
+      ).getOrElse(
+        regressionEvaluators.find(_.metric == defaultRegressionCrossValidationEvalMetric).get
+      )
+
     val resultsFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
       println(s"Execution of repetition $index started.")
       val Array(training, test) = dataFrame.randomSplit(Array(split, 1 - split))
 
       // run the trainer (with folds) on the given training and test data sets
-      val (trainPredictions, testPredictions) = trainWithCrossValidation(trainer, regressionEvaluators.head.evaluator, setting.crossValidationFolds, training.cache, Seq(test.cache))
+      val (trainPredictions, testPredictions) = trainWithCrossValidation(trainer, paramMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training.cache, Seq(test.cache))
 
       // evaluate the performance
       val results = evaluate(regressionEvaluators, trainPredictions, testPredictions)
@@ -386,7 +408,7 @@ private class MachineLearningServiceImpl @Inject() (
 
       // create performance results
       results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
-        RegressionPerformance(evalMetric, results.map( x => (x._2, x._3.head)))
+        RegressionPerformance(evalMetric, results.map(x => (x._2, x._3.head)))
       }
     }
   }
@@ -528,7 +550,7 @@ private class MachineLearningServiceImpl @Inject() (
     k: Option[Int])(
     df: DataFrame
   ) =
-    k.map( pcaDims =>
+    k.map(pcaDims =>
       df.transform(pcaComponents(pcaDims))
     ).getOrElse(df)
 
@@ -589,7 +611,7 @@ private class MachineLearningServiceImpl @Inject() (
         Some((metric, trainValue, testValues))
       } catch {
         case e: Exception =>
-        logger.error(s"Evaluation of metric '$metric' failed."); None
+          logger.error(s"Evaluation of metric '$metric' failed."); None
       }
     }
 
@@ -641,7 +663,8 @@ private class MachineLearningServiceImpl @Inject() (
   }
 
   private def trainWithCrossValidation[M <: Model[M]](
-    trainer: Estimator[M] with Params,
+    trainer: Estimator[M],
+    paramMaps: Array[ParamMap],
     crossValidationEvaluator: Evaluator,
     folds: Option[Int],
     trainingDf: DataFrame,
@@ -650,29 +673,12 @@ private class MachineLearningServiceImpl @Inject() (
     def trainAux[MM <: Model[MM]](estimator: Estimator[MM]) =
       train(estimator, trainingDf, testDfs)
 
-    // TODO: since we are not selecting a model cross validation here is useless
-    // use cross-validation if the folds specified (without parameter optimization) and train
+    // use cross-validation if the folds specified together with params to search through, and train
     folds.map { folds =>
-      val paramGrid = new ParamGridBuilder()
-
-      trainer.params.foreach { param =>
-        // if value of a param not specified add to the grid search
-        if (trainer.get(param).isEmpty)
-          param match {
-            case x: BooleanParam => paramGrid.addGrid(x)
-            case x: IntParam => paramGrid.addGrid(x, Array(2, 3))
-            case x: LongParam => paramGrid.addGrid(x, Array(2l, 3l))
-            case x: FloatParam => paramGrid.addGrid(x, Array(0.5f, 0.7f, 0.9f))
-            case x: DoubleParam => paramGrid.addGrid(x, Array(0.5d, 0.7d, 0.9d))
-            case _ => ()
-          }
-      }
-
-      println(paramGrid.build().mkString("\n"))
 
       val cv = new CrossValidator()
         .setEstimator(trainer)
-        .setEstimatorParamMaps(paramGrid.build())
+        .setEstimatorParamMaps(paramMaps)
         .setEvaluator(crossValidationEvaluator)
         .setNumFolds(folds)
 
@@ -682,10 +688,7 @@ private class MachineLearningServiceImpl @Inject() (
     )
   }
 
-  case class EvaluatorWrapper[Q](
-    metric: Q,
-    evaluator: Evaluator
-  )
+  case class EvaluatorWrapper[Q](metric: Q, evaluator: Evaluator)
 
   private def fit[M <: Model[M], Q](
     estimator: Estimator[M],
@@ -699,14 +702,6 @@ private class MachineLearningServiceImpl @Inject() (
 
     (lrModel, predictions)
   }
-}
-
-object ClassificationEvalMetric extends Enumeration {
-  val f1, weightedPrecision, weightedRecall, accuracy, areaUnderROC, areaUnderPR = Value
-}
-
-object RegressionEvalMetric extends Enumeration {
-  val mse, rmse, r2, mae = Value
 }
 
 abstract class Performance {

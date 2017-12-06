@@ -1,7 +1,7 @@
 package controllers.dataset
 
 import controllers.core.ReadonlyController
-import models.ml.ClassificationSetting
+import models.ml.{ClassificationEvalMetric, ClassificationSetting}
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 

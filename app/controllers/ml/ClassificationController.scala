@@ -4,7 +4,7 @@ import java.util.Date
 import javax.inject.Inject
 
 import controllers.core._
-import controllers.{AdminRestrictedCrudController, EnumFormatter, SeqFormatter, routes}
+import controllers._
 import dataaccess.AscSort
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models._
@@ -23,6 +23,7 @@ import reactivemongo.bson.BSONObjectID
 import services.DataSpaceService
 import util.SecurityUtil.{restrictAdminAny, restrictSubjectPresentAny}
 import views.html.{layout, classification => view}
+import models.ml.classification.ValueOrSeq.ValueOrSeq
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -45,26 +46,29 @@ class ClassificationController @Inject()(
   private implicit val intSeqFormatter = SeqFormatter.applyInt
   private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
 
+  private implicit val intEitherSeqFormatter = EitherSeqFormatter[Int]
+  private implicit val doubleEitherSeqFormatter = EitherSeqFormatter[Double]
+
   protected val treeCoreMapping: Mapping[TreeCore] = mapping(
-    "maxDepth" -> optional(number(min = 1)),
-    "maxBins" -> optional(number(min = 1)),
-    "minInstancesPerNode" -> optional(number(min = 1)),
-    "minInfoGain" -> optional(of(doubleFormat)),
+    "maxDepth" -> of[ValueOrSeq[Int]],
+    "maxBins" -> of[ValueOrSeq[Int]],
+    "minInstancesPerNode" -> of[ValueOrSeq[Int]],
+    "minInfoGain" -> of[ValueOrSeq[Double]],
     "seed" -> optional(longNumber(min = 1))
   )(TreeCore.apply)(TreeCore.unapply)
 
   protected val logisticRegressionForm = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
-      "regularization" -> optional(of(doubleFormat)),
-      "elasticMixingRatio" -> optional(of(doubleFormat)),
-      "maxIteration" -> optional(number(min = 1)),
-      "tolerance" -> optional(of(doubleFormat)),
+      "regularization" -> of[ValueOrSeq[Double]], // optional((doubleFormat)),
+      "elasticMixingRatio" -> of[ValueOrSeq[Double]],
+      "maxIteration" -> of[ValueOrSeq[Int]],
+      "tolerance" -> of[ValueOrSeq[Double]],
       "fitIntercept" -> optional(boolean),
       "family" -> optional(of[LogisticModelFamily.Value]),
       "standardization" -> optional(boolean),
-      "aggregationDepth" -> optional(number(min = 1)),
-      "threshold" -> optional(of(doubleFormat)),
+      "aggregationDepth" -> of[ValueOrSeq[Int]],
+      "threshold" -> of[ValueOrSeq[Double]],
       "thresholds" -> optional(of[Seq[Double]]),
       "name" -> optional(nonEmptyText),
       "createdById" -> ignored(Option.empty[BSONObjectID]),
@@ -75,12 +79,12 @@ class ClassificationController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "hiddenLayers" -> of[Seq[Int]],
-      "maxIteration" -> optional(number(min = 1)),
-      "tolerance" -> optional(of(doubleFormat)),
-      "blockSize" -> optional(number(min = 1)),
+      "maxIteration" -> of[ValueOrSeq[Int]],
+      "tolerance" -> of[ValueOrSeq[Double]],
+      "blockSize" -> of[ValueOrSeq[Int]],
       "solver" -> optional(of[MLPSolver.Value]),
       "seed" -> optional(longNumber(min = 1)),
-      "stepSize" -> optional(of(doubleFormat)),
+      "stepSize" -> of[ValueOrSeq[Double]],
       "name" -> optional(nonEmptyText),
       "createdById" -> ignored(Option.empty[BSONObjectID]),
       "timeCreated" -> ignored(new Date())
@@ -100,8 +104,8 @@ class ClassificationController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "core" -> treeCoreMapping,
-      "numTrees" -> optional(number(min = 1)),
-      "subsamplingRate" -> optional(of(doubleFormat)),
+      "numTrees" -> of[ValueOrSeq[Int]],
+      "subsamplingRate" -> of[ValueOrSeq[Double]],
       "impurity" -> optional(of[DecisionTreeImpurity.Value]),
       "featureSubsetStrategy" -> optional(of[RandomForestFeatureSubsetStrategy.Value]),
       "name" -> optional(nonEmptyText),
@@ -113,9 +117,9 @@ class ClassificationController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "core" -> treeCoreMapping,
-      "maxIteration" -> optional(number(min = 1)),
-      "stepSize" -> optional(of(doubleFormat)),
-      "subsamplingRate" -> optional(of(doubleFormat)),
+      "maxIteration" -> of[ValueOrSeq[Int]],
+      "stepSize" -> of[ValueOrSeq[Double]],
+      "subsamplingRate" -> of[ValueOrSeq[Double]],
       "lossType" -> optional(of[GBTClassificationLossType.Value]),
       "name" -> optional(nonEmptyText),
       "createdById" -> ignored(Option.empty[BSONObjectID]),
@@ -125,7 +129,7 @@ class ClassificationController @Inject()(
   protected val naiveBayesForm = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
-      "smoothing" -> optional(of(doubleFormat)),
+      "smoothing" -> of[ValueOrSeq[Double]],
       "modelType" -> optional(of[BayesModelType.Value]),
       "name" -> optional(nonEmptyText),
       "createdById" -> ignored(Option.empty[BSONObjectID]),
@@ -135,13 +139,13 @@ class ClassificationController @Inject()(
   protected val linearSVMForm = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
-      "aggregationDepth" -> optional(number(min = 1)),
+      "aggregationDepth" -> of[ValueOrSeq[Int]],
       "fitIntercept" -> optional(boolean),
-      "maxIteration" -> optional(number(min = 1)),
-      "regularization" -> optional(of(doubleFormat)),
+      "maxIteration" -> of[ValueOrSeq[Int]],
+      "regularization" -> of[ValueOrSeq[Double]],
       "standardization" -> optional(boolean),
-      "threshold" -> optional(of(doubleFormat)),
-      "tolerance" -> optional(of(doubleFormat)),
+      "threshold" -> of[ValueOrSeq[Double]],
+      "tolerance" -> of[ValueOrSeq[Double]],
       "name" -> optional(nonEmptyText),
       "createdById" -> ignored(Option.empty[BSONObjectID]),
       "timeCreated" -> ignored(new Date())

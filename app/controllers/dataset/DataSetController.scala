@@ -7,6 +7,7 @@ import models.{FieldTypeId, FilterCondition, PageOrder}
 import play.api.libs.json.JsArray
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
+import models.ml.RegressionEvalMetric
 import views.html.dataset
 
 import scala.concurrent.Future
@@ -83,7 +84,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     pcaDims: Option[Int],
     trainingTestingSplit: Option[Double],
     repetitions: Option[Int],
-    crossValidationFolds: Option[Int]
+    crossValidationFolds: Option[Int],
+    crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
   ): Action[AnyContent]
 
   def cluster(

@@ -8,6 +8,7 @@
 @import models.{DataSpaceMetaInfo, FieldTypeId, FilterShowFieldStyle}
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
+@import models.ml.ClassificationEvalMetric
 
 @(
     dataSetName: String,
@@ -84,6 +85,9 @@
             var featuresSelectionNum = $("#featuresSelectionNum").val()
             var repetitions = $("#repetitions").val()
             var crossValidationFolds = $("#crossValidationFolds").val()
+            var crossValidationEvalMetric = $("#crossValidationEvalMetric").val()
+            if (!crossValidationEvalMetric)
+                crossValidationEvalMetric = null
             var featuresNormalizationType = $("#featuresNormalizationType").val()
             if (!featuresNormalizationType)
                 featuresNormalizationType = null
@@ -116,6 +120,7 @@
                 "samplingRatios": samplingTuples,
                 "repetitions": intValue(repetitions),
                 "crossValidationFolds": intValue(crossValidationFolds),
+                "crossValidationEvalMetric": crossValidationEvalMetric,
                 "binCurvesNumBins": intValue(binCurvesNumBins)
             };
 
@@ -267,6 +272,9 @@
 
 @extraFields = {
     @trainingSettingFields()
+    @labelValueAux("crossValidationEvalMetric", "Cross Validation Eval Metric") {
+        @selectEnum("crossValidationEvalMetric", ClassificationEvalMetric, true, Some("input-lg"))
+    }
     @labelValueAux("replicationFilterId", "Replication Data") {
         <input id="replicationFilterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="filter" value="">
         <input id="replicationFilterId" name="replicationFilterId" type="hidden" value="">

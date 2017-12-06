@@ -1,9 +1,11 @@
 package models.ml
 
+import models.ml.classification.ValueOrSeq._
+
 case class TreeCore(
-  maxDepth: Option[Int] = None,
-  maxBins: Option[Int] = None,
-  minInstancesPerNode: Option[Int] = None,
-  minInfoGain: Option[Double] = None,
+  maxDepth: ValueOrSeq[Int] = Left(None),
+  maxBins: ValueOrSeq[Int] = Left(None),
+  minInstancesPerNode: ValueOrSeq[Int] = Left(None),
+  minInfoGain: ValueOrSeq[Double] = Left(None),
   seed: Option[Long] = None
 )

@@ -46,9 +46,9 @@ class MachineLearningClassificationTest @Inject()(
 
     val accuracy = classify(
         LogisticRegression(
-          maxIteration = Some(1000),
-          regularization = Some(0.3),
-          elasticMixingRatio = Some(0.8)
+          maxIteration = Left(Some(1000)),
+          regularization = Left(Some(0.3)),
+          elasticMixingRatio = Left(Some(0.8))
         )
       )
 
@@ -60,9 +60,9 @@ class MachineLearningClassificationTest @Inject()(
     val accuracy2 = classify(
         LogisticRegression(
           family = Some(LogisticModelFamily.Multinomial),
-          maxIteration = Some(1000),
-          regularization = Some(0.3),
-          elasticMixingRatio = Some(0.8)
+          maxIteration = Left(Some(1000)),
+          regularization = Left(Some(0.3)),
+          elasticMixingRatio = Left(Some(0.8))
         )
       )
     println(accuracy2)
@@ -70,12 +70,12 @@ class MachineLearningClassificationTest @Inject()(
 
     println("Decision tree")
 
-    val accuracy3 = classify(DecisionTree(core = TreeCore(maxDepth = Some(10))))
+    val accuracy3 = classify(DecisionTree(core = TreeCore(maxDepth = Left(Some(10)))))
     println(accuracy3)
 
     println("Random forest")
 
-    val accuracy4 = classify(RandomForest(core = TreeCore(maxDepth = Some(10))))
+    val accuracy4 = classify(RandomForest(core = TreeCore(maxDepth = Left(Some(10)))))
     println(accuracy4)
     println
 
@@ -90,9 +90,9 @@ class MachineLearningClassificationTest @Inject()(
     val accuracy6 = classify(
         MultiLayerPerceptron(
           hiddenLayers = Seq(featureFieldNames.size, 10, 10, 3),
-          blockSize = Some(100),
+          blockSize = Left(Some(100)),
           seed = Some(1234),
-          maxIteration = Some(1000)
+          maxIteration = Left(Some(1000))
         )
       )
     println(accuracy6)

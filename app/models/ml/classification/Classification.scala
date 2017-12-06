@@ -3,10 +3,11 @@ package models.ml.classification
 import java.util.Date
 
 import dataaccess.BSONObjectIdentity
-import models.json.{EnumFormat, ManifestedFormat, SubTypeFormat}
+import models.json._
 import models.ml.TreeCore
 import play.api.libs.json.{Format, Json}
 import reactivemongo.bson.BSONObjectID
+import ValueOrSeq._
 import reactivemongo.play.json.BSONFormats._
 
 abstract class Classification {
@@ -22,17 +23,26 @@ object LogisticModelFamily extends Enumeration {
   val Multinomial = Value("multinomial")
 }
 
+object ValueOrSeq {
+  type ValueOrSeq[T] = Either[Option[T], Seq[T]]
+
+  def toValue[T](valueOrSeq: ValueOrSeq[T]): Option[T] = valueOrSeq match {
+    case Left(value) => value
+    case Right(values) => None
+  }
+}
+
 case class LogisticRegression(
   _id: Option[BSONObjectID] = None,
-  regularization: Option[Double] = None,
-  elasticMixingRatio: Option[Double] = None,
-  maxIteration: Option[Int] = None,
-  tolerance: Option[Double] = None,
+  regularization: ValueOrSeq[Double] = Left(None),
+  elasticMixingRatio: ValueOrSeq[Double] = Left(None),
+  maxIteration: ValueOrSeq[Int] = Left(None),
+  tolerance: ValueOrSeq[Double] = Left(None),
   fitIntercept: Option[Boolean] = None,
   family: Option[LogisticModelFamily.Value] = None,
   standardization: Option[Boolean] = None,
-  aggregationDepth: Option[Int] = None,
-  threshold: Option[Double] = None,
+  aggregationDepth: ValueOrSeq[Int] = Left(None),
+  threshold: ValueOrSeq[Double] = Left(None),
   thresholds: Option[Seq[Double]] = None,  // used for multinomial logistic regression
   name: Option[String] = None,
   createdById: Option[BSONObjectID] = None,
@@ -47,12 +57,12 @@ object MLPSolver extends Enumeration {
 case class MultiLayerPerceptron(
   _id: Option[BSONObjectID] = None,
   hiddenLayers: Seq[Int],
-  maxIteration: Option[Int] = None,
-  tolerance: Option[Double] = None,
-  blockSize: Option[Int] = None,
+  maxIteration: ValueOrSeq[Int] = Left(None),
+  tolerance: ValueOrSeq[Double] = Left(None),
+  blockSize: ValueOrSeq[Int] = Left(None),
   solver: Option[MLPSolver.Value] = None,
   seed: Option[Long] = None,
-  stepSize: Option[Double] = None,
+  stepSize: ValueOrSeq[Double] = Left(None),
   name: Option[String] = None,
   createdById: Option[BSONObjectID] = None,
   timeCreated: Date = new Date()
@@ -78,8 +88,8 @@ case class DecisionTree(
 case class RandomForest(
   _id: Option[BSONObjectID] = None,
   core: TreeCore = TreeCore(),
-  numTrees: Option[Int] = None,
-  subsamplingRate: Option[Double] = None,
+  numTrees: ValueOrSeq[Int] = Left(None),
+  subsamplingRate: ValueOrSeq[Double] = Left(None),
   impurity: Option[DecisionTreeImpurity.Value] = None,
   featureSubsetStrategy: Option[RandomForestFeatureSubsetStrategy.Value] = None,
   name: Option[String] = None,
@@ -94,9 +104,9 @@ object GBTClassificationLossType extends Enumeration {
 case class GradientBoostTree(
   _id: Option[BSONObjectID] = None,
   core: TreeCore = TreeCore(),
-  maxIteration: Option[Int] = None,
-  stepSize: Option[Double] = None,
-  subsamplingRate: Option[Double] = None,
+  maxIteration: ValueOrSeq[Int] = Left(None),
+  stepSize: ValueOrSeq[Double] = Left(None),
+  subsamplingRate: ValueOrSeq[Double] = Left(None),
   lossType: Option[GBTClassificationLossType.Value] = None,
 //  impurity: Option[Impurity.Value] = None
   name: Option[String] = None,
@@ -110,7 +120,7 @@ object BayesModelType extends Enumeration {
 
 case class NaiveBayes(
   _id: Option[BSONObjectID] = None,
-  smoothing: Option[Double] = None,
+  smoothing: ValueOrSeq[Double] = Left(None),
   modelType: Option[BayesModelType.Value] = None,
   name: Option[String] = None,
   createdById: Option[BSONObjectID] = None,
@@ -119,13 +129,13 @@ case class NaiveBayes(
 
 case class LinearSupportVectorMachine(
   _id: Option[BSONObjectID] = None,
-  aggregationDepth: Option[Int],
+  aggregationDepth: ValueOrSeq[Int] = Left(None),
   fitIntercept: Option[Boolean],
-  maxIteration: Option[Int],
-  regularization: Option[Double],
+  maxIteration: ValueOrSeq[Int] = Left(None),
+  regularization: ValueOrSeq[Double] = Left(None),
   standardization: Option[Boolean],
-  threshold: Option[Double],
-  tolerance: Option[Double],
+  threshold: ValueOrSeq[Double] = Left(None),
+  tolerance: ValueOrSeq[Double] = Left(None),
 // TODO weightColumn: String
   name: Option[String] = None,
   createdById: Option[BSONObjectID] = None,
@@ -140,6 +150,14 @@ object Classification {
   implicit val decisionTreeImpurityEnumTypeFormat = EnumFormat.enumFormat(DecisionTreeImpurity)
   implicit val gbtClassificationLossTypeEnumTypeFormat = EnumFormat.enumFormat(GBTClassificationLossType)
   implicit val bayesModelTypeEnumTypeFormat = EnumFormat.enumFormat(BayesModelType)
+
+  def eitherFormat[T: Format] = {
+    implicit val optionFormat = new OptionFormat[T]
+    EitherFormat[Option[T], Seq[T]]
+  }
+
+  implicit val doubleEitherFormat = eitherFormat[Double]
+  implicit val intEitherFormat = eitherFormat[Int]
 
   private implicit val treeCoreFormat = Json.format[TreeCore]
 

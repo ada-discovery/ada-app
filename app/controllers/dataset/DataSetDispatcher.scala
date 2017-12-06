@@ -7,6 +7,7 @@ import models.FilterCondition.FilterOrId
 import models.ml.VectorTransformType
 import models.{FieldTypeId, FilterCondition, PageOrder}
 import reactivemongo.bson.BSONObjectID
+import models.ml.RegressionEvalMetric
 import util.SecurityUtil._
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
@@ -106,8 +107,9 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     pcaDims: Option[Int],
     trainingTestingSplit: Option[Double],
     repetitions: Option[Int],
-    crossValidationFolds: Option[Int]
-  ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterId, featuresNormalizationType, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds))
+    crossValidationFolds: Option[Int],
+    crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
+  ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterId, featuresNormalizationType, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds, crossValidationEvalMetric))
 
   override def cluster(
     mlModelId: BSONObjectID,

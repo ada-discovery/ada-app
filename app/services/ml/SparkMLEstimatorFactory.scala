@@ -10,6 +10,7 @@ import org.apache.spark.ml.regression.{DecisionTreeRegressor, GBTRegressor, Rand
 import org.apache.spark.ml.clustering.{BisectingKMeans, GaussianMixture, KMeans, LDA}
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.tuning.ParamGridBuilder
+import models.ml.classification.ValueOrSeq._
 
 import scala.collection.mutable.{Buffer, ListBuffer}
 
@@ -19,27 +20,37 @@ object SparkMLEstimatorFactory {
     model: Classification,
     inputSize: Int,
     outputSize: Int
-  ): Estimator[M] with Params =
-    model match {
-      case x: LogisticRegression => applyAux(x).asInstanceOf[Estimator[M]]
-      case x: MultiLayerPerceptron => applyAux(x, inputSize, outputSize).asInstanceOf[Estimator[M]]
-      case x: DecisionTree => applyAux(x).asInstanceOf[Estimator[M]]
-      case x: RandomForest => applyAux(x).asInstanceOf[Estimator[M]]
-      case x: GradientBoostTree => applyAux(x).asInstanceOf[Estimator[M]]
-      case x: NaiveBayes => applyAux(x).asInstanceOf[Estimator[M]]
-      case x: LinearSupportVectorMachine => applyAux(x).asInstanceOf[Estimator[M]]
+  ): (Estimator[M], Array[ParamMap]) = {
+    val (estimator, paramMaps) = model match {
+      case x: LogisticRegression => applyAux(x)
+      case x: MultiLayerPerceptron => applyAux(x, inputSize, outputSize)
+      case x: DecisionTree => applyAux(x)
+      case x: RandomForest => applyAux(x)
+      case x: GradientBoostTree => applyAux(x)
+      case x: NaiveBayes => applyAux(x)
+      case x: LinearSupportVectorMachine => applyAux(x)
     }
 
-  def apply[M <: Model[M]](model: Regression): Estimator[M] with Params =
-    model match {
-      case x: LinearRegressionDef => applyAux(x).asInstanceOf[Estimator[M]]
-      case x: GeneralizedLinearRegressionDef => applyAux(x).asInstanceOf[Estimator[M]]
-      case x: RegressionTreeDef => applyAux(x).asInstanceOf[Estimator[M]]
-      case x: RandomRegressionForestDef => applyAux(x).asInstanceOf[Estimator[M]]
-      case x: GradientBoostRegressionTreeDef => applyAux(x).asInstanceOf[Estimator[M]]
+    (estimator.asInstanceOf[Estimator[M]], paramMaps)
+  }
+
+  def apply[M <: Model[M]](
+    model: Regression
+  ): (Estimator[M], Array[ParamMap]) = {
+    val (estimator, paramMaps) = model match {
+      case x: LinearRegressionDef => applyAux(x)
+      case x: GeneralizedLinearRegressionDef => applyAux(x)
+      case x: RegressionTreeDef => applyAux(x)
+      case x: RandomRegressionForestDef => applyAux(x)
+      case x: GradientBoostRegressionTreeDef => applyAux(x)
     }
 
-  def apply[M <: Model[M]](model: UnsupervisedLearning): Estimator[M] with Params =
+    (estimator.asInstanceOf[Estimator[M]], paramMaps)
+  }
+
+  def apply[M <: Model[M]](
+    model: UnsupervisedLearning
+  ): Estimator[M] =
     model match {
       case x: KMeansDef => applyAux(x).asInstanceOf[Estimator[M]]
       case x: LDADef => applyAux(x).asInstanceOf[Estimator[M]]
@@ -47,241 +58,241 @@ object SparkMLEstimatorFactory {
       case x: GaussianMixtureDef => applyAux(x).asInstanceOf[Estimator[M]]
     }
 
-  private def applyAux(model: LogisticRegression): LogisticRegressionClassifier = {
+  private def applyAux(model: LogisticRegression): (LogisticRegressionClassifier, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, LogisticRegression, LogisticRegressionClassifier](model)_
 
     val estimator1 = chain(
-      set(_.aggregationDepth, _.setAggregationDepth),
-      set(_.elasticMixingRatio, _.setElasticNetParam),
+      set(x => toValue(x.aggregationDepth), _.setAggregationDepth),
+      set(x => toValue(x.elasticMixingRatio), _.setElasticNetParam),
       set(_.family.map(_.toString), _.setFamily),
       set(_.fitIntercept, _.setFitIntercept),
-      set(_.maxIteration, _.setMaxIter),
-      set(_.regularization, _.setRegParam),
-      set(_.threshold, _.setThreshold),
+      set(x => toValue(x.maxIteration), _.setMaxIter),
+      set(x => toValue(x.regularization), _.setRegParam),
+      set(x => toValue(x.threshold), _.setThreshold),
       set(_.thresholds.map(_.toArray), _.setThresholds),
       set(_.standardization, _.setStandardization),
-      set(_.tolerance, _.setTol)
+      set(x => toValue(x.tolerance), _.setTol)
     )(new LogisticRegressionClassifier())
 
-    val estimator2 = ParamSourceBinder(model, new LogisticRegressionClassifier())
-      .bind(_.aggregationDepth, "aggregationDepth")
-      .bind(_.elasticMixingRatio, "elasticNetParam")
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new LogisticRegressionClassifier())
+      .bind2(_.aggregationDepth, "aggregationDepth")
+      .bind2(_.elasticMixingRatio, "elasticNetParam")
       .bind(_.family.map(_.toString), "family")
       .bind(_.fitIntercept, "fitIntercept")
-      .bind(_.maxIteration, "maxIter")
-      .bind(_.regularization, "regParam")
-      .bind(_.threshold, "threshold")
+      .bind2(_.maxIteration, "maxIter")
+      .bind2(_.regularization, "regParam")
+      .bind2(_.threshold, "threshold")
       .bind(_.thresholds.map(_.toArray), "thresholds")
       .bind(_.standardization, "standardization")
-      .bind(_.tolerance, "tol")
-      .setValuesAndGetModel
+      .bind2(_.tolerance, "tol")
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
   private def applyAux(
     model: MultiLayerPerceptron,
     inputSize: Int,
     outputSize: Int
-  ): MultilayerPerceptronClassifier = {
+  ): (MultilayerPerceptronClassifier, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, MultiLayerPerceptron, MultilayerPerceptronClassifier](model)_
 
     val estimator1 = chain(
-      set(_.blockSize, _.setBlockSize),
+      set(x => toValue(x.blockSize), _.setBlockSize),
       set(_.seed, _.setSeed),
-      set(_.maxIteration, _.setMaxIter),
+      set(x => toValue(x.maxIteration), _.setMaxIter),
       set(_.solver.map(_.toString), _.setSolver),
-      set(_.stepSize, _.setStepSize),
-      set(_.tolerance, _.setTol),
+      set(x => toValue(x.stepSize), _.setStepSize),
+      set(x => toValue(x.tolerance), _.setTol),
       set(o => Some((Seq(inputSize) ++ o.hiddenLayers ++ Seq(outputSize)).toArray), _.setLayers)
     )(new MultilayerPerceptronClassifier())
 
-    val estimator2 = ParamSourceBinder(model, new MultilayerPerceptronClassifier())
-      .bind(_.blockSize, "blockSize")
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new MultilayerPerceptronClassifier())
+      .bind2(_.blockSize, "blockSize")
       .bind(_.seed, "seed")
-      .bind(_.maxIteration, "maxIter")
+      .bind2(_.maxIteration, "maxIter")
       .bind(_.solver.map(_.toString), "solver")
-      .bind(_.stepSize, "stepSize")
-      .bind(_.tolerance, "tol")
+      .bind2(_.stepSize, "stepSize")
+      .bind2(_.tolerance, "tol")
       .bind(o => Some((Seq(inputSize) ++ o.hiddenLayers ++ Seq(outputSize)).toArray), "layers")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: DecisionTree): DecisionTreeClassifier = {
+  private def applyAux(model: DecisionTree): (DecisionTreeClassifier, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, DecisionTree, DecisionTreeClassifier](model)_
 
     val estimator1 = chain(
-      set(_.core.maxDepth, _.setMaxDepth),
-      set(_.core.maxBins, _.setMaxBins),
-      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(x => toValue(x.core.maxDepth), _.setMaxDepth),
+      set(x => toValue(x.core.maxBins), _.setMaxBins),
+      set(x => toValue(x.core.minInstancesPerNode), _.setMinInstancesPerNode),
+      set(x => toValue(x.core.minInfoGain), _.setMinInfoGain),
       set(_.core.seed, _.setSeed),
       set(_.impurity.map(_.toString), _.setImpurity)
     )(new DecisionTreeClassifier())
 
-    val estimator2 = ParamSourceBinder(model, new DecisionTreeClassifier())
-      .bind(_.core.maxDepth, "maxDepth")
-      .bind(_.core.maxBins, "maxBins")
-      .bind(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind(_.core.minInfoGain, "minInfoGain")
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new DecisionTreeClassifier())
+      .bind2(_.core.maxDepth, "maxDepth")
+      .bind2(_.core.maxBins, "maxBins")
+      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bind2(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
       .bind(_.impurity.map(_.toString), "impurity")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: RandomForest): RandomForestClassifier = {
+  private def applyAux(model: RandomForest): (RandomForestClassifier, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, RandomForest, RandomForestClassifier](model)_
 
     val estimator1 = chain(
-      set(_.numTrees, _.setNumTrees),
-      set(_.core.maxDepth, _.setMaxDepth),
-      set(_.core.maxBins, _.setMaxBins),
-      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(x => toValue(x.numTrees), _.setNumTrees),
+      set(x => toValue(x.core.maxDepth), _.setMaxDepth),
+      set(x => toValue(x.core.maxBins), _.setMaxBins),
+      set(x => toValue(x.core.minInstancesPerNode), _.setMinInstancesPerNode),
+      set(x => toValue(x.core.minInfoGain), _.setMinInfoGain),
       set(_.core.seed, _.setSeed),
-      set(_.subsamplingRate, _.setSubsamplingRate),
+      set(x => toValue(x.subsamplingRate), _.setSubsamplingRate),
       set(_.impurity.map(_.toString), _.setImpurity),
       set(_.featureSubsetStrategy.map(_.toString), _.setFeatureSubsetStrategy)
     )(new RandomForestClassifier())
 
-    val estimator2 = ParamSourceBinder(model, new RandomForestClassifier())
-      .bind(_.numTrees, "numTrees")
-      .bind(_.core.maxDepth, "maxDepth")
-      .bind(_.core.maxBins, "maxBins")
-      .bind(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind(_.core.minInfoGain, "minInfoGain")
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new RandomForestClassifier())
+      .bind2(_.numTrees, "numTrees")
+      .bind2(_.core.maxDepth, "maxDepth")
+      .bind2(_.core.maxBins, "maxBins")
+      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bind2(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
-      .bind(_.subsamplingRate, "subsamplingRate")
+      .bind2(_.subsamplingRate, "subsamplingRate")
       .bind(_.impurity.map(_.toString), "impurity")
       .bind(_.featureSubsetStrategy.map(_.toString), "featureSubsetStrategy")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: GradientBoostTree): GBTClassifier = {
+  private def applyAux(model: GradientBoostTree): (GBTClassifier, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, GradientBoostTree, GBTClassifier](model)_
 
     val estimator1 = chain(
       set(_.lossType.map(_.toString), _.setLossType),
-      set(_.maxIteration, _.setMaxIter),
-      set(_.stepSize, _.setStepSize),
-      set(_.core.maxDepth, _.setMaxDepth),
-      set(_.core.maxBins, _.setMaxBins),
-      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(x => toValue(x.maxIteration), _.setMaxIter),
+      set(x => toValue(x.stepSize), _.setStepSize),
+      set(x => toValue(x.core.maxDepth), _.setMaxDepth),
+      set(x => toValue(x.core.maxBins), _.setMaxBins),
+      set(x => toValue(x.core.minInstancesPerNode), _.setMinInstancesPerNode),
+      set(x => toValue(x.core.minInfoGain), _.setMinInfoGain),
       set(_.core.seed, _.setSeed),
-      set(_.subsamplingRate, _.setSubsamplingRate)
+      set(x => toValue(x.subsamplingRate), _.setSubsamplingRate)
 //      set(_.impurity.map(_.toString), _.setImpurity)
     )(new GBTClassifier())
 
-    val estimator2 = ParamSourceBinder(model, new GBTClassifier())
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new GBTClassifier())
       .bind(_.lossType.map(_.toString), "lossType")
-      .bind(_.maxIteration, "maxIter")
-      .bind(_.stepSize, "stepSize")
-      .bind(_.core.maxDepth, "maxDepth")
-      .bind(_.core.maxBins, "maxBins")
-      .bind(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind(_.core.minInfoGain, "minInfoGain")
+      .bind2(_.maxIteration, "maxIter")
+      .bind2(_.stepSize, "stepSize")
+      .bind2(_.core.maxDepth, "maxDepth")
+      .bind2(_.core.maxBins, "maxBins")
+      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bind2(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
-      .bind(_.subsamplingRate, "subsamplingRate")
+      .bind2(_.subsamplingRate, "subsamplingRate")
       //    .bind(_.impurity.map(_.toString), "impurity")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: NaiveBayes): NaiveBayesClassifier = {
+  private def applyAux(model: NaiveBayes): (NaiveBayesClassifier, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, NaiveBayes, NaiveBayesClassifier](model)_
 
     val estimator1 = chain(
-      set(_.smoothing, _.setSmoothing),
+      set(x => toValue(x.smoothing), _.setSmoothing),
       set(_.modelType.map(_.toString), _.setModelType)
     )(new NaiveBayesClassifier())
 
-    val estimator2 = ParamSourceBinder(model, new NaiveBayesClassifier())
-      .bind(_.smoothing, "smoothing")
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new NaiveBayesClassifier())
+      .bind2(_.smoothing, "smoothing")
       .bind(_.modelType.map(_.toString), "modelType")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: LinearSupportVectorMachine): LinearSVC = {
+  private def applyAux(model: LinearSupportVectorMachine): (LinearSVC, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, LinearSupportVectorMachine, LinearSVC](model)_
 
     val estimator1 = chain(
-      set(_.aggregationDepth, _.setAggregationDepth),
+      set(x => toValue(x.aggregationDepth), _.setAggregationDepth),
       set(_.fitIntercept, _.setFitIntercept),
-      set(_.maxIteration, _.setMaxIter),
-      set(_.regularization, _.setRegParam),
+      set(x => toValue(x.maxIteration), _.setMaxIter),
+      set(x => toValue(x.regularization), _.setRegParam),
       set(_.standardization, _.setStandardization),
-      set(_.threshold, _.setThreshold),
-      set(_.tolerance, _.setTol)
+      set(x => toValue(x.threshold), _.setThreshold),
+      set(x => toValue(x.tolerance), _.setTol)
     )(new LinearSVC())
 
-    val estimator2 = ParamSourceBinder(model, new LinearSVC())
-      .bind(_.aggregationDepth, "aggregationDepth")
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new LinearSVC())
+      .bind2(_.aggregationDepth, "aggregationDepth")
       .bind(_.fitIntercept, "fitIntercept")
-      .bind(_.maxIteration, "maxIter")
-      .bind(_.regularization, "regParam")
+      .bind2(_.maxIteration, "maxIter")
+      .bind2(_.regularization, "regParam")
       .bind(_.standardization, "standardization")
-      .bind(_.threshold, "threshold")
-      .bind(_.tolerance, "tol")
-      .setValuesAndGetModel
+      .bind2(_.threshold, "threshold")
+      .bind2(_.tolerance, "tol")
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: LinearRegressionDef): LinearRegressor = {
+  private def applyAux(model: LinearRegressionDef): (LinearRegressor, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, LinearRegressionDef, LinearRegressor](model)_
 
     val estimator1 = chain(
-      set(_.aggregationDepth, _.setAggregationDepth),
-      set(_.elasticMixingRatio, _.setElasticNetParam),
+      set(x => toValue(x.aggregationDepth), _.setAggregationDepth),
+      set(x => toValue(x.elasticMixingRatio), _.setElasticNetParam),
       set(_.solver.map(_.toString), _.setSolver),
       set(_.fitIntercept, _.setFitIntercept),
-      set(_.maxIteration, _.setMaxIter),
-      set(_.regularization, _.setRegParam),
+      set(x => toValue(x.maxIteration), _.setMaxIter),
+      set(x => toValue(x.regularization), _.setRegParam),
       set(_.standardization, _.setStandardization),
-      set(_.tolerance, _.setTol)
+      set(x => toValue(x.tolerance), _.setTol)
     )(new LinearRegressor())
 
-    val estimator2 = ParamSourceBinder(model, new LinearRegressor())
-      .bind(_.aggregationDepth, "aggregationDepth")
-      .bind(_.elasticMixingRatio, "elasticNetParam")
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new LinearRegressor())
+      .bind2(_.aggregationDepth, "aggregationDepth")
+      .bind2(_.elasticMixingRatio, "elasticNetParam")
       .bind(_.solver.map(_.toString), "solver")
       .bind(_.fitIntercept, "fitIntercept")
-      .bind(_.maxIteration, "maxIter")
-      .bind(_.regularization, "regParam")
+      .bind2(_.maxIteration, "maxIter")
+      .bind2(_.regularization, "regParam")
       .bind(_.standardization, "standardization")
-      .bind(_.tolerance, "tol")
-      .setValuesAndGetModel
+      .bind2(_.tolerance, "tol")
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: GeneralizedLinearRegressionDef): GeneralizedLinearRegressor = {
+  private def applyAux(model: GeneralizedLinearRegressionDef): (GeneralizedLinearRegressor, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, GeneralizedLinearRegressionDef, GeneralizedLinearRegressor](model)_
 
     val estimator1 = chain(
@@ -289,116 +300,116 @@ object SparkMLEstimatorFactory {
       set(_.family.map(_.toString), _.setFamily),
       set(_.fitIntercept, _.setFitIntercept),
       set(_.link.map(_.toString), _.setLink),
-      set(_.maxIteration, _.setMaxIter),
-      set(_.regularization, _.setRegParam),
-      set(_.tolerance, _.setTol)
+      set(x => toValue(x.maxIteration), _.setMaxIter),
+      set(x => toValue(x.regularization), _.setRegParam),
+      set(x => toValue(x.tolerance), _.setTol)
     )(new GeneralizedLinearRegressor())
 
-    val estimator2 = ParamSourceBinder(model, new GeneralizedLinearRegressor())
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new GeneralizedLinearRegressor())
       .bind(_.solver.map(_.toString), "solver")
       .bind(_.family.map(_.toString), "family")
       .bind(_.fitIntercept, "fitIntercept")
       .bind(_.link.map(_.toString), "link")
-      .bind(_.maxIteration, "maxIter")
-      .bind(_.regularization, "regParam")
-      .bind(_.tolerance, "tol")
-      .setValuesAndGetModel
+      .bind2(_.maxIteration, "maxIter")
+      .bind2(_.regularization, "regParam")
+      .bind2(_.tolerance, "tol")
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: RegressionTreeDef): DecisionTreeRegressor = {
+  private def applyAux(model: RegressionTreeDef): (DecisionTreeRegressor, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, RegressionTreeDef, DecisionTreeRegressor](model)_
 
     val estimator1 = chain(
-      set(_.core.maxDepth, _.setMaxDepth),
-      set(_.core.maxBins, _.setMaxBins),
-      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(x => toValue(x.core.maxDepth), _.setMaxDepth),
+      set(x => toValue(x.core.maxBins), _.setMaxBins),
+      set(x => toValue(x.core.minInstancesPerNode), _.setMinInstancesPerNode),
+      set(x => toValue(x.core.minInfoGain), _.setMinInfoGain),
       set(_.core.seed, _.setSeed),
       set(_.impurity.map(_.toString), _.setImpurity)
     )(new DecisionTreeRegressor())
 
-    val estimator2 = ParamSourceBinder(model, new DecisionTreeRegressor())
-      .bind(_.core.maxDepth, "maxDepth")
-      .bind(_.core.maxBins, "maxBins")
-      .bind(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind(_.core.minInfoGain, "minInfoGain")
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new DecisionTreeRegressor())
+      .bind2(_.core.maxDepth, "maxDepth")
+      .bind2(_.core.maxBins, "maxBins")
+      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bind2(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
       .bind(_.impurity.map(_.toString), "impurity")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: RandomRegressionForestDef): RandomForestRegressor = {
+  private def applyAux(model: RandomRegressionForestDef): (RandomForestRegressor, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, RandomRegressionForestDef, RandomForestRegressor](model)_
 
     val estimator1 = chain(
       set(_.impurity.map(_.toString), _.setImpurity),
-      set(_.numTrees, _.setNumTrees),
-      set(_.core.maxDepth, _.setMaxDepth),
-      set(_.core.maxBins, _.setMaxBins),
-      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(x => toValue(x.numTrees), _.setNumTrees),
+      set(x => toValue(x.core.maxDepth), _.setMaxDepth),
+      set(x => toValue(x.core.maxBins), _.setMaxBins),
+      set(x => toValue(x.core.minInstancesPerNode), _.setMinInstancesPerNode),
+      set(x => toValue(x.core.minInfoGain), _.setMinInfoGain),
       set(_.core.seed, _.setSeed),
-      set(_.subsamplingRate, _.setSubsamplingRate),
+      set(x => toValue(x.subsamplingRate), _.setSubsamplingRate),
       set(_.featureSubsetStrategy.map(_.toString), _.setFeatureSubsetStrategy)
     )(new RandomForestRegressor())
 
-    val estimator2 = ParamSourceBinder(model, new RandomForestRegressor())
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new RandomForestRegressor())
       .bind(_.impurity.map(_.toString), "impurity")
-      .bind(_.numTrees, "numTrees")
-      .bind(_.core.maxDepth, "maxDepth")
-      .bind(_.core.maxBins, "maxBins")
-      .bind(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind(_.core.minInfoGain, "minInfoGain")
+      .bind2(_.numTrees, "numTrees")
+      .bind2(_.core.maxDepth, "maxDepth")
+      .bind2(_.core.maxBins, "maxBins")
+      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bind2(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
-      .bind(_.subsamplingRate, "subsamplingRate")
+      .bind2(_.subsamplingRate, "subsamplingRate")
       .bind(_.featureSubsetStrategy.map(_.toString), "featureSubsetStrategy")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: GradientBoostRegressionTreeDef): GBTRegressor = {
+  private def applyAux(model: GradientBoostRegressionTreeDef): (GBTRegressor, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, GradientBoostRegressionTreeDef, GBTRegressor](model)_
 
     val estimator1 = chain(
       set(_.lossType.map(_.toString), _.setLossType),
-      set(_.maxIteration, _.setMaxIter),
-      set(_.stepSize, _.setStepSize),
-      set(_.core.maxDepth, _.setMaxDepth),
-      set(_.core.maxBins, _.setMaxBins),
-      set(_.core.minInstancesPerNode, _.setMinInstancesPerNode),
-      set(_.core.minInfoGain, _.setMinInfoGain),
+      set(x => toValue(x.maxIteration), _.setMaxIter),
+      set(x => toValue(x.stepSize), _.setStepSize),
+      set(x => toValue(x.core.maxDepth), _.setMaxDepth),
+      set(x => toValue(x.core.maxBins), _.setMaxBins),
+      set(x => toValue(x.core.minInstancesPerNode), _.setMinInstancesPerNode),
+      set(x => toValue(x.core.minInfoGain), _.setMinInfoGain),
       set(_.core.seed, _.setSeed),
-      set(_.subsamplingRate, _.setSubsamplingRate)
+      set(x => toValue(x.subsamplingRate), _.setSubsamplingRate)
       //      set(_.impurity.map(_.toString), _.setImpurity)
     )(new GBTRegressor())
 
-    val estimator2 = ParamSourceBinder(model, new GBTRegressor())
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new GBTRegressor())
       .bind(_.lossType.map(_.toString), "lossType")
-      .bind(_.maxIteration, "maxIter")
-      .bind(_.stepSize, "stepSize")
-      .bind(_.core.maxDepth, "maxDepth")
-      .bind(_.core.maxBins, "maxBins")
-      .bind(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind(_.core.minInfoGain, "minInfoGain")
+      .bind2(_.maxIteration, "maxIter")
+      .bind2(_.stepSize, "stepSize")
+      .bind2(_.core.maxDepth, "maxDepth")
+      .bind2(_.core.maxBins, "maxBins")
+      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bind2(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
-      .bind(_.subsamplingRate, "subsamplingRate")
+      .bind2(_.subsamplingRate, "subsamplingRate")
       //    .bind(_.impurity.map(_.toString), "impurity")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
-    estimator2
+    (estimator2, paramMaps)
   }
 
   private def applyAux(model: KMeansDef): KMeans = {
@@ -413,14 +424,14 @@ object SparkMLEstimatorFactory {
       set(_.seed, _.setSeed)
     )(new KMeans())
 
-    val estimator2 = ParamSourceBinder(model, new KMeans())
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new KMeans())
       .bind(_.initMode.map(_.toString), "initMode")
       .bind(_.initSteps, "initSteps")
       .bind({o => Some(o.k)}, "k")
       .bind(_.maxIteration, "maxIter")
       .bind(_.tolerance, "tol")
       .bind(_.seed, "seed")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
@@ -445,7 +456,7 @@ object SparkMLEstimatorFactory {
       set(_.seed, _.setSeed)
     )(new LDA())
 
-    val estimator2 = ParamSourceBinder(model, new LDA())
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new LDA())
       .bind(_.checkpointInterval, "checkpointInterval")
       .bind(_.keepLastCheckpoint, "keepLastCheckpoint")
       .bind[Array[Double]](_.docConcentration.map(_.toArray), "docConcentration")
@@ -458,7 +469,7 @@ object SparkMLEstimatorFactory {
       .bind(_.optimizer.map(_.toString), "optimizer")
       .bind(_.subsamplingRate, "subsamplingRate")
       .bind(_.seed, "seed")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
@@ -475,12 +486,12 @@ object SparkMLEstimatorFactory {
       set(_.minDivisibleClusterSize, _.setMinDivisibleClusterSize)
     )(new BisectingKMeans())
 
-    val estimator2 = ParamSourceBinder(model, new BisectingKMeans())
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new BisectingKMeans())
       .bind({o => Some(o.k)}, "k")
       .bind(_.maxIteration, "maxIter")
       .bind(_.seed, "seed")
       .bind(_.minDivisibleClusterSize, "minDivisibleClusterSize")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
@@ -497,12 +508,12 @@ object SparkMLEstimatorFactory {
       set(_.seed, _.setSeed)
     )(new GaussianMixture())
 
-    val estimator2 = ParamSourceBinder(model, new GaussianMixture())
+    val (estimator2, paramMaps) = ParamSourceBinder(model, new GaussianMixture())
       .bind({o => Some(o.k)}, "k")
       .bind(_.maxIteration, "maxIter")
       .bind(_.tolerance, "tol")
       .bind(_.seed, "seed")
-      .setValuesAndGetModel
+      .build
 
     compareParamValues(estimator1, estimator2)
 
@@ -529,59 +540,40 @@ object SparkMLEstimatorFactory {
   private def chain[T](trans: (T => T)*)(init: T) =
     trans.foldLeft(init){case (a, trans) => trans(a)}
 
-  case class ParamSourceBinder[S, T <: Params](source: S, params: T) {
-    private val paramGrid = new ParamGridBuilder()
-
+  case class ParamSourceBinder[S, T <: Params](source: S, model: T) {
     private var paramValueSetters: Buffer[ParamValueSetter[S, _]] = Buffer[ParamValueSetter[S, _]]()
-    private var paramGridSetters: Buffer[ParamGridSetter[S, _]] = Buffer[ParamGridSetter[S, _]]()
 
     def bind[T](value: S => Option[T], paramName: String): this.type =
-      bindAux(value, params.getParam(paramName))
+      bindAux({x => Left(value(x))}, model.getParam(paramName))
 
-    private def bindAux[T](value: S => Option[T], param: Param[T]): this.type = {
-      paramValueSetters.append(ParamValueSetter(params, source)(param, value))
+    def bind2[T](value: S => ValueOrSeq[T], paramName: String): this.type =
+      bindAux(value, model.getParam(paramName))
+
+    private def bindAux[T](values: S => Either[Option[T], Iterable[T]], param: Param[T]): this.type = {
+      paramValueSetters.append(ParamValueSetter(param, values))
       this
     }
 
-    private def bindGridAux[T](values: S => Iterable[T], param: Param[T]): this.type = {
-      paramGridSetters.append(ParamGridSetter(paramGrid, source)(param, values))
-      this
-    }
-
-    def setValues: this.type = {
-      paramValueSetters.foreach(_.set)
-      this
-    }
-
-    def setValuesAndGetModel: T = {
-      paramValueSetters.foreach(_.set)
-      params
-    }
-
-    def model: T = params
-
-    def setParamGrid = paramValueSetters.foreach { paramWrapper =>
-      paramGrid.addGrid(paramWrapper.param, None)
+    def build: (T, Array[ParamMap]) = {
+      val paramGrid = new ParamGridBuilder()
+      paramValueSetters.foreach(_.set(model, paramGrid, source))
+      (model, paramGrid.build())
     }
   }
 
   case class ParamValueSetter[S, T](
-    params: Params,
-    source: S)(
     val param: Param[T],
-    value: S => Option[T]
+    value: S => (Either[Option[T], Iterable[T]])
   ) {
-    def set: Unit = value(source).foreach(params.set(param, _))
+    def set(
+      params: Params,
+      paramGridBuilder: ParamGridBuilder,
+      source: S
+    ): Unit = value(source) match {
+      case Left(valueOption) => valueOption.foreach(params.set(param, _))
+      case Right(values) => paramGridBuilder.addGrid(param, values)
+    }
 //    def get: Option[T] = params.get(param)
-  }
-
-  case class ParamGridSetter[S, T](
-    paramGridBuilder: ParamGridBuilder,
-    source: S)(
-    val param: Param[T],
-    values: S => Iterable[T]
-  ) {
-    def set: Unit = paramGridBuilder.addGrid(param, values(source))
   }
 
   private def compareParamValues(params1: Params, params2: Params) = {

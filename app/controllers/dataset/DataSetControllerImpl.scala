@@ -5,6 +5,7 @@ import java.{util => ju}
 import javax.inject.Inject
 
 import security.AdaAuthConfig
+
 import scala.collection.mutable.{Map => MMap}
 import _root_.util.{FieldUtil, GroupMapList}
 import dataaccess.JsonUtil._
@@ -38,6 +39,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
 import services.ml.{MachineLearningService, Performance}
+import models.ml.{ClassificationEvalMetric, RegressionEvalMetric}
 import views.html.dataset
 import models.ml.DataSetTransformation._
 import models.security.{SecurityRole, UserManager}
@@ -1552,9 +1554,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     pcaDims: Option[Int],
     trainingTestingSplit: Option[Double],
     repetitions: Option[Int],
-    crossValidationFolds: Option[Int]
+    crossValidationFolds: Option[Int],
+    crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
   ) = Action.async { implicit request =>
-    val learningSetting = LearningSetting(featuresNormalizationType, pcaDims, trainingTestingSplit, None, Nil, repetitions, crossValidationFolds)
+    val learningSetting = LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, None, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
 
     for {
       result <- runMLAux(
@@ -1574,11 +1577,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private def runMLAux[M](
     getModel: => Future[Option[M]],
-    runML: (Traversable[JsObject], Seq[(String, FieldTypeSpec)], String, M, LearningSetting) => Future[Traversable[Performance]])(
+    runML: (Traversable[JsObject], Seq[(String, FieldTypeSpec)], String, M, LearningSetting[RegressionEvalMetric.Value]) => Future[Traversable[Performance]])(
     inputFieldNames: Seq[String],
     outputFieldName: String,
     filterId: Option[BSONObjectID],
-    learningSetting: LearningSetting
+    learningSetting: LearningSetting[RegressionEvalMetric.Value]
   ): Future[Option[JsArray]] = {
     val explFieldNamesToLoads =
       if (inputFieldNames.nonEmpty)

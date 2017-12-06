@@ -6,6 +6,7 @@
 @import views.html.elements._
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
+@import models.ml.RegressionEvalMetric
 
 @(
     dataSetName: String,
@@ -88,13 +89,17 @@
                 if (!crossValidationFolds)
                     crossValidationFolds = null
 
+                var crossValidationEvalMetric = $("#crossValidationEvalMetric").val()
+                if (!crossValidationEvalMetric)
+                    crossValidationEvalMetric = null
+
                 var repetitions = $("#repetitions").val()
                 if (!repetitions)
                     repetitions = null
 
                 $('#outputDiv').hide();
 
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.regress(mlModelId, inputFieldNames, outputFieldName, filterId, featuresNormalizationType, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds).ajax( {
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.regress(mlModelId, inputFieldNames, outputFieldName, filterId, featuresNormalizationType, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds, crossValidationEvalMetric).ajax( {
                     success: function(evalRates) {
                         showMessage("'" + mlModelName + "' regression finished.")
                         showMLOutput(evalRates)
@@ -110,6 +115,17 @@
     </script>
 }
 
+@labelValueAux(key: String, label: Any)(valueElement : Any) = @{
+    labelValue(key, label, false, None, 4)(valueElement)
+}
+
+@extraFields = {
+    @trainingSettingFields()
+    @labelValueAux("crossValidationEvalMetric", "Cross Validation Eval Metric") {
+        @selectEnum("crossValidationEvalMetric", RegressionEvalMetric, true, Some("input-lg"))
+    }
+}
+
 @main(Messages("regression.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
 
     <div class="page-header">
@@ -122,6 +138,6 @@
         includeFeatureSelectionNum = false,
         includeOutputField = true,
         extraFieldButtons = None,
-        extraFields = Some(trainingSettingFields())
+        extraFields = Some(extraFields)
     )
 }

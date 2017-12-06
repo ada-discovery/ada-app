@@ -3,11 +3,12 @@ package models.ml.regression
 import java.util.Date
 
 import dataaccess.BSONObjectIdentity
-import models.json.{EnumFormat, ManifestedFormat, SubTypeFormat}
+import models.json._
 import models.ml.TreeCore
 import play.api.libs.json.{Format, Json}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import models.ml.classification.ValueOrSeq._
 
 abstract class Regression {
   val _id: Option[BSONObjectID]
@@ -24,14 +25,14 @@ object RegressionSolver extends Enumeration {
 
 case class LinearRegression(
   _id: Option[BSONObjectID] = None,
-  regularization: Option[Double] = None,
-  elasticMixingRatio: Option[Double] = None,
-  maxIteration: Option[Int] = None,
-  tolerance: Option[Double] = None,
+  regularization: ValueOrSeq[Double] = Left(None),
+  elasticMixingRatio: ValueOrSeq[Double] = Left(None),
+  maxIteration: ValueOrSeq[Int] = Left(None),
+  tolerance: ValueOrSeq[Double] = Left(None),
   fitIntercept: Option[Boolean] = None,
   solver: Option[RegressionSolver.Value] = None,
   standardization: Option[Boolean] = None,
-  aggregationDepth: Option[Int] = None,
+  aggregationDepth: ValueOrSeq[Int] = Left(None),
   name: Option[String] = None,
   createdById: Option[BSONObjectID] = None,
   timeCreated: Date = new Date()
@@ -60,10 +61,10 @@ object GeneralizedLinearRegressionSolver extends Enumeration {
 
 case class GeneralizedLinearRegression(
   _id: Option[BSONObjectID] = None,
-  regularization: Option[Double] = None,
+  regularization: ValueOrSeq[Double] = Left(None),
   link: Option[GeneralizedLinearRegressionLinkType.Value] = None,
-  maxIteration: Option[Int] = None,
-  tolerance: Option[Double] = None,
+  maxIteration: ValueOrSeq[Int] = Left(None),
+  tolerance: ValueOrSeq[Double] = Left(None),
   fitIntercept: Option[Boolean] = None,
   family: Option[GeneralizedLinearRegressionFamily.Value] = None,
   solver: Option[GeneralizedLinearRegressionSolver.Value] = None,
@@ -92,8 +93,8 @@ case class RegressionTree(
 case class RandomRegressionForest(
   _id: Option[BSONObjectID] = None,
   core: TreeCore = TreeCore(),
-  numTrees: Option[Int] = None,
-  subsamplingRate: Option[Double] = None,
+  numTrees: ValueOrSeq[Int] = Left(None),
+  subsamplingRate: ValueOrSeq[Double] = Left(None),
   impurity: Option[RegressionTreeImpurity.Value] = None,
   featureSubsetStrategy: Option[RandomRegressionForestFeatureSubsetStrategy.Value] = None,
   name: Option[String] = None,
@@ -108,9 +109,9 @@ object GBTRegressionLossType extends Enumeration {
 case class GradientBoostRegressionTree(
   _id: Option[BSONObjectID] = None,
   core: TreeCore = TreeCore(),
-  maxIteration: Option[Int] = None,
-  stepSize: Option[Double] = None,
-  subsamplingRate: Option[Double] = None,
+  maxIteration: ValueOrSeq[Int] = Left(None),
+  stepSize: ValueOrSeq[Double] = Left(None),
+  subsamplingRate: ValueOrSeq[Double] = Left(None),
   lossType: Option[GBTRegressionLossType.Value] = None,
 //    impurity: Option[Impurity.Value] = None,
   name: Option[String] = None,
@@ -126,6 +127,14 @@ object Regression {
   implicit val featureSubsetStrategyEnumTypeFormat = EnumFormat.enumFormat(RandomRegressionForestFeatureSubsetStrategy)
   implicit val regressionTreeImpurityEnumTypeFormat = EnumFormat.enumFormat(RegressionTreeImpurity)
   implicit val gbtRegressionLossTypeEnumTypeFormat = EnumFormat.enumFormat(GBTRegressionLossType)
+
+  def eitherFormat[T: Format] = {
+    implicit val optionFormat = new OptionFormat[T]
+    EitherFormat[Option[T], Seq[T]]
+  }
+
+  implicit val doubleEitherFormat = eitherFormat[Double]
+  implicit val intEitherFormat = eitherFormat[Int]
 
   private implicit val treeCoreFormat = Json.format[TreeCore]
 

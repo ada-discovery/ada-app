@@ -17,6 +17,7 @@ import models.json.EnumFormat
 import models.json.EitherFormat._
 import models.ml.{ClassificationSetting, VectorTransformType}
 import models.ml.ClassificationResult.classificationSettingFormat
+import models.ml.{ClassificationEvalMetric, RegressionEvalMetric}
 
 case class Message(
   _id: Option[BSONObjectID],
@@ -86,5 +87,6 @@ object QueryStringBinders {
   implicit val TablePageSeqBinder = new JsonQueryStringBinder[Seq[PageOrder]]
   implicit val ClassificationSettingBinder = new JsonQueryStringBinder[ClassificationSetting]
   implicit val vectorTransformTypeQueryStringBinder = new EnumStringBindable(VectorTransformType)
-
+  implicit val classificationEvalMetricQueryStringBinder = new EnumStringBindable(ClassificationEvalMetric)
+  implicit val regressionEvalMetricQueryStringBinder = new EnumStringBindable(RegressionEvalMetric)
 }

@@ -7,7 +7,7 @@ import dataaccess.Criterion
 import dataaccess.Criterion._
 import models.FilterCondition.toCriterion
 import models.{AdaException, Filter, FilterCondition}
-import models.ml.{ClassificationSetting, VectorTransformType}
+import models.ml.{ClassificationEvalMetric, ClassificationSetting, VectorTransformType}
 import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
@@ -121,6 +121,7 @@ class ClassifyRCResults @Inject() (
             spec.samplingOutputValues.zip(spec.samplingRatios),
             spec.repetitions,
             spec.crossValidationFolds,
+            spec.crossValidationEvalMetric,
             spec.binCurvesNumBins
           )
 
@@ -183,5 +184,6 @@ case class ClassifyRCResultsSpec(
   samplingRatios: Seq[Double],
   repetitions: Option[Int],
   crossValidationFolds: Option[Int],
+  crossValidationEvalMetric: Option[ClassificationEvalMetric.Value],
   binCurvesNumBins: Option[Int]
 )

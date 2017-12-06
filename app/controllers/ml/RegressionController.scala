@@ -4,7 +4,7 @@ import java.util.Date
 import javax.inject.Inject
 
 import controllers.core._
-import controllers.{AdminRestrictedCrudController, EnumFormatter}
+import controllers.{AdminRestrictedCrudController, EnumFormatter, SeqFormatter}
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models._
 import models.ml.TreeCore
@@ -23,6 +23,7 @@ import util.SecurityUtil.{restrictAdminAny, restrictSubjectPresentAny}
 import views.html.{layout, regression => view}
 import controllers.ml.routes.{RegressionController => regressionRoutes}
 import dataaccess.AscSort
+import models.ml.classification.ValueOrSeq.ValueOrSeq
 import play.api.libs.json.{JsArray, Json}
 import services.DataSpaceService
 
@@ -45,25 +46,31 @@ class RegressionController @Inject()(
   private implicit val randomRegressionForestFeatureSubsetStrategyFormatter = EnumFormatter(RandomRegressionForestFeatureSubsetStrategy)
   private implicit val gbtRegressionLossTypeFormatter = EnumFormatter(GBTRegressionLossType)
 
+  private implicit val intSeqFormatter = SeqFormatter.applyInt
+  private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
+
+  private implicit val intEitherSeqFormatter = EitherSeqFormatter[Int]
+  private implicit val doubleEitherSeqFormatter = EitherSeqFormatter[Double]
+
   protected val treeCoreMapping: Mapping[TreeCore] = mapping(
-    "maxDepth" -> optional(number(min = 1)),
-    "maxBins" -> optional(number(min = 1)),
-    "minInstancesPerNode" -> optional(number(min = 1)),
-    "minInfoGain" -> optional(of(doubleFormat)),
+    "maxDepth" -> of[ValueOrSeq[Int]],
+    "maxBins" -> of[ValueOrSeq[Int]],
+    "minInstancesPerNode" -> of[ValueOrSeq[Int]],
+    "minInfoGain" -> of[ValueOrSeq[Double]],
     "seed" -> optional(longNumber(min = 1))
   )(TreeCore.apply)(TreeCore.unapply)
 
   protected val linearRegressionForm = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
-      "regularization" -> optional(of(doubleFormat)),
-      "elasticMixingRatio" -> optional(of(doubleFormat)),
-      "maxIteration" -> optional(number(min = 1)),
-      "tolerance" -> optional(of(doubleFormat)),
+      "regularization" -> of[ValueOrSeq[Double]],
+      "elasticMixingRatio" -> of[ValueOrSeq[Double]],
+      "maxIteration" -> of[ValueOrSeq[Int]],
+      "tolerance" -> of[ValueOrSeq[Double]],
       "fitIntercept" -> optional(boolean),
       "solver" -> optional(of[RegressionSolver.Value]),
       "standardization" -> optional(boolean),
-      "aggregationDepth" -> optional(number(min = 1)),
+      "aggregationDepth" -> of[ValueOrSeq[Int]],
       "name" -> optional(nonEmptyText),
       "createdById" -> ignored(Option.empty[BSONObjectID]),
       "timeCreated" -> ignored(new Date())
@@ -72,10 +79,10 @@ class RegressionController @Inject()(
   protected val generalizedLinearRegressionForm = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
-      "regularization" -> optional(of(doubleFormat)),
+      "regularization" -> of[ValueOrSeq[Double]],
       "link" -> optional(of[GeneralizedLinearRegressionLinkType.Value]),
-      "maxIteration" -> optional(number(min = 1)),
-      "tolerance" -> optional(of(doubleFormat)),
+      "maxIteration" -> of[ValueOrSeq[Int]],
+      "tolerance" -> of[ValueOrSeq[Double]],
       "fitIntercept" -> optional(boolean),
       "family" -> optional(of[GeneralizedLinearRegressionFamily.Value]),
       "solver" -> optional(of[GeneralizedLinearRegressionSolver.Value]),
@@ -98,8 +105,8 @@ class RegressionController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "core" -> treeCoreMapping,
-      "numTrees" -> optional(number(min = 1)),
-      "subsamplingRate" -> optional(of(doubleFormat)),
+      "numTrees" -> of[ValueOrSeq[Int]],
+      "subsamplingRate" -> of[ValueOrSeq[Double]],
       "impurity" -> optional(of[RegressionTreeImpurity.Value]),
       "featureSubsetStrategy" -> optional(of[RandomRegressionForestFeatureSubsetStrategy.Value]),
       "name" -> optional(nonEmptyText),
@@ -111,9 +118,9 @@ class RegressionController @Inject()(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "core" -> treeCoreMapping,
-      "maxIteration" -> optional(number(min = 1)),
-      "stepSize" -> optional(of(doubleFormat)),
-      "subsamplingRate" -> optional(of(doubleFormat)),
+      "maxIteration" -> of[ValueOrSeq[Int]],
+      "stepSize" -> of[ValueOrSeq[Double]],
+      "subsamplingRate" -> of[ValueOrSeq[Double]],
       "lossType" -> optional(of[GBTRegressionLossType.Value]),
       "name" -> optional(nonEmptyText),
       "createdById" -> ignored(Option.empty[BSONObjectID]),

@@ -6,6 +6,7 @@ import controllers.SecureControllerDispatcher
 import models.FilterCondition
 import models.ml.ClassificationSetting
 import reactivemongo.bson.BSONObjectID
+import models.ml.ClassificationEvalMetric
 import util.SecurityUtil.createDataSetPermission
 
 class ClassificationRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf: ClassificationRunControllerFactory)

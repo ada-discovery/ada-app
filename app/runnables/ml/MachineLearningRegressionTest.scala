@@ -38,9 +38,9 @@ class MachineLearningRegressionTest @Inject()(
 
     val error = regress(
       LinearRegression(
-        maxIteration = Some(10),
-        regularization = Some(0.3),
-        elasticMixingRatio = Some(0.8)
+        maxIteration = Left(Some(10)),
+        regularization = Left(Some(0.3)),
+        elasticMixingRatio = Left(Some(0.8))
       )
     )
 
@@ -53,8 +53,8 @@ class MachineLearningRegressionTest @Inject()(
       GeneralizedLinearRegression(
         family = Some(GeneralizedLinearRegressionFamily.Gaussian),
         link = Some(GeneralizedLinearRegressionLinkType.Identity),
-        maxIteration = Some(10),
-        regularization = Some(0.3)
+        maxIteration = Left(Some(10)),
+        regularization = Left(Some(0.3))
       )
     )
     println(error2)
@@ -62,18 +62,18 @@ class MachineLearningRegressionTest @Inject()(
 
     println("Regression tree")
 
-    val error3 = regress(RegressionTree(core = TreeCore(maxDepth = Some(10))))
+    val error3 = regress(RegressionTree(core = TreeCore(maxDepth = Left(Some(10)))))
     println(error3)
 
     println("Random regression forest")
 
-    val error4 = regress(RandomRegressionForest(core = TreeCore(maxDepth = Some(10))))
+    val error4 = regress(RandomRegressionForest(core = TreeCore(maxDepth = Left(Some(10)))))
     println(error4)
     println
 
     println("GBT regression")
 
-    val error5 = regress(GradientBoostRegressionTree(maxIteration = Some(50)))
+    val error5 = regress(GradientBoostRegressionTree(maxIteration = Left(Some(50))))
     println(error5)
   }
 }
