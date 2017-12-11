@@ -126,7 +126,14 @@
                         <input id="targetFieldName" name="targetFieldName" type="hidden" value="">
                     }
                     @labelValue("inputFieldNames", "Input Field") {
-                        @dynamicFieldTable("inputFieldName", Nil, false, 5, Some(extraFieldButtons))
+                        @dynamicFieldTable(
+                            "inputFieldName",
+                            Nil,
+                            false,
+                            5,
+                            Some(extraFieldButtons),
+                            Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(Left(Nil))))
+                        )
                     }
                     @labelValue("filterId", "Filter") {
                         <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="Filter" value="">

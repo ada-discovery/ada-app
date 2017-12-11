@@ -1,15 +1,16 @@
-package runnables.luxpark
+package runnables.mpower
 
 import javax.inject.Inject
 
 import models.StorageType
 import models.ml.{DataSetLink, DataSetTransformationCore}
-import runnables.FutureRunnable
+import runnables.{FutureRunnable, InputFutureRunnable}
 import services.DataSetService
+import scala.reflect.runtime.universe.typeOf
 
-class LinkMPowerTrainingNormsAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends FutureRunnable {
+class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnable[LinkMPowerMergedAndDemographicsDataSetsSpec] {
 
-  private val walkingNormsFieldNames = Nil // take all
+  private val walkingFieldNames = Nil // take all
 
   private val demographicsFieldNames =
     Seq(
@@ -48,21 +49,26 @@ class LinkMPowerTrainingNormsAndDemographicsDataSets @Inject()(dataSetService: D
       "years-smoking"
     )
 
-  private val dataSetLinkSpec = DataSetLink(
-    "mpower_challenge.walking_activity_training_norms",
-    "mpower_challenge.demographics_training",
+  private def dataSetLinkSpec(input: LinkMPowerMergedAndDemographicsDataSetsSpec) = DataSetLink(
+    "mpower_challenge.walking_activity_2",
+    "mpower_challenge.demographics_training_2",
     Seq("healthCode"),
     Seq("healthCode"),
-    walkingNormsFieldNames,
+    walkingFieldNames,
     demographicsFieldNames,
     DataSetTransformationCore(
-      "mpower_challenge.walking_activity_training_norms_w_demographics",
-      "Walking Activity Training Norms with Demographics",
+      "mpower_challenge.walking_activity_2_w_demographics",
+      "Merged Activity with Demographics",
       StorageType.Mongo,
-      Some(4),
-      Some(1)
+      input.processingBatchSize,
+      input.saveBatchSize
     )
   )
 
-  override def runAsFuture = dataSetService.linkDataSets(dataSetLinkSpec)
+  override def runAsFuture(input: LinkMPowerMergedAndDemographicsDataSetsSpec) =
+    dataSetService.linkDataSets(dataSetLinkSpec(input))
+
+  override def inputType = typeOf[LinkMPowerMergedAndDemographicsDataSetsSpec]
 }
+
+case class LinkMPowerMergedAndDemographicsDataSetsSpec(processingBatchSize: Option[Int], saveBatchSize: Option[Int])

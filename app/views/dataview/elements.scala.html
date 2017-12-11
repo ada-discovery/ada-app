@@ -6,6 +6,8 @@
 @import views.html.dataset.dynamicFieldTable
 @import controllers.dataset.FilterRouter
 @import reactivemongo.bson.BSONObjectID
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     form: Form[DataView],
@@ -13,7 +15,7 @@
     idFilterNameMap: Map[BSONObjectID, String],
     allFieldsCall: Call
 )(
-    implicit msg: play.api.i18n.Messages, webJarAssets: WebJarAssets
+    implicit context: DataSetWebContext
 )
 
 @dynamicTableJsImport()
@@ -36,7 +38,8 @@
         form.value.map(_.tableColumnNames.map(nameFieldMap.get).flatten).getOrElse(Nil),
         true,
         5,
-        Some(extraFieldButtons)
+        Some(extraFieldButtons),
+        Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(Left(Nil))))
     )
 }
 

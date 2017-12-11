@@ -4,7 +4,7 @@
 @import models.{Field, Filter}
 @import models.JsTreeNode.format
 @import controllers.dataset.FilterJsRouter
-@import views.html.filter.jsTree
+@import views.html.filter.{jsTree, categoricalTree}
 @import play.api.libs.json.JsArray
 
 @(
@@ -13,9 +13,10 @@
     showFieldStyle: Option[FilterShowFieldStyle.Value] = None,
     filterJsRouter: Option[FilterJsRouter] = None,
     listFiltersCall: Option[Call] = None,
-    filterElementName: String = "filterDiv"
+    filterElementName: String = "filterDiv",
+    categoricalTreeId: String = "categoryTree"
 )(
-    implicit request: Request[_]
+    implicit request: Request[_], webJarAssets: WebJarAssets
 )
 
 @showChoice(value: FilterShowFieldStyle.Value, text: String) = {
@@ -95,13 +96,6 @@
     </ul>
 }
 
-@categoryTreeDataOrUrl = @{
-    categoriesOrCall.get match {
-        case Left(categories) => Left(Json.toJson(categories.map(JsTreeNode.fromCategory)))
-        case Right(call) => Right(call.url)
-    }
-}
-
 @categoryTreeNodeSelectedJsFun = {
     function(node) {
         if (node.type.startsWith("field-")) {
@@ -128,25 +122,8 @@
                     <div class="modal-body">
                         <input id="conditionIndex" type="hidden" value=""/>
                         @if(categoriesOrCall.isDefined) {
-                            <div id="categoryDiv" class="row collapse">
-                                @jsTree(
-                                    categoryTreeDataOrUrl,
-                                    "categoryTree",
-                                    Json.obj(
-                                        "default" -> Json.obj("icon" -> "glyphicon glyphicon-folder-close category-node"),
-                                        "category" -> Json.obj("icon" -> "glyphicon glyphicon-folder-close category-node"),
-                                        "category-open" -> Json.obj("icon" -> "glyphicon glyphicon-folder-open category-node"),
-                                        "field-" + FieldTypeId.Null -> Json.obj("icon" -> "glyphicon glyphicon-ban-circle"),
-                                        "field-" + FieldTypeId.Double -> Json.obj("icon" -> "glyphicon glyphicon-stats"),
-                                        "field-" + FieldTypeId.Integer -> Json.obj("icon" -> "glyphicon glyphicon-signal"),
-                                        "field-" + FieldTypeId.Boolean -> Json.obj("icon" -> "glyphicon glyphicon-check"),
-                                        "field-" + FieldTypeId.Enum -> Json.obj("icon" -> "glyphicon glyphicon-font"),
-                                        "field-" + FieldTypeId.String -> Json.obj("icon" -> "glyphicon glyphicon-bold"),
-                                        "field-" + FieldTypeId.Date -> Json.obj("icon" -> "glyphicon glyphicon-calendar"),
-                                        "field-" + FieldTypeId.Json -> Json.obj("icon" -> "glyphicon glyphicon-book")
-                                    ),
-                                    Some(categoryTreeNodeSelectedJsFun)
-                                )
+                            <div id="categoryFilterDiv" class="row collapse">
+                                @categoricalTree(categoricalTreeId, categoriesOrCall.get, Some(categoryTreeNodeSelectedJsFun))
                                 <hr/>
                             </div>
                         }
@@ -167,7 +144,7 @@
                                 <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
                             </a>
                             @if(categoriesOrCall.isDefined) {
-                                <a id="showCategoryTreeButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#categoryDiv" data-toggle="tooltip" title="Show Category Tree">
+                                <a id="showCategoryTreeButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#categoryFilterDiv" data-toggle="tooltip" title="Show Category Tree">
                                     <span class="glyphicon glyphicon-leaf" aria-hidden="true"></span>
                                 </a>
                             }

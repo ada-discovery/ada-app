@@ -70,7 +70,15 @@
     <div class="row">
         <div class="col-md-3">
             <div class="row">
-                @dynamicFieldTable("fieldName", fields, true, 12)
+                @dynamicFieldTable(
+                    "fieldName",
+                    fields,
+                    true,
+                    12,
+                    None,
+                    Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(Left(Nil)))),
+                    "categoryTree2"
+                )
             </div>
             <div class="row">
                 @helper.form(action=dataSetRouter.getCorrelations(Nil, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {

@@ -2,6 +2,8 @@
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
 @import views.html.dataset.dynamicFieldTable
 @import models.ml.VectorTransformType
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
 
 @(
     includeOutputField: Boolean = true,
@@ -9,7 +11,7 @@
     extraFieldButtons: Option[Html] = None,
     extraFields: Option[Html] = None
 )(
-    implicit webJarAssets: WebJarAssets
+    implicit context: DataSetWebContext
 )
 
 @dynamicTableJsImport()
@@ -42,7 +44,14 @@
                     }
                 }
                 @labelValueAux("inputFieldNames", "Input Fields") {
-                    @dynamicFieldTable("inputFieldName", Nil, false, 12, Some(fieldButtons))
+                    @dynamicFieldTable(
+                        "inputFieldName",
+                        Nil,
+                        false,
+                        12,
+                        Some(fieldButtons),
+                        Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(Left(Nil))))
+                    )
                 }
                 @labelValueAux("filterId", "Input Data") {
                     <input id="filterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="filter" value="">

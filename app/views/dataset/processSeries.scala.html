@@ -99,7 +99,14 @@
                         )
                     }
                     @labelValue("preserveFieldNames", "Preserve Field Names", false, None, 3) {
-                        @dynamicFieldTable("preserveFieldName", Nil, false, 5, Some(extraFieldButtons))
+                        @dynamicFieldTable(
+                            "preserveFieldName",
+                            Nil,
+                            false,
+                            5,
+                            Some(extraFieldButtons),
+                            Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(Left(Nil))))
+                        )
                     }
                     @inputTextAux("core.processingBatchSize", Some(20))
                     @inputTextAux("core.saveBatchSize", Some(5))

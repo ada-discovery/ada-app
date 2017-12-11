@@ -98,6 +98,14 @@
                 ).map(function (field, index) { return {id: field.id, label: field.data.label, nonNullCount: field.data.nonNullCount}; });
             }
 
+            $("#@categoryTreeElementName.get").on('open_node.jstree', function (event, data) {
+                data.instance.set_type(data.node,'category-open');
+            });
+
+            $("#@categoryTreeElementName.get").on('close_node.jstree', function (event, data) {
+                data.instance.set_type(data.node,'category');
+            });
+
             fieldDisplayChoiceCallback = function(choiceVal) {
                 if (categoryTreeFieldNodeDatas.length == 0) {
                     initCategoryTreeFieldNodeDatas()
@@ -125,7 +133,7 @@
             }
 
             if (fieldNameAndLabels) {
-                initJsTree()
+                $("#@categoryTreeElementName.get").jsTreeWidget('init');
                 $("#@categoryTreeElementName.get").bind('ready.jstree', function(e, data) {
                     var rootNode = $('#@categoryTreeElementName.get').jstree(true).get_node("#")
                         if(rootNode.children.length == 0) {
@@ -134,7 +142,7 @@
                     })
             } else {
                 initFilterIfNeededTreeCallback = function() {
-                    initJsTree();
+                    $("#@categoryTreeElementName.get").jsTreeWidget('init');
                     $("#@categoryTreeElementName.get").bind('ready.jstree', function(e, data) {
                         var rootNode = $('#@categoryTreeElementName.get').jstree(true).get_node("#")
                         if(rootNode.children.length == 0) {

@@ -1,4 +1,4 @@
-package runnables.luxpark
+package runnables.mpower
 
 import javax.inject.Inject
 
@@ -7,7 +7,7 @@ import models.ml.{DataSetLink, DataSetTransformationCore}
 import runnables.FutureRunnable
 import services.DataSetService
 
-class LinkMPowerSupplementTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends FutureRunnable {
+class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends FutureRunnable {
 
   private val walkingFieldNames =
     Seq(

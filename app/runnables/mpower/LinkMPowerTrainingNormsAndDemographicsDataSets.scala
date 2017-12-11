@@ -1,4 +1,4 @@
-package runnables.luxpark
+package runnables.mpower
 
 import javax.inject.Inject
 
@@ -7,27 +7,9 @@ import models.ml.{DataSetLink, DataSetTransformationCore}
 import runnables.FutureRunnable
 import services.DataSetService
 
-class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends FutureRunnable {
+class LinkMPowerTrainingNormsAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends FutureRunnable {
 
-  private val walkingFieldNames =
-    Seq(
-      "ROW_ID",
-      "ROW_VERSION",
-      "recordId",
-      "healthCode",
-      "phoneInfo",
-      "appVersion",
-      "createdOn",
-      "medTimepoint",
-      "accel_walking_outboundu002ejsonu002eitems",
-      "accel_walking_restu002ejsonu002eitems",
-      "accel_walking_returnu002ejsonu002eitems",
-      "deviceMotion_walking_outboundu002ejsonu002eitems",
-      "deviceMotion_walking_restu002ejsonu002eitems",
-      "deviceMotion_walking_returnu002ejsonu002eitems",
-      "pedometer_walking_outboundu002ejsonu002eitems",
-      "pedometer_walking_returnu002ejsonu002eitems"
-    )
+  private val walkingNormsFieldNames = Nil // take all
 
   private val demographicsFieldNames =
     Seq(
@@ -67,17 +49,17 @@ class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSe
     )
 
   private val dataSetLinkSpec = DataSetLink(
-    "mpower_challenge.walking_activity_training",
+    "mpower_challenge.walking_activity_training_norms",
     "mpower_challenge.demographics_training",
     Seq("healthCode"),
     Seq("healthCode"),
-    walkingFieldNames,
+    walkingNormsFieldNames,
     demographicsFieldNames,
     DataSetTransformationCore(
-      "mpower_challenge.walking_activity_training_w_demographics",
-      "Walking Activity Training with Demographics",
+      "mpower_challenge.walking_activity_training_norms_w_demographics",
+      "Walking Activity Training Norms with Demographics",
       StorageType.Mongo,
-      Some(1),
+      Some(4),
       Some(1)
     )
   )
