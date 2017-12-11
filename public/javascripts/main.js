@@ -588,3 +588,30 @@ function createTable(columnNames, rows) {
 
     return table
 }
+
+function initJsTree(treeElementId, data, typesSetting) {
+    $('#' + treeElementId).jstree({
+        "core" : {
+            "animation" : 0,
+            "check_callback" : true,
+            "themes" : {
+                'responsive' : false,
+                'variant' : 'large',
+                "stripes" : true
+            },
+            'data' : data
+        },
+        "types" : typesSetting,
+        "search": {
+        "case_insensitive": true,
+            "show_only_matches" : true,
+            "search_leaves_only": true
+        },
+
+        "plugins" : [
+            "search", "sort", "state", "types", "wholerow" // "contextmenu", "dnd",
+        ]
+    });
+
+    $('#' + treeElementId).jstree("deselect_all");
+}
