@@ -83,10 +83,10 @@
             const fjs = fractal.init({
                 handler: 'ada',
                 thisBaseURL: "https://" + location.host,
-                fractalisBaseURL: 'https://localhost',
+                fractalisBaseURL: 'https://fractalis.lcsb.uni.lu',
                 getAuth () {
                     return {token: getCookie("PLAY2AUTH_SESS_ID")}
-//                    return {"user": "", passwd: ""} // https://fractalis.lcsb.uni.lu'
+//                    return {"user": "", passwd: ""}
                 }
             })
 
