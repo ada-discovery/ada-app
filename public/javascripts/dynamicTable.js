@@ -4,7 +4,8 @@ $.widget( "custom.dynamicTable", {
         domainName: null,
         rowToModel: null,
         itemToRow: null,
-        sortable: false
+        sortable: false,
+        hideModalOnEnter: true
     },
 
     // the constructor
@@ -18,7 +19,7 @@ $.widget( "custom.dynamicTable", {
         this.submitButtonName = domainName + 'SubmitButton'
         this.itemsName = domainName + 's[]'
 
-        handleModalButtonEnterPressed(this.modalName, this.submitButtonName, function() {that.addTableRowFromModal()})
+        handleModalButtonEnterPressed(this.modalName, this.submitButtonName, function() { that.addTableRowFromModal()}, that.options.hideModalOnEnter)
 
         $('form').submit(function(ev) {
             ev.preventDefault();

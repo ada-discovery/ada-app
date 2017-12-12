@@ -2,7 +2,8 @@ $.widget( "custom.jsTreeWidget", {
     // default options
     options: {
         data: null,
-        typesSetting: null
+        typesSetting: null,
+        nodeSelectedFun: null
     },
 
     // the constructor
@@ -36,5 +37,14 @@ $.widget( "custom.jsTreeWidget", {
         });
 
         this.element.jstree("deselect_all");
+
+        if (that.options.nodeSelectedFun) {
+            that.element.on("select_node.jstree",
+                function(evt, data) {
+                    console.log(data.node)
+                    that.options.nodeSelectedFun(data.node);
+                }
+            );
+        }
     }
 })

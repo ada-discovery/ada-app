@@ -434,12 +434,14 @@ function getRowId(rowElement, objectIdName) {
   return id
 }
 
-function handleModalButtonEnterPressed(modalName, submitButtonName, action) {
+function handleModalButtonEnterPressed(modalName, submitButtonName, action, hideOnEnter) {
   $("#" + modalName).keypress(function (e) {
     if (e.keyCode == 13) {
       e.preventDefault();
       action()
-      $("#" + modalName).modal("hide")
+      if(hideOnEnter) {
+          $("#" + modalName).modal("hide")
+      }
     }
   });
 
@@ -614,4 +616,24 @@ function initJsTree(treeElementId, data, typesSetting) {
     });
 
     $('#' + treeElementId).jstree("deselect_all");
+}
+
+function moveModalRight(modalId) {
+    $('#' + modalId).one('hidden.bs.modal', function () {
+//            $(this).data('bs.modal', null);
+        var modalDialog = $('#' + modalId + ' .modal-dialog:first')
+        var isRight = modalDialog.hasClass("modal-right")
+        var isLeft = modalDialog.hasClass("modal-left")
+
+        if (isRight) {
+            modalDialog.removeClass("modal-right")
+            modalDialog.addClass("modal-left")
+        } else if (isLeft) {
+            modalDialog.removeClass("modal-left")
+        } else {
+            modalDialog.addClass("modal-right")
+        }
+
+        $('#' + modalId).modal('show');
+    });
 }
