@@ -57,6 +57,13 @@
         :
             {'url' : dataUrl, 'data' : function (node) {return { 'id' : node.id };}}
 
+    var nodeSelectedFun =
+        @if(nodeSelectedFun.isDefined) {
+            @nodeSelectedFun.get
+        } else {
+            null
+        }
+
     $("#@{treeElementName}-Search-Input").keypress(function (e) {
         if (e.which == 13) {
             var searchString = $(this).val();
@@ -68,15 +75,7 @@
 
     $("#@treeElementName").jsTreeWidget({
         data: data,
-        typesSetting: @Html(Json.stringify(typesSetting))
+        typesSetting: @Html(Json.stringify(typesSetting)),
+        nodeSelectedFun: nodeSelectedFun
     });
-
-    @if(nodeSelectedFun.isDefined) {
-        var nodeSelectedFun = @nodeSelectedFun.get
-        $("#@treeElementName").on("select_node.jstree",
-            function(evt, data) {
-                nodeSelectedFun(data.node);
-            }
-        );
-    }
 </script>

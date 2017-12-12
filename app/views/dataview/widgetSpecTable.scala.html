@@ -185,114 +185,140 @@
         // fields
         var concreteClass = values["concreteClass"].trim()
         var fields = getWidgetFieldsWithoutDisplayOptions(concreteClass);
-        var labelFields = getWidgetLabelFields(concreteClass);
-        fields.push("concreteClass")
-        fields = fields.concat(labelFields)
 
-        // data column
-        var dataColumn = $("<td></td>")
-        $.each(fields, function( index, fieldName ) {
-            var value = values[fieldName]
-            if (value != null)
-                dataColumn.append("<input type='hidden' id='" + fieldName + "' value='" + value + "'/>");
-        });
-
-        // display content column
-        var fieldLabels = labelFields.map(function(labelField) {
-            return values[labelField];
-        }).join(", ");
-
-        var contentDisplayColumn = $("<td></td>")
-        if (fieldLabels.length > 0)
-            contentDisplayColumn.append("<div class='row'>Fields: " + fieldLabels + "</div>")
-
-        var subFilterIdValue = "Sub Filter Id: " + values["subFilterId"]
-
-        // distribution and cumulative count
-        var isDistributionOrCumulativeCountType = concreteClass == "@{classOf[DistributionWidgetSpec].getName}" || concreteClass == "@{classOf[CumulativeCountWidgetSpec].getName}"
-
-        var numericBinCount = values["numericBinCount"]
-        var numericBinCountLabelValue =  (isDistributionOrCumulativeCountType && numericBinCount) ? ("Numeric Bin Count: " + numericBinCount) : "";
-
-        var relativeValues = values["relativeValues"]
-        var relativeValuesValue =  (isDistributionOrCumulativeCountType) ? ("Show Relative Values: " + relativeValues) : "";
-
-        var useDateMonthBins = values["useDateMonthBins"]
-        var useDateMonthBinsValue =  (isDistributionOrCumulativeCountType) ? ("Date Month Bins: " + useDateMonthBins) : "";
-
-        // template html
-        var isTemplateHtmlType = concreteClass == "@{classOf[TemplateHtmlWidgetSpec].getName}"
-        var contentLabelValue =  (isTemplateHtmlType) ? ("Content: " + values["content"]) : "";
-
-        // correlation
+        var isDefined = true
+        var isDistributionType = concreteClass == "@{classOf[DistributionWidgetSpec].getName}"
+        var isCumulativeCountType = concreteClass == "@{classOf[CumulativeCountWidgetSpec].getName}"
+        var isBoxType = concreteClass == "@{classOf[BoxWidgetSpec].getName}"
+        var isScatterType = concreteClass == "@{classOf[ScatterWidgetSpec].getName}"
         var isCorrelationType = concreteClass == "@{classOf[CorrelationWidgetSpec].getName}"
-        var fieldNamesValue = (isCorrelationType) ? ("Fields: " + values["fieldNames"]) : "";
 
-        contentDisplayColumn.append("<div class='row'>" + numericBinCountLabelValue + relativeValuesValue + useDateMonthBinsValue + contentLabelValue + fieldNamesValue + subFilterIdValue + "</div>")
-
-        // display options
-        var displayOptions = values["displayOptions"]
-
-        var gridOffsetValue = "";
-        var gridWidthValue = "";
-        var heightValue = "";
-        var isTextualFormValue = false;
-        var titleValue = "";
-        var chartTypeValue = "";
-
-        if (displayOptions) {
-            if (displayOptions["gridOffset"]) {
-                gridOffsetValue = displayOptions["gridOffset"];
-            }
-            if (displayOptions["gridWidth"]) {
-                gridWidthValue = displayOptions["gridWidth"];
-            }
-            if (displayOptions["height"]) {
-                heightValue = displayOptions["height"];
-            }
-            if (displayOptions["isTextualForm"]) {
-                isTextualFormValue = displayOptions["isTextualForm"];
-            }
-            if (displayOptions["chartType"]) {
-                chartTypeValue = displayOptions["chartType"];
-            }
-            if (displayOptions["title"]) {
-                titleValue = displayOptions["title"];
-            }
-        }
-        var textualFormChecked = (isTextualFormValue) ? "checked='checked'" : ""
-
-        var gridOffsetColumn = "<td><input type='text' id='gridOffset' style='width:40px' value='" + gridOffsetValue + "'/></td>";
-        var gridWidthColumn = "<td><input type='text' id='gridWidth' style='width:40px' value='" + gridWidthValue + "'/></td>";
-        var heightColumn = "<td><input type='text' id='height' style='width:60px' value='" + heightValue + "'/></td>";
-        var isTextualFormColumn = "<td><input type='checkbox' id='isTextualForm' name='isTextualForm'" + textualFormChecked + "'/></td>";
-        var titleColumn = "<td><input type='text' id='height' style='width:60px' value='" + titleValue + "'/></td>";
-        var chartTypeColumn = (isDistributionOrCumulativeCountType) ? `<td>@editableChartType(None)</td>` : "<td></td>";
-
-        // concrete class name and check box columns
-        var concreteClassName = concreteClass.replace('models.','').replace('WidgetSpec','')
-        var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
-        var concreteClassNameColumn = "<td>" + concreteClassName + "</td>";
-
-        // create row
-        var row = $("<tr></tr>")
-        row.append(checkboxColumn)
-        row.append(dataColumn)
-        row.append(concreteClassNameColumn)
-        row.append(contentDisplayColumn)
-        row.append(gridOffsetColumn)
-        row.append(gridWidthColumn)
-        row.append(heightColumn)
-        row.append(isTextualFormColumn)
-        row.append(titleColumn)
-        row.append(chartTypeColumn)
-
-        if (chartTypeValue) {
-            row.find("#chartType").val(chartTypeValue);
+        if (isDistributionType || isCumulativeCountType || isBoxType) {
+            isDefined = values["fieldName"] != null && values["fieldName"].length > 0
         }
 
-        // make the row clickable
-        setWidgetRowClickable(row)
+        if (isScatterType) {
+            isDefined = values["xFieldName"] != null && values["xFieldName"].length > 0 && values["yFieldName"] != null && values["yFieldName"].length > 0
+        }
+
+        if (isCorrelationType) {
+            isDefined = values["fieldNames"] != null && values["fieldNames"].length > 0
+        }
+
+        var row = null
+
+        if (isDefined) {
+
+            var labelFields = getWidgetLabelFields(concreteClass);
+            fields.push("concreteClass")
+            fields = fields.concat(labelFields)
+
+            // data column
+            var dataColumn = $("<td></td>")
+            $.each(fields, function( index, fieldName ) {
+                var value = values[fieldName]
+                if (value != null)
+                    dataColumn.append("<input type='hidden' id='" + fieldName + "' value='" + value + "'/>");
+            });
+
+
+            // display content column
+            var fieldLabels = labelFields.map(function(labelField) {
+                return values[labelField];
+            }).join(", ");
+
+            var contentDisplayColumn = $("<td></td>")
+            if (fieldLabels.length > 0)
+                contentDisplayColumn.append("<div class='row'>Fields: " + fieldLabels + "</div>")
+
+            var subFilterIdValue = "Sub Filter Id: " + values["subFilterId"]
+
+            // distribution and cumulative count
+            var isDistributionOrCumulativeCountType = isDistributionType || isCumulativeCountType
+
+            var numericBinCount = values["numericBinCount"]
+            var numericBinCountLabelValue =  (isDistributionOrCumulativeCountType && numericBinCount) ? ("Numeric Bin Count: " + numericBinCount) : "";
+
+            var relativeValues = values["relativeValues"]
+            var relativeValuesValue =  (isDistributionOrCumulativeCountType) ? ("Show Relative Values: " + relativeValues) : "";
+
+            var useDateMonthBins = values["useDateMonthBins"]
+            var useDateMonthBinsValue =  (isDistributionOrCumulativeCountType) ? ("Date Month Bins: " + useDateMonthBins) : "";
+
+            // template html
+            var isTemplateHtmlType = concreteClass == "@{classOf[TemplateHtmlWidgetSpec].getName}"
+            var contentLabelValue =  (isTemplateHtmlType) ? ("Content: " + values["content"]) : "";
+
+            // correlation
+            var isCorrelationType = concreteClass == "@{classOf[CorrelationWidgetSpec].getName}"
+            var fieldNamesValue = (isCorrelationType) ? ("Fields: " + values["fieldNames"]) : "";
+
+            contentDisplayColumn.append("<div class='row'>" + numericBinCountLabelValue + relativeValuesValue + useDateMonthBinsValue + contentLabelValue + fieldNamesValue + subFilterIdValue + "</div>")
+
+            // display options
+            var displayOptions = values["displayOptions"]
+
+            var gridOffsetValue = "";
+            var gridWidthValue = "";
+            var heightValue = "";
+            var isTextualFormValue = false;
+            var titleValue = "";
+            var chartTypeValue = "";
+
+            if (displayOptions) {
+                if (displayOptions["gridOffset"]) {
+                    gridOffsetValue = displayOptions["gridOffset"];
+                }
+                if (displayOptions["gridWidth"]) {
+                    gridWidthValue = displayOptions["gridWidth"];
+                }
+                if (displayOptions["height"]) {
+                    heightValue = displayOptions["height"];
+                }
+                if (displayOptions["isTextualForm"]) {
+                    isTextualFormValue = displayOptions["isTextualForm"];
+                }
+                if (displayOptions["chartType"]) {
+                    chartTypeValue = displayOptions["chartType"];
+                }
+                if (displayOptions["title"]) {
+                    titleValue = displayOptions["title"];
+                }
+            }
+            var textualFormChecked = (isTextualFormValue) ? "checked='checked'" : ""
+
+            var gridOffsetColumn = "<td><input type='text' id='gridOffset' style='width:40px' value='" + gridOffsetValue + "'/></td>";
+            var gridWidthColumn = "<td><input type='text' id='gridWidth' style='width:40px' value='" + gridWidthValue + "'/></td>";
+            var heightColumn = "<td><input type='text' id='height' style='width:60px' value='" + heightValue + "'/></td>";
+            var isTextualFormColumn = "<td><input type='checkbox' id='isTextualForm' name='isTextualForm'" + textualFormChecked + "'/></td>";
+            var titleColumn = "<td><input type='text' id='height' style='width:60px' value='" + titleValue + "'/></td>";
+            var chartTypeColumn = (isDistributionOrCumulativeCountType) ? `<td>@editableChartType(None)</td>` : "<td></td>";
+
+            // concrete class name and check box columns
+            var concreteClassName = concreteClass.replace('models.','').replace('WidgetSpec','')
+            var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
+            var concreteClassNameColumn = "<td>" + concreteClassName + "</td>";
+
+            // create row
+            row = $("<tr></tr>")
+            row.append(checkboxColumn)
+            row.append(dataColumn)
+            row.append(concreteClassNameColumn)
+            row.append(contentDisplayColumn)
+            row.append(gridOffsetColumn)
+            row.append(gridWidthColumn)
+            row.append(heightColumn)
+            row.append(isTextualFormColumn)
+            row.append(titleColumn)
+            row.append(chartTypeColumn)
+
+            if (chartTypeValue) {
+                row.find("#chartType").val(chartTypeValue);
+            }
+
+            // make the row clickable
+            setWidgetRowClickable(row)
+        }
 
         return row;
     }
@@ -393,7 +419,7 @@
     </div>
 }
 
-@dynamicTable("widgetSpec", table, true, rowToModelJsFun, modalItemToRowJsFun, modalInner("add_widgetSpecModal"), None, 12)
+@dynamicTable("widgetSpec", table, true, rowToModelJsFun, modalItemToRowJsFun, modalInner("add_widgetSpecModal"), None, 12, false, false)
 
 <script type="text/javascript">
 
@@ -426,7 +452,7 @@
 
          values["displayOptions"] = rowModel["displayOptions"]
          $('#widgetSpecDiv').dynamicTable('replaceTableRow', rowIndex, values)
-     })
+     }, true)
 
      setWidgetRowClickable($("#widgetSpecDiv table tbody tr"));
 

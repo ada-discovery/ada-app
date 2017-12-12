@@ -51,7 +51,8 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
   protected val categoryRepo: CategoryRepo = dsa.categoryRepo
 
-  protected override val listViewColumns = Some(Seq("name", "fieldType", "isArray", "label", "categoryId"))
+  override protected val listViewColumns = Some(Seq("name", "fieldType", "isArray", "label", "categoryId"))
+  override protected val entityNameKey = "field"
 
   private val exportOrderByFieldName = "name"
   private val csvFileName = "dictionary_" + dataSetId.replace(" ", "-") + ".csv"
@@ -266,7 +267,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   override def updateLabel(id: String, label: String) = Action.async { implicit request =>
     repo.get(id).flatMap(_.fold(
-      Future(NotFound(s"Field '$id' not found"))
+      Future(NotFound(s"$entityName '${formatId(id)}' not found"))
     ){ field =>
       updateCall(field.copy(label = Some(label))).map(_ => Ok("Done"))
     })

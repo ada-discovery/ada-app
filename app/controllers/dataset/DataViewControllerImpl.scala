@@ -56,7 +56,9 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   protected lazy val dataViewRepo = dsa.dataViewRepo
   protected lazy val fieldRepo = dsa.fieldRepo
 
-  protected override val listViewColumns = None // Some(Seq("name"))
+  override protected val listViewColumns = None // Some(Seq("name"))
+  override protected val entityNameKey = "dataView"
+  override protected def formatId(id: BSONObjectID) = id.stringify
 
   private implicit val widgetSpecFormatter = JsonFormatter[WidgetSpec]
   private implicit val eitherFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]

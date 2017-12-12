@@ -42,7 +42,7 @@
             <input type="hidden" id="fieldName">
         </div>
         @if(categoriesOrCall.isDefined) {
-            <div class="col-md-offset-4 col-md-2">
+            <div class="pull-right" style="padding-right: 17px">
                 <a id="showCategoryTreeButton" class="btn btn-sm btn-default" data-toggle="tooltip" onclick="initCategoricalTreeIfNeeded();" title="Show Category Tree">
                     <span class="glyphicon glyphicon-leaf" aria-hidden="true"></span>
                 </a>
@@ -74,21 +74,24 @@
 
 @itemToRowJsFun = {
     function(values) {
-        var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
-        var fieldNameColumn = "<td><input type='hidden' id='fieldName' value='" + values["fieldName"] + "'/></td>";
-        var fieldLabelColumn = "<td>" + values["fieldTypeahead"] + "</td>";
+        var row = null
+        if (values["fieldName"]) {
+            var checkboxColumn = "<td><input type='checkbox' class='table-selection'></input></td>";
+            var fieldNameColumn = "<td><input type='hidden' id='fieldName' value='" + values["fieldName"] + "'/></td>";
+            var fieldLabelColumn = "<td>" + values["fieldTypeahead"] + "</td>";
 
-        // create row
-        var row = $("<tr></tr>")
-        row.append(checkboxColumn)
-        row.append(fieldNameColumn)
-        row.append(fieldLabelColumn)
+            // create row
+            row = $("<tr></tr>")
+            row.append(checkboxColumn)
+            row.append(fieldNameColumn)
+            row.append(fieldLabelColumn)
+        }
 
         return row;
     }
 }
 
-@dynamicTable(tableId, table, sortable, rowToModelJsFun, itemToRowJsFun, modalInner, extraActions, gridWidth)
+@dynamicTable(tableId, table, sortable, rowToModelJsFun, itemToRowJsFun, modalInner, extraActions, gridWidth, false, false)
 
 <script type="text/javascript">
     $(function () {

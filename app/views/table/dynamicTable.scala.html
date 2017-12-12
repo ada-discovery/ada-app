@@ -8,12 +8,14 @@
     itemToRowJsFun: Html,
     addModalInner:  Html,
     extraActions: Option[Html] = None,
-    gridWidth: Int = 4
+    gridWidth: Int = 4,
+    hideModalOnEnter: Boolean = true,
+    hideModalOnButtonPressed: Boolean = true
 )
 
 @modalButtons(domainName: String) = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" class="btn btn-primary" id="@{domainName}SubmitButton" data-dismiss="modal">OK</button>
+    <button type="button" class="btn btn-primary" id="@{domainName}SubmitButton" @if(hideModalOnButtonPressed) { data-dismiss="modal"}>OK</button>
 }
 
 <div id="@{domainName}Div" class="row col-sm-@gridWidth">
@@ -37,6 +39,7 @@
         domainName: '@{domainName}',
         sortable: @sortable,
         rowToModel: @rowToModelJsFun,
-        itemToRow: @itemToRowJsFun
+        itemToRow: @itemToRowJsFun,
+        hideModalOnEnter: @hideModalOnEnter
     });
 </script>

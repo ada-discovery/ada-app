@@ -136,3 +136,8 @@ filter.timeCreated.label = Time Created
 
 login.id = User Id
 login.password = Password
+
+dataView.displayName = Data View
+category.displayName = Category
+field.displayName = Field
+filter.displayName = Filter

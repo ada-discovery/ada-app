@@ -47,7 +47,9 @@ protected[controllers] class FilterControllerImpl @Inject() (
 
   protected val filterRepo = dsa.filterRepo
 
-  protected override val listViewColumns = None // Some(Seq("name", "conditions"))
+  override protected val listViewColumns = None // Some(Seq("name", "conditions"))
+  override protected val entityNameKey = "filter"
+  override protected def formatId(id: BSONObjectID) = id.stringify
 
   private implicit val filterConditionFormatter = JsonFormatter[FilterCondition]
 

@@ -75,7 +75,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
         }
       } yield
         item match {
-          case None => NotFound(s"Entity #$id not found")
+          case None => NotFound(s"$entityName '${formatId(id)}' not found")
           case Some(entity) =>
             render {
               case Accepts.Html() => Ok(editViewWithContext(viewData.get))
@@ -104,8 +104,8 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
       item => {
         saveCall(item).map { id =>
           render {
-            case Accepts.Html() => redirect.flashing("success" -> s"Item ${id} has been created")
-            case Accepts.Json() => Created(Json.obj("message" -> "Item successfully created", "id" -> id.toString))
+            case Accepts.Html() => redirect.flashing("success" -> s"$entityName '${formatId(id)}' has been created")
+            case Accepts.Json() => Created(Json.obj("message" -> s"$entityName successfully created", "id" -> formatId(id)))
           }
         }.recover {
           case e: AdaException =>
@@ -136,8 +136,8 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
       item => {
         updateCall(identity.set(item, id)).map { _ =>
           render {
-            case Accepts.Html() => redirect.flashing("success" -> s"Item ${id} has been updated")
-            case Accepts.Json() => Ok(Json.obj("message" -> "Item successly updated", "id" -> id.toString))
+            case Accepts.Html() => redirect.flashing("success" -> s"$entityName '${formatId(id)}' has been updated")
+            case Accepts.Json() => Ok(Json.obj("message" -> s"$entityName successly updated", "id" -> formatId(id)))
           }
         }.recover {
           case e: AdaException =>
@@ -158,18 +158,18 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
   def delete(id: ID) = Action.async { implicit request =>
     deleteCall(id).map { _ =>
       render {
-        case Accepts.Html() => home.flashing("success" -> s"Item ${id} has been deleted")
-        case Accepts.Json() => Ok(Json.obj("message" -> "Item successfully deleted", "id" -> id.toString))
+        case Accepts.Html() => home.flashing("success" -> s"$entityName '${formatId(id)}' has been deleted")
+        case Accepts.Json() => Ok(Json.obj("message" -> s"$entityName successfully deleted", "id" -> formatId(id)))
       }
     }.recover {
       case e: AdaException =>
-        Logger.error(s"Problem deleting the item ${id}")
+        Logger.error(s"Problem deleting the item '${formatId(id)}'")
         BadRequest(e.getMessage)
       case t: TimeoutException =>
-        Logger.error(s"Problem deleting the item ${id}")
+        Logger.error(s"Problem deleting the item '${formatId(id)}'")
         InternalServerError(t.getMessage)
       case i: RepoException =>
-        Logger.error(s"Problem deleting the item ${id}")
+        Logger.error(s"Problem deleting the item '${formatId(id)}'")
         InternalServerError(i.getMessage)
     }
   }

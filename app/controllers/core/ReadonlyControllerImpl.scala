@@ -51,6 +51,11 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
 
   protected def listViewColumns: Option[Seq[String]] = None
 
+  protected def entityNameKey = ""
+  protected lazy val entityName = if (entityNameKey.isEmpty) "Item" else messagesApi.apply(entityNameKey + ".displayName")
+
+  protected def formatId(id: ID) = id.toString
+
 //  protected implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi)
   protected implicit def webContext(implicit request: Request[_]) = {
     implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
@@ -79,7 +84,7 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
         }
       } yield
         item match {
-          case None => NotFound(s"Entity #$id not found")
+          case None => NotFound(s"$entityName #${formatId(id)} not found")
           case Some(entity) =>
             render {
               case Accepts.Html() => Ok(showViewWithContext(viewData.get))

@@ -49,7 +49,9 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
   protected val fieldRepo = dsa.fieldRepo
 
-  protected override val listViewColumns = Some(Seq(CategoryIdentity.name, "name", "label"))
+  override protected val listViewColumns = Some(Seq(CategoryIdentity.name, "name", "label"))
+  override protected val entityNameKey = "category"
+  override protected def formatId(id: BSONObjectID) = id.stringify
 
   override protected[controllers] val form = Form(
     mapping(
