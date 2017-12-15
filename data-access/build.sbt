@@ -1,4 +1,4 @@
-organization := "ada"
+organization := "org.ada"
 
 name := "ada-dataaccess"
 
