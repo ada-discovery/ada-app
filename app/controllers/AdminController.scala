@@ -31,7 +31,7 @@ class AdminController @Inject() (
   private val messageLogger = MessageLogger(logger, messageRepo)
 
   // we scan only the jars starting with this prefix to speed up the class search
-  private val libPrefix = "ncer-pd"
+  private val libPrefix = "org.ada"
 
 //  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
   private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)(request)

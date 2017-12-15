@@ -6,31 +6,13 @@
     <div align="center">
         <hr/>
         <ul class="list-inline">
+        @current.configuration.getObjectList("footer.logos").get.map { logoEntry =>
             <li>
-                <a target="_blank" href="http://www.fnr.lu">
-                    <img src="@routes.Assets.versioned("images/logos/fnr.png")" />
+                <a target="_blank" href="@{logoEntry.get("url").unwrapped().asInstanceOf[String]}">
+                    <img src="@routes.Assets.versioned(logoEntry.get("logo").unwrapped().asInstanceOf[String])"/>
                 </a>
             </li>
-            <li>
-                <a target="_blank" href="https://www.chl.lu">
-                    <img src="@routes.Assets.versioned("images/logos/chl.png")" />
-                </a>
-            </li>
-            <li>
-                <a target="_blank" href="https://www.lih.lu">
-                    <img src="@routes.Assets.versioned("images/logos/lih.png")" />
-                </a>
-            </li>
-            <li>
-                <a target="_blank" href="http://www.ibbl.lu">
-                    <img src="@routes.Assets.versioned("images/logos/ibbl.png")" />
-                </a>
-            <li>
-            <li>
-                <a target="_blank" href="http://wwwen.uni.lu/lcsb">
-                    <img src="@routes.Assets.versioned("images/logos/unilu-lcsb.png")" />
-                </a>
-            </li>
+        }
         </ul>
         <hr/>
         <p class="text-muted" align="center">

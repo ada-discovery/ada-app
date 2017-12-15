@@ -17,7 +17,7 @@ import net.codingwell.scalaguice.ScalaModule
 
 import collection.JavaConverters._
 
-class InCalSpringModule extends ScalaModule {
+class InCalModule extends ScalaModule {
 
   /////////////////
   // Basic Stuff //
