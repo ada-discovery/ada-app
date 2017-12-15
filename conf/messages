@@ -1,7 +1,7 @@
 # Project specific content (mostly HTML)
 
 homepage.html = \
- <p>Ada provides key infrastructure for secured integration, visualization, and analysis of heterogeneous clinical and experimental data generated during the <a href="ncer-pd">NCER-PD project</a>.\
+ <p>Ada provides key infrastructure for secured integration, visualization, and analysis of heterogeneous clinical and experimental data generated during the <a href="http://www.parkinson.lu">NCER-PD project</a>.\
  </p>\
  <p>\
  NCER-PD research project focuses on improving the diagnosis and stratification of Parkinson's disease (PD) by combining detailed clinical and molecular data of patients to develop novel disease biomarker signatures.\

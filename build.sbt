@@ -2,7 +2,9 @@ import com.github.play2war.plugin._
 
 // val conf = play.api.Configuration.load(new File("."))
 
-name := "ncer-pd"
+organization := "org.ada"
+
+name := "ada-web"
 
 version := "0.6.0"
 
@@ -33,8 +35,8 @@ routesImport ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "ada" % "ada-dataaccess_2.11" % "0.6.0",
-  "nioc-bot" % "nioc-bot_2.11" % "0.2.3",
+  "org.ada" % "ada-dataaccess_2.11" % "0.6.0",
+//  "nioc-bot" % "nioc-bot_2.11" % "0.2.3",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.12.6-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"), // "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
@@ -45,7 +47,7 @@ libraryDependencies ++= Seq(
   "org.webjars" % "html5shiv" % "3.7.0",
   "org.webjars" % "respond" % "1.4.2",
   "org.webjars" % "highcharts" % "4.2.7",
-//  "org.webjars.npm" % "fractalis" % "0.1.6",
+//  "org.webjars.npm" % "fractalis" % "0.1.9",
   "org.webjars.bower" % "plotly.js" % "1.5.1",
   "org.webjars.bower" % "d3" % "3.5.16",
   "org.webjars.bower" % "Autolinker.js" % "0.25.0", // to convert links to a-href elements
