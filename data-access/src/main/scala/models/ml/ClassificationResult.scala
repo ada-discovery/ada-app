@@ -31,13 +31,6 @@ case class ClassificationMetricStats(
   areaUnderPR: Option[MetricStatsValues]
 )
 
-case class MetricStatsValues(
-  mean: Double,
-  min: Double,
-  max: Double,
-  variance: Double
-)
-
 case class BinaryClassificationCurves(
   // ROC - FPR vs TPR (false positive rate vs true positive rate)
   roc: Seq[(Double, Double)],
@@ -77,7 +70,7 @@ case class ClassificationSetting(
 object ClassificationResult {
   implicit val filterOrIdFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
 
-  implicit val tuppleFormat = TupleFormat[String, Double]
+  implicit val tupleFormat = TupleFormat[String, Double]
   implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
   implicit val classificationEvalMetricFormat = EnumFormat.enumFormat(ClassificationEvalMetric)
   implicit val classificationSettingFormat = Json.format[ClassificationSetting]

@@ -10,48 +10,23 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
 
-case class ClassificationResult(
+case class RegressionResult(
   _id: Option[BSONObjectID],
-  setting: ClassificationSetting,
-  trainingStats: ClassificationMetricStats,
-  testStats: ClassificationMetricStats,
-  replicationStats: Option[ClassificationMetricStats] = None,
-  trainingBinCurves: Seq[BinaryClassificationCurves] = Nil,
-  testBinCurves: Seq[BinaryClassificationCurves] = Nil,
-  replicationBinCurves: Seq[BinaryClassificationCurves] = Nil,
+  setting: RegressionSetting,
+  trainingStats: RegressionMetricStats,
+  testStats: RegressionMetricStats,
+  replicationStats: Option[RegressionMetricStats] = None,
   timeCreated: ju.Date = new ju.Date()
 )
 
-case class ClassificationMetricStats(
-  f1: MetricStatsValues,
-  weightedPrecision: MetricStatsValues,
-  weightedRecall: MetricStatsValues,
-  accuracy: MetricStatsValues,
-  areaUnderROC: Option[MetricStatsValues],
-  areaUnderPR: Option[MetricStatsValues]
+case class RegressionMetricStats(
+  mse: MetricStatsValues,
+  rmse: MetricStatsValues,
+  r2: MetricStatsValues,
+  mae: MetricStatsValues
 )
 
-case class MetricStatsValues(
-  mean: Double,
-  min: Double,
-  max: Double,
-  variance: Double
-)
-
-case class BinaryClassificationCurves(
-  // ROC - FPR vs TPR (false positive rate vs true positive rate)
-  roc: Seq[(Double, Double)],
-  // PR - recall vs precision
-  precisionRecall: Seq[(Double, Double)],
-  // threshold vs F-Measure: curve with beta = 1.0.
-  fMeasureThreshold: Seq[(Double, Double)],
-  // threshold vs precision
-  precisionThreshold: Seq[(Double, Double)],
-  // threshold vs recall
-  recallThreshold: Seq[(Double, Double)]
-)
-
-case class ClassificationSetting(
+case class RegressionSetting(
   mlModelId: BSONObjectID,
   outputFieldName: String,
   inputFieldNames: Seq[String],
@@ -64,32 +39,29 @@ case class ClassificationSetting(
   samplingRatios: Seq[(String, Double)],
   repetitions: Option[Int],
   crossValidationFolds: Option[Int],
-  crossValidationEvalMetric: Option[ClassificationEvalMetric.Value],
-  binCurvesNumBins: Option[Int]
+  crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
 ) {
   def fieldNamesToLoads =
     if (inputFieldNames.nonEmpty) (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq else Nil
 
   def learningSetting =
-    LearningSetting[ClassificationEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, replicationFilterId, samplingRatios, repetitions, crossValidationFolds, crossValidationEvalMetric)
+    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, replicationFilterId, samplingRatios, repetitions, crossValidationFolds, crossValidationEvalMetric)
 }
 
-object ClassificationResult {
+object RegressionResult {
   implicit val filterOrIdFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
 
-  implicit val tuppleFormat = TupleFormat[String, Double]
+  implicit val tupleFormat = TupleFormat[String, Double]
   implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
-  implicit val classificationEvalMetricFormat = EnumFormat.enumFormat(ClassificationEvalMetric)
-  implicit val classificationSettingFormat = Json.format[ClassificationSetting]
-  implicit val classificationMetricStatsValuesFormat = Json.format[MetricStatsValues]
-  implicit val classificationMetricStatsFormat = Json.format[ClassificationMetricStats]
-  implicit val doubleTupleFormat = TupleFormat[Double, Double]
-  implicit val binaryClassificationCurvesFormat = Json.format[BinaryClassificationCurves]
-//  implicit val binaryClassifcationCurvesOptionalFormat = new OptionFormat[BinaryClassificationCurves]
-  implicit val classificationResultFormat = new FlattenFormat(Json.format[ClassificationResult], "-", Set("_id", "filterId", "replicationFilterId", "mlModelId"))
+  implicit val regressionEvalMetricFormat = EnumFormat.enumFormat(RegressionEvalMetric)
+  implicit val regressionSettingFormat = Json.format[RegressionSetting]
+  implicit val regressionMetricStatsValuesFormat = Json.format[MetricStatsValues]
+  implicit val regressionMetricStatsFormat = Json.format[RegressionMetricStats]
 
-  implicit object ClassificationResultIdentity extends BSONObjectIdentity[ClassificationResult] {
-    def of(entity: ClassificationResult): Option[BSONObjectID] = entity._id
-    protected def set(entity: ClassificationResult, id: Option[BSONObjectID]) = entity.copy(_id = id)
+  implicit val regressionResultFormat = new FlattenFormat(Json.format[RegressionResult], "-", Set("_id", "filterId", "replicationFilterId", "mlModelId"))
+
+  implicit object RegressionResultIdentity extends BSONObjectIdentity[RegressionResult] {
+    def of(entity: RegressionResult): Option[BSONObjectID] = entity._id
+    protected def set(entity: RegressionResult, id: Option[BSONObjectID]) = entity.copy(_id = id)
   }
 }
