@@ -1,20 +1,21 @@
 package runnables.core
 
+import javax.inject.Inject
+
+import dataaccess.ClassificationResultRepoFactory
 import play.api.Logger
-import runnables.DsaInputFutureRunnable
+import runnables.InputFutureRunnable
 import models._
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Random
 
-class RemoveClassificationBinCurves extends DsaInputFutureRunnable[RemoveClassificationBinCurvesSpec] {
+class RemoveClassificationBinCurves @Inject()(repoFactory: ClassificationResultRepoFactory) extends InputFutureRunnable[RemoveClassificationBinCurvesSpec] {
 
   private val logger = Logger // (this.getClass())
 
   override def runAsFuture(input: RemoveClassificationBinCurvesSpec) = {
-    val dsa_ = dsa(input.dataSetId)
-    val repo = dsa_.classificationResultRepo
+    val repo = repoFactory(input.dataSetId)
 
     for {
       // get all the results

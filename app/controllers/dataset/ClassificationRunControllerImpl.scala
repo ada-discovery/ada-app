@@ -201,7 +201,8 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
   override def classify(
     setting: ClassificationSetting,
-    saveResults: Boolean
+    saveResults: Boolean,
+    saveBinCurves: Boolean
   ) = Action.async { implicit request =>
     val mlModelFuture = classificationRepo.get(setting.mlModelId)
     val criteriaFuture = loadCriteria(setting.filterId)
@@ -262,7 +263,8 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
         val metricStatsMap = MachineLearningUtil.calcClassificationMetricStats(resultsHolder.performanceResults)
 
         if (saveResults) {
-          val finalResult = MachineLearningUtil.createClassificationResult(setting, metricStatsMap, resultsHolder.binCurves)
+          val binCurves = if (saveBinCurves) resultsHolder.binCurves else Nil
+          val finalResult = MachineLearningUtil.createClassificationResult(setting, metricStatsMap, binCurves)
           repo.save(finalResult)
         }
 

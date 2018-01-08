@@ -99,6 +99,8 @@ object SparkMLEstimatorFactory {
   ): (MultilayerPerceptronClassifier, Array[ParamMap]) = {
     def set[T] = setSourceParam[T, MultiLayerPerceptron, MultilayerPerceptronClassifier](model)_
 
+    val layers = (Seq(inputSize) ++ model.hiddenLayers ++ Seq(outputSize)).toArray
+
     val estimator1 = chain(
       set(x => toValue(x.blockSize), _.setBlockSize),
       set(_.seed, _.setSeed),
@@ -106,7 +108,7 @@ object SparkMLEstimatorFactory {
       set(_.solver.map(_.toString), _.setSolver),
       set(x => toValue(x.stepSize), _.setStepSize),
       set(x => toValue(x.tolerance), _.setTol),
-      set(o => Some((Seq(inputSize) ++ o.hiddenLayers ++ Seq(outputSize)).toArray), _.setLayers)
+      set(o => Some(layers), _.setLayers)
     )(new MultilayerPerceptronClassifier())
 
     val (estimator2, paramMaps) = ParamSourceBinder(model, new MultilayerPerceptronClassifier())
@@ -116,7 +118,7 @@ object SparkMLEstimatorFactory {
       .bind(_.solver.map(_.toString), "solver")
       .bind2(_.stepSize, "stepSize")
       .bind2(_.tolerance, "tol")
-      .bind(o => Some((Seq(inputSize) ++ o.hiddenLayers ++ Seq(outputSize)).toArray), "layers")
+      .bind(o => Some(layers), "layers")
       .build
 
     compareParamValues(estimator1, estimator2)

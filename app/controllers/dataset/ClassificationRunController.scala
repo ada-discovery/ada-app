@@ -11,7 +11,8 @@ trait ClassificationRunController extends ReadonlyController[BSONObjectID]{
 
   def classify(
     setting: ClassificationSetting,
-    saveResults: Boolean
+    saveResults: Boolean,
+    saveBinCurves: Boolean
   ): Action[AnyContent]
 
   def selectFeaturesAsChiSquare(

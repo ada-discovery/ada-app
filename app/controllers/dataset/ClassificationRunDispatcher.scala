@@ -37,8 +37,9 @@ class ClassificationRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf
 
   override def classify(
     setting: ClassificationSetting,
-    saveResults: Boolean
-  ) = dispatch(_.classify(setting, saveResults))
+    saveResults: Boolean,
+    saveBinCurves: Boolean
+  ) = dispatch(_.classify(setting, saveResults, saveBinCurves))
 
   override def selectFeaturesAsChiSquare(
     inputFieldNames: Seq[String],

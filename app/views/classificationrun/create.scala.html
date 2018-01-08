@@ -107,6 +107,8 @@
 
             var saveResults = $("#saveResults").is(":checked")
 
+            var saveBinCurves = $("#saveBinCurves").is(":checked")
+
             var setting = {
                 "mlModelId": mlModelIdJson,
                 "outputFieldName": outputFieldName,
@@ -130,7 +132,7 @@
 //            $("#binCurvesPanelDiv").hide();
             $("#binCurvesPanelDiv").html("");
 
-            classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.classify(settingJSON, saveResults).ajax( {
+            classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.classify(settingJSON, saveResults, saveBinCurves).ajax( {
                 success: function(data) {
                     showMessage("'" + mlModelName + "' classification finished.")
                     showMLOutput(data.results)
@@ -287,6 +289,9 @@
     }
     @labelValueAux("saveResults", "Save Results?") {
         <input id="saveResults" type="checkbox"/>
+    }
+    @labelValueAux("saveBinCurves", "Save (Bin) Curves?") {
+        <input id="saveBinCurves" type="checkbox"/>
     }
 }
 
