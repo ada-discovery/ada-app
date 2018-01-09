@@ -1,6 +1,6 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
-@import views.html.dataset.{mlElements, inputFieldAndFilterResources, datasetSubNavWithJs, trainingSettingFields}
+@import views.html.dataset.{datasetMenu, mlElements, inputFieldAndFilterResources, datasetSubNavWithJs, trainingSettingFields}
 @import play.api.i18n.Messages
 @import models.{DataSpaceMetaInfo, FilterShowFieldStyle}
 @import views.html.elements._
@@ -18,12 +18,12 @@
 
 @bottomResources = {
     @inputFieldAndFilterResources(
-        Seq("filter"),
+        Seq("filter", "replicationFilter"),
         filterShowFieldStyle
     )
 
-    @helper.javascriptRouter("dataSetJsRoutes")(
-        dataSetJsRouter.regress
+    @helper.javascriptRouter("regressionRunJsRoutes")(
+        regressionRunJsRouter.regress
     )
 
     <script type="text/javascript">
@@ -65,44 +65,55 @@
                 var outputFieldLabel = $("#outputFieldTypeahead").val();
 
                 var mlModelId = $("#mlModelId").val();
+                var mlModelIdJson = (mlModelId) ? {'$oid': mlModelId} : null
+
                 var mlModelName = $("#mlModelTypeahead").val();
 
                 $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
                 var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
 
                 var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
-//                var filterOrId = (filterId) ? JSON.stringify({'$oid': filterId}) : "[]"
+                var filterIdJson = (filterId) ? {'$oid': filterId} : null
 
                 var pcaDims = $("#pcaDims").val()
-                if (!pcaDims)
-                    pcaDims = null
-
+                var featuresSelectionNum = $("#featuresSelectionNum").val()
+                var repetitions = $("#repetitions").val()
+                var crossValidationFolds = $("#crossValidationFolds").val()
+                var crossValidationEvalMetric = $("#crossValidationEvalMetric").val()
+                if (!crossValidationEvalMetric)
+                    crossValidationEvalMetric = null
                 var featuresNormalizationType = $("#featuresNormalizationType").val()
                 if (!featuresNormalizationType)
                     featuresNormalizationType = null
 
                 var trainingTestingSplit = $("#trainingTestingSplit").val()
-                if (!trainingTestingSplit)
-                    trainingTestingSplit = null
+                var replicationFilterId = ($('#replicationFilterNameTypeahead').val()) ? $("#replicationFilterId").val() : null
+                var replicationFilterIdJson = (replicationFilterId) ? {'$oid': replicationFilterId} : null
 
-                var crossValidationFolds = $("#crossValidationFolds").val()
-                if (!crossValidationFolds)
-                    crossValidationFolds = null
+                var saveResults = $("#saveResults").is(":checked")
 
-                var crossValidationEvalMetric = $("#crossValidationEvalMetric").val()
-                if (!crossValidationEvalMetric)
-                    crossValidationEvalMetric = null
+                var setting = {
+                    "mlModelId": mlModelIdJson,
+                    "outputFieldName": outputFieldName,
+                    "inputFieldNames": inputFieldNames,
+                    "filterId": filterIdJson,
+                    "featuresNormalizationType": featuresNormalizationType,
+                    "pcaDims": intValue(pcaDims),
+                    "trainingTestingSplit": floatValue(trainingTestingSplit),
+                    "replicationFilterId": replicationFilterIdJson,
+                    "repetitions": intValue(repetitions),
+                    "crossValidationFolds": intValue(crossValidationFolds),
+                    "crossValidationEvalMetric": crossValidationEvalMetric
+                };
 
-                var repetitions = $("#repetitions").val()
-                if (!repetitions)
-                    repetitions = null
+                var settingJSON = JSON.stringify(setting)
 
                 $('#outputDiv').hide();
 
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.regress(mlModelId, inputFieldNames, outputFieldName, filterId, featuresNormalizationType, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds, crossValidationEvalMetric).ajax( {
-                    success: function(evalRates) {
+                regressionRunJsRoutes.controllers.dataset.RegressionRunDispatcher.regress(settingJSON, saveResults).ajax( {
+                    success: function(results) {
                         showMessage("'" + mlModelName + "' regression finished.")
-                        showMLOutput(evalRates)
+                        showMLOutput(results)
                     },
                     error: function(data){
                         showError( data.responseText );
@@ -110,6 +121,29 @@
                 });
 
                 showMessage("Regression for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
+            }
+
+
+            function intValue(value) {
+                var intValue = null;
+                if (value && value.length > 0) {
+                    intValue = parseInt(value)
+                    if (isNaN(intValue)) {
+                        intValue = null
+                    }
+                }
+                return intValue;
+            }
+
+            function floatValue(value) {
+                var floatValue = null;
+                if (value && value.length > 0) {
+                    floatValue = parseFloat(value)
+                    if (isNaN(floatValue)) {
+                        floatValue = null
+                    }
+                }
+                return floatValue;
             }
         });
     </script>
@@ -124,6 +158,13 @@
     @labelValueAux("crossValidationEvalMetric", "Cross Validation Eval Metric") {
         @selectEnum("crossValidationEvalMetric", RegressionEvalMetric, true, Some("input-lg"))
     }
+    @labelValueAux("replicationFilterId", "Replication Data") {
+        <input id="replicationFilterNameTypeahead" class="typeahead typeahead-large" type="text" placeholder="filter" value="">
+        <input id="replicationFilterId" name="replicationFilterId" type="hidden" value="">
+    }
+    @labelValueAux("saveResults", "Save Results?") {
+        <input id="saveResults" type="checkbox"/>
+    }
 }
 
 @main(Messages("regression.title", dataSetName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
@@ -135,8 +176,8 @@
     </div>
 
     @mlElements(
-        includeFeatureSelectionNum = false,
         includeOutputField = true,
+        includeFeatureSelectionNum = false,
         extraFieldButtons = None,
         extraFields = Some(extraFields)
     )

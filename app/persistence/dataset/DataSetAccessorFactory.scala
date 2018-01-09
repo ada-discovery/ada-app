@@ -52,6 +52,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     filterRepoFactory: FilterRepoFactory,
     dataViewRepoFactory: DataViewRepoFactory,
     classificationResultRepoFactory: ClassificationResultRepoFactory,
+    regressionResultRepoFactory: RegressionResultRepoFactory,
     dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo
@@ -103,6 +104,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     val filterRepo = filterRepoFactory(dataSetId)
     val dataViewRepo = dataViewRepoFactory(dataSetId)
     val classificationResultRepo = classificationResultRepoFactory(dataSetId)
+    val regressionResultRepo = regressionResultRepoFactory(dataSetId)
 
     val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(dataSpaceId)
 
@@ -113,6 +115,7 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
       filterRepo,
       dataViewRepo,
       classificationResultRepo,
+      regressionResultRepo,
       dataSetRepoCreate(dataSetId),
       dataSetMetaInfoRepo,
       dataSetSettingRepo

@@ -92,24 +92,9 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     fieldNameOption: Option[String]
   ) = dispatch(_.getFractalis(fieldNameOption))
 
-  override def getRegression = dispatch(_.getRegression)
-
   override def getClusterization = dispatch(_.getClusterization)
 
   override def getIndependenceTest = dispatch(_.getIndependenceTest)
-
-  override def regress(
-    mlModelId: BSONObjectID,
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterId: Option[BSONObjectID],
-    featuresNormalizationType: Option[VectorTransformType.Value],
-    pcaDims: Option[Int],
-    trainingTestingSplit: Option[Double],
-    repetitions: Option[Int],
-    crossValidationFolds: Option[Int],
-    crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
-  ) = dispatch(_.regress(mlModelId, inputFieldNames, outputFieldName, filterId, featuresNormalizationType, pcaDims, trainingTestingSplit, repetitions, crossValidationFolds, crossValidationEvalMetric))
 
   override def cluster(
     mlModelId: BSONObjectID,

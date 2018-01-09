@@ -107,14 +107,12 @@ GET         /studies/scatter                                                    
 GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/correlations                                                   controllers.dataset.DataSetDispatcher.getCorrelations(fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /studies/cumulativeCount                                                controllers.dataset.DataSetDispatcher.getCumulativeCount(fieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
-GET         /studies/regression                                                     controllers.dataset.DataSetDispatcher.getRegression
 GET         /studies/clusterization                                                 controllers.dataset.DataSetDispatcher.getClusterization
 GET         /studies/getIndependenceTest                                            controllers.dataset.DataSetDispatcher.getIndependenceTest
 GET         /studies/getSeriesProcessingSpec                                        controllers.dataset.DataSetDispatcher.getSeriesProcessingSpec
 POST        /studies/runSeriesProcessing                                            controllers.dataset.DataSetDispatcher.runSeriesProcessing
 GET         /studies/getSeriesTransformationSpec                                    controllers.dataset.DataSetDispatcher.getSeriesTransformationSpec
 POST        /studies/runSeriesTransformation                                        controllers.dataset.DataSetDispatcher.runSeriesTransformation
-POST        /studies/regress                                                        controllers.dataset.DataSetDispatcher.regress(mlModelId: BSONObjectID, inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresNormalizationType: Option[models.ml.VectorTransformType.Value], pcaDims: Option[Int], trainingTestingSplit: Option[Double], repetitions: Option[Int], crossValidationFolds: Option[Int], crossValidationEvalMetric: Option[models.ml.RegressionEvalMetric.Value])
 POST        /studies/cluster                                                        controllers.dataset.DataSetDispatcher.cluster(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterId: Option[BSONObjectID], featuresNormalizationType: Option[models.ml.VectorTransformType.Value], pcaDims: Option[Int])
 POST        /studies/testIndependence                                               controllers.dataset.DataSetDispatcher.testIndependence(targetFieldName: String, inputFieldNames: Seq[String], filterId: Option[BSONObjectID])
 GET         /studies/fractalis                                                      controllers.dataset.DataSetDispatcher.getFractalis(fieldName: Option[String] ?= None)
@@ -204,14 +202,21 @@ POST        /studies/metainfo/:id                                               
 POST        /studies/metainfo/:id/delete                                            controllers.dataset.DataSpaceMetaInfoController.delete(id: BSONObjectID)
 POST        /studies/metainfo/deleteDataSet/:id                                     controllers.dataset.DataSpaceMetaInfoController.deleteDataSet(id: BSONObjectID)
 
-# ClasificationRunDispatcher
-GET         /studies/classificationRuns                                             controllers.dataset.ClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+# Clasification Run
+GET         /studies/classificationRuns                                             controllers.dataset.ClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[models.FilterCondition] ?= Nil)
 GET         /studies/classificationRuns/get/:id                                     controllers.dataset.ClassificationRunDispatcher.get(id: BSONObjectID)
 GET         /studies/classificationRuns/new                                         controllers.dataset.ClassificationRunDispatcher.create
 POST        /studies/classificationRuns/:id/delete                                  controllers.dataset.ClassificationRunDispatcher.delete(id: BSONObjectID)
 POST        /studies/classify                                                       controllers.dataset.ClassificationRunDispatcher.classify(setting: models.ml.ClassificationSetting, saveResults: Boolean, saveBinCurves: Boolean)
 POST        /studies/selectFeaturesAsChiSquare                                      controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int, discretizerBucketsNum: Int)
 POST        /studies/selectFeaturesAsAnovaChiSquare                                 controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsAnovaChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int)
+
+# Regression Run
+GET         /studies/regressionRuns                                                 controllers.dataset.RegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /studies/regressionRuns/get/:id                                         controllers.dataset.RegressionRunDispatcher.get(id: BSONObjectID)
+GET         /studies/regressionRuns/new                                             controllers.dataset.RegressionRunDispatcher.create
+POST        /studies/regressionRuns/:id/delete                                      controllers.dataset.RegressionRunDispatcher.delete(id: BSONObjectID)
+POST        /studies/regress                                                        controllers.dataset.RegressionRunDispatcher.regress(setting: models.ml.RegressionSetting, saveResults: Boolean)
 
 # ML Classification
 GET         /ml/classification                                                      controllers.ml.ClassificationController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[models.FilterCondition] ?= Nil)

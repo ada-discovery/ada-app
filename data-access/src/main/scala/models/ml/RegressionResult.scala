@@ -32,11 +32,11 @@ case class RegressionSetting(
   inputFieldNames: Seq[String],
   filterId: Option[BSONObjectID],
   featuresNormalizationType: Option[VectorTransformType.Value],
-  featuresSelectionNum: Option[Int],
+//  featuresSelectionNum: Option[Int],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
   replicationFilterId: Option[BSONObjectID],
-  samplingRatios: Seq[(String, Double)],
+//  samplingRatios: Seq[(String, Double)],
   repetitions: Option[Int],
   crossValidationFolds: Option[Int],
   crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
@@ -45,7 +45,7 @@ case class RegressionSetting(
     if (inputFieldNames.nonEmpty) (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq else Nil
 
   def learningSetting =
-    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, replicationFilterId, samplingRatios, repetitions, crossValidationFolds, crossValidationEvalMetric)
+    LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, replicationFilterId, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
 }
 
 object RegressionResult {

@@ -20,7 +20,6 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getDistribution = routes.getDistribution _ map route
   val getCumulativeCount = routes.getCumulativeCount _ map route
   val getCorrelations = routes.getCorrelations _ map route
-  val getRegression = routeFun(_.getRegression)
   val getClusterization = routeFun(_.getClusterization)
   val getIndependenceTest = routeFun(_.getIndependenceTest)
   val getSeriesProcessingSpec = routeFun(_.getSeriesProcessingSpec)
@@ -46,7 +45,6 @@ final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.ja
   val getField = routeFun(_.getField)
   val getWidgets = routeFun(_.getWidgets)
   val getView = routeFun(_.getView)
-  val regress = routeFun(_.regress)
   val cluster = routeFun(_.cluster)
   val testIndependence = routeFun(_.testIndependence)
 }

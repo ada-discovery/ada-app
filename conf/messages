@@ -141,3 +141,5 @@ dataView.displayName = Data View
 category.displayName = Category
 field.displayName = Field
 filter.displayName = Filter
+classificationRun.displayName = Classification Run
+regressionRun.displayName = Regression Run

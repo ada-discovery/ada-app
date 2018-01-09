@@ -1,0 +1,85 @@
+@import views.html.layout
+@import views.html.dataset.{filterWidgetPanel, datasetSubNavWithJs, datasetMenu}
+@import views.html.chart.highcharts.highchartsJsImport
+@import views.html.table.paginatedTable
+@import views.html.filter.{filter, filterWithJs}
+@import views.html.widget.widgetPanelJs
+@import util.typeColumns
+@import models.DataSpaceMetaInfo
+@import models.Field
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+@import models.ml.RegressionResult
+@import reactivemongo.bson.BSONObjectID
+
+@(
+    domainName : String,
+    page: Page[RegressionResult],
+    widgets: Traversable[Widget],
+    fieldNameLabelMap: Map[String, String],
+    allRegressionRunFields: Traversable[Field],
+    mlModelIdNameMap: Map[BSONObjectID, String],
+    filterIdNameMap: Map[BSONObjectID, String],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@actions = {
+    <div class="row">
+        <div class="col-md-10">
+            @filterWithJs(
+                page.filter,
+                regressionRunRouter.plainList,
+                Left(allRegressionRunFields),
+                None,
+                Some(FilterShowFieldStyle.LabelsOnly)
+            )
+        </div>
+        <div class="pull-right">
+            <ul class="list-inline">
+                <li>
+                    <a class="btn btn-success btn-sm pull-right" href="@regressionRunRouter.create" data-toggle="tooltip" title="Launch New Regression">
+                        <span class="glyphicon glyphicon-plus"></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+}
+
+@table = {
+    @paginatedTable(
+        page,
+        regressionRunRouter.list(_, _, page.filterConditions),
+        typeColumns[RegressionResult](
+            (Some("setting-mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.setting.mlModelId).get),
+            (Some("setting-filterId"), "Filter", _.setting.filterId.map(filterId => filterIdNameMap.get(filterId).get).getOrElse("")),
+            (Some("setting-outputFieldName"), "Output Field", result => fieldNameLabelMap.get(result.setting.outputFieldName).get),
+            (Some("testStats-mae-mean"), "Test MAE Mean", result => "%.3f".format(result.testStats.mae.mean)),
+            (Some("testStats-mse-mean"), "Test MSE Mean", result => "%.3f".format(result.testStats.mse.mean)),
+            (Some("testStats-rmse-mean"), "Test RMSE Mean", result => "%.3f".format(result.testStats.rmse.mean)),
+            (Some("testStats-r2-mean"), "Test R2 Mean", result => "%.3f".format(result.testStats.r2.mean)),
+            (Some("timeCreated"), "Time Created", _.timeCreated.toString)
+        ),
+        Some({ item : Any => regressionRunRouter.get(item.asInstanceOf[RegressionResult]._id.get)})
+    )
+}
+
+@bottomResources = {
+    @highchartsJsImport()
+    @widgetPanelJs(widgets)
+}
+
+@layout.list(
+    domainName,
+    None,
+    page.total,
+    Some(actions),
+    table,
+    Some(filterWidgetPanel("filterDiv", widgets, 6)),
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNavWithJs()),
+    None,
+    Some(bottomResources)
+)

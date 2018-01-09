@@ -15,9 +15,9 @@ import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
 import models.json.EnumFormat
 import models.json.EitherFormat._
-import models.ml.{ClassificationSetting, VectorTransformType}
+import models.ml._
 import models.ml.ClassificationResult.classificationSettingFormat
-import models.ml.{ClassificationEvalMetric, RegressionEvalMetric}
+import models.ml.RegressionResult.regressionSettingFormat
 
 case class Message(
   _id: Option[BSONObjectID],
@@ -85,7 +85,10 @@ object QueryStringBinders {
   implicit val FilterOrIdBinder = new JsonQueryStringBinder[FilterOrId]
   implicit val FilterOrIdSeqBinder = new JsonQueryStringBinder[Seq[FilterOrId]]
   implicit val TablePageSeqBinder = new JsonQueryStringBinder[Seq[PageOrder]]
+
   implicit val ClassificationSettingBinder = new JsonQueryStringBinder[ClassificationSetting]
+  implicit val RegressionSettingBinder = new JsonQueryStringBinder[RegressionSetting]
+
   implicit val vectorTransformTypeQueryStringBinder = new EnumStringBindable(VectorTransformType)
   implicit val classificationEvalMetricQueryStringBinder = new EnumStringBindable(ClassificationEvalMetric)
   implicit val regressionEvalMetricQueryStringBinder = new EnumStringBindable(RegressionEvalMetric)

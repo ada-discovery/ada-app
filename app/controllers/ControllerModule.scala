@@ -30,5 +30,9 @@ class ControllerModule extends AbstractModule {
     install(new FactoryModuleBuilder()
       .implement(classOf[ClassificationRunController], classOf[ClassificationRunControllerImpl])
       .build(classOf[ClassificationRunControllerFactory]))
+
+    install(new FactoryModuleBuilder()
+      .implement(classOf[RegressionRunController], classOf[RegressionRunControllerImpl])
+      .build(classOf[RegressionRunControllerFactory]))
   }
 }

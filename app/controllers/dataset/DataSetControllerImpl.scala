@@ -1463,27 +1463,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def getRegression = Action.async { implicit request => {
-    for {
-    // get the data set name, data space tree and the data set setting
-      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
-    } yield {
-      render {
-        case Accepts.Html() => Ok(dataset.regression(
-          dataSetName,
-          setting.filterShowFieldStyle,
-          tree
-        ))
-        case Accepts.Json() => BadRequest("getRegression function doesn't support JSON response.")
-      }
-    }
-  }.recover {
-    case t: TimeoutException =>
-      Logger.error("Problem found in the getRegression process")
-      InternalServerError(t.getMessage)
-  }
-  }
-
   override def getClusterization = Action.async { implicit request => {
     for {
       // get the data set name, data space tree and the data set setting
@@ -1543,80 +1522,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       setting <- settingFuture
     } yield
       (dataSetName, dataSpaceTree, setting)
-  }
-
-  override def regress(
-    mlModelId: BSONObjectID,
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterId: Option[BSONObjectID],
-    featuresNormalizationType: Option[VectorTransformType.Value],
-    pcaDims: Option[Int],
-    trainingTestingSplit: Option[Double],
-    repetitions: Option[Int],
-    crossValidationFolds: Option[Int],
-    crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
-  ) = Action.async { implicit request =>
-    val learningSetting = LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, None, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
-
-    for {
-      result <- runMLAux(
-        regressionRepo.get(mlModelId),
-        mlService.regress)(
-        inputFieldNames, outputFieldName, filterId, learningSetting
-      )
-    } yield
-      result match {
-        case Some(result) =>
-          logger.info("Regression finished with the following results: " + Json.stringify(result))
-          Ok(result)
-        case None =>
-          BadRequest(s"ML regression model with id ${mlModelId.stringify} not found.")
-      }
-  }
-
-  private def runMLAux[M](
-    getModel: => Future[Option[M]],
-    runML: (Traversable[JsObject], Seq[(String, FieldTypeSpec)], String, M, LearningSetting[RegressionEvalMetric.Value]) => Future[Traversable[Performance]])(
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterId: Option[BSONObjectID],
-    learningSetting: LearningSetting[RegressionEvalMetric.Value]
-  ): Future[Option[JsArray]] = {
-    val explFieldNamesToLoads =
-      if (inputFieldNames.nonEmpty)
-        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
-      else
-        Nil
-
-    val criteriaFuture = loadCriteria(filterId)
-
-    for {
-      mlModel <- getModel
-
-      criteria <- criteriaFuture
-
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
-
-      evalRates <- mlModel.map { mlModel =>
-        val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-        runML(jsons, fieldNameAndSpecs, outputFieldName, mlModel, learningSetting)
-      }.getOrElse(
-        Future(Nil)
-      )
-    } yield
-      mlModel.map { mlModel =>
-        val evalJsons = evalRates.toSeq.sortBy(_.evalMetric.id).map { performance =>
-          val results = performance.trainingTestResults
-            Json.obj(
-              "metricName" -> toHumanReadableCamel(performance.evalMetric.toString),
-              "trainEvalRate" -> results.map(_._1).sum / results.size, // mean
-              "testEvalRate" -> results.map(_._2).sum / results.size   // mean
-            )
-        }
-
-        JsArray(evalJsons)
-      }
   }
 
   override def cluster(

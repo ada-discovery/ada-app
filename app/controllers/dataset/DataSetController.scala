@@ -69,24 +69,9 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     fieldName: Option[String]
   ): Action[AnyContent]
 
-  def getRegression: Action[AnyContent]
-
   def getClusterization: Action[AnyContent]
 
   def getIndependenceTest: Action[AnyContent]
-
-  def regress(
-    mlModelId: BSONObjectID,
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterId: Option[BSONObjectID],
-    featuresNormalizationType: Option[VectorTransformType.Value],
-    pcaDims: Option[Int],
-    trainingTestingSplit: Option[Double],
-    repetitions: Option[Int],
-    crossValidationFolds: Option[Int],
-    crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
-  ): Action[AnyContent]
 
   def cluster(
     mlModelId: BSONObjectID,

@@ -12,10 +12,10 @@ import models.FilterCondition.{FilterIdentity, FilterOrId, toCriterion}
 import models.DataSetFormattersAndIds._
 import dataaccess.FilterRepoExtra._
 import controllers.core._
-import models.ml.{ClassificationSetting, _}
-import models.ml.ClassificationResult.{classificationResultFormat, classificationSettingFormat}
+import models.ml.{RegressionSetting, _}
+import models.ml.RegressionResult.{regressionResultFormat, regressionSettingFormat}
 import models.Widget.{WidgetWrites, scatterWidgetFormat}
-import persistence.RepoTypes.ClassificationRepo
+import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -24,77 +24,72 @@ import play.api.data.Forms._
 import play.api.libs.json._
 import play.api.mvc.{Action, Request}
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, DataSpaceService, StatsService, WidgetGenerationService}
+import services.{DataSpaceService, WidgetGenerationService}
 import services.ml._
 import _root_.util.toHumanReadableCamel
 import _root_.util.FieldUtil
-import models.ml.classification.Classification.ClassificationIdentity
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics
+import models.ml.regression.Regression.RegressionIdentity
 
 import scala.reflect.runtime.universe.TypeTag
-import views.html.{classificationrun => view}
+import views.html.{regressionrun => view}
 
 import scala.concurrent.{Future, TimeoutException}
 
-trait ClassificationRunControllerFactory {
-  def apply(dataSetId: String): ClassificationRunController
+trait RegressionRunControllerFactory {
+  def apply(dataSetId: String): RegressionRunController
 }
 
-protected[controllers] class ClassificationRunControllerImpl @Inject()(
+protected[controllers] class RegressionRunControllerImpl @Inject()(
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
-    classificationRepo: ClassificationRepo,
+    regressionRepo: RegressionRepo,
     mlService: MachineLearningService,
-    statsService: StatsService,
-    dataSetService: DataSetService,
     dataSpaceService: DataSpaceService,
     val wgs: WidgetGenerationService
-  ) extends ReadonlyControllerImpl[ClassificationResult, BSONObjectID]
-    with ClassificationRunController
-    with WidgetRepoController[ClassificationResult] {
+  ) extends ReadonlyControllerImpl[RegressionResult, BSONObjectID]
+    with RegressionRunController
+    with WidgetRepoController[RegressionResult] {
 
-  override protected val entityNameKey = "classificationRun"
+  override protected val entityNameKey = "regressionRun"
 
   protected val dsa = dsaf(dataSetId).get
-  override protected val repo = dsa.classificationResultRepo
+  override protected val repo = dsa.regressionResultRepo
   private val ftf = FieldTypeHelper.fieldTypeFactory()
   private val doubleFieldType = ftf.apply(FieldTypeSpec(FieldTypeId.Double)).asValueOf[Any]
   private implicit val doubleScatterWidgetWrites = new WidgetWrites[Any](Seq(doubleFieldType, doubleFieldType))
 
   private val logger = Logger // (this.getClass())
 
-  override protected val typeTag = implicitly[TypeTag[ClassificationResult]]
-  override protected val format = classificationResultFormat
+  override protected val typeTag = implicitly[TypeTag[RegressionResult]]
+  override protected val format = regressionResultFormat
 
   private val distributionDisplayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column), gridWidth = Some(3))
 
   private val widgetSpecs = Seq(
-    DistributionWidgetSpec("testStats-accuracy-mean", None, displayOptions = distributionDisplayOptions),
-    DistributionWidgetSpec("testStats-weightedPrecision-mean", None, displayOptions = distributionDisplayOptions),
-    DistributionWidgetSpec("testStats-weightedRecall-mean", None, displayOptions = distributionDisplayOptions),
-    DistributionWidgetSpec("testStats-f1-mean", None, displayOptions = distributionDisplayOptions),
-    DistributionWidgetSpec("testStats-areaUnderROC-mean", None, displayOptions = distributionDisplayOptions),
-    DistributionWidgetSpec("testStats-areaUnderPR-mean", None, displayOptions = distributionDisplayOptions),
+    DistributionWidgetSpec("testStats-mse-mean", None, displayOptions = distributionDisplayOptions),
+    DistributionWidgetSpec("testStats-rmse-mean", None, displayOptions = distributionDisplayOptions),
+    DistributionWidgetSpec("testStats-r2-mean", None, displayOptions = distributionDisplayOptions),
+    DistributionWidgetSpec("testStats-mae-mean", None, displayOptions = distributionDisplayOptions),
     DistributionWidgetSpec("timeCreated", None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))),
-    ScatterWidgetSpec("trainingStats-accuracy-mean", "testStats-accuracy-mean", Some("setting-mlModelId")),
-    ScatterWidgetSpec("testStats-areaUnderROC-mean", "testStats-accuracy-mean", Some("setting-mlModelId"))
+    ScatterWidgetSpec("trainingStats-mse-mean", "testStats-mse-mean", Some("setting-mlModelId")),
+    ScatterWidgetSpec("testStats-r2-mean", "testStats-mse-mean", Some("setting-mlModelId"))
   )
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
-  protected val router = new ClassificationRunRouter(dataSetId)
+  protected val router = new RegressionRunRouter(dataSetId)
 
   // show view and data
 
   override protected type ShowViewData = (
     String,
-    ClassificationResult,
+    RegressionResult,
     Traversable[DataSpaceMetaInfo]
   )
 
   override protected def getShowViewData(
     id: BSONObjectID,
-    item: ClassificationResult
+    item: RegressionResult
   ) = { request =>
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val dataSetNameFuture = dsa.dataSetName
@@ -103,7 +98,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       dataSetName <- dataSetNameFuture
       tree <- treeFuture
     } yield
-      (dataSetName + " Classification Run", item, tree)
+      (dataSetName + " Regression Run", item, tree)
   }
 
   override protected[controllers] def showView = { implicit ctx =>
@@ -114,7 +109,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
   override protected type ListViewData = (
     String,
-    Page[ClassificationResult],
+    Page[RegressionResult],
     Traversable[Widget],
     Map[String, String],
     Traversable[Field],
@@ -124,23 +119,23 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   )
 
   override protected def getListViewData(
-    page: Page[ClassificationResult]
+    page: Page[RegressionResult]
   ) = { request =>
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val nameFuture = dsa.dataSetName
 
-    val fieldNames = page.items.flatMap { classificationResult =>
-      val setting = classificationResult.setting
+    val fieldNames = page.items.flatMap { regressionResult =>
+      val setting = regressionResult.setting
       setting.inputFieldNames ++ Seq(setting.outputFieldName)
     }.toSet
 
     val fieldsFuture = getDataSetFields(fieldNames)
 
-    val allClassificationRunFieldsFuture = fieldCaseClassRepo.find()
+    val allRegressionRunFieldsFuture = fieldCaseClassRepo.find()
 
     val mlModelIds = page.items.map(_.setting.mlModelId).toSet
 
-    val mlModelsFuture = classificationRepo.find(Seq(ClassificationIdentity.name #-> mlModelIds.toSeq))
+    val mlModelsFuture = regressionRepo.find(Seq(RegressionIdentity.name #-> mlModelIds.toSeq))
 
     val filterIds = page.items.map(_.setting.filterId).toSet
 
@@ -157,7 +152,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
       fields <- fieldsFuture
 
-      allClassificationRunFields <- allClassificationRunFieldsFuture
+      allRegressionRunFields <- allRegressionRunFieldsFuture
 
       mlModels <- mlModelsFuture
 
@@ -169,7 +164,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       val mlModelIdNameMap = mlModels.map(mlModel => (mlModel._id.get, mlModel.name.get)).toMap
       val filterIdNameMap = filters.map(filter => (filter._id.get, filter.name.get)).toMap
 
-      (dataSetName + " Classification Run", page, widgets.flatten, fieldNameLabelMap, allClassificationRunFields, mlModelIdNameMap, filterIdNameMap, tree)
+      (dataSetName + " Regression Run", page, widgets.flatten, fieldNameLabelMap, allRegressionRunFields, mlModelIdNameMap, filterIdNameMap, tree)
     }
   }
 
@@ -191,22 +186,23 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
             setting.filterShowFieldStyle,
             tree
           ))
-          case Accepts.Json() => BadRequest("getClassification function doesn't support JSON response.")
+          case Accepts.Json() => BadRequest("getRegression function doesn't support JSON response.")
         }
       }
     }.recover {
       case t: TimeoutException =>
-        Logger.error("Problem found in the create classification process")
+        Logger.error("Problem found in the create regression process")
         InternalServerError(t.getMessage)
     }
   }
 
-  override def classify(
-    setting: ClassificationSetting,
-    saveResults: Boolean,
-    saveBinCurves: Boolean
+  override def regress(
+    setting: RegressionSetting,
+    saveResults: Boolean
   ) = Action.async { implicit request =>
-    val mlModelFuture = classificationRepo.get(setting.mlModelId)
+    println(Json.prettyPrint(Json.toJson(setting)))
+
+    val mlModelFuture = regressionRepo.get(setting.mlModelId)
     val criteriaFuture = loadCriteria(setting.filterId)
     val replicationCriteriaFuture = loadCriteria(setting.replicationFilterId)
 
@@ -244,17 +240,8 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
-        val selectedFields = setting.featuresSelectionNum.map { featuresSelectionNum =>
-          val inputFields = fields.filter(!_.name.equals(setting.outputFieldName))
-          val outputField = fields.find(_.name.equals(setting.outputFieldName)).get
-          val selectedInputFields = statsService.selectFeaturesAsAnovaChiSquare(mainData, inputFields.toSeq, outputField, featuresSelectionNum)
-          selectedInputFields ++ Seq(outputField)
-        }.getOrElse(
-          fields
-        )
-
-        val fieldNameAndSpecs = selectedFields.toSeq.map(field => (field.name, field.fieldTypeSpec))
-        val results = mlService.classify(mainData, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting, replicationData, setting.binCurvesNumBins)
+        val fieldNameAndSpecs = fields.toSeq.map(field => (field.name, field.fieldTypeSpec))
+        val results = mlService.regress(mainData, fieldNameAndSpecs, setting.outputFieldName, mlModel, setting.learningSetting, replicationData)
         results.map(Some(_))
       }.getOrElse(
         Future(None)
@@ -265,35 +252,24 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
         val metricStatsMap = MachineLearningUtil.calcMetricStats(resultsHolder.performanceResults)
 
         if (saveResults) {
-          val binCurves = if (saveBinCurves) resultsHolder.binCurves else Nil
-          val finalResult = MachineLearningUtil.createClassificationResult(setting, metricStatsMap, binCurves)
+          val finalResult = MachineLearningUtil.createRegressionResult(setting, metricStatsMap)
           repo.save(finalResult)
         }
 
         val resultsJson = resultsToJson(metricStatsMap)
-        val replicationCurves = binCurvesToWidgets(resultsHolder.binCurves.flatMap(_._3), 350)
-        val height = if (replicationCurves.nonEmpty) 350 else 500
-        val trainingCurves = binCurvesToWidgets(resultsHolder.binCurves.flatMap(_._1), height)
-        val testCurves = binCurvesToWidgets(resultsHolder.binCurves.flatMap(_._2), height)
 
-        logger.info("Classification finished with the following results:\n" + Json.prettyPrint(resultsJson))
+        logger.info("Regression finished with the following results:\n" + Json.prettyPrint(resultsJson))
 
-        val json = Json.obj(
-          "results" -> resultsJson,
-          "trainingCurves" -> Json.toJson(trainingCurves.toSeq),
-          "testCurves" -> Json.toJson(testCurves.toSeq),
-          "replicationCurves" -> Json.toJson(replicationCurves.toSeq)
-        )
-        Ok(json)
+        Ok(resultsJson)
       }.getOrElse(
-        BadRequest(s"ML classification model with id ${setting.mlModelId.stringify} not found.")
+        BadRequest(s"ML regression model with id ${setting.mlModelId.stringify} not found.")
       )
   }
 
   private def resultsToJson(
-    evalMetricStatsMap: Map[ClassificationEvalMetric.Value, (MetricStatsValues, MetricStatsValues, Option[MetricStatsValues])]
+    evalMetricStatsMap: Map[RegressionEvalMetric.Value, (MetricStatsValues, MetricStatsValues, Option[MetricStatsValues])]
   ): JsArray = {
-    val metricJsons = ClassificationEvalMetric.values.toSeq.sorted.flatMap { metric =>
+    val metricJsons = RegressionEvalMetric.values.toSeq.sorted.flatMap { metric =>
       evalMetricStatsMap.get(metric).map { case (trainingStats, testStats, replicationStats) =>
         Json.obj(
           "metricName" -> toHumanReadableCamel(metric.toString),
@@ -305,86 +281,6 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     }
 
     JsArray(metricJsons)
-  }
-
-  private def binCurvesToWidgets(
-    binCurves: Traversable[BinaryClassificationCurves],
-    height: Int
-  ): Traversable[Widget] = {
-    def widget(title: String, xCaption: String, yCaption: String, series: Traversable[Seq[(Double, Double)]]) = {
-      if (series.exists(_.nonEmpty)) {
-        val data = series.toSeq.zipWithIndex.map { case (data, index) =>
-          ("Run " + (index + 1).toString, data)
-        }
-        val displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(height))
-        val widget = LineWidget[Double](
-          title, xCaption, yCaption, data, Some(0), Some(1), Some(0), Some(1), displayOptions)
-        Some(widget)
-        //      ScatterWidget(title, xCaption, yCaption, data, BasicDisplayOptions(gridWidth = Some(6), height = Some(450)))
-      } else
-        None
-    }
-
-    val rocWidget = widget("ROC", "FPR", "TPR", binCurves.map(_.roc))
-    val prWidget = widget("PR", "Recall", "Precision", binCurves.map(_.precisionRecall))
-    val fMeasureThresholdWidget = widget("FMeasure by Threshold", "Threshold", "F-Measure", binCurves.map(_.fMeasureThreshold))
-    val precisionThresholdWidget = widget("Precision by Threshold", "Threshold", "Precision", binCurves.map(_.precisionThreshold))
-    val recallThresholdWidget = widget("Recall by Threshold", "Threshold", "Recall", binCurves.map(_.recallThreshold))
-
-    Seq(
-      rocWidget, prWidget, fMeasureThresholdWidget, precisionThresholdWidget, recallThresholdWidget
-    ).flatten
-  }
-
-  override def selectFeaturesAsChiSquare(
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterId: Option[BSONObjectID],
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
-  ) = Action.async { implicit request =>
-    val explFieldNamesToLoads =
-      if (inputFieldNames.nonEmpty)
-        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
-      else
-        Nil
-
-    val criteriaFuture = loadCriteria(filterId)
-
-    for {
-      criteria <- criteriaFuture
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
-    } yield {
-      val fieldNames = statsService.selectFeaturesAsChiSquare(jsons, fields, outputFieldName, featuresToSelectNum, discretizerBucketsNum)
-      val json = JsArray(fieldNames.map(JsString(_)).toSeq)
-      Ok(json)
-    }
-  }
-
-  override def selectFeaturesAsAnovaChiSquare(
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterId: Option[BSONObjectID],
-    featuresToSelectNum: Int
-  ) = Action.async { implicit request =>
-    val explFieldNamesToLoads =
-      if (inputFieldNames.nonEmpty)
-        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
-      else
-        Nil
-
-    val criteriaFuture = loadCriteria(filterId)
-
-    for {
-      criteria <- criteriaFuture
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
-    } yield {
-      val inputFields = fields.filter(!_.name.equals(outputFieldName))
-      val outputField = fields.find(_.name.equals(outputFieldName)).get
-      val selectedFields = statsService.selectFeaturesAsAnovaChiSquare(jsons, inputFields, outputField, featuresToSelectNum)
-      val json = JsArray(selectedFields.map(field => JsString(field.name)))
-      Ok(json)
-    }
   }
 
   private def loadCriteria(filterId: Option[BSONObjectID]) =
@@ -458,4 +354,78 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
         InternalServerError(i.getMessage)
     }
   }
+
+//  override def regress(
+//                        mlModelId: BSONObjectID,
+//                        inputFieldNames: Seq[String],
+//                        outputFieldName: String,
+//                        filterId: Option[BSONObjectID],
+//                        featuresNormalizationType: Option[VectorTransformType.Value],
+//                        pcaDims: Option[Int],
+//                        trainingTestingSplit: Option[Double],
+//                        repetitions: Option[Int],
+//                        crossValidationFolds: Option[Int],
+//                        crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
+//                      ) = Action.async { implicit request =>
+//    val learningSetting = LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, None, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
+//
+//    for {
+//      result <- runMLAux(
+//        regressionRepo.get(mlModelId),
+//        mlService.regress)(
+//        inputFieldNames, outputFieldName, filterId, learningSetting
+//      )
+//    } yield
+//      result match {
+//        case Some(result) =>
+//          logger.info("Regression finished with the following results: " + Json.stringify(result))
+//          Ok(result)
+//        case None =>
+//          BadRequest(s"ML regression model with id ${mlModelId.stringify} not found.")
+//      }
+//  }
+//
+//  private def runMLAux[M](
+//                           getModel: => Future[Option[M]],
+//                           runML: (Traversable[JsObject], Seq[(String, FieldTypeSpec)], String, M, LearningSetting[RegressionEvalMetric.Value]) => Future[Traversable[Performance]])(
+//                           inputFieldNames: Seq[String],
+//                           outputFieldName: String,
+//                           filterId: Option[BSONObjectID],
+//                           learningSetting: LearningSetting[RegressionEvalMetric.Value]
+//                         ): Future[Option[JsArray]] = {
+//    val explFieldNamesToLoads =
+//      if (inputFieldNames.nonEmpty)
+//        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
+//      else
+//        Nil
+//
+//    val criteriaFuture = loadCriteria(filterId)
+//
+//    for {
+//      mlModel <- getModel
+//
+//      criteria <- criteriaFuture
+//
+//      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
+//
+//      evalRates <- mlModel.map { mlModel =>
+//        val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
+//        runML(jsons, fieldNameAndSpecs, outputFieldName, mlModel, learningSetting)
+//      }.getOrElse(
+//        Future(Nil)
+//      )
+//    } yield
+//      mlModel.map { mlModel =>
+//        val evalJsons = evalRates.toSeq.sortBy(_.evalMetric.id).map { performance =>
+//          val results = performance.trainingTestResults
+//          Json.obj(
+//            "metricName" -> toHumanReadableCamel(performance.evalMetric.toString),
+//            "trainEvalRate" -> results.map(_._1).sum / results.size, // mean
+//            "testEvalRate" -> results.map(_._2).sum / results.size   // mean
+//          )
+//        }
+//
+//        JsArray(evalJsons)
+//      }
+//  }
 }

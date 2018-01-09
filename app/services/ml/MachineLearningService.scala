@@ -51,8 +51,9 @@ trait MachineLearningService {
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression,
-    setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value]()
-  ): Future[Traversable[RegressionPerformance]]
+    setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
+    replicationData: Traversable[JsObject] = Nil
+  ): Future[RegressionResultsHolder]
 
   def cluster[M <: Model[M]](
     data: Traversable[JsObject],
@@ -154,7 +155,6 @@ private class MachineLearningServiceImpl @Inject() (
     val finalDf = transformToClassificationDataFrame(df, setting)
     finalDf.cache
 
-
     // REPLICATION DATA (if any)
 
     // create a data frame with all the features
@@ -208,7 +208,7 @@ private class MachineLearningServiceImpl @Inject() (
         evaluators.find(_.metric == defaultClassificationCrossValidationEvalMetric).get
       )
 
-    val resultsWithCountsFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
+    val resultHoldersFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
       logger.info(s"Execution of repetition $index started.")
 
       // sampling
@@ -227,7 +227,9 @@ private class MachineLearningServiceImpl @Inject() (
 
       val testSets = Seq(Some(test.cache), finalReplicationDf).flatten
 
-      val (trainingPredictions, testPredictions) = trainWithCrossValidation(trainer, paramMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training.cache, testSets)
+      val (trainingPredictions, testPredictions) = trainWithCrossValidation(
+        trainer, paramMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training.cache, testSets
+      )
 
       // evaluate the performance
 
@@ -252,7 +254,6 @@ private class MachineLearningServiceImpl @Inject() (
           (None, testPredictionsExt.map(_ => None))
 
       // unpersist and return the results
-
       training.unpersist
       test.unpersist
 
@@ -262,7 +263,7 @@ private class MachineLearningServiceImpl @Inject() (
 
     // EVALUATE PERFORMANCE
 
-    resultsWithCountsFuture.map { resultHolders =>
+    resultHoldersFuture.map { resultHolders =>
       // uncache
       finalDf.unpersist
       df.unpersist
@@ -295,13 +296,6 @@ private class MachineLearningServiceImpl @Inject() (
       ClassificationResultsHolder(performanceResults, counts, curves)
     }
   }
-
-  case class ClassificationResultsAuxHolder(
-    evalResults: Traversable[(ClassificationEvalMetric.Value, Double, Seq[Double])],
-    count: Long,
-    binTrainingCurves: Option[BinaryClassificationCurves],
-    binTestCurves: Seq[Option[BinaryClassificationCurves]]
-  )
 
   private def transformToClassificationDataFrame(
     df: DataFrame,
@@ -358,23 +352,42 @@ private class MachineLearningServiceImpl @Inject() (
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
     mlModel: Regression,
-    setting: LearningSetting[RegressionEvalMetric.Value]
-  ): Future[Traversable[RegressionPerformance]] = {
+    setting: LearningSetting[RegressionEvalMetric.Value],
+    replicationData: Traversable[JsObject]
+  ): Future[RegressionResultsHolder] = {
+    // TRAINING AND TEST DATA
+
+    // create a data frame with all the features
+    val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName))
+    df.cache
+
+    // transform the df to a regression one
+    val finalDf = transformToRegressionDataFrame(df, setting)
+    finalDf.cache
+
+    // REPLICATION DATA (if any)
+
+    // create a data frame with all the features
+    val replicationDf =
+      if (replicationData.nonEmpty) {
+        val df = FeaturesDataFrameFactory(session, replicationData, fields, Some(outputFieldName))
+        Some(df.cache)
+      } else
+        None
+
+    // transform the df to a classification one
+    val finalReplicationDf = replicationDf.map { replicationDf =>
+      val df = transformToClassificationDataFrame(replicationDf, setting)
+      df.cache
+    }
+
+    // CREATE A TRAINER
+
     val (trainer, paramMaps) = SparkMLEstimatorFactory(mlModel)
 
-    val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName))
+    println(paramMaps.mkString("\n"))
 
-    // normalize the features
-    val normalizeFeatures = new SchemaUnchangedTransformer(normalizeFeaturesOptional(setting.featuresNormalizationType))
-
-    // reduce the dimensionality if needed
-    val reduceDim = new SchemaUnchangedTransformer(pcaComponentsOptional(setting.pcaDims))
-
-    // execute the pipeline
-    val pipeline = new Pipeline().setStages(Array(normalizeFeatures, reduceDim))
-    val dataFrame = pipeline.fit(df).transform(df)
-
-    dataFrame.cache()
+    // REPEAT THE TRAINING-TEST CYCLE
 
     // split the data into training and test parts
     val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
@@ -387,30 +400,70 @@ private class MachineLearningServiceImpl @Inject() (
         regressionEvaluators.find(_.metric == defaultRegressionCrossValidationEvalMetric).get
       )
 
-    val resultsFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
-      println(s"Execution of repetition $index started.")
-      val Array(training, test) = dataFrame.randomSplit(Array(split, 1 - split))
+    val count = finalDf.count()
+
+    val resultHoldersFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
+      logger.info(s"Execution of repetition $index started.")
+      val Array(training, test) = finalDf.randomSplit(Array(split, 1 - split))
+
+      val testSets = Seq(Some(test.cache), finalReplicationDf).flatten
 
       // run the trainer (with folds) on the given training and test data sets
-      val (trainPredictions, testPredictions) = trainWithCrossValidation(trainer, paramMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training.cache, Seq(test.cache))
+      val (trainPredictions, testPredictions) = trainWithCrossValidation(
+        trainer, paramMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training.cache, testSets
+      )
 
       // evaluate the performance
       val results = evaluate(regressionEvaluators, trainPredictions, testPredictions)
 
+      // unpersist and return the results
       training.unpersist
       test.unpersist
-      results
+      if (finalReplicationDf.isDefined)
+        finalReplicationDf.get.unpersist
+      if (replicationDf.isDefined)
+        replicationDf.get.unpersist
+
+      RegressionResultsAuxHolder(results, count)
     }
 
-    resultsFuture.map { results =>
+    // EVALUATE PERFORMANCE
+
+    resultHoldersFuture.map { resultHolders =>
       // uncache
-      dataFrame.unpersist()
+      finalDf.unpersist
+      df.unpersist
 
       // create performance results
-      results.flatten.groupBy(_._1).map { case (evalMetric, results) =>
-        RegressionPerformance(evalMetric, results.map(x => (x._2, x._3.head)))
+      val results = resultHolders.flatMap(_.evalResults)
+      val performanceResults = results.groupBy(_._1).map { case (evalMetric, results) =>
+        RegressionPerformance(evalMetric, results.map { case (_, trainResult, testResults) =>
+          val replicationResult = testResults.tail.headOption
+          (trainResult, testResults.head, replicationResult)
+        })
       }
+
+      // counts
+      val counts = resultHolders.map(_.count)
+
+      RegressionResultsHolder(performanceResults, counts)
     }
+  }
+
+  private def transformToRegressionDataFrame(
+    df: DataFrame,
+    setting: LearningSetting[_]
+  ): DataFrame = {
+    // normalize the features
+    val normalizeFeatures = new SchemaUnchangedTransformer(normalizeFeaturesOptional(setting.featuresNormalizationType))
+
+    // reduce the dimensionality if needed
+    val reduceDim = new SchemaUnchangedTransformer(pcaComponentsOptional(setting.pcaDims))
+
+    // create the stages and run a pipeline
+    val stages = Seq(normalizeFeatures, reduceDim)
+    val pipeline = new Pipeline().setStages(stages.toArray)
+    pipeline.fit(df).transform(df)
   }
 
   override def cluster[M <: Model[M]](
@@ -704,35 +757,24 @@ private class MachineLearningServiceImpl @Inject() (
   }
 }
 
-abstract class Performance {
-  type T <: Enumeration#Value
+abstract class Performance[T <: Enumeration#Value] {
   def evalMetric: T
-  def trainingTestResults: Traversable[(Double, Double)]
+  def trainingTestReplicationResults: Traversable[(Double, Double, Option[Double])]
 }
 
 case class ClassificationPerformance (
   val evalMetric: ClassificationEvalMetric.Value,
   val trainingTestReplicationResults: Traversable[(Double, Double, Option[Double])]
-) extends Performance {
-  override type T = ClassificationEvalMetric.Value
-
-  override def trainingTestResults =
-    trainingTestReplicationResults.map { case (train, test, _) => (train, test) }
-}
+) extends Performance[ClassificationEvalMetric.Value]
 
 case class RegressionPerformance(
   val evalMetric: RegressionEvalMetric.Value,
-  val trainingTestResults: Traversable[(Double, Double)]
-) extends Performance {
-  override type T = RegressionEvalMetric.Value
-}
+  val trainingTestReplicationResults: Traversable[(Double, Double, Option[Double])]
+) extends Performance[RegressionEvalMetric.Value]
 
 object MachineLearningUtil {
 
-  def calcClassificationMetricStats(results: Traversable[ClassificationPerformance]) = {
-    def toStats(summaryStatistics: SummaryStatistics) =
-      MetricStatsValues(summaryStatistics.getMean, summaryStatistics.getMin, summaryStatistics.getMax, summaryStatistics.getVariance)
-
+  def calcMetricStats[T <: Enumeration#Value](results: Traversable[Performance[T]]): Map[T, (MetricStatsValues, MetricStatsValues, Option[MetricStatsValues])] =
     results.map { result =>
       val trainingStats = new SummaryStatistics
       val testStats = new SummaryStatistics
@@ -751,7 +793,9 @@ object MachineLearningUtil {
         if (replicationStats.getN > 0) Some(toStats(replicationStats)) else None
       ))
     }.toMap
-  }
+
+  def toStats(summaryStatistics: SummaryStatistics) =
+    MetricStatsValues(summaryStatistics.getMean, summaryStatistics.getMin, summaryStatistics.getMax, summaryStatistics.getVariance)
 
   def createClassificationResult(
     setting: ClassificationSetting,
@@ -760,7 +804,7 @@ object MachineLearningUtil {
   ): ClassificationResult =
     createClassificationResult(
       setting,
-      calcClassificationMetricStats(results),
+      calcMetricStats(results),
       binCurves
     )
 
@@ -844,6 +888,83 @@ object MachineLearningUtil {
     )
   }
 
+  def createRegressionResult(
+    setting: RegressionSetting,
+    results: Traversable[RegressionPerformance]
+  ): RegressionResult =
+    createRegressionResult(
+      setting,
+      calcMetricStats(results)
+    )
+
+  def createRegressionResult(
+    setting: RegressionSetting,
+    evalMetricStatsMap: Map[RegressionEvalMetric.Value, (MetricStatsValues, MetricStatsValues, Option[MetricStatsValues])]
+  ): RegressionResult = {
+    // helper functions
+    def trainingStatsOptional(metric: RegressionEvalMetric.Value) =
+      evalMetricStatsMap.get(metric).map(_._1)
+
+    def testStatsOptional(metric: RegressionEvalMetric.Value) =
+      evalMetricStatsMap.get(metric).map(_._2)
+
+    def replicationStatsOptional(metric: RegressionEvalMetric.Value) =
+      evalMetricStatsMap.get(metric).flatMap(_._3)
+
+    def trainingStats(metric: RegressionEvalMetric.Value) =
+      trainingStatsOptional(metric).getOrElse(
+        throw new AdaException(s"Regression training stats for metrics '${metric.toString}' not found.")
+      )
+
+    def testStats(metric: RegressionEvalMetric.Value) =
+      testStatsOptional(metric).getOrElse(
+        throw new AdaException(s"Regression test stats for metrics '${metric.toString}' not found.")
+      )
+
+    def replicationStats(metric: RegressionEvalMetric.Value) =
+      replicationStatsOptional(metric).getOrElse(
+        throw new AdaException(s"Regression replication stats for metrics '${metric.toString}' not found.")
+      )
+
+    import RegressionEvalMetric._
+
+    val trainingMetricStats = RegressionMetricStats(
+      mse = trainingStats(mse),
+      rmse = trainingStats(rmse),
+      r2 = trainingStats(r2),
+      mae = trainingStats(mae)
+    )
+
+    val testMetricStats = RegressionMetricStats(
+      mse = testStats(mse),
+      rmse = testStats(rmse),
+      r2 = testStats(r2),
+      mae = testStats(mae)
+    )
+
+    val replicationMetricStats =
+      // we assume if mse is defined the rest is fine, otherwise nothing is defined
+      if (replicationStatsOptional(mse).isDefined)
+        Some(
+          RegressionMetricStats(
+            mse = replicationStats(mse),
+            rmse = replicationStats(rmse),
+            r2 = replicationStats(r2),
+            mae = replicationStats(mae)
+          )
+        )
+      else
+        None
+
+    RegressionResult(
+      None,
+      setting.copy(inputFieldNames = setting.inputFieldNames.sorted),
+      trainingMetricStats,
+      testMetricStats,
+      replicationMetricStats
+    )
+  }
+
   //  private def train(
   //    reg: LogisticRegression,
   //    trainData: DataFrame,
@@ -913,8 +1034,25 @@ object MachineLearningUtil {
   //  }
 }
 
+case class ClassificationResultsAuxHolder(
+  evalResults: Traversable[(ClassificationEvalMetric.Value, Double, Seq[Double])],
+  count: Long,
+  binTrainingCurves: Option[BinaryClassificationCurves],
+  binTestCurves: Seq[Option[BinaryClassificationCurves]]
+)
+
+case class RegressionResultsAuxHolder(
+  evalResults: Traversable[(RegressionEvalMetric.Value, Double, Seq[Double])],
+  count: Long
+)
+
 case class ClassificationResultsHolder(
   performanceResults: Traversable[ClassificationPerformance],
   counts: Traversable[Long],
   binCurves: Traversable[STuple3[Option[BinaryClassificationCurves]]]
+)
+
+case class RegressionResultsHolder(
+  performanceResults: Traversable[RegressionPerformance],
+  counts: Traversable[Long]
 )

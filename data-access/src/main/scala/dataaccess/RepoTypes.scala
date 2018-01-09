@@ -2,7 +2,7 @@ package dataaccess
 
 import dataaccess.mongo.MongoAsyncCrudExtraRepo
 import models._
-import models.ml.ClassificationResult
+import models.ml.{ClassificationResult, RegressionResult}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 
@@ -16,7 +16,9 @@ object RepoTypes {
   type CategoryRepo = AsyncCrudRepo[Category, BSONObjectID]
   type FilterRepo = AsyncCrudRepo[Filter, BSONObjectID]
   type DataViewRepo = AsyncCrudRepo[DataView, BSONObjectID]
+
   type ClassificationResultRepo = AsyncCrudRepo[ClassificationResult, BSONObjectID]
+  type RegressionResultRepo = AsyncCrudRepo[RegressionResult, BSONObjectID]
 
   type DataSetMetaInfoRepo = AsyncCrudRepo[DataSetMetaInfo, BSONObjectID]
   type DataSpaceMetaInfoRepo = AsyncCrudRepo[DataSpaceMetaInfo, BSONObjectID]

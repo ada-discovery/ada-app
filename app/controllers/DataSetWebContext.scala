@@ -22,6 +22,8 @@ class DataSetWebContext(
   val dataViewJsRouter = new DataViewJsRouter(dataSetId)
   val classificationRunRouter = new ClassificationRunRouter(dataSetId)
   val classificationRunJsRouter = new ClassificationRunJsRouter(dataSetId)
+  val regressionRunRouter = new RegressionRunRouter(dataSetId)
+  val regressionRunJsRouter = new RegressionRunJsRouter(dataSetId)
 }
 
 object DataSetWebContext {
@@ -98,4 +100,12 @@ object DataSetWebContext {
   def classificationRunJsRouter(
     implicit webContext: DataSetWebContext
   ) = webContext.classificationRunJsRouter
+
+  def regressionRunRouter(
+    implicit webContext: DataSetWebContext
+  ) = webContext.regressionRunRouter
+
+  def regressionRunJsRouter(
+    implicit webContext: DataSetWebContext
+  ) = webContext.regressionRunJsRouter
 }

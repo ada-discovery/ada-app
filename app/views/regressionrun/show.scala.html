@@ -1,0 +1,28 @@
+@import views.html.layout.jsonShow
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
+@import controllers.DataSetWebContext._
+@import controllers.DataSetWebContext
+@import models.ml.RegressionResult
+@import models.ml.RegressionResult._
+@import play.api.libs.json.Json
+@import play.api.libs.json.JsObject
+@import reactivemongo.bson.BSONObjectID
+
+@(
+    title: String,
+    item: RegressionResult,
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@jsonShow(
+    title,
+    Json.toJson(item).as[JsObject],
+    regressionRunRouter.plainList,
+    Some(regressionRunRouter.delete(item._id.get)),
+    false,
+    Map(),
+    Some(datasetMenu(dataSpaceMetaInfos)),
+    Some(datasetSubNavWithJs())
+)

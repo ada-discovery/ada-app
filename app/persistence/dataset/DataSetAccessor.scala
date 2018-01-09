@@ -1,11 +1,13 @@
 package persistence.dataset
 
-import dataaccess.{JsonCrudRepoFactory, Criterion}
-import models.{FieldTypeSpec, DataSetSetting, DataSetMetaInfo}
+import dataaccess.{Criterion, JsonCrudRepoFactory}
+import models.{DataSetMetaInfo, DataSetSetting, FieldTypeSpec}
 import Criterion.Infix
+
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
+
 import scala.concurrent.Future
 import scala.concurrent.Await.result
 import dataaccess.RepoTypes._
@@ -17,6 +19,7 @@ trait DataSetAccessor {
   def filterRepo: FilterRepo
   def dataViewRepo: DataViewRepo
   def classificationResultRepo: ClassificationResultRepo
+  def regressionResultRepo: RegressionResultRepo
 
   // following attributes are dynamically created, i.e., each time the respective function is called
 
@@ -40,6 +43,7 @@ protected class DataSetAccessorImpl(
     val filterRepo: FilterRepo,
     val dataViewRepo: DataViewRepo,
     val classificationResultRepo: ClassificationResultRepo,
+    val regressionResultRepo: RegressionResultRepo,
     dataSetRepoCreate: (Seq[(String, FieldTypeSpec)], Option[DataSetSetting]) => Future[JsonCrudRepo],
     dataSetMetaInfoRepo: DataSetMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo
