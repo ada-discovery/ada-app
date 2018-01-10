@@ -22,7 +22,7 @@ import reactivemongo.core.errors.{DatabaseException, DetailedDatabaseException}
 import reactivemongo.play.json.collection.JSONCollection
 
 import scala.concurrent.duration._
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import models._
 import reactivemongo.akkastream.{AkkaStreamCursor, State}
 import reactivemongo.api._
@@ -43,7 +43,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
   private val indexNameMaxSize = 40
   private val logger = Logger
   private implicit val system = ActorSystem()
-  private val materializer = ActorMaterializer()
+  protected val materializer = ActorMaterializer()
 
   @Inject var reactiveMongoApi : ReactiveMongoApi = _
 
@@ -409,17 +409,28 @@ class MongoAsyncStreamRepo[E: Format, ID: Format](
   import play.modules.reactivemongo.json._
   import play.modules.reactivemongo.json.collection.JSONCollection
 
-  override lazy val stream: Enumerator[E] = {
+  private implicit val m = materializer
+
+  override lazy val stream: Source[E, Future[State]] = {
+    val futureSource = akkaCursor.map(_.documentSource())
+    Await.result(futureSource, 1 minute)
+  }
+
+  override lazy val oldStream: Enumerator[E] = {
+    val enumerator = Enumerator.flatten(akkaCursor.map(_.enumerate()))
+    Concurrent.broadcast(enumerator)._1
+  }
+
+  import reactivemongo.akkastream.cursorProducer
+
+  private def akkaCursor: Future[AkkaStreamCursor[E]] = {
     // ObjectIDs are linear with time, we only want events created after now.
     val since = BSONObjectID.generate
-    val enumerator = Enumerator.flatten(for {
+    val criteria = Json.obj("_id" -> Json.obj("$gt" -> since))
+    for {
       coll <- cappedCollection
-    } yield coll.find(Json.obj("_id" -> Json.obj("$gt" -> since)))
-      .options(QueryOpts().tailable.awaitData)
-      .cursor[E]
-      .enumerate()
-    )
-    Concurrent.broadcast(enumerator)._1
+    } yield
+      coll.find(criteria).options(QueryOpts().tailable.awaitData).cursor[E]()
   }
 
   private lazy val cappedCollection: Future[JSONCollection] = {

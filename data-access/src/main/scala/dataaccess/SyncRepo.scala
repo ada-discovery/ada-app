@@ -1,9 +1,11 @@
 package dataaccess
 
+import akka.stream.scaladsl.Source
 import play.api.libs.iteratee.Enumerator
+import reactivemongo.akkastream.State
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Future, Await, Awaitable}
+import scala.concurrent.{Await, Awaitable, Future}
 
 /**
  * Generic sync repo trait
@@ -41,7 +43,8 @@ trait SyncCrudRepo[E, ID] extends SyncRepo[E, ID] {
 }
 
 trait SyncStreamRepo[E, ID] extends SyncRepo[E, ID] {
-  def stream: Enumerator[E]
+  def oldStream: Enumerator[E]
+  def stream: Source[E, Future[State]]
 }
 
 // Adapters
@@ -112,6 +115,9 @@ private class SyncStreamRepoAdapter[E, ID](
   ) extends SyncRepoAdapter[E, ID](asyncRepo, timeout) with SyncStreamRepo[E, ID] {
 
   override def stream = asyncRepo.stream
+
+  @Deprecated
+  override def oldStream = asyncRepo.oldStream
 }
 
 object RepoSynchronizer {

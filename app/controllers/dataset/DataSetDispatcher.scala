@@ -8,6 +8,7 @@ import models.ml.VectorTransformType
 import models.{FieldTypeId, FilterCondition, PageOrder}
 import reactivemongo.bson.BSONObjectID
 import models.ml.RegressionEvalMetric
+import play.api.mvc.{Action, AnyContent}
 import util.SecurityUtil._
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
@@ -76,6 +77,12 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     groupFieldName: Option[String],
     filterOrId: FilterOrId
   ) = dispatch(_.getDistribution(fieldName, groupFieldName, filterOrId))
+
+  override def getDistributionWidget(
+    fieldName: String,
+    groupFieldName: Option[String],
+    filterId: Option[BSONObjectID]
+  ) = dispatch(_.getDistributionWidget(fieldName, groupFieldName, filterId))
 
   override def getCorrelations(
     fieldNames: Seq[String],

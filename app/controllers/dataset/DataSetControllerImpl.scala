@@ -147,10 +147,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override protected type ListViewData = (
     String,
-      Page[JsObject],
-      Map[String, String],
-      Seq[String]
-    )
+    Page[JsObject],
+    Map[String, String],
+    Seq[String]
+  )
 
   override protected def getListViewData(
     page: Page[JsObject]
@@ -165,13 +165,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       (dataSetName + " Item", page, fieldLabelMap, listViewColumns.get)
   }
 
-  /**
-    * Table displaying given paginated content. Generally used to display fields of the datasets.
-    *
-    * @param page    Page object containing info (number of pages, current page, ...) for pagination. Contains JsObject represenation of data for display.
-    * @param context Web context: request header, messages, and flash
-    * @return View for all available fields.
-    */
   override protected[controllers] def listView = { implicit ctx =>
     (dataset.list(_, _, _, _)).tupled
   }
@@ -489,36 +482,48 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private def widgetsToJsons(
     widgets: Seq[Option[Widget]],
     widgetSpecs: Seq[WidgetSpec],
-    widgetFieldMap: Map[String, Field]
+    fieldMap: Map[String, Field]
   ): JsArray = {
-    val jsons = widgetSpecs.zip(widgets).map { case (widgetSpec, widget) =>
-      val fields = widgetSpec.fieldNames.map(widgetFieldMap.get).flatten
-      val fieldTypes = fields.map(field => ftf(field.fieldTypeSpec).asValueOf[Any])
-      val isCumulativeBinnedWidget = (widgetSpec.isInstanceOf[CumulativeCountWidgetSpec]) && (widgetSpec.asInstanceOf[CumulativeCountWidgetSpec].numericBinCount.isDefined)
-      widget.map { widget =>
-        // fixing integer->double field type for a numerical count widget
-        val fieldTypesToUse =
-          widget match {
-            case e: NumericalCountWidget[Any] if (!e.isCumulative || isCumulativeBinnedWidget) =>
-              val fieldType = fieldTypes.head
-              val fieldTypeToUse =
-                if (fieldType.spec.fieldType == FieldTypeId.Integer) {
-                  val doubleFieldTypeSpec = fieldType.spec.copy(fieldType = FieldTypeId.Double)
-                  ftf(doubleFieldTypeSpec).asInstanceOf[FieldType[Any]]
-                } else {
-                  fieldType
-                }
-              Seq(fieldTypeToUse) ++ fieldTypes.tail
+    val jsons = widgetSpecs.zip(widgets).flatMap { case (widgetSpec, widget) =>
+      widget.map(
+        widgetToJson(_, widgetSpec, fieldMap)
+      )
+    }
 
-            case _ => fieldTypes
-        }
-        // make a scalar type out of it
-        val scalarFieldTypesToUse = fieldTypesToUse.map(fieldType => ftf(fieldType.spec.copy(isArray = false)).asInstanceOf[FieldType[Any]])
-        implicit val writes = new WidgetWrites[Any](scalarFieldTypesToUse.toSeq)
-        Json.toJson(widget)
-      }
-    }.flatten
     JsArray(jsons)
+  }
+
+  private def widgetToJson(
+    widget: Widget,
+    widgetSpec: WidgetSpec,
+    fieldMap: Map[String, Field]
+  ): JsValue = {
+    val fields = widgetSpec.fieldNames.map(fieldMap.get).flatten
+    val fieldTypes = fields.map(field => ftf(field.fieldTypeSpec).asValueOf[Any])
+    val isCumulativeBinnedWidget = (widgetSpec.isInstanceOf[CumulativeCountWidgetSpec]) && (widgetSpec.asInstanceOf[CumulativeCountWidgetSpec].numericBinCount.isDefined)
+
+    // fixing integer->double field type for a numerical count widget
+    val fieldTypesToUse =
+      widget match {
+        case e: NumericalCountWidget[Any] if (!e.isCumulative || isCumulativeBinnedWidget) =>
+          val fieldType = fieldTypes.head
+          val fieldTypeToUse =
+            if (fieldType.spec.fieldType == FieldTypeId.Integer) {
+              val doubleFieldTypeSpec = fieldType.spec.copy(fieldType = FieldTypeId.Double)
+              ftf(doubleFieldTypeSpec).asInstanceOf[FieldType[Any]]
+            } else {
+              fieldType
+            }
+
+          Seq(fieldTypeToUse) ++ fieldTypes.tail
+
+          case _ => fieldTypes
+        }
+
+    // make a scalar type out of it
+    val scalarFieldTypesToUse = fieldTypesToUse.map(fieldType => ftf(fieldType.spec.copy(isArray = false)).asInstanceOf[FieldType[Any]])
+    implicit val writes = new WidgetWrites[Any](scalarFieldTypesToUse.toSeq)
+    Json.toJson(widget)
   }
 
   private def canEditView(
@@ -1229,7 +1234,51 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  def getCorrelations(
+  override def getDistributionWidget(
+    fieldName: String,
+    groupFieldName: Option[String],
+    filterId: Option[BSONObjectID]
+  ) = Action.async { implicit request =>
+    for {
+      // get a filter
+      resolvedFilter <- filterId match {
+        case Some(filterId) => filterRepo.get(filterId)
+        case None => Future(None)
+      }
+
+      // get the criteria
+      criteria <- toCriteria(resolvedFilter.map(_.conditions).getOrElse(Nil))
+
+      // chart field
+      field <- fieldRepo.get(fieldName)
+
+      // get the group field
+      groupField <- groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
+
+      // generate a distribution widget
+      widgetJson <- field match {
+        case Some(field) =>
+          val widgetSpec = DistributionWidgetSpec(
+            fieldName = field.name,
+            groupFieldName = groupField.map(_.name),
+            displayOptions = MultiChartDisplayOptions(height = Some(500))
+          )
+
+          val fields = Seq(field) ++ groupField
+          widgetService(widgetSpec, repo, criteria, fields).map( widget =>
+            widget.map(widgetToJson(_, widgetSpec, fields.map( field => (field.name, field)).toMap))
+          )
+        case None =>
+          Future(None)
+      }
+    } yield
+      widgetJson match {
+        case Some(json) => Ok(json)
+        case None => BadRequest(s"Field $fieldName couldn't be found.")
+      }
+  }
+
+  override def getCorrelations(
     fieldNames: Seq[String],
     filterOrId: FilterOrId
   ) = Action.async { implicit request => {

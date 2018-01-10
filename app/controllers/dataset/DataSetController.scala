@@ -47,6 +47,12 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
+  def getDistributionWidget(
+    fieldName: String,
+    groupFieldName: Option[String],
+    filterId: Option[BSONObjectID]
+  ): Action[AnyContent]
+
   def getCumulativeCount(
     fieldName: Option[String],
     groupFieldName: Option[String],

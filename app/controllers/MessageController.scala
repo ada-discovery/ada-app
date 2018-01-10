@@ -81,14 +81,11 @@ class MessageController @Inject() (
 
   def eventStream = Action { // deadbolt.SubjectPresent()()
     implicit request =>
-//      val source = Source.fromPublisher(Streams.enumeratorToPublisher(repo.stream.map(message => ByteString.fromString(Json.stringify(Json.toJson(message)))))) // [JEventSource[JsValue]()
-//      Ok.sendEntity(HttpEntity.Streamed(source, None, Some("text/event-stream"))) //.as("text/event-stream")
-//      val someDataStream = Source.fromPublisher(Streams.enumeratorToPublisher(repo.stream.map(message => Json.stringify(Json.toJson(message)))))
-      val someDataStream = Source.single("")
-      Ok.chunked(someDataStream via EventSource.flow).as(ContentTypes.EVENT_STREAM) // as("text/event-stream")
+      val messageStream = repo.stream.map(message => Json.toJson(message))
+      Ok.chunked(messageStream via EventSource.flow).as(ContentTypes.EVENT_STREAM) // as("text/event-stream")
   }
 
-  def liveClock() = Action {
+  def liveClock = Action {
     val df: DateTimeFormatter = DateTimeFormatter.ofPattern("HH mm ss")
     val tickSource = Source.tick(0 millis, 100 millis, "TICK")
     val source: Source[String, _] = tickSource.map { (tick) =>
