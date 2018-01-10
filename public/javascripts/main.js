@@ -288,9 +288,11 @@ function registerMessageEventSource(url) {
 
     window.messageSource.addEventListener('error', function (e) {
       if (e.eventPhase == EventSource.CLOSED) {
-        console.log("Connection was closed on error: " + e);
+        console.log("Connection was closed on error: ");
+        console.log(e)
       } else {
-        console.log("Error occurred while streaming: " + e);
+        console.log("Error occurred while streaming: ");
+        console.log(e)
       }
     }, false);
     //setTimeout(function() {
