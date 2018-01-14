@@ -10,6 +10,9 @@ class ClassificationRunRouter(dataSetId: String) extends GenericRouter(routes.Cl
   val get = routes.get _ map route
   val create = routeFun(_.create)
   val delete = routes.delete _ map route
+  val exportToDataSet = routes.exportToDataSet _ map route
+  val exportCsv = routes.exportRecordsAsCsv _ map route
+  val exportJson  = routes.exportRecordsAsJson _ map route
 }
 
 final class ClassificationRunJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.ClassificationRunDispatcher, "dataSet", dataSetId) {

@@ -26,10 +26,11 @@ import play.api.mvc.{Action, Request}
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DataSpaceService, StatsService, WidgetGenerationService}
 import services.ml._
-import _root_.util.toHumanReadableCamel
 import _root_.util.FieldUtil
+import _root_.util.FieldUtil.caseClassToFlatFieldTypes
+import _root_.util.toHumanReadableCamel
+
 import models.ml.classification.Classification.ClassificationIdentity
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 
 import scala.reflect.runtime.universe.TypeTag
 import views.html.{classificationrun => view}
@@ -50,8 +51,10 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     dataSpaceService: DataSpaceService,
     val wgs: WidgetGenerationService
   ) extends ReadonlyControllerImpl[ClassificationResult, BSONObjectID]
+
     with ClassificationRunController
-    with WidgetRepoController[ClassificationResult] {
+    with WidgetRepoController[ClassificationResult]
+    with ExportableAction[ClassificationResult]  {
 
   override protected val entityNameKey = "classificationRun"
 
@@ -80,6 +83,28 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     ScatterWidgetSpec("testStats-areaUnderROC-mean", "testStats-accuracy-mean", Some("setting-mlModelId"))
   )
 
+  // export stuff
+  private val exportOrderByFieldName = "timeCreated"
+  private val csvFileName = "classification_results_" + dataSetId.replace(" ", "-") + ".csv"
+  private val jsonFileName = "classification_results_" + dataSetId.replace(" ", "-") + ".json"
+
+  private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
+  private val csvEOL = "\n"
+
+  override protected val listViewColumns = Some(Seq(
+    "setting-mlModelId",
+    "setting-filterId",
+    "setting-outputFieldName",
+    "testStats-accuracy-mean",
+    "testStats-weightedPrecision-mean",
+    "testStats-weightedRecall-mean",
+    "testStats-f1-mean",
+    "testStats-areaUnderROC-mean",
+    "testStats-areaUnderPR-mean",
+    "timeCreated"
+  ))
+
+  // data set web context with all the routers
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   protected val router = new ClassificationRunRouter(dataSetId)
@@ -113,6 +138,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   // list view and data
 
   override protected type ListViewData = (
+    String,
     String,
     Page[ClassificationResult],
     Traversable[Widget],
@@ -169,12 +195,12 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       val mlModelIdNameMap = mlModels.map(mlModel => (mlModel._id.get, mlModel.name.get)).toMap
       val filterIdNameMap = filters.map(filter => (filter._id.get, filter.name.get)).toMap
 
-      (dataSetName + " Classification Run", page, widgets.flatten, fieldNameLabelMap, allClassificationRunFields, mlModelIdNameMap, filterIdNameMap, tree)
+      (dataSetName + " Classification Run", dataSetName, page, widgets.flatten, fieldNameLabelMap, allClassificationRunFields, mlModelIdNameMap, filterIdNameMap, tree)
     }
   }
 
   override protected[controllers] def listView = { implicit ctx =>
-    (view.list(_, _, _, _, _, _, _, _)).tupled
+    (view.list(_, _, _, _, _, _, _, _, _)).tupled
   }
 
   // run
@@ -458,4 +484,128 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
         InternalServerError(i.getMessage)
     }
   }
+
+  private val fields = caseClassToFlatFieldTypes[ClassificationResult]("-", Set("_id"))
+
+  private case class ClassificationResultExtra(dataSetId: String, mlModelName: Option[String], filterName: Option[String])
+  private implicit val classificationResultExtraFormat = Json.format[ClassificationResultExtra]
+
+  private val extraFields = caseClassToFlatFieldTypes[ClassificationResultExtra]()
+
+  override def exportToDataSet(
+    targetDataSetId: Option[String],
+    targetDataSetName: Option[String]
+  ) = Action.async { implicit request =>
+    val newDataSetId = targetDataSetId.map(_.replace(' ', '_')).getOrElse(dataSetId + "_classification")
+
+    for {
+      // collect all the results
+      allResults <- classificationResultsExtended
+
+      // data set name
+      dataSetName <- dsa.dataSetName
+
+      // new data set name
+      newDataSetName = targetDataSetName.getOrElse(dataSetName + " Classification")
+
+      // register target dsa
+      targetDsa <-
+        dataSetService.register(
+          dsa,
+          newDataSetId,
+          newDataSetName,
+          StorageType.Mongo,
+          "timeCreated"
+        )
+
+      // update the dictionary
+      _ <- {
+        val newFields = (fields ++ extraFields).map { case (name, fieldTypeSpec) =>
+          val roundedFieldSpec =
+            if (fieldTypeSpec.fieldType == FieldTypeId.Double)
+              fieldTypeSpec.copy(displayDecimalPlaces = Some(3))
+            else
+              fieldTypeSpec
+
+          val stringEnums = roundedFieldSpec.enumValues.map(_.map { case (from, to) => (from.toString, to)})
+          val label = toHumanReadableCamel(name.replaceAllLiterally("-", " ").replaceAllLiterally("Stats", ""))
+          Field(name, Some(label), roundedFieldSpec.fieldType, roundedFieldSpec.isArray, stringEnums, roundedFieldSpec.displayDecimalPlaces)
+        }
+        dataSetService.updateDictionaryFields(newDataSetId, newFields, false, true)
+      }
+
+      // delete the old results (if any)
+      _ <- targetDsa.dataSetRepo.deleteAll
+
+      // save the results
+      _ <- targetDsa.dataSetRepo.save(
+        allResults.map { case (result, extraResult) =>
+          val resultJson = Json.toJson(result).as[JsObject]
+          val extraResultJson = Json.toJson(extraResult).as[JsObject]
+          resultJson ++ extraResultJson
+        }
+      )
+    } yield
+      Redirect(router.plainList).flashing("success" -> s"Classification results successfully exported to $newDataSetName.")
+  }
+
+  private def classificationResultsExtended: Future[Traversable[(ClassificationResult, ClassificationResultExtra)]] = {
+    for {
+      // get the results
+      results <- repo.find()
+
+      // add some extra stuff for easier reference (model and filter name)
+      resultsWithExtra <- Future.sequence(
+        results.map { result =>
+          val classificationFuture = classificationRepo.get(result.setting.mlModelId)
+          val filterFuture = result.setting.filterId.map(dsa.filterRepo.get).getOrElse(Future(None))
+
+          for {
+            mlModel <- classificationFuture
+            filter <- filterFuture
+          } yield
+            (result, ClassificationResultExtra(dsa.dataSetId, mlModel.flatMap(_.name), filter.flatMap(_.name)))
+        }
+      )
+    } yield
+      resultsWithExtra
+  }
+
+  // exporting
+
+  override def exportRecordsAsCsv(
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) = {
+    println(tableColumnsOnly)
+    val eolToUse = eol match {
+      case Some(eol) => if (eol.trim.nonEmpty) eol.trim else csvEOL
+      case None => csvEOL
+    }
+    val allFieldNames = fields.map(_._1).toSeq
+    exportToCsv(
+      csvFileName,
+      delimiter,
+      eolToUse,
+      if (replaceEolWithSpace) csvCharReplacements else Nil)(
+      Some(exportOrderByFieldName),
+      filter,
+      if (tableColumnsOnly) listViewColumns.get else Nil,
+      if (tableColumnsOnly) listViewColumns else Some(allFieldNames)
+    )
+  }
+
+  override def exportRecordsAsJson(
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) =
+    exportToJson(
+      jsonFileName)(
+      Some(exportOrderByFieldName),
+      filter,
+      if (tableColumnsOnly) listViewColumns.get else Nil
+    )
 }

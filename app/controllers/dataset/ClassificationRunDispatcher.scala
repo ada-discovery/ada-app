@@ -7,6 +7,7 @@ import models.FilterCondition
 import models.ml.ClassificationSetting
 import reactivemongo.bson.BSONObjectID
 import models.ml.ClassificationEvalMetric
+import play.api.mvc.{Action, AnyContent}
 import util.SecurityUtil.createDataSetPermission
 
 class ClassificationRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf: ClassificationRunControllerFactory)
@@ -57,4 +58,22 @@ class ClassificationRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf
   ) = dispatch(_.selectFeaturesAsAnovaChiSquare(inputFieldNames, outputFieldName, filterId, featuresToSelectNum))
 
   override def delete(id: BSONObjectID) = dispatch(_.delete(id))
+
+  override def exportToDataSet(
+    targetDataSetId: Option[String],
+    targetDataSetName: Option[String]
+  ) = dispatch(_.exportToDataSet(targetDataSetId, targetDataSetName))
+
+  override def exportRecordsAsCsv(
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) = dispatch(_.exportRecordsAsCsv(delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly))
+
+  def exportRecordsAsJson(
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) = dispatch(_.exportRecordsAsJson(filter, tableColumnsOnly))
 }

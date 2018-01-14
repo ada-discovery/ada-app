@@ -1,4 +1,4 @@
-package runnables
+package runnables.ppmi
 
 import javax.inject.Inject
 
@@ -10,6 +10,7 @@ import models.{Field, FieldTypeId, StorageType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json._
+import runnables.FutureRunnable
 import services.DataSetService
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -50,6 +51,9 @@ class CreatePPMIUPSITData @Inject()(
 
   private val idName = JsObjectIdentity.name
   private val ftf = FieldTypeHelper.fieldTypeFactory()
+
+  private val newGenderFieldType = ftf(newGenderField.fieldTypeSpec).asValueOf[Int]
+  private val newFamilyHistoryFieldType = ftf(newFamilyHistoryField.fieldTypeSpec).asValueOf[Boolean]
 
   override def runAsFuture = {
     val dsa = dsaf(dataSetId).get
@@ -105,9 +109,6 @@ class CreatePPMIUPSITData @Inject()(
           }
 
           val uniqueValues = newValues.groupBy(identity).map(_._1)
-
-          val newGenderFieldType = ftf(newGenderField.fieldTypeSpec).asValueOf[Int]
-          val newFamilyHistoryFieldType = ftf(newFamilyHistoryField.fieldTypeSpec).asValueOf[Boolean]
 
           uniqueValues.map { values =>
             val fieldNameValues = fieldDistinctValues.map(_._1).zip(values)

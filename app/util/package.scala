@@ -50,7 +50,7 @@ package object util {
    * @return String converted to camel case.
    */
   def toHumanReadableCamel(s: String): String = {
-    StringUtils.splitByCharacterTypeCamelCase(s.replaceAll("[_|\\.]", " ")).map(
+    StringUtils.splitByCharacterTypeCamelCase(s.replaceAll("[_|\\.]", " ")).filter(!_.equals(" ")).map(
       _.toLowerCase.capitalize
     ).mkString(" ")
 //    val split = s.split("_")

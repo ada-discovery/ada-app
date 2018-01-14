@@ -1,21 +1,21 @@
-package runnables
+package runnables.ppmi
 
 import javax.inject.Inject
 
-import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
-import play.api.Logger
+import _root_.util.GroupMapList
 import dataaccess.Criterion._
 import dataaccess.{FieldType, FieldTypeHelper}
+import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import models.StorageType
 import persistence.dataset.DataSetAccessorFactory
+import play.api.Logger
 import play.api.libs.json._
-import reactivemongo.play.json.BSONFormats._
+import runnables.FutureRunnable
 import services.DataSetService
-import _root_.util.GroupMapList
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class CreatePPMITestData @Inject()(
+class CreatePPMIClinicalDataSet @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService
   ) extends FutureRunnable {

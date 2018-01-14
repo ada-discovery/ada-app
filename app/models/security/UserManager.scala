@@ -25,14 +25,13 @@ trait UserManager {
     * @param password Password which should match the password associated to the mail.
     * @return None, if password is wrong or not associated mail was found. Corresponding Account otherwise.
     */
-  def authenticate(id: String, password: String): Future[Boolean] = {
+  def authenticate(id: String, password: String): Future[Boolean] =
     findByEmail(id).map(userOp =>
       userOp match {
         case Some(usr) => true //(usr.password == password)
         case None => false
       }
     )
-  }
 
   def updateUser(user: User): Future[Boolean]
 
@@ -128,9 +127,10 @@ private class UserManagerImpl @Inject()(
     val dn = "uid=" + id + ",cn=users," + ldapSettings.dit
 
     // TODO: is exists needed?
-    val exists = ldapUserService.getAll.find(_.uid == id).nonEmpty
-    val auth = exists && connector.canBind(dn, password)
-    Future(auth)
+    Future {
+      val exists = ldapUserService.getAll.find(_.uid == id).nonEmpty
+      exists && connector.canBind(dn, password)
+    }
   }
 
   private def addUserIfNotPresent(user: User) =

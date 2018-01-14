@@ -24,11 +24,14 @@ import play.api.data.Forms._
 import play.api.libs.json._
 import play.api.mvc.{Action, Request}
 import reactivemongo.bson.BSONObjectID
-import services.{DataSpaceService, WidgetGenerationService}
+import services.{DataSetService, DataSpaceService, WidgetGenerationService}
 import services.ml._
 import _root_.util.toHumanReadableCamel
 import _root_.util.FieldUtil
 import models.ml.regression.Regression.RegressionIdentity
+import _root_.util.FieldUtil
+import _root_.util.FieldUtil.caseClassToFlatFieldTypes
+import _root_.util.toHumanReadableCamel
 
 import scala.reflect.runtime.universe.TypeTag
 import views.html.{regressionrun => view}
@@ -44,11 +47,14 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
     dsaf: DataSetAccessorFactory,
     regressionRepo: RegressionRepo,
     mlService: MachineLearningService,
+    dataSetService: DataSetService,
     dataSpaceService: DataSpaceService,
     val wgs: WidgetGenerationService
   ) extends ReadonlyControllerImpl[RegressionResult, BSONObjectID]
+
     with RegressionRunController
-    with WidgetRepoController[RegressionResult] {
+    with WidgetRepoController[RegressionResult]
+    with ExportableAction[RegressionResult]  {
 
   override protected val entityNameKey = "regressionRun"
 
@@ -75,6 +81,26 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
     ScatterWidgetSpec("testStats-r2-mean", "testStats-mse-mean", Some("setting-mlModelId"))
   )
 
+  // export stuff
+  private val exportOrderByFieldName = "timeCreated"
+  private val csvFileName = "regression_results_" + dataSetId.replace(" ", "-") + ".csv"
+  private val jsonFileName = "regression_results_" + dataSetId.replace(" ", "-") + ".json"
+
+  private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
+  private val csvEOL = "\n"
+
+  override protected val listViewColumns = Some(Seq(
+    "setting-mlModelId",
+    "setting-filterId",
+    "setting-outputFieldName",
+    "testStats-mae-mean",
+    "testStats-mse-mean",
+    "testStats-rmse-mean",
+    "testStats-r2-mean",
+    "timeCreated"
+  ))
+
+  // data set web context with all the routers
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
   protected val router = new RegressionRunRouter(dataSetId)
@@ -108,6 +134,7 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
   // list view and data
 
   override protected type ListViewData = (
+    String,
     String,
     Page[RegressionResult],
     Traversable[Widget],
@@ -164,12 +191,12 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
       val mlModelIdNameMap = mlModels.map(mlModel => (mlModel._id.get, mlModel.name.get)).toMap
       val filterIdNameMap = filters.map(filter => (filter._id.get, filter.name.get)).toMap
 
-      (dataSetName + " Regression Run", page, widgets.flatten, fieldNameLabelMap, allRegressionRunFields, mlModelIdNameMap, filterIdNameMap, tree)
+      (dataSetName + " Regression Run", dataSetName, page, widgets.flatten, fieldNameLabelMap, allRegressionRunFields, mlModelIdNameMap, filterIdNameMap, tree)
     }
   }
 
   override protected[controllers] def listView = { implicit ctx =>
-    (view.list(_, _, _, _, _, _, _, _)).tupled
+    (view.list(_, _, _, _, _, _, _, _, _)).tupled
   }
 
   // run
@@ -355,77 +382,127 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
     }
   }
 
-//  override def regress(
-//                        mlModelId: BSONObjectID,
-//                        inputFieldNames: Seq[String],
-//                        outputFieldName: String,
-//                        filterId: Option[BSONObjectID],
-//                        featuresNormalizationType: Option[VectorTransformType.Value],
-//                        pcaDims: Option[Int],
-//                        trainingTestingSplit: Option[Double],
-//                        repetitions: Option[Int],
-//                        crossValidationFolds: Option[Int],
-//                        crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
-//                      ) = Action.async { implicit request =>
-//    val learningSetting = LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, None, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
-//
-//    for {
-//      result <- runMLAux(
-//        regressionRepo.get(mlModelId),
-//        mlService.regress)(
-//        inputFieldNames, outputFieldName, filterId, learningSetting
-//      )
-//    } yield
-//      result match {
-//        case Some(result) =>
-//          logger.info("Regression finished with the following results: " + Json.stringify(result))
-//          Ok(result)
-//        case None =>
-//          BadRequest(s"ML regression model with id ${mlModelId.stringify} not found.")
-//      }
-//  }
-//
-//  private def runMLAux[M](
-//                           getModel: => Future[Option[M]],
-//                           runML: (Traversable[JsObject], Seq[(String, FieldTypeSpec)], String, M, LearningSetting[RegressionEvalMetric.Value]) => Future[Traversable[Performance]])(
-//                           inputFieldNames: Seq[String],
-//                           outputFieldName: String,
-//                           filterId: Option[BSONObjectID],
-//                           learningSetting: LearningSetting[RegressionEvalMetric.Value]
-//                         ): Future[Option[JsArray]] = {
-//    val explFieldNamesToLoads =
-//      if (inputFieldNames.nonEmpty)
-//        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
-//      else
-//        Nil
-//
-//    val criteriaFuture = loadCriteria(filterId)
-//
-//    for {
-//      mlModel <- getModel
-//
-//      criteria <- criteriaFuture
-//
-//      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
-//
-//      evalRates <- mlModel.map { mlModel =>
-//        val fieldNameAndSpecs = fields.map(field => (field.name, field.fieldTypeSpec))
-//        runML(jsons, fieldNameAndSpecs, outputFieldName, mlModel, learningSetting)
-//      }.getOrElse(
-//        Future(Nil)
-//      )
-//    } yield
-//      mlModel.map { mlModel =>
-//        val evalJsons = evalRates.toSeq.sortBy(_.evalMetric.id).map { performance =>
-//          val results = performance.trainingTestResults
-//          Json.obj(
-//            "metricName" -> toHumanReadableCamel(performance.evalMetric.toString),
-//            "trainEvalRate" -> results.map(_._1).sum / results.size, // mean
-//            "testEvalRate" -> results.map(_._2).sum / results.size   // mean
-//          )
-//        }
-//
-//        JsArray(evalJsons)
-//      }
-//  }
+  private val fields = caseClassToFlatFieldTypes[RegressionResult]("-", Set("_id"))
+
+  private case class RegressionResultExtra(dataSetId: String, mlModelName: Option[String], filterName: Option[String])
+  private implicit val regressionResultExtraFormat = Json.format[RegressionResultExtra]
+
+  private val extraFields = caseClassToFlatFieldTypes[RegressionResultExtra]()
+
+  override def exportToDataSet(
+    targetDataSetId: Option[String],
+    targetDataSetName: Option[String]
+  ) = Action.async { implicit request =>
+    val newDataSetId = targetDataSetId.map(_.replace(' ', '_')).getOrElse(dataSetId + "_regression")
+
+    for {
+    // collect all the results
+      allResults <- regressionResultsExtended
+
+      // data set name
+      dataSetName <- dsa.dataSetName
+
+      // new data set name
+      newDataSetName = targetDataSetName.getOrElse(dataSetName + " Regression")
+
+      // register target dsa
+      targetDsa <-
+      dataSetService.register(
+        dsa,
+        newDataSetId,
+        newDataSetName,
+        StorageType.Mongo,
+        "timeCreated"
+      )
+
+      // update the dictionary
+      _ <- {
+        val newFields = (fields ++ extraFields).map { case (name, fieldTypeSpec) =>
+          val roundedFieldSpec =
+            if (fieldTypeSpec.fieldType == FieldTypeId.Double)
+              fieldTypeSpec.copy(displayDecimalPlaces = Some(3))
+            else
+              fieldTypeSpec
+
+          val stringEnums = roundedFieldSpec.enumValues.map(_.map { case (from, to) => (from.toString, to)})
+          val label = toHumanReadableCamel(name.replaceAllLiterally("-", " ").replaceAllLiterally("Stats", ""))
+          Field(name, Some(label), roundedFieldSpec.fieldType, roundedFieldSpec.isArray, stringEnums, roundedFieldSpec.displayDecimalPlaces)
+        }
+        dataSetService.updateDictionaryFields(newDataSetId, newFields, false, true)
+      }
+
+      // delete the old results (if any)
+      _ <- targetDsa.dataSetRepo.deleteAll
+
+      // save the results
+      _ <- targetDsa.dataSetRepo.save(
+        allResults.map { case (result, extraResult) =>
+          val resultJson = Json.toJson(result).as[JsObject]
+          val extraResultJson = Json.toJson(extraResult).as[JsObject]
+          resultJson ++ extraResultJson
+        }
+      )
+    } yield
+      Redirect(router.plainList).flashing("success" -> s"Regression results successfully exported to $newDataSetName.")
+  }
+
+  private def regressionResultsExtended: Future[Traversable[(RegressionResult, RegressionResultExtra)]] = {
+    for {
+    // get the results
+      results <- repo.find()
+
+      // add some extra stuff for easier reference (model and filter name)
+      resultsWithExtra <- Future.sequence(
+        results.map { result =>
+          val regressionFuture = regressionRepo.get(result.setting.mlModelId)
+          val filterFuture = result.setting.filterId.map(dsa.filterRepo.get).getOrElse(Future(None))
+
+          for {
+            mlModel <- regressionFuture
+            filter <- filterFuture
+          } yield
+            (result, RegressionResultExtra(dsa.dataSetId, mlModel.flatMap(_.name), filter.flatMap(_.name)))
+        }
+      )
+    } yield
+      resultsWithExtra
+  }
+
+  // exporting
+
+  override def exportRecordsAsCsv(
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) = {
+    println(tableColumnsOnly)
+    val eolToUse = eol match {
+      case Some(eol) => if (eol.trim.nonEmpty) eol.trim else csvEOL
+      case None => csvEOL
+    }
+    val allFieldNames = fields.map(_._1).toSeq
+    exportToCsv(
+      csvFileName,
+      delimiter,
+      eolToUse,
+      if (replaceEolWithSpace) csvCharReplacements else Nil)(
+      Some(exportOrderByFieldName),
+      filter,
+      if (tableColumnsOnly) listViewColumns.get else Nil,
+      if (tableColumnsOnly) listViewColumns else Some(allFieldNames)
+    )
+  }
+
+  override def exportRecordsAsJson(
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) =
+    exportToJson(
+      jsonFileName)(
+      Some(exportOrderByFieldName),
+      filter,
+      if (tableColumnsOnly) listViewColumns.get else Nil
+    )
 }

@@ -40,4 +40,22 @@ class RegressionRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf: Re
   ) = dispatch(_.regress(setting, saveResults))
 
   override def delete(id: BSONObjectID) = dispatch(_.delete(id))
+
+  override def exportToDataSet(
+    targetDataSetId: Option[String],
+    targetDataSetName: Option[String]
+  ) = dispatch(_.exportToDataSet(targetDataSetId, targetDataSetName))
+
+  override def exportRecordsAsCsv(
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) = dispatch(_.exportRecordsAsCsv(delimiter, replaceEolWithSpace, eol, filter, tableColumnsOnly))
+
+  def exportRecordsAsJson(
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ) = dispatch(_.exportRecordsAsJson(filter, tableColumnsOnly))
 }

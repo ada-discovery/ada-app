@@ -1306,7 +1306,7 @@ class DataSetServiceImpl @Inject()(
   ): Future[Unit] = {
     val newFields = fieldNameAndTypes.map { case (fieldName, fieldType) =>
       val stringEnums = fieldType.enumValues.map(_.map { case (from, to) => (from.toString, to)})
-      Field(fieldName, None, fieldType.fieldType, fieldType.isArray, stringEnums)
+      Field(fieldName, None, fieldType.fieldType, fieldType.isArray, stringEnums, fieldType.displayDecimalPlaces)
     }
     updateDictionaryFields(fieldRepo, newFields, deleteAndSave, deleteNonReferenced)
   }

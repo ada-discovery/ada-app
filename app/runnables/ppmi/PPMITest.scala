@@ -1,7 +1,8 @@
-package runnables
+package runnables.ppmi
+
+import java.io._
 
 import scala.io.Source
-import java.io._
 
 object PPMITest extends App {
   val sourceFilename = "/home/peter/Data/PPMI.FINAL.QC.FILTERED.MAF0.005.EXONSPLICING.NOTSYNONYMOUS.vcf.istats"

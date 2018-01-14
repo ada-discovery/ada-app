@@ -1,14 +1,10 @@
-package runnables
+package runnables.ppmi
 
 import javax.inject.Inject
 
 import dataaccess.{FieldTypeHelper, FieldTypeInferrerFactory}
-import models.DataSetMetaInfo
-import runnables.DataSetId._
+import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
-
-import scala.concurrent.Await.result
-import scala.concurrent.duration._
 
 class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends FutureRunnable {
 

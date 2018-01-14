@@ -27,7 +27,6 @@ trait LdapConnector {
   def canBind(userDN: String, password: String): Boolean
 }
 
-
 @Singleton
 class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, settings: LdapSettings) extends LdapConnector {
   // interface for use
@@ -41,7 +40,7 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
   private def setupInterface(): Option[LDAPInterface] = {
     val interface = settings.mode match{
       case "local" => Some(createServer)
-      case "remote" => createConnection()
+      case "remote" => createConnectionPool()
       case _ => None
     }
     // hook interface in lifecycle for proper cleanup
@@ -115,55 +114,59 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * @param pw custom password; loaded from config if not defined.
     * @return LDAPConnection object  with specified credentials. None, if no connection could be established.
     */
-  protected def createConnection(bind: String = settings.bindDN, pw: String = settings.bindPassword): Option[LDAPConnectionPool] = {
+  protected def createConnectionPool(
+    bind: String = settings.bindDN,
+    pw: String = settings.bindPassword
+  ): Option[LDAPConnectionPool] = {
+    val (connection, processor) = createConnection
+
+    val result: ResultCode = try {
+      connection.bind(bind, pw).getResultCode
+    } catch {
+      case _: Throwable => ResultCode.NO_SUCH_OBJECT
+    }
+
+    if (result == ResultCode.SUCCESS) {
+      Logger.info(s"${settings.encryption} LDAP connection to " + settings.host + ":" + settings.port + " established")
+      val connectionPool = processor.map(
+        new LDAPConnectionPool(connection, 1, 10, _)
+      ).getOrElse(
+        new LDAPConnectionPool(connection, 1, 10)
+      )
+      Some(connectionPool)
+    } else {
+      Logger.warn("Failed to establish connection to " + settings.host + ":" + settings.port)
+      None
+    }
+  }
+
+  /**
+    * Creates a connection to an existing LDAP server instance.
+    * @return LDAPConnection object
+    */
+  protected def createConnection: (LDAPConnection, Option[PostConnectProcessor]) = {
     val sslUtil: SSLUtil = setupSSLUtil
-    settings.encryption match{
-      case "ssl" => {
+
+    settings.encryption match {
+      case "ssl" =>
         // connect to server with ssl encryption
         val sslSocketFactory: SSLSocketFactory = sslUtil.createSSLSocketFactory()
-        val connection: LDAPConnection = new LDAPConnection(sslSocketFactory, settings.host, settings.port)
-        val result: ResultCode = try{
-          connection.bind(bind, pw).getResultCode
-        }catch{case _: Throwable => ResultCode.NO_SUCH_OBJECT}
-        if(result == ResultCode.SUCCESS){
-          Logger.info("SSL-secured LDAP connection to " + settings.host + ":" + settings.port + " established")
-          Some(new LDAPConnectionPool(connection, 1, 10))
-        }else{
-          Logger.warn("Failed to establish connection to " + settings.host + ":" + settings.port)
-          None
-        }
-      }
-      case "starttls" => {
+        val connection = new LDAPConnection(sslSocketFactory, settings.host, settings.port)
+        (connection, None)
+
+      case "starttls" =>
         // connect to server with starttls connection
         val connection: LDAPConnection = new LDAPConnection(settings.host, settings.port)
-        val result: ResultCode = try{
-          connection.bind(bind, pw).getResultCode
-        }catch{case _: Throwable => ResultCode.NO_SUCH_OBJECT}
+
         val sslContext: SSLContext = sslUtil.createSSLContext()
         connection.processExtendedOperation(new StartTLSExtendedRequest(sslContext))
-        val processor: StartTLSPostConnectProcessor = new StartTLSPostConnectProcessor(sslContext)
-        if(result == ResultCode.SUCCESS){
-          Logger.info("StartTLS-secured LDAP connection to " + settings.host + ":" + settings.port + " established")
-          Some(new LDAPConnectionPool(connection, 1, 10, processor))
-        }else{
-          Logger.warn("Failed to establish connection to " + settings.host + ":" + settings.port)
-          None
-        }
-      }
-      case _ =>{
+        val processor = new StartTLSPostConnectProcessor(sslContext)
+        (connection, Some(processor))
+
+      case _ =>
         // create unsecured connection
-        val connection: LDAPConnection = new LDAPConnection(settings.host, settings.port)
-        val result: ResultCode = try{
-          connection.bind(bind, pw).getResultCode
-        }catch{case _: Throwable => ResultCode.NO_SUCH_OBJECT}
-        if(result == ResultCode.SUCCESS){
-          Logger.info("Unsecured LDAP connection to " + settings.host + ":" + settings.port + " established")
-          Some(new LDAPConnectionPool(connection, 1, 10))
-        }else{
-          Logger.warn("Failed to establish connection to " + settings.host + ":" + settings.port)
-          None
-        }
-      }
+        val connection = new LDAPConnection(settings.host, settings.port)
+        (connection, None)
     }
   }
 
@@ -198,20 +201,20 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
 
   /**
     * Establish connection and check if bind possible.
-    * Close connection afterwards.
     * Useful for authentification.
     * @param userDN DN for binding.
     * @param password password for binding.
     * @return true, if bind successful.
     */
   def canBind(userDN: String, password: String): Boolean ={
-    val conn: Option[LDAPConnectionPool] = createConnection(userDN, password)
-    if(conn.isDefined){
-      conn.get.close()
-      true
-    }else{
-      false
+    val (connection, _) = createConnection
+
+    val result: ResultCode = try {
+      connection.bind(userDN, password).getResultCode
+    } catch {
+      case _: Throwable => ResultCode.NO_SUCH_OBJECT
     }
+    result == ResultCode.SUCCESS
   }
 
   /**

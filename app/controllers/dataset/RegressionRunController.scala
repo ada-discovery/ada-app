@@ -1,6 +1,7 @@
 package controllers.dataset
 
 import controllers.core.ReadonlyController
+import models.FilterCondition
 import models.ml.RegressionSetting
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
@@ -15,4 +16,22 @@ trait RegressionRunController extends ReadonlyController[BSONObjectID]{
   ): Action[AnyContent]
 
   def delete(id: BSONObjectID): Action[AnyContent]
+
+  def exportToDataSet(
+    targetDataSetId: Option[String],
+    targetDataSetName: Option[String]
+  ): Action[AnyContent]
+
+  def exportRecordsAsCsv(
+    delimiter: String,
+    replaceEolWithSpace: Boolean,
+    eol: Option[String],
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ): Action[AnyContent]
+
+  def exportRecordsAsJson(
+    filter: Seq[FilterCondition],
+    tableColumnsOnly: Boolean
+  ): Action[AnyContent]
 }

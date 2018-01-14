@@ -18,6 +18,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.reflect.runtime.universe.typeOf
 
+@Deprecated
 class ExportClassificationResultsToDataSet @Inject() (
     dsaf: DataSetAccessorFactory,
     dataSetService: DataSetService,
