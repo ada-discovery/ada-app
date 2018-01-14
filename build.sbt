@@ -67,7 +67,7 @@ libraryDependencies ++= Seq(
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
   "com.typesafe.play" %% "play-mailer" % "4.0.0",
   "org.apache.ignite" % "ignite-spark" % "1.6.0",
-  "com.banda" % "incal" % "0.1.6" exclude("org.springframework", "spring-context") exclude("org.springframework", "spring-test") exclude("org.springframework", "spring-web") exclude("org.springframework", "spring-webmvc"),
+  "com.banda" % "incal" % "0.1.6" exclude("org.springframework", "spring-context") exclude("org.springframework", "spring-test") exclude("org.springframework", "spring-web") exclude("org.springframework", "spring-webmvc")
 //  "org.scalatra.scalate" %% "scalate-core" % "1.8.0"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12" ))
 

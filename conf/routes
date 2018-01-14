@@ -211,6 +211,9 @@ POST        /studies/classificationRuns/:id/delete                              
 POST        /studies/classify                                                       controllers.dataset.ClassificationRunDispatcher.classify(setting: models.ml.ClassificationSetting, saveResults: Boolean, saveBinCurves: Boolean)
 POST        /studies/selectFeaturesAsChiSquare                                      controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int, discretizerBucketsNum: Int)
 POST        /studies/selectFeaturesAsAnovaChiSquare                                 controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsAnovaChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int)
+GET         /studies/classificationRuns/exportToDataSet                             controllers.dataset.ClassificationRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
+GET         /studies/classificationRuns/exportAsCsv                                 controllers.dataset.ClassificationRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
+GET         /studies/classificationRuns/exportAsJson                                controllers.dataset.ClassificationRunDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 
 # Regression Run
 GET         /studies/regressionRuns                                                 controllers.dataset.RegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[models.FilterCondition] ?= Nil)
@@ -218,6 +221,9 @@ GET         /studies/regressionRuns/get/:id                                     
 GET         /studies/regressionRuns/new                                             controllers.dataset.RegressionRunDispatcher.create
 POST        /studies/regressionRuns/:id/delete                                      controllers.dataset.RegressionRunDispatcher.delete(id: BSONObjectID)
 POST        /studies/regress                                                        controllers.dataset.RegressionRunDispatcher.regress(setting: models.ml.RegressionSetting, saveResults: Boolean)
+GET         /studies/regressionRuns/exportToDataSet                                 controllers.dataset.RegressionRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
+GET         /studies/regressionRuns/exportAsCsv                                     controllers.dataset.RegressionRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
+GET         /studies/regressionRuns/exportAsJson                                    controllers.dataset.RegressionRunDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 
 # ML Classification
 GET         /ml/classification                                                      controllers.ml.ClassificationController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[models.FilterCondition] ?= Nil)
