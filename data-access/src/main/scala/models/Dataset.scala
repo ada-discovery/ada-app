@@ -261,10 +261,6 @@ case class Category(
 
 // JSON converters and identities
 
-object WidgetSpec {
-
-}
-
 object DataSetFormattersAndIds {
   implicit val enumTypeFormat = EnumFormat.enumFormat(FieldTypeId)
   implicit val categoryFormat: Format[Category] = (
@@ -372,7 +368,7 @@ object DataSetFormattersAndIds {
 
   implicit object JsObjectIdentity extends BSONObjectIdentity[JsObject] {
     override def of(json: JsObject): Option[BSONObjectID] =
-      (json \ name).asOpt[BSONObjectID]
+      (json \ name).toOption.flatMap(_.asOpt[BSONObjectID])
 
     override protected def set(json: JsObject, id: Option[BSONObjectID]): JsObject =
       json.+(name, Json.toJson(id))

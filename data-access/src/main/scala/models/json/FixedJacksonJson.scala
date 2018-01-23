@@ -1,4 +1,4 @@
-package util
+package models.json
 
 import java.io.InputStream
 
@@ -22,16 +22,17 @@ object FixedPlayJsonModule extends SimpleModule("FixedPlayJson", Version.unknown
   }
 }
 
-// -- Serializers.
-
-private[jackson] object JsValueSerializer extends JsonSerializer[JsValue] {
+/**
+  * The only purpose of class is to fix a situation where BigDecimal with more then 10 floating points (E-10) is attempted to be parsed as BigInteger, which fails
+  */
+private object JsValueSerializer extends JsonSerializer[JsValue] {
   import java.math.{ BigDecimal => JBigDec, BigInteger }
   import com.fasterxml.jackson.databind.node.{ BigIntegerNode, DecimalNode }
 
   // Maximum magnitude of BigDecimal to write out as a plain string
   val MaxPlain: BigDecimal = 1e20
   // Minimum magnitude of BigDecimal to write out as a plain string
-  val MinPlain: BigDecimal = 1e-20
+  val MinPlain: BigDecimal = 1e-10
 
   override def serialize(value: JsValue, json: JsonGenerator, provider: SerializerProvider) {
     value match {
@@ -46,8 +47,10 @@ private[jackson] object JsValueSerializer extends JsonSerializer[JsValue] {
         val stripped = v.bigDecimal.stripTrailingZeros
         val raw = if (shouldWritePlain) stripped.toPlainString else stripped.toString
 
-        if (raw contains ".") json.writeTree(new DecimalNode(new JBigDec(raw)))
-        else json.writeTree(new BigIntegerNode(new BigInteger(raw)))
+        if ((raw contains ".") || (raw contains "E-"))
+          json.writeTree(new DecimalNode(new JBigDec(raw)))
+        else
+          json.writeTree(new BigIntegerNode(new BigInteger(raw)))
       }
       case JsString(v) => json.writeString(v)
       case JsBoolean(v) => json.writeBoolean(v)
@@ -71,30 +74,30 @@ private[jackson] object JsValueSerializer extends JsonSerializer[JsValue] {
   }
 }
 
-private[jackson] sealed trait DeserializerContext {
+private sealed trait DeserializerContext {
   def addValue(value: JsValue): DeserializerContext
 }
 
-private[jackson] case class ReadingList(content: ListBuffer[JsValue]) extends DeserializerContext {
+private case class ReadingList(content: ListBuffer[JsValue]) extends DeserializerContext {
   override def addValue(value: JsValue): DeserializerContext = {
     ReadingList(content += value)
   }
 }
 
 // Context for reading an Object
-private[jackson] case class KeyRead(content: ListBuffer[(String, JsValue)], fieldName: String) extends DeserializerContext {
+private case class KeyRead(content: ListBuffer[(String, JsValue)], fieldName: String) extends DeserializerContext {
   def addValue(value: JsValue): DeserializerContext = ReadingMap(content += (fieldName -> value))
 }
 
 // Context for reading one item of an Object (we already red fieldName)
-private[jackson] case class ReadingMap(content: ListBuffer[(String, JsValue)]) extends DeserializerContext {
+private case class ReadingMap(content: ListBuffer[(String, JsValue)]) extends DeserializerContext {
 
   def setField(fieldName: String) = KeyRead(content, fieldName)
   def addValue(value: JsValue): DeserializerContext = throw new Exception("Cannot add a value on an object without a key, malformed JSON object!")
 
 }
 
-private[jackson] class JsValueDeserializer(factory: TypeFactory, klass: Class[_]) extends JsonDeserializer[Object] {
+private class JsValueDeserializer(factory: TypeFactory, klass: Class[_]) extends JsonDeserializer[Object] {
 
   override def isCachable: Boolean = true
 
@@ -174,7 +177,7 @@ private[jackson] class JsValueDeserializer(factory: TypeFactory, klass: Class[_]
   override def getNullValue = JsNull
 }
 
-private[jackson] class PlayDeserializers extends Deserializers.Base {
+private class PlayDeserializers extends Deserializers.Base {
   override def findBeanDeserializer(javaType: JavaType, config: DeserializationConfig, beanDesc: BeanDescription) = {
     val klass = javaType.getRawClass
     if (classOf[JsValue].isAssignableFrom(klass) || klass == JsNull.getClass) {
@@ -184,7 +187,7 @@ private[jackson] class PlayDeserializers extends Deserializers.Base {
 
 }
 
-private[jackson] class PlaySerializers extends Serializers.Base {
+private class PlaySerializers extends Serializers.Base {
   override def findSerializer(config: SerializationConfig, javaType: JavaType, beanDesc: BeanDescription) = {
     val ser: Object = if (classOf[JsValue].isAssignableFrom(beanDesc.getBeanClass)) {
       JsValueSerializer
@@ -195,7 +198,7 @@ private[jackson] class PlaySerializers extends Serializers.Base {
   }
 }
 
-private[json] object JacksonJson {
+object FixedJacksonJson {
 
   private val mapper = (new ObjectMapper).registerModule(FixedPlayJsonModule)
 

@@ -26,8 +26,7 @@ object EnumFormat  {
   }
 }
 
-
-object OrdinalSortedEnumFormat  {
+object OrdinalEnumFormat  {
 
   private def enumReads[E <: Enumeration](
     idValueMap: Map[Int, E#Value]
@@ -50,9 +49,16 @@ object OrdinalSortedEnumFormat  {
     def writes(v: E#Value): JsValue = JsNumber(valueIdMap.get(v).get)
   }
 
+  implicit def enumFormat[E <: Enumeration](valueIdMap: Map[E#Value, Int]): Format[E#Value] = {
+    Format(enumReads(valueIdMap.map(_.swap)), enumWrites(valueIdMap))
+  }
+}
+
+object OrdinalSortedEnumFormat  {
+
   implicit def enumFormat[E <: Enumeration](enum: E): Format[E#Value] = {
     val valueIdMap: Map[E#Value, Int] = enum.values.toSeq.sortBy(_.toString).zipWithIndex.toMap
 
-    Format(enumReads(valueIdMap.map(_.swap)), enumWrites(valueIdMap))
+    OrdinalEnumFormat.enumFormat[E](valueIdMap)
   }
 }

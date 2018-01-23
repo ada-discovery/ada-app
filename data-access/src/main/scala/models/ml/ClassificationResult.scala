@@ -68,18 +68,39 @@ case class ClassificationSetting(
 }
 
 object ClassificationResult {
-  implicit val filterOrIdFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
 
-  implicit val tupleFormat = TupleFormat[String, Double]
-  implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
-  implicit val classificationEvalMetricFormat = EnumFormat.enumFormat(ClassificationEvalMetric)
-  implicit val classificationSettingFormat = Json.format[ClassificationSetting]
-  implicit val classificationMetricStatsValuesFormat = Json.format[MetricStatsValues]
-  implicit val classificationMetricStatsFormat = Json.format[ClassificationMetricStats]
-  implicit val doubleTupleFormat = TupleFormat[Double, Double]
-  implicit val binaryClassificationCurvesFormat = Json.format[BinaryClassificationCurves]
-//  implicit val binaryClassifcationCurvesOptionalFormat = new OptionFormat[BinaryClassificationCurves]
-  implicit val classificationResultFormat = new FlattenFormat(Json.format[ClassificationResult], "-", Set("_id", "filterId", "replicationFilterId", "mlModelId"))
+  implicit val classificationResultFormat: Format[ClassificationResult] = {
+    implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
+    implicit val classificationEvalMetricFormat = EnumFormat.enumFormat(ClassificationEvalMetric)
+    createClassificationResultFormat(vectorTransformTypeFormat, classificationEvalMetricFormat)
+  }
+
+  implicit val classificationSettingFormat: Format[ClassificationSetting] = {
+    implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
+    implicit val classificationEvalMetricFormat = EnumFormat.enumFormat(ClassificationEvalMetric)
+    createClassificationSettingFormat(vectorTransformTypeFormat, classificationEvalMetricFormat)
+  }
+
+  def createClassificationSettingFormat(
+    implicit vectorTransformTypeFormat: Format[VectorTransformType.Value],
+    classificationEvalMetricFormat: Format[ClassificationEvalMetric.Value]
+  ) = {
+    implicit val tupleFormat = TupleFormat[String, Double]
+    Json.format[ClassificationSetting]
+  }
+
+  def createClassificationResultFormat(
+    implicit vectorTransformTypeFormat: Format[VectorTransformType.Value],
+    classificationEvalMetricFormat: Format[ClassificationEvalMetric.Value]
+  ) = {
+    implicit val classificationSettingFormat = createClassificationSettingFormat(vectorTransformTypeFormat, classificationEvalMetricFormat)
+    implicit val classificationMetricStatsValuesFormat = Json.format[MetricStatsValues]
+    implicit val classificationMetricStatsFormat = Json.format[ClassificationMetricStats]
+    implicit val doubleTupleFormat = TupleFormat[Double, Double]
+    implicit val binaryClassificationCurvesFormat = Json.format[BinaryClassificationCurves]
+    //  implicit val binaryClassifcationCurvesOptionalFormat = new OptionFormat[BinaryClassificationCurves]
+    new FlattenFormat(Json.format[ClassificationResult], "-", Set("_id", "filterId", "replicationFilterId", "mlModelId"))
+  }
 
   implicit object ClassificationResultIdentity extends BSONObjectIdentity[ClassificationResult] {
     def of(entity: ClassificationResult): Option[BSONObjectID] = entity._id

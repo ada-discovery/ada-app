@@ -49,16 +49,36 @@ case class RegressionSetting(
 }
 
 object RegressionResult {
-  implicit val filterOrIdFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
 
-  implicit val tupleFormat = TupleFormat[String, Double]
-  implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
-  implicit val regressionEvalMetricFormat = EnumFormat.enumFormat(RegressionEvalMetric)
-  implicit val regressionSettingFormat = Json.format[RegressionSetting]
-  implicit val regressionMetricStatsValuesFormat = Json.format[MetricStatsValues]
-  implicit val regressionMetricStatsFormat = Json.format[RegressionMetricStats]
+  implicit val regressionResultFormat: Format[RegressionResult] = {
+    implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
+    implicit val regressionEvalMetricFormat = EnumFormat.enumFormat(RegressionEvalMetric)
+    createRegressionResultFormat(vectorTransformTypeFormat, regressionEvalMetricFormat)
+  }
 
-  implicit val regressionResultFormat = new FlattenFormat(Json.format[RegressionResult], "-", Set("_id", "filterId", "replicationFilterId", "mlModelId"))
+  implicit val regressionSettingFormat: Format[RegressionSetting] = {
+    implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)
+    implicit val regressionEvalMetricFormat = EnumFormat.enumFormat(RegressionEvalMetric)
+    createRegressionSettingFormat(vectorTransformTypeFormat, regressionEvalMetricFormat)
+  }
+
+  def createRegressionSettingFormat(
+    implicit vectorTransformTypeFormat: Format[VectorTransformType.Value],
+    regressionEvalMetricFormat: Format[RegressionEvalMetric.Value]
+  ) = {
+    implicit val tupleFormat = TupleFormat[String, Double]
+    Json.format[RegressionSetting]
+  }
+
+  def createRegressionResultFormat(
+    implicit vectorTransformTypeFormat: Format[VectorTransformType.Value],
+    regressionEvalMetricFormat: Format[RegressionEvalMetric.Value]
+  ) = {
+    implicit val regressionSettingFormat = createRegressionSettingFormat(vectorTransformTypeFormat, regressionEvalMetricFormat)
+    implicit val regressionMetricStatsValuesFormat = Json.format[MetricStatsValues]
+    implicit val regressionMetricStatsFormat = Json.format[RegressionMetricStats]
+    new FlattenFormat(Json.format[RegressionResult], "-", Set("_id", "filterId", "replicationFilterId", "mlModelId"))
+  }
 
   implicit object RegressionResultIdentity extends BSONObjectIdentity[RegressionResult] {
     def of(entity: RegressionResult): Option[BSONObjectID] = entity._id
