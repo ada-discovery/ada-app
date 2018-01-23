@@ -70,6 +70,19 @@ case class DataSetLink(
   def linkFieldNames = leftLinkFieldNames.zip(rightLinkFieldNames)
 }
 
+case class GeneralDataSetLink(
+  leftSourceDataSetId: String,
+  rightSourceDataSetIds: Seq[String],
+  leftLinkFieldNames: Seq[String],
+  rightLinkFieldNames: Seq[Seq[String]],
+  leftPreserveFieldNames: Traversable[String],
+  rightPreserveFieldNames: Seq[Traversable[String]],
+  addDataSetIdToRightFieldNames: Boolean,
+  core: DataSetTransformationCore
+) extends DataSetTransformation {
+  def linkFieldNames = leftLinkFieldNames.zip(rightLinkFieldNames)
+}
+
 object SeriesProcessingType extends Enumeration {
   val Diff, RelativeDiff, Ratio, LogRatio, Min, Max, Mean = Value
 }

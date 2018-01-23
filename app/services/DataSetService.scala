@@ -23,7 +23,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import play.api.Configuration
 import dataaccess.JsonUtil._
-import _root_.util.{retry, seqFutures}
+import _root_.util.{retry, seqFutures, crossJoin}
 import models.FilterCondition.FilterOrId
 import models.ml._
 
@@ -153,6 +153,10 @@ trait DataSetService {
 
   def linkDataSets(
     spec: DataSetLink
+  ): Future[Unit]
+
+  def linkDataSetsGeneral(
+    spec: GeneralDataSetLink
   ): Future[Unit]
 
   def processSeriesAndSaveDataSet(
@@ -924,6 +928,185 @@ class DataSetServiceImpl @Inject()(
       )
     } yield
         ()
+  }
+
+  case class LinkedDataSetInfo(
+    dsa: DataSetAccessor,
+    preserveFieldNames: Traversable[String],
+    linkFieldNames: Traversable[String]
+  ) {
+    lazy val fieldNamesToLoad: Traversable[String] = {
+      preserveFieldNames match {
+        case Nil => Nil
+        case _ => (preserveFieldNames ++ linkFieldNames).toSet
+      }
+    }
+  }
+
+  override def linkDataSetsGeneral(
+    spec: GeneralDataSetLink
+  ) = {
+    val leftDataSetInfo = dsaf(spec.leftSourceDataSetId).map { dsa =>
+      LinkedDataSetInfo(dsa, spec.leftPreserveFieldNames, spec.leftLinkFieldNames)
+    }.getOrElse(throw new AdaException(s"Data Set ${spec.leftSourceDataSetId} not found."))
+    val leftDsa = leftDataSetInfo.dsa
+
+    val rightDataSetInfos = spec.rightSourceDataSetIds.zip(spec.rightPreserveFieldNames).zip(spec.rightLinkFieldNames).map {
+      case ((dataSetId, preserveFieldNames), linkFieldNames) =>
+        val dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data Set ${dataSetId} not found."))
+        LinkedDataSetInfo(dsa, preserveFieldNames, linkFieldNames)
+    }
+
+    val saveBatchSize = spec.saveBatchSize.getOrElse(10)
+
+    // a helper function to load the fields and create a field name -> field type map
+    def fieldTypeMap(dataSetInfo: LinkedDataSetInfo): Future[Map[String, FieldType[_]]] =
+      for {
+        fields <- dataSetInfo.fieldNamesToLoad match {
+          case Nil => dataSetInfo.dsa.fieldRepo.find()
+          case _ => dataSetInfo.dsa.fieldRepo.find(Seq("name" #-> dataSetInfo.fieldNamesToLoad.toSeq))
+        }
+      } yield
+        fields.map( field => (field.name, ftf(field.fieldTypeSpec))).toMap
+
+    // a helper function to load the jsons for a given data set and create a link -> jsons map
+    def linkJsonsMap(
+      dataSetInfo: LinkedDataSetInfo,
+      fieldTypeMap: Map[String, FieldType[_]]
+    ): Future[Map[Traversable[String], Traversable[JsObject]]] =
+      for {
+        jsons <- dataSetInfo.dsa.dataSetRepo.find(projection = dataSetInfo.fieldNamesToLoad)
+      } yield {
+        val linkFieldNameSet = dataSetInfo.linkFieldNames.toSet
+        jsons.map { json =>
+          val link = dataSetInfo.linkFieldNames.map { fieldName =>
+            val fieldType = fieldTypeMap.get(fieldName).getOrElse(
+              throw new AdaException(s"Field $fieldName not found.")
+            )
+            fieldType.jsonToDisplayString(json \ fieldName)
+          }
+          // remove the link fields from a json
+          val strippedJson = json.fields.filterNot { case (fieldName, _) => linkFieldNameSet.contains(fieldName) }
+
+          // rename if necessary
+          if (spec.addDataSetIdToRightFieldNames) {
+            strippedJson.map { case (fieldName, jsValue) =>
+              (dataSetInfo.dsa.dataSetId.replace('.', '_') + "-" + fieldName, jsValue)
+            }
+          }
+
+          (link, JsObject(strippedJson))
+        }.toGroupMap
+      }
+
+    // a core function that links left and right jsons and saves the results
+    def linkAndSave(
+      leftJsons: Traversable[JsObject],
+      linkRightJsonsMaps: Seq[Map[Traversable[String], Traversable[JsObject]]],
+      leftFieldTypeMap: Map[String, FieldType[_]],
+      linkedDsa: DataSetAccessor
+    ): Future[Unit] = {
+      val linkedJsons = leftJsons.flatMap { json =>
+        val link = spec.leftLinkFieldNames.map { fieldName =>
+          val fieldType = leftFieldTypeMap.get(fieldName).getOrElse(
+            throw new AdaException(s"Field $fieldName not found.")
+          )
+          fieldType.jsonToDisplayString(json \ fieldName)
+        }
+
+        val jsonId = (json \ JsObjectIdentity.name).asOpt[BSONObjectID]
+
+        val rightJsonsCrossed = crossJoin(linkRightJsonsMaps.flatMap(_.get(link)))
+
+        if (rightJsonsCrossed.isEmpty) {
+          Seq(json)
+        } else {
+          rightJsonsCrossed.map { rightJsons =>
+            val rightJson: JsObject = rightJsons.foldLeft(Json.obj()) {_ ++ _}
+            val id = if (rightJsonsCrossed.size > 1 || jsonId.isEmpty) JsObjectIdentity.next else jsonId.get
+
+            json ++ rightJson ++ Json.obj(JsObjectIdentity.name -> id)
+          }
+        }
+      }
+
+      saveOrUpdateRecords(linkedDsa.dataSetRepo, linkedJsons.toSeq, None, false, None, Some(saveBatchSize))
+    }
+
+    for {
+      // register the result data set (if not registered already)
+      linkedDsa <- registerDerivedDataSet(leftDataSetInfo.dsa, spec.resultDataSetId, spec.resultDataSetName, spec.resultStorageType)
+
+      // get all the left data set fields
+      leftFieldTypeMap <- fieldTypeMap(leftDataSetInfo)
+
+      // get all the right data set fields
+      rightFieldTypeMaps <- Future.sequence(
+        rightDataSetInfos.map(fieldTypeMap)
+      )
+
+      // update the linked dictionary
+      _ <- {
+        val leftFieldNameAndTypes = leftFieldTypeMap.map { case (fieldName, fieldType) => (fieldName, fieldType.spec) }.toSeq
+
+        val rightFieldNameAndTypesWoLink = rightFieldTypeMaps.zip(rightDataSetInfos).flatMap { case (rightFieldTypeMap, rightDataSetInfo) =>
+          val linkFieldNameSet = rightDataSetInfo.linkFieldNames.toSet
+          val fieldNameTypesWoLink = rightFieldTypeMap.map { case (fieldName, fieldType) => (fieldName, fieldType.spec)}.filterNot { case (fieldName, _) =>
+            linkFieldNameSet.contains(fieldName)
+          }.toSeq
+
+          if (spec.addDataSetIdToRightFieldNames)
+            fieldNameTypesWoLink.map { case (fieldName, fieldTypeSpec) =>
+              (rightDataSetInfo.dsa.dataSetId.replace('.', '_') + "-" + fieldName, fieldTypeSpec)
+            }
+          else
+            fieldNameTypesWoLink
+        }
+
+        updateDictionary(spec.resultDataSetId, leftFieldNameAndTypes ++ rightFieldNameAndTypesWoLink, false, true)
+      }
+
+      // the right data set link->jsons
+      linkRightJsonsMaps <- Future.sequence(
+        rightDataSetInfos.zip(rightFieldTypeMaps).map {
+          case (rightDataSetInfo, rightFieldTypeMap) => linkJsonsMap(rightDataSetInfo, rightFieldTypeMap)
+        }
+      )
+
+      // delete all items from the linked data set
+      _ <- linkedDsa.dataSetRepo.deleteAll
+
+      // link and save the data
+      _ <- spec.processingBatchSize.map { processingBatchSize =>
+        for {
+          // get all the left ids
+          leftIds <- leftDsa.dataSetRepo.allIds
+
+          // link left and right data sets
+          _ <- seqFutures(leftIds.toSeq.grouped(processingBatchSize)) { ids =>
+            for {
+            // get the jsons
+              leftJsons <- leftDsa.dataSetRepo.findByIds(ids.head, processingBatchSize, leftDataSetInfo.fieldNamesToLoad)
+
+              // link and save the jsons
+              _ <- linkAndSave(leftJsons, linkRightJsonsMaps, leftFieldTypeMap, linkedDsa)
+            } yield
+              ()
+          }
+        } yield
+          ()
+      }.getOrElse(
+        for {
+          // get ALL the jsons
+          leftJsons <- leftDsa.dataSetRepo.find(projection = leftDataSetInfo.fieldNamesToLoad)
+
+          // link and save the jsons
+          _ <- linkAndSave(leftJsons, linkRightJsonsMaps, leftFieldTypeMap, linkedDsa)
+        } yield
+          ()
+      )
+    } yield
+      ()
   }
 
   override def processSeriesAndSaveDataSet(

@@ -13,7 +13,7 @@ import models.DataSetFormattersAndIds._
 import dataaccess.FilterRepoExtra._
 import controllers.core._
 import models.ml.{ClassificationSetting, _}
-import models.ml.ClassificationResult.{classificationResultFormat, classificationSettingFormat}
+import models.ml.ClassificationResult.classificationResultFormat
 import models.Widget.{WidgetWrites, scatterWidgetFormat}
 import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -29,7 +29,7 @@ import services.ml._
 import _root_.util.FieldUtil
 import _root_.util.FieldUtil.caseClassToFlatFieldTypes
 import _root_.util.toHumanReadableCamel
-
+import models.json.{EnumFormat, OrdinalEnumFormat}
 import models.ml.classification.Classification.ClassificationIdentity
 
 import scala.reflect.runtime.universe.TypeTag
@@ -540,9 +540,32 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       // save the results
       _ <- targetDsa.dataSetRepo.save(
         allResults.map { case (result, extraResult) =>
-          val resultJson = Json.toJson(result).as[JsObject]
+          val classificationEvalMetricFieldSpec = fields.find(_._1.equals("setting-crossValidationEvalMetric")).get._2
+          val vectorTransformTypeFieldSpec = fields.find(_._1.equals("setting-featuresNormalizationType")).get._2
+          val subsamplingRatiosFieldSpec = fields.find(_._1.equals("setting-samplingRatios")).get._2
+
+          val classificationEvalMetricMap = classificationEvalMetricFieldSpec.enumValues.get.map { case (int, string) => (ClassificationEvalMetric.withName(string), int)}
+          val vectorTransformTypeMap = vectorTransformTypeFieldSpec.enumValues.get.map { case (int, string) => (VectorTransformType.withName(string), int)}
+
+          val classificationEvalMetricFormat = OrdinalEnumFormat.enumFormat(classificationEvalMetricMap)
+          val vectorTransformTypeFormat = OrdinalEnumFormat.enumFormat(vectorTransformTypeMap)
+
+          implicit val classificationResultFormat = ClassificationResult.createClassificationResultFormat(vectorTransformTypeFormat, classificationEvalMetricFormat)
+
+          val resultJson = Json.toJson(result)(classificationResultFormat).as[JsObject]
+
+          // handle sampling ratios, which are stored as an unstructured array
+          val newSamplingRatioJson = (resultJson \ "setting-samplingRatios").asOpt[JsArray].map { jsonArray =>
+            val samplingRatioJsons = jsonArray.value.map { case json: JsArray =>
+              val outputValue = json.value(0)
+              val samplingRatio = json.value(1)
+              Json.obj("outputValue" -> outputValue, "samplingRatio" -> samplingRatio)
+            }
+            JsArray(samplingRatioJsons)
+          }.getOrElse(JsNull)
+
           val extraResultJson = Json.toJson(extraResult).as[JsObject]
-          resultJson ++ extraResultJson
+          resultJson.+("setting-samplingRatios", newSamplingRatioJson) ++ extraResultJson
         }
       )
     } yield

@@ -32,6 +32,7 @@ import models.ml.regression.Regression.RegressionIdentity
 import _root_.util.FieldUtil
 import _root_.util.FieldUtil.caseClassToFlatFieldTypes
 import _root_.util.toHumanReadableCamel
+import models.json.OrdinalEnumFormat
 
 import scala.reflect.runtime.universe.TypeTag
 import views.html.{regressionrun => view}
@@ -437,7 +438,18 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
       // save the results
       _ <- targetDsa.dataSetRepo.save(
         allResults.map { case (result, extraResult) =>
-          val resultJson = Json.toJson(result).as[JsObject]
+          val regressionEvalMetricFieldSpec = fields.find(_._1.equals("setting-crossValidationEvalMetric")).get._2
+          val vectorTransformTypeFieldSpec = fields.find(_._1.equals("setting-featuresNormalizationType")).get._2
+
+          val regressionEvalMetricMap = regressionEvalMetricFieldSpec.enumValues.get.map { case (int, string) => (RegressionEvalMetric.withName(string), int)}
+          val vectorTransformTypeMap = vectorTransformTypeFieldSpec.enumValues.get.map { case (int, string) => (VectorTransformType.withName(string), int)}
+
+          val regressionEvalMetricFormat = OrdinalEnumFormat.enumFormat(regressionEvalMetricMap)
+          val vectorTransformTypeFormat = OrdinalEnumFormat.enumFormat(vectorTransformTypeMap)
+
+          implicit val regressionResultFormat = RegressionResult.createRegressionResultFormat(vectorTransformTypeFormat, regressionEvalMetricFormat)
+
+          val resultJson = Json.toJson(result)(regressionResultFormat).as[JsObject]
           val extraResultJson = Json.toJson(extraResult).as[JsObject]
           resultJson ++ extraResultJson
         }

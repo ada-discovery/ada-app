@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.concurrent.Executors
 
 import models._
@@ -6,6 +7,7 @@ import play.api.{Logger, LoggerLike}
 import dataaccess.JsonUtil
 import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.blocking
 
@@ -222,4 +224,21 @@ package object util {
   }
 
   type STuple3[T] = (T, T, T)
+
+  def crossJoin[T](list: Traversable[Traversable[T]]): Traversable[Traversable[T]] =
+    list match {
+      case xs :: Nil => xs map (Traversable(_))
+      case x :: xs => for {
+        i <- x
+        j <- crossJoin(xs)
+      } yield Traversable(i) ++ j
+    }
+
+  def getListOfFiles(dir: String): Seq[File] = {
+    val d = new File(dir)
+    if (d.exists && d.isDirectory)
+      d.listFiles.filter(_.isFile).toList
+    else
+      Nil
+  }
 }

@@ -2,6 +2,7 @@ package runnables
 
 import java.io._
 import scala.io.Source
+import util.getListOfFiles
 
 object ParkMarcotteMerge extends App {
   val rootFolder = "/home/peter/Data/Park-Marcotte/human_random/"
@@ -30,12 +31,4 @@ object ParkMarcotteMerge extends App {
   pw.write(header + "\n")
   pw.write(mergedContent)
   pw.close
-
-  def getListOfFiles(dir: String): Seq[File] = {
-    val d = new File(dir)
-    if (d.exists && d.isDirectory)
-      d.listFiles.filter(_.isFile).toList
-    else
-      Nil
-  }
 }

@@ -3,6 +3,8 @@ package services.datasetimporter
 import java.util.Date
 import javax.inject.Inject
 
+import com.fasterxml.jackson.core.JsonParseException
+import com.fasterxml.jackson.databind.JsonMappingException
 import models.{Field, FieldTypeId, FieldTypeSpec}
 import dataaccess.{FieldType, FieldTypeHelper}
 import models.synapse._
@@ -211,12 +213,24 @@ private class SynapseDataSetImporter @Inject() (
           val fieldNameJsons = fileFieldNames.flatMap( fieldName =>
             JsonUtil.toString(json \ fieldName).map { fileHandleId =>
               val fileContent = fileHandleIdContentMap.get(fileHandleId).get
+
+              def extractJsonsFromCSV = {
+                val (jsons, _) = extractJsonsAndInferFieldsFromCSV(fileContent, "\t", Nil, Nil)
+                JsArray(jsons)
+              }
+
               val columnJson =
                 if (entityColumnName.isDefined) {
-                  val (jsons, _) = extractJsonsAndInferFieldsFromCSV(fileContent, "\t", Nil, Nil)
-                  JsArray(jsons)
-                } else
-                  Json.parse(fileContent)
+                  extractJsonsFromCSV
+                } else {
+                  try {
+                    Json.parse(fileContent)
+                  } catch {
+                    // if it cannot be parsed as JSON try to treat it as a CSV file
+                    case e: JsonParseException => extractJsonsFromCSV
+                    case e: JsonMappingException => extractJsonsFromCSV
+                  }
+                }
 
               (fieldName, columnJson)
             }
