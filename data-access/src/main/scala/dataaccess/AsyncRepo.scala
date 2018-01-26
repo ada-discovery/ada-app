@@ -35,6 +35,19 @@ trait AsyncReadonlyRepo[+E, ID] {
     skip: Option[Int] = None
   ): Future[Traversable[E]]
 
+  // default/dummy implementation of streaming provided by if supported should be overridden
+  def findAsStream(
+    criteria: Seq[Criterion[Any]] = Nil,
+    sort: Seq[Sort] = Nil,
+    projection: Traversable[String] = Nil,
+    limit: Option[Int] = None,
+    skip: Option[Int] = None
+  ): Future[Source[E, _]] = for {
+    items <- find(criteria, sort, projection, limit, skip)
+  } yield {
+    Source.fromIterator(() => items.toIterator)
+  }
+
   /**
     * Return the number of elements matching criteria.
     *

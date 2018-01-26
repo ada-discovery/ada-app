@@ -1,10 +1,12 @@
 package dataaccess
 
+import akka.stream.scaladsl.Source
 import dataaccess.RepoTypes.{JsonCrudRepo, JsonReadonlyRepo}
 import play.api.libs.json.{Format, JsObject, Json}
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 private[dataaccess] abstract class AbstractJsonFormatReadonlyRepoAdapter[E: Format, ID] extends JsonReadonlyRepo {
 
@@ -23,6 +25,18 @@ private[dataaccess] abstract class AbstractJsonFormatReadonlyRepoAdapter[E: Form
       items <- repo.find(criteria, sort, projection, limit, skip)
     } yield
       items.map(asJson)
+
+  override def findAsStream(
+    criteria: Seq[Criterion[Any]],
+    sort: Seq[Sort],
+    projection: Traversable[String],
+    limit: Option[Int],
+    skip: Option[Int]
+  ): Future[Source[JsObject, _]] =
+    for {
+      source <- repo.findAsStream(criteria, sort, projection, limit, skip)
+    } yield
+      source.map(asJson)
 
   override def count(criteria: Seq[Criterion[Any]]) =
     repo.count(criteria)

@@ -37,7 +37,7 @@ class ElasticJsonCrudRepo @Inject()(
   }
 
   override protected def serializeSearchResult(response: RichSearchResponse) = {
-    response.hits.map { hit =>
+    response.hits.flatMap(serializeSearchHitOptional).toIterable
 //      val stringSource = hit.sourceAsString
 //      val renamedStringSource = stringSource.replaceFirst("\"id\":", "\"_id\":")
 //      JsObject(
@@ -48,12 +48,16 @@ class ElasticJsonCrudRepo @Inject()(
 //            (fieldName, BinaryJsonUtil.toJson(value))
 //        }.toSeq
 //      )
-      Json.parse(hit.sourceAsString) match {
-        case x: JsObject => jsonIdRenameFormat.reads(x).asOpt.map(_.asInstanceOf[JsObject])
-        case _ => None
-      }
-    }.toIterable.flatten
   }
+
+  override protected def serializeSearchHit(result: RichSearchHit) =
+    serializeSearchHitOptional(result).getOrElse(Json.obj())
+
+  private def serializeSearchHitOptional(result: RichSearchHit) =
+    Json.parse(result.sourceAsString) match {
+      case x: JsObject => jsonIdRenameFormat.reads(x).asOpt.map(_.asInstanceOf[JsObject])
+      case _ => None
+    }
 
   override protected def serializeProjectionSearchResult(
     projection: Seq[String],

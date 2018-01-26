@@ -3,13 +3,16 @@ package dataaccess.elastic
 import com.sksamuel.elastic4s._
 import org.elasticsearch.search.sort.SortOrder
 import reactivemongo.bson.BSONObjectID
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.Await.result
 import java.util.Date
 
+import akka.actor.ActorSystem
+import akka.stream.scaladsl.Source
+import com.sksamuel.elastic4s.streams.ReactiveElastic._
 import dataaccess._
 
 abstract protected class ElasticAsyncReadonlyRepo[E, ID](
@@ -24,6 +27,7 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
   protected val indexAndType = IndexAndType(indexName, typeName)
 
   protected val unboundLimit = Integer.MAX_VALUE
+  protected val scrollKeepAlive = "1m"
 
   def get(id: ID): Future[Option[E]] =
     client execute {
@@ -37,6 +41,60 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     limit: Option[Int],
     skip: Option[Int]
   ): Future[Traversable[E]] = {
+    val searchDefinition = createSearchDefinition(criteria, sort, projection, limit, skip)
+
+    client execute (
+      searchDefinition
+    ) map { searchResult =>
+      val projectionSeq = projection.map(toDBFieldName).toSeq
+
+      val serializationStart = new Date()
+
+      if (searchResult.shardFailures.nonEmpty) {
+        throw new AdaDataAccessException(searchResult.shardFailures(0).reason())
+      }
+
+      val result: Traversable[E] = projection match {
+        case Nil => serializeSearchResult(searchResult)
+        case _ => serializeProjectionSearchHits(projectionSeq, searchResult.hits)
+      }
+      println(s"Serialization for the projection '${projection.mkString(", ")}' finished in ${new Date().getTime - serializationStart.getTime} ms.")
+      result
+    }
+  }
+
+  implicit val system = ActorSystem()
+
+  override def findAsStream(
+    criteria: Seq[Criterion[Any]],
+    sort: Seq[Sort],
+    projection: Traversable[String],
+    limit: Option[Int],
+    skip: Option[Int]
+  ): Future[Source[E, _]] = {
+    val searchDefinition = createSearchDefinition(criteria, sort, projection, limit, skip)
+
+    val publisher = client publisher {
+      searchDefinition scroll scrollKeepAlive
+    }
+    val source = Source.fromPublisher(publisher).map { richSearchHit =>
+      val projectionSeq = projection.map(toDBFieldName).toSeq
+
+      projection match {
+        case Nil => serializeSearchHit(richSearchHit)
+        case _ => serializeProjectionSearchHit(projectionSeq, richSearchHit)
+      }
+    }
+    Future(source)
+  }
+
+  private def createSearchDefinition(
+    criteria: Seq[Criterion[Any]],
+    sort: Seq[Sort],
+    projection: Traversable[String],
+    limit: Option[Int],
+    skip: Option[Int]
+  ): SearchDefinition = {
     val projectionSeq = projection.map(toDBFieldName).toSeq
 
     val searchDefs: Seq[(Boolean, SearchDefinition => SearchDefinition)] =
@@ -65,30 +123,35 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
           if (limit.isDefined)
             (_: SearchDefinition) start skip.getOrElse(0) limit limit.get
           else
-            // if undefined we still need to pass "unbound" limit, since by default ES returns only 10 items
+          // if undefined we still need to pass "unbound" limit, since by default ES returns only 10 items
             (_: SearchDefinition) limit unboundLimit
         )
       )
 
-    val searchDefinition = searchDefs.foldLeft(search in indexAndType) {
+    searchDefs.foldLeft(search in indexAndType) {
       case (sd, (cond, createNewDef)) =>
         if (cond) createNewDef(sd) else sd
     }
+  }
 
-    client execute {
-      searchDefinition
-    } map { searchResult =>
-      val serializationStart = new Date()
-      if (searchResult.shardFailures.nonEmpty) {
-        throw new AdaDataAccessException(searchResult.shardFailures(0).reason())
-      }
-      val result: Traversable[E] = projection match {
-        case Nil => serializeSearchResult(searchResult)
-        case _ => serializeProjectionSearchResults(projectionSeq, searchResult.hits)
-      }
-      println(s"Serialization for the projection '${projection.mkString(", ")}' finished in ${new Date().getTime - serializationStart.getTime} ms.")
-      result
+  private def serializeSearchResultWithProjection(
+    projection: Traversable[String])(
+    searchResult: RichSearchResponse
+  ): Traversable[E] = {
+    val projectionSeq = projection.map(toDBFieldName).toSeq
+
+    val serializationStart = new Date()
+
+    if (searchResult.shardFailures.nonEmpty) {
+      throw new AdaDataAccessException(searchResult.shardFailures(0).reason())
     }
+
+    val result: Traversable[E] = projection match {
+      case Nil => serializeSearchResult(searchResult)
+      case _ => serializeProjectionSearchHits(projectionSeq, searchResult.hits)
+    }
+    println(s"Serialization for the projection '${projection.mkString(", ")}' finished in ${new Date().getTime - serializationStart.getTime} ms.")
+    result
   }
 
   private def toSort(sorts: Seq[Sort]): Seq[SortDefinition] =

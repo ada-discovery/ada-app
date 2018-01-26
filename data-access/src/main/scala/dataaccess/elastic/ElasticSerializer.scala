@@ -1,18 +1,23 @@
 package dataaccess.elastic
 
 import com.evojam.play.elastic4s.PlayElasticJsonSupport
-import com.sksamuel.elastic4s.{RichSearchHit, RichSearchResponse, RichGetResponse}
+import com.sksamuel.elastic4s.{RichGetResponse, RichSearchHit, RichSearchResponse}
 import dataaccess.DynamicConstructorFinder
-import play.api.libs.json.Format
+import play.api.libs.json.{Format, JsNull, JsObject, Json}
+
 import collection.mutable.{Map => MMap}
 import scala.reflect.runtime.{universe => ru}
 import java.util.Date
 
 trait ElasticSerializer[E] {
 
-  protected def serializeGetResult(response: RichGetResponse): Option[E]
+  protected def serializeGetResult(
+    response: RichGetResponse
+  ): Option[E]
 
-  protected def serializeSearchResult(response: RichSearchResponse): Traversable[E]
+  protected def serializeSearchResult(
+    response: RichSearchResponse
+  ): Traversable[E]
 
   protected def serializeProjectionSearchResult(
     projection: Seq[String],
@@ -20,14 +25,28 @@ trait ElasticSerializer[E] {
   ): E
 
   // by default just iterate through and serialize each result independently
-  protected def serializeProjectionSearchResults(
+  protected def serializeProjectionSearchHits(
     projection: Seq[String],
     results: Array[RichSearchHit]
   ): Traversable[E] =
-    results.map { result =>
-      val fieldValues = result.fieldsSeq.map(field => (field.name, field.getValue[Any]))
-      serializeProjectionSearchResult(projection, fieldValues)
-    }
+    results.map { serializeProjectionSearchHit(projection, _) }
+
+  protected def serializeProjectionSearchHit(
+    projection: Seq[String],
+    result: RichSearchHit
+  ): E = {
+    val fieldValues = result.fieldsSeq.map(field => (field.name, field.getValue[Any]))
+    serializeProjectionSearchResult(projection, fieldValues)
+  }
+
+  protected def serializeSearchHit(
+    result: RichSearchHit
+  ): E
+//
+//  {
+//    val fieldValues = result.fieldsSeq.map(field => (field.name, field.getValue[Any]))
+//    serializeProjectionSearchResult(fieldValues.map(_._1), fieldValues)
+//  }
 }
 
 trait ElasticFormatSerializer[E] extends ElasticSerializer[E] with PlayElasticJsonSupport {
@@ -74,7 +93,7 @@ trait ElasticFormatSerializer[E] extends ElasticSerializer[E] with PlayElasticJs
     constructor(fieldNameValueMap).get
   }
 
-  override protected def serializeProjectionSearchResults(
+  override protected def serializeProjectionSearchHits(
     projection: Seq[String],
     results: Array[RichSearchHit]
   ): Traversable[E] =
@@ -84,15 +103,18 @@ trait ElasticFormatSerializer[E] extends ElasticSerializer[E] with PlayElasticJs
         val fieldValues = result.fieldsSeq.map(field => (field.name, field.getValue[Any]))
         constructor(fieldValues.toMap).get
       }
-    } else {
+    } else
       // TODO: optimize me... we should group the results by the concrete class field name
-      results.map { result =>
-        val fieldValues = result.fieldsSeq.map(field => (field.name, field.getValue[Any]))
-        serializeProjectionSearchResult(projection, fieldValues)
-      }
-    }
+      results.map { serializeProjectionSearchHit(projection, _) }
 
-  protected def constructorOrException(fieldNames: Seq[String], concreteClassName: Option[String] = None) = {
+  override protected def serializeSearchHit(
+    result: RichSearchHit
+  ): E = Json.parse(result.sourceAsString).as[E]
+
+  protected def constructorOrException(
+    fieldNames: Seq[String],
+    concreteClassName: Option[String] = None
+  ) = {
     val unrenamedFieldNames = fieldNames.map( fieldName =>
       ElasticIdRenameUtil.unrename(fieldName)
     )

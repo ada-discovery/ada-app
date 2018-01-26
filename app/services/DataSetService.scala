@@ -23,7 +23,10 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import play.api.Configuration
 import dataaccess.JsonUtil._
-import _root_.util.{retry, seqFutures, crossJoin}
+import _root_.util.{crossJoin, retry, seqFutures}
+import akka.actor.ActorSystem
+import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.stream.scaladsl.Sink
 import models.FilterCondition.FilterOrId
 import models.ml._
 
@@ -121,6 +124,8 @@ trait DataSetService {
     newDataSetSetting: Option[DataSetSetting],
     newDataView: Option[DataView],
     saveBatchSize: Option[Int],
+    inferenceGroupSize: Option[Int],
+    inferenceGroupsInParallel: Option[Int],
     jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]] = None
   ): Future[Unit]
 
@@ -173,6 +178,15 @@ trait DataSetService {
     criteria: Seq[Criterion[Any]] = Nil
   ): Future[(Traversable[JsObject], Seq[Field])]
 
+  def copyToNewStorage(
+    dataSetId: String,
+    groupSize: Int,
+    parallelism: Int,
+    backpressureBufferSize: Int,
+    saveDeltaOnly: Boolean,
+    targetStorageType: StorageType.Value
+  ): Future[Unit]
+
   def extractPeaks(
     series: Seq[Double],
     peakNum: Int,
@@ -198,6 +212,9 @@ class DataSetServiceImpl @Inject()(
   private val jsonFti = FieldTypeHelper.jsonFieldTypeInferrer
 
   private val idName = JsObjectIdentity.name
+
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
 
   private type CreateJsonsWithFieldTypes =
     (Seq[String], Seq[Seq[String]]) => (Seq[JsObject], Seq[FieldType[_]])
@@ -1681,6 +1698,53 @@ class DataSetServiceImpl @Inject()(
     }
   }
 
+  override def copyToNewStorage(
+    dataSetId: String,
+    groupSize: Int,
+    parallelism: Int,
+    backpressureBufferSize: Int,
+    saveDeltaOnly: Boolean,
+    targetStorageType: StorageType.Value
+  ): Future[Unit] = {
+    val dsa = dsaf(dataSetId: String).get
+    val originalDataSetRepo = dsa.dataSetRepo
+    for {
+      // setting
+      setting <- dsa.setting
+
+      // stream
+      stream <- originalDataSetRepo.findAsStream()
+
+      // switch the storage type
+      _ <- dsa.updateDataSetRepo(setting.copy(storageType = targetStorageType))
+
+      // new data set repo
+      newDataSetRepo = dsa.dataSetRepo
+
+      // delete the new data set (at a new storage) if needed
+      _ <- if (!saveDeltaOnly) newDataSetRepo.deleteAll else Future(())
+
+      // existing ids at the new data set
+      existingIds <- newDataSetRepo.allIds.map(_.toSet)
+
+      // group and save the stream as it goes
+      _ <- stream.map{ json => logger.info("Reading from the source DB..."); json}
+        .grouped(groupSize)
+        .buffer(backpressureBufferSize, OverflowStrategy.backpressure)
+        .mapAsync(parallelism){ jsons =>
+          val newJsons = jsons.filterNot { json =>
+            val id  = (json \ idName).as[BSONObjectID]
+            existingIds.contains(id)
+          }
+          if (newJsons.size != jsons.size)
+            logger.info(s"Skipping ${jsons.size - newJsons.size} items.")
+          logger.info(s"Saving ${newJsons.size} items.")
+          newDataSetRepo.save(newJsons)
+        }.runWith(Sink.ignore)
+    } yield
+      ()
+  }
+
   override def translateDataAndDictionaryOptimal(
     originalDataSetId: String,
     newDataSetId: String,
@@ -1688,6 +1752,8 @@ class DataSetServiceImpl @Inject()(
     newDataSetSetting: Option[DataSetSetting],
     newDataView: Option[DataView],
     saveBatchSize: Option[Int],
+    inferenceGroupSize: Option[Int],
+    inferenceGroupsInParallel: Option[Int],
     jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]]
   ) = {
     logger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' initiated.")
@@ -1695,6 +1761,9 @@ class DataSetServiceImpl @Inject()(
     val originalDataRepo = originalDsa.dataSetRepo
     val originalDictionaryRepo = originalDsa.fieldRepo
     val originalCategoryRepo = originalDsa.categoryRepo
+
+    val inferenceGroupsInParallelInit = inferenceGroupsInParallel.getOrElse(2)
+    val inferenceGroupSizeInit = inferenceGroupSize.getOrElse(10)
 
     for {
       // get the accessor (data repo and field repo) for the newly registered data set
@@ -1721,8 +1790,8 @@ class DataSetServiceImpl @Inject()(
         logger.info("Inferring new field types")
         val fieldNames = originalFieldNameAndTypes.map(_._1).sorted
 
-        seqFutures(fieldNames.grouped(100)) {
-          inferFieldTypesInParallel(originalDataRepo, _, 10, jsonFieldTypeInferrer)
+        seqFutures(fieldNames.grouped(inferenceGroupsInParallelInit * inferenceGroupSizeInit)) {
+          inferFieldTypesInParallel(originalDataRepo, _, inferenceGroupSizeInit, jsonFieldTypeInferrer)
         }.map(_.flatten)
       }
 

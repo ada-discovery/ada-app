@@ -29,6 +29,8 @@ class InferNewDataSet @Inject()(dataSetService: DataSetService) extends InputFut
       Some(dataSetSetting),
       None,
       spec.saveBatchSize,
+      spec.inferenceGroupSize,
+      spec.inferenceGroupsInParallel,
       Some(fieldTypeInferrerFactory.applyJson)
     )
   }
@@ -43,6 +45,8 @@ case class InferNewDataSetSpec(
   storageType: StorageType.Value,
   defaultDistributionFieldName: String,
   saveBatchSize: Option[Int],
+  inferenceGroupSize: Option[Int],
+  inferenceGroupsInParallel: Option[Int],
   maxEnumValuesCount: Int,
   minAvgValuesPerEnum: Double
 )

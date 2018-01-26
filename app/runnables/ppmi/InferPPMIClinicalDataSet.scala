@@ -23,6 +23,8 @@ class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends
       None,
       None,
       Some(100),
+      None,
+      None,
       Some(fieldTypeInferrerFactory.applyJson)
     )
   }

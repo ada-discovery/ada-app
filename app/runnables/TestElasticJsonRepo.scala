@@ -4,16 +4,13 @@ import com.google.inject.Inject
 import dataaccess.AscSort
 import dataaccess.Criterion.Infix
 import models.DataSetFormattersAndIds.JsObjectIdentity
-import models.DataSetImportFormattersAndIds.DataSetImportIdentity
-import models.workspace.{UserGroup, Workspace}
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
-import play.api.libs.json.{Json, JsObject}
+import play.api.libs.json.{JsObject, Json}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONObjectIDFormat
-import scala.concurrent.duration._
 
-import scala.concurrent.{Future, Await}
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestElasticJsonRepo @Inject() (dsaf: DataSetAccessorFactory) extends FutureRunnable {

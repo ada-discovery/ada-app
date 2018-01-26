@@ -13,10 +13,19 @@ class MergeHeaders extends InputRunnable[MergeHeadersSpec] {
   override def run(input: MergeHeadersSpec) = {
     val newHeaders = getListOfFiles(input.folderPath).sortBy(_.getName).zipWithIndex.map {
       case (headerFile, index) =>
-        println(headerFile.getName)
+        val headerName = headerFile.getName.split('.').head
         val header = Source.fromFile(headerFile).getLines().next().replaceAll("\"", "")
 
-        if (index == 0) header else header.split(",", 2)(1)
+        val headerItems = header.split(",")
+
+        val newHeaderItems = headerItems.map { columnName =>
+          headerName + "-" + columnName
+        }
+
+        if (index == 0)
+          headerItems.head + "," + newHeaderItems.tail.mkString(",")
+        else
+          newHeaderItems.tail.mkString(",")
     }
 
     println

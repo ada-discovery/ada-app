@@ -198,6 +198,8 @@ private class PlaySerializers extends Serializers.Base {
   }
 }
 
+@Deprecated
+// TODO: remove
 object FixedJacksonJson {
 
   private val mapper = (new ObjectMapper).registerModule(FixedPlayJsonModule)

@@ -76,14 +76,13 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
     )
   }
 
-  // TODO
-  def findAsStream(
+  override def findAsStream(
     criteria: Seq[Criterion[Any]],
     sort: Seq[Sort],
     projection: Traversable[String],
     limit: Option[Int],
     skip: Option[Int]
-  ): Future[Source[E, Future[State]]] =
+  ): Future[Source[E, _]] =
     findAsCursor(criteria, sort, projection, limit, skip).map { cursor =>
       // handle the limit
       limit match {
