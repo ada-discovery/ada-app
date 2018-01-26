@@ -1,0 +1,114 @@
+package runnables.mpower
+
+import javax.inject.Inject
+
+import persistence.dataset.DataSetAccessorFactory
+import play.api.libs.json._
+import runnables.InputFutureRunnable
+import services.DataSetService
+import dataaccess.RepoTypes.JsonCrudRepo
+import dataaccess.JsonCrudRepoExtra._
+import dataaccess.Criterion._
+import models.AdaException
+import models.DataSetFormattersAndIds.JsObjectIdentity
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.reflect.runtime.universe.typeOf
+import scala.util.Random
+import _root_.util.seqFutures
+import play.api.Logger
+
+class CheckConsistencyOfAllInOneFeatureSet @Inject()(
+    dsaf: DataSetAccessorFactory,
+    dataSetService: DataSetService
+  ) extends InputFutureRunnable[CheckConsistencyOfAllInOneFeatureSetSpec] {
+
+  private val submissionIdFieldName = "submissionId"
+  private val logger = Logger
+
+  override def runAsFuture(spec: CheckConsistencyOfAllInOneFeatureSetSpec) = {
+    val scoreBoardDataSetRepo = dsaf(spec.scoreBoardDataSetId).get.dataSetRepo
+    val allInOneDataSetRepo = dsaf(spec.allInOneFeatureSetId).get.dataSetRepo
+
+    for {
+      // retrieve all the submission ids
+      submissionJsons <- scoreBoardDataSetRepo.find(projection = Seq(submissionIdFieldName))
+
+      // create submission id data set repo pairs
+      submissionIdDataRepos = submissionJsons.map(submissionIdDataSetRepo(spec.submissionDataSetPrefix)).flatten
+
+      // randomly draw n all-in-one features
+      randomAllInOneFeatures <- allInOneDataSetRepo.allIds.flatMap { ids =>
+        val randomIds = Random.shuffle(ids).take(spec.numberOfRecordsToCheck)
+        allInOneDataSetRepo.find(Seq(JsObjectIdentity.name #-> randomIds.toSeq))
+      }
+
+      // check the features for all submission data sets available
+      _ <- seqFutures(randomAllInOneFeatures.toSeq.zipWithIndex) { case (json, index) =>
+        val keyJsValue = (json \ spec.keyFieldName)
+        val key = if (spec.isKeyInt) keyJsValue.as[Int] else keyJsValue.as[String]
+
+        logger.info(s"Checking consistency of json $index with the key $key.")
+
+        seqFutures(submissionIdDataRepos) { case (submissionId, dataSetRepo) =>
+          checkFeatures(json, submissionId, dataSetRepo, spec.keyFieldName, key)
+        }
+      }
+    } yield
+      ()
+  }
+
+  private def submissionIdDataSetRepo(
+    submissionDataSetPrefix: String)(
+    submissionJson: JsObject
+  ): Option[(String, JsonCrudRepo)] = {
+    val submissionId = (submissionJson \ submissionIdFieldName).get match {
+      case JsNull => None
+      case submissionIdJsValue: JsValue =>
+        val id = submissionIdJsValue.asOpt[String].getOrElse(submissionIdJsValue.as[Int].toString)
+        Some(id)
+    }
+
+    submissionId.flatMap { submissionId =>
+      dsaf(submissionDataSetPrefix + "." + submissionId).map(dsa =>
+        (submissionId, dsa.dataSetRepo)
+      )
+    }
+  }
+
+  private def checkFeatures(
+    allInOneFeatureJson: JsObject,
+    submissionId: String,
+    featureDataSetRepo: JsonCrudRepo,
+    keyFieldName: String,
+    keyValue: Any
+  ): Future[Unit] = {
+    val allInOneFeatureNameJsValueMap = allInOneFeatureJson.fields.filter(_._1.startsWith(submissionId + "-")).map {
+      case (fieldName, jsValue) => (fieldName.stripPrefix(submissionId + "-"), jsValue)
+    }.toMap
+
+    for {
+      featureJson <- featureDataSetRepo.find(Seq(keyFieldName #== keyValue), limit = Some(1)).map(_.head)
+    } yield
+      featureJson.fields.filterNot(_._1.equals(keyFieldName)).map { case (fieldName, jsValue) =>
+        allInOneFeatureNameJsValueMap.get(fieldName).map { allInOneJsValue =>
+          if (!Json.stringify(jsValue).equals(Json.stringify(allInOneJsValue)))
+            throw new AdaException(s"Found mismatch in the submission $submissionId, field name $fieldName: $jsValue vs $allInOneJsValue")
+        }.getOrElse(
+          throw new AdaException(s"Found mismatch in the submission $submissionId, field name $fieldName not found in the all-in-one feature set.")
+        )
+      }
+  }
+
+  override def inputType = typeOf[CheckConsistencyOfAllInOneFeatureSetSpec]
+}
+
+case class CheckConsistencyOfAllInOneFeatureSetSpec(
+  scoreBoardDataSetId: String,
+  submissionDataSetPrefix: String,
+  allInOneFeatureSetId: String,
+  keyFieldName: String,
+  numberOfRecordsToCheck: Int,
+  isKeyInt: Boolean
+)
