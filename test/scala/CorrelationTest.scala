@@ -1,15 +1,90 @@
-package runnables
-
-import javax.inject.Inject
-
+import akka.stream.scaladsl.Source
+import org.scalatest._
 import services.StatsService
 
-class CorrelationTest @Inject() (statsService: StatsService) extends App {
+import scala.concurrent.Future
+import scala.util.Random
+
+class CorrelationTest extends AsyncFlatSpec with Matchers {
 
   private val xs = Seq(0.5, 0.7, 1.2, 6.3, 0.1, 0.4, 0.7, -1.2, 3, 4.2, 5.7, 4.2, 8.1)
   private val ys = Seq(0.5, 0.4, 0.4, 0.4, -1.2, 0.8, 0.23, 0.9, 2, 0.1, -4.1, 3, 4)
-  private val expectedResult = 0.1725
+  private val expectedResult = 0.1725323796730674
 
-  val result = statsService.calcPearsonCorrelations(xs.zip(ys).map{ case (a,b) => Seq(Some(a),Some(b))})
-  assert(result.equals(expectedResult), s"$expectedResult expected but got $result")
+  private val randomInputSize = 100
+  private val randomFeaturesNum = 25
+
+  private val injector = TestApp.apply.injector
+  private val statsService = injector.instanceOf[StatsService]
+
+  "Correlations" should "match the static example" in {
+    val inputs = xs.zip(ys).map{ case (a,b) => Seq(Some(a),Some(b))}
+    val inputsAllDefined = xs.zip(ys).map{ case (a,b) => Seq(a, b)}
+    val inputSource = Source.fromIterator(() => inputs.toIterator)
+    val inputSourceAllDefined = Source.fromIterator(() => inputsAllDefined.toIterator)
+
+    def checkResult(result: Seq[Seq[Option[Double]]]) = {
+      result.size should be (2)
+      result.map(_.size should be (2))
+      result(0)(0).get should be (1d)
+      result(1)(1).get should be (1d)
+      result(0)(1).get should be (expectedResult)
+      result(1)(0).get should be (expectedResult)
+    }
+
+    val featuresNum = inputs.head.size
+
+    // standard calculation
+    Future(statsService.calcPearsonCorrelations(inputs)).map(checkResult)
+
+    // streamed calculations
+    statsService.calcPearsonCorrelations(inputSource, featuresNum, None).map(checkResult)
+
+    // streamed calculations with an all-values-defined optimization
+    statsService.calcPearsonCorrelationsAllDefined(inputSourceAllDefined, featuresNum, None).map(checkResult)
+
+    // parallel streamed calculations
+    statsService.calcPearsonCorrelations(inputSource, featuresNum, Some(4)).map(checkResult)
+
+    // parallel streamed calculations with an all-values-defined optimization
+    statsService.calcPearsonCorrelationsAllDefined(inputSourceAllDefined, featuresNum, Some(4)).map(checkResult)
+  }
+
+  "Correlations" should "match each other" in {
+    val inputs = for (_ <- 1 to randomInputSize) yield {
+      for (_ <- 1 to randomFeaturesNum) yield
+       Some((Random.nextDouble() * 2) - 1)
+    }
+    val inputsAllDefined = inputs.map(_.map(_.get))
+    val inputSource = Source.fromIterator(() => inputs.toIterator)
+    val inputSourceAllDefined = Source.fromIterator(() => inputsAllDefined.toIterator)
+
+    // standard calculation
+    val protoResult = statsService.calcPearsonCorrelations(inputs)
+
+    def checkResult(result: Seq[Seq[Option[Double]]]) = {
+      result.map(_.size should be (randomFeaturesNum))
+      for (i <- 0 to randomFeaturesNum - 1) yield
+        result(i)(i).get should be (1d)
+
+      result.zip(protoResult).map { case (rowCor1, rowCor2) =>
+        rowCor1.zip(rowCor2).map { case (cor1, cor2) =>
+          cor1 should be (cor2)
+        }
+      }
+      result.size should be (randomFeaturesNum)
+    }
+
+    // streamed calculations
+    statsService.calcPearsonCorrelations(inputSource, randomFeaturesNum, None).map(checkResult)
+
+    // streamed calculations with an all-values-defined optimization
+    statsService.calcPearsonCorrelationsAllDefined(inputSourceAllDefined, randomFeaturesNum, None).map(checkResult)
+
+    // parallel streamed calculations
+    statsService.calcPearsonCorrelations(inputSource, randomFeaturesNum, Some(4)).map(checkResult)
+
+    // parallel streamed calculations with an all-values-defined optimization
+    statsService.calcPearsonCorrelationsAllDefined(inputSourceAllDefined, randomFeaturesNum, Some(4)).map(checkResult)
+  }
 }

@@ -1,15 +1,13 @@
 package scala
 
+import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 
-/**
-  * Created by peter on 31.01.18.
-  */
-object TesstUtil {
+object TestApp {
 
-  val app = {
+  val apply: Application = {
     import scala.collection.JavaConversions.iterableAsScalaIterable
-    val env = play.api.Environment.simple(mode = play.api.Mode.Dev)
+    val env = play.api.Environment.simple(mode = play.api.Mode.Test)
     val config = play.api.Configuration.load(env)
     val modules = config.getStringList("play.modules.enabled").fold(
       List.empty[String])(l => iterableAsScalaIterable(l).toList)
