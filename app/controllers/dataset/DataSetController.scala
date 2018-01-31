@@ -67,6 +67,10 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   ): Action[AnyContent]
 
   def getCorrelations(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def calcCorrelations(
     fieldNames: Seq[String],
     filterOrId: FilterOrId
   ): Action[AnyContent]

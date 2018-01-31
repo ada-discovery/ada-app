@@ -129,6 +129,15 @@ trait DataSetService {
     jsonFieldTypeInferrer: Option[FieldTypeInferrer[JsReadable]] = None
   ): Future[Unit]
 
+  def translateData(
+    originalDataSetId: String,
+    newDataSetId: String,
+    newDataSetName: String,
+    newDataSetSetting: Option[DataSetSetting],
+    newDataView: Option[DataView],
+    saveBatchSize: Option[Int]
+  ): Future[Unit]
+
   def register(
     sourceDsa: DataSetAccessor,
     newDataSetId: String,
@@ -1787,11 +1796,12 @@ class DataSetServiceImpl @Inject()(
       originalFieldNameMap = originalFields.map(field => (field.name, field)).toMap
 
       newFieldNameAndTypes <- {
-        logger.info("Inferring new field types")
+        logger.info("Inferring new field types started")
         val fieldNames = originalFieldNameAndTypes.map(_._1).sorted
 
-        seqFutures(fieldNames.grouped(inferenceGroupsInParallelInit * inferenceGroupSizeInit)) {
-          inferFieldTypesInParallel(originalDataRepo, _, inferenceGroupSizeInit, jsonFieldTypeInferrer)
+        seqFutures(fieldNames.grouped(inferenceGroupsInParallelInit * inferenceGroupSizeInit)) { fieldsNames =>
+          logger.info(s"Inferring new field types for ${fieldsNames.size} fields")
+          inferFieldTypesInParallel(originalDataRepo, fieldsNames, inferenceGroupSizeInit, jsonFieldTypeInferrer)
         }.map(_.flatten)
       }
 
@@ -1854,6 +1864,66 @@ class DataSetServiceImpl @Inject()(
       }
     } yield
       messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")
+  }
+
+  override def translateData(
+    originalDataSetId: String,
+    newDataSetId: String,
+    newDataSetName: String,
+    newDataSetSetting: Option[DataSetSetting],
+    newDataView: Option[DataView],
+    saveBatchSize: Option[Int]
+  ) = {
+    logger.info(s"Translation of the data using a given dictionary for data set '${originalDataSetId}' initiated.")
+    val originalDsa = dsaf(originalDataSetId).get
+    val originalDataRepo = originalDsa.dataSetRepo
+
+    for {
+    // get the accessor (data repo and field repo) for the newly registered data set
+      originalDataSetInfo <- originalDsa.metaInfo
+      newDsa <- dsaf.register(
+        DataSetMetaInfo(None, newDataSetId, newDataSetName, 0, false, originalDataSetInfo.dataSpaceId),
+        newDataSetSetting,
+        newDataView
+      )
+
+      // since we possible changed the dictionary (the data structure) we need to update the data set repo
+      _ <- newDsa.updateDataSetRepo
+
+      // get the new data set repo
+      newDataRepo = newDsa.dataSetRepo
+
+      // get all the fields
+      newFields <- newDsa.fieldRepo.find()
+
+      // delete all the data
+      _ <- {
+        logger.info(s"Deleting all the data for '${newDataSetId}'.")
+        newDataRepo.deleteAll
+      }
+
+      originalIds <- {
+        logger.info("Getting the original ids")
+        // get the items (from the data set)
+        originalDataRepo.find(
+          projection = Seq(dataSetIdFieldName),
+          sort = Seq(AscSort(dataSetIdFieldName))
+        ).map(_.map(json => (json \ dataSetIdFieldName).as[BSONObjectID]))
+      }
+
+      // save the new items
+      _ <- {
+        logger.info("Saving new items")
+        val newFieldNameAndTypeMap: Map[String, FieldType[_]] = newFields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap
+        val size = originalIds.size
+        seqFutures(
+          originalIds.toSeq.grouped(saveBatchSize.getOrElse(1)).zipWithIndex
+        ) {
+          createNewJsonsAndSave(originalDataRepo, newDataRepo, newFieldNameAndTypeMap, size, saveBatchSize.getOrElse(1))
+        }
+      }
+    } yield
+      messageLogger.info(s"Translation of the data using a given dictionary for data set '${originalDataSetId}' successfully finished.")
   }
 
   protected def translateDataAndDictionary(

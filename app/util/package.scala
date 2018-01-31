@@ -8,6 +8,8 @@ import dataaccess.JsonUtil
 import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
 
+import scala.collection.Iterator.empty
+import scala.collection.{AbstractIterator, Iterator}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.blocking
 
@@ -240,5 +242,28 @@ package object util {
       d.listFiles.filter(_.isFile).toList
     else
       Nil
+  }
+
+  implicit class GrouppedVariousSize[A](list: Iterable[A]) {
+
+    def grouped(sizes: Iterable[Int]): Iterator[Seq[A]] = new AbstractIterator[Seq[A]] {
+      private var hd: Seq[A] = _
+      private var hdDefined: Boolean = false
+      private val listIt = list.toIterator
+      private val groupSizesIt = sizes.toIterator
+
+      def hasNext = hdDefined || listIt.hasNext && groupSizesIt.hasNext && {
+        val groupSize = groupSizesIt.next()
+        hd = for (_ <- 1 to groupSize if listIt.hasNext) yield listIt.next()
+        hdDefined = true
+        true
+      }
+
+      def next() = if (hasNext) {
+        hdDefined = false
+        hd
+      } else
+        empty.next()
+    }
   }
 }

@@ -11,6 +11,7 @@ import dataaccess.JsonCrudRepoExtra._
 import dataaccess.Criterion._
 import models.AdaException
 import models.DataSetFormattersAndIds.JsObjectIdentity
+import dataaccess.ignite.BinaryJsonUtil.getValueFromJson
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -31,6 +32,11 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
     val scoreBoardDataSetRepo = dsaf(spec.scoreBoardDataSetId).get.dataSetRepo
     val allInOneDataSetRepo = dsaf(spec.allInOneFeatureSetId).get.dataSetRepo
 
+    def keyValue(json: JsObject): Any = {
+      val keyJsValue = (json \ spec.keyFieldName)
+      if (spec.isKeyInt) keyJsValue.as[Int] else keyJsValue.as[String]
+    }
+
     for {
       // retrieve all the submission ids
       submissionJsons <- scoreBoardDataSetRepo.find(projection = Seq(submissionIdFieldName))
@@ -39,15 +45,16 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
       submissionIdDataRepos = submissionJsons.map(submissionIdDataSetRepo(spec.submissionDataSetPrefix)).flatten
 
       // randomly draw n all-in-one features
-      randomAllInOneFeatures <- allInOneDataSetRepo.allIds.flatMap { ids =>
-        val randomIds = Random.shuffle(ids).take(spec.numberOfRecordsToCheck)
-        allInOneDataSetRepo.find(Seq(JsObjectIdentity.name #-> randomIds.toSeq))
+      randomAllInOneFeatures <- allInOneDataSetRepo.find(projection = Seq(spec.keyFieldName)).flatMap { jsonKeys =>
+        logger.info(s"Loading ${spec.numberOfRecordsToCheck} random entries.")
+        val keys = jsonKeys.map(keyValue)
+        val randomKeys = Random.shuffle(keys).take(spec.numberOfRecordsToCheck)
+        allInOneDataSetRepo.find(Seq(spec.keyFieldName #-> randomKeys.toSeq))
       }
 
       // check the features for all submission data sets available
       _ <- seqFutures(randomAllInOneFeatures.toSeq.zipWithIndex) { case (json, index) =>
-        val keyJsValue = (json \ spec.keyFieldName)
-        val key = if (spec.isKeyInt) keyJsValue.as[Int] else keyJsValue.as[String]
+        val key = keyValue(json)
 
         logger.info(s"Checking consistency of json $index with the key $key.")
 
@@ -63,12 +70,12 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
     submissionDataSetPrefix: String)(
     submissionJson: JsObject
   ): Option[(String, JsonCrudRepo)] = {
-    val submissionId = (submissionJson \ submissionIdFieldName).get match {
+    val submissionId = (submissionJson \ submissionIdFieldName).toOption.flatMap(_ match {
       case JsNull => None
       case submissionIdJsValue: JsValue =>
         val id = submissionIdJsValue.asOpt[String].getOrElse(submissionIdJsValue.as[Int].toString)
         Some(id)
-    }
+    })
 
     submissionId.flatMap { submissionId =>
       dsaf(submissionDataSetPrefix + "." + submissionId).map(dsa =>
@@ -89,12 +96,19 @@ class CheckConsistencyOfAllInOneFeatureSet @Inject()(
     }.toMap
 
     for {
-      featureJson <- featureDataSetRepo.find(Seq(keyFieldName #== keyValue), limit = Some(1)).map(_.head)
+      featureJson <- featureDataSetRepo.find(Seq(keyFieldName #== keyValue), limit = Some(1)).flatMap { featureJsons =>
+        if (featureJsons.size > 0)
+          Future(featureJsons.head)
+        else
+          featureDataSetRepo.find(Seq(keyFieldName.toLowerCase #== keyValue), limit = Some(1)).map(_.head)
+      }
     } yield
-      featureJson.fields.filterNot(_._1.equals(keyFieldName)).map { case (fieldName, jsValue) =>
+      featureJson.fields.filterNot{ case (fieldName, _) => fieldName.equalsIgnoreCase(keyFieldName) || fieldName.equals(JsObjectIdentity.name) }.map { case (fieldName, jsValue) =>
+        val value = getValueFromJson(jsValue)
         allInOneFeatureNameJsValueMap.get(fieldName).map { allInOneJsValue =>
-          if (!Json.stringify(jsValue).equals(Json.stringify(allInOneJsValue)))
-            throw new AdaException(s"Found mismatch in the submission $submissionId, field name $fieldName: $jsValue vs $allInOneJsValue")
+          val allInOneValue = getValueFromJson(allInOneJsValue)
+          if (!value.equals(allInOneValue))
+            throw new AdaException(s"Found mismatch in the submission $submissionId, field name $fieldName: $value vs $allInOneValue")
         }.getOrElse(
           throw new AdaException(s"Found mismatch in the submission $submissionId, field name $fieldName not found in the all-in-one feature set.")
         )

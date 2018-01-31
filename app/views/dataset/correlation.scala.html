@@ -15,8 +15,6 @@
 
 @(
     domainName: String,
-    fields: Traversable[Field],
-    chartSpec: Option[Widget],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -29,7 +27,7 @@
         <div class="col-md-10">
             @filterWithJs(
                 Some(filterSpec),
-                dataSetRouter.getCorrelations(fields.map(_.name).toSeq, filterSpec.conditionsOrId),
+                dataSetRouter.getCorrelations(filterSpec.conditionsOrId),
                 Right(dataSetRouter.allFields),
                 Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
                 filterShowFieldStyle,
@@ -48,7 +46,15 @@
 
 @bottomResources = {
     @highchartsJsImport()
-    @chartSpec.map(widgetJs(_)).getOrElse("")
+}
+
+@fieldButtons = {
+    <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
+        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
+    </a>
+    <a class="btn btn-success btn-sm pull-right" href="#" onclick="calcCorrelations();" data-toggle="tooltip" title="Calculate Correlations">
+        <span class="glyphicon glyphicon-play" aria-hidden="true"></span> Calculate
+    </a>
 }
 
 @main(Messages("correlation.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
@@ -72,31 +78,27 @@
             <div class="row">
                 @dynamicFieldTable(
                     "fieldName",
-                    fields,
+                    Nil,
                     true,
                     12,
-                    None,
-                    Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(Left(Nil)))),
+                    Some(fieldButtons),
+                    Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
                     "categoryTree2"
                 )
             </div>
-            <div class="row">
-                @helper.form(action=dataSetRouter.getCorrelations(Nil, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {
-                    <input type="hidden" name="dataSet" value="@context.dataSetId"/>
-                    <input type="hidden" name="filterOrId" value="@Json.toJson(filterSpec.conditionsOrId)"/>
-                    <button type="primary" onclick="addFieldNames()" class="btn btn-primary">Show</button>
-                }
-            </div>
         </div>
-        <div class="col-md-9">
-            @chartSpec.map(widget(_)).getOrElse("")
-            @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
+        <div id="widgetDiv" class="col-md-9">
         </div>
+        @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
     </div>
 }
 
 @helper.javascriptRouter("dataViewJsRoutes")(
     dataViewJsRouter.addCorrelation
+)
+
+@helper.javascriptRouter("dataSetJsRoutes")(
+    dataSetJsRouter.calcCorrelations
 )
 
 <script type="text/javascript">
@@ -113,13 +115,33 @@
         $('#fieldNameDiv #addRowButton').focus();
     });
 
-    function addFieldNames() {
-        var fieldNames = getFieldNames()
-        $.each(fieldNames, function(index, str) {
-            var map = {};
-            map["fieldNames"] = str.trim();
-            addParams($("#fieldForm"), map)
-        })
+    function calcCorrelations() {
+        var inputFieldNames = getFieldNames()
+
+        var filterOrId = $("#filterDiv").multiFilter('getJsonFilterId')
+        if (!filterOrId) {
+            filterOrId = $("#filterDiv").multiFilter('getJsonConditions')
+        }
+        var filterOrIdJson = JSON.stringify(filterOrId)
+
+        $("#widgetDiv").html("")
+
+        if (inputFieldNames.length == 0) {
+            showError("Correlation calculation cannot be launched. No fields specified.");
+        } else {
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcCorrelations(inputFieldNames, filterOrIdJson).ajax({
+                success: function (widget) {
+                    showMessage("Correlation calculation finished.")
+                    $("#widgetDiv").html(widgetDiv(widget))
+                    genericWidget(widget)
+                },
+                error: function (data) {
+                    showError(data.responseText);
+                }
+            });
+
+            showMessage("Correlation calculation for " + inputFieldNames.length + " fields launched.")
+        }
     }
 
     function addCorrelationToView() {
@@ -146,5 +168,20 @@
         $('#fieldNameDiv').dynamicTable('updateModelFromTable');
         var fieldNames = $('#fieldNameDiv').dynamicTable('getModel');
         return fieldNames;
+    }
+
+    function addAllFields() {
+        $.ajax({
+            url: '@Html(dataSetRouter.fields(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
+            success: function (data) {
+                $.each(data, function(index, field) {
+                    var values = {};
+                    values["fieldName"] = field.name;
+                    values["fieldTypeahead"] = field.label ? field.label : field.name;
+
+                    $('#fieldNameDiv').dynamicTable('addTableRow', values)
+                });
+            }
+        });
     }
 </script>

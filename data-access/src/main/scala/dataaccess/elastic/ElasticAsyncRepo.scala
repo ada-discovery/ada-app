@@ -134,26 +134,6 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     }
   }
 
-  private def serializeSearchResultWithProjection(
-    projection: Traversable[String])(
-    searchResult: RichSearchResponse
-  ): Traversable[E] = {
-    val projectionSeq = projection.map(toDBFieldName).toSeq
-
-    val serializationStart = new Date()
-
-    if (searchResult.shardFailures.nonEmpty) {
-      throw new AdaDataAccessException(searchResult.shardFailures(0).reason())
-    }
-
-    val result: Traversable[E] = projection match {
-      case Nil => serializeSearchResult(searchResult)
-      case _ => serializeProjectionSearchHits(projectionSeq, searchResult.hits)
-    }
-    println(s"Serialization for the projection '${projection.mkString(", ")}' finished in ${new Date().getTime - serializationStart.getTime} ms.")
-    result
-  }
-
   private def toSort(sorts: Seq[Sort]): Seq[SortDefinition] =
     sorts map {
       _ match {

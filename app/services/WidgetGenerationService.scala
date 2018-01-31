@@ -184,6 +184,19 @@ class WidgetGenerationServiceImpl @Inject() (
             BoxWidget(chartTitle, field.labelOrElseName, quants, None, None, displayOptions)
           }
 
+      case CorrelationWidgetSpec(fieldNames, subFilter, displayOptions) =>
+        val fields = fieldNames.map(nameFieldMap.get).flatten
+
+        for {
+          correlations <- statsService.calcPearsonCorrelations(repo, criteria, fields)
+        } yield
+          if (correlations.nonEmpty) {
+            val chartTitle = title.getOrElse("Correlations")
+            val widget = createCorrelationWidget(Some(chartTitle), correlations, fields, displayOptions)
+            Some(widget)
+          } else
+            None
+
       case TemplateHtmlWidgetSpec(content, subFilter, displayOptions) =>
         val widget = HtmlWidget("", content, displayOptions)
         Future(Some(widget))
@@ -265,16 +278,11 @@ class WidgetGenerationServiceImpl @Inject() (
 
       case CorrelationWidgetSpec(fieldNames, subFilter, displayOptions) =>
         val corrFields = fieldNames.map(nameFieldMap.get).flatten
-
         val chartTitle = title.getOrElse("Correlations")
+        val correlations = statsService.calcPearsonCorrelations(items, corrFields)
 
         if (items.nonEmpty) {
-          val widget = createCorrelations(
-            Some(chartTitle),
-            items,
-            corrFields,
-            displayOptions
-          )
+          val widget = createCorrelationWidget(Some(chartTitle), correlations, corrFields, displayOptions)
           Some(widget)
         } else
           None
@@ -471,14 +479,12 @@ class WidgetGenerationServiceImpl @Inject() (
     )
   }
 
-  private def createCorrelations(
+  private def createCorrelationWidget(
     title: Option[String],
-    items: Traversable[JsObject],
+    correlations: Seq[Seq[Option[Double]]],
     fields: Seq[Field],
     displayOptions: DisplayOptions
   ): HeatmapWidget = {
-    val correlations = statsService.calcPearsonCorrelations(items, fields)
-
     val fieldLabels = fields.map(_.labelOrElseName)
     HeatmapWidget(
       title.getOrElse("Correlations"),

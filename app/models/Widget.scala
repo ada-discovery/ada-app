@@ -225,6 +225,18 @@ object Widget {
     )(ScatterWidget[T1, T2](_, _, _, _, _), {x => (x.title, x.xAxisCaption, x.yAxisCaption, x.data, x.displayOptions)})
   }
 
+  implicit val heatmapWidgetFormat: Format[HeatmapWidget] = {
+    (
+      (__ \ "title").format[String] and
+      (__ \ "xCategories").format[Seq[String]] and
+      (__ \ "yCategories").format[Seq[String]] and
+      (__ \ "data").format[Seq[Seq[Option[Double]]]] and
+      (__ \ "min").format[Option[Double]] and
+      (__ \ "max").format[Option[Double]] and
+      (__ \ "displayOptions").format[DisplayOptions]
+    )(HeatmapWidget(_, _, _, _, _, _, _), {x => (x.title, x.xCategories, x.yCategories, x.data, x.min, x.max, x.displayOptions)})
+  }
+
   class WidgetWrites[T](fieldTypes: Seq[FieldType[T]]) extends Writes[Widget] {
 
     private val concreteClassFieldName = "concreteClass"
@@ -249,7 +261,7 @@ object Widget {
           boxWidgetWrites(fieldTypes.head).writes(e)
 
         case e: HeatmapWidget =>
-          Json.format[HeatmapWidget].writes(e)
+          heatmapWidgetFormat.writes(e)
 
         case e: HtmlWidget =>
           Json.format[HtmlWidget].writes(e)

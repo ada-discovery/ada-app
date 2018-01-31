@@ -14,7 +14,7 @@ class InferNewDataSet @Inject()(dataSetService: DataSetService) extends InputFut
 
   override def runAsFuture(spec: InferNewDataSetSpec) = {
     val fieldTypeInferrerFactory = FieldTypeInferrerFactory(
-      FieldTypeHelper.fieldTypeFactory(),
+      FieldTypeHelper.fieldTypeFactory(booleanIncludeNumbers = spec.booleanIncludeNumbers),
       spec.maxEnumValuesCount,
       spec.minAvgValuesPerEnum,
       FieldTypeHelper.arrayDelimiter
@@ -48,5 +48,6 @@ case class InferNewDataSetSpec(
   inferenceGroupSize: Option[Int],
   inferenceGroupsInParallel: Option[Int],
   maxEnumValuesCount: Int,
-  minAvgValuesPerEnum: Double
+  minAvgValuesPerEnum: Double,
+  booleanIncludeNumbers: Boolean
 )

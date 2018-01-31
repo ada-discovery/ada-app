@@ -7,16 +7,21 @@ import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import _root_.util.BasicStats.Quantiles
 import _root_.util._
+import _root_.util.GrouppedVariousSize
 import dataaccess.JsonUtil.project
 import java.{util => ju}
 import javax.inject.{Inject, Singleton}
 
 import Criterion.Infix
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
 import org.apache.commons.math3.stat.inference.{OneWayAnova, TestUtils}
 import org.apache.spark.ml.feature.ChiSqSelector
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.stat.ChiSquareTest
 import org.apache.spark.sql.DataFrame
+import play.api.Logger
 import services.ml.BooleanLabelIndexer
 
 import scala.collection.JavaConversions._
@@ -40,10 +45,6 @@ trait StatsService {
     field: Field,
     numericBinCount: Option[Int]
   ): Seq[Count[_]]
-
-//  def toRelativeCounts(
-//    counts: Seq[Count[_]]
-//  ): Seq[Count[_]]
 
   def calcGroupedDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
@@ -89,10 +90,38 @@ trait StatsService {
     groupField: Option[Field]
   ): Seq[(String, Seq[(Any, Any)])]
 
+  // correlations
+
+  def calcPearsonCorrelations(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    fields: Seq[Field],
+    parallelism: Option[Int] = None,
+    areValuesAllDefined: Boolean = false
+  ): Future[Seq[Seq[Option[Double]]]]
+
   def calcPearsonCorrelations(
     items: Traversable[JsObject],
     fields: Seq[Field]
   ): Seq[Seq[Option[Double]]]
+
+  def calcPearsonCorrelations(
+    values: Traversable[Seq[Option[Double]]]
+  ): Seq[Seq[Option[Double]]]
+
+  def calcPearsonCorrelations(
+    source: Source[Seq[Option[Double]], _],
+    featuresNum: Int,
+    parallelism: Option[Int]
+  ): Future[Seq[Seq[Option[Double]]]]
+
+  def calcPearsonCorrelationsAllDefined(
+    source: Source[Seq[Double], _],
+    featuresNum: Int,
+    parallelism: Option[Int]
+  ): Future[Seq[Seq[Option[Double]]]]
+
+  // independence tests
 
   def testChiSquare(
     data: Traversable[JsObject],
@@ -146,6 +175,8 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   private val ftf = FieldTypeHelper.fieldTypeFactory()
   private val defaultNumericBinCount = 20
   private val anovaTest = new CommonsOneWayAnovaAdjusted()
+
+  private val logger = Logger
 
   override def calcDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
@@ -1025,22 +1056,22 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
 
     val data: Seq[Seq[Option[Double]]] = fieldsWithValues.map(_._2).transpose
 
-    pearsonCorrelationAux(data)
+    calcPearsonCorrelations(data)
   }
 
-  private def pearsonCorrelationAux(
+  override def calcPearsonCorrelations(
     values: Traversable[Seq[Option[Double]]]
   ): Seq[Seq[Option[Double]]] = {
     val elementsCount = if (values.nonEmpty) values.head.size else 0
 
     def calc(index1: Int, index2: Int) = {
-      val els = (values.map(_ (index1)).toSeq, values.map(_ (index2)).toSeq).zipped.map {
+      val els = (values.map(_ (index1)).toSeq, values.map(_ (index2)).toSeq).zipped.flatMap {
         case (el1: Option[Double], el2: Option[Double]) =>
           if ((el1.isDefined) && (el2.isDefined)) {
             Some((el1.get, el2.get))
           } else
             None
-      }.flatten
+      }
 
       if (els.nonEmpty) {
         val length = els.size
@@ -1077,6 +1108,263 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
           Some(1d)
       }.toList
     }.toList
+  }
+
+  implicit val system = ActorSystem()
+  implicit val materializer = ActorMaterializer()
+
+  case class PersonIterativeAccum(
+    sum1: Double,
+    sum2: Double,
+    sqSum1: Double,
+    sqSum2: Double,
+    pSum: Double,
+    count: Int
+  )
+
+  private def pearsonCorrelationSink(
+    n: Int,
+    parallelGroupSizes: Seq[Int]
+  ) =
+    Sink.fold[Seq[Seq[PersonIterativeAccum]], Seq[Option[Double]]](
+      for (i <- 0 to n - 1) yield Seq.fill(i)(PersonIterativeAccum(0, 0, 0, 0, 0, 0))
+    ) {
+      case (accums, featureValues) =>
+
+        def calcAux(accumFeatureValuePairs: Seq[(Seq[PersonIterativeAccum], Option[Double])]) =
+          accumFeatureValuePairs.map { case (rowAccums, value1) =>
+            rowAccums.zip(featureValues).map { case (accum, value2) =>
+              if (value1.isDefined && value2.isDefined) {
+                PersonIterativeAccum(
+                  accum.sum1 + value1.get,
+                  accum.sum2 + value2.get,
+                  accum.sqSum1 + value1.get * value1.get,
+                  accum.sqSum2 + value2.get * value2.get,
+                  accum.pSum + value1.get * value2.get,
+                  accum.count + 1
+                )
+              } else
+                accum
+            }
+          }
+
+        val accumFeatureValuePairs = accums.zip(featureValues)
+
+        parallelGroupSizes match {
+          case Nil => calcAux(accumFeatureValuePairs)
+          case _ => accumFeatureValuePairs.grouped(parallelGroupSizes).toSeq.par.flatMap(calcAux).toList
+        }
+    }
+
+  case class PersonIterativeAccumGlobal(
+    sumSqSums: Seq[(Double, Double)],
+    pSums: Seq[Seq[Double]],
+    count: Int
+  )
+
+  private def pearsonCorrelationSinkAllDefined(
+    n: Int,
+    parallelGroupSizes: Seq[Int]
+  ) =
+    Sink.fold[PersonIterativeAccumGlobal, Seq[Double]](
+      PersonIterativeAccumGlobal(
+        sumSqSums = for (i <- 0 to n - 1) yield (0d, 0d),
+        pSums = for (i <- 0 to n - 1) yield Seq.fill(i)(0d),
+        count = 0
+      )
+    ) {
+      case (accumGlobal, featureValues) =>
+        val newSumSqSums = accumGlobal.sumSqSums.zip(featureValues).map { case ((sum, sqSum), value) =>
+          (sum + value, sqSum + value * value)
+        }
+
+        def calcAux(pSumValuePairs: Seq[(Seq[Double], Double)]) =
+          pSumValuePairs.map { case (pSums, value1) =>
+            pSums.zip(featureValues).map { case (pSum, value2) =>
+              pSum + value1 * value2
+            }
+          }
+
+        val pSumValuePairs = accumGlobal.pSums.zip(featureValues)
+
+        val newPSums = parallelGroupSizes match {
+          case Nil => calcAux(pSumValuePairs)
+          case _ => pSumValuePairs.grouped(parallelGroupSizes).toSeq.par.flatMap(calcAux).toList
+        }
+        PersonIterativeAccumGlobal(newSumSqSums, newPSums, accumGlobal.count + 1)
+    }
+
+  override def calcPearsonCorrelations(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    fields: Seq[Field],
+    parallelism: Option[Int],
+    areValuesAllDefined: Boolean
+  ): Future[Seq[Seq[Option[Double]]]] =
+    for {
+      // create a data source
+      source <- dataRepo.findAsStream(criteria, Nil, fields.map(_.name))
+
+      // covert the data source to (double) value source and calc correlations
+      corrs <- if (areValuesAllDefined) {
+        val getDoubleValuesDefined = {json: JsObject => fields.map(field => getDoubleValue(field)(json).get)}
+        calcPearsonCorrelationsAllDefined(source.map(getDoubleValuesDefined), fields.size, parallelism)
+      } else {
+        val getDoubleValues = {json: JsObject => fields.map(field => getDoubleValue(field)(json))}
+        calcPearsonCorrelations(source.map(getDoubleValues), fields.size, parallelism)
+      }
+    } yield
+      corrs
+
+  override def calcPearsonCorrelations(
+    source: Source[Seq[Option[Double]], _],
+    featuresNum: Int,
+    parallelism: Option[Int]
+  ): Future[Seq[Seq[Option[Double]]]] = {
+    val groupSizes = calcGroupSizes(featuresNum, parallelism)
+
+    for {
+      // run the stream with a selected sink and get accums back
+      accums <- {
+        val sink = pearsonCorrelationSink(featuresNum, groupSizes)
+        source.runWith(sink)
+      }
+    } yield
+      accumsToCorrelations(accums, groupSizes)
+  }
+
+  override def calcPearsonCorrelationsAllDefined(
+    source: Source[Seq[Double], _],
+    featuresNum: Int,
+    parallelism: Option[Int]
+  ): Future[Seq[Seq[Option[Double]]]] = {
+    val groupSizes = calcGroupSizes(featuresNum, parallelism)
+
+    for {
+      // run the stream with a selected sink and get accums back
+      accums <- {
+        val sink = pearsonCorrelationSinkAllDefined(featuresNum, groupSizes)
+        source.runWith(sink).map(globalAccumToAccums)
+      }
+    } yield
+      accumsToCorrelations(accums, groupSizes)
+  }
+
+  private def calcGroupSizes(n: Int, parallelism: Option[Int]) =
+    parallelism.map { groupNumber =>
+      val initGroupSize = n / Math.sqrt(groupNumber)
+
+      val groupSizes = (1 to groupNumber).map { i =>
+        val doubleGroupSize = (Math.sqrt(i) - Math.sqrt(i - 1)) * initGroupSize
+        Math.round(doubleGroupSize).toInt
+      }.filter(_ > 0)
+
+      val sum = groupSizes.sum
+      val fixedGroupSizes = if (sum < n) {
+        if (groupSizes.size > 1)
+          groupSizes.take(groupSizes.size - 1) :+ (groupSizes.last + (n - sum))
+        else if (groupSizes.size == 1)
+          Seq(groupSizes.head + (n - sum))
+        else
+          Seq(n)
+      } else
+        groupSizes
+
+      val newSum = fixedGroupSizes.sum
+      logger.info("Groups          : " + fixedGroupSizes.mkString(","))
+      logger.info("Sum             : " + newSum)
+
+      fixedGroupSizes
+    }.getOrElse(
+      Nil
+    )
+
+  private def accumToCorrelation(accum: PersonIterativeAccum): Option[Double] = {
+    val length = accum.count
+
+    if (length < 2) {
+      None
+    } else {
+      val mean1 = accum.sum1 / length
+      val mean2 = accum.sum2 / length
+
+      // sum up the squares
+      val mean1Sq = accum.sqSum1 / length
+      val mean2Sq = accum.sqSum2 / length
+
+      // sum up the products
+      val pMean = accum.pSum / length
+
+      // calculate the pearson score
+      val numerator = pMean - mean1 * mean2
+
+      val denominator = Math.sqrt((mean1Sq - mean1 * mean1) * (mean2Sq - mean2 * mean2))
+
+      if (denominator == 0)
+        None
+      else if (denominator.isNaN || denominator.isInfinity) {
+        logger.error(s"Got not-a-number denominator during a correlation calculation.")
+        None
+      } else if (numerator.isNaN || numerator.isInfinity) {
+        logger.error(s"Got not-a-number numerator during a correlation calculation.")
+        None
+      } else
+        Some(numerator/ denominator)
+    }
+  }
+
+  private def globalAccumToAccums(
+    globalAccum: PersonIterativeAccumGlobal
+  ): Seq[Seq[PersonIterativeAccum]] = {
+    logger.info("Converting the global streamed accumulator to the partial ones.")
+    globalAccum.pSums.zip(globalAccum.sumSqSums).map { case (rowPSums, (sum1, sqSum1)) =>
+      rowPSums.zip(globalAccum.sumSqSums).map { case (pSum, (sum2, sqSum2)) =>
+        PersonIterativeAccum(sum1, sum2, sqSum1, sqSum2, pSum, globalAccum.count)
+      }
+    }
+  }
+
+  private def accumsToCorrelations(
+    accums: Seq[Seq[PersonIterativeAccum]],
+    parallelGroupSizes: Seq[Int]
+  ): Seq[Seq[Option[Double]]] = {
+    logger.info("Creating correlations from the streamed accumulators.")
+    val n = accums.size
+
+    def calcAux(accums: Seq[Seq[PersonIterativeAccum]]) = accums.map(_.map(accumToCorrelation))
+
+    val triangleResults = parallelGroupSizes match {
+      case Nil => calcAux(accums)
+      case _ => accums.grouped(parallelGroupSizes).toSeq.par.flatMap(calcAux).toList
+    }
+
+    for (i <- 0 to n - 1) yield
+      for (j <- 0 to n - 1) yield {
+        if (i > j)
+          triangleResults(i)(j)
+        else if (i < j)
+          triangleResults(j)(i)
+        else
+          Some(1d)
+      }
+  }
+
+  private def getDoubleValue(field: Field)(json: JsObject): Option[Double] = {
+    // helper function
+    def value[T]: Option[T] = {
+      val typedFieldType = ftf(field.fieldTypeSpec).asValueOf[T]
+      typedFieldType.jsonToValue(json \ field.name)
+    }
+
+    field.fieldType match {
+      case FieldTypeId.Double => value[Double]
+
+      case FieldTypeId.Integer => value[Long].map(_.toDouble)
+
+      case FieldTypeId.Date => value[java.util.Date].map(_.getTime.toDouble)
+
+      case _ => None
+    }
   }
 
 

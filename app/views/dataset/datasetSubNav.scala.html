@@ -22,7 +22,7 @@
             @listItem(dataSetRouter.plainGetDistribution, "Distribution", Some(2))
             @listItem(dataSetRouter.getCumulativeCount(None, None, Left(Nil)), "Cumulative Count", Some(2))
             @listItem(dataSetRouter.plainGetScatterStats, "Scatter", Some(2))
-            @listItem(dataSetRouter.getCorrelations(Nil, Left(Nil)), "Correlation", Some(2))
+            @listItem(dataSetRouter.getCorrelations(Left(Nil)), "Correlation", Some(2))
             @listItem(dataSetRouter.getIndependenceTest, "Independence Test (Chi-Square/ANOVA)", Some(2))
             <li role="separator" class="divider"></li>
             @listItem(classificationRunRouter.plainList, "ML Classification", Some(2))

@@ -1278,31 +1278,50 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
   }
 
-  override def getCorrelations(
+  override def getCorrelations(filterOrId: FilterOrId) = Action.async { implicit request => {
+    val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting(request)
+    val filterFuture = filterRepo.resolve(filterOrId)
+    for {
+      // get the data set name, the data space tree, and the setting
+      (dataSetName, dataSpaceTree, setting) <- dataSetNameTreeSettingFuture
+
+      // use a given filter conditions or load one
+      resolvedFilter <- filterFuture
+
+      // create a name -> field map of the filter referenced fields
+      fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
+    } yield {
+      // get a new fileter
+      val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+
+      render {
+        case Accepts.Html() => Ok(dataset.correlation(
+          dataSetName,
+          newFilter,
+          setting.filterShowFieldStyle,
+          dataSpaceTree
+        ))
+        case Accepts.Json() => BadRequest("Correlations function doesn't support JSON response.")
+      }
+    }
+  }.recover {
+    case t: TimeoutException =>
+      Logger.error("Problem found in the getCorrelations method")
+      InternalServerError(t.getMessage)
+  }
+  }
+
+  def calcCorrelations(
     fieldNames: Seq[String],
     filterOrId: FilterOrId
   ) = Action.async { implicit request => {
+    println("Calc Correlations reached")
     for {
-    // get the setting
-      setting <- dsa.setting
-
-      // get the data set name
-      dataSetName <- dsa.dataSetName
-
-      // get the data space tree
-      dataSpaceTree <- dataSpaceService.getTreeForCurrentUser(request)
-
       // use a given filter conditions or load one
-      resolvedFilter <- filterRepo.resolve(filterOrId)
+      resolvedFilter <-  filterRepo.resolve(filterOrId)
 
       // get the criteria
       criteria <- toCriteria(resolvedFilter.conditions)
-
-      // get the chart items
-      chartItems <- if (fieldNames.nonEmpty)
-        repo.find(criteria, Nil, fieldNames)
-      else
-        Future(Nil)
 
       // chart fields
       fields <- getFields(fieldNames)
@@ -1310,25 +1329,22 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // create a name -> field map of the filter referenced fields
       fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
 
+      // create a correlation widget spec
+      widgetSpec = {
+        val displayOptions = BasicDisplayOptions(height = Some(Math.max(400, fields.size * 20)))
+        CorrelationWidgetSpec(fieldNames, None, displayOptions)
+      }
+
+      // generate a widget
+      widget <- widgetService.apply(widgetSpec, repo, criteria, fields)
     } yield {
-      // generate the correlation widget
-      val displayOptions = BasicDisplayOptions(height = Some(500))
-      val widgetSpec = CorrelationWidgetSpec(fieldNames, None, displayOptions)
-      val widget = widgetService(widgetSpec, chartItems, fields)
-
-      // get a new fileter
+      // get a new filter
       val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+      val widgetJson = widget.map(widgetToJson(_, widgetSpec, fields.map( field => (field.name, field)).toMap))
 
-      render {
-        case Accepts.Html() => Ok(dataset.correlation(
-          dataSetName,
-          fields,
-          widget,
-          newFilter,
-          setting.filterShowFieldStyle,
-          dataSpaceTree
-        ))
-        case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
+      widgetJson match {
+        case Some(json) => Ok(json)
+        case None => BadRequest(s"Correlation widget cannot be generated.")
       }
     }
   }.recover {

@@ -85,9 +85,13 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   ) = dispatch(_.getDistributionWidget(fieldName, groupFieldName, filterId))
 
   override def getCorrelations(
+    filterOrId: FilterOrId
+  ) = dispatch(_.getCorrelations(filterOrId))
+
+  override def calcCorrelations(
     fieldNames: Seq[String],
     filterOrId: FilterOrId
-  ) = dispatch(_.getCorrelations(fieldNames, filterOrId))
+  ) = dispatch(_.calcCorrelations(fieldNames, filterOrId))
 
   override def getCumulativeCount(
     dateFieldName: Option[String],

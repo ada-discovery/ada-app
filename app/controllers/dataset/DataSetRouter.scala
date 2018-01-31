@@ -48,4 +48,5 @@ final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.ja
   val cluster = routeFun(_.cluster)
   val getDistributionWidget = routeFun(_.getDistributionWidget)
   val testIndependence = routeFun(_.testIndependence)
+  val calcCorrelations = routeFun(_.calcCorrelations)
 }

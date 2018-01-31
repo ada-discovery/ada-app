@@ -1,8 +1,11 @@
-package runnables
+package scala
 
 import play.api.inject.guice.GuiceApplicationBuilder
 
-class GuiceBuilderRunnable[T <: Runnable](implicit ev: Manifest[T]) {
+/**
+  * Created by peter on 31.01.18.
+  */
+object TesstUtil {
 
   val app = {
     import scala.collection.JavaConversions.iterableAsScalaIterable
@@ -11,10 +14,5 @@ class GuiceBuilderRunnable[T <: Runnable](implicit ev: Manifest[T]) {
     val modules = config.getStringList("play.modules.enabled").fold(
       List.empty[String])(l => iterableAsScalaIterable(l).toList)
     new GuiceApplicationBuilder().configure("play.modules.enabled" -> modules).build
-  }
-
-  def run = {
-    app.injector.instanceOf[T].run
-    app.stop()
   }
 }
