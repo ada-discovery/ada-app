@@ -55,6 +55,8 @@ libraryDependencies ++= Seq(
   "org.webjars.bower" % "plotly.js" % "1.5.1",
   "org.webjars.bower" % "d3" % "3.5.16",
   "org.webjars.bower" % "Autolinker.js" % "0.25.0", // to convert links to a-href elements
+//  "org.webjars.bower" % "vis" % "4.19.1" exclude("org.webjars" % "jquery"),  // to create graphs visualizations
+  "org.webjars" % "visjs" % "4.21.0", // to create graphs visualizations
   "org.webjars" % "jquery-ui" % "1.11.1",
   "net.codingwell" %% "scala-guice" % "4.0.1",
 //  "com.google.inject.extensions" % "guice-spring" % "4.0", // so we can initialize spring container in Guice

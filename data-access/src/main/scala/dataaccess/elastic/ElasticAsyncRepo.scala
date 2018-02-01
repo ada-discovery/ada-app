@@ -27,7 +27,7 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
   protected val indexAndType = IndexAndType(indexName, typeName)
 
   protected val unboundLimit = Integer.MAX_VALUE
-  protected val scrollKeepAlive = "1m"
+  protected val scrollKeepAlive = "3m"
 
   def get(id: ID): Future[Option[E]] =
     client execute {
