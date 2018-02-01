@@ -67,7 +67,7 @@ class CalcCorrelations @Inject()(
       (streamedCorrelations, streamExecTime) <- {
         val calcStart = new ju.Date
         seqFutures(1 to input.streamRepetitions) { _ =>
-          statsService.calcPearsonCorrelations(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamAreValuesAllDefined)
+          statsService.calcPearsonCorrelations(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
         }.map { results =>
           val execTime = new ju.Date().getTime - calcStart.getTime
           (results.head, execTime.toDouble / input.streamRepetitions)
@@ -130,6 +130,7 @@ case class CalcCorrelationsSpec(
   standardRepetitions: Int,
   streamRepetitions: Int,
   streamParallelism: Option[Int],
+  streamWithProjection: Boolean,
   streamAreValuesAllDefined: Boolean,
   exportFileName: Option[String]
 )

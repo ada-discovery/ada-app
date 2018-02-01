@@ -35,6 +35,10 @@ class AppController @Inject() (
     Ok(layout.home())
   }
 
+  def networkVis = Action { implicit request =>
+    Ok(views.html.networkVis.networkVis())
+  }
+
   // TODO: move elsewhere
   def studies = restrictSubjectPresentAny(deadbolt) {
     implicit request =>

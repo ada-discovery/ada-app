@@ -97,6 +97,7 @@ trait StatsService {
     criteria: Seq[Criterion[Any]],
     fields: Seq[Field],
     parallelism: Option[Int] = None,
+    withProjection: Boolean = true,
     areValuesAllDefined: Boolean = false
   ): Future[Seq[Seq[Option[Double]]]]
 
@@ -1199,11 +1200,12 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     criteria: Seq[Criterion[Any]],
     fields: Seq[Field],
     parallelism: Option[Int],
+    withProjection: Boolean,
     areValuesAllDefined: Boolean
   ): Future[Seq[Seq[Option[Double]]]] =
     for {
       // create a data source
-      source <- dataRepo.findAsStream(criteria, Nil, fields.map(_.name))
+      source <- dataRepo.findAsStream(criteria, Nil, if (withProjection) fields.map(_.name) else Nil)
 
       // covert the data source to (double) value source and calc correlations
       corrs <- if (areValuesAllDefined) {
