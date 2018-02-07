@@ -41,6 +41,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
   import play.modules.reactivemongo.json.collection.JSONCollection
 
   private val indexNameMaxSize = 40
+  private val indexMaxFieldsNum = 31
   private val logger = Logger
   private implicit val system = ActorSystem()
   protected val materializer = ActorMaterializer()
@@ -118,7 +119,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
     // use index / hint only if the limit is not provided and projection is not empty
     val queryBuilder2 =
-      if (mongoAutoCreateIndexForProjection && limit.isEmpty && projection.nonEmpty) {
+      if (mongoAutoCreateIndexForProjection && limit.isEmpty && projection.nonEmpty && projection.size <= indexMaxFieldsNum) {
         val fullName = sortedProjection.mkString("_")
         val name = if (fullName.size <= indexNameMaxSize)
           fullName

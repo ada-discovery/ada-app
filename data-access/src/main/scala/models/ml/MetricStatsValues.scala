@@ -4,5 +4,6 @@ case class MetricStatsValues(
   mean: Double,
   min: Double,
   max: Double,
-  variance: Double
+  variance: Double,
+  median: Option[Double]
 )
