@@ -1,5 +1,6 @@
 package runnables
 
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.{util => ju}
@@ -7,10 +8,11 @@ import java.{util => ju}
 import com.google.inject.Inject
 import persistence.dataset.DataSetAccessorFactory
 import services.StatsService
-import util.seqFutures
+import util.{seqFutures, writeByteArrayStream}
 import dataaccess.Criterion._
 import models.DataSetFormattersAndIds.FieldIdentity
 import models.{Field, FieldTypeId}
+import org.apache.commons.io.IOUtils
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -59,7 +61,7 @@ class CalcCorrelations @Inject()(
             (Nil, 0)
           } else {
             val execTime = new ju.Date().getTime - calcStart.getTime
-            (results.head, execTime.toDouble / input.standardRepetitions)
+            (results.head, execTime.toDouble / (1000 * input.standardRepetitions))
           }
         }
       }
@@ -70,18 +72,12 @@ class CalcCorrelations @Inject()(
           statsService.calcPearsonCorrelations(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
         }.map { results =>
           val execTime = new ju.Date().getTime - calcStart.getTime
-          (results.head, execTime.toDouble / input.streamRepetitions)
+          (results.head, execTime.toDouble / (1000 * input.streamRepetitions))
         }
       }
     } yield {
-      logger.info(s"Correlation for ${numericFields.size} fields using ALL DATA finished in $execTime ms on average.")
-      logger.info(s"Correlation for ${numericFields.size} fields using STREAMS finished in $streamExecTime ms on average.")
-
-//      logger.info("Correlations with ALL DATA:")
-//      logger.info(correlations.map(_.map(_.getOrElse(0)).mkString(",")).mkString("\n"))
-//
-//      logger.info("Correlations with STREAMS:")
-//      logger.info(streamedCorrelations.map(_.map(_.getOrElse(0)).mkString(",")).mkString("\n"))
+      logger.info(s"Correlation for ${numericFields.size} fields using ALL DATA finished in ${execTime} sec on average.")
+      logger.info(s"Correlation for ${numericFields.size} fields using STREAMS finished in ${streamExecTime} sec on average.")
 
       correlations.zip(streamedCorrelations).map { case (rowCor1, rowCor2) =>
         rowCor1.zip(rowCor2).map { case (cor1, cor2) =>
@@ -92,13 +88,35 @@ class CalcCorrelations @Inject()(
       val correlationsToExport = if (correlations.nonEmpty) correlations else streamedCorrelations
       input.exportFileName.map { exportFileName =>
         logger.info(s"Exporting the calculated correlations to $exportFileName.")
-        exportCorrelations(correlationsToExport, sortedFields, exportFileName)
+        exportCorrelationsOptimal(correlationsToExport, sortedFields, exportFileName)
       }.getOrElse(
         ()
       )
     }
   }
 
+  private def exportCorrelationsOptimal(
+    corrs: Seq[Seq[Option[Double]]],
+    fields: Seq[Field],
+    fileName: String
+  ) = {
+    val fieldNames = fields.map(field => field.name.replaceAllLiterally("u002e", "."))
+
+    val header = "featureName," + fieldNames.mkString(",") + "\n"
+    val headerBytes = header.getBytes(StandardCharsets.UTF_8)
+
+    val rowBytesStream = (corrs.toStream, fieldNames).zipped.toStream.map { case (rowCorrs, fieldName) =>
+      val rowValues = rowCorrs.map(_.map(_.toString).getOrElse("")).mkString(",")
+      val rowContent = fieldName + "," + rowValues + "\n"
+      rowContent.getBytes(StandardCharsets.UTF_8)
+    }
+
+    val outputStream = Stream(headerBytes) #::: rowBytesStream
+
+    writeByteArrayStream(outputStream, new java.io.File(fileName))
+  }
+
+  @Deprecated
   private def exportCorrelations(
     corrs: Seq[Seq[Option[Double]]],
     fields: Seq[Field],
@@ -110,7 +128,7 @@ class CalcCorrelations @Inject()(
       fieldName + "," + rowValues
     }
 
-    val header = "," + fieldNames.mkString(",")
+    val header = "featureName," + fieldNames.mkString(",")
     val content = (Seq(header) ++ rows).mkString("\n")
 
     Files.write(

@@ -25,6 +25,7 @@ import play.api.Logger
 import services.ml.BooleanLabelIndexer
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
 import scala.concurrent.Future
 import scala.math.BigDecimal.RoundingMode
 import scala.concurrent.duration._
@@ -1030,6 +1031,10 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     }
   }
 
+  //////////////////
+  // Correlations //
+  //////////////////
+
   override def calcPearsonCorrelations(
     items: Traversable[JsObject],
     fields: Seq[Field]
@@ -1157,13 +1162,90 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         }
     }
 
-  case class PersonIterativeAccumGlobal(
-    sumSqSums: Seq[(Double, Double)],
-    pSums: Seq[Seq[Double]],
-    count: Int
-  )
+  @Deprecated
+  // seems slower than @see pearsonCorrelationSink and could be removed
+  private def pearsonCorrelationSinkMutable(
+    n: Int,
+    parallelGroupSizes: Seq[Int]
+  ) = {
+    val starts = parallelGroupSizes.scanLeft(0){_+_}
+    val startEnds = parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
+
+    Sink.fold[Seq[mutable.ArraySeq[PersonIterativeAccum]], Seq[Option[Double]]](
+      for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(PersonIterativeAccum(0, 0, 0, 0, 0, 0)): _*)
+    ) {
+      case (accums, featureValues) =>
+
+        def calcAux(from: Int, to: Int) =
+          for (i <- from to to) {
+            val rowAccums = accums(i)
+            featureValues(i).foreach(value1 =>
+              for (j <- 0 to i - 1) {
+                featureValues(j).foreach { value2 =>
+                  val accum = rowAccums(j)
+                  val newAccum = PersonIterativeAccum(
+                    accum.sum1 + value1,
+                    accum.sum2 + value2,
+                    accum.sqSum1 + value1 * value1,
+                    accum.sqSum2 + value2 * value2,
+                    accum.pSum + value1 * value2,
+                    accum.count + 1
+                  )
+                  rowAccums.update(j, newAccum)
+                }
+              }
+            )
+          }
+
+        startEnds match {
+          case Nil => calcAux(0, n - 1)
+          case _ => startEnds.par.foreach((calcAux(_, _)).tupled)
+        }
+        accums
+    }
+  }
 
   private def pearsonCorrelationSinkAllDefined(
+    n: Int,
+    parallelGroupSizes: Seq[Int]
+  ) = {
+    val starts = parallelGroupSizes.scanLeft(0){_+_}
+    val startEnds = parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
+
+    Sink.fold[PersonIterativeAccumGlobalArray, Seq[Double]](
+      PersonIterativeAccumGlobalArray(
+        sumSqSums = for (i <- 0 to n - 1) yield (0d, 0d),
+        pSums = (for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(0d): _*)).toArray,
+        count = 0
+      )
+    ) {
+      case (accumGlobal, featureValues) =>
+        val newSumSqSums = (accumGlobal.sumSqSums, featureValues).zipped.map { case ((sum, sqSum), value) =>
+          (sum + value, sqSum + value * value)
+        }
+
+        val pSums = accumGlobal.pSums
+
+        def calcAux(from: Int, to: Int) =
+          for (i <- from to to) {
+            val rowPSums = pSums(i)
+            val value1 = featureValues(i)
+            for (j <- 0 to i - 1) {
+              val value2 = featureValues(j)
+              rowPSums.update(j, rowPSums(j) + value1 * value2)
+            }
+          }
+
+        startEnds match {
+          case Nil => calcAux(0, n - 1)
+          case _ => startEnds.par.foreach((calcAux(_, _)).tupled)
+        }
+        PersonIterativeAccumGlobalArray(newSumSqSums, pSums, accumGlobal.count + 1)
+    }
+  }
+
+  @Deprecated
+  private def pearsonCorrelationSinkAllDefinedOld(
     n: Int,
     parallelGroupSizes: Seq[Int]
   ) =
@@ -1175,24 +1257,24 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       )
     ) {
       case (accumGlobal, featureValues) =>
-        val newSumSqSums = accumGlobal.sumSqSums.zip(featureValues).map { case ((sum, sqSum), value) =>
+        val newSumSqSums = (accumGlobal.sumSqSums, featureValues).zipped.map { case ((sum, sqSum), value) =>
           (sum + value, sqSum + value * value)
         }
 
-        def calcAux(pSumValuePairs: Seq[(Seq[Double], Double)]) =
+        def calcAux(pSumValuePairs: Traversable[(Seq[Double], Double)]) =
           pSumValuePairs.map { case (pSums, value1) =>
-            pSums.zip(featureValues).map { case (pSum, value2) =>
+            (pSums, featureValues).zipped.map { case (pSum, value2) =>
               pSum + value1 * value2
             }
           }
 
-        val pSumValuePairs = accumGlobal.pSums.zip(featureValues)
+        val pSumValuePairs = (accumGlobal.pSums, featureValues).zipped.toTraversable
 
         val newPSums = parallelGroupSizes match {
           case Nil => calcAux(pSumValuePairs)
-          case _ => pSumValuePairs.grouped(parallelGroupSizes).toSeq.par.flatMap(calcAux).toList
+          case _ => pSumValuePairs.grouped(parallelGroupSizes).toArray.par.flatMap(calcAux).arrayseq
         }
-        PersonIterativeAccumGlobal(newSumSqSums, newPSums, accumGlobal.count + 1)
+        PersonIterativeAccumGlobal(newSumSqSums, newPSums.toSeq, accumGlobal.count + 1)
     }
 
   override def calcPearsonCorrelations(
@@ -1316,11 +1398,23 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   }
 
   private def globalAccumToAccums(
+    globalAccum: PersonIterativeAccumGlobalArray
+  ): Seq[Seq[PersonIterativeAccum]] = {
+    logger.info("Converting the global streamed accumulator to the partial ones.")
+    (globalAccum.pSums, globalAccum.sumSqSums).zipped.map { case (rowPSums, (sum1, sqSum1)) =>
+      (rowPSums, globalAccum.sumSqSums).zipped.map { case (pSum, (sum2, sqSum2)) =>
+        PersonIterativeAccum(sum1, sum2, sqSum1, sqSum2, pSum, globalAccum.count)
+      }
+    }
+  }
+
+  @Deprecated
+  private def globalAccumToAccumsOld(
     globalAccum: PersonIterativeAccumGlobal
   ): Seq[Seq[PersonIterativeAccum]] = {
     logger.info("Converting the global streamed accumulator to the partial ones.")
-    globalAccum.pSums.zip(globalAccum.sumSqSums).map { case (rowPSums, (sum1, sqSum1)) =>
-      rowPSums.zip(globalAccum.sumSqSums).map { case (pSum, (sum2, sqSum2)) =>
+    (globalAccum.pSums, globalAccum.sumSqSums).zipped.map { case (rowPSums, (sum1, sqSum1)) =>
+      (rowPSums, globalAccum.sumSqSums).zipped.map { case (pSum, (sum2, sqSum2)) =>
         PersonIterativeAccum(sum1, sum2, sqSum1, sqSum2, pSum, globalAccum.count)
       }
     }
@@ -1337,8 +1431,10 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
 
     val triangleResults = parallelGroupSizes match {
       case Nil => calcAux(accums)
-      case _ => accums.grouped(parallelGroupSizes).toSeq.par.flatMap(calcAux).toList
+      case _ => accums.grouped(parallelGroupSizes).toArray.par.flatMap(calcAux).arrayseq
     }
+
+    logger.info("Triangle results finished. Generating a full matrix.")
 
     for (i <- 0 to n - 1) yield
       for (j <- 0 to n - 1) yield {
@@ -1601,3 +1697,16 @@ case class AnovaResult(pValue: Double, fValue: Double, degreeOfFreedomBetweenGro
 object AnovaResult {
   implicit val anovaResultFormat = Json.format[AnovaResult]
 }
+
+@Deprecated
+case class PersonIterativeAccumGlobal(
+  sumSqSums: Seq[(Double, Double)],
+  pSums: Seq[Seq[Double]],
+  count: Int
+)
+
+case class PersonIterativeAccumGlobalArray(
+  sumSqSums: Seq[(Double, Double)],
+  pSums: Array[mutable.ArraySeq[Double]],
+  count: Int
+)

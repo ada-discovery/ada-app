@@ -1,15 +1,16 @@
-import java.io.File
+import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util.concurrent.Executors
 
 import models._
 import org.apache.commons.lang.StringUtils
 import play.api.{Logger, LoggerLike}
 import dataaccess.JsonUtil
+import org.apache.commons.io.IOUtils
 import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
 
 import scala.collection.Iterator.empty
-import scala.collection.{AbstractIterator, Iterator}
+import scala.collection.{AbstractIterator, Iterator, Traversable}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.blocking
 
@@ -244,9 +245,9 @@ package object util {
       Nil
   }
 
-  implicit class GrouppedVariousSize[A](list: Iterable[A]) {
+  implicit class GrouppedVariousSize[A](list: Traversable[A]) {
 
-    def grouped(sizes: Iterable[Int]): Iterator[Seq[A]] = new AbstractIterator[Seq[A]] {
+    def grouped(sizes: Traversable[Int]): Iterator[Seq[A]] = new AbstractIterator[Seq[A]] {
       private var hd: Seq[A] = _
       private var hdDefined: Boolean = false
       private val listIt = list.toIterator
@@ -265,5 +266,18 @@ package object util {
       } else
         empty.next()
     }
+  }
+
+  def writeByteArrayStream(data: Stream[Array[Byte]], file : File) = {
+    val target = new BufferedOutputStream(new FileOutputStream(file))
+    try
+      data.foreach(IOUtils.write(_, target))
+    finally
+      target.close
+  }
+
+  def writeByteStream(data: Stream[Byte], file : File) = {
+    val target = new BufferedOutputStream(new FileOutputStream(file))
+    try data.foreach(target.write(_)) finally target.close
   }
 }

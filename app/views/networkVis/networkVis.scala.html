@@ -1,86 +1,172 @@
+@import util.matchesPath
 @import controllers.core.WebContext
+@import controllers.core.WebContext._
+@import views.html.layout.main
+@import controllers.routes.{MPowerChallengeController => challengeRoutes}
+@import play.api.libs.json.Json
+@import views.html.elements.labelValue
 
-@()(
-    implicit context: WebContext
-)
+@(
+    domainName: String,
+    nodes: Traversable[VisNode],
+    edges: Traversable[VisEdge]
+)(implicit context: WebContext)
 
-<html>
-    <head>
-        <title>Network | Sizing</title>
+@listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
+    <li @if(matchesPath(call.url, context.request.path, matchPrefixDepth)) {class="inner-node active"} else {class="inner-node"}>
+        <a href="@call">
+            <ul class="list-inline">
+                <li>
+                    <span class="glyphicon glyphicon-chevron-right"></span>
+                </li>
+                <li>
+                    <h4>@text</h4>
+                </li>
+            </ul>
+        </a>
+    </li>
+}
 
-        <style type="text/css">
-        html, body {
-            font: 10pt arial;
-        }
+@sideBar = {
+    <ul class="sidebar-nav nav nav-pills nav-stacked">
+        @listItem(challengeRoutes.tremorNetwork, "LDOPA Tremor", Some(2))
+        @listItem(challengeRoutes.dyskinesiaNetwork, "LDOPA Dyskinesia", Some(2))
+        @listItem(challengeRoutes.bradykinesiaNetwork, "LDOPA Bradykinesia", Some(2))
+    </ul>
+}
+
+@main(Messages("network.title", domainName), Some(sideBar)) {
+
+    <style type="text/css">
         #mynetwork {
-            width: 1000px;
-            height: 800px
+            height: 700px;
+            border: #cbcbcb 1px solid;
+            border-radius: 10px;
         }
-        </style>
+    </style>
 
-        <script src="@routes.WebJarAssets.at(context.webJarAssets.locate("vis.min.js"))"></script>
-        <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/vis.min.css")">
+    <div class="page-header">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>@Messages("network.title", domainName)</h1>
+            </div>
+        </div>
+    </div>
 
-        <script type="text/javascript">
-    var nodes = null;
-    var edges = null;
-    var network = null;
+    <script src="@routes.WebJarAssets.at(context.webJarAssets.locate("vis.min.js"))"></script>
+    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/vis.min.css")">
 
-    function draw() {
-        // create people.
-        // value corresponds with the age of the person
-        nodes = [
-            {id: 1,  value: 2,  label: 'Algie' },
-            {id: 2,  value: 31, label: 'Alston'},
-            {id: 3,  value: 12, label: 'Barney'},
-            {id: 4,  value: 16, label: 'Coley' },
-            {id: 5,  value: 17, label: 'Grant' },
-            {id: 6,  value: 15, label: 'Langdon'},
-            {id: 7,  value: 6,  label: 'Lee'},
-            {id: 8,  value: 5,  label: 'Merlin'},
-            {id: 9,  value: 30, label: 'Mick'},
-            {id: 10, value: 18, label: 'Tod'},
-        ];
+    <div class="row">
+        <div class="col-md-10">
+            <div id="mynetwork"></div>
+        </div>
 
-        // create connections between people
-        // value corresponds with the amount of contact between two people
-        edges = [
-            {from: 2, to: 8, value: 3, title: '3 emails per week'},
-            {from: 2, to: 9, value: 5, title: '5 emails per week'},
-            {from: 2, to: 10,value: 1, title: '1 emails per week'},
-            {from: 4, to: 6, value: 8, title: '8 emails per week'},
-            {from: 5, to: 7, value: 2, title: '2 emails per week'},
-            {from: 4, to: 5, value: 1, title: '1 emails per week'},
-            {from: 9, to: 10,value: 2, title: '2 emails per week'},
-            {from: 2, to: 3, value: 6, title: '6 emails per week'},
-            {from: 3, to: 9, value: 4, title: '4 emails per week'},
-            {from: 5, to: 3, value: 1, title: '1 emails per week'},
-            {from: 2, to: 7, value: 4, title: '4 emails per week'}
-        ];
+        <div class="col-md-2">
+            <div id="teamInfoDiv" class="row alert alert-success">
+                No team selected
+            </div>
+            <div class="row">
+                <a class="btn btn-info" onclick="zoomIn();" data-toggle="tooltip" title="Zoom In">
+                    <span class="glyphicon glyphicon-zoom-in"></span>
+                </a>
+                <a class="btn btn-info" onclick="zoomOut();" data-toggle="tooltip" title="Zoom Out">
+                    <span class="glyphicon glyphicon-zoom-out"></span>
+                </a>
+            </div>
+            <div class="row">
+                <div class="panel panel-default" style="margin-top: 20px">
+                    <div class="panel-body">
+                        <select id="topTeamSelection" name="topTeamSelection" onchange="selectTeams()" >
+                            <option value="">Show All</option>
+                            <option value="5">Top 5</option>
+                            <option value="10">Top 10</option>
+                            <option value="15">Top 15</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        // Instantiate our network object.
-        var container = document.getElementById('mynetwork');
-        var data = {
-            nodes: nodes,
-            edges: edges
-        };
-        var options = {
-            nodes: {
-                shape: 'dot',
-                scaling:{
-                    label: {
-                        min:8,
-                        max:20
-                    }
-                }
+    <script type="text/javascript">
+        var nodes = [
+            @nodes.map{ node =>
+                {id: @node.id, size: @node.size, font: { multi: true }, label: '<b>@{node.label}</b>', data: JSON.parse('@Html(Json.stringify(node.data.get))')},
             }
-        };
-        network = new vis.Network(container, data, options);
-    }
-  </script>
+        ];
 
-    </head>
-    <body onload="draw()">
-        <div id="mynetwork"></div>
-    </body>
-</html>
+        var edges = [
+            @edges.map{ edge =>
+                {from: @edge.from, to: @edge.to, width: @edge.value, title: '@edge.label', color:{color:'#60c842', opacity: 0.8}},
+            }
+        ];
+
+        var network = null;
+
+        function draw(selectedNodes) {
+            // Instantiate our network object.
+            var container = document.getElementById('mynetwork');
+            var data = {
+                nodes: selectedNodes,
+                edges: edges
+            };
+            var options = {
+                nodes: {
+                    shape: 'dot',
+                    font: {
+                        size: 16
+                    }
+                },
+                interaction:{
+                    hover:true
+                }
+            };
+            network = new vis.Network(container, data, options);
+            network.fit();
+
+            network.on("click", function (params) {
+                var node = getNode(params.nodes[0])
+                $("#teamInfoDiv").html("<h4><b>" + node.label + "</b></h4><hr/>Ranks : " + node.data.ranks + "</br>AUPRs: " + node.data.auprs)
+            });
+        }
+
+        function zoomIn() {
+            var newScale = 1.5 * network.getScale()
+            var options = {
+                scale: newScale,
+                animation: { duration: 300, easingFunction: "easeInCubic" }
+            };
+            network.moveTo(options);
+        }
+
+        function zoomOut() {
+            var newScale = 0.666 * network.getScale()
+            var options = {
+                scale: newScale,
+                animation: { duration: 300, easingFunction: "easeInCubic" }
+            };
+            network.moveTo(options);
+        }
+
+        function getNode(nodeId) {
+            var found = nodes.find(function (node) {
+                return node.id == nodeId;
+            });
+            return found
+        }
+
+        function selectTeams() {
+            var teamsNum = $("#topTeamSelection").val()
+            var selectedNodes = nodes
+            if (teamsNum) {
+                selectedNodes = nodes.slice(0, teamsNum)
+            }
+            draw(selectedNodes)
+        }
+
+        $(function () {
+            // draw all nodes
+            draw(nodes)
+        })
+    </script>
+}

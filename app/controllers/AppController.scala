@@ -16,6 +16,7 @@ import util.SecurityUtil._
 import views.html.layout
 
 import scala.concurrent.Future
+import scala.io.Source
 
 class AppController @Inject() (
     dataSpaceService: DataSpaceService,
@@ -26,6 +27,8 @@ class AppController @Inject() (
 
   @Inject var deadbolt: DeadboltActions = _
 
+  private val correlationFileName = "/home/peter/Data/mpower_ldopa_challenge_correlations/dyskinesia-corrs.csv"
+
   private implicit def webContext(implicit request: Request[_]) = {
     implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
     WebContext(messagesApi, webJarAssets)
@@ -33,10 +36,6 @@ class AppController @Inject() (
 
   def index = Action { implicit request =>
     Ok(layout.home())
-  }
-
-  def networkVis = Action { implicit request =>
-    Ok(views.html.networkVis.networkVis())
   }
 
   // TODO: move elsewhere

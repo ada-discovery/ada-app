@@ -261,8 +261,10 @@ GET         /messages/eventStream                                               
 POST        /messages/saveUserMessage                                               controllers.MessageController.saveUserMessage(message: String)
 GET         /message/listMostRecent                                                 controllers.MessageController.listMostRecent(limit: Int)
 
-#Temporary
-GET         /networkVis                                                             controllers.AppController.networkVis
+#Temporary for mpower challenge
+GET         /pdChallenge/ldopaTremor                                                controllers.MPowerChallengeController.tremorNetwork
+GET         /pdChallenge/ldopaDyskinesia                                            controllers.MPowerChallengeController.dyskinesiaNetwork
+GET         /pdChallenge/ldopaBradykinesia                                          controllers.MPowerChallengeController.bradykinesiaNetwork
 
 # Map static resources from the /public folder to the /assets URL path
 #GET         /assets/*file                                                           controllers.Assets.at(path="/public", file)

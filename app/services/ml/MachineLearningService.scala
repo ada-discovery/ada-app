@@ -234,13 +234,14 @@ private class MachineLearningServiceImpl @Inject() (
       // evaluate the performance
 
       def withBinaryEvaluationCol(df: DataFrame) =
-        if (outputSize == 2 && df.columns.contains(binaryClassifierInputName))
-          df
-        else
+        if (outputSize == 2 && !df.columns.contains(binaryClassifierInputName)) {
           binaryPredictionVectorizer.transform(df)
+        } else
+          df
 
       val trainingPredictionsExt = withBinaryEvaluationCol(trainingPredictions)
       val testPredictionsExt = testPredictions.map(withBinaryEvaluationCol)
+
       val results = evaluate(evaluators, trainingPredictionsExt, testPredictionsExt)
 
       // generate binary classification curves (roc, pr, etc.) if the output is binary
@@ -787,15 +788,30 @@ object MachineLearningUtil {
           replicationStats.addValue(replicationValue.get)
       }
 
+      val sortedTrainValues = result.trainingTestReplicationResults.map(_._1).toSeq.sorted
+      val sortedTestValues = result.trainingTestReplicationResults.map(_._2).toSeq.sorted
+      val sortedReplicationValues = result.trainingTestReplicationResults.flatMap(_._3).toSeq.sorted
+
       (result.evalMetric, (
-        toStats(trainingStats),
-        toStats(testStats),
-        if (replicationStats.getN > 0) Some(toStats(replicationStats)) else None
+        toStats(trainingStats, median(sortedTrainValues)),
+        toStats(testStats, median(sortedTestValues)),
+        if (replicationStats.getN > 0) Some(toStats(replicationStats, median(sortedReplicationValues))) else None
       ))
     }.toMap
 
-  def toStats(summaryStatistics: SummaryStatistics) =
-    MetricStatsValues(summaryStatistics.getMean, summaryStatistics.getMin, summaryStatistics.getMax, summaryStatistics.getVariance)
+  def median(seq: Seq[Double]): Double = {
+    val middle = seq.size / 2
+    if (seq.size % 2 == 1)
+      seq(middle)
+    else {
+      val med1 = seq(middle)
+      val med2 = seq(1 + middle)
+      (med1 + med2) /2
+    }
+  }
+
+  def toStats(summaryStatistics: SummaryStatistics, median: Double) =
+    MetricStatsValues(summaryStatistics.getMean, summaryStatistics.getMin, summaryStatistics.getMax, summaryStatistics.getVariance, Some(median))
 
   def createClassificationResult(
     setting: ClassificationSetting,
