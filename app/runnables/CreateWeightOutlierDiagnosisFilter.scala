@@ -4,13 +4,13 @@ import javax.inject.Inject
 
 import dataaccess.{AsyncReadonlyRepo, Criterion, EqualsCriterion, NotEqualsNullCriterion}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import services.StatsService
 import dataaccess.Criterion._
 import models.{ConditionType, Field, Filter, FilterCondition}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
-import scala.reflect.runtime.universe._
+import services.stats.StatsService
 
+import scala.reflect.runtime.universe._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -90,7 +90,7 @@ class CreateWeightOutlierDiagnosisFilter @Inject()(
       // calc the quantiles
       fieldQuantiles <- Future.sequence(
         fields.map { field =>
-          statsService.calcQuantiles(dataRepo, criteria, field).map(
+          statsService.calcQuartiles(dataRepo, criteria, field).map(
             _.map( quantiles =>
             (field, quantiles)
           ))

@@ -1,6 +1,6 @@
 package runnables
 
-import services.{PersonIterativeAccumGlobal, PersonIterativeAccumGlobalArray}
+import services.stats.calc.{PersonIterativeAccumGlobal, PersonIterativeAccumGlobalArray}
 import util.GrouppedVariousSize
 import java.{util => ju}
 

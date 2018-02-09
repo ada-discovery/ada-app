@@ -208,7 +208,7 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
 
   protected def createIndex(): Future[_] =
     client execute {
-      create index indexName replicas 0 indexSetting("max_result_window", unboundLimit)
+      create index indexName replicas 0 indexSetting("max_result_window", unboundLimit) // indexSetting("_all", false)
     }
 
   protected def existsIndex(): Future[Boolean] =

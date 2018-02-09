@@ -26,8 +26,9 @@ import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.col
 import play.api.libs.json.{JsObject, Json}
-import services.{FeaturesDataFrameFactory, SparkApp, StatsService}
+import services.{FeaturesDataFrameFactory, SparkApp}
 import play.api.{Configuration, Logger}
+import services.stats.StatsService
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global

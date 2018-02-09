@@ -1,6 +1,5 @@
 package models
 
-import _root_.util.BasicStats.Quantiles
 import dataaccess.{AdaConversionException, FieldType, FieldTypeHelper}
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
@@ -8,6 +7,7 @@ import play.api.libs.functional.syntax._
 import models.json._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
+import services.stats.calc.Quartiles
 
 abstract class Widget {
   val title: String
@@ -23,7 +23,7 @@ case class CategoricalCountWidget(
   showLegend: Boolean,
   useRelativeValues: Boolean,
   isCumulative: Boolean,
-  data: Seq[(String, Seq[Count[String]])],
+  data: Seq[(String, Traversable[Count[String]])],
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends Widget
 
@@ -32,7 +32,7 @@ case class NumericalCountWidget[T](
   fieldLabel: String,
   useRelativeValues: Boolean,
   isCumulative: Boolean,
-  data: Seq[(String, Seq[Count[T]])],
+  data: Seq[(String, Traversable[Count[T]])],
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends Widget
 
@@ -40,7 +40,7 @@ case class ScatterWidget[T1, T2](
   title: String,
   xAxisCaption: String,
   yAxisCaption: String,
-  data: Seq[(String, String, Seq[(T1, T2)])],
+  data: Seq[(String, Traversable[(T1, T2)])],
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 
@@ -59,7 +59,7 @@ case class LineWidget[T](
 case class BoxWidget[T <% Ordered[T]](
   title: String,
   yAxisCaption: String,
-  data: Quantiles[T],
+  data: Quartiles[T],
   min: Option[T] = None,
   max: Option[T] = None,
   displayOptions: DisplayOptions = BasicDisplayOptions()
@@ -86,7 +86,7 @@ case class HtmlWidget(
 case class Count[+T](
   value: T,
   count: Int,
-  key: Option[String]
+  key: Option[String] = None
 )
 
 object Widget {
@@ -122,7 +122,7 @@ object Widget {
   implicit val tuple2Format = TupleFormat[String, String, Seq[Seq[Double]]]
   implicit val optionFormat = new OptionFormat[Double]
 
-  def quantilesFormat[T <% Ordered[T]](fieldType: FieldType[T]): Format[Quantiles[T]] = {
+  def quantilesFormat[T <% Ordered[T]](fieldType: FieldType[T]): Format[Quartiles[T]] = {
     implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
 
     (
@@ -131,10 +131,10 @@ object Widget {
       (__ \ "median").format[T] and
       (__ \ "upperQuantile").format[T] and
       (__ \ "upperWhisker").format[T]
-    )(Quantiles[T](_, _, _, _, _), {x => (x.lowerWhisker, x.lowerQuantile, x.median, x.upperQuantile, x.upperWhisker)})
+    )(Quartiles[T](_, _, _, _, _), { x => (x.lowerWhisker, x.lowerQuantile, x.median, x.upperQuantile, x.upperWhisker)})
   }
 
-  def quantilesWrites[T](fieldType: FieldType[T]): Writes[Quantiles[T]] = {
+  def quantilesWrites[T](fieldType: FieldType[T]): Writes[Quartiles[T]] = {
     implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
 
     (
@@ -152,7 +152,7 @@ object Widget {
     (
       (__ \ "title").format[String] and
       (__ \ "yAxisCaption").format[String] and
-      (__ \ "data").format[Quantiles[T]](quantilesFormat[T](fieldType)) and
+      (__ \ "data").format[Quartiles[T]](quantilesFormat[T](fieldType)) and
       (__ \ "min").format[Option[T]] and
       (__ \ "max").format[Option[T]] and
       (__ \ "displayOptions").format[DisplayOptions]
@@ -165,7 +165,7 @@ object Widget {
     (
       (__ \ "title").write[String] and
       (__ \ "yAxisCaption").write[String] and
-      (__ \ "data").write[Quantiles[T]](quantilesWrites[T](fieldType)) and
+      (__ \ "data").write[Quartiles[T]](quantilesWrites[T](fieldType)) and
       (__ \ "min").write[Option[T]] and
       (__ \ "max").write[Option[T]] and
       (__ \ "displayOptions").write[DisplayOptions]
@@ -175,14 +175,14 @@ object Widget {
   def numericalCountWidgetFormat[T](fieldType: FieldType[T]): Format[NumericalCountWidget[T]] = {
     implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
     implicit val countFormatVal = countFormat[T](fieldType)
-    implicit val tupleFormat = TupleFormat[String, Seq[Count[T]]]
+    implicit val tupleFormat = TupleFormat[String, Traversable[Count[T]]]
 
     (
       (__ \ "title").format[String] and
       (__ \ "fieldLabel").format[String] and
       (__ \ "useRelativeValues").format[Boolean] and
       (__ \ "isCumulative").format[Boolean] and
-      (__ \ "data").format[Seq[(String, Seq[Count[T]])]] and
+      (__ \ "data").format[Seq[(String, Traversable[Count[T]])]] and
       (__ \ "displayOptions").format[MultiChartDisplayOptions]
     )(NumericalCountWidget[T](_, _, _, _, _, _), {x => (x.title, x.fieldLabel, x.useRelativeValues, x.isCumulative, x.data, x.displayOptions)})
   }
@@ -214,13 +214,13 @@ object Widget {
     implicit val value2Format = FieldTypeFormat.apply[T2](fieldType2)
 
     implicit val tuple1Format = TupleFormat[T1, T2]
-    implicit val tuple2Format = TupleFormat[String, String, Seq[(T1, T2)]]
+    implicit val tuple2Format = TupleFormat[String, Traversable[(T1, T2)]]
 
     (
       (__ \ "title").format[String] and
       (__ \ "xAxisCaption").format[String] and
       (__ \ "yAxisCaption").format[String] and
-      (__ \ "data").format[Seq[(String, String, Seq[(T1, T2)])]] and
+      (__ \ "data").format[Seq[(String, Traversable[(T1, T2)])]] and
       (__ \ "displayOptions").format[DisplayOptions]
     )(ScatterWidget[T1, T2](_, _, _, _, _), {x => (x.title, x.xAxisCaption, x.yAxisCaption, x.data, x.displayOptions)})
   }
@@ -236,6 +236,8 @@ object Widget {
       (__ \ "displayOptions").format[DisplayOptions]
     )(HeatmapWidget(_, _, _, _, _, _, _), {x => (x.title, x.xCategories, x.yCategories, x.data, x.min, x.max, x.displayOptions)})
   }
+
+  implicit val stringCountTupleFormat = TupleFormat[String, Traversable[Count[String]]]
 
   class WidgetWrites[T](fieldTypes: Seq[FieldType[T]]) extends Writes[Widget] {
 
@@ -279,7 +281,7 @@ object Widget {
 // TODO: move elsewhere
 object CategoricalCountWidget {
 
-  def groupDataByValue(chartSpec: CategoricalCountWidget): Seq[(String, Seq[Int])] =
+  def groupDataByValue(chartSpec: CategoricalCountWidget): Traversable[(String, Seq[Int])] =
     chartSpec.data match {
       case Nil => Nil
       case series =>

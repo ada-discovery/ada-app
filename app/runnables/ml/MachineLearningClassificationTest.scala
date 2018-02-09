@@ -6,8 +6,9 @@ import models.ml.TreeCore
 import models.ml.classification._
 import persistence.dataset.DataSetAccessorFactory
 import runnables.GuiceBuilderRunnable
-import services.{DataSetService, StatsService}
+import services.DataSetService
 import services.ml.MachineLearningService
+import services.stats.StatsService
 
 import scala.concurrent.Await
 import scala.concurrent.Await.result

@@ -7,13 +7,13 @@ import java.{util => ju}
 
 import com.google.inject.Inject
 import persistence.dataset.DataSetAccessorFactory
-import services.StatsService
 import util.{seqFutures, writeByteArrayStream}
 import dataaccess.Criterion._
 import models.DataSetFormattersAndIds.FieldIdentity
 import models.{Field, FieldTypeId}
 import org.apache.commons.io.IOUtils
 import play.api.Logger
+import services.stats.StatsService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf

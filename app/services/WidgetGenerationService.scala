@@ -8,9 +8,10 @@ import dataaccess.RepoTypes.JsonReadonlyRepo
 import models._
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
+import services.stats.StatsService
 import util.{fieldLabel, shorten}
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 @ImplementedBy(classOf[WidgetGenerationServiceImpl])
@@ -176,7 +177,7 @@ class WidgetGenerationServiceImpl @Inject() (
       case BoxWidgetSpec(fieldName, subFilter, displayOptions) =>
         val field = nameFieldMap.get(fieldName).get
         for {
-          quantiles <- statsService.calcQuantiles(repo, criteria, field)
+          quantiles <- statsService.calcQuartiles(repo, criteria, field)
         } yield
           quantiles.map { quants =>
             implicit val ordering = quants.ordering
@@ -248,7 +249,7 @@ class WidgetGenerationServiceImpl @Inject() (
 
       case BoxWidgetSpec(fieldName, subFilter, displayOptions) =>
         nameFieldMap.get(fieldName).map { field =>
-          statsService.calcQuantiles(items, field).map { quants =>
+          statsService.calcQuartiles(items, field).map { quants =>
             implicit val ordering = quants.ordering
             val chartTitle = title.getOrElse(field.labelOrElseName)
             BoxWidget(chartTitle, field.labelOrElseName, quants, None, None, displayOptions)
@@ -294,7 +295,7 @@ class WidgetGenerationServiceImpl @Inject() (
   }
 
   private def createDistributionWidget(
-    countSeries: Seq[(String, Seq[Count[Any]])],
+    countSeries: Seq[(String, Traversable[Count[Any]])],
     field: Field,
     chartTitle: String,
     showLabels: Boolean,
@@ -358,7 +359,7 @@ class WidgetGenerationServiceImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Future[Seq[(String, Seq[Count[Any]])]] =
+  ): Future[Seq[(String, Traversable[Count[Any]])]] =
     groupField match {
       case Some(groupField) =>
         statsService.calcGroupedDistributionCounts(repo, criteria, field, groupField, numericBinCount)
@@ -373,7 +374,7 @@ class WidgetGenerationServiceImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Seq[(String, Seq[Count[Any]])] =
+  ): Seq[(String, Traversable[Count[Any]])] =
     groupField match {
       case Some(groupField) =>
         statsService.calcGroupedDistributionCounts(items, field, groupField, numericBinCount)
@@ -389,7 +390,7 @@ class WidgetGenerationServiceImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Future[Seq[(String, Seq[Count[Any]])]] =
+  ): Future[Seq[(String, Traversable[Count[Any]])]] =
     numericBinCount match {
       case Some(_) =>
         calcDistributionCounts(repo, criteria, field, groupField, numericBinCount).map( distCountsSeries =>
@@ -398,6 +399,7 @@ class WidgetGenerationServiceImpl @Inject() (
 
       case None =>
         val projection = Seq(field.name) ++ groupField.map(_.name)
+
         repo.find(criteria, Nil, projection.toSet).map( jsons =>
           statsService.calcCumulativeCounts(jsons, field, groupField)
         )
@@ -408,7 +410,7 @@ class WidgetGenerationServiceImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Seq[(String, Seq[Count[Any]])] =
+  ): Seq[(String, Traversable[Count[Any]])] =
     numericBinCount match {
       case Some(_) =>
         val distCountsSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
@@ -420,13 +422,14 @@ class WidgetGenerationServiceImpl @Inject() (
 
   // function that converts dist counts to cumulative counts by applying simple running sum
   private def toCumCounts[T](
-    distCountsSeries: Seq[(String, Seq[Count[T]])]
+    distCountsSeries: Seq[(String, Traversable[Count[T]])]
   ): Seq[(String, Seq[Count[T]])] =
     distCountsSeries.map { case (seriesName, distCounts) =>
-      val cumCounts = distCounts.scanLeft(0) { case (sum, count) =>
+      val distCountsSeq = distCounts.toSeq
+      val cumCounts = distCountsSeq.scanLeft(0) { case (sum, count) =>
         sum + count.count
       }
-      val labeledDistCounts: Seq[Count[T]] = distCounts.map(_.value).zip(cumCounts).map { case (value, count) =>
+      val labeledDistCounts: Seq[Count[T]] = distCountsSeq.map(_.value).zip(cumCounts).map { case (value, count) =>
         Count(value, count, None)
       }
       (seriesName, labeledDistCounts)
@@ -466,15 +469,13 @@ class WidgetGenerationServiceImpl @Inject() (
     groupField: Option[Field],
     displayOptions: DisplayOptions
   ): ScatterWidget[_, _] = {
-    val data = statsService.collectScatterData(xyzItems, xField, yField, groupField).sortBy(_._1)
+    val data = statsService.collectScatterData(xyzItems, xField, yField, groupField)
+
     ScatterWidget(
       title.getOrElse("Comparison"),
       xField.labelOrElseName,
       yField.labelOrElseName,
-      data.map { case (name, values) =>
-        val initName = if (name.isEmpty) "Undefined" else name
-        (initName, "rgba(223, 83, 83, .5)", values)
-      },
+      data.toSeq.sortBy(_._1),
       displayOptions
     )
   }

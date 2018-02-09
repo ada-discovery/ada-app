@@ -8,7 +8,8 @@ import dataaccess.{FieldType, FieldTypeHelper, NotEqualsNullCriterion}
 import models.DataSetFormattersAndIds.FieldIdentity
 import persistence.dataset.DataSetAccessorFactory
 import runnables.FutureRunnable
-import services.{SparkApp, StatsService}
+import services.SparkApp
+import services.stats.StatsService
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

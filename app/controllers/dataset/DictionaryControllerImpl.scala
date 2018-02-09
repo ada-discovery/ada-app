@@ -25,6 +25,7 @@ import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import services.stats.StatsService
 import util.FieldUtil
 import views.html.{dataview, dictionary => view}
 

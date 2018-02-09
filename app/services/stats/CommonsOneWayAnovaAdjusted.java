@@ -1,4 +1,4 @@
-package services;
+package services.stats;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more

@@ -81,6 +81,9 @@ trait FieldType[T] {
   def jsonToDisplayString(json: JsReadable): String =
     valueToDisplayString(jsonToValue(json))
 
+  def jsonToDisplayStringOptional(json: JsReadable): Option[String] =
+    jsonToValue(json).map(value => valueToDisplayString(Some(value)))
+
   def isValueOf[E: TypeTag] =
     typeOf[E].typeSymbol.asClass.equals(valueClass)
 

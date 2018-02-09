@@ -13,8 +13,9 @@ import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import runnables.InputFutureRunnable
-import services.{DataSetService, StatsService}
+import services.DataSetService
 import services.ml.{MachineLearningService, MachineLearningUtil}
+import services.stats.StatsService
 import util.{FieldUtil, seqFutures}
 
 import scala.concurrent.ExecutionContext.Implicits.global

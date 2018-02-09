@@ -8,7 +8,7 @@
 <script type="text/javascript">
     $(function () {
         scatterChart('@widget.title', '@{elementId}', '@{widget.xAxisCaption}', '@{widget.yAxisCaption}',
-            [ @widget.data.map { case (name, color, data) =>
+            [ @widget.data.map { case (name, data) =>
                 {name : '@shorten(name)', data : [@data.map{ point => [@{point._1 + "," + point._2}],}]},}
             ], // color : 'color'
             @{widget.displayOptions.height.getOrElse(400)}

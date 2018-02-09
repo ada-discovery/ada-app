@@ -10,7 +10,6 @@ import scala.collection.mutable.{Map => MMap}
 import _root_.util.{FieldUtil, GroupMapList}
 import dataaccess.JsonUtil._
 import models.ConditionType._
-import util.{BasicStats, fieldLabel}
 import _root_.util.WebExportUtil._
 import _root_.util.{seqFutures, shorten, toHumanReadableCamel}
 import dataaccess._
@@ -43,7 +42,8 @@ import models.ml.{ClassificationEvalMetric, RegressionEvalMetric}
 import views.html.dataset
 import models.ml.DataSetTransformation._
 import models.security.{SecurityRole, UserManager}
-import services.ChiSquareResult.chiSquareResultFormat
+import services.stats.ChiSquareResult.chiSquareResultFormat
+import services.stats.{AnovaResult, ChiSquareResult, StatsService}
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -1111,19 +1111,27 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           widgetService(widgetSpec, xyzItems, fields)
         }
 
+      def calcMean[T](
+        elements: Seq[T])(
+        implicit num: Numeric[T]
+      ): Option[Double] =
+        elements.headOption.map ( _ =>
+          num.toDouble(elements.sum) / elements.length
+        )
+
       def mean(field: Field): Option[Double] = {
         field.fieldTypeSpec.fieldType match {
           case FieldTypeId.Integer => {
             val values = getValues[Long](field, xyzItems).flatten
-            BasicStats.mean(values.toSeq)
+            calcMean(values.toSeq)
           }
           case FieldTypeId.Double => {
             val values = getValues[Double](field, xyzItems).flatten
-            BasicStats.mean(values.toSeq)
+            calcMean(values.toSeq)
           }
           case FieldTypeId.Date => {
             val values = getValues[ju.Date](field, xyzItems).flatten
-            BasicStats.mean(values.map(_.getTime).toSeq)
+            calcMean(values.map(_.getTime).toSeq)
           }
           case _ =>
             None
@@ -1628,13 +1636,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           // PCA 1-2 Scatter
           val displayOptions = BasicDisplayOptions(height = Some(500))
 
-          val classPCA12s = idPCA12s.map { case (id, pca12) =>
-            (idClassMap.get(id).get, pca12)
+          val pca12WidgetData = idPCA12s.map { case (id, pca12) =>
+            (idClassMap.get(id).get.toString, pca12)
           }.toGroupMap.toSeq.sortBy(_._1)
-
-          val pca12WidgetData = classPCA12s.map { case (clazz, values) =>
-            (clazz.toString, "rgba(223, 83, 83, .5)", values.toSeq)
-          }
 
           val pca12Scatter = ScatterWidget("PCA", "PC1", "PC2", pca12WidgetData, displayOptions)
 
@@ -1740,11 +1744,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case _ => JsString(point.toString)
       }
 
-    val seriesJsons = scatter.data.map { case (name, color, data) =>
+    val seriesJsons = scatter.data.map { case (name, data) =>
       Json.obj(
         "name" -> shorten(name),
         "data" -> JsArray(
-          data.map { case (point1, point2) =>
+          data.toSeq.map { case (point1, point2) =>
             JsArray(Seq(toJson(point1), toJson(point2)))
           }
         )

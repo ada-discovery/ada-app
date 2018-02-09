@@ -11,7 +11,7 @@
     widget: CategoricalCountWidget
 )
 
-@countTableAux(groupNames: Seq[String], data: Seq[(String, Seq[Int])]) = {
+@countTableAux(groupNames: Seq[String], data: Traversable[(String, Seq[Int])]) = {
     @displayTable(
         data,
         Seq(

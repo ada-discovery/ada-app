@@ -24,13 +24,14 @@ import play.api.data.Forms._
 import play.api.libs.json._
 import play.api.mvc.{Action, Request}
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, DataSpaceService, StatsService, WidgetGenerationService}
+import services.{DataSetService, DataSpaceService, WidgetGenerationService}
 import services.ml._
 import _root_.util.FieldUtil
 import _root_.util.FieldUtil.caseClassToFlatFieldTypes
 import _root_.util.toHumanReadableCamel
 import models.json.{EnumFormat, OrdinalEnumFormat}
 import models.ml.classification.Classification.ClassificationIdentity
+import services.stats.StatsService
 
 import scala.reflect.runtime.universe.TypeTag
 import views.html.{classificationrun => view}

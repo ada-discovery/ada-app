@@ -1,35 +1,34 @@
-package services
+package services.stats
 
-import com.google.inject.ImplementedBy
-import dataaccess._
-import models._
-import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import _root_.util.BasicStats.Quantiles
-import _root_.util._
-import _root_.util.GrouppedVariousSize
-import dataaccess.JsonUtil.project
 import java.{util => ju}
 import javax.inject.{Inject, Singleton}
 
-import Criterion.Infix
+import _root_.util.{GrouppedVariousSize, _}
+import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
-import org.apache.commons.math3.stat.inference.{OneWayAnova, TestUtils}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source}
+import akka.stream.{ActorMaterializer, ClosedShape}
+import com.google.inject.ImplementedBy
+import dataaccess.Criterion.Infix
+import dataaccess.JsonUtil.project
+import dataaccess._
+import models._
 import org.apache.spark.ml.feature.ChiSqSelector
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.stat.ChiSquareTest
 import org.apache.spark.sql.DataFrame
 import play.api.Logger
+import play.api.libs.json._
+import reactivemongo.bson.BSONObjectID
 import services.ml.BooleanLabelIndexer
+import services.stats.calc._
+import services.{FeaturesDataFrameFactory, SparkApp}
 
-import scala.collection.JavaConversions._
-import scala.collection.mutable
+import JsonFieldUtil._
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.math.BigDecimal.RoundingMode
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.JavaConversions._
 
 @ImplementedBy(classOf[StatsServiceImpl])
 trait StatsService {
@@ -39,13 +38,13 @@ trait StatsService {
     criteria: Seq[Criterion[Any]],
     field: Field,
     numericBinCount: Option[Int]
-   ): Future[Seq[Count[_]]]
+   ): Future[Traversable[Count[_]]]
 
   def calcDistributionCounts(
     items: Traversable[JsObject],
     field: Field,
     numericBinCount: Option[Int]
-  ): Seq[Count[_]]
+  ): Traversable[Count[_]]
 
   def calcGroupedDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
@@ -53,43 +52,42 @@ trait StatsService {
     field: Field,
     groupField: Field,
     numericBinCount: Option[Int]
-  ): Future[Seq[(String, Seq[Count[_]])]]
+  ): Future[Seq[(String, Traversable[Count[_]])]]
 
   def calcGroupedDistributionCounts(
     items: Traversable[JsObject],
     field: Field,
     groupField: Field,
     numericBinCount: Option[Int]
-  ): Seq[(String, Seq[Count[_]])]
-
-  def categoricalCountsWithFormatting[T](
-    values: Traversable[Option[T]],
-    renderer: Option[Option[T] => String]
-  ): Seq[Count[String]]
+  ): Seq[(String, Traversable[Count[_]])]
 
   def calcCumulativeCounts(
     items: Traversable[JsObject],
     field: Field,
     groupField: Option[Field]
-  ): Seq[(String, Seq[Count[Any]])]
+  ): Seq[(String, Traversable[Count[Any]])]
 
-  def calcQuantiles(
+  // quartiles
+
+  def calcQuartiles(
     items: Traversable[JsObject],
     field: Field
-  ): Option[Quantiles[Any]]
+  ): Option[Quartiles[Any]]
 
-  def calcQuantiles(
+  def calcQuartiles(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
-  ): Future[Option[Quantiles[Any]]]
+  ): Future[Option[Quartiles[Any]]]
+
+  // scatter
 
   def collectScatterData(
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
     groupField: Option[Field]
-  ): Seq[(String, Seq[(Any, Any)])]
+  ): Traversable[(String, Traversable[(Any, Any)])]
 
   // correlations
 
@@ -105,10 +103,6 @@ trait StatsService {
   def calcPearsonCorrelations(
     items: Traversable[JsObject],
     fields: Seq[Field]
-  ): Seq[Seq[Option[Double]]]
-
-  def calcPearsonCorrelations(
-    values: Traversable[Seq[Option[Double]]]
   ): Seq[Seq[Option[Double]]]
 
   def calcPearsonCorrelations(
@@ -174,7 +168,7 @@ trait StatsService {
 class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
 
   private val session = sparkApp.session
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
+  private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
   private val defaultNumericBinCount = 20
   private val anovaTest = new CommonsOneWayAnovaAdjusted()
 
@@ -185,22 +179,11 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     criteria: Seq[Criterion[Any]],
     field: Field,
     numericBinCountOption: Option[Int]
-  ): Future[Seq[Count[_]]] = {
-    val fieldTypeSpec = field.fieldTypeSpec
-    val fieldType = ftf(fieldTypeSpec)
-    val fieldTypeId = fieldTypeSpec.fieldType
+  ): Future[Traversable[Count[_]]] = {
+    val spec = field.fieldTypeSpec
+    val fieldType = ftf(spec)
+    val fieldTypeId = spec.fieldType
     val numericBinCount = numericBinCountOption.getOrElse(defaultNumericBinCount)
-
-    def getRenderer[T]= {
-      val typedFieldType = fieldType.asValueOf[T]
-
-      { (value : Option[T]) =>
-        value match {
-          case Some(_) => typedFieldType.valueToDisplayString(value)
-          case None => "Undefined"
-        }
-      }
-    }
 
     fieldTypeId match {
       case FieldTypeId.String =>
@@ -209,15 +192,17 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         } yield {
           val typedFieldType = fieldType.asValueOf[String]
           val values = jsons.map(json => typedFieldType.jsonToValue(json \ field.name))
-          categoricalCountsWithFormatting(values, Some(getRenderer[String]))
+          val counts = UniqueDistributionCountsCalc[String].fun()(values)
+
+          createStringCounts(counts, fieldType.asValueOf[String])
         }
 
       case FieldTypeId.Enum => {
-        val values = fieldTypeSpec.enumValues.map(_.map(_._1).toSeq.sorted).getOrElse(Nil)
+        val values = spec.enumValues.map(_.map(_._1).toSeq.sorted).getOrElse(Nil)
         for {
           counts <- categoricalCountsRepo(field.name, values, dataRepo, criteria)
         } yield
-          formatCategoricalCounts(counts, Some(getRenderer[Int]))
+          createStringCounts(counts, fieldType.asValueOf[Int])
       }
 
       case FieldTypeId.Boolean => {
@@ -225,7 +210,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         for {
           counts <- categoricalCountsRepo(field.name, values, dataRepo, criteria)
         } yield
-          formatCategoricalCounts(counts, Some(getRenderer[Boolean]))
+          createStringCounts(counts, fieldType.asValueOf[Boolean])
       }
 
       case FieldTypeId.Double =>
@@ -274,7 +259,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         for {
           count <- dataRepo.count(criteria)
         } yield
-          formatCategoricalCounts[Nothing](Seq((None, count)), None)
+          createStringCounts[Nothing](Seq((None, count)), fieldType.asValueOf[Nothing])
 
       // for the json type we can't do anything
       case FieldTypeId.Json =>
@@ -288,7 +273,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     field: Field,
     groupField: Field,
     numericBinCountOption: Option[Int]
-  ): Future[Seq[(String, Seq[Count[_]])]] = {
+  ): Future[Seq[(String, Traversable[Count[_]])]] = {
 
     val groupFieldSpec = groupField.fieldTypeSpec
     val groupFieldType = ftf(groupFieldSpec)
@@ -361,36 +346,26 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     items: Traversable[JsObject],
     field: Field,
     numericBinCountOption: Option[Int]
-  ): Seq[Count[_]] = {
-    val fieldTypeSpec = field.fieldTypeSpec
-    val fieldType = ftf(fieldTypeSpec)
-    val fieldTypeId = fieldTypeSpec.fieldType
+  ): Traversable[Count[_]] = {
+    val spec = field.fieldTypeSpec
+    val fieldType = ftf(spec)
+
     val numericBinCount = numericBinCountOption.getOrElse(defaultNumericBinCount)
 
-    val jsons = project(items, field.name)
-    def getValues[T]: Traversable[Option[T]] = jsonsToValues[T](jsons, fieldType)
-
-    def getRenderer[T]= {
-      val typedFieldType = fieldType.asValueOf[T]
-
-      { (value : Option[T]) =>
-        value match {
-          case Some(_) => typedFieldType.valueToDisplayString(value)
-          case None => "Undefined"
-        }
-      }
+    def getValues[T]: Traversable[Option[T]] = {
+      val jsonToValue = jsonToArrayValue[T](field)
+      items.map(jsonToValue).flatten
     }
 
-    fieldTypeId match {
+    def calcUniqueCounts[T] = {
+      val counts = UniqueDistributionCountsCalc[T].fun()(getValues[T])
+      createStringCounts(counts, fieldType.asValueOf[T])
+    }
 
-      case FieldTypeId.String =>
-        categoricalCountsWithFormatting(getValues[String], Some(getRenderer[String]))
-
-      case FieldTypeId.Enum =>
-        categoricalCountsWithFormatting(getValues[Int], Some(getRenderer[Int]))
-
-      case FieldTypeId.Boolean =>
-        categoricalCountsWithFormatting(getValues[Boolean], Some(getRenderer[Boolean]))
+    spec.fieldType match {
+      case FieldTypeId.String => calcUniqueCounts[String]
+      case FieldTypeId.Enum => calcUniqueCounts[Int]
+      case FieldTypeId.Boolean => calcUniqueCounts[Boolean]
 
       case FieldTypeId.Double =>
         val numCounts = numericalCounts(getValues[Double].flatten, numericBinCount, false, None, None)
@@ -424,7 +399,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       }
 
       case FieldTypeId.Null =>
-        formatCategoricalCounts[Nothing](Seq((None, jsons.size)), None)
+        createStringCounts[Nothing](Seq((None, items.size)), fieldType.asValueOf[Nothing])
 
       // for the json type we can't do anything
       case FieldTypeId.Json =>
@@ -437,7 +412,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     field: Field,
     groupField: Field,
     numericBinCountOption: Option[Int]
-  ): Seq[(String, Seq[Count[_]])] = {
+  ): Seq[(String, Traversable[Count[_]])] = {
     val groupFieldSpec = groupField.fieldTypeSpec
     val groupFieldType = ftf(groupFieldSpec)
     val groupFieldTypeId = groupFieldSpec.fieldType
@@ -456,9 +431,11 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     val groupedValues = groupFieldTypeId match {
 
       case FieldTypeId.String =>
+
         val groupedJsons = groupValues[String].filter(_._1.isDefined).map {
           case (option, jsons) => (option.get, jsons)
         }.toSeq.sortBy(_._1)
+
         val undefinedGroupJsons = groupValues[String].find(_._1.isEmpty).map(_._2).getOrElse(Nil)
         groupedJsons ++ Seq(("Undefined", undefinedGroupJsons))
 
@@ -483,9 +460,11 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         )
 
       case FieldTypeId.Json =>
+
         val values = groupValues[JsObject]
         val groupedJsons = values.collect { case (Some(value), jsons) => (Json.stringify(value), jsons)}.toSeq.sortBy(_._1)
         val undefinedGroupJsons = values.find(_._1.isEmpty).map(_._2).getOrElse(Nil)
+
         groupedJsons ++ Seq(("Undefined", undefinedGroupJsons))
     }
 
@@ -494,11 +473,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       (groupName, counts)
     }
   }
-
-  private def categoricalCounts[T](
-    values: Traversable[Option[T]]
-  ): Seq[(Option[T], Int)] =
-    values.groupBy(identity).map { case (value, seq) => (value, seq.size) }.toSeq
 
   private def categoricalCountsRepo[T](
     fieldName: String,
@@ -673,26 +647,19 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       bucketCounts
   }
 
-  override def categoricalCountsWithFormatting[T](
-    values: Traversable[Option[T]],
-    renderer: Option[Option[T] => String]
-  ): Seq[Count[String]] =
-    formatCategoricalCounts(categoricalCounts(values), renderer)
-
-  private def formatCategoricalCounts[T](
-    counts: Seq[(Option[T], Int)],
-    renderer: Option[Option[T] => String]
-  ): Seq[Count[String]] = {
+  private def createStringCounts[T](
+    counts: Traversable[(Option[T], Int)],
+    fieldType: FieldType[T]
+  ): Traversable[Count[String]] =
     counts.map {
-      case (key, count) => {
-        val stringKey = key.map(_.toString)
+      case (value, count) => {
+        val stringKey = value.map(_.toString)
         val keyOrEmpty = stringKey.getOrElse("")
-        val label = renderer.map(_.apply(key)).getOrElse(keyOrEmpty)
+        val label = value.map(value => fieldType.valueToDisplayString(Some(value))).getOrElse("Undefined")
 
         Count(label, count, stringKey)
       }
     }
-  }
 
   private def convertNumericalCounts[T](
     counts: Seq[(BigDecimal, Int)],
@@ -713,48 +680,26 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     xField: Field,
     yField: Field,
     groupField: Option[Field]
-  ): Seq[(String, Seq[(Any, Any)])] = {
-    val xFieldName = xField.name
-    val yFieldName = yField.name
+  ): Traversable[(String, Traversable[(Any, Any)])] = {
+    // create a json value converter
+    val jsonValues = jsonToTuple[Any, Any](xField, yField)
+    groupField.map { groupField =>
+      // create a group->string converter and merge with the value one
+      val groupJsonString = jsonToDisplayString(groupField)
+      val groupStringJsonValues = {jsObject: JsObject =>
+        val values = jsonValues(jsObject)
+        (groupJsonString(jsObject), values._1, values._2)
+      }
 
-    val xFieldType = ftf(xField.fieldTypeSpec)
-    val yFieldType = ftf(yField.fieldTypeSpec)
+      // extract data and produce scatter data
+      val data = xyzItems.map(groupStringJsonValues)
+      val result = GroupScatterCalc[String, Any, Any].fun()(data)
 
-    val xyzSeq = xyzItems.toSeq
-    val xJsons = project(xyzSeq, xFieldName).toSeq
-    val yJsons = project(xyzSeq, yFieldName).toSeq
-
-    def values(
-      jsons: Seq[JsReadable],
-      fieldType: FieldType[_]
-    ) =
-      jsons.map(fieldType.jsonToValue)
-
-    val xValues = values(xJsons, xFieldType)
-    val yValues = values(yJsons, yFieldType)
-
-    def flattenTupples[A, B](
-      tupples: Traversable[(Option[A], Option[B])]
-    ): Seq[(A, B)] =
-      tupples.map(_.zipped).flatten.toSeq
-
-    groupField match {
-      case Some(groupField) =>
-        val groupFieldType = ftf(groupField.fieldTypeSpec)
-        val groupJsons = project(xyzSeq, groupField.name).toSeq
-        val groupValues = jsonsToDisplayString(groupFieldType, groupJsons)
-
-        val groupedValues = (groupValues, xValues, yValues).zipped.groupBy(_._1).map { case (groupValue, values) =>
-          (
-            groupValue,
-            flattenTupples(values.map(tupple => (tupple._2, tupple._3)))
-          )
-        }
-        groupedValues.filter(_._2.nonEmpty).toSeq
-
-      case None =>
-        val xys = flattenTupples(xValues.zip(yValues))
-        Seq(("all", xys))
+      result.map { case (groupName, values) => (groupName.getOrElse("Undefined"), values)}
+    }.getOrElse{
+      val data = xyzItems.map(jsonValues)
+      val result = ScatterCalc[Any, Any].fun()(data)
+      Seq(("all", result))
     }
   }
 
@@ -829,62 +774,51 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       }
     }
 
-  override def calcQuantiles(
+  override def calcQuartiles(
     items: Traversable[JsObject],
     field: Field
-  ): Option[Quantiles[Any]] = {
-    val jsons = project(items, field.name)
-    val typeSpec = field.fieldTypeSpec
-    val fieldType = ftf(typeSpec)
+  ): Option[Quartiles[Any]] = {
+    // helper function to convert jsons to values and calculate quartiles
+    def quartiles[T: Ordering](toDouble: T => Double): Option[Quartiles[Any]] = {
+      val jsonToValue = jsonToArrayValue[T](field)
+      val values = items.map(jsonToValue).flatten.flatten
+      QuartilesCalc[T].fun(toDouble)(values).asInstanceOf[Option[Quartiles[Any]]]
+    }
 
-    def quantiles[T: Ordering](
-      toDouble: T => Double
-    ): Option[Quantiles[Any]] =
-      BasicStats.quantiles[T](
-        jsonsToValues[T](jsons, fieldType).flatten.toSeq,
-        toDouble
-      ).asInstanceOf[Option[Quantiles[Any]]]
-
-    typeSpec.fieldType match {
-      case FieldTypeId.Double => quantiles[Double](identity)
-
-      case FieldTypeId.Integer => quantiles[Long](_.toDouble)
-
-      case FieldTypeId.Date => quantiles[ju.Date](_.getTime.toDouble)
-
+    field.fieldType match {
+      case FieldTypeId.Double => quartiles[Double](identity)
+      case FieldTypeId.Integer => quartiles[Long](_.toDouble)
+      case FieldTypeId.Date => quartiles[ju.Date](_.getTime.toDouble)
       case _ => None
     }
   }
 
-  override def calcQuantiles(
+  override def calcQuartiles(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
-  ): Future[Option[Quantiles[Any]]] = {
+  ): Future[Option[Quartiles[Any]]] = {
     val typeSpec = field.fieldTypeSpec
 
-    def quantiles[T: Ordering](toDouble: T => Double) =
-      calcQuantiles[T](dataRepo, criteria, field, toDouble).map(
-        _.asInstanceOf[Option[Quantiles[Any]]]
+    def quartiles[T: Ordering](toDouble: T => Double) =
+      calcQuartiles[T](dataRepo, criteria, field, toDouble).map(
+        _.asInstanceOf[Option[Quartiles[Any]]]
       )
 
     typeSpec.fieldType match {
-      case FieldTypeId.Double => quantiles[Double](identity)
-
-      case FieldTypeId.Integer => quantiles[Long](_.toDouble)
-
-      case FieldTypeId.Date => quantiles[ju.Date](_.getTime.toDouble)
-
+      case FieldTypeId.Double => quartiles[Double](identity)
+      case FieldTypeId.Integer => quartiles[Long](_.toDouble)
+      case FieldTypeId.Date => quartiles[ju.Date](_.getTime.toDouble)
       case _ => Future(None)
     }
   }
 
-  def calcQuantiles[T: Ordering](
+  def calcQuartiles[T: Ordering](
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
     toDouble: T => Double
-  ): Future[Option[Quantiles[T]]] =
+  ): Future[Option[Quartiles[T]]] =
     for {
       // total length
       length <- dataRepo.count(criteria ++ Seq(field.name #!@))
@@ -904,7 +838,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
-  ): Future[Option[Quantiles[T]]] = {
+  ): Future[Option[Quartiles[T]]] = {
     val typeSpec = field.fieldTypeSpec
     val fieldType = ftf(typeSpec).asValueOf[T]
 
@@ -1026,7 +960,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         upperQuantile <- upperQuantileOption
         upperWhisker <- medianLowerUpperWhiskerOptions._3
       } yield {
-        Quantiles(lowerWhisker, lowerQuantile, median, upperQuantile, upperWhisker)
+        Quartiles(lowerWhisker, lowerQuantile, median, upperQuantile, upperWhisker)
       }
     }
   }
@@ -1039,243 +973,68 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     items: Traversable[JsObject],
     fields: Seq[Field]
   ): Seq[Seq[Option[Double]]] = {
-
-    def getValues[T](field: Field): Traversable[Option[T]] = {
-      val typedFieldType = ftf(field.fieldTypeSpec).asValueOf[T]
-      project(items, field.name).map(typedFieldType.jsonToValue)
-    }
-
-    val fieldsWithValues: Seq[(Field, Traversable[Option[Double]])] = fields.map { field =>
-      field.fieldType match {
-        case FieldTypeId.Double =>
-          Some((field, getValues[Double](field)))
-
-        case FieldTypeId.Integer =>
-          Some((field, getValues[Long](field).map(_.map(_.toDouble))))
-
-        case FieldTypeId.Date =>
-          Some((field, getValues[java.util.Date](field).map(_.map(_.getTime.toDouble))))
-
-        case _ => None
-      }
-    }.flatten
-
-    val data: Seq[Seq[Option[Double]]] = fieldsWithValues.map(_._2).transpose
-
-    calcPearsonCorrelations(data)
-  }
-
-  override def calcPearsonCorrelations(
-    values: Traversable[Seq[Option[Double]]]
-  ): Seq[Seq[Option[Double]]] = {
-    val elementsCount = if (values.nonEmpty) values.head.size else 0
-
-    def calc(index1: Int, index2: Int) = {
-      val els = (values.map(_ (index1)).toSeq, values.map(_ (index2)).toSeq).zipped.flatMap {
-        case (el1: Option[Double], el2: Option[Double]) =>
-          if ((el1.isDefined) && (el2.isDefined)) {
-            Some((el1.get, el2.get))
-          } else
-            None
-      }
-
-      if (els.nonEmpty) {
-        val length = els.size
-
-        val mean1 = els.map(_._1).sum / length
-        val mean2 = els.map(_._2).sum / length
-
-        // sum up the squares
-        val mean1Sq = els.map(_._1).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
-        val mean2Sq = els.map(_._2).foldLeft(0.0)(_ + Math.pow(_, 2)) / length
-
-        // sum up the products
-        val pMean = els.foldLeft(0.0) { case (accum, pair) => accum + pair._1 * pair._2 } / length
-
-        // calculate the pearson score
-        val numerator = pMean - mean1 * mean2
-
-        val denominator = Math.sqrt(
-          (mean1Sq - Math.pow(mean1, 2)) * (mean2Sq - Math.pow(mean2, 2))
-        )
-        if (denominator == 0)
-          None
-        else
-          Some(numerator / denominator)
-      } else
-        None
-    }
-
-    (0 until elementsCount).par.map { i =>
-      (0 until elementsCount).par.map { j =>
-        if (i != j)
-          calc(i, j)
-        else
-          Some(1d)
-      }.toList
-    }.toList
+    val doubleValues = jsonToDoubles(fields)
+    PearsonCorrelationCalc.fun()(items.map(doubleValues))
   }
 
   implicit val system = ActorSystem()
   implicit val materializer = ActorMaterializer()
 
-  case class PersonIterativeAccum(
-    sum1: Double,
-    sum2: Double,
-    sqSum1: Double,
-    sqSum2: Double,
-    pSum: Double,
-    count: Int
-  )
+  private def ssad() = {
+    val topHeadSink = Sink.head[Int]
+    val bottomHeadSink = Sink.head[Int]
+    val sharedDoubler = Flow[Int].map(_ * 2)
 
-  private def pearsonCorrelationSink(
-    n: Int,
-    parallelGroupSizes: Seq[Int]
-  ) =
-    Sink.fold[Seq[Seq[PersonIterativeAccum]], Seq[Option[Double]]](
-      for (i <- 0 to n - 1) yield Seq.fill(i)(PersonIterativeAccum(0, 0, 0, 0, 0, 0))
-    ) {
-      case (accums, featureValues) =>
+    val lala = RunnableGraph.fromGraph(GraphDSL.create(topHeadSink, bottomHeadSink)((_, _)) { implicit builder =>
+      (topHS, bottomHS) =>
+        import GraphDSL.Implicits._
+        val broadcast = builder.add(Broadcast[Int](2))
+        Source.single(1) ~> broadcast.in
 
-        def calcAux(accumFeatureValuePairs: Seq[(Seq[PersonIterativeAccum], Option[Double])]) =
-          accumFeatureValuePairs.map { case (rowAccums, value1) =>
-            rowAccums.zip(featureValues).map { case (accum, value2) =>
-              if (value1.isDefined && value2.isDefined) {
-                PersonIterativeAccum(
-                  accum.sum1 + value1.get,
-                  accum.sum2 + value2.get,
-                  accum.sqSum1 + value1.get * value1.get,
-                  accum.sqSum2 + value2.get * value2.get,
-                  accum.pSum + value1.get * value2.get,
-                  accum.count + 1
-                )
-              } else
-                accum
-            }
-          }
-
-        val accumFeatureValuePairs = accums.zip(featureValues)
-
-        parallelGroupSizes match {
-          case Nil => calcAux(accumFeatureValuePairs)
-          case _ => accumFeatureValuePairs.grouped(parallelGroupSizes).toSeq.par.flatMap(calcAux).toList
-        }
-    }
-
-  @Deprecated
-  // seems slower than @see pearsonCorrelationSink and could be removed
-  private def pearsonCorrelationSinkMutable(
-    n: Int,
-    parallelGroupSizes: Seq[Int]
-  ) = {
-    val starts = parallelGroupSizes.scanLeft(0){_+_}
-    val startEnds = parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
-
-    Sink.fold[Seq[mutable.ArraySeq[PersonIterativeAccum]], Seq[Option[Double]]](
-      for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(PersonIterativeAccum(0, 0, 0, 0, 0, 0)): _*)
-    ) {
-      case (accums, featureValues) =>
-
-        def calcAux(from: Int, to: Int) =
-          for (i <- from to to) {
-            val rowAccums = accums(i)
-            featureValues(i).foreach(value1 =>
-              for (j <- 0 to i - 1) {
-                featureValues(j).foreach { value2 =>
-                  val accum = rowAccums(j)
-                  val newAccum = PersonIterativeAccum(
-                    accum.sum1 + value1,
-                    accum.sum2 + value2,
-                    accum.sqSum1 + value1 * value1,
-                    accum.sqSum2 + value2 * value2,
-                    accum.pSum + value1 * value2,
-                    accum.count + 1
-                  )
-                  rowAccums.update(j, newAccum)
-                }
-              }
-            )
-          }
-
-        startEnds match {
-          case Nil => calcAux(0, n - 1)
-          case _ => startEnds.par.foreach((calcAux(_, _)).tupled)
-        }
-        accums
-    }
+        broadcast.out(0) ~> sharedDoubler ~> topHS.in
+        broadcast.out(1) ~> sharedDoubler ~> bottomHS.in
+        ClosedShape
+    })
+    lala.run()
   }
 
-  private def pearsonCorrelationSinkAllDefined(
-    n: Int,
-    parallelGroupSizes: Seq[Int]
+  private def connectSinksToSource[T, U](
+    source: Source[T, _],
+    sinks: Traversable[Sink[U, _]]
   ) = {
-    val starts = parallelGroupSizes.scanLeft(0){_+_}
-    val startEnds = parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
+    val topHeadSink = Sink.head[Int]
+    val bottomHeadSink = Sink.head[Int]
+    val sharedDoubler = Flow[Int].map(_ * 2)
 
-    Sink.fold[PersonIterativeAccumGlobalArray, Seq[Double]](
-      PersonIterativeAccumGlobalArray(
-        sumSqSums = for (i <- 0 to n - 1) yield (0d, 0d),
-        pSums = (for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(0d): _*)).toArray,
-        count = 0
-      )
-    ) {
-      case (accumGlobal, featureValues) =>
-        val newSumSqSums = (accumGlobal.sumSqSums, featureValues).zipped.map { case ((sum, sqSum), value) =>
-          (sum + value, sqSum + value * value)
-        }
+    val lala = RunnableGraph.fromGraph(GraphDSL.create(topHeadSink, bottomHeadSink)((_, _)) { implicit builder =>
+      (topHS, bottomHS) =>
+        import GraphDSL.Implicits._
+        val broadcast = builder.add(Broadcast[Int](2))
+        Source.single(1) ~> broadcast.in
 
-        val pSums = accumGlobal.pSums
-
-        def calcAux(from: Int, to: Int) =
-          for (i <- from to to) {
-            val rowPSums = pSums(i)
-            val value1 = featureValues(i)
-            for (j <- 0 to i - 1) {
-              val value2 = featureValues(j)
-              rowPSums.update(j, rowPSums(j) + value1 * value2)
-            }
-          }
-
-        startEnds match {
-          case Nil => calcAux(0, n - 1)
-          case _ => startEnds.par.foreach((calcAux(_, _)).tupled)
-        }
-        PersonIterativeAccumGlobalArray(newSumSqSums, pSums, accumGlobal.count + 1)
-    }
+        broadcast.out(0) ~> sharedDoubler ~> topHS.in
+        broadcast.out(1) ~> sharedDoubler ~> bottomHS.in
+        ClosedShape
+    })
+    lala.run()
   }
 
-  @Deprecated
-  private def pearsonCorrelationSinkAllDefinedOld(
-    n: Int,
-    parallelGroupSizes: Seq[Int]
-  ) =
-    Sink.fold[PersonIterativeAccumGlobal, Seq[Double]](
-      PersonIterativeAccumGlobal(
-        sumSqSums = for (i <- 0 to n - 1) yield (0d, 0d),
-        pSums = for (i <- 0 to n - 1) yield Seq.fill(i)(0d),
-        count = 0
-      )
-    ) {
-      case (accumGlobal, featureValues) =>
-        val newSumSqSums = (accumGlobal.sumSqSums, featureValues).zipped.map { case ((sum, sqSum), value) =>
-          (sum + value, sqSum + value * value)
-        }
+  private def ddasdsa() = {
+    val g = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
+      import GraphDSL.Implicits._
+      val in = Source(1 to 10)
+      val out = Sink.ignore
 
-        def calcAux(pSumValuePairs: Traversable[(Seq[Double], Double)]) =
-          pSumValuePairs.map { case (pSums, value1) =>
-            (pSums, featureValues).zipped.map { case (pSum, value2) =>
-              pSum + value1 * value2
-            }
-          }
+      val bcast = builder.add(Broadcast[Int](2))
+      val merge = builder.add(Merge[Int](2))
 
-        val pSumValuePairs = (accumGlobal.pSums, featureValues).zipped.toTraversable
+      val f1, f2, f3, f4 = Flow[Int].map(_ + 10)
 
-        val newPSums = parallelGroupSizes match {
-          case Nil => calcAux(pSumValuePairs)
-          case _ => pSumValuePairs.grouped(parallelGroupSizes).toArray.par.flatMap(calcAux).arrayseq
-        }
-        PersonIterativeAccumGlobal(newSumSqSums, newPSums.toSeq, accumGlobal.count + 1)
-    }
+      in ~> f1 ~> bcast ~> f2 ~> merge ~> f3 ~> out
+      bcast ~> f4 ~> merge
+      ClosedShape
+    })
+  }
 
   override def calcPearsonCorrelations(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
@@ -1291,11 +1050,11 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
 
       // covert the data source to (double) value source and calc correlations
       corrs <- if (areValuesAllDefined) {
-        val getDoubleValuesDefined = {json: JsObject => fields.map(field => getDoubleValue(field)(json).get)}
-        calcPearsonCorrelationsAllDefined(source.map(getDoubleValuesDefined), fields.size, parallelism)
+        val doubleValues = jsonToDoublesDefined(fields)
+        calcPearsonCorrelationsAllDefined(source.map(doubleValues), fields.size, parallelism)
       } else {
-        val getDoubleValues = {json: JsObject => fields.map(field => getDoubleValue(field)(json))}
-        calcPearsonCorrelations(source.map(getDoubleValues), fields.size, parallelism)
+        val doubleValues = jsonToDoubles(fields)
+        calcPearsonCorrelations(source.map(doubleValues), fields.size, parallelism)
       }
     } yield
       corrs
@@ -1310,11 +1069,11 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     for {
       // run the stream with a selected sink and get accums back
       accums <- {
-        val sink = pearsonCorrelationSink(featuresNum, groupSizes)
+        val sink = PearsonCorrelationCalc.sink(featuresNum, groupSizes)
         source.runWith(sink)
       }
     } yield
-      accumsToCorrelations(accums, groupSizes)
+      PearsonCorrelationCalc.postSink(groupSizes)(accums)
   }
 
   override def calcPearsonCorrelationsAllDefined(
@@ -1326,12 +1085,12 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
 
     for {
       // run the stream with a selected sink and get accums back
-      accums <- {
-        val sink = pearsonCorrelationSinkAllDefined(featuresNum, groupSizes)
-        source.runWith(sink).map(globalAccumToAccums)
+      globalAccum <- {
+        val sink = PearsonCorrelationAllDefinedCalc.sink(featuresNum, groupSizes)
+        source.runWith(sink)
       }
     } yield
-      accumsToCorrelations(accums, groupSizes)
+      PearsonCorrelationAllDefinedCalc.postSink(groupSizes)(globalAccum)
   }
 
   private def calcGroupSizes(n: Int, parallelism: Option[Int]) =
@@ -1362,109 +1121,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     }.getOrElse(
       Nil
     )
-
-  private def accumToCorrelation(accum: PersonIterativeAccum): Option[Double] = {
-    val length = accum.count
-
-    if (length < 2) {
-      None
-    } else {
-      val mean1 = accum.sum1 / length
-      val mean2 = accum.sum2 / length
-
-      // sum up the squares
-      val mean1Sq = accum.sqSum1 / length
-      val mean2Sq = accum.sqSum2 / length
-
-      // sum up the products
-      val pMean = accum.pSum / length
-
-      // calculate the pearson score
-      val numerator = pMean - mean1 * mean2
-
-      val denominator = Math.sqrt((mean1Sq - mean1 * mean1) * (mean2Sq - mean2 * mean2))
-
-      if (denominator == 0)
-        None
-      else if (denominator.isNaN || denominator.isInfinity) {
-        logger.error(s"Got not-a-number denominator during a correlation calculation.")
-        None
-      } else if (numerator.isNaN || numerator.isInfinity) {
-        logger.error(s"Got not-a-number numerator during a correlation calculation.")
-        None
-      } else
-        Some(numerator/ denominator)
-    }
-  }
-
-  private def globalAccumToAccums(
-    globalAccum: PersonIterativeAccumGlobalArray
-  ): Seq[Seq[PersonIterativeAccum]] = {
-    logger.info("Converting the global streamed accumulator to the partial ones.")
-    (globalAccum.pSums, globalAccum.sumSqSums).zipped.map { case (rowPSums, (sum1, sqSum1)) =>
-      (rowPSums, globalAccum.sumSqSums).zipped.map { case (pSum, (sum2, sqSum2)) =>
-        PersonIterativeAccum(sum1, sum2, sqSum1, sqSum2, pSum, globalAccum.count)
-      }
-    }
-  }
-
-  @Deprecated
-  private def globalAccumToAccumsOld(
-    globalAccum: PersonIterativeAccumGlobal
-  ): Seq[Seq[PersonIterativeAccum]] = {
-    logger.info("Converting the global streamed accumulator to the partial ones.")
-    (globalAccum.pSums, globalAccum.sumSqSums).zipped.map { case (rowPSums, (sum1, sqSum1)) =>
-      (rowPSums, globalAccum.sumSqSums).zipped.map { case (pSum, (sum2, sqSum2)) =>
-        PersonIterativeAccum(sum1, sum2, sqSum1, sqSum2, pSum, globalAccum.count)
-      }
-    }
-  }
-
-  private def accumsToCorrelations(
-    accums: Seq[Seq[PersonIterativeAccum]],
-    parallelGroupSizes: Seq[Int]
-  ): Seq[Seq[Option[Double]]] = {
-    logger.info("Creating correlations from the streamed accumulators.")
-    val n = accums.size
-
-    def calcAux(accums: Seq[Seq[PersonIterativeAccum]]) = accums.map(_.map(accumToCorrelation))
-
-    val triangleResults = parallelGroupSizes match {
-      case Nil => calcAux(accums)
-      case _ => accums.grouped(parallelGroupSizes).toArray.par.flatMap(calcAux).arrayseq
-    }
-
-    logger.info("Triangle results finished. Generating a full matrix.")
-
-    for (i <- 0 to n - 1) yield
-      for (j <- 0 to n - 1) yield {
-        if (i > j)
-          triangleResults(i)(j)
-        else if (i < j)
-          triangleResults(j)(i)
-        else
-          Some(1d)
-      }
-  }
-
-  private def getDoubleValue(field: Field)(json: JsObject): Option[Double] = {
-    // helper function
-    def value[T]: Option[T] = {
-      val typedFieldType = ftf(field.fieldTypeSpec).asValueOf[T]
-      typedFieldType.jsonToValue(json \ field.name)
-    }
-
-    field.fieldType match {
-      case FieldTypeId.Double => value[Double]
-
-      case FieldTypeId.Integer => value[Long].map(_.toDouble)
-
-      case FieldTypeId.Date => value[java.util.Date].map(_.getTime.toDouble)
-
-      case _ => None
-    }
-  }
-
 
   override def testChiSquare(
     data: Traversable[JsObject],
@@ -1563,22 +1219,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         None
     }
   }
-
-  def jsonsToValues[T](
-    jsons: Traversable[JsReadable],
-    fieldType: FieldType[_]
-  ): Traversable[Option[T]] =
-    if (fieldType.spec.isArray) {
-      val typedFieldType = fieldType.asValueOf[Array[Option[T]]]
-
-      jsons.map( json =>
-        typedFieldType.jsonToValue(json).map(_.toSeq).getOrElse(Seq(None))
-      ).flatten
-    } else {
-      val typedFieldType = fieldType.asValueOf[T]
-
-      jsons.map(typedFieldType.jsonToValue)
-    }
 
   override def testIndependenceSorted(
     items: Traversable[JsObject],
@@ -1697,16 +1337,3 @@ case class AnovaResult(pValue: Double, fValue: Double, degreeOfFreedomBetweenGro
 object AnovaResult {
   implicit val anovaResultFormat = Json.format[AnovaResult]
 }
-
-@Deprecated
-case class PersonIterativeAccumGlobal(
-  sumSqSums: Seq[(Double, Double)],
-  pSums: Seq[Seq[Double]],
-  count: Int
-)
-
-case class PersonIterativeAccumGlobalArray(
-  sumSqSums: Seq[(Double, Double)],
-  pSums: Array[mutable.ArraySeq[Double]],
-  count: Int
-)

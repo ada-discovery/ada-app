@@ -24,6 +24,7 @@ class ElasticJsonCrudRepo @Inject()(
 
   private implicit val jsonIdRenameFormat = ElasticIdRenameUtil.createFormat
   private val fieldNamesAndTypeWithId = fieldNamesAndTypes ++ Seq((ElasticIdRenameUtil.newIdName, FieldTypeSpec(FieldTypeId.Json)))
+  private val includeInAll = false
 
   // TODO: should be called as a post-init method, since all vals must be instantiated (i.e. the order matters)
   createIndexIfNeeded()
@@ -92,7 +93,7 @@ class ElasticJsonCrudRepo @Inject()(
             toElasticFieldType(fieldName, fieldTypeSpec)
           }
         )
-      ) indexSetting("max_result_window", unboundLimit) // indexSetting("mapping.coerce", true)
+      ) indexSetting("max_result_window", unboundLimit) // indexSetting("_all", false) indexSetting("mapping.coerce", true)
     }
 
   private def toElasticFieldType(fieldName: String, fieldTypeSpec: FieldTypeSpec): TypedFieldDefinition =
@@ -100,13 +101,13 @@ class ElasticJsonCrudRepo @Inject()(
       fieldName typed NestedType as ("$oid" typed StringType) //  store true
     } else
       fieldTypeSpec.fieldType match {
-        case FieldTypeId.Integer => fieldName typed LongType store true
-        case FieldTypeId.Double => new CoerceDoubleFieldDefinition(fieldName) store true
-        case FieldTypeId.Boolean => fieldName typed BooleanType store true
-        case FieldTypeId.Enum => fieldName typed IntegerType store true
-        case FieldTypeId.String => fieldName typed StringType index NotAnalyzed store true
-        case FieldTypeId.Date => fieldName typed LongType store true
+        case FieldTypeId.Integer => fieldName typed LongType store true includeInAll(includeInAll)
+        case FieldTypeId.Double => new CoerceDoubleFieldDefinition(fieldName) store true includeInAll(includeInAll)
+        case FieldTypeId.Boolean => fieldName typed BooleanType store true includeInAll(includeInAll)
+        case FieldTypeId.Enum => fieldName typed IntegerType store true includeInAll(includeInAll)
+        case FieldTypeId.String => fieldName typed StringType index NotAnalyzed store true includeInAll(includeInAll)
+        case FieldTypeId.Date => fieldName typed LongType store true includeInAll(includeInAll)
         case FieldTypeId.Json => fieldName typed NestedType
-        case FieldTypeId.Null => fieldName typed ShortType // doesn't matter which type since it's always null
+        case FieldTypeId.Null => fieldName typed ShortType includeInAll(includeInAll) // doesn't matter which type since it's always null
       }
 }

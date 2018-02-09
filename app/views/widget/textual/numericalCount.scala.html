@@ -17,7 +17,7 @@
     }
 }
 
-@countTableAux(groupName: String, data: Seq[Count[_]]) = {
+@countTableAux(groupName: String, data: Traversable[Count[_]]) = {
     @displayTable(
         data,
         typeColumns[Count[_]](
