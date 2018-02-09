@@ -1,6 +1,7 @@
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.StatsService
+import services.stats.StatsService
+import services.stats.calc.PearsonCorrelationCalc
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -16,6 +17,7 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
 
   private val injector = TestApp.apply.injector
   private val statsService = injector.instanceOf[StatsService]
+  private val pearsonCorrelationCalc = PearsonCorrelationCalc.fun()
 
   "Correlations" should "match the static example" in {
     val inputs = xs.zip(ys).map{ case (a,b) => Seq(Some(a),Some(b))}
@@ -35,7 +37,7 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
     val featuresNum = inputs.head.size
 
     // standard calculation
-    Future(statsService.calcPearsonCorrelations(inputs)).map(checkResult)
+    Future(pearsonCorrelationCalc(inputs)).map(checkResult)
 
     // streamed calculations
     statsService.calcPearsonCorrelations(inputSource, featuresNum, None).map(checkResult)
@@ -60,7 +62,7 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
     val inputSourceAllDefined = Source.fromIterator(() => inputsAllDefined.toIterator)
 
     // standard calculation
-    val protoResult = statsService.calcPearsonCorrelations(inputs)
+    val protoResult = pearsonCorrelationCalc(inputs)
 
     def checkResult(result: Seq[Seq[Option[Double]]]) = {
       result.map(_.size should be (randomFeaturesNum))

@@ -166,7 +166,7 @@ function boxWidget(elementId, widget) {
 
 function scatterWidget(elementId, widget) {
     var datas = widget.data.map(function(series) {
-        return {name : shorten(series[0]), data : series[2]}
+        return {name : shorten(series[0]), data : series[1]}
     })
 
     var height = widget.displayOptions.height || 400;
