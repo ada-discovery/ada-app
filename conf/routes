@@ -262,6 +262,7 @@ POST        /messages/saveUserMessage                                           
 GET         /message/listMostRecent                                                 controllers.MessageController.listMostRecent(limit: Int)
 
 #Temporary for mpower challenge
+GET         /pdChallenge/mpower                                                     controllers.MPowerChallengeController.mPowerNetwork
 GET         /pdChallenge/ldopaTremor                                                controllers.MPowerChallengeController.tremorNetwork
 GET         /pdChallenge/ldopaDyskinesia                                            controllers.MPowerChallengeController.dyskinesiaNetwork
 GET         /pdChallenge/ldopaBradykinesia                                          controllers.MPowerChallengeController.bradykinesiaNetwork
