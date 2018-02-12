@@ -39,6 +39,9 @@ class MPowerChallengeController @Inject()(
   private lazy val bradykinesiaCorrDsa = dsaf("harvard_ldopa.bradykinesia_correlation").get
   private lazy val bradykinesiaScoreBoardDsa = dsaf("harvard_ldopa.score_board_bradykinesia").get
 
+  private lazy val mPowerCorrDsa = dsaf("mpower_challenge.correlation").get
+  private lazy val mPowerScoreBoardDsa = dsaf("mpower_challenge.score_board").get
+
   private val featureFieldName = "featureName"
   private val absCorrMeanCutoff = 0.4
 
@@ -63,6 +66,8 @@ class MPowerChallengeController @Inject()(
 
   private lazy val bradykinesiaCorrelationScoresFuture = calcCrossTeamMeanAbsCorrelations(bradykinesiaScoreBoardDsa, bradykinesiaCorrDsa)
 
+  private lazy val mPowerCorrelationScoresFuture = calcCrossTeamMeanAbsCorrelations(mPowerScoreBoardDsa, mPowerCorrDsa)
+
   def tremorNetwork = Action.async { implicit request =>
     showTeamCorrelationNetwork("LDOPA Tremor Subchallenge Team Correlation", tremorScoreBoardDsa, tremorCorrelationScoresFuture)
   }
@@ -73,6 +78,10 @@ class MPowerChallengeController @Inject()(
 
   def bradykinesiaNetwork = Action.async { implicit request =>
     showTeamCorrelationNetwork("LDOPA Bradykinesia Subchallenge Team Correlation", bradykinesiaScoreBoardDsa, bradykinesiaCorrelationScoresFuture)
+  }
+
+  def mPowerNetwork = Action.async { implicit request =>
+    showTeamCorrelationNetwork("mPower Subchallenge Team Correlation", mPowerScoreBoardDsa, mPowerCorrelationScoresFuture)
   }
 
   def showTeamCorrelationNetwork(
@@ -155,13 +164,14 @@ class MPowerChallengeController @Inject()(
       }.groupBy(_._1)
 
       // calculate abs correlation mean between each pair of teams
-      crossTeamMeanAbsCorrelations <- calcAbsCorrelationMeansForAllTeams(submissionInfos, submissionIdFeatureNamesMap)
+      crossTeamMeanAbsCorrelations <- calcAbsCorrelationMeansForAllTeams(submissionInfos, submissionIdFeatureNamesMap, correlationDsa)
     } yield
       crossTeamMeanAbsCorrelations
 
   private def calcAbsCorrelationMeansForAllTeams(
     submissionInfos: Traversable[ScoreSubmissionInfo],
-    submissionIdFeatureNamesMap: Map[Int, Traversable[(Int, String)]]
+    submissionIdFeatureNamesMap: Map[Int, Traversable[(Int, String)]],
+    corrDsa: DataSetAccessor
   ): Future[Seq[(String, String,  Traversable[Option[Double]])]] = {
     def findFeatureNames(submissionInfo: ScoreSubmissionInfo): Traversable[String] =
       submissionInfo.submissionId.map { submissionId =>
@@ -184,7 +194,7 @@ class MPowerChallengeController @Inject()(
           meanAbsCorrelations <- Future.sequence(
             for (featureNames1 <- allFeatureNames1; submissionInfo2 <- submissionInfos2) yield {
               val featureNames2 = findFeatureNames(submissionInfo2).toSeq
-              extractAbsCorrelationMean(featureNames1, featureNames2)
+              extractAbsCorrelationMean(featureNames1, featureNames2, corrDsa)
             }
           )
         } yield
@@ -195,11 +205,12 @@ class MPowerChallengeController @Inject()(
 
   private def extractAbsCorrelationMean(
     featureNames1: Seq[String],
-    featureNames2: Seq[String]
+    featureNames2: Seq[String],
+    corrDsa: DataSetAccessor
   ): Future[Option[Double]] =
     if (featureNames2.nonEmpty) {
       for {
-        correlationJsons <- dyskinesiaCorrDsa.dataSetRepo.find(
+        correlationJsons <- corrDsa.dataSetRepo.find(
           criteria = Seq(featureFieldName #-> featureNames1.map(_.replaceAllLiterally("u002e", "."))),
           projection = featureNames2 :+ featureFieldName
         )

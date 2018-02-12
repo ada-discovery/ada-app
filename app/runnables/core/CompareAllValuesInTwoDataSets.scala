@@ -105,13 +105,16 @@ class CompareAllValuesInTwoDataSets @Inject()(
     val key1 = getValueFromJson((jsObject1 \ keyFieldName).get)
     val key2 = getValueFromJson((jsObject2 \ keyFieldName).get)
 
-    val fieldsNum1 = jsObject1.fields.size
-    val fieldsNum2 = jsObject2.fields.size
+    val nonNullFields1 = jsObject1.fields.filterNot(_._2.equals(JsNull))
+    val nonNullFields2 = jsObject2.fields.filterNot(_._2.equals(JsNull))
 
-    assert(fieldsNum1.equals(fieldsNum2), s"The number of fields $fieldsNum1 vs $fieldsNum2 do not match.")
+    val fieldsNum1 = nonNullFields1.size
+    val fieldsNum2 = nonNullFields2.size
+
+    assert(fieldsNum1.equals(fieldsNum2), s"The number of non-null fields $fieldsNum1 vs $fieldsNum2 do not match.")
     assert(key1.equals(key2), s"Keys $key1 vs $key2 do not match.")
 
-    val errors = jsObject1.fields.sortBy(_._1).zip(jsObject2.fields.sortBy(_._1)).map { case ((fieldName1, jsValue1), (fieldName2, jsValue2)) =>
+    val errors = nonNullFields1.sortBy(_._1).zip(nonNullFields2.sortBy(_._1)).map { case ((fieldName1, jsValue1), (fieldName2, jsValue2)) =>
       if (!fieldName1.equals(JsObjectIdentity.name)) {
         val value1 = getValueFromJson(jsValue1)
         val value2 = getValueFromJson(jsValue2)

@@ -363,9 +363,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     }
 
     spec.fieldType match {
-      case FieldTypeId.String => calcUniqueCounts[String]
-      case FieldTypeId.Enum => calcUniqueCounts[Int]
-      case FieldTypeId.Boolean => calcUniqueCounts[Boolean]
+      case FieldTypeId.String | FieldTypeId.Enum | FieldTypeId.Boolean => calcUniqueCounts
 
       case FieldTypeId.Double =>
         val numCounts = numericalCounts(getValues[Double].flatten, numericBinCount, false, None, None)

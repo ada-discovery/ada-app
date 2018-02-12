@@ -1653,22 +1653,6 @@ class DataSetServiceImpl @Inject()(
       messageLogger.info(s"Translation of the data and dictionary for data set '${originalDataSetId}' successfully finished.")
   }
 
-//  private val x = new java.math.BigDecimal("1E-10")
-  private val badValue = new java.math.BigDecimal("6E-12")
-
-  private def fixJsonDouble(fieldType: FieldType[_], json: JsReadable): JsReadable = {
-    if (fieldType.spec.fieldType == FieldTypeId.Double) {
-      json.asOpt[String].map { string =>
-        val value = new java.math.BigDecimal(string)
-        if (string.contains(".00E-10") || string.contains(".00E-11") || string.contains(".00E-12") || string.contains(".00E-13") || string.contains(".00E-14") || string.contains(".00E-15")) {
-          println("Got a bad value: " + value)
-          JsString("0")
-        } else json
-      }.getOrElse(json)
-    } else
-      json
-  }
-
   private def createNewJsonsAndSave(
     originalDataRepo: JsonCrudRepo,
     newDataRepo: JsonCrudRepo,
@@ -1679,8 +1663,7 @@ class DataSetServiceImpl @Inject()(
   ): Future[Traversable[BSONObjectID]] = {
     // helper functions to parse jsons
     def displayJsonToJson[T](fieldType: FieldType[T], json: JsReadable): JsValue = {
-      val fixedJson = fixJsonDouble(fieldType, json)
-      val value = fieldType.displayJsonToValue(fixedJson)
+      val value = fieldType.displayJsonToValue(json)
       fieldType.valueToJson(value)
     }
 
