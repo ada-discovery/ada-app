@@ -139,7 +139,9 @@
 }
 
 @widgetsDiv = {
-    <div id="widgetsDiv" class="row vertical-divider"></div>
+    <div id="widgetsDiv" class="row vertical-divider">
+        <div class='spinner' style='margin: auto; margin-bottom: 20px'></div>
+    </div>
 }
 
 @filtersAndWidgets = {
@@ -150,7 +152,6 @@
 
 @bottomResources = {
     @highchartsJsImport()
-
     @widgetPanelAjaxLoadJs(widgetCallbackId, widgetGridElementWidth, dataSetJsRouter)
 
     @highchartsJsImportForBulkExport()

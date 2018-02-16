@@ -55,7 +55,7 @@
 
                 var filterId = ($('#filterNameTypeahead').val()) ? $("#filterId").val() : null
 
-                $('#outputDiv').hide();
+                $('#outputDiv').html("");
 
                 dataSetJsRoutes.controllers.dataset.DataSetDispatcher.testIndependence(targetFieldName, inputFieldNames, filterId).ajax( {
                     success: function(results) {
@@ -68,6 +68,7 @@
                 });
 
                 showMessage("Independence test for the field '" + targetFieldLabel + "' launched.")
+                addSpinner($("#outputDiv"))
             }
 
             function showTestResults(results) {
@@ -151,7 +152,7 @@
     <hr/>
 
     <div class="row">
-        <div class="col-md-9">
+        <div class="col-md-10 col-md-offset-1">
             <div id="outputDiv">
             </div>
         </div>

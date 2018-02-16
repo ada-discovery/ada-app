@@ -73,6 +73,7 @@
             if (!featuresNormalizationType)
                 featuresNormalizationType = null
 
+            $('#countDiv').html("");
             $('#scatterPanelDiv').html("");
             $('#pcaScatterDiv').html("")
             $("#independenceTestPanelDiv").html("");
@@ -116,6 +117,7 @@
             });
 
             showMessage("Clusterization using the ML model '" + mlModelName + "' launched.")
+            addSpinner($("#countDiv"))
         }
 
         function drawScatter(scatter, divId, height) {

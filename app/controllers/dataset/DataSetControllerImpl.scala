@@ -104,6 +104,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private val csvCharReplacements = Map("\n" -> " ", "\r" -> " ")
   private val csvEOL = "\n"
+  private val numericTypes = Set(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
@@ -1201,11 +1202,16 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // generate widgets - distribution and box
         widgets <- field match {
           case Some(field) =>
+            val useColumnChart = (!numericTypes.contains(field.fieldType) && groupField.isDefined)
+
             val widgetSpecs: Seq[WidgetSpec] = Seq(
               DistributionWidgetSpec(
                 fieldName = field.name,
                 groupFieldName = groupField.map(_.name),
-                displayOptions = MultiChartDisplayOptions(height = Some(500))
+                displayOptions = MultiChartDisplayOptions(
+                  height = Some(500),
+                  chartType = if (useColumnChart) Some(ChartType.Column) else None
+                )
               ),
               BoxWidgetSpec(
                 fieldName = field.name,
@@ -1346,9 +1352,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       widget <- widgetService.apply(widgetSpec, repo, criteria, fields)
     } yield {
       val widgetJson = widget.map { widget =>
-        // if we have more than 100 fields for performance purposed we round correlation to 3 decimal places
+        // if we have more than 50 fields for performance purposed we round correlation to 3 decimal places
         val newWidget =
-          if (fields.size > 100) {
+          if (fields.size > 50) {
             val heatmapWidget = widget.asInstanceOf[HeatmapWidget]
             val newData = heatmapWidget.data.map(_.map(_.map(value => Math.round(value * 1000).toDouble / 1000)))
             heatmapWidget.copy(data = newData)
@@ -1635,7 +1641,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
           val (idClasses, idPCA12s) = mlService.clusterAndGetPCA12(jsonsWithStringIds, fieldNameAndSpecs, mlModel, featuresNormalizationType, pcaDims)
 
-          val numericTypes = Set(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
           val numericFields = fields.filter(field => !field.fieldTypeSpec.isArray && numericTypes.contains(field.fieldType))
 
           val idClassMap = idClasses.toMap

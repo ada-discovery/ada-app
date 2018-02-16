@@ -128,8 +128,7 @@
 
             var settingJSON = JSON.stringify(setting)
 
-            $('#outputDiv').hide();
-//            $("#binCurvesPanelDiv").hide();
+            $('#outputDiv').html("");
             $("#binCurvesPanelDiv").html("");
 
             classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.classify(settingJSON, saveResults, saveBinCurves).ajax( {
@@ -153,6 +152,7 @@
             });
 
             showMessage("Classification for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
+            addSpinner($("#outputDiv"))
         }
 
         function addBinCurves(name, binCurves, columnWidth) {

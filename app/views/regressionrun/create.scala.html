@@ -108,7 +108,7 @@
 
                 var settingJSON = JSON.stringify(setting)
 
-                $('#outputDiv').hide();
+                $('#outputDiv').html();
 
                 regressionRunJsRoutes.controllers.dataset.RegressionRunDispatcher.regress(settingJSON, saveResults).ajax( {
                     success: function(results) {
@@ -121,6 +121,7 @@
                 });
 
                 showMessage("Regression for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
+                addSpinner($("#outputDiv"))
             }
 
 

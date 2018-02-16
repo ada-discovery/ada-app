@@ -84,6 +84,103 @@
 @bottomResources = {
     @highchartsJsImport()
     @widgetPanelJs(chartSpecs)
+
+    <script type="text/javascript">
+        $(function () {
+            populateFieldTypeahedFromUrl(
+                $('#fieldForm #fieldTypeahead'),
+                $('#fieldForm #fieldName'),
+                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id,
+                function() {
+                    setTimeout("$('#fieldForm #fieldTypeahead').focus();", 250)
+                }
+            )
+
+             populateFieldTypeahedFromUrl(
+                $('#fieldForm #groupFieldTypeahead'),
+                $('#fieldForm #groupFieldName'),
+                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
+             );
+
+             $('#fieldForm #fieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    $('#fieldForm').submit();;
+                    return false;
+                }
+             });
+
+             $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    var groupFieldTypeahedVal = $('#fieldForm #groupFieldTypeahead').val();
+                    if (!groupFieldTypeahedVal)
+                        $('#fieldForm #groupFieldName').val("")
+                    $('#fieldForm').submit();;
+                    return false;
+                }
+             });
+        });
+
+        $(window).load(function() {
+            $('#fieldForm #fieldTypeahead').focus()
+        });
+
+        function addDistribution() {
+            var handler = function(e) {
+                addDistributionToView();
+            };
+
+            $("#dataViewSelectionModal #submitButton").one( "click", handler );
+            $("#dataViewSelectionModal").modal('show');
+        }
+
+        function addBoxPlot() {
+            var handler = function(e) {
+                addBoxPlotToView();
+            };
+
+            $("#dataViewSelectionModal #submitButton").one( "click", handler );
+            $("#dataViewSelectionModal").modal('show');
+        }
+
+        function addDistributionToView() {
+            var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+            var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
+            var fieldName = $('#fieldForm #fieldName').val()
+            var groupFieldName = $('#fieldForm #groupFieldName').val()
+            if (groupFieldName == "")
+                groupFieldName = null
+
+            if (fieldName) {
+                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addDistribution(dataViewId, fieldName, groupFieldName).ajax( {
+                    success: function() {
+                        showMessage("Distribution for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
+                    },
+                    error: function(data){
+                        showError(data.responseText);
+                    }
+                });
+            }
+        }
+
+        function addBoxPlotToView() {
+            var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+            var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
+            var fieldName = $('#fieldForm #fieldName').val()
+
+            if (fieldName) {
+                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId, [fieldName]).ajax( {
+                    success: function() {
+                        showMessage("Box plot for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
+                    },
+                    error: function(data){
+                        showError( data.responseText );
+                    }
+                });
+            }
+        }
+    </script>
 }
 
 @main(Messages("distribution.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
@@ -99,6 +196,9 @@
     </div>
     <br/>
     <br/>
+    <br/>
+    <br/>
+    <br/>
 
     @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
 
@@ -109,101 +209,3 @@
     dataViewJsRouter.addDistribution,
     dataViewJsRouter.addBoxPlots
 )
-
-<script type="text/javascript">
-    $(function () {
-        populateFieldTypeahedFromUrl(
-            $('#fieldForm #fieldTypeahead'),
-            $('#fieldForm #fieldName'),
-            '@Html(dataSetRouter.allFields.url)',
-            @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
-        )
-
-        populateFieldTypeahedFromUrl(
-            $('#fieldForm #groupFieldTypeahead'),
-            $('#fieldForm #groupFieldName'),
-            '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
-            @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
-        );
-
-        $('#fieldForm #fieldTypeahead').on('typeahead:selected', function(e, data) {
-            $('#fieldForm').submit();
-        });
-
-        $('#fieldForm #groupFieldTypeahead').on('typeahead:selected', function(e, data) {
-            $('#fieldForm').submit();
-        });
-
-        $('#fieldForm #fieldTypeahead').keypress(function (e) {
-            if (e.which == 13) {
-                $('#fieldForm').submit();;
-                return false;
-            }
-        });
-
-        $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
-            if (e.which == 13) {
-                var groupFieldTypeahedVal = $('#fieldForm #groupFieldTypeahead').val();
-                if (!groupFieldTypeahedVal)
-                    $('#fieldForm #groupFieldName').val("")
-                $('#fieldForm').submit();;
-                return false;
-            }
-        });
-    });
-
-    function addDistribution() {
-        var handler = function(e) {
-            addDistributionToView();
-        };
-
-        $("#dataViewSelectionModal #submitButton").one( "click", handler );
-        $("#dataViewSelectionModal").modal('show');
-    }
-
-    function addBoxPlot() {
-        var handler = function(e) {
-            addBoxPlotToView();
-        };
-
-        $("#dataViewSelectionModal #submitButton").one( "click", handler );
-        $("#dataViewSelectionModal").modal('show');
-    }
-
-    function addDistributionToView() {
-        var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
-        var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
-        var fieldName = $('#fieldForm #fieldName').val()
-        var groupFieldName = $('#fieldForm #groupFieldName').val()
-        if (groupFieldName == "")
-            groupFieldName = null
-
-        if (fieldName) {
-            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addDistribution(dataViewId, fieldName, groupFieldName).ajax( {
-                success: function() {
-                    showMessage("Distribution for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
-                },
-                error: function(data){
-                    showError( data.responseText );
-                }
-            });
-        }
-    }
-
-    function addBoxPlotToView() {
-        var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
-        var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
-        var fieldName = $('#fieldForm #fieldName').val()
-
-        if (fieldName) {
-            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId, [fieldName]).ajax( {
-                success: function() {
-                    showMessage("Box plot for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
-                },
-                error: function(data){
-                    showError( data.responseText );
-                }
-            });
-        }
-    }
-</script>
