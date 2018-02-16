@@ -262,10 +262,14 @@ POST        /messages/saveUserMessage                                           
 GET         /message/listMostRecent                                                 controllers.MessageController.listMostRecent(limit: Int)
 
 #Temporary for mpower challenge
-GET         /pdChallenge/mpower                                                     controllers.MPowerChallengeController.mPowerNetwork
-GET         /pdChallenge/ldopaTremor                                                controllers.MPowerChallengeController.tremorNetwork
-GET         /pdChallenge/ldopaDyskinesia                                            controllers.MPowerChallengeController.dyskinesiaNetwork
-GET         /pdChallenge/ldopaBradykinesia                                          controllers.MPowerChallengeController.bradykinesiaNetwork
+GET         /pdChallenge/mpowerTeam                                                 controllers.MPowerChallengeController.mPowerTeamNetwork
+GET         /pdChallenge/ldopaTremorTeam                                            controllers.MPowerChallengeController.tremorTeamNetwork
+GET         /pdChallenge/ldopaDyskinesiaTeam                                        controllers.MPowerChallengeController.dyskinesiaTeamNetwork
+GET         /pdChallenge/ldopaBradykinesiaTeam                                      controllers.MPowerChallengeController.bradykinesiaTeamNetwork
+GET         /pdChallenge/mpowerSubmission                                           controllers.MPowerChallengeController.mPowerSubmissionNetwork
+GET         /pdChallenge/ldopaTremorSubmission                                      controllers.MPowerChallengeController.tremorSubmissionNetwork
+GET         /pdChallenge/ldopaDyskinesiaSubmission                                  controllers.MPowerChallengeController.dyskinesiaSubmissionNetwork
+GET         /pdChallenge/ldopaBradykinesiaSubmission                                controllers.MPowerChallengeController.bradykinesiaSubmissionNetwork
 
 # Map static resources from the /public folder to the /assets URL path
 #GET         /assets/*file                                                           controllers.Assets.at(path="/public", file)
