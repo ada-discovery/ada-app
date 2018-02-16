@@ -169,6 +169,15 @@ function populateTypeahead(element, source, displayFun, suggestionFun, updateVal
         if (updateValueElement)
             updateValueElement(datum);
     });
+
+    element.on('keyup', this, function(e) {
+        if(e.keyCode != 8 && e.keyCode != 46) {
+            var suggestions = $(this).parent().find('.tt-suggestion')
+            if (suggestions.length == 1) {
+                element.typeahead('select', suggestions.first())
+            }
+        }
+    })
 }
 
 function createFieldBloodhoundSource(fieldNameAndLabels, showOption) {
@@ -265,11 +274,14 @@ function populateFieldTypeahedAux(typeaheadElement, fieldNameElement, source, sh
  * @param showOption 0 - show field names only, 1 - show field labels only,
  *                   2 - show field labels, and field names if no label defined, 3 - show both, field names and labels
  */
-function populateFieldTypeahedFromUrl(typeaheadElement, fieldNameElement, url, showOption) {
+function populateFieldTypeahedFromUrl(typeaheadElement, fieldNameElement, url, showOption, postFunction) {
     $.ajax({
         url: url,
         success: function (fieldNameAndLabels) {
             populateFieldTypeahed(typeaheadElement, fieldNameElement, fieldNameAndLabels, showOption);
+            if (postFunction) {
+                postFunction()
+            }
         }
     });
 }
@@ -638,4 +650,8 @@ function moveModalRight(modalId) {
 
         $('#' + modalId).modal('show');
     });
+}
+
+function addSpinner(element) {
+    element.append("<div class='spinner' style='margin: auto;'></div>")
 }
