@@ -5,18 +5,72 @@ import dataaccess.FieldTypeHelper
 import models.{Count, Field, FieldTypeId}
 import org.scalatest._
 import services.stats.StatsService
-import services.stats.calc.{PearsonCorrelationCalc, UniqueDistributionCountsCalc}
+import services.stats.calc.{GroupUniqueDistributionCountsCalc, UniqueDistributionCountsCalc}
 
 import scala.concurrent.Future
 import scala.util.Random
 
-class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
+class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
 
-  private val values1: Seq[Double] = Seq(0.5, 0.5, 1, 2, 0.1, 2, 7, 3, 5, 7, 0.5, 2)
-  private val expectedResult1 = Seq(0.1 -> 1, 0.5 -> 3, 1.0 -> 1, 2.0 -> 3, 3.0 -> 1, 5.0 -> 1, 7.0 -> 2)
+  private val values1: Seq[(Option[String], Double)] = Seq(
+    (Some("x"), 0.5),
+    (Some("y"), 0.1),
+    (Some("y"), 5),
+    (Some("x"), 0.5),
+    (Some("x"), 1),
+    (Some("x"), 2),
+    (None, 1),
+    (Some("x"), 0.1),
+    (Some("x"), 2),
+    (Some("y"), 0.1),
+    (Some("x"), 7),
+    (None, 1),
+    (Some("x"), 3),
+    (Some("x"), 5),
+    (Some("y"), 5),
+    (Some("x"), 7),
+    (Some("y"), 0.1),
+    (Some("x"), 0.5),
+    (None, 0.5),
+    (Some("x"), 2),
+    (Some("y"), 7)
+  )
+  private val expectedResult1 = Seq(
+    None -> Seq(0.5 -> 1, 1.0 -> 2),
+    Some("x") -> Seq(0.1 -> 1, 0.5 -> 3, 1.0 -> 1, 2.0 -> 3, 3.0 -> 1, 5.0 -> 1, 7.0 -> 2),
+    Some("y") -> Seq(0.1 -> 3, 5.0 -> 2, 7.0 -> 1)
+  )
 
-  private val values2 = Seq(None, Some("cat"), None, Some("dog"), Some("zebra"), Some("tiger"), Some("dog"), None, Some("dolphin"), Some("dolphin"), Some("cat"), Some("dolphin"))
-  private val expectedResult2 = Seq(None -> 3, Some("cat") -> 2, Some("dog") -> 2, Some("dolphin") -> 3, Some("tiger") -> 1, Some("zebra") -> 1)
+  private val values2 = Seq(
+    (Some("x"), None),
+    (Some("x"), Some("cat")),
+    (None -> Some("bird")),
+    (Some("x"), None),
+    (Some("x"), Some("dog")),
+    (None, None),
+    (Some("x"), Some("zebra")),
+    (None -> Some("bird")),
+    (Some("x"), Some("tiger")),
+    (Some("x"), Some("dog")),
+    (Some("x"), None),
+    (None, None),
+    (Some("y"), Some("tiger")),
+    (None, Some("cat")),
+    (Some("x"), Some("dolphin")),
+    (Some("x"), Some("dolphin")),
+    (None -> Some("bird")),
+    (Some("x"), Some("cat")),
+    (Some("y"), Some("tiger")),
+    (Some("x"), Some("dolphin")),
+    (Some("y"), None),
+    (None, None)
+  )
+
+  private val expectedResult2 = Seq(
+    None -> Seq(None -> 3, Some("bird") -> 3, Some("cat") -> 1),
+    Some("x") -> Seq(None -> 3, Some("cat") -> 2, Some("dog") -> 2, Some("dolphin") -> 3, Some("tiger") -> 1, Some("zebra") -> 1),
+    Some("y") -> Seq(None -> 1, Some("tiger") -> 2)
+  )
 
   private val randomInputSize = 1000
 
@@ -25,118 +79,154 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  private val doubleCalc = UniqueDistributionCountsCalc[Double]
+  private val doubleCalc = GroupUniqueDistributionCountsCalc[String, Double]
   private val doubleField = Field("xxx", None, FieldTypeId.Double)
   private val doubleFieldType = ftf(doubleField.fieldTypeSpec).asValueOf[Double]
 
-  private val stringCalc = UniqueDistributionCountsCalc[String]
+  private val stringCalc = GroupUniqueDistributionCountsCalc[String, String]
   private val stringField = Field("xxx", None, FieldTypeId.String)
   private val stringFieldType = ftf(stringField.fieldTypeSpec).asValueOf[String]
 
   "Distributions" should "match the static example (double)" in {
-    val inputs = values1.map(Some(_))
+    val inputs = values1.map{ case (group, value) => (group, Some(value)) }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
-    def checkResult(result: Traversable[Count[String]]) = {
+    def checkResult(result: Traversable[(String, Traversable[Count[String]])]) = {
       result.size should be (expectedResult1.size)
 
-      val sorted = result.toSeq.sortBy(_.value)
+      val sorted = result.toSeq.sortBy(_._1)
 
-      sorted.zip(expectedResult1).foreach{ case (Count(value1, count1, _), (value2, count2)) =>
-        value1 should be (value2.toString)
-        count1 should be (count2)
+      sorted.zip(expectedResult1).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
+        groupName1 should be (groupName2.getOrElse("Undefined"))
+        counts1.size should be (counts2.size)
+
+        counts1.map(_.count).sum should be (counts2.map(_._2).sum)
+
+        val sorted = counts1.toSeq.sortBy(_.value)
+        sorted.zip(counts2).foreach { case (Count(value1, count1, _), (value2, count2)) =>
+          value1 should be (value2.toString)
+          count1 should be (count2)
+        }
       }
 
-      result.map(_.count).sum should be (values1.size)
+      result.flatMap{ case (_, values) => values.map(_.count)}.sum should be (values1.size)
     }
 
     // standard calculation
     Future(doubleCalc.fun()(inputs)).map { counts =>
-      val results = statsService.createStringCounts(counts, doubleFieldType)
+      val results = statsService.createGroupStringCounts(counts, stringFieldType, doubleFieldType)
       checkResult(results)
     }
 
     // streamed calculations
-    statsService.calcDistributionCountsStreamed[Double](inputSource, doubleField).map(checkResult)
+    statsService.calcGroupedDistributionCountsStreamed[String, Double](inputSource, stringField, doubleField).map(checkResult)
   }
 
   "Distributions" should "match the static example (string)" in {
     val inputSource = Source.fromIterator(() => values2.toIterator)
 
-    def checkResult(result: Traversable[Count[String]]) = {
+    def checkResult(result: Traversable[(String, Traversable[Count[String]])]) = {
       result.size should be (expectedResult2.size)
 
-      val sorted = result.toSeq.sortBy(_.value)
+      val sorted = result.toSeq.sortBy(_._1)
 
-      sorted.zip(expectedResult2).foreach{ case (Count(value1, count1, _), (value2, count2)) =>
-        value1 should be (value2.getOrElse("Undefined"))
-        count1 should be (count2)
+      sorted.zip(expectedResult2).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
+        groupName1 should be (groupName2.getOrElse("Undefined"))
+        counts1.size should be (counts2.size)
+
+        counts1.map(_.count).sum should be (counts2.map(_._2).sum)
+
+        val sorted = counts1.toSeq.sortBy(_.value)
+        sorted.zip(counts2).foreach { case (Count(value1, count1, _), (value2, count2)) =>
+          value1 should be (value2.getOrElse("Undefined"))
+          count1 should be (count2)
+        }
       }
 
-      result.map(_.count).sum should be (values2.size)
+      result.flatMap{ case (_, values) => values.map(_.count)}.sum should be (values2.size)
     }
 
     // standard calculation
     Future(stringCalc.fun()(values2)).map { counts =>
-      val results = statsService.createStringCounts(counts, stringFieldType)
+      val results = statsService.createGroupStringCounts(counts, stringFieldType, stringFieldType)
       checkResult(results)
     }
 
     // streamed calculations
-    statsService.calcDistributionCountsStreamed[String](inputSource, stringField).map(checkResult)
+    statsService.calcGroupedDistributionCountsStreamed[String, String](inputSource, stringField, stringField).map(checkResult)
   }
 
   "Distributions" should "match each other (double)" in {
     val inputs = for (_ <- 1 to randomInputSize) yield {
-       if (Random.nextDouble() < 0.2) None else Some(Random.nextInt(20).toDouble)
+      val group = if (Random.nextDouble() < 0.2) None else Some(Random.nextInt(4).toString)
+      val value = if (Random.nextDouble() < 0.2) None else Some(Random.nextInt(20).toDouble)
+      (group,  value)
     }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
     val counts = doubleCalc.fun()(inputs)
-    val protoResult = statsService.createStringCounts(counts, doubleFieldType).toSeq.sortBy(_.value)
+    val protoResult = statsService.createGroupStringCounts(counts, stringFieldType, doubleFieldType)
 
-    def checkResult(result: Traversable[Count[String]]) = {
+    def checkResult(result: Traversable[(String, Traversable[Count[String]])]) = {
       result.size should be (protoResult.size)
 
-      val sorted = result.toSeq.sortBy(_.value)
+      result.toSeq.zip(protoResult).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
+        groupName1 should be (groupName2)
+        counts1.size should be (counts2.size)
 
-      sorted.zip(protoResult).foreach{ case (Count(value1, count1, _), Count(value2, count2, _)) =>
-        value1 should be (value2)
-        count1 should be (count2)
+        counts1.map(_.count).sum should be (counts2.map(_.count).sum)
+
+        val sorted1 = counts1.toSeq.sortBy(_.value)
+        val sorted2 = counts2.toSeq.sortBy(_.value)
+
+        sorted1.zip(sorted2).foreach { case (Count(value1, count1, _), Count(value2, count2, _)) =>
+          value1 should be (value2)
+          count1 should be (count2)
+        }
       }
 
-      result.map(_.count).sum should be (inputs.size)
+      result.flatMap{ case (_, values) => values.map(_.count)}.sum should be (inputs.size)
     }
 
     // streamed calculations
-    statsService.calcDistributionCountsStreamed[Double](inputSource, doubleField).map(checkResult)
+    statsService.calcGroupedDistributionCountsStreamed[String, Double](inputSource, stringField, doubleField).map(checkResult)
   }
 
   "Distributions" should "match each other (string)" in {
     val inputs = for (_ <- 1 to randomInputSize) yield {
-      if (Random.nextDouble() < 0.2) None else Some(Random.nextInt(20).toString)
+      val group = if (Random.nextDouble() < 0.2) None else Some(Random.nextInt(4).toString)
+      val value = if (Random.nextDouble() < 0.2) None else Some(Random.nextInt(20).toString)
+      (group,  value)
     }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
     val counts = stringCalc.fun()(inputs)
-    val protoResult = statsService.createStringCounts(counts, stringFieldType).toSeq.sortBy(_.value)
+    val protoResult = statsService.createGroupStringCounts(counts, stringFieldType, stringFieldType)
 
-    def checkResult(result: Traversable[Count[String]]) = {
+    def checkResult(result: Traversable[(String, Traversable[Count[String]])]) = {
       result.size should be (protoResult.size)
 
-      val sorted = result.toSeq.sortBy(_.value)
+      result.toSeq.zip(protoResult).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
+        groupName1 should be (groupName2)
+        counts1.size should be (counts2.size)
 
-      sorted.zip(protoResult).foreach{ case (Count(value1, count1, _), Count(value2, count2, _)) =>
-        value1 should be (value2)
-        count1 should be (count2)
+        counts1.map(_.count).sum should be (counts2.map(_.count).sum)
+
+        val sorted1 = counts1.toSeq.sortBy(_.value)
+        val sorted2 = counts2.toSeq.sortBy(_.value)
+
+        sorted1.zip(sorted2).foreach { case (Count(value1, count1, _), Count(value2, count2, _)) =>
+          value1 should be (value2)
+          count1 should be (count2)
+        }
       }
 
-      result.map(_.count).sum should be (inputs.size)
+      result.flatMap{ case (_, values) => values.map(_.count)}.sum should be (inputs.size)
     }
 
     // streamed calculations
-    statsService.calcDistributionCountsStreamed[String](inputSource, stringField).map(checkResult)
+    statsService.calcGroupedDistributionCountsStreamed[String, String](inputSource, stringField, stringField).map(checkResult)
   }
 }

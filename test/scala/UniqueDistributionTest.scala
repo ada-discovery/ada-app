@@ -10,7 +10,7 @@ import services.stats.calc.{PearsonCorrelationCalc, UniqueDistributionCountsCalc
 import scala.concurrent.Future
 import scala.util.Random
 
-class DistributionTest extends AsyncFlatSpec with Matchers {
+class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
 
   private val values1: Seq[Double] = Seq(0.5, 0.5, 1, 2, 0.1, 2, 7, 3, 5, 7, 0.5, 2)
   private val expectedResult1 = Seq(0.1 -> 1, 0.5 -> 3, 1.0 -> 1, 2.0 -> 3, 3.0 -> 1, 5.0 -> 1, 7.0 -> 2)

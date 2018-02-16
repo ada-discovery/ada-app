@@ -40,16 +40,16 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
     Future(pearsonCorrelationCalc(inputs)).map(checkResult)
 
     // streamed calculations
-    statsService.calcPearsonCorrelations(inputSource, featuresNum, None).map(checkResult)
+    statsService.calcPearsonCorrelationsStreamed(inputSource, featuresNum, None).map(checkResult)
 
     // streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefined(inputSourceAllDefined, featuresNum, None).map(checkResult)
+    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, featuresNum, None).map(checkResult)
 
     // parallel streamed calculations
-    statsService.calcPearsonCorrelations(inputSource, featuresNum, Some(4)).map(checkResult)
+    statsService.calcPearsonCorrelationsStreamed(inputSource, featuresNum, Some(4)).map(checkResult)
 
     // parallel streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefined(inputSourceAllDefined, featuresNum, Some(4)).map(checkResult)
+    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, featuresNum, Some(4)).map(checkResult)
   }
 
   "Correlations" should "match each other" in {
@@ -78,15 +78,15 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
     }
 
     // streamed calculations
-    statsService.calcPearsonCorrelations(inputSource, randomFeaturesNum, None).map(checkResult)
+    statsService.calcPearsonCorrelationsStreamed(inputSource, randomFeaturesNum, None).map(checkResult)
 
     // streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefined(inputSourceAllDefined, randomFeaturesNum, None).map(checkResult)
+    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, randomFeaturesNum, None).map(checkResult)
 
     // parallel streamed calculations
-    statsService.calcPearsonCorrelations(inputSource, randomFeaturesNum, Some(4)).map(checkResult)
+    statsService.calcPearsonCorrelationsStreamed(inputSource, randomFeaturesNum, Some(4)).map(checkResult)
 
     // parallel streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefined(inputSourceAllDefined, randomFeaturesNum, Some(4)).map(checkResult)
+    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, randomFeaturesNum, Some(4)).map(checkResult)
   }
 }
