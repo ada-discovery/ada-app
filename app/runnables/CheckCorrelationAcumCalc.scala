@@ -178,7 +178,7 @@ object CheckCorrelationAcumCalc extends App {
       Nil
     )
 
-  private val n = 8000
+  private val n = 5600
   private val parallelism = 4
   private val repetitions = 20
 

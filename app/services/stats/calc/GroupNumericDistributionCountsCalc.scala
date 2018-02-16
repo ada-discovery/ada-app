@@ -1,0 +1,86 @@
+package services.stats.calc
+
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+import services.stats.Calculator
+
+import util.GroupMapList
+import services.stats.calc.GroupNumericDistributionCountsCalcIOType._
+import util.AkkaStreamUtil._
+
+import scala.concurrent.Await
+import scala.util.Random
+import scala.concurrent.duration._
+
+object GroupNumericDistributionCountsCalcIOType {
+  type IN[G, T] = (Option[G], Option[T])
+  type OUT[G, T] = Traversable[(Option[G], Traversable[(BigDecimal, Int)])]
+  type INTER[G,T] = Traversable[((Option[G], Int), Int)]
+  type OPTIONS[T] = NumericDistributionOptions[T]
+  type SINK_OPTIONS[T] = NumericDistributionSinkOptions[T]
+}
+
+private class GroupNumericDistributionCountsCalc[G, T: Numeric] extends Calculator[IN[G,T], OUT[G,T], INTER[G,T], OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]]
+  with NumericDistributionCountsHelper[T] {
+
+  override val numeric = implicitly[Numeric[T]]
+  private val maxGroups = Int.MaxValue
+
+  private val normalCalc = NumericDistributionCountsCalc[T]
+
+  override def fun(options: OPTIONS[T]) =
+    _.toGroupMap.map { case (group, values) =>
+      (group, normalCalc.fun(options)(values))
+    }
+
+  override def sink(options: SINK_OPTIONS[T]) = {
+    val stepSize = calcStepSize(
+      options.columnCount,
+      options.min,
+      options.max,
+      options.specialColumnForMax
+    )
+
+    val minBg = BigDecimal(numeric.toDouble(options.min))
+    val max = numeric.toDouble(options.max)
+
+    val flatFlow = Flow[IN[G, T]].collect { case (g, Some(x)) => (g, x)}
+
+    val groupBucketIndexFlow = Flow[(Option[G], T)]
+      .groupBy(maxGroups, _._1)
+      .map { case (group, value) =>
+        group -> calcBucketIndex(
+          stepSize, options.columnCount, minBg, max)(
+          numeric.toDouble(value)
+        )
+      }.mergeSubstreams
+
+    flatFlow.via(groupBucketIndexFlow).via(groupCountFlow(maxGroups)).toMat(Sink.seq)(Keep.right)
+  }
+
+  override def postSink(options: SINK_OPTIONS[T]) = { elements =>
+    val stepSize = calcStepSize(
+      options.columnCount,
+      options.min,
+      options.max,
+      options.specialColumnForMax
+    )
+
+    val minBg = BigDecimal(numeric.toDouble(options.min))
+
+    val groupIndexCounts = elements.map { case ((group, index), count) => (group, (index, count))}.toGroupMap
+
+    groupIndexCounts.map { case (group, counts) =>
+      val xValueCounts = counts.toSeq.sortBy(_._1)map{ case (index, count) =>
+        val xValue = minBg + (index * stepSize)
+        (xValue, count)
+      }
+      (group, xValueCounts)
+    }
+  }
+}
+
+object GroupNumericDistributionCountsCalc {
+  def apply[G, T: Numeric]: Calculator[IN[G,T], OUT[G,T], INTER[G,T], OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]] = new GroupNumericDistributionCountsCalc[G,T]
+}

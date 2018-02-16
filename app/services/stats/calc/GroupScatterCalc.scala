@@ -1,17 +1,21 @@
 package services.stats.calc
 
+import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import services.stats.NoOptionsCalculator
 import services.stats.calc.GroupScatterCalcIOTypes._
+import util.AkkaStreamUtil._
 import util.{GroupMapList, GroupMapList3}
 
 object GroupScatterCalcIOTypes {
   type IN[G, A, B] = (Option[G], Option[A], Option[B])
   type OUT[G, A, B] = Traversable[(Option[G], Traversable[(A, B)])]
-  type INTER[G, A, B] = Traversable[(Option[G], (A, B))]
+  type INTER[G, A, B] = Seq[(Option[G], Seq[(A, B)])]
 }
 
-private class GroupScatterCalc[G, A, B] extends NoOptionsCalculator[IN[G, A, B], OUT[G, A, B], INTER[G, A, B]] {
+private class GroupScatterCalc[G, A, B] extends NoOptionsCalculator[IN[G, A, B], OUT[G, A, B], OUT[G, A, B]] {
+
+  private val maxGroups = Int.MaxValue
 
   override def fun(opt: Unit)  =
     _.toGroupMap.map {
@@ -19,16 +23,13 @@ private class GroupScatterCalc[G, A, B] extends NoOptionsCalculator[IN[G, A, B],
     }
 
   override def sink(options: Unit) = {
-    val flatFlow: Flow[IN[G, A, B], (Option[G], (A, B)), _] = Flow.fromFunction(toOption2).collect{ case (g, Some(x)) => (g, x) }
+    val flatFlow = Flow.fromFunction(toOption2).collect{ case (g, Some(x)) => (g, x) }
+    val groupedFlow = flatFlow.via(groupFlow[Option[G], (A, B)](maxGroups))
 
-    flatFlow.toMat(Sink.seq[(Option[G], (A, B))])(Keep.right)
-
-    // TODO: could be optimzed by using groupBy directly with flows
-//    val lalaFlow = flatFlow.groupBy(100, _._1).mergeSubstreams
-//    lalaFlow.toMat(Sink.seq)(Keep.right)
+    groupedFlow.toMat(Sink.seq)(Keep.right)
   }
 
-  override def postSink(options: Unit) = _.toGroupMap
+  override def postSink(options: Unit) = identity
 
   private def toOption(ab: (Option[A], Option[B])) =
     ab._1.flatMap(a =>
@@ -40,5 +41,5 @@ private class GroupScatterCalc[G, A, B] extends NoOptionsCalculator[IN[G, A, B],
 }
 
 object GroupScatterCalc {
-  def apply[G, A, B]: NoOptionsCalculator[IN[G, A, B], OUT[G, A, B], INTER[G, A, B]] = new GroupScatterCalc[G, A, B]
+  def apply[G, A, B]: NoOptionsCalculator[IN[G, A, B], OUT[G, A, B], OUT[G, A, B]] = new GroupScatterCalc[G, A, B]
 }

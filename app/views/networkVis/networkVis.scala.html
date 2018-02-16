@@ -12,6 +12,21 @@
     edges: Traversable[VisEdge]
 )(implicit context: WebContext)
 
+@topItem(text: String, id: Int) = {
+    <li style="padding-top: 15px">
+        <ul class="list-inline">
+            <li>
+                <button type="button" class="btn btn-sm btn-default btn-expand" data-toggle="collapse" data-target="#submenu-@{id}">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                </button>
+            </li>
+            <li style="color: darkgray;">
+                <h4>@text</h4>
+            </li>
+        </ul>
+    </li>
+}
+
 @listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
     <li @if(matchesPath(call.url, context.request.path, matchPrefixDepth)) {class="inner-node active"} else {class="inner-node"}>
         <a href="@call">
@@ -20,7 +35,7 @@
                     <span class="glyphicon glyphicon-chevron-right"></span>
                 </li>
                 <li>
-                    <h4>@text</h4>
+                    <h5>@text</h5>
                 </li>
             </ul>
         </a>
@@ -29,11 +44,33 @@
 
 @sideBar = {
     <ul class="sidebar-nav nav nav-pills nav-stacked">
-        @listItem(challengeRoutes.mPowerNetwork, "1. mPower", Some(2))
-        @listItem(challengeRoutes.tremorNetwork, "2.1 LDOPA Tremor", Some(2))
-        @listItem(challengeRoutes.dyskinesiaNetwork, "2.2 LDOPA Dyskinesia", Some(2))
-        @listItem(challengeRoutes.bradykinesiaNetwork, "2.3 LDOPA Bradykinesia", Some(2))
+        @topItem("1. mPower", 1)
+        <div id="submenu-1" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
+            @listItem(challengeRoutes.mPowerTeamNetwork, "Teams", Some(2))
+            @listItem(challengeRoutes.mPowerSubmissionNetwork, "Submissions", Some(2))
+        </div>
+        @topItem("2.1 Tremor", 2)
+        <div id="submenu-2" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
+            @listItem(challengeRoutes.tremorTeamNetwork, "Teams", Some(2))
+            @listItem(challengeRoutes.tremorSubmissionNetwork, "Submissions", Some(2))
+        </div>
+
+        @topItem("2.2 Dyskinesia", 3)
+        <div id="submenu-3" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
+            @listItem(challengeRoutes.dyskinesiaTeamNetwork, "Teams", Some(2))
+            @listItem(challengeRoutes.dyskinesiaSubmissionNetwork, "Submissions", Some(2))
+        </div>
+
+        @topItem("2.3 Bradykinesia", 4)
+        <div id="submenu-4" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
+            @listItem(challengeRoutes.bradykinesiaTeamNetwork, "Teams", Some(2))
+            @listItem(challengeRoutes.bradykinesiaSubmissionNetwork, "Submissions", Some(2))
+        </div>
     </ul>
+}
+
+@option(i: Int) = {
+    <option value="@{i*5}">Top @{i*5}</option>
 }
 
 @main(Messages("network.title", domainName), Some(sideBar)) {
@@ -79,9 +116,7 @@
                     <div class="panel-body">
                         <select id="topTeamSelection" name="topTeamSelection" onchange="selectTeams()" >
                             <option value="">Show All</option>
-                            <option value="5">Top 5</option>
-                            <option value="10">Top 10</option>
-                            <option value="15">Top 15</option>
+                            @{for(i <- 1 until nodes.size / 5) yield option(i)}
                         </select>
                     </div>
                 </div>
@@ -107,6 +142,7 @@
         function draw(selectedNodes) {
             // Instantiate our network object.
             var container = document.getElementById('mynetwork');
+            var physicsEnabled = (selectedNodes.length <= 30)
             var data = {
                 nodes: selectedNodes,
                 edges: edges
@@ -120,6 +156,9 @@
                 },
                 interaction:{
                     hover:true
+                },
+                physics: {
+                    enabled: physicsEnabled
                 }
             };
             network = new vis.Network(container, data, options);
@@ -127,7 +166,13 @@
 
             network.on("click", function (params) {
                 var node = getNode(params.nodes[0])
-                $("#teamInfoDiv").html("<h4><b>" + node.label + "</b></h4><hr/>Ranks : " + node.data.ranks + "</br>AUPRs: " + node.data.auprs)
+                $("#teamInfoDiv").html("")
+                $("#teamInfoDiv").append("<h4><b>" + node.label + "</b></h4><hr/>")
+                $.each(node.data, function (key, value) {
+                    if (value && (!Array.isArray(value) || value.length > 0)) {
+                        $("#teamInfoDiv").append(key + " : " + value + "</br>")
+                    }
+                })
             });
         }
 
@@ -169,5 +214,28 @@
             // draw all nodes
             draw(nodes)
         })
+
+        $('.btn-expand').on('click', function () {
+            updatePlusMinusIcon($(this));
+        });
+
+        $(".submenu-div").each(function () {
+            if ($(this).find("li.inner-node.active").size() > 0) {
+                $(this).addClass("in")
+                updatePlusMinusIcon($(this).prev());
+            }
+        });
+
+        function updatePlusMinusIcon(element) {
+            var iconPlus = element.find("span.glyphicon-plus:first");
+            var iconMinus = element.find("span.glyphicon-minus:first");
+            if (iconPlus.length) {
+                iconPlus.removeClass("glyphicon-plus");
+                iconPlus.addClass("glyphicon-minus");
+            } else {
+                iconMinus.removeClass("glyphicon-minus");
+                iconMinus.addClass("glyphicon-plus");
+            }
+        }
     </script>
 }

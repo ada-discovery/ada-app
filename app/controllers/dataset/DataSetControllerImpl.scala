@@ -1323,7 +1323,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldNames: Seq[String],
     filterOrId: FilterOrId
   ) = Action.async { implicit request => {
-    println("Calc Correlations reached")
     for {
       // use a given filter conditions or load one
       resolvedFilter <-  filterRepo.resolve(filterOrId)
@@ -1346,9 +1345,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // generate a widget
       widget <- widgetService.apply(widgetSpec, repo, criteria, fields)
     } yield {
-      // get a new filter
-      val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
-      val widgetJson = widget.map(widgetToJson(_, widgetSpec, fields.map( field => (field.name, field)).toMap))
+      val widgetJson = widget.map { widget =>
+        // if we have more than 100 fields for performance purposed we round correlation to 3 decimal places
+        val newWidget =
+          if (fields.size > 100) {
+            val heatmapWidget = widget.asInstanceOf[HeatmapWidget]
+            val newData = heatmapWidget.data.map(_.map(_.map(value => Math.round(value * 1000).toDouble / 1000)))
+            heatmapWidget.copy(data = newData)
+          } else
+            widget
+        widgetToJson(newWidget, widgetSpec, fields.map( field => (field.name, field)).toMap)
+      }
 
       widgetJson match {
         case Some(json) => Ok(json)

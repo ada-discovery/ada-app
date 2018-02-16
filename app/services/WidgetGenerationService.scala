@@ -189,7 +189,7 @@ class WidgetGenerationServiceImpl @Inject() (
         val fields = fieldNames.map(nameFieldMap.get).flatten
 
         for {
-          correlations <- statsService.calcPearsonCorrelations(repo, criteria, fields)
+          correlations <- statsService.calcPearsonCorrelationsStreamed(repo, criteria, fields)
         } yield
           if (correlations.nonEmpty) {
             val chartTitle = title.getOrElse("Correlations")
@@ -295,7 +295,7 @@ class WidgetGenerationServiceImpl @Inject() (
   }
 
   private def createDistributionWidget(
-    countSeries: Seq[(String, Traversable[Count[Any]])],
+    countSeries: Traversable[(String, Traversable[Count[Any]])],
     field: Field,
     chartTitle: String,
     showLabels: Boolean,
@@ -336,14 +336,14 @@ class WidgetGenerationServiceImpl @Inject() (
               )
               (seriesName, newCounts)
             }
-            val nonZeroCountSeriesSorted = countSeriesSorted.filter(_._2.exists(_.count > 0))
+            val nonZeroCountSeriesSorted = countSeriesSorted.filter(_._2.exists(_.count > 0)).toSeq
 
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Pie)))
             CategoricalCountWidget(chartTitle, field.name, field.labelOrElseName, showLabels, showLegend, useRelativeValues, isCumulative, nonZeroCountSeriesSorted, initializedDisplayOptions)
           }
 
           case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date => {
-            val nonZeroNumCountSeries = countSeries.filter(_._2.nonEmpty)
+            val nonZeroNumCountSeries = countSeries.filter(_._2.nonEmpty).toSeq
             val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
             NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, isCumulative, nonZeroNumCountSeries, initializedDisplayOptions)
           }
@@ -359,7 +359,7 @@ class WidgetGenerationServiceImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Future[Seq[(String, Traversable[Count[Any]])]] =
+  ): Future[Traversable[(String, Traversable[Count[Any]])]] =
     groupField match {
       case Some(groupField) =>
         statsService.calcGroupedDistributionCounts(repo, criteria, field, groupField, numericBinCount)
@@ -374,7 +374,7 @@ class WidgetGenerationServiceImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Seq[(String, Traversable[Count[Any]])] =
+  ): Traversable[(String, Traversable[Count[Any]])] =
     groupField match {
       case Some(groupField) =>
         statsService.calcGroupedDistributionCounts(items, field, groupField, numericBinCount)
@@ -394,7 +394,7 @@ class WidgetGenerationServiceImpl @Inject() (
     numericBinCount match {
       case Some(_) =>
         calcDistributionCounts(repo, criteria, field, groupField, numericBinCount).map( distCountsSeries =>
-          toCumCounts(distCountsSeries)
+          toCumCounts(distCountsSeries.toSeq)
         )
 
       case None =>
@@ -414,7 +414,7 @@ class WidgetGenerationServiceImpl @Inject() (
     numericBinCount match {
       case Some(_) =>
         val distCountsSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
-        toCumCounts(distCountsSeries)
+        toCumCounts(distCountsSeries.toSeq)
 
       case None =>
         statsService.calcCumulativeCounts(items, field, groupField)
