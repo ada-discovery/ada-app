@@ -2,7 +2,7 @@
     modalName: String,
     title: String,
     exportCall: Call,
-    modalBody: Option[Html]
+    modalBody: Html
 )
 
 @buttons = {
@@ -10,4 +10,4 @@
     <button type="submit" id="exportButton" class="btn btn-primary">Export</button>
 }
 
-@modal(modalName, title, modalBody.getOrElse(Html("")), Some(exportCall), Some(buttons))
+@modal(modalName, title, modalBody, Some(exportCall), Some(buttons))

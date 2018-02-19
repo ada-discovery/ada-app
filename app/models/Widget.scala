@@ -7,7 +7,7 @@ import play.api.libs.functional.syntax._
 import models.json._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import services.stats.calc.Quartiles
+import services.stats.calc.{BasicStatsResult, Quartiles}
 
 abstract class Widget {
   val title: String
@@ -74,6 +74,13 @@ case class HeatmapWidget(
   data: Seq[Seq[Option[Double]]],
   min: Option[Double] = None,
   max: Option[Double] = None,
+  displayOptions: DisplayOptions = BasicDisplayOptions()
+) extends Widget
+
+case class BasicStatsWidget(
+  title: String,
+  fieldLabel: String,
+  data: BasicStatsResult,
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 
@@ -237,6 +244,10 @@ object Widget {
     )(HeatmapWidget(_, _, _, _, _, _, _), {x => (x.title, x.xCategories, x.yCategories, x.data, x.min, x.max, x.displayOptions)})
   }
 
+  implicit val basicStatsResulFormat = Json.format[BasicStatsResult]
+
+  implicit val basicStatsWidgetFormat = Json.format[BasicStatsWidget]
+
   implicit val stringCountTupleFormat = TupleFormat[String, Traversable[Count[String]]]
 
   class WidgetWrites[T](fieldTypes: Seq[FieldType[T]]) extends Writes[Widget] {
@@ -264,6 +275,9 @@ object Widget {
 
         case e: HeatmapWidget =>
           heatmapWidgetFormat.writes(e)
+
+        case e: BasicStatsWidget =>
+          basicStatsWidgetFormat.writes(e)
 
         case e: HtmlWidget =>
           Json.format[HtmlWidget].writes(e)

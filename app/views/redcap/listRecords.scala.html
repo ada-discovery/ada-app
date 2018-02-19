@@ -48,9 +48,9 @@
             </div>
         </div>
     }
-    @views.html.exportModal("exportCsvModal", "LuxPark REDCap CSV Export", routes.RedCapController.exportRecordsAsCsv(), Some(modalBody(",")))
-    @views.html.exportModal("exportTranSMARTDataModal", "LuxPark CSV TranSMART Data Export", routes.RedCapController.exportTranSMARTDataFile(), Some(modalBody("\\t")))
-    @views.html.exportModal("exportTranSMARTMappingModal", "LuxPark CSV TranSMART Mapping Export", routes.RedCapController.exportTranSMARTMappingFile(), Some(modalBody("\\t")))
+    @views.html.exportModal("exportCsvModal", "LuxPark REDCap CSV Export", routes.RedCapController.exportRecordsAsCsv(), modalBody(","))
+    @views.html.exportModal("exportTranSMARTDataModal", "LuxPark CSV TranSMART Data Export", routes.RedCapController.exportTranSMARTDataFile(), modalBody("\\t"))
+    @views.html.exportModal("exportTranSMARTMappingModal", "LuxPark CSV TranSMART Mapping Export", routes.RedCapController.exportTranSMARTMappingFile(), modalBody("\\t"))
 }
 
 @table = @{

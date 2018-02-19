@@ -1209,13 +1209,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 fieldName = field.name,
                 groupFieldName = groupField.map(_.name),
                 displayOptions = MultiChartDisplayOptions(
+                  gridWidth = Some(6),
                   height = Some(500),
                   chartType = if (useColumnChart) Some(ChartType.Column) else None
                 )
               ),
               BoxWidgetSpec(
                 fieldName = field.name,
-                displayOptions = BasicDisplayOptions(height = Some(500))
+                displayOptions = BasicDisplayOptions(gridWidth = Some(3), height = Some(500))
+              ),
+              BasicStatsWidgetSpec(
+                fieldName = field.name,
+                displayOptions = BasicDisplayOptions(gridWidth = Some(3), height = Some(500))
               )
             )
             widgetService(widgetSpecs, repo, criteria, Map(), Seq(field) ++ groupField, false)

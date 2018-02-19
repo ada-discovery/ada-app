@@ -20,13 +20,22 @@
             <input type="hidden" id="replaceEolWithSpace" name="replaceEolWithSpace" value="true">
         }
         @labelValue("eol", "EOL", false, Some("If not specified standard '\\n' character will be used")) {
-            <input id="eol" name="eol" value="">
+            <input id="eol" namen="eol" value="">
         }
     </fieldset>
 }
 
-@jsonBody = {
-    <h4>Do you want to proceed?</h4>
+@exportJsonModalBody = {
+    <p>Do you want to proceed?</p>
+}
+
+@exportAllModalBody = {
+    <p>Are you sure you want to export the FULL data set (no filter applied) with ALL the fields?</p>
+}
+
+@exportAllCsvModalButtons = {
+    <button type="button" class="btn btn-default" data-dismiss="modal">No</button>
+    <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="$('#exportAllCsvModal').modal('show');">Yes</button>
 }
 
 <div class="dropdown">
@@ -36,7 +45,7 @@
     </button>
     <ul class="dropdown-menu">
         <li>
-            <a href="#" data-toggle="modal" data-target="#exportAllCsvModal">
+            <a href="#" data-toggle="modal" data-target="#exportAllConfirmationCsvModal">
                 Export All as CSV
             </a>
         </li>
@@ -68,12 +77,13 @@
         </li>
         @extraListItems
     </ul>
-    @exportModal("exportAllCsvModal", "Full CSV Export", exportCsvCall(",", Nil, false), Some(csvBody(",")))
-    @exportModal("exportFilteredCsvModal", "Filtered CSV Export", exportCsvCall(",", conditions, false), Some(csvBody(",")))
-    @exportModal("exportFilteredTableCsvModal", "Filtered Table CSV Export", exportCsvCall(",", conditions, true), Some(csvBody(",")))
-    @exportModal("exportAllJsonModal", "Full Json Export", exportJsonCall(Nil, false), Some(jsonBody))
-    @exportModal("exportFilteredJsonModal", "Filtered Json Export", exportJsonCall(conditions, false), Some(jsonBody))
-    @exportModal("exportFilteredTableJsonModal", "Filtered Table Json Export", exportJsonCall(conditions, true), Some(jsonBody))
+    @modal("exportAllConfirmationCsvModal", "Full CSV Export", exportAllModalBody, None, Some(exportAllCsvModalButtons))
+    @exportModal("exportAllCsvModal", "Full CSV Export", exportCsvCall(",", Nil, false), csvBody(","))
+    @exportModal("exportFilteredCsvModal", "Filtered CSV Export", exportCsvCall(",", conditions, false), csvBody(","))
+    @exportModal("exportFilteredTableCsvModal", "Filtered Table CSV Export", exportCsvCall(",", conditions, true), csvBody(","))
+    @exportModal("exportAllJsonModal", "Full Json Export", exportJsonCall(Nil, false), exportAllModalBody)
+    @exportModal("exportFilteredJsonModal", "Filtered Json Export", exportJsonCall(conditions, false), exportJsonModalBody)
+    @exportModal("exportFilteredTableJsonModal", "Filtered Table Json Export", exportJsonCall(conditions, true), exportJsonModalBody)
     @extraModals
 </div>
 

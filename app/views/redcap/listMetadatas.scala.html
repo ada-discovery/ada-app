@@ -26,7 +26,7 @@
             </div>
         </div>
     }
-    @views.html.exportModal("exportCsvModal", "LuxPark REDCap Metadata CSV Export", routes.RedCapController.exportAllMetadatasAsCsv(), Some(modalBody(",")))
+    @views.html.exportModal("exportCsvModal", "LuxPark REDCap Metadata CSV Export", routes.RedCapController.exportAllMetadatasAsCsv(), modalBody(","))
 }
 
 @table = @{

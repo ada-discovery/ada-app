@@ -128,6 +128,17 @@ trait StatsService {
     field: Field
   ): Future[Option[Quartiles[Any]]]
 
+  // standard stats
+
+  def calcBasicStats(
+    items: Traversable[JsObject],
+    field: Field
+  ): Option[BasicStatsResult]
+
+  def calcBasicStatsStreamed(
+    source: Source[Option[Double], _]
+  ): Future[Option[BasicStatsResult]]
+
   // scatter
 
   def collectScatterData(
@@ -887,6 +898,10 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       }
     }
 
+  ///////////////
+  // Quartiles //
+  ///////////////
+
   override def calcQuartiles(
     items: Traversable[JsObject],
     field: Field
@@ -1077,6 +1092,29 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       }
     }
   }
+
+  ////////////////////
+  // Standard stats //
+  ////////////////////
+
+  override def calcBasicStats(
+    items: Traversable[JsObject],
+    field: Field
+  ): Option[BasicStatsResult] = {
+    val doubleValue = jsonToDouble(field)
+    BasicStatsCalc.fun()(items.map(doubleValue))
+  }
+
+  override def calcBasicStatsStreamed(
+    source: Source[Option[Double], _]
+  ): Future[Option[BasicStatsResult]] =
+    for {
+      accum <- {
+        val sink = BasicStatsCalc.sink()
+        source.runWith(sink)
+      }
+    } yield
+      BasicStatsCalc.postSink()(accum)
 
   //////////////////
   // Correlations //

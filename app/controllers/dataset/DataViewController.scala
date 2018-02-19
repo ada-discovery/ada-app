@@ -43,6 +43,11 @@ trait DataViewController extends CrudController[BSONObjectID] {
     fieldNames: Seq[String]
   ): Action[AnyContent]
 
+  def addBasicStats(
+    dataViewId: BSONObjectID,
+    fieldNames: Seq[String]
+  ): Action[AnyContent]
+
   def addScatter(
     dataViewId: BSONObjectID,
     xFieldName: String,

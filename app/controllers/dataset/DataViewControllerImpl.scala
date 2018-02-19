@@ -358,6 +358,20 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       Future(())
   }
 
+  override def addBasicStats(
+    dataViewId: BSONObjectID,
+    fieldNames: Seq[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val existingFieldNames = filterSpecsOf[BasicStatsWidgetSpec](dataView).map(_.fieldName)
+    val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
+
+    if (newFieldNames.nonEmpty) {
+      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ newFieldNames.map(BasicStatsWidgetSpec(_)))
+      repo.update(newDataView)
+    } else
+      Future(())
+  }
+
   override def addScatter(
     dataViewId: BSONObjectID,
     xFieldName: String,

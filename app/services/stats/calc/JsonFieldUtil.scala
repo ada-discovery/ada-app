@@ -18,6 +18,12 @@ object JsonFieldUtil {
     jsonToDoublesAux(valueGets)
   }
 
+  def jsonToDouble(
+    field: Field
+  )(
+    implicit ftf: FieldTypeFactory
+  ): JsObject => Option[Double] = doubleGet(field)
+
   def jsonToDoublesDefined(
     fields: Seq[Field]
   )(
@@ -130,38 +136,47 @@ object JsonFieldUtil {
     implicit ftf: FieldTypeFactory
   ):  Seq[JsObject => Option[Double]] = {
     val emptyDoubleValue = {_: JsObject => None}
-    //    val specFieldTypeMap = MMap[FieldTypeSpec, FieldType[_]]()
 
     fields.map { field =>
-      val spec = field.fieldTypeSpec
-      val fieldType = ftf(spec)
-      //      val fieldType = specFieldTypeMap.getOrElseUpdate(spec, ftf(spec))
+      doubleGet(field, emptyDoubleValue)
+    }
+  }
 
-      // helper function to create a getter for array head value
-      def arrayHeadValueGet[T] = {
-        val arrayFieldType = fieldType.asValueOf[Array[Option[T]]]
-        valueGet(arrayFieldType, field.name).andThen(
-          _.flatMap(_.headOption).flatten
-        )
+  private def doubleGet(
+    field: Field,
+    emptyDoubleValue: JsObject => Option[Double] = {_: JsObject => None})(
+    implicit ftf: FieldTypeFactory
+  ):  JsObject => Option[Double] = {
+   //    val specFieldTypeMap = MMap[FieldTypeSpec, FieldType[_]]()
+
+    val spec = field.fieldTypeSpec
+    val fieldType = ftf(spec)
+    //      val fieldType = specFieldTypeMap.getOrElseUpdate(spec, ftf(spec))
+
+    // helper function to create a getter for array head value
+    def arrayHeadValueGet[T] = {
+      val arrayFieldType = fieldType.asValueOf[Array[Option[T]]]
+      valueGet(arrayFieldType, field.name).andThen(
+        _.flatMap(_.headOption).flatten
+      )
+    }
+
+    // helper function to create a getter for a (scalar) value
+    def scalarValueGet[T] = valueGet(fieldType.asValueOf[T], field.name)
+
+    if (spec.isArray) {
+      field.fieldType match {
+        case FieldTypeId.Double => arrayHeadValueGet[Double]
+        case FieldTypeId.Integer => arrayHeadValueGet[Long].andThen(_.map(_.toDouble))
+        case FieldTypeId.Date => arrayHeadValueGet[ju.Date].andThen(_.map(_.getTime.toDouble))
+        case _ => emptyDoubleValue
       }
-
-      // helper function to create a getter for a (scalar) value
-      def scalarValueGet[T] = valueGet(fieldType.asValueOf[T], field.name)
-
-      if (spec.isArray) {
-        field.fieldType match {
-          case FieldTypeId.Double => arrayHeadValueGet[Double]
-          case FieldTypeId.Integer => arrayHeadValueGet[Long].andThen(_.map(_.toDouble))
-          case FieldTypeId.Date => arrayHeadValueGet[ju.Date].andThen(_.map(_.getTime.toDouble))
-          case _ => emptyDoubleValue
-        }
-      } else {
-        field.fieldType match {
-          case FieldTypeId.Double => scalarValueGet[Double]
-          case FieldTypeId.Integer => scalarValueGet[Long].andThen(_.map(_.toDouble))
-          case FieldTypeId.Date => scalarValueGet[ju.Date].andThen(_.map(_.getTime.toDouble))
-          case _ => emptyDoubleValue
-        }
+    } else {
+      field.fieldType match {
+        case FieldTypeId.Double => scalarValueGet[Double]
+        case FieldTypeId.Integer => scalarValueGet[Long].andThen(_.map(_.toDouble))
+        case FieldTypeId.Date => scalarValueGet[ju.Date].andThen(_.map(_.getTime.toDouble))
+        case _ => emptyDoubleValue
       }
     }
   }

@@ -105,6 +105,11 @@ class DataViewDispatcher @Inject()(
     fieldNames: Seq[String]
   ) = dispatchIsAdminOrOwner(dataViewId, _.addBoxPlots(dataViewId, fieldNames))
 
+  override def addBasicStats(
+    dataViewId: BSONObjectID,
+    fieldNames: Seq[String]
+  ) = dispatchIsAdminOrOwner(dataViewId, _.addBasicStats(dataViewId, fieldNames))
+
   override def saveFilter(
     dataViewId: BSONObjectID,
     filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]]

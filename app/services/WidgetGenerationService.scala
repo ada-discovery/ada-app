@@ -288,6 +288,14 @@ class WidgetGenerationServiceImpl @Inject() (
         } else
           None
 
+      case BasicStatsWidgetSpec(fieldName, subFilter, displayOptions) =>
+        nameFieldMap.get(fieldName).flatMap { field =>
+          statsService.calcBasicStats(items, field).map { basicStats =>
+            val chartTitle = title.getOrElse(field.labelOrElseName)
+            BasicStatsWidget(chartTitle, field.labelOrElseName, basicStats, displayOptions)
+          }
+        }
+
       case TemplateHtmlWidgetSpec(content, subFilter, displayOptions) =>
         val widget = HtmlWidget("", content, displayOptions)
         Some(widget)

@@ -57,6 +57,11 @@
                         To Box Plots
                     </a>
                 </li>
+                <li>
+                    <a href="#" onclick="addBasicStats();return false" data-toggle="tooltip" title="Add Basic Stats To View">
+                        To Basic Stats
+                    </a>
+                </li>
             </ul>
         </div>
     </div>
@@ -144,6 +149,15 @@
             $("#dataViewSelectionModal").modal('show');
         }
 
+        function addBasicStats() {
+            var handler = function(e) {
+                addBasicStatsToView();
+            };
+
+            $("#dataViewSelectionModal #submitButton").one( "click", handler );
+            $("#dataViewSelectionModal").modal('show');
+        }
+
         function addDistributionToView() {
             var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
             var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
@@ -180,6 +194,23 @@
                 });
             }
         }
+
+        function addBasicStatsToView() {
+            var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+            var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
+            var fieldName = $('#fieldForm #fieldName').val()
+
+            if (fieldName) {
+                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBasicStats(dataViewId, [fieldName]).ajax( {
+                    success: function() {
+                        showMessage("Basic stats for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
+                    },
+                    error: function(data){
+                        showError( data.responseText );
+                    }
+                });
+            }
+        }
     </script>
 }
 
@@ -207,5 +238,6 @@
 
 @helper.javascriptRouter("dataViewJsRoutes")(
     dataViewJsRouter.addDistribution,
-    dataViewJsRouter.addBoxPlots
+    dataViewJsRouter.addBoxPlots,
+    dataViewJsRouter.addBasicStats
 )

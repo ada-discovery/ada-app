@@ -83,6 +83,11 @@
                 </a>
             </li>
             <li>
+                <a href="#" onclick="addFieldBasicStats();return false" data-toggle="tooltip" title="Add Basic Stats To View">
+                    Basic Stats
+                </a>
+            </li>
+            <li>
                 <a href="#" onclick="addFieldCorrelation();return false" data-toggle="tooltip" title="Add Correlation To View">
                     Correlation
                 </a>
@@ -139,6 +144,7 @@
     dataViewJsRouter.addDistributions,
     dataViewJsRouter.addCumulativeCounts,
     dataViewJsRouter.addBoxPlots,
+    dataViewJsRouter.addBasicStats,
     dataViewJsRouter.addScatter,
     dataViewJsRouter.addCorrelation,
     dataViewJsRouter.addTableFields
@@ -193,6 +199,15 @@
     function addFieldBoxPlots() {
         var handler = function(e) {
             addFieldBoxPlotsToView();
+        };
+
+        $("#dataViewSelectionModal #submitButton").one( "click", handler );
+        $("#dataViewSelectionModal").modal('show');
+    }
+
+    function addFieldBasicStats() {
+        var handler = function(e) {
+            addFieldBasicStatsToView();
         };
 
         $("#dataViewSelectionModal #submitButton").one( "click", handler );
@@ -255,6 +270,21 @@
         dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId, fieldNames).ajax( {
             success: function() {
                 showMessage("Box plots for the field(s) '" + fieldNames + "' have been successfully added to the view '" + dataViewName + "'.");
+            },
+            error: function(data){
+                showError( data.responseText );
+            }
+        });
+    }
+
+    function addFieldBasicStatsToView() {
+        var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+        var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
+        var fieldNames = getCheckedTableIds("dictionaryTable", "id")
+
+        dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBasicStats(dataViewId, fieldNames).ajax( {
+            success: function() {
+                showMessage("Basic stats for the field(s) '" + fieldNames + "' have been successfully added to the view '" + dataViewName + "'.");
             },
             error: function(data){
                 showError( data.responseText );
