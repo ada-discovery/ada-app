@@ -197,6 +197,7 @@ function genericWidget(widget, filterElementId) {
         switch (widget.concreteClass) {
             case "models.CategoricalCountWidget": categoricalTableWidget(elementIdVal, widget); break;
             case "models.NumericalCountWidget": numericalTableWidget(elementIdVal, widget); break;
+            case "models.BasicStatsWidget": basicStatsWidget(elementIdVal, widget); break;
             default: console.log(widget.concreteClass + " does not have a textual representation.")
         }
     else
@@ -208,6 +209,7 @@ function genericWidget(widget, filterElementId) {
             case "models.HeatmapWidget": heatmapWidget(elementIdVal, widget); break;
             case "models.HtmlWidget": htmlWidget(elementIdVal, widget); break;
             case 'models.LineWidget': lineWidget(elementIdVal, widget); break;
+            case "models.BasicStatsWidget": basicStatsWidget(elementIdVal, widget); break;
             default: console.log("Widget type" + widget.concreteClass + " unrecognized.")
         }
 }
@@ -305,6 +307,45 @@ function numericalTableWidget(elementId, widget) {
     var div = $("<div style='position: relative; overflow: hidden; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
 
     var table = createTable(columnNames, rowData)
+
+    div.append(caption)
+
+    var centerWrapper = $("<table align='center'>")
+    var tr = $("<tr class='vertical-divider' valign='top'>")
+    var td = $("<td>")
+
+    td.append(table)
+    tr.append(td)
+    centerWrapper.append(tr)
+    div.append(centerWrapper)
+
+    $('#' + elementId).html(div)
+}
+
+function basicStatsWidget(elementId, widget) {
+    var caption = "<h4 align='center'>" + widget.title + "</h4>"
+    var columnNames = ["Stats", "Value"]
+
+    function roundOrInt(value) {
+        return Number.isInteger(value) ? value : value.toFixed(3)
+    }
+
+    var data = [
+        ["Min", roundOrInt(widget.data.min)],
+        ["Max", roundOrInt(widget.data.max)],
+        ["Mean", roundOrInt(widget.data.mean)],
+        ["Variance", roundOrInt(widget.data.variance)],
+        ["STD", roundOrInt(widget.data.standardDeviation)],
+        ["# Defined", widget.data.definedCount],
+        ["# Undefined", widget.data.undefinedCount]
+    ]
+
+    var caption = "<h4 align='center'>" + widget.title + "</h4>"
+
+    var height = widget.displayOptions.height || 400
+    var div = $("<div style='position: relative; overflow: hidden; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
+
+    var table = createTable(columnNames, data)
 
     div.append(caption)
 
