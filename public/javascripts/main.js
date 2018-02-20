@@ -172,12 +172,31 @@ function populateTypeahead(element, source, displayFun, suggestionFun, updateVal
 
     element.on('keyup', this, function(e) {
         if(e.keyCode != 8 && e.keyCode != 46) {
-            var suggestions = $(this).parent().find('.tt-suggestion')
-            if (suggestions.length == 1) {
-                element.typeahead('select', suggestions.first())
-            }
+            selectFirstSuggestion(element)
         }
     })
+}
+
+function selectFirstSuggestion(element) {
+    var suggestions = element.parent().find('.tt-suggestion')
+    if (suggestions.length == 1) {
+        element.typeahead('select', suggestions.first())
+    }
+}
+
+function selectShortestSuggestion(element) {
+    var suggestions = element.parent().find('.tt-suggestion')
+    if (suggestions.length > 0) {
+        var min = Number.MAX_SAFE_INTEGER
+        var minSuggestion = null
+        $.each(suggestions, function (index, suggestion) {
+            if (suggestion.innerText.length < min) {
+                minSuggestion = suggestion;
+                min = suggestion.innerText.length
+            }
+        });
+        element.typeahead('select', minSuggestion)
+    }
 }
 
 function createFieldBloodhoundSource(fieldNameAndLabels, showOption) {
@@ -654,4 +673,24 @@ function moveModalRight(modalId) {
 
 function addSpinner(element) {
     element.append("<div class='spinner' style='margin: auto;'></div>")
+}
+
+function updateFilterValueElement(filterElement, data) {
+    var fieldType = (data.isArray) ? data.fieldType + " Array" : data.fieldType
+    filterElement.find("#fieldInfo").html("Field type: " + fieldType)
+
+    var newValueElement = null
+    if (data.allowedValues.length > 0) {
+        newValueElement = $("<select id='value' class='float-left conditionValue'>")
+        newValueElement.append("<option value=''></option>")
+        $.each(data.allowedValues, function (index, keyValue) {
+            newValueElement.append("<option value='" + keyValue[0] + "'>" + keyValue[1] + "</option>")
+        });
+    } else {
+        newValueElement = "<input id='value' class='float-left conditionValue' placeholder='Condition'/>"
+    }
+    var valueElement = filterElement.find("#value")
+    var oldValue = valueElement.val()
+    valueElement.replaceWith(newValueElement)
+    filterElement.find("#value").val(oldValue)
 }

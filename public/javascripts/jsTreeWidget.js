@@ -41,7 +41,6 @@ $.widget( "custom.jsTreeWidget", {
         if (that.options.nodeSelectedFun) {
             that.element.on("select_node.jstree",
                 function(evt, data) {
-                    console.log(data.node)
                     that.options.nodeSelectedFun(data.node);
                 }
             );

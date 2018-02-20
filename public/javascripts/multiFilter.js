@@ -26,7 +26,6 @@ $.widget( "custom.multiFilter", {
         this.addEditConditionModalElement = this.element.find("#addEditConditionModal");
         this.fieldNameTypeaheadElement = this.element.find("#fieldNameTypeahead");
         this.fieldNameElement = this.element.find("#fieldName");
-        this.valueElement = this.element.find("#value");
         var saveFilterModalName = "saveFilterModal" + this.element.attr('id');
         this.saveFilterModalElement = this.element.find("#" + saveFilterModalName);
         this.saveFilterNameElement = this.element.find("#saveFilterName");
@@ -44,7 +43,7 @@ $.widget( "custom.multiFilter", {
 
         this.addEditConditionModalElement.on('shown.bs.modal', function () {
             if ($(this).find("#conditionIndex:first").val())
-                that.valueElement.focus();
+                that.element.find("#value").focus();
 //            else
 //                that.fieldNameTypeaheadElement.focus();
         })
@@ -97,6 +96,11 @@ $.widget( "custom.multiFilter", {
         var that = this;
         this.initFilterIfNeeded(function() {
             that.addEditConditionModalElement.find("#conditionIndex").first().val(index);
+
+            // set the value element to a text field (by default)
+            var newValueElement = "<input id='value' class='float-left conditionValue' placeholder='Condition'/>"
+            var valueElement = that.addEditConditionModalElement.find("#value")
+            valueElement.replaceWith(newValueElement)
 
             var condition = that.jsonConditions[index]
             that.updateModalFromModel(condition, that.conditionFields);
@@ -215,9 +219,7 @@ $.widget( "custom.multiFilter", {
 
     updateModalFromModel: function (condition, fields) {
         var that = this;
-        $.each(fields,  function( i, field ) {
-            that.addEditConditionModalElement.find("#" + field).first().val(condition[field]);
-        })
+
         var fieldNameTypeahead = this.addEditConditionModalElement.find("#fieldNameTypeahead").first();
 
         var elementToSelect = condition["fieldName"];
@@ -225,7 +227,12 @@ $.widget( "custom.multiFilter", {
             elementToSelect = condition["fieldLabel"];
     //        var elementToSelect = {name: condition["fieldName"], label: condition["fieldLabel"], isLabel: true};
 
-        fieldNameTypeahead.typeahead('val', elementToSelect);
+        fieldNameTypeahead.typeahead('val', elementToSelect)
+
+        $.each(fields,  function( i, field ) {
+            that.addEditConditionModalElement.find("#" + field).first().val(condition[field]);
+        })
+        selectShortestSuggestion(fieldNameTypeahead)
     },
 
     updateFilterFromModel: function (index, condition, fields) {
@@ -243,7 +250,10 @@ $.widget( "custom.multiFilter", {
                         url: this.options.getFieldsUrl,
                         success: function (data) {
                             that.fieldNameAndLabels = data.map( function(field, index) {
-                                return {name: field.name, label: field.label};
+                                if (Array.isArray(field))
+                                    return {name: field[0], label: field[1]};
+                                else
+                                    return {name: field.name, label: field.label};
                             });
                             if (that.options.initFilterIfNeededCallback) {
                                 that.options.initFilterIfNeededCallback();
@@ -365,5 +375,6 @@ $.widget( "custom.multiFilter", {
     setFieldTypeaheadAndName: function(name, typeaheadVal) {
         this.fieldNameTypeaheadElement.typeahead('val', typeaheadVal);
         this.fieldNameElement.val(name)
+        selectShortestSuggestion(this.fieldNameTypeaheadElement)
     }
 })
