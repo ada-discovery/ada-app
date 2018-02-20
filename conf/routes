@@ -94,7 +94,9 @@ GET         /studies/records                                                    
 GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
 GET         /studies/fields                                                         controllers.dataset.DataSetDispatcher.getFields(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
 GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
+GET         /studies/fieldNamesAndLabels                                            controllers.dataset.DataSetDispatcher.getFieldNamesAndLabels(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
 GET         /studies/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
+GET         /studies/fieldTypeAndAllowedValues/:fieldName                           controllers.dataset.DataSetDispatcher.getFieldTypeWithAllowedValues(fieldName: String)
 GET         /studies/field/:fieldName                                               controllers.dataset.DataSetDispatcher.getField(fieldName: String)
 GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(dataViewId: BSONObjectID, delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(dataViewId: BSONObjectID, filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)

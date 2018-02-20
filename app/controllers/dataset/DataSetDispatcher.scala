@@ -129,13 +129,21 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def runSeriesTransformation = dispatch(_.runSeriesTransformation)
 
-  override def getFields(
-    fieldTypeIds: Seq[FieldTypeId.Value]
-  ) = dispatch(_.getFields(fieldTypeIds))
-
   override def getField(fieldName: String) = dispatch(_.getField(fieldName))
 
   override def getFieldNames = dispatch(_.getFieldNames)
+
+  override def getFieldNamesAndLabels(
+    fieldTypeIds: Seq[FieldTypeId.Value]
+  ) = dispatch(_.getFieldNamesAndLabels(fieldTypeIds))
+
+  override def getFieldTypeWithAllowedValues(
+    fieldName: String
+  ) = dispatch(_.getFieldTypeWithAllowedValues(fieldName))
+
+  override def getFields(
+    fieldTypeIds: Seq[FieldTypeId.Value]
+  ) = dispatch(_.getFields(fieldTypeIds))
 
   override def getFieldValue(
     id: BSONObjectID,

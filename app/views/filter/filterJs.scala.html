@@ -134,6 +134,7 @@
 
             if (fieldNameAndLabels) {
                 $("#@categoryTreeElementName.get").jsTreeWidget('init');
+                $('#@categoryTreeElementName.get').jstree("deselect_all");
                 $("#@categoryTreeElementName.get").bind('ready.jstree', function(e, data) {
                     var rootNode = $('#@categoryTreeElementName.get').jstree(true).get_node("#")
                         if(rootNode.children.length == 0) {
@@ -143,6 +144,7 @@
             } else {
                 initFilterIfNeededTreeCallback = function() {
                     $("#@categoryTreeElementName.get").jsTreeWidget('init');
+                    $('#@categoryTreeElementName.get').jstree("deselect_all");
                     $("#@categoryTreeElementName.get").bind('ready.jstree', function(e, data) {
                         var rootNode = $('#@categoryTreeElementName.get').jstree(true).get_node("#")
                         if(rootNode.children.length == 0) {

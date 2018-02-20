@@ -23,6 +23,7 @@ import controllers.core.{ExportableAction, ReadonlyControllerImpl, WebContext}
 import org.apache.commons.lang3.StringEscapeUtils
 import models.FilterCondition.FilterOrId
 import models.Widget.WidgetWrites
+import models.json.{OptionFormat, TupleFormat}
 import models.ml._
 import persistence.RepoTypes.{ClassificationRepo, RegressionRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -1812,6 +1813,36 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
+  override def getFieldNames = Action.async { implicit request =>
+    for {
+      fields <- fieldRepo.find(sort = Seq(AscSort("name")))
+    } yield {
+      val fieldNames = fields.map(_.name)
+      Ok(Json.toJson(fieldNames))
+    }
+  }
+
+  private implicit val optionFormat = new OptionFormat[String]
+  private implicit val tupleFormat = TupleFormat[String, Option[String]]
+
+  def getFieldNamesAndLabels(
+    fieldTypeIds: Seq[FieldTypeId.Value]
+  ) = Action.async { implicit request =>
+    for {
+      fields <- fieldRepo.find(
+        criteria = fieldTypeIds match {
+          case Nil => Nil
+          case _ => Seq("fieldType" #-> fieldTypeIds)
+        },
+        //        sort = Seq(AscSort("name")),
+        projection = Seq("name", "label", "fieldType")
+      )
+    } yield {
+      val fieldNameAndLabels = fields.map { field => (field.name, field.label)}.toSeq
+      Ok(Json.toJson(fieldNameAndLabels))
+    }
+  }
+
   override def getField(fieldName: String) = Action.async { implicit request =>
     for {
       field <- fieldRepo.get(fieldName)
@@ -1821,14 +1852,30 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def getFieldNames = Action.async { implicit request =>
+  override def getFieldTypeWithAllowedValues(fieldName: String) = Action.async { implicit request =>
     for {
-      fields <- fieldRepo.find(sort = Seq(AscSort("name")))
-    } yield {
-      val fieldNames = fields.map(_.name)
-      Ok(Json.toJson(fieldNames))
-    }
+      field <- fieldRepo.get(fieldName)
+    } yield
+      field match {
+        case Some(field) =>
+          val allowedValues = getAllowedValues(field)
+          implicit val tupleFormat = TupleFormat[String, String]
+          val json = Json.obj("fieldType" -> field.fieldType, "isArray" -> field.isArray, "allowedValues" -> allowedValues)
+          Ok(json)
+
+        case None => BadRequest(s"Field $fieldName does not exist.")
+      }
   }
+
+  private def getAllowedValues(field: Field): Traversable[(String, String)] =
+    field.fieldType match {
+      case FieldTypeId.Enum => field.numValues.map(_.toSeq.sortBy(_._1)).getOrElse(Nil)
+      case FieldTypeId.Boolean => Seq(
+        "true" -> field.displayTrueValue.getOrElse("true"),
+        "false" -> field.displayFalseValue.getOrElse("false")
+      )
+      case _ => Nil
+    }
 
   override def getFieldValue(id: BSONObjectID, fieldName: String) = Action.async { implicit request =>
 //    for {

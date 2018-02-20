@@ -30,6 +30,7 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getTable = routes.getTable _ map route
   val fields = routes.getFields _ map route
   val allFields = routeFun(_.getFields())
+  val allFieldNamesAndLabels = routeFun(_.getFieldNamesAndLabels())
   val fieldNames = routeFun(_.getFieldNames)
   val getFieldValue = routes.getFieldValue _ map route
   val exportCsv = routes.exportRecordsAsCsv _ map route
@@ -43,6 +44,7 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
 final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.DataSetDispatcher, "dataSet", dataSetId) {
   val getFieldValue = routeFun(_.getFieldValue)
   val getField = routeFun(_.getField)
+  val getFieldTypeWithAllowedValues = routeFun(_.getFieldTypeWithAllowedValues)
   val getWidgets = routeFun(_.getWidgets)
   val getView = routeFun(_.getView)
   val cluster = routeFun(_.cluster)

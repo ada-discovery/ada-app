@@ -5,6 +5,7 @@
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.{widgetPanel, widgetPanelJs}
 @import views.html.dataset.datasetSubNavWithJs
+@import views.html.dataset.dataSetFilterWithJs
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.filter.{filter, filterWithJs}
 @import play.api.libs.json.Json
@@ -30,15 +31,10 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filterWithJs(
-                Some(filterSpec),
+            @dataSetFilterWithJs(
+                filterSpec,
                 dataSetRouter.getDistribution(field.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
-                Right(dataSetRouter.allFields),
-                Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
-                filterShowFieldStyle,
-                Some(filterJsRouter),
-                Some(filterRouter.idAndNames),
-                "filterOrId"
+                filterShowFieldStyle
             )
         </div>
         <div class="pull-right dropdown">
@@ -233,7 +229,9 @@
 
     @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
 
-    @widgetPanel(chartSpecs, 12 / chartSpecs.size)
+    @if(chartSpecs.nonEmpty) {
+        @widgetPanel(chartSpecs, 12 / chartSpecs.size)
+    }
 }
 
 @helper.javascriptRouter("dataViewJsRoutes")(

@@ -40,6 +40,7 @@ class CreatePPMIClinicalDataSet2 @Inject()(
   private val fieldNames = Seq(
     genderFieldName,
     "RANDOMAGE",
+    "SOCIOECOEDUCYRS",
     "UPSITUPSIT_Raw_Score",
     "NUPDRS3PartI_Score",
     "NUPDRS3PartII_Score",
@@ -74,6 +75,7 @@ class CreatePPMIClinicalDataSet2 @Inject()(
   private val fieldNameVisitMap = Map(
     "SCREENGENDER" -> Undefined,
     "RANDOMAGE" -> Undefined,
+    "SOCIOECOEDUCYRS"-> Undefined,
     "FAMHXPDBIODADPD" -> Undefined,
     "FAMHXPDBIOMOMPD" -> Undefined,
     "FAMHXPDFULSIBPD" -> Undefined,

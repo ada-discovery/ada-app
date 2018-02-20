@@ -105,6 +105,7 @@
                 var lastIndex = text.lastIndexOf(" (" + nonNullCount + ")")
                 text = text.substring(0, lastIndex)
             }
+            console.log("Category tree node selected" + text)
             $('#@filterElementName').multiFilter('setFieldTypeaheadAndName', node.id, text);
         }
     }
@@ -128,26 +129,33 @@
                             </div>
                         }
                         <div class="row">
-                            <div class="float-left col-md-4">
+                            <div class="col-md-4">
                                 <input id="fieldNameTypeahead" class="typeahead" type="text" placeholder="Field Name or Label">
                                 <input id="fieldName" type="hidden" value="">
                             </div>
-                            <div id="conditionDiv">
-                                <select id="conditionType" class="float-left">
-                                @ConditionType.values.map{ conditionType =>
-                                    <option value="@conditionType">@conditionType</option>
-                                }
+                            <div class="col-md-6">
+                                <select id="conditionType" class="float-left ">
+                                    @ConditionType.values.map{ conditionType =>
+                                        <option value="@conditionType">@conditionType</option>
+                                    }
                                 </select>
-                                <input id="value" class="float-left" placeholder="Condition"/>
+                                <input id="value" class="float-left conditionValue" placeholder="Condition"/>
                             </div>
-                            <a id="showChoicesButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#showChoicesPanel" data-toggle="tooltip" title="Field Name/Label Display Options">
-                                <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
-                            </a>
-                            @if(categoriesOrCall.isDefined) {
-                                <a id="showCategoryTreeButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#categoryFilterDiv" data-toggle="tooltip" title="Show Category Tree">
-                                    <span class="glyphicon glyphicon-leaf" aria-hidden="true"></span>
+                            <div clas="col-md-2">
+                                <a id="showChoicesButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#showChoicesPanel" data-toggle="tooltip" title="Field Name/Label Display Options">
+                                    <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
                                 </a>
-                            }
+                                @if(categoriesOrCall.isDefined) {
+                                    <a id="showCategoryTreeButton" class="btn btn-sm btn-default" data-toggle="collapse" data-target="#categoryFilterDiv" data-toggle="tooltip" title="Show Category Tree">
+                                        <span class="glyphicon glyphicon-leaf" aria-hidden="true"></span>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12" style="margin-left:10px">
+                                <span id="fieldInfo" class="help-block"></span>
+                            </div>
                         </div>
                         <div id="showChoicesPanel" class="row collapse">
                             <hr/>

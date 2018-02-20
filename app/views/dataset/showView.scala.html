@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.dataset.{datasetSubNav, datasetSubNavJs, datasetMenu}
+@import views.html.dataset.{datasetSubNav, datasetSubNavJs, datasetMenu, dataSetFilterValuesUpdate}
 @import views.html.widget.{widgetPanelJs, widgetPanelAjaxLoadJs}
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
 @import views.html.dataset.{viewTables, viewTablesJs}
@@ -106,7 +106,7 @@
     @filterJs(
         viewPart.page.filter,
         dataSetRouter.getView(dataViewId, Nil, Nil, true),
-        Right(dataSetRouter.allFields),
+        Right(dataSetRouter.allFieldNamesAndLabels),
         Some(filterJsRouter),
         Some(filterRouter.idAndNames),
         "filterOrIds",
@@ -154,11 +154,14 @@
     @highchartsJsImport()
     @widgetPanelAjaxLoadJs(widgetCallbackId, widgetGridElementWidth, dataSetJsRouter)
 
-    @highchartsJsImportForBulkExport()
     @datasetSubNavJs()
 
     @helper.javascriptRouter("dataViewJsRoutes")(
         dataViewJsRouter.saveFilter
+    )
+
+    @helper.javascriptRouter("dataSetJsRoutes2")(
+        dataSetJsRouter.getFieldTypeWithAllowedValues
     )
 
     @tableViewParts.zipWithIndex.map { case (viewPart, index) =>
@@ -178,7 +181,7 @@
 
         function saveFilterToView() {
             var filterOrIds = [
-                @tableViewParts.zipWithIndex.map{ case (viewPart, index) => getFilterOrId(@index)}.mkString(",")
+                @tableViewParts.zipWithIndex.map{ case (_, index) => getFilterOrId(@index)}.mkString(",")
             ];
 
             dataViewJsRoutes.controllers.dataset.DataViewDispatcher.saveFilter(
@@ -194,6 +197,10 @@
             });
         }
     </script>
+
+    @tableViewParts.zipWithIndex.map { case (_, index) => @dataSetFilterValuesUpdate("filter" + index) }
+
+    @highchartsJsImportForBulkExport()
 }
 
 @layout.list(

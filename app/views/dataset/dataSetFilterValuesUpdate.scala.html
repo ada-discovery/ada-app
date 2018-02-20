@@ -1,0 +1,26 @@
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+
+@(
+    filterName: String
+)(
+    implicit context: DataSetWebContext
+)
+
+@helper.javascriptRouter("dataSetJsRoutes2")(
+    dataSetJsRouter.getFieldTypeWithAllowedValues
+)
+
+<script type="text/javascript">
+
+    $("#@filterName #fieldNameTypeahead").on('typeahead:select', function (e, field) {
+        dataSetJsRoutes2.controllers.dataset.DataSetDispatcher.getFieldTypeWithAllowedValues(field.key).ajax( {
+            success: function(data) {
+                updateFilterValueElement($("#@filterName"), data)
+            },
+            error: function(data){
+                showError(data.responseText);
+            }
+        });
+     });
+ </script>

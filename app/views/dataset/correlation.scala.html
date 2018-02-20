@@ -5,6 +5,7 @@
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.{widgetJs, widget}
 @import views.html.dataset.{dynamicFieldTable, datasetSubNavWithJs}
+@import views.html.dataset.dataSetFilterWithJs
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.table.dynamicTableJsImport
 @import views.html.filter.{filter, filterWithJs}
@@ -25,15 +26,10 @@
 @actions = {
     <div class="row">
         <div class="col-md-10">
-            @filterWithJs(
-                Some(filterSpec),
+            @dataSetFilterWithJs(
+                filterSpec,
                 dataSetRouter.getCorrelations(filterSpec.conditionsOrId),
-                Right(dataSetRouter.allFields),
-                Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
-                filterShowFieldStyle,
-                Some(filterJsRouter),
-                Some(filterRouter.idAndNames),
-                "filterOrId"
+                filterShowFieldStyle
             )
         </div>
         <div class="pull-right">

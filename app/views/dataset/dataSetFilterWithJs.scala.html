@@ -1,0 +1,25 @@
+@import views.html.filter.{filter, filterWithJs}
+@import views.html.dataset.dataSetFilterValuesUpdate
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+
+@(
+    filterSpec: models.Filter,
+    submitCall: Call,
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value]
+)(
+    implicit context: DataSetWebContext
+)
+
+@filterWithJs(
+    Some(filterSpec),
+    submitCall,
+    Right(dataSetRouter.allFieldNamesAndLabels),
+    Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
+    filterShowFieldStyle,
+    Some(filterJsRouter),
+    Some(filterRouter.idAndNames),
+    "filterOrId"
+)
+
+@dataSetFilterValuesUpdate("filterDiv")

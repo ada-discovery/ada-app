@@ -107,6 +107,10 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getFieldNames: Action[AnyContent]
 
+  def getFieldNamesAndLabels(
+    fieldTypeIds: Seq[FieldTypeId.Value]
+  ): Action[AnyContent]
+
   def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ): Action[AnyContent]
@@ -114,6 +118,8 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def getFieldValue(id: BSONObjectID, fieldName: String): Action[AnyContent]
 
   def getField(fieldName: String): Action[AnyContent]
+
+  def getFieldTypeWithAllowedValues(fieldName: String): Action[AnyContent]
 
   def exportRecordsAsCsv(
     dataViewId: BSONObjectID,
