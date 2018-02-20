@@ -324,3 +324,8 @@ tr.vertical-divider > td:last-child {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+.conditionValue {
+    width: 200px;
+    max-width: 200px
+}
