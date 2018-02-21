@@ -33,6 +33,8 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
   val ldapinterface: Option[LDAPInterface] = setupInterface()
   val ldapsettings: LdapSettings = settings
 
+  private val logger = Logger
+
   /**
     * Creates either a server or a connection, depending on the configuration.
     * @return LDAPInterface, either of type InMemoryDirectoryServer or LDAPConnection.
@@ -206,14 +208,23 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * @param password password for binding.
     * @return true, if bind successful.
     */
-  def canBind(userDN: String, password: String): Boolean ={
+  def canBind(userDN: String, password: String): Boolean = {
+    logger.info(s"Checking the user credentials for $userDN in LDAP.")
     val (connection, _) = createConnection
 
     val result: ResultCode = try {
       connection.bind(userDN, password).getResultCode
     } catch {
-      case _: Throwable => ResultCode.NO_SUCH_OBJECT
+      case _: LDAPException => ResultCode.NO_SUCH_OBJECT
     }
+
+    // Close the connection
+    connection.close()
+
+    // Log the outcome
+    val successfulWord = if (result == ResultCode.SUCCESS) "successful" else "unsuccessful"
+    logger.info(s"The LDAP verification for $userDN is ${successfulWord.toUpperCase}.")
+
     result == ResultCode.SUCCESS
   }
 

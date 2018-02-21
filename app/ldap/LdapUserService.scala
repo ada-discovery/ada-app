@@ -13,7 +13,7 @@ trait LdapUserService {
   def getAll: Traversable[LdapUser]
 }
 
-protected class LdapUserServiceImpl @Inject()(connector: LdapConnector) extends LdapUserService{
+protected class LdapUserServiceImpl @Inject()(connector: LdapConnector) extends LdapUserService {
 
   private val settings = connector.ldapsettings
   private val groups: Seq[String] = settings.groups

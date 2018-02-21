@@ -148,6 +148,23 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
     val extraRestrictions = restrictChainFuture2(Seq(isAdmin, checkOwner))_
     extraRestrictions(originalAction)(request)
   }
+
+  protected def dispatchIsAdminAux(
+    currentUser: Request[_] => Future[Option[User]])(
+    action: C => Action[AnyContent]
+  ) = Action.async { implicit request =>
+    val originalAction = dispatchAuthenticated(action)
+
+    // is admin?
+    def isAdmin = { action: AuthenticatedAction[AnyContent] =>
+      Future(
+        deadbolt.Restrict[AnyContent](List(Array(SecurityRole.admin)), unauthorizedDeadboltHandler)()(action)
+      )
+    }
+
+    val extraRestrictions = restrictChainFuture2(Seq(isAdmin))_
+    extraRestrictions(originalAction)(request)
+  }
 }
 
 abstract class StaticSecureControllerDispatcher[C](controllerParamId: String, controllers : Iterable[(String, C)]) extends SecureControllerDispatcher[C](controllerParamId) {

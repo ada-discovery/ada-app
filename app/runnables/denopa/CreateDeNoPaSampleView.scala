@@ -41,6 +41,7 @@ class CreateDeNoPaSampleView extends DsaInputFutureRunnable[CreateDeNoPaSampleVi
       distributionWidgets,
       4,
       false,
+      false,
       true
     )
   }

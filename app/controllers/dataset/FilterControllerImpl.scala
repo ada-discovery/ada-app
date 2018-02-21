@@ -10,17 +10,18 @@ import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
 import dataaccess._
 import models._
 import models.FilterCondition.{FilterIdentity, filterFormat}
-import models.security.UserManager
+import models.security.{SecurityRole, UserManager}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import java.util.Date
 
+import reactivemongo.play.json.BSONFormats._
 import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
 import services.DataSpaceService
 import views.html.{dataview, filters => view}
@@ -57,11 +58,12 @@ protected[controllers] class FilterControllerImpl @Inject() (
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
-      "conditions" -> seq(of[FilterCondition])
-    ) { (id, name, conditions) =>
-      Filter(id, Some(name), conditions)
+      "conditions" -> seq(of[FilterCondition]),
+      "isPrivate" -> boolean
+    ) { (id, name, conditions, isPrivate) =>
+      Filter(id, Some(name), conditions, isPrivate)
     }
-    ((item: Filter) => Some(item._id, item.name.getOrElse(""), item.conditions))
+    ((item: Filter) => Some(item._id, item.name.getOrElse(""), item.conditions, item.isPrivate))
   )
 
   protected val router: FilterRouter = new FilterRouter(dataSetId)
@@ -198,14 +200,18 @@ protected[controllers] class FilterControllerImpl @Inject() (
       id <- {
         val mergedFilter =
           existingFilterOption.fold(filter) { existingFilter =>
-            filter.copy(createdById = existingFilter.createdById, timeCreated = existingFilter.timeCreated, conditions = existingFilter.conditions)
+            filter.copy(
+              createdById = existingFilter.createdById,
+              timeCreated = existingFilter.timeCreated,
+              conditions = existingFilter.conditions
+            )
           }
         repo.update(mergedFilter)
       }
     } yield
       id
 
-  override def getIdAndNames = Action.async { implicit request =>
+  override def idAndNames = Action.async { implicit request =>
     for {
       filters <- filterRepo.find(
         sort = Seq(AscSort("name")),
@@ -213,5 +219,41 @@ protected[controllers] class FilterControllerImpl @Inject() (
       )
     } yield
       Ok(Json.toJson(filters))
+  }
+
+  override def idAndNamesAccessible = Action.async { implicit request =>
+    // auxiliary function to find filter for given criteria
+    def findAux(criteria: Seq[Criterion[Any]]) = repo.find(
+      criteria = criteria,
+      projection = Seq("name", "isPrivate", "createdById"),
+      sort = Seq(AscSort("name"))
+    )
+
+    for {
+      user <- currentUser(request)
+
+      filters <- {
+        user match {
+          case None => Future(Nil)
+
+          case Some(user) =>
+            val isAdmin = user.roles.contains(SecurityRole.admin)
+            // admin     => get all; non-admin => not private or owner
+            if (isAdmin)
+              findAux(Nil)
+            else
+              findAux(Nil).map { filters =>
+                filters.filter { filter =>
+                  !filter.isPrivate || (filter.createdById.isDefined && filter.createdById.equals(user._id))
+                }
+              }
+        }
+      }
+    } yield {
+      val idAndNames = filters.toSeq.map( filter =>
+        Json.obj("_id" -> filter._id, "name" -> filter.name)
+      )
+      Ok(JsArray(idAndNames))
+    }
   }
 }

@@ -160,7 +160,8 @@ POST        /studies/filters/save                                               
 POST        /studies/filters/saveAjax                                               controllers.dataset.FilterDispatcher.saveAjax(filter: models.Filter)
 POST        /studies/filters/:id                                                    controllers.dataset.FilterDispatcher.update(id: BSONObjectID)
 POST        /studies/filters/:id/delete                                             controllers.dataset.FilterDispatcher.delete(id: BSONObjectID)
-GET         /studies/filters/idAndNames                                             controllers.dataset.FilterDispatcher.getIdAndNames
+GET         /studies/filters/idAndNames                                             controllers.dataset.FilterDispatcher.idAndNames
+GET         /studies/filters/idAndNamesAccessible                                   controllers.dataset.FilterDispatcher.idAndNamesAccessible
 
 # DataViewDispatcher
 GET         /studies/dataviews                                                      controllers.dataset.DataViewDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
@@ -173,6 +174,7 @@ POST        /studies/dataviews/updateAndShowView/:id                            
 POST        /studies/dataviews/:id/delete                                           controllers.dataset.DataViewDispatcher.delete(id: BSONObjectID)
 GET         /studies/dataviews/copy                                                 controllers.dataset.DataViewDispatcher.copy(dataViewId: BSONObjectID)
 GET         /studies/dataviews/idAndNames                                           controllers.dataset.DataViewDispatcher.idAndNames
+GET         /studies/dataviews/idAndNamesAccessible                                 controllers.dataset.DataViewDispatcher.idAndNamesAccessible
 GET         /studies/dataviews/addDistributions                                     controllers.dataset.DataViewDispatcher.addDistributions(dataViewId: BSONObjectID, fieldNames: Seq[String])
 GET         /studies/dataviews/addDistribution                                      controllers.dataset.DataViewDispatcher.addDistribution(dataViewId: BSONObjectID, fieldName: String, groupFieldName: Option[String])
 GET         /studies/dataviews/addCumulativeCounts                                  controllers.dataset.DataViewDispatcher.addCumulativeCounts(dataViewId: BSONObjectID, fieldNames: Seq[String])

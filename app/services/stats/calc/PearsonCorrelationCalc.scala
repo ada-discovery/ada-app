@@ -76,6 +76,7 @@ object PearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq
       for (i <- 0 to n - 1) yield Seq.fill(i)(PersonIterativeAccum(0, 0, 0, 0, 0, 0))
     ) {
       case (accums, featureValues) =>
+        logger.info("Executing an iteration of Pearson correlation")
 
         def calcAux(accumFeatureValuePairs: Seq[(Seq[PersonIterativeAccum], Option[Double])]) =
           accumFeatureValuePairs.map { case (rowAccums, value1) =>

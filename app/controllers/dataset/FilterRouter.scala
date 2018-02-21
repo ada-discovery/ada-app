@@ -11,7 +11,8 @@ final class FilterRouter(dataSetId: String) extends GenericRouter(routes.FilterD
   val save = routeFun(_.save)
   val update = routes.update _ map route
   val delete = routes.delete _ map route
-  val idAndNames = routeFun(_.getIdAndNames)
+//  val idAndNames = routeFun(_.idAndNames)
+  val idAndNamesAccessible = routeFun(_.idAndNamesAccessible)
 }
 
 final class FilterJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.FilterDispatcher, "dataSet", dataSetId) {

@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.elements.{inputText, labelValue, value}
+@import views.html.elements.{inputText, labelValue, checkbox, value}
 @import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
 @import views.html.filters.displayConditions
 @import controllers.dataset.FilterRouter
@@ -20,6 +20,7 @@
 
 @elements = {
     @inputText("filter", "name", form)
+    @checkbox("filter", "isPrivate", form)
     @value("filter", "Created By", form.value.map(_.createdBy.map(_.ldapDn)).flatten.getOrElse("") )
     @value("filter", "Time Created",  form.value.map(_.timeCreated.map(_.format("yyyy-MM-dd HH:mm:ss"))).flatten.getOrElse(""))
     @labelValue("conditions", "Conditions") {

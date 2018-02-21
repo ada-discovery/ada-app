@@ -100,6 +100,7 @@ class CreateTwoFeatureViews extends DsaInputFutureRunnable[CreateTwoFeatureViews
       distributionWidgets ++ boxPlotWidgets,
       spec.defaultElementGridWidth,
       false,
+      false,
       true
     )
   }
@@ -115,6 +116,7 @@ class CreateTwoFeatureViews extends DsaInputFutureRunnable[CreateTwoFeatureViews
       Nil,
       spec.defaultElementGridWidth,
       true,
+      false,
       true
     )
 

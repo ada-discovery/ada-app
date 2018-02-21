@@ -13,7 +13,7 @@ import models._
 import models.DataSetFormattersAndIds._
 import models.json.EitherFormat
 import models.FilterCondition.{FilterIdentity, filterFormat}
-import models.security.UserManager
+import models.security.{SecurityRole, UserManager}
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import dataaccess.Criterion._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -73,11 +73,12 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       "widgetSpecs" -> seq(of[WidgetSpec]),
       "elementGridWidth" -> default(number(min = 1, max = 12), 3),
       "default" -> boolean,
+      "isPrivate" -> boolean,
       "useOptimizedRepoChartCalcMethod" -> boolean
     ) {
-       DataView(_, _, _, _, _, _, _, _)
+       DataView(_, _, _, _, _, _, _, _, _)
      }
-    ((item: DataView) => Some((item._id, item.name, item.filterOrIds, item.tableColumnNames, item.widgetSpecs, item.elementGridWidth, item.default, item.useOptimizedRepoChartCalcMethod)))
+    ((item: DataView) => Some((item._id, item.name, item.filterOrIds, item.tableColumnNames, item.widgetSpecs, item.elementGridWidth, item.default, item.isPrivate, item.useOptimizedRepoChartCalcMethod)))
   )
 
   // router for requests; to be passed to views as helper.
@@ -228,6 +229,55 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 //        sort = Seq(AscSort("name")),
         projection = Seq("name", "default", "elementGridWidth", "timeCreated")
       )
+    } yield {
+      val sorted = dataViews.toSeq.sortBy(dataView =>
+        (!dataView.default, dataView.name)
+      )
+      val idAndNames = sorted.map( dataView =>
+        Json.obj(
+          "_id" -> dataView._id,
+          "name" -> dataView.name,
+          "default" -> dataView.default
+        )
+      )
+      Ok(JsArray(idAndNames))
+    }
+  }
+
+  override def idAndNamesAccessible = Action.async { implicit request =>
+    // auxiliary function to find data views for given criteria
+    def findAux(criteria: Seq[Criterion[Any]]) = repo.find(
+      criteria = criteria,
+      projection = Seq("name", "default", "elementGridWidth", "timeCreated", "isPrivate", "createdById")
+    )
+
+    for {
+      user <- currentUser(request)
+
+      dataViews <- {
+        user match {
+          case None => Future(Nil)
+
+          case Some(user) =>
+            val isAdmin = user.roles.contains(SecurityRole.admin)
+            // admin     => get all; non-admin => not private or owner
+            if (isAdmin)
+              findAux(Nil)
+            else
+              findAux(Nil).map { views =>
+                views.filter { view =>
+                  !view.isPrivate || (view.createdById.isDefined && view.createdById.equals(user._id))
+                }
+              }
+              // TODO: fix Apache ignite to support boolean conditions
+
+//              findAux(Seq("isPrivate" #== falsefid)).flatMap { nonPrivateViews =>
+//                findAux(Seq("createdById" #== user._id)).map { ownedViews =>
+//                  (nonPrivateViews ++ ownedViews).toSet
+//                }
+//              }
+        }
+      }
     } yield {
       val sorted = dataViews.toSeq.sortBy(dataView =>
         (!dataView.default, dataView.name)

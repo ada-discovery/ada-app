@@ -12,7 +12,8 @@ final class DataViewRouter(dataSetId: String) extends GenericRouter(routes.DataV
   val update = routes.update _ map route
   val delete = routes.delete _ map route
   val copy = routes.copy _ map route
-  val idAndNames = routeFun(_.idAndNames)
+//  val idAndNames = routeFun(_.idAndNames)
+  val idAndNamesAccessible = routeFun(_.idAndNamesAccessible)
   val getAndShowView = routes.getAndShowView _ map route
   val updateAndShowView = routes.updateAndShowView _ map route
 }

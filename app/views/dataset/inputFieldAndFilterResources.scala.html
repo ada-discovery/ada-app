@@ -22,7 +22,7 @@
         )
 
         $.ajax({
-            url: '@Html(filterRouter.idAndNames.url)',
+            url: '@Html(filterRouter.idAndNamesAccessible.url)',
             success: function (data) {
                 var typeaheadData = data.map(function (item, index) {
                     return {name: item._id.$oid, label: item.name};

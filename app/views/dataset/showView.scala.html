@@ -97,7 +97,7 @@
         Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(viewPart.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))))),
         filterShowFieldStyle,
         Some(filterJsRouter),
-        Some(filterRouter.idAndNames),
+        Some(filterRouter.idAndNamesAccessible),
         s"filter$index"
     )
 }
@@ -108,7 +108,7 @@
         dataSetRouter.getView(dataViewId, Nil, Nil, true),
         Right(dataSetRouter.allFieldNamesAndLabels),
         Some(filterJsRouter),
-        Some(filterRouter.idAndNames),
+        Some(filterRouter.idAndNamesAccessible),
         "filterOrIds",
         s"filter$index",
         Some(createSubmissionJsonJsFunction(index)),

@@ -18,7 +18,7 @@
                 var currentDataViewId = currentParams["dataViewId"]
 
                 $.ajax({
-                    url: '@Html(new DataViewRouter(dataSetId).idAndNames.url)',
+                    url: '@Html(new DataViewRouter(dataSetId).idAndNamesAccessible.url)',
                     success: function (data) {
                         if (data.length > 0) {
                             $.each(data, function (index, dataView) {

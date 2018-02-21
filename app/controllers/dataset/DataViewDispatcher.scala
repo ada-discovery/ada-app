@@ -53,7 +53,9 @@ class DataViewDispatcher @Inject()(
 
   override def save = dispatch(_.save)
 
-  override def idAndNames = dispatch(_.idAndNames)
+  override def idAndNames = dispatchIsAdmin(_.idAndNames)
+
+  override def idAndNamesAccessible = dispatch(_.idAndNamesAccessible)
 
   override def getAndShowView(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.getAndShowView(id))
 
@@ -133,5 +135,14 @@ class DataViewDispatcher @Inject()(
       }
 
     dispatchIsAdminOrOwnerAux(objectOwnerFun, currentUserFun)(action)
+  }
+
+  protected def dispatchIsAdmin(
+    action: DataViewController => Action[AnyContent]
+  ): Action[AnyContent] = {
+    val currentUserFun = {
+      request: Request[_] => currentUser(request)
+    }
+    dispatchIsAdminAux(currentUserFun)(action)
   }
 }

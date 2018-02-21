@@ -50,9 +50,11 @@ class FilterDispatcher @Inject()(
 
   override def save = dispatch(_.save)
 
-  override def saveAjax(filter: Filter): Action[AnyContent] = dispatch(_.saveAjax(filter))
+  override def saveAjax(filter: Filter) = dispatch(_.saveAjax(filter))
 
-  override def getIdAndNames: Action[AnyContent] = dispatch(_.getIdAndNames)
+  override def idAndNames = dispatch(_.idAndNames)
+
+  override def idAndNamesAccessible  = dispatch(_.idAndNamesAccessible)
 
   protected def dispatchIsAdminOrOwner(
     id: BSONObjectID,

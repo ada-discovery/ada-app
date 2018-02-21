@@ -123,15 +123,17 @@ class AuthController @Inject() (
       idPassword =>
         for {
           authenticationSuccessful <- userManager.authenticate(idPassword._1, idPassword._2)
+
           userOption <- userManager.findById(idPassword._1)
+
           response <-
             if (!authenticationSuccessful)
               Future(authenticationUnsuccessfulResult)
-           else
-            userOption match {
-              case Some(user) => loginSuccessfulResult(user.ldapDn)
-              case None => Future(userNotFoundResult)
-            }
+            else
+              userOption match {
+                case Some(user) => loginSuccessfulResult(user.ldapDn)
+                case None => Future(userNotFoundResult)
+              }
         } yield
           response
     )

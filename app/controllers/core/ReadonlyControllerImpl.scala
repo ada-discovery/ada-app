@@ -105,7 +105,11 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
     * @param orderBy Column to be sorted
     * @param filter Filter applied on items
     */
-  def find(page: Int, orderBy: String, filter: Seq[FilterCondition]) = Action.async { implicit request =>
+  def find(
+    page: Int,
+    orderBy: String,
+    filter: Seq[FilterCondition]
+  ) = Action.async { implicit request =>
     {
       for {
         (items, count) <- getFutureItemsAndCount(page, orderBy, filter)

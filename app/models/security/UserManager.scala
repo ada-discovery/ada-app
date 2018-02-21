@@ -126,10 +126,9 @@ private class UserManagerImpl @Inject()(
   override def authenticate(id: String, password: String): Future[Boolean] = {
     val dn = "uid=" + id + ",cn=users," + ldapSettings.dit
 
-    // TODO: is exists needed?
     Future {
-      val exists = ldapUserService.getAll.find(_.uid == id).nonEmpty
-      exists && connector.canBind(dn, password)
+//      val exists = ldapUserService.getAll.find(_.uid == id).nonEmpty
+      connector.canBind(dn, password)
     }
   }
 

@@ -8,7 +8,10 @@ import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
 
 trait DataViewController extends CrudController[BSONObjectID] {
+
   def idAndNames: Action[AnyContent]
+
+  def idAndNamesAccessible: Action[AnyContent]
 
   def getAndShowView(id: BSONObjectID): Action[AnyContent]
 
