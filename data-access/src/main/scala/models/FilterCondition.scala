@@ -3,7 +3,7 @@ package models
 import java.util.Date
 
 import dataaccess._
-import models.json.{EitherFormat, EnumFormat}
+import models.json.{EitherFormat, EnumFormat, OptionFormat}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
@@ -35,6 +35,7 @@ case class Filter(
   _id: Option[BSONObjectID],
   name: Option[String],
   conditions: Seq[FilterCondition],
+  isPrivate: Boolean = false,
   createdById: Option[BSONObjectID] = None,
   timeCreated: Option[Date] = Some(new Date()),
   var createdBy: Option[User] = None
@@ -52,16 +53,19 @@ object FilterShowFieldStyle extends Enumeration {
 
 object FilterCondition {
   implicit val conditionTypeFormat = EnumFormat.enumFormat(ConditionType)
+
   implicit val filterConditionFormat = Json.format[FilterCondition]
+
   implicit val filterFormat: Format[Filter] = (
     (__ \ "_id").formatNullable[BSONObjectID] and
     (__ \ "name").formatNullable[String] and
     (__ \ "conditions").format[Seq[FilterCondition]] and
+    (__ \ "isPrivate").format[Boolean] and
     (__ \ "createdById").formatNullable[BSONObjectID] and
     (__ \ "timeCreated").formatNullable[Date]
   )(
-    Filter(_, _, _, _, _),
-    (item: Filter) =>  (item._id, item.name, item.conditions, item.createdById, item.timeCreated)
+    Filter(_, _, _, _, _, _),
+    (item: Filter) =>  (item._id, item.name, item.conditions, item.isPrivate, item.createdById, item.timeCreated)
   )
 
   implicit object FilterIdentity extends BSONObjectIdentity[Filter] {
