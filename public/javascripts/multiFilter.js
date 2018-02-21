@@ -316,7 +316,7 @@ $.widget( "custom.multiFilter", {
 
     saveFilter: function () {
         var name = this.saveFilterNameElement.val();
-        var fullFilter = {_id: null, name: name, timeCreated: 0, conditions: this.jsonConditions};
+        var fullFilter = {_id: null, name: name, isPrivate: false, timeCreated: 0, conditions: this.jsonConditions};
         filterJsRoutes.controllers.dataset.FilterDispatcher.saveAjax(JSON.stringify(fullFilter)).ajax( {
             success: function(data) {
                 showMessage("Filter '" + name + "' successfully saved.");
