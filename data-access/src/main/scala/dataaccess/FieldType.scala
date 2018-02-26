@@ -92,5 +92,7 @@ trait FieldType[T] {
 }
 
 private abstract class FormatFieldType[T: Format] extends FieldType[T] {
-  override protected def valueToJsonNonEmpty(value: T): JsValue = Json.toJson(value)
+
+  override protected def valueToJsonNonEmpty(value: T): JsValue =
+    Json.toJson(value)
 }

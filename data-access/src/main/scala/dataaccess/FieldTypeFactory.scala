@@ -114,6 +114,13 @@ private case class DoubleFieldType(
         case  _ => throw new AdaConversionException(s"Json $json is not double.")
     }
 
+  override protected def valueToJsonNonEmpty(value: Double) =
+    // need to handle positive and negative infinity, which cannot be transformed to BigDecimal and so either to JSON
+    if (value.isInfinity)
+      JsNull
+    else
+      Json.toJson(value)
+
   override protected def jsonToValueWoNull(json: JsReadable) =
     displayJsonToValueWoString(json)
 }
