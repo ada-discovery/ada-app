@@ -378,6 +378,8 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
             val values = jsons.flatMap(json => typedFieldType.jsonToValue(json \ groupField.name))
             values.toSet.toSeq.map { json: JsObject => (Json.stringify(json), json) }.sortBy(_._1)
           }
+
+        case _ => Future(Nil)
       }
 
       seriesCounts <- {
@@ -539,6 +541,8 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         val undefinedGroupJsons = values.find(_._1.isEmpty).map(_._2).getOrElse(Nil)
 
         groupedJsons ++ Seq(("Undefined", undefinedGroupJsons))
+
+      case _ => Seq(("All", items))
     }
 
     groupedValues.map { case (groupName, jsons) =>

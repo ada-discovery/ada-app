@@ -30,9 +30,10 @@ private class SynapseDataSetImporter @Inject() (
   private val synapseBulkDownloadAttemptNumber = 4
   private val synapseDefaultBulkDownloadGroupNumber = 5
   private val keyField = "ROW_ID"
+  private val maxEnumValuesCount = 150
 
   private val synapseFtf = FieldTypeHelper.fieldTypeFactory(FieldTypeHelper.nullAliases ++ Set("nan"))
-  private val fti = FieldTypeHelper.fieldTypeInferrerFactory(synapseFtf).apply
+  private val fti = FieldTypeHelper.fieldTypeInferrerFactory(synapseFtf, maxEnumValuesCount).apply
 
   private val prefixSuffixSeparators = Seq(
     ("\"[\"\"", "\"\"]\""),

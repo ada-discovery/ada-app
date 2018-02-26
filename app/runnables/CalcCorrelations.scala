@@ -5,6 +5,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.{util => ju}
 
+import akka.stream.scaladsl.{FileIO, Framing, Sink, Source}
+import akka.util.ByteString
 import com.google.inject.Inject
 import persistence.dataset.DataSetAccessorFactory
 import util.{seqFutures, writeByteArrayStream}

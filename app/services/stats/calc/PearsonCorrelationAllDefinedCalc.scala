@@ -38,7 +38,7 @@ object PearsonCorrelationAllDefinedCalc extends Calculator[IN, OUT, INTER, Unit,
       )
     ) {
       case (accumGlobal, featureValues) =>
-        logger.info("Executing an iteration of Pearson correlation")
+//        logger.info("Executing an iteration of Pearson correlation")
         val newSumSqSums = (accumGlobal.sumSqSums, featureValues).zipped.map { case ((sum, sqSum), value) =>
           (sum + value, sqSum + value * value)
         }

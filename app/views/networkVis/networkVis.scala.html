@@ -8,6 +8,7 @@
 
 @(
     domainName: String,
+    threshold: Double,
     nodes: Traversable[VisNode],
     edges: Traversable[VisEdge]
 )(implicit context: WebContext)
@@ -46,31 +47,35 @@
     <ul class="sidebar-nav nav nav-pills nav-stacked">
         @topItem("1. mPower", 1)
         <div id="submenu-1" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
-            @listItem(challengeRoutes.mPowerTeamNetwork, "Teams", Some(2))
-            @listItem(challengeRoutes.mPowerSubmissionNetwork, "Submissions", Some(2))
+            @listItem(challengeRoutes.mPowerTeamNetwork(), "Teams", Some(2))
+            @listItem(challengeRoutes.mPowerSubmissionNetwork(), "Submissions", Some(2))
         </div>
         @topItem("2.1 Tremor", 2)
         <div id="submenu-2" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
-            @listItem(challengeRoutes.tremorTeamNetwork, "Teams", Some(2))
-            @listItem(challengeRoutes.tremorSubmissionNetwork, "Submissions", Some(2))
+            @listItem(challengeRoutes.tremorTeamNetwork(), "Teams", Some(2))
+            @listItem(challengeRoutes.tremorSubmissionNetwork(), "Submissions", Some(2))
         </div>
 
         @topItem("2.2 Dyskinesia", 3)
         <div id="submenu-3" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
-            @listItem(challengeRoutes.dyskinesiaTeamNetwork, "Teams", Some(2))
-            @listItem(challengeRoutes.dyskinesiaSubmissionNetwork, "Submissions", Some(2))
+            @listItem(challengeRoutes.dyskinesiaTeamNetwork(), "Teams", Some(2))
+            @listItem(challengeRoutes.dyskinesiaSubmissionNetwork(), "Submissions", Some(2))
         </div>
 
         @topItem("2.3 Bradykinesia", 4)
         <div id="submenu-4" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
-            @listItem(challengeRoutes.bradykinesiaTeamNetwork, "Teams", Some(2))
-            @listItem(challengeRoutes.bradykinesiaSubmissionNetwork, "Submissions", Some(2))
+            @listItem(challengeRoutes.bradykinesiaTeamNetwork(), "Teams", Some(2))
+            @listItem(challengeRoutes.bradykinesiaSubmissionNetwork(), "Submissions", Some(2))
         </div>
     </ul>
 }
 
 @option(i: Int) = {
     <option value="@{i*5}">Top @{i*5}</option>
+}
+
+@thresholdOption(i: Int) = {
+    <option value="0.@i" @if(threshold.toString.equals(s"0.$i")) {selected="selected"}>0.@i</option>
 }
 
 @main(Messages("network.title", domainName), Some(sideBar)) {
@@ -114,9 +119,20 @@
             <div class="row">
                 <div class="panel panel-default" style="margin-top: 20px">
                     <div class="panel-body">
-                        <select id="topTeamSelection" name="topTeamSelection" onchange="selectTeams()" >
-                            <option value="">Show All</option>
+                        <span style="padding-top: 5px">Show</span>
+                        <select class="pull-right" id="topTeamSelection" name="topTeamSelection" onchange="selectTeams()" >
+                            <option value="">All</option>
                             @{for(i <- 1 until nodes.size / 5) yield option(i)}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="panel panel-default" style="margin-top: 20px">
+                    <div class="panel-body">
+                        <span style="padding-top: 5px">Threshold</span>
+                        <select class="pull-right" id="corrThreshold" name="corrThreshold" onchange="resubmit()">
+                            @{for (i <- 1 to 9) yield thresholdOption(i)}
                         </select>
                     </div>
                 </div>
@@ -142,7 +158,7 @@
         function draw(selectedNodes) {
             // Instantiate our network object.
             var container = document.getElementById('mynetwork');
-            var physicsEnabled = (selectedNodes.length <= 30)
+            var physicsEnabled = true // (selectedNodes.length <= 30)
             var data = {
                 nodes: selectedNodes,
                 edges: edges
@@ -165,14 +181,24 @@
             network.fit();
 
             network.on("click", function (params) {
-                var node = getNode(params.nodes[0])
-                $("#teamInfoDiv").html("")
-                $("#teamInfoDiv").append("<h4><b>" + node.label + "</b></h4><hr/>")
-                $.each(node.data, function (key, value) {
-                    if (value && (!Array.isArray(value) || value.length > 0)) {
-                        $("#teamInfoDiv").append(key + " : " + value + "</br>")
-                    }
-                })
+                console.log(params)
+                if (params.nodes.length > 0) {
+                    var node = getNode(params.nodes[0])
+                    $("#teamInfoDiv").html("")
+                    $("#teamInfoDiv").append("<h4><b>" + node.label + "</b></h4><hr/>")
+                    $.each(node.data, function (key, value) {
+                        if (value && (!Array.isArray(value) || value.length > 0)) {
+                            $("#teamInfoDiv").append(key + " : " + value + "</br>")
+                        }
+                    })
+                } else {
+                    var edge = getEdge(params.edges[0])
+                    var from = getNode(edge.from)
+                    var to = getNode(edge.to)
+                    $("#teamInfoDiv").html("")
+                    $("#teamInfoDiv").append("<h4>" + from.label + " <-> " + to.label + "</h4><hr/>")
+                    $("#teamInfoDiv").append(edge.title)
+                }
             });
         }
 
@@ -201,6 +227,13 @@
             return found
         }
 
+        function getEdge(edgeId) {
+            var found = edges.find(function (edge) {
+                return edge.id == edgeId;
+            });
+            return found
+        }
+
         function selectTeams() {
             var teamsNum = $("#topTeamSelection").val()
             var selectedNodes = nodes
@@ -208,6 +241,15 @@
                 selectedNodes = nodes.slice(0, teamsNum)
             }
             draw(selectedNodes)
+        }
+
+        function resubmit() {
+            var url = window.location.href
+
+            var corrThreshold = $("#corrThreshold").val()
+            var params = {};
+            params['corrThreshold'] = corrThreshold;
+            submit('get', url, params)
         }
 
         $(function () {
