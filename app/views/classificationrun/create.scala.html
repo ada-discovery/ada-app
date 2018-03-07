@@ -36,7 +36,7 @@
             populateFieldTypeahedFromUrl(
                 $('#outputFieldTypeahead'),
                 $('#outputFieldName'),
-                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
                 @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
             )
 

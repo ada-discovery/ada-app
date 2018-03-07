@@ -4,10 +4,9 @@ import java.{util => ju}
 import javax.inject.{Inject, Singleton}
 
 import _root_.util.{GrouppedVariousSize, _}
-import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source}
-import akka.stream.{ActorMaterializer, ClosedShape}
+import akka.stream.scaladsl.{Source}
+import akka.stream.{ActorMaterializer}
 import com.google.inject.ImplementedBy
 import dataaccess.Criterion.Infix
 import dataaccess.JsonUtil.project
@@ -33,87 +32,101 @@ import scala.collection.JavaConversions._
 @ImplementedBy(classOf[StatsServiceImpl])
 trait StatsService {
 
-  def calcDistributionCounts(
+  //////////////////////////////////
+  // Unique Counts / Distribution //
+  //////////////////////////////////
+
+  type UniqueCount[T] = UniqueDistributionCountsCalcIOType.OUT[T]
+  type GroupUniqueCount[G, T] = GroupUniqueDistributionCountsCalcIOType.OUT[G, T]
+
+  type NumericCount = NumericDistributionCountsCalcIOType.OUT
+  type GroupNumericCount[G] = GroupNumericDistributionCountsCalcIOType.OUT[G]
+
+  def calcUniqueDistributionCounts(
     items: Traversable[JsObject],
-    field: Field,
-    numericBinCount: Option[Int]
-  ): Traversable[Count[_]]
-
-  def calcGroupedDistributionCounts(
-    items: Traversable[JsObject],
-    field: Field,
-    groupField: Field,
-    numericBinCount: Option[Int]
-  ): Traversable[(String, Traversable[Count[_]])]
-
-  def calcDistributionCounts(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    field: Field,
-    numericBinCount: Option[Int]
-  ): Future[Traversable[Count[_]]]
-
-  def calcGroupedDistributionCounts(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    field: Field,
-    groupField: Field,
-    numericBinCount: Option[Int]
-  ): Future[Traversable[(String, Traversable[Count[_]])]]
-
-  def calcDistributionCountsStreamed[T](
-    source: Source[Option[T], _],
     field: Field
-  ): Future[Traversable[Count[String]]]
+  ): UniqueCount[Any]
+
+  def calcUniqueDistributionCounts(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    field: Field
+  ): Future[UniqueCount[Any]]
+
+  def calcUniqueDistributionCountsStreamed[T](
+    source: Source[Option[T], _]
+  ): Future[UniqueCount[T]]
+
+  // grouped
+
+  def calcGroupedUniqueDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Field
+  ): GroupUniqueCount[Any, Any]
+
+  def calcGroupedUniqueDistributionCounts(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    field: Field,
+    groupField: Field
+  ): Future[GroupUniqueCount[Any, Any]]
+
+  def calcGroupedUniqueDistributionCountsStreamed[G, T](
+    source: Source[(Option[G], Option[T]), _]
+  ): Future[GroupUniqueCount[G, T]]
+
+  ///////////////////////////////////
+  // Numeric Counts / Distribution //
+  ///////////////////////////////////
+
+  def calcNumericDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    numericBinCountOption: Option[Int]
+  ): NumericCount
+
+  def calcNumericDistributionCounts(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    field: Field,
+    numericBinCountOption: Option[Int]
+  ): Future[NumericCount]
 
   def calcNumericDistributionCountsStreamed[T: Numeric](
     source: Source[Option[T], _],
-    options: NumericDistributionSinkOptions[T],
-    convert: Option[BigDecimal => Any] = None
-  ): Future[Traversable[Count[_]]]
+    options: NumericDistributionSinkOptions[T]
+  ): Future[NumericCount]
 
-  def calcGroupedDistributionCountsStreamed[G, T](
-    source: Source[(Option[G], Option[T]), _],
+  // grouped
+
+  def calcGroupedNumericDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field,
     groupField: Field,
-    field: Field
-  ): Future[Traversable[(String, Traversable[Count[String]])]]
+    numericBinCountOption: Option[Int]
+  ): GroupNumericCount[Any]
+
+  def calcGroupedNumericDistributionCounts(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    field: Field,
+    groupField: Field,
+    numericBinCountOption: Option[Int]
+  ): Future[GroupNumericCount[Any]]
 
   def calcGroupedNumericDistributionCountsStreamed[G, T: Numeric](
     source: Source[(Option[G], Option[T]), _],
-    options: NumericDistributionSinkOptions[T],
-    groupField: Field,
-    convert: Option[BigDecimal => Any]
-  ): Future[Traversable[(String, Traversable[Count[_]])]]
+    options: NumericDistributionSinkOptions[T]
+  ): Future[GroupNumericCount[G]]
+
+  // cumulative counts
 
   def calcCumulativeCounts(
     items: Traversable[JsObject],
     field: Field,
     groupField: Option[Field]
   ): Seq[(String, Traversable[Count[Any]])]
-
-  // to remove
-
-  def createStringCounts[T](
-    counts: Traversable[(Option[T], Int)],
-    fieldType: FieldType[T]
-  ): Traversable[Count[String]]
-
-  def createGroupStringCounts[G, T](
-    groupCounts: Traversable[(Option[G], Traversable[(Option[T], Int)])],
-    groupFieldType: FieldType[G],
-    fieldType: FieldType[T]
-  ): Seq[(String, Traversable[Count[String]])]
-
-  def convertNumericalCounts(
-    counts: Traversable[(BigDecimal, Int)],
-    convert: Option[BigDecimal => Any] = None
-  ): Seq[Count[_]]
-
-  def convertGroupNumericalCounts[G, T](
-    groupCounts: Traversable[(Option[G], Traversable[(BigDecimal, Int)])],
-    groupFieldType: FieldType[G],
-    convert: Option[BigDecimal => Any] = None
-  ): Seq[(String, Traversable[Count[_]])]
 
   // quartiles
 
@@ -236,188 +249,142 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
-  ///////////////////
-  // Distributions //
-  ///////////////////
+  ////////////////////////////////
+  // Unique Distribution Counts //
+  ////////////////////////////////
 
-  override def calcDistributionCounts(
+  override def calcUniqueDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field
+  ): UniqueCount[Any] = {
+    val jsonToValue = jsonToArrayValue[Any](field)
+    val values = items.map(jsonToValue).flatten
+    UniqueDistributionCountsCalc[Any].fun()(values)
+  }
+
+  override def calcUniqueDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
-    field: Field,
-    numericBinCountOption: Option[Int]
-  ): Future[Traversable[Count[_]]] = {
+    field: Field
+  ): Future[UniqueCount[Any]] = {
     val spec = field.fieldTypeSpec
-    val fieldType = ftf(spec)
-    val fieldTypeId = spec.fieldType
-    val numericBinCount = numericBinCountOption.getOrElse(defaultNumericBinCount)
+    field.fieldType match {
+      // repo optimized unique distribution counts can be fully utilized only for enum and boolean types for which the (distinct) values are known
+      case FieldTypeId.Enum =>
+        val values = spec.enumValues.map(_.map(_._1).toSeq.sorted).getOrElse(Nil)
+        calcUniqueCountsFromRepo(field.name, values, dataRepo, criteria)
 
-    fieldTypeId match {
-      case FieldTypeId.String =>
+      case FieldTypeId.Boolean =>
+        val values = Seq(true, false)
+        calcUniqueCountsFromRepo(field.name, values, dataRepo, criteria)
+
+      case _ =>
         for {
           jsons <- dataRepo.find(criteria = criteria, projection = Seq(field.name))
         } yield {
-          val typedFieldType = fieldType.asValueOf[String]
-          val values = jsons.map(json => typedFieldType.jsonToValue(json \ field.name))
-          val counts = UniqueDistributionCountsCalc[String].fun()(values)
-
-          createStringCounts(counts, fieldType.asValueOf[String])
+          val fieldType = ftf(spec).asValueOf[Any]
+          val values = jsons.map(json => fieldType.jsonToValue(json \ field.name))
+          UniqueDistributionCountsCalc[Any].fun()(values)
         }
-
-      case FieldTypeId.Enum => {
-        val values = spec.enumValues.map(_.map(_._1).toSeq.sorted).getOrElse(Nil)
-        for {
-          counts <- categoricalCountsRepo(field.name, values, dataRepo, criteria)
-        } yield
-          createStringCounts(counts, fieldType.asValueOf[Int])
-      }
-
-      case FieldTypeId.Boolean => {
-        val values = Seq(true, false)
-        for {
-          counts <- categoricalCountsRepo(field.name, values, dataRepo, criteria)
-        } yield
-          createStringCounts(counts, fieldType.asValueOf[Boolean])
-      }
-
-      case FieldTypeId.Double =>
-        for {
-          numCounts <-
-            numericalCountsRepo(
-              BigDecimal(_: Double), _.toDouble,
-              field.name, fieldType.asValueOf[Double], dataRepo, criteria, numericBinCount, false, None, None
-            )
-        } yield
-          convertNumericalCounts(numCounts, None)
-
-      case FieldTypeId.Integer =>
-        for {
-          numCounts <-
-            numericalCountsRepo(
-              BigDecimal(_: Long), _.toDouble,
-              field.name, fieldType.asValueOf[Long], dataRepo, criteria, numericBinCount, true, None, None
-            )
-        } yield {
-          // TODO: fix this
-          val convert = None
-//            if (numCounts.length < 20)
-//              Some { value: BigDecimal => value.toLong }
-//            else
-//              None
-
-          convertNumericalCounts(numCounts, convert)
-        }
-
-      case FieldTypeId.Date => {
-        def convert(ms: BigDecimal) = new ju.Date(ms.setScale(0, BigDecimal.RoundingMode.CEILING).toLongExact)
-
-        for {
-          numCounts <-
-            numericalCountsRepo(
-              {x : ju.Date => BigDecimal(x.getTime)},
-              convert,
-              field.name, fieldType.asValueOf[ju.Date], dataRepo, criteria, numericBinCount, false, None, None
-            )
-        } yield
-          convertNumericalCounts(numCounts, Some(convert(_)))
-      }
-
-      case FieldTypeId.Null =>
-        for {
-          count <- dataRepo.count(criteria)
-        } yield
-          createStringCounts[Nothing](Seq((None, count)), fieldType.asValueOf[Nothing])
-
-      // for the json type we can't do anything
-      case FieldTypeId.Json =>
-        Future(Nil)
     }
   }
 
-  def calcGroupedDistributionCounts(
+  private def calcUniqueCountsFromRepo[T](
+    fieldName: String,
+    values: Traversable[T],
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]]
+  ): Future[Seq[(Option[T], Int)]] = {
+    val countFutures = values.par.map { value =>
+      val finalCriteria = criteria ++ Seq(fieldName #== value)
+      dataRepo.count(finalCriteria).map { count =>
+        (Some(value) : Option[T], count)
+      }
+    }.toList
+
+    val findNoneCriteria = criteria ++ Seq(fieldName #=@)
+    val naValueFuture = dataRepo.count(findNoneCriteria).map { count =>
+      (Option.empty[T], count)
+    }
+
+    Future.sequence(countFutures ++ Seq(naValueFuture))
+  }
+
+  override def calcUniqueDistributionCountsStreamed[T](
+    source: Source[Option[T], _]
+  ): Future[UniqueCount[T]] = {
+    val calc = UniqueDistributionCountsCalc[T]
+    for {
+    // run the stream with a selected sink and the results back
+      output <- {
+        val sink = calc.sink()
+        source.runWith(sink)
+      }
+    } yield
+      calc.postSink()(output)
+  }
+
+  override def calcGroupedUniqueDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Field
+  ): GroupUniqueCount[Any, Any] = {
+    val jsonValues = jsonToTuple[Any, Any](groupField, field)
+    val values = items.map(jsonValues)
+    GroupUniqueDistributionCountsCalc[Any, Any].fun()(values)
+  }
+
+  override def calcGroupedUniqueDistributionCounts(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
-    groupField: Field,
-    numericBinCountOption: Option[Int]
-  ): Future[Seq[(String, Traversable[Count[_]])]] = {
-
-    val groupFieldSpec = groupField.fieldTypeSpec
-    val groupFieldType = ftf(groupFieldSpec)
-    val groupFieldTypeId = groupFieldSpec.fieldType
-
+    groupField: Field
+  ): Future[GroupUniqueCount[Any, Any]] =
     for {
-      groupLabelValues <- groupFieldTypeId match {
-        case FieldTypeId.String =>
-          for {
-            jsons <- dataRepo.find(criteria = criteria, projection = Seq(groupField.name))
-          } yield {
-            val typedFieldType = groupFieldType.asValueOf[String]
-            val values = jsons.flatMap(json => typedFieldType.jsonToValue(json \ groupField.name))
-            values.toSet.toSeq.sorted.map(string => (string, string))
-          }
-
-        case FieldTypeId.Enum => {
-          val values = groupFieldSpec.enumValues.map(_.toSeq.sortBy(_._1).map { case (int, label) =>
-            (label, int)
-          }).getOrElse(Nil)
-          Future(values)
-        }
-
-        case FieldTypeId.Boolean =>
-          val values = Seq(
-            (groupFieldSpec.displayTrueValue.getOrElse("True"), true),
-            (groupFieldSpec.displayFalseValue.getOrElse("False"), false)
-          )
-          Future(values)
-
-        case FieldTypeId.Json =>
-          for {
-            jsons <- dataRepo.find(criteria = criteria, projection = Seq(groupField.name))
-          } yield {
-            val typedFieldType = groupFieldType.asValueOf[JsObject]
-            val values = jsons.flatMap(json => typedFieldType.jsonToValue(json \ groupField.name))
-            values.toSet.toSeq.map { json: JsObject => (Json.stringify(json), json) }.sortBy(_._1)
-          }
-
-        case _ => Future(Nil)
-      }
+      groupValues <- groupValues(dataRepo, criteria, groupField)
 
       seriesCounts <- {
         val groupFieldName = groupField.name
-        val countFutures = groupLabelValues.par.map { case (label, value) =>
+        val countFutures = groupValues.par.map { value =>
           val finalCriteria = criteria ++ Seq(groupFieldName #== value)
-          calcDistributionCounts(dataRepo, finalCriteria, field, numericBinCountOption).map { counts =>
-            (label, counts)
+          calcUniqueDistributionCounts(dataRepo, finalCriteria, field).map { counts =>
+            (Some(value), counts)
           }
         }.toList
 
         val undefinedGroupCriteria = criteria ++ Seq(groupFieldName #=@)
-        val naValueFuture = calcDistributionCounts(dataRepo, undefinedGroupCriteria, field, numericBinCountOption).map { counts =>
-          ("Undefined", counts)
+        val naValueFuture = calcUniqueDistributionCounts(dataRepo, undefinedGroupCriteria, field).map { counts =>
+          (None, counts)
         }
 
         Future.sequence(countFutures ++ Seq(naValueFuture))
       }
-    } yield {
-      val seriesCountsMap = seriesCounts.toMap
-      val seriesNames = groupLabelValues.map(_._1) ++ Seq("Undefined")
+    } yield
+      seriesCounts
 
-      // series counts sorted by the order of group labels
-      seriesNames.map { name =>
-        val counts = seriesCountsMap.get(name).get
-        (name, counts)
+  override def calcGroupedUniqueDistributionCountsStreamed[G, T](
+    source: Source[(Option[G], Option[T]), _]
+  ): Future[GroupUniqueCount[G, T]] = {
+    val calc = GroupUniqueDistributionCountsCalc[G, T]
+    for {
+    // run the stream with a selected sink and the results back
+      output <- {
+        val sink = calc.sink()
+        source.runWith(sink)
       }
-    }
+    } yield
+      calc.postSink()(output)
   }
 
-  override def calcDistributionCounts(
+  /////////////////////////////////
+  // Numeric Distribution Counts //
+  /////////////////////////////////
+
+  override def calcNumericDistributionCounts(
     items: Traversable[JsObject],
     field: Field,
     numericBinCountOption: Option[Int]
-  ): Traversable[Count[_]] = {
-    val spec = field.fieldTypeSpec
-    val fieldType = ftf(spec)
-
+  ): NumericCount = {
     val numericBinCount = numericBinCountOption.getOrElse(defaultNumericBinCount)
 
     def getValues[T]: Traversable[Option[T]] = {
@@ -425,23 +392,12 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       items.map(jsonToValue).flatten
     }
 
-    def calcUniqueCounts[T] = {
-      val counts = UniqueDistributionCountsCalc[T].fun()(getValues[T])
-      createStringCounts(counts, fieldType.asValueOf[T])
-    }
-
     def calcNumericCounts[T: Numeric](
       values: Traversable[Option[T]],
-      options: NumericDistributionOptions[T],
-      convert: Option[BigDecimal => Any] = None
-    ) = {
-      val numCounts = NumericDistributionCountsCalc[T].fun(options)(values)
-      convertNumericalCounts(numCounts, convert)
-    }
+      options: NumericDistributionOptions[T]
+    ) = NumericDistributionCountsCalc[T].fun(options)(values)
 
-    spec.fieldType match {
-      case FieldTypeId.String | FieldTypeId.Enum | FieldTypeId.Boolean | FieldTypeId.Null => calcUniqueCounts
-
+    field.fieldType match {
       case FieldTypeId.Double =>
         val options = NumericDistributionOptions[Double](numericBinCount)
         calcNumericCounts(getValues[Double], options)
@@ -461,118 +417,168 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
           valueCount < numericBinCount
         )
 
-        // TODO: fix this
-        val convert = None
-//          if (valueCount < numericBinCount)
-//            Some { value: BigDecimal => value.toLong }
-//          else
-//            None
-
-        calcNumericCounts(values, options, convert)
+        calcNumericCounts(values, options)
 
       case FieldTypeId.Date =>
         val values = getValues[ju.Date].map(_.map(_.getTime))
         val options = NumericDistributionOptions[Long](numericBinCount)
-        def convert(ms: BigDecimal) = new ju.Date(ms.setScale(0, BigDecimal.RoundingMode.CEILING).toLongExact)
-        calcNumericCounts[Long](values, options, Some(convert(_)))
+        calcNumericCounts[Long](values, options)
 
-      // for the json type we can't do anything
-      case FieldTypeId.Json =>
-        Nil
+      case _ => Nil
     }
   }
 
-  override def calcGroupedDistributionCounts(
+  override def calcNumericDistributionCounts(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    field: Field,
+    numericBinCountOption: Option[Int]
+  ): Future[NumericCount] = {
+    val spec = field.fieldTypeSpec
+    val fieldType = ftf(spec)
+    val fieldTypeId = spec.fieldType
+    val numericBinCount = numericBinCountOption.getOrElse(defaultNumericBinCount)
+
+    fieldTypeId match {
+
+      case FieldTypeId.Double =>
+        calcNumericalCountsFromRepo(
+          BigDecimal(_: Double), _.toDouble,
+          field.name, fieldType.asValueOf[Double], dataRepo, criteria, numericBinCount, false, None, None
+        )
+
+      case FieldTypeId.Integer =>
+        calcNumericalCountsFromRepo(
+          BigDecimal(_: Long), _.toDouble,
+          field.name, fieldType.asValueOf[Long], dataRepo, criteria, numericBinCount, true, None, None
+        )
+
+      case FieldTypeId.Date =>
+        def convert(ms: BigDecimal) = new ju.Date(ms.setScale(0, BigDecimal.RoundingMode.CEILING).toLongExact)
+
+        calcNumericalCountsFromRepo(
+          {x : ju.Date => BigDecimal(x.getTime)},
+          convert,
+          field.name, fieldType.asValueOf[ju.Date], dataRepo, criteria, numericBinCount, false, None, None
+        )
+
+      case _ =>
+        Future(Nil)
+    }
+  }
+
+  override def calcNumericDistributionCountsStreamed[T: Numeric](
+    source: Source[Option[T], _],
+    options: NumericDistributionSinkOptions[T]
+  ): Future[NumericCount] = {
+    val calc = NumericDistributionCountsCalc[T]
+    for {
+      // run the stream with a selected sink and process with a post-sink
+      output <- {
+        val sink = calc.sink(options)
+        source.runWith(sink)
+      }
+    } yield
+      calc.postSink(options)(output)
+  }
+
+  // grouped
+
+  override def calcGroupedNumericDistributionCounts(
     items: Traversable[JsObject],
     field: Field,
     groupField: Field,
     numericBinCountOption: Option[Int]
-  ): Seq[(String, Traversable[Count[_]])] = {
-    val groupFieldSpec = groupField.fieldTypeSpec
-    val groupFieldType = ftf(groupFieldSpec)
-    val groupFieldTypeId = groupFieldSpec.fieldType
+  ): GroupNumericCount[Any] = {
+    val groupFieldType = ftf(groupField.fieldTypeSpec)
 
-    def groupValues[T]: Traversable[(Option[T], Traversable[JsObject])] = {
-      val typedFieldType = groupFieldType.asValueOf[T]
+    // group the jsons
+    val groupedJsons = items.map { json =>
+      val value = groupFieldType.jsonToValue(json \ groupField.name)
+      (value, json)
+    }.toGroupMap
 
-      val groupedJsons = items.map { json =>
-        val value = typedFieldType.jsonToValue(json \ groupField.name)
-        (value, json)
-      }.groupBy(_._1)
-
-      groupedJsons.map { case (groupName, values) => (groupName, values.map(_._2))}
+    // calculate numeric distribution counts for each group
+    groupedJsons.map { case (groupValue, jsons) =>
+      val counts = calcNumericDistributionCounts(jsons, field, numericBinCountOption)
+      (groupValue, counts)
     }
+  }
 
-    val groupedValues = groupFieldTypeId match {
+  override def calcGroupedNumericDistributionCounts(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    field: Field,
+    groupField: Field,
+    numericBinCountOption: Option[Int]
+  ): Future[GroupNumericCount[Any]] =
+    for {
+      groupVals <- groupValues(dataRepo, criteria, groupField)
 
-      case FieldTypeId.String =>
+      seriesCounts <- {
+        val groupFieldName = groupField.name
+        val countFutures = groupVals.par.map { value =>
+          val finalCriteria = criteria ++ Seq(groupFieldName #== value)
+          calcNumericDistributionCounts(dataRepo, finalCriteria, field, numericBinCountOption).map { counts =>
+            (Some(value), counts)
+          }
+        }.toList
 
-        val groupedJsons = groupValues[String].filter(_._1.isDefined).map {
-          case (option, jsons) => (option.get, jsons)
-        }.toSeq.sortBy(_._1)
+        val undefinedGroupCriteria = criteria ++ Seq(groupFieldName #=@)
+        val naValueFuture = calcNumericDistributionCounts(dataRepo, undefinedGroupCriteria, field, numericBinCountOption).map { counts =>
+          (None, counts)
+        }
 
-        val undefinedGroupJsons = groupValues[String].find(_._1.isEmpty).map(_._2).getOrElse(Nil)
-        groupedJsons ++ Seq(("Undefined", undefinedGroupJsons))
+        Future.sequence(countFutures ++ Seq(naValueFuture))
+      }
+    } yield
+      seriesCounts
+
+  override def calcGroupedNumericDistributionCountsStreamed[G, T: Numeric](
+    source: Source[(Option[G], Option[T]), _],
+    options: NumericDistributionSinkOptions[T]
+  ): Future[GroupNumericCount[G]] = {
+    val calc = GroupNumericDistributionCountsCalc[G, T]
+    for {
+    // run the stream with a selected sink and the results back
+      output <- {
+        val sink = calc.sink(options)
+        source.runWith(sink)
+      }
+    } yield
+      calc.postSink(options)(output)
+  }
+
+  private def groupValues(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    groupField: Field
+  ) = {
+    val groupFieldSpec = groupField.fieldTypeSpec
+
+    groupFieldSpec.fieldType match {
 
       case FieldTypeId.Enum =>
-        val jsonsMap = groupValues[Int].toMap
-        def getJsons(groupValue: Option[Int]) = jsonsMap.get(groupValue).getOrElse(Nil)
-
-        val groupedJsons = groupFieldSpec.enumValues.map(_.toSeq.sortBy(_._1).map { case (int, label) =>
-          (label, getJsons(Some(int)))
-        }).getOrElse(Nil)
-
-        groupedJsons ++ Seq(("Undefined", getJsons(None)))
+        val values = groupFieldSpec.enumValues.map(_.map(_._1)).getOrElse(Nil)
+        Future(values)
 
       case FieldTypeId.Boolean =>
-        val jsonsMap = groupValues[Boolean].toMap
-        def getJsons(groupValue: Option[Boolean]) = jsonsMap.get(groupValue).getOrElse(Nil)
+        Future(Seq(true, false))
 
-        Seq(
-          (groupFieldSpec.displayTrueValue.getOrElse("True"), getJsons(Some(true))),
-          (groupFieldSpec.displayFalseValue.getOrElse("False"), getJsons(Some(false))),
-          ("Undefined", getJsons(None))
-        )
-
-      case FieldTypeId.Json =>
-
-        val values = groupValues[JsObject]
-        val groupedJsons = values.collect { case (Some(value), jsons) => (Json.stringify(value), jsons)}.toSeq.sortBy(_._1)
-        val undefinedGroupJsons = values.find(_._1.isEmpty).map(_._2).getOrElse(Nil)
-
-        groupedJsons ++ Seq(("Undefined", undefinedGroupJsons))
-
-      case _ => Seq(("All", items))
-    }
-
-    groupedValues.map { case (groupName, jsons) =>
-      val counts = calcDistributionCounts(jsons, field, numericBinCountOption)
-      (groupName, counts)
+      case _ =>
+        for {
+          jsons <- dataRepo.find(
+            criteria = criteria ++ Seq(groupField.name #!@),
+            projection = Seq(groupField.name)
+          )
+        } yield {
+          val groupFieldType = ftf(groupFieldSpec)
+          jsons.flatMap(json => groupFieldType.jsonToValue(json \ groupField.name)).toSet
+        }
     }
   }
 
-  private def categoricalCountsRepo[T](
-    fieldName: String,
-    values: Traversable[T],
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]]
-  ): Future[Seq[(Option[T], Int)]] = {
-    val countFutures = values.par.map { value =>
-      val finalCriteria = criteria ++ Seq(fieldName #== value)
-      dataRepo.count(finalCriteria).map { count =>
-        (Some(value), count)
-      }
-    }.toList
-
-    val findNoneCriteria = criteria ++ Seq(fieldName #=@)
-    val naValueFuture = dataRepo.count(findNoneCriteria).map { count =>
-      (None, count)
-    }
-
-    Future.sequence(countFutures ++ Seq(naValueFuture))
-  }
-
-  private def numericalCountsRepo[T](
+  private def calcNumericalCountsFromRepo[T](
     toBigDecimal: T => BigDecimal,
     toRangeVal: BigDecimal => Any,
     fieldName: String,
@@ -583,7 +589,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     columnForEachIntValue: Boolean,
     explMin: Option[T],
     explMax: Option[T]
-  ): Future[Seq[(BigDecimal, Int)]] = {
+  ): Future[NumericCount] = {
     def jsonToBigDecimalValue(json: JsObject): Option[BigDecimal] = {
       fieldType.jsonToValue(json \ fieldName).map(toBigDecimal)
     }
@@ -669,135 +675,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       bucketCounts
   }
 
-  def createStringCounts[T](
-    counts: Traversable[(Option[T], Int)],
-    fieldType: FieldType[T]
-  ): Traversable[Count[String]] =
-    counts.map {
-      case (value, count) => {
-        val stringKey = value.map(_.toString)
-        val keyOrEmpty = stringKey.getOrElse("")
-        val label = value.map(value => fieldType.valueToDisplayString(Some(value))).getOrElse("Undefined")
-
-        Count(label, count, stringKey)
-      }
-    }
-
-  def createGroupStringCounts[G, T](
-    groupCounts: Traversable[(Option[G], Traversable[(Option[T], Int)])],
-    groupFieldType: FieldType[G],
-    fieldType: FieldType[T]
-  ): Seq[(String, Traversable[Count[String]])] =
-    groupCounts.toSeq.map{ case (group, counts) =>
-      val groupString = group match {
-        case Some(group) => groupFieldType.valueToDisplayString(Some(group))
-        case None => "Undefined"
-      }
-      val stringCounts = createStringCounts(counts, fieldType)
-      (groupString, stringCounts)
-    }
-
-  def convertNumericalCounts(
-    counts: Traversable[(BigDecimal, Int)],
-    convert: Option[BigDecimal => Any] = None
-  ): Seq[Count[_]] =
-    counts.toSeq.sortBy(_._1).map {
-      case (xValue, count) =>
-        val convertedValue = convert.map(_.apply(xValue)).getOrElse(xValue.toDouble)
-        Count(convertedValue, count, None)
-    }
-
-  def convertGroupNumericalCounts[G, T](
-    groupCounts: Traversable[(Option[G], Traversable[(BigDecimal, Int)])],
-    groupFieldType: FieldType[G],
-    convert: Option[BigDecimal => Any] = None
-  ): Seq[(String, Traversable[Count[_]])] =
-    groupCounts.toSeq.map{ case (group, counts) =>
-      val groupString = group match {
-        case Some(group) => groupFieldType.valueToDisplayString(Some(group))
-        case None => "Undefined"
-      }
-      val stringCounts = convertNumericalCounts(counts, convert)
-      (groupString, stringCounts)
-    }
-
-  override def calcDistributionCountsStreamed[T](
-    source: Source[Option[T], _],
-    field: Field
-  ): Future[Traversable[Count[String]]] = {
-    val fieldType = ftf(field.fieldTypeSpec)
-    val calc = UniqueDistributionCountsCalc[T]
-    for {
-      // run the stream with a selected sink and the results back
-      output <- {
-        val sink = calc.sink()
-        source.runWith(sink)
-      }
-    } yield {
-      val counts = calc.postSink()(output)
-      createStringCounts(counts, fieldType.asValueOf[T])
-    }
-  }
-
-  override def calcNumericDistributionCountsStreamed[T: Numeric](
-    source: Source[Option[T], _],
-    options: NumericDistributionSinkOptions[T],
-    convert: Option[BigDecimal => Any]
-  ): Future[Traversable[Count[_]]] = {
-    val calc = NumericDistributionCountsCalc[T]
-    for {
-    // run the stream with a selected sink and the results back
-      output <- {
-        val sink = calc.sink(options)
-        source.runWith(sink)
-      }
-    } yield {
-      val counts = calc.postSink(options)(output)
-      convertNumericalCounts(counts, convert)
-    }
-  }
-
-  override def calcGroupedDistributionCountsStreamed[G, T](
-    source: Source[(Option[G], Option[T]), _],
-    groupField: Field,
-    field: Field
-  ): Future[Seq[(String, Traversable[Count[String]])]] = {
-    val fieldType = ftf(field.fieldTypeSpec).asValueOf[T]
-    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[G]
-
-    val calc = GroupUniqueDistributionCountsCalc[G, T]
-    for {
-      // run the stream with a selected sink and the results back
-      output <- {
-        val sink = calc.sink()
-        source.runWith(sink)
-      }
-    } yield {
-      val counts = calc.postSink()(output)
-      createGroupStringCounts(counts, groupFieldType, fieldType)
-    }
-  }
-
-  override def calcGroupedNumericDistributionCountsStreamed[G, T: Numeric](
-    source: Source[(Option[G], Option[T]), _],
-    options: NumericDistributionSinkOptions[T],
-    groupField: Field,
-    convert: Option[BigDecimal => Any]
-  ): Future[Seq[(String, Traversable[Count[_]])]] = {
-    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[G]
-
-    val calc = GroupNumericDistributionCountsCalc[G, T]
-    for {
-    // run the stream with a selected sink and the results back
-      output <- {
-        val sink = calc.sink(options)
-        source.runWith(sink)
-      }
-    } yield {
-      val counts = calc.postSink(options)(output)
-      convertGroupNumericalCounts(counts, groupFieldType, convert)
-    }
-  }
+  // cumulative counts
 
   private def calcCumulativeCountsAux[T: Ordering](
     items: Traversable[JsObject],
@@ -825,7 +703,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         val groups = jsonsToDisplayString(groupFieldType, groupJsons)
 
         val groupedValues = (groups, values).zipped.groupBy(_._1).map { case (group, values) =>
-          (group, values.map(_._2).flatten.toSeq)
+          (group, values.flatMap(_._2).toSeq)
         }.toSeq
         sortValues(groupedValues)
 

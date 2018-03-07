@@ -6,6 +6,7 @@ import org.apache.commons.lang.StringUtils
 import play.api.{Logger, LoggerLike}
 import dataaccess.JsonUtil
 import org.apache.commons.io.IOUtils
+import play.api.libs.json.{Json, Writes}
 import play.api.mvc.{AnyContent, Request}
 import play.twirl.api.Html
 
@@ -291,4 +292,7 @@ package object util {
     val target = new BufferedOutputStream(new FileOutputStream(file))
     try data.foreach(target.write(_)) finally target.close
   }
+
+  def toJsonHtml[T](o: T)(implicit tjs: Writes[T]): Html =
+    Html(Json.stringify(Json.toJson(o)))
 }

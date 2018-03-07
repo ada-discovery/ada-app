@@ -31,7 +31,7 @@
             populateFieldTypeahedFromUrl(
                 $('#outputFieldTypeahead'),
                 $('#outputFieldName'),
-                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date)).url)',
+                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date)).url)',
                 @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
             )
 

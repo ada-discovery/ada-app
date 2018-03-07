@@ -1825,7 +1825,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private implicit val optionFormat = new OptionFormat[String]
   private implicit val tupleFormat = TupleFormat[String, Option[String]]
 
-  def getFieldNamesAndLabels(
+  override def getFieldNamesAndLabels(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ) = Action.async { implicit request =>
     for {

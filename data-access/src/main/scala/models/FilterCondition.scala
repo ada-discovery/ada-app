@@ -3,6 +3,7 @@ package models
 import java.util.Date
 
 import dataaccess._
+import models.FilterCondition.FilterOrId
 import models.json.{EitherFormat, EnumFormat, OptionFormat}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
@@ -75,14 +76,6 @@ object FilterCondition {
 
   type FilterOrId = Either[Seq[FilterCondition], BSONObjectID]
 
-  implicit val eitherFilterOrIdFormat = EitherFormat[Seq[FilterCondition], BSONObjectID]
-
-  def filterOrIdsToJson(filterOrIds: Seq[FilterOrId]): JsValue = {
-    Json.toJson(
-      filterOrIds.map(inputFilterConditionOrId => Json.toJson(inputFilterConditionOrId))
-    )
-  }
-
   import ConditionType._
 
   def toCriterion(
@@ -137,4 +130,29 @@ object FilterCondition {
       case LessEqual => convertedValue.map(LessEqualCriterion(fieldName, _))
     }
   }
+}
+
+object FilterConditionExtraFormats {
+  implicit val conditionTypeFormat = EnumFormat.enumFormat(ConditionType)
+
+  // filter without value label
+  implicit val coreFilterConditionFormat: Format[FilterCondition] = (
+    (__ \ "fieldName").format[String] and
+    (__ \ "fieldLabel").formatNullable[String] and
+    (__ \ "conditionType").format[ConditionType.Value] and
+    (__ \ "value").formatNullable[String]
+  )(
+    FilterCondition(_, _, _, _, None),
+    (item: FilterCondition) =>  (item.fieldName, item.fieldLabel, item.conditionType, item.value)
+  )
+
+  implicit val eitherFilterOrIdFormat: Format[FilterOrId] = EitherFormat[Seq[FilterCondition], BSONObjectID]
+
+//  implicit val filterOrIdsFormat = Json.format[Seq[FilterOrId]]
+
+//  def filterOrIdsToJson(filterOrIds: Seq[FilterOrId]): JsValue = {
+//    Json.toJson(
+//      filterOrIds.map(inputFilterConditionOrId => Json.toJson(inputFilterConditionOrId))
+//    )
+//  }
 }

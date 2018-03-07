@@ -3,13 +3,14 @@ package services
 import javax.inject.{Inject, Singleton}
 
 import com.google.inject.ImplementedBy
-import dataaccess.Criterion
+import dataaccess.{Criterion, FieldType, FieldTypeHelper}
 import dataaccess.RepoTypes.JsonReadonlyRepo
 import models._
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import services.stats.StatsService
 import util.{fieldLabel, shorten}
+import java.util
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -44,6 +45,8 @@ trait WidgetGenerationService {
 class WidgetGenerationServiceImpl @Inject() (
     statsService: StatsService
   ) extends WidgetGenerationService {
+
+  private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def apply(
     widgetSpecs: Traversable[WidgetSpec],
@@ -370,11 +373,44 @@ class WidgetGenerationServiceImpl @Inject() (
   ): Future[Traversable[(String, Traversable[Count[Any]])]] =
     groupField match {
       case Some(groupField) =>
-        statsService.calcGroupedDistributionCounts(repo, criteria, field, groupField, numericBinCount)
+        field.fieldType match {
+          case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
+            statsService.calcGroupedNumericDistributionCounts(repo, criteria, field, groupField, numericBinCount).map { groupCounts =>
+              val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+              createGroupNumericCounts(groupCounts, groupFieldType, convertNumeric(field.fieldType))
+            }
+
+          case _ =>
+            statsService.calcGroupedUniqueDistributionCounts(repo, criteria, field, groupField).map { groupCounts =>
+              val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+              val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
+
+              createGroupStringCounts(groupCounts, groupFieldType, fieldType)
+            }
+        }
+
       case None =>
-        statsService.calcDistributionCounts(repo, criteria, field, numericBinCount).map(counts =>
-          Seq(("All", counts))
-        )
+        field.fieldType match {
+          case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
+            statsService.calcNumericDistributionCounts(repo, criteria, field, numericBinCount).map { numericCounts =>
+              val counts = createNumericCounts(numericCounts, convertNumeric(field.fieldType))
+              Seq(("All", counts))
+            }
+
+          case _ =>
+            statsService.calcUniqueDistributionCounts(repo, criteria, field).map { counts =>
+              val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
+              Seq(("All", createStringCounts(counts, fieldType)))
+            }
+        }
+    }
+
+  private def convertNumeric(fieldType: FieldTypeId.Value) =
+    fieldType match {
+      case FieldTypeId.Date =>
+        val convert = {ms: BigDecimal => new java.util.Date(ms.setScale(0, BigDecimal.RoundingMode.CEILING).toLongExact)}
+        Some(convert)
+      case _ => None
     }
 
   private def calcDistributionCounts(
@@ -385,11 +421,81 @@ class WidgetGenerationServiceImpl @Inject() (
   ): Traversable[(String, Traversable[Count[Any]])] =
     groupField match {
       case Some(groupField) =>
-        statsService.calcGroupedDistributionCounts(items, field, groupField, numericBinCount)
+        field.fieldType match {
+          case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
+            val groupCounts = statsService.calcGroupedNumericDistributionCounts(items, field, groupField, numericBinCount)
+            val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+            createGroupNumericCounts(groupCounts, groupFieldType, convertNumeric(field.fieldType))
+
+          case _ =>
+            val groupCounts = statsService.calcGroupedUniqueDistributionCounts(items, field, groupField)
+            val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+            val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
+
+            createGroupStringCounts(groupCounts, groupFieldType, fieldType)
+        }
 
       case None =>
-        val counts = statsService.calcDistributionCounts(items, field, numericBinCount)
+        val counts = field.fieldType match {
+          case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
+            val counts = statsService.calcNumericDistributionCounts(items, field, numericBinCount)
+              createNumericCounts(counts, convertNumeric(field.fieldType))
+
+          case _ =>
+            val uniqueCounts = statsService.calcUniqueDistributionCounts(items, field)
+            val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
+            createStringCounts(uniqueCounts, fieldType)
+        }
+
         Seq(("All", counts))
+    }
+
+  private def createStringCounts[T](
+    counts: Traversable[(Option[T], Int)],
+    fieldType: FieldType[T]
+  ): Traversable[Count[String]] =
+    counts.map { case (value, count) =>
+      val stringKey = value.map(_.toString)
+      val label = value.map(value => fieldType.valueToDisplayString(Some(value))).getOrElse("Undefined")
+      Count(label, count, stringKey)
+    }
+
+  private def createNumericCounts(
+    counts: Traversable[(BigDecimal, Int)],
+    convert: Option[BigDecimal => Any] = None
+  ): Seq[Count[_]] =
+    counts.toSeq.sortBy(_._1).map { case (xValue, count) =>
+      val convertedValue = convert.map(_.apply(xValue)).getOrElse(xValue.toDouble)
+      Count(convertedValue, count, None)
+    }
+
+  private def createGroupStringCounts[G, T](
+    groupCounts: Traversable[(Option[G], Traversable[(Option[T], Int)])],
+    groupFieldType: FieldType[G],
+    fieldType: FieldType[T]
+  ): Seq[(String, Traversable[Count[String]])] = {
+    groupCounts.toSeq.sortBy(_._1.isEmpty).map { case (group, counts) =>
+      val groupString = group match {
+        case Some(group) => groupFieldType.valueToDisplayString(Some(group))
+        case None => "Undefined"
+      }
+      val stringCounts = createStringCounts(counts, fieldType)
+      (groupString, stringCounts)
+    }
+  }
+
+  private def createGroupNumericCounts[G, T](
+    groupCounts: Traversable[(Option[G], Traversable[(BigDecimal, Int)])],
+    groupFieldType: FieldType[G],
+    convert: Option[BigDecimal => Any] = None
+  ): Seq[(String, Traversable[Count[_]])] =
+    groupCounts.toSeq.sortBy(_._1.isEmpty).map { case (group, counts) =>
+      val groupString = group match {
+        case Some(group) => groupFieldType.valueToDisplayString(Some(group))
+        case None => "Undefined"
+      }
+      val numericCounts = createNumericCounts(counts, convert)
+      (groupString, numericCounts)
     }
 
   private def calcCumulativeCounts(

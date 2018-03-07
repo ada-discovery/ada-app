@@ -102,7 +102,7 @@
         populateFieldTypeahedFromUrl(
             $('#fieldNameDiv #fieldTypeahead'),
             $('#fieldNameDiv #fieldName'),
-            '@Html(dataSetRouter.fields(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
+            '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
             @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         );
 
@@ -169,12 +169,12 @@
 
     function addAllFields() {
         $.ajax({
-            url: '@Html(dataSetRouter.fields(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
+            url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
             success: function (data) {
                 $.each(data, function(index, field) {
                     var values = {};
-                    values["fieldName"] = field.name;
-                    values["fieldTypeahead"] = field.label ? field.label : field.name;
+                    values["fieldName"] = field[0];
+                    values["fieldTypeahead"] = field[1] ? field[1] : field[0];
 
                     $('#fieldNameDiv').dynamicTable('addTableRow', values)
                 });

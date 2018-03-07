@@ -15,13 +15,13 @@ import scala.concurrent.duration._
 
 object GroupNumericDistributionCountsCalcIOType {
   type IN[G, T] = (Option[G], Option[T])
-  type OUT[G, T] = Traversable[(Option[G], Traversable[(BigDecimal, Int)])]
-  type INTER[G,T] = Traversable[((Option[G], Int), Int)]
+  type OUT[G] = Traversable[(Option[G], Traversable[(BigDecimal, Int)])]
+  type INTER[G] = Traversable[((Option[G], Int), Int)]
   type OPTIONS[T] = NumericDistributionOptions[T]
   type SINK_OPTIONS[T] = NumericDistributionSinkOptions[T]
 }
 
-private class GroupNumericDistributionCountsCalc[G, T: Numeric] extends Calculator[IN[G,T], OUT[G,T], INTER[G,T], OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]]
+private class GroupNumericDistributionCountsCalc[G, T: Numeric] extends Calculator[IN[G,T], OUT[G], INTER[G], OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]]
   with NumericDistributionCountsHelper[T] {
 
   override val numeric = implicitly[Numeric[T]]
@@ -72,15 +72,19 @@ private class GroupNumericDistributionCountsCalc[G, T: Numeric] extends Calculat
     val groupIndexCounts = elements.map { case ((group, index), count) => (group, (index, count))}.toGroupMap
 
     groupIndexCounts.map { case (group, counts) =>
-      val xValueCounts = counts.toSeq.sortBy(_._1)map{ case (index, count) =>
-        val xValue = minBg + (index * stepSize)
-        (xValue, count)
-      }
+      val indexCountMap = counts.toMap
+
+      val xValueCounts =
+        for (index <- 0 to options.columnCount - 1) yield {
+          val count = indexCountMap.get(index).getOrElse(0)
+          val xValue = minBg + (index * stepSize)
+          (xValue, count)
+        }
       (group, xValueCounts)
     }
   }
 }
 
 object GroupNumericDistributionCountsCalc {
-  def apply[G, T: Numeric]: Calculator[IN[G,T], OUT[G,T], INTER[G,T], OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]] = new GroupNumericDistributionCountsCalc[G,T]
+  def apply[G, T: Numeric]: Calculator[IN[G,T], OUT[G], INTER[G], OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]] = new GroupNumericDistributionCountsCalc[G,T]
 }

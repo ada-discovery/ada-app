@@ -8,13 +8,13 @@ import scala.collection.mutable
 
 object NumericDistributionCountsCalcIOType {
   type IN[T] = Option[T]
-  type OUT[T] = Traversable[(BigDecimal, Int)]
-  type INTER[T] = mutable.ArraySeq[Int]
+  type OUT = Traversable[(BigDecimal, Int)]
+  type INTER = mutable.ArraySeq[Int]
   type OPTIONS[T] = NumericDistributionOptions[T]
   type SINK_OPTIONS[T] = NumericDistributionSinkOptions[T]
 }
 
-private class NumericDistributionCountsCalc[T: Numeric] extends Calculator[IN[T], OUT[T], INTER[T], OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]] {
+private class NumericDistributionCountsCalc[T: Numeric] extends Calculator[IN[T], OUT, INTER, OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]] {
 
   private val allDefinedCalc = AllDefinedNumericDistributionCountsCalc[T]
 
@@ -33,5 +33,5 @@ private class NumericDistributionCountsCalc[T: Numeric] extends Calculator[IN[T]
 }
 
 object NumericDistributionCountsCalc {
-  def apply[T: Numeric]: Calculator[IN[T], OUT[T], INTER[T], OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]] = new NumericDistributionCountsCalc[T]
+  def apply[T: Numeric]: Calculator[IN[T], OUT, INTER, OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]] = new NumericDistributionCountsCalc[T]
 }

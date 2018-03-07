@@ -8,7 +8,7 @@
 @import reactivemongo.bson.BSONObjectID
 @import models.DataSpaceMetaInfo
 @import be.objectify.deadbolt.scala.views.html.restrict
-@import models.security.SecurityRole
+@import models.FilterConditionExtraFormats.eitherFilterOrIdFormat
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
 @import controllers.dataset.TableViewData
@@ -83,7 +83,7 @@
 
 @createSubmissionJsonJsFunction(index: Int) = {
     function(conditions, filterId) {
-        var filterOrIds = JSON.parse('@{Html(Json.stringify(FilterCondition.filterOrIdsToJson(inputFilterConditionsOrIds)))}');
+        var filterOrIds = JSON.parse('@{Html(Json.stringify(Json.toJson(inputFilterConditionsOrIds)))}');
 
         filterOrIds[@index] = (filterId) ? {'$oid': filterId} : conditions;
 

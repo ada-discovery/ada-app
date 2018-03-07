@@ -197,7 +197,12 @@ private class RedCapDataSetImporter @Inject() (
   ): Traversable[JsObject] = {
     logger.info("Inheriting fields from the first visit...")
 
-    val visitField = fieldNameTypeMap.get(visitFieldName).get
+    def getFieldType(fieldName: String) =
+      fieldNameTypeMap.get(fieldName).getOrElse(
+        throw new AdaException(s"Field $fieldName not found in the dictionary.")
+      )
+
+    val visitField = getFieldType(visitFieldName)
 
     def visitValue(json: JsObject): String =
       visitField.jsonToDisplayString(json \ visitFieldName)
@@ -207,17 +212,23 @@ private class RedCapDataSetImporter @Inject() (
       visit1Json: JsObject
     ): JsObject = {
       val inheritedJsValues = fieldNamesToInherit.map { fieldName =>
-        val fieldType = fieldNameTypeMap.get(fieldName).get
-        val jsValue = (json \ fieldName).get
+//        val fieldType = getFieldType(fieldName)
+        val jsValue = (json \ fieldName).toOption.getOrElse(JsNull)
 
-        val inheritedJsValue = if (jsValue == JsNull) (visit1Json \ fieldName).get else jsValue
+        val inheritedJsValue =
+          if (jsValue == JsNull)
+            (visit1Json \ fieldName).get
+          else
+            jsValue
+
         (fieldName, inheritedJsValue)
       }.toSeq
+
       json.++(JsObject(inheritedJsValues))
     }
 
     val visit1Id = s"${visitPrefix}_1_${armPrefix}_1"
-    val keyField = fieldNameTypeMap.get(keyFieldName).get
+    val keyField = getFieldType(keyFieldName)
 
     records.groupBy(json => keyField.jsonToValue(json \ keyFieldName)).map { case (_, groupRecords) =>
 
@@ -353,11 +364,14 @@ private class RedCapDataSetImporter @Inject() (
         val fields = inferDictionary(metadatas, categoryNameIds.toMap)
 
         // also add redcap_event_name
-        val fieldTypeSpec = inferredFieldNameTypeMap.get(visitFieldName).get.spec
-        val stringEnums = fieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
-        val visitField = Field(visitFieldName, Some(visitLabel), fieldTypeSpec.fieldType, fieldTypeSpec.isArray, stringEnums)
+        inferredFieldNameTypeMap.get(visitFieldName).map(_.spec) match {
+          case Some(visitFieldTypeSpec) =>
+            val stringEnums = visitFieldTypeSpec.enumValues.map(_.map { case (from, to) => (from.toString, to) })
+            val visitField = Field(visitFieldName, Some(visitLabel), visitFieldTypeSpec.fieldType, visitFieldTypeSpec.isArray, stringEnums)
+            fields ++ Seq(visitField)
 
-        fields ++ Seq(visitField)
+          case None => fields
+        }
       }
 
       // save the fields

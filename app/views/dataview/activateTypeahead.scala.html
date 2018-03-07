@@ -1,38 +1,65 @@
-@(
-    fieldsCall: Call,
-    filtersCall: Call
-)(
-    implicit webJarAssets: WebJarAssets
-)
+@import controllers.DataSetWebContext
+@import controllers.DataSetWebContext._
+
+@()(implicit context: DataSetWebContext)
 
 @typeaheadJsImport()
 
 <script type="text/javascript">
     $(function () {
         var showOption = @{FilterShowFieldStyle.NamesAndLabels.id}
+
         $.ajax({
-            url: '@Html(fieldsCall.url)',
+            url: '@Html(dataSetRouter.allFieldNamesAndLabels.url)',
             success: function (data) {
                 populateFieldTypeaheds(
                     [
                         $('#add_tableColumnNameModal #fieldTypeahead'),
                         $('#add_widgetSpecModal #fieldNameTypeahead'),
-                        $('#add_widgetSpecModal #groupFieldNameTypeahead'),
-                        $('#add_widgetSpecModal #xFieldNameTypeahead'),
-                        $('#add_widgetSpecModal #yFieldNameTypeahead'),
-                        $('#edit_widgetSpecModal #fieldNameTypeahead'),
-                        $('#edit_widgetSpecModal #groupFieldNameTypeahead'),
-                        $('#edit_widgetSpecModal #xFieldNameTypeahead'),
-                        $('#edit_widgetSpecModal #yFieldNameTypeahead')
+                        $('#edit_widgetSpecModal #fieldNameTypeahead')
                     ],
                     [
                         $('#add_tableColumnNameModal #fieldName'),
                         $('#add_widgetSpecModal #fieldName'),
+                        $('#edit_widgetSpecModal #fieldName')
+                    ],
+                    data,
+                    showOption
+                );
+            }
+        });
+
+        $.ajax({
+            url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)).url)',
+            success: function (data) {
+                populateFieldTypeaheds(
+                    [
+                        $('#add_widgetSpecModal #groupFieldNameTypeahead'),
+                        $('#edit_widgetSpecModal #groupFieldNameTypeahead')
+                    ],
+                    [
                         $('#add_widgetSpecModal #groupFieldName'),
+                        $('#edit_widgetSpecModal #groupFieldName')
+                    ],
+                    data,
+                    showOption
+                );
+            }
+        });
+
+        $.ajax({
+            url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
+            success: function (data) {
+                populateFieldTypeaheds(
+                    [
+                        $('#add_widgetSpecModal #xFieldNameTypeahead'),
+                        $('#add_widgetSpecModal #yFieldNameTypeahead'),
+                        $('#edit_widgetSpecModal #xFieldNameTypeahead'),
+                        $('#edit_widgetSpecModal #yFieldNameTypeahead')
+                    ],
+                    [
                         $('#add_widgetSpecModal #xFieldName'),
                         $('#add_widgetSpecModal #yFieldName'),
-                        $('#edit_widgetSpecModal #fieldName'),
-                        $('#edit_widgetSpecModal #groupFieldName'),
                         $('#edit_widgetSpecModal #xFieldName'),
                         $('#edit_widgetSpecModal #yFieldName')
                     ],
@@ -43,7 +70,7 @@
         });
 
         $.ajax({
-            url: '@Html(filtersCall.url)',
+            url: '@Html(filterRouter.idAndNamesAccessible.url)',
             success: function (data) {
                 var typeaheadData = data.map(function (item, index) {
                     return {name: item._id.$oid, label: item.name};

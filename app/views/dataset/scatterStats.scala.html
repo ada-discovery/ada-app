@@ -1,14 +1,12 @@
-@import reactivemongo.play.json.BSONFormats._
 @import views.html.chart.highcharts.highchartsJsImport
-@import views.html.chart.highcharts.scatterChart
 @import views.html.widget.{widgetJs, widget}
 @import views.html.layout.main
 @import views.html.dataset.datasetSubNavWithJs
 @import views.html.dataset.dataSetFilterWithJs
 @import views.html.dataview.dataViewSelectionModal
-@import views.html.filter.{filter, filterWithJs}
 @import play.api.libs.json.Json
 @import models.{DataSpaceMetaInfo, FieldTypeId, Field}
+@import models.FilterConditionExtraFormats.eitherFilterOrIdFormat
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
 
@@ -116,7 +114,7 @@
 <script type="text/javascript">
     $(function () {
         $.ajax({
-            url: '@Html(dataSetRouter.fields(Seq(FieldTypeId.Integer, FieldTypeId.Double)).url)',
+            url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double)).url)',
             success: function (data) {
                 populateFieldTypeahed(
                     $('#fieldForm #xFieldTypeahead'),
@@ -136,7 +134,7 @@
         populateFieldTypeahedFromUrl(
             $('#fieldForm #groupFieldTypeahead'),
             $('#fieldForm #groupFieldName'),
-            '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+            '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)).url)',
             @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
         );
 

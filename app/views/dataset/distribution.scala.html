@@ -1,5 +1,6 @@
 @import models.{FilterCondition, Widget}
 @import models.Field
+@import models.FilterConditionExtraFormats.eitherFilterOrIdFormat
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
@@ -12,7 +13,6 @@
 @import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import models.DataSpaceMetaInfo
-@import models.FilterCondition.eitherFilterOrIdFormat
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
 
@@ -91,7 +91,7 @@
             populateFieldTypeahedFromUrl(
                 $('#fieldForm #fieldTypeahead'),
                 $('#fieldForm #fieldName'),
-                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
+                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
                 @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id,
                 function() {
                     setTimeout("$('#fieldForm #fieldTypeahead').focus();", 250)
@@ -101,7 +101,7 @@
              populateFieldTypeahedFromUrl(
                 $('#fieldForm #groupFieldTypeahead'),
                 $('#fieldForm #groupFieldName'),
-                '@Html(dataSetRouter.fields(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean)).url)',
+                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)).url)',
                 @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
              );
 

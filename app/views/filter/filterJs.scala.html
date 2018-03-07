@@ -1,6 +1,8 @@
 @import play.api.libs.json.Json
 @import models.{Field, Filter}
+@import models.FilterConditionExtraFormats.coreFilterConditionFormat
 @import controllers.dataset.FilterJsRouter
+@import util.toJsonHtml
 
 @(
     filter: Option[Filter],
@@ -52,7 +54,7 @@
 
 <script type="text/javascript">
     $(function () {
-        var jsConditions = JSON.parse('@{Html(Json.stringify(Json.toJson(filter.map(_.conditions).getOrElse(Nil))))}');
+        var jsConditions = JSON.parse('@{toJsonHtml(filter.map(_.conditions).getOrElse(Nil))}');
 
         var filterId =
             @if(filter.isDefined && filter.get._id.isDefined) {
