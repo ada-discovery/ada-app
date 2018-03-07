@@ -201,14 +201,20 @@ function selectShortestSuggestion(element) {
 
 function createFieldBloodhoundSource(fieldNameAndLabels, showOption) {
     var fullFieldNameAndLabels = fieldNameAndLabels.map( function(field, index) {
-        var nameItem = {key: field.name, value: field.name};
-        var labelItem = {key: field.name, value: field.label, isLabel: true}
+
+        var nameItem = (Array.isArray(field)) ?
+            {key: field[0], value: field[0]} :
+            {key: field.name, value: field.name};
+
+        var labelItem = (Array.isArray(field)) ?
+            {key: field[0], value: field[1], isLabel: true} :
+            {key: field.name, value: field.label, isLabel: true};
 
         switch (showOption) {
             case 0: return [nameItem];
-            case 1: return (field.label) ? [labelItem] : [];
-            case 2: return (field.label) ? [labelItem] : [nameItem];
-            case 3: return (field.label) ? [nameItem, labelItem] : [nameItem];
+            case 1: return (labelItem.value != null) ? [labelItem] : [];
+            case 2: return (labelItem.value != null) ? [labelItem] : [nameItem];
+            case 3: return (labelItem.value != null) ? [nameItem, labelItem] : [nameItem];
         }
     });
 

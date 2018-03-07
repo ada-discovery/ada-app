@@ -77,83 +77,70 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
   private val injector = TestApp.apply.injector
   private val statsService = injector.instanceOf[StatsService]
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
-
   private val doubleCalc = GroupUniqueDistributionCountsCalc[String, Double]
-  private val doubleField = Field("xxx", None, FieldTypeId.Double)
-  private val doubleFieldType = ftf(doubleField.fieldTypeSpec).asValueOf[Double]
-
   private val stringCalc = GroupUniqueDistributionCountsCalc[String, String]
-  private val stringField = Field("xxx", None, FieldTypeId.String)
-  private val stringFieldType = ftf(stringField.fieldTypeSpec).asValueOf[String]
 
   "Distributions" should "match the static example (double)" in {
     val inputs = values1.map{ case (group, value) => (group, Some(value)) }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
-    def checkResult(result: Traversable[(String, Traversable[Count[String]])]) = {
+    def checkResult(result: Traversable[(Option[String], Traversable[(Option[Double], Int)])]) = {
       result.size should be (expectedResult1.size)
 
       val sorted = result.toSeq.sortBy(_._1)
 
       sorted.zip(expectedResult1).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
-        groupName1 should be (groupName2.getOrElse("Undefined"))
+        groupName1 should be (groupName2)
         counts1.size should be (counts2.size)
 
-        counts1.map(_.count).sum should be (counts2.map(_._2).sum)
+        counts1.map(_._2).sum should be (counts2.map(_._2).sum)
 
-        val sorted = counts1.toSeq.sortBy(_.value)
-        sorted.zip(counts2).foreach { case (Count(value1, count1, _), (value2, count2)) =>
-          value1 should be (value2.toString)
+        val sorted = counts1.toSeq.sortBy(_._1)
+        sorted.zip(counts2).foreach { case ((Some(value1), count1), (value2, count2)) =>
+          value1 should be (value2)
           count1 should be (count2)
         }
       }
 
-      result.flatMap{ case (_, values) => values.map(_.count)}.sum should be (values1.size)
+      result.flatMap{ case (_, values) => values.map(_._2)}.sum should be (values1.size)
     }
 
     // standard calculation
-    Future(doubleCalc.fun()(inputs)).map { counts =>
-      val results = statsService.createGroupStringCounts(counts, stringFieldType, doubleFieldType)
-      checkResult(results)
-    }
+    Future(doubleCalc.fun()(inputs)).map(checkResult)
 
     // streamed calculations
-    statsService.calcGroupedDistributionCountsStreamed[String, Double](inputSource, stringField, doubleField).map(checkResult)
+    statsService.calcGroupedUniqueDistributionCountsStreamed[String, Double](inputSource).map(checkResult)
   }
 
   "Distributions" should "match the static example (string)" in {
     val inputSource = Source.fromIterator(() => values2.toIterator)
 
-    def checkResult(result: Traversable[(String, Traversable[Count[String]])]) = {
+    def checkResult(result: Traversable[(Option[String], Traversable[(Option[String], Int)])]) = {
       result.size should be (expectedResult2.size)
 
       val sorted = result.toSeq.sortBy(_._1)
 
       sorted.zip(expectedResult2).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
-        groupName1 should be (groupName2.getOrElse("Undefined"))
+        groupName1 should be (groupName2)
         counts1.size should be (counts2.size)
 
-        counts1.map(_.count).sum should be (counts2.map(_._2).sum)
+        counts1.map(_._2).sum should be (counts2.map(_._2).sum)
 
-        val sorted = counts1.toSeq.sortBy(_.value)
-        sorted.zip(counts2).foreach { case (Count(value1, count1, _), (value2, count2)) =>
-          value1 should be (value2.getOrElse("Undefined"))
+        val sorted = counts1.toSeq.sortBy(_._1)
+        sorted.zip(counts2).foreach { case ((value1, count1), (value2, count2)) =>
+          value1 should be (value2)
           count1 should be (count2)
         }
       }
 
-      result.flatMap{ case (_, values) => values.map(_.count)}.sum should be (values2.size)
+      result.flatMap{ case (_, values) => values.map(_._2)}.sum should be (values2.size)
     }
 
     // standard calculation
-    Future(stringCalc.fun()(values2)).map { counts =>
-      val results = statsService.createGroupStringCounts(counts, stringFieldType, stringFieldType)
-      checkResult(results)
-    }
+    Future(stringCalc.fun()(values2)).map(checkResult)
 
     // streamed calculations
-    statsService.calcGroupedDistributionCountsStreamed[String, String](inputSource, stringField, stringField).map(checkResult)
+    statsService.calcGroupedUniqueDistributionCountsStreamed[String, String](inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (double)" in {
@@ -165,32 +152,31 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val counts = doubleCalc.fun()(inputs)
-    val protoResult = statsService.createGroupStringCounts(counts, stringFieldType, doubleFieldType)
+    val protoResult = doubleCalc.fun()(inputs)
 
-    def checkResult(result: Traversable[(String, Traversable[Count[String]])]) = {
+    def checkResult(result: Traversable[(Option[String], Traversable[(Option[Double], Int)])]) = {
       result.size should be (protoResult.size)
 
-      result.toSeq.zip(protoResult).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
+      result.toSeq.zip(protoResult.toSeq).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
         groupName1 should be (groupName2)
         counts1.size should be (counts2.size)
 
-        counts1.map(_.count).sum should be (counts2.map(_.count).sum)
+        counts1.map(_._2).sum should be (counts2.map(_._2).sum)
 
-        val sorted1 = counts1.toSeq.sortBy(_.value)
-        val sorted2 = counts2.toSeq.sortBy(_.value)
+        val sorted1 = counts1.toSeq.sortBy(_._1)
+        val sorted2 = counts2.toSeq.sortBy(_._1)
 
-        sorted1.zip(sorted2).foreach { case (Count(value1, count1, _), Count(value2, count2, _)) =>
+        sorted1.zip(sorted2).foreach { case ((value1, count1), (value2, count2)) =>
           value1 should be (value2)
           count1 should be (count2)
         }
       }
 
-      result.flatMap{ case (_, values) => values.map(_.count)}.sum should be (inputs.size)
+      result.flatMap{ case (_, values) => values.map(_._2)}.sum should be (inputs.size)
     }
 
     // streamed calculations
-    statsService.calcGroupedDistributionCountsStreamed[String, Double](inputSource, stringField, doubleField).map(checkResult)
+    statsService.calcGroupedUniqueDistributionCountsStreamed[String, Double](inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (string)" in {
@@ -202,31 +188,30 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val counts = stringCalc.fun()(inputs)
-    val protoResult = statsService.createGroupStringCounts(counts, stringFieldType, stringFieldType)
+    val protoResult = stringCalc.fun()(inputs)
 
-    def checkResult(result: Traversable[(String, Traversable[Count[String]])]) = {
+    def checkResult(result: Traversable[(Option[String], Traversable[(Option[String], Int)])]) = {
       result.size should be (protoResult.size)
 
-      result.toSeq.zip(protoResult).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
+      result.toSeq.zip(protoResult.toSeq).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
         groupName1 should be (groupName2)
         counts1.size should be (counts2.size)
 
-        counts1.map(_.count).sum should be (counts2.map(_.count).sum)
+        counts1.map(_._2).sum should be (counts2.map(_._2).sum)
 
-        val sorted1 = counts1.toSeq.sortBy(_.value)
-        val sorted2 = counts2.toSeq.sortBy(_.value)
+        val sorted1 = counts1.toSeq.sortBy(_._1)
+        val sorted2 = counts2.toSeq.sortBy(_._1)
 
-        sorted1.zip(sorted2).foreach { case (Count(value1, count1, _), Count(value2, count2, _)) =>
+        sorted1.zip(sorted2).foreach { case ((value1, count1), (value2, count2)) =>
           value1 should be (value2)
           count1 should be (count2)
         }
       }
 
-      result.flatMap{ case (_, values) => values.map(_.count)}.sum should be (inputs.size)
+      result.flatMap{ case (_, values) => values.map(_._2)}.sum should be (inputs.size)
     }
 
     // streamed calculations
-    statsService.calcGroupedDistributionCountsStreamed[String, String](inputSource, stringField, stringField).map(checkResult)
+    statsService.calcGroupedUniqueDistributionCountsStreamed[String, String](inputSource).map(checkResult)
   }
 }

@@ -23,67 +23,54 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
   private val injector = TestApp.apply.injector
   private val statsService = injector.instanceOf[StatsService]
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
-
   private val doubleCalc = UniqueDistributionCountsCalc[Double]
-  private val doubleField = Field("xxx", None, FieldTypeId.Double)
-  private val doubleFieldType = ftf(doubleField.fieldTypeSpec).asValueOf[Double]
-
   private val stringCalc = UniqueDistributionCountsCalc[String]
-  private val stringField = Field("xxx", None, FieldTypeId.String)
-  private val stringFieldType = ftf(stringField.fieldTypeSpec).asValueOf[String]
 
   "Distributions" should "match the static example (double)" in {
     val inputs = values1.map(Some(_))
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
-    def checkResult(result: Traversable[Count[String]]) = {
+    def checkResult(result: Traversable[(Option[Double], Int)]) = {
       result.size should be (expectedResult1.size)
 
-      val sorted = result.toSeq.sortBy(_.value)
+      val sorted = result.toSeq.sortBy(_._1)
 
-      sorted.zip(expectedResult1).foreach{ case (Count(value1, count1, _), (value2, count2)) =>
-        value1 should be (value2.toString)
+      sorted.zip(expectedResult1).foreach{ case ((Some(value1), count1), (value2, count2)) =>
+        value1 should be (value2)
         count1 should be (count2)
       }
 
-      result.map(_.count).sum should be (values1.size)
+      result.map(_._2).sum should be (values1.size)
     }
 
     // standard calculation
-    Future(doubleCalc.fun()(inputs)).map { counts =>
-      val results = statsService.createStringCounts(counts, doubleFieldType)
-      checkResult(results)
-    }
+    Future(doubleCalc.fun()(inputs)).map(checkResult)
 
     // streamed calculations
-    statsService.calcDistributionCountsStreamed[Double](inputSource, doubleField).map(checkResult)
+    statsService.calcUniqueDistributionCountsStreamed[Double](inputSource).map(checkResult)
   }
 
   "Distributions" should "match the static example (string)" in {
     val inputSource = Source.fromIterator(() => values2.toIterator)
 
-    def checkResult(result: Traversable[Count[String]]) = {
+    def checkResult(result: Traversable[(Option[String], Int)]) = {
       result.size should be (expectedResult2.size)
 
-      val sorted = result.toSeq.sortBy(_.value)
+      val sorted = result.toSeq.sortBy(_._1)
 
-      sorted.zip(expectedResult2).foreach{ case (Count(value1, count1, _), (value2, count2)) =>
-        value1 should be (value2.getOrElse("Undefined"))
+      sorted.zip(expectedResult2).foreach{ case ((value1, count1), (value2, count2)) =>
+        value1 should be (value2)
         count1 should be (count2)
       }
 
-      result.map(_.count).sum should be (values2.size)
+      result.map(_._2).sum should be (values2.size)
     }
 
     // standard calculation
-    Future(stringCalc.fun()(values2)).map { counts =>
-      val results = statsService.createStringCounts(counts, stringFieldType)
-      checkResult(results)
-    }
+    Future(stringCalc.fun()(values2)).map(checkResult)
 
     // streamed calculations
-    statsService.calcDistributionCountsStreamed[String](inputSource, stringField).map(checkResult)
+    statsService.calcUniqueDistributionCountsStreamed[String](inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (double)" in {
@@ -93,24 +80,23 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val counts = doubleCalc.fun()(inputs)
-    val protoResult = statsService.createStringCounts(counts, doubleFieldType).toSeq.sortBy(_.value)
+    val protoResult = doubleCalc.fun()(inputs).toSeq.sortBy(_._1)
 
-    def checkResult(result: Traversable[Count[String]]) = {
+    def checkResult(result: Traversable[(Option[Double], Int)]) = {
       result.size should be (protoResult.size)
 
-      val sorted = result.toSeq.sortBy(_.value)
+      val sorted = result.toSeq.sortBy(_._1)
 
-      sorted.zip(protoResult).foreach{ case (Count(value1, count1, _), Count(value2, count2, _)) =>
+      sorted.zip(protoResult).foreach{ case ((value1, count1), (value2, count2)) =>
         value1 should be (value2)
         count1 should be (count2)
       }
 
-      result.map(_.count).sum should be (inputs.size)
+      result.map(_._2).sum should be (inputs.size)
     }
 
     // streamed calculations
-    statsService.calcDistributionCountsStreamed[Double](inputSource, doubleField).map(checkResult)
+    statsService.calcUniqueDistributionCountsStreamed[Double](inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (string)" in {
@@ -120,23 +106,22 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val counts = stringCalc.fun()(inputs)
-    val protoResult = statsService.createStringCounts(counts, stringFieldType).toSeq.sortBy(_.value)
+    val protoResult = stringCalc.fun()(inputs).toSeq.sortBy(_._1)
 
-    def checkResult(result: Traversable[Count[String]]) = {
+    def checkResult(result: Traversable[(Option[String], Int)]) = {
       result.size should be (protoResult.size)
 
-      val sorted = result.toSeq.sortBy(_.value)
+      val sorted = result.toSeq.sortBy(_._1)
 
-      sorted.zip(protoResult).foreach{ case (Count(value1, count1, _), Count(value2, count2, _)) =>
+      sorted.zip(protoResult).foreach{ case ((value1, count1), (value2, count2)) =>
         value1 should be (value2)
         count1 should be (count2)
       }
 
-      result.map(_.count).sum should be (inputs.size)
+      result.map(_._2).sum should be (inputs.size)
     }
 
     // streamed calculations
-    statsService.calcDistributionCountsStreamed[String](inputSource, stringField).map(checkResult)
+    statsService.calcUniqueDistributionCountsStreamed[String](inputSource).map(checkResult)
   }
 }

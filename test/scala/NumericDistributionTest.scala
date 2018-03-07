@@ -1,8 +1,6 @@
 package scala
 
 import akka.stream.scaladsl.Source
-import dataaccess.FieldTypeHelper
-import models.{Count, Field, FieldTypeId}
 import org.scalatest._
 import services.stats.StatsService
 import services.stats.calc.{NumericDistributionCountsCalc, NumericDistributionOptions, NumericDistributionSinkOptions, UniqueDistributionCountsCalc}
@@ -25,37 +23,27 @@ class NumericDistributionTest extends AsyncFlatSpec with Matchers {
   private val injector = TestApp.apply.injector
   private val statsService = injector.instanceOf[StatsService]
 
-  private val ftf = FieldTypeHelper.fieldTypeFactory()
-
   private val doubleCalc = NumericDistributionCountsCalc[Double]
-  private val doubleField = Field("xxx", None, FieldTypeId.Double)
-  private val doubleFieldType = ftf(doubleField.fieldTypeSpec).asValueOf[Double]
-
   private val intCalc = NumericDistributionCountsCalc[Long]
-  private val intField = Field("xxx", None, FieldTypeId.Integer)
-  private val intFieldType = ftf(intField.fieldTypeSpec).asValueOf[Long]
 
   "Distributions" should "match the static example (double)" in {
     val inputs = values1.map(Some(_))
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
-    def checkResult(result: Traversable[Count[_]]) = {
+    def checkResult(result: Traversable[(BigDecimal, Int)]) = {
       result.size should be (expectedResult1.size)
 
-      result.toSeq.zip(expectedResult1).foreach{ case (Count(value1, count1, _), (value2, count2)) =>
+      result.toSeq.zip(expectedResult1).foreach{ case ((value1, count1), (value2, count2)) =>
         value1 should be (value2)
         count1 should be (count2)
       }
 
-      result.map(_.count).sum should be (values1.size)
+      result.map(_._2).sum should be (values1.size)
     }
 
     // standard calculation
     val standardOptions = NumericDistributionOptions[Double](columnCount1)
-    Future(doubleCalc.fun(standardOptions)(inputs)).map { counts =>
-      val results = statsService.convertNumericalCounts(counts)
-      checkResult(results)
-    }
+    Future(doubleCalc.fun(standardOptions)(inputs)).map(checkResult)
 
     // streamed calculations
     val streamOptions = NumericDistributionSinkOptions(columnCount1, values1.min, values1.max)
@@ -65,23 +53,20 @@ class NumericDistributionTest extends AsyncFlatSpec with Matchers {
   "Distributions" should "match the static example (int/long)" in {
     val inputSource = Source.fromIterator(() => values2.toIterator)
 
-    def checkResult(result: Traversable[Count[_]]) = {
+    def checkResult(result: Traversable[(BigDecimal, Int)]) = {
       result.size should be (expectedResult2.size)
 
-      result.toSeq.zip(expectedResult2).foreach{ case (Count(value1, count1, _), (value2, count2)) =>
+      result.toSeq.zip(expectedResult2).foreach{ case ((value1, count1), (value2, count2)) =>
         value1 should be (value2)
         count1 should be (count2)
       }
 
-      result.map(_.count).sum should be (values2.flatten.size)
+      result.map(_._2).sum should be (values2.flatten.size)
     }
 
     // standard calculation
     val standardOptions = NumericDistributionOptions[Long](columnCount2, None, None, true)
-    Future(intCalc.fun(standardOptions)(values2)).map { counts =>
-      val results = statsService.convertNumericalCounts(counts)
-      checkResult(results)
-    }
+    Future(intCalc.fun(standardOptions)(values2)).map(checkResult)
 
     // streamed calculations
     val streamOptions = NumericDistributionSinkOptions(columnCount2, values2.flatten.min, values2.flatten.max, true)
@@ -99,18 +84,17 @@ class NumericDistributionTest extends AsyncFlatSpec with Matchers {
 
     // standard calculation
     val standardOptions = NumericDistributionOptions[Double](columnCount)
-    val counts = doubleCalc.fun(standardOptions)(inputs)
-    val protoResult = statsService.convertNumericalCounts(counts)
+    val protoResult = doubleCalc.fun(standardOptions)(inputs).toSeq
 
-    def checkResult(result: Traversable[Count[_]]) = {
+    def checkResult(result: Traversable[(BigDecimal, Int)]) = {
       result.size should be (protoResult.size)
 
-      result.toSeq.zip(protoResult).foreach{ case (Count(value1, count1, _), Count(value2, count2, _)) =>
+      result.toSeq.zip(protoResult).foreach{ case ((value1, count1), (value2, count2)) =>
         value1 should be (value2)
         count1 should be (count2)
       }
 
-      result.map(_.count).sum should be (flattenedInputs.size)
+      result.map(_._2).sum should be (flattenedInputs.size)
     }
 
     // streamed calculations
@@ -130,18 +114,17 @@ class NumericDistributionTest extends AsyncFlatSpec with Matchers {
 
     // standard calculation
     val standardOptions = NumericDistributionOptions[Long](columnCount)
-    val counts = intCalc.fun(standardOptions)(inputs)
-    val protoResult = statsService.convertNumericalCounts(counts)
+    val protoResult = intCalc.fun(standardOptions)(inputs)
 
-    def checkResult(result: Traversable[Count[_]]) = {
+    def checkResult(result: Traversable[(BigDecimal, Int)]) = {
       result.size should be (protoResult.size)
 
-      result.toSeq.zip(protoResult).foreach{ case (Count(value1, count1, _), Count(value2, count2, _)) =>
+      result.toSeq.zip(protoResult.toSeq).foreach{ case ((value1, count1), (value2, count2)) =>
         value1 should be (value2)
         count1 should be (count2)
       }
 
-      result.map(_.count).sum should be (flattenedInputs.size)
+      result.map(_._2).sum should be (flattenedInputs.size)
     }
 
     // streamed calculations

@@ -1,90 +1,99 @@
 package scala
 
 import akka.stream.scaladsl.Source
-import dataaccess.FieldTypeHelper
-import models.{Count, Field, FieldTypeId}
 import org.scalatest._
 import services.stats.StatsService
-import services.stats.calc.{GroupUniqueDistributionCountsCalc, UniqueDistributionCountsCalc}
+import services.stats.calc._
 
 import scala.concurrent.Future
 import scala.util.Random
 
-class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
+class GroupNumericDistributionTest extends AsyncFlatSpec with Matchers {
 
   private val values1: Seq[(Option[String], Double)] = Seq(
     (Some("x"), 0.5),
-    (Some("y"), 0.1),
+    (Some("y"), 0.5),
     (Some("y"), 5),
     (Some("x"), 0.5),
-    (Some("x"), 1),
+    (Some("x"), 1.5),
     (Some("x"), 2),
-    (None, 1),
-    (Some("x"), 0.1),
-    (Some("x"), 2),
-    (Some("y"), 0.1),
-    (Some("x"), 7),
+    (None, 7.5),
+    (Some("x"), 0.6),
+    (Some("x"), 2.4),
+    (Some("y"), 2.4),
+    (Some("x"), 2.6),
     (None, 1),
     (Some("x"), 3),
     (Some("x"), 5),
     (Some("y"), 5),
-    (Some("x"), 7),
-    (Some("y"), 0.1),
-    (Some("x"), 0.5),
+    (Some("x"), 7.5),
+    (Some("y"), 1.5),
+    (Some("x"), 1.1),
     (None, 0.5),
     (Some("x"), 2),
-    (Some("y"), 7)
-  )
-  private val expectedResult1 = Seq(
-    None -> Seq(0.5 -> 1, 1.0 -> 2),
-    Some("x") -> Seq(0.1 -> 1, 0.5 -> 3, 1.0 -> 1, 2.0 -> 3, 3.0 -> 1, 5.0 -> 1, 7.0 -> 2),
-    Some("y") -> Seq(0.1 -> 3, 5.0 -> 2, 7.0 -> 1)
+    (Some("y"), 7.5)
   )
 
-  private val values2 = Seq(
+  private val expectedResult1 = Seq(
+    None -> Seq(0.5 -> 2, 1.5 -> 0, 2.5 -> 0, 3.5 -> 0, 4.5 -> 0, 5.5 -> 0, 6.5 -> 1),
+    Some("x") -> Seq(0.5 -> 4, 1.5 -> 4, 2.5 -> 2, 3.5 -> 0, 4.5 -> 1, 5.5 -> 0, 6.5 -> 1),
+    Some("y") -> Seq(0.5 -> 1, 1.5 -> 2, 2.5 -> 0, 3.5 -> 0, 4.5 -> 2, 5.5 -> 0, 6.5 -> 1)
+  )
+
+  private val columnCount1 = 7
+
+  private val values2: Seq[(Option[String], Option[Long])] = Seq(
+    (Some("x"), Some(1)),
     (Some("x"), None),
-    (Some("x"), Some("cat")),
-    (None -> Some("bird")),
-    (Some("x"), None),
-    (Some("x"), Some("dog")),
+    (None, Some(7)),
+    (Some("x"), Some(1)),
+    (Some("x"), Some(3)),
     (None, None),
-    (Some("x"), Some("zebra")),
-    (None -> Some("bird")),
-    (Some("x"), Some("tiger")),
-    (Some("x"), Some("dog")),
+    (Some("x"), Some(2)),
+    (None, Some(1)),
     (Some("x"), None),
+    (Some("x"), Some(3)),
+    (Some("x"), Some(2)),
     (None, None),
-    (Some("y"), Some("tiger")),
-    (None, Some("cat")),
-    (Some("x"), Some("dolphin")),
-    (Some("x"), Some("dolphin")),
-    (None -> Some("bird")),
-    (Some("x"), Some("cat")),
-    (Some("y"), Some("tiger")),
-    (Some("x"), Some("dolphin")),
+    (Some("y"), Some(1)),
+    (None, Some(7)),
+    (Some("x"), Some(2)),
+    (Some("x"), Some(3)),
+    (None, Some(2)),
+    (Some("x"), Some(5)),
+    (Some("y"), Some(4)),
+    (Some("x"), Some(7)),
     (Some("y"), None),
-    (None, None)
+    (None, None),
+    (Some("x"), Some(4)),
+    (Some("x"), Some(2)),
+    (Some("y"), Some(1)),
+    (Some("x"), None),
+    (Some("x"), None),
+    (Some("y"), Some(7))
   )
 
   private val expectedResult2 = Seq(
-    None -> Seq(None -> 3, Some("bird") -> 3, Some("cat") -> 1),
-    Some("x") -> Seq(None -> 3, Some("cat") -> 2, Some("dog") -> 2, Some("dolphin") -> 3, Some("tiger") -> 1, Some("zebra") -> 1),
-    Some("y") -> Seq(None -> 1, Some("tiger") -> 2)
+    None -> Seq(1 -> 1, 2 -> 1, 3 -> 0, 4 -> 0, 5 -> 0, 6 -> 0, 7 -> 2),
+    Some("x") -> Seq(1 -> 2, 2 -> 4, 3 -> 3, 4 -> 1, 5 -> 1, 6 -> 0, 7 -> 1),
+    Some("y") -> Seq(1 -> 2, 2 -> 0, 3 -> 0, 4 -> 1, 5 -> 0, 6 -> 0, 7 -> 1)
   )
+
+  private val columnCount2 = 7
 
   private val randomInputSize = 1000
 
   private val injector = TestApp.apply.injector
   private val statsService = injector.instanceOf[StatsService]
 
-  private val doubleCalc = GroupUniqueDistributionCountsCalc[String, Double]
-  private val stringCalc = GroupUniqueDistributionCountsCalc[String, String]
+  private val doubleCalc = GroupNumericDistributionCountsCalc[String, Double]
+  private val intCalc = GroupNumericDistributionCountsCalc[String, Long]
 
   "Distributions" should "match the static example (double)" in {
     val inputs = values1.map{ case (group, value) => (group, Some(value)) }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
-    def checkResult(result: Traversable[(Option[String], Traversable[(Option[Double], Int)])]) = {
+    def checkResult(result: Traversable[(Option[String], Traversable[(BigDecimal, Int)])]) = {
       result.size should be (expectedResult1.size)
 
       val sorted = result.toSeq.sortBy(_._1)
@@ -92,11 +101,9 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
       sorted.zip(expectedResult1).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
         groupName1 should be (groupName2)
         counts1.size should be (counts2.size)
-
         counts1.map(_._2).sum should be (counts2.map(_._2).sum)
 
-        val sorted = counts1.toSeq.sortBy(_._1)
-        sorted.zip(counts2).foreach { case ((Some(value1), count1), (value2, count2)) =>
+        counts1.toSeq.zip(counts2).foreach { case ((value1, count1), (value2, count2)) =>
           value1 should be (value2)
           count1 should be (count2)
         }
@@ -106,16 +113,18 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // standard calculation
-    Future(doubleCalc.fun()(inputs)).map(checkResult)
+    val standardOptions = NumericDistributionOptions[Double](columnCount1)
+    Future(doubleCalc.fun(standardOptions)(inputs)).map(checkResult)
 
     // streamed calculations
-    statsService.calcGroupedUniqueDistributionCountsStreamed[String, Double](inputSource).map(checkResult)
+    val streamOptions = NumericDistributionSinkOptions(columnCount1, values1.map(_._2).min, values1.map(_._2).max)
+    statsService.calcGroupedNumericDistributionCountsStreamed[String, Double](inputSource, streamOptions).map(checkResult)
   }
 
-  "Distributions" should "match the static example (string)" in {
+  "Distributions" should "match the static example (int/long)" in {
     val inputSource = Source.fromIterator(() => values2.toIterator)
 
-    def checkResult(result: Traversable[(Option[String], Traversable[(Option[String], Int)])]) = {
+    def checkResult(result: Traversable[(Option[String], Traversable[(BigDecimal, Int)])]) = {
       result.size should be (expectedResult2.size)
 
       val sorted = result.toSeq.sortBy(_._1)
@@ -123,24 +132,24 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
       sorted.zip(expectedResult2).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
         groupName1 should be (groupName2)
         counts1.size should be (counts2.size)
-
         counts1.map(_._2).sum should be (counts2.map(_._2).sum)
 
-        val sorted = counts1.toSeq.sortBy(_._1)
-        sorted.zip(counts2).foreach { case ((value1, count1), (value2, count2)) =>
+        counts1.toSeq.zip(counts2).foreach { case ((value1, count1), (value2, count2)) =>
           value1 should be (value2)
           count1 should be (count2)
         }
       }
 
-      result.flatMap{ case (_, values) => values.map(_._2)}.sum should be (values2.size)
+      result.flatMap{ case (_, values) => values.map(_._2)}.sum should be (values2.count(_._2.isDefined))
     }
 
     // standard calculation
-    Future(stringCalc.fun()(values2)).map(checkResult)
+    val standardOptions = NumericDistributionOptions[Long](columnCount2, None, None, true)
+    Future(intCalc.fun(standardOptions)(values2)).map(checkResult)
 
     // streamed calculations
-    statsService.calcGroupedUniqueDistributionCountsStreamed[String, String](inputSource).map(checkResult)
+    val streamOptions = NumericDistributionSinkOptions(columnCount2, values2.flatMap(_._2).min, values2.flatMap(_._2).max, true)
+    statsService.calcGroupedNumericDistributionCountsStreamed[String, Long](inputSource, streamOptions).map(checkResult)
   }
 
   "Distributions" should "match each other (double)" in {
@@ -151,67 +160,67 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
-    // standard calculation
-    val protoResult = doubleCalc.fun()(inputs)
+    val columnCount = 30
 
-    def checkResult(result: Traversable[(Option[String], Traversable[(Option[Double], Int)])]) = {
+    // standard calculation
+    val standardOptions = NumericDistributionOptions[Double](columnCount)
+    val protoResult = doubleCalc.fun(standardOptions)(inputs)
+
+    def checkResult(result: Traversable[(Option[String], Traversable[(BigDecimal, Int)])]) = {
       result.size should be (protoResult.size)
 
       result.toSeq.zip(protoResult.toSeq).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
         groupName1 should be (groupName2)
         counts1.size should be (counts2.size)
-
         counts1.map(_._2).sum should be (counts2.map(_._2).sum)
 
-        val sorted1 = counts1.toSeq.sortBy(_._1)
-        val sorted2 = counts2.toSeq.sortBy(_._1)
-
-        sorted1.zip(sorted2).foreach { case ((value1, count1), (value2, count2)) =>
+        counts1.toSeq.zip(counts2.toSeq).foreach { case ((value1, count1), (value2, count2)) =>
           value1 should be (value2)
           count1 should be (count2)
         }
       }
 
-      result.flatMap{ case (_, values) => values.map(_._2)}.sum should be (inputs.size)
+      result.flatMap{ case (_, values) => values.map(_._2)}.sum should be (inputs.count(_._2.isDefined))
     }
 
     // streamed calculations
-    statsService.calcGroupedUniqueDistributionCountsStreamed[String, Double](inputSource).map(checkResult)
+    val streamOptions = NumericDistributionSinkOptions(columnCount, inputs.flatMap(_._2).min, inputs.flatMap(_._2).max)
+    statsService.calcGroupedNumericDistributionCountsStreamed[String, Double](inputSource, streamOptions).map(checkResult)
   }
 
-  "Distributions" should "match each other (string)" in {
+  "Distributions" should "match each other (int/long)" in {
     val inputs = for (_ <- 1 to randomInputSize) yield {
       val group = if (Random.nextDouble() < 0.2) None else Some(Random.nextInt(4).toString)
-      val value = if (Random.nextDouble() < 0.2) None else Some(Random.nextInt(20).toString)
+      val value = if (Random.nextDouble() < 0.2) None else Some(Random.nextInt(20).toLong)
       (group,  value)
     }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
-    // standard calculation
-    val protoResult = stringCalc.fun()(inputs)
+    val columnCount = 15
 
-    def checkResult(result: Traversable[(Option[String], Traversable[(Option[String], Int)])]) = {
+    // standard calculation
+    val standardOptions = NumericDistributionOptions[Long](columnCount)
+    val protoResult = intCalc.fun(standardOptions)(inputs)
+
+    def checkResult(result: Traversable[(Option[String], Traversable[(BigDecimal, Int)])]) = {
       result.size should be (protoResult.size)
 
       result.toSeq.zip(protoResult.toSeq).foreach{ case ((groupName1, counts1), (groupName2, counts2)) =>
         groupName1 should be (groupName2)
         counts1.size should be (counts2.size)
-
         counts1.map(_._2).sum should be (counts2.map(_._2).sum)
 
-        val sorted1 = counts1.toSeq.sortBy(_._1)
-        val sorted2 = counts2.toSeq.sortBy(_._1)
-
-        sorted1.zip(sorted2).foreach { case ((value1, count1), (value2, count2)) =>
+        counts1.toSeq.zip(counts2.toSeq).foreach { case ((value1, count1), (value2, count2)) =>
           value1 should be (value2)
           count1 should be (count2)
         }
       }
 
-      result.flatMap{ case (_, values) => values.map(_._2)}.sum should be (inputs.size)
+      result.flatMap{ case (_, values) => values.map(_._2)}.sum should be (inputs.count(_._2.isDefined))
     }
 
     // streamed calculations
-    statsService.calcGroupedUniqueDistributionCountsStreamed[String, String](inputSource).map(checkResult)
+    val streamOptions = NumericDistributionSinkOptions(columnCount, inputs.flatMap(_._2).min, inputs.flatMap(_._2).max)
+    statsService.calcGroupedNumericDistributionCountsStreamed[String, Long](inputSource, streamOptions).map(checkResult)
   }
 }
