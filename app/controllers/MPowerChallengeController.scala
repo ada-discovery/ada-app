@@ -5,25 +5,22 @@ import javax.inject.Inject
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import controllers.core.WebContext
 import models.DataSetFormattersAndIds.FieldIdentity
-import models.{DataSpaceMetaInfo, DisplayOptions, HeatmapWidget}
+import models.{AdaException}
 import models.security.UserManager
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.i18n.MessagesApi
 import play.api.libs.functional.syntax._
-import reactivemongo.play.json.BSONFormats._
 import play.api.libs.functional.syntax._
 import models.json._
 import play.api.libs.json._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, AnyContent, Controller, Request}
 import security.AdaAuthConfig
-import _root_.util.seqFutures
+import _root_.util.{seqFutures, GroupMapList}
 import dataaccess.Criterion._
-import models.json.OptionFormat
 import play.api.Logger
 import play.api.libs.json.Json
 import play.api.libs.json._
-import reactivemongo.play.json.BSONFormats._
 
 import scala.concurrent.Future
 
@@ -38,18 +35,22 @@ class MPowerChallengeController @Inject()(
 
   private lazy val tremorCorrDsa = dsaf("harvard_ldopa.tremor_correlation").get
   private lazy val tremorScoreBoardDsa = dsaf("harvard_ldopa.score_board_tremor_ext").get
+  private lazy val tremorFeatureInfoDsa = dsaf("harvard_ldopa.tremor_feature_info").get
 
   private lazy val dyskinesiaCorrDsa = dsaf("harvard_ldopa.dyskinesia_correlation").get
   private lazy val dyskinesiaScoreBoardDsa = dsaf("harvard_ldopa.score_board_dyskinesia_ext").get
+  private lazy val dyskinesiaFeatureInfoDsa = dsaf("harvard_ldopa.dyskinesia_feature_info").get
 
   private lazy val bradykinesiaCorrDsa = dsaf("harvard_ldopa.bradykinesia_correlation").get
   private lazy val bradykinesiaScoreBoardDsa = dsaf("harvard_ldopa.score_board_bradykinesia_ext").get
+  private lazy val bradykinesiaFeatureInfoDsa = dsaf("harvard_ldopa.bradykinesia_feature_info").get
 
   private lazy val mPowerCorrDsa = dsaf("mpower_challenge.correlation").get
   private lazy val mPowerScoreBoardDsa = dsaf("mpower_challenge.score_board_ext").get
+  private lazy val mPowerFeatureInfoDsa = dsaf("mpower_challenge.feature_info").get
 
   private val featureFieldName = "featureName"
-  private val defaultAbsCorrMeanCutoff = 0.4
+  private val defaultAbsCorrMeanCutoff = 0.5
 
   private val featureGroupSize = Some(200)
 
@@ -119,119 +120,279 @@ class MPowerChallengeController @Inject()(
     override val AUPR = None
   }
 
-  implicit val ldopaScoreSubmissionFormat = Json.format[LDOPAScoreSubmissionInfo]
-  implicit val mPowerScoreSubmissionFormat = Json.format[mPowerScoreSubmissionInfo]
+  private implicit val ldopaScoreSubmissionFormat = Json.format[LDOPAScoreSubmissionInfo]
+  private implicit val mPowerScoreSubmissionFormat = Json.format[mPowerScoreSubmissionInfo]
 
   private implicit def webContext(implicit request: Request[_]) = {
     implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
     WebContext(messagesApi, webJarAssets)
   }
 
-  private lazy val tremorTeamCorrelationScoresFuture = calcCrossTeamMeanAbsCorrelations(tremorScoreBoardDsa, tremorCorrDsa)
+  // demographic features
 
-  private lazy val dyskinesiaTeamCorrelationScoresFuture = calcCrossTeamMeanAbsCorrelations(dyskinesiaScoreBoardDsa, dyskinesiaCorrDsa)
+  private lazy val tremorDemographicFeaturesFuture =
+    groupDemographicFeaturesBySubmission(tremorFeatureInfoDsa)
 
-  private lazy val bradykinesiaTeamCorrelationScoresFuture = calcCrossTeamMeanAbsCorrelations(bradykinesiaScoreBoardDsa, bradykinesiaCorrDsa)
+  private lazy val dyskinesiaDemographicFeaturesFuture =
+    groupDemographicFeaturesBySubmission(dyskinesiaFeatureInfoDsa)
 
-  private lazy val mPowerTeamCorrelationScoresFuture = calcCrossTeamMeanAbsCorrelations(mPowerScoreBoardDsa, mPowerCorrDsa)
+  private lazy val bradykinesiaDemographicFeaturesFuture =
+    groupDemographicFeaturesBySubmission(bradykinesiaFeatureInfoDsa)
 
-  private lazy val tremorSubmissionCorrelationScoresFuture = calcCrossSubmissionMeanAbsCorrelations(tremorScoreBoardDsa, tremorCorrDsa)
+  private lazy val mPowerDemographicFeaturesFuture =
+    groupDemographicFeaturesBySubmission(mPowerFeatureInfoDsa)
 
-  private lazy val dyskinesiaSubmissionCorrelationScoresFuture = calcCrossSubmissionMeanAbsCorrelations(dyskinesiaScoreBoardDsa, dyskinesiaCorrDsa)
+  // abs correlations
 
-  private lazy val bradykinesiaSubmissionCorrelationScoresFuture = calcCrossSubmissionMeanAbsCorrelations(bradykinesiaScoreBoardDsa, bradykinesiaCorrDsa)
+  private lazy val tremorTeamCorrelationScoresFuture =
+    calcCrossTeamMeanAbsCorrelations(tremorScoreBoardDsa, tremorCorrDsa)
 
-  private lazy val mPowerSubmissionCorrelationScoresFuture = calcCrossSubmissionMeanAbsCorrelations(mPowerScoreBoardDsa, mPowerCorrDsa)
+  private lazy val dyskinesiaTeamCorrelationScoresFuture =
+    calcCrossTeamMeanAbsCorrelations(dyskinesiaScoreBoardDsa, dyskinesiaCorrDsa)
 
-  def tremorTeamNetwork(corrThreshold: Option[Double]) = Action.async { implicit request =>
+  private lazy val bradykinesiaTeamCorrelationScoresFuture =
+    calcCrossTeamMeanAbsCorrelations(bradykinesiaScoreBoardDsa, bradykinesiaCorrDsa)
+
+  private lazy val mPowerTeamCorrelationScoresFuture =
+    calcCrossTeamMeanAbsCorrelations(mPowerScoreBoardDsa, mPowerCorrDsa)
+
+  private lazy val tremorSubmissionCorrelationScoresFuture =
+    calcCrossSubmissionMeanAbsCorrelations(tremorScoreBoardDsa, tremorCorrDsa)
+
+  private lazy val dyskinesiaSubmissionCorrelationScoresFuture =
+    calcCrossSubmissionMeanAbsCorrelations(dyskinesiaScoreBoardDsa, dyskinesiaCorrDsa)
+
+  private lazy val bradykinesiaSubmissionCorrelationScoresFuture =
+    calcCrossSubmissionMeanAbsCorrelations(bradykinesiaScoreBoardDsa, bradykinesiaCorrDsa)
+
+  private lazy val mPowerSubmissionCorrelationScoresFuture =
+    calcCrossSubmissionMeanAbsCorrelations(mPowerScoreBoardDsa, mPowerCorrDsa)
+
+  // abs correlations wo demographics
+
+  private lazy val tremorTeamCorrelationScoresWoDemographicsFuture =
+    calcCrossTeamMeanAbsCorrelations(
+      tremorScoreBoardDsa, tremorCorrDsa, tremorDemographicFeaturesFuture
+    )
+
+  private lazy val dyskinesiaTeamCorrelationScoresWoDemographicsFuture =
+    calcCrossTeamMeanAbsCorrelations(
+      dyskinesiaScoreBoardDsa, dyskinesiaCorrDsa, dyskinesiaDemographicFeaturesFuture
+    )
+
+  private lazy val bradykinesiaTeamCorrelationScoresWoDemographicsFuture =
+    calcCrossTeamMeanAbsCorrelations(
+      bradykinesiaScoreBoardDsa, bradykinesiaCorrDsa, bradykinesiaDemographicFeaturesFuture
+    )
+
+  private lazy val mPowerTeamCorrelationScoresWoDemographicsFuture =
+    calcCrossTeamMeanAbsCorrelations(
+      mPowerScoreBoardDsa, mPowerCorrDsa, mPowerDemographicFeaturesFuture
+    )
+
+  private lazy val tremorSubmissionCorrelationScoresWoDemographicsFuture =
+    calcCrossSubmissionMeanAbsCorrelations(
+      tremorScoreBoardDsa, tremorCorrDsa, tremorDemographicFeaturesFuture
+    )
+
+  private lazy val dyskinesiaSubmissionCorrelationScoresWoDemographicsFuture =
+    calcCrossSubmissionMeanAbsCorrelations(
+      dyskinesiaScoreBoardDsa, dyskinesiaCorrDsa, dyskinesiaDemographicFeaturesFuture
+    )
+
+  private lazy val bradykinesiaSubmissionCorrelationScoresWoDemographicsFuture =
+    calcCrossSubmissionMeanAbsCorrelations(
+      bradykinesiaScoreBoardDsa, bradykinesiaCorrDsa, bradykinesiaDemographicFeaturesFuture
+    )
+
+  private lazy val mPowerSubmissionCorrelationScoresWoDemographicsFuture =
+    calcCrossSubmissionMeanAbsCorrelations(
+      mPowerScoreBoardDsa, mPowerCorrDsa, mPowerDemographicFeaturesFuture
+    )
+
+  def tremorTeamNetwork(
+    corrThreshold: Option[Double],
+    withDemographics: Boolean
+  ) = Action.async { implicit request =>
+    val correlationScoresFuture =
+      if (withDemographics)
+        tremorTeamCorrelationScoresFuture
+      else
+        tremorTeamCorrelationScoresWoDemographicsFuture
+
     showTeamCorrelationNetwork(
       "LDOPA Tremor Subchallenge Team Correlation",
       tremorScoreBoardDsa,
       corrThreshold,
-      tremorTeamCorrelationScoresFuture
+      withDemographics,
+      correlationScoresFuture,
+      tremorDemographicFeaturesFuture
     )
   }
 
-  def dyskinesiaTeamNetwork(corrThreshold: Option[Double]) = Action.async { implicit request =>
+  def dyskinesiaTeamNetwork(
+    corrThreshold: Option[Double],
+    withDemographics: Boolean
+  ) = Action.async { implicit request =>
+    val correlationScoresFuture =
+      if (withDemographics)
+        dyskinesiaTeamCorrelationScoresFuture
+      else
+        dyskinesiaTeamCorrelationScoresWoDemographicsFuture
+
     showTeamCorrelationNetwork(
       "LDOPA Dyskinesia Subchallenge Team Correlation",
       dyskinesiaScoreBoardDsa,
       corrThreshold,
-      dyskinesiaTeamCorrelationScoresFuture
+      withDemographics,
+      correlationScoresFuture,
+      dyskinesiaDemographicFeaturesFuture
     )
   }
 
-  def bradykinesiaTeamNetwork(corrThreshold: Option[Double]) = Action.async { implicit request =>
+  def bradykinesiaTeamNetwork(
+    corrThreshold: Option[Double],
+    withDemographics: Boolean
+  ) = Action.async { implicit request =>
+    val correlationScoresFuture =
+      if (withDemographics)
+        bradykinesiaTeamCorrelationScoresFuture
+      else
+        bradykinesiaTeamCorrelationScoresWoDemographicsFuture
+
     showTeamCorrelationNetwork(
       "LDOPA Bradykinesia Subchallenge Team Correlation",
       bradykinesiaScoreBoardDsa,
       corrThreshold,
-      bradykinesiaTeamCorrelationScoresFuture
+      withDemographics,
+      correlationScoresFuture,
+      bradykinesiaDemographicFeaturesFuture
     )
   }
 
-  def mPowerTeamNetwork(corrThreshold: Option[Double]) = Action.async { implicit request =>
+  def mPowerTeamNetwork(
+    corrThreshold: Option[Double],
+    withDemographics: Boolean
+  ) = Action.async { implicit request =>
+    val correlationScoresFuture =
+      if (withDemographics)
+        mPowerTeamCorrelationScoresFuture
+      else
+        mPowerTeamCorrelationScoresWoDemographicsFuture
+
     showTeamCorrelationNetwork(
       "mPower Subchallenge Team Correlation",
       mPowerScoreBoardDsa,
       corrThreshold,
-      mPowerTeamCorrelationScoresFuture
+      withDemographics,
+      correlationScoresFuture,
+      mPowerDemographicFeaturesFuture
     )
   }
 
-  def tremorSubmissionNetwork(corrThreshold: Option[Double]) = Action.async { implicit request =>
+  def tremorSubmissionNetwork(
+    corrThreshold: Option[Double],
+    withDemographics: Boolean
+  ) = Action.async { implicit request =>
+    val correlationScoresFuture =
+      if (withDemographics)
+        tremorSubmissionCorrelationScoresFuture
+      else
+        tremorSubmissionCorrelationScoresWoDemographicsFuture
+
     showSubmissionCorrelationNetwork(
       "LDOPA Tremor Subchallenge Submission Correlation",
       tremorScoreBoardDsa,
       corrThreshold,
-      tremorSubmissionCorrelationScoresFuture
+      withDemographics,
+      correlationScoresFuture,
+      tremorDemographicFeaturesFuture
     )
   }
 
-  def dyskinesiaSubmissionNetwork(corrThreshold: Option[Double]) = Action.async { implicit request =>
+  def dyskinesiaSubmissionNetwork(
+    corrThreshold: Option[Double],
+    withDemographics: Boolean
+  ) = Action.async { implicit request =>
+    val correlationScoresFuture =
+      if (withDemographics)
+        dyskinesiaSubmissionCorrelationScoresFuture
+      else
+        dyskinesiaSubmissionCorrelationScoresWoDemographicsFuture
+
     showSubmissionCorrelationNetwork(
       "LDOPA Dyskinesia Subchallenge Submission Correlation",
       dyskinesiaScoreBoardDsa,
       corrThreshold,
-      dyskinesiaSubmissionCorrelationScoresFuture
+      withDemographics,
+      correlationScoresFuture,
+      dyskinesiaDemographicFeaturesFuture
     )
   }
 
-  def bradykinesiaSubmissionNetwork(corrThreshold: Option[Double]) = Action.async { implicit request =>
+  def bradykinesiaSubmissionNetwork(
+    corrThreshold: Option[Double],
+    withDemographics: Boolean
+  ) = Action.async { implicit request =>
+    val correlationScoresFuture =
+      if (withDemographics)
+        bradykinesiaSubmissionCorrelationScoresFuture
+      else
+        bradykinesiaSubmissionCorrelationScoresWoDemographicsFuture
+
     showSubmissionCorrelationNetwork(
       "LDOPA Bradykinesia Subchallenge Submission Correlation",
       bradykinesiaScoreBoardDsa,
       corrThreshold,
-      bradykinesiaSubmissionCorrelationScoresFuture
+      withDemographics,
+      correlationScoresFuture,
+      bradykinesiaDemographicFeaturesFuture
     )
   }
 
-  def mPowerSubmissionNetwork(corrThreshold: Option[Double]) = Action.async { implicit request =>
+  def mPowerSubmissionNetwork(
+    corrThreshold: Option[Double],
+    withDemographics: Boolean
+  ) = Action.async { implicit request =>
+    val correlationScoresFuture =
+      if (withDemographics)
+        mPowerSubmissionCorrelationScoresFuture
+      else
+        mPowerSubmissionCorrelationScoresWoDemographicsFuture
+
     showSubmissionCorrelationNetwork(
       "mPower Subchallenge Submission Correlation",
       mPowerScoreBoardDsa,
       corrThreshold,
-      mPowerSubmissionCorrelationScoresFuture
+      withDemographics,
+      correlationScoresFuture,
+      mPowerDemographicFeaturesFuture
     )
   }
 
-  def showTeamCorrelationNetwork(
+  private def showTeamCorrelationNetwork(
     domainName: String,
     scoreBoardDsa: DataSetAccessor,
     corrThreshold: Option[Double],
-    crossTeamCorrelationScoresFuture: Future[Seq[(String, String,  Traversable[Option[Double]])]]
-  )(implicit request: Request[AnyContent]) = {
+    withDemographics: Boolean,
+    crossTeamCorrelationScoresFuture: Future[Seq[(String, String,  Traversable[(Option[Double], Option[Double])])]],
+    submissionIdDemographicFeaturesMapFuture: Future[Map[Int, Traversable[String]]])(
+    implicit request: Request[AnyContent]
+  ) = {
     val threshold = corrThreshold.getOrElse(defaultAbsCorrMeanCutoff)
     for {
+      // cross team mean abs correlations
+      crossTeamCorrelationScores <- crossTeamCorrelationScoresFuture
+
+      // demographic features grouped by submission id
+      submissionIdDemographicFeaturesMap <- submissionIdDemographicFeaturesMapFuture
+
       // get all the scored submission infos
       submissionInfos: Traversable[SubmissionInfo] <- scoreBoardDsa.dataSetRepo.find().map(jsons =>
         jsons.map { json =>
           json.asOpt[LDOPAScoreSubmissionInfo].getOrElse(json.as[mPowerScoreSubmissionInfo])
         }
       )
-
-      // cross team mean abs correlations
-      crossTeamCorrelationScores <- crossTeamCorrelationScoresFuture
     } yield {
       val teamSubmissionInfos = submissionInfos.groupBy(_.Team).toSeq
 
@@ -254,6 +415,11 @@ class MPowerChallengeController @Inject()(
         val fullAurocs = submissions.flatMap(_.AUROC_Full)
         val unbiasedAurocs = submissions.flatMap(_.AUROC_Unbiased_Subset)
         val featureNums = submissions.flatMap(_.featureNum)
+        val demographicFeatureNums = submissions.flatMap(submissionInfo =>
+          submissionInfo.submissionIdInt.map( submissiondId =>
+            submissionIdDemographicFeaturesMap.get(submissiondId).map(_.size).getOrElse(0)
+          )
+        )
 
         val finalRanks = submissions.flatMap(_.RankFinal)
         val meanRank = if (finalRanks.nonEmpty)
@@ -270,7 +436,8 @@ class MPowerChallengeController @Inject()(
             "Full AUROCs" -> fullAurocs,
             "Unbiased AUPRs" -> unbiasedAuprs,
             "AUPRs" -> auprs,
-            "# Features" -> featureNums
+            "# Features" -> featureNums,
+            "# Demographic Feat." -> demographicFeatureNums
           )
 
           Some(VisNode(index, 5 + (maxRank - meanRank), team, Some(data)))
@@ -278,7 +445,12 @@ class MPowerChallengeController @Inject()(
           None
       }.sortBy(_.id)
 
-      val edges = crossTeamCorrelationScores.flatMap { case (team1, team2, absCorrMeans) =>
+      // create two arrows from and to team 1 and 2
+      val correlationScores = crossTeamCorrelationScores.flatMap { case (team1, team2, absCorrMeans) =>
+        Seq((team1, team2, absCorrMeans.map(_._1)), (team2, team1, absCorrMeans.map(_._2)))
+      }
+
+      val edges = correlationScores.flatMap { case (team1, team2, absCorrMeans) =>
         val index1 = teamIndexMap.get(team1).get
         val index2 = teamIndexMap.get(team2).get
         val definedAbsCorrMeans = absCorrMeans.flatten
@@ -294,33 +466,41 @@ class MPowerChallengeController @Inject()(
       println("Nodes: " + nodes.size)
       println("Edges: " + edges.size)
       println(edges.mkString("\n"))
-      Ok(views.html.networkVis.networkVis(domainName, threshold, nodes, edges))
+      Ok(views.html.mpowerchallenge.networkVis(domainName, threshold, withDemographics, nodes, edges))
     }
   }
 
-  def showSubmissionCorrelationNetwork(
+  private def showSubmissionCorrelationNetwork(
     domainName: String,
     scoreBoardDsa: DataSetAccessor,
     corrThreshold: Option[Double],
-    crossSubmissionCorrelationScoresFuture: Future[Seq[(Int, Int,  Option[Double])]]
-  )(implicit request: Request[AnyContent]) = {
+    withDemographics: Boolean,
+    crossSubmissionCorrelationScoresFuture: Future[Seq[(Int, Int, Option[Double], Option[Double])]],
+    submissionIdDemographicFeaturesMapFuture: Future[Map[Int, Traversable[String]]])(
+    implicit request: Request[AnyContent]
+  ) = {
     val threshold = corrThreshold.getOrElse(defaultAbsCorrMeanCutoff)
     for {
+      // cross submission mean abs correlations
+      crossSubmissionCorrelationScores <- crossSubmissionCorrelationScoresFuture
+
+      // demographic features grouped by submission id
+      submissionIdDemographicFeaturesMap <- submissionIdDemographicFeaturesMapFuture
+
       // get all the scored submission infos
       submissionInfos: Traversable[SubmissionInfo] <- scoreBoardDsa.dataSetRepo.find().map(jsons =>
         jsons.map ( json =>
           json.asOpt[LDOPAScoreSubmissionInfo].getOrElse(json.as[mPowerScoreSubmissionInfo])
         )
       )
-
-      // cross submission mean abs correlations
-      crossSubmissionCorrelationScores <- crossSubmissionCorrelationScoresFuture
     } yield {
       val sortedSubmissions =  submissionInfos.collect{ case x if x.RankFinal.isDefined && x.submissionIdInt.isDefined => x}.toSeq.sortBy(_.RankFinal.get)
       val submissionIndexMap = sortedSubmissions.map(_.submissionIdInt.get).zipWithIndex.toMap
 
       val maxRank = submissionInfos.flatMap(_.RankFinal).max
       val nodes = sortedSubmissions.zipWithIndex.map { case (submission, index) =>
+        val demographicFeaturesNum = submissionIdDemographicFeaturesMap.get(submission.submissionIdInt.get).map(_.size).getOrElse(0)
+
         val data = Json.obj(
           "Submission Id" -> submission.submissionIdInt.get,
           "Rank" -> submission.Rank,
@@ -330,15 +510,22 @@ class MPowerChallengeController @Inject()(
           "Unbiased AUPR" -> submission.AUPR_Unbiased_Subset,
           "Full AUROC" -> submission.AUROC_Full,
           "Unbiased AUROC" -> submission.AUROC_Unbiased_Subset,
-          "# Features" -> submission.featureNum
+          "# Features" -> submission.featureNum,
+          "# Demographic Feat." -> demographicFeaturesNum
         )
 
         VisNode(index, 5 + (maxRank - submission.RankFinal.get), submission.Team, Some(data))
       }
 
-      val edges = crossSubmissionCorrelationScores.flatMap { case (submissionId1, submissionId2, absCorrMean) =>
+      // create two arrows from and to submission 1 and 2
+      val correlationScores = crossSubmissionCorrelationScores.flatMap { case (submissionId1, submissionId2, absCorrMean1, absCorrMean2) =>
+        Seq((submissionId1, submissionId2, absCorrMean1), (submissionId2, submissionId1, absCorrMean2))
+      }
+
+      val edges = correlationScores.flatMap { case (submissionId1, submissionId2, absCorrMean) =>
         val index1 = submissionIndexMap.get(submissionId1).get
         val index2 = submissionIndexMap.get(submissionId2).get
+
         absCorrMean.flatMap { absCorrMean =>
           if (absCorrMean > threshold) {
             Some(VisEdge(index1, index2, 2 + (absCorrMean) * 10, f"$absCorrMean%1.2f"))
@@ -349,13 +536,14 @@ class MPowerChallengeController @Inject()(
       println("Nodes: " + nodes.size)
       println("Edges: " + edges.size)
       println(edges.mkString("\n"))
-      Ok(views.html.networkVis.networkVis(domainName, threshold, nodes, edges))
+      Ok(views.html.mpowerchallenge.networkVis(domainName, threshold, withDemographics, nodes, edges))
     }
   }
 
-  def calcCrossTeamMeanAbsCorrelations(
+  private def calcCrossTeamMeanAbsCorrelations(
     scoreBoardDsa: DataSetAccessor,
-    correlationDsa: DataSetAccessor
+    correlationDsa: DataSetAccessor,
+    featuresToExcludeFuture: Future[Map[Int, Set[String]]] = Future(Map())
   ) =
     for {
       // get all the scored submission infos
@@ -364,18 +552,40 @@ class MPowerChallengeController @Inject()(
           json.asOpt[LDOPAScoreSubmissionInfo].getOrElse(json.as[mPowerScoreSubmissionInfo])
         )
       )
+
+      // features to exclude
+      submissionFeaturesToExclude <- featuresToExcludeFuture
 
       // create a submission id feature names map
       submissionIdFeatureNamesMap <- createSubmissionIdFeatureMap(correlationDsa)
 
       // calculate abs correlation mean between each pair of teams
-      crossTeamMeanAbsCorrelations <- calcAbsCorrelationMeansForAllTeams(submissionInfos, submissionIdFeatureNamesMap, correlationDsa)
+      crossTeamMeanAbsCorrelations <- {
+        val filteredFeatureNamesMap =
+          submissionIdFeatureNamesMap.map { case (submissionId, features) =>
+            val featuresToExclude = submissionFeaturesToExclude.get(submissionId).getOrElse(Set())
+            val newFeatures = features.filterNot(featuresToExclude.contains)
+
+            assert(
+              featuresToExclude.size + newFeatures.size == features.size,
+              s"The number of features after exclusion is inconsistent." +
+              s"There must be some features that do not occur in the original feature set." +
+              s"Counts: ${features.size} - ${featuresToExclude.size} != ${newFeatures.size}.\n" +
+              s"Features to exclude: ${featuresToExclude.mkString(",")}\n" +
+              s"Actual features: ${features.mkString(",")}"
+            )
+
+            (submissionId, newFeatures)
+          }
+        calcAbsCorrelationMeansForAllTeams(submissionInfos, filteredFeatureNamesMap, correlationDsa)
+      }
     } yield
       crossTeamMeanAbsCorrelations
 
-  def calcCrossSubmissionMeanAbsCorrelations(
+  private def calcCrossSubmissionMeanAbsCorrelations(
     scoreBoardDsa: DataSetAccessor,
-    correlationDsa: DataSetAccessor
+    correlationDsa: DataSetAccessor,
+    featuresToExcludeFuture: Future[Map[Int, Set[String]]] = Future(Map())
   ) =
     for {
       // get all the scored submission infos
@@ -385,23 +595,44 @@ class MPowerChallengeController @Inject()(
         )
       )
 
+      // features to exclude
+      submissionFeaturesToExclude <- featuresToExcludeFuture
+
       // create a submission id feature names map
       submissionIdFeatureNamesMap <- createSubmissionIdFeatureMap(correlationDsa)
 
       // calculate abs correlation mean between each pair of submissions
-      crossSubmissionMeanAbsCorrelations <- calcAbsCorrelationMeansForAllSubmissions(submissionInfos, submissionIdFeatureNamesMap, correlationDsa)
+      crossSubmissionMeanAbsCorrelations <- {
+        val filteredFeatureNamesMap =
+          submissionIdFeatureNamesMap.map { case (submissionId, features) =>
+            val featuresToExclude = submissionFeaturesToExclude.get(submissionId).getOrElse(Set())
+            val newFeatures = features.filterNot(featuresToExclude.contains)
+
+            assert(
+              featuresToExclude.size + newFeatures.size == features.size,
+              s"The number of features after exclusion is inconsistent." +
+              s"There must be some features that do not occur in the original feature set." +
+              s"Counts: ${features.size} - ${featuresToExclude.size} != ${newFeatures.size}.\n" +
+              s"Features to exclude: ${featuresToExclude.mkString(",")}\n" +
+              s"Actual features: ${features.mkString(",")}"
+            )
+
+            (submissionId, newFeatures)
+          }
+        calcAbsCorrelationMeansForAllSubmissions(submissionInfos, filteredFeatureNamesMap, correlationDsa)
+      }
     } yield
       crossSubmissionMeanAbsCorrelations
 
   private def calcAbsCorrelationMeansForAllTeams(
     submissionInfos: Traversable[SubmissionInfo],
-    submissionIdFeatureNamesMap: Map[Int, Traversable[(Int, String)]],
+    submissionIdFeatureNamesMap: Map[Int, Traversable[String]],
     corrDsa: DataSetAccessor
-  ): Future[Seq[(String, String,  Traversable[Option[Double]])]] = {
+  ): Future[Seq[(String, String,  Traversable[(Option[Double], Option[Double])])]] = {
 
     def findFeatureNames(submissionInfo: SubmissionInfo): Traversable[String] =
       submissionInfo.submissionIdInt.map { submissionId =>
-        submissionIdFeatureNamesMap.get(submissionId).get.map(_._2)
+        submissionIdFeatureNamesMap.get(submissionId).get
       }.getOrElse(
         Nil
       )
@@ -415,7 +646,7 @@ class MPowerChallengeController @Inject()(
         findFeatureNames(submissionInfo1).toSeq
       }.filter(_.nonEmpty)
 
-      val submissionInfos2 = teamSubmissionInfos.filter { case (team2, subInfos) => team1 < team2}
+      val submissionInfos2 = teamSubmissionInfos.filter { case (team2, _) => team1 < team2}
 
       logger.info(s"Calculating abs correlation means for the team ${team1}.")
 
@@ -424,7 +655,7 @@ class MPowerChallengeController @Inject()(
           meanAbsCorrelations <- Future.sequence(
             for (featureNames1 <- allFeatureNames1; submissionInfo2 <- submissionInfos2) yield {
               val featureNames2 = findFeatureNames(submissionInfo2).toSeq
-              extractAbsCorrelationMean(featureNames1, featureNames2, corrDsa, featureGroupSize)
+              extractAbsCorrelationMeans(featureNames1, featureNames2, corrDsa, featureGroupSize)
             }
           )
         } yield
@@ -435,12 +666,12 @@ class MPowerChallengeController @Inject()(
 
   private def calcAbsCorrelationMeansForAllSubmissions(
     submissionInfos: Traversable[SubmissionInfo],
-    submissionIdFeatureNamesMap: Map[Int, Traversable[(Int, String)]],
+    submissionIdFeatureNamesMap: Map[Int, Traversable[String]],
     corrDsa: DataSetAccessor
-  ): Future[Seq[(Int, Int,  Option[Double])]] = {
+  ): Future[Seq[(Int, Int,  Option[Double], Option[Double])]] = {
     def findFeatureNames(submissionInfo: SubmissionInfo): Traversable[String] =
       submissionInfo.submissionIdInt.map { submissionId =>
-        submissionIdFeatureNamesMap.get(submissionId).get.map(_._2)
+        submissionIdFeatureNamesMap.get(submissionId).get
       }.getOrElse(
         Nil
       )
@@ -462,9 +693,9 @@ class MPowerChallengeController @Inject()(
         val featureNames2 = findFeatureNames(submissionInfo2).toSeq
 
         for {
-          meanAbsCorrelation <- extractAbsCorrelationMean(featureNames1, featureNames2, corrDsa, featureGroupSize)
+          absMeans <- extractAbsCorrelationMeans(featureNames1, featureNames2, corrDsa, featureGroupSize)
         } yield
-          (submissionId1, submissionId2, meanAbsCorrelation)
+          (submissionId1, submissionId2, absMeans._1, absMeans._2)
       }
     }.map(_.flatten)
   }
@@ -510,12 +741,12 @@ class MPowerChallengeController @Inject()(
       }
     }
 
-  private def extractAbsCorrelationMean(
+  private def extractAbsCorrelationMeans(
     featureNames1: Seq[String],
     featureNames2: Seq[String],
     corrDsa: DataSetAccessor,
     groupSize: Option[Int]
-  ): Future[Option[Double]] =
+  ): Future[(Option[Double], Option[Double])] =
     if (featureNames2.nonEmpty) {
       for {
         correlations <- groupSize.map { groupSize =>
@@ -525,10 +756,10 @@ class MPowerChallengeController @Inject()(
         )
       } yield {
 //        extractAbsMean(correlations)
-        extractRowColumnMaxes(correlations)
+        extractRowColumnMaxMeans(correlations)
       }
     } else
-      Future(None)
+      Future((None, None))
 
   private def extractAbsMean(correlations: Traversable[Seq[Option[Double]]]) = {
     val definedCorrelations = correlations.flatten.flatten
@@ -536,35 +767,22 @@ class MPowerChallengeController @Inject()(
     Some(absCorrelations.sum / definedCorrelations.size)
   }
 
-  private def extractRowColumnMaxes(correlations: Traversable[Seq[Option[Double]]]) = {
+  private def extractRowColumnMaxMeans(
+    correlations: Traversable[Seq[Option[Double]]]
+  ): (Option[Double], Option[Double]) = {
     val absCorrelations = correlations.toSeq.par.map(_.map(_.map(_.abs))).toList
 
-    def nonOneMaxes(xs: Traversable[Seq[Option[Double]]]) = {
-//      val nonOneXs = xs.map(_.filter(x => x.isDefined && !x.get.equals(1d)))
-      val nonOneXs = xs.filterNot(_.contains(Some(1d)))
-//      if (xs.size != nonOneXs.size) {
-//        println(s"${xs.size} vs ${nonOneXs.size}")
-//      }
-      nonOneXs.map { row =>
-        row match {
-          case Nil => None
-          case _ => row.max
-        }
-      }
+    def calcMeanMax(corrs: Traversable[Seq[Option[Double]]]) = {
+      val maxes = corrs.par.map(_.max).toList
+      if (maxes.nonEmpty) Some(maxes.flatten.sum / maxes.size) else None
     }
 
-//    val rowMaxes = nonOneMaxes(absCorrelations)
-//    val columnMaxes = nonOneMaxes(absCorrelations.transpose)
-
-    val rowMaxes = absCorrelations.par.map(_.max).toList
-    val columnMaxes = absCorrelations.transpose.par.map(_.max).toList
-
-    val allMaxes = rowMaxes ++ columnMaxes
-
-    Some(allMaxes.flatten.sum / allMaxes.size)
+    (calcMeanMax(absCorrelations), calcMeanMax(absCorrelations.transpose))
   }
 
-  private def createSubmissionIdFeatureMap(correlationDsa: DataSetAccessor) = {
+  private def createSubmissionIdFeatureMap(
+    correlationDsa: DataSetAccessor
+  ): Future[Map[Int, Traversable[String]]] =
     for {
       // get all the feature names
       featureNames <- correlationDsa.fieldRepo.find(Seq(FieldIdentity.name #!= featureFieldName)).map(fields =>
@@ -576,7 +794,34 @@ class MPowerChallengeController @Inject()(
         val featureNameParts = featureName.split("-", 2)
         val submissionId = featureNameParts(0).toInt
         (submissionId, featureName)
-      }.groupBy(_._1)}
+      }.toGroupMap
+
+  private case class FeatureInfo(Team: String, SubmissionId: Int, Name: String)
+
+  private implicit val featureInfoFormat = Json.format[FeatureInfo]
+
+  private def groupDemographicFeaturesBySubmission(
+    featureInfoDsa: DataSetAccessor
+  ) =
+    for {
+      categoryField <- featureInfoDsa.fieldRepo.get("Category")
+
+      demographicFeatureInfos <- {
+        val field = categoryField.getOrElse(throw new AdaException("Field Category not found"))
+        field.numValues.get.find(_._2.equals("demographic")).map(_._1.toInt) match {
+          case Some(demographicValue) =>
+            featureInfoDsa.dataSetRepo.find(
+              criteria = Seq("Category" #== demographicValue)
+            ).map(_.map(_.as[FeatureInfo]))
+
+          case None => Future(Nil)
+        }
+      }
+    } yield
+      demographicFeatureInfos.groupBy(_.SubmissionId).map{ case (submissionId, values) =>
+        // need to add submissionId prefix with "-" becauses that's how the features are stored
+        (submissionId, values.map(featureInfo => submissionId + "-" + featureInfo.Name).toSet)
+      }
 }
 
 case class VisNode(id: Int, size: Int, label: String, data: Option[JsValue])

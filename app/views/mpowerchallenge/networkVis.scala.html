@@ -9,6 +9,7 @@
 @(
     domainName: String,
     threshold: Double,
+    withDemographics: Boolean,
     nodes: Traversable[VisNode],
     edges: Traversable[VisEdge]
 )(implicit context: WebContext)
@@ -137,6 +138,14 @@
                     </div>
                 </div>
             </div>
+            <div class="row">
+                <div class="panel panel-default" style="margin-top: 20px">
+                    <div class="panel-body">
+                        <span style="padding-top: 5px">With Demographics</span>
+                        <input type='checkbox' id="withDemographics" @if(withDemographics) {checked='checked'} onchange="resubmit()"/>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -149,7 +158,7 @@
 
         var edges = [
             @edges.map{ edge =>
-                {from: @edge.from, to: @edge.to, width: @edge.value, title: '@edge.label', color:{color:'#60c842', opacity: 0.8}},
+                {from: @edge.from, to: @edge.to, width: @edge.value, title: '@edge.label', color:{color:'#60c842', opacity: 0.8}, arrows:'to'},
             }
         ];
 
@@ -170,7 +179,7 @@
                         size: 16
                     }
                 },
-                interaction:{
+                interaction: {
                     hover:true
                 },
                 physics: {
@@ -183,6 +192,7 @@
             network.on("click", function (params) {
                 console.log(params)
                 if (params.nodes.length > 0) {
+                    // node  click
                     var node = getNode(params.nodes[0])
                     $("#teamInfoDiv").html("")
                     $("#teamInfoDiv").append("<h4><b>" + node.label + "</b></h4><hr/>")
@@ -192,11 +202,12 @@
                         }
                     })
                 } else {
+                    // edge click
                     var edge = getEdge(params.edges[0])
                     var from = getNode(edge.from)
                     var to = getNode(edge.to)
                     $("#teamInfoDiv").html("")
-                    $("#teamInfoDiv").append("<h4>" + from.label + " <-> " + to.label + "</h4><hr/>")
+                    $("#teamInfoDiv").append("<h4>" + from.label + " -> " + to.label + "</h4><hr/>")
                     $("#teamInfoDiv").append(edge.title)
                 }
             });
@@ -246,9 +257,10 @@
         function resubmit() {
             var url = window.location.href
 
-            var corrThreshold = $("#corrThreshold").val()
             var params = {};
-            params['corrThreshold'] = corrThreshold;
+            params['corrThreshold'] = $("#corrThreshold").val();
+            params['withDemographics'] = $("#withDemographics").is(':checked');
+
             submit('get', url, params)
         }
 

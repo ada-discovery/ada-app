@@ -24,6 +24,7 @@ import org.apache.spark.ml.param._
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.functions.col
 import play.api.libs.json.{JsObject, Json}
 import services.{FeaturesDataFrameFactory, SparkApp}
@@ -666,7 +667,14 @@ private class MachineLearningServiceImpl @Inject() (
         Some((metric, trainValue, testValues))
       } catch {
         case e: Exception =>
-          logger.error(s"Evaluation of metric '$metric' failed."); None
+          val fieldNamesString = trainPredictions.schema.fieldNames.mkString(", ") + "\n"
+          val rowsString = trainPredictions.take(10).map(_.toSeq.mkString(", ")).mkString("\n")
+
+          logger.error(
+            s"Evaluation of metric '$metric' failed." +
+            s"Train Predictions: ${fieldNamesString + rowsString}"
+          )
+          None
       }
     }
 
