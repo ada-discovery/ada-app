@@ -700,3 +700,22 @@ function updateFilterValueElement(filterElement, data) {
     valueElement.replaceWith(newValueElement)
     filterElement.find("#value").val(oldValue)
 }
+
+function updatePlusMinusIcon(element) {
+    var iconPlus = element.find("span.glyphicon-plus:first");
+    var iconMinus = element.find("span.glyphicon-minus:first");
+    if (iconPlus.length) {
+        iconPlus.removeClass("glyphicon-plus");
+        iconPlus.addClass("glyphicon-minus");
+    } else {
+        iconMinus.removeClass("glyphicon-minus");
+        iconMinus.addClass("glyphicon-plus");
+    }
+}
+
+function scrollToAnchor(id, offset){
+    var tag = $("#" + id)
+    if (!offset)
+        offset = 0
+    $('html,body').animate({scrollTop: tag.offset().top + offset},'slow');
+}

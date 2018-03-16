@@ -329,3 +329,16 @@ tr.vertical-divider > td:last-child {
     width: 200px;
     max-width: 200px
 }
+
+.documentation {
+    margin-bottom: 50px;
+    font-size: 18px;
+}
+
+.documentation-caption {
+    color: #317eac;
+}
+
+.documentation-section-navigation-caption {
+    color: #626262;
+}
