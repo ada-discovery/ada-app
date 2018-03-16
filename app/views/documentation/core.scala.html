@@ -1,0 +1,59 @@
+@import util.matchesPath
+@import views.html.layout.main
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
+@import controllers.routes.{DocumentationController => docRoutes}
+@import views.html.basicSideBar
+
+@(
+    helpName: String)(
+    content: Html
+)(implicit context: WebContext)
+
+@sideBar = @{
+    basicSideBar(Seq(
+        ("Introduction", Seq(
+            (docRoutes.intro, "Overview", None),
+            (docRoutes.basic, "Basics", None)
+        )),
+        ("Analytics", Seq(
+            (docRoutes.stats, "Statistics", None),
+            (docRoutes.filters, "Filters", None),
+            (docRoutes.views, "Views", None)
+        )),
+        ("Machine Learning", Seq(
+            (docRoutes.ml, "Overview", None),
+            (docRoutes.mlClassification, "Classification", None),
+            (docRoutes.mlRegression, "Regression", None),
+            (docRoutes.mlClusterization, "Clusterization", None)
+        )),
+        ("Other", Seq(
+            (docRoutes.dataSetImport, "Data Set Import", None),
+            (docRoutes.userManagement, "User Management", None),
+            (docRoutes.technology, "Technology", None)
+        ))
+    ))
+}
+
+@main(Messages("documentation.title", helpName), Some(sideBar)) {
+
+    <div class="page-header">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>@helpName</h1>
+            </div>
+        </div>
+    </div>
+
+    @content
+
+    <script type="text/javascript">
+        $('.anchor-link').on('click', function () {
+            var sectionId = $(this).attr("href").substring(1)
+            var offset = $(this).attr("anchor-offset")
+            if (offset)
+                offset = parseInt(offset)
+            scrollToAnchor(sectionId, offset)
+        });
+    </script>
+}

@@ -94,16 +94,4 @@
         $('.btn-dataspace-expand').on('click', function () {
             updatePlusMinusIcon($(this));
         });
-
-        function updatePlusMinusIcon(element) {
-            var iconPlus = element.find("span.glyphicon-plus:first");
-            var iconMinus = element.find("span.glyphicon-minus:first");
-            if (iconPlus.length) {
-                iconPlus.removeClass("glyphicon-plus");
-                iconPlus.addClass("glyphicon-minus");
-            } else {
-                iconMinus.removeClass("glyphicon-minus");
-                iconMinus.addClass("glyphicon-plus");
-            }
-        }
 </script>

@@ -75,6 +75,7 @@ seriesTransformation.title = Series Transformation of {0}
 fractalis.title = Fractalis ({0})
 independenceTest.title = Independence Test of {0}
 network.title = {0} Network
+documentation.title = Documentation: {0}
 
 dataSetSetting.keyFieldName.label = Key Field
 dataSetSetting.exportOrderByFieldName.label = Export OrderBy Field

@@ -1,0 +1,41 @@
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
+@import views.html.documentation.core
+@import views.html.documentation.section
+
+@()(implicit context: WebContext)
+
+@core("Data Set Import") {
+
+    @section(None, None, 0, false) {
+        <p>
+            To create, edit, delete, schedule, or execute a data set import, go to <i>Admin->Data Set Imports</i>. Ada provides three file-based data import adapters:
+            <ul>
+                <li>CSV</li>
+                <li>JSON</li>
+                <li><a href="http://transmartfoundation.org">tranSMART</a></li>
+            </ul>
+        </p>
+
+        <p>
+            and three RESTful-based:
+            <ul>
+                <li><a href="http://www.project-redcap.org">REDCap</a></li>
+                <li><a href="https://www.synapse.org">Synapse</a></li>
+                <li><a href="http://www.egait.de">eGAIT</a></li>
+            </ul>
+        </p>
+    } {
+        <div class="row">
+            <div class="col-md-5">
+                <img class="img-responsive" src="@routes.Assets.versioned("images/documentation/data_set_imports.png")"/>
+            </div>
+            <div class="col-md-7">
+                <div class="panel panel-warning">
+                    <div class="panel-heading"><strong>Note</strong></div>
+                    <div class="panel-body">Data sets can be imported only by admins! If you have data that you believe should be imported to (a specific instance of) Ada, <a href="@routes.AppController.contact()">contact your admin</a>.</div>
+                </div>
+            </div>
+        </div>
+    }
+}

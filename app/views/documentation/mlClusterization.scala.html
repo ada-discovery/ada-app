@@ -1,0 +1,26 @@
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
+@import views.html.documentation.core
+@import views.html.documentation.imageSection
+
+@()(implicit context: WebContext)
+
+@core("Clusterization") {
+
+    @imageSection(None, None, Some("images/documentation/scatter.png"), 1, false) {
+        <p>
+            Models:
+            <ul>
+                <li>K-means</li>
+                <li>Bisecting k-means</li>
+                <li>Gaussian mixture</li>
+                <li>LDA</li>
+            </ul>
+        </p>
+
+        <p>
+            Clusterization results are visualized as scatters for all the numerical input variables with clusters, also with principal components.
+            Significance of the variables for a produced clusterization (i.e., categorical class membership) is checked with ANOVA and Chi-square tests.
+        </p>
+    }
+}

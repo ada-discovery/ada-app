@@ -5,6 +5,7 @@
 @import controllers.routes.{MPowerChallengeController => challengeRoutes}
 @import play.api.libs.json.Json
 @import views.html.elements.labelValue
+@import views.html.basicSideBar
 
 @(
     domainName: String,
@@ -14,61 +15,25 @@
     edges: Traversable[VisEdge]
 )(implicit context: WebContext)
 
-@topItem(text: String, id: Int) = {
-    <li style="padding-top: 15px">
-        <ul class="list-inline">
-            <li>
-                <button type="button" class="btn btn-sm btn-default btn-expand" data-toggle="collapse" data-target="#submenu-@{id}">
-                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                </button>
-            </li>
-            <li style="color: darkgray;">
-                <h4>@text</h4>
-            </li>
-        </ul>
-    </li>
-}
-
-@listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
-    <li @if(matchesPath(call.url, context.request.path, matchPrefixDepth)) {class="inner-node active"} else {class="inner-node"}>
-        <a href="@call">
-            <ul class="list-inline">
-                <li>
-                    <span class="glyphicon glyphicon-chevron-right"></span>
-                </li>
-                <li>
-                    <h5>@text</h5>
-                </li>
-            </ul>
-        </a>
-    </li>
-}
-
-@sideBar = {
-    <ul class="sidebar-nav nav nav-pills nav-stacked">
-        @topItem("1. mPower", 1)
-        <div id="submenu-1" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
-            @listItem(challengeRoutes.mPowerTeamNetwork(), "Teams", Some(2))
-            @listItem(challengeRoutes.mPowerSubmissionNetwork(), "Submissions", Some(2))
-        </div>
-        @topItem("2.1 Tremor", 2)
-        <div id="submenu-2" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
-            @listItem(challengeRoutes.tremorTeamNetwork(), "Teams", Some(2))
-            @listItem(challengeRoutes.tremorSubmissionNetwork(), "Submissions", Some(2))
-        </div>
-
-        @topItem("2.2 Dyskinesia", 3)
-        <div id="submenu-3" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
-            @listItem(challengeRoutes.dyskinesiaTeamNetwork(), "Teams", Some(2))
-            @listItem(challengeRoutes.dyskinesiaSubmissionNetwork(), "Submissions", Some(2))
-        </div>
-
-        @topItem("2.3 Bradykinesia", 4)
-        <div id="submenu-4" class="collapse clear-left submenu-div sidebar-nav nav nav-pills nav-stacked">
-            @listItem(challengeRoutes.bradykinesiaTeamNetwork(), "Teams", Some(2))
-            @listItem(challengeRoutes.bradykinesiaSubmissionNetwork(), "Submissions", Some(2))
-        </div>
-    </ul>
+@mysideBar = @{
+    basicSideBar(Seq(
+        ("1. mPower", Seq(
+            (challengeRoutes.mPowerTeamNetwork(), "Teams", Some(2)),
+            (challengeRoutes.mPowerSubmissionNetwork(), "Submissions", Some(2))
+        )),
+        ("2.1 Tremor", Seq(
+            (challengeRoutes.tremorTeamNetwork(), "Teams", Some(2)),
+            (challengeRoutes.tremorSubmissionNetwork(), "Submissions", Some(2))
+        )),
+        ("2.2 Dyskinesia", Seq(
+            (challengeRoutes.dyskinesiaTeamNetwork(), "Teams", Some(2)),
+            (challengeRoutes.dyskinesiaSubmissionNetwork(), "Submissions", Some(2))
+        )),
+        ("2.3 Bradykinesia", Seq(
+            (challengeRoutes.bradykinesiaTeamNetwork(), "Teams", Some(2)),
+            (challengeRoutes.bradykinesiaSubmissionNetwork(), "Submissions", Some(2))
+        ))
+    ))
 }
 
 @option(i: Int) = {
@@ -79,7 +44,7 @@
     <option value="0.@i" @if(threshold.toString.equals(s"0.$i")) {selected="selected"}>0.@i</option>
 }
 
-@main(Messages("network.title", domainName), Some(sideBar)) {
+@main(Messages("network.title", domainName), Some(mysideBar)) {
 
     <style type="text/css">
         #mynetwork {
@@ -268,28 +233,5 @@
             // draw all nodes
             draw(nodes)
         })
-
-        $('.btn-expand').on('click', function () {
-            updatePlusMinusIcon($(this));
-        });
-
-        $(".submenu-div").each(function () {
-            if ($(this).find("li.inner-node.active").size() > 0) {
-                $(this).addClass("in")
-                updatePlusMinusIcon($(this).prev());
-            }
-        });
-
-        function updatePlusMinusIcon(element) {
-            var iconPlus = element.find("span.glyphicon-plus:first");
-            var iconMinus = element.find("span.glyphicon-minus:first");
-            if (iconPlus.length) {
-                iconPlus.removeClass("glyphicon-plus");
-                iconPlus.addClass("glyphicon-minus");
-            } else {
-                iconMinus.removeClass("glyphicon-minus");
-                iconMinus.addClass("glyphicon-plus");
-            }
-        }
     </script>
 }

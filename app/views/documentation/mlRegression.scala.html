@@ -1,0 +1,63 @@
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
+@import views.html.documentation.core
+@import views.html.documentation.imageSection
+@import views.html.documentation.sectionNavigation
+
+@()(implicit context: WebContext)
+
+@core("Regression") {
+
+    @sectionNavigation(
+        ("section_models", "Models"),
+        ("section_evaluation_metrics", "Evaluation Metrics"),
+        ("section_feature_normalization_and_scaling", "Feature Normalization and Scaling"),
+        ("section_other_functionality", "Other Functionality")
+    )
+
+    @imageSection(Some("section_models"), Some("Models"), None, 1) {
+        <p>
+            <ul>
+                <li>Linear regression</li>
+                <li>Generalized linear regression</li>
+                <li>Regression tree</li>
+                <li>Random regression forest</li>
+                <li>Gradient boost regression tree</li>
+            </ul>
+        </p>
+    }
+
+    @imageSection(Some("section_evaluation_metrics"), Some("Evaluation Metrics"), None, 1) {
+        <p>
+            <ul>
+                <li>MSE</li>
+                <li>RMSE</li>
+                <li>MAE</li>
+                <li>R2</li>
+            </ul>
+        </p>
+    }
+
+    @imageSection(Some("section_feature_normalization_and_scaling"), Some("Feature Normalization and Scaling"), None, 1) {
+        <p>
+            <ul>
+                <li>Standard scaling (z-score)</li>
+                <li>Min-max 0-1 scaling</li>
+                <li>Min-max -1-1 scaling</li>
+                <li>Max absolute scaling</li>
+                <li>L1 normalization</li>
+                <li>L2 normalization</li>
+            </ul>
+        </p>
+    }
+
+    @imageSection(Some("section_other_functionality"), Some("Other Functionality"), None, 1, false) {
+        <p>
+            <ul>
+                <li>Cross-validation (param grid)</li>
+                <li>Dimensionality reduction by PCA</li>
+                <li>Results storable to DB</li>
+            </ul>
+        </p>
+    }
+}

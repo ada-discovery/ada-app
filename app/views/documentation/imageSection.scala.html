@@ -1,0 +1,16 @@
+@import views.html.documentation.section
+
+@(
+    id: Option[String] = None,
+    caption: Option[String] = None,
+    picPath: Option[String] = None,
+    picOffset: Int = 1,
+    withLine: Boolean = true)(
+    content: Html
+)
+
+@imageAux(picPath: String) = {
+    <img class="img-responsive" src="@routes.Assets.versioned(picPath)"/>
+}
+
+@section(id, caption, picOffset, withLine)(content)(picPath.map(imageAux).getOrElse(Html("")))

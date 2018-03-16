@@ -1,0 +1,37 @@
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
+@import views.html.documentation.core
+@import views.html.documentation.section
+
+@()(implicit context: WebContext)
+
+@core("Views") {
+
+    @section(None, None, 0, false) {
+        <p>
+            View is a central presentation concept is Ada. It is a customizable container of different filters, widgets, and tables.
+            To create a new view go to <i>Setting->Views</i> and click on <img src="@routes.Assets.versioned("images/documentation/new_button.png")"/> located on the right side.
+            Once a view is created, widgets from analytical sections can be added to the view by clicking <code>+To</code> in their screens.
+            Size and position of each widget is customizable through the options, such as width (in columns: max 12), height (in pixels), and offset.
+        </p>
+
+        <p>
+            Before you create a new filter or view, always verify if the same (or similar) view does not exist.
+            Always give a filter or a view a appropriate name reflecting its meaning and use, such as "Cases vs Controls (Motor Tests)" and avoid dummy names, e.g., "View 21” and "Peter’s Stuff".
+            Do not include too many widgets and table columns in a single view; split if necessary.
+            Note that views can be copied (<img src="@routes.Assets.versioned("images/documentation/copy_button.png")"/>) so if there is a view you like do not start from scratch and copy and modify the view instead.
+        </p>
+        <p>
+            Access rules for views (and filters) are quite straightforward: all non-private filters and views can be used by all the users who have access to the underlying data set.
+            Filter or view can be edited or deleted only by the original creator (or admin).
+        </p>
+    } {
+        <div clas="row">
+            <img class="img-responsive" src="@routes.Assets.versioned("images/documentation/new_view.png")"/>
+        </div>
+        <div clas="row" style="margin-top: 40px">
+            <hr/>
+            <img class="img-responsive" src="@routes.Assets.versioned("images/carousel/stats-small.png")"/>
+        </div>
+    }
+}

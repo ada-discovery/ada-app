@@ -1,0 +1,20 @@
+@(
+    id: Option[String] = None,
+    caption: Option[String] = None,
+    rightOffset: Int = 1,
+    withLine: Boolean = true)(
+    leftContent: Html)(
+    rightContent: Html = Html("")
+)
+
+<div @if(id.isDefined) { id="@id.get"} class="row documentation">
+    <div class="col-md-7">
+        @if(caption.isDefined) {<h3 class="documentation-caption">@caption.get</h3>}
+        @leftContent
+    </div>
+    <div class="col-md-offset-@rightOffset col-md-@{5 - rightOffset}">
+        @rightContent
+    </div>
+</div>
+
+@if(withLine) { <hr/> }
