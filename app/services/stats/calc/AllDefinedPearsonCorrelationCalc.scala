@@ -2,31 +2,48 @@ package services.stats.calc
 
 import akka.stream.scaladsl.Sink
 import services.stats.Calculator
-import services.stats.calc.PearsonCorrelationAllDefinedCalcIOTypes._
+import services.stats.calc.AllDefinedPearsonCorrelationCalcIOTypes._
 import _root_.util.GrouppedVariousSize
 import play.api.Logger
 
 import scala.collection.mutable
 import scala.concurrent.Future
 
-object PearsonCorrelationAllDefinedCalcIOTypes {
+object AllDefinedPearsonCorrelationCalcIOTypes {
   type IN = Seq[Double]
   type OUT = Seq[Seq[Option[Double]]]
   type INTER = PersonIterativeAccumGlobalArray
 }
 
-object PearsonCorrelationAllDefinedCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq[Int]), Seq[Int]] {
+object AllDefinedPearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq[Int]), Seq[Int]] {
 
   private val logger = Logger
 
   override def fun(o: Unit) = { values: Traversable[IN] =>
-    ???
+    val elementsCount = if (values.nonEmpty) values.head.size else 0
+
+    def calc(index1: Int, index2: Int) = {
+      val els = (
+        values.map(_ (index1)).toSeq,
+        values.map(_ (index2)).toSeq
+      ).zipped
+
+      PearsonCorrelationCalc.calcForPair(els)
+    }
+
+    (0 until elementsCount).par.map { i =>
+      (0 until elementsCount).par.map { j =>
+        if (i != j)
+          calc(i, j)
+        else
+          Some(1d)
+      }.toList
+    }.toList
   }
 
   override def sink(featuresNumAndGroupSizes: (Int, Seq[Int])): Sink[IN, Future[INTER]] = {
     val n = featuresNumAndGroupSizes._1
     val parallelGroupSizes = featuresNumAndGroupSizes._2
-
     val starts = parallelGroupSizes.scanLeft(0){_+_}
     val startEnds = parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
 

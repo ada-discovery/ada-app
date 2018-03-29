@@ -13,8 +13,6 @@ object BasicStatsCalcIOTypes {
 
 object BasicStatsCalc extends NoOptionsCalculator[IN, OUT, INTER] {
 
-  private val logger = Logger
-
   override def fun(o: Unit) = { values: Traversable[IN] =>
     val flattenedValues = values.flatten
     if (flattenedValues.nonEmpty) {
@@ -24,48 +22,57 @@ object BasicStatsCalc extends NoOptionsCalculator[IN, OUT, INTER] {
       val max = flattenedValues.max
       val mean = flattenedValues.sum / count
 
-      // sum up the squares
       val meanSq = flattenedValues.foldLeft(0.0)((accum, value) => accum + value * value) / count
-
       val variance = meanSq - mean * mean
+      val sVariance = sampleVariance(variance, count)
 
-      Some(BasicStatsResult(min, max, mean, variance, Math.sqrt(variance), count, values.size - count))
+      Some(BasicStatsResult(min, max, mean, variance, Math.sqrt(variance), sVariance, Math.sqrt(sVariance), count, values.size - count))
     } else
       None
   }
 
   override def sink(o: Unit) =
-    Sink.fold[BasicStatsAccum, Option[Double]](
+    Sink.fold[INTER, IN](
       BasicStatsAccum(Double.MaxValue, Double.MinValue, 0, 0, 0, 0)
     ) {
-      case (accum, value) =>
-        value match {
-          case Some(value) =>
-            BasicStatsAccum(
-              Math.min(accum.min, value),
-              Math.max(accum.max, value),
-              accum.sum + value,
-              accum.sqSum + value * value,
-              accum.count + 1,
-              accum.undefinedCount
-            )
-
-          case None => accum.copy(undefinedCount = accum.undefinedCount + 1)
-        }
+      case (accum, value) => updateAccum(accum, value)
     }
 
   override def postSink(o: Unit) = { accum: INTER =>
     if (accum.count > 0) {
       val mean = accum.sum / accum.count
 
-      // sum up the squares
       val meanSq = accum.sqSum / accum.count
       val variance = meanSq - mean * mean
+      val sVariance = sampleVariance(variance, accum.count)
 
-      Some(BasicStatsResult(accum.min, accum.max, mean, variance, Math.sqrt(variance), accum.count, accum.undefinedCount))
+      Some(BasicStatsResult(
+        accum.min, accum.max, mean, variance, Math.sqrt(variance), sVariance, Math.sqrt(sVariance), accum.count, accum.undefinedCount
+      ))
     } else
       None
   }
+
+  private def sampleVariance(variance: Double, count: Int) =
+    if (count > 1) variance * count / (count - 1) else variance
+
+  private[calc] def updateAccum(
+    accum: BasicStatsAccum,
+    value: Option[Double]
+  ) =
+    value match {
+      case Some(value) =>
+        BasicStatsAccum(
+          Math.min(accum.min, value),
+          Math.max(accum.max, value),
+          accum.sum + value,
+          accum.sqSum + value * value,
+          accum.count + 1,
+          accum.undefinedCount
+        )
+
+      case None => accum.copy(undefinedCount = accum.undefinedCount + 1)
+    }
 }
 
 case class BasicStatsResult(
@@ -74,6 +81,8 @@ case class BasicStatsResult(
   mean: Double,
   variance: Double,
   standardDeviation: Double,
+  sampleVariance: Double,
+  sampleStandardDeviation: Double,
   definedCount: Int,
   undefinedCount: Int
 )

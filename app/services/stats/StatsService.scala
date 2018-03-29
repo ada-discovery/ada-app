@@ -3,10 +3,10 @@ package services.stats
 import java.{util => ju}
 import javax.inject.{Inject, Singleton}
 
-import _root_.util.{GrouppedVariousSize, _}
+import _root_.util.{AkkaStreamUtil, GroupMapList}
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{Source}
-import akka.stream.{ActorMaterializer}
+import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.ActorMaterializer
 import com.google.inject.ImplementedBy
 import dataaccess.Criterion.Infix
 import dataaccess.JsonUtil.project
@@ -22,12 +22,14 @@ import reactivemongo.bson.BSONObjectID
 import services.ml.BooleanLabelIndexer
 import services.stats.calc._
 import services.{FeaturesDataFrameFactory, SparkApp}
-
 import JsonFieldUtil._
+import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition, RealMatrix}
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.math.BigDecimal.RoundingMode
 import scala.collection.JavaConversions._
+import services.stats.StatsHelperUtil._
 
 @ImplementedBy(classOf[StatsServiceImpl])
 trait StatsService {
@@ -120,7 +122,9 @@ trait StatsService {
     options: NumericDistributionSinkOptions[T]
   ): Future[GroupNumericCount[G]]
 
-  // cumulative counts
+  ///////////////////////
+  // Cumulative Counts //
+  ///////////////////////
 
   def calcCumulativeCounts(
     items: Traversable[JsObject],
@@ -128,7 +132,9 @@ trait StatsService {
     groupField: Option[Field]
   ): Seq[(String, Traversable[Count[Any]])]
 
-  // quartiles
+  ///////////////
+  // Quartiles //
+  ///////////////
 
   def calcQuartiles(
     items: Traversable[JsObject],
@@ -141,7 +147,9 @@ trait StatsService {
     field: Field
   ): Future[Option[Quartiles[Any]]]
 
-  // standard stats
+  ////////////////////
+  // Standard Stats //
+  ////////////////////
 
   def calcBasicStats(
     items: Traversable[JsObject],
@@ -152,7 +160,9 @@ trait StatsService {
     source: Source[Option[Double], _]
   ): Future[Option[BasicStatsResult]]
 
-  // scatter
+  /////////////
+  // Scatter //
+  /////////////
 
   def collectScatterData(
     xyzItems: Traversable[JsObject],
@@ -161,7 +171,9 @@ trait StatsService {
     groupField: Option[Field]
   ): Traversable[(String, Traversable[(Any, Any)])]
 
-  // correlations
+  //////////////////
+  // Correlations //
+  //////////////////
 
   def calcPearsonCorrelations(
     items: Traversable[JsObject],
@@ -189,7 +201,81 @@ trait StatsService {
     parallelism: Option[Int]
   ): Future[Seq[Seq[Option[Double]]]]
 
-  // independence tests
+  ////////////////////////
+  // Euclidean Distance //
+  ////////////////////////
+
+  def calcEuclideanDistance(
+    items: Traversable[JsObject],
+    fields: Seq[Field]
+  ): Seq[Seq[Double]]
+
+  def calcEuclideanDistanceStreamed(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    fields: Seq[Field],
+    parallelism: Option[Int] = None,
+    withProjection: Boolean = true,
+    areValuesAllDefined: Boolean = false
+  ): Future[Seq[Seq[Double]]]
+
+  def calcEuclideanDistanceStreamed(
+    source: Source[Seq[Option[Double]], _],
+    featuresNum: Int,
+    parallelism: Option[Int]
+  ): Future[Seq[Seq[Double]]]
+
+  def calcEuclideanDistanceAllDefinedStreamed(
+    source: Source[Seq[Double], _],
+    featuresNum: Int,
+    parallelism: Option[Int]
+  ): Future[Seq[Seq[Double]]]
+
+  /////////////////
+  // Gram Matrix //
+  /////////////////
+
+  def calcGramMatrix(
+    matrix: Traversable[Seq[Double]]
+  ): Seq[Seq[Double]]
+
+  def calcGramMatrix(
+    source: Source[Seq[Double], _]
+  ): Future[Seq[Seq[Double]]]
+
+  ////////////////
+  // Metric MDS //
+  ////////////////
+
+  def performMetricMDS(
+    distanceMatrix: Traversable[Seq[Double]],
+    dims: Int,
+    scaleByEigenValues: Boolean
+  ): (Seq[Seq[Double]], Seq[Double])
+
+  def performMetricMDS(
+    distanceMatrixSource: Source[Seq[Double], _],
+    dims: Int,
+    scaleByEigenValues: Boolean
+  ): Future[(Seq[Seq[Double]], Seq[Double])]
+
+  /////////////////////
+  // Standardization //
+  /////////////////////
+
+  def standardize(
+    inputs: Traversable[Seq[Option[Double]]],
+    useSampleStd: Boolean
+  ): Traversable[Seq[Option[Double]]]
+
+  def standardize(
+    source: Source[Seq[Option[Double]], _],
+    useSampleStd: Boolean
+  ): Future[Traversable[Seq[Option[Double]]]]
+
+  ////////////////////////
+  // Independence Tests //
+  ////////////////////////
 
   def testChiSquare(
     data: Traversable[JsObject],
@@ -314,14 +400,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     source: Source[Option[T], _]
   ): Future[UniqueCount[T]] = {
     val calc = UniqueDistributionCountsCalc[T]
-    for {
-    // run the stream with a selected sink and the results back
-      output <- {
-        val sink = calc.sink()
-        source.runWith(sink)
-      }
-    } yield
-      calc.postSink()(output)
+    calc.runSink((), ())(source)
   }
 
   override def calcGroupedUniqueDistributionCounts(
@@ -366,14 +445,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     source: Source[(Option[G], Option[T]), _]
   ): Future[GroupUniqueCount[G, T]] = {
     val calc = GroupUniqueDistributionCountsCalc[G, T]
-    for {
-    // run the stream with a selected sink and the results back
-      output <- {
-        val sink = calc.sink()
-        source.runWith(sink)
-      }
-    } yield
-      calc.postSink()(output)
+    calc.runSink((), ())(source)
   }
 
   /////////////////////////////////
@@ -472,14 +544,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     options: NumericDistributionSinkOptions[T]
   ): Future[NumericCount] = {
     val calc = NumericDistributionCountsCalc[T]
-    for {
-      // run the stream with a selected sink and process with a post-sink
-      output <- {
-        val sink = calc.sink(options)
-        source.runWith(sink)
-      }
-    } yield
-      calc.postSink(options)(output)
+    calc.runSink(options, options)(source)
   }
 
   // grouped
@@ -539,14 +604,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     options: NumericDistributionSinkOptions[T]
   ): Future[GroupNumericCount[G]] = {
     val calc = GroupNumericDistributionCountsCalc[G, T]
-    for {
-    // run the stream with a selected sink and the results back
-      output <- {
-        val sink = calc.sink(options)
-        source.runWith(sink)
-      }
-    } yield
-      calc.postSink(options)(output)
+    calc.runSink(options, options)(source)
   }
 
   private def groupValues(
@@ -989,14 +1047,10 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
 
   override def calcBasicStatsStreamed(
     source: Source[Option[Double], _]
-  ): Future[Option[BasicStatsResult]] =
-    for {
-      accum <- {
-        val sink = BasicStatsCalc.sink()
-        source.runWith(sink)
-      }
-    } yield
-      BasicStatsCalc.postSink()(accum)
+  ): Future[Option[BasicStatsResult]] = {
+    val calc = BasicStatsCalc
+    calc.runSink((), ())(source)
+  }
 
   //////////////////
   // Correlations //
@@ -1022,8 +1076,8 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       // create a data source
       source <- dataRepo.findAsStream(criteria, Nil, if (withProjection) fields.map(_.name) else Nil)
 
-      // covert the data source to (double) value source and calc correlations
-      corrs <- if (areValuesAllDefined) {
+      // convert the data source to a (double) value source and calc correlations
+      correlations <- if (areValuesAllDefined) {
         val doubleValues = jsonToDoublesDefined(fields)
         calcPearsonCorrelationsAllDefinedStreamed(source.map(doubleValues), fields.size, parallelism)
       } else {
@@ -1031,23 +1085,17 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         calcPearsonCorrelationsStreamed(source.map(doubleValues), fields.size, parallelism)
       }
     } yield
-      corrs
+      correlations
 
   override def calcPearsonCorrelationsStreamed(
     source: Source[Seq[Option[Double]], _],
     featuresNum: Int,
     parallelism: Option[Int]
   ): Future[Seq[Seq[Option[Double]]]] = {
-    val groupSizes = calcGroupSizes(featuresNum, parallelism)
+    val groupSizes = calcMatrixGroupSizes(featuresNum, parallelism)
 
-    for {
-      // run the stream with a selected sink and get accums back
-      accums <- {
-        val sink = PearsonCorrelationCalc.sink(featuresNum, groupSizes)
-        source.runWith(sink)
-      }
-    } yield
-      PearsonCorrelationCalc.postSink(groupSizes)(accums)
+    val calc = PearsonCorrelationCalc
+    calc.runSink((featuresNum, groupSizes), groupSizes)(source)
   }
 
   override def calcPearsonCorrelationsAllDefinedStreamed(
@@ -1055,46 +1103,222 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     featuresNum: Int,
     parallelism: Option[Int]
   ): Future[Seq[Seq[Option[Double]]]] = {
-    val groupSizes = calcGroupSizes(featuresNum, parallelism)
+    val groupSizes = calcMatrixGroupSizes(featuresNum, parallelism)
 
-    for {
-      // run the stream with a selected sink and get accums back
-      globalAccum <- {
-        val sink = PearsonCorrelationAllDefinedCalc.sink(featuresNum, groupSizes)
-        source.runWith(sink)
-      }
-    } yield
-      PearsonCorrelationAllDefinedCalc.postSink(groupSizes)(globalAccum)
+    val calc = AllDefinedPearsonCorrelationCalc
+    calc.runSink((featuresNum, groupSizes), groupSizes)(source)
   }
 
-  private def calcGroupSizes(n: Int, parallelism: Option[Int]) =
-    parallelism.map { groupNumber =>
-      val initGroupSize = n / Math.sqrt(groupNumber)
+  ////////////////////////
+  // Euclidean Distance //
+  ////////////////////////
 
-      val groupSizes = (1 to groupNumber).map { i =>
-        val doubleGroupSize = (Math.sqrt(i) - Math.sqrt(i - 1)) * initGroupSize
-        Math.round(doubleGroupSize).toInt
-      }.filter(_ > 0)
+  override def calcEuclideanDistance(
+    items: Traversable[JsObject],
+    fields: Seq[Field]
+  ): Seq[Seq[Double]] = {
+    val doubleValues = jsonToDoubles(fields)
+    EuclideanDistanceCalc.fun()(items.map(doubleValues))
+  }
 
-      val sum = groupSizes.sum
-      val fixedGroupSizes = if (sum < n) {
-        if (groupSizes.size > 1)
-          groupSizes.take(groupSizes.size - 1) :+ (groupSizes.last + (n - sum))
-        else if (groupSizes.size == 1)
-          Seq(groupSizes.head + (n - sum))
-        else
-          Seq(n)
-      } else
-        groupSizes
+  override def calcEuclideanDistanceStreamed(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    fields: Seq[Field],
+    parallelism: Option[Int] = None,
+    withProjection: Boolean = true,
+    areValuesAllDefined: Boolean = false
+  ): Future[Seq[Seq[Double]]] =
+    for {
+      // create a data source
+      source <- dataRepo.findAsStream(criteria, Nil, if (withProjection) fields.map(_.name) else Nil)
 
-      val newSum = fixedGroupSizes.sum
-      logger.info("Groups          : " + fixedGroupSizes.mkString(","))
-      logger.info("Sum             : " + newSum)
+      // convert the data source to a (double) value source and calc distances
+      distances <- if (areValuesAllDefined) {
+        val doubleValues = jsonToDoublesDefined(fields)
+        calcEuclideanDistanceAllDefinedStreamed(source.map(doubleValues), fields.size, parallelism)
+      } else {
+        val doubleValues = jsonToDoubles(fields)
+        calcEuclideanDistanceStreamed(source.map(doubleValues), fields.size, parallelism)
+      }
+    } yield
+      distances
 
-      fixedGroupSizes
-    }.getOrElse(
-      Nil
+  override def calcEuclideanDistanceStreamed(
+    source: Source[Seq[Option[Double]], _],
+    featuresNum: Int,
+    parallelism: Option[Int]
+  ): Future[Seq[Seq[Double]]] = {
+    val groupSizes = calcMatrixGroupSizes(featuresNum, parallelism)
+
+    val calc = EuclideanDistanceCalc
+    calc.runSink((featuresNum, groupSizes), ())(source)
+  }
+
+  override def calcEuclideanDistanceAllDefinedStreamed(
+    source: Source[Seq[Double], _],
+    featuresNum: Int,
+    parallelism: Option[Int]
+  ): Future[Seq[Seq[Double]]] = {
+    val groupSizes = calcMatrixGroupSizes(featuresNum, parallelism)
+
+    val calc = AllDefinedEuclideanDistanceCalc
+    calc.runSink((featuresNum, groupSizes), ())(source)
+  }
+
+  /////////////////
+  // Gram Matrix //
+  /////////////////
+
+  def calcGramMatrix(
+    matrix: Traversable[Seq[Double]]
+  ): Seq[Seq[Double]] = {
+    val squareMatrix = matrix.map(_.map(value => -0.5 * value * value)).toSeq
+
+    // calc row and column sums
+    val (rowMeans, columnMeans) = MatrixRowColumnMeanCalc.fun()(squareMatrix)
+
+    // calc total mean
+    val totalMean = rowMeans.sum / rowMeans.size
+
+    // produce Gram matrix
+    (squareMatrix, rowMeans).zipped.map { case (row, rowMean) =>
+      (row, columnMeans).zipped.map { case (value, columnMean) =>
+        value - rowMean - columnMean + totalMean
+      }
+    }
+  }
+
+  def calcGramMatrix(
+    source: Source[Seq[Double], _]
+  ): Future[Seq[Seq[Double]]] = {
+    val squareMatrixSource = source.map(_.map(value => -0.5 * value * value))
+
+    for {
+      // calc row and column sums
+      (rowMeans, columnMeans) <- MatrixRowColumnMeanCalc.runSink((), ())(squareMatrixSource)
+
+      // Gram matrix
+      gramMatrix <- {
+        // calc total mean
+        val totalMean = rowMeans.sum / rowMeans.size
+
+        val rowMeanSource = Source.fromIterator(() => rowMeans.iterator)
+
+        // produce Gram matrix
+        AkkaStreamUtil.zipSources(squareMatrixSource, rowMeanSource).map { case (row, rowMean) =>
+          (row, columnMeans).zipped.map { case (value, columnMean) =>
+            value - rowMean - columnMean + totalMean
+          }
+        }.runWith(Sink.seq[Seq[Double]])
+      }
+    } yield
+      gramMatrix
+  }
+
+  ////////////////
+  // Metric MDS //
+  ////////////////
+
+  override def performMetricMDS(
+    distanceMatrix: Traversable[Seq[Double]],
+    dims: Int,
+    scaleByEigenValues: Boolean
+  ): (Seq[Seq[Double]], Seq[Double]) = {
+    logger.info("Calculating Gram matrix...")
+    val gramMatrix = calcGramMatrix(distanceMatrix)
+
+    logger.info("Performing metric MDS...")
+    performMetricMDSAux(gramMatrix, dims, scaleByEigenValues)
+  }
+
+  override def performMetricMDS(
+    distanceMatrixSource: Source[Seq[Double], _],
+    dims: Int,
+    scaleByEigenValues: Boolean
+  ): Future[(Seq[Seq[Double]], Seq[Double])] =
+    for {
+      gramMatrix <- {
+        logger.info("Calculating Gram matrix...")
+        calcGramMatrix(distanceMatrixSource)
+      }
+    } yield {
+      logger.info("Performing metric MDS...")
+      performMetricMDSAux(gramMatrix, dims, scaleByEigenValues)
+    }
+
+  private def performMetricMDSAux(
+    gramMatrix: Seq[Seq[Double]],
+    dims: Int,
+    scaleByEigenValues: Boolean
+  ) = {
+    val (eigenValues, eigenVectors) = calcEigenValuesAndVectors(gramMatrix)
+
+    val mdsSolution = eigenVectors.transpose.map(_.take(dims))
+
+    def scaledMdsSolution =
+      mdsSolution.transpose.zip(eigenValues).map { case (mdsColumn, eigenValue) =>
+        val squareSum = mdsColumn.fold(0d){ case (sum, value) => sum + value * value }
+        val factor = Math.sqrt(eigenValue / squareSum)
+        mdsColumn.map(_ * factor)
+      }.transpose
+
+    (if (scaleByEigenValues) scaledMdsSolution else mdsSolution, eigenValues)
+  }
+
+  private def calcEigenValuesAndVectors(
+    matrix: Seq[Seq[Double]]
+  ): (Seq[Double], Seq[Seq[Double]]) = {
+    val realMatrix = new Array2DRowRealMatrix(matrix.map(_.toArray).toArray)
+    val eigenDecomposition = new EigenDecomposition(realMatrix)
+
+    // eigen values
+    val eigenValues = eigenDecomposition.getRealEigenvalues.toSeq
+
+    // eigen vectors
+    val eigenVectorMatrix = eigenDecomposition.getVT
+    val eigenVectors = for (i <- 0 to eigenVectorMatrix.getRowDimension - 1) yield eigenVectorMatrix.getRow(i).toSeq
+
+    (eigenValues, eigenVectors)
+  }
+
+  /////////////////////
+  // Standardization //
+  /////////////////////
+
+  def standardize(
+    inputs: Traversable[Seq[Option[Double]]],
+    useSampleStd: Boolean
+  ): Traversable[Seq[Option[Double]]] = {
+    val basicStats = MultiBasicStatsCalc.fun()(inputs)
+    StandardizationCalc.fun(meansAndStds(basicStats, useSampleStd))(inputs)
+  }
+
+  def standardize(
+    source: Source[Seq[Option[Double]], _],
+    useSampleStd: Boolean
+  ): Future[Traversable[Seq[Option[Double]]]] =
+    for {
+      basicStats <- MultiBasicStatsCalc.runSink((), ())(source)
+
+      result <- StandardizationCalc.runSink(meansAndStds(basicStats, useSampleStd), ())(source)
+    } yield
+      result
+
+  private def meansAndStds(
+    basicStats: Seq[Option[BasicStatsResult]],
+    useSampleStd: Boolean
+  ) =
+    basicStats.map(
+      _ match {
+        case Some(stats) => (stats.mean, if (useSampleStd) stats.sampleStandardDeviation else stats.standardDeviation)
+        case None => (0d, 0d)
+      }
     )
+
+  ////////////////////////
+  // Independence Tests //
+  ////////////////////////
 
   override def testChiSquare(
     data: Traversable[JsObject],

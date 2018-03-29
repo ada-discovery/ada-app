@@ -23,13 +23,6 @@ trait RedCapServiceFactory {
   def apply(@Assisted("url") url: String, @Assisted("token") token: String): RedCapService
 }
 
-object RedCapServiceFactory {
-  def defaultRedCapService(redCapServiceFactory: RedCapServiceFactory, configuration: Configuration): RedCapService = {
-    val url = configuration.getString("redcap.prodserver.api.url").get
-    val token = configuration.getString("redcap.prodserver.token").get
-    redCapServiceFactory(url, token)
-  }
-}
 trait RedCapService {
 
   /**

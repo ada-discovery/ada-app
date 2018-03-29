@@ -37,11 +37,6 @@
                         <ul class="dropdown-menu">
                             @listItem(routes.TranslationController.find(), "DE-EN Translations", Some(3))
                             <li role="separator" class="divider"></li>
-                            @listItem(routes.RedCapController.listRecords(), "LuxPark REDCap Records")
-                            @listItem(routes.RedCapController.listMetadatas(), "LuxPark REDCap Metadata")
-                            @listItem(routes.RedCapController.listExportFields(), "LuxPark REDCap Export Fields")
-                            @listItem(routes.RedCapController.overview(), "LuxPark REDCap Overview")
-                            <li role="separator" class="divider"></li>
                             @listItem(controllers.ml.routes.RCPredictionController.showRCPrediction(), "RC Prediction")
                         </ul>
                     </li>

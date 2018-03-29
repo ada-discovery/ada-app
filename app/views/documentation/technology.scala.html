@@ -1,15 +1,16 @@
 @import controllers.core.WebContext
 @import controllers.core.WebContext._
 @import views.html.documentation.core
-@import views.html.documentation.imageSection
+@import views.html.documentation.section
 
 @()(implicit context: WebContext)
 
 @core("Technology") {
 
-    @imageSection(None, None, Some("images/documentation/architecture.png"), 1, false) {
+    @section(None, None, 1, false) {
         <p>
-            Ada has a modular, lightweight, layered architecture, centered around Scala stack, with a strong focus on performance.
+            Ada has a modular, lightweight, layered architecture, centered around <a href="https://www.scala-lang.org">Scala</a> stack, with a strong focus on performance.
+            Scala is a modern functional and object-oriented JVM language developed by academics at <a href="https://www.epfl.ch">EPFL</a>.
         </p>
 
         <p>
@@ -20,5 +21,13 @@
         <p>
             Ada is packed and compiled using Play sbt scripts as a standalone application with an embedded Netty server, which can be deployed anywhere.
         </p>
+    } {
+        <div clas="row">
+            <img class="img-responsive" src="@routes.Assets.versioned("images/documentation/scala.png")"/>
+        </div>
+        <div clas="row" style="margin-top: 40px">
+            <hr/>
+            <img class="img-responsive" src="@routes.Assets.versioned("images/documentation/architecture.png")"/>
+        </div>
     }
 }

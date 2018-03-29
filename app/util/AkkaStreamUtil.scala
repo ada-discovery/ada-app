@@ -1,8 +1,9 @@
 package util
 
 import akka.NotUsed
-import akka.stream.{ActorMaterializer, ClosedShape}
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source}
+import akka.stream.{ActorMaterializer, ClosedShape, SourceShape}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source, Zip}
+import play.api.libs.json.JsObject
 
 object AkkaStreamUtil {
 
@@ -32,6 +33,24 @@ object AkkaStreamUtil {
       .map { case (a, b) => a -> Seq(b)}
       .reduce((l, r) ⇒ (l._1, l._2 ++ r._2))
       .mergeSubstreams
+
+  def zipSources[A, B](
+    source1: Source[A, _],
+    source2: Source[B, _]
+  ): Source[(A, B), NotUsed] =
+    Source.fromGraph(GraphDSL.create() { implicit b =>
+      import GraphDSL.Implicits._
+
+      // prepare graph elements
+      val zip = b.add(Zip[A, B]())
+
+      // connect the graph
+      source1 ~> zip.in0
+      source2 ~> zip.in1
+
+      // expose port
+      SourceShape(zip.out)
+    })
 
   private def ssad(implicit materializer: ActorMaterializer) = {
     val topHeadSink = Sink.head[Int]

@@ -1,15 +1,15 @@
-package runnables
+package runnables.core
+
+import java.{util => ju}
 
 import services.stats.calc.{PersonIterativeAccumGlobal, PersonIterativeAccumGlobalArray}
 import util.GrouppedVariousSize
-import java.{util => ju}
 
 import scala.collection.mutable
 import scala.collection.parallel.mutable.ParArray
-import scala.concurrent.{Await, Future}
-import scala.util.Random
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
+import scala.concurrent.Future
+import scala.util.Random
 
 object CheckCorrelationAcumCalc extends App {
 

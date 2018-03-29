@@ -1,6 +1,5 @@
-package runnables
+package runnables.core
 
-import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.{util => ju}
@@ -8,16 +7,17 @@ import java.{util => ju}
 import akka.stream.scaladsl.{FileIO, Framing, Sink, Source}
 import akka.util.ByteString
 import com.google.inject.Inject
-import persistence.dataset.DataSetAccessorFactory
-import util.{seqFutures, writeByteArrayStream}
 import dataaccess.Criterion._
 import models.DataSetFormattersAndIds.FieldIdentity
 import models.{Field, FieldTypeId}
-import org.apache.commons.io.IOUtils
+import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
+import runnables.InputFutureRunnable
 import services.stats.StatsService
+import util.{seqFutures, writeByteArrayStream}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.reflect.runtime.universe.typeOf
 
 class CalcCorrelations @Inject()(
@@ -90,54 +90,16 @@ class CalcCorrelations @Inject()(
       val correlationsToExport = if (correlations.nonEmpty) correlations else streamedCorrelations
       input.exportFileName.map { exportFileName =>
         logger.info(s"Exporting the calculated correlations to $exportFileName.")
-        exportCorrelationsOptimal(correlationsToExport, sortedFields, exportFileName)
+        FeatureMatrixIO.saveSquare(
+          correlationsToExport,
+          sortedFields.map(_.name),
+          exportFileName,
+          (value: Option[Double]) => value.map(_.toString).getOrElse("")
+        )
       }.getOrElse(
         ()
       )
     }
-  }
-
-  private def exportCorrelationsOptimal(
-    corrs: Seq[Seq[Option[Double]]],
-    fields: Seq[Field],
-    fileName: String
-  ) = {
-    val fieldNames = fields.map(field => field.name.replaceAllLiterally("u002e", "."))
-
-    val header = "featureName," + fieldNames.mkString(",") + "\n"
-    val headerBytes = header.getBytes(StandardCharsets.UTF_8)
-
-    val rowBytesStream = (corrs.toStream, fieldNames).zipped.toStream.map { case (rowCorrs, fieldName) =>
-      val rowValues = rowCorrs.map(_.map(_.toString).getOrElse("")).mkString(",")
-      val rowContent = fieldName + "," + rowValues + "\n"
-      rowContent.getBytes(StandardCharsets.UTF_8)
-    }
-
-    val outputStream = Stream(headerBytes) #::: rowBytesStream
-
-    writeByteArrayStream(outputStream, new java.io.File(fileName))
-  }
-
-  @Deprecated
-  private def exportCorrelations(
-    corrs: Seq[Seq[Option[Double]]],
-    fields: Seq[Field],
-    fileName: String
-  ) = {
-    val fieldNames = fields.map(field => field.name.replaceAllLiterally("u002e", "."))
-    val rows = corrs.zip(fieldNames).map { case (rowCorrs, fieldName) =>
-      val rowValues = rowCorrs.map(_.map(_.toString).getOrElse("")).mkString(",")
-      fieldName + "," + rowValues
-    }
-
-    val header = "featureName," + fieldNames.mkString(",")
-    val content = (Seq(header) ++ rows).mkString("\n")
-
-    Files.write(
-      Paths.get(fileName),
-      content.getBytes(StandardCharsets.UTF_8)
-    )
-    ()
   }
 
   override def inputType = typeOf[CalcCorrelationsSpec]
@@ -154,3 +116,8 @@ case class CalcCorrelationsSpec(
   streamAreValuesAllDefined: Boolean,
   exportFileName: Option[String]
 )
+
+object FeatureMatrixExport {
+
+
+}

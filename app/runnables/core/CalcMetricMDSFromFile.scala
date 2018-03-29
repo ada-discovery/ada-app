@@ -1,0 +1,45 @@
+package runnables.core
+
+import javax.inject.Inject
+
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import play.api.Logger
+import runnables.InputFutureRunnable
+import services.stats.StatsService
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.reflect.runtime.universe.typeOf
+
+class CalcMetricMDSFromFile @Inject() (statsService: StatsService) extends InputFutureRunnable[CalcMetricMDSFromFileSpec] {
+
+  private val logger = Logger
+
+  override def runAsFuture(input: CalcMetricMDSFromFileSpec) =
+    for {
+      // create a double-value file source and retrieve the field names
+      (source, fieldNames) <- FeatureMatrixIO.load(input.inputFileName, Some(1))
+
+      // perform metric MDS
+      (mdsProjections, eigenValues) <- statsService.performMetricMDS(source, input.dims, input.scaleByEigenValues)
+    } yield {
+      logger.info(s"Exporting the calculated MDS projections to ${input.exportFileName}.")
+      FeatureMatrixIO.save(
+        mdsProjections,
+        fieldNames,
+        for (i <- 1 to input.dims) yield "x" + i,
+        "featureName",
+        input.exportFileName,
+        (value: Double) => value.toString
+      )
+    }
+
+  override def inputType = typeOf[CalcMetricMDSFromFileSpec]
+}
+
+case class CalcMetricMDSFromFileSpec(
+  inputFileName: String,
+  dims: Int,
+  scaleByEigenValues: Boolean,
+  exportFileName: String
+)

@@ -2,6 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
+import _root_.util.AkkaStreamUtil.zipSources
 import akka.NotUsed
 import akka.actor.ActorSystem
 import persistence.dataset.DataSetAccessorFactory
@@ -78,20 +79,7 @@ class CompareAllValuesInTwoDataSets @Inject()(
       )
 
       // paired stream
-      pairedStream: Source[(JsObject, JsObject), NotUsed] = Source.fromGraph(GraphDSL.create() { implicit b =>
-        import GraphDSL.Implicits._
-
-        // prepare graph elements
-        val zip = b.add(Zip[JsObject, JsObject]())
-        def ints = Source.fromIterator(() => Iterator.from(1))
-
-        // connect the graph
-        stream1 ~> zip.in0
-        stream2 ~> zip.in1
-
-        // expose port
-        SourceShape(zip.out)
-      })
+      pairedStream = zipSources(stream1, stream2)
 
       // compare the jsons one-by-one and return the number of errors
       errorCount <- pairedStream.map((compare(spec.keyFieldName)(_, _)).tupled).runWith(Sink.fold(0)(_+_))
