@@ -1,8 +1,9 @@
 package scala
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.StatsService
 import services.stats.calc._
 
 import scala.concurrent.Future
@@ -83,11 +84,11 @@ class GroupNumericDistributionTest extends AsyncFlatSpec with Matchers {
 
   private val randomInputSize = 1000
 
-  private val injector = TestApp.apply.injector
-  private val statsService = injector.instanceOf[StatsService]
-
   private val doubleCalc = GroupNumericDistributionCountsCalc[String, Double]
   private val intCalc = GroupNumericDistributionCountsCalc[String, Long]
+
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
 
   "Distributions" should "match the static example (double)" in {
     val inputs = values1.map{ case (group, value) => (group, Some(value)) }
@@ -118,7 +119,7 @@ class GroupNumericDistributionTest extends AsyncFlatSpec with Matchers {
 
     // streamed calculations
     val streamOptions = NumericDistributionSinkOptions(columnCount1, values1.map(_._2).min, values1.map(_._2).max)
-    statsService.calcGroupedNumericDistributionCountsStreamed[String, Double](inputSource, streamOptions).map(checkResult)
+    doubleCalc.runSink(streamOptions, streamOptions)(inputSource).map(checkResult)
   }
 
   "Distributions" should "match the static example (int/long)" in {
@@ -149,7 +150,7 @@ class GroupNumericDistributionTest extends AsyncFlatSpec with Matchers {
 
     // streamed calculations
     val streamOptions = NumericDistributionSinkOptions(columnCount2, values2.flatMap(_._2).min, values2.flatMap(_._2).max, true)
-    statsService.calcGroupedNumericDistributionCountsStreamed[String, Long](inputSource, streamOptions).map(checkResult)
+    intCalc.runSink(streamOptions, streamOptions)(inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (double)" in {
@@ -185,7 +186,7 @@ class GroupNumericDistributionTest extends AsyncFlatSpec with Matchers {
 
     // streamed calculations
     val streamOptions = NumericDistributionSinkOptions(columnCount, inputs.flatMap(_._2).min, inputs.flatMap(_._2).max)
-    statsService.calcGroupedNumericDistributionCountsStreamed[String, Double](inputSource, streamOptions).map(checkResult)
+    doubleCalc.runSink(streamOptions, streamOptions)(inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (int/long)" in {
@@ -221,6 +222,6 @@ class GroupNumericDistributionTest extends AsyncFlatSpec with Matchers {
 
     // streamed calculations
     val streamOptions = NumericDistributionSinkOptions(columnCount, inputs.flatMap(_._2).min, inputs.flatMap(_._2).max)
-    statsService.calcGroupedNumericDistributionCountsStreamed[String, Long](inputSource, streamOptions).map(checkResult)
+    intCalc.runSink(streamOptions, streamOptions)(inputSource).map(checkResult)
   }
 }

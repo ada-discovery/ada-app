@@ -1,101 +1,115 @@
 package scala
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.StatsHelperUtil.calcMatrixGroupSizes
-import services.stats.calc.MatrixRowColumnSumCalc
+import services.stats.StatsService
 
 import scala.concurrent.Future
 import scala.util.Random
 
-class MatrixRowColumnSumTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
+class MetricMDSTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
 
-  private val inputs =
+  private val inputs: Seq[Seq[Double]] =
     Seq(
-      Seq(0.5,  0.7,  1.2,  6.3,  0.1),
-      Seq( -2,    0,  7.1, -3.1,  4.2),
-      Seq(1.2,  0.2,  1.2,  6.3, -9.9),
-      Seq(0.8,  0.7, -8.3,  2.2,  0.1),
-      Seq(4.9, -1.1,  1.2,  0.1,  3.2)
+      Seq(0, 2, 3, 4, 5, 5),
+      Seq(2, 0, 3, 5, 6, 5),
+      Seq(3, 3, 0, 5, 4, 6),
+      Seq(4, 5, 5, 0, 4, 3),
+      Seq(5, 6, 4, 4, 0, 2),
+      Seq(5, 5, 6, 3, 2, 0)
     )
 
-  private val expectedResult = (
-    Seq(8.8, 6.2,  -1, -4.5,  8.3),
-    Seq(5.4, 0.5, 2.4, 11.8, -2.3)
+  private val expectedResult = Seq(
+    Seq(-1.9301, -0.6756, 0.3818, 1.0441),
+    Seq(-2.6179, -1.1281, -1.1303, -0.4680),
+    Seq(-2.1119, 2.0914, 0.4168, -0.4032),
+    Seq(1.4786, -1.3608, 1.8070, -0.3940),
+    Seq(2.3836, 2.0059, -0.2743, 0.2351),
+    Seq(2.7976, -0.9328, -1.2011, -0.0140)
   )
 
-  private val randomInputSize = 100
-  private val precision = 0.00000001
+  private val randomInputSize = 2000
+  private val precision = 0.0001
 
-  private val calc = MatrixRowColumnSumCalc
+  private val injector = TestApp.apply.injector
+  private val statsService = injector.instanceOf[StatsService]
 
-  private implicit val system = ActorSystem()
-  private implicit val materializer = ActorMaterializer()
-
-  "Matrix row column sums" should "match the static example" in {
+  "Metric MDS" should "match the static example" in {
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
-    def checkResult(rowColumnSums: (Seq[Double], Seq[Double])) = {
-      val rowSums = rowColumnSums._1
-      val columnSums = rowColumnSums._2
-
-      (rowSums, expectedResult._1).zipped.foreach { case (sum1, sum2) =>
-        sum1 shouldBeAround (sum2, precision)
+    def checkAux(
+      calc: Int => Future[(Seq[Seq[Double]], Seq[Double])],
+      dims: Int
+    ): Future[Assertion] = {
+      calc(dims).map { case (mdsProjections, _) =>
+        checkResult(expectedResult, dims)(mdsProjections)
       }
-
-      (columnSums, expectedResult._2).zipped.foreach { case (sum1, sum2) =>
-        sum1 shouldBeAround (sum2, precision)
-      }
-
-      rowSums.size should be (inputs.size)
-      columnSums.size should be (inputs.size)
-
-      rowSums.sum shouldBeAround (columnSums.sum, precision)
     }
 
     // standard calculation
-    Future(calc.fun()(inputs)).map(checkResult)
+    def checkStandardAux(dims: Int) = checkAux(
+      (dims: Int) => Future(statsService.performMetricMDS(inputs, dims, true)), dims
+    )
 
-    // streamed calculations
-    calc.runSink((), ())(inputSource).map(checkResult)
+    // streamed calculation
+    def checkStreamedAux(dims: Int) = checkAux(
+      statsService.performMetricMDS(inputSource, _, true), dims
+    )
+
+    // dims: 2
+    checkStandardAux(2)
+    checkStreamedAux(2)
+
+    // dims: 3
+    checkStandardAux(3)
+    checkStreamedAux(3)
+
+    // dims: 4
+    checkStandardAux(4)
+    checkStreamedAux(4)
   }
 
-  "Matrix row column sums" should "match each other" in {
+  "Metric MDS" should "match each other" in {
     val inputs =
-      for (_ <- 1 to randomInputSize) yield {
-        for (_ <- 1 to randomInputSize) yield
-          (Random.nextDouble() * 2) - 1
+      for (i <- 1 to randomInputSize) yield {
+        for (j <- 1 to randomInputSize) yield
+          if (i != j) Random.nextDouble() else 0d
       }
 
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
-    // standard calculation
-    val (protoRowSums, protoColumnSums) = calc.fun()(inputs)
-
-    def checkResult(rowColumnSums: (Seq[Double], Seq[Double])) = {
-      val rowSums = rowColumnSums._1
-      val columnSums = rowColumnSums._2
-
-      (rowSums, protoRowSums).zipped.foreach { case (sum1, sum2) =>
-        sum1 should be (sum2)
+    def checkAux(dims: Int): Future[Assertion] = {
+      val (expectedMdsProjections, _) = statsService.performMetricMDS(inputs, dims, false)
+      statsService.performMetricMDS(inputSource, dims, false).map { case (mdsProjections, _) =>
+        checkResult(expectedMdsProjections, dims)(mdsProjections)
       }
-
-      (columnSums, protoColumnSums).zipped.foreach { case (sum1, sum2) =>
-        sum1 should be (sum2)
-      }
-
-      rowSums.size should be (protoRowSums.size)
-      columnSums.size should be (protoColumnSums.size)
-
-      rowSums.size should be (randomInputSize)
-      columnSums.size should be (randomInputSize)
-
-      rowSums.sum shouldBeAround (columnSums.sum, precision)
     }
 
-    // streamed calculations
-    calc.runSink((), ())(inputSource).map(checkResult)
+    // dims: 2
+    checkAux(2)
+
+    // dims: 3
+    checkAux(3)
+
+    // dims: 4
+    checkAux(4)
+  }
+
+  def checkResult(
+    expectedMdsProjections: Seq[Seq[Double]],
+    dims: Int)(
+    mdsProjections: Seq[Seq[Double]]
+  ) = {
+    (mdsProjections, expectedMdsProjections).zipped.map { case (projection, expectedProjection) =>
+      val trimmedExpProjection = expectedProjection.take(dims)
+
+      (projection, trimmedExpProjection).zipped.map { case (value, expValue) =>
+        value shouldBeAround (expValue, precision)
+      }
+
+      projection.size should be (trimmedExpProjection.size)
+    }
+
+    mdsProjections.size should be (expectedMdsProjections.size)
   }
 }

@@ -1,5 +1,7 @@
 package scala
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.StatsService
@@ -8,26 +10,22 @@ import services.stats.calc.{BasicStatsCalc, BasicStatsResult}
 import scala.concurrent.Future
 import scala.util.Random
 
-class BasicStatsTest extends AsyncFlatSpec with Matchers {
+class BasicStatsTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
 
   private val values: Seq[Option[Double]] = Seq(None, Some(0.5), Some(2), Some(-3.5), None, Some(8.9), Some(4.2), Some(8.1), Some(0), Some(-1))
 
+  private val variance = 22.495 - 2.4 * 2.4
   private val expectedResult = BasicStatsResult(
-    -3.5, 8.9, 2.4, 22.495 - 2.4 * 2.4, Math.sqrt(22.495 - 2.4 * 2.4), 8, 2
+    -3.5, 8.9, 2.4, variance, Math.sqrt(variance), variance * 8 / 7, Math.sqrt(variance * 8 / 7), 8, 2
   )
 
-  private val injector = TestApp.apply.injector
-  private val statsService = injector.instanceOf[StatsService]
   private val randomInputSize = 1000
   private val precision = 0.00000001
 
   private val calc = BasicStatsCalc
 
-  private implicit class ShouldBeAround(value1: Double) {
-    def shouldBeAround(value2: Double) = {
-      Math.abs(value1 - value2) should be < (precision)
-    }
-  }
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
 
   "Basic stats" should "match the static example" in {
     val inputSource = Source.fromIterator(() => values.toIterator)
@@ -38,9 +36,11 @@ class BasicStatsTest extends AsyncFlatSpec with Matchers {
 
       resultDefined.min should be (expectedResult.min)
       resultDefined.max should be (expectedResult.max)
-      resultDefined.mean shouldBeAround (expectedResult.mean)
-      resultDefined.variance shouldBeAround (expectedResult.variance)
-      resultDefined.standardDeviation shouldBeAround (expectedResult.standardDeviation)
+      resultDefined.mean shouldBeAround (expectedResult.mean, precision)
+      resultDefined.variance shouldBeAround (expectedResult.variance, precision)
+      resultDefined.standardDeviation shouldBeAround (expectedResult.standardDeviation, precision)
+      resultDefined.sampleVariance shouldBeAround (expectedResult.sampleVariance, precision)
+      resultDefined.sampleStandardDeviation shouldBeAround (expectedResult.sampleStandardDeviation, precision)
       resultDefined.definedCount should be (expectedResult.definedCount)
       resultDefined.undefinedCount should be (expectedResult.undefinedCount)
     }
@@ -49,7 +49,7 @@ class BasicStatsTest extends AsyncFlatSpec with Matchers {
     Future(calc.fun()(values)).map(checkResult)
 
     // streamed calculations
-    statsService.calcBasicStatsStreamed(inputSource).map(checkResult)
+    calc.runSink((), ())(inputSource).map(checkResult)
   }
 
   "Basic stats" should "match each other" in {
@@ -68,14 +68,14 @@ class BasicStatsTest extends AsyncFlatSpec with Matchers {
 
       resultDefined.min should be (protoResult.min)
       resultDefined.max should be (protoResult.max)
-      resultDefined.mean shouldBeAround (protoResult.mean)
-      resultDefined.variance shouldBeAround (protoResult.variance)
-      resultDefined.standardDeviation shouldBeAround (protoResult.standardDeviation)
+      resultDefined.mean shouldBeAround (protoResult.mean, precision)
+      resultDefined.variance shouldBeAround (protoResult.variance, precision)
+      resultDefined.standardDeviation shouldBeAround (protoResult.standardDeviation, precision)
       resultDefined.definedCount should be (protoResult.definedCount)
       resultDefined.undefinedCount should be (protoResult.undefinedCount)
     }
 
     // streamed calculations
-    statsService.calcBasicStatsStreamed(inputSource).map(checkResult)
+    calc.runSink((), ())(inputSource).map(checkResult)
   }
 }

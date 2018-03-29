@@ -1,11 +1,10 @@
 package scala
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import dataaccess.FieldTypeHelper
-import models.{Count, Field, FieldTypeId}
 import org.scalatest._
-import services.stats.StatsService
-import services.stats.calc.{PearsonCorrelationCalc, UniqueDistributionCountsCalc}
+import services.stats.calc.{UniqueDistributionCountsCalc}
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -20,11 +19,11 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
 
   private val randomInputSize = 1000
 
-  private val injector = TestApp.apply.injector
-  private val statsService = injector.instanceOf[StatsService]
-
   private val doubleCalc = UniqueDistributionCountsCalc[Double]
   private val stringCalc = UniqueDistributionCountsCalc[String]
+
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
 
   "Distributions" should "match the static example (double)" in {
     val inputs = values1.map(Some(_))
@@ -47,7 +46,7 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
     Future(doubleCalc.fun()(inputs)).map(checkResult)
 
     // streamed calculations
-    statsService.calcUniqueDistributionCountsStreamed[Double](inputSource).map(checkResult)
+    doubleCalc.runSink((),())(inputSource).map(checkResult)
   }
 
   "Distributions" should "match the static example (string)" in {
@@ -70,7 +69,7 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
     Future(stringCalc.fun()(values2)).map(checkResult)
 
     // streamed calculations
-    statsService.calcUniqueDistributionCountsStreamed[String](inputSource).map(checkResult)
+    stringCalc.runSink((), ())(inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (double)" in {
@@ -96,7 +95,7 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // streamed calculations
-    statsService.calcUniqueDistributionCountsStreamed[Double](inputSource).map(checkResult)
+    doubleCalc.runSink((), ())(inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (string)" in {
@@ -122,6 +121,6 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // streamed calculations
-    statsService.calcUniqueDistributionCountsStreamed[String](inputSource).map(checkResult)
+    stringCalc.runSink((), ())(inputSource).map(checkResult)
   }
 }

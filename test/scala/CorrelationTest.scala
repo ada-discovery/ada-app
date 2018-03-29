@@ -1,7 +1,10 @@
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
+import services.stats.StatsHelperUtil.calcMatrixGroupSizes
 import services.stats.StatsService
-import services.stats.calc.PearsonCorrelationCalc
+import services.stats.calc.{AllDefinedPearsonCorrelationCalc, PearsonCorrelationCalc}
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -15,9 +18,14 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
   private val randomInputSize = 100
   private val randomFeaturesNum = 25
 
-  private val injector = TestApp.apply.injector
-  private val statsService = injector.instanceOf[StatsService]
-  private val pearsonCorrelationCalc = PearsonCorrelationCalc.fun()
+  private val calc = PearsonCorrelationCalc
+  private val allDefinedCalc = AllDefinedPearsonCorrelationCalc
+
+//  private val injector = TestApp.apply.injector
+//  private val statsService = injector.instanceOf[StatsService]
+
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
 
   "Correlations" should "match the static example" in {
     val inputs = xs.zip(ys).map{ case (a,b) => Seq(Some(a),Some(b))}
@@ -35,21 +43,23 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
     }
 
     val featuresNum = inputs.head.size
+    val noParallelismGroupSizes = calcMatrixGroupSizes(featuresNum, None)
+    val groupSizes = calcMatrixGroupSizes(featuresNum, Some(4))
 
     // standard calculation
-    Future(pearsonCorrelationCalc(inputs)).map(checkResult)
+    Future(calc.fun()(inputs)).map(checkResult)
 
     // streamed calculations
-    statsService.calcPearsonCorrelationsStreamed(inputSource, featuresNum, None).map(checkResult)
+    calc.runSink((featuresNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSource).map(checkResult)
 
     // streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, featuresNum, None).map(checkResult)
+    allDefinedCalc.runSink((featuresNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSourceAllDefined).map(checkResult)
 
     // parallel streamed calculations
-    statsService.calcPearsonCorrelationsStreamed(inputSource, featuresNum, Some(4)).map(checkResult)
+    calc.runSink((featuresNum, groupSizes), groupSizes)(inputSource).map(checkResult)
 
     // parallel streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, featuresNum, Some(4)).map(checkResult)
+    allDefinedCalc.runSink((featuresNum, groupSizes), groupSizes)(inputSourceAllDefined).map(checkResult)
   }
 
   "Correlations" should "match each other" in {
@@ -62,7 +72,7 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
     val inputSourceAllDefined = Source.fromIterator(() => inputsAllDefined.toIterator)
 
     // standard calculation
-    val protoResult = pearsonCorrelationCalc(inputs)
+    val protoResult = calc.fun()(inputs)
 
     def checkResult(result: Seq[Seq[Option[Double]]]) = {
       result.map(_.size should be (randomFeaturesNum))
@@ -77,16 +87,19 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
       result.size should be (randomFeaturesNum)
     }
 
+    val noParallelismGroupSizes = calcMatrixGroupSizes(randomFeaturesNum, None)
+    val groupSizes = calcMatrixGroupSizes(randomFeaturesNum, Some(4))
+
     // streamed calculations
-    statsService.calcPearsonCorrelationsStreamed(inputSource, randomFeaturesNum, None).map(checkResult)
+    calc.runSink((randomFeaturesNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSource).map(checkResult)
 
     // streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, randomFeaturesNum, None).map(checkResult)
+    allDefinedCalc.runSink((randomFeaturesNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSourceAllDefined).map(checkResult)
 
     // parallel streamed calculations
-    statsService.calcPearsonCorrelationsStreamed(inputSource, randomFeaturesNum, Some(4)).map(checkResult)
+    calc.runSink((randomFeaturesNum, groupSizes), groupSizes)(inputSource).map(checkResult)
 
     // parallel streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, randomFeaturesNum, Some(4)).map(checkResult)
+    allDefinedCalc.runSink((randomFeaturesNum, groupSizes), groupSizes)(inputSourceAllDefined).map(checkResult)
   }
 }

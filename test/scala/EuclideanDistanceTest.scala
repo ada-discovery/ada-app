@@ -1,63 +1,66 @@
+package scala
+
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.StatsService
-import services.stats.calc.PearsonCorrelationCalc
+import services.stats.StatsHelperUtil.calcMatrixGroupSizes
+import services.stats.calc.{AllDefinedEuclideanDistanceCalc, EuclideanDistanceCalc}
 
 import scala.concurrent.Future
 import scala.util.Random
 
-class CorrelationTest extends AsyncFlatSpec with Matchers {
+class EuclideanDistanceTest extends AsyncFlatSpec with Matchers {
 
-  private val xs = Seq(0.5, 0.7, 1.2, 6.3, 0.1, 0.4, 0.7, -1.2, 3, 4.2, 5.7, 4.2, 8.1)
-  private val ys = Seq(0.5, 0.4, 0.4, 0.4, -1.2, 0.8, 0.23, 0.9, 2, 0.1, -4.1, 3, 4)
-  private val expectedResult = 0.1725323796730674
+  private val xs = Seq(0.5, 0.7, 1.2, 6.3,  0.1, 0.4,  0.7, -1.2, 3, 4.2,  5.7, 4.2, 8.1)
+  private val ys = Seq(0.5, 0.4, 0.4, 0.4, -1.2, 0.8, 0.23,  0.9, 2, 0.1, -4.1,   3, 4)
+  private val expectedResult = Math.sqrt(174.1209)
 
   private val randomInputSize = 100
   private val randomFeaturesNum = 25
 
-  private val injector = TestApp.apply.injector
-  private val statsService = injector.instanceOf[StatsService]
-  private val calc = PearsonCorrelationCalc
+  private val calc = EuclideanDistanceCalc
+  private val allDefinedCalc = AllDefinedEuclideanDistanceCalc
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
-  "Correlations" should "match the static example" in {
+  "Euclidean distances" should "match the static example" in {
     val inputs = xs.zip(ys).map{ case (a,b) => Seq(Some(a),Some(b))}
     val inputsAllDefined = xs.zip(ys).map{ case (a,b) => Seq(a, b)}
     val inputSource = Source.fromIterator(() => inputs.toIterator)
     val inputSourceAllDefined = Source.fromIterator(() => inputsAllDefined.toIterator)
 
-    def checkResult(result: Seq[Seq[Option[Double]]]) = {
+    def checkResult(result: Seq[Seq[Double]]) = {
       result.size should be (2)
       result.map(_.size should be (2))
-      result(0)(0).get should be (1d)
-      result(1)(1).get should be (1d)
-      result(0)(1).get should be (expectedResult)
-      result(1)(0).get should be (expectedResult)
+      result(0)(0) should be (0d)
+      result(1)(1) should be (0d)
+      result(0)(1) should be (expectedResult)
+      result(1)(0) should be (expectedResult)
     }
 
     val featuresNum = inputs.head.size
+    val noParallelismGroupSizes = calcMatrixGroupSizes(featuresNum, None)
+    val groupSizes = calcMatrixGroupSizes(featuresNum, Some(4))
 
     // standard calculation
     Future(calc.fun()(inputs)).map(checkResult)
 
-    // streamed calculations
-    statsService.calcPearsonCorrelationsStreamed(inputSource, featuresNum, None).map(checkResult)
+    // streamed calculations without parallelism
+    calc.runSink((featuresNum, noParallelismGroupSizes), ())(inputSource).map(checkResult)
 
-    // streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, featuresNum, None).map(checkResult)
+    // streamed calculations with parallelism
+    calc.runSink((featuresNum, groupSizes), ())(inputSource).map(checkResult)
 
-    // parallel streamed calculations
-    statsService.calcPearsonCorrelationsStreamed(inputSource, featuresNum, Some(4)).map(checkResult)
+    // all-values-defined streamed calculations without parallelism
+    allDefinedCalc.runSink((featuresNum, noParallelismGroupSizes), ())(inputSourceAllDefined).map(checkResult)
 
-    // parallel streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, featuresNum, Some(4)).map(checkResult)
+    // all-values-defined streamed calculations with parallelism
+    allDefinedCalc.runSink((featuresNum, groupSizes), ())(inputSourceAllDefined).map(checkResult)
   }
 
-  "Correlations" should "match each other" in {
+  "Euclidean distances" should "match each other" in {
     val inputs = for (_ <- 1 to randomInputSize) yield {
       for (_ <- 1 to randomFeaturesNum) yield
        Some((Random.nextDouble() * 2) - 1)
@@ -69,10 +72,10 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
     // standard calculation
     val protoResult = calc.fun()(inputs)
 
-    def checkResult(result: Seq[Seq[Option[Double]]]) = {
+    def checkResult(result: Seq[Seq[Double]]) = {
       result.map(_.size should be (randomFeaturesNum))
       for (i <- 0 to randomFeaturesNum - 1) yield
-        result(i)(i).get should be (1d)
+        result(i)(i) should be (0d)
 
       result.zip(protoResult).map { case (rowCor1, rowCor2) =>
         rowCor1.zip(rowCor2).map { case (cor1, cor2) =>
@@ -82,16 +85,19 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
       result.size should be (randomFeaturesNum)
     }
 
-    // streamed calculations
-    statsService.calcPearsonCorrelationsStreamed(inputSource, randomFeaturesNum, None).map(checkResult)
+    val noParallelismGroupSizes = calcMatrixGroupSizes(randomFeaturesNum, None)
+    val groupSizes = calcMatrixGroupSizes(randomFeaturesNum, Some(4))
 
-    // streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, randomFeaturesNum, None).map(checkResult)
+    // streamed calculations without parallelism
+    calc.runSink((randomFeaturesNum, noParallelismGroupSizes), ())(inputSource).map(checkResult)
 
-    // parallel streamed calculations
-    statsService.calcPearsonCorrelationsStreamed(inputSource, randomFeaturesNum, Some(4)).map(checkResult)
+    // streamed calculations with parallelism
+    calc.runSink((randomFeaturesNum, groupSizes), ())(inputSource).map(checkResult)
 
-    // parallel streamed calculations with an all-values-defined optimization
-    statsService.calcPearsonCorrelationsAllDefinedStreamed(inputSourceAllDefined, randomFeaturesNum, Some(4)).map(checkResult)
+    // all-values-defined streamed calculations without parallelism
+    allDefinedCalc.runSink((randomFeaturesNum, noParallelismGroupSizes), ())(inputSourceAllDefined).map(checkResult)
+
+    // all-values-defined streamed calculations with parallelism
+    allDefinedCalc.runSink((randomFeaturesNum, groupSizes), ())(inputSourceAllDefined).map(checkResult)
   }
 }

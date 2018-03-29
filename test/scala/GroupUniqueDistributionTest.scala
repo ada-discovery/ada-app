@@ -1,11 +1,10 @@
 package scala
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import dataaccess.FieldTypeHelper
-import models.{Count, Field, FieldTypeId}
 import org.scalatest._
-import services.stats.StatsService
-import services.stats.calc.{GroupUniqueDistributionCountsCalc, UniqueDistributionCountsCalc}
+import services.stats.calc.GroupUniqueDistributionCountsCalc
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -74,11 +73,11 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
 
   private val randomInputSize = 1000
 
-  private val injector = TestApp.apply.injector
-  private val statsService = injector.instanceOf[StatsService]
-
   private val doubleCalc = GroupUniqueDistributionCountsCalc[String, Double]
   private val stringCalc = GroupUniqueDistributionCountsCalc[String, String]
+
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
 
   "Distributions" should "match the static example (double)" in {
     val inputs = values1.map{ case (group, value) => (group, Some(value)) }
@@ -109,7 +108,7 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     Future(doubleCalc.fun()(inputs)).map(checkResult)
 
     // streamed calculations
-    statsService.calcGroupedUniqueDistributionCountsStreamed[String, Double](inputSource).map(checkResult)
+    doubleCalc.runSink((),())(inputSource).map(checkResult)
   }
 
   "Distributions" should "match the static example (string)" in {
@@ -140,7 +139,7 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     Future(stringCalc.fun()(values2)).map(checkResult)
 
     // streamed calculations
-    statsService.calcGroupedUniqueDistributionCountsStreamed[String, String](inputSource).map(checkResult)
+    stringCalc.runSink((),())(inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (double)" in {
@@ -176,7 +175,7 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // streamed calculations
-    statsService.calcGroupedUniqueDistributionCountsStreamed[String, Double](inputSource).map(checkResult)
+    doubleCalc.runSink((),())(inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (string)" in {
@@ -212,6 +211,6 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // streamed calculations
-    statsService.calcGroupedUniqueDistributionCountsStreamed[String, String](inputSource).map(checkResult)
+    stringCalc.runSink((),())(inputSource).map(checkResult)
   }
 }
