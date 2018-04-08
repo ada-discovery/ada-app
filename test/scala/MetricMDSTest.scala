@@ -29,7 +29,7 @@ class MetricMDSTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
   )
 
   private val randomInputSize = 2000
-  private val precision = 0.0001
+  private val precision = 0.001
 
   private val injector = TestApp.apply.injector
   private val statsService = injector.instanceOf[StatsService]
@@ -48,7 +48,7 @@ class MetricMDSTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
 
     // standard calculation
     def checkStandardAux(dims: Int) = checkAux(
-      (dims: Int) => Future(statsService.performMetricMDS(inputs, dims, true)), dims
+      (dims: Int) => statsService.performMetricMDS(inputs, dims, true), dims
     )
 
     // streamed calculation
@@ -71,18 +71,25 @@ class MetricMDSTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
 
   "Metric MDS" should "match each other" in {
     val inputs =
-      for (i <- 1 to randomInputSize) yield {
-        for (j <- 1 to randomInputSize) yield
+      for (i <- 0 to randomInputSize - 1) yield {
+        for (j <- 0 to randomInputSize - 1) yield
           if (i != j) Random.nextDouble() else 0d
       }
 
-    val inputSource = Source.fromIterator(() => inputs.toIterator)
+    val symInputs =
+      for (i <- 0 to randomInputSize - 1) yield {
+        for (j <- 0 to randomInputSize - 1) yield
+          if (i == j) 0 else if (i < j) inputs(i)(j) else inputs(j)(i)
+      }
+
+    val inputSource = Source.fromIterator(() => symInputs.toIterator)
 
     def checkAux(dims: Int): Future[Assertion] = {
-      val (expectedMdsProjections, _) = statsService.performMetricMDS(inputs, dims, false)
-      statsService.performMetricMDS(inputSource, dims, false).map { case (mdsProjections, _) =>
+      for {
+        (expectedMdsProjections, _) <- statsService.performMetricMDS(symInputs, dims, false)
+        (mdsProjections, _) <- statsService.performMetricMDS(inputSource, dims, false)
+      } yield
         checkResult(expectedMdsProjections, dims)(mdsProjections)
-      }
     }
 
     // dims: 2
@@ -100,7 +107,21 @@ class MetricMDSTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
     dims: Int)(
     mdsProjections: Seq[Seq[Double]]
   ) = {
-    (mdsProjections, expectedMdsProjections).zipped.map { case (projection, expectedProjection) =>
+    def transAux(vector: Seq[Double]) = {
+      val head = vector.headOption.flatMap(value =>
+        if (value != 0) Some(value) else None
+      )
+
+      head match {
+        case Some(head) => vector.map(_ / head)
+        case None => vector
+      }
+    }
+
+    val expectedMdsProjectionsWithOne = expectedMdsProjections.transpose.map(transAux).transpose
+    val mdsProjectionsWithOne = mdsProjections.transpose.map(transAux).transpose
+
+    (mdsProjectionsWithOne, expectedMdsProjectionsWithOne).zipped.map { case (projection, expectedProjection) =>
       val trimmedExpProjection = expectedProjection.take(dims)
 
       (projection, trimmedExpProjection).zipped.map { case (value, expValue) =>

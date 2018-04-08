@@ -1,115 +1,91 @@
 package scala
 
-import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.StatsService
 
-import scala.concurrent.Future
 import scala.util.Random
 
-class MetricMDSTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
+class EigenVectorsTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
 
-  private val inputs: Seq[Seq[Double]] =
-    Seq(
-      Seq(0, 2, 3, 4, 5, 5),
-      Seq(2, 0, 3, 5, 6, 5),
-      Seq(3, 3, 0, 5, 4, 6),
-      Seq(4, 5, 5, 0, 4, 3),
-      Seq(5, 6, 4, 4, 0, 2),
-      Seq(5, 5, 6, 3, 2, 0)
-    )
-
-  private val expectedResult = Seq(
-    Seq(-1.9301, -0.6756, 0.3818, 1.0441),
-    Seq(-2.6179, -1.1281, -1.1303, -0.4680),
-    Seq(-2.1119, 2.0914, 0.4168, -0.4032),
-    Seq(1.4786, -1.3608, 1.8070, -0.3940),
-    Seq(2.3836, 2.0059, -0.2743, 0.2351),
-    Seq(2.7976, -0.9328, -1.2011, -0.0140)
+  private val inputs: Seq[Seq[Double]] = Seq(
+    Seq(1, -1, 0),
+    Seq(-1, 2, -1),
+    Seq(0, -1, 1)
   )
 
-  private val randomInputSize = 2000
+  private val expectedEigenValues: Seq[Double] = Seq(3, 1, 0)
+  private val expectedEigenVectors: Seq[Seq[Double]] = Seq(
+    Seq(1, -2, 1),
+    Seq(1, 0, -1),
+    Seq(1, 1, 1)
+  )
+
+  private val randomInputSize = 100
   private val precision = 0.0001
 
   private val injector = TestApp.apply.injector
   private val statsService = injector.instanceOf[StatsService]
 
-  "Metric MDS" should "match the static example" in {
-    val inputSource = Source.fromIterator(() => inputs.toIterator)
+  "Eigen vectors" should "match a static example" in {
+    val (eigenValues, eigenVectors) = statsService.calcEigenValuesAndVectors(inputs)
+    val (eigenValues2, eigenVectors2) = statsService.calcEigenValuesAndVectorsSymMatrixBreeze(inputs)
+    val (eigenValues3, _, eigenVectors3) = statsService.calcEigenValuesAndVectorsBreeze(inputs)
 
-    def checkAux(
-      calc: Int => Future[(Seq[Seq[Double]], Seq[Double])],
-      dims: Int
-    ): Future[Assertion] = {
-      calc(dims).map { case (mdsProjections, _) =>
-        checkResult(expectedResult, dims)(mdsProjections)
-      }
-    }
-
-    // standard calculation
-    def checkStandardAux(dims: Int) = checkAux(
-      (dims: Int) => Future(statsService.performMetricMDS(inputs, dims, true)), dims
-    )
-
-    // streamed calculation
-    def checkStreamedAux(dims: Int) = checkAux(
-      statsService.performMetricMDS(inputSource, _, true), dims
-    )
-
-    // dims: 2
-    checkStandardAux(2)
-    checkStreamedAux(2)
-
-    // dims: 3
-    checkStandardAux(3)
-    checkStreamedAux(3)
-
-    // dims: 4
-    checkStandardAux(4)
-    checkStreamedAux(4)
+    checkResult(eigenValues, eigenVectors, expectedEigenValues, expectedEigenVectors)
+    checkResult(eigenValues2, eigenVectors2, expectedEigenValues, expectedEigenVectors)
+    checkResult(eigenValues3, eigenVectors3, expectedEigenValues, expectedEigenVectors)
   }
 
-  "Metric MDS" should "match each other" in {
+  "Eigen vectors" should "match each other" in {
     val inputs =
-      for (i <- 1 to randomInputSize) yield {
-        for (j <- 1 to randomInputSize) yield
+      for (i <- 0 to randomInputSize - 1) yield {
+        for (j <- 0 to randomInputSize - 1) yield
           if (i != j) Random.nextDouble() else 0d
       }
 
-    val inputSource = Source.fromIterator(() => inputs.toIterator)
-
-    def checkAux(dims: Int): Future[Assertion] = {
-      val (expectedMdsProjections, _) = statsService.performMetricMDS(inputs, dims, false)
-      statsService.performMetricMDS(inputSource, dims, false).map { case (mdsProjections, _) =>
-        checkResult(expectedMdsProjections, dims)(mdsProjections)
+    val symInputs =
+      for (i <- 0 to randomInputSize - 1) yield {
+        for (j <- 0 to randomInputSize - 1) yield
+          if (i == j) 0 else if (i < j) inputs(i)(j) else inputs(j)(i)
       }
-    }
 
-    // dims: 2
-    checkAux(2)
+    val (eigenValues, eigenVectors) = statsService.calcEigenValuesAndVectors(symInputs)
+    val (eigenValues2, eigenVectors2) = statsService.calcEigenValuesAndVectorsSymMatrixBreeze(symInputs)
+    val (eigenValues3, _, eigenVectors3) = statsService.calcEigenValuesAndVectorsBreeze(symInputs)
 
-    // dims: 3
-    checkAux(3)
-
-    // dims: 4
-    checkAux(4)
+    checkResult(eigenValues, eigenVectors, eigenValues2, eigenVectors2)
+    checkResult(eigenValues, eigenVectors, eigenValues3, eigenVectors3)
   }
 
   def checkResult(
-    expectedMdsProjections: Seq[Seq[Double]],
-    dims: Int)(
-    mdsProjections: Seq[Seq[Double]]
+    eigenValues: Seq[Double],
+    eigenVectors: Seq[Seq[Double]],
+    eigenValues2: Seq[Double],
+    eigenVectors2: Seq[Seq[Double]]
   ) = {
-    (mdsProjections, expectedMdsProjections).zipped.map { case (projection, expectedProjection) =>
-      val trimmedExpProjection = expectedProjection.take(dims)
-
-      (projection, trimmedExpProjection).zipped.map { case (value, expValue) =>
-        value shouldBeAround (expValue, precision)
-      }
-
-      projection.size should be (trimmedExpProjection.size)
+    eigenValues.zip(eigenValues2).map { case (value1, value2) =>
+      value1 shouldBeAround (value2, precision)
     }
 
-    mdsProjections.size should be (expectedMdsProjections.size)
+    (eigenVectors, eigenVectors2).zipped.map { case (eigenVector, eigenVector2) =>
+      def transAux(vector: Seq[Double]) = {
+        val head = vector.headOption.flatMap(value =>
+          if (value != 0) Some(value) else None
+        )
+
+        head match {
+          case Some(head) => vector.map(_ / head)
+          case None => vector
+        }
+      }
+
+      (transAux(eigenVector), transAux(eigenVector2)).zipped.map { case (value1, value2) =>
+        value1 shouldBeAround (value2, precision)
+      }
+
+      eigenVector.size should be (eigenVector2.size)
+    }
+
+    eigenVectors.size should be (eigenVectors2.size)
   }
 }

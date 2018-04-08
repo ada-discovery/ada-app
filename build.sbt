@@ -76,6 +76,8 @@ libraryDependencies ++= Seq(
 //  "com.github.haifengl" %% "smile-scala" % "1.5.0", // machine learning
 //  "com.github.haifengl" % "smile-netlib" % "1.5.0", // for optimized optimized matrix computation
 //  "com.github.haifengl" % "smile-plot" % "1.5.0", // machine learning
+  "org.scalanlp" %% "breeze" % "0.13.2", // linear algebra and stuff
+  "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
   "com.banda" % "incal" % "0.1.6" exclude("org.springframework", "spring-context") exclude("org.springframework", "spring-test") exclude("org.springframework", "spring-web") exclude("org.springframework", "spring-webmvc"),
 //  "org.scalatra.scalate" %% "scalate-core" % "1.8.0"
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"

@@ -173,7 +173,7 @@ case class TemplateHtmlWidgetSpec(
 }
 
 object ChartType extends Enumeration {
-  val Pie, Column, Bar, Line, Polar = Value
+  val Pie, Column, Bar, Line, Spline, Polar = Value
 }
 
 case class Dictionary(
