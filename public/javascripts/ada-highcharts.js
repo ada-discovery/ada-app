@@ -9,7 +9,7 @@
         allowPointClick,
         allowChartTypeChange
     ) {
-        var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
+        var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
             exporting = chartTypeMenu(chartElementId, chartTypes)
@@ -94,7 +94,7 @@
         allowPointClick,
         allowChartTypeChange
     ) {
-        var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
+        var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
             exporting = chartTypeMenu(chartElementId, chartTypes)
@@ -267,7 +267,7 @@
         yMin,
         yMax
     ) {
-        var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
+        var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
             exporting = chartTypeMenu(chartElementId, chartTypes)
@@ -371,7 +371,7 @@
         allowPointClick,
         allowChartTypeChange
     ) {
-        var chartTypes = ["Pie", "Column", "Bar", "Line", "Polar"];
+        var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
         var exporting = {};
         if (allowChartTypeChange)
             exporting = chartTypeMenu(chartElementId, chartTypes)
@@ -723,6 +723,13 @@
 
                 lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, true, true);
                 break;
+            case 'Spline':
+                var series = datas.map( function(data, index) {
+                    return {name: data.name, data: data.data, type: 'spline'};
+                });
+
+                lineChart(title, elementId, categories, series, '', yAxisCaption, showLegendImpl, true, pointFormat, height, null, true, true);
+                break;
             case 'Polar':
                 var series = datas.map( function(data, index) {
                     return {name: data.name, data: data.data, type: 'area', pointPlacement: 'on'};
@@ -762,6 +769,13 @@
                 break;
             case 'Line':
                 var series = datas
+
+                lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true);
+                break;
+            case 'Spline':
+                var series = datas.map( function(data, index) {
+                    return {name: data.name, data: data.data, type: 'spline'};
+                });
 
                 lineChart(title, elementId, null, series, xAxisCaption, yAxisCaption, showLegend, true, pointFormat, height, dataType, false, true);
                 break;
