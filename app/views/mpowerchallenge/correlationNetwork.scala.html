@@ -1,11 +1,11 @@
-@import util.matchesPath
 @import controllers.core.WebContext
 @import controllers.core.WebContext._
 @import views.html.layout.main
-@import controllers.routes.{MPowerChallengeController => challengeRoutes}
+@import controllers.mpower.routes.{MPowerChallengeCorrelationController => challengeRoutes}
 @import play.api.libs.json.Json
-@import views.html.elements.labelValue
 @import views.html.basicSideBar
+@import controllers.mpower.VisNode
+@import controllers.mpower.VisEdge
 
 @(
     domainName: String,

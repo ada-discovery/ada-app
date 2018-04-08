@@ -22,14 +22,14 @@ private class GroupScatterCalc[G, A, B] extends NoOptionsCalculator[IN[G, A, B],
       case (groupValue, values) => (groupValue, values.flatMap(toOption))
     }
 
-  override def sink(options: Unit) = {
+  override def flow(options: Unit) = {
     val flatFlow = Flow.fromFunction(toOption2).collect{ case (g, Some(x)) => (g, x) }
     val groupedFlow = flatFlow.via(groupFlow[Option[G], (A, B)](maxGroups))
 
-    groupedFlow.toMat(Sink.seq)(Keep.right)
+    groupedFlow.via(seqFlow)
   }
 
-  override def postSink(options: Unit) = identity
+  override def postFlow(options: Unit) = identity
 
   private def toOption(ab: (Option[A], Option[B])) =
     ab._1.flatMap(a =>

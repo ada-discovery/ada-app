@@ -22,14 +22,14 @@ private class NumericDistributionCountsCalc[T: Numeric] extends Calculator[IN[T]
     allDefinedCalc.fun(options)(values.flatten)
   }
 
-  override def sink(options: SINK_OPTIONS[T]) = {
-    val allDefinedSink = allDefinedCalc.sink(options)
+  override def flow(options: SINK_OPTIONS[T]) = {
+    val allDefinedFlow = allDefinedCalc.flow(options)
     val flatFlow = Flow[Option[T]].collect { case Some(x) => x}
-    flatFlow.toMat(allDefinedSink)(Keep.right)
+    flatFlow.via(allDefinedFlow)
   }
 
-  override def postSink(options: SINK_OPTIONS[T]) =
-    allDefinedCalc.postSink(options)
+  override def postFlow(options: SINK_OPTIONS[T]) =
+    allDefinedCalc.postFlow(options)
 }
 
 object NumericDistributionCountsCalc {

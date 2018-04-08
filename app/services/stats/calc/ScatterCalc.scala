@@ -1,8 +1,9 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.{Flow, Keep, Sink}
+import akka.stream.scaladsl.Flow
 import services.stats.NoOptionsCalculator
 import services.stats.calc.ScatterCalcIOTypes._
+import util.AkkaStreamUtil._
 
 object ScatterCalcIOTypes {
   type IN[A, B] = (Option[A], Option[B])
@@ -13,12 +14,12 @@ private class ScatterCalc[A, B] extends NoOptionsCalculator[IN[A, B], OUT[A, B],
 
   override def fun(opt: Unit)  = _.flatMap(toOption)
 
-  override def sink(options: Unit) = {
+  override def flow(options: Unit) = {
     val flatFlow = Flow.fromFunction(toOption).collect { case Some(x) => x}
-    flatFlow.toMat(Sink.seq[(A, B)])(Keep.right)
+    flatFlow.via(seqFlow)
   }
 
-  override def postSink(options: Unit) = identity
+  override def postFlow(options: Unit) = identity
 
   private def toOption(ab: (Option[A], Option[B])) =
     ab._1.flatMap(a =>

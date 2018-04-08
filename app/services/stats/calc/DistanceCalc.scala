@@ -1,6 +1,6 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Flow, Sink}
 import services.stats.Calculator
 import play.api.Logger
 
@@ -46,13 +46,13 @@ protected abstract class DistanceCalc[IN, OPT2, OPT3] extends Calculator[Seq[IN]
     }.toList
   }
 
-  override def sink(options: OPT2): Sink[Seq[IN], Future[INTER]] = {
+  override def flow(options: OPT2) = {
     val (n, parallelGroupSizes) = featuresNumAndGroupSizes(options)
 
     val starts = parallelGroupSizes.scanLeft(0){_+_}
     val startEnds = parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
 
-    Sink.fold[INTER, Seq[IN]](
+    Flow[Seq[IN]].fold[INTER](
       (for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(0d): _*)).toArray
     ) {
       case (accumGlobal, featureValues) =>
@@ -76,7 +76,7 @@ protected abstract class DistanceCalc[IN, OPT2, OPT3] extends Calculator[Seq[IN]
     }
   }
 
-  override def postSink(options: OPT3) = { triangleResults: INTER =>
+  override def postFlow(options: OPT3) = { triangleResults: INTER =>
     val n = triangleResults.length
     logger.info("Generating a full matrix from the triangle sum results.")
 

@@ -1,6 +1,6 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Flow, Sink}
 import services.stats.NoOptionsCalculator
 import MatrixRowColumnSumCalcIOTypes._
 
@@ -25,8 +25,8 @@ object MatrixRowColumnSumCalc extends NoOptionsCalculator[IN, OUT, INTER] {
     (rowSums, columnSums)
   }
 
-  override def sink(o: Unit) =
-    Sink.fold[INTER, IN]((Nil, Nil)) {
+  override def flow(o: Unit) =
+    Flow[IN].fold[INTER]((Nil, Nil)) {
       case ((rowSums, columnSums), values) =>
         val initColumnSums = columnSums match {
           case Nil => Seq.fill(values.size)(0d)
@@ -39,5 +39,5 @@ object MatrixRowColumnSumCalc extends NoOptionsCalculator[IN, OUT, INTER] {
         (newRowSums, newColumnSums)
     }
 
-  override def postSink(o: Unit) = identity
+  override def postFlow(o: Unit) = identity
 }

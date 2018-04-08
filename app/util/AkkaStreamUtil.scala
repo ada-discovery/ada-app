@@ -1,9 +1,16 @@
 package util
 
 import akka.NotUsed
-import akka.stream.{ActorMaterializer, ClosedShape, SourceShape}
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source, Zip}
+import akka.actor.ActorSystem
+import akka.stream._
+import akka.stream.javadsl.ZipWithN
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source, Zip, ZipN}
 import play.api.libs.json.JsObject
+import shapeless.ops.hlist.ZipWith
+
+import scala.annotation.tailrec
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 
 object AkkaStreamUtil {
 
@@ -52,6 +59,52 @@ object AkkaStreamUtil {
       SourceShape(zip.out)
     })
 
+  def zipNFlows[T, U](
+    flows: Seq[Flow[T, U, NotUsed]])(
+  ): Flow[T, Seq[U], NotUsed] =
+    Flow.fromGraph(GraphDSL.create() { implicit b =>
+      import GraphDSL.Implicits._
+
+      val bcast = b.add(Broadcast[T](flows.size))
+      val zipper = b.add(ZipN[U](flows.size))
+      val flowsB = flows.map(flow => b.add(flow))
+
+      flowsB.zipWithIndex.foreach { case (flow, i) => bcast.out(i) ~> flow.in }
+      flowsB.zipWithIndex.foreach { case (flow, i) => flow.out ~> zipper.in(i)}
+
+      FlowShape(bcast.in, zipper.out)
+    })
+
+  def seqFlow[T]: Flow[T, Seq[T], NotUsed] =
+    Flow[T].fold(Vector.newBuilder[T]) { _ += _ }.map(_.result)
+
+  /**
+    * Combine several sinks with fan-out strategy like `Broadcast` or `Balance` and returns `Sink`.
+    */
+  def combine[T, U, R](
+    first: Sink[U, Future[R]],
+    second: Sink[U, Future[R]],
+    rest: Sink[U, Future[R]]*)(
+    strategy: Int ⇒ Graph[UniformFanOutShape[T, U], NotUsed]
+  ): Sink[T, NotUsed] = {
+//    val finalSink = Sink[T, Future[R]]
+
+    Sink.fromGraph(GraphDSL.create() { implicit b ⇒
+      import GraphDSL.Implicits._
+      val d = b.add(strategy(rest.size + 2))
+      d.out(0) ~> first
+      d.out(1) ~> second
+
+      @tailrec def combineRest(idx: Int, i: Iterator[Sink[U, Future[R]]]): SinkShape[T] =
+        if (i.hasNext) {
+          d.out(idx) ~> i.next()
+          combineRest(idx + 1, i)
+        } else new SinkShape(d.in)
+
+      combineRest(2, rest.iterator)
+    })
+  }
+
   private def ssad(implicit materializer: ActorMaterializer) = {
     val topHeadSink = Sink.head[Int]
     val bottomHeadSink = Sink.head[Int]
@@ -70,26 +123,53 @@ object AkkaStreamUtil {
     lala.run()
   }
 
-  private def connectSinksToSource[T, U](
+  private def connectSinkToSource[T, U](
     source: Source[T, _],
-    sinks: Traversable[Sink[U, _]])(
+    sink: Sink[T, Future[U]])(
     implicit materializer: ActorMaterializer
   ) = {
     val topHeadSink = Sink.head[Int]
     val bottomHeadSink = Sink.head[Int]
-    val sharedDoubler = Flow[Int].map(_ * 2)
 
-    val lala = RunnableGraph.fromGraph(GraphDSL.create(topHeadSink, bottomHeadSink)((_, _)) { implicit builder =>
-      (topHS, bottomHS) =>
+    val lala = RunnableGraph.fromGraph(GraphDSL.create(sink, sink)((_, _)) { implicit builder =>
+      (sink1, sink2) =>
         import GraphDSL.Implicits._
-        val broadcast = builder.add(Broadcast[Int](2))
-        Source.single(1) ~> broadcast.in
+        val broadcast = builder.add(Broadcast[T](2))
+        source ~> broadcast.in
 
-        broadcast.out(0) ~> sharedDoubler ~> topHS.in
-        broadcast.out(1) ~> sharedDoubler ~> bottomHS.in
+        broadcast.out(0) ~> sink1.in
+        broadcast.out(1) ~> sink2.in
+
         ClosedShape
     })
     lala.run()
+  }
+
+  private def connectSourceToSinks[T, U](
+    source: Source[T, _],
+    sinks: Traversable[Sink[T, Future[U]]])(
+  ) = {
+
+
+//    val sink1 = Sink.fold[Int, Int](0)(_ + _)
+//    val sink2 = Sink.fold[Int, Int](0)(_ + _)
+//
+//    val sink = Sink.combine(sink1, sink2)(Broadcast[Int](_))
+//
+//    Source(List(0, 1, 2)).runWith(sink)
+
+    val g = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
+      import GraphDSL.Implicits._
+      val bcast = builder.add(Broadcast[T](sinks.size))
+
+      source ~> bcast
+
+      sinks.toSeq.zipWithIndex.foreach { case (sink, i) =>
+        bcast.out(i) ~> sink
+      }
+
+      ClosedShape
+    })
   }
 
   private def ddasdsa() = {
@@ -108,4 +188,21 @@ object AkkaStreamUtil {
       ClosedShape
     })
   }
+}
+
+object AkkaTest extends App {
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
+
+  val source = Source(List(0, 1, 2))
+
+  val sumFlow = Flow[Int].fold(0)(_+_)
+  val minFlow = Flow[Int].fold(Integer.MAX_VALUE)(Math.min)
+  val maxFlow = Flow[Int].fold(Integer.MIN_VALUE)(Math.max)
+  val combinedFlow = AkkaStreamUtil.zipNFlows(Seq(sumFlow, minFlow, maxFlow))
+
+  val resultsFuture = source.via(combinedFlow).runWith(Sink.head)
+  val results = Await.result(resultsFuture, 1 minute)
+
+  println(results.mkString("\n"))
 }

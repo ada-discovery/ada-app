@@ -1,37 +1,28 @@
-package controllers
+package controllers.mpower
 
 import javax.inject.Inject
 
+import _root_.util.{GroupMapList, seqFutures}
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
+import controllers.WebJarAssets
 import controllers.core.WebContext
-import models.DataSetFormattersAndIds.FieldIdentity
-import models.{AdaException}
-import models.security.UserManager
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import play.api.i18n.MessagesApi
-import play.api.libs.functional.syntax._
-import play.api.libs.functional.syntax._
-import models.json._
-import play.api.libs.json._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{Action, AnyContent, Controller, Request}
-import security.AdaAuthConfig
-import _root_.util.{seqFutures, GroupMapList}
 import dataaccess.Criterion._
+import models.AdaException
+import models.DataSetFormattersAndIds.FieldIdentity
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
-import play.api.libs.json.Json
-import play.api.libs.json._
+import play.api.i18n.MessagesApi
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{Json, _}
+import play.api.mvc.{Action, AnyContent, Controller, Request}
 
 import scala.concurrent.Future
 
-class MPowerChallengeController @Inject()(
+class MPowerChallengeCorrelationController @Inject()(
     dsaf: DataSetAccessorFactory,
-    val userManager: UserManager,
     messagesApi: MessagesApi,
     webJarAssets: WebJarAssets
-  ) extends Controller with AdaAuthConfig {
-
-  @Inject var deadbolt: DeadboltActions = _
+  ) extends Controller {
 
   private lazy val tremorCorrDsa = dsaf("harvard_ldopa.tremor_correlation").get
   private lazy val tremorScoreBoardDsa = dsaf("harvard_ldopa.score_board_tremor_ext").get
@@ -466,7 +457,7 @@ class MPowerChallengeController @Inject()(
       println("Nodes: " + nodes.size)
       println("Edges: " + edges.size)
       println(edges.mkString("\n"))
-      Ok(views.html.mpowerchallenge.networkVis(domainName, threshold, withDemographics, nodes, edges))
+      Ok(views.html.mpowerchallenge.correlationNetwork(domainName, threshold, withDemographics, nodes, edges))
     }
   }
 
@@ -536,7 +527,7 @@ class MPowerChallengeController @Inject()(
       println("Nodes: " + nodes.size)
       println("Edges: " + edges.size)
       println(edges.mkString("\n"))
-      Ok(views.html.mpowerchallenge.networkVis(domainName, threshold, withDemographics, nodes, edges))
+      Ok(views.html.mpowerchallenge.correlationNetwork(domainName, threshold, withDemographics, nodes, edges))
     }
   }
 

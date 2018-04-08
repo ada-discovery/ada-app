@@ -1,17 +1,12 @@
 package services.stats.calc
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import services.stats.Calculator
 
 import util.GroupMapList
 import services.stats.calc.GroupNumericDistributionCountsCalcIOType._
 import util.AkkaStreamUtil._
-
-import scala.concurrent.Await
-import scala.util.Random
-import scala.concurrent.duration._
 
 object GroupNumericDistributionCountsCalcIOType {
   type IN[G, T] = (Option[G], Option[T])
@@ -34,7 +29,7 @@ private class GroupNumericDistributionCountsCalc[G, T: Numeric] extends Calculat
       (group, normalCalc.fun(options)(values))
     }
 
-  override def sink(options: SINK_OPTIONS[T]) = {
+  override def flow(options: SINK_OPTIONS[T]) = {
     val stepSize = calcStepSize(
       options.columnCount,
       options.min,
@@ -56,10 +51,10 @@ private class GroupNumericDistributionCountsCalc[G, T: Numeric] extends Calculat
         )
       }.mergeSubstreams
 
-    flatFlow.via(groupBucketIndexFlow).via(groupCountFlow(maxGroups)).toMat(Sink.seq)(Keep.right)
+    flatFlow.via(groupBucketIndexFlow).via(groupCountFlow(maxGroups)).via(seqFlow)
   }
 
-  override def postSink(options: SINK_OPTIONS[T]) = { elements =>
+  override def postFlow(options: SINK_OPTIONS[T]) = { elements =>
     val stepSize = calcStepSize(
       options.columnCount,
       options.min,

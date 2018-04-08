@@ -259,22 +259,28 @@ GET         /documentation/stats                                                
 GET         /documentation/filters                                                  controllers.DocumentationController.filters()
 GET         /documentation/views                                                    controllers.DocumentationController.views()
 GET         /documentation/ml                                                       controllers.DocumentationController.ml()
-GET         /documentation/classification                                         controllers.DocumentationController.mlClassification()
-GET         /documentation/regression                                             controllers.DocumentationController.mlRegression()
-GET         /documentation/clusterization                                         controllers.DocumentationController.mlClusterization()
+GET         /documentation/classification                                           controllers.DocumentationController.mlClassification()
+GET         /documentation/regression                                               controllers.DocumentationController.mlRegression()
+GET         /documentation/clusterization                                           controllers.DocumentationController.mlClusterization()
 GET         /documentation/userManagement                                           controllers.DocumentationController.userManagement()
 GET         /documentation/dataSetImport                                            controllers.DocumentationController.dataSetImport()
 GET         /documentation/technology                                               controllers.DocumentationController.technology()
 
-#Temporary for mpower challenge
-GET         /pdChallenge/mpowerTeam                                                 controllers.MPowerChallengeController.mPowerTeamNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
-GET         /pdChallenge/ldopaTremorTeam                                            controllers.MPowerChallengeController.tremorTeamNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
-GET         /pdChallenge/ldopaDyskinesiaTeam                                        controllers.MPowerChallengeController.dyskinesiaTeamNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
-GET         /pdChallenge/ldopaBradykinesiaTeam                                      controllers.MPowerChallengeController.bradykinesiaTeamNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
-GET         /pdChallenge/mpowerSubmission                                           controllers.MPowerChallengeController.mPowerSubmissionNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
-GET         /pdChallenge/ldopaTremorSubmission                                      controllers.MPowerChallengeController.tremorSubmissionNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
-GET         /pdChallenge/ldopaDyskinesiaSubmission                                  controllers.MPowerChallengeController.dyskinesiaSubmissionNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
-GET         /pdChallenge/ldopaBradykinesiaSubmission                                controllers.MPowerChallengeController.bradykinesiaSubmissionNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
+#Temporary for mpower challenge correlation
+GET         /pdChallenge/mpowerTeam                                                 controllers.mpower.MPowerChallengeCorrelationController.mPowerTeamNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
+GET         /pdChallenge/ldopaTremorTeam                                            controllers.mpower.MPowerChallengeCorrelationController.tremorTeamNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
+GET         /pdChallenge/ldopaDyskinesiaTeam                                        controllers.mpower.MPowerChallengeCorrelationController.dyskinesiaTeamNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
+GET         /pdChallenge/ldopaBradykinesiaTeam                                      controllers.mpower.MPowerChallengeCorrelationController.bradykinesiaTeamNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
+GET         /pdChallenge/mpowerSubmission                                           controllers.mpower.MPowerChallengeCorrelationController.mPowerSubmissionNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
+GET         /pdChallenge/ldopaTremorSubmission                                      controllers.mpower.MPowerChallengeCorrelationController.tremorSubmissionNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
+GET         /pdChallenge/ldopaDyskinesiaSubmission                                  controllers.mpower.MPowerChallengeCorrelationController.dyskinesiaSubmissionNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
+GET         /pdChallenge/ldopaBradykinesiaSubmission                                controllers.mpower.MPowerChallengeCorrelationController.bradykinesiaSubmissionNetwork(corrThreshold: Option[Double] ?= None, withDemographics: Boolean ?= false)
+
+#Temporary for mpower challenge clustering
+GET         /pdChallenge/mpowerMDS                                                 controllers.mpower.MPowerChallengeClusteringController.mPowerMDS(topRank: Option[Int] ?= None)
+GET         /pdChallenge/ldopaTremorMDS                                            controllers.mpower.MPowerChallengeClusteringController.tremorMDS(topRank: Option[Int] ?= None)
+GET         /pdChallenge/ldopaDyskinesiaMDS                                        controllers.mpower.MPowerChallengeClusteringController.dyskinesiaMDS(topRank: Option[Int] ?= None)
+GET         /pdChallenge/ldopaBradykinesiaMDS                                      controllers.mpower.MPowerChallengeClusteringController.bradykinesiaMDS(topRank: Option[Int] ?= None)
 
 # Map static resources from the /public folder to the /assets URL path
 #GET         /assets/*file                                                           controllers.Assets.at(path="/public", file)

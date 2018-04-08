@@ -16,9 +16,9 @@ object MatrixRowColumnMeanCalc extends NoOptionsCalculator[IN, OUT, INTER] {
     (rowMeans, columnMeans)
   }
 
-  override def sink(o: Unit) = sumCalc.sink()
+  override def flow(o: Unit) = sumCalc.flow()
 
-  override def postSink(o: Unit) = { case (rowSums, columnSums) =>
+  override def postFlow(o: Unit) = { case (rowSums, columnSums) =>
     val n = rowSums.size
     val rowMeans = rowSums.map(_ / n)
     val columnMeans = columnSums.map(_ / n)

@@ -1,6 +1,6 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Flow, Sink}
 import services.stats.Calculator
 import services.stats.calc.AllDefinedPearsonCorrelationCalcIOTypes._
 import _root_.util.GrouppedVariousSize
@@ -41,13 +41,15 @@ object AllDefinedPearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit,
     }.toList
   }
 
-  override def sink(featuresNumAndGroupSizes: (Int, Seq[Int])): Sink[IN, Future[INTER]] = {
+  override def flow(
+    featuresNumAndGroupSizes: (Int, Seq[Int])
+  ) = {
     val n = featuresNumAndGroupSizes._1
     val parallelGroupSizes = featuresNumAndGroupSizes._2
     val starts = parallelGroupSizes.scanLeft(0){_+_}
     val startEnds = parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
 
-    Sink.fold[PersonIterativeAccumGlobalArray, IN](
+    Flow[IN].fold[PersonIterativeAccumGlobalArray](
       PersonIterativeAccumGlobalArray(
         sumSqSums = for (i <- 0 to n - 1) yield (0d, 0d),
         pSums = (for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(0d): _*)).toArray,
@@ -81,11 +83,11 @@ object AllDefinedPearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit,
   }
 
   @Deprecated
-  private def sinkOld(
+  private def flowOld(
     n: Int,
     parallelGroupSizes: Seq[Int]
   ) =
-    Sink.fold[PersonIterativeAccumGlobal, Seq[Double]](
+    Flow[Seq[Double]].fold[PersonIterativeAccumGlobal](
       PersonIterativeAccumGlobal(
         sumSqSums = for (i <- 0 to n - 1) yield (0d, 0d),
         pSums = for (i <- 0 to n - 1) yield Seq.fill(i)(0d),
@@ -113,9 +115,9 @@ object AllDefinedPearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit,
         PersonIterativeAccumGlobal(newSumSqSums, newPSums.toSeq, accumGlobal.count + 1)
     }
 
-  override def postSink(parallelGroupSizes: Seq[Int]) = { globalAccum: INTER =>
+  override def postFlow(parallelGroupSizes: Seq[Int]) = { globalAccum: INTER =>
     val accums = globalAccumToAccums(globalAccum)
-    PearsonCorrelationCalc.postSink(parallelGroupSizes)(accums)
+    PearsonCorrelationCalc.postFlow(parallelGroupSizes)(accums)
   }
 
   private def globalAccumToAccums(

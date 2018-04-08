@@ -43,13 +43,11 @@ object WebExportUtil {
     charset : String = DEFAULT_CHARSET)(
     content : String
   ): Result = {
-//    val fileContent: Enumerator[Array[Byte]] = Enumerator(content.getBytes(charset))
-
     val source: Source[ByteString, _] = Source.single(ByteString(content, charset))
 
     Result(
       header = ResponseHeader(200, Map(CONTENT_DISPOSITION -> s"attachment; filename=${filename}")),
-      body = HttpEntity.Streamed(source, Some(content.length), Some("application/x-download")) // source.via(Compression.gzip)
+      body = HttpEntity.Streamed(source, None, Some("application/x-download")) // source.via(Compression.gzip) Some(content.length)
     )
 
 //    Result(

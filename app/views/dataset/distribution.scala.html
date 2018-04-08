@@ -20,7 +20,7 @@
     domainName: String,
     field: Option[Field],
     groupField: Option[Field],
-    chartSpecs: Seq[Widget],
+    widgets: Seq[Widget],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -84,7 +84,7 @@
 
 @bottomResources = {
     @highchartsJsImport()
-    @widgetPanelJs(chartSpecs)
+    @widgetPanelJs(widgets)
 
     <script type="text/javascript">
         $(function () {
@@ -229,8 +229,8 @@
 
     @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
 
-    @if(chartSpecs.nonEmpty) {
-        @widgetPanel(chartSpecs, 12 / chartSpecs.size)
+    @if(widgets.nonEmpty) {
+        @widgetPanel(widgets, 12 / widgets.size)
     }
 }
 

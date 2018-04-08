@@ -1,6 +1,6 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Flow, Sink}
 import services.stats.NoOptionsCalculator
 import services.stats.calc.BasicStatsCalcIOTypes._
 import play.api.Logger
@@ -31,14 +31,14 @@ object BasicStatsCalc extends NoOptionsCalculator[IN, OUT, INTER] {
       None
   }
 
-  override def sink(o: Unit) =
-    Sink.fold[INTER, IN](
+  override def flow(o: Unit) =
+    Flow[IN].fold[INTER](
       BasicStatsAccum(Double.MaxValue, Double.MinValue, 0, 0, 0, 0)
     ) {
       case (accum, value) => updateAccum(accum, value)
     }
 
-  override def postSink(o: Unit) = { accum: INTER =>
+  override def postFlow(o: Unit) = { accum: INTER =>
     if (accum.count > 0) {
       val mean = accum.sum / accum.count
 

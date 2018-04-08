@@ -1,0 +1,84 @@
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
+@import views.html.layout.main
+@import controllers.mpower.routes.{MPowerChallengeClusteringController => challengeRoutes}
+@import views.html.basicSideBar
+@import views.html.chart.highcharts.highchartsJsImport
+@import views.html.widget.{widgetPanel, widgetPanelJs}
+
+@(
+    domainName: String,
+    widgets: Traversable[Widget],
+    count: Int,
+    maxRank: Int,
+    topRankSelection: Option[Int]
+)(implicit context: WebContext)
+
+@sideBar = @{
+    basicSideBar(Seq(
+        ("1. mPower", Seq(
+            (challengeRoutes.mPowerMDS(Some(10)), "MDS", Some(2))
+        )),
+        ("2.1 Tremor", Seq(
+            (challengeRoutes.tremorMDS(Some(10)), "MDS", Some(2))
+        )),
+        ("2.2 Dyskinesia", Seq(
+            (challengeRoutes.dyskinesiaMDS(Some(10)), "MDS", Some(2))
+        )),
+        ("2.3 Bradykinesia", Seq(
+            (challengeRoutes.bradykinesiaMDS(Some(10)), "MDS", Some(2))
+        ))
+    ))
+}
+
+@bottomResources = {
+    @highchartsJsImport()
+    @widgetPanelJs(widgets)
+
+    <script type="text/javascript">
+        function resubmit() {
+            var params = {}
+
+            var topRank = $("#topSubmissionSelection").val()
+            if (topRank)
+                params["topRank"] = topRank;
+
+            submit('get', window.location.href, params)
+        }
+
+    </script>
+}
+
+@option(i: Int) = {
+    <option @if(topRankSelection.isDefined && topRankSelection.get.equals(i*5)) { selected="selected" } value="@{i*5}">Top @{i*5}</option>
+}
+
+@main(Messages("mds.title", domainName), Some(sideBar), None, None, Some(bottomResources)) {
+
+    <div class="page-header">
+        <h3>
+            @Messages("mds.title", domainName)
+        </h3>
+    </div>
+
+    <div class="row">
+        <div class="col-md-7">
+            <h3>Count: <b>@count</b></h3>
+        </div>
+        <div class="panel panel-default pull-right">
+            <div class="panel-body">
+                <span style="padding-top: 5px">Show Submissions</span>
+                <select id="topSubmissionSelection" name="topSubmissionSelection" onchange="resubmit()" >
+                    <option value="">All</option>
+                    @{for(i <- 1 to ((maxRank - 1) / 5)) yield option(i)}
+                </select>
+            </div>
+        </div>
+    </div>
+    <br/>
+    <br/>
+
+    @if(widgets.nonEmpty) {
+        @widgetPanel(widgets, 12 / widgets.size)
+    }
+}

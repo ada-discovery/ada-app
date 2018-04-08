@@ -1,8 +1,7 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Flow, Sink}
 import services.stats.Calculator
-
 import services.stats.calc.AllDefinedNumericDistributionCountsCalcIOType._
 
 import scala.collection.mutable
@@ -47,7 +46,7 @@ private class AllDefinedNumericDistributionCountsCalc[T: Numeric] extends Calcul
       Seq[(BigDecimal, Int)]()
   }
 
-  override def sink(options: SINK_OPTIONS[T]) = {
+  override def flow(options: SINK_OPTIONS[T]) = {
     val stepSize = calcStepSize(
       options.columnCount,
       options.min,
@@ -58,7 +57,7 @@ private class AllDefinedNumericDistributionCountsCalc[T: Numeric] extends Calcul
     val minBg = BigDecimal(numeric.toDouble(options.min))
     val max = numeric.toDouble(options.max)
 
-    Sink.fold[INTER[T], IN[T]](
+    Flow[IN[T]].fold[INTER[T]](
       mutable.ArraySeq(Seq.fill(options.columnCount)(0) :_*)
     ) { case (array, value) =>
       val index = calcBucketIndex(
@@ -70,7 +69,7 @@ private class AllDefinedNumericDistributionCountsCalc[T: Numeric] extends Calcul
     }
   }
 
-  override def postSink(options: SINK_OPTIONS[T]) = { array =>
+  override def postFlow(options: SINK_OPTIONS[T]) = { array =>
     val columnCount = array.length
 
     val stepSize = calcStepSize(

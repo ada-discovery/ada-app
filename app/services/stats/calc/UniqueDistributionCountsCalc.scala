@@ -1,9 +1,7 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.{Keep, Sink}
 import services.stats.NoOptionsCalculator
 
-import scala.collection.mutable.{Map => MMap}
 import util.AkkaStreamUtil._
 import services.stats.calc.UniqueDistributionCountsCalcIOType._
 
@@ -19,10 +17,10 @@ private class UniqueDistributionCountsCalc[T] extends NoOptionsCalculator[IN[T],
   override def fun(options: Unit) =
     _.groupBy(identity).map { case (value, seq) => (value, seq.size) }
 
-  override def sink(options: Unit) =
-    groupCountFlow[Option[T]](maxGroups).toMat(Sink.seq)(Keep.right)
+  override def flow(options: Unit) =
+    groupCountFlow[Option[T]](maxGroups).via(seqFlow)
 
-  override def postSink(options: Unit) = identity
+  override def postFlow(options: Unit) = identity
 }
 
 object UniqueDistributionCountsCalc {

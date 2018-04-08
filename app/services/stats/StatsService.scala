@@ -23,6 +23,8 @@ import services.ml.BooleanLabelIndexer
 import services.stats.calc._
 import services.{FeaturesDataFrameFactory, SparkApp}
 import JsonFieldUtil._
+import breeze.linalg.{eigSym, eig, DenseMatrix}
+import breeze.linalg.eigSym.EigSym
 import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition, RealMatrix}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -251,13 +253,29 @@ trait StatsService {
     distanceMatrix: Traversable[Seq[Double]],
     dims: Int,
     scaleByEigenValues: Boolean
-  ): (Seq[Seq[Double]], Seq[Double])
+  ): Future[(Seq[Seq[Double]], Seq[Double])]
 
   def performMetricMDS(
     distanceMatrixSource: Source[Seq[Double], _],
     dims: Int,
     scaleByEigenValues: Boolean
   ): Future[(Seq[Seq[Double]], Seq[Double])]
+
+  //////////////////////////
+  // Eigen Vectors/values //
+  //////////////////////////
+
+  def calcEigenValuesAndVectors(
+    matrix: Seq[Seq[Double]]
+  ): (Seq[Double], Seq[Seq[Double]])
+
+  def calcEigenValuesAndVectorsSymMatrixBreeze(
+    matrix: Seq[Seq[Double]]
+  ): (Seq[Double], Seq[Seq[Double]])
+
+  def calcEigenValuesAndVectorsBreeze(
+    matrix: Seq[Seq[Double]]
+  ): (Seq[Double], Seq[Double], Seq[Seq[Double]])
 
   /////////////////////
   // Standardization //
@@ -1224,7 +1242,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     distanceMatrix: Traversable[Seq[Double]],
     dims: Int,
     scaleByEigenValues: Boolean
-  ): (Seq[Seq[Double]], Seq[Double]) = {
+  ): Future[(Seq[Seq[Double]], Seq[Double])] = {
     logger.info("Calculating Gram matrix...")
     val gramMatrix = calcGramMatrix(distanceMatrix)
 
@@ -1242,33 +1260,39 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         logger.info("Calculating Gram matrix...")
         calcGramMatrix(distanceMatrixSource)
       }
-    } yield {
-      logger.info("Performing metric MDS...")
-      performMetricMDSAux(gramMatrix, dims, scaleByEigenValues)
-    }
+
+      result <- {
+        logger.info("Performing metric MDS...")
+        performMetricMDSAux(gramMatrix, dims, scaleByEigenValues)
+      }
+    } yield
+      result
 
   private def performMetricMDSAux(
     gramMatrix: Seq[Seq[Double]],
     dims: Int,
     scaleByEigenValues: Boolean
-  ) = {
-    val (eigenValues, eigenVectors) = calcEigenValuesAndVectors(gramMatrix)
+  ) =
+    Future {
+      val (eigenValues, eigenVectors) = calcEigenValuesAndVectorsSymMatrixBreeze(gramMatrix)
+//      val (eigenValues, _, eigenVectors) = calcEigenValuesAndVectorsBreeze(gramMatrix)
 
-    val mdsSolution = eigenVectors.transpose.map(_.take(dims))
+      val mdsSolution = eigenVectors.transpose.map(_.take(dims))
 
-    def scaledMdsSolution =
-      mdsSolution.transpose.zip(eigenValues).map { case (mdsColumn, eigenValue) =>
-        val squareSum = mdsColumn.fold(0d){ case (sum, value) => sum + value * value }
-        val factor = Math.sqrt(eigenValue / squareSum)
-        mdsColumn.map(_ * factor)
-      }.transpose
+      def scaledMdsSolution =
+        mdsSolution.transpose.zip(eigenValues).map { case (mdsColumn, eigenValue) =>
+          val squareSum = mdsColumn.fold(0d) { case (sum, value) => sum + value * value }
+          val factor = Math.sqrt(eigenValue / squareSum)
+          mdsColumn.map(_ * factor)
+        }.transpose
 
-    (if (scaleByEigenValues) scaledMdsSolution else mdsSolution, eigenValues)
-  }
+      (if (scaleByEigenValues) scaledMdsSolution else mdsSolution, eigenValues)
+    }
 
-  private def calcEigenValuesAndVectors(
+  override def calcEigenValuesAndVectors(
     matrix: Seq[Seq[Double]]
   ): (Seq[Double], Seq[Seq[Double]]) = {
+    val maxIterations: Byte = 50
     val realMatrix = new Array2DRowRealMatrix(matrix.map(_.toArray).toArray)
     val eigenDecomposition = new EigenDecomposition(realMatrix)
 
@@ -1280,6 +1304,32 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     val eigenVectors = for (i <- 0 to eigenVectorMatrix.getRowDimension - 1) yield eigenVectorMatrix.getRow(i).toSeq
 
     (eigenValues, eigenVectors)
+  }
+
+  override def calcEigenValuesAndVectorsSymMatrixBreeze(
+    matrix: Seq[Seq[Double]]
+  ): (Seq[Double], Seq[Seq[Double]]) = {
+    val EigSym(eigenValues, eigenVectors) = eigSym(DenseMatrix(matrix: _*))
+
+    (eigenValues.toScalaVector().reverse, eigenVectors.data.toSeq.grouped(eigenVectors.rows).toSeq.reverse)
+  }
+
+  override def calcEigenValuesAndVectorsBreeze(
+    matrix: Seq[Seq[Double]]
+  ): (Seq[Double], Seq[Double], Seq[Seq[Double]]) = {
+    val result = eig(DenseMatrix(matrix: _*))
+
+    val eigenValues = result.eigenvalues.toScalaVector()
+    val eigenValuesComplex = result.eigenvaluesComplex.toScalaVector()
+    val eigenVectors = result.eigenvectors.data.toSeq.grouped(result.eigenvectors.rows).toSeq
+
+    val sortedResult = (eigenValues, eigenValuesComplex, eigenVectors).zipped.toSeq.sortBy(-_._1)
+
+    (
+      sortedResult.map(_._1),
+      sortedResult.map(_._2),
+      sortedResult.map(_._3)
+    )
   }
 
   /////////////////////

@@ -24,10 +24,10 @@ private class GroupUniqueDistributionCountsCalc[G,T] extends NoOptionsCalculator
       (group, normalCalc.fun()(values))
     }
 
-  override def sink(options: Unit) =
-    groupCountFlow[(Option[G], Option[T])](maxGroups).toMat(Sink.seq)(Keep.right)
+  override def flow(options: Unit) =
+    groupCountFlow[(Option[G], Option[T])](maxGroups).via(seqFlow)
 
-  override def postSink(options: Unit) =
+  override def postFlow(options: Unit) =
     _.map { case ((group, value), count) => (group, (value, count)) }.toGroupMap
 }
 

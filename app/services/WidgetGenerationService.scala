@@ -21,10 +21,10 @@ trait WidgetGenerationService {
   def apply(
     widgetSpecs: Traversable[WidgetSpec],
     repo: JsonReadonlyRepo,
-    criteria: Seq[Criterion[Any]],
-    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
+    criteria: Seq[Criterion[Any]] = Nil,
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]] = Map(),
     fields: Traversable[Field],
-    usePerWidgetRepoMethod: Boolean
+    usePerWidgetRepoMethod: Boolean = false
   ): Future[Traversable[Option[(Widget, Seq[String])]]]
 
   def apply(

@@ -1,6 +1,6 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Flow, Sink}
 import services.stats.NoOptionsCalculator
 import services.stats.calc.MultiBasicStatsCalcIOTypes._
 
@@ -22,8 +22,8 @@ object MultiBasicStatsCalc extends NoOptionsCalculator[IN, OUT, INTER] {
     (0 until elementsCount).par.map(calcAux).toList
   }
 
-  override def sink(o: Unit) =
-    Sink.fold[INTER, IN](Nil) {
+  override def flow(o: Unit) =
+    Flow[IN].fold[INTER](Nil) {
       case (accums, values) =>
 
         // init accumulators if needed
@@ -35,5 +35,5 @@ object MultiBasicStatsCalc extends NoOptionsCalculator[IN, OUT, INTER] {
         initAccums.zip(values).map { case (accum, value) => basicCalc.updateAccum(accum, value)}
     }
 
-  override def postSink(o: Unit) = _.map(basicCalc.postSink())
+  override def postFlow(o: Unit) = _.map(basicCalc.postFlow())
 }

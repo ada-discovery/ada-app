@@ -1,6 +1,6 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Flow, Sink}
 import services.stats.Calculator
 import services.stats.calc.PearsonCorrelationCalcIOTypes._
 import _root_.util.GrouppedVariousSize
@@ -71,11 +71,11 @@ object PearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq
       None
   }
 
-  override def sink(featuresNumAndGroupSizes: (Int, Seq[Int])): Sink[IN, Future[INTER]] = {
+  override def flow(featuresNumAndGroupSizes: (Int, Seq[Int])) = {
     val n = featuresNumAndGroupSizes._1
     val parallelGroupSize = featuresNumAndGroupSizes._2
 
-    Sink.fold[INTER, IN](
+    Flow[IN].fold[INTER](
       for (i <- 0 to n - 1) yield Seq.fill(i)(PersonIterativeAccum(0, 0, 0, 0, 0, 0))
     ) {
       case (accums, featureValues) =>
@@ -109,14 +109,14 @@ object PearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq
 
   @Deprecated
   // seems slower than @see pearsonCorrelationSink and could be removed
-  private def sinkMutable(
+  private def flowMutable(
     n: Int,
     parallelGroupSizes: Seq[Int]
   ) = {
     val starts = parallelGroupSizes.scanLeft(0){_+_}
     val startEnds = parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
 
-    Sink.fold[Seq[mutable.ArraySeq[PersonIterativeAccum]], Seq[Option[Double]]](
+    Flow[Seq[Option[Double]]].fold[Seq[mutable.ArraySeq[PersonIterativeAccum]]](
       for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(PersonIterativeAccum(0, 0, 0, 0, 0, 0)): _*)
     ) {
       case (accums, featureValues) =>
@@ -150,7 +150,7 @@ object PearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq
     }
   }
 
-  override def postSink(parallelGroupSizes: Seq[Int]) = { accums: INTER =>
+  override def postFlow(parallelGroupSizes: Seq[Int]) = { accums: INTER =>
     logger.info("Creating correlations from the streamed accumulators.")
     val n = accums.size
 
