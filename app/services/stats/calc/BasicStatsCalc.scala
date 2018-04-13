@@ -1,7 +1,7 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.{Flow, Sink}
-import services.stats.NoOptionsCalculator
+import services.stats.CalculatorHelper.NoOptionsCalculator
 import services.stats.calc.BasicStatsCalcIOTypes._
 import play.api.Logger
 

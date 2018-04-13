@@ -4,12 +4,12 @@ import java.{util => ju}
 import javax.inject.{Inject, Singleton}
 
 import _root_.util.{AkkaStreamUtil, GroupMapList}
+import _root_.util.FieldUtil.fieldTypeOrdering
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.ActorMaterializer
 import com.google.inject.ImplementedBy
 import dataaccess.Criterion.Infix
-import dataaccess.JsonUtil.project
 import dataaccess._
 import models._
 import org.apache.spark.ml.feature.ChiSqSelector
@@ -23,15 +23,18 @@ import services.ml.BooleanLabelIndexer
 import services.stats.calc._
 import services.{FeaturesDataFrameFactory, SparkApp}
 import JsonFieldUtil._
-import breeze.linalg.{eigSym, eig, DenseMatrix}
+import akka.NotUsed
+import breeze.linalg.{DenseMatrix, eig, eigSym}
 import breeze.linalg.eigSym.EigSym
-import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition, RealMatrix}
+import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.math.BigDecimal.RoundingMode
 import scala.collection.JavaConversions._
 import services.stats.StatsHelperUtil._
+import services.stats.CalculatorHelper._
+
+import scala.reflect.runtime.universe.TypeTag
 
 @ImplementedBy(classOf[StatsServiceImpl])
 trait StatsService {
@@ -40,26 +43,34 @@ trait StatsService {
   // Unique Counts / Distribution //
   //////////////////////////////////
 
-  type UniqueCount[T] = UniqueDistributionCountsCalcIOType.OUT[T]
-  type GroupUniqueCount[G, T] = GroupUniqueDistributionCountsCalcIOType.OUT[G, T]
-
-  type NumericCount = NumericDistributionCountsCalcIOType.OUT
-  type GroupNumericCount[G] = GroupNumericDistributionCountsCalcIOType.OUT[G]
+  type UniqueCount[T] = UniqueDistributionCountsCalcIOTypes.OUT[T]
+  type UniqueCountFlowOutput[T] = UniqueDistributionCountsCalcIOTypes.OUT[T]
+  type GroupUniqueCount[G, T] = GroupUniqueDistributionCountsCalcIOTypes.OUT[G, T]
+  type GroupUniqueCountFlowOutput[G, T] = GroupUniqueDistributionCountsCalcIOTypes.INTER[G, T]
 
   def calcUniqueDistributionCounts(
     items: Traversable[JsObject],
     field: Field
   ): UniqueCount[Any]
 
-  def calcUniqueDistributionCounts(
+  def calcUniqueDistributionCountsStreamed[T](
+    source: Source[Option[T], _]
+  ): Future[UniqueCount[T]]
+
+  def calcUniqueDistributionCountsStreamed(
+    source: Source[JsObject, _],
+    field: Field
+  ): Future[UniqueCount[Any]]
+
+  def createUniqueDistributionCountsJsonFlow(
+    field: Field
+  ): Flow[JsObject, UniqueCountFlowOutput[Any], NotUsed]
+
+  def calcUniqueDistributionCountsFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
   ): Future[UniqueCount[Any]]
-
-  def calcUniqueDistributionCountsStreamed[T](
-    source: Source[Option[T], _]
-  ): Future[UniqueCount[T]]
 
   // grouped
 
@@ -69,20 +80,36 @@ trait StatsService {
     groupField: Field
   ): GroupUniqueCount[Any, Any]
 
-  def calcGroupedUniqueDistributionCounts(
+  def calcGroupedUniqueDistributionCountsStreamed[G, T](
+    source: Source[(Option[G], Option[T]), _]
+  ): Future[GroupUniqueCount[G, T]]
+
+  def calcGroupedUniqueDistributionCountsStreamed(
+    source: Source[JsObject, _],
+    field: Field,
+    groupField: Field
+  ): Future[GroupUniqueCount[Any, Any]]
+
+  def createGroupedUniqueDistributionCountsJsonFlow(
+    field: Field,
+    groupField: Field
+  ): Flow[JsObject, GroupUniqueCountFlowOutput[Any, Any], NotUsed]
+
+  def calcGroupedUniqueDistributionCountsFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
     groupField: Field
   ): Future[GroupUniqueCount[Any, Any]]
 
-  def calcGroupedUniqueDistributionCountsStreamed[G, T](
-    source: Source[(Option[G], Option[T]), _]
-  ): Future[GroupUniqueCount[G, T]]
-
   ///////////////////////////////////
   // Numeric Counts / Distribution //
   ///////////////////////////////////
+
+  type NumericCount = NumericDistributionCountsCalcIOTypes.OUT
+  type NumericCountFlowOutput = NumericDistributionCountsCalcIOTypes.INTER
+  type GroupNumericCount[G] = GroupNumericDistributionCountsCalcIOTypes.OUT[G]
+  type GroupNumericCountFlowOutput[G] = GroupNumericDistributionCountsCalcIOTypes.INTER[G]
 
   def calcNumericDistributionCounts(
     items: Traversable[JsObject],
@@ -90,16 +117,27 @@ trait StatsService {
     numericBinCountOption: Option[Int]
   ): NumericCount
 
-  def calcNumericDistributionCounts(
+  def calcNumericDistributionCountsStreamed(
+    source: Source[Option[Double], _],
+    options: NumericDistributionFlowOptions
+  ): Future[NumericCount]
+
+  def calcNumericDistributionCountsStreamed(
+    source: Source[JsObject, _],
+    field: Field,
+    options: NumericDistributionFlowOptions
+  ): Future[NumericCount]
+
+  def createNumericDistributionCountsJsonFlow(
+    field: Field,
+    options: NumericDistributionFlowOptions
+  ): Flow[JsObject, NumericCountFlowOutput, NotUsed]
+
+  def calcNumericDistributionCountsFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
     numericBinCountOption: Option[Int]
-  ): Future[NumericCount]
-
-  def calcNumericDistributionCountsStreamed[T: Numeric](
-    source: Source[Option[T], _],
-    options: NumericDistributionSinkOptions[T]
   ): Future[NumericCount]
 
   // grouped
@@ -111,7 +149,25 @@ trait StatsService {
     numericBinCountOption: Option[Int]
   ): GroupNumericCount[Any]
 
-  def calcGroupedNumericDistributionCounts(
+  def calcGroupedNumericDistributionCountsStreamed[G](
+    source: Source[(Option[G], Option[Double]), _],
+    options: NumericDistributionFlowOptions
+  ): Future[GroupNumericCount[G]]
+
+  def calcGroupedNumericDistributionCountsStreamed(
+    source: Source[JsObject, _],
+    field: Field,
+    groupField: Field,
+    options: NumericDistributionFlowOptions
+  ): Future[GroupNumericCount[Any]]
+
+  def createGroupedNumericDistributionCountsJsonFlow(
+    field: Field,
+    groupField: Field,
+    options: NumericDistributionFlowOptions
+  ): Flow[JsObject, GroupNumericCountFlowOutput[Any], NotUsed]
+
+  def calcGroupedNumericDistributionCountsFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
@@ -119,20 +175,55 @@ trait StatsService {
     numericBinCountOption: Option[Int]
   ): Future[GroupNumericCount[Any]]
 
-  def calcGroupedNumericDistributionCountsStreamed[G, T: Numeric](
-    source: Source[(Option[G], Option[T]), _],
-    options: NumericDistributionSinkOptions[T]
-  ): Future[GroupNumericCount[G]]
-
   ///////////////////////
   // Cumulative Counts //
   ///////////////////////
 
+  type CumulativeCount[T] = CumulativeOrderedCountsCalcIOTypes.OUT[T]
+  type CumulativeCountFlowOutput[T] = CumulativeOrderedCountsCalcIOTypes.OUT[T]
+  type GroupCumulativeCount[G, T] = GroupCumulativeOrderedCountsCalcIOTypes.OUT[G, T]
+  type GroupCumulativeCountFlowOutput[G, T] = GroupCumulativeOrderedCountsCalcIOTypes.INTER[G, T]
+
   def calcCumulativeCounts(
     items: Traversable[JsObject],
+    field: Field
+  ): CumulativeCount[Any]
+
+  def calcCumulativeCountsStreamed[T: Ordering](
+    source: Source[Option[T], _]
+  ): Future[CumulativeCount[T]]
+
+  def calcCumulativeCountsStreamed(
+    source: Source[JsObject, _],
+    field: Field
+  ): Future[CumulativeCount[Any]]
+
+  def createCumulativeCountsJsonFlow(
+    field: Field
+  ): Flow[JsObject, CumulativeCountFlowOutput[Any], NotUsed]
+
+  // grouped
+
+  def calcGroupedCumulativeCounts(
+    items: Traversable[JsObject],
     field: Field,
-    groupField: Option[Field]
-  ): Seq[(String, Traversable[Count[Any]])]
+    groupField: Field
+  ): GroupCumulativeCount[Any, Any]
+
+  def calcGroupedCumulativeStreamed[G, T: Ordering](
+    source: Source[(Option[G], Option[T]), _]
+  ): Future[GroupCumulativeCount[G, T]]
+
+  def calcGroupedCumulativeStreamed(
+    source: Source[JsObject, _],
+    field: Field,
+    groupField: Field
+  ): Future[GroupCumulativeCount[Any, Any]]
+
+  def createGroupedCumulativeJsonFlow(
+    field: Field,
+    groupField: Field
+  ): Flow[JsObject, GroupCumulativeCountFlowOutput[Any, Any], NotUsed]
 
   ///////////////
   // Quartiles //
@@ -143,7 +234,7 @@ trait StatsService {
     field: Field
   ): Option[Quartiles[Any]]
 
-  def calcQuartiles(
+  def calcQuartilesFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
@@ -162,16 +253,62 @@ trait StatsService {
     source: Source[Option[Double], _]
   ): Future[Option[BasicStatsResult]]
 
-  /////////////
-  // Scatter //
-  /////////////
+  //////////////
+  // Scatters //
+  //////////////
 
-  def collectScatterData(
-    xyzItems: Traversable[JsObject],
+  type TupleData[T1, T2] = TupleCalcIOTypes.OUT[T1, T2]
+  type TupleDataFlowOutput[T1, T2] = TupleCalcIOTypes.OUT[T1, T2]
+  type GroupTupleData[G, T1, T2] = GroupTupleCalcIOTypes.OUT[G, T1, T2]
+  type GroupTupleDataFlowOutput[G, T1, T2] = GroupTupleCalcIOTypes.INTER[G, T1, T2]
+
+  def collectTuples(
+    jsons: Traversable[JsObject],
+    xField: Field,
+    yField: Field
+  ): TupleData[Any, Any]
+
+  def collectTuplesStreamed[T1, T2](
+    source: Source[(Option[T1], Option[T2]),_]
+  ): Future[TupleData[T1, T2]]
+
+  def collectTuplesStreamed(
+    source: Source[JsObject, _],
+    xField: Field,
+    yField: Field
+  ): Future[TupleData[Any, Any]]
+
+  def createTuplesJsonFlow(
+    xField: Field,
+    yField: Field
+  ): Flow[JsObject, TupleDataFlowOutput[Any, Any], NotUsed]
+
+  // grouped
+
+  def collectGroupedTuples(
+    jsons: Traversable[JsObject],
     xField: Field,
     yField: Field,
-    groupField: Option[Field]
-  ): Traversable[(String, Traversable[(Any, Any)])]
+    groupField: Field
+  ): GroupTupleData[String, Any, Any]
+
+  def collectGroupedTuplesStreamed[G, T1, T2](
+    source: Source[(Option[G], Option[T1], Option[T2]),_]
+  ): Future[GroupTupleData[G, T1, T2]]
+
+  def collectGroupedTuplesStreamed(
+    source: Source[JsObject,_],
+    xField: Field,
+    yField: Field,
+    groupField: Field
+  ): Future[GroupTupleData[String, Any, Any]]
+
+  def createGroupedTuplesJsonFlow(
+    jsons: Traversable[JsObject],
+    xField: Field,
+    yField: Field,
+    groupField: Field
+  ): Flow[JsObject, GroupTupleDataFlowOutput[String, Any, Any], NotUsed]
 
   //////////////////
   // Correlations //
@@ -360,13 +497,26 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   override def calcUniqueDistributionCounts(
     items: Traversable[JsObject],
     field: Field
-  ): UniqueCount[Any] = {
-    val jsonToValue = jsonToArrayValue[Any](field)
-    val values = items.map(jsonToValue).flatten
-    UniqueDistributionCountsCalc[Any].fun()(values)
-  }
+  ): UniqueCount[Any] =
+    UniqueDistributionCountsCalc[Any].jsonFunA_(field, field)(items)
 
-  override def calcUniqueDistributionCounts(
+  override def calcUniqueDistributionCountsStreamed[T](
+    source: Source[Option[T], _]
+  ): Future[UniqueCount[T]] =
+    UniqueDistributionCountsCalc[T].runFlow_(source)
+
+  override def calcUniqueDistributionCountsStreamed(
+    source: Source[JsObject, _],
+    field: Field
+  ): Future[UniqueCount[Any]] =
+    UniqueDistributionCountsCalc[Any].runJsonFlowA_(field, field)(source)
+
+  override def createUniqueDistributionCountsJsonFlow(
+    field: Field
+  ): Flow[JsObject, UniqueCountFlowOutput[Any], NotUsed] =
+    UniqueDistributionCountsCalc[Any].jsonFlowA_(field, field)
+
+  override def calcUniqueDistributionCountsFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
@@ -414,24 +564,34 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     Future.sequence(countFutures ++ Seq(naValueFuture))
   }
 
-  override def calcUniqueDistributionCountsStreamed[T](
-    source: Source[Option[T], _]
-  ): Future[UniqueCount[T]] = {
-    val calc = UniqueDistributionCountsCalc[T]
-    calc.runSink((), ())(source)
-  }
+  // grouped
 
   override def calcGroupedUniqueDistributionCounts(
     items: Traversable[JsObject],
     field: Field,
     groupField: Field
-  ): GroupUniqueCount[Any, Any] = {
-    val jsonValues = jsonToTuple[Any, Any](groupField, field)
-    val values = items.map(jsonValues)
-    GroupUniqueDistributionCountsCalc[Any, Any].fun()(values)
-  }
+  ) =
+    GroupUniqueDistributionCountsCalc[Any, Any].jsonFunA_(field, groupField, field)(items)
 
-  override def calcGroupedUniqueDistributionCounts(
+  override def calcGroupedUniqueDistributionCountsStreamed[G, T](
+    source: Source[(Option[G], Option[T]), _]
+  ): Future[GroupUniqueCount[G, T]] =
+    GroupUniqueDistributionCountsCalc[G, T].runFlow_(source)
+
+  override def calcGroupedUniqueDistributionCountsStreamed(
+    source: Source[JsObject, _],
+    field: Field,
+    groupField: Field
+  ): Future[GroupUniqueCount[Any, Any]] =
+    GroupUniqueDistributionCountsCalc[Any, Any].runJsonFlowA_(field, groupField, field)(source)
+
+  override def createGroupedUniqueDistributionCountsJsonFlow(
+    field: Field,
+    groupField: Field
+  ): Flow[JsObject, GroupUniqueCountFlowOutput[Any, Any], NotUsed] =
+    GroupUniqueDistributionCountsCalc[Any, Any].jsonFlowA_(field, groupField, field)
+
+  override def calcGroupedUniqueDistributionCountsFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
@@ -444,13 +604,13 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         val groupFieldName = groupField.name
         val countFutures = groupValues.par.map { value =>
           val finalCriteria = criteria ++ Seq(groupFieldName #== value)
-          calcUniqueDistributionCounts(dataRepo, finalCriteria, field).map { counts =>
+          calcUniqueDistributionCountsFromRepo(dataRepo, finalCriteria, field).map { counts =>
             (Some(value), counts)
           }
         }.toList
 
         val undefinedGroupCriteria = criteria ++ Seq(groupFieldName #=@)
-        val naValueFuture = calcUniqueDistributionCounts(dataRepo, undefinedGroupCriteria, field).map { counts =>
+        val naValueFuture = calcUniqueDistributionCountsFromRepo(dataRepo, undefinedGroupCriteria, field).map { counts =>
           (None, counts)
         }
 
@@ -458,13 +618,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       }
     } yield
       seriesCounts
-
-  override def calcGroupedUniqueDistributionCountsStreamed[G, T](
-    source: Source[(Option[G], Option[T]), _]
-  ): Future[GroupUniqueCount[G, T]] = {
-    val calc = GroupUniqueDistributionCountsCalc[G, T]
-    calc.runSink((), ())(source)
-  }
 
   /////////////////////////////////
   // Numeric Distribution Counts //
@@ -476,49 +629,30 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     numericBinCountOption: Option[Int]
   ): NumericCount = {
     val numericBinCount = numericBinCountOption.getOrElse(defaultNumericBinCount)
-
-    def getValues[T]: Traversable[Option[T]] = {
-      val jsonToValue = jsonToArrayValue[T](field)
-      items.map(jsonToValue).flatten
-    }
-
-    def calcNumericCounts[T: Numeric](
-      values: Traversable[Option[T]],
-      options: NumericDistributionOptions[T]
-    ) = NumericDistributionCountsCalc[T].fun(options)(values)
-
-    field.fieldType match {
-      case FieldTypeId.Double =>
-        val options = NumericDistributionOptions[Double](numericBinCount)
-        calcNumericCounts(getValues[Double], options)
-
-      case FieldTypeId.Integer =>
-        val values = getValues[Long]
-        val flatValues = values.flatten
-
-        val min = if (flatValues.nonEmpty) flatValues.min else 0
-        val max = if (flatValues.nonEmpty) flatValues.max else 0
-        val valueCount = Math.abs(max - min)
-
-        val options = NumericDistributionOptions(
-          Math.min(numericBinCount, valueCount + 1).toInt,
-          Some(min),
-          Some(max),
-          valueCount < numericBinCount
-        )
-
-        calcNumericCounts(values, options)
-
-      case FieldTypeId.Date =>
-        val values = getValues[ju.Date].map(_.map(_.getTime))
-        val options = NumericDistributionOptions[Long](numericBinCount)
-        calcNumericCounts[Long](values, options)
-
-      case _ => Nil
-    }
+    val options = NumericDistributionOptions(numericBinCount)
+    NumericDistributionCountsCalc.jsonFunA(field, Seq(field), options)(items)
   }
 
-  override def calcNumericDistributionCounts(
+  override def calcNumericDistributionCountsStreamed(
+    source: Source[Option[Double], _],
+    options: NumericDistributionFlowOptions
+  ): Future[NumericCount] =
+    NumericDistributionCountsCalc.runFlow(options, options)(source)
+
+  override def calcNumericDistributionCountsStreamed(
+    source: Source[JsObject, _],
+    field: Field,
+    options: NumericDistributionFlowOptions
+  ): Future[NumericCount] =
+    NumericDistributionCountsCalc.runJsonFlowA(field, Seq(field), options, options)(source)
+
+  def createNumericDistributionCountsJsonFlow(
+    field: Field,
+    options: NumericDistributionFlowOptions
+  ): Flow[JsObject, NumericCountFlowOutput, NotUsed] =
+    NumericDistributionCountsCalc.jsonFlowA(field, Seq(field), options)
+
+  override def calcNumericDistributionCountsFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
@@ -557,14 +691,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     }
   }
 
-  override def calcNumericDistributionCountsStreamed[T: Numeric](
-    source: Source[Option[T], _],
-    options: NumericDistributionSinkOptions[T]
-  ): Future[NumericCount] = {
-    val calc = NumericDistributionCountsCalc[T]
-    calc.runSink(options, options)(source)
-  }
-
   // grouped
 
   override def calcGroupedNumericDistributionCounts(
@@ -573,22 +699,34 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     groupField: Field,
     numericBinCountOption: Option[Int]
   ): GroupNumericCount[Any] = {
-    val groupFieldType = ftf(groupField.fieldTypeSpec)
+    val numericBinCount = numericBinCountOption.getOrElse(defaultNumericBinCount)
+    val options = NumericDistributionOptions(numericBinCount)
 
-    // group the jsons
-    val groupedJsons = items.map { json =>
-      val value = groupFieldType.jsonToValue(json \ groupField.name)
-      (value, json)
-    }.toGroupMap
-
-    // calculate numeric distribution counts for each group
-    groupedJsons.map { case (groupValue, jsons) =>
-      val counts = calcNumericDistributionCounts(jsons, field, numericBinCountOption)
-      (groupValue, counts)
-    }
+    GroupNumericDistributionCountsCalc[Any].jsonFunA(field, Seq(groupField, field), options)(items)
   }
 
-  override def calcGroupedNumericDistributionCounts(
+  override def calcGroupedNumericDistributionCountsStreamed[G](
+    source: Source[(Option[G], Option[Double]), _],
+    options: NumericDistributionFlowOptions
+  ): Future[GroupNumericCount[G]] =
+    GroupNumericDistributionCountsCalc[G].runFlow(options, options)(source)
+
+  override def calcGroupedNumericDistributionCountsStreamed(
+    source: Source[JsObject, _],
+    field: Field,
+    groupField: Field,
+    options: NumericDistributionFlowOptions
+  ): Future[GroupNumericCount[Any]] =
+    GroupNumericDistributionCountsCalc[Any].runJsonFlowA(field, Seq(groupField, field), options, options)(source)
+
+  override def createGroupedNumericDistributionCountsJsonFlow(
+    field: Field,
+    groupField: Field,
+    options: NumericDistributionFlowOptions
+  ): Flow[JsObject, GroupNumericCountFlowOutput[Any], NotUsed] =
+    GroupNumericDistributionCountsCalc[Any].jsonFlowA(field, Seq(groupField, field), options)
+
+  override def calcGroupedNumericDistributionCountsFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
@@ -602,13 +740,13 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
         val groupFieldName = groupField.name
         val countFutures = groupVals.par.map { value =>
           val finalCriteria = criteria ++ Seq(groupFieldName #== value)
-          calcNumericDistributionCounts(dataRepo, finalCriteria, field, numericBinCountOption).map { counts =>
+          calcNumericDistributionCountsFromRepo(dataRepo, finalCriteria, field, numericBinCountOption).map { counts =>
             (Some(value), counts)
           }
         }.toList
 
         val undefinedGroupCriteria = criteria ++ Seq(groupFieldName #=@)
-        val naValueFuture = calcNumericDistributionCounts(dataRepo, undefinedGroupCriteria, field, numericBinCountOption).map { counts =>
+        val naValueFuture = calcNumericDistributionCountsFromRepo(dataRepo, undefinedGroupCriteria, field, numericBinCountOption).map { counts =>
           (None, counts)
         }
 
@@ -616,14 +754,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       }
     } yield
       seriesCounts
-
-  override def calcGroupedNumericDistributionCountsStreamed[G, T: Numeric](
-    source: Source[(Option[G], Option[T]), _],
-    options: NumericDistributionSinkOptions[T]
-  ): Future[GroupNumericCount[G]] = {
-    val calc = GroupNumericDistributionCountsCalc[G, T]
-    calc.runSink(options, options)(source)
-  }
 
   private def groupValues(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
@@ -751,110 +881,134 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       bucketCounts
   }
 
-  // cumulative counts
-
-  private def calcCumulativeCountsAux[T: Ordering](
-    items: Traversable[JsObject],
-    field: Field,
-    groupField: Option[Field]
-  ): Seq[(String, Seq[Count[T]])] = {
-    val fieldType = ftf(field.fieldTypeSpec).asValueOf[T]
-
-    val itemsSeq = items.toSeq
-    val jsons = project(itemsSeq, field.name).toSeq
-    val values = jsons.map(fieldType.jsonToValue)
-
-    def sortValues(groupedValues: Seq[(String, Seq[T])]) =
-      groupedValues.map{ case (name, values) =>
-        val counts = (values.sorted, Stream.from(1)).zipped.map { case (value, count) =>
-          Count(value, count, None)
-        }
-        (name, counts)
-      }
-
-    groupField match {
-      case Some(groupField) =>
-        val groupFieldType = ftf(groupField.fieldTypeSpec)
-        val groupJsons = project(itemsSeq, groupField.name).toSeq
-        val groups = jsonsToDisplayString(groupFieldType, groupJsons)
-
-        val groupedValues = (groups, values).zipped.groupBy(_._1).map { case (group, values) =>
-          (group, values.flatMap(_._2).toSeq)
-        }.toSeq
-        sortValues(groupedValues)
-
-      case None =>
-        sortValues(Seq(("all", values.flatten)))
-    }
-  }
-
-  //////////////
-  // Scatters //
-  //////////////
-
-  override def collectScatterData(
-    xyzItems: Traversable[JsObject],
-    xField: Field,
-    yField: Field,
-    groupField: Option[Field]
-  ): Traversable[(String, Traversable[(Any, Any)])] = {
-    // create a json value converter
-    val jsonValues = jsonToTuple[Any, Any](xField, yField)
-    groupField.map { groupField =>
-      // create a group->string converter and merge with the value one
-      val groupJsonString = jsonToDisplayString(groupField)
-      val groupStringJsonValues = {jsObject: JsObject =>
-        val values = jsonValues(jsObject)
-        (groupJsonString(jsObject), values._1, values._2)
-      }
-
-      // extract data and produce scatter data
-      val data = xyzItems.map(groupStringJsonValues)
-      val result = GroupScatterCalc[String, Any, Any].fun()(data)
-
-      result.map { case (groupName, values) => (groupName.getOrElse("Undefined"), values)}
-    }.getOrElse{
-      val data = xyzItems.map(jsonValues)
-      val result = ScatterCalc[Any, Any].fun()(data)
-      Seq(("all", result))
-    }
-  }
+  ///////////////////////
+  // Cumulative Counts //
+  ///////////////////////
 
   override def calcCumulativeCounts(
     items: Traversable[JsObject],
+    field: Field
+  ): CumulativeCount[Any] =
+    fieldTypeOrdering(field.fieldType).map { implicit ordering =>
+      CumulativeOrderedCountsCalc[Any].jsonFunA_(field, field)(items)
+    }.getOrElse(Nil)
+
+  override def calcCumulativeCountsStreamed[T: Ordering](
+    source: Source[Option[T], _]
+  ): Future[CumulativeCount[T]] =
+    CumulativeOrderedCountsCalc[T].runFlow_(source)
+
+  override def calcCumulativeCountsStreamed(
+    source: Source[JsObject, _],
+    field: Field
+  ): Future[CumulativeCount[Any]] =
+    fieldTypeOrdering(field.fieldType).map { implicit ordering =>
+      CumulativeOrderedCountsCalc[Any].runJsonFlowA_(field, field)(source)
+    }.getOrElse(Future(Nil))
+
+  override def createCumulativeCountsJsonFlow(
+    field: Field
+  ): Flow[JsObject, CumulativeCountFlowOutput[Any], NotUsed] =
+    fieldTypeOrdering(field.fieldType).map { implicit ordering =>
+      CumulativeOrderedCountsCalc[Any].jsonFlowA_(field, field)
+    }.getOrElse(
+      Flow[JsObject].map(_ => Nil)
+    )
+
+  // grouped
+
+  override def calcGroupedCumulativeCounts(
+    items: Traversable[JsObject],
     field: Field,
-    groupField: Option[Field]
-  ): Seq[(String, Seq[Count[Any]])] = {
-    def calcCounts[T: Ordering] = calcCumulativeCountsAux[T](items, field, groupField)
+    groupField: Field
+  ): GroupCumulativeCount[Any, Any] =
+    fieldTypeOrdering(field.fieldType).map { implicit ordering =>
+      GroupCumulativeOrderedCountsCalc[Any, Any].jsonFunA_(field, groupField, field)(items)
+    }.getOrElse(Nil)
 
-    field.fieldType match {
+  override def calcGroupedCumulativeStreamed[G, T: Ordering](
+    source: Source[(Option[G], Option[T]), _]
+  ): Future[GroupCumulativeCount[G, T]] =
+    GroupCumulativeOrderedCountsCalc[G, T].runFlow_(source)
 
-      case FieldTypeId.String => calcCounts[String]
+  override def calcGroupedCumulativeStreamed(
+    source: Source[JsObject, _],
+    field: Field,
+    groupField: Field
+  ): Future[GroupCumulativeCount[Any, Any]] =
+    fieldTypeOrdering(field.fieldType).map { implicit ordering =>
+      GroupCumulativeOrderedCountsCalc[Any, Any].runJsonFlowA_(field, groupField, field)(source)
+    }.getOrElse(Future(Nil))
 
-      case FieldTypeId.Enum => calcCounts[Int]
+  override def createGroupedCumulativeJsonFlow(
+    field: Field,
+    groupField: Field
+  ): Flow[JsObject, GroupCumulativeCountFlowOutput[Any, Any], NotUsed] =
+    fieldTypeOrdering(field.fieldType).map { implicit ordering =>
+      GroupCumulativeOrderedCountsCalc[Any, Any].jsonFlowA_(field, groupField, field)
+    }.getOrElse(
+      Flow[JsObject].map(_ => Nil)
+    )
 
-      case FieldTypeId.Boolean => calcCounts[Boolean]
+  ////////////
+  // Tuples //
+  ////////////
 
-      case FieldTypeId.Double => calcCounts[Double]
+  override def collectTuples(
+    jsons: Traversable[JsObject],
+    xField: Field,
+    yField: Field
+  ): TupleData[Any, Any] =
+    TupleCalc[Any, Any].jsonFun_(xField, yField)(jsons)
 
-      case FieldTypeId.Integer => calcCounts[Long]
+  override def collectTuplesStreamed[T1, T2](
+    source: Source[(Option[T1], Option[T2]),_]
+  ): Future[TupleData[T1, T2]] =
+    TupleCalc[T1, T2].runFlow_(source)
 
-      case FieldTypeId.Date => calcCounts[ju.Date]
+  override def collectTuplesStreamed(
+    source: Source[JsObject, _],
+    xField: Field,
+    yField: Field
+  ): Future[TupleData[Any, Any]] =
+    TupleCalc[Any, Any].runJsonFlow_(xField, yField)(source)
 
-      case _ => Nil
-    }
-  }
+  override def createTuplesJsonFlow(
+    xField: Field,
+    yField: Field
+  ): Flow[JsObject, TupleDataFlowOutput[Any, Any], NotUsed] =
+    TupleCalc[Any, Any].jsonFlow_(xField, yField)
 
-  private def jsonsToDisplayString[T](
-    fieldType: FieldType[T],
-    jsons: Traversable[JsReadable]
-  ): Traversable[String] =
-    jsons.map { json =>
-      fieldType.jsonToValue(json) match {
-        case None => "Undefined"
-        case Some(value) => fieldType.valueToDisplayString(Some(value))
-      }
-    }
+  // grouped
+
+  override def collectGroupedTuples(
+    jsons: Traversable[JsObject],
+    xField: Field,
+    yField: Field,
+    groupField: Field
+  ): GroupTupleData[String, Any, Any] =
+    GroupTupleCalc[String, Any, Any].jsonFun_(groupField, xField, yField)(jsons)
+
+  override def collectGroupedTuplesStreamed[G, T1, T2](
+    source: Source[(Option[G], Option[T1], Option[T2]),_]
+  ): Future[GroupTupleData[G, T1, T2]] =
+    GroupTupleCalc[G, T1, T2].runFlow_(source)
+
+  override def collectGroupedTuplesStreamed(
+    source: Source[JsObject,_],
+    xField: Field,
+    yField: Field,
+    groupField: Field
+  ): Future[GroupTupleData[String, Any, Any]] =
+    GroupTupleCalc[String, Any, Any].runJsonFlow_(groupField, xField, yField)(source)
+
+  override def createGroupedTuplesJsonFlow(
+    jsons: Traversable[JsObject],
+    xField: Field,
+    yField: Field,
+    groupField: Field
+  ): Flow[JsObject, GroupTupleDataFlowOutput[String, Any, Any], NotUsed] =
+    GroupTupleCalc[String, Any, Any].jsonFlow_(groupField, xField, yField)
 
   ///////////////
   // Quartiles //
@@ -864,22 +1018,22 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     items: Traversable[JsObject],
     field: Field
   ): Option[Quartiles[Any]] = {
-    // helper function to convert jsons to values and calculate quartiles
-    def quartiles[T: Ordering](toDouble: T => Double): Option[Quartiles[Any]] = {
-      val jsonToValue = jsonToArrayValue[T](field)
-      val values = items.map(jsonToValue).flatten.flatten
-      QuartilesCalc[T].fun(toDouble)(values).asInstanceOf[Option[Quartiles[Any]]]
-    }
+
+    def quartilesAux[T: Ordering](
+      toDouble: T => Double)(
+      implicit typeTag: TypeTag[T]
+    ) =
+      QuartilesCalc[T].jsonFunA(field, Seq(field), toDouble)(items).asInstanceOf[Option[Quartiles[Any]]]
 
     field.fieldType match {
-      case FieldTypeId.Double => quartiles[Double](identity)
-      case FieldTypeId.Integer => quartiles[Long](_.toDouble)
-      case FieldTypeId.Date => quartiles[ju.Date](_.getTime.toDouble)
+      case FieldTypeId.Double => quartilesAux[Double](identity)
+      case FieldTypeId.Integer => quartilesAux[Long](_.toDouble)
+      case FieldTypeId.Date => quartilesAux[ju.Date](_.getTime.toDouble)
       case _ => None
     }
   }
 
-  override def calcQuartiles(
+  override def calcQuartilesFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
@@ -887,7 +1041,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     val typeSpec = field.fieldTypeSpec
 
     def quartiles[T: Ordering](toDouble: T => Double) =
-      calcQuartiles[T](dataRepo, criteria, field, toDouble).map(
+      calcQuartilesFromRepo[T](dataRepo, criteria, field, toDouble).map(
         _.asInstanceOf[Option[Quartiles[Any]]]
       )
 
@@ -899,7 +1053,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     }
   }
 
-  def calcQuartiles[T: Ordering](
+  def calcQuartilesFromRepo[T: Ordering](
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
@@ -909,7 +1063,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       // total length
       length <- dataRepo.count(criteria ++ Seq(field.name #!@))
 
-      // create quantiles
+      // create quartiles
       quants <-
         if (length > 0)
           createQuantilesAux(toDouble, length, dataRepo, criteria, field)
@@ -1058,17 +1212,13 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   override def calcBasicStats(
     items: Traversable[JsObject],
     field: Field
-  ): Option[BasicStatsResult] = {
-    val doubleValue = jsonToDouble(field)
-    BasicStatsCalc.fun()(items.map(doubleValue))
-  }
+  ): Option[BasicStatsResult] =
+    BasicStatsCalc.jsonFunA_(field, field)(items)
 
   override def calcBasicStatsStreamed(
     source: Source[Option[Double], _]
-  ): Future[Option[BasicStatsResult]] = {
-    val calc = BasicStatsCalc
-    calc.runSink((), ())(source)
-  }
+  ): Future[Option[BasicStatsResult]] =
+    BasicStatsCalc.runFlow_(source)
 
   //////////////////
   // Correlations //
@@ -1077,33 +1227,8 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   override def calcPearsonCorrelations(
     items: Traversable[JsObject],
     fields: Seq[Field]
-  ): Seq[Seq[Option[Double]]] = {
-    val doubleValues = jsonToDoubles(fields)
-    PearsonCorrelationCalc.fun()(items.map(doubleValues))
-  }
-
-  override def calcPearsonCorrelationsStreamed(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    fields: Seq[Field],
-    parallelism: Option[Int],
-    withProjection: Boolean,
-    areValuesAllDefined: Boolean
-  ): Future[Seq[Seq[Option[Double]]]] =
-    for {
-      // create a data source
-      source <- dataRepo.findAsStream(criteria, Nil, if (withProjection) fields.map(_.name) else Nil)
-
-      // convert the data source to a (double) value source and calc correlations
-      correlations <- if (areValuesAllDefined) {
-        val doubleValues = jsonToDoublesDefined(fields)
-        calcPearsonCorrelationsAllDefinedStreamed(source.map(doubleValues), fields.size, parallelism)
-      } else {
-        val doubleValues = jsonToDoubles(fields)
-        calcPearsonCorrelationsStreamed(source.map(doubleValues), fields.size, parallelism)
-      }
-    } yield
-      correlations
+  ): Seq[Seq[Option[Double]]] =
+    PearsonCorrelationCalc.jsonFun(fields, ())(items)
 
   override def calcPearsonCorrelationsStreamed(
     source: Source[Seq[Option[Double]], _],
@@ -1112,8 +1237,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   ): Future[Seq[Seq[Option[Double]]]] = {
     val groupSizes = calcMatrixGroupSizes(featuresNum, parallelism)
 
-    val calc = PearsonCorrelationCalc
-    calc.runSink((featuresNum, groupSizes), groupSizes)(source)
+    PearsonCorrelationCalc.runFlow((featuresNum, groupSizes), groupSizes)(source)
   }
 
   override def calcPearsonCorrelationsAllDefinedStreamed(
@@ -1123,8 +1247,31 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   ): Future[Seq[Seq[Option[Double]]]] = {
     val groupSizes = calcMatrixGroupSizes(featuresNum, parallelism)
 
-    val calc = AllDefinedPearsonCorrelationCalc
-    calc.runSink((featuresNum, groupSizes), groupSizes)(source)
+    AllDefinedPearsonCorrelationCalc.runFlow((featuresNum, groupSizes), groupSizes)(source)
+  }
+
+  override def calcPearsonCorrelationsStreamed(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    fields: Seq[Field],
+    parallelism: Option[Int],
+    withProjection: Boolean,
+    areValuesAllDefined: Boolean
+  ): Future[Seq[Seq[Option[Double]]]] = {
+    val groupSizes = calcMatrixGroupSizes(fields.size, parallelism)
+
+    for {
+      // create a data source
+      source <- dataRepo.findAsStream(criteria, Nil, if (withProjection) fields.map(_.name) else Nil)
+
+      // calc correlations from a json source (use all defined or optional one)
+      correlations <- if (areValuesAllDefined)
+        AllDefinedPearsonCorrelationCalc.runJsonFlow(fields, (fields.size, groupSizes), groupSizes)(source)
+      else
+        PearsonCorrelationCalc.runJsonFlow(fields, (fields.size, groupSizes), groupSizes)(source)
+
+    } yield
+      correlations
   }
 
   ////////////////////////
@@ -1134,33 +1281,8 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   override def calcEuclideanDistance(
     items: Traversable[JsObject],
     fields: Seq[Field]
-  ): Seq[Seq[Double]] = {
-    val doubleValues = jsonToDoubles(fields)
-    EuclideanDistanceCalc.fun()(items.map(doubleValues))
-  }
-
-  override def calcEuclideanDistanceStreamed(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    fields: Seq[Field],
-    parallelism: Option[Int] = None,
-    withProjection: Boolean = true,
-    areValuesAllDefined: Boolean = false
-  ): Future[Seq[Seq[Double]]] =
-    for {
-      // create a data source
-      source <- dataRepo.findAsStream(criteria, Nil, if (withProjection) fields.map(_.name) else Nil)
-
-      // convert the data source to a (double) value source and calc distances
-      distances <- if (areValuesAllDefined) {
-        val doubleValues = jsonToDoublesDefined(fields)
-        calcEuclideanDistanceAllDefinedStreamed(source.map(doubleValues), fields.size, parallelism)
-      } else {
-        val doubleValues = jsonToDoubles(fields)
-        calcEuclideanDistanceStreamed(source.map(doubleValues), fields.size, parallelism)
-      }
-    } yield
-      distances
+  ): Seq[Seq[Double]] =
+    EuclideanDistanceCalc.jsonFun(fields, ())(items)
 
   override def calcEuclideanDistanceStreamed(
     source: Source[Seq[Option[Double]], _],
@@ -1169,8 +1291,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   ): Future[Seq[Seq[Double]]] = {
     val groupSizes = calcMatrixGroupSizes(featuresNum, parallelism)
 
-    val calc = EuclideanDistanceCalc
-    calc.runSink((featuresNum, groupSizes), ())(source)
+    EuclideanDistanceCalc.runFlow((featuresNum, groupSizes), ())(source)
   }
 
   override def calcEuclideanDistanceAllDefinedStreamed(
@@ -1180,8 +1301,30 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   ): Future[Seq[Seq[Double]]] = {
     val groupSizes = calcMatrixGroupSizes(featuresNum, parallelism)
 
-    val calc = AllDefinedEuclideanDistanceCalc
-    calc.runSink((featuresNum, groupSizes), ())(source)
+    AllDefinedEuclideanDistanceCalc.runFlow((featuresNum, groupSizes), ())(source)
+  }
+
+  override def calcEuclideanDistanceStreamed(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    fields: Seq[Field],
+    parallelism: Option[Int] = None,
+    withProjection: Boolean = true,
+    areValuesAllDefined: Boolean = false
+  ): Future[Seq[Seq[Double]]] = {
+    val groupSizes = calcMatrixGroupSizes(fields.size, parallelism)
+
+    for {
+      // create a data source
+      source <- dataRepo.findAsStream(criteria, Nil, if (withProjection) fields.map(_.name) else Nil)
+
+      // convert the data source to a (double) value source and calc distances
+      distances <- if (areValuesAllDefined)
+        AllDefinedEuclideanDistanceCalc.runJsonFlow(fields, (fields.size, groupSizes), ())(source)
+      else
+        EuclideanDistanceCalc.runJsonFlow(fields, (fields.size, groupSizes), ())(source)
+    } yield
+      distances
   }
 
   /////////////////
@@ -1194,7 +1337,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     val squareMatrix = matrix.map(_.map(value => -0.5 * value * value)).toSeq
 
     // calc row and column sums
-    val (rowMeans, columnMeans) = MatrixRowColumnMeanCalc.fun()(squareMatrix)
+    val (rowMeans, columnMeans) = MatrixRowColumnMeanCalc.fun_(squareMatrix)
 
     // calc total mean
     val totalMean = rowMeans.sum / rowMeans.size
@@ -1214,7 +1357,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
 
     for {
       // calc row and column sums
-      (rowMeans, columnMeans) <- MatrixRowColumnMeanCalc.runSink((), ())(squareMatrixSource)
+      (rowMeans, columnMeans) <- MatrixRowColumnMeanCalc.runFlow_(squareMatrixSource)
 
       // Gram matrix
       gramMatrix <- {
@@ -1292,7 +1435,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   override def calcEigenValuesAndVectors(
     matrix: Seq[Seq[Double]]
   ): (Seq[Double], Seq[Seq[Double]]) = {
-    val maxIterations: Byte = 50
     val realMatrix = new Array2DRowRealMatrix(matrix.map(_.toArray).toArray)
     val eigenDecomposition = new EigenDecomposition(realMatrix)
 
@@ -1349,9 +1491,9 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     useSampleStd: Boolean
   ): Future[Traversable[Seq[Option[Double]]]] =
     for {
-      basicStats <- MultiBasicStatsCalc.runSink((), ())(source)
+      basicStats <- MultiBasicStatsCalc.runFlow_(source)
 
-      result <- StandardizationCalc.runSink(meansAndStds(basicStats, useSampleStd), ())(source)
+      result <- StandardizationCalc.runFlow(meansAndStds(basicStats, useSampleStd), ())(source)
     } yield
       result
 

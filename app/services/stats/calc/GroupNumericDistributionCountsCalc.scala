@@ -1,35 +1,31 @@
 package services.stats.calc
 
-
-import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+import akka.stream.scaladsl.Flow
 import services.stats.Calculator
 
 import util.GroupMapList
-import services.stats.calc.GroupNumericDistributionCountsCalcIOType._
+import services.stats.calc.GroupNumericDistributionCountsCalcIOTypes._
 import util.AkkaStreamUtil._
 
-object GroupNumericDistributionCountsCalcIOType {
-  type IN[G, T] = (Option[G], Option[T])
+object GroupNumericDistributionCountsCalcIOTypes {
+  type IN[G] = (Option[G], Option[Double])
   type OUT[G] = Traversable[(Option[G], Traversable[(BigDecimal, Int)])]
   type INTER[G] = Traversable[((Option[G], Int), Int)]
-  type OPTIONS[T] = NumericDistributionOptions[T]
-  type SINK_OPTIONS[T] = NumericDistributionSinkOptions[T]
+  type OPTS = NumericDistributionOptions
+  type FLOW_OPTS = NumericDistributionFlowOptions
 }
 
-private class GroupNumericDistributionCountsCalc[G, T: Numeric] extends Calculator[IN[G,T], OUT[G], INTER[G], OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]]
-  with NumericDistributionCountsHelper[T] {
+private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[IN[G], OUT[G], INTER[G], OPTS, FLOW_OPTS, FLOW_OPTS] with NumericDistributionCountsHelper {
 
-  override val numeric = implicitly[Numeric[T]]
   private val maxGroups = Int.MaxValue
+  private val normalCalc = NumericDistributionCountsCalc
 
-  private val normalCalc = NumericDistributionCountsCalc[T]
-
-  override def fun(options: OPTIONS[T]) =
+  override def fun(options: OPTS) =
     _.toGroupMap.map { case (group, values) =>
       (group, normalCalc.fun(options)(values))
     }
 
-  override def flow(options: SINK_OPTIONS[T]) = {
+  override def flow(options: FLOW_OPTS) = {
     val stepSize = calcStepSize(
       options.columnCount,
       options.min,
@@ -37,24 +33,22 @@ private class GroupNumericDistributionCountsCalc[G, T: Numeric] extends Calculat
       options.specialColumnForMax
     )
 
-    val minBg = BigDecimal(numeric.toDouble(options.min))
-    val max = numeric.toDouble(options.max)
+    val minBg = BigDecimal(options.min)
+    val max = options.max
 
-    val flatFlow = Flow[IN[G, T]].collect { case (g, Some(x)) => (g, x)}
+    val flatFlow = Flow[IN[G]].collect { case (g, Some(x)) => (g, x)}
 
-    val groupBucketIndexFlow = Flow[(Option[G], T)]
+    val groupBucketIndexFlow = Flow[(Option[G], Double)]
       .groupBy(maxGroups, _._1)
       .map { case (group, value) =>
         group -> calcBucketIndex(
-          stepSize, options.columnCount, minBg, max)(
-          numeric.toDouble(value)
-        )
+          stepSize, options.columnCount, minBg, max)(value)
       }.mergeSubstreams
 
     flatFlow.via(groupBucketIndexFlow).via(groupCountFlow(maxGroups)).via(seqFlow)
   }
 
-  override def postFlow(options: SINK_OPTIONS[T]) = { elements =>
+  override def postFlow(options: FLOW_OPTS) = { elements =>
     val stepSize = calcStepSize(
       options.columnCount,
       options.min,
@@ -62,7 +56,7 @@ private class GroupNumericDistributionCountsCalc[G, T: Numeric] extends Calculat
       options.specialColumnForMax
     )
 
-    val minBg = BigDecimal(numeric.toDouble(options.min))
+    val minBg = BigDecimal(options.min)
 
     val groupIndexCounts = elements.map { case ((group, index), count) => (group, (index, count))}.toGroupMap
 
@@ -81,5 +75,5 @@ private class GroupNumericDistributionCountsCalc[G, T: Numeric] extends Calculat
 }
 
 object GroupNumericDistributionCountsCalc {
-  def apply[G, T: Numeric]: Calculator[IN[G,T], OUT[G], INTER[G], OPTIONS[T], SINK_OPTIONS[T], SINK_OPTIONS[T]] = new GroupNumericDistributionCountsCalc[G,T]
+  def apply[G]: Calculator[IN[G], OUT[G], INTER[G], OPTS, FLOW_OPTS, FLOW_OPTS] = new GroupNumericDistributionCountsCalc[G]
 }

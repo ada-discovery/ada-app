@@ -178,4 +178,21 @@ object FieldUtil {
             typ.typeSymbol.fullName
         throw new AdaException(s"Type ${typeName} unknown.")
     }
+
+  def fieldTypeOrdering(
+    fieldTypeId: FieldTypeId.Value
+  ): Option[Ordering[Any]] = {
+    def aux[T: Ordering]: Option[Ordering[Any]] =
+      Some(implicitly[Ordering[T]].asInstanceOf[Ordering[Any]])
+
+    fieldTypeId match {
+      case FieldTypeId.String => aux[String]
+      case FieldTypeId.Enum => aux[Int]
+      case FieldTypeId.Boolean => aux[Boolean]
+      case FieldTypeId.Double => aux[Double]
+      case FieldTypeId.Integer => aux[Long]
+      case FieldTypeId.Date => aux[ju.Date]
+      case _ => None
+    }
+  }
 }

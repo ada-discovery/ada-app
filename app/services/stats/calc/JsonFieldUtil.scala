@@ -9,30 +9,6 @@ import scala.collection.mutable.{Map => MMap}
 
 object JsonFieldUtil {
 
-  def jsonToDoubles(
-    fields: Seq[Field]
-  )(
-    implicit ftf: FieldTypeFactory
-  ): JsObject => Seq[Option[Double]] = {
-    val valueGets: Seq[JsObject => Option[Double]] = doubleGets(fields)
-    jsonToDoublesAux(valueGets)
-  }
-
-  def jsonToDouble(
-    field: Field
-  )(
-    implicit ftf: FieldTypeFactory
-  ): JsObject => Option[Double] = doubleGet(field)
-
-  def jsonToDoublesDefined(
-    fields: Seq[Field]
-  )(
-    implicit ftf: FieldTypeFactory
-  ): JsObject => Seq[Double] = {
-    val valueGets: Seq[JsObject => Option[Double]] = doubleGets(fields)
-    jsonToValuesDefinedAux(valueGets)
-  }
-
   def jsonToValue[T](
     field: Field
   )(
@@ -42,26 +18,11 @@ object JsonFieldUtil {
     valueGet(fieldType.asValueOf[T], field.name)
   }
 
-  def jsonToDisplayString[T](
+  def jsonToDouble(
     field: Field
   )(
     implicit ftf: FieldTypeFactory
-  ): JsObject => Option[String] = {
-    val fieldType = ftf(field.fieldTypeSpec)
-    displayStringGet(fieldType.asValueOf[T], field.name)
-  }
-
-  def jsonToValues[T](
-    fields: Seq[Field]
-  )(
-    implicit ftf: FieldTypeFactory
-  ): JsObject => Seq[Option[T]] = {
-    val valueGets = fields.map { field =>
-      val fieldType = ftf(field.fieldTypeSpec)
-      valueGet(fieldType.asValueOf[T], field.name)
-    }
-    jsonToDoublesAux(valueGets)
-  }
+  ): JsObject => Option[Double] = doubleScalarGet(field)
 
   def jsonToTuple[T1, T2](
     field1: Field,
@@ -115,6 +76,12 @@ object JsonFieldUtil {
     }
   }
 
+  def jsonToArrayDouble(
+    field: Field
+  )(
+    implicit ftf: FieldTypeFactory
+  ): JsObject => Array[Option[Double]] = doubleArrayGet(field)
+
   def jsonsToValues[T](
     jsons: Traversable[JsReadable],
     fieldType: FieldType[_]
@@ -122,14 +89,52 @@ object JsonFieldUtil {
     if (fieldType.spec.isArray) {
       val typedFieldType = fieldType.asValueOf[Array[Option[T]]]
 
-      jsons.map( json =>
+      jsons.flatMap( json =>
         typedFieldType.jsonToValue(json).map(_.toSeq).getOrElse(Seq(None))
-      ).flatten
+      )
     } else {
       val typedFieldType = fieldType.asValueOf[T]
-
       jsons.map(typedFieldType.jsonToValue)
     }
+
+  def jsonToDoubles(
+    fields: Seq[Field]
+  )(
+    implicit ftf: FieldTypeFactory
+  ): JsObject => Seq[Option[Double]] = {
+    val valueGets: Seq[JsObject => Option[Double]] = doubleGets(fields)
+    jsonToDoublesAux(valueGets)
+  }
+
+  def jsonToDoublesDefined(
+    fields: Seq[Field]
+  )(
+    implicit ftf: FieldTypeFactory
+  ): JsObject => Seq[Double] = {
+    val valueGets: Seq[JsObject => Option[Double]] = doubleGets(fields)
+    jsonToValuesDefinedAux(valueGets)
+  }
+
+  def jsonToDisplayString[T](
+    field: Field
+  )(
+    implicit ftf: FieldTypeFactory
+  ): JsObject => Option[String] = {
+    val fieldType = ftf(field.fieldTypeSpec)
+    displayStringGet(fieldType.asValueOf[T], field.name)
+  }
+
+  def jsonToValues[T](
+    fields: Seq[Field]
+  )(
+    implicit ftf: FieldTypeFactory
+  ): JsObject => Seq[Option[T]] = {
+    val valueGets = fields.map { field =>
+      val fieldType = ftf(field.fieldTypeSpec)
+      valueGet(fieldType.asValueOf[T], field.name)
+    }
+    jsonToDoublesAux(valueGets)
+  }
 
   private def doubleGets(
     fields: Seq[Field])(
@@ -138,11 +143,11 @@ object JsonFieldUtil {
     val emptyDoubleValue = {_: JsObject => None}
 
     fields.map { field =>
-      doubleGet(field, emptyDoubleValue)
+      doubleScalarGet(field, emptyDoubleValue)
     }
   }
 
-  private def doubleGet(
+  private def doubleScalarGet(
     field: Field,
     emptyDoubleValue: JsObject => Option[Double] = {_: JsObject => None})(
     implicit ftf: FieldTypeFactory
@@ -180,6 +185,18 @@ object JsonFieldUtil {
       }
     }
   }
+
+  private def doubleArrayGet(
+    field: Field,
+    emptyDoubleValue: JsObject => Array[Option[Double]] = {_: JsObject => Array()})(
+    implicit ftf: FieldTypeFactory
+  ):  JsObject => Array[Option[Double]] =
+    field.fieldType match {
+      case FieldTypeId.Double => jsonToArrayValue[Double](field)
+      case FieldTypeId.Integer => jsonToArrayValue[Long](field).andThen(_.map(_.map(_.toDouble)))
+      case FieldTypeId.Date => jsonToArrayValue[ju.Date](field).andThen(_.map(_.map(_.getTime.toDouble)))
+      case _ => emptyDoubleValue
+    }
 
   private def valueGet[T](fieldType: FieldType[T], fieldName: String) = {
     jsObject: JsObject =>

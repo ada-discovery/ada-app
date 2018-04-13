@@ -1,16 +1,16 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.Flow
-import services.stats.NoOptionsCalculator
-import services.stats.calc.ScatterCalcIOTypes._
+import services.stats.CalculatorHelper.NoOptionsCalculator
+import services.stats.calc.TupleCalcIOTypes._
 import util.AkkaStreamUtil._
 
-object ScatterCalcIOTypes {
+object TupleCalcIOTypes {
   type IN[A, B] = (Option[A], Option[B])
   type OUT[A, B] = Traversable[(A, B)]
 }
 
-private class ScatterCalc[A, B] extends NoOptionsCalculator[IN[A, B], OUT[A, B], OUT[A, B]] {
+private class TupleCalc[A, B] extends NoOptionsCalculator[IN[A, B], OUT[A, B], OUT[A, B]] {
 
   override def fun(opt: Unit)  = _.flatMap(toOption)
 
@@ -27,6 +27,6 @@ private class ScatterCalc[A, B] extends NoOptionsCalculator[IN[A, B], OUT[A, B],
     )
 }
 
-object ScatterCalc {
-  def apply[A, B]: NoOptionsCalculator[IN[A, B], OUT[A, B], OUT[A, B]] = new ScatterCalc[A, B]
+object TupleCalc {
+  def apply[A, B]: NoOptionsCalculator[IN[A, B], OUT[A, B], OUT[A, B]] = new TupleCalc[A, B]
 }

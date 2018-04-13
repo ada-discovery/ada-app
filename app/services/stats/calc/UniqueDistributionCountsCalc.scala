@@ -1,16 +1,15 @@
 package services.stats.calc
 
-import services.stats.NoOptionsCalculator
-
 import util.AkkaStreamUtil._
-import services.stats.calc.UniqueDistributionCountsCalcIOType._
+import services.stats.CalculatorHelper.NoOptionsCalculator
+import services.stats.calc.UniqueDistributionCountsCalcIOTypes._
 
-object UniqueDistributionCountsCalcIOType {
+object UniqueDistributionCountsCalcIOTypes {
   type IN[T] = Option[T]
   type OUT[T] = Traversable[(Option[T], Int)]
 }
 
-private class UniqueDistributionCountsCalc[T] extends NoOptionsCalculator[IN[T], OUT[T], OUT[T]] {
+private[stats] class UniqueDistributionCountsCalc[T] extends NoOptionsCalculator[IN[T], OUT[T], OUT[T]] {
 
   private val maxGroups = Int.MaxValue
 

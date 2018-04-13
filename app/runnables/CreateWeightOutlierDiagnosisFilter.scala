@@ -90,7 +90,7 @@ class CreateWeightOutlierDiagnosisFilter @Inject()(
       // calc the quantiles
       fieldQuantiles <- Future.sequence(
         fields.map { field =>
-          statsService.calcQuartiles(dataRepo, criteria, field).map(
+          statsService.calcQuartilesFromRepo(dataRepo, criteria, field).map(
             _.map( quantiles =>
             (field, quantiles)
           ))

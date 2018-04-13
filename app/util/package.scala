@@ -225,9 +225,7 @@ package object util {
   implicit class GroupMapList[A, B](list: Traversable[(A, B)]) {
 
     def toGroupMap: Map[A, Traversable[B]] =
-      list.groupBy(_._1).map(x =>
-        (x._1, x._2.map(_._2))
-      )
+      list.groupBy(_._1).map(x => (x._1, x._2.map(_._2)))
   }
 
   implicit class GroupMapList3[A, B, C](list: Traversable[(A, B, C)]) {

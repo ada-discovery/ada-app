@@ -1,13 +1,12 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.{Keep, Sink}
-import services.stats.NoOptionsCalculator
+import services.stats.CalculatorHelper.NoOptionsCalculator
 
 import util.GroupMapList
 import util.AkkaStreamUtil._
-import services.stats.calc.GroupUniqueDistributionCountsCalcIOType._
+import services.stats.calc.GroupUniqueDistributionCountsCalcIOTypes._
 
-object GroupUniqueDistributionCountsCalcIOType {
+object GroupUniqueDistributionCountsCalcIOTypes {
   type IN[G, T] = (Option[G], Option[T])
   type OUT[G, T] = Traversable[(Option[G], Traversable[(Option[T], Int)])]
   type INTER[G,T] = Traversable[((Option[G], Option[T]), Int)]

@@ -108,6 +108,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private val numericTypes = Set(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
+  private val doubleFieldType = ftf(FieldTypeSpec(FieldTypeId.Double)).asValueOf[Double]
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
@@ -502,29 +503,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ): JsValue = {
     val fields = widgetSpec.fieldNames.map(fieldMap.get).flatten
     val fieldTypes = fields.map(field => ftf(field.fieldTypeSpec).asValueOf[Any])
-    val isCumulativeBinnedWidget = (widgetSpec.isInstanceOf[CumulativeCountWidgetSpec]) && (widgetSpec.asInstanceOf[CumulativeCountWidgetSpec].numericBinCount.isDefined)
-
-    // fixing integer->double field type for a numerical count widget
-    val fieldTypesToUse =
-      widget match {
-        case e: NumericalCountWidget[Any] if (!e.isCumulative || isCumulativeBinnedWidget) =>
-          val fieldType = fieldTypes.head
-          val fieldTypeToUse =
-            if (fieldType.spec.fieldType == FieldTypeId.Integer) {
-              val doubleFieldTypeSpec = fieldType.spec.copy(fieldType = FieldTypeId.Double)
-              ftf(doubleFieldTypeSpec).asInstanceOf[FieldType[Any]]
-            } else {
-              fieldType
-            }
-
-          Seq(fieldTypeToUse) ++ fieldTypes.tail
-
-          case _ => fieldTypes
-        }
 
     // make a scalar type out of it
-    val scalarFieldTypesToUse = fieldTypesToUse.map(fieldType => ftf(fieldType.spec.copy(isArray = false)).asInstanceOf[FieldType[Any]])
-    implicit val writes = new WidgetWrites[Any](scalarFieldTypesToUse.toSeq)
+    val scalarFieldTypesToUse = fieldTypes.map(fieldType => ftf(fieldType.spec.copy(isArray = false)).asInstanceOf[FieldType[Any]])
+    implicit val writes = new WidgetWrites[Any](scalarFieldTypesToUse.toSeq, Some(doubleFieldType))
     Json.toJson(widget)
   }
 
@@ -1110,7 +1092,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           val displayOptions = BasicDisplayOptions(height = Some(500))
           val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, groupField.map(_.name), None, displayOptions)
 
-          widgetService(widgetSpec, xyzItems, fields)
+          widgetService.genLocally(widgetSpec, xyzItems, fields)
         }
 
       def calcMean[T](
@@ -1203,7 +1185,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // generate widgets - distribution and box
         widgets <- field match {
           case Some(field) =>
-            val useColumnChart = (!numericTypes.contains(field.fieldType) && groupField.isDefined)
+            val distChartType =
+              if (numericTypes.contains(field.fieldType))
+                if (groupField.isDefined) ChartType.Spline else ChartType.Column
+              else
+                if (groupField.isDefined) ChartType.Column else ChartType.Pie
 
             val widgetSpecs: Seq[WidgetSpec] = Seq(
               DistributionWidgetSpec(
@@ -1212,7 +1198,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 displayOptions = MultiChartDisplayOptions(
                   gridWidth = Some(6),
                   height = Some(500),
-                  chartType = if (useColumnChart) Some(ChartType.Column) else None
+                  chartType = Some(distChartType)
                 )
               ),
               BoxWidgetSpec(
@@ -1285,7 +1271,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           )
 
           val fields = Seq(field) ++ groupField
-          widgetService(widgetSpec, repo, criteria, fields).map( widget =>
+          widgetService.genFromRepo(widgetSpec, repo, criteria, fields).map( widget =>
             widget.map(widgetToJson(_, widgetSpec, fields.map( field => (field.name, field)).toMap))
           )
         case None =>
@@ -1355,7 +1341,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
 
       // generate a widget
-      widget <- widgetService.apply(widgetSpec, repo, criteria, fields)
+      widget <- widgetService.genFromRepo(widgetSpec, repo, criteria, fields)
     } yield {
       val widgetJson = widget.map { widget =>
         // if we have more than 50 fields for performance purposed we round correlation to 3 decimal places
@@ -1439,7 +1425,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Line), height = Some(500))
               )
 
-              widgetService(widgetSpec, items, Seq(field) ++ groupField)
+              widgetService.genLocally(widgetSpec, items, Seq(field) ++ groupField)
             }
           }.getOrElse(
             Future(None)
@@ -1672,7 +1658,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, Some(clusterClassField.name), None, displayOptions)
 
             // generate a scatter widget
-            widgetService(widgetSpec, jsonsWithClasses, Seq(xField, yField, clusterClassField))
+            widgetService.genLocally(widgetSpec, jsonsWithClasses, Seq(xField, yField, clusterClassField))
           }
 
           // Transform Scatters into JSONs

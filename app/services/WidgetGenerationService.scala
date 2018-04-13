@@ -10,7 +10,8 @@ import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import services.stats.StatsService
 import util.{fieldLabel, shorten}
-import java.util
+import services.stats.calc.{GroupUniqueDistributionCountsCalcIOTypes, UniqueDistributionCountsCalcIOTypes}
+import services.widgetgen._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -27,14 +28,14 @@ trait WidgetGenerationService {
     usePerWidgetRepoMethod: Boolean = false
   ): Future[Traversable[Option[(Widget, Seq[String])]]]
 
-  def apply(
+  def genFromRepo(
     widgetSpec: WidgetSpec,
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     fields: Traversable[Field]
   ): Future[Option[Widget]]
 
-  def apply(
+  def genLocally(
     widgetSpec: WidgetSpec,
     items: Traversable[JsObject],
     fields: Traversable[Field]
@@ -47,6 +48,7 @@ class WidgetGenerationServiceImpl @Inject() (
   ) extends WidgetGenerationService {
 
   private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
+  private val maxIntCountsForZeroPadding = 1000
 
   override def apply(
     widgetSpecs: Traversable[WidgetSpec],
@@ -89,7 +91,7 @@ class WidgetGenerationServiceImpl @Inject() (
         repoWidgetSpecs.par.map { widgetSpec =>
 
           val newCriteria = criteria ++ getSubCriteria(widgetSpec.subFilterId)
-          applyAux(widgetSpec, repo, newCriteria, nameFieldMap).map { widget =>
+          genFromRepoAux(widgetSpec, repo, newCriteria, nameFieldMap).map { widget =>
             val widgetFieldNames = widget.map(widget => (widget, widgetSpec.fieldNames.toSeq))
             (widgetSpec, widgetFieldNames)
           }
@@ -104,7 +106,7 @@ class WidgetGenerationServiceImpl @Inject() (
 
             repo.find(criteria ++ getSubCriteria(subFilterId), Nil, fieldNames).map { chartData =>
               widgetSpecs.par.map { widgetSpec =>
-                val widget = apply(widgetSpec, chartData, fields)
+                val widget = genLocally(widgetSpec, chartData, fields)
                 val widgetFieldNames = widget.map(widget => (widget, widgetSpec.fieldNames.toSeq))
                 (widgetSpec, widgetFieldNames)
               }.toList
@@ -124,247 +126,131 @@ class WidgetGenerationServiceImpl @Inject() (
     }
   }
 
-  override def apply(
+  override def genFromRepo(
     widgetSpec: WidgetSpec,
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     fields: Traversable[Field]
   ): Future[Option[Widget]] = {
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
-    applyAux(widgetSpec, repo, criteria, nameFieldMap)
+    genFromRepoAux(widgetSpec, repo, criteria, nameFieldMap)
   }
 
-  private def applyAux(
+  private def genFromRepoAux(
     widgetSpec: WidgetSpec,
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     nameFieldMap: Map[String, Field]
   ): Future[Option[Widget]] = {
-    val title = widgetSpec.displayOptions.title
+
+    // aux functions to retrieve a field by name
+    def getField(name: String): Field =
+      nameFieldMap.get(name).getOrElse(throw new AdaException(s"Field $name not found."))
+
+    def getFieldO(name: Option[String]) = name.map(getField)
 
     widgetSpec match {
 
-      case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
-        val field = nameFieldMap.get(fieldName)
-        val groupField = groupFieldName.map(nameFieldMap.get).flatten
-
-        field.map { field =>
-          calcDistributionCounts(repo, criteria, field, groupField, numericBinCount).map { countSeries =>
-            val chartTitle = title.getOrElse(getDistributionWidgetTitle(field, groupField))
-            createDistributionWidget(countSeries, field, chartTitle, false, true, useRelativeValues, false, numericBinCount, displayOptions)
-          }
-        }.getOrElse(
-          Future(None)
+      case spec: DistributionWidgetSpec =>
+        val field = getField(spec.fieldName)
+        val groupField = getFieldO(spec.groupFieldName)
+        calcDistributionCountsFromRepo(repo, criteria, field, groupField, spec.numericBinCount).map(
+          DistributionWidgetGenerator(nameFieldMap, spec)
         )
 
-      case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
-        val field = nameFieldMap.get(fieldName)
-        val groupField = groupFieldName.map(nameFieldMap.get).flatten
-
-        field.map { field =>
-          calcCumulativeCounts(repo, criteria, field, groupField, numericBinCount).map { cumCountSeries =>
-            val chartTitle = title.getOrElse(getCumulativeCountWidgetTitle(field, groupField))
-
-            val nonZeroCountSeries = cumCountSeries.filter(_._2.exists(_.count > 0))
-            val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-            if (nonZeroCountSeries.nonEmpty) {
-              val widget = NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, true, nonZeroCountSeries, initializedDisplayOptions)
-              Some(widget)
-            } else
-              None
-          }
-        }.getOrElse(
-          Future(None)
+      case spec: CumulativeCountWidgetSpec =>
+        val field = getField(spec.fieldName)
+        val groupField = getFieldO(spec.groupFieldName)
+        calcCumulativeCountsFromRepo(repo, criteria, field, groupField, spec.numericBinCount).map(
+          CumulativeCountWidgetGenerator(nameFieldMap, spec)
         )
 
-      case BoxWidgetSpec(fieldName, subFilter, displayOptions) =>
-        val field = nameFieldMap.get(fieldName).get
-        for {
-          quantiles <- statsService.calcQuartiles(repo, criteria, field)
-        } yield
-          quantiles.map { quants =>
-            implicit val ordering = quants.ordering
-            val chartTitle = title.getOrElse(field.labelOrElseName)
-            BoxWidget(chartTitle, field.labelOrElseName, quants, None, None, displayOptions)
-          }
+      case spec: BoxWidgetSpec =>
+        statsService.calcQuartilesFromRepo(repo, criteria, getField(spec.fieldName)).map(
+          _.flatMap(BoxWidgetGenerator(nameFieldMap, spec))
+        )
 
-      case CorrelationWidgetSpec(fieldNames, subFilter, displayOptions) =>
-        val fields = fieldNames.map(nameFieldMap.get).flatten
+      case spec: CorrelationWidgetSpec =>
+        val fields = spec.fieldNames.flatMap(nameFieldMap.get)
+        statsService.calcPearsonCorrelationsStreamed(repo, criteria, fields).map(
+          CorrelationWidgetGenerator(nameFieldMap, spec)
+        )
 
-        for {
-          correlations <- statsService.calcPearsonCorrelationsStreamed(repo, criteria, fields)
-        } yield
-          if (correlations.nonEmpty) {
-            val chartTitle = title.getOrElse("Correlations")
-            val widget = createCorrelationWidget(Some(chartTitle), correlations, fields, displayOptions)
-            Some(widget)
-          } else
-            None
-
-      case TemplateHtmlWidgetSpec(content, subFilter, displayOptions) =>
-        val widget = HtmlWidget("", content, displayOptions)
+      case spec: TemplateHtmlWidgetSpec =>
+        val widget = HtmlWidget("", spec.content, spec.displayOptions)
         Future(Some(widget))
 
       case _ => Future(None)
     }
   }
 
-  override def apply(
+  override def genLocally(
     widgetSpec: WidgetSpec,
     items: Traversable[JsObject],
     fields: Traversable[Field]
   ): Option[Widget] = {
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
-    applyAux(widgetSpec, items, nameFieldMap)
+    genLocallyAux(widgetSpec, items, nameFieldMap)
   }
 
-  private def applyAux(
+  private def genLocallyAux(
     widgetSpec: WidgetSpec,
     items: Traversable[JsObject],
     nameFieldMap: Map[String, Field]
   ): Option[Widget] = {
-    val title = widgetSpec.displayOptions.title
+
+    // aux functions to retrieve a field by name
+    def getField(name: String): Field =
+      nameFieldMap.get(name).getOrElse(throw new AdaException(s"Field $name not found."))
+
+    def getFieldO(name: Option[String]) = name.map(getField)
 
     widgetSpec match {
 
-      case DistributionWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
-        val field = nameFieldMap.get(fieldName)
-        val groupField = groupFieldName.map(nameFieldMap.get).flatten
+      case spec: DistributionWidgetSpec =>
+        val field = getField(spec.fieldName)
+        val groupField = getFieldO(spec.groupFieldName)
+        val countSeries = calcDistributionCounts(items, field, groupField, spec.numericBinCount)
+        DistributionWidgetGenerator(nameFieldMap, spec)(countSeries)
 
-        field.map { field =>
-          val countSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
-          val chartTitle = title.getOrElse(getDistributionWidgetTitle(field, groupField))
-          createDistributionWidget(countSeries, field, chartTitle, false, true, useRelativeValues, false, numericBinCount, displayOptions)
-        }.flatten
+      case spec: CumulativeCountWidgetSpec =>
+        val field = getField(spec.fieldName)
+        val groupField = getFieldO(spec.groupFieldName)
+        val countSeries = calcCumulativeCounts(items, field, groupField, spec.numericBinCount)
+        CumulativeCountWidgetGenerator(nameFieldMap, spec)(countSeries)
 
-      case CumulativeCountWidgetSpec(fieldName, groupFieldName, subFilter, useRelativeValues, numericBinCount, useDateMonthBins, displayOptions) =>
-        val field = nameFieldMap.get(fieldName).get
-        val groupField = groupFieldName.map(nameFieldMap.get).flatten
+      case spec: BoxWidgetSpec =>
+        val field = getField(spec.fieldName)
+        statsService.calcQuartiles(items, field).flatMap(
+          BoxWidgetGenerator(nameFieldMap, spec)
+        )
 
-        val series = calcCumulativeCounts(items, field, groupField, numericBinCount)
-        val nonZeroCountSeries = series.filter(_._2.exists(_.count > 0))
+      case spec: ScatterWidgetSpec =>
+        val xField = getField(spec.xFieldName)
+        val yField = getField(spec.yFieldName)
+        val groupField = getFieldO(spec.groupFieldName)
 
-        val chartTitle = title.getOrElse(getCumulativeCountWidgetTitle(field, groupField))
+        val data = calcScatterData(items, xField, yField, groupField)
+        ScatterWidgetGenerator[Any, Any](nameFieldMap, spec)(data)
 
-        val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-        val chartSpec = NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, true, nonZeroCountSeries, initializedDisplayOptions)
-        Some(chartSpec)
+      case spec: CorrelationWidgetSpec =>
+        val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
+        val correlations = statsService.calcPearsonCorrelations(items, fields)
+        CorrelationWidgetGenerator(nameFieldMap, spec)(correlations)
 
-      case BoxWidgetSpec(fieldName, subFilter, displayOptions) =>
-        nameFieldMap.get(fieldName).map { field =>
-          statsService.calcQuartiles(items, field).map { quants =>
-            implicit val ordering = quants.ordering
-            val chartTitle = title.getOrElse(field.labelOrElseName)
-            BoxWidget(chartTitle, field.labelOrElseName, quants, None, None, displayOptions)
-          }
-        }.flatten
+      case spec: BasicStatsWidgetSpec =>
+        val field = getField(spec.fieldName)
+        statsService.calcBasicStats(items, field).flatMap (
+          BasicStatsWidgetGenerator(nameFieldMap, spec)
+        )
 
-      case ScatterWidgetSpec(xFieldName, yFieldName, groupFieldName, subFilter, displayOptions) =>
-        val xField = nameFieldMap.get(xFieldName).get
-        val yField = nameFieldMap.get(yFieldName).get
-        val shortXFieldLabel = shorten(xField.labelOrElseName, 20)
-        val shortYFieldLabel = shorten(yField.labelOrElseName, 20)
-
-        val chartTitle = title.getOrElse(s"$shortXFieldLabel vs. $shortYFieldLabel")
-
-        if (items.nonEmpty) {
-          val widget = createScatter(
-            Some(chartTitle),
-            items,
-            xField,
-            yField,
-            groupFieldName.map(nameFieldMap.get).flatten,
-            displayOptions
-          )
-          Some(widget)
-        } else
-          None
-
-      case CorrelationWidgetSpec(fieldNames, subFilter, displayOptions) =>
-        val corrFields = fieldNames.map(nameFieldMap.get).flatten
-        val chartTitle = title.getOrElse("Correlations")
-        val correlations = statsService.calcPearsonCorrelations(items, corrFields)
-
-        if (items.nonEmpty) {
-          val widget = createCorrelationWidget(Some(chartTitle), correlations, corrFields, displayOptions)
-          Some(widget)
-        } else
-          None
-
-      case BasicStatsWidgetSpec(fieldName, subFilter, displayOptions) =>
-        nameFieldMap.get(fieldName).flatMap { field =>
-          statsService.calcBasicStats(items, field).map { basicStats =>
-            val chartTitle = title.getOrElse(field.labelOrElseName)
-            BasicStatsWidget(chartTitle, field.labelOrElseName, basicStats, displayOptions)
-          }
-        }
-
-      case TemplateHtmlWidgetSpec(content, subFilter, displayOptions) =>
-        val widget = HtmlWidget("", content, displayOptions)
+      case spec: TemplateHtmlWidgetSpec =>
+        val widget = HtmlWidget("", spec.content, spec.displayOptions)
         Some(widget)
     }
   }
 
-  private def createDistributionWidget(
-    countSeries: Traversable[(String, Traversable[Count[Any]])],
-    field: Field,
-    chartTitle: String,
-    showLabels: Boolean,
-    showLegend: Boolean,
-    useRelativeValues: Boolean,
-    isCumulative: Boolean,
-    maxCategoricalBinCount: Option[Int],
-    displayOptions: MultiChartDisplayOptions
-  ): Option[Widget] = {
-    val fieldTypeId = field.fieldTypeSpec.fieldType
-
-    val nonZeroCountExists = countSeries.exists(_._2.exists(_.count > 0))
-    if (nonZeroCountExists)
-      Some(
-        fieldTypeId match {
-          case FieldTypeId.String | FieldTypeId.Enum | FieldTypeId.Boolean | FieldTypeId.Null | FieldTypeId.Json => {
-            // enforce the same categories in all the series
-            val labelGroupedCounts = countSeries.map(_._2).flatten.groupBy(_.value)
-            val nonZeroLabelSumCounts = labelGroupedCounts.map { case (label, counts) =>
-              (label, counts.map(_.count).sum)
-            }.filter(_._2 > 0)
-
-            val sortedLabels: Seq[String] = nonZeroLabelSumCounts.toSeq.sortBy(_._2).map(_._1.toString)
-            val topSortedLabels  = maxCategoricalBinCount match {
-              case Some(maxCategoricalBinCount) => sortedLabels.takeRight(maxCategoricalBinCount)
-              case None => sortedLabels
-            }
-
-            val countSeriesSorted = countSeries.map { case (seriesName, counts) =>
-
-              val labelCountMap = counts.map { count =>
-                val label = count.value.toString
-                (label, Count(label, count.count, count.key))
-              }.toMap
-
-              val newCounts = topSortedLabels.map ( label =>
-                labelCountMap.get(label).getOrElse(Count(label, 0, None))
-              )
-              (seriesName, newCounts)
-            }
-            val nonZeroCountSeriesSorted = countSeriesSorted.filter(_._2.exists(_.count > 0)).toSeq
-
-            val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Pie)))
-            CategoricalCountWidget(chartTitle, field.name, field.labelOrElseName, showLabels, showLegend, useRelativeValues, isCumulative, nonZeroCountSeriesSorted, initializedDisplayOptions)
-          }
-
-          case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date => {
-            val nonZeroNumCountSeries = countSeries.filter(_._2.nonEmpty).toSeq
-            val initializedDisplayOptions = displayOptions.copy(chartType = Some(displayOptions.chartType.getOrElse(ChartType.Line)))
-            NumericalCountWidget(chartTitle, field.labelOrElseName, useRelativeValues, isCumulative, nonZeroNumCountSeries, initializedDisplayOptions)
-          }
-        }
-      )
-    else
-      Option.empty[Widget]
-  }
-
-  private def calcDistributionCounts(
+  private def calcDistributionCountsFromRepo(
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field,
@@ -374,14 +260,15 @@ class WidgetGenerationServiceImpl @Inject() (
     groupField match {
       case Some(groupField) =>
         field.fieldType match {
+
           case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
-            statsService.calcGroupedNumericDistributionCounts(repo, criteria, field, groupField, numericBinCount).map { groupCounts =>
+            statsService.calcGroupedNumericDistributionCountsFromRepo(repo, criteria, field, groupField, numericBinCount).map { groupCounts =>
               val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-              createGroupNumericCounts(groupCounts, groupFieldType, convertNumeric(field.fieldType))
+              createGroupNumericCounts(groupCounts, groupFieldType, field)
             }
 
           case _ =>
-            statsService.calcGroupedUniqueDistributionCounts(repo, criteria, field, groupField).map { groupCounts =>
+            statsService.calcGroupedUniqueDistributionCountsFromRepo(repo, criteria, field, groupField).map { groupCounts =>
               val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
               val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
 
@@ -392,13 +279,13 @@ class WidgetGenerationServiceImpl @Inject() (
       case None =>
         field.fieldType match {
           case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
-            statsService.calcNumericDistributionCounts(repo, criteria, field, numericBinCount).map { numericCounts =>
+            statsService.calcNumericDistributionCountsFromRepo(repo, criteria, field, numericBinCount).map { numericCounts =>
               val counts = createNumericCounts(numericCounts, convertNumeric(field.fieldType))
               Seq(("All", counts))
             }
 
           case _ =>
-            statsService.calcUniqueDistributionCounts(repo, criteria, field).map { counts =>
+            statsService.calcUniqueDistributionCountsFromRepo(repo, criteria, field).map { counts =>
               val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
               Seq(("All", createStringCounts(counts, fieldType)))
             }
@@ -422,33 +309,143 @@ class WidgetGenerationServiceImpl @Inject() (
     groupField match {
       case Some(groupField) =>
         field.fieldType match {
-          case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
-            val groupCounts = statsService.calcGroupedNumericDistributionCounts(items, field, groupField, numericBinCount)
-            val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-            createGroupNumericCounts(groupCounts, groupFieldType, convertNumeric(field.fieldType))
+          // group numeric
+          case FieldTypeId.Double | FieldTypeId.Date =>
+            countGroupNumericDistributionCounts(items, field, groupField, numericBinCount)
 
-          case _ =>
-            val groupCounts = statsService.calcGroupedUniqueDistributionCounts(items, field, groupField)
-            val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-            val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
+          // group numeric or unique depending on whether bin counts are defined
+          case FieldTypeId.Integer =>
+            numericBinCount match {
 
-            createGroupStringCounts(groupCounts, groupFieldType, fieldType)
+              case Some(_) =>
+                countGroupNumericDistributionCounts(items, field, groupField, numericBinCount)
+
+              case None =>
+                countGroupUniqueIntDistributionCounts(items, field,  groupField)
+            }
+
+          // group unique
+          case _ => countGroupUniqueDistributionCounts(items, field, groupField)
         }
 
       case None =>
         val counts = field.fieldType match {
-          case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
-            val counts = statsService.calcNumericDistributionCounts(items, field, numericBinCount)
-              createNumericCounts(counts, convertNumeric(field.fieldType))
+          // numeric
+          case FieldTypeId.Double | FieldTypeId.Date =>
+            countNumericDistributionCounts(items, field, numericBinCount)
 
-          case _ =>
-            val uniqueCounts = statsService.calcUniqueDistributionCounts(items, field)
-            val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-            createStringCounts(uniqueCounts, fieldType)
+          // numeric or unique depending on whether bin counts are defined
+          case FieldTypeId.Integer =>
+            numericBinCount match {
+
+              case Some(_) =>
+                countNumericDistributionCounts(items, field, numericBinCount)
+
+              case None =>
+                countUniqueIntDistributionCounts(items, field)
+            }
+
+          // unique
+          case _ => countUniqueDistributionCounts(items, field)
         }
 
         Seq(("All", counts))
     }
+
+  private def countGroupNumericDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Field,
+    numericBinCount: Option[Int]
+  ) = {
+    val groupCounts = statsService.calcGroupedNumericDistributionCounts(items, field, groupField, numericBinCount)
+    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+    createGroupNumericCounts(groupCounts, groupFieldType, field)
+  }
+
+  private def countGroupUniqueDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Field
+  ) = {
+    val groupCounts = statsService.calcGroupedUniqueDistributionCounts(items, field, groupField)
+    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+    val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
+
+    createGroupStringCounts(groupCounts, groupFieldType, fieldType)
+  }
+
+  private def countGroupUniqueIntDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Field
+  ) = {
+    val groupCounts = statsService.calcGroupedUniqueDistributionCounts(items, field, groupField)
+    val longGroupCounts = groupCounts.asInstanceOf[GroupUniqueDistributionCountsCalcIOTypes.OUT[Any, Long]]
+    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+
+    toGroupStringValues(longGroupCounts, groupFieldType).map {
+      case (groupString, valueCounts) =>
+        (groupString, prepareIntCounts(valueCounts))
+    }
+  }
+
+  private def countNumericDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    numericBinCount: Option[Int]
+  ) = {
+    val counts = statsService.calcNumericDistributionCounts(items, field, numericBinCount)
+    createNumericCounts(counts, convertNumeric(field.fieldType))
+  }
+
+  private def countUniqueDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field
+  ) = {
+    val uniqueCounts = statsService.calcUniqueDistributionCounts(items, field)
+    val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
+    createStringCounts(uniqueCounts, fieldType)
+  }
+
+  private def countUniqueIntDistributionCounts(
+    items: Traversable[JsObject],
+    field: Field
+  ) = {
+    val uniqueCounts = statsService.calcUniqueDistributionCounts(items, field)
+    val longUniqueCounts = uniqueCounts.asInstanceOf[UniqueDistributionCountsCalcIOTypes.OUT[Long]]
+
+    prepareIntCounts(longUniqueCounts)
+  }
+
+  private def prepareIntCounts(
+    longUniqueCounts: UniqueDistributionCountsCalcIOTypes.OUT[Long]
+  ) = {
+    val counts = longUniqueCounts.collect{ case (Some(value), count) => Count(value, count)}.toSeq.sortBy(_.value)
+    val size = counts.size
+
+    val min = counts.head.value
+    val max = counts.last.value
+
+    // if the difference between max and min is "small" enough we can add a zero count for missing values
+    if (Math.abs(max - min) < maxIntCountsForZeroPadding) {
+      val countsWithZeroes = for (i <- 0 to size - 1) yield {
+        val count = counts(i)
+        if (i + 1 < size) {
+          val nextCount = counts(i + 1)
+
+          val zeroCounts =
+            for (missingValue <- count.value + 1 to nextCount.value - 1) yield Count(missingValue, 0)
+
+          Seq(count) ++ zeroCounts
+        } else
+          Seq(count)
+      }
+
+      countsWithZeroes.flatten
+    } else
+      counts
+  }
 
   private def createStringCounts[T](
     counts: Traversable[(Option[T], Int)],
@@ -458,6 +455,16 @@ class WidgetGenerationServiceImpl @Inject() (
       val stringKey = value.map(_.toString)
       val label = value.map(value => fieldType.valueToDisplayString(Some(value))).getOrElse("Undefined")
       Count(label, count, stringKey)
+    }
+
+  private def createStringCountsDefined[T](
+    counts: Traversable[(T, Int)],
+    fieldType: FieldType[T]
+  ): Traversable[Count[String]] =
+    counts.map { case (value, count) =>
+      val stringKey = value.toString
+      val label = fieldType.valueToDisplayString(Some(value))
+      Count(label, count, Some(stringKey))
     }
 
   private def createNumericCounts(
@@ -473,41 +480,47 @@ class WidgetGenerationServiceImpl @Inject() (
     groupCounts: Traversable[(Option[G], Traversable[(Option[T], Int)])],
     groupFieldType: FieldType[G],
     fieldType: FieldType[T]
-  ): Seq[(String, Traversable[Count[String]])] = {
-    groupCounts.toSeq.sortBy(_._1.isEmpty).map { case (group, counts) =>
-      val groupString = group match {
-        case Some(group) => groupFieldType.valueToDisplayString(Some(group))
-        case None => "Undefined"
-      }
-      val stringCounts = createStringCounts(counts, fieldType)
-      (groupString, stringCounts)
+  ): Seq[(String, Traversable[Count[String]])] =
+    toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, counts) =>
+      (groupString, createStringCounts(counts, fieldType))
+    }
+
+  private def createGroupNumericCounts[G](
+    groupCounts: Traversable[(Option[G], Traversable[(BigDecimal, Int)])],
+    groupFieldType: FieldType[G],
+    field: Field
+  ): Seq[(String, Traversable[Count[_]])] = {
+    // value converter
+    val convert = convertNumeric(field.fieldType)
+
+    // handle group string names and convert values
+    toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, counts) =>
+      (groupString, createNumericCounts(counts, convert))
     }
   }
 
-  private def createGroupNumericCounts[G, T](
-    groupCounts: Traversable[(Option[G], Traversable[(BigDecimal, Int)])],
-    groupFieldType: FieldType[G],
-    convert: Option[BigDecimal => Any] = None
-  ): Seq[(String, Traversable[Count[_]])] =
-    groupCounts.toSeq.sortBy(_._1.isEmpty).map { case (group, counts) =>
+  private def toGroupStringValues[G, T](
+    groupCounts: Traversable[(Option[G], Traversable[T])],
+    groupFieldType: FieldType[G]
+  ): Seq[(String, Traversable[T])] =
+    groupCounts.toSeq.sortBy(_._1.isEmpty).map { case (group, values) =>
       val groupString = group match {
         case Some(group) => groupFieldType.valueToDisplayString(Some(group))
         case None => "Undefined"
       }
-      val numericCounts = createNumericCounts(counts, convert)
-      (groupString, numericCounts)
+      (groupString, values)
     }
 
-  private def calcCumulativeCounts(
+  private def calcCumulativeCountsFromRepo(
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Future[Seq[(String, Traversable[Count[Any]])]] =
+  ): Future[Traversable[(String, Traversable[Count[Any]])]] =
     numericBinCount match {
       case Some(_) =>
-        calcDistributionCounts(repo, criteria, field, groupField, numericBinCount).map( distCountsSeries =>
+        calcDistributionCountsFromRepo(repo, criteria, field, groupField, numericBinCount).map( distCountsSeries =>
           toCumCounts(distCountsSeries.toSeq)
         )
 
@@ -515,7 +528,7 @@ class WidgetGenerationServiceImpl @Inject() (
         val projection = Seq(field.name) ++ groupField.map(_.name)
 
         repo.find(criteria, Nil, projection.toSet).map( jsons =>
-          statsService.calcCumulativeCounts(jsons, field, groupField)
+          calcCumulativeCounts(jsons, field, groupField, None)
         )
     }
 
@@ -524,91 +537,113 @@ class WidgetGenerationServiceImpl @Inject() (
     field: Field,
     groupField: Option[Field],
     numericBinCount: Option[Int]
-  ): Seq[(String, Traversable[Count[Any]])] =
+  ): Traversable[(String, Traversable[Count[Any]])] =
     numericBinCount match {
       case Some(_) =>
-        val distCountsSeries = calcDistributionCounts(items, field, groupField, numericBinCount)
-        toCumCounts(distCountsSeries.toSeq)
+        val distCounts = calcDistributionCounts(items, field, groupField, numericBinCount)
+        toCumCounts(distCounts)
 
       case None =>
-        statsService.calcCumulativeCounts(items, field, groupField)
+        groupField match {
+          case Some(groupField) =>
+            field.fieldType match {
+              // group numeric
+              case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
+                countGroupNumericCumulativeCounts(items, field, groupField)
+
+              // group string
+              case _ =>
+                countGroupStringCumulativeCounts(items, field, groupField)
+            }
+
+          case None =>
+            val counts = field.fieldType match {
+              // numeric
+              case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
+                countNumericCumulativeCounts(items, field)
+
+              // string
+              case _ =>
+                countStringCumulativeCounts(items, field)
+            }
+
+            Seq(("All", counts))
+        }
     }
+
+  private def countGroupNumericCumulativeCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Field
+  ) = {
+    val groupCounts = statsService.calcGroupedCumulativeCounts(items, field, groupField)
+    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+
+    toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, valueCounts) =>
+      val counts = valueCounts.map { case (value, count) => Count(value, count)}
+      (groupString, counts)
+    }
+  }
+
+  private def countGroupStringCumulativeCounts(
+    items: Traversable[JsObject],
+    field: Field,
+    groupField: Field
+  ) = {
+    val groupCounts = statsService.calcGroupedCumulativeCounts(items, field, groupField)
+    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
+    val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
+
+    toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, valueCounts) =>
+      (groupString, createStringCountsDefined(valueCounts, fieldType))
+    }
+  }
+
+  private def countNumericCumulativeCounts(
+    items: Traversable[JsObject],
+    field: Field
+  ) = {
+    val valueCounts = statsService.calcCumulativeCounts(items, field)
+    valueCounts.map { case (value, count) => Count(value, count)}
+  }
+
+  private def countStringCumulativeCounts(
+    items: Traversable[JsObject],
+    field: Field
+  ) = {
+    val valueCounts = statsService.calcCumulativeCounts(items, field)
+    val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
+    createStringCountsDefined(valueCounts, fieldType)
+  }
 
   // function that converts dist counts to cumulative counts by applying simple running sum
   private def toCumCounts[T](
-    distCountsSeries: Seq[(String, Traversable[Count[T]])]
-  ): Seq[(String, Seq[Count[T]])] =
+    distCountsSeries: Traversable[(String, Traversable[Count[T]])]
+  ): Traversable[(String, Seq[Count[T]])] =
     distCountsSeries.map { case (seriesName, distCounts) =>
       val distCountsSeq = distCounts.toSeq
       val cumCounts = distCountsSeq.scanLeft(0) { case (sum, count) =>
         sum + count.count
       }
-      val labeledDistCounts: Seq[Count[T]] = distCountsSeq.map(_.value).zip(cumCounts).map { case (value, count) =>
-        Count(value, count, None)
+      val labeledDistCounts: Seq[Count[T]] = distCountsSeq.map(_.value).zip(cumCounts.tail).map { case (value, count) =>
+        Count(value, count)
       }
       (seriesName, labeledDistCounts)
     }
 
-  private def getDistributionWidgetTitle(
-    field: Field,
-    groupField: Option[Field]
-  ): String = {
-    val label = field.label.getOrElse(fieldLabel(field.name))
-    groupField.map { groupField =>
-      val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 25)
-      shorten(label, 25) + " by " + groupShortLabel
-    }.getOrElse(
-      label
-    )
-  }
-
-  private def getCumulativeCountWidgetTitle(
-    field: Field,
-    groupField: Option[Field]
-  ): String = {
-    val label = field.label.getOrElse(fieldLabel(field.name))
-    groupField match {
-      case Some(groupField) =>
-        val groupShortLabel = shorten(groupField.label.getOrElse(fieldLabel(groupField.name)), 25)
-        shorten(label, 25) + " by " + groupShortLabel
-      case None => label
-    }
-  }
-
-  private def createScatter(
-    title: Option[String],
+  private def calcScatterData(
     xyzItems: Traversable[JsObject],
     xField: Field,
     yField: Field,
-    groupField: Option[Field],
-    displayOptions: DisplayOptions
-  ): ScatterWidget[_, _] = {
-    val data = statsService.collectScatterData(xyzItems, xField, yField, groupField)
+    groupField: Option[Field]
+  ): Seq[(String, Traversable[(Any, Any)])] =
+    groupField match {
+      case Some(groupField) =>
+        val dataAux = statsService.collectGroupedTuples(xyzItems, xField, yField, groupField)
+        dataAux.map { case (groupName, values) => (groupName.getOrElse("Undefined"), values)}.toSeq
 
-    ScatterWidget(
-      title.getOrElse("Comparison"),
-      xField.labelOrElseName,
-      yField.labelOrElseName,
-      data.toSeq.sortBy(_._1),
-      displayOptions
-    )
-  }
-
-  private def createCorrelationWidget(
-    title: Option[String],
-    correlations: Seq[Seq[Option[Double]]],
-    fields: Seq[Field],
-    displayOptions: DisplayOptions
-  ): HeatmapWidget = {
-    val fieldLabels = fields.map(_.labelOrElseName)
-    HeatmapWidget(
-      title.getOrElse("Correlations"),
-      fieldLabels,
-      fieldLabels,
-      correlations,
-      Some(-1),
-      Some(1),
-      displayOptions
-    )
-  }
+      case None =>
+        val dataAux = statsService.collectTuples(xyzItems, xField, yField)
+        Seq(("all", dataAux))
+    }
 }

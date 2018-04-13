@@ -1,0 +1,115 @@
+package services.stats.jsonin
+
+import services.stats.calc._
+import dataaccess.ReflectionUtil.construct2
+import models.AdaException
+import util.ReflectionUtil.findClasses
+
+import scala.reflect.runtime.universe._
+
+object JsonInputConverterFactory {
+
+  // we scan only the jars starting with this prefix to speed up the class search
+  private val libPrefix = "org.ada"
+
+  // find the converter classes in a package services and create instances
+  private val converterClasses = findClasses[JsonInputConverter[_]](libPrefix, Some("services."), None)
+
+  private val converters = converterClasses.map { clazz =>
+    construct2[JsonInputConverter[_]](clazz, Nil)
+  }
+
+  private val inputConverterMap: Map[Type, JsonInputConverter[_]] =
+    converters.filterNot(_.specificUseClass.isDefined).map { converter =>
+      converter.inputType -> converter
+    }.toMap
+
+  private val specificUseClassConvertersMap: Map[Class[_], Traversable[JsonInputConverter[_]]] =
+    converters.filter(_.specificUseClass.isDefined).map { converter =>
+      (converter.specificUseClass.get, converter)
+    }.toTraversable.groupBy(_._1).map(x => (x._1, x._2.map(_._2))).toMap
+
+  def apply[IN: TypeTag]: JsonInputConverter[IN] =
+    applyOption[IN].getOrElse(throwNotFound[IN])
+
+  def applyOption[IN: TypeTag]: Option[JsonInputConverter[IN]] =
+    findByInputType[IN](typeOf[IN], inputConverterMap)
+
+  def apply[IN: TypeTag](useInstance: Any): JsonInputConverter[IN] =
+    applyOption[IN](useInstance).getOrElse(throwNotFound[IN])
+
+  def applyOption[IN: TypeTag](useInstance: Any): Option[JsonInputConverter[IN]] =
+    findByUseInstanceAux[IN](useInstance)
+
+  private def findByUseInstanceAux[IN: TypeTag](useInstance: Any): Option[JsonInputConverter[IN]] = {
+    val inputType = typeOf[IN]
+
+    // try first to find by a specific use instance, if it fails search a non-use input types
+    findByUseInstance[IN](useInstance, inputType) match {
+      case Some(converter) => Some(converter)
+      case None => findByInputType[IN](inputType, inputConverterMap)
+    }
+  }
+
+  private def findByUseInstance[IN: TypeTag](
+    useInstance: Any,
+    inputType: Type
+  ): Option[JsonInputConverter[IN]] =
+    specificUseClassConvertersMap.find { case (clazz, _) =>
+      clazz.isInstance(useInstance)
+    }.flatMap { case (clazz, converters) =>
+//      println(useInstance + " matches: " + clazz.getName)
+      val typeConverters = converters.map(converter => (converter.inputType, converter))
+      findByInputType[IN](inputType, typeConverters)
+    }
+
+  private def findByInputType[IN](
+    inputType: Type,
+    typeConverters: Traversable[(Type, JsonInputConverter[_])]
+  ): Option[JsonInputConverter[IN]] =
+    typeConverters.find { case (typ, _) =>
+      inputType <:< typ
+    }.map(
+      _._2.asInstanceOf[JsonInputConverter[IN]]
+    )
+
+  private def throwNotFound[IN: TypeTag] = {
+    val typeName = fullTypeName(typeOf[IN])
+    throw new AdaException(s"No json input converter exists for the input type ${typeName}. Create a converter class in the services package and it will be automatically fetched and registered.")
+  }
+
+  private def fullTypeName(typ: Type) = {
+    val innerTypeNames = if (typ.typeArgs.nonEmpty) {
+      s"[${typ.typeArgs.map(_.typeSymbol.fullName).mkString(", ")}]"
+    } else ""
+    typ.typeSymbol.fullName + innerTypeNames
+  }
+}
+
+object TestFind extends App {
+  val factory = JsonInputConverterFactory
+
+  println("----------------------------")
+
+  println(factory.applyOption[UniqueDistributionCountsCalcIOTypes.IN[Any]])
+  println(factory.applyOption[UniqueDistributionCountsCalcIOTypes.IN[String]])
+  println(factory.applyOption[NumericDistributionCountsCalcIOTypes.IN])
+  println(factory.applyOption[Option[Any]])
+  println(factory.applyOption[Option[Double]])
+  println(factory.applyOption[Array[NumericDistributionCountsCalcIOTypes.IN]])
+  println(factory.applyOption[Array[NumericDistributionCountsCalcIOTypes.IN]])
+
+  println("----------------------------")
+
+  println(factory.applyOption[NumericDistributionCountsCalcIOTypes.IN](NumericDistributionCountsCalc))
+  println(factory.applyOption[NumericDistributionCountsCalcIOTypes.IN](NumericDistributionCountsCalc))
+
+  println("----------------------------")
+
+  println(factory.applyOption[TupleCalcIOTypes.IN[Any, Any]])
+  println(factory.applyOption[TupleCalcIOTypes.IN[Int, Int]])
+  println(factory.applyOption[(Option[Any], Option[Any])])
+  println(factory.applyOption[GroupTupleCalcIOTypes.IN[String, Any, Any]])
+  println(factory.applyOption[GroupTupleCalcIOTypes.IN[Any, Any, Any]])
+  println(factory.applyOption[GroupTupleCalcIOTypes.IN[String, Int, Double]])
+}

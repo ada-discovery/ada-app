@@ -1,6 +1,7 @@
 package models
 
 import dataaccess.{AdaConversionException, FieldType, FieldTypeHelper}
+import models.DataSetFormattersAndIds.JsObjectIdentity
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.functional.syntax._
@@ -250,7 +251,10 @@ object Widget {
 
   implicit val stringCountTupleFormat = TupleFormat[String, Traversable[Count[String]]]
 
-  class WidgetWrites[T](fieldTypes: Seq[FieldType[T]]) extends Writes[Widget] {
+  class WidgetWrites[T](
+    fieldTypes: Seq[FieldType[T]],
+    defaultDoubleFieldType: Option[FieldType[Double]] = None
+  ) extends Writes[Widget] {
 
     private val concreteClassFieldName = "concreteClass"
 
@@ -262,7 +266,15 @@ object Widget {
           Json.format[CategoricalCountWidget].writes(e)
 
         case e: NumericalCountWidget[T]  =>
-          numericalCountWidgetFormat(fieldTypes.head).writes(e)
+          try {
+            numericalCountWidgetFormat(fieldTypes.head).writes(e)
+          } catch {
+            case ex: AdaConversionException =>
+              // if the conversion fails let's try double (if the field type provided)
+              defaultDoubleFieldType.map(
+                numericalCountWidgetFormat(_).writes(e.asInstanceOf[NumericalCountWidget[Double]])
+              ).getOrElse(throw ex)
+          }
 
         case e: LineWidget[T]  =>
           lineWidgetFormat(fieldTypes.head).writes(e)
@@ -285,7 +297,7 @@ object Widget {
 
       json.asInstanceOf[JsObject] ++ Json.obj(
         concreteClassFieldName -> JsString(concreteClassName),
-        "_id" -> o._id,
+        JsObjectIdentity.name -> o._id,
         "fieldType" -> fieldTypes.headOption.map(fieldType => JsString(fieldType.spec.fieldType.toString))
       )
     }
