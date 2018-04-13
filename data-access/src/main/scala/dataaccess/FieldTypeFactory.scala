@@ -5,13 +5,13 @@ import java.util.Date
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
-import models.{FieldTypeSpec, FieldTypeId}
+import models.{FieldTypeId, FieldTypeSpec}
 import play.api.libs.json._
 import java.{util => ju}
 import java.{lang => jl}
-import dataaccess.ConversionUtil._
 
-import scala.reflect.ClassTag
+import dataaccess.ConversionUtil._
+import scala.reflect.runtime.universe._
 
 trait FieldTypeFactory {
   def apply(field: FieldTypeSpec): FieldType[_]
@@ -39,9 +39,7 @@ private case class EnumFieldType(
 
   val spec = FieldTypeSpec(FieldTypeId.Enum, false, Some(enumValueMap))
 
-  override val valueClass = classOf[Int]
-
-  override val classTag = Some(implicitly[ClassTag[Int]])
+  override val valueTypeTag = typeTag[Int]
 
   val reversedEnumValueMap = enumValueMap.map(_.swap)
 
@@ -88,9 +86,7 @@ private case class DoubleFieldType(
 
   val spec = FieldTypeSpec(FieldTypeId.Double, false)
 
-  override val valueClass = classOf[jl.Double]
-
-  override val classTag = Some(implicitly[ClassTag[Double]])
+  override val valueTypeTag = typeTag[Double]
 
   override protected def displayStringToValueWoNull(text: String) =
     toDouble(text)
@@ -135,9 +131,7 @@ private case class BooleanFieldType(
 
   val spec = FieldTypeSpec(FieldTypeId.Boolean, false)
 
-  override val valueClass = classOf[jl.Boolean]
-
-  override val classTag = Some(implicitly[ClassTag[Boolean]])
+  override val valueTypeTag = typeTag[Boolean]
 
   override protected def displayStringToValueWoNull(text: String) =
     toBoolean(includeNumbers)(text)
@@ -175,12 +169,9 @@ private case class ArrayFieldType[T](
 
   override protected[dataaccess] val nullAliases: Set[String] = elementFieldType.nullAliases
 
-  override val valueClass = classOf[Array[Any]]
+  private implicit val elementClassTag: TypeTag[T] = elementFieldType.valueTypeTag
 
-  override val classTag = None
-
-  private implicit val elementClassTag: ClassTag[T] =
-    elementFieldType.classTag.getOrElse(throw new IllegalArgumentException(s"No class tag provided for $elementFieldTypeSpec."))
+  override val valueTypeTag = typeTag[Array[Option[T]]]
 
   override protected def displayStringToValueWoNull(text: String) = {
     val values: Seq[Option[T]] = text.split(delimiter, -1).map(textElement =>
@@ -246,9 +237,7 @@ private class FieldTypeFactoryImpl(
     new FieldType[Nothing] {
       val spec = FieldTypeSpec(FieldTypeId.Null, false)
 
-      val valueClass = classOf[Nothing]
-
-      override val classTag = Some(implicitly[ClassTag[Nothing]])
+      override val valueTypeTag = typeTag[Nothing]
 
       override protected[dataaccess] val nullAliases = nullValues
 
@@ -271,9 +260,7 @@ private class FieldTypeFactoryImpl(
     new FormatFieldType[Long] {
       val spec = FieldTypeSpec(FieldTypeId.Integer, false)
 
-      val valueClass = classOf[jl.Long]
-
-      override val classTag = Some(implicitly[ClassTag[Long]])
+      override val valueTypeTag = typeTag[Long]
 
       override protected[dataaccess] val nullAliases = nullValues
 
@@ -299,9 +286,7 @@ private class FieldTypeFactoryImpl(
     new FormatFieldType[ju.Date] {
       val spec = FieldTypeSpec(FieldTypeId.Date, false)
 
-      val valueClass = classOf[ju.Date]
-
-      override val classTag = Some(implicitly[ClassTag[ju.Date]])
+      override val valueTypeTag = typeTag[ju.Date]
 
       private val displayFormatter = new SimpleDateFormat(displayDateFormat)
 
@@ -338,9 +323,7 @@ private class FieldTypeFactoryImpl(
     new FormatFieldType[String] {
       val spec = FieldTypeSpec(FieldTypeId.String, false)
 
-      val valueClass = classOf[String]
-
-      override val classTag = Some(implicitly[ClassTag[String]])
+      override val valueTypeTag = typeTag[String]
 
       override protected[dataaccess] val nullAliases = nullValues
 
@@ -365,9 +348,7 @@ private class FieldTypeFactoryImpl(
     new FormatFieldType[JsObject] {
       val spec = FieldTypeSpec(FieldTypeId.Json, false)
 
-      val valueClass = classOf[JsObject]
-
-      override val classTag = Some(implicitly[ClassTag[JsObject]])
+      override val valueTypeTag = typeTag[JsObject]
 
       override protected[dataaccess] val nullAliases = nullValues
 
@@ -396,13 +377,11 @@ private class FieldTypeFactoryImpl(
     }
   )
 
-  private val staticJsonArrayType = new FieldType[Array[Option[JsObject]]] {
+  private val staticJsonArrayType: FieldType[_] = new FieldType[Array[Option[JsObject]]] {
 
     val spec = FieldTypeSpec(FieldTypeId.Json, true)
 
-    val valueClass = classOf[Array[Any]]
-
-    override val classTag = None
+    override val valueTypeTag = typeTag[Array[Option[JsObject]]]
 
     override protected[dataaccess] val nullAliases = nullValues
 
@@ -457,7 +436,7 @@ private class FieldTypeFactoryImpl(
       }
   }
 
-  private val staticArrayTypes: Seq[FieldType[_]] = staticScalarTypes.map(scalarType => ArrayFieldType(scalarType, arrayDelimiter)) ++ Seq(staticJsonArrayType)
+  private val staticArrayTypes: Seq[FieldType[_]] = staticScalarTypes.map(scalarType => ArrayFieldType(scalarType, arrayDelimiter).asInstanceOf[FieldType[_]]) ++ Seq(staticJsonArrayType)
 
   private val staticTypes: Seq[FieldType[_]] = staticScalarTypes ++ staticArrayTypes
 
@@ -474,28 +453,24 @@ private class FieldTypeFactoryImpl(
 
     // handle dynamic types (e.g. enum)
     fieldTypeId match {
-      case FieldTypeId.Enum => {
+      case FieldTypeId.Enum =>
         val intEnumMap = fieldTypeSpec.enumValues.getOrElse(Map[Int, String]())
         val scalarType = EnumFieldType(nullValues, intEnumMap)
         arrayOrElseScalar(scalarType)
-      }
 
-      case FieldTypeId.Double => {
+      case FieldTypeId.Double =>
         val scalarType = DoubleFieldType(nullValues, fieldTypeSpec.displayDecimalPlaces)
         arrayOrElseScalar(scalarType)
-      }
 
-      case FieldTypeId.Boolean => {
+      case FieldTypeId.Boolean =>
         val scalarType = BooleanFieldType(nullValues, booleanIncludeNumbers, fieldTypeSpec.displayTrueValue, fieldTypeSpec.displayFalseValue)
         arrayOrElseScalar(scalarType)
-      }
 
-      case _ => {
+      case _ =>
         // get a static type
         staticTypeMap.getOrElse(fieldTypeSpec,
           throw new IllegalArgumentException(s"Field type $fieldTypeSpec unrecognized.")
         )
-      }
     }
   }
 

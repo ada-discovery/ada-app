@@ -5,6 +5,7 @@ import org.scalatest._
 import services.stats.StatsHelperUtil.calcMatrixGroupSizes
 import services.stats.StatsService
 import services.stats.calc.{AllDefinedPearsonCorrelationCalc, PearsonCorrelationCalc}
+import services.stats.CalculatorHelper._
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -50,16 +51,16 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
     Future(calc.fun()(inputs)).map(checkResult)
 
     // streamed calculations
-    calc.runSink((featuresNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSource).map(checkResult)
+    calc.runFlow((featuresNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSource).map(checkResult)
 
     // streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runSink((featuresNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow((featuresNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSourceAllDefined).map(checkResult)
 
     // parallel streamed calculations
-    calc.runSink((featuresNum, groupSizes), groupSizes)(inputSource).map(checkResult)
+    calc.runFlow((featuresNum, groupSizes), groupSizes)(inputSource).map(checkResult)
 
     // parallel streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runSink((featuresNum, groupSizes), groupSizes)(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow((featuresNum, groupSizes), groupSizes)(inputSourceAllDefined).map(checkResult)
   }
 
   "Correlations" should "match each other" in {
@@ -91,15 +92,15 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
     val groupSizes = calcMatrixGroupSizes(randomFeaturesNum, Some(4))
 
     // streamed calculations
-    calc.runSink((randomFeaturesNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSource).map(checkResult)
+    calc.runFlow((randomFeaturesNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSource).map(checkResult)
 
     // streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runSink((randomFeaturesNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow((randomFeaturesNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSourceAllDefined).map(checkResult)
 
     // parallel streamed calculations
-    calc.runSink((randomFeaturesNum, groupSizes), groupSizes)(inputSource).map(checkResult)
+    calc.runFlow((randomFeaturesNum, groupSizes), groupSizes)(inputSource).map(checkResult)
 
     // parallel streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runSink((randomFeaturesNum, groupSizes), groupSizes)(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow((randomFeaturesNum, groupSizes), groupSizes)(inputSourceAllDefined).map(checkResult)
   }
 }

@@ -4,7 +4,8 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.calc.{UniqueDistributionCountsCalc}
+import services.stats.calc.{ArrayCalc, UniqueDistributionCountsCalc}
+import services.stats.CalculatorHelper._
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -22,12 +23,19 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
   private val doubleCalc = UniqueDistributionCountsCalc[Double]
   private val stringCalc = UniqueDistributionCountsCalc[String]
 
+  private val doubleArrayCalc = ArrayCalc(UniqueDistributionCountsCalc[Double])
+  private val stringArrayCalc = ArrayCalc(UniqueDistributionCountsCalc[String])
+
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
   "Distributions" should "match the static example (double)" in {
-    val inputs = values1.map(Some(_))
+    val inputs: Seq[Option[Double]] = values1.map(Some(_))
     val inputSource = Source.fromIterator(() => inputs.toIterator)
+
+    // array inputs
+    val arrayInputs = inputs.grouped(3).map(_.toArray).toSeq
+    val arrayInputSource = Source.fromIterator(() => arrayInputs.toIterator)
 
     def checkResult(result: Traversable[(Option[Double], Int)]) = {
       result.size should be (expectedResult1.size)
@@ -39,18 +47,29 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
         count1 should be (count2)
       }
 
-      result.map(_._2).sum should be (values1.size)
+      result.map(_._2).sum should be (inputs.size)
     }
 
     // standard calculation
-    Future(doubleCalc.fun()(inputs)).map(checkResult)
+    Future(doubleCalc.fun_(inputs)).map(checkResult)
 
     // streamed calculations
-    doubleCalc.runSink((),())(inputSource).map(checkResult)
+    doubleCalc.runFlow_(inputSource).map(checkResult)
+
+    // standard calculation for array
+    Future(doubleArrayCalc.fun_(arrayInputs)).map(checkResult)
+
+    // streamed calculations for array
+    doubleArrayCalc.runFlow_(arrayInputSource).map(checkResult)
   }
 
   "Distributions" should "match the static example (string)" in {
-    val inputSource = Source.fromIterator(() => values2.toIterator)
+    val inputs: Seq[Option[String]] = values2
+    val inputSource = Source.fromIterator(() => inputs.toIterator)
+
+    // array inputs
+    val arrayInputs = inputs.grouped(3).map(_.toArray).toSeq
+    val arrayInputSource = Source.fromIterator(() => arrayInputs.toIterator)
 
     def checkResult(result: Traversable[(Option[String], Int)]) = {
       result.size should be (expectedResult2.size)
@@ -62,14 +81,20 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
         count1 should be (count2)
       }
 
-      result.map(_._2).sum should be (values2.size)
+      result.map(_._2).sum should be (inputs.size)
     }
 
     // standard calculation
-    Future(stringCalc.fun()(values2)).map(checkResult)
+    Future(stringCalc.fun_(inputs)).map(checkResult)
 
     // streamed calculations
-    stringCalc.runSink((), ())(inputSource).map(checkResult)
+    stringCalc.runFlow_(inputSource).map(checkResult)
+
+    // standard calculation for array
+    Future(stringArrayCalc.fun_(arrayInputs)).map(checkResult)
+
+    // streamed calculations for array
+    stringArrayCalc.runFlow_(arrayInputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (double)" in {
@@ -78,8 +103,12 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
+    // array inputs
+    val arrayInputs = inputs.grouped(3).map(_.toArray).toSeq
+    val arrayInputSource = Source.fromIterator(() => arrayInputs.toIterator)
+
     // standard calculation
-    val protoResult = doubleCalc.fun()(inputs).toSeq.sortBy(_._1)
+    val protoResult = doubleCalc.fun_(inputs).toSeq.sortBy(_._1)
 
     def checkResult(result: Traversable[(Option[Double], Int)]) = {
       result.size should be (protoResult.size)
@@ -95,7 +124,13 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // streamed calculations
-    doubleCalc.runSink((), ())(inputSource).map(checkResult)
+    doubleCalc.runFlow_(inputSource).map(checkResult)
+
+    // standard calculation for array
+    Future(doubleArrayCalc.fun_(arrayInputs)).map(checkResult)
+
+    // streamed calculations for array
+    doubleArrayCalc.runFlow_(arrayInputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (string)" in {
@@ -104,8 +139,12 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
+    // array inputs
+    val arrayInputs = inputs.grouped(3).map(_.toArray).toSeq
+    val arrayInputSource = Source.fromIterator(() => arrayInputs.toIterator)
+
     // standard calculation
-    val protoResult = stringCalc.fun()(inputs).toSeq.sortBy(_._1)
+    val protoResult = stringCalc.fun_(inputs).toSeq.sortBy(_._1)
 
     def checkResult(result: Traversable[(Option[String], Int)]) = {
       result.size should be (protoResult.size)
@@ -121,6 +160,12 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // streamed calculations
-    stringCalc.runSink((), ())(inputSource).map(checkResult)
+    stringCalc.runFlow_(inputSource).map(checkResult)
+
+    // standard calculation for array
+    Future(stringArrayCalc.fun_(arrayInputs)).map(checkResult)
+
+    // streamed calculations for array
+    stringArrayCalc.runFlow_(arrayInputSource).map(checkResult)
   }
 }

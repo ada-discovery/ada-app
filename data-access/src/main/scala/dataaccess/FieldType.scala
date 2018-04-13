@@ -3,15 +3,12 @@ package dataaccess
 import models.FieldTypeSpec
 import play.api.libs.json._
 
-import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
-import scala.reflect.runtime.{universe => ru}
+import dataaccess.ReflectionUtil.typeToClass
 
 trait FieldType[T] {
 
   val spec: FieldTypeSpec
-  val valueClass: Class[_]
-  val classTag: Option[ClassTag[T]]
 
   protected[dataaccess] val nullAliases: Set[String]
 
@@ -84,11 +81,14 @@ trait FieldType[T] {
   def jsonToDisplayStringOptional(json: JsReadable): Option[String] =
     jsonToValue(json).map(value => valueToDisplayString(Some(value)))
 
-  def isValueOf[E: TypeTag] =
-    typeOf[E].typeSymbol.asClass.equals(valueClass)
-
   def asValueOf[E] =
     this.asInstanceOf[FieldType[E]]
+
+  // reflection type stuff
+  val valueTypeTag: TypeTag[T]
+
+  lazy val valueType: Type = valueTypeTag.tpe
+  lazy val valueClass: Class[_] = typeToClass(valueType)
 }
 
 private abstract class FormatFieldType[T: Format] extends FieldType[T] {

@@ -4,7 +4,8 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.calc.{NumericDistributionCountsCalc, NumericDistributionOptions, NumericDistributionSinkOptions}
+import services.stats.calc._
+import services.stats.CalculatorHelper._
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -21,15 +22,19 @@ class NumericDistributionTest extends AsyncFlatSpec with Matchers {
 
   private val randomInputSize = 1000
 
-  private val doubleCalc = NumericDistributionCountsCalc[Double]
-  private val intCalc = NumericDistributionCountsCalc[Long]
+  private val calc = NumericDistributionCountsCalc.apply
+  private val arrayCalc = ArrayCalc(NumericDistributionCountsCalc.apply)
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
   "Distributions" should "match the static example (double)" in {
-    val inputs = values1.map(Some(_))
+    val inputs: Seq[Option[Double]] = values1.map(Some(_))
     val inputSource = Source.fromIterator(() => inputs.toIterator)
+
+    // array inputs
+    val arrayInputs = inputs.grouped(3).map(_.toArray).toSeq
+    val arrayInputSource = Source.fromIterator(() => arrayInputs.toIterator)
 
     def checkResult(result: Traversable[(BigDecimal, Int)]) = {
       result.size should be (expectedResult1.size)
@@ -39,20 +44,31 @@ class NumericDistributionTest extends AsyncFlatSpec with Matchers {
         count1 should be (count2)
       }
 
-      result.map(_._2).sum should be (values1.size)
+      result.map(_._2).sum should be (inputs.size)
     }
 
     // standard calculation
-    val standardOptions = NumericDistributionOptions[Double](columnCount1)
-    Future(doubleCalc.fun(standardOptions)(inputs)).map(checkResult)
+    val standardOptions = NumericDistributionOptions(columnCount1)
+    Future(calc.fun(standardOptions)(inputs)).map(checkResult)
 
     // streamed calculations
-    val streamOptions = NumericDistributionSinkOptions(columnCount1, values1.min, values1.max)
-    doubleCalc.runSink(streamOptions, streamOptions)(inputSource).map(checkResult)
+    val streamOptions = NumericDistributionFlowOptions(columnCount1, values1.min, values1.max)
+    calc.runFlow(streamOptions, streamOptions)(inputSource).map(checkResult)
+
+    // standard calculation for array
+    Future(arrayCalc.fun(standardOptions)(arrayInputs)).map(checkResult)
+
+    // streamed calculations for array
+    arrayCalc.runFlow(streamOptions, streamOptions)(arrayInputSource).map(checkResult)
   }
 
   "Distributions" should "match the static example (int/long)" in {
-    val inputSource = Source.fromIterator(() => values2.toIterator)
+    val inputs = values2.map(_.map(_.toDouble))
+    val inputSource = Source.fromIterator(() => inputs.toIterator)
+
+    // array inputs
+    val arrayInputs = inputs.grouped(3).map(_.toArray).toSeq
+    val arrayInputSource = Source.fromIterator(() => arrayInputs.toIterator)
 
     def checkResult(result: Traversable[(BigDecimal, Int)]) = {
       result.size should be (expectedResult2.size)
@@ -62,16 +78,22 @@ class NumericDistributionTest extends AsyncFlatSpec with Matchers {
         count1 should be (count2)
       }
 
-      result.map(_._2).sum should be (values2.flatten.size)
+      result.map(_._2).sum should be (inputs.flatten.size)
     }
 
     // standard calculation
-    val standardOptions = NumericDistributionOptions[Long](columnCount2, None, None, true)
-    Future(intCalc.fun(standardOptions)(values2)).map(checkResult)
+    val standardOptions = NumericDistributionOptions(columnCount2, true)
+    Future(calc.fun(standardOptions)(inputs)).map(checkResult)
 
     // streamed calculations
-    val streamOptions = NumericDistributionSinkOptions(columnCount2, values2.flatten.min, values2.flatten.max, true)
-    intCalc.runSink(streamOptions, streamOptions)(inputSource).map(checkResult)
+    val streamOptions = NumericDistributionFlowOptions(columnCount2, inputs.flatten.min, inputs.flatten.max, true)
+    calc.runFlow(streamOptions, streamOptions)(inputSource).map(checkResult)
+
+    // standard calculation for array
+    Future(arrayCalc.fun(standardOptions)(arrayInputs)).map(checkResult)
+
+    // streamed calculations for array
+    arrayCalc.runFlow(streamOptions, streamOptions)(arrayInputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (double)" in {
@@ -81,11 +103,15 @@ class NumericDistributionTest extends AsyncFlatSpec with Matchers {
     val flattenedInputs = inputs.flatten
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
+    // array inputs
+    val arrayInputs = inputs.grouped(3).map(_.toArray).toSeq
+    val arrayInputSource = Source.fromIterator(() => arrayInputs.toIterator)
+
     val columnCount = 30
 
     // standard calculation
-    val standardOptions = NumericDistributionOptions[Double](columnCount)
-    val protoResult = doubleCalc.fun(standardOptions)(inputs).toSeq
+    val standardOptions = NumericDistributionOptions(columnCount)
+    val protoResult = calc.fun(standardOptions)(inputs).toSeq
 
     def checkResult(result: Traversable[(BigDecimal, Int)]) = {
       result.size should be (protoResult.size)
@@ -100,22 +126,33 @@ class NumericDistributionTest extends AsyncFlatSpec with Matchers {
 
     // streamed calculations
 
-    val streamOptions = NumericDistributionSinkOptions(columnCount, flattenedInputs.min, flattenedInputs.max)
-    doubleCalc.runSink(streamOptions, streamOptions)(inputSource).map(checkResult)
+    val streamOptions = NumericDistributionFlowOptions(columnCount, flattenedInputs.min, flattenedInputs.max)
+    calc.runFlow(streamOptions, streamOptions)(inputSource).map(checkResult)
+
+    // standard calculation for array
+    Future(arrayCalc.fun(standardOptions)(arrayInputs)).map(checkResult)
+
+    // streamed calculations for array
+    arrayCalc.runFlow(streamOptions, streamOptions)(arrayInputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (int/long)" in {
-    val inputs = for (_ <- 1 to randomInputSize) yield {
+    val intInputs = for (_ <- 1 to randomInputSize) yield {
       if (Random.nextDouble() < 0.2) None else Some(Random.nextInt(20).toLong)
     }
+    val inputs = intInputs.map(_.map(_.toDouble))
     val flattenedInputs = inputs.flatten
     val inputSource = Source.fromIterator(() => inputs.toIterator)
+
+    // array inputs
+    val arrayInputs = inputs.grouped(3).map(_.toArray).toSeq
+    val arrayInputSource = Source.fromIterator(() => arrayInputs.toIterator)
 
     val columnCount = 15
 
     // standard calculation
-    val standardOptions = NumericDistributionOptions[Long](columnCount)
-    val protoResult = intCalc.fun(standardOptions)(inputs)
+    val standardOptions = NumericDistributionOptions(columnCount)
+    val protoResult = calc.fun(standardOptions)(inputs)
 
     def checkResult(result: Traversable[(BigDecimal, Int)]) = {
       result.size should be (protoResult.size)
@@ -130,7 +167,13 @@ class NumericDistributionTest extends AsyncFlatSpec with Matchers {
 
     // streamed calculations
 
-    val streamOptions = NumericDistributionSinkOptions(columnCount, flattenedInputs.min, flattenedInputs.max)
-    intCalc.runSink(streamOptions, streamOptions)(inputSource).map(checkResult)
+    val streamOptions = NumericDistributionFlowOptions(columnCount, flattenedInputs.min, flattenedInputs.max)
+    calc.runFlow(streamOptions, streamOptions)(inputSource).map(checkResult)
+
+    // standard calculation for array
+    Future(arrayCalc.fun(standardOptions)(arrayInputs)).map(checkResult)
+
+    // streamed calculations for array
+    arrayCalc.runFlow(streamOptions, streamOptions)(arrayInputSource).map(checkResult)
   }
 }

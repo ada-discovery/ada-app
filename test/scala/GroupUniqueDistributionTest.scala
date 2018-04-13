@@ -5,6 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.calc.GroupUniqueDistributionCountsCalc
+import services.stats.CalculatorHelper._
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -105,10 +106,10 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // standard calculation
-    Future(doubleCalc.fun()(inputs)).map(checkResult)
+    Future(doubleCalc.fun_(inputs)).map(checkResult)
 
     // streamed calculations
-    doubleCalc.runSink((),())(inputSource).map(checkResult)
+    doubleCalc.runFlow_(inputSource).map(checkResult)
   }
 
   "Distributions" should "match the static example (string)" in {
@@ -136,10 +137,10 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // standard calculation
-    Future(stringCalc.fun()(values2)).map(checkResult)
+    Future(stringCalc.fun_(values2)).map(checkResult)
 
     // streamed calculations
-    stringCalc.runSink((),())(inputSource).map(checkResult)
+    stringCalc.runFlow_(inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (double)" in {
@@ -151,7 +152,7 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val protoResult = doubleCalc.fun()(inputs)
+    val protoResult = doubleCalc.fun_(inputs)
 
     def checkResult(result: Traversable[(Option[String], Traversable[(Option[Double], Int)])]) = {
       result.size should be (protoResult.size)
@@ -175,7 +176,7 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // streamed calculations
-    doubleCalc.runSink((),())(inputSource).map(checkResult)
+    doubleCalc.runFlow_(inputSource).map(checkResult)
   }
 
   "Distributions" should "match each other (string)" in {
@@ -187,7 +188,7 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val protoResult = stringCalc.fun()(inputs)
+    val protoResult = stringCalc.fun_(inputs)
 
     def checkResult(result: Traversable[(Option[String], Traversable[(Option[String], Int)])]) = {
       result.size should be (protoResult.size)
@@ -211,6 +212,6 @@ class GroupUniqueDistributionTest extends AsyncFlatSpec with Matchers {
     }
 
     // streamed calculations
-    stringCalc.runSink((),())(inputSource).map(checkResult)
+    stringCalc.runFlow_(inputSource).map(checkResult)
   }
 }

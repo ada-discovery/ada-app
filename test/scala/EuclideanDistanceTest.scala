@@ -6,6 +6,7 @@ import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.StatsHelperUtil.calcMatrixGroupSizes
 import services.stats.calc.{AllDefinedEuclideanDistanceCalc, EuclideanDistanceCalc}
+import services.stats.CalculatorHelper._
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -48,16 +49,16 @@ class EuclideanDistanceTest extends AsyncFlatSpec with Matchers {
     Future(calc.fun()(inputs)).map(checkResult)
 
     // streamed calculations without parallelism
-    calc.runSink((featuresNum, noParallelismGroupSizes), ())(inputSource).map(checkResult)
+    calc.runFlow((featuresNum, noParallelismGroupSizes), ())(inputSource).map(checkResult)
 
     // streamed calculations with parallelism
-    calc.runSink((featuresNum, groupSizes), ())(inputSource).map(checkResult)
+    calc.runFlow((featuresNum, groupSizes), ())(inputSource).map(checkResult)
 
     // all-values-defined streamed calculations without parallelism
-    allDefinedCalc.runSink((featuresNum, noParallelismGroupSizes), ())(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow((featuresNum, noParallelismGroupSizes), ())(inputSourceAllDefined).map(checkResult)
 
     // all-values-defined streamed calculations with parallelism
-    allDefinedCalc.runSink((featuresNum, groupSizes), ())(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow((featuresNum, groupSizes), ())(inputSourceAllDefined).map(checkResult)
   }
 
   "Euclidean distances" should "match each other" in {
@@ -89,15 +90,15 @@ class EuclideanDistanceTest extends AsyncFlatSpec with Matchers {
     val groupSizes = calcMatrixGroupSizes(randomFeaturesNum, Some(4))
 
     // streamed calculations without parallelism
-    calc.runSink((randomFeaturesNum, noParallelismGroupSizes), ())(inputSource).map(checkResult)
+    calc.runFlow((randomFeaturesNum, noParallelismGroupSizes), ())(inputSource).map(checkResult)
 
     // streamed calculations with parallelism
-    calc.runSink((randomFeaturesNum, groupSizes), ())(inputSource).map(checkResult)
+    calc.runFlow((randomFeaturesNum, groupSizes), ())(inputSource).map(checkResult)
 
     // all-values-defined streamed calculations without parallelism
-    allDefinedCalc.runSink((randomFeaturesNum, noParallelismGroupSizes), ())(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow((randomFeaturesNum, noParallelismGroupSizes), ())(inputSourceAllDefined).map(checkResult)
 
     // all-values-defined streamed calculations with parallelism
-    allDefinedCalc.runSink((randomFeaturesNum, groupSizes), ())(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow((randomFeaturesNum, groupSizes), ())(inputSourceAllDefined).map(checkResult)
   }
 }

@@ -4,8 +4,8 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.StatsService
 import services.stats.calc.{BasicStatsCalc, BasicStatsResult}
+import services.stats.CalculatorHelper._
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -46,10 +46,10 @@ class BasicStatsTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
     }
 
     // standard calculation
-    Future(calc.fun()(values)).map(checkResult)
+    Future(calc.fun_(values)).map(checkResult)
 
     // streamed calculations
-    calc.runSink((), ())(inputSource).map(checkResult)
+    calc.runFlow_(inputSource).map(checkResult)
   }
 
   "Basic stats" should "match each other" in {
@@ -59,7 +59,7 @@ class BasicStatsTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val protoResult = calc.fun()(inputs).get
+    val protoResult = calc.fun_(inputs).get
 
     def checkResult(result: Option[BasicStatsResult]) = {
       result should not be (None)
@@ -76,6 +76,6 @@ class BasicStatsTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
     }
 
     // streamed calculations
-    calc.runSink((), ())(inputSource).map(checkResult)
+    calc.runFlow_(inputSource).map(checkResult)
   }
 }

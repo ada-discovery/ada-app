@@ -6,6 +6,7 @@ import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.StatsHelperUtil.calcMatrixGroupSizes
 import services.stats.calc.MatrixRowColumnSumCalc
+import services.stats.CalculatorHelper._
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -56,10 +57,10 @@ class MatrixRowColumnSumTest extends AsyncFlatSpec with Matchers with ExtraMatch
     }
 
     // standard calculation
-    Future(calc.fun()(inputs)).map(checkResult)
+    Future(calc.fun_(inputs)).map(checkResult)
 
     // streamed calculations
-    calc.runSink((), ())(inputSource).map(checkResult)
+    calc.runFlow_(inputSource).map(checkResult)
   }
 
   "Matrix row column sums" should "match each other" in {
@@ -72,7 +73,7 @@ class MatrixRowColumnSumTest extends AsyncFlatSpec with Matchers with ExtraMatch
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val (protoRowSums, protoColumnSums) = calc.fun()(inputs)
+    val (protoRowSums, protoColumnSums) = calc.fun_(inputs)
 
     def checkResult(rowColumnSums: (Seq[Double], Seq[Double])) = {
       val rowSums = rowColumnSums._1
@@ -96,6 +97,6 @@ class MatrixRowColumnSumTest extends AsyncFlatSpec with Matchers with ExtraMatch
     }
 
     // streamed calculations
-    calc.runSink((), ())(inputSource).map(checkResult)
+    calc.runFlow_(inputSource).map(checkResult)
   }
 }
