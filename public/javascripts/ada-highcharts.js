@@ -153,6 +153,8 @@
             plotOptions: {
                 series: {
                     borderWidth: 0,
+                    pointPadding: 0.07,
+                    groupPadding: 0.05,
                     dataLabels: {
                         enabled: showLabels,
                         formatter: function() {
