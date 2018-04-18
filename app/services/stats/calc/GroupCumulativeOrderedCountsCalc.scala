@@ -1,31 +1,36 @@
 package services.stats.calc
 
-import services.stats.CalculatorHelper.NoOptionsCalculator
-import services.stats.calc.GroupCumulativeOrderedCountsCalcIOTypes._
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
+import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 
-object GroupCumulativeOrderedCountsCalcIOTypes {
-  type IN[G, T] = (Option[G], Option[T])
-  type OUT[G, T] = Traversable[(Option[G], Traversable[(T, Int)])]
-  type INTER[G, T] = Traversable[((Option[G], Option[T]), Int)]
+trait GroupCumulativeOrderedCountsCalcTypePack[G, T] extends NoOptionsCalculatorTypePack {
+  type IN = (Option[G], Option[T])
+  type OUT = Traversable[(Option[G], Traversable[(T, Int)])]
+  type INTER = Traversable[((Option[G], Option[T]), Int)]
 }
 
-private class GroupCumulativeOrderedCountsCalc[G, T: Ordering] extends NoOptionsCalculator[IN[G,T], OUT[G,T], INTER[G,T]] with CumulativeOrderedCountsCalcFun {
+private class GroupCumulativeOrderedCountsCalc[G, T: Ordering] extends Calculator[GroupCumulativeOrderedCountsCalcTypePack[G, T]] with CumulativeOrderedCountsCalcFun {
 
-  private val basicCalc = GroupUniqueDistributionCountsCalc[G, T]
+  private val basicCalc = GroupUniqueDistributionCountsCalc.apply[G, T]
 
-  override def fun(options: Unit) =
-    (basicCalc.fun()(_)) andThen groupSortAndCount
+  override def fun(options: Unit): Traversable[IN] => OUT =
+    (basicCalc.fun(())(_)) andThen groupSortAndCount
+//    (inputs: Traversable[IN]) => {
+//      val outputs = basicCalc.fun(())(inputs)
+//      groupSortAndCount(outputs)
+//    }
 
-  override def flow(options: Unit) =
-    basicCalc.flow()
+  override def flow(options: Unit): Flow[IN, INTER, NotUsed] =
+    basicCalc.flow(())
 
-  override def postFlow(options: Unit) =
-    (basicCalc.postFlow()(_)) andThen groupSortAndCount
+  override def postFlow(options: Unit): INTER => OUT =
+    (basicCalc.postFlow(())(_)) andThen groupSortAndCount
 
-  private def groupSortAndCount(groupValues: GroupUniqueDistributionCountsCalcIOTypes.OUT[G, T]) =
+  private def groupSortAndCount(groupValues: GroupUniqueDistributionCountsCalcTypePack[G, T]#OUT) =
     groupValues.map { case (group, values) => (group, sortAndCount(values)) }
 }
 
 object GroupCumulativeOrderedCountsCalc {
-  def apply[G, T: Ordering]: NoOptionsCalculator[IN[G,T], OUT[G,T], INTER[G,T]] = new GroupCumulativeOrderedCountsCalc[G, T]
+  def apply[G, T: Ordering]: Calculator[GroupCumulativeOrderedCountsCalcTypePack[G, T]] = new GroupCumulativeOrderedCountsCalc[G, T]
 }

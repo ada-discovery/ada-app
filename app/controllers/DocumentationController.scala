@@ -8,37 +8,61 @@ import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller, Request}
 import play.twirl.api.Html
 import views.html.documentation
+import play.api.cache.Cached
 
-class DocumentationController @Inject()(messagesApi: MessagesApi, webJarAssets: WebJarAssets) extends Controller {
+class DocumentationController @Inject()(
+    messagesApi: MessagesApi,
+    webJarAssets: WebJarAssets,
+    cached: Cached
+  ) extends Controller {
 
   private implicit def webContext(implicit request: Request[_]) = {
     implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
     WebContext(messagesApi, webJarAssets)
   }
 
-  def intro = showHtml(documentation.intro()(_))
+  def intro =
+    showHtml("intro", documentation.intro()(_))
 
-  def basic = showHtml(documentation.basic()(_))
+  def basic =
+    showHtml("basic", documentation.basic()(_))
 
-  def stats = showHtml(documentation.stats()(_))
+  def stats =
+    showHtml("stats", documentation.stats()(_))
 
-  def views = showHtml(documentation.view()(_))
+  def views =
+    showHtml("views", documentation.view()(_))
 
-  def filters = showHtml(documentation.filters()(_))
+  def filters =
+    showHtml("filters", documentation.filters()(_))
 
-  def ml = showHtml(documentation.ml()(_))
+  def ml =
+    showHtml("ml", documentation.ml()(_))
 
-  def mlClassification = showHtml(documentation.mlClassification()(_))
+  def mlClassification =
+    showHtml("mlClassification", documentation.mlClassification()(_))
 
-  def mlRegression = showHtml(documentation.mlRegression()(_))
+  def mlRegression =
+    showHtml("mlRegression", documentation.mlRegression()(_))
 
-  def mlClusterization = showHtml(documentation.mlClusterization()(_))
+  def mlClusterization =
+    showHtml("mlClusterization", documentation.mlClusterization()(_))
 
-  def userManagement = showHtml(documentation.userManagement()(_))
+  def userManagement =
+    showHtml("userManagement", documentation.userManagement()(_))
 
-  def dataSetImport = showHtml(documentation.dataSetImport()(_))
+  def dataSetImport =
+    showHtml("dataSetImport", documentation.dataSetImport()(_))
 
-  def technology = showHtml(documentation.technology()(_))
+  def technology =
+    showHtml("technology", documentation.technology()(_))
 
-  private def showHtml(html: WebContext => Html) = Action { implicit request => Ok(html(webContext))}
+  private def showHtml(
+    cacheName: String,
+    html: WebContext => Html
+  ) = // cached(s"documentation-$cacheName") ( // TODO: introduce caching only if a user is not logged in
+    Action { implicit request =>
+      Ok(html(webContext))
+    }
+  // )
 }

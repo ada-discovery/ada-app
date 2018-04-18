@@ -1,18 +1,19 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.{Flow, Keep, Sink}
-import services.stats.Calculator
-import StandardizationCalcIOTypes._
+import services.stats.{Calculator, CalculatorTypePack}
 import util.AkkaStreamUtil.seqFlow
 
-object StandardizationCalcIOTypes {
+trait StandardizationCalcTypePack extends CalculatorTypePack {
   type IN = Seq[Option[Double]]
   type OUT = Traversable[Seq[Option[Double]]]
   type INTER = OUT
   type OPT = Seq[(Double, Double)]
+  type FLOW_OPT = OPT
+  type SINK_OPT = Unit
 }
 
-object StandardizationCalc extends Calculator[IN, OUT, INTER, OPT, OPT, Unit] {
+object StandardizationCalc extends Calculator[StandardizationCalcTypePack] {
 
   override def fun(options: OPT) = _.map(standardizeRow(options))
 

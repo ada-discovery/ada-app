@@ -19,7 +19,7 @@ import play.api.mvc.{Action, AnyContent, Result}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import util.SecurityUtil.{restrictAdminAny, restrictSubjectPresentAny}
+import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAny}
 import views.html.{layout, regression => view}
 import controllers.ml.routes.{RegressionController => regressionRoutes}
 import dataaccess.AscSort
@@ -200,7 +200,7 @@ class RegressionController @Inject()(
   // default form... unused
   override protected[controllers] val form = linearRegressionForm.asInstanceOf[Form[Regression]]
 
-  def create(concreteClassName: String) = restrictAdminAny(deadbolt) {
+  def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
 
       def createAux[E <: Regression](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =

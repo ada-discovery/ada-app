@@ -1,17 +1,15 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.{Flow, Sink}
-import services.stats.CalculatorHelper.NoOptionsCalculator
-import services.stats.calc.BasicStatsCalcIOTypes._
-import play.api.Logger
+import akka.stream.scaladsl.Flow
+import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 
-object BasicStatsCalcIOTypes {
+trait BasicStatsCalcTypePack extends NoOptionsCalculatorTypePack{
   type IN = Option[Double]
   type OUT = Option[BasicStatsResult]
   type INTER = BasicStatsAccum
 }
 
-object BasicStatsCalc extends NoOptionsCalculator[IN, OUT, INTER] {
+object BasicStatsCalc extends Calculator[BasicStatsCalcTypePack] {
 
   override def fun(o: Unit) = { values: Traversable[IN] =>
     val flattenedValues = values.flatten

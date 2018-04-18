@@ -1,16 +1,15 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.{Flow, Sink}
-import services.stats.CalculatorHelper.NoOptionsCalculator
-import MatrixRowColumnSumCalcIOTypes._
+import akka.stream.scaladsl.Flow
+import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 
-object MatrixRowColumnSumCalcIOTypes {
+trait MatrixRowColumnSumCalcTypePack extends NoOptionsCalculatorTypePack {
   type IN = Seq[Double]
   type OUT = (Seq[Double], Seq[Double])
   type INTER = OUT
 }
 
-object MatrixRowColumnSumCalc extends NoOptionsCalculator[IN, OUT, INTER] {
+private object MatrixRowColumnSumCalcAux extends Calculator[MatrixRowColumnSumCalcTypePack] {
 
   override def fun(o: Unit) = { values: Traversable[IN] =>
     val elementsCount = if (values.nonEmpty) values.head.size else 0
@@ -40,4 +39,8 @@ object MatrixRowColumnSumCalc extends NoOptionsCalculator[IN, OUT, INTER] {
     }
 
   override def postFlow(o: Unit) = identity
+}
+
+object MatrixRowColumnSumCalc {
+  def apply: Calculator[MatrixRowColumnSumCalcTypePack] = MatrixRowColumnSumCalcAux
 }

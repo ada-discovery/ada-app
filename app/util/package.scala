@@ -293,4 +293,6 @@ package object util {
 
   def toJsonHtml[T](o: T)(implicit tjs: Writes[T]): Html =
     Html(Json.stringify(Json.toJson(o)))
+
+  val noCacheSetting = "no-cache, max-age=0, must-revalidate, no-store"
 }

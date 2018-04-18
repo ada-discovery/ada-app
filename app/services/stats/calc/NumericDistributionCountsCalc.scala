@@ -1,17 +1,20 @@
 package services.stats.calc
 
-import services.stats.calc.NumericDistributionCountsCalcIOTypes._
+import services.stats.{Calculator, CalculatorTypePack}
 
 import scala.collection.mutable
 
-object NumericDistributionCountsCalcIOTypes {
+trait NumericDistributionCountsCalcTypePack extends CalculatorTypePack {
   type IN = Option[Double]
   type OUT = Traversable[(BigDecimal, Int)]
   type INTER = mutable.ArraySeq[Int]
-  type OPTS = NumericDistributionOptions
-  type FLOW_OPTS = NumericDistributionFlowOptions
+  type OPT = NumericDistributionOptions
+  type FLOW_OPT = NumericDistributionFlowOptions
+  type SINK_OPT = FLOW_OPT
 }
 
-object NumericDistributionCountsCalc extends OptionInputCalc[Double, OUT, INTER, OPTS, FLOW_OPTS, FLOW_OPTS] {
-  override protected val allDefinedCalc = AllDefinedNumericDistributionCountsCalc.apply
+private[stats] object NumericDistributionCountsCalcAux extends OptionInputCalc(AllDefinedNumericDistributionCountsCalc.apply) with Calculator[NumericDistributionCountsCalcTypePack]
+
+object NumericDistributionCountsCalc {
+  def apply: Calculator[NumericDistributionCountsCalcTypePack] = NumericDistributionCountsCalcAux
 }

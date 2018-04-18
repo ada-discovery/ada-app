@@ -1,25 +1,37 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.Flow
-import services.stats.Calculator
+import services.stats.{Calculator, CalculatorTypePack, NoOptionsCalculatorTypePack}
 
-private[stats] class ArrayCalc[IN, OUT, INTER, OPT1, OPT2, OPT3](
-    val innerCalculator: Calculator[IN, OUT, INTER, OPT1, OPT2, OPT3]
-  ) extends Calculator[Array[IN], OUT, INTER, OPT1, OPT2, OPT3] {
+private[stats] class ArrayCalc[C <: CalculatorTypePack, CC <: ArrayCalculatorTypePack[C]](val innerCalculator: Calculator[C]) extends Calculator[CC] {
 
-  override def fun(options: OPT1) =
-    (values) => innerCalculator.fun(options)(values.flatten)
+  def fun(options: OPT) =
+    (values: Traversable[IN]) => innerCalculator.fun(options)(values.flatten)
 
-  override def flow(options: OPT2) =
-    Flow[Array[IN]].mapConcat(_.toList).via(innerCalculator.flow(options))
+  def flow(options: FLOW_OPT) =
+    Flow[IN].mapConcat(_.toList).via(innerCalculator.flow(options))
 
-  override def postFlow(options: OPT3) =
+  def postFlow(options: SINK_OPT) =
     innerCalculator.postFlow(options)
 }
 
 object ArrayCalc {
+  def apply[C <: CalculatorTypePack](
+    calculator: Calculator[C]
+  ): Calculator[ArrayCalculatorTypePack[C]] =
+    new ArrayCalc[C, ArrayCalculatorTypePack[C]](calculator)
 
-  def apply[IN, OUT, INTER, OPT1, OPT2, OPT3]
-    (calculator: Calculator[IN, OUT, INTER, OPT1, OPT2, OPT3]
-  ): Calculator[Array[IN], OUT, INTER, OPT1, OPT2, OPT3] = new ArrayCalc(calculator)
+  def applyNoOptions[C <: NoOptionsCalculatorTypePack](
+    calculator: Calculator[C]
+  ): Calculator[ArrayCalculatorTypePack[C] with NoOptionsCalculatorTypePack] =
+    new ArrayCalc[C, ArrayCalculatorTypePack[C] with NoOptionsCalculatorTypePack](calculator)
+}
+
+trait ArrayCalculatorTypePack[PACK <: CalculatorTypePack] extends CalculatorTypePack {
+  type IN = Array[PACK#IN]
+  type OUT = PACK#OUT
+  type INTER = PACK#INTER
+  type OPT = PACK#OPT
+  type FLOW_OPT = PACK#FLOW_OPT
+  type SINK_OPT = PACK#SINK_OPT
 }

@@ -195,4 +195,24 @@ object FieldUtil {
       case _ => None
     }
   }
+
+  def valueOrdering(
+    value: Any
+  ): Option[Ordering[Any]] = {
+    def aux[T: Ordering]: Option[Ordering[Any]] =
+      Some(implicitly[Ordering[T]].asInstanceOf[Ordering[Any]])
+
+    value match {
+      case _: String => aux[String]
+      case _: Boolean => aux[Boolean]
+      case _: Double => aux[Double]
+      case _: Float => aux[Float]
+      case _: Long => aux[Long]
+      case _: Int => aux[Int]
+      case _: Short => aux[Short]
+      case _: Byte => aux[Byte]
+      case _: java.util.Date => aux[java.util.Date]
+      case _ => None
+    }
+  }
 }

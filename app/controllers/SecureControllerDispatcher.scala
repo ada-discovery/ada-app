@@ -127,7 +127,7 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
         objectOwnerId match {
           case Some(createdById) =>
             accessingUser.map { accessingUser =>
-              // if the user accessing the data view is the owner process, otherwise "unauthorized"
+              // if the user accessing the data view is the owner then  process, otherwise "unauthorized"
               if (accessingUser._id.get.equals(createdById)) toActionAny(action) else unauthorizedAction
             }.getOrElse(
               // if we cannot determine the currently logged user for some reason return "unauthorized"

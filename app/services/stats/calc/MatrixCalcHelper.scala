@@ -1,8 +1,10 @@
-package services.stats
+package services.stats.calc
 
-object StatsHelperUtil {
+import services.stats.calc.AllDefinedPearsonCorrelationCalc.calcGroupSizes
 
-  def calcMatrixGroupSizes(n: Int, parallelism: Option[Int]) =
+trait MatrixCalcHelper {
+
+  def calcGroupSizes(n: Int, parallelism: Option[Int]) =
     parallelism.map { groupNumber =>
       val initGroupSize = n / Math.sqrt(groupNumber)
 
@@ -30,4 +32,11 @@ object StatsHelperUtil {
     }.getOrElse(
       Nil
     )
+
+  def calcStartEnds(n: Int, parallelism: Option[Int]) = {
+    val parallelGroupSizes = calcGroupSizes(n, parallelism)
+
+    val starts = parallelGroupSizes.scanLeft(0){_+_}
+    parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
+  }
 }

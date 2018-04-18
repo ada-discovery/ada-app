@@ -1,21 +1,21 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.Flow
-import services.stats.Calculator
-import services.stats.calc.AllDefinedNumericDistributionCountsCalcIOType._
+import services.stats.{Calculator, CalculatorTypePack}
 
 import scala.collection.mutable
 import scala.math.BigDecimal.RoundingMode
 
-object AllDefinedNumericDistributionCountsCalcIOType {
+trait AllDefinedNumericDistributionCountsCalcTypePack extends CalculatorTypePack {
   type IN = Double
   type OUT = Traversable[(BigDecimal, Int)]
   type INTER = mutable.ArraySeq[Int]
-  type OPTS = NumericDistributionOptions
-  type FLOW_OPTS = NumericDistributionFlowOptions
+  type OPT = NumericDistributionOptions
+  type FLOW_OPT = NumericDistributionFlowOptions
+  type SINK_OPT = FLOW_OPT
 }
 
-private class AllDefinedNumericDistributionCountsCalc extends Calculator[IN, OUT, INTER, OPTS, FLOW_OPTS, FLOW_OPTS] with NumericDistributionCountsHelper {
+private class AllDefinedNumericDistributionCountsCalc extends Calculator[AllDefinedNumericDistributionCountsCalcTypePack] with NumericDistributionCountsHelper {
 
   private val zero = BigDecimal(0)
 
@@ -43,7 +43,7 @@ private class AllDefinedNumericDistributionCountsCalc extends Calculator[IN, OUT
       Seq[(BigDecimal, Int)]()
   }
 
-  override def flow(options: FLOW_OPTS) = {
+  override def flow(options: FLOW_OPT) = {
     val stepSize = calcStepSize(
       options.columnCount,
       options.min,
@@ -64,7 +64,7 @@ private class AllDefinedNumericDistributionCountsCalc extends Calculator[IN, OUT
     }
   }
 
-  override def postFlow(options: FLOW_OPTS) = { array =>
+  override def postFlow(options: SINK_OPT) = { array =>
     val columnCount = array.length
 
     val stepSize = calcStepSize(
@@ -85,7 +85,7 @@ private class AllDefinedNumericDistributionCountsCalc extends Calculator[IN, OUT
 }
 
 object AllDefinedNumericDistributionCountsCalc {
-  def apply: Calculator[IN, OUT, INTER, OPTS, FLOW_OPTS, FLOW_OPTS] = new AllDefinedNumericDistributionCountsCalc
+  def apply: Calculator[AllDefinedNumericDistributionCountsCalcTypePack] = new AllDefinedNumericDistributionCountsCalc
 }
 
 trait NumericDistributionCountsHelper {

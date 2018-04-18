@@ -117,7 +117,7 @@ class DataSpaceMetaInfoController @Inject() (
     (view.edit(_, _, _, _)).tupled
   }
 
-  override def edit(id: BSONObjectID) = restrictAdminAny(deadbolt) (
+  override def edit(id: BSONObjectID) = restrictAdminAnyNoCaching(deadbolt) (
     toAuthenticatedAction(
       super.edit(id)
     )
@@ -173,13 +173,13 @@ class DataSpaceMetaInfoController @Inject() (
       id
 
   // if update successful redirect to get/show instead of list
-  override def update(id: BSONObjectID) = restrictAdminAny(deadbolt) (
+  override def update(id: BSONObjectID) = restrictAdminAnyNoCaching(deadbolt) (
     toAuthenticatedAction(
       update(id, Redirect(routes.DataSpaceMetaInfoController.get(id)))
     )
   )
 
-  def deleteDataSet(id: BSONObjectID) = restrictAdminAny(deadbolt) {
+  def deleteDataSet(id: BSONObjectID) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
       implicit val msg = messagesApi.preferred(request)
       repo.get(id).flatMap(_.fold(

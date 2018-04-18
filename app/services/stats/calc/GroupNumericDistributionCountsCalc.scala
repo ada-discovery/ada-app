@@ -1,31 +1,30 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.Flow
-import services.stats.Calculator
-
+import services.stats.{Calculator, CalculatorTypePack}
 import util.GroupMapList
-import services.stats.calc.GroupNumericDistributionCountsCalcIOTypes._
 import util.AkkaStreamUtil._
 
-object GroupNumericDistributionCountsCalcIOTypes {
-  type IN[G] = (Option[G], Option[Double])
-  type OUT[G] = Traversable[(Option[G], Traversable[(BigDecimal, Int)])]
-  type INTER[G] = Traversable[((Option[G], Int), Int)]
-  type OPTS = NumericDistributionOptions
-  type FLOW_OPTS = NumericDistributionFlowOptions
+trait GroupNumericDistributionCountsCalcTypePack[G] extends CalculatorTypePack {
+  type IN = (Option[G], Option[Double])
+  type OUT = Traversable[(Option[G], Traversable[(BigDecimal, Int)])]
+  type INTER = Traversable[((Option[G], Int), Int)]
+  type OPT = NumericDistributionOptions
+  type FLOW_OPT = NumericDistributionFlowOptions
+  type SINK_OPT = FLOW_OPT
 }
 
-private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[IN[G], OUT[G], INTER[G], OPTS, FLOW_OPTS, FLOW_OPTS] with NumericDistributionCountsHelper {
+private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[GroupNumericDistributionCountsCalcTypePack[G]] with NumericDistributionCountsHelper {
 
   private val maxGroups = Int.MaxValue
-  private val normalCalc = NumericDistributionCountsCalc
+  private val normalCalc = NumericDistributionCountsCalc.apply
 
-  override def fun(options: OPTS) =
+  override def fun(options: OPT) =
     _.toGroupMap.map { case (group, values) =>
       (group, normalCalc.fun(options)(values))
     }
 
-  override def flow(options: FLOW_OPTS) = {
+  override def flow(options: FLOW_OPT) = {
     val stepSize = calcStepSize(
       options.columnCount,
       options.min,
@@ -36,7 +35,7 @@ private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[IN
     val minBg = BigDecimal(options.min)
     val max = options.max
 
-    val flatFlow = Flow[IN[G]].collect { case (g, Some(x)) => (g, x)}
+    val flatFlow = Flow[IN].collect { case (g, Some(x)) => (g, x)}
 
     val groupBucketIndexFlow = Flow[(Option[G], Double)]
       .groupBy(maxGroups, _._1)
@@ -48,7 +47,7 @@ private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[IN
     flatFlow.via(groupBucketIndexFlow).via(groupCountFlow(maxGroups)).via(seqFlow)
   }
 
-  override def postFlow(options: FLOW_OPTS) = { elements =>
+  override def postFlow(options: FLOW_OPT) = { elements =>
     val stepSize = calcStepSize(
       options.columnCount,
       options.min,
@@ -75,5 +74,5 @@ private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[IN
 }
 
 object GroupNumericDistributionCountsCalc {
-  def apply[G]: Calculator[IN[G], OUT[G], INTER[G], OPTS, FLOW_OPTS, FLOW_OPTS] = new GroupNumericDistributionCountsCalc[G]
+  def apply[G]: Calculator[GroupNumericDistributionCountsCalcTypePack[G]] = new GroupNumericDistributionCountsCalc[G]
 }

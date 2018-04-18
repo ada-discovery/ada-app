@@ -26,13 +26,13 @@ class LdapController @Inject() (
   //  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
   private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)
 
-  def settings = restrictAdminAny(deadbolt) {
+  def settings = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future (
       Ok(views.html.ldapviews.viewSettings(ldapSettings))
     )
   }
 
-  def ldapList = restrictAdminAny(deadbolt) {
+  def ldapList = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {
       val entries: Traversable[String] = ldapConnector.getEntryList
       val content = "ldap entry list (" + entries.size + "):\n" + entries.fold("")((s,a)=> a+"\n\n"+s)

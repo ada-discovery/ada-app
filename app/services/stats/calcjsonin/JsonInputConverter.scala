@@ -1,4 +1,4 @@
-package services.stats.jsonin
+package services.stats.calcjsonin
 
 import dataaccess.FieldTypeHelper
 import models.Field

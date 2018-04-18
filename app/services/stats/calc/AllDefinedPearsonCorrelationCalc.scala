@@ -1,21 +1,22 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.{Flow, Sink}
-import services.stats.Calculator
-import services.stats.calc.AllDefinedPearsonCorrelationCalcIOTypes._
+import services.stats.{Calculator, CalculatorTypePack}
 import _root_.util.GrouppedVariousSize
 import play.api.Logger
 
 import scala.collection.mutable
-import scala.concurrent.Future
 
-object AllDefinedPearsonCorrelationCalcIOTypes {
+trait AllDefinedPearsonCorrelationCalcTypePack extends CalculatorTypePack {
   type IN = Seq[Double]
   type OUT = Seq[Seq[Option[Double]]]
   type INTER = PersonIterativeAccumGlobalArray
+  type OPT = Unit
+  type FLOW_OPT = Option[Int]
+  type SINK_OPT = Option[Int]
 }
 
-object AllDefinedPearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq[Int]), Seq[Int]] {
+object AllDefinedPearsonCorrelationCalc extends Calculator[AllDefinedPearsonCorrelationCalcTypePack] with MatrixCalcHelper {
 
   private val logger = Logger
 
@@ -41,28 +42,32 @@ object AllDefinedPearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit,
     }.toList
   }
 
-  override def flow(
-    featuresNumAndGroupSizes: (Int, Seq[Int])
-  ) = {
-    val n = featuresNumAndGroupSizes._1
-    val parallelGroupSizes = featuresNumAndGroupSizes._2
-    val starts = parallelGroupSizes.scanLeft(0){_+_}
-    val startEnds = parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
-
+  override def flow(parallelism: Option[Int]) = {
     Flow[IN].fold[PersonIterativeAccumGlobalArray](
-      PersonIterativeAccumGlobalArray(
-        sumSqSums = for (i <- 0 to n - 1) yield (0d, 0d),
-        pSums = (for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(0d): _*)).toArray,
-        count = 0
-      )
+      PersonIterativeAccumGlobalArray(Nil, Array(), 0)
     ) {
       case (accumGlobal, featureValues) =>
-//        logger.info("Executing an iteration of Pearson correlation")
-        val newSumSqSums = (accumGlobal.sumSqSums, featureValues).zipped.map { case ((sum, sqSum), value) =>
-          (sum + value, sqSum + value * value)
+        val n = featureValues.size
+
+        // calculate the optimal computation start and end indices in the matrix
+        val startEnds = calcStartEnds(n, parallelism)
+
+        // if the accumulator is empty, initialized it with zero counts/sums
+        val initializedAccumGlobal: PersonIterativeAccumGlobalArray =
+          if (accumGlobal.sumSqSums.isEmpty)
+            PersonIterativeAccumGlobalArray(
+              sumSqSums = for (i <- 0 to n - 1) yield (0d, 0d),
+              pSums = (for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(0d): _*)).toArray,
+              count = 0
+            )
+          else
+            accumGlobal
+
+        val newSumSqSums = (initializedAccumGlobal.sumSqSums, featureValues).zipped.map {
+          case ((sum, sqSum), value) => (sum + value, sqSum + value * value)
         }
 
-        val pSums = accumGlobal.pSums
+        val pSums = initializedAccumGlobal.pSums
 
         def calcAux(from: Int, to: Int) =
           for (i <- from to to) {
@@ -78,7 +83,7 @@ object AllDefinedPearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit,
           case Nil => calcAux(0, n - 1)
           case _ => startEnds.par.foreach((calcAux(_, _)).tupled)
         }
-        PersonIterativeAccumGlobalArray(newSumSqSums, pSums, accumGlobal.count + 1)
+        PersonIterativeAccumGlobalArray(newSumSqSums, pSums, initializedAccumGlobal.count + 1)
     }
   }
 
@@ -115,9 +120,9 @@ object AllDefinedPearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit,
         PersonIterativeAccumGlobal(newSumSqSums, newPSums.toSeq, accumGlobal.count + 1)
     }
 
-  override def postFlow(parallelGroupSizes: Seq[Int]) = { globalAccum: INTER =>
+  override def postFlow(parallelism: Option[Int]) = { globalAccum: INTER =>
     val accums = globalAccumToAccums(globalAccum)
-    PearsonCorrelationCalc.postFlow(parallelGroupSizes)(accums)
+    PearsonCorrelationCalc.postFlow(parallelism)(accums)
   }
 
   private def globalAccumToAccums(

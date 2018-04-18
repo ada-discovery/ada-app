@@ -1,6 +1,6 @@
 package services.stats.calc
 
-object EuclideanDistanceCalc extends DistanceCalc[Option[Double], (Int, Seq[Int]), Unit] {
+object EuclideanDistanceCalc extends DistanceCalc[Option[Double], DistanceCalcTypePack[Option[Double]]] {
 
   override protected def dist(
     el1: Option[Double],
@@ -12,11 +12,9 @@ object EuclideanDistanceCalc extends DistanceCalc[Option[Double], (Int, Seq[Int]
     }
 
   override protected def processSum(sum: Double) = Math.sqrt(sum)
-
-  override protected def featuresNumAndGroupSizes = identity
 }
 
-object AllDefinedEuclideanDistanceCalc extends DistanceCalc[Double, (Int, Seq[Int]), Unit] {
+object AllDefinedEuclideanDistanceCalc extends DistanceCalc[Double, DistanceCalcTypePack[Double]] {
 
   override protected def dist(
     value1: Double,
@@ -27,6 +25,4 @@ object AllDefinedEuclideanDistanceCalc extends DistanceCalc[Double, (Int, Seq[In
   }
 
   override protected def processSum(sum: Double) = Math.sqrt(sum)
-
-  override protected def featuresNumAndGroupSizes = identity
 }

@@ -29,7 +29,7 @@
         <div id="navigation" class="collapse navbar-collapse">
             <ul class="nav navbar-nav">
                 @subjectPresent() {
-                    @listItem(routes.AppController.studies(), "Studies", Some(1))
+                    @listItem(routes.AppController.dataSets(), "Studies", Some(1))
                 }
                 @restrict(roles = List(Array(SecurityRole.admin))) {
                     <li class="dropdown">

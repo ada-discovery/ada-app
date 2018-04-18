@@ -1,18 +1,16 @@
 package services.stats.calc
 
-import services.stats.CalculatorHelper.NoOptionsCalculator
-
-import util.GroupMapList
+import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import util.AkkaStreamUtil._
-import services.stats.calc.GroupUniqueDistributionCountsCalcIOTypes._
+import util.GroupMapList
 
-object GroupUniqueDistributionCountsCalcIOTypes {
-  type IN[G, T] = (Option[G], Option[T])
-  type OUT[G, T] = Traversable[(Option[G], Traversable[(Option[T], Int)])]
-  type INTER[G,T] = Traversable[((Option[G], Option[T]), Int)]
+trait GroupUniqueDistributionCountsCalcTypePack[G, T] extends NoOptionsCalculatorTypePack {
+  type IN = (Option[G], Option[T])
+  type OUT = Traversable[(Option[G], Traversable[(Option[T], Int)])]
+  type INTER = Traversable[((Option[G], Option[T]), Int)]
 }
 
-private class GroupUniqueDistributionCountsCalc[G,T] extends NoOptionsCalculator[IN[G,T], OUT[G,T], INTER[G,T]] {
+private class GroupUniqueDistributionCountsCalc[G,T] extends Calculator[GroupUniqueDistributionCountsCalcTypePack[G, T]] {
 
   private val maxGroups = Int.MaxValue
 
@@ -31,5 +29,5 @@ private class GroupUniqueDistributionCountsCalc[G,T] extends NoOptionsCalculator
 }
 
 object GroupUniqueDistributionCountsCalc {
-  def apply[G, T]: NoOptionsCalculator[IN[G,T], OUT[G,T], INTER[G,T]] = new GroupUniqueDistributionCountsCalc[G,T]
+  def apply[G, T]: Calculator[GroupUniqueDistributionCountsCalcTypePack[G, T]] = new GroupUniqueDistributionCountsCalc[G,T]
 }

@@ -21,7 +21,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import services.DataSpaceService
 import controllers.ml.routes.{UnsupervisedLearningController => route}
-import util.SecurityUtil.{restrictAdminAny, restrictSubjectPresentAny}
+import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAny}
 import views.html.{layout, unsupervisedlearning => view}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -164,7 +164,7 @@ class UnsupervisedLearningController @Inject()(
   // default form... unused
   override protected[controllers] val form = kMeansForm.asInstanceOf[Form[UnsupervisedLearning]]
 
-  def create(concreteClassName: String) = restrictAdminAny(deadbolt) {
+  def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
 
       def createAux[E <: UnsupervisedLearning](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =

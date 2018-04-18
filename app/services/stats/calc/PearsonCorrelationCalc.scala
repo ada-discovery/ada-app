@@ -1,21 +1,22 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.{Flow, Sink}
-import services.stats.Calculator
-import services.stats.calc.PearsonCorrelationCalcIOTypes._
+import services.stats.{Calculator, CalculatorTypePack}
 import _root_.util.GrouppedVariousSize
 import play.api.Logger
 
 import scala.collection.mutable
-import scala.concurrent.Future
 
-object PearsonCorrelationCalcIOTypes {
+trait PearsonCorrelationCalcTypePack extends CalculatorTypePack {
   type IN = Seq[Option[Double]]
   type OUT = Seq[Seq[Option[Double]]]
   type INTER = Seq[Seq[PersonIterativeAccum]]
+  type OPT = Unit
+  type FLOW_OPT = Option[Int]
+  type SINK_OPT = Option[Int]
 }
 
-object PearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq[Int]), Seq[Int]] {
+object PearsonCorrelationCalc extends Calculator[PearsonCorrelationCalcTypePack] with MatrixCalcHelper {
 
   private val logger = Logger
 
@@ -71,16 +72,22 @@ object PearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq
       None
   }
 
-  override def flow(featuresNumAndGroupSizes: (Int, Seq[Int])) = {
-    val n = featuresNumAndGroupSizes._1
-    val parallelGroupSize = featuresNumAndGroupSizes._2
-
-    Flow[IN].fold[INTER](
-      for (i <- 0 to n - 1) yield Seq.fill(i)(PersonIterativeAccum(0, 0, 0, 0, 0, 0))
-    ) {
+  override def flow(parallelism: Option[Int]) = {
+    Flow[IN].fold[INTER](Nil) {
       case (accums, featureValues) =>
-//        logger.info("Executing an iteration of Pearson correlation")
+        val n = featureValues.size
 
+        // if accumulators are empty, initialized them with zero counts/sums
+        val initializedAccums =
+          if (accums.isEmpty)
+            for (i <- 0 to n - 1) yield Seq.fill(i)(PersonIterativeAccum(0, 0, 0, 0, 0, 0))
+          else
+            accums
+
+        // calculate the optimal parallel computation group sizes
+        val groupSizes = calcGroupSizes(n, parallelism)
+
+        // helper function to calculate correlations for a slice of matrix
         def calcAux(accumFeatureValuePairs: Seq[(Seq[PersonIterativeAccum], Option[Double])]) =
           accumFeatureValuePairs.map { case (rowAccums, value1) =>
             rowAccums.zip(featureValues).map { case (accum, value2) =>
@@ -98,11 +105,11 @@ object PearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq
             }
           }
 
-        val accumFeatureValuePairs = accums.zip(featureValues)
+        val accumFeatureValuePairs = initializedAccums.zip(featureValues)
 
-        parallelGroupSize match {
+        groupSizes match {
           case Nil => calcAux(accumFeatureValuePairs)
-          case _ => accumFeatureValuePairs.grouped(parallelGroupSize).toSeq.par.flatMap(calcAux).toList
+          case _ => accumFeatureValuePairs.grouped(groupSizes).toSeq.par.flatMap(calcAux).toList
         }
     }
   }
@@ -150,15 +157,18 @@ object PearsonCorrelationCalc extends Calculator[IN, OUT, INTER, Unit, (Int, Seq
     }
   }
 
-  override def postFlow(parallelGroupSizes: Seq[Int]) = { accums: INTER =>
+  override def postFlow(parallelism: Option[Int]) = { accums: INTER =>
     logger.info("Creating correlations from the streamed accumulators.")
     val n = accums.size
 
+    // calc optimal parallel computation group sizes
+    val groupSizes = calcGroupSizes(n, parallelism)
+
     def calcAux(accums: Seq[Seq[PersonIterativeAccum]]) = accums.map(_.map(accumToCorrelation))
 
-    val triangleResults = parallelGroupSizes match {
+    val triangleResults = groupSizes match {
       case Nil => calcAux(accums)
-      case _ => accums.grouped(parallelGroupSizes).toArray.par.flatMap(calcAux).arrayseq
+      case _ => accums.grouped(groupSizes).toArray.par.flatMap(calcAux).arrayseq
     }
 
     logger.info("Triangle results finished. Generating a full matrix.")

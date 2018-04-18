@@ -1,16 +1,14 @@
 package services.stats.calc
 
-import services.stats.CalculatorHelper.FullDataCalculator
-import services.stats.FullDataCalculatorAdapter
-import services.stats.calc.AllDefinedQuartilesCalcIOTypes._
+import services.stats.{Calculator, FullDataCalculatorAdapter, FullDataCalculatorTypePack}
 
-object AllDefinedQuartilesCalcIOTypes {
-  type IN[T] = T
-  type OUT[T] = Option[Quartiles[T]]
-  type OPT[T] = T => Double
+trait AllDefinedQuartilesCalcTypePack[T] extends FullDataCalculatorTypePack {
+  type IN = T
+  type OUT = Option[Quartiles[T]]
+  type OPT = T => Double
 }
 
-private class AllDefinedQuartilesCalc[T: Ordering] extends FullDataCalculatorAdapter[IN[T], OUT[T], OPT[T]] {
+private class AllDefinedQuartilesCalc[T: Ordering] extends FullDataCalculatorAdapter[AllDefinedQuartilesCalcTypePack[T]] {
 
   /**
     * Calculate quartiles for boxplots.
@@ -60,5 +58,5 @@ case class Quartiles[T <% Ordered[T]](
 }
 
 object AllDefinedQuartilesCalc {
-  def apply[T: Ordering]: FullDataCalculator[T, Option[Quartiles[T]], T => Double] = new AllDefinedQuartilesCalc[T]
+  def apply[T: Ordering]: Calculator[AllDefinedQuartilesCalcTypePack[T]] = new AllDefinedQuartilesCalc[T]
 }

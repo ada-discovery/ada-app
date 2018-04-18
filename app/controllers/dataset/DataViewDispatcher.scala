@@ -10,7 +10,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.mvc.{Action, AnyContent, Request, Result}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
-import util.SecurityUtil.{createDataSetPermission, restrictAdmin, restrictChainFuture}
+import util.SecurityUtil.createDataSetPermission
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

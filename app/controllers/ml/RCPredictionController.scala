@@ -20,7 +20,7 @@ import play.api.mvc.{Action, AnyContent, Controller, Request}
 import services.DataSpaceService
 import services.ml.RCPredictionService
 import util.MessageLogger
-import util.SecurityUtil.restrictAdminAny
+import util.SecurityUtil.restrictAdminAnyNoCaching
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -114,7 +114,7 @@ class RCPredictionController @Inject()(
     seriesPreprocessingType = _seriesPreprocessingType
   }
 
-  def showRCPrediction = restrictAdminAny(deadbolt) {
+  def showRCPrediction = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
       for {
         tree <- dataSpaceService.getTreeForCurrentUser(request)
@@ -122,7 +122,7 @@ class RCPredictionController @Inject()(
         Ok(views.html.admin.rcPrediction(rcPredictionSettingsForm, tree))
   }
 
-  def runRCPrediction = restrictAdminAny(deadbolt) {
+  def runRCPrediction = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
       rcPredictionSettingsForm.bindFromRequest.fold(
         { formWithErrors =>

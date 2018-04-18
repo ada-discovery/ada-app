@@ -1,29 +1,29 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.{Flow, Sink}
-import services.stats.Calculator
+import services.stats.{Calculator, CalculatorTypePack}
 import play.api.Logger
 
 import scala.collection.mutable
-import scala.concurrent.Future
-import DistanceCalcIOTypes._
 
-object DistanceCalcIOTypes {
+trait DistanceCalcTypePack[T] extends CalculatorTypePack {
+  type IN = Seq[T]
   type OUT = Seq[Seq[Double]]
   type INTER = Array[mutable.ArraySeq[Double]]
+  type OPT = Unit
+  type FLOW_OPT = Option[Int]
+  type SINK_OPT = Unit
 }
 
-protected abstract class DistanceCalc[IN, OPT2, OPT3] extends Calculator[Seq[IN], OUT, INTER, Unit, OPT2, OPT3] {
+protected abstract class DistanceCalc[T, C <: DistanceCalcTypePack[T]] extends Calculator[C] with MatrixCalcHelper {
 
   private val logger = Logger
 
-  protected def dist(el1: IN, el2: IN): Option[Double]
+  protected def dist(el1: T, el2: T): Option[Double]
 
   protected def processSum(sum: Double): Double
 
-  protected def featuresNumAndGroupSizes: OPT2 => (Int, Seq[Int])
-
-  override def fun(o: Unit) = { values: Traversable[Seq[IN]] =>
+  override def fun(o: Unit) = { values: Traversable[Seq[T]] =>
     val elementsCount = if (values.nonEmpty) values.head.size else 0
 
     def calc(index1: Int, index2: Int) = {
@@ -46,19 +46,26 @@ protected abstract class DistanceCalc[IN, OPT2, OPT3] extends Calculator[Seq[IN]
     }.toList
   }
 
-  override def flow(options: OPT2) = {
-    val (n, parallelGroupSizes) = featuresNumAndGroupSizes(options)
-
-    val starts = parallelGroupSizes.scanLeft(0){_+_}
-    val startEnds = parallelGroupSizes.zip(starts).map{ case (size, start) => (start, Math.min(start + size, n) - 1)}
-
-    Flow[Seq[IN]].fold[INTER](
-      (for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(0d): _*)).toArray
+  override def flow(paralellism: Option[Int]) = {
+    Flow[IN].fold[INTER](
+      Array()
     ) {
       case (accumGlobal, featureValues) =>
+        val n = featureValues.size
+
+        // calculate the optimal computation start and end indices in the matrix
+        val startEnds = calcStartEnds(n, paralellism)
+
+        // if the accumulator is empty, initialized it with zero counts/sums
+        val initializedAccumGlobal =
+          if (accumGlobal.length == 0) {
+            (for (i <- 0 to n - 1) yield mutable.ArraySeq(Seq.fill(i)(0d): _*)).toArray
+          } else
+            accumGlobal
+
         def calcAux(from: Int, to: Int) =
           for (i <- from to to) {
-            val rowPSums = accumGlobal(i)
+            val rowPSums = initializedAccumGlobal(i)
             val value1 = featureValues(i)
             for (j <- 0 to i - 1) {
               val value2 = featureValues(j)
@@ -72,11 +79,11 @@ protected abstract class DistanceCalc[IN, OPT2, OPT3] extends Calculator[Seq[IN]
           case Nil => calcAux(0, n - 1)
           case _ => startEnds.par.foreach((calcAux(_, _)).tupled)
         }
-        accumGlobal
+        initializedAccumGlobal
     }
   }
 
-  override def postFlow(options: OPT3) = { triangleResults: INTER =>
+  override def postFlow(options: SINK_OPT) = { triangleResults: INTER =>
     val n = triangleResults.length
     logger.info("Generating a full matrix from the triangle sum results.")
 

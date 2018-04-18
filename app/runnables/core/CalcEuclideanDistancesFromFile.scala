@@ -12,13 +12,16 @@ import scala.reflect.runtime.universe.typeOf
 
 class CalcEuclideanDistancesFromFile @Inject() (statsService: StatsService) extends InputFutureRunnable[CalcEuclideanDistancesFromFileSpec] {
 
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
+
   override def runAsFuture(input: CalcEuclideanDistancesFromFileSpec) =
     for {
       // create a double-value file source and retrieve the field names
       (source, fieldNames) <- FeatureMatrixIO.load(input.inputFileName, input.skipFirstColumns)
 
       // calc Euclidean distances
-      distances <- statsService.calcEuclideanDistanceAllDefinedStreamed(source, fieldNames.size, input.streamParallelism)
+      distances <- statsService.euclideanDistanceAllDefinedExec.execStreamed(input.streamParallelism, input.streamParallelism)(source)
     } yield
       FeatureMatrixIO.saveSquare(
         distances,

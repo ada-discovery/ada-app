@@ -5,6 +5,7 @@ import javax.inject.Inject
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import controllers.core.WebContext
 import models.FieldTypeId
+import play.api.Logger
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json._
@@ -31,6 +32,8 @@ class AuthController @Inject() (
     messagesApi: MessagesApi,
     webJarAssets: WebJarAssets
   ) extends Controller with LoginLogout with AdaAuthConfig {
+
+  private val logger = Logger
 
   /**
     * Login form definition.
@@ -127,9 +130,10 @@ class AuthController @Inject() (
           userOption <- userManager.findById(idPassword._1)
 
           response <-
-            if (!authenticationSuccessful)
+            if (!authenticationSuccessful) {
+              logger.info(s"Unsuccessful login attempt from the ip address: ${request.remoteAddress}")
               Future(authenticationUnsuccessfulResult)
-            else
+            } else
               userOption match {
                 case Some(user) => loginSuccessfulResult(user.ldapDn)
                 case None => Future(userNotFoundResult)

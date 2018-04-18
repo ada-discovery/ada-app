@@ -30,7 +30,7 @@ import java.io.{File, FileInputStream, FileOutputStream}
 import controllers.core._
 import dataaccess.AscSort
 import services.{DataSetImportScheduler, DataSetService, DataSpaceService}
-import util.SecurityUtil.restrictAdminAny
+import util.SecurityUtil.restrictAdminAnyNoCaching
 import views.html.{datasetimport => view}
 import views.html.layout
 import util.{MessageLogger, getRequestParamValue}
@@ -354,7 +354,7 @@ class DataSetImportController @Inject()(
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled}
 
-  def create(concreteClassName: String) = restrictAdminAny(deadbolt) {
+  def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
 
       def createAux[E <: DataSetImport](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =
@@ -365,7 +365,7 @@ class DataSetImportController @Inject()(
       createAux(getFormWithViews(concreteClassName))
   }
 
-  def execute(id: BSONObjectID) = restrictAdminAny(deadbolt) {
+  def execute(id: BSONObjectID) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Data set import #$id not found"))
@@ -417,7 +417,7 @@ class DataSetImportController @Inject()(
     }
   }
 
-  def idAndNames = restrictAdminAny(deadbolt) {
+  def idAndNames = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
       for {
         imports <- repo.find(sort = Seq(AscSort("name")))
@@ -432,7 +432,7 @@ class DataSetImportController @Inject()(
       }
   }
 
-  def copy(id: BSONObjectID) = restrictAdminAny(deadbolt) {
+  def copy(id: BSONObjectID) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Entity #$id not found"))

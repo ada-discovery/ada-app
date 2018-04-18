@@ -1,4 +1,4 @@
-package services.stats.jsonin
+package services.stats.calcjsonin
 
 import services.stats.calc._
 import dataaccess.ReflectionUtil.construct2
@@ -91,25 +91,25 @@ object TestFind extends App {
 
   println("----------------------------")
 
-  println(factory.applyOption[UniqueDistributionCountsCalcIOTypes.IN[Any]])
-  println(factory.applyOption[UniqueDistributionCountsCalcIOTypes.IN[String]])
-  println(factory.applyOption[NumericDistributionCountsCalcIOTypes.IN])
+  println(factory.applyOption[UniqueDistributionCountsCalcTypePack[Any]#IN])
+  println(factory.applyOption[UniqueDistributionCountsCalcTypePack[String]#IN])
+  println(factory.applyOption[NumericDistributionCountsCalcTypePack#IN])
   println(factory.applyOption[Option[Any]])
   println(factory.applyOption[Option[Double]])
-  println(factory.applyOption[Array[NumericDistributionCountsCalcIOTypes.IN]])
-  println(factory.applyOption[Array[NumericDistributionCountsCalcIOTypes.IN]])
+  println(factory.applyOption[Array[NumericDistributionCountsCalcTypePack#IN]])
+  println(factory.applyOption[Array[NumericDistributionCountsCalcTypePack#IN]])
 
   println("----------------------------")
 
-  println(factory.applyOption[NumericDistributionCountsCalcIOTypes.IN](NumericDistributionCountsCalc))
-  println(factory.applyOption[NumericDistributionCountsCalcIOTypes.IN](NumericDistributionCountsCalc))
+  println(factory.applyOption[NumericDistributionCountsCalcTypePack#IN](NumericDistributionCountsCalc))
+  println(factory.applyOption[NumericDistributionCountsCalcTypePack#IN](NumericDistributionCountsCalc))
 
   println("----------------------------")
 
-  println(factory.applyOption[TupleCalcIOTypes.IN[Any, Any]])
-  println(factory.applyOption[TupleCalcIOTypes.IN[Int, Int]])
+  println(factory.applyOption[TupleCalcTypePack[Any, Any]#IN])
+  println(factory.applyOption[TupleCalcTypePack[Int, Int]#IN])
   println(factory.applyOption[(Option[Any], Option[Any])])
-  println(factory.applyOption[GroupTupleCalcIOTypes.IN[String, Any, Any]])
-  println(factory.applyOption[GroupTupleCalcIOTypes.IN[Any, Any, Any]])
-  println(factory.applyOption[GroupTupleCalcIOTypes.IN[String, Int, Double]])
+  println(factory.applyOption[GroupTupleCalcTypePack[String, Any, Any]#IN])
+  println(factory.applyOption[GroupTupleCalcTypePack[Any, Any, Any]#IN])
+  println(factory.applyOption[GroupTupleCalcTypePack[String, Int, Double]#IN])
 }

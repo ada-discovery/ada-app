@@ -1,18 +1,17 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.{Flow, Keep, Sink}
-import services.stats.CalculatorHelper.NoOptionsCalculator
-import services.stats.calc.GroupTupleCalcIOTypes._
+import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import util.AkkaStreamUtil._
 import util.GroupMapList3
 
-object GroupTupleCalcIOTypes {
-  type IN[G, A, B] = (Option[G], Option[A], Option[B])
-  type OUT[G, A, B] = Traversable[(Option[G], Traversable[(A, B)])]
-  type INTER[G, A, B] = Seq[(Option[G], Seq[(A, B)])]
+trait GroupTupleCalcTypePack[G, A, B] extends NoOptionsCalculatorTypePack {
+  type IN = (Option[G], Option[A], Option[B])
+  type OUT = Traversable[(Option[G], Traversable[(A, B)])]
+  type INTER = Seq[(Option[G], Seq[(A, B)])]
 }
 
-private[stats] class GroupTupleCalc[G, A, B] extends NoOptionsCalculator[IN[G, A, B], OUT[G, A, B], INTER[G, A, B]] {
+private[stats] class GroupTupleCalc[G, A, B] extends Calculator[GroupTupleCalcTypePack[G, A, B]] {
 
   private val maxGroups = Int.MaxValue
 
@@ -35,10 +34,10 @@ private[stats] class GroupTupleCalc[G, A, B] extends NoOptionsCalculator[IN[G, A
       ab._2.map(b => (a, b))
     )
 
-  private def toOption2(gab: IN[G, A, B]) =
+  private def toOption2(gab: IN) =
     (gab._1, toOption(gab._2, gab._3))
 }
 
 object GroupTupleCalc {
-  def apply[G, A, B]: NoOptionsCalculator[IN[G, A, B], OUT[G, A, B], INTER[G, A, B]] = new GroupTupleCalc[G, A, B]
+  def apply[G, A, B]: Calculator[GroupTupleCalcTypePack[G, A, B]] = new GroupTupleCalc[G, A, B]
 }

@@ -5,8 +5,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import models.Field
 import play.api.libs.json.JsObject
-import services.stats.calc.{ArrayCalc, GroupUniqueDistributionCountsCalc}
-import services.stats.jsonin.JsonInputConverterFactory
+import services.stats.calc.{ArrayCalc, ArrayCalculatorTypePack}
+import services.stats.calcjsonin.JsonInputConverterFactory
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -14,33 +14,30 @@ import scala.reflect.runtime.universe._
 
 object CalculatorHelper {
 
-  type NoOptionsCalculator[IN, OUT, INTER] = Calculator[IN, OUT, INTER, Unit, Unit, Unit]
-  type FullDataCalculator[IN, OUT, OPT] = Calculator[IN, OUT, Traversable[IN], OPT, Unit, OPT]
-
   private val jicf = JsonInputConverterFactory
 
-  implicit class RunExt[IN, OUT, INTER, OPT1, OPT2, OPT3](
-    val calculator: Calculator[IN, OUT, INTER, OPT1, OPT2, OPT3]
-  ) extends AnyVal {
+  implicit class RunExt[C <: CalculatorTypePack] (
+    val calculator: Calculator[C])(
+    implicit materializer: Materializer
+  ) {
 
     def runFlow(
-      options2: OPT2,
-      options3: OPT3)(
-      source: Source[IN, _])(
-      implicit materializer: Materializer
-    ): Future[OUT] =
+      options2: C#FLOW_OPT,
+      options3: C#SINK_OPT)(
+      source: Source[C#IN, _]
+    ): Future[C#OUT] =
       source.via(calculator.flow(options2)).runWith(Sink.head).map(calculator.postFlow(options3))
   }
 
-  implicit class JsonExt[
-    IN: TypeTag, OUT, INTER, OPT1, OPT2, OPT3
-  ](
-    val calculator: Calculator[IN, OUT, INTER, OPT1, OPT2, OPT3]
+  implicit class JsonExt[C <: CalculatorTypePack](
+    val calculator: Calculator[C])(
+    implicit inputTypeTag: TypeTag[C#IN]
   ) {
+
     def jsonFun(
       fields: Seq[Field],
-      options: OPT1
-    ): Traversable[JsObject] => OUT = {
+      options: C#OPT
+    ): Traversable[JsObject] => C#OUT = {
       (jsons: Traversable[JsObject]) =>
         val jsonConverter = jsonConvert(fields)
         val inputs = jsons.map(jsonConverter)
@@ -49,11 +46,29 @@ object CalculatorHelper {
 
     def jsonFlow(
       fields: Seq[Field],
-      options: OPT2
-    ): Flow[JsObject, INTER, NotUsed] = {
+      options: C#FLOW_OPT
+    ): Flow[JsObject, C#INTER, NotUsed] = {
       val jsonConverter = jsonConvert(fields)
       Flow[JsObject].map(jsonConverter).via(calculator.flow(options))
     }
+
+    def runJsonFlow(
+      fields: Seq[Field],
+      options2: C#FLOW_OPT,
+      options3: C#SINK_OPT)(
+      source: Source[JsObject, _])(
+      implicit materializer: Materializer
+    ): Future[C#OUT] =
+      source.via(jsonFlow(fields, options2)).runWith(Sink.head).map(calculator.postFlow(options3))
+
+    private def jsonConvert(fields: Seq[Field]) =
+      jicf.apply[C#IN](calculator).apply(fields)
+  }
+
+  implicit class ArrayJsonExt[C <: CalculatorTypePack](
+    val calculator: Calculator[C])(
+    implicit inputTypeTag: TypeTag[C#IN], arrayTypeTag: TypeTag[ArrayCalculatorTypePack[C]#IN]
+  ) {
 
     /**
       * Transforms jsons to the expected input and executes.
@@ -67,12 +82,12 @@ object CalculatorHelper {
     def jsonFunA(
       scalarOrArrayField: Field,
       fields: Seq[Field],
-      options: OPT1
-    ): Traversable[JsObject] => OUT =
-        if (scalarOrArrayField.isArray)
-          ArrayCalc(calculator).jsonFun(fields, options)
-        else
-          calculator.jsonFun(fields, options)
+      options: C#OPT
+    ): Traversable[JsObject] => C#OUT =
+      if (scalarOrArrayField.isArray) {
+        ArrayCalc(calculator).jsonFun(fields, options)
+      } else
+        calculator.jsonFun(fields, options)
 
     /**
       * Creates a flow (stream) for an execution with inputs transformed from provided jsons.
@@ -86,30 +101,21 @@ object CalculatorHelper {
     def jsonFlowA(
       scalarOrArrayField: Field,
       fields: Seq[Field],
-      options: OPT2
-    ): Flow[JsObject, INTER, NotUsed] =
+      options: C#FLOW_OPT
+    ): Flow[JsObject, C#INTER, NotUsed] =
       if (scalarOrArrayField.isArray)
         ArrayCalc(calculator).jsonFlow(fields, options)
       else
         calculator.jsonFlow(fields, options)
 
-    def runJsonFlow(
-      fields: Seq[Field],
-      options2: OPT2,
-      options3: OPT3)(
-      source: Source[JsObject, _])(
-      implicit materializer: Materializer
-    ): Future[OUT] =
-      source.via(jsonFlow(fields, options2)).runWith(Sink.head).map(calculator.postFlow(options3))
-
     def runJsonFlowA(
       scalarOrArrayField: Field,
       fields: Seq[Field],
-      options2: OPT2,
-      options3: OPT3)(
+      options2: C#FLOW_OPT,
+      options3: C#SINK_OPT)(
       source: Source[JsObject, _])(
       implicit materializer: Materializer
-    ): Future[OUT] =
+    ): Future[C#OUT] =
       if (scalarOrArrayField.isArray)
         ArrayCalc(calculator).runJsonFlow(fields, options2, options3)(source)
       else
@@ -118,15 +124,15 @@ object CalculatorHelper {
     private def jsonConvert(fields: Seq[Field]) = {
       val unwrappedCalculator =
         calculator match {
-          case arrayCalc: ArrayCalc[_, _, _, _, _, _] => arrayCalc.innerCalculator
+          case arrayCalc: ArrayCalc[C, _] => arrayCalc.innerCalculator
           case _ => calculator
         }
-      jicf[IN](unwrappedCalculator).apply(fields)
+      jicf.apply[C#IN](unwrappedCalculator).apply(fields)
     }
   }
 
-  implicit class NoOptionsExt[IN, OUT, INTER](
-    val calculator: NoOptionsCalculator[IN, OUT, INTER]
+  implicit class NoOptionsExt[C <: NoOptionsCalculatorTypePack](
+    val calculator: Calculator[C]
   ) {
     def fun_ = calculator.fun(())
 
@@ -135,15 +141,14 @@ object CalculatorHelper {
     def postFlow_ = calculator.postFlow(())
 
     def runFlow_(
-      source: Source[IN, _])(
+      source: Source[C#IN, _])(
       implicit materializer: Materializer
-    ): Future[OUT] = calculator.runFlow((), ())(source)
+    ) = calculator.runFlow((), ())(source)
   }
 
-  implicit class NoOptionsJsonExt[
-    IN: TypeTag, OUT, INTER
-  ](
-    val calculator: NoOptionsCalculator[IN, OUT, INTER]
+  implicit class NoOptionsJsonExt[C <: NoOptionsCalculatorTypePack](
+    val calculator: Calculator[C])(
+    implicit typeTag: TypeTag[C#IN]
   ) {
     def jsonFun_(fields: Field*) =
       calculator.jsonFun(fields, ())
@@ -172,4 +177,81 @@ object CalculatorHelper {
     ) =
       calculator.runJsonFlowA(scalarOrArrayField, fields, (), ())(source)
   }
+
+  implicit class NoOptionsExecExt[C <: NoOptionsCalculatorTypePack, F](
+    val calculatorExecutor: CalculatorExecutor[C, F]
+  ) {
+    def exec_ =
+      calculatorExecutor.exec(())(_)
+
+    def execStreamed_(
+      source: Source[C#IN, _])(
+      implicit materializer: Materializer
+    ) = calculatorExecutor.execStreamed((), ())(source)
+
+    def execJson_(
+      fields: F
+    ) = calculatorExecutor.execJson((), fields)(_)
+
+    def execJsonA_(
+      scalarOrArrayField: Field,
+      fields: F
+    ) = calculatorExecutor.execJsonA((), scalarOrArrayField, fields)(_)
+
+    def execJsonStreamed_(
+      fields: F)(
+      source: Source[JsObject, _])(
+      implicit materializer: Materializer
+    ) = calculatorExecutor.execJsonStreamed((), (), fields)(source)
+
+    def execJsonStreamedA_(
+      scalarOrArrayField: Field,
+      fields: F)(
+      source: Source[JsObject, _])(
+      implicit materializer: Materializer
+    ) = calculatorExecutor.execJsonStreamedA((), (), scalarOrArrayField, fields)(source)
+
+    def createJsonFlow_(
+      fields: F
+    ) = calculatorExecutor.createJsonFlow((), fields)
+
+    def createJsonFlowA_(
+      scalarOrArrayField: Field,
+      fields: F
+    ) = calculatorExecutor.createJsonFlowA((), scalarOrArrayField, fields)
+  }
+
+  implicit class SingleFieldExecExt[C <: CalculatorTypePack](
+    val calculatorExecutor: CalculatorExecutor[C, Field]
+  ) {
+    def execJsonA_(
+      options: C#OPT,
+      field: Field
+    ) = calculatorExecutor.execJsonA(options, field, field)(_)
+
+    def execJsonStreamedA_(
+      flowOptions: C#FLOW_OPT,
+      postFlowOptions: C#SINK_OPT,
+      field: Field)(
+      source: Source[JsObject, _])(
+      implicit materializer: Materializer
+    ) = calculatorExecutor.execJsonStreamedA(flowOptions, postFlowOptions, field, field)(source)
+
+    def createJsonFlowA_(
+      options: C#FLOW_OPT,
+      field: Field
+    ) = calculatorExecutor.createJsonFlowA(options, field, field)
+  }
+}
+
+trait FullDataCalculatorTypePack extends CalculatorTypePack {
+  override type INTER = Traversable[IN]
+  override type FLOW_OPT = Unit
+  override type SINK_OPT = OPT
+}
+
+trait NoOptionsCalculatorTypePack extends CalculatorTypePack {
+  override type OPT = Unit
+  override type FLOW_OPT = Unit
+  override type SINK_OPT = Unit
 }

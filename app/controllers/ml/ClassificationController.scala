@@ -21,7 +21,7 @@ import play.twirl.api.Html
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
 import services.DataSpaceService
-import util.SecurityUtil.{restrictAdminAny, restrictSubjectPresentAny}
+import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAny}
 import views.html.{layout, classification => view}
 import models.ml.classification.ValueOrSeq.ValueOrSeq
 
@@ -236,7 +236,7 @@ class ClassificationController @Inject()(
   // default form... unused
   override protected[controllers] val form = logisticRegressionForm.asInstanceOf[Form[Classification]]
 
-  def create(concreteClassName: String) = restrictAdminAny(deadbolt) {
+  def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
 
       def createAux[E <: Classification](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =

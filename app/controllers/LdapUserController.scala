@@ -22,7 +22,7 @@ class LdapUserController @Inject() (
 
   private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)
 
-  def listAll = restrictAdminAny(deadbolt) {
+  def listAll = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {
       implicit val msg = messagesApi.preferred(request)
 
@@ -31,7 +31,7 @@ class LdapUserController @Inject() (
     }
   }
 
-  def get(id: String) = restrictAdminAny(deadbolt) {
+  def get(id: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {
       implicit val msg = messagesApi.preferred(request)
 

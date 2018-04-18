@@ -1,21 +1,19 @@
 package services.stats.calc
 
-import akka.stream.scaladsl.{Flow, Keep}
-import services.stats.Calculator
+import akka.stream.scaladsl.Flow
+import services.stats.{Calculator, CalculatorTypePack}
 
-private[stats] trait OptionInputCalc[IN, OUT, INTER, OPT1, OPT2, OPT3] extends Calculator[Option[IN], OUT, INTER, OPT1, OPT2, OPT3] {
+private[stats] class OptionInputCalc[C <: CalculatorTypePack](val allDefinedCalc: Calculator[C]) {
 
-  protected val allDefinedCalc: Calculator[IN, OUT, INTER, OPT1, OPT2, OPT3]
+  def fun(options: C#OPT) =
+    (values: Traversable[Option[C#IN]]) => allDefinedCalc.fun(options)(values.flatten)
 
-  override def fun(options: OPT1) =
-    (values) => allDefinedCalc.fun(options)(values.flatten)
-
-  override def flow(options: OPT2) = {
+  def flow(options: C#FLOW_OPT) = {
     val allDefinedFlow = allDefinedCalc.flow(options)
-    val flatFlow = Flow[Option[IN]].collect { case Some(x) => x }
+    val flatFlow = Flow[Option[C#IN]].collect { case Some(x) => x }
     flatFlow.via(allDefinedFlow)
   }
 
-  override def postFlow(options: OPT3) =
+  def postFlow(options: C#SINK_OPT) =
     allDefinedCalc.postFlow(options)
 }

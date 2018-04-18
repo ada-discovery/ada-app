@@ -62,7 +62,7 @@ trait AdminRestricted {
   protected def restrict[A](
     bodyParser: BodyParser[A])(
     action: AuthenticatedAction[A]
-  ) = restrictAdmin[A](deadbolt, bodyParser)(action)
+  ) = restrictAdminNoCaching[A](deadbolt, bodyParser)(action)
 }
 
 trait AdminRestrictedReadonlyController[ID] extends RestrictedReadonlyController[ID] with AdminRestricted

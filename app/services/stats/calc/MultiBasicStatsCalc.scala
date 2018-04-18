@@ -1,16 +1,15 @@
 package services.stats.calc
 
 import akka.stream.scaladsl.{Flow, Sink}
-import services.stats.CalculatorHelper.NoOptionsCalculator
-import services.stats.calc.MultiBasicStatsCalcIOTypes._
+import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 
-object MultiBasicStatsCalcIOTypes {
+trait MultiBasicStatsCalcTypePack extends NoOptionsCalculatorTypePack {
   type IN = Seq[Option[Double]]
   type OUT = Seq[Option[BasicStatsResult]]
   type INTER = Seq[BasicStatsAccum]
 }
 
-object MultiBasicStatsCalc extends NoOptionsCalculator[IN, OUT, INTER] {
+object MultiBasicStatsCalc extends Calculator[MultiBasicStatsCalcTypePack] {
 
   private val basicCalc = BasicStatsCalc
 
@@ -35,5 +34,5 @@ object MultiBasicStatsCalc extends NoOptionsCalculator[IN, OUT, INTER] {
         initAccums.zip(values).map { case (accum, value) => basicCalc.updateAccum(accum, value)}
     }
 
-  override def postFlow(o: Unit) = _.map(basicCalc.postFlow())
+  override def postFlow(o: Unit) = _.map(basicCalc.postFlow(()))
 }

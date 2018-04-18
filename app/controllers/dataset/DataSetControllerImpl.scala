@@ -19,7 +19,7 @@ import com.google.inject.assistedinject.Assisted
 import controllers._
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import Criterion.Infix
-import controllers.core.{ExportableAction, ReadonlyControllerImpl, WebContext}
+import controllers.core._
 import org.apache.commons.lang3.StringEscapeUtils
 import models.FilterCondition.FilterOrId
 import models.Widget.WidgetWrites
@@ -43,6 +43,7 @@ import models.ml.{ClassificationEvalMetric, RegressionEvalMetric}
 import views.html.dataset
 import models.ml.DataSetTransformation._
 import models.security.{SecurityRole, UserManager}
+import play.mvc.With
 import services.stats.ChiSquareResult.chiSquareResultFormat
 import services.stats.{AnovaResult, ChiSquareResult, StatsService}
 

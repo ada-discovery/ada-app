@@ -3,6 +3,7 @@ package util
 import java.security.MessageDigest
 
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
+import controllers.core.WithNoCaching
 import models.security.SecurityRole
 import play.api.http.{Status => HttpStatus}
 import play.api.mvc.BodyParsers.parse
@@ -76,18 +77,32 @@ object SecurityUtil {
   ): Action[A] =
     deadbolt.Restrict[A](List(Array(SecurityRole.admin)))(bodyParser)(action)
 
+  def restrictAdminAny(
+    deadbolt: DeadboltActions)(
+    action: AuthenticatedAction[AnyContent]
+  ): Action[AnyContent] =
+    restrictAdmin(deadbolt, parse.anyContent)(action)
+
+  def restrictAdminNoCaching[A](
+    deadbolt: DeadboltActions,
+    bodyParser: BodyParser[A])(
+    action: AuthenticatedAction[A]
+  ): Action[A] = WithNoCaching (
+    restrictAdmin(deadbolt, bodyParser)(action)
+  )
+
+  def restrictAdminAnyNoCaching(
+    deadbolt: DeadboltActions)(
+    action: AuthenticatedAction[AnyContent]
+  ): Action[AnyContent] =
+    restrictAdminNoCaching(deadbolt, parse.anyContent)(action)
+
   def restrictSubjectPresent[A](
     deadbolt: DeadboltActions,
     bodyParser: BodyParser[A])(
     action: AuthenticatedAction[A]
   ): Action[A] =
     deadbolt.SubjectPresent[A]()(bodyParser)(action)
-
-  def restrictAdminAny(
-    deadbolt: DeadboltActions)(
-    action: AuthenticatedAction[AnyContent]
-  ): Action[AnyContent] =
-    restrictAdmin(deadbolt, parse.anyContent)(action)
 
   def restrictSubjectPresentAny(
     deadbolt: DeadboltActions)(

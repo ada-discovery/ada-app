@@ -1,19 +1,18 @@
 package services.stats.calc
 
-import services.stats.Calculator
-import services.stats.calc.QuartilesCalcIOTypes._
+import services.stats.{Calculator, CalculatorTypePack}
 
-object QuartilesCalcIOTypes {
-  type IN[T] = Option[T]
-  type OUT[T] = Option[Quartiles[T]]
-  type INTER[T] = Traversable[T]
-  type OPT[T] = T => Double
+trait QuartilesCalcTypePack[T] extends CalculatorTypePack {
+  type IN = Option[T]
+  type OUT = Option[Quartiles[T]]
+  type INTER = Traversable[T]
+  type OPT = T => Double
+  type FLOW_OPT = Unit
+  type SINK_OPT = OPT
 }
 
-private[stats] class QuartilesCalc[T: Ordering] extends OptionInputCalc[T, OUT[T], Traversable[T], OPT[T], Unit, OPT[T]] {
-  override protected val allDefinedCalc = AllDefinedQuartilesCalc[T]
-}
+private[stats] class QuartilesCalc[T: Ordering] extends OptionInputCalc(AllDefinedQuartilesCalc[T]) with Calculator[QuartilesCalcTypePack[T]]
 
 object QuartilesCalc {
-  def apply[T: Ordering]: Calculator[IN[T], OUT[T], INTER[T], OPT[T], Unit, OPT[T]] = new QuartilesCalc[T]
+  def apply[T: Ordering]: Calculator[QuartilesCalcTypePack[T]] = new QuartilesCalc[T]
 }

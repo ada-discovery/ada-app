@@ -13,7 +13,7 @@ import play.api.data.Form
 import runnables.InputRunnable
 import util.MessageLogger
 import util.ReflectionUtil.findClasses
-import _root_.util.SecurityUtil.{restrictAdmin, restrictAdminAny}
+import _root_.util.SecurityUtil.restrictAdminAnyNoCaching
 import views.html.{admin => adminviews}
 import java.{util => ju}
 
@@ -42,7 +42,7 @@ class AdminController @Inject() (
     *
     * @return View listing all runnables in directory "runnables".
     */
-  def listRunnables = restrictAdminAny(deadbolt) {
+  def listRunnables = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {
       val classes1 = findClasses[Runnable](libPrefix, Some("runnables."), None)
       val classes2 = findClasses[InputRunnable[_]](libPrefix, Some("runnables."), None)
@@ -54,7 +54,7 @@ class AdminController @Inject() (
 
   private val runnablesRedirect = Redirect(routes.AdminController.listRunnables())
 
-  def runScript(className: String) = restrictAdminAny(deadbolt) {
+  def runScript(className: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {
       implicit val msg = messagesApi.preferred(request)
       try {
@@ -88,7 +88,7 @@ class AdminController @Inject() (
     }
   }
 
-  def runInputScript(className: String) = restrictAdminAny(deadbolt) {
+  def runInputScript(className: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {
       implicit val msg = messagesApi.preferred(request)
       try {

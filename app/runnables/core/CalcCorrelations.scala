@@ -27,6 +27,8 @@ class CalcCorrelations @Inject()(
 
   private val logger = Logger
 
+  import statsService._
+
   def runAsFuture(input: CalcCorrelationsSpec) = {
     val dsa = dsaf(input.dataSetId).get
     val dataSetRepo = dsa.dataSetRepo
@@ -57,7 +59,7 @@ class CalcCorrelations @Inject()(
           for {
             items <- dataSetRepo.find(projection = fieldNames)
           } yield
-            statsService.calcPearsonCorrelations(items, sortedFields)
+            pearsonCorrelationExec.execJson((), sortedFields)(items)
         }.map { results =>
           if (results.isEmpty) {
             (Nil, 0)
@@ -71,7 +73,7 @@ class CalcCorrelations @Inject()(
       (streamedCorrelations, streamExecTime) <- {
         val calcStart = new ju.Date
         seqFutures(1 to input.streamRepetitions) { _ =>
-          statsService.calcPearsonCorrelationsStreamed(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
+          calcPearsonCorrelationsStreamed(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
         }.map { results =>
           val execTime = new ju.Date().getTime - calcStart.getTime
           (results.head, execTime.toDouble / (1000 * input.streamRepetitions))

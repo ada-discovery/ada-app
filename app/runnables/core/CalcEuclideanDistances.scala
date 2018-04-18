@@ -20,6 +20,8 @@ class CalcEuclideanDistances @Inject()(
     statsService: StatsService
   ) extends InputFutureRunnable[CalcEuclideanDistancesSpec] {
 
+  import statsService._
+
   private val logger = Logger
 
   def runAsFuture(input: CalcEuclideanDistancesSpec) = {
@@ -52,7 +54,7 @@ class CalcEuclideanDistances @Inject()(
           for {
             items <- dataSetRepo.find(projection = fieldNames)
           } yield
-            statsService.calcEuclideanDistance(items, sortedFields)
+            euclideanDistanceExec.execJson((), sortedFields)(items)
         }.map { results =>
           if (results.isEmpty) {
             (Nil, 0)
@@ -66,7 +68,7 @@ class CalcEuclideanDistances @Inject()(
       (streamedEuclideanDistances, streamExecTime) <- {
         val calcStart = new ju.Date
         seqFutures(1 to input.streamRepetitions) { _ =>
-          statsService.calcEuclideanDistanceStreamed(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
+          calcEuclideanDistanceStreamed(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
         }.map { results =>
           val execTime = new ju.Date().getTime - calcStart.getTime
           (results.head, execTime.toDouble / (1000 * input.streamRepetitions))
