@@ -23,8 +23,8 @@ class UniqueDistributionTest extends AsyncFlatSpec with Matchers {
   private val doubleCalc = UniqueDistributionCountsCalc[Double]
   private val stringCalc = UniqueDistributionCountsCalc[String]
 
-  private val doubleArrayCalc = ArrayCalc(UniqueDistributionCountsCalc[Double])
-  private val stringArrayCalc = ArrayCalc(UniqueDistributionCountsCalc[String])
+  private val doubleArrayCalc = ArrayCalc.applyNoOptions(UniqueDistributionCountsCalc[Double])
+  private val stringArrayCalc = ArrayCalc.applyNoOptions(UniqueDistributionCountsCalc[String])
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()

@@ -2,7 +2,6 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.StatsHelperUtil.calcMatrixGroupSizes
 import services.stats.StatsService
 import services.stats.calc.{AllDefinedPearsonCorrelationCalc, PearsonCorrelationCalc}
 import services.stats.CalculatorHelper._
@@ -44,23 +43,21 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
     }
 
     val featuresNum = inputs.head.size
-    val noParallelismGroupSizes = calcMatrixGroupSizes(featuresNum, None)
-    val groupSizes = calcMatrixGroupSizes(featuresNum, Some(4))
 
     // standard calculation
     Future(calc.fun()(inputs)).map(checkResult)
 
     // streamed calculations
-    calc.runFlow((featuresNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSource).map(checkResult)
+    calc.runFlow(None, None)(inputSource).map(checkResult)
 
     // streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runFlow((featuresNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow(None, None)(inputSourceAllDefined).map(checkResult)
 
     // parallel streamed calculations
-    calc.runFlow((featuresNum, groupSizes), groupSizes)(inputSource).map(checkResult)
+    calc.runFlow(Some(4), Some(4))(inputSource).map(checkResult)
 
     // parallel streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runFlow((featuresNum, groupSizes), groupSizes)(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow(Some(4), Some(4))(inputSourceAllDefined).map(checkResult)
   }
 
   "Correlations" should "match each other" in {
@@ -88,19 +85,16 @@ class CorrelationTest extends AsyncFlatSpec with Matchers {
       result.size should be (randomFeaturesNum)
     }
 
-    val noParallelismGroupSizes = calcMatrixGroupSizes(randomFeaturesNum, None)
-    val groupSizes = calcMatrixGroupSizes(randomFeaturesNum, Some(4))
-
     // streamed calculations
-    calc.runFlow((randomFeaturesNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSource).map(checkResult)
+    calc.runFlow(None, None)(inputSource).map(checkResult)
 
     // streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runFlow((randomFeaturesNum, noParallelismGroupSizes), noParallelismGroupSizes)(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow(None, None)(inputSourceAllDefined).map(checkResult)
 
     // parallel streamed calculations
-    calc.runFlow((randomFeaturesNum, groupSizes), groupSizes)(inputSource).map(checkResult)
+    calc.runFlow(Some(4), Some(4))(inputSource).map(checkResult)
 
     // parallel streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runFlow((randomFeaturesNum, groupSizes), groupSizes)(inputSourceAllDefined).map(checkResult)
+    allDefinedCalc.runFlow(Some(4), Some(4))(inputSourceAllDefined).map(checkResult)
   }
 }

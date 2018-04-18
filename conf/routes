@@ -4,7 +4,7 @@
 
 # Default path
 GET         /                                                                       controllers.AppController.index
-GET         /studies                                                                controllers.AppController.studies
+GET         /dataSets                                                               controllers.AppController.dataSets
 GET         /contact                                                                controllers.AppController.contact
 
 # User profiles
@@ -76,146 +76,146 @@ POST        /translations/:id                                                   
 POST        /translations/:id/delete                                                controllers.TranslationController.delete(id: BSONObjectID)
 
 # DataSetDispatcher
-GET         /studies/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter: Seq[models.FilterCondition] ?= Nil)
-GET         /studies/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
-GET         /studies/fields                                                         controllers.dataset.DataSetDispatcher.getFields(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
-GET         /studies/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
-GET         /studies/fieldNamesAndLabels                                            controllers.dataset.DataSetDispatcher.getFieldNamesAndLabels(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
-GET         /studies/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
-GET         /studies/fieldTypeAndAllowedValues/:fieldName                           controllers.dataset.DataSetDispatcher.getFieldTypeWithAllowedValues(fieldName: String)
-GET         /studies/field/:fieldName                                               controllers.dataset.DataSetDispatcher.getField(fieldName: String)
-GET         /studies/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(dataViewId: BSONObjectID, delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
-GET         /studies/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(dataViewId: BSONObjectID, filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
-GET         /studies/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
-GET         /studies/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
-GET         /studies/getView                                                        controllers.dataset.DataSetDispatcher.getView(dataViewId: BSONObjectID, tablePages: Seq[models.PageOrder] ?= Nil, filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]] ?= Nil, filterChanged: Boolean ?= false)
-GET         /studies/getWidgets                                                     controllers.dataset.DataSetDispatcher.getWidgets(callbackId: String)
-GET         /studies/getDefaultView                                                 controllers.dataset.DataSetDispatcher.getDefaultView
-GET         /studies/scatter                                                        controllers.dataset.DataSetDispatcher.getScatterStats(xFieldName: Option[String] ?= None, yFieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
-GET         /studies/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
-GET         /studies/distributionWidget                                             controllers.dataset.DataSetDispatcher.getDistributionWidget(fieldName: String, groupFieldName: Option[String] ?= None, filterId: Option[BSONObjectID])
-GET         /studies/correlations                                                   controllers.dataset.DataSetDispatcher.getCorrelations(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
-POST        /studies/calcCorrelations                                               controllers.dataset.DataSetDispatcher.calcCorrelations(fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
-GET         /studies/cumulativeCount                                                controllers.dataset.DataSetDispatcher.getCumulativeCount(fieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
-GET         /studies/clusterization                                                 controllers.dataset.DataSetDispatcher.getClusterization
-GET         /studies/getIndependenceTest                                            controllers.dataset.DataSetDispatcher.getIndependenceTest
-GET         /studies/getSeriesProcessingSpec                                        controllers.dataset.DataSetDispatcher.getSeriesProcessingSpec
-POST        /studies/runSeriesProcessing                                            controllers.dataset.DataSetDispatcher.runSeriesProcessing
-GET         /studies/getSeriesTransformationSpec                                    controllers.dataset.DataSetDispatcher.getSeriesTransformationSpec
-POST        /studies/runSeriesTransformation                                        controllers.dataset.DataSetDispatcher.runSeriesTransformation
-POST        /studies/cluster                                                        controllers.dataset.DataSetDispatcher.cluster(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterId: Option[BSONObjectID], featuresNormalizationType: Option[models.ml.VectorTransformType.Value], pcaDims: Option[Int])
-POST        /studies/testIndependence                                               controllers.dataset.DataSetDispatcher.testIndependence(targetFieldName: String, inputFieldNames: Seq[String], filterId: Option[BSONObjectID])
-GET         /studies/fractalis                                                      controllers.dataset.DataSetDispatcher.getFractalis(fieldName: Option[String] ?= None)
-GET         /studies/table                                                          controllers.dataset.DataSetDispatcher.getTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
-GET         /studies/widgetPanelAndTable                                            controllers.dataset.DataSetDispatcher.getWidgetPanelAndTable(dataViewId: BSONObjectID, tablePage: Int, tableOrder: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
-GET         /studies/categoriesWithFieldsAsTreeNodes                                controllers.dataset.DataSetDispatcher.getCategoriesWithFieldsAsTreeNodes(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
-GET         /studies/records/findCustom                                             controllers.dataset.DataSetDispatcher.findCustom(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil), orderBy: String ?= "", projection: Seq[String] ?= Nil, limit: Option[Int] ?= None, skip: Option[Int] ?= None)
+GET         /dataSets/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter: Seq[models.FilterCondition] ?= Nil)
+GET         /dataSets/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
+GET         /dataSets/fields                                                         controllers.dataset.DataSetDispatcher.getFields(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
+GET         /dataSets/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
+GET         /dataSets/fieldNamesAndLabels                                            controllers.dataset.DataSetDispatcher.getFieldNamesAndLabels(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
+GET         /dataSets/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
+GET         /dataSets/fieldTypeAndAllowedValues/:fieldName                           controllers.dataset.DataSetDispatcher.getFieldTypeWithAllowedValues(fieldName: String)
+GET         /dataSets/field/:fieldName                                               controllers.dataset.DataSetDispatcher.getField(fieldName: String)
+GET         /dataSets/records/exportAsCsv                                            controllers.dataset.DataSetDispatcher.exportRecordsAsCsv(dataViewId: BSONObjectID, delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/records/exportAsJson                                           controllers.dataset.DataSetDispatcher.exportRecordsAsJson(dataViewId: BSONObjectID, filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/records/exportTranSMARTData                                    controllers.dataset.DataSetDispatcher.exportTranSMARTDataFile(delimiter: String ?= "\t")
+GET         /dataSets/records/exportTranSMARTMapping                                 controllers.dataset.DataSetDispatcher.exportTranSMARTMappingFile(delimiter: String ?= "\t")
+GET         /dataSets/getView                                                        controllers.dataset.DataSetDispatcher.getView(dataViewId: BSONObjectID, tablePages: Seq[models.PageOrder] ?= Nil, filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]] ?= Nil, filterChanged: Boolean ?= false)
+GET         /dataSets/getWidgets                                                     controllers.dataset.DataSetDispatcher.getWidgets(callbackId: String)
+GET         /dataSets/getDefaultView                                                 controllers.dataset.DataSetDispatcher.getDefaultView
+GET         /dataSets/scatter                                                        controllers.dataset.DataSetDispatcher.getScatterStats(xFieldName: Option[String] ?= None, yFieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /dataSets/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /dataSets/distributionWidget                                             controllers.dataset.DataSetDispatcher.getDistributionWidget(fieldName: String, groupFieldName: Option[String] ?= None, filterId: Option[BSONObjectID])
+GET         /dataSets/correlations                                                   controllers.dataset.DataSetDispatcher.getCorrelations(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+POST        /dataSets/calcCorrelations                                               controllers.dataset.DataSetDispatcher.calcCorrelations(fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /dataSets/cumulativeCount                                                controllers.dataset.DataSetDispatcher.getCumulativeCount(fieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /dataSets/clusterization                                                 controllers.dataset.DataSetDispatcher.getClusterization
+GET         /dataSets/getIndependenceTest                                            controllers.dataset.DataSetDispatcher.getIndependenceTest
+GET         /dataSets/getSeriesProcessingSpec                                        controllers.dataset.DataSetDispatcher.getSeriesProcessingSpec
+POST        /dataSets/runSeriesProcessing                                            controllers.dataset.DataSetDispatcher.runSeriesProcessing
+GET         /dataSets/getSeriesTransformationSpec                                    controllers.dataset.DataSetDispatcher.getSeriesTransformationSpec
+POST        /dataSets/runSeriesTransformation                                        controllers.dataset.DataSetDispatcher.runSeriesTransformation
+POST        /dataSets/cluster                                                        controllers.dataset.DataSetDispatcher.cluster(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterId: Option[BSONObjectID], featuresNormalizationType: Option[models.ml.VectorTransformType.Value], pcaDims: Option[Int])
+POST        /dataSets/testIndependence                                               controllers.dataset.DataSetDispatcher.testIndependence(targetFieldName: String, inputFieldNames: Seq[String], filterId: Option[BSONObjectID])
+GET         /dataSets/fractalis                                                      controllers.dataset.DataSetDispatcher.getFractalis(fieldName: Option[String] ?= None)
+GET         /dataSets/table                                                          controllers.dataset.DataSetDispatcher.getTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
+GET         /dataSets/widgetPanelAndTable                                            controllers.dataset.DataSetDispatcher.getWidgetPanelAndTable(dataViewId: BSONObjectID, tablePage: Int, tableOrder: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
+GET         /dataSets/categoriesWithFieldsAsTreeNodes                                controllers.dataset.DataSetDispatcher.getCategoriesWithFieldsAsTreeNodes(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
+GET         /dataSets/records/findCustom                                             controllers.dataset.DataSetDispatcher.findCustom(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil), orderBy: String ?= "", projection: Seq[String] ?= Nil, limit: Option[Int] ?= None, skip: Option[Int] ?= None)
 
 # DictionaryDispatcher
-GET         /studies/dictionary                                                     controllers.dataset.DictionaryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
-GET         /studies/dictionary/listAll                                             controllers.dataset.DictionaryDispatcher.listAll(s: String ?= "name")
-GET         /studies/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)
-POST        /studies/dictionary/save                                                controllers.dataset.DictionaryDispatcher.save
-GET         /studies/dictionary/edit/:name                                          controllers.dataset.DictionaryDispatcher.edit(name: String)
-POST        /studies/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.update(name: String)
-POST        /studies/dictionary/updateLabel/:id/:label                              controllers.dataset.DictionaryDispatcher.updateLabel(id: String, label: String)
-GET         /studies/dictionary/jsRoutes                                            controllers.dataset.DictionaryDispatcher.jsRoutes
-GET         /studies/dictionary/exportAsCsv                                         controllers.dataset.DictionaryDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
-GET         /studies/dictionary/exportAsJson                                        controllers.dataset.DictionaryDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/dictionary                                                     controllers.dataset.DictionaryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /dataSets/dictionary/listAll                                             controllers.dataset.DictionaryDispatcher.listAll(s: String ?= "name")
+GET         /dataSets/dictionary/get/:name                                           controllers.dataset.DictionaryDispatcher.get(name: String)
+POST        /dataSets/dictionary/save                                                controllers.dataset.DictionaryDispatcher.save
+GET         /dataSets/dictionary/edit/:name                                          controllers.dataset.DictionaryDispatcher.edit(name: String)
+POST        /dataSets/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.update(name: String)
+POST        /dataSets/dictionary/updateLabel/:id/:label                              controllers.dataset.DictionaryDispatcher.updateLabel(id: String, label: String)
+GET         /dataSets/dictionary/jsRoutes                                            controllers.dataset.DictionaryDispatcher.jsRoutes
+GET         /dataSets/dictionary/exportAsCsv                                         controllers.dataset.DictionaryDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/dictionary/exportAsJson                                        controllers.dataset.DictionaryDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 
 # CategoryDispatcher
-GET         /studies/categories                                                     controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
-GET         /studies/categories/get/:id                                             controllers.dataset.CategoryDispatcher.get(id: BSONObjectID)
-GET         /studies/categories/new                                                 controllers.dataset.CategoryDispatcher.create
-POST        /studies/categories/save                                                controllers.dataset.CategoryDispatcher.save
-POST        /studies/categories/save/:name                                          controllers.dataset.CategoryDispatcher.saveForName(name: String)
-POST        /studies/categories/:id                                                 controllers.dataset.CategoryDispatcher.update(id: BSONObjectID)
-POST        /studies/categories/:id/delete                                          controllers.dataset.CategoryDispatcher.delete(id: BSONObjectID)
-GET         /studies/categories/idAndNames                                          controllers.dataset.CategoryDispatcher.idAndNames
-GET         /studies/categories/getCategoryD3Root                                   controllers.dataset.CategoryDispatcher.getCategoryD3Root
-GET         /studies/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
-GET         /studies/categories/addFields                                           controllers.dataset.CategoryDispatcher.addFields(categoryId: BSONObjectID, fieldNames: Seq[String])
-POST        /studies/categories/updateLabel/:id/:label                              controllers.dataset.CategoryDispatcher.updateLabel(id: BSONObjectID, label: String)
-GET         /studies/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
+GET         /dataSets/categories                                                     controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /dataSets/categories/get/:id                                             controllers.dataset.CategoryDispatcher.get(id: BSONObjectID)
+GET         /dataSets/categories/new                                                 controllers.dataset.CategoryDispatcher.create
+POST        /dataSets/categories/save                                                controllers.dataset.CategoryDispatcher.save
+POST        /dataSets/categories/save/:name                                          controllers.dataset.CategoryDispatcher.saveForName(name: String)
+POST        /dataSets/categories/:id                                                 controllers.dataset.CategoryDispatcher.update(id: BSONObjectID)
+POST        /dataSets/categories/:id/delete                                          controllers.dataset.CategoryDispatcher.delete(id: BSONObjectID)
+GET         /dataSets/categories/idAndNames                                          controllers.dataset.CategoryDispatcher.idAndNames
+GET         /dataSets/categories/getCategoryD3Root                                   controllers.dataset.CategoryDispatcher.getCategoryD3Root
+GET         /dataSets/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
+GET         /dataSets/categories/addFields                                           controllers.dataset.CategoryDispatcher.addFields(categoryId: BSONObjectID, fieldNames: Seq[String])
+POST        /dataSets/categories/updateLabel/:id/:label                              controllers.dataset.CategoryDispatcher.updateLabel(id: BSONObjectID, label: String)
+GET         /dataSets/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
 
 # FilterDispatcher
-GET         /studies/filters                                                        controllers.dataset.FilterDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
-GET         /studies/filters/get/:id                                                controllers.dataset.FilterDispatcher.get(id: BSONObjectID)
-GET         /studies/filters/new                                                    controllers.dataset.FilterDispatcher.create
-POST        /studies/filters/save                                                   controllers.dataset.FilterDispatcher.save
-POST        /studies/filters/saveAjax                                               controllers.dataset.FilterDispatcher.saveAjax(filter: models.Filter)
-POST        /studies/filters/:id                                                    controllers.dataset.FilterDispatcher.update(id: BSONObjectID)
-POST        /studies/filters/:id/delete                                             controllers.dataset.FilterDispatcher.delete(id: BSONObjectID)
-GET         /studies/filters/idAndNames                                             controllers.dataset.FilterDispatcher.idAndNames
-GET         /studies/filters/idAndNamesAccessible                                   controllers.dataset.FilterDispatcher.idAndNamesAccessible
+GET         /dataSets/filters                                                        controllers.dataset.FilterDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /dataSets/filters/get/:id                                                controllers.dataset.FilterDispatcher.get(id: BSONObjectID)
+GET         /dataSets/filters/new                                                    controllers.dataset.FilterDispatcher.create
+POST        /dataSets/filters/save                                                   controllers.dataset.FilterDispatcher.save
+POST        /dataSets/filters/saveAjax                                               controllers.dataset.FilterDispatcher.saveAjax(filter: models.Filter)
+POST        /dataSets/filters/:id                                                    controllers.dataset.FilterDispatcher.update(id: BSONObjectID)
+POST        /dataSets/filters/:id/delete                                             controllers.dataset.FilterDispatcher.delete(id: BSONObjectID)
+GET         /dataSets/filters/idAndNames                                             controllers.dataset.FilterDispatcher.idAndNames
+GET         /dataSets/filters/idAndNamesAccessible                                   controllers.dataset.FilterDispatcher.idAndNamesAccessible
 
 # DataViewDispatcher
-GET         /studies/dataviews                                                      controllers.dataset.DataViewDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
-GET         /studies/dataviews/get/:id                                              controllers.dataset.DataViewDispatcher.get(id: BSONObjectID)
-GET         /studies/dataviews/getAndShowView/:id                                   controllers.dataset.DataViewDispatcher.getAndShowView(id: BSONObjectID)
-GET         /studies/dataviews/new                                                  controllers.dataset.DataViewDispatcher.create
-POST        /studies/dataviews/save                                                 controllers.dataset.DataViewDispatcher.save
-POST        /studies/dataviews/:id                                                  controllers.dataset.DataViewDispatcher.update(id: BSONObjectID)
-POST        /studies/dataviews/updateAndShowView/:id                                controllers.dataset.DataViewDispatcher.updateAndShowView(id: BSONObjectID)
-POST        /studies/dataviews/:id/delete                                           controllers.dataset.DataViewDispatcher.delete(id: BSONObjectID)
-GET         /studies/dataviews/copy                                                 controllers.dataset.DataViewDispatcher.copy(dataViewId: BSONObjectID)
-GET         /studies/dataviews/idAndNames                                           controllers.dataset.DataViewDispatcher.idAndNames
-GET         /studies/dataviews/idAndNamesAccessible                                 controllers.dataset.DataViewDispatcher.idAndNamesAccessible
-GET         /studies/dataviews/addDistributions                                     controllers.dataset.DataViewDispatcher.addDistributions(dataViewId: BSONObjectID, fieldNames: Seq[String])
-GET         /studies/dataviews/addDistribution                                      controllers.dataset.DataViewDispatcher.addDistribution(dataViewId: BSONObjectID, fieldName: String, groupFieldName: Option[String])
-GET         /studies/dataviews/addCumulativeCounts                                  controllers.dataset.DataViewDispatcher.addCumulativeCounts(dataViewId: BSONObjectID, fieldNames: Seq[String])
-GET         /studies/dataviews/addCumulativeCount                                   controllers.dataset.DataViewDispatcher.addCumulativeCount(dataViewId: BSONObjectID, fieldName: String, groupFieldName: Option[String])
-GET         /studies/dataviews/addBoxPlots                                          controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId: BSONObjectID, fieldNames: Seq[String])
-GET         /studies/dataviews/addBasicStats                                        controllers.dataset.DataViewDispatcher.addBasicStats(dataViewId: BSONObjectID, fieldNames: Seq[String])
-GET         /studies/dataviews/addScatter                                           controllers.dataset.DataViewDispatcher.addScatter(dataViewId: BSONObjectID, xFieldName: String, yFieldName: String, groupFieldName: Option[String])
-GET         /studies/dataviews/addCorrelation                                       controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId: BSONObjectID, fieldNames: Seq[String])
-GET         /studies/dataviews/addTableFields                                       controllers.dataset.DataViewDispatcher.addTableFields(dataViewId: BSONObjectID, fieldNames: Seq[String])
-GET         /studies/dataviews/saveFilter                                           controllers.dataset.DataViewDispatcher.saveFilter(dataViewId: BSONObjectID, filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]])
+GET         /dataSets/dataviews                                                      controllers.dataset.DataViewDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /dataSets/dataviews/get/:id                                              controllers.dataset.DataViewDispatcher.get(id: BSONObjectID)
+GET         /dataSets/dataviews/getAndShowView/:id                                   controllers.dataset.DataViewDispatcher.getAndShowView(id: BSONObjectID)
+GET         /dataSets/dataviews/new                                                  controllers.dataset.DataViewDispatcher.create
+POST        /dataSets/dataviews/save                                                 controllers.dataset.DataViewDispatcher.save
+POST        /dataSets/dataviews/:id                                                  controllers.dataset.DataViewDispatcher.update(id: BSONObjectID)
+POST        /dataSets/dataviews/updateAndShowView/:id                                controllers.dataset.DataViewDispatcher.updateAndShowView(id: BSONObjectID)
+POST        /dataSets/dataviews/:id/delete                                           controllers.dataset.DataViewDispatcher.delete(id: BSONObjectID)
+GET         /dataSets/dataviews/copy                                                 controllers.dataset.DataViewDispatcher.copy(dataViewId: BSONObjectID)
+GET         /dataSets/dataviews/idAndNames                                           controllers.dataset.DataViewDispatcher.idAndNames
+GET         /dataSets/dataviews/idAndNamesAccessible                                 controllers.dataset.DataViewDispatcher.idAndNamesAccessible
+GET         /dataSets/dataviews/addDistributions                                     controllers.dataset.DataViewDispatcher.addDistributions(dataViewId: BSONObjectID, fieldNames: Seq[String])
+GET         /dataSets/dataviews/addDistribution                                      controllers.dataset.DataViewDispatcher.addDistribution(dataViewId: BSONObjectID, fieldName: String, groupFieldName: Option[String])
+GET         /dataSets/dataviews/addCumulativeCounts                                  controllers.dataset.DataViewDispatcher.addCumulativeCounts(dataViewId: BSONObjectID, fieldNames: Seq[String])
+GET         /dataSets/dataviews/addCumulativeCount                                   controllers.dataset.DataViewDispatcher.addCumulativeCount(dataViewId: BSONObjectID, fieldName: String, groupFieldName: Option[String])
+GET         /dataSets/dataviews/addBoxPlots                                          controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId: BSONObjectID, fieldNames: Seq[String])
+GET         /dataSets/dataviews/addBasicStats                                        controllers.dataset.DataViewDispatcher.addBasicStats(dataViewId: BSONObjectID, fieldNames: Seq[String])
+GET         /dataSets/dataviews/addScatter                                           controllers.dataset.DataViewDispatcher.addScatter(dataViewId: BSONObjectID, xFieldName: String, yFieldName: String, groupFieldName: Option[String])
+GET         /dataSets/dataviews/addCorrelation                                       controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId: BSONObjectID, fieldNames: Seq[String])
+GET         /dataSets/dataviews/addTableFields                                       controllers.dataset.DataViewDispatcher.addTableFields(dataViewId: BSONObjectID, fieldNames: Seq[String])
+GET         /dataSets/dataviews/saveFilter                                           controllers.dataset.DataViewDispatcher.saveFilter(dataViewId: BSONObjectID, filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]])
 
 # DataSetSetting
-GET         /studies/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : Seq[models.FilterCondition] ?= Nil)
-GET         /studies/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: String ?= "dataSetId")
-GET         /studies/setting/new                                                    controllers.dataset.DataSetSettingController.create
-POST        /studies/setting/save                                                   controllers.dataset.DataSetSettingController.save
-GET         /studies/setting/:id/get                                                controllers.dataset.DataSetSettingController.get(id: BSONObjectID)
-GET         /studies/setting/:id                                                    controllers.dataset.DataSetSettingController.edit(id: BSONObjectID)
-GET         /studies/setting/edit/                                                  controllers.dataset.DataSetSettingController.editForDataSet(dataSet: String)
-POST        /studies/setting/:id                                                    controllers.dataset.DataSetSettingController.update(id: BSONObjectID)
-POST        /studies/setting/update/:id                                             controllers.dataset.DataSetSettingController.updateForDataSet(id: BSONObjectID)
-POST        /studies/setting/:id/delete                                             controllers.dataset.DataSetSettingController.delete(id: BSONObjectID)
+GET         /dataSets/setting                                                        controllers.dataset.DataSetSettingController.find(p: Int ?= 0, s: String ?= "dataSetId", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /dataSets/setting/all                                                    controllers.dataset.DataSetSettingController.listAll(s: String ?= "dataSetId")
+GET         /dataSets/setting/new                                                    controllers.dataset.DataSetSettingController.create
+POST        /dataSets/setting/save                                                   controllers.dataset.DataSetSettingController.save
+GET         /dataSets/setting/:id/get                                                controllers.dataset.DataSetSettingController.get(id: BSONObjectID)
+GET         /dataSets/setting/:id                                                    controllers.dataset.DataSetSettingController.edit(id: BSONObjectID)
+GET         /dataSets/setting/edit/                                                  controllers.dataset.DataSetSettingController.editForDataSet(dataSet: String)
+POST        /dataSets/setting/:id                                                    controllers.dataset.DataSetSettingController.update(id: BSONObjectID)
+POST        /dataSets/setting/update/:id                                             controllers.dataset.DataSetSettingController.updateForDataSet(id: BSONObjectID)
+POST        /dataSets/setting/:id/delete                                             controllers.dataset.DataSetSettingController.delete(id: BSONObjectID)
 
 # Data SpaceMeta info
-GET         /studies/metainfo                                                       controllers.dataset.DataSpaceMetaInfoController.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
-GET         /studies/metainfo/all                                                   controllers.dataset.DataSpaceMetaInfoController.listAll(s: String ?= "name")
-GET         /studies/metainfo/new                                                   controllers.dataset.DataSpaceMetaInfoController.create
-POST        /studies/metainfo/save                                                  controllers.dataset.DataSpaceMetaInfoController.save
-GET         /studies/metainfo/:id/get                                               controllers.dataset.DataSpaceMetaInfoController.get(id: BSONObjectID)
-GET         /studies/metainfo/:id                                                   controllers.dataset.DataSpaceMetaInfoController.edit(id: BSONObjectID)
-POST        /studies/metainfo/:id                                                   controllers.dataset.DataSpaceMetaInfoController.update(id: BSONObjectID)
-POST        /studies/metainfo/:id/delete                                            controllers.dataset.DataSpaceMetaInfoController.delete(id: BSONObjectID)
-POST        /studies/metainfo/deleteDataSet/:id                                     controllers.dataset.DataSpaceMetaInfoController.deleteDataSet(id: BSONObjectID)
+GET         /dataSets/metainfo                                                       controllers.dataset.DataSpaceMetaInfoController.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /dataSets/metainfo/all                                                   controllers.dataset.DataSpaceMetaInfoController.listAll(s: String ?= "name")
+GET         /dataSets/metainfo/new                                                   controllers.dataset.DataSpaceMetaInfoController.create
+POST        /dataSets/metainfo/save                                                  controllers.dataset.DataSpaceMetaInfoController.save
+GET         /dataSets/metainfo/:id/get                                               controllers.dataset.DataSpaceMetaInfoController.get(id: BSONObjectID)
+GET         /dataSets/metainfo/:id                                                   controllers.dataset.DataSpaceMetaInfoController.edit(id: BSONObjectID)
+POST        /dataSets/metainfo/:id                                                   controllers.dataset.DataSpaceMetaInfoController.update(id: BSONObjectID)
+POST        /dataSets/metainfo/:id/delete                                            controllers.dataset.DataSpaceMetaInfoController.delete(id: BSONObjectID)
+POST        /dataSets/metainfo/deleteDataSet/:id                                     controllers.dataset.DataSpaceMetaInfoController.deleteDataSet(id: BSONObjectID)
 
 # Clasification Run
-GET         /studies/classificationRuns                                             controllers.dataset.ClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[models.FilterCondition] ?= Nil)
-GET         /studies/classificationRuns/get/:id                                     controllers.dataset.ClassificationRunDispatcher.get(id: BSONObjectID)
-GET         /studies/classificationRuns/new                                         controllers.dataset.ClassificationRunDispatcher.create
-POST        /studies/classificationRuns/:id/delete                                  controllers.dataset.ClassificationRunDispatcher.delete(id: BSONObjectID)
-POST        /studies/classify                                                       controllers.dataset.ClassificationRunDispatcher.classify(setting: models.ml.ClassificationSetting, saveResults: Boolean, saveBinCurves: Boolean)
-POST        /studies/selectFeaturesAsChiSquare                                      controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int, discretizerBucketsNum: Int)
-POST        /studies/selectFeaturesAsAnovaChiSquare                                 controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsAnovaChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int)
-GET         /studies/classificationRuns/exportToDataSet                             controllers.dataset.ClassificationRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
-GET         /studies/classificationRuns/exportAsCsv                                 controllers.dataset.ClassificationRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
-GET         /studies/classificationRuns/exportAsJson                                controllers.dataset.ClassificationRunDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/classificationRuns                                             controllers.dataset.ClassificationRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /dataSets/classificationRuns/get/:id                                     controllers.dataset.ClassificationRunDispatcher.get(id: BSONObjectID)
+GET         /dataSets/classificationRuns/new                                         controllers.dataset.ClassificationRunDispatcher.create
+POST        /dataSets/classificationRuns/:id/delete                                  controllers.dataset.ClassificationRunDispatcher.delete(id: BSONObjectID)
+POST        /dataSets/classify                                                       controllers.dataset.ClassificationRunDispatcher.classify(setting: models.ml.ClassificationSetting, saveResults: Boolean, saveBinCurves: Boolean)
+POST        /dataSets/selectFeaturesAsChiSquare                                      controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int, discretizerBucketsNum: Int)
+POST        /dataSets/selectFeaturesAsAnovaChiSquare                                 controllers.dataset.ClassificationRunDispatcher.selectFeaturesAsAnovaChiSquare(inputFieldNames: Seq[String], outputFieldName: String, filterId: Option[BSONObjectID], featuresToSelectNum: Int)
+GET         /dataSets/classificationRuns/exportToDataSet                             controllers.dataset.ClassificationRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
+GET         /dataSets/classificationRuns/exportAsCsv                                 controllers.dataset.ClassificationRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/classificationRuns/exportAsJson                                controllers.dataset.ClassificationRunDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 
 # Regression Run
-GET         /studies/regressionRuns                                                 controllers.dataset.RegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[models.FilterCondition] ?= Nil)
-GET         /studies/regressionRuns/get/:id                                         controllers.dataset.RegressionRunDispatcher.get(id: BSONObjectID)
-GET         /studies/regressionRuns/new                                             controllers.dataset.RegressionRunDispatcher.create
-POST        /studies/regressionRuns/:id/delete                                      controllers.dataset.RegressionRunDispatcher.delete(id: BSONObjectID)
-POST        /studies/regress                                                        controllers.dataset.RegressionRunDispatcher.regress(setting: models.ml.RegressionSetting, saveResults: Boolean)
-GET         /studies/regressionRuns/exportToDataSet                                 controllers.dataset.RegressionRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
-GET         /studies/regressionRuns/exportAsCsv                                     controllers.dataset.RegressionRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
-GET         /studies/regressionRuns/exportAsJson                                    controllers.dataset.RegressionRunDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/regressionRuns                                                 controllers.dataset.RegressionRunDispatcher.find(p: Int ?= 0, s: String ?= "timeCreated", filter : Seq[models.FilterCondition] ?= Nil)
+GET         /dataSets/regressionRuns/get/:id                                         controllers.dataset.RegressionRunDispatcher.get(id: BSONObjectID)
+GET         /dataSets/regressionRuns/new                                             controllers.dataset.RegressionRunDispatcher.create
+POST        /dataSets/regressionRuns/:id/delete                                      controllers.dataset.RegressionRunDispatcher.delete(id: BSONObjectID)
+POST        /dataSets/regress                                                        controllers.dataset.RegressionRunDispatcher.regress(setting: models.ml.RegressionSetting, saveResults: Boolean)
+GET         /dataSets/regressionRuns/exportToDataSet                                 controllers.dataset.RegressionRunDispatcher.exportToDataSet(targetDataSetId: Option[String] ?= None, targetDataSetName: Option[String] ?= None)
+GET         /dataSets/regressionRuns/exportAsCsv                                     controllers.dataset.RegressionRunDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/regressionRuns/exportAsJson                                    controllers.dataset.RegressionRunDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 
 # ML Classification
 GET         /ml/classification                                                      controllers.ml.ClassificationController.find(p: Int ?= 0, s: String ?= "concreteClass", filter: Seq[models.FilterCondition] ?= Nil)

@@ -4,7 +4,6 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.StatsHelperUtil.calcMatrixGroupSizes
 import services.stats.calc.MatrixRowColumnSumCalc
 import services.stats.CalculatorHelper._
 
@@ -30,7 +29,7 @@ class MatrixRowColumnSumTest extends AsyncFlatSpec with Matchers with ExtraMatch
   private val randomInputSize = 100
   private val precision = 0.00000001
 
-  private val calc = MatrixRowColumnSumCalc
+  private val calc = MatrixRowColumnSumCalc.apply
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
