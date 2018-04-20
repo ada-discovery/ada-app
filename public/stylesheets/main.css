@@ -342,3 +342,22 @@ tr.vertical-divider > td:last-child {
 .documentation-section-navigation-caption {
     color: #626262;
 }
+
+.col-md-8-5, .col-md-1-75 {
+    position: relative;
+    min-height: 1px;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+@media (min-width: 992px) {
+    .col-md-8-5, .col-md-1-75 {
+        float: left;
+    }
+    .col-md-8-5 {
+        width: 70.833%
+    }
+    .col-md-1-75 {
+        width: 14.583%
+    }
+}
