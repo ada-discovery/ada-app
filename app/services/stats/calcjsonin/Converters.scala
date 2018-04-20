@@ -44,6 +44,22 @@ class ArrayGroupNumericDistributionCountsConverter extends ArrayGroupDoubleConve
   override def specificUseClass = Some(classOf[GroupNumericDistributionCountsCalc[Any]])
 }
 
+class ScalarCumulativeNumericBinCountsConverter extends ScalarDoubleConverter {
+  override def specificUseClass = Some(classOf[CumulativeNumericBinCountsCalc])
+}
+
+class ArrayCumulativeNumericBinCountsConverter extends ArrayDoubleConverter {
+  override def specificUseClass = Some(classOf[CumulativeNumericBinCountsCalc])
+}
+
+class ScalarGroupCumulativeNumericBinCountsConverter extends ScalarGroupDoubleConverter[Any] {
+  override def specificUseClass = Some(classOf[GroupCumulativeNumericBinCountsCalc[Any]])
+}
+
+class ArrayGroupCumulativeNumericBinCountsConverter extends ArrayGroupDoubleConverter[Any] {
+  override def specificUseClass = Some(classOf[GroupNumericDistributionCountsCalc[Any]])
+}
+
 class AnyStringGroupScatterConverter extends StringGroupScatterConverter[Any, Any] {
   override def specificUseClass = Some(classOf[GroupTupleCalc[_, _, _]])
 }
@@ -184,7 +200,7 @@ private[calcjsonin] abstract class ArrayGroupDoubleConverter[G: TypeTag] extends
       array.map((group, _))
   }
 
-  override def inputType = typeOf[(Option[G], Option[Double])]
+  override def inputType = typeOf[Array[(Option[G], Option[Double])]]
 }
 
 private[calcjsonin] abstract class ScalarNumericConverter[T: TypeTag] extends JsonInputConverter[Option[T]] {

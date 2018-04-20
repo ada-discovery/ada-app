@@ -1,18 +1,18 @@
 package services.widgetgen
 
 import models._
-import services.stats.calc.BasicStatsResult
+import services.stats.calc.{BasicStatsCalcTypePack, BasicStatsResult}
 
-object BasicStatsWidgetGenerator extends WidgetGenerator[BasicStatsWidgetSpec, BasicStatsWidget, BasicStatsResult] {
+object BasicStatsWidgetGenerator extends WidgetGenerator[BasicStatsWidgetSpec, BasicStatsWidget, BasicStatsCalcTypePack#OUT] {
 
   override def apply(
     fieldNameMap: Map[String, Field],
     spec: BasicStatsWidgetSpec
   ) =
-    (results:  BasicStatsResult) => {
-      val field = fieldNameMap.get(spec.fieldName).get
-      val chartTitle = title(spec).getOrElse(field.labelOrElseName)
-      val widget = BasicStatsWidget(chartTitle, field.labelOrElseName, results, spec.displayOptions)
-      Some(widget)
-    }
+    (results:  BasicStatsCalcTypePack#OUT) =>
+      results.map { results =>
+        val field = fieldNameMap.get(spec.fieldName).get
+        val chartTitle = title(spec).getOrElse(field.labelOrElseName)
+        BasicStatsWidget(chartTitle, field.labelOrElseName, results, spec.displayOptions)
+      }
 }

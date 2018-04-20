@@ -63,13 +63,16 @@ package object util {
 //    split.map { x => x.capitalize}.mkString(" ")
   }
 
-  def fieldLabel(fieldName : String) =
+  def fieldLabel(fieldName : String): String =
     toHumanReadableCamel(JsonUtil.unescapeKey(fieldName))
 
   def fieldLabel(fieldName : String, fieldLabelMap : Option[Map[String, String]]) = {
     val defaultLabel = toHumanReadableCamel(JsonUtil.unescapeKey(fieldName))
     fieldLabelMap.map(_.getOrElse(fieldName, defaultLabel)).getOrElse(defaultLabel)
   }
+
+  def fieldLabel(field: Field): String =
+    field.label.getOrElse(fieldLabel(field.name))
 
   def widgetElementId(chart: Widget) = chart._id.stringify + "Widget"
 

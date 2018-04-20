@@ -2,24 +2,27 @@ package services.stats.calc
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
+import dataaccess.{AsyncReadonlyRepo, Criterion}
 import models.{Field, FieldTypeId}
 import play.api.libs.json.JsObject
-import services.stats.CalculatorExecutor
+import services.stats.{CalculatorExecutor, ToFields, With2TupleFields, WithSeqFields}
 import services.stats.CalculatorHelper._
 import util.FieldUtil.{fieldTypeOrdering, valueOrdering}
-import scala.reflect.runtime.universe._
 
+import scala.reflect.runtime.universe._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-private class GroupCumulativeOrderedCountsAnyExec[G](
+private class GroupCumulativeOrderedCountsAnyExec[G, F](
     implicit inputTypeTag: TypeTag[GroupCumulativeOrderedCountsCalcTypePack[G, Any]#IN]
-  ) extends CalculatorExecutor[GroupCumulativeOrderedCountsCalcTypePack[G, Any], (Field, Field)] {
+  ) extends CalculatorExecutor[GroupCumulativeOrderedCountsCalcTypePack[G, Any], F] {
+
+  toFields: ToFields[F] =>
 
   private def anyExec(
     implicit ordering: Ordering[Any]
   ) = {
-    CalculatorExecutor.with2Tuple(GroupCumulativeOrderedCountsCalc.apply[G, Any])
+    CalculatorExecutor.withSeq(GroupCumulativeOrderedCountsCalc.apply[G, Any])
   }
 
   override def exec(
@@ -36,56 +39,81 @@ private class GroupCumulativeOrderedCountsAnyExec[G](
 
   override def execJson(
     options: Unit,
-    fields: (Field, Field))(
+    fields: F)(
     jsons: Traversable[JsObject]
   ) = dispatch(
-      _.execJson(options, fields)(jsons)
+      _.execJson(options, toFields(fields))(jsons)
     )(fields, Nil)
 
   override def execJsonA(
     options: Unit,
     scalarOrArrayField: Field,
-    fields: (Field, Field))(
+    fields: F)(
     jsons: Traversable[JsObject]
   ) = dispatch(
-      _.execJsonA(options, scalarOrArrayField, fields)(jsons)
+      _.execJsonA(options, scalarOrArrayField, toFields(fields))(jsons)
     )(fields, Nil)
 
   override def execJsonStreamed(
     flowOptions: Unit,
     postFlowOptions: Unit,
-    fields: (Field, Field))(
+    fields: F)(
     source: Source[JsObject, _])(
     implicit materializer: Materializer
   ) = dispatch(
-      _.execJsonStreamed(flowOptions, postFlowOptions, fields)(source)
+      _.execJsonStreamed(flowOptions, postFlowOptions, toFields(fields))(source)
     )(fields, Future(Nil))
 
   override def execJsonStreamedA(
     flowOptions: Unit,
     postFlowOptions: Unit,
     scalarOrArrayField: Field,
-    fields: (Field, Field))(
+    fields: F)(
     source: Source[JsObject, _])(
     implicit materializer: Materializer
   ) = dispatch(
-      _.execJsonStreamedA(flowOptions, postFlowOptions, scalarOrArrayField, fields)(source)
+      _.execJsonStreamedA(flowOptions, postFlowOptions, scalarOrArrayField, toFields(fields))(source)
     )(fields, Future(Nil))
 
   override def createJsonFlow(
     options: Unit,
-    fields: (Field, Field)
+    fields: F
   ) = dispatch(
-      _.createJsonFlow(options, fields)
+      _.createJsonFlow(options, toFields(fields))
     )(fields, Flow[JsObject].map(_ => Nil))
 
   override def createJsonFlowA(
     options: Unit,
     scalarOrArrayField: Field,
-    fields: (Field, Field)
+    fields: F
   ) = dispatch(
-      _.createJsonFlowA(options, scalarOrArrayField, fields)
+      _.createJsonFlowA(options, scalarOrArrayField, toFields(fields))
     )(fields, Flow[JsObject].map(_ => Nil))
+
+  override def execJsonRepoStreamed(
+    flowOptions: Unit,
+    postFlowOptions: Unit,
+    withProjection: Boolean,
+    fields: F)(
+    dataRepo: AsyncReadonlyRepo[JsObject, _],
+    criteria: Seq[Criterion[Any]])(
+    implicit materializer: Materializer
+  ) = dispatch(
+      _.execJsonRepoStreamed(flowOptions, postFlowOptions, withProjection, toFields(fields))(dataRepo, criteria)
+    )(fields, Future(Nil))
+
+  override def execJsonRepoStreamedA(
+    flowOptions: Unit,
+    postFlowOptions: Unit,
+    withProjection: Boolean,
+    scalarOrArrayField: Field,
+    fields: F)(
+    dataRepo: AsyncReadonlyRepo[JsObject, _],
+    criteria: Seq[Criterion[Any]])(
+    implicit materializer: Materializer
+  ) = dispatch(
+      _.execJsonRepoStreamedA(flowOptions, postFlowOptions, withProjection, scalarOrArrayField, toFields(fields))(dataRepo, criteria)
+    )(fields, Future(Nil))
 
   override def execStreamed(
     flowOptions: Unit,
@@ -96,16 +124,19 @@ private class GroupCumulativeOrderedCountsAnyExec[G](
     throw new RuntimeException("Method GroupCumulativeOrderedCountsAnyExec.execStreamed is not supported due to unknown value type (ordering).")
 
   private def dispatch[OUT](
-    exec: CalculatorExecutor[GroupCumulativeOrderedCountsCalcTypePack[G, Any], (Field, Field)] => OUT)(
-    fields: (Field, Field),
+    exec: CalculatorExecutor[GroupCumulativeOrderedCountsCalcTypePack[G, Any], Seq[Field]] => OUT)(
+    fields: F,
     defaultOutput: OUT
   ): OUT =
-    fieldTypeOrdering(fields._2.fieldType).map { implicit ordering =>
-      exec(anyExec)
-    }.getOrElse(defaultOutput)
+    // assume the second field is the one determining a type
+    toFields(fields).tail.headOption.flatMap( field =>
+      fieldTypeOrdering(field.fieldType).map { implicit ordering =>
+        exec(anyExec)
+      }
+    ).getOrElse(defaultOutput)
 
   private def dispatchVal[OUT](
-    exec: CalculatorExecutor[GroupCumulativeOrderedCountsCalcTypePack[G, Any], (Field, Field)] => OUT)(
+    exec: CalculatorExecutor[GroupCumulativeOrderedCountsCalcTypePack[G, Any], Seq[Field]] => OUT)(
     value: Any,
     defaultOutput: OUT
   ): OUT =
@@ -115,7 +146,12 @@ private class GroupCumulativeOrderedCountsAnyExec[G](
 }
 
 object GroupCumulativeOrderedCountsAnyExec {
-  def apply[G](
+
+  def with2Tuple[G](
     implicit inputTypeTag: TypeTag[GroupCumulativeOrderedCountsCalcTypePack[G, Any]#IN]
-  ): CalculatorExecutor[GroupCumulativeOrderedCountsCalcTypePack[G, Any], (Field, Field)] = new GroupCumulativeOrderedCountsAnyExec[G]
+  ): CalculatorExecutor[GroupCumulativeOrderedCountsCalcTypePack[G, Any], (Field, Field)] = new GroupCumulativeOrderedCountsAnyExec[G, (Field, Field)] with With2TupleFields
+
+  def withSeq[G](
+    implicit inputTypeTag: TypeTag[GroupCumulativeOrderedCountsCalcTypePack[G, Any]#IN]
+  ): CalculatorExecutor[GroupCumulativeOrderedCountsCalcTypePack[G, Any], Seq[Field]] = new GroupCumulativeOrderedCountsAnyExec[G, Seq[Field]] with WithSeqFields
 }

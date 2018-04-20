@@ -3,10 +3,8 @@ package util
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
-import akka.stream.javadsl.ZipWithN
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source, Zip, ZipN}
-import play.api.libs.json.JsObject
-import shapeless.ops.hlist.ZipWith
+import scala.collection.mutable.{Buffer, ListBuffer}
 
 import scala.annotation.tailrec
 import scala.concurrent.{Await, Future}
@@ -37,8 +35,8 @@ object AkkaStreamUtil {
   ): Flow[(A, B), (A, Seq[B]), NotUsed] =
     Flow[(A,B)]
       .groupBy(maxSubstreams, _._1)
-      .map { case (a, b) => a -> Seq(b)}
-      .reduce((l, r) ⇒ (l._1, l._2 ++ r._2))
+      .map { case (a, b) => a -> Buffer(b)}
+      .reduce((l, r) ⇒ (l._1, {l._2.appendAll(r._2); l._2}))
       .mergeSubstreams
 
   def zipSources[A, B](

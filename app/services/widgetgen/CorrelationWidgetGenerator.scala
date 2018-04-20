@@ -1,14 +1,15 @@
 package services.widgetgen
 
 import models._
+import services.stats.calc.PearsonCorrelationCalcTypePack
 
-object CorrelationWidgetGenerator extends WidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, Seq[Seq[Option[Double]]]] {
+object CorrelationWidgetGenerator extends WidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, PearsonCorrelationCalcTypePack#OUT] {
 
   override def apply(
     fieldNameMap: Map[String, Field],
     spec: CorrelationWidgetSpec
   ) =
-    (correlations: Seq[Seq[Option[Double]]]) =>
+    (correlations: PearsonCorrelationCalcTypePack#OUT) =>
       if (correlations.nonEmpty) {
         val fields = spec.fieldNames.flatMap(fieldNameMap.get)
         val fieldLabels = fields.map(_.labelOrElseName)

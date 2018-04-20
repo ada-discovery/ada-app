@@ -16,7 +16,7 @@ import dataaccess._
 import dataaccess.FilterRepoExtra._
 import models.{MultiChartDisplayOptions, _}
 import com.google.inject.assistedinject.Assisted
-import controllers._
+import controllers.{routes, _}
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import Criterion.Infix
 import controllers.core._
@@ -31,7 +31,7 @@ import play.api.Logger
 import play.api.data.{Form, Mapping}
 import play.api.data.Forms.{mapping, number, of, optional}
 import play.api.libs.json._
-import play.api.mvc.Results._
+import play.api.mvc.Results.{Redirect, _}
 import play.api.data.Forms.{mapping, _}
 import reactivemongo.bson.BSONObjectID
 import services._
@@ -1042,19 +1042,26 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     setting: DataSetSetting)(
     implicit request: Request[_]
   ): Future[Result] = {
-    val dataSetNameFuture = dsa.dataSetName
-    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
 
     // auxiliary function to retrieve a field definition
     def getField(fieldName: Option[String]): Future[Option[Field]] =
       fieldName.map(fieldRepo.get).getOrElse(Future(None))
 
+    // field retrieve futures
     val xFieldFuture = getField(xFieldName)
     val yFieldFuture = getField(yFieldName)
     val groupFieldFuture = getField(groupFieldName)
 
+    // other futures
+    val dataSetNameFuture = dsa.dataSetName
+    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
+    val filterFuture = filterRepo.resolve(filterOrId)
+
+    // display options
+    val displayOptions = BasicDisplayOptions(height = Some(500))
+
     for {
-    // get the data set name
+      // get the data set name
       dataSetName <- dataSetNameFuture
 
       // get the data space tree
@@ -1070,62 +1077,30 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       groupField <- groupFieldFuture
 
       // use a given filter conditions or load one
-      resolvedFilter <- filterRepo.resolve(filterOrId)
+      resolvedFilter <- filterFuture
 
       // get the criteria
       criteria <- toCriteria(resolvedFilter.conditions)
 
-      // collect all the fields
-      fields = Seq(xField, yField, groupField).flatten
-
-      xyzItems <-
+      widget <- {
+        // collect all the fields
+        val fields = Seq(groupField, xField, yField).flatten
+        val startTime = new ju.Date
         (xField zip yField).headOption.map { case (xField, yField) =>
-          repo.find(criteria, Nil, fields.map(_.name).toSet)
+          val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, groupFieldName, None, displayOptions)
+
+          widgetService.genStreamed(widgetSpec, repo, criteria, fields).map { widget =>
+            println(s"Scatter widget generated in ${new ju.Date().getTime - startTime.getTime} ms.")
+            widget
+          }
         }.getOrElse(
-          Future(Nil)
+          Future(None)
         )
+      }
 
       // create a name -> field map of the filter referenced fields
       fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
     } yield {
-      val widget: Option[Widget] =
-        (xField zip yField).headOption.flatMap { case (xField, yField) =>
-          val displayOptions = BasicDisplayOptions(height = Some(500))
-          val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, groupField.map(_.name), None, displayOptions)
-
-          widgetService.genLocally(widgetSpec, xyzItems, fields)
-        }
-
-      def calcMean[T](
-        elements: Seq[T])(
-        implicit num: Numeric[T]
-      ): Option[Double] =
-        elements.headOption.map ( _ =>
-          num.toDouble(elements.sum) / elements.length
-        )
-
-      def mean(field: Field): Option[Double] = {
-        field.fieldTypeSpec.fieldType match {
-          case FieldTypeId.Integer => {
-            val values = getValues[Long](field, xyzItems).flatten
-            calcMean(values.toSeq)
-          }
-          case FieldTypeId.Double => {
-            val values = getValues[Double](field, xyzItems).flatten
-            calcMean(values.toSeq)
-          }
-          case FieldTypeId.Date => {
-            val values = getValues[ju.Date](field, xyzItems).flatten
-            calcMean(values.map(_.getTime).toSeq)
-          }
-          case _ =>
-            None
-        }
-      }
-
-      val xMean = xField.map(mean).flatten
-      val yMean = yField.map(mean).flatten
-
       val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
 
       render {
@@ -1135,8 +1110,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           yField,
           groupField,
           widget,
-          xMean,
-          yMean,
           newFilter,
           setting.filterShowFieldStyle,
           dataSpaceTree
@@ -1342,7 +1315,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
 
       // generate a widget
-      widget <- widgetService.genFromRepo(widgetSpec, repo, criteria, fields)
+      widget <- widgetService.genStreamed(widgetSpec, repo, criteria, fields)
     } yield {
       val widgetJson = widget.map { widget =>
         // if we have more than 50 fields for performance purposed we round correlation to 3 decimal places

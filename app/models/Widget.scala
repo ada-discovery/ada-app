@@ -267,7 +267,7 @@ object Widget {
 
         case e: NumericalCountWidget[T]  =>
           try {
-            numericalCountWidgetFormat(fieldTypes.head).writes(e)
+            numericalCountWidgetFormat(fieldTypes.last).writes(e)
           } catch {
             case ex: AdaConversionException =>
               // if the conversion fails let's try double (if the field type provided)
@@ -280,7 +280,7 @@ object Widget {
           lineWidgetFormat(fieldTypes.head).writes(e)
 
         case e: ScatterWidget[T, T] =>
-          scatterWidgetFormat(fieldTypes.head, fieldTypes.tail.head).writes(e)
+          scatterWidgetFormat(fieldTypes(fieldTypes.size - 2), fieldTypes.last).writes(e)
 
         case e: BoxWidget[T] =>
           boxWidgetWrites(fieldTypes.head).writes(e)
@@ -295,10 +295,15 @@ object Widget {
           Json.format[HtmlWidget].writes(e)
       }
 
+      val fieldTypeJson = fieldTypes match {
+        case Nil => JsNull
+        case _ => JsString(fieldTypes.last.spec.fieldType.toString)
+      }
+
       json.asInstanceOf[JsObject] ++ Json.obj(
         concreteClassFieldName -> JsString(concreteClassName),
         JsObjectIdentity.name -> o._id,
-        "fieldType" -> fieldTypes.headOption.map(fieldType => JsString(fieldType.spec.fieldType.toString))
+        "fieldType" -> fieldTypeJson
       )
     }
   }

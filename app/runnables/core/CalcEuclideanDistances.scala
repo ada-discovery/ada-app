@@ -2,23 +2,32 @@ package runnables.core
 
 import java.{util => ju}
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import com.google.inject.Inject
+import dataaccess.{AsyncReadonlyRepo, Criterion}
 import dataaccess.Criterion._
 import models.DataSetFormattersAndIds.FieldIdentity
-import models.FieldTypeId
+import models.{Field, FieldTypeId}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
+import play.api.libs.json.JsObject
+import reactivemongo.bson.BSONObjectID
 import runnables.InputFutureRunnable
 import services.stats.StatsService
 import util.seqFutures
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.reflect.runtime.universe.typeOf
 
 class CalcEuclideanDistances @Inject()(
     dsaf: DataSetAccessorFactory,
     statsService: StatsService
   ) extends InputFutureRunnable[CalcEuclideanDistancesSpec] {
+
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
 
   import statsService._
 
@@ -97,6 +106,23 @@ class CalcEuclideanDistances @Inject()(
         ()
       )
     }
+  }
+
+  private def calcEuclideanDistanceStreamed(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    fields: Seq[Field],
+    parallelism: Option[Int] = None,
+    withProjection: Boolean = true,
+    areValuesAllDefined: Boolean = false
+  ): Future[Seq[Seq[Double]]] = {
+    val exec =
+      if (areValuesAllDefined)
+        (euclideanDistanceAllDefinedExec.execJsonRepoStreamed)_
+      else
+        (euclideanDistanceExec.execJsonRepoStreamed)_
+
+    exec(parallelism, (), withProjection, fields)(dataRepo, criteria)
   }
 
   override def inputType = typeOf[CalcEuclideanDistancesSpec]

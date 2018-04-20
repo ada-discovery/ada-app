@@ -14,7 +14,7 @@ import dataaccess.FilterRepoExtra._
 import controllers.core._
 import models.ml.{RegressionSetting, _}
 import models.ml.RegressionResult.{regressionResultFormat, regressionSettingFormat}
-import models.Widget.{WidgetWrites, scatterWidgetFormat}
+import models.Widget.WidgetWrites
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger

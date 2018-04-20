@@ -53,7 +53,12 @@
     <option @if(topRankSelection.isDefined && topRankSelection.get.equals(i*5)) { selected="selected" } value="@{i*5}">Top @{i*5}</option>
 }
 
-@main(Messages("mds.title", domainName), Some(sideBar), None, None, Some(bottomResources)) {
+@main(
+    title = Messages("mds.title", domainName),
+    sideBar = Some(sideBar),
+    bottomResources = Some(bottomResources),
+    showMessageBox = false
+) {
 
     <div class="page-header">
         <h3>

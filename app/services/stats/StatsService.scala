@@ -82,46 +82,15 @@ trait StatsService extends CalculatorExecutors {
     numericBinCountOption: Option[Int]
   ): Future[GroupNumericCount[Any]]
 
-  ///////////////
-  // Quartiles //
-  ///////////////
-
-  def calcQuartiles(
-    items: Traversable[JsObject],
-    field: Field
-  ): Option[Quartiles[Any]]
+  /////////////////////////
+  // Quartiles From Repo //
+  /////////////////////////
 
   def calcQuartilesFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field
   ): Future[Option[Quartiles[Any]]]
-
-  //////////////////
-  // Correlations //
-  //////////////////
-
-  def calcPearsonCorrelationsStreamed(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    fields: Seq[Field],
-    parallelism: Option[Int] = None,
-    withProjection: Boolean = true,
-    areValuesAllDefined: Boolean = false
-  ): Future[Seq[Seq[Option[Double]]]]
-
-  ////////////////////////
-  // Euclidean Distance //
-  ////////////////////////
-
-  def calcEuclideanDistanceStreamed(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    fields: Seq[Field],
-    parallelism: Option[Int] = None,
-    withProjection: Boolean = true,
-    areValuesAllDefined: Boolean = false
-  ): Future[Seq[Seq[Double]]]
 
   /////////////////
   // Gram Matrix //
@@ -529,25 +498,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   // Quartiles //
   ///////////////
 
-  override def calcQuartiles(
-    items: Traversable[JsObject],
-    field: Field
-  ): Option[Quartiles[Any]] = {
-
-    def quartilesAux[T: Ordering](
-      toDouble: T => Double)(
-      implicit typeTag: TypeTag[T]
-    ) =
-      QuartilesCalc[T].jsonFunA(field, Seq(field), toDouble)(items).asInstanceOf[Option[Quartiles[Any]]]
-
-    field.fieldType match {
-      case FieldTypeId.Double => quartilesAux[Double](identity)
-      case FieldTypeId.Integer => quartilesAux[Long](_.toDouble)
-      case FieldTypeId.Date => quartilesAux[ju.Date](_.getTime.toDouble)
-      case _ => None
-    }
-  }
-
   override def calcQuartilesFromRepo(
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
@@ -568,7 +518,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     }
   }
 
-  def calcQuartilesFromRepo[T: Ordering](
+  private def calcQuartilesFromRepo[T: Ordering](
     dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
     criteria: Seq[Criterion[Any]],
     field: Field,
@@ -719,55 +669,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       }
     }
   }
-
-  //////////////////
-  // Correlations //
-  //////////////////
-
-  override def calcPearsonCorrelationsStreamed(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    fields: Seq[Field],
-    parallelism: Option[Int],
-    withProjection: Boolean,
-    areValuesAllDefined: Boolean
-  ): Future[Seq[Seq[Option[Double]]]] =
-    for {
-      // create a data source
-      source <- dataRepo.findAsStream(criteria, Nil, if (withProjection) fields.map(_.name) else Nil)
-
-      // calc correlations from a json source (use all defined or optional one)
-      correlations <- if (areValuesAllDefined)
-        AllDefinedPearsonCorrelationCalc.runJsonFlow(fields, parallelism, parallelism)(source)
-      else
-        PearsonCorrelationCalc.runJsonFlow(fields, parallelism, parallelism)(source)
-
-    } yield
-      correlations
-
-  ////////////////////////
-  // Euclidean Distance //
-  ////////////////////////
-
-  override def calcEuclideanDistanceStreamed(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
-    criteria: Seq[Criterion[Any]],
-    fields: Seq[Field],
-    parallelism: Option[Int] = None,
-    withProjection: Boolean = true,
-    areValuesAllDefined: Boolean = false
-  ): Future[Seq[Seq[Double]]] =
-    for {
-      // create a data source
-      source <- dataRepo.findAsStream(criteria, Nil, if (withProjection) fields.map(_.name) else Nil)
-
-      // convert the data source to a (double) value source and calc distances
-      distances <- if (areValuesAllDefined)
-        AllDefinedEuclideanDistanceCalc.runJsonFlow(fields, parallelism, ())(source)
-      else
-        EuclideanDistanceCalc.runJsonFlow(fields, parallelism, ())(source)
-    } yield
-      distances
 
   /////////////////
   // Gram Matrix //

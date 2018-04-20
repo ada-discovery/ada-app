@@ -1,23 +1,25 @@
 package services.stats.calc
 
-import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
+import dataaccess.{AsyncReadonlyRepo, Criterion}
 import models.{Field, FieldTypeId}
 import play.api.libs.json.JsObject
-import services.stats.CalculatorExecutor
+import services.stats.{CalculatorExecutor, ToFields, WithSeqFields, WithSingleField}
 import services.stats.CalculatorHelper._
 import util.FieldUtil.{fieldTypeOrdering, valueOrdering}
-import scala.reflect.runtime.universe._
 
+import scala.reflect.runtime.universe._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-private object CumulativeOrderedCountsAnyExecAux extends CalculatorExecutor[CumulativeOrderedCountsCalcTypePack[Any], Field] {
+private class CumulativeOrderedCountsAnyExec[F] extends CalculatorExecutor[CumulativeOrderedCountsCalcTypePack[Any], F] {
+
+  toFields: ToFields[F] =>
 
   private def genericExec[T: Ordering](
     implicit inputTypeTag: TypeTag[T]
-  ) = CalculatorExecutor.withSingle(CumulativeOrderedCountsCalc[T])
+  ) = CalculatorExecutor.withSeq(CumulativeOrderedCountsCalc[T])
 
   override def exec(
     options: Unit)(
@@ -33,56 +35,81 @@ private object CumulativeOrderedCountsAnyExecAux extends CalculatorExecutor[Cumu
 
   override def execJson(
     options: Unit,
-    field: Field)(
+    fields: F)(
     jsons: Traversable[JsObject]
   ) = dispatch(
-      _.execJson(options, field)(jsons)
-    )(field, Nil)
+      _.execJson(options, toFields(fields))(jsons)
+    )(fields, Nil)
 
   override def execJsonA(
     options: Unit,
     scalarOrArrayField: Field,
-    field: Field)(
+    fields: F)(
     jsons: Traversable[JsObject]
   ) = dispatch(
-      _.execJsonA(options, scalarOrArrayField, field)(jsons)
-    )(field, Nil)
+      _.execJsonA(options, scalarOrArrayField, toFields(fields))(jsons)
+    )(fields, Nil)
 
   override def execJsonStreamed(
     flowOptions: Unit,
     postFlowOptions: Unit,
-    field: Field)(
+    fields: F)(
     source: Source[JsObject, _])(
     implicit materializer: Materializer
   ) = dispatch(
-      _.execJsonStreamed(flowOptions, postFlowOptions, field)(source)
-    )(field, Future(Nil))
+      _.execJsonStreamed(flowOptions, postFlowOptions, toFields(fields))(source)
+    )(fields, Future(Nil))
 
   override def execJsonStreamedA(
     flowOptions: Unit,
     postFlowOptions: Unit,
     scalarOrArrayField: Field,
-    field: Field)(
+    fields: F)(
     source: Source[JsObject, _])(
     implicit materializer: Materializer
   ) = dispatch(
-      _.execJsonStreamedA(flowOptions, postFlowOptions, scalarOrArrayField, field)(source)
-    )(field, Future(Nil))
+      _.execJsonStreamedA(flowOptions, postFlowOptions, scalarOrArrayField, toFields(fields))(source)
+    )(fields, Future(Nil))
+
+  override def execJsonRepoStreamed(
+    flowOptions: Unit,
+    postFlowOptions: Unit,
+    withProjection: Boolean,
+    fields: F)(
+    dataRepo: AsyncReadonlyRepo[JsObject, _],
+    criteria: Seq[Criterion[Any]])(
+    implicit materializer: Materializer
+  ) = dispatch(
+      _.execJsonRepoStreamed(flowOptions, postFlowOptions, withProjection, toFields(fields))(dataRepo, criteria)
+    )(fields, Future(Nil))
+
+  override def execJsonRepoStreamedA(
+    flowOptions: Unit,
+    postFlowOptions: Unit,
+    withProjection: Boolean,
+    scalarOrArrayField: Field,
+    fields: F)(
+    dataRepo: AsyncReadonlyRepo[JsObject, _],
+    criteria: Seq[Criterion[Any]])(
+    implicit materializer: Materializer
+  ) = dispatch(
+      _.execJsonRepoStreamedA(flowOptions, postFlowOptions, withProjection, scalarOrArrayField, toFields(fields))(dataRepo, criteria)
+    )(fields, Future(Nil))
 
   override def createJsonFlow(
     options: Unit,
-    field: Field
+    fields: F
   ) = dispatch(
-      _.createJsonFlow(options, field)
-    )(field, Flow[JsObject].map(_ => Nil))
+      _.createJsonFlow(options, toFields(fields))
+    )(fields, Flow[JsObject].map(_ => Nil))
 
   override def createJsonFlowA(
     options: Unit,
     scalarOrArrayField: Field,
-    field: Field
+    fields: F
   ) = dispatch(
-      _.createJsonFlowA(options, scalarOrArrayField, field)
-    )(field, Flow[JsObject].map(_ => Nil))
+      _.createJsonFlowA(options, scalarOrArrayField, toFields(fields))
+    )(fields, Flow[JsObject].map(_ => Nil))
 
   override def execStreamed(
     flowOptions: Unit,
@@ -93,16 +120,18 @@ private object CumulativeOrderedCountsAnyExecAux extends CalculatorExecutor[Cumu
     throw new RuntimeException("Method CumulativeOrderedCountsAnyExec.execStreamed is not supported due to unknown value type (ordering).")
 
   private def dispatch[OUT](
-    exec: CalculatorExecutor[CumulativeOrderedCountsCalcTypePack[Any], Field] => OUT)(
-    field: Field,
+    exec: CalculatorExecutor[CumulativeOrderedCountsCalcTypePack[Any], Seq[Field]] => OUT)(
+    fields: F,
     defaultOutput: OUT
   ): OUT =
-    fieldTypeOrdering(field.fieldType).map { implicit ordering =>
-      exec(genericExec[Any])
-    }.getOrElse(defaultOutput)
+    toFields(fields).headOption.flatMap( field =>
+      fieldTypeOrdering(field.fieldType).map { implicit ordering =>
+        exec(genericExec[Any])
+      }
+    ).getOrElse(defaultOutput)
 
   private def dispatchVal[OUT](
-    exec: CalculatorExecutor[CumulativeOrderedCountsCalcTypePack[Any], Field] => OUT)(
+    exec: CalculatorExecutor[CumulativeOrderedCountsCalcTypePack[Any], Seq[Field]] => OUT)(
     value: Any,
     defaultOutput: OUT
   ): OUT =
@@ -112,5 +141,9 @@ private object CumulativeOrderedCountsAnyExecAux extends CalculatorExecutor[Cumu
 }
 
 object CumulativeOrderedCountsAnyExec {
-  def apply: CalculatorExecutor[CumulativeOrderedCountsCalcTypePack[Any], Field] = CumulativeOrderedCountsAnyExecAux
+  def withSingle: CalculatorExecutor[CumulativeOrderedCountsCalcTypePack[Any], Field] =
+    new CumulativeOrderedCountsAnyExec[Field] with WithSingleField
+
+  def withSeq: CalculatorExecutor[CumulativeOrderedCountsCalcTypePack[Any], Seq[Field]] =
+    new CumulativeOrderedCountsAnyExec[Seq[Field]] with WithSeqFields
 }

@@ -3,11 +3,14 @@ package services.stats
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
+import dataaccess.{AsyncReadonlyRepo, Criterion}
 import models.Field
 import play.api.libs.json.JsObject
+import reactivemongo.bson.BSONObjectID
 import services.stats.CalculatorHelper._
-import scala.reflect.runtime.universe._
+import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.reflect.runtime.universe._
 import scala.concurrent.Future
 
 trait CalculatorExecutor[C <: CalculatorTypePack, F] {
@@ -52,6 +55,27 @@ trait CalculatorExecutor[C <: CalculatorTypePack, F] {
     scalarOrArrayField: Field,
     fields: F)(
     source: Source[JsObject, _])(
+    implicit materializer: Materializer
+  ): Future[C#OUT]
+
+  def execJsonRepoStreamed(
+    flowOptions: C#FLOW_OPT,
+    postFlowOptions: C#SINK_OPT,
+    withProjection: Boolean,
+    fields: F)(
+    dataRepo: AsyncReadonlyRepo[JsObject, _],
+    criteria: Seq[Criterion[Any]])(
+    implicit materializer: Materializer
+  ): Future[C#OUT]
+
+  def execJsonRepoStreamedA(
+    flowOptions: C#FLOW_OPT,
+    postFlowOptions: C#SINK_OPT,
+    withProjection: Boolean,
+    scalarOrArrayField: Field,
+    fields: F)(
+    dataRepo: AsyncReadonlyRepo[JsObject, _],
+    criteria: Seq[Criterion[Any]])(
     implicit materializer: Materializer
   ): Future[C#OUT]
 
@@ -120,6 +144,49 @@ private class CalculatorExecutorImpl[C <: CalculatorTypePack, F](
     implicit materializer: Materializer
   ): Future[C#OUT] =
     calculator.runJsonFlowA(scalarOrArrayField, toFields(fields), flowOptions, postFlowOptions)(source)
+
+  override def execJsonRepoStreamed(
+    flowOptions: C#FLOW_OPT,
+    postFlowOptions: C#SINK_OPT,
+    withProjection: Boolean,
+    fields: F)(
+    dataRepo: AsyncReadonlyRepo[JsObject, _],
+    criteria: Seq[Criterion[Any]])(
+    implicit materializer: Materializer
+  ): Future[C#OUT] =
+    for {
+      // create a data source
+      source <- dataRepo.findAsStream(
+        criteria = criteria,
+        projection = if (withProjection) toFields(fields).map(_.name) else Nil
+      )
+
+      // execute the calculator on the data source
+      results <- execJsonStreamed(flowOptions, postFlowOptions, fields)(source)
+    } yield
+      results
+
+  override def execJsonRepoStreamedA(
+    flowOptions: C#FLOW_OPT,
+    postFlowOptions: C#SINK_OPT,
+    withProjection: Boolean,
+    scalarOrArrayField: Field,
+    fields: F)(
+    dataRepo: AsyncReadonlyRepo[JsObject, _],
+    criteria: Seq[Criterion[Any]])(
+    implicit materializer: Materializer
+  ): Future[C#OUT] =
+    for {
+    // create a data source
+      source <- dataRepo.findAsStream(
+        criteria = criteria,
+        projection = if (withProjection) toFields(fields).map(_.name) else Nil
+      )
+
+      // execute the calculator on the data source
+      results <- execJsonStreamedA(flowOptions, postFlowOptions, scalarOrArrayField, fields)(source)
+    } yield
+      results
 
   override def createJsonFlow(
     flowOptions: C#FLOW_OPT,

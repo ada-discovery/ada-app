@@ -5,7 +5,10 @@
 
 @()(implicit context: WebContext)
 
-@main(Messages("homepage.title", Messages("project.name"))) {
+@main(
+    title = Messages("homepage.title", Messages("project.name")),
+    showMessageBox = false
+) {
 
     <div class="page-header">
         <div class="row">

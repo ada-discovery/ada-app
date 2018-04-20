@@ -35,7 +35,11 @@
     ))
 }
 
-@main(Messages("documentation.title", helpName), Some(sideBar)) {
+@main(
+    title = Messages("documentation.title", helpName),
+    sideBar = Some(sideBar),
+    showMessageBox = false
+) {
 
     <div class="page-header">
         <div class="row">

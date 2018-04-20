@@ -16,8 +16,6 @@
     yField: Option[Field],
     groupField: Option[Field],
     widgetOption: Option[Widget],
-    xMean: Option[Double],
-    yMean: Option[Double],
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -63,22 +61,6 @@
             <div class="col-md-3">
                 <input id="groupFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name or Label" value="@groupField.map(_.labelOrElseName)">
                 <input id="groupFieldName" name="groupFieldName" type="hidden" value="@groupField.map(_.name)">
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-2">
-                <div class="well">
-                    Mean: @{xMean.map { mean =>
-                        BigDecimal(mean).setScale(3, BigDecimal.RoundingMode.FLOOR)
-                    }.getOrElse("N/A")}
-                </div>
-            </div>
-            <div class="col-md-offset-2 col-md-2">
-                <div class="well">
-                    Mean: @{yMean.map { mean =>
-                        BigDecimal(mean).setScale(3, BigDecimal.RoundingMode.FLOOR)
-                    }.getOrElse("N/A")}
-                </div>
             </div>
         </div>
         <hr/>

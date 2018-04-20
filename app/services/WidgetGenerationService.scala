@@ -5,13 +5,13 @@ import javax.inject.{Inject, Singleton}
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.google.inject.ImplementedBy
-import dataaccess.{Criterion, FieldType, FieldTypeHelper}
+import dataaccess.{Criterion, FieldType, FieldTypeHelper, NotEqualsNullCriterion}
 import dataaccess.RepoTypes.JsonReadonlyRepo
 import models._
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import services.stats.StatsService
-import services.stats.calc.{NumericDistributionOptions, UniqueDistributionCountsCalcTypePack}
+import services.stats.calc.{NumericDistributionFlowOptions, NumericDistributionOptions, UniqueDistributionCountsCalcTypePack}
 import services.widgetgen._
 import services.stats.CalculatorHelper._
 
@@ -30,18 +30,25 @@ trait WidgetGenerationService {
     usePerWidgetRepoMethod: Boolean = false
   ): Future[Traversable[Option[(Widget, Seq[String])]]]
 
-  def genFromRepo(
+  def genLocally(
+    widgetSpec: WidgetSpec,
+    items: Traversable[JsObject],
+    fields: Traversable[Field]
+  ): Option[Widget]
+
+  def genStreamed(
     widgetSpec: WidgetSpec,
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     fields: Traversable[Field]
   ): Future[Option[Widget]]
 
-  def genLocally(
+  def genFromRepo(
     widgetSpec: WidgetSpec,
-    items: Traversable[JsObject],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
     fields: Traversable[Field]
-  ): Option[Widget]
+  ): Future[Option[Widget]]
 }
 
 @Singleton
@@ -52,6 +59,7 @@ class WidgetGenerationServiceImpl @Inject() (
   private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
   private val maxIntCountsForZeroPadding = 1000
   private val defaultNumericBinCount = 20
+  private val streamedCorrelationCalcParallelism = Some(4)
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
@@ -170,18 +178,12 @@ class WidgetGenerationServiceImpl @Inject() (
         val field = getField(spec.fieldName)
         val groupField = getFieldO(spec.groupFieldName)
         calcCumulativeCountsFromRepo(repo, criteria, field, groupField, spec.numericBinCount).map(
-          CumulativeCountWidgetGenerator(nameFieldMap, spec)
+          CumulativeCountWidgetGenerator2(nameFieldMap, spec)
         )
 
       case spec: BoxWidgetSpec =>
         calcQuartilesFromRepo(repo, criteria, getField(spec.fieldName)).map(
           _.flatMap(BoxWidgetGenerator(nameFieldMap, spec))
-        )
-
-      case spec: CorrelationWidgetSpec =>
-        val fields = spec.fieldNames.flatMap(nameFieldMap.get)
-        calcPearsonCorrelationsStreamed(repo, criteria, fields).map(
-          CorrelationWidgetGenerator(nameFieldMap, spec)
         )
 
       case spec: TemplateHtmlWidgetSpec =>
@@ -213,50 +215,146 @@ class WidgetGenerationServiceImpl @Inject() (
 
     def getFieldO(name: Option[String]) = name.map(getField)
 
+    val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
+
     widgetSpec match {
 
       case spec: DistributionWidgetSpec =>
         val field = getField(spec.fieldName)
         val groupField = getFieldO(spec.groupFieldName)
+
         val countSeries = calcDistributionCounts(jsons, field, groupField, spec.numericBinCount)
         DistributionWidgetGenerator(nameFieldMap, spec)(countSeries)
 
-      case spec: CumulativeCountWidgetSpec =>
-        val field = getField(spec.fieldName)
-        val groupField = getFieldO(spec.groupFieldName)
-        val countSeries = calcCumulativeCounts(jsons, field, groupField, spec.numericBinCount)
-        CumulativeCountWidgetGenerator(nameFieldMap, spec)(countSeries)
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty =>
+        val options = NumericDistributionOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount))
+        val counts = cumulativeNumericBinCountsSeqExec.execJsonA(options, fields(0), fields)(jsons)
+        CumulativeNumericBinCountWidgetGenerator(nameFieldMap, spec)(counts)
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined =>
+        val options = NumericDistributionOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount))
+        val counts = groupCumulativeNumericBinCountsSeqExec.execJsonA(options, fields(1), fields)(jsons)
+        GroupCumulativeNumericBinCountWidgetGenerator(nameFieldMap, spec)(counts)
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isEmpty =>
+        val valueCounts = cumulativeOrderedCountsAnySeqExec.execJsonA_(fields(0), fields)(jsons)
+        CumulativeCountWidgetGenerator(nameFieldMap, spec)(valueCounts)
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isDefined =>
+        val groupCounts = groupCumulativeOrderedCountsAnySeqExec[Any].execJsonA_(fields(1), fields)(jsons)
+        GroupCumulativeCountWidgetGenerator(nameFieldMap, spec)(groupCounts)
 
       case spec: BoxWidgetSpec =>
-        val field = getField(spec.fieldName)
-        calcQuartiles(jsons, field).flatMap(
+        quartilesAnySeqExec.execJsonA_(fields(0), fields)(jsons).flatMap(
           BoxWidgetGenerator(nameFieldMap, spec)
         )
 
-      case spec: ScatterWidgetSpec =>
-        val xField = getField(spec.xFieldName)
-        val yField = getField(spec.yFieldName)
-        val groupField = getFieldO(spec.groupFieldName)
+      case spec: ScatterWidgetSpec if spec.groupFieldName.isDefined =>
+        val data = groupTupleSeqExec[String, Any, Any].execJson_(fields)(jsons)
+        GroupScatterWidgetGenerator[Any, Any](nameFieldMap, spec)(data)
 
-        val data = calcScatterData(jsons, xField, yField, groupField)
+      case spec: ScatterWidgetSpec if spec.groupFieldName.isEmpty =>
+        val data = tupleSeqExec[Any, Any].execJson_(fields)(jsons)
         ScatterWidgetGenerator[Any, Any](nameFieldMap, spec)(data)
 
       case spec: CorrelationWidgetSpec =>
-        val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
         val correlations = pearsonCorrelationExec.execJson((), fields)(jsons)
         CorrelationWidgetGenerator(nameFieldMap, spec)(correlations)
 
       case spec: BasicStatsWidgetSpec =>
-        val field = getField(spec.fieldName)
-        basicStatsExec.execJsonA_((), field)(jsons).flatMap (
-          BasicStatsWidgetGenerator(nameFieldMap, spec)
-        )
+        val results = basicStatsSeqExec.execJsonA_(fields(0), fields)(jsons)
+        BasicStatsWidgetGenerator(nameFieldMap, spec)(results)
 
       case spec: TemplateHtmlWidgetSpec =>
         val widget = HtmlWidget("", spec.content, spec.displayOptions)
         Some(widget)
     }
   }
+
+  override def genStreamed(
+    widgetSpec: WidgetSpec,
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    fields: Traversable[Field]
+  ): Future[Option[Widget]] = {
+    val nameFieldMap = fields.map(field => (field.name, field)).toMap
+    genStreamedAux(widgetSpec, repo, criteria, nameFieldMap)
+  }
+
+  private def genStreamedAux(
+    widgetSpec: WidgetSpec,
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    nameFieldMap: Map[String, Field]
+  ): Future[Option[Widget]] = {
+    val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
+
+    widgetSpec match {
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty =>
+        val options = NumericDistributionFlowOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount), 0, 1)
+        cumulativeNumericBinCountsSeqExec.execJsonRepoStreamedA(options, options, true, fields(0), fields)(repo, criteria).map(
+          CumulativeNumericBinCountWidgetGenerator(nameFieldMap, spec)
+        )
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined =>
+        val options = NumericDistributionFlowOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount), 0, 1)
+        groupCumulativeNumericBinCountsSeqExec.execJsonRepoStreamedA(options, options, true, fields(1), fields)(repo, criteria).map(
+          GroupCumulativeNumericBinCountWidgetGenerator(nameFieldMap, spec)
+        )
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isEmpty =>
+        cumulativeOrderedCountsAnySeqExec.execJsonRepoStreamedA_(true, fields(0), fields)(repo, criteria).map(
+          CumulativeCountWidgetGenerator(nameFieldMap, spec)
+        )
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isDefined =>
+        groupCumulativeOrderedCountsAnySeqExec[Any].execJsonRepoStreamedA_(true, fields(1), fields)(repo, criteria).map(
+          GroupCumulativeCountWidgetGenerator(nameFieldMap, spec)
+        )
+
+      case spec: BoxWidgetSpec =>
+        quartilesAnySeqExec.execJsonRepoStreamedA_(true, fields(0), fields)(repo, criteria ++ withNotNull(fields)).map(
+          _.flatMap(BoxWidgetGenerator(nameFieldMap, spec))
+        )
+
+      case spec: ScatterWidgetSpec if spec.groupFieldName.isDefined =>
+        groupTupleSeqExec[String, Any, Any].execJsonRepoStreamed_(true, fields)(repo, criteria ++ withNotNull(fields.tail)).map(
+          GroupScatterWidgetGenerator[Any, Any](nameFieldMap, spec)
+        )
+
+      case spec: ScatterWidgetSpec if spec.groupFieldName.isEmpty =>
+        tupleSeqExec[Any, Any].execJsonRepoStreamed_(true, fields)(repo, criteria ++ withNotNull(fields)).map(
+          ScatterWidgetGenerator[Any, Any](nameFieldMap, spec)
+        )
+
+      case spec: CorrelationWidgetSpec =>
+        pearsonCorrelationExec.execJsonRepoStreamed(
+          streamedCorrelationCalcParallelism,
+          streamedCorrelationCalcParallelism,
+          true, fields)(repo, criteria
+        ).map(
+          CorrelationWidgetGenerator(nameFieldMap, spec)
+        )
+
+      case spec: BasicStatsWidgetSpec =>
+        basicStatsSeqExec.execJsonRepoStreamedA_(true, fields(0), fields)(repo, criteria).map(
+          BasicStatsWidgetGenerator(nameFieldMap, spec)
+        )
+
+      case spec: TemplateHtmlWidgetSpec =>
+        val widget = HtmlWidget("", spec.content, spec.displayOptions)
+        Future(Some(widget))
+
+      case _ => Future(None)
+    }
+  }
+
+  private def withNotNull(fields: Seq[Field]): Seq[Criterion[Any]] =
+    fields.map(field => NotEqualsNullCriterion(field.name))
+
+//  private def withNotNull(fields: Field*): Seq[Criterion[Any]] =
+//    fields.map(field => NotEqualsNullCriterion(field.name))
 
   private def calcDistributionCountsFromRepo(
     repo: JsonReadonlyRepo,
@@ -532,96 +630,8 @@ class WidgetGenerationServiceImpl @Inject() (
         )
 
       case None =>
-        val projection = Seq(field.name) ++ groupField.map(_.name)
-
-        repo.find(criteria, Nil, projection.toSet).map( jsons =>
-          calcCumulativeCounts(jsons, field, groupField, None)
-        )
+        Future(Nil)
     }
-
-  private def calcCumulativeCounts(
-    items: Traversable[JsObject],
-    field: Field,
-    groupField: Option[Field],
-    numericBinCount: Option[Int]
-  ): Traversable[(String, Traversable[Count[Any]])] =
-    numericBinCount match {
-      case Some(_) =>
-        val distCounts = calcDistributionCounts(items, field, groupField, numericBinCount)
-        toCumCounts(distCounts)
-
-      case None =>
-        groupField match {
-          case Some(groupField) =>
-            field.fieldType match {
-              // group numeric
-              case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
-                countGroupNumericCumulativeCounts(items, field, groupField)
-
-              // group string
-              case _ =>
-                countGroupStringCumulativeCounts(items, field, groupField)
-            }
-
-          case None =>
-            val counts = field.fieldType match {
-              // numeric
-              case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
-                countNumericCumulativeCounts(items, field)
-
-              // string
-              case _ =>
-                countStringCumulativeCounts(items, field)
-            }
-
-            Seq(("All", counts))
-        }
-    }
-
-  private def countGroupNumericCumulativeCounts(
-    jsons: Traversable[JsObject],
-    field: Field,
-    groupField: Field
-  ) = {
-    val groupCounts = groupCumulativeOrderedCountsAnyExec[Any].execJsonA_(field, (groupField, field))(jsons)
-    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-
-    toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, valueCounts) =>
-      val counts = valueCounts.map { case (value, count) => Count(value, count)}
-      (groupString, counts)
-    }
-  }
-
-  private def countGroupStringCumulativeCounts(
-    jsons: Traversable[JsObject],
-    field: Field,
-    groupField: Field
-  ) = {
-    val groupCounts = groupCumulativeOrderedCountsAnyExec[Any].execJsonA_(field, (groupField, field))(jsons)
-    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-    val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-
-    toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, valueCounts) =>
-      (groupString, createStringCountsDefined(valueCounts, fieldType))
-    }
-  }
-
-  private def countNumericCumulativeCounts(
-    jsons: Traversable[JsObject],
-    field: Field
-  ) = {
-    val valueCounts = cumulativeOrderedCountsAnyExec.execJsonA_((), field)(jsons)
-    valueCounts.map { case (value, count) => Count(value, count) }
-  }
-
-  private def countStringCumulativeCounts(
-    jsons: Traversable[JsObject],
-    field: Field
-  ) = {
-    val valueCounts = cumulativeOrderedCountsAnyExec.execJsonA_((), field)(jsons)
-    val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-    createStringCountsDefined(valueCounts, fieldType)
-  }
 
   // function that converts dist counts to cumulative counts by applying simple running sum
   private def toCumCounts[T](
@@ -636,21 +646,5 @@ class WidgetGenerationServiceImpl @Inject() (
         Count(value, count)
       }
       (seriesName, labeledDistCounts)
-    }
-
-  private def calcScatterData(
-    xyzItems: Traversable[JsObject],
-    xField: Field,
-    yField: Field,
-    groupField: Option[Field]
-  ): Seq[(String, Traversable[(Any, Any)])] =
-    groupField match {
-      case Some(groupField) =>
-        val dataAux = groupTupleExec[String, Any, Any].execJson_((groupField, xField, yField))(xyzItems)
-        dataAux.map { case (groupName, values) => (groupName.getOrElse("Undefined"), values)}.toSeq
-
-      case None =>
-        val dataAux = tupleExec[Any, Any].execJson_((xField, yField))(xyzItems)
-        Seq(("all", dataAux))
     }
 }

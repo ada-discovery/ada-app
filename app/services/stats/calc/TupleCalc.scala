@@ -15,7 +15,7 @@ private class TupleCalc[A, B] extends Calculator[TupleCalcTypePack[A, B]] {
   override def fun(opt: Unit)  = _.flatMap(toOption)
 
   override def flow(options: Unit) = {
-    val flatFlow = Flow.fromFunction(toOption).collect { case Some(x) => x}
+    val flatFlow = Flow[IN].collect { case (Some(x), Some(y)) => (x, y)}
     flatFlow.via(seqFlow)
   }
 

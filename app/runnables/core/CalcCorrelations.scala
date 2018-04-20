@@ -4,14 +4,19 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import java.{util => ju}
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{FileIO, Framing, Sink, Source}
 import akka.util.ByteString
 import com.google.inject.Inject
+import dataaccess.{AsyncReadonlyRepo, Criterion}
 import dataaccess.Criterion._
 import models.DataSetFormattersAndIds.FieldIdentity
 import models.{Field, FieldTypeId}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
+import play.api.libs.json.JsObject
+import reactivemongo.bson.BSONObjectID
 import runnables.InputFutureRunnable
 import services.stats.StatsService
 import util.{seqFutures, writeByteArrayStream}
@@ -26,6 +31,9 @@ class CalcCorrelations @Inject()(
   ) extends InputFutureRunnable[CalcCorrelationsSpec] {
 
   private val logger = Logger
+
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
 
   import statsService._
 
@@ -102,6 +110,23 @@ class CalcCorrelations @Inject()(
         ()
       )
     }
+  }
+
+  private def calcPearsonCorrelationsStreamed(
+    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    criteria: Seq[Criterion[Any]],
+    fields: Seq[Field],
+    parallelism: Option[Int],
+    withProjection: Boolean,
+    areValuesAllDefined: Boolean
+  ): Future[Seq[Seq[Option[Double]]]] = {
+    val exec =
+      if (areValuesAllDefined)
+        (pearsonCorrelationAllDefinedExec.execJsonRepoStreamed)_
+      else
+        (pearsonCorrelationExec.execJsonRepoStreamed)_
+
+    exec(parallelism, parallelism, withProjection, fields)(dataRepo, criteria)
   }
 
   override def inputType = typeOf[CalcCorrelationsSpec]

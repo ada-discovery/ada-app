@@ -117,7 +117,7 @@ case class DistributionWidgetSpec(
   useDateMonthBins: Boolean = false,
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends WidgetSpec {
-  override val fieldNames = Seq(Some(fieldName), groupFieldName).flatten
+  override val fieldNames = Seq(groupFieldName, Some(fieldName)).flatten
 }
 
 case class CumulativeCountWidgetSpec(
@@ -129,7 +129,7 @@ case class CumulativeCountWidgetSpec(
   useDateMonthBins: Boolean = false,
   displayOptions: MultiChartDisplayOptions = MultiChartDisplayOptions()
 ) extends WidgetSpec {
-  override val fieldNames = Seq(Some(fieldName), groupFieldName).flatten
+  override val fieldNames = Seq(groupFieldName, Some(fieldName)).flatten
 }
 
 case class BoxWidgetSpec(
@@ -147,7 +147,7 @@ case class ScatterWidgetSpec(
   subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec {
-  override val fieldNames = Seq(Some(xFieldName), Some(yFieldName), groupFieldName).flatten
+  override val fieldNames = Seq(groupFieldName, Some(xFieldName), Some(yFieldName)).flatten
 }
 
 case class CorrelationWidgetSpec(

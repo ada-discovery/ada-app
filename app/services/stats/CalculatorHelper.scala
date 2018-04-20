@@ -3,8 +3,10 @@ package services.stats
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
+import dataaccess.{AsyncReadonlyRepo, Criterion}
 import models.Field
 import play.api.libs.json.JsObject
+import reactivemongo.bson.BSONObjectID
 import services.stats.calc.{ArrayCalc, ArrayCalculatorTypePack}
 import services.stats.calcjsonin.JsonInputConverterFactory
 
@@ -61,8 +63,14 @@ object CalculatorHelper {
     ): Future[C#OUT] =
       source.via(jsonFlow(fields, options2)).runWith(Sink.head).map(calculator.postFlow(options3))
 
-    private def jsonConvert(fields: Seq[Field]) =
-      jicf.apply[C#IN](calculator).apply(fields)
+    private def jsonConvert(fields: Seq[Field]) = {
+      val unwrappedCalculator =
+        calculator match {
+          case arrayCalc: ArrayCalc[C, _] => arrayCalc.innerCalculator
+          case _ => calculator
+        }
+      jicf.apply[C#IN](unwrappedCalculator).apply(fields)
+    }
   }
 
   implicit class ArrayJsonExt[C <: CalculatorTypePack](
@@ -120,15 +128,6 @@ object CalculatorHelper {
         ArrayCalc(calculator).runJsonFlow(fields, options2, options3)(source)
       else
         calculator.runJsonFlow(fields, options2, options3)(source)
-
-    private def jsonConvert(fields: Seq[Field]) = {
-      val unwrappedCalculator =
-        calculator match {
-          case arrayCalc: ArrayCalc[C, _] => arrayCalc.innerCalculator
-          case _ => calculator
-        }
-      jicf.apply[C#IN](unwrappedCalculator).apply(fields)
-    }
   }
 
   implicit class NoOptionsExt[C <: NoOptionsCalculatorTypePack](
@@ -211,6 +210,23 @@ object CalculatorHelper {
       implicit materializer: Materializer
     ) = calculatorExecutor.execJsonStreamedA((), (), scalarOrArrayField, fields)(source)
 
+    def execJsonRepoStreamed_(
+      withProjection: Boolean,
+      fields: F)(
+      dataRepo: AsyncReadonlyRepo[JsObject, _],
+      criteria: Seq[Criterion[Any]])(
+      implicit materializer: Materializer
+    ) = calculatorExecutor.execJsonRepoStreamed((), (), withProjection, fields)(dataRepo, criteria)
+
+    def execJsonRepoStreamedA_(
+      withProjection: Boolean,
+      scalarOrArrayField: Field,
+      fields: F)(
+      dataRepo: AsyncReadonlyRepo[JsObject, _],
+      criteria: Seq[Criterion[Any]])(
+      implicit materializer: Materializer
+    ) = calculatorExecutor.execJsonRepoStreamedA((), (), withProjection, scalarOrArrayField, fields)(dataRepo, criteria)
+
     def createJsonFlow_(
       fields: F
     ) = calculatorExecutor.createJsonFlow((), fields)
@@ -236,6 +252,17 @@ object CalculatorHelper {
       source: Source[JsObject, _])(
       implicit materializer: Materializer
     ) = calculatorExecutor.execJsonStreamedA(flowOptions, postFlowOptions, field, field)(source)
+
+
+    def execJsonRepoStreamedA_(
+      flowOptions: C#FLOW_OPT,
+      postFlowOptions: C#SINK_OPT,
+      withProjection: Boolean,
+      field: Field)(
+      dataRepo: AsyncReadonlyRepo[JsObject, _],
+      criteria: Seq[Criterion[Any]])(
+      implicit materializer: Materializer
+    ) = calculatorExecutor.execJsonRepoStreamedA(flowOptions, postFlowOptions, withProjection, field, field)(dataRepo, criteria)
 
     def createJsonFlowA_(
       options: C#FLOW_OPT,
