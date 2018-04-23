@@ -7,7 +7,7 @@ organization := "org.ada"
 
 name := "ada-web"
 
-version := "0.6.2"
+version := "0.6.3"
 
 scalaVersion := "2.11.11"
 
@@ -38,7 +38,7 @@ routesImport ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.ada" % "ada-dataaccess_2.11" % "0.6.2",
+  "org.ada" % "ada-dataaccess_2.11" % "0.6.3",
 //  "nioc-bot" % "nioc-bot_2.11" % "0.2.3",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.12.6-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"), // "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
@@ -73,9 +73,9 @@ libraryDependencies ++= Seq(
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
   "com.typesafe.play" %% "play-mailer" % "4.0.0",
   "org.apache.ignite" % "ignite-spark" % "1.6.0",
-//  "com.github.haifengl" %% "smile-scala" % "1.5.0", // machine learning
-//  "com.github.haifengl" % "smile-netlib" % "1.5.0", // for optimized optimized matrix computation
-//  "com.github.haifengl" % "smile-plot" % "1.5.0", // machine learning
+  "com.github.haifengl" %% "smile-scala" % "1.5.0", // machine learning
+  "com.github.haifengl" % "smile-netlib" % "1.5.0", // for optimized optimized matrix computation
+  "com.github.haifengl" % "smile-plot" % "1.5.0", // machine learning
   "org.scalanlp" %% "breeze" % "0.13.2", // linear algebra and stuff
   "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
   "com.banda" % "incal" % "0.1.6" exclude("org.springframework", "spring-context") exclude("org.springframework", "spring-test") exclude("org.springframework", "spring-web") exclude("org.springframework", "spring-webmvc"),
