@@ -111,6 +111,18 @@ private class CumulativeOrderedCountsAnyExec[F] extends CalculatorExecutor[Cumul
       _.createJsonFlowA(options, scalarOrArrayField, toFields(fields))
     )(fields, Flow[JsObject].map(_ => Nil))
 
+  override def execPostFlow(
+    options: Unit)(
+    flowOutput: Traversable[(Any, Int)]
+  ): Traversable[(Any, Int)] =
+    flowOutput.headOption.map { case (someVal, _) =>
+      dispatchVal(
+        _.execPostFlow(options)(flowOutput)
+      )(someVal, Nil)
+    }.getOrElse(
+      Nil
+    )
+
   override def execStreamed(
     flowOptions: Unit,
     postFlowOptions: Unit)(
@@ -118,6 +130,8 @@ private class CumulativeOrderedCountsAnyExec[F] extends CalculatorExecutor[Cumul
     implicit materializer: Materializer
   ) =
     throw new RuntimeException("Method CumulativeOrderedCountsAnyExec.execStreamed is not supported due to unknown value type (ordering).")
+
+  // helper dispatch functions
 
   private def dispatch[OUT](
     exec: CalculatorExecutor[CumulativeOrderedCountsCalcTypePack[Any], Seq[Field]] => OUT)(

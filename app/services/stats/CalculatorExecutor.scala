@@ -89,6 +89,11 @@ trait CalculatorExecutor[C <: CalculatorTypePack, F] {
     scalarOrArrayField: Field,
     fields: F
   ): Flow[JsObject, C#INTER, NotUsed]
+
+  def execPostFlow(
+    options: C#SINK_OPT)(
+    flowOutput: C#INTER
+  ): C#OUT
 }
 
 private class CalculatorExecutorImpl[C <: CalculatorTypePack, F](
@@ -200,6 +205,12 @@ private class CalculatorExecutorImpl[C <: CalculatorTypePack, F](
     fields: F
   ): Flow[JsObject, C#INTER, NotUsed] =
     calculator.jsonFlowA(scalarOrArrayField, toFields(fields), flowOptions)
+
+  override def execPostFlow(
+    options: C#SINK_OPT)(
+    flowOutput: C#INTER
+   ): C#OUT =
+    calculator.postFlow(options)(flowOutput)
 }
 
 trait ToFields[F] extends (F => Seq[Field])

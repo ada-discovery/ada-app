@@ -123,6 +123,21 @@ private class GroupCumulativeOrderedCountsAnyExec[G, F](
   ) =
     throw new RuntimeException("Method GroupCumulativeOrderedCountsAnyExec.execStreamed is not supported due to unknown value type (ordering).")
 
+  override def execPostFlow(
+    options: Unit)(
+    flowOutput: Traversable[((Option[G], Any), Int)]
+  ) = {
+    flowOutput.headOption.map { case ((_, someVal), _) =>
+      dispatchVal(
+        _.execPostFlow(options)(flowOutput)
+      )(someVal, Nil)
+    }.getOrElse(
+      Nil
+    )
+  }
+
+  // helper / dispatch functions
+
   private def dispatch[OUT](
     exec: CalculatorExecutor[GroupCumulativeOrderedCountsCalcTypePack[G, Any], Seq[Field]] => OUT)(
     fields: F,

@@ -33,7 +33,7 @@ trait WidgetRepoController[E] {
         fieldCaseClassRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
       }
 
-      widgets <- wgs.apply(widgetSpecs, jsonCaseClassRepo, criteria, Map(), fields, false)
+      widgets <- wgs.applyOld(widgetSpecs, jsonCaseClassRepo, criteria, Map(), fields, false)
   } yield
       widgets.map(_.map(_._1))
 }

@@ -73,6 +73,38 @@ object FieldUtil {
     }.flatten
   }
 
+  def isNumeric(fieldType: FieldTypeId.Value): Boolean =
+    fieldType == FieldTypeId.Integer ||
+      fieldType == FieldTypeId.Double ||
+        fieldType == FieldTypeId.Date
+
+  def isCategorical(fieldType: FieldTypeId.Value): Boolean =
+    fieldType == FieldTypeId.String ||
+      fieldType == FieldTypeId.Enum ||
+        fieldType == FieldTypeId.Boolean
+
+  implicit class InfixFieldOps(val field: Field) {
+    def isNumeric = FieldUtil.isNumeric(field.fieldType)
+
+    def isCategorical = FieldUtil.isCategorical(field.fieldType)
+
+    def isInteger = field.fieldType == FieldTypeId.Integer
+
+    def isDouble = field.fieldType == FieldTypeId.Double
+
+    def isDate = field.fieldType == FieldTypeId.Date
+
+    def isString = field.fieldType == FieldTypeId.String
+
+    def isEnum = field.fieldType == FieldTypeId.Enum
+
+    def isBoolean = field.fieldType == FieldTypeId.Boolean
+
+    def isJson = field.fieldType == FieldTypeId.Json
+
+    def isNull = field.fieldType == FieldTypeId.Null
+  }
+
   implicit class InfixOp(val typ: Type) {
 
     private val optionInnerType =

@@ -60,8 +60,12 @@ class ArrayGroupCumulativeNumericBinCountsConverter extends ArrayGroupDoubleConv
   override def specificUseClass = Some(classOf[GroupNumericDistributionCountsCalc[Any]])
 }
 
-class AnyStringGroupScatterConverter extends StringGroupScatterConverter[Any, Any] {
-  override def specificUseClass = Some(classOf[GroupTupleCalc[_, _, _]])
+class AnyStringGroupTupleConverter extends StringGroupTupleConverter[Any, Any] {
+  override def specificUseClass = Some(classOf[GroupTupleCalc[String, _, _]])
+}
+
+class AnyStringUniqueGroupTupleConverter extends StringGroupTupleConverter[Any, Any] {
+  override def specificUseClass = Some(classOf[GroupUniqueTupleCalc[String, _, _]])
 }
 
 class BasicStatsConverter extends ScalarDoubleConverter {
@@ -303,7 +307,7 @@ private[calcjsonin] abstract class ArrayGroupNumericConverter[G: TypeTag, T: Typ
   override def inputType = typeOf[Array[(Option[G], Option[T])]]
 }
 
-private[calcjsonin] abstract class StringGroupScatterConverter[T1: TypeTag, T2: TypeTag] extends JsonInputConverter[GroupTupleCalcTypePack[String, T1, T2]#IN] {
+private[calcjsonin] abstract class StringGroupTupleConverter[T1: TypeTag, T2: TypeTag] extends JsonInputConverter[GroupTupleCalcTypePack[String, T1, T2]#IN] {
 
   override def apply(fields: Seq[Field]) = {
     requireFields(fields, 3)

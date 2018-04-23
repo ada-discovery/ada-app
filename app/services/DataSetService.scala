@@ -6,7 +6,7 @@ import javax.inject.Inject
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import dataaccess._
 import dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, JsonCrudRepo}
-import dataaccess.JsonCrudRepoExtra.InfixOps
+import dataaccess.JsonRepoExtra.InfixOps
 import dataaccess.JsonUtil
 import _root_.util.{GroupMapList, MessageLogger}
 import com.google.inject.ImplementedBy

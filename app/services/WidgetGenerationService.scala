@@ -2,24 +2,47 @@ package services
 
 import javax.inject.{Inject, Singleton}
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Flow, Sink}
 import com.google.inject.ImplementedBy
-import dataaccess.{Criterion, FieldType, FieldTypeHelper, NotEqualsNullCriterion}
+import dataaccess.{Criterion, FieldType, FieldTypeHelper}
 import dataaccess.RepoTypes.JsonReadonlyRepo
 import models._
+import play.api.{Configuration, Logger}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
-import services.stats.StatsService
-import services.stats.calc.{NumericDistributionFlowOptions, NumericDistributionOptions, UniqueDistributionCountsCalcTypePack}
+import services.stats.{CalculatorTypePack, StatsService}
 import services.widgetgen._
 import services.stats.CalculatorHelper._
+import util.AkkaStreamUtil
+import util.FieldUtil._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.concurrent.Future.sequence
 
 @ImplementedBy(classOf[WidgetGenerationServiceImpl])
 trait WidgetGenerationService {
+
+  @Deprecated
+  def applyOld(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]] = Nil,
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]] = Map(),
+    fields: Traversable[Field],
+    usePerWidgetRepoMethod: Boolean = false
+  ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
+    val method =
+      if (usePerWidgetRepoMethod)
+        WidgetGenerationMethod.RepoAndFullData
+      else
+        WidgetGenerationMethod.FullData
+
+    apply(widgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, fields, method)
+  }
 
   def apply(
     widgetSpecs: Traversable[WidgetSpec],
@@ -27,10 +50,10 @@ trait WidgetGenerationService {
     criteria: Seq[Criterion[Any]] = Nil,
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]] = Map(),
     fields: Traversable[Field],
-    usePerWidgetRepoMethod: Boolean = false
+    genMethod: WidgetGenerationMethod.Value
   ): Future[Traversable[Option[(Widget, Seq[String])]]]
 
-  def genLocally(
+  def genFromFullData(
     widgetSpec: WidgetSpec,
     items: Traversable[JsObject],
     fields: Traversable[Field]
@@ -40,7 +63,8 @@ trait WidgetGenerationService {
     widgetSpec: WidgetSpec,
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
-    fields: Traversable[Field]
+    fields: Traversable[Field],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]] = Map()
   ): Future[Option[Widget]]
 
   def genFromRepo(
@@ -51,20 +75,37 @@ trait WidgetGenerationService {
   ): Future[Option[Widget]]
 }
 
+object WidgetGenerationMethod extends Enumeration {
+
+  protected case class Val(val isRepoBased: Boolean, outputString: String) extends super.Val {
+    override def toString = outputString
+  }
+  implicit def valueToVal(x: Value) = x.asInstanceOf[Val]
+
+  val FullData = Val(false, "Full Data")
+  val StreamedIndividually = Val(false, "Streamed Individually")
+  val StreamedAll = Val(false, "Streamed All")
+  val RepoAndFullData = Val(false, "Repo and Full Data")
+  val RepoAndStreamedIndividually = Val(false, "Repo and Streamed Individually")
+  val RepoAndStreamedAll = Val(false, "Repo and Streamed All")
+}
+
 @Singleton
 class WidgetGenerationServiceImpl @Inject() (
-    statsService: StatsService
+    statsService: StatsService,
+    configuration: Configuration
   ) extends WidgetGenerationService {
 
-  private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
-  private val maxIntCountsForZeroPadding = 1000
-  private val defaultNumericBinCount = 20
-  private val streamedCorrelationCalcParallelism = Some(4)
+  private val streamedCorrelationCalcParallelism = configuration.getInt("streamedcalc.correlation.parallelism").getOrElse(4)
+
+  private val logger = Logger
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
   import statsService._
+
+  import WidgetGenerationMethod._
 
   override def apply(
     widgetSpecs: Traversable[WidgetSpec],
@@ -72,18 +113,12 @@ class WidgetGenerationServiceImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
     fields: Traversable[Field],
-    usePerWidgetRepoMethod: Boolean
+    genMethod: WidgetGenerationMethod.Value
   ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
 
-    // a helper function to get the sub criteria for the widget
-    def getSubCriteria(filterId: Option[BSONObjectID]): Seq[Criterion[Any]] =
-      filterId.map(subFilterId =>
-        widgetFilterSubCriteriaMap.get(subFilterId).getOrElse(Nil)
-      ).getOrElse(Nil)
-
     val splitWidgetSpecs: Traversable[Either[WidgetSpec, WidgetSpec]] =
-      if (usePerWidgetRepoMethod)
+      if (genMethod.isRepoBased)
         widgetSpecs.collect {
           case p: DistributionWidgetSpec => Left(p)
           case p: BoxWidgetSpec => Left(p)
@@ -96,51 +131,265 @@ class WidgetGenerationServiceImpl @Inject() (
       else
         widgetSpecs.map(Right(_))
 
-    val repoWidgetSpecs = splitWidgetSpecs.map(_.left.toOption).flatten
-    val fullDataWidgetSpecs = splitWidgetSpecs.map(_.right.toOption).flatten
-    val fullDataFieldNames = fullDataWidgetSpecs.map(_.fieldNames).flatten.toSet
+    val repoWidgetSpecs = splitWidgetSpecs.flatMap(_.left.toOption)
+    val nonRepoWidgetSpecs = splitWidgetSpecs.flatMap(_.right.toOption)
 
-    println("Loaded chart field names: " + fullDataFieldNames.mkString(", "))
+    // future to generate widgets from repo
+    val repoWidgetsFuture = genFromRepo(
+      repoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap
+    )
 
-    val repoWidgetSpecsFuture =
-      Future.sequence(
-        repoWidgetSpecs.par.map { widgetSpec =>
+    // future to generate widgets from full data or stream (individual per widget or full with flow broadcast)
+    val nonRepoWidgetsFuture =
+      genMethod match {
+        case RepoAndFullData | FullData =>
+          genFromFullData(nonRepoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
 
-          val newCriteria = criteria ++ getSubCriteria(widgetSpec.subFilterId)
-          genFromRepoAux(widgetSpec, repo, newCriteria, nameFieldMap).map { widget =>
-            val widgetFieldNames = widget.map(widget => (widget, widgetSpec.fieldNames.toSeq))
-            (widgetSpec, widgetFieldNames)
-          }
+        case RepoAndStreamedIndividually | StreamedIndividually =>
+          genStreamedIndividually(nonRepoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
+
+        case RepoAndStreamedAll | StreamedAll =>
+          genStreamedAll(nonRepoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
+      }
+
+    for {
+      specWidgets1 <- repoWidgetsFuture
+      specWidgets2 <- nonRepoWidgetsFuture
+    } yield {
+      val specWidgetMap = (specWidgets1 ++ specWidgets2).toMap
+
+      // add field names
+      val specWidgetFieldNamesMap = specWidgetMap.map { case (spec, widgetOption) =>
+        spec -> widgetOption.map(widget => (widget, spec.fieldNames.toSeq))
+      }
+
+      // return widgets (with field names) in the specified order
+      widgetSpecs.flatMap(specWidgetFieldNamesMap.get)
+    }
+  }
+
+  private def genFromRepo(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
+    nameFieldMap: Map[String, Field]
+  ): Future[Traversable[(WidgetSpec, Option[Widget])]] = sequence(
+      widgetSpecs.par.map { widgetSpec =>
+        val newCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(widgetSpec.subFilterId)
+
+        genFromRepoAux(
+          widgetSpec, repo, newCriteria, nameFieldMap
+        ).map((widgetSpec, _))
+
+      }.toList
+    )
+
+  private def genStreamedIndividually(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
+    nameFieldMap: Map[String, Field]
+  ): Future[Traversable[(WidgetSpec, Option[Widget])]] =
+    for {
+      // calc min maxes for requested fields and filter widgets without min/max
+      (fieldNameMinMaxesDefined, filteredWidgetSpecs) <- createMinMaxMapAndFilterSpec(widgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
+
+      // generate widgets
+      widgets <- genStreamedIndividuallyAux(
+        filteredWidgetSpecs,  repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap, fieldNameMinMaxesDefined
+      )
+    } yield
+      widgets
+
+  private def genStreamedAll(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
+    nameFieldMap: Map[String, Field]
+  ): Future[Traversable[(WidgetSpec, Option[Widget])]] =
+    for {
+      // calc min maxes for requested fields and filter widgets without min/max
+      (fieldNameMinMaxesDefined, filteredWidgetSpecs) <- createMinMaxMapAndFilterSpec(widgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
+
+      // group by sub filter id and generate widgets in batches with zipped flows (and post flows)
+      specWidgets <- sequence(
+        filteredWidgetSpecs.groupBy(_.subFilterId).map { case (subFilterId, groupedWidgetSpecs) =>
+          val finalCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(subFilterId)
+          genStreamedAllAux(groupedWidgetSpecs, repo, finalCriteria, nameFieldMap, fieldNameMinMaxesDefined)
+        }
+      ).map(_.flatten)
+    } yield
+      specWidgets
+
+  private def createMinMaxMapAndFilterSpec(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
+    nameFieldMap: Map[String, Field]
+  ): Future[(
+      Map[(String, Option[BSONObjectID]), (Double, Double)],
+      Traversable[WidgetSpec]
+    )] = {
+
+    // collect all the fields required for min/max calculation for all the widgets
+    val widgetSpecMinMaxFields =
+      widgetSpecs.map { widgetSpec =>
+        val field = flowMinMaxField(widgetSpec, nameFieldMap)
+        (widgetSpec, field)
+      }
+
+    val minMaxSubFilterIdFields = widgetSpecMinMaxFields.collect { case (spec, Some(field)) =>
+      (spec.subFilterId, field)
+    }.toSet
+
+    for {
+      // calc min maxes for requested fields
+      fieldNameSubFilterIdMinMaxMap <- sequence(
+        minMaxSubFilterIdFields.map { case (subFilterId, field) =>
+          val finalCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(subFilterId)
+          getNumericMinMax(repo, finalCriteria, field).map { case (min, max) => (field.name, subFilterId) -> (min, max) }
+        }
+      ).map(_.toMap)
+    } yield {
+
+      // check if all the min/max values requested by widgets are defined... if not filter out the unfulfilled widgets and log a warning message
+      val filteredWidgetSpecs = widgetSpecMinMaxFields.collect { case (widgetSpec, minMaxField) =>
+        minMaxField match {
+          case Some(field) =>
+            val (min, max) = fieldNameSubFilterIdMinMaxMap.get((field.name, widgetSpec.subFilterId)).get
+            if (min.isDefined && max.isDefined) {
+              Some(widgetSpec)
+            } else {
+              logger.warn(s"Cannot generate a widget of type ${widgetSpec.getClass.getName} because its field ${field.name} has no min/max values. Probably it doesn't contain any values or all are null.")
+              None
+            }
+
+          case None => Some(widgetSpec)
+        }
+      }.flatten
+
+      val map = fieldNameSubFilterIdMinMaxMap.collect{
+        case ((fieldName, subFilterId), (Some(min), Some(max))) => ((fieldName, subFilterId), (min, max))
+      }
+      (map, filteredWidgetSpecs)
+    }
+  }
+
+  private def genStreamedAllAux(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    nameFieldMap: Map[String, Field],
+    fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
+  ): Future[Traversable[(WidgetSpec, Option[Widget])]] = {
+
+    // create (loaded) generators
+    val specGenerators = widgetSpecs.map { widgetSpec =>
+      val generator = createGenerator(widgetSpec, nameFieldMap, fieldNameSubFilterIdMinMaxes)
+      (widgetSpec, generator)
+    }.toSeq
+
+    val definedGenerators = specGenerators.collect { case (_, Some(generator)) => generator }
+
+    // collect all the flows
+    val flows: Seq[Flow[JsObject, Any, NotUsed]] = definedGenerators.map(_.flow)
+
+    // collect all the post flows
+    val postFlows: Seq[Any => Option[Widget]] = definedGenerators.map(
+      _.genPostFlow.asInstanceOf[Any => Option[Widget]]
+    )
+
+    // zip the flows
+    val zippedFlow = AkkaStreamUtil.zipNFlows(flows)
+
+    // zip the post flows
+    val zippedPostFlow =
+      Flow[Seq[Any]].map( flowOutputs =>
+        flowOutputs.zip(postFlows).par.map { case (flowOutput, postFlow) =>
+          postFlow(flowOutput)
         }.toList
       )
 
-    val fullDataWidgetSpecsFuture =
-      if (fullDataWidgetSpecs.nonEmpty) {
-        Future.sequence(
-          fullDataWidgetSpecs.groupBy(_.subFilterId).map { case (subFilterId, widgetSpecs) =>
-            val fieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
-
-            repo.find(criteria ++ getSubCriteria(subFilterId), Nil, fieldNames).map { chartData =>
-              widgetSpecs.par.map { widgetSpec =>
-                val widget = genLocally(widgetSpec, chartData, fields)
-                val widgetFieldNames = widget.map(widget => (widget, widgetSpec.fieldNames.toSeq))
-                (widgetSpec, widgetFieldNames)
-              }.toList
-            }
-          }
-        )
-      } else
-        Future(Nil)
-
     for {
-      chartSpecs1 <- repoWidgetSpecsFuture
-      chartSpecs2 <- fullDataWidgetSpecsFuture
+      // create a data source
+      source <- repo.findAsStream(
+        criteria = criteria,
+        projection = Nil // TODO
+      )
+
+      // execute the flows (with post flows) on the data source to generate widgets
+      widgets <- source.via(zippedFlow.via(zippedPostFlow)).runWith(Sink.head)
     } yield {
-      val specWidgetMap = (chartSpecs1 ++ chartSpecs2.flatten).toMap
-      // return widgets in the specified order
-      widgetSpecs.map(specWidgetMap.get).flatten
+      val specWidgetMap = definedGenerators.zip(widgets).map { case (generator, widget) =>
+        (generator.spec, widget)
+      }.toMap
+
+      specGenerators.map { case (spec, generator) =>
+        val widget = specWidgetMap.get(spec) match {
+          case Some(widget) => widget
+          case None => genStaticWidget(spec)
+        }
+        (spec, widget)
+      }
     }
   }
+
+  private def genStreamedIndividuallyAux(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
+    nameFieldMap: Map[String, Field],
+    fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
+  ): Future[Traversable[(WidgetSpec, Option[Widget])]] = sequence(
+    widgetSpecs.par.map { widgetSpec =>
+      val newCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(widgetSpec.subFilterId)
+
+      genStreamedAux(
+        widgetSpec, repo, newCriteria, nameFieldMap, fieldNameSubFilterIdMinMaxes
+      ).map((widgetSpec, _))
+
+    }.toList
+  )
+
+  private def genFromFullData(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
+    nameFieldMap: Map[String, Field]
+  ): Future[Traversable[(WidgetSpec, Option[Widget])]] =
+    if (widgetSpecs.nonEmpty) {
+      sequence(
+        widgetSpecs.groupBy(_.subFilterId).map { case (subFilterId, widgetSpecs) =>
+          val fieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
+          val finalCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(subFilterId)
+
+          repo.find(
+            criteria = finalCriteria,
+            projection = fieldNames
+          ).map { jsons =>
+            widgetSpecs.par.map { widgetSpec =>
+              val widget = genFromFullDataAux(widgetSpec, jsons, nameFieldMap)
+              (widgetSpec, widget)
+            }.toList
+          }
+        }
+      ).map(_.flatten)
+    } else
+      Future(Nil)
+
+  private def getSubCriteria(
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]])(
+    filterId: Option[BSONObjectID]
+  ): Seq[Criterion[Any]] =
+    filterId.map(subFilterId =>
+      widgetFilterSubCriteriaMap.get(subFilterId).getOrElse(Nil)
+    ).getOrElse(Nil)
 
   override def genFromRepo(
     widgetSpec: WidgetSpec,
@@ -158,32 +407,69 @@ class WidgetGenerationServiceImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     nameFieldMap: Map[String, Field]
   ): Future[Option[Widget]] = {
+    val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
 
     // aux functions to retrieve a field by name
     def getField(name: String): Field =
       nameFieldMap.get(name).getOrElse(throw new AdaException(s"Field $name not found."))
 
-    def getFieldO(name: Option[String]) = name.map(getField)
-
     widgetSpec match {
 
-      case spec: DistributionWidgetSpec =>
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && fields(0).isNumeric =>
         val field = getField(spec.fieldName)
-        val groupField = getFieldO(spec.groupFieldName)
-        calcDistributionCountsFromRepo(repo, criteria, field, groupField, spec.numericBinCount).map(
-          DistributionWidgetGenerator(nameFieldMap, spec)
+        calcNumericDistributionCountsFromRepo(repo, criteria, field, spec.numericBinCount).map(
+          NumericDistributionWidgetGenerator(0, 1).apply(spec)(nameFieldMap)
         )
 
-      case spec: CumulativeCountWidgetSpec =>
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && !fields(0).isNumeric =>
         val field = getField(spec.fieldName)
-        val groupField = getFieldO(spec.groupFieldName)
-        calcCumulativeCountsFromRepo(repo, criteria, field, groupField, spec.numericBinCount).map(
-          CumulativeCountWidgetGenerator2(nameFieldMap, spec)
+        calcUniqueDistributionCountsFromRepo(repo, criteria, field).map(
+          CategoricalDistributionWidgetGenerator(spec)(nameFieldMap)
+        )
+
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isDefined && fields(1).isNumeric =>
+        val field = getField(spec.fieldName)
+        val groupField = getField(spec.groupFieldName.get)
+        calcGroupedNumericDistributionCountsFromRepo(repo, criteria, field, groupField, spec.numericBinCount).map(
+          GroupNumericDistributionWidgetGenerator(0, 1)(spec)(nameFieldMap)
+        )
+
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isDefined && !fields(1).isNumeric =>
+        val field = getField(spec.fieldName)
+        val groupField = getField(spec.groupFieldName.get)
+        calcGroupedUniqueDistributionCountsFromRepo(repo, criteria, field, groupField).map(
+          GroupCategoricalDistributionWidgetGenerator(spec)(nameFieldMap)
+        )
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty && fields(0).isNumeric =>
+        val field = getField(spec.fieldName)
+        calcNumericDistributionCountsFromRepo(repo, criteria, field, spec.numericBinCount).map(
+          CumulativeNumericBinCountWidgetGenerator(0, 1)(spec)(nameFieldMap)
+        )
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty && !fields(0).isNumeric =>
+        val field = getField(spec.fieldName)
+        calcUniqueDistributionCountsFromRepo(repo, criteria, field).map(
+          UniqueCumulativeCountWidgetGenerator(spec)(nameFieldMap)
+        )
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined && fields(1).isNumeric =>
+        val field = getField(spec.fieldName)
+        val groupField = getField(spec.groupFieldName.get)
+        calcGroupedNumericDistributionCountsFromRepo(repo, criteria, field, groupField, spec.numericBinCount).map(
+          GroupCumulativeNumericBinCountWidgetGenerator(0, 1)(spec)(nameFieldMap)
+        )
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined && !fields(1).isNumeric =>
+        val field = getField(spec.fieldName)
+        val groupField = getField(spec.groupFieldName.get)
+        calcGroupedUniqueDistributionCountsFromRepo(repo, criteria, field, groupField).map(
+          GroupUniqueCumulativeCountWidgetGenerator(spec)(nameFieldMap)
         )
 
       case spec: BoxWidgetSpec =>
         calcQuartilesFromRepo(repo, criteria, getField(spec.fieldName)).map(
-          _.flatMap(BoxWidgetGenerator(nameFieldMap, spec))
+          BoxWidgetGenerator(spec)(nameFieldMap)
         )
 
       case spec: TemplateHtmlWidgetSpec =>
@@ -194,457 +480,192 @@ class WidgetGenerationServiceImpl @Inject() (
     }
   }
 
-  override def genLocally(
+  override def genFromFullData(
     widgetSpec: WidgetSpec,
     items: Traversable[JsObject],
     fields: Traversable[Field]
   ): Option[Widget] = {
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
-    genLocallyAux(widgetSpec, items, nameFieldMap)
+    genFromFullDataAux(widgetSpec, items, nameFieldMap)
   }
 
-  private def genLocallyAux(
+  private def genFromFullDataAux(
     widgetSpec: WidgetSpec,
     jsons: Traversable[JsObject],
     nameFieldMap: Map[String, Field]
   ): Option[Widget] = {
-
-    // aux functions to retrieve a field by name
-    def getField(name: String): Field =
-      nameFieldMap.get(name).getOrElse(throw new AdaException(s"Field $name not found."))
-
-    def getFieldO(name: Option[String]) = name.map(getField)
-
     val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
 
-    widgetSpec match {
+    // we don't use streaming (flows) here hence we can feed any min/max flow option values
+    val dummyFlowMinMaxMap = fields.map( field => ((field.name, widgetSpec.subFilterId) -> (0d, 1d))).toMap
 
-      case spec: DistributionWidgetSpec =>
-        val field = getField(spec.fieldName)
-        val groupField = getFieldO(spec.groupFieldName)
-
-        val countSeries = calcDistributionCounts(jsons, field, groupField, spec.numericBinCount)
-        DistributionWidgetGenerator(nameFieldMap, spec)(countSeries)
-
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty =>
-        val options = NumericDistributionOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount))
-        val counts = cumulativeNumericBinCountsSeqExec.execJsonA(options, fields(0), fields)(jsons)
-        CumulativeNumericBinCountWidgetGenerator(nameFieldMap, spec)(counts)
-
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined =>
-        val options = NumericDistributionOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount))
-        val counts = groupCumulativeNumericBinCountsSeqExec.execJsonA(options, fields(1), fields)(jsons)
-        GroupCumulativeNumericBinCountWidgetGenerator(nameFieldMap, spec)(counts)
-
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isEmpty =>
-        val valueCounts = cumulativeOrderedCountsAnySeqExec.execJsonA_(fields(0), fields)(jsons)
-        CumulativeCountWidgetGenerator(nameFieldMap, spec)(valueCounts)
-
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isDefined =>
-        val groupCounts = groupCumulativeOrderedCountsAnySeqExec[Any].execJsonA_(fields(1), fields)(jsons)
-        GroupCumulativeCountWidgetGenerator(nameFieldMap, spec)(groupCounts)
-
-      case spec: BoxWidgetSpec =>
-        quartilesAnySeqExec.execJsonA_(fields(0), fields)(jsons).flatMap(
-          BoxWidgetGenerator(nameFieldMap, spec)
-        )
-
-      case spec: ScatterWidgetSpec if spec.groupFieldName.isDefined =>
-        val data = groupTupleSeqExec[String, Any, Any].execJson_(fields)(jsons)
-        GroupScatterWidgetGenerator[Any, Any](nameFieldMap, spec)(data)
-
-      case spec: ScatterWidgetSpec if spec.groupFieldName.isEmpty =>
-        val data = tupleSeqExec[Any, Any].execJson_(fields)(jsons)
-        ScatterWidgetGenerator[Any, Any](nameFieldMap, spec)(data)
-
-      case spec: CorrelationWidgetSpec =>
-        val correlations = pearsonCorrelationExec.execJson((), fields)(jsons)
-        CorrelationWidgetGenerator(nameFieldMap, spec)(correlations)
-
-      case spec: BasicStatsWidgetSpec =>
-        val results = basicStatsSeqExec.execJsonA_(fields(0), fields)(jsons)
-        BasicStatsWidgetGenerator(nameFieldMap, spec)(results)
-
-      case spec: TemplateHtmlWidgetSpec =>
-        val widget = HtmlWidget("", spec.content, spec.displayOptions)
-        Some(widget)
-    }
+    createGenerator(widgetSpec, nameFieldMap, dummyFlowMinMaxMap).map(
+      generatorLoaded => generatorLoaded.genJson(jsons)
+    ).getOrElse(genStaticWidget(widgetSpec))
   }
 
   override def genStreamed(
     widgetSpec: WidgetSpec,
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
-    fields: Traversable[Field]
+    fields: Traversable[Field],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]]
   ): Future[Option[Widget]] = {
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
-    genStreamedAux(widgetSpec, repo, criteria, nameFieldMap)
+    val subFilterId = widgetSpec.subFilterId
+    val finalCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(subFilterId)
+
+    for {
+      // retrieve min and max values if requested by a widget
+      fieldNameMinMax <- flowMinMaxField(widgetSpec, nameFieldMap).map { field =>
+
+        getNumericMinMax(repo, finalCriteria, field).map { case (min, max) =>
+          Some((field.name, min, max))
+        }
+      }.getOrElse(
+        Future(None)
+      )
+
+      widget <-
+        fieldNameMinMax.map { case (fieldName, minOption, maxOption) =>
+          // field requires min and max values
+          minOption.zip(maxOption).headOption.map { case (min, max) =>
+            // if min and max values are available, create a map and generate a streamed widget
+            val fieldNameMinMaxes = Map((fieldName, subFilterId) -> (min, max))
+            genStreamedAux(widgetSpec, repo, criteria, nameFieldMap, fieldNameMinMaxes)
+          }.getOrElse {
+            // otherwise return none and log a warning message
+            logger.warn(s"Cannot generate a widget of type ${widgetSpec.getClass.getName} because its field $fieldName has no min/max values. Probably it doesn't contain any values or all are null.")
+            Future(None)
+          }
+        }.getOrElse(
+          // no min and max values are required, hence we can call a streamed widget generation with an empty map
+          genStreamedAux(widgetSpec, repo, criteria, nameFieldMap, Map())
+        )
+    } yield
+      widget
   }
 
   private def genStreamedAux(
     widgetSpec: WidgetSpec,
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
+    nameFieldMap: Map[String, Field],
+    fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
+  ): Future[Option[Widget]] =
+    createGenerator(widgetSpec, nameFieldMap, fieldNameSubFilterIdMinMaxes).map(
+      generatorLoaded => generatorLoaded.genJsonRepoStreamed(repo, criteria)
+    ).getOrElse(
+      Future(genStaticWidget(widgetSpec))
+    )
+
+  private def genStaticWidget(widgetSpec: WidgetSpec) =
+    widgetSpec match {
+      case spec: TemplateHtmlWidgetSpec =>
+        val widget = HtmlWidget("", spec.content, spec.displayOptions)
+        Some(widget)
+
+      case _ => None
+    }
+
+  private def createGenerator(
+    widgetSpec: WidgetSpec,
+    nameFieldMap: Map[String, Field],
+    fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
+  ): Option[CalculatorWidgetGeneratorLoaded[_, Widget,_]] = {
+    val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
+
+    def minMax = flowMinMax(widgetSpec, nameFieldMap, fieldNameSubFilterIdMinMaxes)
+
+    def aux[S <: WidgetSpec, W <: Widget, C <: CalculatorTypePack](
+      generator: CalculatorWidgetGenerator[S, W, C]
+    ) =
+      Some(CalculatorWidgetGeneratorLoaded[S, W, C](generator, widgetSpec.asInstanceOf[S], fields))
+
+    widgetSpec match {
+
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && !fields(0).isNumeric =>
+        aux(CategoricalDistributionWidgetGenerator)
+
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && (fields(0).isDouble || fields(0).isDate || (fields(0).isInteger && spec.numericBinCount.isDefined)) =>
+        aux(NumericDistributionWidgetGenerator(minMax))
+
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && fields(0).isInteger && spec.numericBinCount.isEmpty =>
+        aux(UniqueIntDistributionWidgetGenerator)
+
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isDefined && !fields(1).isNumeric =>
+        aux(GroupCategoricalDistributionWidgetGenerator)
+
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isDefined && (fields(1).isDouble || fields(1).isDate || (fields(1).isInteger && spec.numericBinCount.isDefined)) =>
+        aux(GroupNumericDistributionWidgetGenerator(minMax))
+
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isDefined && fields(1).isInteger && spec.numericBinCount.isEmpty =>
+        aux(GroupUniqueIntDistributionWidgetGenerator)
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty =>
+        aux(CumulativeNumericBinCountWidgetGenerator(minMax))
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined =>
+        aux(GroupCumulativeNumericBinCountWidgetGenerator(minMax))
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isEmpty =>
+        aux(CumulativeCountWidgetGenerator)
+
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isDefined =>
+        aux(GroupCumulativeCountWidgetGenerator)
+
+      case spec: BoxWidgetSpec =>
+        aux(BoxWidgetGenerator)
+
+      case spec: ScatterWidgetSpec if spec.groupFieldName.isEmpty =>
+        aux(ScatterWidgetGenerator[Any, Any])
+
+      case spec: ScatterWidgetSpec if spec.groupFieldName.isDefined =>
+        aux(GroupScatterWidgetGenerator[Any, Any])
+
+      case spec: CorrelationWidgetSpec =>
+        aux(CorrelationWidgetGenerator(Some(streamedCorrelationCalcParallelism)))
+
+      case spec: BasicStatsWidgetSpec =>
+        aux(BasicStatsWidgetGenerator)
+
+      case _ => None
+    }
+  }
+
+  private def flowMinMax(
+    widgetSpec: WidgetSpec,
+    nameFieldMap: Map[String, Field],
+    fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
+  ): (Double, Double) = {
+    val fieldName = flowMinMaxField(widgetSpec, nameFieldMap).get.name
+    val subfilterId = widgetSpec.subFilterId
+    fieldNameSubFilterIdMinMaxes.get((fieldName, subfilterId)).getOrElse(
+      throw new AdaException(s"Min max values for field $fieldName requested by a widget ${widgetSpec.getClass.getName} is not available.")
+    )
+  }
+
+  private def flowMinMaxField(
+    widgetSpec: WidgetSpec,
     nameFieldMap: Map[String, Field]
-  ): Future[Option[Widget]] = {
+  ): Option[Field] = {
     val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
 
     widgetSpec match {
 
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && (fields(0).isDouble || fields(0).isDate || (fields(0).isInteger && spec.numericBinCount.isDefined)) =>
+        Some(fields(0))
+
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isDefined && (fields(1).isDouble || fields(1).isDate || (fields(1).isInteger && spec.numericBinCount.isDefined)) =>
+        Some(fields(1))
+
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty =>
-        val options = NumericDistributionFlowOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount), 0, 1)
-        cumulativeNumericBinCountsSeqExec.execJsonRepoStreamedA(options, options, true, fields(0), fields)(repo, criteria).map(
-          CumulativeNumericBinCountWidgetGenerator(nameFieldMap, spec)
-        )
+        Some(fields(0))
 
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined =>
-        val options = NumericDistributionFlowOptions(spec.numericBinCount.getOrElse(defaultNumericBinCount), 0, 1)
-        groupCumulativeNumericBinCountsSeqExec.execJsonRepoStreamedA(options, options, true, fields(1), fields)(repo, criteria).map(
-          GroupCumulativeNumericBinCountWidgetGenerator(nameFieldMap, spec)
-        )
+        Some(fields(1))
 
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isEmpty =>
-        cumulativeOrderedCountsAnySeqExec.execJsonRepoStreamedA_(true, fields(0), fields)(repo, criteria).map(
-          CumulativeCountWidgetGenerator(nameFieldMap, spec)
-        )
-
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isDefined =>
-        groupCumulativeOrderedCountsAnySeqExec[Any].execJsonRepoStreamedA_(true, fields(1), fields)(repo, criteria).map(
-          GroupCumulativeCountWidgetGenerator(nameFieldMap, spec)
-        )
-
-      case spec: BoxWidgetSpec =>
-        quartilesAnySeqExec.execJsonRepoStreamedA_(true, fields(0), fields)(repo, criteria ++ withNotNull(fields)).map(
-          _.flatMap(BoxWidgetGenerator(nameFieldMap, spec))
-        )
-
-      case spec: ScatterWidgetSpec if spec.groupFieldName.isDefined =>
-        groupTupleSeqExec[String, Any, Any].execJsonRepoStreamed_(true, fields)(repo, criteria ++ withNotNull(fields.tail)).map(
-          GroupScatterWidgetGenerator[Any, Any](nameFieldMap, spec)
-        )
-
-      case spec: ScatterWidgetSpec if spec.groupFieldName.isEmpty =>
-        tupleSeqExec[Any, Any].execJsonRepoStreamed_(true, fields)(repo, criteria ++ withNotNull(fields)).map(
-          ScatterWidgetGenerator[Any, Any](nameFieldMap, spec)
-        )
-
-      case spec: CorrelationWidgetSpec =>
-        pearsonCorrelationExec.execJsonRepoStreamed(
-          streamedCorrelationCalcParallelism,
-          streamedCorrelationCalcParallelism,
-          true, fields)(repo, criteria
-        ).map(
-          CorrelationWidgetGenerator(nameFieldMap, spec)
-        )
-
-      case spec: BasicStatsWidgetSpec =>
-        basicStatsSeqExec.execJsonRepoStreamedA_(true, fields(0), fields)(repo, criteria).map(
-          BasicStatsWidgetGenerator(nameFieldMap, spec)
-        )
-
-      case spec: TemplateHtmlWidgetSpec =>
-        val widget = HtmlWidget("", spec.content, spec.displayOptions)
-        Future(Some(widget))
-
-      case _ => Future(None)
-    }
-  }
-
-  private def withNotNull(fields: Seq[Field]): Seq[Criterion[Any]] =
-    fields.map(field => NotEqualsNullCriterion(field.name))
-
-//  private def withNotNull(fields: Field*): Seq[Criterion[Any]] =
-//    fields.map(field => NotEqualsNullCriterion(field.name))
-
-  private def calcDistributionCountsFromRepo(
-    repo: JsonReadonlyRepo,
-    criteria: Seq[Criterion[Any]],
-    field: Field,
-    groupField: Option[Field],
-    numericBinCount: Option[Int]
-  ): Future[Traversable[(String, Traversable[Count[Any]])]] =
-    groupField match {
-      case Some(groupField) =>
-        field.fieldType match {
-
-          case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
-            calcGroupedNumericDistributionCountsFromRepo(repo, criteria, field, groupField, numericBinCount).map { groupCounts =>
-              val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-              createGroupNumericCounts(groupCounts, groupFieldType, field)
-            }
-
-          case _ =>
-            calcGroupedUniqueDistributionCountsFromRepo(repo, criteria, field, groupField).map { groupCounts =>
-              val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-              val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-
-              createGroupStringCounts(groupCounts, groupFieldType, fieldType)
-            }
-        }
-
-      case None =>
-        field.fieldType match {
-          case FieldTypeId.Double | FieldTypeId.Integer | FieldTypeId.Date =>
-            calcNumericDistributionCountsFromRepo(repo, criteria, field, numericBinCount).map { numericCounts =>
-              val counts = createNumericCounts(numericCounts, convertNumeric(field.fieldType))
-              Seq(("All", counts))
-            }
-
-          case _ =>
-            calcUniqueDistributionCountsFromRepo(repo, criteria, field).map { counts =>
-              val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-              Seq(("All", createStringCounts(counts, fieldType)))
-            }
-        }
-    }
-
-  private def convertNumeric(fieldType: FieldTypeId.Value) =
-    fieldType match {
-      case FieldTypeId.Date =>
-        val convert = {ms: BigDecimal => new java.util.Date(ms.setScale(0, BigDecimal.RoundingMode.CEILING).toLongExact)}
-        Some(convert)
       case _ => None
     }
-
-  private def calcDistributionCounts(
-    items: Traversable[JsObject],
-    field: Field,
-    groupField: Option[Field],
-    numericBinCount: Option[Int]
-  ): Traversable[(String, Traversable[Count[Any]])] =
-    groupField match {
-      case Some(groupField) =>
-        field.fieldType match {
-          // group numeric
-          case FieldTypeId.Double | FieldTypeId.Date =>
-            countGroupNumericDistributionCounts(items, field, groupField, numericBinCount)
-
-          // group numeric or unique depending on whether bin counts are defined
-          case FieldTypeId.Integer =>
-            numericBinCount match {
-
-              case Some(_) =>
-                countGroupNumericDistributionCounts(items, field, groupField, numericBinCount)
-
-              case None =>
-                countGroupUniqueIntDistributionCounts(items, field,  groupField)
-            }
-
-          // group unique
-          case _ => countGroupUniqueDistributionCounts(items, field, groupField)
-        }
-
-      case None =>
-        val counts = field.fieldType match {
-          // numeric
-          case FieldTypeId.Double | FieldTypeId.Date =>
-            countNumericDistributionCounts(items, field, numericBinCount)
-
-          // numeric or unique depending on whether bin counts are defined
-          case FieldTypeId.Integer =>
-            numericBinCount match {
-
-              case Some(_) =>
-                countNumericDistributionCounts(items, field, numericBinCount)
-
-              case None =>
-                countUniqueIntDistributionCounts(items, field)
-            }
-
-          // unique
-          case _ => countUniqueDistributionCounts(items, field)
-        }
-
-        Seq(("All", counts))
-    }
-
-  private def countGroupNumericDistributionCounts(
-    items: Traversable[JsObject],
-    field: Field,
-    groupField: Field,
-    numericBinCount: Option[Int]
-  ) = {
-    val options = NumericDistributionOptions(numericBinCount.getOrElse(defaultNumericBinCount))
-    val groupCounts = groupNumericDistributionCountsExec[Any].execJsonA(options, field, (groupField, field))(items)
-    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-    createGroupNumericCounts(groupCounts, groupFieldType, field)
   }
-
-  private def countGroupUniqueDistributionCounts(
-    items: Traversable[JsObject],
-    field: Field,
-    groupField: Field
-  ) = {
-    val groupCounts = groupUniqueDistributionCountsExec[Any, Any].execJsonA_(field, (groupField, field))(items)
-    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-    val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-
-    createGroupStringCounts(groupCounts, groupFieldType, fieldType)
-  }
-
-  private def countGroupUniqueIntDistributionCounts(
-    items: Traversable[JsObject],
-    field: Field,
-    groupField: Field
-  ) = {
-    val longGroupCounts = groupUniqueDistributionCountsExec[Any, Long].execJsonA_(field, (groupField, field))(items)
-    val groupFieldType = ftf(groupField.fieldTypeSpec).asValueOf[Any]
-
-    toGroupStringValues(longGroupCounts, groupFieldType).map {
-      case (groupString, valueCounts) =>
-        (groupString, prepareIntCounts(valueCounts))
-    }
-  }
-
-  private def countNumericDistributionCounts(
-    items: Traversable[JsObject],
-    field: Field,
-    numericBinCount: Option[Int]
-  ) = {
-    val options = NumericDistributionOptions(numericBinCount.getOrElse(defaultNumericBinCount))
-    val counts = numericDistributionCountsExec.execJsonA_(options, field)(items)
-    createNumericCounts(counts, convertNumeric(field.fieldType))
-  }
-
-  private def countUniqueDistributionCounts(
-    items: Traversable[JsObject],
-    field: Field
-  ) = {
-    val uniqueCounts = uniqueDistributionCountsExec[Any].execJsonA_((), field)(items)
-    val fieldType = ftf(field.fieldTypeSpec).asValueOf[Any]
-    createStringCounts(uniqueCounts, fieldType)
-  }
-
-  private def countUniqueIntDistributionCounts(
-    items: Traversable[JsObject],
-    field: Field
-  ) = {
-    val longUniqueCounts = uniqueDistributionCountsExec[Long].execJsonA_((), field)(items)
-    prepareIntCounts(longUniqueCounts)
-  }
-
-  private def prepareIntCounts(
-    longUniqueCounts: UniqueDistributionCountsCalcTypePack[Long]#OUT
-  ) = {
-    val counts = longUniqueCounts.collect{ case (Some(value), count) => Count(value, count)}.toSeq.sortBy(_.value)
-    val size = counts.size
-
-    val min = counts.head.value
-    val max = counts.last.value
-
-    // if the difference between max and min is "small" enough we can add a zero count for missing values
-    if (Math.abs(max - min) < maxIntCountsForZeroPadding) {
-      val countsWithZeroes = for (i <- 0 to size - 1) yield {
-        val count = counts(i)
-        if (i + 1 < size) {
-          val nextCount = counts(i + 1)
-
-          val zeroCounts =
-            for (missingValue <- count.value + 1 to nextCount.value - 1) yield Count(missingValue, 0)
-
-          Seq(count) ++ zeroCounts
-        } else
-          Seq(count)
-      }
-
-      countsWithZeroes.flatten
-    } else
-      counts
-  }
-
-  private def createStringCounts[T](
-    counts: Traversable[(Option[T], Int)],
-    fieldType: FieldType[T]
-  ): Traversable[Count[String]] =
-    counts.map { case (value, count) =>
-      val stringKey = value.map(_.toString)
-      val label = value.map(value => fieldType.valueToDisplayString(Some(value))).getOrElse("Undefined")
-      Count(label, count, stringKey)
-    }
-
-  private def createStringCountsDefined[T](
-    counts: Traversable[(T, Int)],
-    fieldType: FieldType[T]
-  ): Traversable[Count[String]] =
-    counts.map { case (value, count) =>
-      val stringKey = value.toString
-      val label = fieldType.valueToDisplayString(Some(value))
-      Count(label, count, Some(stringKey))
-    }
-
-  private def createNumericCounts(
-    counts: Traversable[(BigDecimal, Int)],
-    convert: Option[BigDecimal => Any] = None
-  ): Seq[Count[_]] =
-    counts.toSeq.sortBy(_._1).map { case (xValue, count) =>
-      val convertedValue = convert.map(_.apply(xValue)).getOrElse(xValue.toDouble)
-      Count(convertedValue, count, None)
-    }
-
-  private def createGroupStringCounts[G, T](
-    groupCounts: Traversable[(Option[G], Traversable[(Option[T], Int)])],
-    groupFieldType: FieldType[G],
-    fieldType: FieldType[T]
-  ): Seq[(String, Traversable[Count[String]])] =
-    toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, counts) =>
-      (groupString, createStringCounts(counts, fieldType))
-    }
-
-  private def createGroupNumericCounts[G](
-    groupCounts: Traversable[(Option[G], Traversable[(BigDecimal, Int)])],
-    groupFieldType: FieldType[G],
-    field: Field
-  ): Seq[(String, Traversable[Count[_]])] = {
-    // value converter
-    val convert = convertNumeric(field.fieldType)
-
-    // handle group string names and convert values
-    toGroupStringValues(groupCounts, groupFieldType).map { case (groupString, counts) =>
-      (groupString, createNumericCounts(counts, convert))
-    }
-  }
-
-  private def toGroupStringValues[G, T](
-    groupCounts: Traversable[(Option[G], Traversable[T])],
-    groupFieldType: FieldType[G]
-  ): Seq[(String, Traversable[T])] =
-    groupCounts.toSeq.sortBy(_._1.isEmpty).map { case (group, values) =>
-      val groupString = group match {
-        case Some(group) => groupFieldType.valueToDisplayString(Some(group))
-        case None => "Undefined"
-      }
-      (groupString, values)
-    }
-
-  private def calcCumulativeCountsFromRepo(
-    repo: JsonReadonlyRepo,
-    criteria: Seq[Criterion[Any]],
-    field: Field,
-    groupField: Option[Field],
-    numericBinCount: Option[Int]
-  ): Future[Traversable[(String, Traversable[Count[Any]])]] =
-    numericBinCount match {
-      case Some(_) =>
-        calcDistributionCountsFromRepo(repo, criteria, field, groupField, numericBinCount).map( distCountsSeries =>
-          toCumCounts(distCountsSeries.toSeq)
-        )
-
-      case None =>
-        Future(Nil)
-    }
-
-  // function that converts dist counts to cumulative counts by applying simple running sum
-  private def toCumCounts[T](
-    distCountsSeries: Traversable[(String, Traversable[Count[T]])]
-  ): Traversable[(String, Seq[Count[T]])] =
-    distCountsSeries.map { case (seriesName, distCounts) =>
-      val distCountsSeq = distCounts.toSeq
-      val cumCounts = distCountsSeq.scanLeft(0) { case (sum, count) =>
-        sum + count.count
-      }
-      val labeledDistCounts: Seq[Count[T]] = distCountsSeq.map(_.value).zip(cumCounts.tail).map { case (value, count) =>
-        Count(value, count)
-      }
-      (seriesName, labeledDistCounts)
-    }
 }

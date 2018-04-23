@@ -6,6 +6,7 @@ import be.objectify.deadbolt.scala.AuthenticatedRequest
 import controllers.WebJarAssets
 import controllers.core.WebContext
 import dataaccess.{AscSort, DescSort}
+import dataaccess.JsonRepoExtra._
 import dataaccess.Criterion._
 import models._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -145,9 +146,7 @@ class MPowerChallengeClusteringController @Inject()(
       count <- dsa.dataSetRepo.count(criteria)
 
       // get the max rank
-      rankJson <- dsa.dataSetRepo.find(
-        projection = Seq(rankFieldName), sort = Seq(DescSort(rankFieldName)), limit = Some(1)
-      ).map(_.head \ rankFieldName)
+      rankJson <- dsa.dataSetRepo.max(rankFieldName, Nil)
 
       // create widgets
       widgetsAndFieldNames <- {
@@ -155,7 +154,7 @@ class MPowerChallengeClusteringController @Inject()(
 
         val filteredWidgetSpecs = widgetSpecs.filter(_.fieldNames.forall(fieldNameSet.contains))
 
-        widgetGenerationService.apply(
+        widgetGenerationService.applyOld(
           widgetSpecs = filteredWidgetSpecs,
           repo = dsa.dataSetRepo,
           criteria = criteria,
@@ -177,7 +176,7 @@ class MPowerChallengeClusteringController @Inject()(
           case _ => widget
         }
       }
-      Ok(clustering(title, newWidgets, count, rankJson.as[Int], topRank))
+      Ok(clustering(title, newWidgets, count, rankJson.get.as[Int], topRank))
     }
   }
 }

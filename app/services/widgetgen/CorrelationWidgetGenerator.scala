@@ -3,11 +3,21 @@ package services.widgetgen
 import models._
 import services.stats.calc.PearsonCorrelationCalcTypePack
 
-object CorrelationWidgetGenerator extends WidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, PearsonCorrelationCalcTypePack#OUT] {
+private class CorrelationWidgetGenerator(flowParallelism: Option[Int]) extends CalculatorWidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, PearsonCorrelationCalcTypePack] {
+
+  override protected val seqExecutor = pearsonCorrelationExec
+
+  override protected def specToOptions = _ => ()
+
+  override protected def specToFlowOptions = _ => flowParallelism
+
+  override protected def specToSinkOptions = _ => flowParallelism
+
+  override protected val supportArray = false
 
   override def apply(
-    fieldNameMap: Map[String, Field],
-    spec: CorrelationWidgetSpec
+    spec: CorrelationWidgetSpec)(
+    fieldNameMap: Map[String, Field]
   ) =
     (correlations: PearsonCorrelationCalcTypePack#OUT) =>
       if (correlations.nonEmpty) {
@@ -20,4 +30,8 @@ object CorrelationWidgetGenerator extends WidgetGenerator[CorrelationWidgetSpec,
         Some(widget)
       } else
         None
+}
+
+object CorrelationWidgetGenerator {
+  def apply(flowParallelism: Option[Int]): CalculatorWidgetGenerator[CorrelationWidgetSpec, HeatmapWidget, PearsonCorrelationCalcTypePack] = new CorrelationWidgetGenerator(flowParallelism)
 }

@@ -14,7 +14,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
-import dataaccess.JsonCrudRepoExtra.InfixOps
+import dataaccess.JsonRepoExtra.InfixOps
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

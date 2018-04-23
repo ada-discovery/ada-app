@@ -12,7 +12,8 @@ trait TupleCalcTypePack[A, B] extends NoOptionsCalculatorTypePack {
 
 private class TupleCalc[A, B] extends Calculator[TupleCalcTypePack[A, B]] {
 
-  override def fun(opt: Unit)  = _.flatMap(toOption)
+  override def fun(opt: Unit) =
+    _.collect { case (Some(x), Some(y)) => (x, y)}
 
   override def flow(options: Unit) = {
     val flatFlow = Flow[IN].collect { case (Some(x), Some(y)) => (x, y)}
@@ -20,11 +21,6 @@ private class TupleCalc[A, B] extends Calculator[TupleCalcTypePack[A, B]] {
   }
 
   override def postFlow(options: Unit) = identity
-
-  private def toOption(ab: (Option[A], Option[B])) =
-    ab._1.flatMap(a =>
-      ab._2.map(b => (a, b))
-    )
 }
 
 object TupleCalc {

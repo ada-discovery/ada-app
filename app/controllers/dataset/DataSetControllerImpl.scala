@@ -39,7 +39,6 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
 import services.ml.{MachineLearningService, Performance}
-import models.ml.{ClassificationEvalMetric, RegressionEvalMetric}
 import views.html.dataset
 import models.ml.DataSetTransformation._
 import models.security.{SecurityRole, UserManager}
@@ -116,6 +115,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private implicit val storageTypeFormatter =  EnumFormatter(StorageType)
   private implicit val seriesProcessingSpec = JsonFormatter[SeriesProcessingSpec]
   private implicit val seriesTransformationSpec = JsonFormatter[SeriesTransformationSpec]
+
+//  private val distScreenWidgetsGenMethod = WidgetGenerationMethod.StreamedIndividually
+  private val distScreenWidgetsGenMethod = WidgetGenerationMethod.FullData
 
   private val coreMapping: Mapping[DataSetTransformationCore] = mapping(
     "resultDataSetId" -> nonEmptyText,
@@ -414,15 +416,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           }
 
         // get the response data
-        viewResponses <- {
-          val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
-
+        viewResponses <-
           Future.sequence(
             filterOrIdsToUse.zip(tablePagesToUse).map { case (filterOrId, tablePage) =>
               getViewResponseWoWidgets(tablePage.page, tablePage.orderBy, filterOrId, columnNames, widgetFieldMap)
             }
           )
-        }
       } yield {
         Logger.info(s"Data loading of a view for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
         val renderingStart = new ju.Date()
@@ -687,28 +686,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     widgetSpecs: Seq[WidgetSpec],
     widgetFieldMap: Map[String, Field],
     useOptimizedRepoChartCalcMethod: Boolean
-  ): Future[ViewResponse] =
+  ): Future[ViewResponse] = {
+    // future to retrieve a filter
+    val resolvedFilterFuture = filterRepo.resolve(filterOrId)
+
+    // future to load sub-criteria
+    val filterSubCriteriaFuture = filterSubCriteriaMap(widgetSpecs)
+
     for {
       // use a given filter conditions or load one
-      resolvedFilter <- filterRepo.resolve(filterOrId)
+      resolvedFilter <- resolvedFilterFuture
+
+      // get the widgets' sub criteria
+      filterSubCriteria <- filterSubCriteriaFuture
 
       // get the conditions
       conditions = resolvedFilter.conditions
 
       // generate criteria
       criteria <- toCriteria(conditions)
-
-      // get the widgets' sub criteria
-      filterSubCriteria <- Future.sequence(
-        widgetSpecs.map(_.subFilterId).flatten.toSet.map { subFilterId: BSONObjectID =>
-
-          filterRepo.resolve(Right(subFilterId)).flatMap(resolvedFilter =>
-            toCriteria(resolvedFilter.conditions).map(criteria =>
-              (subFilterId, criteria)
-            )
-          )
-        }
-      )
 
       // create a name -> field map of all the referenced fields for a quick lookup
       nameFieldMap <- {
@@ -736,34 +732,32 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       )
     } yield
       response
+  }
 
   private def getViewWidgets(
     filterOrId: FilterOrId,
     widgetSpecs: Seq[WidgetSpec],
     widgetFieldMap: Map[String, Field],
     useOptimizedRepoWidgetCalcMethod: Boolean
-  ): Future[Traversable[Option[Widget]]] =
+  ): Future[Traversable[Option[Widget]]] = {
+    // future to retrieve a filter
+    val resolvedFilterFuture = filterRepo.resolve(filterOrId)
+
+    // future to load sub-criteria
+    val filterSubCriteriaFuture = filterSubCriteriaMap(widgetSpecs)
+
     for {
       // use a given filter conditions or load one
-      resolvedFilter <- filterRepo.resolve(filterOrId)
+      resolvedFilter <- resolvedFilterFuture
+
+      // get the widgets' sub criteria
+      filterSubCriteria <- filterSubCriteriaFuture
 
       // get the conditions
       conditions = resolvedFilter.conditions
 
       // generate criteria
       criteria <- toCriteria(conditions)
-
-      // get the widgets' sub criteria
-      filterSubCriteria <- Future.sequence(
-        widgetSpecs.map(_.subFilterId).flatten.toSet.map { subFilterId: BSONObjectID =>
-
-          filterRepo.resolve(Right(subFilterId)).flatMap(resolvedFilter =>
-            toCriteria(resolvedFilter.conditions).map(criteria =>
-              (subFilterId, criteria)
-            )
-          )
-        }
-      )
 
       // create a name -> field map of all the referenced fields for a quick lookup
       fields <- {
@@ -774,7 +768,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             filterFieldNames.diff(widgetFieldMap.keySet)
 
           getFields(requiredFieldNames).map { fields =>
-//            val newMap = fields.map(field => (field.name, field)).toMap
+            //            val newMap = fields.map(field => (field.name, field)).toMap
             fields ++ widgetFieldMap.values
           }
         } else {
@@ -784,9 +778,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       }
 
-      widgetFields <- widgetService(widgetSpecs, repo, criteria, filterSubCriteria.toMap, fields, useOptimizedRepoWidgetCalcMethod)
+      widgetFields <- widgetService.applyOld(widgetSpecs, repo, criteria, filterSubCriteria.toMap, fields, useOptimizedRepoWidgetCalcMethod)
     } yield
       widgetFields.map(_.map(_._1))
+  }
 
   private def getViewResponseWoWidgets(
     page: Int,
@@ -845,7 +840,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val countFuture = repo.count(criteria)
 
     // widgets
-    val widgetsFuture = widgetService(widgetSpecs, repo, criteria, widgetSubCriteria, nameFieldMap.values, useOptimizedRepoChartCalcMethod)
+    val widgetsFuture = widgetService.applyOld(widgetSpecs, repo, criteria, widgetSubCriteria, nameFieldMap.values, useOptimizedRepoChartCalcMethod)
 
     // table items
     val tableItemsFuture = getTableItems(page, orderBy, criteria, nameFieldMap, tableFieldNames)
@@ -1184,7 +1179,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 displayOptions = BasicDisplayOptions(gridWidth = Some(3), height = Some(500))
               )
             )
-            widgetService(widgetSpecs, repo, criteria, Map(), Seq(field) ++ groupField, false)
+            val start = new ju.Date
+            widgetService(widgetSpecs, repo, criteria, Map(), Seq(field) ++ groupField, distScreenWidgetsGenMethod).map { widgets =>
+              println(s"Dist. widgets generated in ${new ju.Date().getTime - start.getTime} ms using ${distScreenWidgetsGenMethod.toString} method.")
+              widgets
+            }
           case None =>
             Future(Nil)
         }
@@ -1399,7 +1398,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Line), height = Some(500))
               )
 
-              widgetService.genLocally(widgetSpec, items, Seq(field) ++ groupField)
+              widgetService.genFromFullData(widgetSpec, items, Seq(field) ++ groupField)
             }
           }.getOrElse(
             Future(None)
@@ -1632,7 +1631,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, Some(clusterClassField.name), None, displayOptions)
 
             // generate a scatter widget
-            widgetService.genLocally(widgetSpec, jsonsWithClasses, Seq(xField, yField, clusterClassField))
+            widgetService.genFromFullData(widgetSpec, jsonsWithClasses, Seq(xField, yField, clusterClassField))
           }
 
           // Transform Scatters into JSONs
@@ -1918,6 +1917,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
     Future.sequence(futureFieldLabelPairs).map{ _.flatten.toMap }
   }
+
+  private def filterSubCriteriaMap(widgetSpecs: Traversable[WidgetSpec])  =
+    Future.sequence(
+      widgetSpecs.map(_.subFilterId).flatten.toSet.map { subFilterId: BSONObjectID =>
+
+        filterRepo.resolve(Right(subFilterId)).flatMap(resolvedFilter =>
+          toCriteria(resolvedFilter.conditions).map(criteria =>
+            (subFilterId, criteria)
+         )
+        )
+      }
+    )
 
   //////////////////////
   // Export Functions //

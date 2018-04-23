@@ -1,19 +1,31 @@
 package services.widgetgen
 
+import dataaccess.Criterion
 import models.{BoxWidget, BoxWidgetSpec, Field}
-import services.stats.calc.Quartiles
+import services.stats.calc.QuartilesCalcNoOptionsTypePack
 
-object BoxWidgetGenerator extends WidgetGenerator[BoxWidgetSpec, BoxWidget[Any], Quartiles[Any]] {
+object BoxWidgetGenerator extends CalculatorWidgetGenerator[BoxWidgetSpec, BoxWidget[Any], QuartilesCalcNoOptionsTypePack[Any]]
+  with NoOptionsCalculatorWidgetGenerator[BoxWidgetSpec] {
+
+  override protected val seqExecutor = quartilesAnySeqExec
+
+  override protected val supportArray = true
+
+  override protected def adjustStreamedCriteria(
+    criteria: Seq[Criterion[Any]],
+    fields: Seq[Field]
+  ) = withNotNull(fields)
 
   override def apply(
-    fieldNameMap: Map[String, Field],
-    spec: BoxWidgetSpec
+    spec: BoxWidgetSpec)(
+    fieldNameMap: Map[String, Field]
   ) =
-    (quartiles:  Quartiles[Any]) => {
-      implicit val ordering = quartiles.ordering
-      val field = fieldNameMap.get(spec.fieldName).get
-      val chartTitle = title(spec).getOrElse(field.labelOrElseName)
-      val widget = BoxWidget[Any](chartTitle, field.labelOrElseName, quartiles, None, None, spec.displayOptions)
-      Some(widget)
-    }
+    (result: QuartilesCalcNoOptionsTypePack[Any]#OUT) =>
+      result.map { quartiles =>
+        implicit val ordering = quartiles.ordering
+        val field = fieldNameMap.get(spec.fieldName).get
+        val chartTitle = title(spec).getOrElse(field.labelOrElseName)
+        val widget = BoxWidget[Any](chartTitle, field.labelOrElseName, quartiles, None, None, spec.displayOptions)
+        widget
+      }
 }

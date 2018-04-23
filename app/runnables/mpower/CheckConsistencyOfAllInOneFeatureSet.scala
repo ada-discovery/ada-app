@@ -7,7 +7,7 @@ import play.api.libs.json._
 import runnables.InputFutureRunnable
 import services.DataSetService
 import dataaccess.RepoTypes.JsonCrudRepo
-import dataaccess.JsonCrudRepoExtra._
+import dataaccess.JsonRepoExtra._
 import dataaccess.Criterion._
 import models.AdaException
 import models.DataSetFormattersAndIds.JsObjectIdentity

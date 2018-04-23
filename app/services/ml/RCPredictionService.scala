@@ -14,7 +14,7 @@ import com.banda.network.business._
 import com.banda.network.domain._
 import com.google.inject.{ImplementedBy, Singleton}
 import dataaccess.Criterion.Infix
-import dataaccess.JsonCrudRepoExtra.InfixOps
+import dataaccess.JsonRepoExtra.InfixOps
 import dataaccess.JsonUtil
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models._

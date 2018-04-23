@@ -109,6 +109,16 @@ trait CalculatorExecutors {
   ) =
     withSeq(TupleCalc.apply[A, B])
 
+  def uniqueTupleExec[A, B](
+    implicit inputTypeTag: TypeTag[TupleCalcTypePack[A, B]#IN]
+  ) =
+    with2Tuple(UniqueTupleCalc.apply[A, B])
+
+  def uniqueTupleSeqExec[A, B](
+    implicit inputTypeTag: TypeTag[TupleCalcTypePack[A, B]#IN]
+  ) =
+    withSeq(UniqueTupleCalc.apply[A, B])
+
   def groupTupleExec[G, A, B](
     implicit inputTypeTag: TypeTag[GroupTupleCalcTypePack[G, A, B]#IN]
   ) =
@@ -118,6 +128,16 @@ trait CalculatorExecutors {
     implicit inputTypeTag: TypeTag[GroupTupleCalcTypePack[G, A, B]#IN]
   ) =
     withSeq(GroupTupleCalc.apply[G, A, B])
+
+  def groupUniqueTupleExec[G, A, B](
+    implicit inputTypeTag: TypeTag[GroupTupleCalcTypePack[G, A, B]#IN]
+  ) =
+    with3Tuple(GroupUniqueTupleCalc.apply[G, A, B])
+
+  def groupUniqueTupleSeqExec[G, A, B](
+    implicit inputTypeTag: TypeTag[GroupTupleCalcTypePack[G, A, B]#IN]
+  ) =
+    withSeq(GroupUniqueTupleCalc.apply[G, A, B])
 
   // Quartiles
 

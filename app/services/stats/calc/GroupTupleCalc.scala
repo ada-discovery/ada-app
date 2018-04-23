@@ -21,7 +21,6 @@ private[stats] class GroupTupleCalc[G, A, B] extends Calculator[GroupTupleCalcTy
     }
 
   override def flow(options: Unit) = {
-//    val flatFlow = Flow.fromFunction(toOption2).collect{ case (g, Some(x)) => (g, x) }
     val flatFlow = Flow[IN].collect{ case (g, Some(x), Some(y)) => (g, (x, y)) }
     val groupedFlow = flatFlow.via(groupFlow[Option[G], (A, B)](maxGroups))
 
@@ -34,9 +33,6 @@ private[stats] class GroupTupleCalc[G, A, B] extends Calculator[GroupTupleCalcTy
     ab._1.flatMap(a =>
       ab._2.map(b => (a, b))
     )
-
-  private def toOption2(gab: IN) =
-    (gab._1, toOption(gab._2, gab._3))
 }
 
 object GroupTupleCalc {

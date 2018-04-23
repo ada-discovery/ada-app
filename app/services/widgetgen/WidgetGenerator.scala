@@ -1,18 +1,160 @@
 package services.widgetgen
 
+import akka.NotUsed
+import akka.stream.Materializer
+import akka.stream.scaladsl.Flow
+import dataaccess.{AsyncReadonlyRepo, Criterion, NotEqualsNullCriterion}
 import models.{Field, Widget, WidgetSpec}
+import play.api.libs.json.JsObject
+import services.stats.{CalculatorExecutor, CalculatorExecutors, CalculatorTypePack}
 
-trait WidgetGenerator[S <: WidgetSpec, W <: Widget, IN] {
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+trait WidgetGenerator[S <: WidgetSpec, +W <: Widget] {
+
+  type IN
 
   def apply(
-    fieldNameMap: Map[String, Field],
-    spec: S
+    spec: S)(
+    fieldNameMap: Map[String, Field]
   ): IN => Option[W]
 
-  def apply(
-    fields: Seq[Field],
-    spec: S
-  ): IN => Option[W] = apply(fields.map(field => field.name -> field).toMap, spec)
+  def applyFields(
+    spec: S)(
+    fields: Seq[Field]
+  ): IN => Option[W] = apply(spec)(fields.map(field => field.name -> field).toMap)
 
   protected def title(widgetSpec: WidgetSpec) = widgetSpec.displayOptions.title
+}
+
+trait CalculatorWidgetGenerator[S <: WidgetSpec, +W <: Widget, C <: CalculatorTypePack] extends WidgetGenerator[S, W] with CalculatorExecutors {
+
+  type IN = C#OUT
+
+  protected val seqExecutor: CalculatorExecutor[C, Seq[Field]]
+
+  protected def specToOptions: S => C#OPT
+
+  protected def specToFlowOptions: S => C#FLOW_OPT
+
+  protected def specToSinkOptions: S => C#SINK_OPT
+
+  protected val supportArray: Boolean
+
+  protected def withProjection: Boolean = true
+
+  protected def adjustStreamedCriteria(
+    criteria: Seq[Criterion[Any]],
+    fields: Seq[Field]
+  ) = criteria
+
+  protected def withNotNull(fields: Seq[Field]): Seq[Criterion[Any]] =
+    fields.map(field => NotEqualsNullCriterion(field.name))
+
+  protected def scalarOrArrayField(fields: Seq[Field]): Field =
+    if (fields.size > 1) fields(1) else fields(0)
+
+  def genJson(
+    spec: S)(
+    fields: Seq[Field])(
+    jsons: Traversable[JsObject]
+  ): Option[W] = {
+    val options = specToOptions(spec)
+
+    // decide whether to use a pure scalar json executor or a scalar/array one
+    val result =
+      if (supportArray)
+        seqExecutor.execJsonA(options, scalarOrArrayField(fields), fields)(jsons)
+      else
+        seqExecutor.execJson(options, fields)(jsons)
+
+    // generate widget out of it
+    applyFields(spec)(fields)(result)
+  }
+
+  def genJsonRepoStreamed(
+    spec: S)(
+    fields: Seq[Field])(
+    dataRepo: AsyncReadonlyRepo[JsObject, _],
+    criteria: Seq[Criterion[Any]])(
+    implicit materializer: Materializer
+  ): Future[Option[W]] = {
+    val flowOptions = specToFlowOptions(spec)
+    val sinkOptions = specToSinkOptions(spec)
+
+    // decide whether to use a pure scalar json streamed executor or a scalar/array one
+    val exec = if (supportArray)
+      seqExecutor.execJsonRepoStreamedA(flowOptions, sinkOptions, withProjection, scalarOrArrayField(fields), fields)_
+    else
+      seqExecutor.execJsonRepoStreamed(flowOptions, sinkOptions, withProjection, fields)_
+
+    for {
+      // execute on given data repo with criteria
+      calcResult <- exec(dataRepo, adjustStreamedCriteria(criteria, fields))
+    } yield
+      // generate widget out of it
+      applyFields(spec)(fields)(calcResult)
+  }
+
+  def flow(
+    spec: S)(
+    fields: Seq[Field]
+  ): Flow[JsObject, C#INTER, NotUsed] = {
+    val flowOptions = specToFlowOptions(spec)
+
+    // decide whether to use a pure scalar flow or a scalar/array one
+    if (supportArray)
+      seqExecutor.createJsonFlowA(flowOptions, scalarOrArrayField(fields), fields)
+    else
+      seqExecutor.createJsonFlow(flowOptions, fields)
+  }
+
+  def genPostFlow(
+    spec: S)(
+    fields: Seq[Field])(
+    flowOutput: C#INTER
+  ): Option[W] = {
+    val sinkOptions = specToSinkOptions(spec)
+
+    val result = seqExecutor.execPostFlow(sinkOptions)(flowOutput)
+
+    applyFields(spec)(fields)(result)
+  }
+}
+
+case class CalculatorWidgetGeneratorLoaded[S <: WidgetSpec, +W <: Widget, C <: CalculatorTypePack](
+  generator: CalculatorWidgetGenerator[S, W, C],
+  spec: S,
+  fields: Seq[Field]
+) {
+
+  def apply(
+    inputs: generator.IN
+  ) = generator.applyFields(spec)(fields)(inputs)
+
+  def genJson(
+    jsons: Traversable[JsObject]
+  ) = generator.genJson(spec)(fields)(jsons)
+
+  def genJsonRepoStreamed(
+    dataRepo: AsyncReadonlyRepo[JsObject, _],
+    criteria: Seq[Criterion[Any]])(
+    implicit materializer: Materializer
+  ) = generator.genJsonRepoStreamed(spec)(fields)(dataRepo, criteria)
+
+  def flow = generator.flow(spec)(fields)
+
+  def genPostFlow = generator.genPostFlow(spec)(fields)(_)
+}
+
+trait NoOptionsCalculatorWidgetGenerator[S] {
+  protected def specToOptions: S => Unit =
+    _ => ()
+
+  protected def specToFlowOptions: S => Unit =
+    _ => ()
+
+  protected def specToSinkOptions: S => Unit =
+    _ => ()
 }

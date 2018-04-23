@@ -235,6 +235,9 @@ object CalculatorHelper {
       scalarOrArrayField: Field,
       fields: F
     ) = calculatorExecutor.createJsonFlowA((), scalarOrArrayField, fields)
+
+    def execPostFlow_ =
+      calculatorExecutor.execPostFlow(())(_)
   }
 
   implicit class SingleFieldExecExt[C <: CalculatorTypePack](

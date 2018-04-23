@@ -21,10 +21,18 @@ object AkkaStreamUtil {
       .reduce((l, r) ⇒ (l._1, l._2 + r._2))
       .mergeSubstreams
 
+  def uniqueFlow[A](
+    maxSubstreams: Int
+  ): Flow[A, A, NotUsed] =
+    Flow[A]
+      .groupBy(maxSubstreams, identity)
+      .reduce((l, _) ⇒ l)
+      .mergeSubstreams
+
   def groupCountFlowTuple[A, B](
     maxSubstreams: Int
   ): Flow[(A, B), (A, Int), NotUsed] =
-    Flow[(A,B)]
+    Flow[(A, B)]
       .groupBy(maxSubstreams, _._1)
       .map { case (a, _) => a -> 1}
       .reduce((l, r) ⇒ (l._1, l._2 + r._2))

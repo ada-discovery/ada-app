@@ -10,6 +10,7 @@ import akka.stream.ActorMaterializer
 import com.google.inject.ImplementedBy
 import dataaccess.Criterion.Infix
 import dataaccess._
+import dataaccess.JsonRepoExtra._
 import models._
 import org.apache.spark.ml.feature.ChiSqSelector
 import org.apache.spark.ml.linalg.Vector
@@ -24,6 +25,7 @@ import services.{FeaturesDataFrameFactory, SparkApp}
 import JsonFieldUtil._
 import breeze.linalg.{DenseMatrix, eig, eigSym}
 import breeze.linalg.eigSym.EigSym
+import dataaccess.RepoTypes.JsonReadonlyRepo
 import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -44,7 +46,7 @@ trait StatsService extends CalculatorExecutors {
   type GroupUniqueCount[G, T] = GroupUniqueDistributionCountsCalcTypePack[G, T]#OUT
 
   def calcUniqueDistributionCountsFromRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field
   ): Future[UniqueCount[Any]]
@@ -52,7 +54,7 @@ trait StatsService extends CalculatorExecutors {
   // grouped
 
   def calcGroupedUniqueDistributionCountsFromRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field,
     groupField: Field
@@ -66,7 +68,7 @@ trait StatsService extends CalculatorExecutors {
   type GroupNumericCount[G] = GroupNumericDistributionCountsCalcTypePack[G]#OUT
 
   def calcNumericDistributionCountsFromRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field,
     numericBinCountOption: Option[Int]
@@ -75,7 +77,7 @@ trait StatsService extends CalculatorExecutors {
   // grouped
 
   def calcGroupedNumericDistributionCountsFromRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field,
     groupField: Field,
@@ -87,10 +89,26 @@ trait StatsService extends CalculatorExecutors {
   /////////////////////////
 
   def calcQuartilesFromRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field
   ): Future[Option[Quartiles[Any]]]
+
+  /////////////////////////
+  // Min & man From Repo //
+  /////////////////////////
+
+  def getMinMax[T](
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    field: Field
+  ): Future[(Option[T], Option[T])]
+
+  def getNumericMinMax(
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    field: Field
+  ): Future[(Option[Double], Option[Double])]
 
   /////////////////
   // Gram Matrix //
@@ -217,7 +235,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   ////////////////////////////////
 
   override def calcUniqueDistributionCountsFromRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field
   ): Future[UniqueCount[Any]] = {
@@ -246,7 +264,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   private def calcUniqueCountsFromRepo[T](
     fieldName: String,
     values: Traversable[T],
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]]
   ): Future[Seq[(Option[T], Int)]] = {
     val countFutures = values.par.map { value =>
@@ -267,7 +285,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   // grouped
 
   override def calcGroupedUniqueDistributionCountsFromRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field,
     groupField: Field
@@ -299,7 +317,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   /////////////////////////////////
 
   override def calcNumericDistributionCountsFromRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field,
     numericBinCountOption: Option[Int]
@@ -340,7 +358,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   // grouped
 
   override def calcGroupedNumericDistributionCountsFromRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field,
     groupField: Field,
@@ -369,7 +387,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       seriesCounts
 
   private def groupValues(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     groupField: Field
   ) = {
@@ -402,43 +420,40 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     toRangeVal: BigDecimal => Any,
     fieldName: String,
     fieldType: FieldType[T],
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     maxColumnCount: Int,
     columnForEachIntValue: Boolean,
     explMin: Option[T],
     explMax: Option[T]
   ): Future[NumericCount] = {
-    def jsonToBigDecimalValue(json: JsObject): Option[BigDecimal] = {
-      fieldType.jsonToValue(json \ fieldName).map(toBigDecimal)
-    }
+    def jsonToBigDecimalValue(jsValue: JsReadable): Option[BigDecimal] =
+      fieldType.jsonToValue(jsValue).map(toBigDecimal)
+
+    // future to retrieve a max value if not explicitly provided
+    val maxFuture =
+      if (explMax.isDefined)
+        Future(Some(toBigDecimal(explMax.get)))
+      else
+        dataRepo.max(fieldName, criteria, true).map ( jsResult =>
+          jsResult.flatMap(jsonToBigDecimalValue)
+        )
+
+    // future to retrieve a min value if not explicitly provided
+    val minFuture =
+      if (explMin.isDefined)
+        Future(Some(toBigDecimal(explMin.get)))
+      else
+        dataRepo.min(fieldName, criteria, true).map( jsResult =>
+          jsResult.flatMap(jsonToBigDecimalValue)
+        )
 
     for {
-      maxOption <- if (explMax.isDefined)
-        Future(Some(toBigDecimal(explMax.get)))
-      else {
-        val maxJsonFuture = dataRepo.find(
-          criteria = criteria ++ Seq(fieldName #!@),
-          projection = Seq(fieldName),
-          sort = Seq(DescSort(fieldName)),
-          limit = Some(1)
-        ).map(_.headOption)
+      // get max
+      maxOption <- maxFuture
 
-        maxJsonFuture.map(_.map(jsonToBigDecimalValue).flatten)
-      }
-
-      minOption <- if (explMin.isDefined)
-        Future(Some(toBigDecimal(explMin.get)))
-      else {
-        val minJsonFuture = dataRepo.find(
-          criteria = criteria ++ Seq(fieldName #!@),
-          projection = Seq(fieldName),
-          sort = Seq(AscSort(fieldName)),
-          limit = Some(1)
-        ).map(_.headOption)
-
-        minJsonFuture.map(_.map(jsonToBigDecimalValue).flatten)
-      }
+      // get min
+      minOption <- minFuture
 
       columnCountStepSizeOption: Option[(Int, BigDecimal)] =
         minOption.zip(maxOption).headOption.map { case (min, max) =>
@@ -499,7 +514,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   ///////////////
 
   override def calcQuartilesFromRepo(
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field
   ): Future[Option[Quartiles[Any]]] = {
@@ -519,7 +534,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   }
 
   private def calcQuartilesFromRepo[T: Ordering](
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field,
     toDouble: T => Double
@@ -540,7 +555,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
   private def createQuantilesAux[T: Ordering](
     toDouble: T => Double,
     length: Int,                                            // must be non-zero
-    dataRepo: AsyncReadonlyRepo[JsObject, BSONObjectID],
+    dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field
   ): Future[Option[Quartiles[T]]] = {
@@ -670,11 +685,59 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
     }
   }
 
+  /////////////////////////
+  // Min & man From Repo //
+  /////////////////////////
+
+  override def getMinMax[T](
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    field: Field
+  ): Future[(Option[T], Option[T])] = {
+    val fieldType = ftf(field.fieldTypeSpec).asValueOf[T]
+
+    // min and max futures
+    val minFuture = dataRepo.min(field.name, criteria, true)
+    val maxFuture = dataRepo.max(field.name, criteria, true)
+
+    for {
+      minOption <- minFuture
+      maxOption <- maxFuture
+    } yield
+      minOption.zip(maxOption).headOption.map { case (minJsValue, maxJsValue) =>
+        val min = fieldType.jsonToValue(minJsValue)
+        val max = fieldType.jsonToValue(maxJsValue)
+        (min, max)
+      }.getOrElse(
+        (None, None)
+      )
+  }
+
+  override def getNumericMinMax(
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    field: Field
+  ): Future[(Option[Double], Option[Double])] = {
+
+    // aux function to convert the result to double
+    def aux[T](toDouble: T => Double) =
+      getMinMax[T](dataRepo, criteria, field).map {
+        case (min, max) => (min.map(toDouble), max.map(toDouble))
+      }
+
+    field.fieldType match {
+      case FieldTypeId.Double => aux[Double](identity)
+      case FieldTypeId.Integer => aux[Long](_.toDouble)
+      case FieldTypeId.Date => aux[ju.Date](_.getTime.toDouble)
+      case _ => Future(None, None)
+    }
+  }
+
   /////////////////
   // Gram Matrix //
   /////////////////
 
-  def calcGramMatrix(
+  override def calcGramMatrix(
     matrix: Traversable[Seq[Double]]
   ): Seq[Seq[Double]] = {
     val squareMatrix = matrix.map(_.map(value => -0.5 * value * value)).toSeq

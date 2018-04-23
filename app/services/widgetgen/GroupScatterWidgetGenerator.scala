@@ -1,40 +1,39 @@
 package services.widgetgen
 
 import dataaccess.Criterion
-import models._
-import services.stats.calc.{GroupTupleCalcTypePack, TupleCalcTypePack}
+import models.{Field, ScatterWidget, ScatterWidgetSpec}
+import services.stats.calc.GroupTupleCalcTypePack
 import util.shorten
 
 import scala.reflect.runtime.universe._
 
-private class ScatterWidgetGenerator[T1, T2](
-    implicit inputTypeTag: TypeTag[TupleCalcTypePack[T1, T2]#IN]
-  ) extends CalculatorWidgetGenerator[ScatterWidgetSpec, ScatterWidget[T1, T2], TupleCalcTypePack[T1, T2]]
+private class GroupScatterWidgetGenerator[T1, T2](
+    implicit inputTypeTag: TypeTag[GroupTupleCalcTypePack[String, T1, T2]#IN]
+  ) extends CalculatorWidgetGenerator[ScatterWidgetSpec, ScatterWidget[T1, T2], GroupTupleCalcTypePack[String, T1, T2]]
     with NoOptionsCalculatorWidgetGenerator[ScatterWidgetSpec] {
 
-//  override protected val seqExecutor = tupleSeqExec[T1, T2]
+//  override protected val seqExecutor = groupTupleSeqExec[String, T1, T2]
 
-  override protected val seqExecutor = uniqueTupleSeqExec[T1, T2]
+  override protected val seqExecutor = groupUniqueTupleSeqExec[String, T1, T2]
 
   override protected val supportArray = false
 
   override protected def adjustStreamedCriteria(
     criteria: Seq[Criterion[Any]],
     fields: Seq[Field]
-  ) = withNotNull(fields)
+  ) = withNotNull(fields.tail)
 
   override def apply(
     spec: ScatterWidgetSpec)(
     fieldNameMap: Map[String, Field]
   ) =
-    (data: TupleCalcTypePack[T1, T2]#OUT) =>
+    (data: GroupTupleCalcTypePack[String, T1, T2]#OUT) =>
       if (data.nonEmpty) {
         val xField = fieldNameMap.get(spec.xFieldName).get
         val yField = fieldNameMap.get(spec.yFieldName).get
         val shortXFieldLabel = shorten(xField.labelOrElseName, 20)
         val shortYFieldLabel = shorten(yField.labelOrElseName, 20)
-
-        val finalData = Seq(("all", data))
+        val finalData = data.map { case (groupName, values) => (groupName.getOrElse("Undefined"), values)}.toSeq.sortBy(_._1)
 
         val widget = ScatterWidget(
           title(spec).getOrElse(s"$shortXFieldLabel vs. $shortYFieldLabel"),
@@ -48,9 +47,9 @@ private class ScatterWidgetGenerator[T1, T2](
         None
 }
 
-object ScatterWidgetGenerator {
+object GroupScatterWidgetGenerator {
   def apply[T1, T2](
-    implicit inputTypeTag: TypeTag[TupleCalcTypePack[T1, T2]#IN]
-  ): CalculatorWidgetGenerator[ScatterWidgetSpec, ScatterWidget[T1, T2], TupleCalcTypePack[T1, T2]] =
-    new ScatterWidgetGenerator[T1, T2]
+    implicit inputTypeTag: TypeTag[GroupTupleCalcTypePack[String, T1, T2]#IN]
+  ): CalculatorWidgetGenerator[ScatterWidgetSpec, ScatterWidget[T1, T2], GroupTupleCalcTypePack[String, T1, T2]] =
+    new GroupScatterWidgetGenerator[T1, T2]
 }

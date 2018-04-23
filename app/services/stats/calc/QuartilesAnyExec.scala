@@ -123,7 +123,18 @@ private class QuartilesAnyExec[F] extends CalculatorExecutor[QuartilesCalcNoOpti
   ) =
     throw new RuntimeException("Method QuartilesAnyExecAux.execStreamed is not supported due to unknown value type (ordering).")
 
+  override def execPostFlow(
+    options: Unit)(
+    flowOutput: Traversable[Any]
+  ): Option[Quartiles[Any]] =
+    flowOutput.headOption.flatMap { someVal =>
+      dispatchVal(
+        (executor) => executor.execPostFlow(_)(flowOutput)
+      )(someVal, None)
+    }
+
   // auxiliary functions
+
   private def dispatch[OUT](
     exec: CalculatorExecutor[QuartilesCalcTypePack[Any], Seq[Field]] => ((Any => Double) => OUT))(
     fields: F,

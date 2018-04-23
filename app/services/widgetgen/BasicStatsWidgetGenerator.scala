@@ -1,13 +1,18 @@
 package services.widgetgen
 
 import models._
-import services.stats.calc.{BasicStatsCalcTypePack, BasicStatsResult}
+import services.stats.calc.BasicStatsCalcTypePack
 
-object BasicStatsWidgetGenerator extends WidgetGenerator[BasicStatsWidgetSpec, BasicStatsWidget, BasicStatsCalcTypePack#OUT] {
+object BasicStatsWidgetGenerator extends CalculatorWidgetGenerator[BasicStatsWidgetSpec, BasicStatsWidget, BasicStatsCalcTypePack]
+  with NoOptionsCalculatorWidgetGenerator[BasicStatsWidgetSpec] {
+
+  override protected val seqExecutor = basicStatsSeqExec
+
+  override protected val supportArray = true
 
   override def apply(
-    fieldNameMap: Map[String, Field],
-    spec: BasicStatsWidgetSpec
+    spec: BasicStatsWidgetSpec)(
+    fieldNameMap: Map[String, Field]
   ) =
     (results:  BasicStatsCalcTypePack#OUT) =>
       results.map { results =>
