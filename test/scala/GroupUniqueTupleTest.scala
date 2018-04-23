@@ -9,12 +9,12 @@ import services.stats.calc._
 
 import scala.util.Random
 
-class GroupTupleTest extends AsyncFlatSpec with Matchers {
+class GroupUniqueTupleTest extends AsyncFlatSpec with Matchers {
 
   private val randomInputSize = 100000
 
-  private val intLongCalc = GroupTupleCalc.apply[String, Int, Long]
-  private val doubleCalc = GroupTupleCalc.apply[String, Double, Double]
+  private val intLongCalc = GroupUniqueTupleCalc.apply[String, Int, Long]
+  private val doubleCalc = GroupUniqueTupleCalc.apply[String, Double, Double]
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
@@ -54,8 +54,13 @@ class GroupTupleTest extends AsyncFlatSpec with Matchers {
   def checkResult[G: Ordering, A: Numeric, B: Numeric](
     protoResult: GroupTupleCalcTypePack[G, A, B]#OUT,
     inputs: Traversable[(Option[G], Option[A], Option[B])])(
-    result: GroupTupleCalcTypePack[G, A, B]#OUT
+    result: GroupTupleCalcTypePack[G, A, B]#OUT)(
+    implicit orderingA: Ordering[A], orderingB: Ordering[B]
    ) = {
+    // aux function to sort pairs
+    def sort(first: (A,B), second : (A,B)): Boolean =
+      orderingA.lt(first._1, second._1) || ((first._1 == second._1) && (orderingB.lt(first._2, second._2)))
+
     result.size should be (protoResult.size)
 
     result.toSeq.sortBy(_._1).zip(protoResult.toSeq.sortBy(_._1)).foreach{ case ((groupName1, values1), (groupName2, values2)) =>
@@ -65,12 +70,12 @@ class GroupTupleTest extends AsyncFlatSpec with Matchers {
       values1.map(_._1).sum should be (values2.map(_._1).sum)
       values1.map(_._2).sum should be (values2.map(_._2).sum)
 
-      values1.toSeq.zip(values2.toSeq).foreach { case ((a1, b1), (a2, b2)) =>
+      values1.toSeq.sortWith(sort).zip(values2.toSeq.sortWith(sort)).foreach { case ((a1, b1), (a2, b2)) =>
         a1 should be (a2)
         b1 should be (b2)
       }
     }
 
-    result.map(_._2.size).sum should be (inputs.count { case (_, value1, value2) => value1.isDefined && value2.isDefined})
+    result.map(_._2.size).sum should be (inputs.collect { case (g, Some(value1), Some(value2)) => (g, value1, value2) }.toSet.size)
   }
 }
