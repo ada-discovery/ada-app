@@ -116,8 +116,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private implicit val seriesProcessingSpec = JsonFormatter[SeriesProcessingSpec]
   private implicit val seriesTransformationSpec = JsonFormatter[SeriesTransformationSpec]
 
-//  private val distScreenWidgetsGenMethod = WidgetGenerationMethod.StreamedIndividually
-  private val distScreenWidgetsGenMethod = WidgetGenerationMethod.FullData
+//  private val distScreenWidgetsGenMethod = WidgetGenerationMethod.FullData
+  private val distScreenWidgetsGenMethod = WidgetGenerationMethod.RepoAndFullData
 
   private val coreMapping: Mapping[DataSetTransformationCore] = mapping(
     "resultDataSetId" -> nonEmptyText,

@@ -6,7 +6,7 @@ import models.DataSetFormattersAndIds.FieldIdentity
 import models.{AdaException, Field, FieldTypeId, StorageType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
-import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
+import play.api.libs.json._
 import runnables.InputFutureRunnable
 import services.DataSetService
 import dataaccess.Criterion._
@@ -15,24 +15,21 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source
 import scala.reflect.runtime.universe.typeOf
 
-class LinkMDSProjectionWithFeatureInfo @Inject()(
+class LinkFeatureFileWithFeatureInfo @Inject()(
     dataSetService: DataSetService,
     dsaf: DataSetAccessorFactory
-  ) extends InputFutureRunnable[LinkMDSProjectionWithFeatureInfoSpec] {
+  ) extends InputFutureRunnable[LinkFeatureFileWithFeatureInfoSpec] {
 
   private val submissionIdFieldName = "SubmissionId"
   private val featureFieldName = "Name"
 
   private val scoreSubmissionIdFieldName = "submissionId"
 
-  private val newMdsX1Field = Field("mds_x1", Some("MDS X1"), FieldTypeId.Double, false)
-  private val newMdsX2Field = Field("mds_x2", Some("MDS X2"), FieldTypeId.Double, false)
-
   private val excludedScoreFields = Seq(
     "ROW_ID", "ROW_VERSION", "Team", "dataFileHandleId", "entityId", "submissionName", "teamWiki"
   )
 
-  override def runAsFuture(input: LinkMDSProjectionWithFeatureInfoSpec) = {
+  override def runAsFuture(input: LinkFeatureFileWithFeatureInfoSpec) = {
     val metaInfoDsa = dsaf(input.featureMetaInfoDataSetId).get
     val scoreDsa = dsaf(input.scoreDataSetId).get
 
@@ -52,8 +49,8 @@ class LinkMDSProjectionWithFeatureInfo @Inject()(
       // register target dsa
       targetDsa <- dataSetService.register(
         metaInfoDsa,
-        input.newMDSDataSetId,
-        dataSetName + " MDS",
+        input.newDataSetId,
+        dataSetName + " " + input.newDataSetNameSuffix,
         StorageType.ElasticSearch,
         setting.defaultDistributionFieldName
       )
@@ -77,19 +74,23 @@ class LinkMDSProjectionWithFeatureInfo @Inject()(
         }.toMap
       }
 
-      // create new jsons with MDS projection (x1 and x2)
-      newJsons = {
-        val lines = Source.fromFile(input.mdsProjectionFileName).getLines()
+      // create new jsons with new fields (from file)... first column is expected to be submission column
+      (newJsons, fileFields) = {
+        val lines = Source.fromFile(input.featureFileName).getLines()
 
         // header could be ignored
         val header = lines.take(1).toSeq.head
 
-        lines.map { line =>
-          val parts = line.split(",").map(_.trim)
+        val fileFields = header.split(",", -1).tail.zipWithIndex.map { case (_, index) =>
+          val fieldName = input.newFieldNamePrefix + (index + 1)
+          val fieldLabel = input.newFieldLabelPrefix + (index + 1)
+          Field(fieldName, Some(fieldLabel), FieldTypeId.Double, false)
+        }
+
+        val jsons = lines.map { line =>
+          val parts = line.split(",", -1).map(_.trim)
           val featureName = parts(0)
           val submissionId =  featureName.split("-")(0).toInt
-          val x1 = parts(1).toDouble
-          val x2 = parts(2).toDouble
 
           val featureInfoJson = submissionFeatureNameJsonMap.get(featureName).getOrElse(
             throw new AdaException(s"Feature $featureName not found.")
@@ -99,8 +100,16 @@ class LinkMDSProjectionWithFeatureInfo @Inject()(
             throw new AdaException(s"Submission $submissionId not found.")
           )
 
-          featureInfoJson ++ scoreJson ++ Json.obj(newMdsX1Field.name -> x1, newMdsX2Field.name -> x2)
+          val fileValueJson = JsObject(
+            parts.tail.zip(fileFields).map { case (value, field) =>
+              field.name -> JsNumber(value.toDouble)
+            }
+          )
+
+          featureInfoJson ++ scoreJson ++ fileValueJson
         }.toSeq
+
+        (jsons, fileFields)
       }
 
       // create a new dictionary
@@ -108,8 +117,8 @@ class LinkMDSProjectionWithFeatureInfo @Inject()(
         val scoreFieldsToStore = scoreFields.filter(_.name != scoreSubmissionIdFieldName)
 
         dataSetService.updateDictionaryFields(
-          input.newMDSDataSetId,
-          fields ++ scoreFieldsToStore ++ Seq(newMdsX1Field, newMdsX2Field),
+          input.newDataSetId,
+          fields ++ scoreFieldsToStore ++ fileFields,
           false,
           true
         )
@@ -142,12 +151,15 @@ class LinkMDSProjectionWithFeatureInfo @Inject()(
         }
     })
 
-  override def inputType = typeOf[LinkMDSProjectionWithFeatureInfoSpec]
+  override def inputType = typeOf[LinkFeatureFileWithFeatureInfoSpec]
 }
 
-case class LinkMDSProjectionWithFeatureInfoSpec(
+case class LinkFeatureFileWithFeatureInfoSpec(
   featureMetaInfoDataSetId: String,
   scoreDataSetId: String,
-  newMDSDataSetId: String,
-  mdsProjectionFileName: String
+  featureFileName: String,
+  newDataSetId: String,
+  newDataSetNameSuffix: String,
+  newFieldNamePrefix: String,
+  newFieldLabelPrefix: String
 )

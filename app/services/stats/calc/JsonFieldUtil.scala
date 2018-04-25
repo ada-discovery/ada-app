@@ -5,7 +5,9 @@ import models.{Field, FieldTypeId}
 import play.api.libs.json.{JsObject, JsReadable, Json}
 import java.{util => ju}
 
+import scala.collection.mutable
 import scala.collection.mutable.{Map => MMap}
+import scala.reflect.ClassTag
 
 object JsonFieldUtil {
 
@@ -103,7 +105,7 @@ object JsonFieldUtil {
     implicit ftf: FieldTypeFactory
   ): JsObject => Seq[Option[Double]] = {
     val valueGets: Seq[JsObject => Option[Double]] = doubleGets(fields)
-    jsonToDoublesAux(valueGets)
+    jsonToSeqAux(valueGets)
   }
 
   def jsonToDoublesDefined(
@@ -112,7 +114,27 @@ object JsonFieldUtil {
     implicit ftf: FieldTypeFactory
   ): JsObject => Seq[Double] = {
     val valueGets: Seq[JsObject => Option[Double]] = doubleGets(fields)
-    jsonToValuesDefinedAux(valueGets)
+    jsonToSeqDefinedAux(valueGets)
+  }
+
+  // NOTE: This function does not support array field types it just returns double scalar for each field and returns the overall result as array
+  // this is essentially the same as jsonToDoubles but instead of seq, array is returned
+  def jsonToArrayDoubles(
+    fields: Seq[Field]
+    )(
+    implicit ftf: FieldTypeFactory
+  ): JsObject => Array[Option[Double]] = {
+    val valueGets: Seq[JsObject => Option[Double]] = doubleGets(fields)
+    jsonToArrayAux(valueGets)
+  }
+
+  def jsonToArrayDoublesDefined(
+    fields: Seq[Field]
+    )(
+    implicit ftf: FieldTypeFactory
+  ): JsObject => Array[Double] = {
+    val valueGets: Seq[JsObject => Option[Double]] = doubleGets(fields)
+    jsonToArrayDefinedAux(valueGets)
   }
 
   def jsonToDisplayString[T](
@@ -133,7 +155,7 @@ object JsonFieldUtil {
       val fieldType = ftf(field.fieldTypeSpec)
       valueGet(fieldType.asValueOf[T], field.name)
     }
-    jsonToDoublesAux(valueGets)
+    jsonToSeqAux(valueGets)
   }
 
   private def doubleGets(
@@ -208,13 +230,46 @@ object JsonFieldUtil {
       fieldType.jsonToDisplayStringOptional(jsObject \ fieldName)
   }
 
-  private def jsonToDoublesAux[T](
-    valueGets: Seq[JsObject => Option[T]]
-  ) = { jsObject: JsObject => valueGets.map(_(jsObject))}
+  private def jsonToSeqAux[T](
+    valueGets: Seq[JsObject => T]
+  ): JsObject => Seq[T] =
+    (jsObject: JsObject) => valueGets.map(_(jsObject))
 
-  private def jsonToValuesDefinedAux[T](
+  private def jsonToArrayAux[T: ClassTag](
+    valueGets: Seq[JsObject => T]
+  ): JsObject => Array[T] = {
+    val size = valueGets.size
+
+    { jsObject: JsObject =>
+      val result = new Array[T](size)
+      for (i <- 0 to size - 1) yield {
+        result.update(i, valueGets(i)(jsObject))
+      }
+      result
+    }
+  }
+
+  private def jsonToSeqDefinedAux[T](
     valueGets: Seq[JsObject => Option[T]]
-  ) = { jsObject: JsObject => valueGets.map(_(jsObject).getOrElse(
-    throw new AdaConversionException(s"All values defined expected but got None for JSON:\n ${Json.prettyPrint(jsObject)}.")
-  ))}
+  ): JsObject => Seq[T] =
+    (jsObject: JsObject) =>
+      valueGets.map(_(jsObject).getOrElse(
+        throw new AdaConversionException(s"All values are expected to be defined but got None for JSON:\n ${Json.prettyPrint(jsObject)}.")
+      ))
+
+  private def jsonToArrayDefinedAux[T: ClassTag](
+    valueGets: Seq[JsObject => Option[T]]
+  ): JsObject => Array[T] = {
+    val size = valueGets.size
+
+    { jsObject: JsObject =>
+      val result = new Array[T](size)
+      for (i <- 0 to size - 1) yield {
+        result.update(i, valueGets(i)(jsObject).getOrElse(
+          throw new AdaConversionException(s"All values are expected to be defined but got None for JSON:\n ${Json.prettyPrint(jsObject)}.")
+        ))
+      }
+      result
+    }
+  }
 }

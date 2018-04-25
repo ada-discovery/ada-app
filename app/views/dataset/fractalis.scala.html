@@ -19,9 +19,17 @@
 
 @actions = {
     <div class="row">
-        <div class="col-md-3">
+        <div class="col-md-6 col-sm-12">
             <input id="fieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@field.map(_.labelOrElseName)">
             <input id="fieldName" name="fieldName" type="hidden" value="@field.map(_.name)">
+        </div>
+        <div class="pull-right">
+            <button id="fractalisAddButton" type="button" class="btn btn-lg">Add</button>
+            <select id="widgetSelection" class="input-lg">
+                <option value="correlation-analysis">Scatter</option>
+                <option value="boxplot">Box Plot</option>
+                <option value="pca-analysis">PCA</option>
+            </select>
         </div>
     </div>
 }
@@ -33,7 +41,7 @@
         dataSetJsRouter.getField
     )
 
-    <script type="text/javascript" src="@routes.Assets.versioned("javascripts/fractal-0.1.8.min.js")"></script>
+    <script type="text/javascript" src="@routes.Assets.versioned("javascripts/fractal-0.5.0.min.js")"></script>
 
     <script type="text/javascript">
         $(function () {
@@ -63,6 +71,7 @@
                                 data_set: '@context.dataSetId'
                             }
                         ])
+                        showMessage("Field " + fieldLabel + " has been submitted to Fractalis.")
                     },
                     error: function(data){
                         showError( data.responseText );
@@ -80,19 +89,33 @@
                 }
             });
 
+            $('#fractalisAddButton').click(addWidget);
+
             const fjs = fractal.init({
                 handler: 'ada',
-                thisBaseURL: "https://" + location.host,
-                fractalisBaseURL: 'https://fractalis.lcsb.uni.lu',
+//                dataSource: "https://" + location.host,
+//                fractalisNode: 'https://fractalis.lcsb.uni.lu',
+                dataSource: "http://172.17.0.1:9000",
+                fractalisNode: 'http://localhost',
                 getAuth () {
                     return {token: getCookie("PLAY2AUTH_SESS_ID")}
 //                    return {"user": "", passwd: ""}
+                },
+                options: {
+                    controlPanelPosition: 'right'
                 }
             })
 
             fjs.clearCache();
 
-            fjs.setChart({chart: 'correlation-analysis', selector: '#fractalis-div'})
+            function addWidget() {
+                var widgetType = $("#widgetSelection").val()
+                var randomNum = Math.random().toString()
+                var divName = widgetType + "-div" + randomNum.split('.')[1]
+
+                $("#widgetsDiv").append('<div class="col-md-6" id="' + divName + '" style="height: 30vw"></div>')
+                fjs.setChart(widgetType, '#' + divName)
+            }
         });
     </script>
 }
@@ -109,7 +132,6 @@
         @actions
     </div>
     <hr/>
-    <div style="width: 100%; height: 1200px">
-        <div id="fractalis-div"></div>
+    <div id="widgetsDiv" class="row">
     </div>
 }

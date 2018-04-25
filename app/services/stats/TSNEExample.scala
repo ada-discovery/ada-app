@@ -22,10 +22,17 @@ object TSNEExample extends App with ManifoldOperators with ProjectionOperators {
   val legend = label.unzip.map(_(0).toString)
 
   println("Calculating PCA")
+  println("# Items                  :" + x.length)
+  println("Length of row            :" + x(0).length)
+  println
+
   val pc = pca(x)
   pc.setProjection(50)
   val x50 = pc.project(x)
 
+  println("After PCA - # Items      : " + x50.length)
+  println("After PCA - Length of row: " + x50(0).length)
+  println
   println("Performing T-SNE")
   val sne = tsne(x50, 3, 20, 200, 1000)
 

@@ -32,7 +32,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.collection.JavaConversions._
 import services.stats.CalculatorHelper._
-
+import smile.manifold.{Operators => ManifoldOperators}
+import smile.projection.{Operators => ProjectionOperators}
+import smile.manifold.Operators
+import smile.plot.Palette
 import scala.reflect.runtime.universe.TypeTag
 
 @ImplementedBy(classOf[StatsServiceImpl])
@@ -138,6 +141,15 @@ trait StatsService extends CalculatorExecutors {
     scaleByEigenValues: Boolean
   ): Future[(Seq[Seq[Double]], Seq[Double])]
 
+  ///////////
+  // t-SNE //
+  ///////////
+
+  def performTSNE(
+    data: Array[Array[Double]],
+    setting: TSNESetting = TSNESetting()
+  ): Array[Array[Double]]
+
   //////////////////////////
   // Eigen Vectors/values //
   //////////////////////////
@@ -218,7 +230,7 @@ trait StatsService extends CalculatorExecutors {
 }
 
 @Singleton
-class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
+class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with ManifoldOperators {
 
   private val session = sparkApp.session
   private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
@@ -838,6 +850,10 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       (if (scaleByEigenValues) scaledMdsSolution else mdsSolution, eigenValues)
     }
 
+  /////////////////
+  // Eigen Stuff //
+  /////////////////
+
   override def calcEigenValuesAndVectors(
     matrix: Seq[Seq[Double]]
   ): (Seq[Double], Seq[Seq[Double]]) = {
@@ -878,6 +894,22 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService {
       sortedResult.map(_._2),
       sortedResult.map(_._3)
     )
+  }
+
+  ///////////
+  // t-SNE //
+  ///////////
+
+  override def performTSNE(
+    data: Array[Array[Double]],
+    setting: TSNESetting
+  ): Array[Array[Double]] = {
+    if (data.length > 0) {
+      logger.info(s"Running t-SNE for ${data.length} items with ${data(0).length} features and ${setting.iterations} iterations.")
+      val sne = tsne(data, setting.dim, setting.perplexity, setting.eta, setting.iterations)
+      sne.getCoordinates
+    } else
+      Array[Array[Double]]()
   }
 
   /////////////////////
@@ -1133,3 +1165,10 @@ case class AnovaResult(pValue: Double, fValue: Double, degreeOfFreedomBetweenGro
 object AnovaResult {
   implicit val anovaResultFormat = Json.format[AnovaResult]
 }
+
+case class TSNESetting(
+  dim: Int = 2,
+  perplexity: Double = 20,
+  eta: Double = 100,
+  iterations: Int = 1000
+)

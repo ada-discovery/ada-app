@@ -6,7 +6,7 @@ import java.{util => ju}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{FileIO, Framing, Sink, Source}
+import runnables.core.CalcUtil._
 import akka.util.ByteString
 import com.google.inject.Inject
 import dataaccess.{AsyncReadonlyRepo, Criterion}
@@ -43,54 +43,31 @@ class CalcCorrelations @Inject()(
 
     for {
       // get the fields first
-      numericFields <-
-        if (input.featuresNum.isDefined)
-          dsa.fieldRepo.find(
-            Seq("fieldType" #-> Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)),
-            limit = Some(input.featuresNum.get)
-          )
-        else
-          dsa.fieldRepo.find(
-            Seq(
-              "fieldType" #-> Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date),
-              FieldIdentity.name #!-> input.allFeaturesExcept
-            )
-          )
+      numericFields <- numericFields(dsa.fieldRepo)(input.featuresNum, input.allFeaturesExcept)
 
       // sorted fields
       sortedFields = numericFields.toSeq.sortBy(_.name)
       fieldNames = sortedFields.map(_.name)
 
-      (correlations, execTime) <- {
-        val calcStart = new ju.Date
-        seqFutures(1 to input.standardRepetitions) { _ =>
-          for {
-            items <- dataSetRepo.find(projection = fieldNames)
-          } yield
-            pearsonCorrelationExec.execJson((), sortedFields)(items)
-        }.map { results =>
-          if (results.isEmpty) {
-            (Nil, 0)
-          } else {
-            val execTime = new ju.Date().getTime - calcStart.getTime
-            (results.head, execTime.toDouble / (1000 * input.standardRepetitions))
-          }
-        }
+      // calculate correlations standardly
+      correlationsWithExecTime <- repeatWithTimeOptional(input.standardRepetitions) {
+        dataSetRepo.find(projection = fieldNames).map(
+          pearsonCorrelationExec.execJson((), sortedFields)
+        )
       }
 
-      (streamedCorrelations, streamExecTime) <- {
-        val calcStart = new ju.Date
-        seqFutures(1 to input.streamRepetitions) { _ =>
-          calcPearsonCorrelationsStreamed(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
-        }.map { results =>
-          val execTime = new ju.Date().getTime - calcStart.getTime
-          (results.head, execTime.toDouble / (1000 * input.streamRepetitions))
-        }
+      // calculate correlations as a stream
+      streamedCorrelationsWithExecTime <- repeatWithTimeOptional(input.streamRepetitions) {
+        calcPearsonCorrelationsStreamed(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
       }
     } yield {
-      logger.info(s"Correlation for ${numericFields.size} fields using ALL DATA finished in ${execTime} sec on average.")
-      logger.info(s"Correlation for ${numericFields.size} fields using STREAMS finished in ${streamExecTime} sec on average.")
+      val (correlations, execTime) = correlationsWithExecTime.getOrElse((Nil, 0))
+      val (streamedCorrelations, streamedExecTime) = streamedCorrelationsWithExecTime.getOrElse((Nil, 0))
 
+      logger.info(s"Correlation for ${numericFields.size} fields using ALL DATA finished in ${execTime} sec on average.")
+      logger.info(s"Correlation for ${numericFields.size} fields using STREAMS finished in ${streamedExecTime} sec on average.")
+
+      // check if both results match
       correlations.zip(streamedCorrelations).map { case (rowCor1, rowCor2) =>
         rowCor1.zip(rowCor2).map { case (cor1, cor2) =>
           assert(cor1.equals(cor2), s"$cor1 is not equal $cor2.")

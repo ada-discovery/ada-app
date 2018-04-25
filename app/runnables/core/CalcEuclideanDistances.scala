@@ -16,6 +16,7 @@ import reactivemongo.bson.BSONObjectID
 import runnables.InputFutureRunnable
 import services.stats.StatsService
 import util.seqFutures
+import runnables.core.CalcUtil._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -39,54 +40,31 @@ class CalcEuclideanDistances @Inject()(
 
     for {
       // get the fields first
-      numericFields <-
-        if (input.featuresNum.isDefined)
-          dsa.fieldRepo.find(
-            Seq("fieldType" #-> Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)),
-            limit = Some(input.featuresNum.get)
-          )
-        else
-          dsa.fieldRepo.find(
-            Seq(
-              "fieldType" #-> Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date),
-              FieldIdentity.name #!-> input.allFeaturesExcept
-            )
-          )
+      numericFields <- numericFields(dsa.fieldRepo)(input.featuresNum, input.allFeaturesExcept)
 
       // sorted fields
       sortedFields = numericFields.toSeq.sortBy(_.name)
       fieldNames = sortedFields.map(_.name)
 
-      (euclideanDistances, execTime) <- {
-        val calcStart = new ju.Date
-        seqFutures(1 to input.standardRepetitions) { _ =>
-          for {
-            items <- dataSetRepo.find(projection = fieldNames)
-          } yield
-            euclideanDistanceExec.execJson((), sortedFields)(items)
-        }.map { results =>
-          if (results.isEmpty) {
-            (Nil, 0)
-          } else {
-            val execTime = new ju.Date().getTime - calcStart.getTime
-            (results.head, execTime.toDouble / (1000 * input.standardRepetitions))
-          }
-        }
+      // calculate Euclidean distances standardly
+      euclideanDistancesWithExecTime <- repeatWithTimeOptional(input.standardRepetitions) {
+        dataSetRepo.find(projection = fieldNames).map(
+          euclideanDistanceExec.execJson((), sortedFields)
+        )
       }
 
-      (streamedEuclideanDistances, streamExecTime) <- {
-        val calcStart = new ju.Date
-        seqFutures(1 to input.streamRepetitions) { _ =>
-          calcEuclideanDistanceStreamed(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
-        }.map { results =>
-          val execTime = new ju.Date().getTime - calcStart.getTime
-          (results.head, execTime.toDouble / (1000 * input.streamRepetitions))
-        }
+      // calculate Euclidean distances as a stream
+      streamedEuclideanDistancesWithExecTime <- repeatWithTimeOptional(input.streamRepetitions) {
+        calcEuclideanDistanceStreamed(dataSetRepo, Nil, sortedFields, input.streamParallelism, input.streamWithProjection, input.streamAreValuesAllDefined)
       }
     } yield {
-      logger.info(s"Euclidean distances for ${numericFields.size} fields using ALL DATA finished in ${execTime} sec on average.")
-      logger.info(s"Euclidean distances for ${numericFields.size} fields using STREAMS finished in ${streamExecTime} sec on average.")
+      val (euclideanDistances, execTime) = euclideanDistancesWithExecTime.getOrElse((Nil, 0))
+      val (streamedEuclideanDistances, streamedExecTime) = streamedEuclideanDistancesWithExecTime.getOrElse((Nil, 0))
 
+      logger.info(s"Euclidean distances for ${numericFields.size} fields using ALL DATA finished in ${execTime} sec on average.")
+      logger.info(s"Euclidean distances for ${numericFields.size} fields using STREAMS finished in ${streamedExecTime} sec on average.")
+
+      // check if both results match
       euclideanDistances.zip(streamedEuclideanDistances).map { case (rowCor1, rowCor2) =>
         rowCor1.zip(rowCor2).map { case (cor1, cor2) =>
           assert(cor1.equals(cor2), s"$cor1 is not equal $cor2.")

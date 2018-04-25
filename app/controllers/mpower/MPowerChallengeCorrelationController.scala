@@ -22,7 +22,7 @@ class MPowerChallengeCorrelationController @Inject()(
     dsaf: DataSetAccessorFactory,
     messagesApi: MessagesApi,
     webJarAssets: WebJarAssets
-  ) extends Controller {
+  ) extends Controller with FeatureMatrixExtractor {
 
   private lazy val tremorCorrDsa = dsaf("harvard_ldopa.tremor_correlation").get
   private lazy val tremorScoreBoardDsa = dsaf("harvard_ldopa.score_board_tremor_ext").get
@@ -40,76 +40,11 @@ class MPowerChallengeCorrelationController @Inject()(
   private lazy val mPowerScoreBoardDsa = dsaf("mpower_challenge.score_board_ext").get
   private lazy val mPowerFeatureInfoDsa = dsaf("mpower_challenge.feature_info").get
 
-  private val featureFieldName = "featureName"
   private val defaultAbsCorrMeanCutoff = 0.5
 
   private val featureGroupSize = Some(200)
 
   private val logger = Logger
-
-  trait SubmissionInfo {
-    def Team: String
-    def Rank: Option[Int]
-    def submissionIdInt: Option[Int]
-    def featureNum: Option[Int]
-
-    def AUPR: Option[Double]
-    def AUPR_Unbiased_Subset: Option[Double]
-    def AUROC_Full: Option[Double]
-    def AUROC_Unbiased_Subset: Option[Double]
-    def Rank_Full: Option[Int]
-    def Rank_Unbiased_Subset: Option[Int]
-
-    def RankFinal: Option[Int]
-  }
-
-  case class LDOPAScoreSubmissionInfo(
-    Team: String,
-    AUPR: Option[Double],
-    Rank: Option[Int],
-    submissionId: Option[Int],
-    submissionName: Option[String],
-    featureNum: Option[Int]
-  ) extends SubmissionInfo {
-    override val submissionIdInt = submissionId
-
-    override val RankFinal = Rank
-
-    override val AUPR_Unbiased_Subset = None
-
-    override val AUROC_Full = None
-
-    override val AUROC_Unbiased_Subset = None
-
-    override val Rank_Full = None
-
-    override val Rank_Unbiased_Subset = None
-  }
-
-  case class mPowerScoreSubmissionInfo(
-    Team: String,
-    AUPR_Unbiased_Subset: Option[Double],
-    AUROC_Full: Option[Double],
-    AUROC_Unbiased_Subset: Option[Double],
-    Rank_Full: Option[Int],
-    Rank_Unbiased_Subset: Option[Int],
-    submissionId: Option[String],
-    submissionName: Option[String],
-    featureNum: Option[Int]
-  ) extends SubmissionInfo {
-
-    override val submissionIdInt = try {
-      submissionId.map(_.toInt)
-    } catch {
-      case e: NumberFormatException => None
-    }
-
-    override val RankFinal = Rank_Unbiased_Subset
-
-    override val Rank = None
-
-    override val AUPR = None
-  }
 
   private implicit val ldopaScoreSubmissionFormat = Json.format[LDOPAScoreSubmissionInfo]
   private implicit val mPowerScoreSubmissionFormat = Json.format[mPowerScoreSubmissionInfo]
@@ -577,7 +512,7 @@ class MPowerChallengeCorrelationController @Inject()(
     scoreBoardDsa: DataSetAccessor,
     correlationDsa: DataSetAccessor,
     featuresToExcludeFuture: Future[Map[Int, Set[String]]] = Future(Map())
-  ) =
+  ): Future[Seq[(Int, Int, Option[Double], Option[Double])]] =
     for {
       // get all the scored submission infos
       submissionInfos <- scoreBoardDsa.dataSetRepo.find().map(jsons =>
@@ -621,22 +556,12 @@ class MPowerChallengeCorrelationController @Inject()(
     corrDsa: DataSetAccessor
   ): Future[Seq[(String, String,  Traversable[(Option[Double], Option[Double])])]] = {
 
-    def findFeatureNames(submissionInfo: SubmissionInfo): Traversable[String] =
-      submissionInfo.submissionIdInt.map { submissionId =>
-        submissionIdFeatureNamesMap.get(submissionId).get
-      }.getOrElse(
-        Nil
-      )
-
-    val teamSubmissionInfos = submissionInfos.groupBy(_.Team).toSeq.sortBy(_._1)
+    val definedSubmissionInfos = submissionInfos.filter(_.submissionIdInt.isDefined)
+    val teamSubmissionInfos = definedSubmissionInfos.groupBy(_.Team).toSeq.sortBy(_._1)
 
     logger.info(s"Calculating abs correlation means at the team level for ${submissionInfos.size} submissions.")
 
     seqFutures(teamSubmissionInfos) { case (team1, submissionInfos1) =>
-      val allFeatureNames1 = submissionInfos1.map { submissionInfo1 =>
-        findFeatureNames(submissionInfo1).toSeq
-      }.filter(_.nonEmpty)
-
       val submissionInfos2 = teamSubmissionInfos.filter { case (team2, _) => team1 < team2}
 
       logger.info(s"Calculating abs correlation means for the team ${team1}.")
@@ -644,9 +569,16 @@ class MPowerChallengeCorrelationController @Inject()(
       seqFutures(submissionInfos2) { case (team2, submissionInfos2) =>
         for {
           meanAbsCorrelations <- Future.sequence(
-            for (featureNames1 <- allFeatureNames1; submissionInfo2 <- submissionInfos2) yield {
-              val featureNames2 = findFeatureNames(submissionInfo2).toSeq
-              extractAbsCorrelationMeans(featureNames1, featureNames2, corrDsa, featureGroupSize)
+            for {
+              submissionInfo1 <- submissionInfos1
+              submissionInfo2 <- submissionInfos2
+            } yield {
+              val submissionId1 = submissionInfo1.submissionIdInt.get
+              val submissionId2 = submissionInfo2.submissionIdInt.get
+
+              calcAbsCorrelationMeansForSubmissionPair(submissionId1, submissionId2, submissionIdFeatureNamesMap, corrDsa).map { case (_, _, aggCorrs1, aggCorrs2) =>
+                (aggCorrs1, aggCorrs2)
+              }
             }
           )
         } yield
@@ -660,115 +592,43 @@ class MPowerChallengeCorrelationController @Inject()(
     submissionIdFeatureNamesMap: Map[Int, Traversable[String]],
     corrDsa: DataSetAccessor
   ): Future[Seq[(Int, Int,  Option[Double], Option[Double])]] = {
-    def findFeatureNames(submissionInfo: SubmissionInfo): Traversable[String] =
-      submissionInfo.submissionIdInt.map { submissionId =>
-        submissionIdFeatureNamesMap.get(submissionId).get
-      }.getOrElse(
-        Nil
-      )
-
     val definedSubmissionInfos = submissionInfos.filter(_.submissionIdInt.isDefined)
 
     logger.info(s"Calculating abs correlation means at the submission level for ${submissionInfos.size} submissions.")
 
     seqFutures(definedSubmissionInfos) { submissionInfo1 =>
       val submissionId1 = submissionInfo1.submissionIdInt.get
-      val featureNames1 = findFeatureNames(submissionInfo1).toSeq
-
       val submissionInfos2 = definedSubmissionInfos.filter(subInfo => submissionId1 < subInfo.submissionIdInt.get)
 
       logger.info(s"Calculating abs correlation means for the submission ${submissionId1}.")
 
       seqFutures(submissionInfos2) { submissionInfo2 =>
         val submissionId2 = submissionInfo2.submissionIdInt.get
-        val featureNames2 = findFeatureNames(submissionInfo2).toSeq
-
-        for {
-          absMeans <- extractAbsCorrelationMeans(featureNames1, featureNames2, corrDsa, featureGroupSize)
-        } yield
-          (submissionId1, submissionId2, absMeans._1, absMeans._2)
+        calcAbsCorrelationMeansForSubmissionPair(submissionId1, submissionId2, submissionIdFeatureNamesMap, corrDsa)
       }
     }.map(_.flatten)
   }
 
-  private def extractCorrelations(
-    featureNames1: Seq[String],
-    featureNames2: Seq[String],
-    corrDsa: DataSetAccessor,
-    groupSize: Int
-  ): Future[Traversable[Seq[Option[Double]]]] =
-    for {
-      correlations <-
-        seqFutures(featureNames1.grouped(groupSize)) { feat1 =>
-          seqFutures(featureNames2.grouped(groupSize)) { feat2 =>
-            extractCorrelations(feat1, feat2, corrDsa)
-          }.map { partialColumnCorrs =>
-            val partialColumnCorrsSeq = partialColumnCorrs.map(_.toSeq)
-            val rowNum = partialColumnCorrsSeq.head.size
-
-            for (rowIndex <- 0 to rowNum - 1) yield partialColumnCorrsSeq.flatMap(_(rowIndex))
-          }
-        }.map(_.flatten)
-    } yield
-      correlations
-
-  private def extractCorrelations(
-    featureNames1: Seq[String],
-    featureNames2: Seq[String],
+  private def calcAbsCorrelationMeansForSubmissionPair(
+    submissionId1: Int,
+    submissionId2: Int,
+    submissionIdFeatureNamesMap: Map[Int, Traversable[String]],
     corrDsa: DataSetAccessor
-  ): Future[Traversable[Seq[Option[Double]]]] =
+  ): Future[(Int, Int,  Option[Double], Option[Double])] = {
+
+    // aux function to find feature names for submission ids
+    def findFeatureNames(submissionId: Int): Traversable[String] =
+      submissionIdFeatureNamesMap.get(submissionId).get
+
+    val featureNames1 = findFeatureNames(submissionId1).toSeq
+    val featureNames2 = findFeatureNames(submissionId2).toSeq
+
     for {
-      correlationJsons <- corrDsa.dataSetRepo.find(
-        criteria = Seq(featureFieldName #-> featureNames1.map(_.replaceAllLiterally("u002e", "."))),
-        projection = featureNames2 :+ featureFieldName
+      absMeans <- extractFeatureMatrixAggregates(
+        featureNames1, featureNames2, corrDsa, featureGroupSize, aggFun.mean, aggFun.max, Some(_.abs)
       )
-    } yield {
-      assert(correlationJsons.size.equals(featureNames1.size), s"The number of correlation rows ${correlationJsons.size} doesn't equal the number of features ${featureNames1.size}: ${featureNames1.mkString(",")}.")
-
-      correlationJsons.map { correlationJson =>
-        featureNames2.map { featureName2 =>
-          (correlationJson \ featureName2).asOpt[Double]
-        }
-      }
-    }
-
-  private def extractAbsCorrelationMeans(
-    featureNames1: Seq[String],
-    featureNames2: Seq[String],
-    corrDsa: DataSetAccessor,
-    groupSize: Option[Int]
-  ): Future[(Option[Double], Option[Double])] =
-    if (featureNames2.nonEmpty) {
-      for {
-        correlations <- groupSize.map { groupSize =>
-          extractCorrelations(featureNames1, featureNames2, corrDsa, groupSize)
-        }.getOrElse(
-          extractCorrelations(featureNames1, featureNames2, corrDsa)
-        )
-      } yield {
-//        extractAbsMean(correlations)
-        extractRowColumnMaxMeans(correlations)
-      }
-    } else
-      Future((None, None))
-
-  private def extractAbsMean(correlations: Traversable[Seq[Option[Double]]]) = {
-    val definedCorrelations = correlations.flatten.flatten
-    val absCorrelations = definedCorrelations.map(_.abs)
-    Some(absCorrelations.sum / definedCorrelations.size)
-  }
-
-  private def extractRowColumnMaxMeans(
-    correlations: Traversable[Seq[Option[Double]]]
-  ): (Option[Double], Option[Double]) = {
-    val absCorrelations = correlations.toSeq.par.map(_.map(_.map(_.abs))).toList
-
-    def calcMeanMax(corrs: Traversable[Seq[Option[Double]]]) = {
-      val maxes = corrs.par.map(_.max).toList
-      if (maxes.nonEmpty) Some(maxes.flatten.sum / maxes.size) else None
-    }
-
-    (calcMeanMax(absCorrelations), calcMeanMax(absCorrelations.transpose))
+    } yield
+      (submissionId1, submissionId2, absMeans._1, absMeans._2)
   }
 
   private def createSubmissionIdFeatureMap(
@@ -818,3 +678,172 @@ class MPowerChallengeCorrelationController @Inject()(
 case class VisNode(id: Int, size: Int, label: String, data: Option[JsValue])
 
 case class VisEdge(from: Int, to: Int, value: Double, label: String)
+
+trait FeatureMatrixExtractor {
+
+  protected val featureFieldName = "featureName"
+
+  object aggFun {
+    val max = aggAux(_.max)(_)
+    val min = aggAux(_.min)(_)
+    val mean = aggAux(values => values.sum / values.size)(_)
+
+    private def aggAux(
+      agg: Seq[Double] => Double)(
+      values: Seq[Option[Double]]
+    ) =
+      values.flatten match {
+        case Nil => None
+        case flattenedValues => Some(agg(flattenedValues))
+      }
+  }
+
+  protected def extractFeatureMatrixAggregates(
+    featureNames1: Seq[String],
+    featureNames2: Seq[String],
+    featureMatrixDsa: DataSetAccessor,
+    groupSize: Option[Int],
+    aggOut: Seq[Option[Double]] => Option[Double],
+    aggIn: Seq[Option[Double]] => Option[Double],
+    valueTransform: Option[Double => Double] = None
+  ): Future[(Option[Double], Option[Double])] =
+    if (featureNames2.nonEmpty) {
+      for {
+        matrix <- groupSize.map { groupSize =>
+          extractFeatureMatrixGrouped(featureNames1, featureNames2, featureMatrixDsa, groupSize, valueTransform)
+        }.getOrElse(
+          extractFeatureMatrix(featureNames1, featureNames2, featureMatrixDsa, valueTransform)
+        )
+      } yield {
+        extractRowColumnAggregates(matrix.toSeq, aggOut, aggIn)
+      }
+    } else
+      Future((None, None))
+
+  private def extractRowColumnAggregates(
+    matrix: Seq[Seq[Option[Double]]],
+    aggOut: Seq[Option[Double]] => Option[Double],
+    aggIn: Seq[Option[Double]] => Option[Double]
+  ): (Option[Double], Option[Double]) = {
+    def calcAux(m: Seq[Seq[Option[Double]]]) =
+      aggOut(m.par.map(aggIn).toList)
+
+    (calcAux(matrix), calcAux(matrix.transpose))
+  }
+
+  private def extractFeatureMatrixGrouped(
+    featureNames1: Seq[String],
+    featureNames2: Seq[String],
+    featureMatrixDsa: DataSetAccessor,
+    groupSize: Int,
+    valueTransform: Option[Double => Double] = None
+  ): Future[Traversable[Seq[Option[Double]]]] =
+    for {
+      matrix <-
+        seqFutures(featureNames1.grouped(groupSize)) { feat1 =>
+          seqFutures(featureNames2.grouped(groupSize)) { feat2 =>
+            extractFeatureMatrix(feat1, feat2, featureMatrixDsa, valueTransform)
+          }.map { partialColumnValues =>
+            val partialColumnValuesSeq = partialColumnValues.map(_.toSeq)
+            val rowNum = partialColumnValuesSeq.head.size
+
+            for (rowIndex <- 0 to rowNum - 1) yield partialColumnValuesSeq.flatMap(_(rowIndex))
+          }
+        }.map(_.flatten)
+    } yield
+      matrix
+
+  private def extractFeatureMatrix(
+    featureNames1: Seq[String],
+    featureNames2: Seq[String],
+    featureMatrixDsa: DataSetAccessor,
+    valueTransform: Option[Double => Double] = None
+  ): Future[Traversable[Seq[Option[Double]]]] =
+    for {
+      jsons <- featureMatrixDsa.dataSetRepo.find(
+        criteria = Seq(featureFieldName #-> featureNames1.map(_.replaceAllLiterally("u002e", "."))),
+        projection = featureNames2 :+ featureFieldName
+      )
+    } yield {
+      assert(
+        jsons.size.equals(featureNames1.size),
+        s"The number of extracted feature rows ${jsons.size} doesn't equal the number of features ${featureNames1.size}: ${featureNames1.mkString(",")}."
+      )
+
+      jsons.map { json =>
+        featureNames2.map { featureName2 =>
+          (json \ featureName2).asOpt[Double].map { value =>
+            valueTransform match {
+              case Some(valueTransform) => valueTransform(value)
+              case None => value
+            }
+          }
+        }
+      }
+    }
+}
+
+
+trait SubmissionInfo {
+  def Team: String
+  def Rank: Option[Int]
+  def submissionIdInt: Option[Int]
+  def featureNum: Option[Int]
+
+  def AUPR: Option[Double]
+  def AUPR_Unbiased_Subset: Option[Double]
+  def AUROC_Full: Option[Double]
+  def AUROC_Unbiased_Subset: Option[Double]
+  def Rank_Full: Option[Int]
+  def Rank_Unbiased_Subset: Option[Int]
+
+  def RankFinal: Option[Int]
+}
+
+case class LDOPAScoreSubmissionInfo(
+  Team: String,
+  AUPR: Option[Double],
+  Rank: Option[Int],
+  submissionId: Option[Int],
+  submissionName: Option[String],
+  featureNum: Option[Int]
+) extends SubmissionInfo {
+  override val submissionIdInt = submissionId
+
+  override val RankFinal = Rank
+
+  override val AUPR_Unbiased_Subset = None
+
+  override val AUROC_Full = None
+
+  override val AUROC_Unbiased_Subset = None
+
+  override val Rank_Full = None
+
+  override val Rank_Unbiased_Subset = None
+}
+
+case class mPowerScoreSubmissionInfo(
+  Team: String,
+  AUPR_Unbiased_Subset: Option[Double],
+  AUROC_Full: Option[Double],
+  AUROC_Unbiased_Subset: Option[Double],
+  Rank_Full: Option[Int],
+  Rank_Unbiased_Subset: Option[Int],
+  submissionId: Option[String],
+  submissionName: Option[String],
+  featureNum: Option[Int]
+) extends SubmissionInfo {
+
+  override val submissionIdInt = try {
+    submissionId.map(_.toInt)
+  } catch {
+    case e: NumberFormatException => None
+  }
+
+  override val RankFinal = Rank_Unbiased_Subset
+
+  override val Rank = None
+
+  override val AUPR = None
+}

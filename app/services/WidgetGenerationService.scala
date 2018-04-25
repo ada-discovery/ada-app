@@ -4,7 +4,7 @@ import javax.inject.{Inject, Singleton}
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.{Flow, Sink}
 import com.google.inject.ImplementedBy
 import dataaccess.{Criterion, FieldType, FieldTypeHelper}
@@ -83,11 +83,11 @@ object WidgetGenerationMethod extends Enumeration {
   implicit def valueToVal(x: Value) = x.asInstanceOf[Val]
 
   val FullData = Val(false, "Full Data")
-  val StreamedIndividually = Val(false, "Streamed Individually")
   val StreamedAll = Val(false, "Streamed All")
-  val RepoAndFullData = Val(false, "Repo and Full Data")
-  val RepoAndStreamedIndividually = Val(false, "Repo and Streamed Individually")
-  val RepoAndStreamedAll = Val(false, "Repo and Streamed All")
+  val StreamedIndividually = Val(false, "Streamed Individually")
+  val RepoAndFullData = Val(true, "Repo and Full Data")
+  val RepoAndStreamedAll = Val(true, "Repo and Streamed All")
+  val RepoAndStreamedIndividually = Val(true, "Repo and Streamed Individually")
 }
 
 @Singleton
@@ -139,18 +139,21 @@ class WidgetGenerationServiceImpl @Inject() (
       repoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap
     )
 
-    // future to generate widgets from full data or stream (individual per widget or full with flow broadcast)
+    // future to generate widgets from full data or a stream (individual per widget or full with a flow broadcast)
     val nonRepoWidgetsFuture =
-      genMethod match {
-        case RepoAndFullData | FullData =>
-          genFromFullData(nonRepoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
+      if (nonRepoWidgetSpecs.nonEmpty)
+        genMethod match {
+          case RepoAndFullData | FullData =>
+            genFromFullData(nonRepoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
 
-        case RepoAndStreamedIndividually | StreamedIndividually =>
-          genStreamedIndividually(nonRepoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
+          case RepoAndStreamedIndividually | StreamedIndividually =>
+            genStreamedIndividually(nonRepoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
 
-        case RepoAndStreamedAll | StreamedAll =>
-          genStreamedAll(nonRepoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
-      }
+          case RepoAndStreamedAll | StreamedAll =>
+            genStreamedAll(nonRepoWidgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
+        }
+      else
+        Future(Nil)
 
     for {
       specWidgets1 <- repoWidgetsFuture
@@ -295,6 +298,9 @@ class WidgetGenerationServiceImpl @Inject() (
 
     val definedGenerators = specGenerators.collect { case (_, Some(generator)) => generator }
 
+    // referenced field names
+    val flowFieldNames = specGenerators.collect { case (spec, _) => spec.fieldNames }.flatten.toSet
+
     // collect all the flows
     val flows: Seq[Flow[JsObject, Any, NotUsed]] = definedGenerators.map(_.flow)
 
@@ -307,23 +313,28 @@ class WidgetGenerationServiceImpl @Inject() (
     val zippedFlow = AkkaStreamUtil.zipNFlows(flows)
 
     // zip the post flows
-    val zippedPostFlow =
-      Flow[Seq[Any]].map( flowOutputs =>
-        flowOutputs.zip(postFlows).par.map { case (flowOutput, postFlow) =>
-          postFlow(flowOutput)
-        }.toList
-      )
+//    val zippedPostFlow =
+//      Flow[Seq[Any]].map( flowOutputs =>
+//        flowOutputs.zip(postFlows).par.map { case (flowOutput, postFlow) =>
+//          postFlow(flowOutput)
+//        }.toList
+//      )
 
     for {
       // create a data source
       source <- repo.findAsStream(
         criteria = criteria,
-        projection = Nil // TODO
+        projection = flowFieldNames
       )
 
       // execute the flows (with post flows) on the data source to generate widgets
-      widgets <- source.via(zippedFlow.via(zippedPostFlow)).runWith(Sink.head)
+//      widgets <- source.via(zippedFlow.via(zippedPostFlow)).runWith(Sink.head) // .buffer(100, OverflowStrategy.backpressure)
+      flowOutputs <- source.via(zippedFlow).runWith(Sink.head)
     } yield {
+      val widgets = flowOutputs.zip(postFlows).par.map { case (flowOutput, postFlow) =>
+        postFlow(flowOutput)
+      }.toList
+
       val specWidgetMap = definedGenerators.zip(widgets).map { case (generator, widget) =>
         (generator.spec, widget)
       }.toMap
@@ -363,25 +374,22 @@ class WidgetGenerationServiceImpl @Inject() (
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
     nameFieldMap: Map[String, Field]
   ): Future[Traversable[(WidgetSpec, Option[Widget])]] =
-    if (widgetSpecs.nonEmpty) {
-      sequence(
-        widgetSpecs.groupBy(_.subFilterId).map { case (subFilterId, widgetSpecs) =>
-          val fieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
-          val finalCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(subFilterId)
+    sequence(
+      widgetSpecs.groupBy(_.subFilterId).map { case (subFilterId, widgetSpecs) =>
+        val fieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
+        val finalCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(subFilterId)
 
-          repo.find(
-            criteria = finalCriteria,
-            projection = fieldNames
-          ).map { jsons =>
-            widgetSpecs.par.map { widgetSpec =>
-              val widget = genFromFullDataAux(widgetSpec, jsons, nameFieldMap)
-              (widgetSpec, widget)
-            }.toList
-          }
+        repo.find(
+          criteria = finalCriteria,
+          projection = fieldNames
+        ).map { jsons =>
+          widgetSpecs.par.map { widgetSpec =>
+            val widget = genFromFullDataAux(widgetSpec, jsons, nameFieldMap)
+            (widgetSpec, widget)
+          }.toList
         }
-      ).map(_.flatten)
-    } else
-      Future(Nil)
+      }
+    ).map(_.flatten)
 
   private def getSubCriteria(
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]])(

@@ -3,13 +3,14 @@ package runnables.core
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{FileIO, Framing, Sink, Source}
 import akka.util.ByteString
 import util.writeByteArrayStream
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 object FeatureMatrixIO {
@@ -74,24 +75,47 @@ object FeatureMatrixIO {
   def load(
     fileName: String,
     skipFirstColumnsOption: Option[Int]
-  ): Future[(Source[Seq[Double], _], Seq[String])] = {
-    val headerTailFileSource =
-      FileIO.fromPath(Paths.get(fileName))
-        .via(Framing.delimiter(ByteString("\n"), 1000000).map(_.utf8String))
-        .prefixAndTail(1)
-
-    val skipFirstColumns = skipFirstColumnsOption.getOrElse(0)
-
+  ): Future[(Source[Seq[Double], _], Seq[String])] =
     for {
-      header <- headerTailFileSource.flatMapConcat { case (header, tail) => Source(header) }.runWith(Sink.head)
+      (header, contentSource) <- createHeaderAndContentFileSource(fileName)
     } yield {
-      val fieldNames = header.split(",").toSeq.drop(skipFirstColumns).map(_.trim)
+      val skipFirstColumns = skipFirstColumnsOption.getOrElse(0)
+      val fieldNames = header.split(",", -1).toSeq.drop(skipFirstColumns).map(_.trim)
 
-      val source = headerTailFileSource.flatMapConcat { case (header, tail) =>
-        //tail.via(doubles)
-        tail.map(line => line.split(",").toSeq.drop(skipFirstColumns).map(_.trim.toDouble))
+      val source = contentSource.map { line =>
+        line.split(",", -1).toSeq.drop(skipFirstColumns).map(_.trim.toDouble)
       }
       (source, fieldNames)
     }
+
+  def loadArray(
+    fileName: String,
+    skipFirstColumnsOption: Option[Int]
+  ): Future[(Source[Array[Double], _], Seq[String])] =
+    for {
+      (header, contentSource) <- createHeaderAndContentFileSource(fileName)
+    } yield {
+      val skipFirstColumns = skipFirstColumnsOption.getOrElse(0)
+      val fieldNames = header.split(",", -1).toSeq.drop(skipFirstColumns).map(_.trim)
+
+      val source = contentSource.map { line =>
+        line.split(",", -1).drop(skipFirstColumns).map(_.trim.toDouble)
+      }
+      (source, fieldNames)
+    }
+
+  private def createHeaderAndContentFileSource(
+    fileName: String
+  ): Future[(String, Source[String, _])] = {
+    val headerTailSource = FileIO.fromPath(Paths.get(fileName))
+      .via(Framing.delimiter(ByteString("\n"), 1000000).map(_.utf8String))
+      .prefixAndTail(1)
+
+    val headerSource = headerTailSource.flatMapConcat { case (header, _) => Source(header) }
+    val contentSource = headerTailSource.flatMapConcat { case (_, tail) => tail }
+
+    headerSource.runWith(Sink.head).map ( header =>
+      (header, contentSource)
+    )
   }
 }
