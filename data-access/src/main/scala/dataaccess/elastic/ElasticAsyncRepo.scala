@@ -72,7 +72,8 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     limit: Option[Int],
     skip: Option[Int]
   ): Future[Source[E, _]] = {
-    val searchDefinition = createSearchDefinition(criteria, sort, projection, limit, skip)
+    val scrollLimit = limit.getOrElse(setting.scrollBatchSize)
+    val searchDefinition = createSearchDefinition(criteria, sort, projection, Some(scrollLimit), skip)
 
     val publisher = client publisher {
       searchDefinition scroll scrollKeepAlive
@@ -123,7 +124,7 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
           if (limit.isDefined)
             (_: SearchDefinition) start skip.getOrElse(0) limit limit.get
           else
-          // if undefined we still need to pass "unbound" limit, since by default ES returns only 10 items
+            // if undefined we still need to pass "unbound" limit, since by default ES returns only 10 items
             (_: SearchDefinition) limit unboundLimit
         )
       )

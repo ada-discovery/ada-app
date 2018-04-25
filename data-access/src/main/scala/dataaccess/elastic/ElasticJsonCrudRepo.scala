@@ -15,12 +15,19 @@ import dataaccess.RepoTypes.JsonCrudRepo
 import javax.inject.Inject
 
 import models.json.FixedJacksonJson
+import play.api.Configuration
 
 class ElasticJsonCrudRepo @Inject()(
     @Assisted collectionName : String,
     @Assisted fieldNamesAndTypes: Seq[(String, FieldTypeSpec)],
-    client: ElasticClient
-  ) extends ElasticAsyncCrudRepo[JsObject, BSONObjectID](collectionName, collectionName, client) with JsonCrudRepo {
+    client: ElasticClient,
+    configuration: Configuration
+  ) extends ElasticAsyncCrudRepo[JsObject, BSONObjectID](
+    collectionName,
+    collectionName,
+    client,
+    ElasticSetting(scrollBatchSize = configuration.getInt("elasticdb.scroll.batch.size").getOrElse(100))
+  ) with JsonCrudRepo {
 
   private implicit val jsonIdRenameFormat = ElasticIdRenameUtil.createFormat
   private val fieldNamesAndTypeWithId = fieldNamesAndTypes ++ Seq((ElasticIdRenameUtil.newIdName, FieldTypeSpec(FieldTypeId.Json)))
