@@ -104,6 +104,21 @@ object FeatureMatrixIO {
       (source, fieldNames)
     }
 
+  def loadArrayWithFirstIdColumn(
+    fileName: String
+  ): Future[(Source[(String, Array[Double]), _], Seq[String])] =
+    for {
+      (header, contentSource) <- createHeaderAndContentFileSource(fileName)
+    } yield {
+      val fieldNames = header.split(",", -1).map(_.trim)
+
+      val source = contentSource.map { line =>
+        val parts = line.split(",", -1)
+        (parts(0).trim, parts.tail.map(_.trim.toDouble))
+      }
+      (source, fieldNames)
+    }
+
   private def createHeaderAndContentFileSource(
     fileName: String
   ): Future[(String, Source[String, _])] = {

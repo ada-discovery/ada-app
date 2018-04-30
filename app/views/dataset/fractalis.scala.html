@@ -10,6 +10,7 @@
 
 @(
     domainName: String,
+    fractalisServerUrl: String,
     field: Option[Field],
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -93,10 +94,8 @@
 
             const fjs = fractal.init({
                 handler: 'ada',
-//                dataSource: "https://" + location.host,
-//                fractalisNode: 'https://fractalis.lcsb.uni.lu',
-                dataSource: "http://172.17.0.1:9000",
-                fractalisNode: 'http://localhost',
+                dataSource: "https://" + location.host,
+                fractalisNode: '@fractalisServerUrl',
                 getAuth () {
                     return {token: getCookie("PLAY2AUTH_SESS_ID")}
 //                    return {"user": "", passwd: ""}

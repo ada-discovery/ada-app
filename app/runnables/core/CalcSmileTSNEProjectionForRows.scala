@@ -7,24 +7,24 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import runnables.InputFutureRunnable
 import runnables.core.CalcUtil._
-import services.stats.{StatsService, TSNESetting}
+import services.stats.{StatsService, SmileTSNESetting}
 import services.stats.calc.JsonFieldUtil._
 import smile.plot._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 
-class CalcTSNEProjectionForRows @Inject()(
+class CalcSmileTSNEProjectionForRows @Inject()(
     dsaf: DataSetAccessorFactory,
     statsService: StatsService
-  ) extends InputFutureRunnable[CalcTSNEProjectionForRowsSpec] {
+  ) extends InputFutureRunnable[CalcSmileTSNEProjectionForRowsSpec] {
 
   import statsService._
 
   private val logger = Logger
   implicit val ftf = FieldTypeHelper.fieldTypeFactory()
 
-  def runAsFuture(input: CalcTSNEProjectionForRowsSpec) = {
+  def runAsFuture(input: CalcSmileTSNEProjectionForRowsSpec) = {
     val dsa = dsaf(input.dataSetId).get
     val dataSetRepo = dsa.dataSetRepo
 
@@ -51,16 +51,15 @@ class CalcTSNEProjectionForRows @Inject()(
           val idLabels = jsons.map(idLabelJsonConverter)
 
           // prepare the setting
-          val setting = TSNESetting(
+          val setting = SmileTSNESetting(
             dims = input.dims,
-            maxIterations = input.iterations.getOrElse(1000),
+            iterations = input.iterations.getOrElse(1000),
             perplexity = input.perplexity.getOrElse(20),
-            theta = input.theta.getOrElse(0.5),
-            pcaDims = input.pcaDims
+            eta = input.eta.getOrElse(200)
           )
 
           // run t-SNE
-          val results = performTSNE(inputs.toArray, setting)
+          val results = performSmileTSNE(inputs.toArray, setting)
           (results, idLabels)
         }
       }
@@ -94,10 +93,10 @@ class CalcTSNEProjectionForRows @Inject()(
     }
   }
 
-  override def inputType = typeOf[CalcTSNEProjectionForRowsSpec]
+  override def inputType = typeOf[CalcSmileTSNEProjectionForRowsSpec]
 }
 
-case class CalcTSNEProjectionForRowsSpec(
+case class CalcSmileTSNEProjectionForRowsSpec(
   dataSetId: String,
   featuresNum: Option[Int],
   allFeaturesExcept: Seq[String],
@@ -105,8 +104,7 @@ case class CalcTSNEProjectionForRowsSpec(
   dims: Int,
   iterations: Option[Int],
   perplexity: Option[Double],
-  theta: Option[Double],
-  pcaDims: Option[Int],
+  eta: Option[Double],
   repetitions: Int,
   exportFileName: Option[String],
   plotExportFileName: Option[String]

@@ -1,5 +1,6 @@
 package services.stats
 
+import java.io.File
 import java.{util => ju}
 import javax.inject.{Inject, Singleton}
 
@@ -18,13 +19,14 @@ import org.apache.spark.ml.stat.ChiSquareTest
 import org.apache.spark.sql.DataFrame
 import play.api.Logger
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
 import services.ml.BooleanLabelIndexer
 import services.stats.calc._
 import services.{FeaturesDataFrameFactory, SparkApp}
 import JsonFieldUtil._
 import breeze.linalg.{DenseMatrix, eig, eigSym}
 import breeze.linalg.eigSym.EigSym
+import com.jujutsu.tsne.TSneConfig
+import com.jujutsu.tsne.barneshut.{BHTSne, ParallelBHTsne}
 import dataaccess.RepoTypes.JsonReadonlyRepo
 import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
 
@@ -34,8 +36,7 @@ import scala.collection.JavaConversions._
 import services.stats.CalculatorHelper._
 import smile.manifold.{Operators => ManifoldOperators}
 import smile.projection.{Operators => ProjectionOperators}
-import smile.manifold.Operators
-import smile.plot.Palette
+
 import scala.reflect.runtime.universe.TypeTag
 
 @ImplementedBy(classOf[StatsServiceImpl])
@@ -145,12 +146,17 @@ trait StatsService extends CalculatorExecutors {
   // t-SNE //
   ///////////
 
+  def performSmileTSNE(
+    data: Array[Array[Double]],
+    setting: SmileTSNESetting = SmileTSNESetting()
+  ): Array[Array[Double]]
+
   def performTSNE(
     data: Array[Array[Double]],
     setting: TSNESetting = TSNESetting()
   ): Array[Array[Double]]
 
-  //////////////////////////
+    //////////////////////////
   // Eigen Vectors/values //
   //////////////////////////
 
@@ -900,16 +906,31 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
   // t-SNE //
   ///////////
 
-  override def performTSNE(
+  override def performSmileTSNE(
     data: Array[Array[Double]],
-    setting: TSNESetting
+    setting: SmileTSNESetting
   ): Array[Array[Double]] = {
     if (data.length > 0) {
       logger.info(s"Running t-SNE for ${data.length} items with ${data(0).length} features and ${setting.iterations} iterations.")
-      val sne = tsne(data, setting.dim, setting.perplexity, setting.eta, setting.iterations)
+      val sne = tsne(data, setting.dims, setting.perplexity, setting.eta, setting.iterations)
       sne.getCoordinates
     } else
       Array[Array[Double]]()
+  }
+
+  private val parallelTSNE = true
+  private val silentTSNSE = true
+
+  override def performTSNE(
+    data: Array[Array[Double]],
+    setting: TSNESetting
+  ) = {
+    logger.info(s"Running t-SNE for ${data.length} items with ${data(0).length} features and ${setting.maxIterations} iterations.")
+    val tsne = if (parallelTSNE) new ParallelBHTsne else new BHTSne
+    val config = new TSneConfig(
+      data, setting.dims, setting.pcaDims.getOrElse(0), setting.perplexity, setting.maxIterations, setting.pcaDims.isDefined, setting.theta, silentTSNSE, true
+    )
+    tsne.tsne(config)
   }
 
   /////////////////////
@@ -1166,9 +1187,17 @@ object AnovaResult {
   implicit val anovaResultFormat = Json.format[AnovaResult]
 }
 
-case class TSNESetting(
-  dim: Int = 2,
+case class SmileTSNESetting(
+  dims: Int = 2,
   perplexity: Double = 20,
   eta: Double = 100,
   iterations: Int = 1000
+)
+
+case class TSNESetting(
+  dims: Int = 2,
+  perplexity: Double = 20,
+  theta: Double = 0.5,
+  maxIterations: Int = 1000,
+  pcaDims: Option[Int] = None
 )

@@ -1,0 +1,156 @@
+package runnables.core
+
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
+import com.google.inject.Inject
+import models.AdaException
+import persistence.dataset.DataSetAccessorFactory
+import play.api.Logger
+import runnables.InputFutureRunnable
+import runnables.core.CalcUtil._
+import services.stats.{StatsService, TSNESetting}
+import smile.plot._
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.reflect.runtime.universe.typeOf
+
+class CalcTSNEProjectionFromFile @Inject()(
+    dsaf: DataSetAccessorFactory,
+    statsService: StatsService
+  ) extends InputFutureRunnable[CalcTSNEProjectionFromFileSpec] {
+
+  import statsService._
+
+  private val logger = Logger
+
+  private implicit val system = ActorSystem()
+  private implicit val materializer = ActorMaterializer()
+
+  def runAsFuture(input: CalcTSNEProjectionFromFileSpec) = {
+    for {
+      // create a double-value file source and retrieve the field names
+      (source, fieldNames) <- FeatureMatrixIO.loadArrayWithFirstIdColumn(input.inputFileName)
+
+      // fully load everything from the source
+      idInputs <- source.runWith(Sink.seq)
+    } yield {
+
+      // aux function
+      def withDefault[T](default: T)(values: Seq[T]) =
+        values match {
+          case Nil => Seq(default)
+          case _ => values
+        }
+
+      for {
+        perplexity <- withDefault(20d)(input.perplexities)
+        theta <- withDefault(0.5d)(input.thetas)
+        iterations <- withDefault(1000)(input.iterations)
+      } yield {
+        val ids = idInputs.map(_._1)
+        val arrayInput = idInputs.map(_._2).toArray
+        val inputs = if (input.isColumnBased) arrayInput.transpose else arrayInput
+
+        // prepare the setting
+        val setting = TSNESetting(
+          dims = input.dims,
+          pcaDims = input.pcaDims,
+          maxIterations = iterations,
+          perplexity = perplexity,
+          theta = theta
+        )
+
+        val pcaDimsPart = setting.pcaDims.map(pcaDims => s"_pca-$pcaDims").getOrElse("")
+        val exportFileName = s"${input.exportFileName}-${input.dims}d_iter-${iterations}_per-${perplexity}_theta-${theta}" + pcaDimsPart
+        val plotExportFileName = if (input.exportPlot) Some(exportFileName + ".png") else None
+
+        runAndExportAux(
+          input.inputFileName,
+          inputs,
+          ids,
+          fieldNames,
+          input.isColumnBased)(
+          setting,
+          exportFileName + ".csv",
+          plotExportFileName
+        )
+      }
+    }
+  }
+
+  private def runAndExportAux(
+    inputFileName: String,
+    inputs: Array[Array[Double]],
+    ids: Seq[String],
+    fieldNames: Seq[String],
+    isColumnBased: Boolean)(
+    setting: TSNESetting,
+    exportFileName: String,
+    plotExportFileName: Option[String]
+  ) = {
+    // run t-SNE
+    val tsneProjections = performTSNE(inputs, setting)
+
+    val prefix = if (isColumnBased) "Column-based" else "Row-based"
+    logger.info(s"$prefix t-SNE for a file ${inputFileName} finished.")
+
+    // image export
+    if (plotExportFileName.isDefined) {
+      val tsneFailed = tsneProjections.exists(_.exists(_.isNaN))
+      if (tsneFailed)
+        logger.error(s"$prefix t-SNE for a file ${inputFileName} returned NaN values. Image export is not possible.")
+      else {
+        val labels = tsneProjections.map(_ => 0)
+        val canvas = ScatterPlot.plot(tsneProjections, labels, 'o', Palette.COLORS)
+        try {
+          saveCanvasAsImage(plotExportFileName.get, 1000, 800)(canvas)
+        } catch {
+          case e: Exception => logger.error("t-SNE image export is not possible due to " + e.getMessage)
+        }
+      }
+    }
+
+    if (isColumnBased) {
+      if (tsneProjections.length != fieldNames.size - 1)
+        throw new AdaException(s"The number of rows from $prefix t-SNE ${tsneProjections.length} is not equal to the number of features ${fieldNames.size - 1}")
+
+      // save the results for columns
+      FeatureMatrixIO.save(
+        tsneProjections.map(_.toSeq),
+        fieldNames.tail,
+        for (i <- 1 to setting.dims) yield "x" + i,
+        "featureName",
+        exportFileName,
+        (value: Double) => value.toString
+      )
+    } else {
+      if (tsneProjections.length != ids.size)
+        throw new AdaException(s"The number of rows from $prefix t-SNE ${tsneProjections.length} is not equal to the number of ids/labels ${ids.size - 1}")
+
+      // save the results for rows
+      FeatureMatrixIO.save(
+        tsneProjections.map(_.toSeq),
+        ids,
+        for (i <- 1 to setting.dims) yield "x" + i,
+        fieldNames.head,
+        exportFileName,
+        (value: Double) => value.toString
+      )
+    }
+  }
+
+  override def inputType = typeOf[CalcTSNEProjectionFromFileSpec]
+}
+
+case class CalcTSNEProjectionFromFileSpec(
+  inputFileName: String,
+  dims: Int,
+  iterations: Seq[Int],
+  perplexities: Seq[Double],
+  thetas: Seq[Double],
+  pcaDims: Option[Int],
+  isColumnBased: Boolean,
+  exportFileName: String,
+  exportPlot: Boolean
+)

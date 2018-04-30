@@ -8,7 +8,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import runnables.InputFutureRunnable
 import runnables.core.CalcUtil._
-import services.stats.{StatsService, TSNESetting}
+import services.stats.{StatsService, SmileTSNESetting}
 import smile.plot._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -17,7 +17,7 @@ import scala.reflect.runtime.universe.typeOf
 class CalcTSNEProjectionForDistMatrixFromFile @Inject()(
     dsaf: DataSetAccessorFactory,
     statsService: StatsService
-  ) extends InputFutureRunnable[CalcTSNEProjectionForDistMatrixFromFileSpec] {
+  ) extends InputFutureRunnable[CalcSmileTSNEProjectionForDistMatrixFromFileSpec] {
 
   import statsService._
 
@@ -26,12 +26,13 @@ class CalcTSNEProjectionForDistMatrixFromFile @Inject()(
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
-  def runAsFuture(input: CalcTSNEProjectionForDistMatrixFromFileSpec) = {
+  def runAsFuture(input: CalcSmileTSNEProjectionForDistMatrixFromFileSpec) = {
     for {
     // create a double-value file source and retrieve the field names
       (source, fieldNames) <- FeatureMatrixIO.loadArray(input.inputFileName, Some(1))
 
       // fully load everything from the source
+//      inputs <- source.map(_.map(x => 1 - x)).runWith(Sink.seq)
       inputs <- source.runWith(Sink.seq)
     } yield {
 
@@ -50,8 +51,8 @@ class CalcTSNEProjectionForDistMatrixFromFile @Inject()(
         val arrayInputs = inputs.toArray
 
         // prepare the setting
-        val setting = TSNESetting(
-          dim = input.dims,
+        val setting = SmileTSNESetting(
+          dims = input.dims,
           iterations = iterations,
           perplexity = perplexity,
           eta = eta
@@ -77,12 +78,12 @@ class CalcTSNEProjectionForDistMatrixFromFile @Inject()(
     inputFileName: String,
     inputs: Array[Array[Double]],
     fieldNames: Seq[String])(
-    setting: TSNESetting,
+    setting: SmileTSNESetting,
     exportFileName: String,
     plotExportFileName: Option[String]
   ) = {
     // run t-SNE
-    val tsneProjections = performTSNE(inputs, setting)
+    val tsneProjections = performSmileTSNE(inputs, setting)
     logger.info(s"Distance-matrix-based t-SNE for a file ${inputFileName} finished.")
 
     // image export
@@ -101,17 +102,17 @@ class CalcTSNEProjectionForDistMatrixFromFile @Inject()(
     FeatureMatrixIO.save(
       tsneProjections.map(_.toSeq),
       fieldNames,
-      for (i <- 1 to setting.dim) yield "x" + i,
+      for (i <- 1 to setting.dims) yield "x" + i,
       "featureName",
       exportFileName,
       (value: Double) => value.toString
     )
   }
 
-  override def inputType = typeOf[CalcTSNEProjectionForDistMatrixFromFileSpec]
+  override def inputType = typeOf[CalcSmileTSNEProjectionForDistMatrixFromFileSpec]
 }
 
-case class CalcTSNEProjectionForDistMatrixFromFileSpec(
+case class CalcSmileTSNEProjectionForDistMatrixFromFileSpec(
   inputFileName: String,
   dims: Int,
   iterations: Seq[Int],

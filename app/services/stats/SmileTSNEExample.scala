@@ -10,7 +10,7 @@ import smile.plot.Palette
 import smile.manifold.{Operators => ManifoldOperators}
 import smile.projection.{Operators => ProjectionOperators}
 
-object TSNEExample extends App with ManifoldOperators with ProjectionOperators {
+object SmileTSNEExample extends App with ManifoldOperators with ProjectionOperators {
 
   private val folder = "/home/peter/Downloads/smile/shell/src/universal/data/mnist/"
 

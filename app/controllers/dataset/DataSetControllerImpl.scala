@@ -27,7 +27,7 @@ import models.json.{OptionFormat, TupleFormat}
 import models.ml._
 import persistence.RepoTypes.{ClassificationRepo, RegressionRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.data.{Form, Mapping}
 import play.api.data.Forms.{mapping, number, of, optional}
 import play.api.libs.json._
@@ -65,6 +65,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     unsupervisedLearningRepo: UnsupervisedLearningRepo,
     dataSpaceService: DataSpaceService,
     tranSMARTService: TranSMARTService,
+    configuration: Configuration,
     val userManager: UserManager
   ) extends ReadonlyControllerImpl[JsObject, BSONObjectID]
 
@@ -118,6 +119,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
 //  private val distScreenWidgetsGenMethod = WidgetGenerationMethod.FullData
   private val distScreenWidgetsGenMethod = WidgetGenerationMethod.RepoAndFullData
+
+  private val fractalisServerUrl = configuration.getString("fractalis.server.url").getOrElse("https://fractalis.lcsb.uni.lu")
 
   private val coreMapping: Mapping[DataSetTransformationCore] = mapping(
     "resultDataSetId" -> nonEmptyText,
@@ -1500,6 +1503,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         render {
           case Accepts.Html() => Ok(dataset.fractalis(
             dataSetName,
+            fractalisServerUrl,
             field,
             setting.filterShowFieldStyle,
             tree
