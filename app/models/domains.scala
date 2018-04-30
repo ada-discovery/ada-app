@@ -11,6 +11,7 @@ import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import java.util.{Date, UUID}
 
+import controllers.mpower.AggFunction
 import reactivemongo.play.json.BSONFormats._
 import play.api.libs.json._
 import models.json.EnumFormat
@@ -92,4 +93,6 @@ object QueryStringBinders {
   implicit val vectorTransformTypeQueryStringBinder = new EnumStringBindable(VectorTransformType)
   implicit val classificationEvalMetricQueryStringBinder = new EnumStringBindable(ClassificationEvalMetric)
   implicit val regressionEvalMetricQueryStringBinder = new EnumStringBindable(RegressionEvalMetric)
+
+  implicit val aggFunctionQueryStringBinder = new EnumStringBindable(AggFunction)
 }

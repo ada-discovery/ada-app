@@ -24,33 +24,23 @@ class MPowerChallengeCorrelationController @Inject()(
     webJarAssets: WebJarAssets
   ) extends Controller {
 
-  private lazy val tremorCorrDsa = dsaf("harvard_ldopa.tremor_correlation").get
-  private lazy val tremorSubmissionCorrMeanMaxAbsDsa = dsaf("harvard_ldopa.tremor_correlation_abs_mean_max").get
-  private lazy val tremorSubmissionCorrMeanMaxAbsWoDemDsa = dsaf("harvard_ldopa.tremor_correlation_abs_mean_max_wo_dem").get
+  private val tremorCorrDataSetPrefix = "harvard_ldopa.tremor_correlation_abs"
   private lazy val tremorScoreBoardDsa = dsaf("harvard_ldopa.score_board_tremor_ext").get
   private lazy val tremorFeatureInfoDsa = dsaf("harvard_ldopa.tremor_feature_info").get
 
-  private lazy val dyskinesiaCorrDsa = dsaf("harvard_ldopa.dyskinesia_correlation").get
-  private lazy val dyskinesiaSubmissionCorrMeanMaxAbsDsa = dsaf("harvard_ldopa.dyskinesia_correlation_abs_mean_max").get
-  private lazy val dyskinesiaSubmissionCorrMeanMaxAbsWoDemDsa = dsaf("harvard_ldopa.dyskinesia_correlation_abs_mean_max_wo_dem").get
+  private val dyskinesiaCorrDateSetPrefix = "harvard_ldopa.dyskinesia_correlation_abs"
   private lazy val dyskinesiaScoreBoardDsa = dsaf("harvard_ldopa.score_board_dyskinesia_ext").get
-  private lazy val dyskinesiaFeatureInfoDsa = dsaf("harvard_ldopa.dyskinesia_feature_info").get
+  private lazy val dyskinesiaFeatureInfoDsa = dsaf("harvard_ldopa.dyskinesia_feature_meta_info").get
 
-  private lazy val bradykinesiaCorrDsa = dsaf("harvard_ldopa.bradykinesia_correlation").get
-  private lazy val bradykinesiaSubmissionCorrMeanMaxAbsDsa = dsaf("harvard_ldopa.bradykinesia_correlation_abs_mean_max").get
-  private lazy val bradykinesiaSubmissionCorrMeanMaxAbsWoDemDsa = dsaf("harvard_ldopa.bradykinesia_correlation_abs_mean_max_wo_dem").get
+  private val bradykinesiaCorrDataSetPrefix = "harvard_ldopa.bradykinesia_correlation_abs"
   private lazy val bradykinesiaScoreBoardDsa = dsaf("harvard_ldopa.score_board_bradykinesia_ext").get
   private lazy val bradykinesiaFeatureInfoDsa = dsaf("harvard_ldopa.bradykinesia_feature_info").get
 
-  private lazy val mPowerCorrDsa = dsaf("mpower_challenge.correlation").get
-  private lazy val mPowerSubmissionCorrMeanMaxAbsDsa = dsaf("mpower_challenge.correlation_abs_mean_max").get
-  private lazy val mPowerSubmissionCorrMeanMaxAbsWoDemDsa = dsaf("mpower_challenge.correlation_abs_mean_max_wo_dem").get
+  private val mPowerCorrDataSetPrefix = "mpower_challenge.correlation_abs"
   private lazy val mPowerScoreBoardDsa = dsaf("mpower_challenge.score_board_ext").get
   private lazy val mPowerFeatureInfoDsa = dsaf("mpower_challenge.feature_info").get
 
   private val defaultAbsCorrMeanCutoff = 0.5
-
-  private val featureGroupSize = Some(200)
 
   private val logger = Logger
 
@@ -63,14 +53,12 @@ class MPowerChallengeCorrelationController @Inject()(
   }
 
   def tremorTeamNetwork(
-    corrThreshold: Option[Double],
-    withDemographics: Boolean
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
+    withDemographics: Boolean,
+    corrThreshold: Option[Double]
   ) = Action.async { implicit request =>
-    val correlationDsa =
-      if (withDemographics)
-        tremorSubmissionCorrMeanMaxAbsDsa
-      else
-        tremorSubmissionCorrMeanMaxAbsWoDemDsa
+    val correlationDsa = getCorrelationDsa(tremorCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showTeamCorrelationNetwork(
       "LDOPA Tremor Subchallenge Team Correlation",
@@ -78,19 +66,19 @@ class MPowerChallengeCorrelationController @Inject()(
       tremorScoreBoardDsa,
       tremorFeatureInfoDsa,
       corrThreshold,
+      aggOut,
+      aggIn,
       withDemographics
     )
   }
 
   def dyskinesiaTeamNetwork(
-    corrThreshold: Option[Double],
-    withDemographics: Boolean
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
+    withDemographics: Boolean,
+    corrThreshold: Option[Double]
   ) = Action.async { implicit request =>
-    val correlationDsa =
-      if (withDemographics)
-        dyskinesiaSubmissionCorrMeanMaxAbsDsa
-      else
-        dyskinesiaSubmissionCorrMeanMaxAbsWoDemDsa
+    val correlationDsa = getCorrelationDsa(dyskinesiaCorrDateSetPrefix, aggOut, aggIn, withDemographics)
 
     showTeamCorrelationNetwork(
       "LDOPA Dyskinesia Subchallenge Team Correlation",
@@ -98,19 +86,19 @@ class MPowerChallengeCorrelationController @Inject()(
       dyskinesiaScoreBoardDsa,
       dyskinesiaFeatureInfoDsa,
       corrThreshold,
+      aggOut,
+      aggIn,
       withDemographics
     )
   }
 
   def bradykinesiaTeamNetwork(
-    corrThreshold: Option[Double],
-    withDemographics: Boolean
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
+    withDemographics: Boolean,
+    corrThreshold: Option[Double]
   ) = Action.async { implicit request =>
-    val correlationDsa =
-      if (withDemographics)
-        bradykinesiaSubmissionCorrMeanMaxAbsDsa
-      else
-        bradykinesiaSubmissionCorrMeanMaxAbsWoDemDsa
+    val correlationDsa = getCorrelationDsa(bradykinesiaCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showTeamCorrelationNetwork(
       "LDOPA Bradykinesia Subchallenge Team Correlation",
@@ -118,19 +106,19 @@ class MPowerChallengeCorrelationController @Inject()(
       bradykinesiaScoreBoardDsa,
       bradykinesiaFeatureInfoDsa,
       corrThreshold,
+      aggOut,
+      aggIn,
       withDemographics
     )
   }
 
   def mPowerTeamNetwork(
-    corrThreshold: Option[Double],
-    withDemographics: Boolean
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
+    withDemographics: Boolean,
+    corrThreshold: Option[Double]
   ) = Action.async { implicit request =>
-    val correlationDsa =
-      if (withDemographics)
-        mPowerSubmissionCorrMeanMaxAbsDsa
-      else
-        mPowerSubmissionCorrMeanMaxAbsWoDemDsa
+    val correlationDsa = getCorrelationDsa(mPowerCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showTeamCorrelationNetwork(
       "mPower Subchallenge Team Correlation",
@@ -138,19 +126,19 @@ class MPowerChallengeCorrelationController @Inject()(
       mPowerScoreBoardDsa,
       mPowerFeatureInfoDsa,
       corrThreshold,
+      aggOut,
+      aggIn,
       withDemographics
     )
   }
 
   def tremorSubmissionNetwork(
-    corrThreshold: Option[Double],
-    withDemographics: Boolean
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
+    withDemographics: Boolean,
+    corrThreshold: Option[Double]
   ) = Action.async { implicit request =>
-    val correlationDsa =
-      if (withDemographics)
-        tremorSubmissionCorrMeanMaxAbsDsa
-      else
-        tremorSubmissionCorrMeanMaxAbsWoDemDsa
+    val correlationDsa = getCorrelationDsa(tremorCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showSubmissionCorrelationNetwork(
       "LDOPA Tremor Subchallenge Submission Correlation",
@@ -158,19 +146,19 @@ class MPowerChallengeCorrelationController @Inject()(
       tremorScoreBoardDsa,
       tremorFeatureInfoDsa,
       corrThreshold,
+      aggOut,
+      aggIn,
       withDemographics
     )
   }
 
   def dyskinesiaSubmissionNetwork(
-    corrThreshold: Option[Double],
-    withDemographics: Boolean
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
+    withDemographics: Boolean,
+    corrThreshold: Option[Double]
   ) = Action.async { implicit request =>
-    val correlationDsa =
-      if (withDemographics)
-        dyskinesiaSubmissionCorrMeanMaxAbsDsa
-      else
-        dyskinesiaSubmissionCorrMeanMaxAbsWoDemDsa
+    val correlationDsa = getCorrelationDsa(dyskinesiaCorrDateSetPrefix, aggOut, aggIn, withDemographics)
 
     showSubmissionCorrelationNetwork(
       "LDOPA Dyskinesia Subchallenge Submission Correlation",
@@ -178,19 +166,19 @@ class MPowerChallengeCorrelationController @Inject()(
       dyskinesiaScoreBoardDsa,
       dyskinesiaFeatureInfoDsa,
       corrThreshold,
+      aggOut,
+      aggIn,
       withDemographics
     )
   }
 
   def bradykinesiaSubmissionNetwork(
-    corrThreshold: Option[Double],
-    withDemographics: Boolean
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
+    withDemographics: Boolean,
+    corrThreshold: Option[Double]
   ) = Action.async { implicit request =>
-    val correlationDsa =
-      if (withDemographics)
-        bradykinesiaSubmissionCorrMeanMaxAbsDsa
-      else
-        bradykinesiaSubmissionCorrMeanMaxAbsWoDemDsa
+    val correlationDsa = getCorrelationDsa(bradykinesiaCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showSubmissionCorrelationNetwork(
       "LDOPA Bradykinesia Subchallenge Submission Correlation",
@@ -198,19 +186,19 @@ class MPowerChallengeCorrelationController @Inject()(
       bradykinesiaScoreBoardDsa,
       bradykinesiaFeatureInfoDsa,
       corrThreshold,
+      aggOut,
+      aggIn,
       withDemographics
     )
   }
 
   def mPowerSubmissionNetwork(
-    corrThreshold: Option[Double],
-    withDemographics: Boolean
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
+    withDemographics: Boolean,
+    corrThreshold: Option[Double]
   ) = Action.async { implicit request =>
-    val correlationDsa =
-      if (withDemographics)
-        mPowerSubmissionCorrMeanMaxAbsDsa
-      else
-        mPowerSubmissionCorrMeanMaxAbsWoDemDsa
+    val correlationDsa = getCorrelationDsa(mPowerCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showSubmissionCorrelationNetwork(
       "mPower Subchallenge Submission Correlation",
@@ -218,8 +206,23 @@ class MPowerChallengeCorrelationController @Inject()(
       mPowerScoreBoardDsa,
       mPowerFeatureInfoDsa,
       corrThreshold,
+      aggOut,
+      aggIn,
       withDemographics
     )
+  }
+
+  private def getCorrelationDsa(
+    prefix: String,
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
+    withDemographics: Boolean
+  ): DataSetAccessor = {
+    val dataSetId = s"${prefix}_${aggOut.toString}_${aggIn.toString}"
+    if (withDemographics)
+      dsaf(dataSetId).get
+    else
+      dsaf(dataSetId + "_wo_dem").get
   }
 
   private def showTeamCorrelationNetwork(
@@ -228,6 +231,8 @@ class MPowerChallengeCorrelationController @Inject()(
     scoreBoardDsa: DataSetAccessor,
     featureInfoDsa: DataSetAccessor,
     corrThreshold: Option[Double],
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
     withDemographics: Boolean)(
     implicit request: Request[AnyContent]
   ) = {
@@ -316,7 +321,7 @@ class MPowerChallengeCorrelationController @Inject()(
       println("Nodes: " + nodes.size)
       println("Edges: " + edges.size)
       println(edges.mkString("\n"))
-      Ok(views.html.mpowerchallenge.correlationNetwork(domainName, threshold, withDemographics, nodes, edges))
+      Ok(views.html.mpowerchallenge.correlationNetwork(domainName, threshold, aggOut, aggIn, withDemographics, nodes, edges))
     }
   }
 
@@ -326,6 +331,8 @@ class MPowerChallengeCorrelationController @Inject()(
     scoreBoardDsa: DataSetAccessor,
     featureInfoDsa: DataSetAccessor,
     corrThreshold: Option[Double],
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
     withDemographics: Boolean)(
     implicit request: Request[AnyContent]
   ) = {
@@ -382,7 +389,7 @@ class MPowerChallengeCorrelationController @Inject()(
       println("Nodes: " + nodes.size)
       println("Edges: " + edges.size)
       println(edges.mkString("\n"))
-      Ok(views.html.mpowerchallenge.correlationNetwork(domainName, threshold, withDemographics, nodes, edges))
+      Ok(views.html.mpowerchallenge.correlationNetwork(domainName, threshold, aggOut, aggIn, withDemographics, nodes, edges))
     }
   }
 
@@ -532,3 +539,7 @@ case class mPowerScoreSubmissionInfo(
 }
 
 case class FeatureInfo(Team: String, SubmissionId: Int, Name: String)
+
+object AggFunction extends Enumeration {
+  val max, min, mean = Value
+}

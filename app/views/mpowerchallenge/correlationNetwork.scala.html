@@ -4,12 +4,16 @@
 @import controllers.mpower.routes.{MPowerChallengeCorrelationController => challengeRoutes}
 @import play.api.libs.json.Json
 @import views.html.basicSideBar
+@import views.html.elements.selectEnum
 @import controllers.mpower.VisNode
 @import controllers.mpower.VisEdge
 
+@import controllers.mpower.AggFunction
 @(
     domainName: String,
     threshold: Double,
+    aggOut: AggFunction.Value,
+    aggIn: AggFunction.Value,
     withDemographics: Boolean,
     nodes: Traversable[VisNode],
     edges: Traversable[VisEdge]
@@ -47,124 +51,130 @@
 @bottomResources = {
 
     <script type="text/javascript">
-            var nodes = [
-                @nodes.map{ node =>
+        var nodes = [
+            @nodes.map{ node =>
                 {id: @node.id, size: @node.size, font: { multi: true }, label: '<b>@{node.label}</b>', data: JSON.parse('@Html(Json.stringify(node.data.get))')},
-                }
-            ];
+            }
+        ];
 
-            var edges = [
-                @edges.map{ edge =>
+        var edges = [
+            @edges.map{ edge =>
                 {from: @edge.from, to: @edge.to, width: @edge.value, title: '@edge.label', color:{color:'#60c842', opacity: 0.8}, arrows:'to'},
+            }
+        ];
+
+        var network = null;
+
+        function draw(selectedNodes) {
+            // Instantiate our network object.
+            var container = document.getElementById('mynetwork');
+            var physicsEnabled = true // (selectedNodes.length <= 30)
+            var data = {
+                nodes: selectedNodes,
+                edges: edges
+            };
+            var options = {
+                nodes: {
+                    shape: 'dot',
+                    font: {
+                        size: 16
+                    }
+                },
+                interaction: {
+                    hover:true
+                },
+                physics: {
+                    enabled: physicsEnabled
                 }
-            ];
+            };
+            network = new vis.Network(container, data, options);
+            network.fit();
 
-            var network = null;
-
-            function draw(selectedNodes) {
-                // Instantiate our network object.
-                var container = document.getElementById('mynetwork');
-                var physicsEnabled = true // (selectedNodes.length <= 30)
-                var data = {
-                    nodes: selectedNodes,
-                    edges: edges
-                };
-                var options = {
-                    nodes: {
-                        shape: 'dot',
-                        font: {
-                            size: 16
+            network.on("click", function (params) {
+                if (params.nodes.length > 0) {
+                    // node  click
+                    var node = getNode(params.nodes[0])
+                    $("#teamInfoDiv").html("")
+                    $("#teamInfoDiv").append("<h4><b>" + node.label + "</b></h4><hr/>")
+                    $.each(node.data, function (key, value) {
+                        if (value && (!Array.isArray(value) || value.length > 0)) {
+                            $("#teamInfoDiv").append(key + " : " + value + "</br>")
                         }
-                    },
-                    interaction: {
-                        hover:true
-                    },
-                    physics: {
-                        enabled: physicsEnabled
-                    }
-                };
-                network = new vis.Network(container, data, options);
-                network.fit();
-
-                network.on("click", function (params) {
-                    console.log(params)
-                    if (params.nodes.length > 0) {
-                        // node  click
-                        var node = getNode(params.nodes[0])
-                        $("#teamInfoDiv").html("")
-                        $("#teamInfoDiv").append("<h4><b>" + node.label + "</b></h4><hr/>")
-                        $.each(node.data, function (key, value) {
-                            if (value && (!Array.isArray(value) || value.length > 0)) {
-                                $("#teamInfoDiv").append(key + " : " + value + "</br>")
-                            }
-                        })
-                    } else {
-                        // edge click
-                        var edge = getEdge(params.edges[0])
-                        var from = getNode(edge.from)
-                        var to = getNode(edge.to)
-                        $("#teamInfoDiv").html("")
-                        $("#teamInfoDiv").append("<h4>" + from.label + " -> " + to.label + "</h4><hr/>")
-                        $("#teamInfoDiv").append(edge.title)
-                    }
-                });
-            }
-
-            function zoomIn() {
-                var newScale = 1.5 * network.getScale()
-                var options = {
-                    scale: newScale,
-                    animation: { duration: 300, easingFunction: "easeInCubic" }
-                };
-                network.moveTo(options);
-            }
-
-            function zoomOut() {
-                var newScale = 0.666 * network.getScale()
-                var options = {
-                    scale: newScale,
-                    animation: { duration: 300, easingFunction: "easeInCubic" }
-                };
-                network.moveTo(options);
-            }
-
-            function getNode(nodeId) {
-                var found = nodes.find(function (node) {
-                    return node.id == nodeId;
-                });
-                return found
-            }
-
-            function getEdge(edgeId) {
-                var found = edges.find(function (edge) {
-                    return edge.id == edgeId;
-                });
-                return found
-            }
-
-            function selectTeams() {
-                var teamsNum = $("#topTeamSelection").val()
-                var selectedNodes = nodes
-                if (teamsNum) {
-                    selectedNodes = nodes.slice(0, teamsNum)
+                    })
+                } else {
+                    // edge click
+                    var edge = getEdge(params.edges[0])
+                    var from = getNode(edge.from)
+                    var to = getNode(edge.to)
+                    $("#teamInfoDiv").html("")
+                    $("#teamInfoDiv").append("<h4>" + from.label + '<span class="glyphicon glyphicon-arrow-right"></span>' + to.label + "</h4><hr/>")
+                    $("#teamInfoDiv").append(edge.title)
                 }
-                draw(selectedNodes)
+            });
+        }
+
+        function zoomIn() {
+            var newScale = 1.5 * network.getScale()
+            var options = {
+                scale: newScale,
+                animation: { duration: 300, easingFunction: "easeInCubic" }
+            };
+            network.moveTo(options);
+        }
+
+        function zoomOut() {
+            var newScale = 0.666 * network.getScale()
+            var options = {
+                scale: newScale,
+                animation: { duration: 300, easingFunction: "easeInCubic" }
+            };
+            network.moveTo(options);
+        }
+
+        function getNode(nodeId) {
+            var found = nodes.find(function (node) {
+                return node.id == nodeId;
+            });
+            return found
+        }
+
+        function getEdge(edgeId) {
+            var found = edges.find(function (edge) {
+                return edge.id == edgeId;
+            });
+            return found
+        }
+
+        function selectTeams() {
+            var teamsNum = $("#topTeamSelection").val()
+            var selectedNodes = nodes
+            if (teamsNum) {
+                selectedNodes = nodes.slice(0, teamsNum)
             }
+            draw(selectedNodes)
+        }
 
-            function resubmit() {
-                var url = window.location.href
+        function resubmit() {
+            var url = window.location.href
 
-                var params = {};
-                params['corrThreshold'] = $("#corrThreshold").val();
-                params['withDemographics'] = $("#withDemographics").is(':checked');
+            var params = {};
+            params['corrThreshold'] = $("#corrThreshold").val();
+            params['aggOut'] = $("#aggOut").val();
+            params['aggIn'] = $("#aggIn").val();
+            params['withDemographics'] = $("#withDemographics").is(':checked');
 
-                submit('get', url, params)
-            }
+            submit('get', url, params)
+        }
 
-            $(function () {
-                // draw all nodes
-                draw(nodes)
-            })
+        $("#aggOut").change(resubmit)
+        $("#aggIn").change(resubmit)
+
+        $(function () {
+            // draw all nodes
+            draw(nodes)
+            // activate tooltips
+            $('[data-toggle="tooltip"]').tooltip();
+        })
     </script>
 }
 
@@ -229,6 +239,23 @@
                         <select class="pull-right" id="corrThreshold" name="corrThreshold" onchange="resubmit()">
                             @{for (i <- 1 to 9) yield thresholdOption(i)}
                         </select>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="panel panel-default" style="margin-top: 20px">
+                    <div class="panel-body">
+                        <span style="padding-top: 5px"><a href="#" data-toggle="tooltip" data-placement="bottom" style="color: #000;" title="Recommended: Mean">Agg Out</a></span>
+                        @selectEnum("aggOut", AggFunction, false, Some("pull-right"), Some(aggOut.toString))
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="panel panel-default" style="margin-top: 20px">
+                    <div class="panel-body">
+                        <span style="padding-top: 5px"><a href="#" data-toggle="tooltip" data-placement="bottom" style="color: #000;" title="Recommended: Max">Agg In</a></span>
+                        @selectEnum("aggIn", AggFunction, false, Some("pull-right"), Some(aggIn.toString))
                     </div>
                 </div>
             </div>
