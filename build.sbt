@@ -27,6 +27,7 @@ resolvers ++= Seq(
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
   "JCenter" at "http://jcenter.bintray.com/",
   "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
+  "jitpack.io" at "https://jitpack.io",   // for t-SNE (Java impl)
   Resolver.mavenLocal
 //  "Ivylocal" at "file://home/peter/.ivy2/local/" // " + Path.userHome.absolutePath + "
 )
@@ -75,7 +76,8 @@ libraryDependencies ++= Seq(
   "org.apache.ignite" % "ignite-spark" % "1.6.0",
   "com.github.haifengl" %% "smile-scala" % "1.5.0", // machine learning
   "com.github.haifengl" % "smile-netlib" % "1.5.0", // for optimized optimized matrix computation
-  "com.github.haifengl" % "smile-plot" % "1.5.0", // machine learning
+  "com.github.haifengl" % "smile-plot" % "1.5.0",    // machine learning
+  "com.github.lejon.T-SNE-Java" % "tsne" % "v2.5.0"	,// t-SNE Java
   "org.scalanlp" %% "breeze" % "0.13.2", // linear algebra and stuff
   "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
   "com.banda" % "incal" % "0.1.6" exclude("org.springframework", "spring-context") exclude("org.springframework", "spring-test") exclude("org.springframework", "spring-web") exclude("org.springframework", "spring-webmvc"),
