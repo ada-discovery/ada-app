@@ -26,10 +26,10 @@ private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[Gr
 
   override def flow(options: FLOW_OPT) = {
     val stepSize = calcStepSize(
-      options.columnCount,
+      options.binCount,
       options.min,
       options.max,
-      options.specialColumnForMax
+      options.specialBinForMax
     )
 
     val minBg = BigDecimal(options.min)
@@ -41,7 +41,7 @@ private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[Gr
       .groupBy(maxGroups, _._1)
       .map { case (group, value) =>
         group -> calcBucketIndex(
-          stepSize, options.columnCount, minBg, max)(value)
+          stepSize, options.binCount, minBg, max)(value)
       }.mergeSubstreams
 
     flatFlow.via(groupBucketIndexFlow).via(groupCountFlow(maxGroups)).via(seqFlow)
@@ -49,10 +49,10 @@ private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[Gr
 
   override def postFlow(options: FLOW_OPT) = { elements =>
     val stepSize = calcStepSize(
-      options.columnCount,
+      options.binCount,
       options.min,
       options.max,
-      options.specialColumnForMax
+      options.specialBinForMax
     )
 
     val minBg = BigDecimal(options.min)
@@ -63,7 +63,7 @@ private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[Gr
       val indexCountMap = counts.toMap
 
       val xValueCounts =
-        for (index <- 0 to options.columnCount - 1) yield {
+        for (index <- 0 to options.binCount - 1) yield {
           val count = indexCountMap.get(index).getOrElse(0)
           val xValue = minBg + (index * stepSize)
           (xValue, count)

@@ -11,22 +11,31 @@
     widgets: Traversable[Widget],
     count: Int,
     maxRank: Int,
-    topRankSelection: Option[Int]
+    topRankSelection: Option[Int],
+    k: Int,
+    method: Int,
+    pcaDims: Option[Int],
+    scaled: Boolean,
+    isTSNE: Boolean
 )(implicit context: WebContext)
 
 @sideBar = @{
     basicSideBar(Seq(
         ("1. mPower", Seq(
-            (challengeRoutes.mPowerMDS(Some(10)), "MDS", Some(2))
+            (challengeRoutes.mPowerMDS(Some(10), 10), "MDS", Some(2)),
+            (challengeRoutes.mPowerTSNE(Some(10), 10), "t-SNE", Some(2))
         )),
         ("2.1 Tremor", Seq(
-            (challengeRoutes.tremorMDS(Some(10)), "MDS", Some(2))
+            (challengeRoutes.tremorMDS(Some(10), 10), "MDS", Some(2)),
+            (challengeRoutes.tremorTSNE(Some(10), 10), "t-SNE", Some(2))
         )),
         ("2.2 Dyskinesia", Seq(
-            (challengeRoutes.dyskinesiaMDS(Some(10)), "MDS", Some(2))
+            (challengeRoutes.dyskinesiaMDS(Some(10), 10), "MDS", Some(2)),
+            (challengeRoutes.dyskinesiaTSNE(Some(10), 10), "t-SNE", Some(2))
         )),
         ("2.3 Bradykinesia", Seq(
-            (challengeRoutes.bradykinesiaMDS(Some(10)), "MDS", Some(2))
+            (challengeRoutes.bradykinesiaMDS(Some(10), 10), "MDS", Some(2)),
+            (challengeRoutes.bradykinesiaTSNE(Some(10), 10), "t-SNE", Some(2))
         ))
     ))
 }
@@ -43,6 +52,17 @@
             if (topRank)
                 params["topRank"] = topRank;
 
+            params["k"] = $("#k").val();
+            params["method"] = $("#method").val();
+
+            @if(isTSNE) {
+                params['scaled'] = $("#scaled").is(':checked');
+            }
+
+            var pcaDims = $("#pcaDims").val()
+            if (pcaDims)
+                params["pcaDims"] = pcaDims;
+
             submit('get', window.location.href, params)
         }
 
@@ -53,8 +73,12 @@
     <option @if(topRankSelection.isDefined && topRankSelection.get.equals(i*5)) { selected="selected" } value="@{i*5}">Top @{i*5}</option>
 }
 
+@kOption(i: Int) = {
+    <option @if(k.equals(i)) { selected="selected" } value="@{i}">@{i}</option>
+}
+
 @main(
-    title = Messages("mds.title", domainName),
+    title = if (isTSNE) Messages("tsne.title", domainName) else Messages("mds.title", domainName),
     sideBar = Some(sideBar),
     bottomResources = Some(bottomResources),
     showMessageBox = false
@@ -62,21 +86,57 @@
 
     <div class="page-header">
         <h3>
-            @Messages("mds.title", domainName)
+            @{if(isTSNE) Messages("tsne.title", domainName) else Messages("mds.title", domainName)}
         </h3>
     </div>
 
     <div class="row">
-        <div class="col-md-7">
+        <div class="col-md-3 col-sm-12">
             <h3>Count: <b>@count</b></h3>
         </div>
-        <div class="panel panel-default pull-right">
-            <div class="panel-body">
-                <span style="padding-top: 5px">Show Submissions</span>
-                <select id="topSubmissionSelection" name="topSubmissionSelection" onchange="resubmit()" >
-                    <option value="">All</option>
-                    @{for(i <- 1 to ((maxRank - 1) / 5)) yield option(i)}
-                </select>
+        <div class="col-md-9 col-sm-12">
+            @if(isTSNE) {
+                <div class="panel panel-default pull-right">
+                    <div class="panel-body">
+                        <span style="padding-top: 5px">Scaled</span>
+                        <input type='checkbox' id="scaled" @if(scaled) { checked='checked' } onchange="resubmit()"/>
+                    </div>
+                </div>
+                <div class="panel panel-default pull-right">
+                    <div class="panel-body">
+                        <span style="padding-top: 5px">PCA Dims</span>
+                        <select id="pcaDims" name="pcaDims" onchange="resubmit()" >
+                            <option @if(pcaDims.isEmpty) { selected="selected" } value="">No</option>
+                            <option @if(pcaDims.isDefined && pcaDims.get.equals(20)) { selected="selected" } value="20">20</option>
+                        </select>
+                    </div>
+                </div>
+            }
+            <div class="panel panel-default pull-right">
+                <div class="panel-body">
+                    <span style="padding-top: 5px">Show Submissions</span>
+                    <select id="topSubmissionSelection" name="topSubmissionSelection" onchange="resubmit()" >
+                        <option value="">All</option>
+                        @{for(i <- 1 to ((maxRank - 1) / 5)) yield option(i)}
+                    </select>
+                </div>
+            </div>
+            <div class="panel panel-default pull-right">
+                <div class="panel-body">
+                    <span style="padding-top: 5px">k</span>
+                    <select id="k" name="k" onchange="resubmit()" >
+                        @{Seq(2,5,10,20).map(kOption)}
+                    </select>
+                </div>
+            </div>
+            <div class="panel panel-default pull-right">
+                <div class="panel-body">
+                    <span style="padding-top: 5px">Clusterization</span>
+                    <select id="method" name="method" onchange="resubmit()" >
+                        <option @if(method.equals(1)) { selected="selected" } value="1">k-Means</option>
+                        <option @if(method.equals(2)) { selected="selected" } value="2">Bis. k-Means</option>
+                    </select>
+                </div>
             </div>
         </div>
     </div>

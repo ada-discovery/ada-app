@@ -222,6 +222,7 @@ class DataSetImportController @Inject()(
       "url" -> nonEmptyText,
       "token" -> nonEmptyText,
       "importDictionaryFlag" -> boolean,
+      "eventNames" -> of[Seq[String]],
       "categoriesToInheritFromFirstVisit" -> of[Seq[String]],
       "saveBatchSize" -> optional(number(min = 1)),
       "scheduled" -> boolean,

@@ -23,7 +23,7 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
 import play.api.Configuration
 import dataaccess.JsonUtil._
-import _root_.util.{crossJoin, retry, seqFutures}
+import _root_.util.{crossProduct, retry, seqFutures}
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.Sink
@@ -1042,7 +1042,7 @@ class DataSetServiceImpl @Inject()(
 
         val jsonId = (json \ JsObjectIdentity.name).asOpt[BSONObjectID]
 
-        val rightJsonsCrossed = crossJoin(linkRightJsonsMaps.flatMap(_.get(link)))
+        val rightJsonsCrossed = crossProduct(linkRightJsonsMaps.flatMap(_.get(link)))
 
         if (rightJsonsCrossed.isEmpty) {
           Seq(json)

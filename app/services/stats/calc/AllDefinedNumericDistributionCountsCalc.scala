@@ -17,24 +17,22 @@ trait AllDefinedNumericDistributionCountsCalcTypePack extends CalculatorTypePack
 
 private class AllDefinedNumericDistributionCountsCalc extends Calculator[AllDefinedNumericDistributionCountsCalcTypePack] with NumericDistributionCountsHelper {
 
-  private val zero = BigDecimal(0)
-
   override def fun(options: NumericDistributionOptions) = { values =>
     if (values.nonEmpty) {
       val min = values.min
       val max = values.max
 
-      val stepSize = calcStepSize(options.columnCount, min, max, options.specialColumnForMax)
+      val stepSize = calcStepSize(options.binCount, min, max, options.specialBinForMax)
 
       val minBg = BigDecimal(min)
 
       val bucketIndeces = values.map(
-        calcBucketIndex(stepSize, options.columnCount, minBg, max)
+        calcBucketIndex(stepSize, options.binCount, minBg, max)
       )
 
       val countMap = bucketIndeces.groupBy(identity).map { case (index, values) => (index, values.size) }
 
-      (0 until options.columnCount).map { index =>
+      (0 until options.binCount).map { index =>
         val count = countMap.get(index).getOrElse(0)
         val xValue = minBg + (index * stepSize)
         (xValue, count)
@@ -45,20 +43,20 @@ private class AllDefinedNumericDistributionCountsCalc extends Calculator[AllDefi
 
   override def flow(options: FLOW_OPT) = {
     val stepSize = calcStepSize(
-      options.columnCount,
+      options.binCount,
       options.min,
       options.max,
-      options.specialColumnForMax
+      options.specialBinForMax
     )
 
     val minBg = BigDecimal(options.min)
     val max = options.max
 
     Flow[IN].fold[INTER](
-      mutable.ArraySeq(Seq.fill(options.columnCount)(0) :_*)
+      mutable.ArraySeq(Seq.fill(options.binCount)(0) :_*)
     ) { case (array, value) =>
       val index = calcBucketIndex(
-        stepSize, options.columnCount, minBg, max)(value)
+        stepSize, options.binCount, minBg, max)(value)
       array.update(index, array(index) + 1)
       array
     }
@@ -68,10 +66,10 @@ private class AllDefinedNumericDistributionCountsCalc extends Calculator[AllDefi
     val columnCount = array.length
 
     val stepSize = calcStepSize(
-      options.columnCount,
+      options.binCount,
       options.min,
       options.max,
-      options.specialColumnForMax
+      options.specialBinForMax
     )
 
     val minBg = BigDecimal(options.min)
@@ -93,25 +91,25 @@ trait NumericDistributionCountsHelper {
   private val zero = BigDecimal(0)
 
   def calcStepSize(
-    columnCount: Int,
+    binCount: Int,
     min: Double,
     max: Double,
-    specialColumnForMax: Boolean
+    specialBinForMax: Boolean
   ): BigDecimal = {
     val minBd = BigDecimal(min)
     val maxBd = BigDecimal(max)
 
     if (minBd >= maxBd)
       0
-    else if (specialColumnForMax)
-      (maxBd - minBd) / (columnCount - 1)
+    else if (specialBinForMax)
+      (maxBd - minBd) / (binCount - 1)
     else
-      (maxBd - minBd) / columnCount
+      (maxBd - minBd) / binCount
   }
 
   def calcBucketIndex(
     stepSize: BigDecimal,
-    columnCount: Int,
+    binCount: Int,
     minBg: BigDecimal,
     max: Double)(
     doubleValue: Double
@@ -119,19 +117,19 @@ trait NumericDistributionCountsHelper {
     if (stepSize.equals(zero))
       0
     else if (doubleValue == max)
-      columnCount - 1
+      binCount - 1
     else
       ((doubleValue - minBg) / stepSize).setScale(0, RoundingMode.FLOOR).toInt
 }
 
 case class NumericDistributionOptions(
-  columnCount: Int,
-  specialColumnForMax: Boolean = false
+  binCount: Int,
+  specialBinForMax: Boolean = false
 )
 
 case class NumericDistributionFlowOptions(
-  columnCount: Int,
+  binCount: Int,
   min: Double,
   max: Double,
-  specialColumnForMax: Boolean = false
+  specialBinForMax: Boolean = false
 )

@@ -390,29 +390,32 @@ trait DistributionWidgetGeneratorHelper {
     longUniqueCounts: UniqueDistributionCountsCalcTypePack[Long]#OUT
   ) = {
     val counts = longUniqueCounts.collect{ case (Some(value), count) => Count(value, count)}.toSeq.sortBy(_.value)
-    val size = counts.size
+    if (counts.nonEmpty) {
+      val size = counts.size
 
-    val min = counts.head.value
-    val max = counts.last.value
+      val min = counts.head.value
+      val max = counts.last.value
 
-    // if the difference between max and min is "small" enough we can add a zero count for missing values
-    if (Math.abs(max - min) < maxIntCountsForZeroPadding) {
-      val countsWithZeroes = for (i <- 0 to size - 1) yield {
-        val count = counts(i)
-        if (i + 1 < size) {
-          val nextCount = counts(i + 1)
+      // if the difference between max and min is "small" enough we can add a zero count for missing values
+      if (Math.abs(max - min) < maxIntCountsForZeroPadding) {
+        val countsWithZeroes = for (i <- 0 to size - 1) yield {
+          val count = counts(i)
+          if (i + 1 < size) {
+            val nextCount = counts(i + 1)
 
-          val zeroCounts =
-            for (missingValue <- count.value + 1 to nextCount.value - 1) yield Count(missingValue, 0)
+            val zeroCounts =
+              for (missingValue <- count.value + 1 to nextCount.value - 1) yield Count(missingValue, 0)
 
-          Seq(count) ++ zeroCounts
-        } else
-          Seq(count)
-      }
+            Seq(count) ++ zeroCounts
+          } else
+            Seq(count)
+        }
 
-      countsWithZeroes.flatten
+        countsWithZeroes.flatten
+      } else
+        counts
     } else
-      counts
+      Nil
   }
 
   protected def createTitle(

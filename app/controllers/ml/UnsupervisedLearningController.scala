@@ -21,7 +21,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import services.DataSpaceService
 import controllers.ml.routes.{UnsupervisedLearningController => route}
-import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAny}
+import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, unsupervisedlearning => view}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -186,7 +186,7 @@ class UnsupervisedLearningController @Inject()(
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
 
-  def idAndNames = restrictSubjectPresentAny(deadbolt) {
+  def idAndNames = restrictSubjectPresentAnyNoCaching(deadbolt) {
     implicit request =>
       for {
         regressions <- repo.find(

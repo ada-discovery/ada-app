@@ -1492,7 +1492,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldNameOption: Option[String]
   ) = Action.async { implicit request => {
       for {
-      // get the data set name, data space tree and the data set setting
+        // get the data set name, data space tree and the data set setting
         (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
 
         fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
@@ -1500,16 +1500,28 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // field
         field <- fieldRepo.get(fieldName)
       } yield {
-        render {
-          case Accepts.Html() => Ok(dataset.fractalis(
-            dataSetName,
-            fractalisServerUrl,
-            field,
-            setting.filterShowFieldStyle,
-            tree
-          ))
-          case Accepts.Json() => BadRequest("getFractalis function doesn't support JSON response.")
-        }
+        val sessionCookie = request.cookies.get("PLAY2AUTH_SESS_ID")
+        val sessionId = sessionCookie.map(_.value)
+
+//        println("isSecure  : " + sessionCookie.get.secure)
+//        println("HTTP Only : " + sessionCookie.get.httpOnly)
+//        println("Value     : " + sessionCookie.get.value)
+
+        sessionId.map { sessionId =>
+          render {
+            case Accepts.Html() => Ok(dataset.fractalis(
+              dataSetName,
+              fractalisServerUrl,
+              sessionId,
+              field,
+              setting.filterShowFieldStyle,
+              tree
+            ))
+            case Accepts.Json() => BadRequest("getFractalis function doesn't support JSON response.")
+          }
+        }.getOrElse(
+          BadRequest("Session id not available.")
+        )
       }
     }.recover {
       case t: TimeoutException =>

@@ -21,7 +21,7 @@ import play.twirl.api.Html
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
 import services.DataSpaceService
-import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAny}
+import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, classification => view}
 import models.ml.classification.ValueOrSeq.ValueOrSeq
 
@@ -258,7 +258,7 @@ class ClassificationController @Inject()(
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
 
-  def idAndNames = restrictSubjectPresentAny(deadbolt) {
+  def idAndNames = restrictSubjectPresentAnyNoCaching(deadbolt) {
     implicit request =>
       for {
         classifications <- repo.find(

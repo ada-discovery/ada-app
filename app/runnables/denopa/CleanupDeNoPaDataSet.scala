@@ -2,6 +2,7 @@ package runnables.denopa
 
 import javax.inject.Inject
 
+import models.{DataSetSetting, StorageType}
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import runnables.DataSetId._
 import services.DataSetService
@@ -12,8 +13,8 @@ class CleanupDeNoPaBaseline @Inject()(dataSetService: DataSetService) extends Fu
       denopa_raw_clinical_baseline,
       denopa_clinical_baseline,
       "Clinical Baseline",
-      Some(DeNoPaDataSetSettings.ClinicalBaseline),
-      Some(DeNoPaDataViews.ClinicalBaseline),
+      Some(new DataSetSetting(denopa_clinical_baseline, StorageType.ElasticSearch, "")),
+      None,
       true, true, true
     )
 }
@@ -24,8 +25,8 @@ class CleanupDeNoPaFirstVisit @Inject()(dataSetService: DataSetService) extends 
       denopa_raw_clinical_first_visit,
       denopa_clinical_first_visit,
       "Clinical First Visit",
-      Some(DeNoPaDataSetSettings.ClinicalFirstVisit),
-      Some(DeNoPaDataViews.ClinicalFirstVisit),
+      Some(new DataSetSetting(denopa_clinical_first_visit, StorageType.ElasticSearch, "")),
+      None,
       true, true, true
     )
 }
@@ -36,8 +37,8 @@ class CleanupDeNoPaSecondVisit @Inject()(dataSetService: DataSetService) extends
       denopa_raw_clinical_second_visit,
       denopa_clinical_second_visit,
       "Clinical Second Visit",
-      Some(DeNoPaDataSetSettings.ClinicalSecondVisit),
-      Some(DeNoPaDataViews.ClinicalSecondVisit),
+      Some(new DataSetSetting(denopa_clinical_second_visit, StorageType.ElasticSearch, "")),
+      None,
       true, true, true
     )
 }

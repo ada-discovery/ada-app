@@ -47,7 +47,7 @@ class AppController @Inject() (
     }
 
   // TODO: move elsewhere
-  def dataSets = WithNoCaching(restrictSubjectPresentAny(deadbolt) {
+  def dataSets = restrictSubjectPresentAnyNoCaching(deadbolt) {
     implicit request =>
       for {
         user <- currentUser(request)
@@ -67,8 +67,7 @@ class AppController @Inject() (
           BadRequest("No logged user.")
         )
       }
-    }
-  )
+  }
 
   private def countDataSetsNumRecursively(dataSpace: DataSpaceMetaInfo): Int =
     dataSpace.children.foldLeft(dataSpace.dataSetMetaInfos.size) {

@@ -128,7 +128,7 @@ trait AdaAuthConfig extends AuthConfig {
     */
   override lazy val tokenAccessor: CookieTokenAccessor = new CookieTokenAccessor(
     cookieSecureOption = false, // TODO: Introduce   play.api.Play.isProd(play.api.Play.current),
-    cookieHttpOnlyOption = false,
+    cookieHttpOnlyOption = true,
     cookieMaxAge       = Some(sessionTimeoutInSeconds)
   )
 }

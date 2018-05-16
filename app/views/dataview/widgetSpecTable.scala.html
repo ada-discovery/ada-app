@@ -71,6 +71,12 @@
                     ("yFieldNameTypeahead", x.yFieldName)) ++
                     x.groupFieldName.map( ("groupFieldNameTypeahead", _)
                 ))
+            case x: GridMeanWidgetSpec =>
+                fieldLabelElements(Seq(
+                    ("xFieldNameTypeahead", x.xFieldName),
+                    ("yFieldNameTypeahead", x.yFieldName),
+                    ("valueFieldNameTypeahead", x.valueFieldName)
+                ))
             case x: BasicStatsWidgetSpec =>
                 fieldLabelElements(Seq(
                     ("fieldNameTypeahead", x.fieldName)
@@ -137,6 +143,11 @@
                             x.numericBinCount.map( count => "Numeric Bin Count: " + count),
                             Some(s"Show Relative Values: ${x.relativeValues}"),
                             Some(s"Date Month Bins: ${x.useDateMonthBins}")
+                        )
+                    case x: GridMeanWidgetSpec =>
+                        Seq(
+                            Some("X Bin Count: " + x.xBinCount),
+                            Some("Y Bin Count: " + x.yBinCount)
                         )
                     case x: TemplateHtmlWidgetSpec =>
                         Seq(
@@ -381,12 +392,18 @@
             }
         </div>
 
+        <div id="valueFieldNameDiv" style="display: none">
+            @labelValueAux("valueFieldName", "Value Field") {
+                <input type="text" id="valueFieldNameTypeahead" class="typeahead">
+                <input type="hidden" id="valueFieldName">
+            }
+        </div>
+
         <div id="fieldNamesDiv" style="display: none">
             @labelValueAux("fieldNames", "Fields") {
                 <input type="text" id="fieldNames">
             }
         </div>
-
 
         <div id="contentDiv" style="display: none">
             @labelValueAux("content", "Content") {
@@ -409,6 +426,18 @@
         <div id="useDateMonthBinsDiv" style="display: none">
             @labelValueAux("useDateMonthBins", "Date Month Bins?") {
                 <input type="checkbox" id="useDateMonthBins"/>
+            }
+        </div>
+
+        <div id="xBinCountDiv" style="display: none">
+            @labelValueAux("xBinCount", "X Bins #") {
+                <input type="text" id="xBinCount">
+            }
+        </div>
+
+        <div id="yBinCountDiv" style="display: none">
+            @labelValueAux("yBinCount", "Y Bins #") {
+                <input type="text" id="yBinCount">
             }
         </div>
 
@@ -533,6 +562,12 @@
         // useDateMonthBins is boolean hence we need to do the setting again
         setIfNotNull(output, "useDateMonthBins", getBoolValue("useDateMonthBins"))
 
+        // x bin count is integer hence we need to do the setting again
+        setIfNotNull(output, "xBinCount", getIntValue("xBinCount", 20))
+
+        // y bin count is integer hence we need to do the setting again
+        setIfNotNull(output, "yBinCount", getIntValue("yBinCount", 20))
+
         // fieldNames (of correlation widget) is array  hence we need to do the setting again
         setIfNotNull(output, "fieldNames", getArray("fieldNames"))
 
@@ -559,10 +594,13 @@
         $("#" + modalName + " #xFieldNameDiv").hide();
         $("#" + modalName + " #yFieldNameDiv").hide();
         $("#" + modalName + " #groupFieldNameDiv").hide();
+        $("#" + modalName + " #valueFieldNameDiv").hide();
         $("#" + modalName + " #contentDiv").hide();
         $("#" + modalName + " #numericBinCountDiv").hide();
         $("#" + modalName + " #fieldNamesDiv").hide();
         $("#" + modalName + " #relativeValuesDiv").hide();
+        $("#" + modalName + " #xBinCountDiv").hide();
+        $("#" + modalName + " #yBinCountDiv").hide();
         $("#" + modalName + " #useDateMonthBinsDiv").hide();
     }
 
@@ -579,6 +617,7 @@
         $('#edit_widgetSpecModal #xFieldName').val(model["xFieldName"]);
         $('#edit_widgetSpecModal #yFieldName').val(model["yFieldName"]);
         $('#edit_widgetSpecModal #groupFieldName').val(model["groupFieldName"]);
+        $('#edit_widgetSpecModal #valueFieldName').val(model["valueFieldName"]);
         $('#edit_widgetSpecModal #fieldNames').val(model["fieldNames"]);
 
         $('#edit_widgetSpecModal #fieldNameTypeahead').val(model["fieldNameTypeahead"]);
@@ -587,6 +626,8 @@
         $('#edit_widgetSpecModal #groupFieldNameTypeahead').val(model["groupFieldNameTypeahead"]);
 
         $('#edit_widgetSpecModal #numericBinCount').val(model["numericBinCount"]);
+        $('#edit_widgetSpecModal #xBinCount').val(model["xBinCount"]);
+        $('#edit_widgetSpecModal #yBinCount').val(model["yBinCount"]);
 
         $('#edit_widgetSpecModal #relativeValues').prop('checked', model["relativeValues"]);
         $('#edit_widgetSpecModal #useDateMonthBins').prop('checked', model["useDateMonthBins"]);
@@ -648,6 +689,9 @@
                 break;
             case "@{classOf[ScatterWidgetSpec].getName}" :
                 labelFields = ["xFieldNameTypeahead", "yFieldNameTypeahead", "groupFieldNameTypeahead"];
+                break;
+            case "@{classOf[GridMeanWidgetSpec].getName}" :
+                labelFields = ["xFieldNameTypeahead", "yFieldNameTypeahead", "valueFieldNameTypeahead"];
                 break;
             case "@{classOf[CorrelationWidgetSpec].getName}" :
                 break;

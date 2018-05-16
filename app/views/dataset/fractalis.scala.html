@@ -11,6 +11,7 @@
 @(
     domainName: String,
     fractalisServerUrl: String,
+    sessionId: String,
     field: Option[Field],
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -25,7 +26,7 @@
             <input id="fieldName" name="fieldName" type="hidden" value="@field.map(_.name)">
         </div>
         <div class="pull-right">
-            <button id="fractalisAddButton" type="button" class="btn btn-lg">Add</button>
+            <button id="fractalisAddButton" type="button" class="btn btn-default btn-lg">Add</button>
             <select id="widgetSelection" class="input-lg">
                 <option value="correlation-analysis">Scatter</option>
                 <option value="boxplot">Box Plot</option>
@@ -97,8 +98,8 @@
                 dataSource: "https://" + location.host,
                 fractalisNode: '@fractalisServerUrl',
                 getAuth () {
-                    return {token: getCookie("PLAY2AUTH_SESS_ID")}
-//                    return {"user": "", passwd: ""}
+                    return {token: "@Html(sessionId)"}
+//                    return {token: getCookie("PLAY2AUTH_SESS_ID")}
                 },
                 options: {
                     controlPanelPosition: 'right'
@@ -112,7 +113,7 @@
                 var randomNum = Math.random().toString()
                 var divName = widgetType + "-div" + randomNum.split('.')[1]
 
-                $("#widgetsDiv").append('<div class="col-md-6" id="' + divName + '" style="height: 30vw"></div>')
+                $("#widgetsDiv").append('<div class="col-md-6 col-sm-12" id="' + divName + '" style="height: 30vw"></div>')
                 fjs.setChart(widgetType, '#' + divName)
             }
         });

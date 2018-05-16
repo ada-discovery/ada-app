@@ -241,12 +241,12 @@ package object util {
 
   type STuple3[T] = (T, T, T)
 
-  def crossJoin[T](list: Traversable[Traversable[T]]): Traversable[Traversable[T]] =
+  def crossProduct[T](list: Traversable[Traversable[T]]): Traversable[Traversable[T]] =
     list match {
       case xs :: Nil => xs map (Traversable(_))
       case x :: xs => for {
         i <- x
-        j <- crossJoin(xs)
+        j <- crossProduct(xs)
       } yield Traversable(i) ++ j
     }
 

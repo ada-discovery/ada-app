@@ -9,10 +9,8 @@ GET         /contact                                                            
 
 # User profiles
 GET         /profile                                                                controllers.UserProfileController.profile
-GET         /workspace                                                              controllers.UserProfileController.workspace
 GET         /settings                                                               controllers.UserProfileController.settings
 POST        /settings                                                               controllers.UserProfileController.updateSettings
-GET         /adminpanel                                                             controllers.UserProfileController.adminPanel
 
 # logins
 GET         /login                                                                  controllers.AuthController.login
@@ -277,10 +275,14 @@ GET         /pdChallenge/ldopaDyskinesiaSubmission                              
 GET         /pdChallenge/ldopaBradykinesiaSubmission                                controllers.mpower.MPowerChallengeCorrelationController.bradykinesiaSubmissionNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
 
 #Temporary for mpower challenge clustering
-GET         /pdChallenge/mpowerMDS                                                 controllers.mpower.MPowerChallengeClusteringController.mPowerMDS(topRank: Option[Int] ?= None)
-GET         /pdChallenge/ldopaTremorMDS                                            controllers.mpower.MPowerChallengeClusteringController.tremorMDS(topRank: Option[Int] ?= None)
-GET         /pdChallenge/ldopaDyskinesiaMDS                                        controllers.mpower.MPowerChallengeClusteringController.dyskinesiaMDS(topRank: Option[Int] ?= None)
-GET         /pdChallenge/ldopaBradykinesiaMDS                                      controllers.mpower.MPowerChallengeClusteringController.bradykinesiaMDS(topRank: Option[Int] ?= None)
+GET         /pdChallenge/mpowerMDS                                                 controllers.mpower.MPowerChallengeClusteringController.mPowerMDS(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1)
+GET         /pdChallenge/ldopaTremorMDS                                            controllers.mpower.MPowerChallengeClusteringController.tremorMDS(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1)
+GET         /pdChallenge/ldopaDyskinesiaMDS                                        controllers.mpower.MPowerChallengeClusteringController.dyskinesiaMDS(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1)
+GET         /pdChallenge/ldopaBradykinesiaMDS                                      controllers.mpower.MPowerChallengeClusteringController.bradykinesiaMDS(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1)
+GET         /pdChallenge/mpowerTSNE                                                controllers.mpower.MPowerChallengeClusteringController.mPowerTSNE(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true)
+GET         /pdChallenge/ldopaTremorTSNE                                           controllers.mpower.MPowerChallengeClusteringController.tremorTSNE(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true)
+GET         /pdChallenge/ldopaDyskinesiaTSNE                                       controllers.mpower.MPowerChallengeClusteringController.dyskinesiaTSNE(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true)
+GET         /pdChallenge/ldopaBradykinesiaTSNE                                     controllers.mpower.MPowerChallengeClusteringController.bradykinesiaTSNE(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1, pcaDims: Option[Int] ?= None, scaled: Boolean ?= true)
 
 # Map static resources from the /public folder to the /assets URL path
 #GET         /assets/*file                                                           controllers.Assets.at(path="/public", file)

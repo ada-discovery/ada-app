@@ -3,6 +3,8 @@ package services.datasetimporter
 import java.util.Date
 import javax.inject.Inject
 
+import util.seqFutures
+
 import dataaccess.RepoTypes.CategoryRepo
 import dataaccess.RepoTypes.FieldRepo
 import dataaccess._
@@ -74,7 +76,13 @@ private class RedCapDataSetImporter @Inject() (
       // get the data from a given red cap service
       records <- {
         logger.info("Downloading records from REDCap...")
-        redCapService.listRecords("cdisc_dm_usubjd", "")
+        if (importInfo.eventNames.nonEmpty) {
+          seqFutures(importInfo.eventNames) { eventName =>
+            logger.info(s"Downloading records for the event ${eventName}...")
+            redCapService.listEventRecords(Seq(eventName.trim))
+          }.map(_.flatten)
+        } else
+          redCapService.listAllRecords // "cdisc_dm_usubjd"
       }
 
       // import dictionary (if needed) otherwise use an existing one (should exist)
@@ -342,7 +350,7 @@ private class RedCapDataSetImporter @Inject() (
 
     for {
       // obtain the RedCAP metadata
-      metadatas <- redCapService.listMetadatas("field_name", "")
+      metadatas <- redCapService.listMetadatas // "field_name"
 
       // save the obtained categories and return category names with ids
       categoryNameIds <- Future.sequence {

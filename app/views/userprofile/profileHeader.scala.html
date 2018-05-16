@@ -8,9 +8,7 @@
 <ul class="nav nav-tabs">
     <!-- profile header with tabs -->
     <li @if(active==1){class="active"}><a href="@routes.UserProfileController.profile()">Home</a></li>
-    <li @if(active==2){class="active"}><a href="@routes.UserProfileController.workspace()">Workspace</a></li>
-    <li @if(active==3){class="active"}><a href="@routes.UserProfileController.settings()">Settings</a></li>
-    @restrict(roles = List(Array(SecurityRole.admin))){
-        <li @if(active==4){class="active"}><a href="@routes.UserProfileController.adminPanel()">Admin Panel</a></li>
-    }
+    <!--
+    <li @if(active==2){class="active"}><a href="@routes.UserProfileController.settings()">Settings</a></li>
+    -->
 </ul>

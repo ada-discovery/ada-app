@@ -14,7 +14,7 @@ import play.api.Logger
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, AnyContent, Controller, Request}
-import services.WidgetGenerationService
+import services.{WidgetGenerationMethod, WidgetGenerationService}
 import views.html.mpowerchallenge.clustering
 
 class MPowerChallengeClusteringController @Inject()(
@@ -24,13 +24,9 @@ class MPowerChallengeClusteringController @Inject()(
     webJarAssets: WebJarAssets
   ) extends Controller {
 
-  private lazy val tremorMDSDsa = dsaf("harvard_ldopa.tremor_feature_mds").get
-  private lazy val dyskinesiaMDSDsa = dsaf("harvard_ldopa.dyskinesia_feature_mds").get
-  private lazy val bradykinesiaMDSDsa = dsaf("harvard_ldopa.bradykinesia_feature_mds").get
-  private lazy val mPowerMDSDsa = dsaf("mpower_challenge.feature_mds").get
-
-  private val mdsX1 = "mds_x1"
-  private val mdsX2 = "mds_x2"
+  private val x1 = "x1"
+  private val x2 = "x2"
+  private val clazz = "clazz"
   private val category = "Category"
   private val team = "Team"
   private val auroc = "AUROC_Unbiased_Subset"
@@ -40,69 +36,107 @@ class MPowerChallengeClusteringController @Inject()(
 
   private val widgetSpecs = Seq(
     ScatterWidgetSpec(
-      xFieldName = mdsX1,
-      yFieldName = mdsX2,
-      groupFieldName = Some(category),
-      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(700), title = Some("MDS X1 vs MDS X2 by Feature Category"))
+      xFieldName = x1,
+      yFieldName = x2,
+      groupFieldName = Some(clazz),
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(750), title = Some("X1 vs X2 by Clusterization Class"))
     ),
     ScatterWidgetSpec(
-      xFieldName = mdsX1,
-      yFieldName = mdsX2,
+      xFieldName = x1,
+      yFieldName = x2,
+      groupFieldName = Some(category),
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(750), title = Some("X1 vs X2 by Feature Category"))
+    ),
+    ScatterWidgetSpec(
+      xFieldName = x1,
+      yFieldName = x2,
       groupFieldName = Some(team),
-      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(700), title = Some("MDS X1 vs MDS X2 by Team"))
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(750), title = Some("X1 vs X2 by Team"))
+    ),
+    GridMeanWidgetSpec(
+      xFieldName = x1,
+      yFieldName = x2,
+      valueFieldName = auroc,
+      xBinCount = 50,
+      yBinCount = 50,
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUROC Mean"))
+    ),
+    GridMeanWidgetSpec(
+      xFieldName = x1,
+      yFieldName = x2,
+      valueFieldName = aupr,
+      xBinCount = 50,
+      yBinCount = 50,
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUPR Mean"))
+    ),
+    GridMeanWidgetSpec(
+      xFieldName = x1,
+      yFieldName = x2,
+      valueFieldName = auroc,
+      xBinCount = 20,
+      yBinCount = 20,
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUROC Mean"))
+    ),
+    GridMeanWidgetSpec(
+      xFieldName = x1,
+      yFieldName = x2,
+      valueFieldName = aupr,
+      xBinCount = 20,
+      yBinCount = 20,
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUPR Mean"))
     ),
     DistributionWidgetSpec(
-      fieldName = mdsX1,
+      fieldName = auroc,
+      groupFieldName = Some(clazz),
+      relativeValues = true,
+      displayOptions = MultiChartDisplayOptions(
+        chartType = Some(ChartType.Spline), gridWidth = Some(8), gridOffset = Some(2), height = Some(400), title = Some("AUROC by Clusterization Class")
+      )
+    ),
+    DistributionWidgetSpec(
+      fieldName = aupr,
+      groupFieldName = Some(clazz),
+      relativeValues = true,
+      displayOptions = MultiChartDisplayOptions(
+        chartType = Some(ChartType.Spline), gridWidth = Some(8), gridOffset = Some(2), height = Some(400), title = Some("AUPR by Clusterization Class")
+      )
+    ),
+    DistributionWidgetSpec(
+      fieldName = x1,
       groupFieldName = Some(category),
       relativeValues = true,
       displayOptions = MultiChartDisplayOptions(
-        chartType = Some(ChartType.Spline), gridWidth = Some(6), title = Some("MDS X1 by Feature Category")
+        chartType = Some(ChartType.Spline), gridWidth = Some(6), title = Some("X1 by Feature Category")
       )
     ),
     DistributionWidgetSpec(
-      fieldName = mdsX2,
+      fieldName = x2,
       groupFieldName = Some(category),
       relativeValues = true,
       displayOptions = MultiChartDisplayOptions(
-        chartType = Some(ChartType.Spline), gridWidth = Some(6), title = Some("MDS X2 by Feature Category")
-      )
-    ),
-    DistributionWidgetSpec(
-      fieldName = mdsX1,
-      groupFieldName = Some(team),
-      relativeValues = true,
-      displayOptions = MultiChartDisplayOptions(
-        chartType = Some(ChartType.Spline), gridWidth = Some(6), title = Some("MDS X1 by Team")
-      )
-    ),
-    DistributionWidgetSpec(
-      fieldName = mdsX2,
-      groupFieldName = Some(team),
-      relativeValues = true,
-      displayOptions = MultiChartDisplayOptions(
-        chartType = Some(ChartType.Spline), gridWidth = Some(6), title = Some("MDS X2 by Team")
+        chartType = Some(ChartType.Spline), gridWidth = Some(6), title = Some("X2 by Feature Category")
       )
     ),
     ScatterWidgetSpec(
-      xFieldName = mdsX1,
+      xFieldName = x1,
       yFieldName = auroc,
       groupFieldName = None,
       displayOptions = BasicDisplayOptions(gridWidth = Some(6), height = None)
     ),
     ScatterWidgetSpec(
-      xFieldName = mdsX2,
+      xFieldName = x2,
       yFieldName = auroc,
       groupFieldName = None,
       displayOptions = BasicDisplayOptions(gridWidth = Some(6), height = None)
     ),
     ScatterWidgetSpec(
-      xFieldName = mdsX1,
+      xFieldName = x1,
       yFieldName = aupr,
       groupFieldName = None,
       displayOptions = BasicDisplayOptions(gridWidth = Some(6), height = None)
     ),
     ScatterWidgetSpec(
-      xFieldName = mdsX2,
+      xFieldName = x2,
       yFieldName = aupr,
       groupFieldName = None,
       displayOptions = BasicDisplayOptions(gridWidth = Some(6), height = None)
@@ -114,27 +148,164 @@ class MPowerChallengeClusteringController @Inject()(
     WebContext(messagesApi, webJarAssets)
   }
 
-  def tremorMDS(topRank: Option[Int]) = mdsAux(
-    "Tremor Features", tremorMDSDsa, "Rank", topRank
+  // MDS
+
+  def tremorMDS(
+    topRank: Option[Int],
+    k: Int,
+    method: Int
+  ) = clusterizationAux(
+    "Tremor Features", tremorMDSDsa(k, method), "Rank", topRank, k, method, None, false, false
   )
 
-  def dyskinesiaMDS(topRank: Option[Int]) = mdsAux(
-    "Dyskinesia Features", dyskinesiaMDSDsa, "Rank", topRank
+  def dyskinesiaMDS(
+    topRank: Option[Int],
+    k: Int,
+    method: Int
+  ) = clusterizationAux(
+    "Dyskinesia Features", dyskinesiaMDSDsa(k, method), "Rank", topRank, k, method, None, false, false
   )
 
-  def bradykinesiaMDS(topRank: Option[Int]) = mdsAux(
-    "Bradykinesia Features", bradykinesiaMDSDsa, "Rank", topRank
+  def bradykinesiaMDS(
+    topRank: Option[Int],
+    k: Int,
+    method: Int
+  ) = clusterizationAux(
+    "Bradykinesia Features", bradykinesiaMDSDsa(k, method), "Rank", topRank, k, method, None, false, false
   )
 
-  def mPowerMDS(topRank: Option[Int]) = mdsAux(
-    "mPower Features", mPowerMDSDsa, "Rank_Unbiased_Subset", topRank
+  def mPowerMDS(
+    topRank: Option[Int],
+    k: Int,
+    method: Int
+  ) = clusterizationAux(
+    "mPower Features", mPowerMDSDsa(k, method), "Rank_Unbiased_Subset", topRank, k, method, None, false, false
   )
 
-  private def mdsAux(
+  private def tremorMDSDsa(
+    k: Int,
+    method: Int
+  ) = dsa(s"harvard_ldopa.tremor-scaled-mds_eigen_unscaled-${methodToString(method)}kmeans_${k}_iter_50")
+
+  private def dyskinesiaMDSDsa(
+    k: Int,
+    method: Int
+  ) = dsa(s"harvard_ldopa.dyskinesia-scaled-mds_eigen_unscaled-${methodToString(method)}kmeans_${k}_iter_50")
+
+  private def bradykinesiaMDSDsa(
+    k: Int,
+    method: Int
+  ) = dsa(s"harvard_ldopa.bradykinesia-scaled-mds_eigen_unscaled-${methodToString(method)}kmeans_${k}_iter_50")
+
+  private def mPowerMDSDsa(
+    k: Int,
+    method: Int
+  ) = dsa(s"mpower_challenge.mpower-scaled-mds_eigen_unscaled-${methodToString(method)}kmeans_${k}_iter_50")
+
+  // t-SNE
+
+  def tremorTSNE(
+    topRank: Option[Int],
+    k: Int,
+    method: Int,
+    pcaDims: Option[Int],
+    scaled: Boolean
+  ) = clusterizationAux(
+    "Tremor Features", tremorTSNEDsa(k, method, pcaDims, scaled), "Rank", topRank, k, method, pcaDims, scaled, true
+  )
+
+  def dyskinesiaTSNE(
+    topRank: Option[Int],
+    k: Int,
+    method: Int,
+    pcaDims: Option[Int],
+    scaled: Boolean
+  ) = clusterizationAux(
+    "Dyskinesia Features", dyskinesiaTSNEDsa(k, method, pcaDims, scaled), "Rank", topRank, k, method, pcaDims, scaled, true
+  )
+
+  def bradykinesiaTSNE(
+    topRank: Option[Int],
+    k: Int,
+    method: Int,
+    pcaDims: Option[Int],
+    scaled: Boolean
+  ) = clusterizationAux(
+    "Bradykinesia Features", bradykinesiaTSNEDsa(k, method, pcaDims, scaled), "Rank", topRank, k, method, pcaDims, scaled, true
+  )
+
+  // no pca for mPower t-SNE (TODO)
+  def mPowerTSNE(
+    topRank: Option[Int],
+    k: Int,
+    method: Int,
+    pcaDims: Option[Int],
+    scaled: Boolean
+  ) = clusterizationAux(
+    "mPower Features", mPowerTSNEDsa(k, method, None, scaled), "Rank_Unbiased_Subset", topRank, k, method, None, scaled, true
+  )
+
+  private def tremorTSNEDsa(
+    k: Int,
+    method: Int,
+    pcaDims: Option[Int],
+    scaled: Boolean
+  ) = dsa(s"harvard_ldopa.tremor${scaledToString(scaled)}-cols-2d_iter-4000_per-20_0_theta-0_25${pcaDimsToString(pcaDims)}-${methodToString(method)}kmeans_${k}_iter_50")
+
+  private def dyskinesiaTSNEDsa(
+    k: Int,
+    method: Int,
+    pcaDims: Option[Int],
+    scaled: Boolean
+  ) = dsa(s"harvard_ldopa.dyskinesia${scaledToString(scaled)}-cols-2d_iter-4000_per-20_0_theta-0_25${pcaDimsToString(pcaDims)}-${methodToString(method)}kmeans_${k}_iter_50")
+
+  private def bradykinesiaTSNEDsa(
+    k: Int,
+    method: Int,
+    pcaDims: Option[Int],
+    scaled: Boolean
+  ) = dsa(s"harvard_ldopa.bradykinesia${scaledToString(scaled)}-cols-2d_iter-4000_per-20_0_theta-0_25${pcaDimsToString(pcaDims)}-${methodToString(method)}kmeans_${k}_iter_50")
+
+  private def mPowerTSNEDsa(
+    k: Int,
+    method: Int,
+    pcaDims: Option[Int],
+    scaled: Boolean
+  ) = dsa(s"mpower_challenge.mpower${scaledToString(scaled)}-cols-2d_iter-4000_per-20_0_theta-0_25${pcaDimsToString(pcaDims)}-${methodToString(method)}kmeans_${k}_iter_50")
+
+  private def dsa(dataSetId: String) = dsaf(dataSetId).getOrElse(
+    throw new AdaException(s"Data set $dataSetId does not exist.")
+  )
+
+  private def methodToString(method: Int) =
+    method match {
+      case 1 => ""
+      case 2 => "bis"
+      case _ => throw new AdaException(s"Clusterization method $method unrecognized.")
+    }
+
+  private def scaledToString(scaled: Boolean) =
+    scaled match {
+      case true => "-scaled"
+      case false => ""
+    }
+
+  private def pcaDimsToString(pcaDims: Option[Int]) =
+    pcaDims match {
+      case Some(pcaDims) => s"_pca-$pcaDims"
+      case None => ""
+    }
+
+  private def clusterizationAux(
     title: String,
     dsa: DataSetAccessor,
     rankFieldName: String,
-    topRank: Option[Int]
+    topRank: Option[Int],
+    k: Int,
+    method: Int,
+    pcaDims: Option[Int],
+    scaled: Boolean,
+    isTSNE: Boolean
   ) = Action.async { implicit request =>
     val criteria = topRank.map(rank => Seq(rankFieldName #<= rank)).getOrElse(Nil)
 
@@ -154,11 +325,12 @@ class MPowerChallengeClusteringController @Inject()(
 
         val filteredWidgetSpecs = widgetSpecs.filter(_.fieldNames.forall(fieldNameSet.contains))
 
-        widgetGenerationService.applyOld(
+        widgetGenerationService(
           widgetSpecs = filteredWidgetSpecs,
           repo = dsa.dataSetRepo,
           criteria = criteria,
-          fields = fields
+          fields = fields,
+          genMethod = WidgetGenerationMethod.FullData
         )
       }
     } yield {
@@ -176,7 +348,7 @@ class MPowerChallengeClusteringController @Inject()(
           case _ => widget
         }
       }
-      Ok(clustering(title, newWidgets, count, rankJson.get.as[Int], topRank))
+      Ok(clustering(title, newWidgets, count, rankJson.get.as[Int], topRank, k, method, pcaDims, scaled, isTSNE))
     }
   }
 }

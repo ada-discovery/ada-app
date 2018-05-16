@@ -25,7 +25,7 @@ private class CorrelationWidgetGenerator(flowParallelism: Option[Int]) extends C
         val fieldLabels = fields.map(_.labelOrElseName)
 
         val widget = HeatmapWidget(
-          title(spec).getOrElse("Correlations"), fieldLabels, fieldLabels, correlations, Some(-1), Some(1), spec.displayOptions
+          title(spec).getOrElse("Correlations"), fieldLabels, fieldLabels, None, None, correlations, Some(-1), Some(1), true, spec.displayOptions
         )
         Some(widget)
       } else

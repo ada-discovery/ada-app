@@ -124,6 +124,7 @@ class WidgetGenerationServiceImpl @Inject() (
           case p: BoxWidgetSpec => Left(p)
           case p: CumulativeCountWidgetSpec => if (p.numericBinCount.isDefined) Left(p) else Right(p)
           case p: ScatterWidgetSpec => Right(p)
+          case p: GridMeanWidgetSpec => Right(p)
           case p: CorrelationWidgetSpec => Right(p)
           case p: BasicStatsWidgetSpec => Right(p)
           case p: TemplateHtmlWidgetSpec => Left(p)
@@ -241,12 +242,12 @@ class WidgetGenerationServiceImpl @Inject() (
     // collect all the fields required for min/max calculation for all the widgets
     val widgetSpecMinMaxFields =
       widgetSpecs.map { widgetSpec =>
-        val field = flowMinMaxField(widgetSpec, nameFieldMap)
-        (widgetSpec, field)
+        val fields = flowMinMaxFields(widgetSpec, nameFieldMap)
+        (widgetSpec, fields)
       }
 
-    val minMaxSubFilterIdFields = widgetSpecMinMaxFields.collect { case (spec, Some(field)) =>
-      (spec.subFilterId, field)
+    val minMaxSubFilterIdFields = widgetSpecMinMaxFields.flatMap { case (widgetSpec, fields) =>
+      fields.map(field => (widgetSpec.subFilterId, field))
     }.toSet
 
     for {
@@ -260,18 +261,17 @@ class WidgetGenerationServiceImpl @Inject() (
     } yield {
 
       // check if all the min/max values requested by widgets are defined... if not filter out the unfulfilled widgets and log a warning message
-      val filteredWidgetSpecs = widgetSpecMinMaxFields.collect { case (widgetSpec, minMaxField) =>
-        minMaxField match {
-          case Some(field) =>
-            val (min, max) = fieldNameSubFilterIdMinMaxMap.get((field.name, widgetSpec.subFilterId)).get
-            if (min.isDefined && max.isDefined) {
-              Some(widgetSpec)
-            } else {
-              logger.warn(s"Cannot generate a widget of type ${widgetSpec.getClass.getName} because its field ${field.name} has no min/max values. Probably it doesn't contain any values or all are null.")
-              None
-            }
+      val filteredWidgetSpecs = widgetSpecMinMaxFields.map { case (widgetSpec, minMaxFields) =>
+        val minMaxes = minMaxFields.map { field =>
+          val (min, max) = fieldNameSubFilterIdMinMaxMap.get((field.name, widgetSpec.subFilterId)).get
+          (field, min, max)
+        }
 
-          case None => Some(widgetSpec)
+        minMaxes.find{ case (_, min, max) => min.isEmpty || max.isEmpty }.map { fieldWithoutMinMax =>
+          logger.warn(s"Cannot generate a widget of type ${widgetSpec.getClass.getName} because its field ${fieldWithoutMinMax._1.name} has no min/max values. Probably it doesn't contain any values or all are null.")
+          None
+        }.getOrElse{
+          Some(widgetSpec)
         }
       }.flatten
 
@@ -525,31 +525,31 @@ class WidgetGenerationServiceImpl @Inject() (
 
     for {
       // retrieve min and max values if requested by a widget
-      fieldNameMinMax <- flowMinMaxField(widgetSpec, nameFieldMap).map { field =>
+      fieldNameMinMaxes <- sequence(
+        flowMinMaxFields(widgetSpec, nameFieldMap).map { field =>
 
-        getNumericMinMax(repo, finalCriteria, field).map { case (min, max) =>
-          Some((field.name, min, max))
+          getNumericMinMax(repo, finalCriteria, field).map { case (minOption, maxOption) =>
+            minOption.zip(maxOption).headOption.map { case (min, max) =>
+              Some((field.name, min, max))
+            }.getOrElse {
+              // otherwise return none and log a warning message
+              logger.warn(s"Cannot generate a widget of type ${widgetSpec.getClass.getName} because its field ${field.name} has no min/max values. Probably it doesn't contain any values or all are null.")
+              None
+            }
+          }
         }
-      }.getOrElse(
-        Future(None)
       )
 
       widget <-
-        fieldNameMinMax.map { case (fieldName, minOption, maxOption) =>
-          // field requires min and max values
-          minOption.zip(maxOption).headOption.map { case (min, max) =>
-            // if min and max values are available, create a map and generate a streamed widget
-            val fieldNameMinMaxes = Map((fieldName, subFilterId) -> (min, max))
-            genStreamedAux(widgetSpec, repo, criteria, nameFieldMap, fieldNameMinMaxes)
-          }.getOrElse {
-            // otherwise return none and log a warning message
-            logger.warn(s"Cannot generate a widget of type ${widgetSpec.getClass.getName} because its field $fieldName has no min/max values. Probably it doesn't contain any values or all are null.")
-            Future(None)
-          }
-        }.getOrElse(
-          // no min and max values are required, hence we can call a streamed widget generation with an empty map
-          genStreamedAux(widgetSpec, repo, criteria, nameFieldMap, Map())
-        )
+        if (fieldNameMinMaxes.contains(None)) {
+          Future(None)
+        } else {
+          // if min and max values are available, create a map and generate a streamed widget
+          val fieldNameMinMaxMap = fieldNameMinMaxes.collect { case Some(x) => x }.map { case (fieldName, min, max) =>
+            (fieldName, subFilterId) -> (min, max)
+          }.toMap
+          genStreamedAux(widgetSpec, repo, criteria, nameFieldMap, fieldNameMinMaxMap)
+        }
     } yield
       widget
   }
@@ -581,9 +581,23 @@ class WidgetGenerationServiceImpl @Inject() (
     nameFieldMap: Map[String, Field],
     fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
   ): Option[CalculatorWidgetGeneratorLoaded[_, Widget,_]] = {
-    val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
+    val fields = widgetSpec.fieldNames.map(nameFieldMap.get).toSeq
 
-    def minMax = flowMinMax(widgetSpec, nameFieldMap, fieldNameSubFilterIdMinMaxes)
+    if (fields.exists(_.isEmpty)) {
+      logger.warn(s"Cannot generate a widget ${widgetSpec.getClass.getSimpleName} because some of its fields do not exist : ${widgetSpec.fieldNames.mkString(", ")}.")
+      None
+    } else
+      createGenerator(widgetSpec, fields.flatten, nameFieldMap, fieldNameSubFilterIdMinMaxes)
+  }
+
+  private def createGenerator(
+    widgetSpec: WidgetSpec,
+    fields: Seq[Field],
+    nameFieldMap: Map[String, Field],
+    fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
+  ): Option[CalculatorWidgetGeneratorLoaded[_, Widget,_]] = {
+    def minMaxes = flowMinMaxes(widgetSpec, nameFieldMap, fieldNameSubFilterIdMinMaxes)
+    def minMax = minMaxes.head
 
     def aux[S <: WidgetSpec, W <: Widget, C <: CalculatorTypePack](
       generator: CalculatorWidgetGenerator[S, W, C]
@@ -631,6 +645,10 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: ScatterWidgetSpec if spec.groupFieldName.isDefined =>
         aux(GroupScatterWidgetGenerator[Any, Any])
 
+      case spec: GridMeanWidgetSpec =>
+        val minMaxValues = minMaxes
+        aux(GridMeanWidgetGenerator.apply(minMaxValues(0), minMaxValues(1)))
+
       case spec: CorrelationWidgetSpec =>
         aux(CorrelationWidgetGenerator(Some(streamedCorrelationCalcParallelism)))
 
@@ -641,39 +659,44 @@ class WidgetGenerationServiceImpl @Inject() (
     }
   }
 
-  private def flowMinMax(
+  private def flowMinMaxes(
     widgetSpec: WidgetSpec,
     nameFieldMap: Map[String, Field],
     fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
-  ): (Double, Double) = {
-    val fieldName = flowMinMaxField(widgetSpec, nameFieldMap).get.name
-    val subfilterId = widgetSpec.subFilterId
-    fieldNameSubFilterIdMinMaxes.get((fieldName, subfilterId)).getOrElse(
-      throw new AdaException(s"Min max values for field $fieldName requested by a widget ${widgetSpec.getClass.getName} is not available.")
-    )
+  ): Seq[(Double, Double)] = {
+    flowMinMaxFields(widgetSpec, nameFieldMap).map { field =>
+      val fieldName = field.name
+      val subfilterId = widgetSpec.subFilterId
+      fieldNameSubFilterIdMinMaxes.get((fieldName, subfilterId)).getOrElse(
+        throw new AdaException(s"Min max values for field $fieldName requested by a widget ${widgetSpec.getClass.getName} is not available.")
+      )
+    }
   }
 
-  private def flowMinMaxField(
+  private def flowMinMaxFields(
     widgetSpec: WidgetSpec,
     nameFieldMap: Map[String, Field]
-  ): Option[Field] = {
+  ): Seq[Field] = {
     val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
 
     widgetSpec match {
 
       case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && (fields(0).isDouble || fields(0).isDate || (fields(0).isInteger && spec.numericBinCount.isDefined)) =>
-        Some(fields(0))
+        Seq(fields(0))
 
       case spec: DistributionWidgetSpec if spec.groupFieldName.isDefined && (fields(1).isDouble || fields(1).isDate || (fields(1).isInteger && spec.numericBinCount.isDefined)) =>
-        Some(fields(1))
+        Seq(fields(1))
 
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty =>
-        Some(fields(0))
+        Seq(fields(0))
 
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined =>
-        Some(fields(1))
+        Seq(fields(1))
 
-      case _ => None
+      case spec: GridMeanWidgetSpec =>
+        Seq(fields(0), fields(1))
+
+      case _ => Nil
     }
   }
 }

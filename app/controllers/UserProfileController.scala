@@ -24,6 +24,7 @@ import models.security.{DeadboltUser, UserManager}
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import controllers.core.WebContext
 import reactivemongo.bson.BSONObjectID
+import util.SecurityUtil.restrictSubjectPresentAnyNoCaching
 
 class UserProfileController @Inject() (
     workspaceRepo: UserSettingsRepo,
@@ -49,7 +50,7 @@ class UserProfileController @Inject() (
   /**
     * Leads to profile page which shows some basic user information.
     */
-  def profile() = deadbolt.SubjectPresent()() {
+  def profile() = restrictSubjectPresentAnyNoCaching(deadbolt) {
     implicit request => Future {
       request.subject.map { case DeadboltUser(user) =>
         Ok(views.profile(user))
@@ -60,28 +61,9 @@ class UserProfileController @Inject() (
   }
 
   /**
-    * Leads to workspace, where user can inspect saved filters.
-    */
-  def workspace() = deadbolt.SubjectPresent()() {
-    implicit request =>
-      request.subject.map { case DeadboltUser(user) =>
-        for {
-          workspaceTrav <- workspaceRepo.find(Seq("email" #== user.email))
-        } yield {
-          if (workspaceTrav.isEmpty) // TODO: workspace will not be empty in final version!
-            Ok(views.workspace(user, new Workspace(None, "dummy", Workspace.emptyUserGroup, Seq(), Seq())))
-          else
-            Ok(views.workspace(user, workspaceTrav.head))
-        }
-      }.getOrElse(
-        Future(BadRequest("The user has not been logged in."))
-      )
-  }
-
-  /**
     * Leads to user settings, where the user is allowed to change uncritical user properties such as password, affilitiation, name.
     */
-  def settings() = deadbolt.SubjectPresent()() {
+  def settings() = restrictSubjectPresentAnyNoCaching(deadbolt) {
     implicit request => Future {
       request.subject.map { case DeadboltUser(user) =>
         Ok(views.profileSettings(userUpdateForm.fill(user)))
@@ -95,7 +77,7 @@ class UserProfileController @Inject() (
     * Save changes made in user settings page to database.
     * Extracts current user from token for information match.
     */
-  def updateSettings() = deadbolt.SubjectPresent()() {
+  def updateSettings() = restrictSubjectPresentAnyNoCaching(deadbolt) {
     implicit request =>
       request.subject.map { case DeadboltUser(user) =>
         userUpdateForm.bindFromRequest.fold(
@@ -121,15 +103,6 @@ class UserProfileController @Inject() (
         Future(BadRequest("The user has not been logged in."))
       )
   }
-
-
-  /**
-    * Advanced options only visible to admin user.
-    * Simple redirect to runnables in AdminController by now.
-    */
-  def adminPanel() = Action(
-    Redirect(routes.AdminController.listRunnables())
-  )
 
   /**
     * Updates user data by setting unprotected fields to new values.

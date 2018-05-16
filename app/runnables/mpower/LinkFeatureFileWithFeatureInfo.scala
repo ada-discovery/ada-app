@@ -34,9 +34,6 @@ class LinkFeatureFileWithFeatureInfo @Inject()(
     val scoreDsa = dsaf(input.scoreDataSetId).get
 
     for {
-      // get the name of the source score data set
-      dataSetName <- metaInfoDsa.dataSetName
-
       // get all the fields
       fields <- metaInfoDsa.fieldRepo.find()
 
@@ -50,7 +47,7 @@ class LinkFeatureFileWithFeatureInfo @Inject()(
       targetDsa <- dataSetService.register(
         metaInfoDsa,
         input.newDataSetId,
-        dataSetName + " " + input.newDataSetNameSuffix,
+        input.newDataSetName,
         StorageType.ElasticSearch,
         setting.defaultDistributionFieldName
       )
@@ -74,17 +71,15 @@ class LinkFeatureFileWithFeatureInfo @Inject()(
         }.toMap
       }
 
-      // create new jsons with new fields (from file)... first column is expected to be submission column
+      // create new jsons with new fields (from file)... first column is expected to be a submission column
       (newJsons, fileFields) = {
         val lines = Source.fromFile(input.featureFileName).getLines()
 
         // header could be ignored
         val header = lines.take(1).toSeq.head
 
-        val fileFields = header.split(",", -1).tail.zipWithIndex.map { case (_, index) =>
-          val fieldName = input.newFieldNamePrefix + (index + 1)
-          val fieldLabel = input.newFieldLabelPrefix + (index + 1)
-          Field(fieldName, Some(fieldLabel), FieldTypeId.Double, false)
+        val fileFields = header.split(",", -1).tail.map { fieldName =>
+          Field(fieldName, Some(fieldName.capitalize), FieldTypeId.Double, false)
         }
 
         val jsons = lines.map { line =>
@@ -159,7 +154,5 @@ case class LinkFeatureFileWithFeatureInfoSpec(
   scoreDataSetId: String,
   featureFileName: String,
   newDataSetId: String,
-  newDataSetNameSuffix: String,
-  newFieldNamePrefix: String,
-  newFieldLabelPrefix: String
+  newDataSetName: String
 )

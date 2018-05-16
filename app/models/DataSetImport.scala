@@ -113,6 +113,7 @@ case class RedCapDataSetImport(
   url: String,
   token: String,
   importDictionaryFlag: Boolean,
+  eventNames: Seq[String] = Nil,
   categoriesToInheritFromFirstVisit: Seq[String] = Nil,
   saveBatchSize: Option[Int] = None,
   scheduled: Boolean = false,

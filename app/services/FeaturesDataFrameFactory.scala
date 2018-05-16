@@ -79,7 +79,7 @@ object FeaturesDataFrameFactory {
       fields.map(_._1)
     ).toSet
 
-  private def prepFeaturesDataFrame(
+  def prepFeaturesDataFrame(
     featureFieldNames: Set[String],
     outputFieldName: Option[String],
     dropNaValues: Boolean = true)(

@@ -92,6 +92,14 @@ class AllDefinedEuclideanDistanceCalcConverter extends AllDefinedSeqDoubleConver
   override def specificUseClass = Some(AllDefinedEuclideanDistanceCalc.getClass)
 }
 
+class SeqBinMeanCalcConverter extends SeqDoubleConverter {
+  override def specificUseClass = Some(SeqBinMeanCalcAux.getClass)
+}
+
+class AllDefinedSeqBinMeanCalcConverter extends AllDefinedSeqDoubleConverter {
+  override def specificUseClass = Some(classOf[AllDefinedSeqBinMeanCalc])
+}
+
 ////////////////////
 // Helper Classes //
 ////////////////////

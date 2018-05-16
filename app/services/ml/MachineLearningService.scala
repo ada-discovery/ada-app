@@ -57,7 +57,7 @@ trait MachineLearningService {
     replicationData: Traversable[JsObject] = Nil
   ): Future[RegressionResultsHolder]
 
-  def cluster[M <: Model[M]](
+  def cluster(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
@@ -65,7 +65,15 @@ trait MachineLearningService {
     pcaDim: Option[Int] = None
   ): Traversable[(String, Int)]
 
-  def clusterAndGetPCA12[M <: Model[M]](
+  def clusterDf(
+    dataFrame: DataFrame,
+    idColumnName: String,
+    mlModel: UnsupervisedLearning,
+    featuresNormalizationType: Option[VectorTransformType.Value],
+    pcaDim: Option[Int] = None
+  ): Traversable[(String, Int)]
+
+  def clusterAndGetPCA12(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
@@ -469,7 +477,7 @@ private class MachineLearningServiceImpl @Inject() (
     pipeline.fit(df).transform(df)
   }
 
-  override def cluster[M <: Model[M]](
+  override def cluster(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
@@ -480,7 +488,7 @@ private class MachineLearningServiceImpl @Inject() (
     idClusters
   }
 
-  override def clusterAndGetPCA12[M <: Model[M]](
+  override def clusterAndGetPCA12(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
@@ -503,19 +511,45 @@ private class MachineLearningServiceImpl @Inject() (
     (idClusters, idPca12Values)
   }
 
-  private def clusterAux[M <: Model[M]](
+  override def clusterDf(
+    dataFrame: DataFrame,
+    idColumnName: String,
+    mlModel: UnsupervisedLearning,
+    featuresNormalizationType: Option[VectorTransformType.Value],
+    pcaDim: Option[Int] = None
+  ): Traversable[(String, Int)] = {
+    val featureNames = dataFrame.columns.filterNot(_.equals(idColumnName))
+    val featureDf = dataFrame.transform(
+      FeaturesDataFrameFactory.prepFeaturesDataFrame(featureNames.toSet, None)
+    )
+
+    val (df, idClusters) = clusterAux2(featureDf, idColumnName, mlModel, featuresNormalizationType, pcaDim)
+    idClusters
+  }
+
+  private def clusterAux(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     mlModel: UnsupervisedLearning,
     featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDim: Option[Int]
   ): (DataFrame, Traversable[(String, Int)]) = {
-    val trainer = SparkMLEstimatorFactory[M](mlModel)
-
     // prepare a data frame for learning
     val featureFieldNames = fields.map(_._1)
     val fieldsWithId = fields ++ Seq((JsObjectIdentity.name, FieldTypeSpec(FieldTypeId.String)))
     val df = FeaturesDataFrameFactory(session, data, fieldsWithId, featureFieldNames)
+
+    clusterAux2(df, JsObjectIdentity.name, mlModel, featuresNormalizationType, pcaDim)
+  }
+
+  private def clusterAux2[M <: Model[M]](
+    df: DataFrame,
+    idColumnName: String,
+    mlModel: UnsupervisedLearning,
+    featuresNormalizationType: Option[VectorTransformType.Value],
+    pcaDim: Option[Int]
+  ): (DataFrame, Traversable[(String, Int)]) = {
+    val trainer = SparkMLEstimatorFactory[M](mlModel)
 
     val normalizedDf = normalizeFeaturesOptional(featuresNormalizationType)(df)
 
@@ -525,78 +559,39 @@ private class MachineLearningServiceImpl @Inject() (
     val cachedDf = dataFrame.cache()
 
     val (model, predictions) = fit(trainer, cachedDf)
+    predictions.cache()
 
     import sparkApp.session.implicits._
 
     def extractClusterClasses(columnName: String): Traversable[(String, Int)] =
-      predictions.select(JsObjectIdentity.name, columnName).map { r =>
+      predictions.select(idColumnName, columnName).map { r =>
         val id = r(0).asInstanceOf[String]
         val clazz = r(1).asInstanceOf[Int]
         (id, clazz + 1)
       }.collect
 
     def extractClusterClasssedFromProbabilities(columnName: String): Traversable[(String, Int)] =
-      predictions.select(JsObjectIdentity.name, columnName).map { r =>
+      predictions.select(idColumnName, columnName).map { r =>
         val id = r(0).asInstanceOf[String]
         val clazz = r(1).asInstanceOf[DenseVector].values.zipWithIndex.maxBy(_._1)._2
         (id, clazz + 1)
       }.collect
 
     val result = model match {
-      case m: KMeansModel =>
-        // Evaluate clustering by computing Within Set Sum of Squared Errors.
-        //        val WSSSE = m.computeCost(cachedDf)
-        //        println(s"Within Set Sum of Squared Errors = $WSSSE")
-
-        //        // Shows the result.
-        //        println("Cluster Centers:")
-        //        m.clusterCenters.foreach(println)
-
-        // extract cluster classes
+      case _: KMeansModel =>
         extractClusterClasses("prediction")
 
-      case m: LDAModel =>
-        //        val ll = m.logLikelihood(cachedDf)
-        //        val lp = m.logPerplexity(cachedDf)
-        //        println(s"The lower bound on the log likelihood of the entire corpus: $ll")
-        //        println(s"The upper bound bound on perplexity: $lp")
-        //
-        //        // Describe topics.
-        //        val topics = m.describeTopics(3)
-        //        println("The topics described by their top-weighted terms:")
-        //        topics.show(false)
-
-        //        // Shows the result.
-        //        val transformed = model.transform(cachedDf)
-        //        transformed.show(false)
-
-        // extract cluster classes
+      case _: LDAModel =>
         extractClusterClasssedFromProbabilities("topicDistribution")
 
-      case m: BisectingKMeansModel =>
-        // Evaluate clustering.
-        //        val cost = m.computeCost(cachedDf)
-        //        println(s"Within Set Sum of Squared Errors = $cost")
-        //
-        //        // Shows the result.
-        //        println("Cluster Centers: ")
-        //        val centers = m.clusterCenters
-        //        centers.foreach(println)
-
-        // extract cluster classes
+      case _: BisectingKMeansModel =>
         extractClusterClasses("prediction")
 
-      case m: GaussianMixtureModel =>
-        // output parameters of mixture model model
-        //        for (i <- 0 until m.getK) {
-        //          println(s"Gaussian $i:\nweight=${m.weights(i)}\n" +
-        //            s"mu=${m.gaussians(i).mean}\nsigma=\n${m.gaussians(i).cov}\n")
-        //        }
-
-        // extract cluster classes
+      case _: GaussianMixtureModel =>
         extractClusterClasssedFromProbabilities("probability")
     }
 
+    predictions.unpersist()
     cachedDf.unpersist
 
     (normalizedDf, result)
@@ -753,7 +748,7 @@ private class MachineLearningServiceImpl @Inject() (
 
   case class EvaluatorWrapper[Q](metric: Q, evaluator: Evaluator)
 
-  private def fit[M <: Model[M], Q](
+  private def fit[M <: Model[M]](
     estimator: Estimator[M],
     data: DataFrame
   ): (M, DataFrame) = {

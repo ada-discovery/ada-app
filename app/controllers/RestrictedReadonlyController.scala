@@ -79,7 +79,7 @@ trait SubjectPresentRestricted {
   protected def restrict[A](
     bodyParser: BodyParser[A])(
     action: AuthenticatedAction[A]
-  ) = restrictSubjectPresent[A](deadbolt, bodyParser)(action)
+  ) = restrictSubjectPresentNoCaching[A](deadbolt, bodyParser)(action)
 }
 
 trait SubjectPresentRestrictedReadonlyController[ID] extends RestrictedReadonlyController[ID] with SubjectPresentRestricted

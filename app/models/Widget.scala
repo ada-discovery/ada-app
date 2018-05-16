@@ -72,9 +72,12 @@ case class HeatmapWidget(
   title: String,
   xCategories: Seq[String],
   yCategories: Seq[String],
+  xAxisCaption: Option[String],
+  yAxisCaption: Option[String],
   data: Seq[Seq[Option[Double]]],
   min: Option[Double] = None,
   max: Option[Double] = None,
+  twoColors: Boolean = true,
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 
@@ -238,11 +241,14 @@ object Widget {
       (__ \ "title").format[String] and
       (__ \ "xCategories").format[Seq[String]] and
       (__ \ "yCategories").format[Seq[String]] and
+      (__ \ "xAxisCaption").formatNullable[String] and
+      (__ \ "yAxisCaption").formatNullable[String] and
       (__ \ "data").format[Seq[Seq[Option[Double]]]] and
       (__ \ "min").format[Option[Double]] and
       (__ \ "max").format[Option[Double]] and
+      (__ \ "twoColors").format[Boolean] and
       (__ \ "displayOptions").format[DisplayOptions]
-    )(HeatmapWidget(_, _, _, _, _, _, _), {x => (x.title, x.xCategories, x.yCategories, x.data, x.min, x.max, x.displayOptions)})
+    )(HeatmapWidget(_, _, _, _, _, _, _, _, _, _), {x => (x.title, x.xCategories, x.yCategories, x.xAxisCaption, x.yAxisCaption, x.data, x.min, x.max, x.twoColors, x.displayOptions)})
   }
 
   implicit val basicStatsResulFormat = Json.format[BasicStatsResult]

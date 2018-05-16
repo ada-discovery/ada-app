@@ -30,7 +30,7 @@ class MPowerChallengeCorrelationController @Inject()(
 
   private val dyskinesiaCorrDateSetPrefix = "harvard_ldopa.dyskinesia_correlation_abs"
   private lazy val dyskinesiaScoreBoardDsa = dsaf("harvard_ldopa.score_board_dyskinesia_ext").get
-  private lazy val dyskinesiaFeatureInfoDsa = dsaf("harvard_ldopa.dyskinesia_feature_meta_info").get
+  private lazy val dyskinesiaFeatureInfoDsa = dsaf("harvard_ldopa.dyskinesia_feature_info").get
 
   private val bradykinesiaCorrDataSetPrefix = "harvard_ldopa.bradykinesia_correlation_abs"
   private lazy val bradykinesiaScoreBoardDsa = dsaf("harvard_ldopa.score_board_bradykinesia_ext").get

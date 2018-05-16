@@ -104,11 +104,28 @@ object SecurityUtil {
   ): Action[A] =
     deadbolt.SubjectPresent[A]()(bodyParser)(action)
 
+  def restrictSubjectPresentNoCaching[A](
+    deadbolt: DeadboltActions,
+    bodyParser: BodyParser[A])(
+    action: AuthenticatedAction[A]
+  ): Action[A] =
+    WithNoCaching(
+      restrictSubjectPresent(deadbolt, bodyParser)(action)
+    )
+
   def restrictSubjectPresentAny(
     deadbolt: DeadboltActions)(
     action: AuthenticatedAction[AnyContent]
   ): Action[AnyContent] =
     restrictSubjectPresent(deadbolt, parse.anyContent)(action)
+
+  def restrictSubjectPresentAnyNoCaching(
+    deadbolt: DeadboltActions)(
+    action: AuthenticatedAction[AnyContent]
+  ): Action[AnyContent] =
+    WithNoCaching(
+      restrictSubjectPresentAny(deadbolt)(action)
+    )
 
   def toAuthenticatedAction[A](action: Action[A]): AuthenticatedAction[A] = {
     implicit request => action.apply(request)

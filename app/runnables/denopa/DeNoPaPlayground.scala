@@ -26,7 +26,7 @@ class DeNoPaPlayground @Inject() (
   private val firstVisitDsa = dsaf("denopa.raw_clinical_first_visit").get
   private val secondVisitDsa = dsaf("denopa.raw_clinical_second_visit").get
 
-  private val folder = configuration.getString("denopa.translation.import.folder").get
+  private val folder = "/home/peter.banda/Data/DeNoPa/translations/final/"
 
   private val filename_de = folder + "DeNoPa_dictionary_de"
   private val filename_en = folder + "DeNoPa_dictionary_en-utf8"

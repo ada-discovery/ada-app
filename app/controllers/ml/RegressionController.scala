@@ -19,7 +19,7 @@ import play.api.mvc.{Action, AnyContent, Result}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAny}
+import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, regression => view}
 import controllers.ml.routes.{RegressionController => regressionRoutes}
 import dataaccess.AscSort
@@ -222,7 +222,7 @@ class RegressionController @Inject()(
 
   override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
 
-  def idAndNames = restrictSubjectPresentAny(deadbolt) {
+  def idAndNames = restrictSubjectPresentAnyNoCaching(deadbolt) {
     implicit request =>
       for {
         regressions <- repo.find(

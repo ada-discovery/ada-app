@@ -163,9 +163,19 @@ trait CalculatorExecutors {
   def pearsonCorrelationAllDefinedExec =
     withSeq(AllDefinedPearsonCorrelationCalc)
 
+  // Euclidean distance
+
   def euclideanDistanceExec =
     withSeq(EuclideanDistanceCalc)
 
   def euclideanDistanceAllDefinedExec =
     withSeq(AllDefinedEuclideanDistanceCalc)
+
+  // Seq Bin Mean
+
+  def seqBinMeanExec =
+    withSeq(SeqBinMeanCalc.apply)
+
+  def seqBinMeanAllDefinedExec =
+    withSeq(AllDefinedSeqBinMeanCalc.apply)
 }
