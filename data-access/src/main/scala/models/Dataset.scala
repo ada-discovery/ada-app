@@ -150,6 +150,18 @@ case class ScatterWidgetSpec(
   override val fieldNames = Seq(groupFieldName, Some(xFieldName), Some(yFieldName)).flatten
 }
 
+case class GridMeanWidgetSpec(
+  xFieldName: String,
+  yFieldName: String,
+  valueFieldName: String,
+  xBinCount: Int,
+  yBinCount: Int,
+  subFilterId: Option[BSONObjectID] = None,
+  displayOptions: BasicDisplayOptions = BasicDisplayOptions()
+) extends WidgetSpec {
+  override val fieldNames = Seq(xFieldName, yFieldName, valueFieldName)
+}
+
 case class CorrelationWidgetSpec(
   fieldNames: Seq[String],
   subFilterId: Option[BSONObjectID] = None,
@@ -301,6 +313,7 @@ object DataSetFormattersAndIds {
       ManifestedFormat(Json.format[CumulativeCountWidgetSpec]),
       ManifestedFormat(Json.format[BoxWidgetSpec]),
       ManifestedFormat(Json.format[ScatterWidgetSpec]),
+      ManifestedFormat(Json.format[GridMeanWidgetSpec]),
       ManifestedFormat(Json.format[CorrelationWidgetSpec]),
       ManifestedFormat(Json.format[BasicStatsWidgetSpec]),
       ManifestedFormat(Json.format[TemplateHtmlWidgetSpec])

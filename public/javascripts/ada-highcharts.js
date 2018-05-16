@@ -539,9 +539,24 @@
         chartElementId,
         xCategories,
         yCategories,
+        xAxisCaption,
+        yAxisCaption,
         data,
+        min,
+        max,
+        twoColors,
         height
     ) {
+        var colors = (twoColors) ?
+            [
+                [0, Highcharts.getOptions().colors[5]],
+                [0.5, '#FFFFFF'],
+                [1, Highcharts.getOptions().colors[0]]
+            ] : [
+                [0, '#FFFFFF'],
+                [1, Highcharts.getOptions().colors[0]]
+            ]
+
         $('#' + chartElementId).highcharts({
             chart: {
                 type: 'heatmap',
@@ -552,6 +567,10 @@
             },
             xAxis: {
                 categories: xCategories,
+                title: {
+                    enabled: (xAxisCaption != null),
+                    text: xAxisCaption
+                },
                 labels: {
                     formatter: function() {
                         return shorten(this.value, 10);
@@ -560,7 +579,10 @@
             },
             yAxis: {
                 categories: yCategories,
-                title: null,
+                title: {
+                    enabled: (yAxisCaption != null),
+                    text: yAxisCaption
+                },
                 labels: {
                     formatter: function() {
                         return shorten(this.value, 10);
@@ -571,13 +593,9 @@
                 enabled: false
             },
             colorAxis: {
-                stops: [
-                    [0, Highcharts.getOptions().colors[5]],
-                    [0.5, '#FFFFFF'],
-                    [1, Highcharts.getOptions().colors[0]]
-                ],
-                min: -1,
-                max: 1
+                stops: colors,
+                min: min,
+                max: max
 //                    minColor: '#FFFFFF',
 //                    maxColor: Highcharts.getOptions().colors[0]
             },
@@ -591,8 +609,9 @@
             },
             tooltip: {
                 formatter: function () {
+                    var value = (this.point.value) ? Highcharts.numberFormat(this.point.value, 3, '.') : "Undefined"
                     return '<b>' + this.series.xAxis.categories[this.point.x] + '</b><br><b>' +
-                        this.series.yAxis.categories[this.point.y] + '</b><br>' + Highcharts.numberFormat(this.point.value, 3, '.');
+                        this.series.yAxis.categories[this.point.y] + '</b><br>' + value;
                 },
                 valueDecimals: 2
             },

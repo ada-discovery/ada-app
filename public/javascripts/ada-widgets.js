@@ -179,12 +179,12 @@ function heatmapWidget(elementId, widget) {
     var yCategories =  widget.yCategories
     var data = widget.data.map(function(seq, i) {
         return seq.map(function(value, j) {
-            return [i, j, value || 0]
+            return [i, j, value]
         })
     })
 
     var height = widget.displayOptions.height || 400
-    heatmapChart(widget.title, elementId, xCategories, yCategories, [].concat.apply([], data), height)
+    heatmapChart(widget.title, elementId, xCategories, yCategories, widget.xAxisCaption, widget.yAxisCaption, [].concat.apply([], data), widget.min, widget.max, widget.twoColors, height)
 };
 
 function htmlWidget(elementId, widget) {
