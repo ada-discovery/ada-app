@@ -7,8 +7,8 @@ import scala.reflect.ClassTag
 
 object ConversionUtil {
 
-  private val minValidYear = 1900
-  private val maxValidYear = 2100
+  private val minValidYear = 1800
+  private val maxValidYear = 3000
 
   def toDouble = convert(_.toDouble)_
 
@@ -28,7 +28,7 @@ object ConversionUtil {
     val dates = dateFormats.map { format =>
       try {
         val dateFormat = new SimpleDateFormat(format)
-        dateFormat.setLenient(false)
+//        dateFormat.setLenient(false)
         val parsePosition = new ParsePosition(0)
         val date = dateFormat.parse(text, parsePosition)
         if (parsePosition.getIndex == text.length) {

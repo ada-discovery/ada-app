@@ -3,6 +3,7 @@ package dataaccess
 object FieldTypeHelper {
   val nullAliases = Set("", "na", "n/a", "null")
   val dateFormats = Seq(
+    "yyyy-MM-dd HH:mm:ss.SS",
     "yyyy-MM-dd HH:mm:ss",
     "yyyy-MM-dd HH:mm",
     "yyyy-MM-dd HH",

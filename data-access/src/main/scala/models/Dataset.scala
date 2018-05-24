@@ -150,16 +150,32 @@ case class ScatterWidgetSpec(
   override val fieldNames = Seq(groupFieldName, Some(xFieldName), Some(yFieldName)).flatten
 }
 
-case class GridMeanWidgetSpec(
+object AggType extends Enumeration {
+  val Mean, Max, Min, Variance = Value
+}
+
+case class HeatmapAggWidgetSpec(
   xFieldName: String,
   yFieldName: String,
   valueFieldName: String,
   xBinCount: Int,
   yBinCount: Int,
+  aggType: AggType.Value,
   subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec {
   override val fieldNames = Seq(xFieldName, yFieldName, valueFieldName)
+}
+
+case class GridDistributionCountWidgetSpec(
+  xFieldName: String,
+  yFieldName: String,
+  xBinCount: Int,
+  yBinCount: Int,
+  subFilterId: Option[BSONObjectID] = None,
+  displayOptions: BasicDisplayOptions = BasicDisplayOptions()
+) extends WidgetSpec {
+  override val fieldNames = Seq(xFieldName, yFieldName)
 }
 
 case class CorrelationWidgetSpec(
@@ -301,7 +317,8 @@ object DataSetFormattersAndIds {
       )
   )
 
-  implicit val chartEnumTypeFormat = EnumFormat.enumFormat(ChartType)
+  implicit val chartTypeFormat = EnumFormat.enumFormat(ChartType)
+  implicit val aggTypeFormat = EnumFormat.enumFormat(AggType)
   implicit val fieldChartTypeFormat = Json.format[FieldChartType]
   implicit val basicDisplayOptionsFormat = Json.format[BasicDisplayOptions]
   implicit val distributionDisplayOptionsFormat = Json.format[MultiChartDisplayOptions]
@@ -313,7 +330,8 @@ object DataSetFormattersAndIds {
       ManifestedFormat(Json.format[CumulativeCountWidgetSpec]),
       ManifestedFormat(Json.format[BoxWidgetSpec]),
       ManifestedFormat(Json.format[ScatterWidgetSpec]),
-      ManifestedFormat(Json.format[GridMeanWidgetSpec]),
+      ManifestedFormat(Json.format[HeatmapAggWidgetSpec]),
+      ManifestedFormat(Json.format[GridDistributionCountWidgetSpec]),
       ManifestedFormat(Json.format[CorrelationWidgetSpec]),
       ManifestedFormat(Json.format[BasicStatsWidgetSpec]),
       ManifestedFormat(Json.format[TemplateHtmlWidgetSpec])
