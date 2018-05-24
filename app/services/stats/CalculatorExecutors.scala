@@ -171,11 +171,35 @@ trait CalculatorExecutors {
   def euclideanDistanceAllDefinedExec =
     withSeq(AllDefinedEuclideanDistanceCalc)
 
-  // Seq Bin Mean
+  // Seq bin aggregation
 
   def seqBinMeanExec =
     withSeq(SeqBinMeanCalc.apply)
 
   def seqBinMeanAllDefinedExec =
     withSeq(AllDefinedSeqBinMeanCalc.apply)
+
+  def seqBinMaxExec =
+    withSeq(SeqBinMaxCalc.apply)
+
+  def seqBinMaxAllDefinedExec =
+    withSeq(AllDefinedSeqBinMaxCalc.apply)
+
+  def seqBinMinExec =
+    withSeq(SeqBinMinCalc.apply)
+
+  def seqBinMinAllDefinedExec =
+    withSeq(AllDefinedSeqBinMinCalc.apply)
+
+  def seqBinVarianceExec =
+    withSeq(SeqBinVarianceCalc.apply)
+
+  def seqBinVarianceAllDefinedExec =
+    withSeq(AllDefinedSeqBinVarianceCalc.apply)
+
+  def seqBinCountExec =
+    withSeq(SeqBinCountCalc.apply)
+
+  def seqBinCountAllDefinedExec =
+    withSeq(AllDefinedSeqBinCountCalc.apply)
 }

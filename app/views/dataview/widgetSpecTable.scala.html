@@ -1,5 +1,5 @@
 @import views.html.table.{displayTable, dynamicTable}
-@import views.html.elements.labelValue
+@import views.html.elements.{labelValue, selectEnum}
 @import util.typeColumns
 @import models.ChartType
 @import models.{WidgetSpec, Field, Filter}
@@ -10,7 +10,6 @@
 @import reactivemongo.play.json.BSONFormats._
 @import dataaccess.JsonUtil
 @import play.api.libs.json.JsArray
-@import controllers.dataset.FilterRouter
 @import reactivemongo.bson.BSONObjectID
 
 @(
@@ -71,11 +70,16 @@
                     ("yFieldNameTypeahead", x.yFieldName)) ++
                     x.groupFieldName.map( ("groupFieldNameTypeahead", _)
                 ))
-            case x: GridMeanWidgetSpec =>
+            case x: HeatmapAggWidgetSpec =>
                 fieldLabelElements(Seq(
                     ("xFieldNameTypeahead", x.xFieldName),
                     ("yFieldNameTypeahead", x.yFieldName),
                     ("valueFieldNameTypeahead", x.valueFieldName)
+                ))
+            case x: GridDistributionCountWidgetSpec =>
+                fieldLabelElements(Seq(
+                    ("xFieldNameTypeahead", x.xFieldName),
+                    ("yFieldNameTypeahead", x.yFieldName)
                 ))
             case x: BasicStatsWidgetSpec =>
                 fieldLabelElements(Seq(
@@ -144,11 +148,19 @@
                             Some(s"Show Relative Values: ${x.relativeValues}"),
                             Some(s"Date Month Bins: ${x.useDateMonthBins}")
                         )
-                    case x: GridMeanWidgetSpec =>
+                    case x: HeatmapAggWidgetSpec =>
+                        Seq(
+                            Some("X Bin Count: " + x.xBinCount),
+                            Some("Y Bin Count: " + x.yBinCount),
+                            Some("Agg Type: " + x.aggType)
+                        )
+
+                    case x: GridDistributionCountWidgetSpec =>
                         Seq(
                             Some("X Bin Count: " + x.xBinCount),
                             Some("Y Bin Count: " + x.yBinCount)
                         )
+
                     case x: TemplateHtmlWidgetSpec =>
                         Seq(
                             Some("Content: " + Html(util.shorten(x.content, 50)))
@@ -203,13 +215,26 @@
         var isBoxType = concreteClass == "@{classOf[BoxWidgetSpec].getName}"
         var isScatterType = concreteClass == "@{classOf[ScatterWidgetSpec].getName}"
         var isCorrelationType = concreteClass == "@{classOf[CorrelationWidgetSpec].getName}"
+        var isHeatmapAggType = concreteClass == "@{classOf[HeatmapAggWidgetSpec].getName}"
+        var isGridDistributionCountType = concreteClass == "@{classOf[GridDistributionCountWidgetSpec].getName}"
+        var isTemplateHtmlType = concreteClass == "@{classOf[TemplateHtmlWidgetSpec].getName}"
+
+        var xyFieldsDefined = values["xFieldName"] != null && values["xFieldName"].length > 0 && values["yFieldName"] != null && values["yFieldName"].length > 0
 
         if (isDistributionType || isCumulativeCountType || isBoxType) {
             isDefined = values["fieldName"] != null && values["fieldName"].length > 0
         }
 
         if (isScatterType) {
-            isDefined = values["xFieldName"] != null && values["xFieldName"].length > 0 && values["yFieldName"] != null && values["yFieldName"].length > 0
+            isDefined = xyFieldsDefined
+        }
+
+        if (isGridDistributionCountType) {
+            isDefined = xyFieldsDefined && values["xBinCount"].length > 0 && values["yBinCount"].length > 0
+        }
+
+        if (isHeatmapAggType) {
+            isDefined = xyFieldsDefined && values["valueFieldName"] != null && values["valueFieldName"].length > 0 && values["xBinCount"].length > 0 && values["yBinCount"].length > 0 && values["aggType"].length > 0
         }
 
         if (isCorrelationType) {
@@ -242,31 +267,46 @@
             if (fieldLabels.length > 0)
                 contentDisplayColumn.append("<div class='row'>Fields: " + fieldLabels + "</div>")
 
-            var subFilterIdValue = "Sub Filter Id: " + values["subFilterId"]
+            // DISPLAY ELEMENTS
+            var displayElements = []
 
             // distribution and cumulative count
             var isDistributionOrCumulativeCountType = isDistributionType || isCumulativeCountType
 
             var numericBinCount = values["numericBinCount"]
-            var numericBinCountLabelValue =  (isDistributionOrCumulativeCountType && numericBinCount) ? ("Numeric Bin Count: " + numericBinCount) : "";
+            if (isDistributionOrCumulativeCountType) {
+                if (numericBinCount)
+                    displayElements.push("Numeric Bin Count: " + numericBinCount)
 
-            var relativeValues = values["relativeValues"]
-            var relativeValuesValue =  (isDistributionOrCumulativeCountType) ? ("Show Relative Values: " + relativeValues) : "";
-
-            var useDateMonthBins = values["useDateMonthBins"]
-            var useDateMonthBinsValue =  (isDistributionOrCumulativeCountType) ? ("Date Month Bins: " + useDateMonthBins) : "";
+                displayElements.push("Show Relative Values: " + values["relativeValues"])
+                displayElements.push("Date Month Bins: " + values["useDateMonthBins"])
+             }
 
             // template html
-            var isTemplateHtmlType = concreteClass == "@{classOf[TemplateHtmlWidgetSpec].getName}"
-            var contentLabelValue =  (isTemplateHtmlType) ? ("Content: " + values["content"]) : "";
+            if (isTemplateHtmlType)
+                displayElements.push("Content: " + values["content"])
 
             // correlation
-            var isCorrelationType = concreteClass == "@{classOf[CorrelationWidgetSpec].getName}"
-            var fieldNamesValue = (isCorrelationType) ? ("Fields: " + values["fieldNames"]) : "";
+            if (isCorrelationType)
+                displayElements.push("Fields: " + values["fieldNames"])
 
-            contentDisplayColumn.append("<div class='row'>" + numericBinCountLabelValue + relativeValuesValue + useDateMonthBinsValue + contentLabelValue + fieldNamesValue + subFilterIdValue + "</div>")
+            if (isGridDistributionCountType || isHeatmapAggType) {
+                displayElements.push("X Bin Count: " + values["xBinCount"])
+                displayElements.push("Y Bin Count: " + values["yBinCount"])
+            }
 
-            // display options
+            if (isHeatmapAggType) {
+                displayElements.push("Agg Type: " + values["aggType"])
+            }
+
+            var subFilterIdValue = values["subFilterId"]
+
+            if (subFilterIdValue)
+                displayElements.push("Sub Filter Id: " + subFilterIdValue)
+
+            contentDisplayColumn.append("<div class='row'>" + displayElements.join(", ") + "</div>")
+
+            // DISPLAY OPTIONS
             var displayOptions = values["displayOptions"]
 
             var gridOffsetValue = "";
@@ -408,6 +448,12 @@
         <div id="contentDiv" style="display: none">
             @labelValueAux("content", "Content") {
                 <textarea id="content" rows="15" cols="35"></textarea>
+            }
+        </div>
+
+        <div id="aggTypeDiv" style="display: none">
+            @labelValueAux("aggType", "Aggregation Type") {
+                @selectEnum("aggType", AggType, false)
             }
         </div>
 
@@ -598,6 +644,7 @@
         $("#" + modalName + " #contentDiv").hide();
         $("#" + modalName + " #numericBinCountDiv").hide();
         $("#" + modalName + " #fieldNamesDiv").hide();
+        $("#" + modalName + " #aggTypeDiv").hide();
         $("#" + modalName + " #relativeValuesDiv").hide();
         $("#" + modalName + " #xBinCountDiv").hide();
         $("#" + modalName + " #yBinCountDiv").hide();
@@ -624,11 +671,13 @@
         $('#edit_widgetSpecModal #xFieldNameTypeahead').val(model["xFieldNameTypeahead"]);
         $('#edit_widgetSpecModal #yFieldNameTypeahead').val(model["yFieldNameTypeahead"]);
         $('#edit_widgetSpecModal #groupFieldNameTypeahead').val(model["groupFieldNameTypeahead"]);
+        $('#edit_widgetSpecModal #valueFieldNameTypeahead').val(model["valueFieldNameTypeahead"]);
 
         $('#edit_widgetSpecModal #numericBinCount').val(model["numericBinCount"]);
         $('#edit_widgetSpecModal #xBinCount').val(model["xBinCount"]);
         $('#edit_widgetSpecModal #yBinCount').val(model["yBinCount"]);
 
+        $('#edit_widgetSpecModal #aggType').val(model["aggType"]);
         $('#edit_widgetSpecModal #relativeValues').prop('checked', model["relativeValues"]);
         $('#edit_widgetSpecModal #useDateMonthBins').prop('checked', model["useDateMonthBins"]);
         $('#edit_widgetSpecModal #content').val(model["content"]);
@@ -690,8 +739,11 @@
             case "@{classOf[ScatterWidgetSpec].getName}" :
                 labelFields = ["xFieldNameTypeahead", "yFieldNameTypeahead", "groupFieldNameTypeahead"];
                 break;
-            case "@{classOf[GridMeanWidgetSpec].getName}" :
+            case "@{classOf[HeatmapAggWidgetSpec].getName}" :
                 labelFields = ["xFieldNameTypeahead", "yFieldNameTypeahead", "valueFieldNameTypeahead"];
+                break;
+            case "@{classOf[GridDistributionCountWidgetSpec].getName}" :
+                labelFields = ["xFieldNameTypeahead", "yFieldNameTypeahead"];
                 break;
             case "@{classOf[CorrelationWidgetSpec].getName}" :
                 break;

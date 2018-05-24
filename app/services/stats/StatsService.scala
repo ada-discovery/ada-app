@@ -4,7 +4,7 @@ import java.io.File
 import java.{util => ju}
 import javax.inject.{Inject, Singleton}
 
-import _root_.util.{AkkaStreamUtil, GroupMapList}
+import _root_.util.{AkkaStreamUtil, GroupMapList, crossProduct}
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.ActorMaterializer
@@ -34,6 +34,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.collection.JavaConversions._
 import services.stats.CalculatorHelper._
+import services.stats.calc.SeqBinCountCalc.SeqBinCountCalcTypePack
 import smile.manifold.{Operators => ManifoldOperators}
 import smile.projection.{Operators => ProjectionOperators}
 
@@ -69,6 +70,7 @@ trait StatsService extends CalculatorExecutors {
   ///////////////////////////////////////////////
 
   type NumericCount = NumericDistributionCountsCalcTypePack#OUT
+  type SeqNumericCount = SeqBinCountCalcTypePack#OUT
   type GroupNumericCount[G] = GroupNumericDistributionCountsCalcTypePack[G]#OUT
 
   def calcNumericDistributionCountsFromRepo(
@@ -77,6 +79,12 @@ trait StatsService extends CalculatorExecutors {
     field: Field,
     numericBinCountOption: Option[Int]
   ): Future[NumericCount]
+
+  def calcSeqNumericDistributionCountsFromRepo(
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    fieldsAndBinCounts: Seq[(Field, Option[Int])]
+  ): Future[SeqNumericCount]
 
   // grouped
 
@@ -99,7 +107,7 @@ trait StatsService extends CalculatorExecutors {
   ): Future[Option[Quartiles[Any]]]
 
   /////////////////////////
-  // Min & man From Repo //
+  // Min & Max From Repo //
   /////////////////////////
 
   def getMinMax[T](
@@ -157,7 +165,7 @@ trait StatsService extends CalculatorExecutors {
   ): Array[Array[Double]]
 
     //////////////////////////
-  // Eigen Vectors/values //
+  // Eigenvectors/values //
   //////////////////////////
 
   def calcEigenValuesAndVectors(
@@ -339,37 +347,43 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     criteria: Seq[Criterion[Any]],
     field: Field,
     numericBinCountOption: Option[Int]
-  ): Future[NumericCount] = {
-    val spec = field.fieldTypeSpec
-    val fieldType = ftf(spec)
-    val fieldTypeId = spec.fieldType
+  ): Future[NumericCount] =
+    createRepoCountSpec(field, numericBinCountOption).map( repoCountSpec =>
+      calcNumericalCountsFromRepo(dataRepo, criteria)(repoCountSpec)
+    ).getOrElse(
+      Future(Nil)
+    )
+
+  private def createRepoCountSpec(
+    field: Field,
+    numericBinCountOption: Option[Int]
+  ): Option[RepoCountSpec[_]] = {
+    val fieldType = ftf(field.fieldTypeSpec)
     val numericBinCount = numericBinCountOption.getOrElse(defaultNumericBinCount)
 
-    fieldTypeId match {
+    def createAux[T](
+      toBigDecimal: T => BigDecimal,
+      toRangeVal: BigDecimal => Any,
+      columnForEachIntValue: Boolean
+    ) = Some(
+      RepoCountSpec(
+        toBigDecimal, toRangeVal, field.name, fieldType.asValueOf[T], numericBinCount, columnForEachIntValue
+      )
+    )
 
+    field.fieldType match {
       case FieldTypeId.Double =>
-        calcNumericalCountsFromRepo(
-          BigDecimal(_: Double), _.toDouble,
-          field.name, fieldType.asValueOf[Double], dataRepo, criteria, numericBinCount, false, None, None
-        )
+        createAux(BigDecimal(_: Double), _.toDouble, false)
 
       case FieldTypeId.Integer =>
-        calcNumericalCountsFromRepo(
-          BigDecimal(_: Long), _.toDouble,
-          field.name, fieldType.asValueOf[Long], dataRepo, criteria, numericBinCount, true, None, None
-        )
+        createAux(BigDecimal(_: Long), _.toDouble, true)
 
       case FieldTypeId.Date =>
         def convert(ms: BigDecimal) = new ju.Date(ms.setScale(0, BigDecimal.RoundingMode.CEILING).toLongExact)
-
-        calcNumericalCountsFromRepo(
-          {x : ju.Date => BigDecimal(x.getTime)},
-          convert,
-          field.name, fieldType.asValueOf[ju.Date], dataRepo, criteria, numericBinCount, false, None, None
-        )
+        createAux({x : ju.Date => BigDecimal(x.getTime)}, convert, false)
 
       case _ =>
-        Future(Nil)
+        None
     }
   }
 
@@ -433,98 +447,202 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     }
   }
 
-  private def calcNumericalCountsFromRepo[T](
+  case class RepoCountSpec[T](
     toBigDecimal: T => BigDecimal,
     toRangeVal: BigDecimal => Any,
     fieldName: String,
     fieldType: FieldType[T],
-    dataRepo: JsonReadonlyRepo,
-    criteria: Seq[Criterion[Any]],
     maxColumnCount: Int,
     columnForEachIntValue: Boolean,
-    explMin: Option[T],
-    explMax: Option[T]
+    explMin: Option[T] = None,
+    explMax: Option[T] = None
+  )
+
+  private def calcNumericalCountsFromRepo[T](
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]])(
+    spec: RepoCountSpec[T]
   ): Future[NumericCount] = {
-    def jsonToBigDecimalValue(jsValue: JsReadable): Option[BigDecimal] =
-      fieldType.jsonToValue(jsValue).map(toBigDecimal)
-
-    // future to retrieve a max value if not explicitly provided
-    val maxFuture =
-      if (explMax.isDefined)
-        Future(Some(toBigDecimal(explMax.get)))
-      else
-        dataRepo.max(fieldName, criteria, true).map ( jsResult =>
-          jsResult.flatMap(jsonToBigDecimalValue)
-        )
-
-    // future to retrieve a min value if not explicitly provided
-    val minFuture =
-      if (explMin.isDefined)
-        Future(Some(toBigDecimal(explMin.get)))
-      else
-        dataRepo.min(fieldName, criteria, true).map( jsResult =>
-          jsResult.flatMap(jsonToBigDecimalValue)
-        )
-
     for {
-      // get max
-      maxOption <- maxFuture
+      // get min and max
+      (minOption, maxOption) <- getMinMaxBigDecimal(dataRepo, criteria)(spec)
 
-      // get min
-      minOption <- minFuture
+      // calc the column count and step size
+      columnCountStepSizeOption = calcColumnCountStepSize(minOption, maxOption, spec.maxColumnCount, spec.columnForEachIntValue)
 
-      columnCountStepSizeOption: Option[(Int, BigDecimal)] =
-        minOption.zip(maxOption).headOption.map { case (min, max) =>
-          val columnCount =
-            if (columnForEachIntValue) {
-              val valueCount = max - min
-              Math.min(maxColumnCount, valueCount.toInt + 1)
-            } else
-              maxColumnCount
-
-          val stepSize: BigDecimal = if (min == max)
-            0
-          else if (columnForEachIntValue && columnCount < maxColumnCount)
-            (max - min) / (columnCount - 1)
-          else
-            (max - min) / columnCount
-
-        (columnCount, stepSize)
-      }
-
-      bucketCounts <-
+      // obtain the binned counts
+      binnedCounts <-
         minOption.zip(columnCountStepSizeOption).headOption.map { case (min, (columnCount, stepSize)) =>
-          if (stepSize == 0) {
-            val rangeCriteria = Seq(fieldName #== toRangeVal(min))
-            dataRepo.count(rangeCriteria ++ criteria).map(count =>
-              Seq((min, count))
-            )
-          } else {
-            val futures = (0 until columnCount).par.map { index =>
+          val rangeStartAndCriteria = calcRangeStartAndCriteria(spec, min, stepSize, columnCount)
 
-              val start = min + (index * stepSize)
-              val end = min + ((index + 1) * stepSize)
-
-              val startVal = toRangeVal(start)
-              val endVal = toRangeVal(end)
-
-              val rangeCriteria =
-                if (index < columnCount - 1)
-                  Seq(fieldName #>= startVal, fieldName #< endVal)
-                else
-                  Seq(fieldName #>= startVal, fieldName #<= endVal)
-
-              dataRepo.count(rangeCriteria ++ criteria).map((start, _))
-            }
-
-            Future.sequence(futures.toList)
+          val futures = rangeStartAndCriteria.par.map {
+            case (start, rangeCriteria) => dataRepo.count(rangeCriteria ++ criteria).map((start, _))
           }
+
+          Future.sequence(futures.toList)
         }.getOrElse(
           Future(Nil)
         )
 
     } yield
-      bucketCounts
+      binnedCounts
+  }
+
+  // seq
+
+  override def calcSeqNumericDistributionCountsFromRepo(
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    fieldsAndBinCounts: Seq[(Field, Option[Int])]
+  ): Future[SeqNumericCount] = {
+    println("CALLING calcSeqNumericDistributionCountsFromRepo")
+    val repoCountSpecs = fieldsAndBinCounts.flatMap { case (field, numericBinCount) =>
+      createRepoCountSpec(field, numericBinCount).asInstanceOf[Option[RepoCountSpec[Any]]]
+    }
+    calcSeqNumericalCountsFromRepo(dataRepo, criteria)(repoCountSpecs)
+  }
+
+  private def calcSeqNumericalCountsFromRepo(
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]])(
+    specs: Seq[RepoCountSpec[Any]]
+  ): Future[SeqNumericCount] = {
+    val notNullCriteria = specs.map(spec => NotEqualsNullCriterion(spec.fieldName))
+
+    val specMinMaxFutures = Future.sequence(
+      specs.map(spec =>
+        getMinMaxBigDecimal(dataRepo, criteria ++ notNullCriteria)(spec).map(minMax => (spec, minMax))
+      )
+    )
+
+    for {
+      // get mines and maxes
+      specMinMaxes <- specMinMaxFutures
+
+      // calc the column counts and step sizes
+      specMinColumnCountStepSizes = specMinMaxes.map { case (spec, (min, max)) =>
+        calcColumnCountStepSize(min, max, spec.maxColumnCount, spec.columnForEachIntValue).map(
+          (spec, min, _)
+        )
+      }
+
+      // obtain the binned counts
+      binnedCounts <- {
+        val definedSpecMinColumnCountStepSizes = specMinColumnCountStepSizes.flatten
+        if (definedSpecMinColumnCountStepSizes.size == specMinColumnCountStepSizes.size) {
+
+          val rangeStartAndCriteria = crossProduct(
+            definedSpecMinColumnCountStepSizes.map { case (spec, min, (columnCount, stepSize)) =>
+              calcRangeStartAndCriteria(spec, min.get, stepSize, columnCount)
+            }
+          )
+
+          val futures = rangeStartAndCriteria.par.map { rangeStartAndCriteria =>
+            val rangeStartAndCriteriaSeq = rangeStartAndCriteria.toSeq
+            val rangeCriteria = rangeStartAndCriteriaSeq.flatMap(_._2)
+            val starts = rangeStartAndCriteriaSeq.map(_._1)
+            dataRepo.count(rangeCriteria ++ criteria).map((starts, _))
+          }
+
+          Future.sequence(futures.toList)
+        } else
+          Future(Nil)
+      }
+    } yield
+      binnedCounts
+  }
+
+  private def getMinMaxBigDecimal[T](
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]])(
+    spec: RepoCountSpec[T]
+  ): Future[(Option[BigDecimal], Option[BigDecimal])] = {
+    def jsonToBigDecimalValue(jsValue: JsReadable): Option[BigDecimal] =
+      spec.fieldType.jsonToValue(jsValue).map(spec.toBigDecimal)
+
+    // future to retrieve a max value if not explicitly provided
+    val maxFuture =
+      if (spec.explMax.isDefined)
+        Future(Some(spec.toBigDecimal(spec.explMax.get)))
+      else
+        dataRepo.max(spec.fieldName, criteria, true).map(
+          _.flatMap(jsonToBigDecimalValue)
+        )
+
+    // future to retrieve a min value if not explicitly provided
+    val minFuture =
+      if (spec.explMin.isDefined)
+        Future(Some(spec.toBigDecimal(spec.explMin.get)))
+      else
+        dataRepo.min(spec.fieldName, criteria, true).map(
+          _.flatMap(jsonToBigDecimalValue)
+        )
+
+    for {
+      min <- minFuture
+      max <- maxFuture
+    } yield
+      (min, max)
+  }
+
+  private def calcColumnCountStepSize(
+    minOption: Option[BigDecimal],
+    maxOption: Option[BigDecimal],
+    maxColumnCount: Int,
+    columnForEachIntValue: Boolean
+  ): Option[(Int, BigDecimal)] =
+    minOption.zip(maxOption).headOption.map { case (min, max) =>
+      val columnCount =
+        if (columnForEachIntValue) {
+          val valueCount = max - min
+          Math.min(maxColumnCount, valueCount.toInt + 1)
+        } else
+          maxColumnCount
+
+      val stepSize: BigDecimal = if (min == max)
+        0
+      else if (columnForEachIntValue && columnCount < maxColumnCount)
+        (max - min) / (columnCount - 1)
+      else
+        (max - min) / columnCount
+
+      (columnCount, stepSize)
+    }
+
+  private def calcRangeStartAndCriteria[T](
+    spec: RepoCountSpec[T],
+    min: BigDecimal,
+    stepSize: BigDecimal,
+    columnCount: Int
+  ): Seq[(BigDecimal, Seq[Criterion[Any]])] =
+    if (stepSize == 0) {
+      val rangeCriteria = Seq(spec.fieldName #== spec.toRangeVal(min))
+      Seq((min, rangeCriteria))
+    } else {
+      (0 until columnCount).map { columnIndex =>
+        calcRangeStartAndCriteriaAux(spec.fieldName, min, stepSize, columnCount, columnIndex, spec.toRangeVal)
+      }
+    }
+
+  private def calcRangeStartAndCriteriaAux(
+    fieldName: String,
+    min: BigDecimal,
+    stepSize: BigDecimal,
+    columnCount: Int,
+    columnIndex: Int,
+    toRangeVal: BigDecimal => Any
+  ): (BigDecimal, Seq[Criterion[Any]]) = {
+    val start = min + (columnIndex * stepSize)
+    val end = min + ((columnIndex + 1) * stepSize)
+
+    val startVal = toRangeVal(start)
+    val endVal = toRangeVal(end)
+
+    val criteria = if (columnIndex < columnCount - 1)
+      Seq(fieldName #>= startVal, fieldName #< endVal)
+    else
+      Seq(fieldName #>= startVal, fieldName #<= endVal)
+    (start, criteria)
   }
 
   ///////////////

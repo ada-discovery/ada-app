@@ -210,6 +210,12 @@ class DataSpaceMetaInfoController @Inject() (
         def deleteCategories: Future[_] =
           dsa.categoryRepo.deleteAll
 
+        def deleteViews: Future[_] =
+          dsa.dataViewRepo.deleteAll
+
+        def deleteFilters: Future[_] =
+          dsa.filterRepo.deleteAll
+
         def deleteSetting: Future[_] =
           dsa.setting.flatMap ( setting =>
             dataSetSettingRepo.delete(setting._id.get)
@@ -238,6 +244,8 @@ class DataSpaceMetaInfoController @Inject() (
             _ <- deleteFields
             _ <- deleteCategories
             _ <- deleteSetting
+            _ <- deleteViews
+            _ <- deleteFilters
           } yield ()
         }
 

@@ -1,5 +1,7 @@
 package services
 
+import java.util.Spliterators
+import java.util.stream.StreamSupport
 import java.{util => ju}
 import javax.inject.Inject
 
@@ -8,7 +10,7 @@ import dataaccess._
 import dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, JsonCrudRepo}
 import dataaccess.JsonRepoExtra.InfixOps
 import dataaccess.JsonUtil
-import _root_.util.{GroupMapList, MessageLogger}
+import _root_.util.{AkkaStreamUtil, GroupMapList, MessageLogger}
 import com.google.inject.ImplementedBy
 import models._
 import Criterion.Infix
@@ -20,19 +22,24 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import play.api.Configuration
 import dataaccess.JsonUtil._
 import _root_.util.{crossProduct, retry, seqFutures}
 import akka.actor.ActorSystem
+import akka.stream.impl.QueueSink
+import akka.stream.impl.Stages.DefaultAttributes
 import akka.stream.{ActorMaterializer, OverflowStrategy}
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, StreamConverters}
 import models.FilterCondition.FilterOrId
 import models.ml._
 
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+import runnables.core.CompareAllValuesInTwoDataSetsSpec
 import services.ml.{RCPredictionService, RCPredictionStaticHelper}
+
+import scala.concurrent.duration.Duration.Inf
 
 @ImplementedBy(classOf[DataSetServiceImpl])
 trait DataSetService {
@@ -461,7 +468,7 @@ class DataSetServiceImpl @Inject()(
         lineBuffer.+=(line)
         Option.empty[Seq[String]]
       } else if (values.get.size > columnCount) {
-        throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.get.size}' vs '${columnCount}'. Parsing terminated.")
+        throw new AdaParseException(s"Buffered line ${index} has overflown an unexpected count '${values.get.size}' vs '${columnCount}'. Parsing terminated. Line: ${line}. Parsed values:\n ${values.get.mkString("\n")}")
       } else {
         // reset the buffer
         lineBuffer.clear()
@@ -1133,6 +1140,109 @@ class DataSetServiceImpl @Inject()(
       )
     } yield
       ()
+  }
+
+  def linkDataSetStreamed(spec: CompareAllValuesInTwoDataSetsSpec) = {
+    val dsa1 = dsaf(spec.dataSetId1).get
+    val dsa2 = dsaf(spec.dataSetId2).get
+
+    def key(json: JsObject): Seq[Any] = {
+      Seq()
+    }
+
+    def compare(value1: Any, value2: Any): Int = {
+      def aux[T](implicit ordering: Ordering[T]) = {
+        val value1X = value1.asInstanceOf[T]
+        val value2X = value2.asInstanceOf[T]
+
+        ordering.compare(value1X, value2X)
+      }
+
+      value1 match {
+        case _: String => aux[String]
+        case _: Boolean => aux[Boolean]
+        case _: Double => aux[Double]
+        case _: Float => aux[Float]
+        case _: Long => aux[Long]
+        case _: Int => aux[Int]
+        case _: Short => aux[Short]
+        case _: Byte => aux[Byte]
+        case _: java.util.Date => aux[java.util.Date]
+        case _ => throw new AdaException(s"No ordering found for ${value1.getClass.getName}")
+      }
+    }
+
+    for {
+      // get all the field names
+      fieldNames <- dsa1.fieldRepo.find(
+        sort = Seq(AscSort(FieldIdentity.name)),
+        skip = spec.fieldsSkip,
+        limit = spec.fieldsNum
+      ).map(_.map(_.name).toSeq)
+
+      // stream1
+      leftSource <- {
+        if(spec.fieldsNum.isDefined)
+          logger.info(s"Creating a stream for these fields ${fieldNames.mkString(",")}.")
+        else
+          logger.info(s"Creating a stream for all available fields.")
+
+        dsa1.dataSetRepo.findAsStream(
+          sort = Seq(AscSort(spec.keyFieldName)),
+          projection = if(spec.fieldsNum.isDefined) fieldNames :+ spec.keyFieldName else Nil
+        )
+      }
+
+      // stream2
+      rightSource <- dsa2.dataSetRepo.findAsStream(
+        sort = Seq(AscSort(spec.keyFieldName)),
+        projection = if(spec.fieldsNum.isDefined) fieldNames :+ spec.keyFieldName else Nil
+      )
+
+      // paired stream
+      pairedStream = AkkaStreamUtil.zipSources(leftSource, rightSource)
+
+      errorCount <- {
+        val rightIterator = rightSource.runWith(StreamConverters.asJavaStream[JsObject]).iterator()
+        var currentRightJson: Option[JsObject] = None
+        var currentRightKey: Seq[Any] = Nil
+
+        leftSource.map { leftJson =>
+          if (currentRightJson.isEmpty && rightIterator.hasNext) {
+            currentRightJson = Some(rightIterator.next())
+            currentRightKey = key(currentRightJson.get)
+          }
+
+          val leftKey = key(leftJson)
+
+          leftJson
+        }
+        pairedStream.map { case (left, right) => 0 }.runWith(Sink.fold(0)(_+_))
+      }
+    } yield
+      if (errorCount > 0)
+        logger.error(s"In total $errorCount errors were found during json data set comparison.")
+  }
+
+  def asJavaStream[T](): Sink[T, java.util.stream.Stream[T]] = {
+    Sink.fromGraph(new QueueSink[T]())
+      .mapMaterializedValue(queue ⇒ StreamSupport.stream(
+        Spliterators.spliteratorUnknownSize(new java.util.Iterator[T] {
+          var nextElementFuture: Future[Option[T]] = queue.pull()
+          var nextElement: Option[T] = null
+
+          override def hasNext: Boolean = {
+            nextElement = Await.result(nextElementFuture, Inf)
+            nextElement.isDefined
+          }
+
+          override def next(): T = {
+            val next = nextElement.get
+            nextElementFuture = queue.pull()
+            next
+          }
+        }, 0), false).onClose(new Runnable { def run = queue.cancel() }))
+      .withAttributes(DefaultAttributes.asJavaStream)
   }
 
   override def processSeriesAndSaveDataSet(

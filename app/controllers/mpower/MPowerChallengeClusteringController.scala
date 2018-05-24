@@ -53,36 +53,40 @@ class MPowerChallengeClusteringController @Inject()(
       groupFieldName = Some(team),
       displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(750), title = Some("X1 vs X2 by Team"))
     ),
-    GridMeanWidgetSpec(
+    HeatmapAggWidgetSpec(
       xFieldName = x1,
       yFieldName = x2,
       valueFieldName = auroc,
       xBinCount = 50,
       yBinCount = 50,
+      aggType = AggType.Mean,
       displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUROC Mean"))
     ),
-    GridMeanWidgetSpec(
+    HeatmapAggWidgetSpec(
       xFieldName = x1,
       yFieldName = x2,
       valueFieldName = aupr,
       xBinCount = 50,
       yBinCount = 50,
+      aggType = AggType.Mean,
       displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUPR Mean"))
     ),
-    GridMeanWidgetSpec(
+    HeatmapAggWidgetSpec(
       xFieldName = x1,
       yFieldName = x2,
       valueFieldName = auroc,
       xBinCount = 20,
       yBinCount = 20,
+      aggType = AggType.Mean,
       displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUROC Mean"))
     ),
-    GridMeanWidgetSpec(
+    HeatmapAggWidgetSpec(
       xFieldName = x1,
       yFieldName = x2,
       valueFieldName = aupr,
       xBinCount = 20,
       yBinCount = 20,
+      aggType = AggType.Mean,
       displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUPR Mean"))
     ),
     DistributionWidgetSpec(

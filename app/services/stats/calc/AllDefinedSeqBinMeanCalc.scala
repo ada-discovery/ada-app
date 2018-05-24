@@ -21,15 +21,15 @@ private[stats] class AllDefinedSeqBinMeanCalc extends AllDefinedSeqBinAggCalc[(D
 }
 
 object AllDefinedSeqBinMeanCalc {
-  type AllDefinedSeqBinMeanCalcTypePack = AllDefinedSeqBinAggCalcTypePack[(Double, Int)]
+  type AllDefinedSeqBinMeanCalcTypePack = AllDefinedSeqBinCalcTypePack[(Double, Int), Option[Double]]
 
   def apply: Calculator[AllDefinedSeqBinMeanCalcTypePack] = new AllDefinedSeqBinMeanCalc
 }
 
-private[stats] object SeqBinMeanCalcAux extends SeqBinAggCalc(AllDefinedSeqBinMeanCalc.apply)
+private[stats] object SeqBinMeanCalcAux extends SeqBinCalc(AllDefinedSeqBinMeanCalc.apply)
 
 object SeqBinMeanCalc {
-  type SeqBinMeanCalcTypePack = SeqBinAggCalcTypePack[(Double, Int)]
+  type SeqBinMeanCalcTypePack = SeqBinCalcTypePack[(Double, Int), Option[Double]]
 
   def apply: Calculator[SeqBinMeanCalcTypePack] = SeqBinMeanCalcAux
 }

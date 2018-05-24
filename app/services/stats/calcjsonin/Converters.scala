@@ -100,6 +100,38 @@ class AllDefinedSeqBinMeanCalcConverter extends AllDefinedSeqDoubleConverter {
   override def specificUseClass = Some(classOf[AllDefinedSeqBinMeanCalc])
 }
 
+class SeqBinMaxCalcConverter extends SeqDoubleConverter {
+  override def specificUseClass = Some(SeqBinMaxCalcAux.getClass)
+}
+
+class AllDefinedSeqBinMaxCalcConverter extends AllDefinedSeqDoubleConverter {
+  override def specificUseClass = Some(classOf[AllDefinedSeqBinMaxCalc])
+}
+
+class SeqBinMinCalcConverter extends SeqDoubleConverter {
+  override def specificUseClass = Some(SeqBinMinCalcAux.getClass)
+}
+
+class AllDefinedSeqBinMinCalcConverter extends AllDefinedSeqDoubleConverter {
+  override def specificUseClass = Some(classOf[AllDefinedSeqBinMinCalc])
+}
+
+class SeqBinVarianceCalcConverter extends SeqDoubleConverter {
+  override def specificUseClass = Some(SeqBinVarianceCalcAux.getClass)
+}
+
+class AllDefinedSeqBinVarianceCalcConverter extends AllDefinedSeqDoubleConverter {
+  override def specificUseClass = Some(classOf[AllDefinedSeqBinVarianceCalc])
+}
+
+class SeqBinCountCalcConverter extends SeqDoubleConverter {
+  override def specificUseClass = Some(SeqBinCountCalcAux.getClass)
+}
+
+class AllDefinedSeqBinCountCalcConverter extends AllDefinedSeqDoubleConverter {
+  override def specificUseClass = Some(classOf[AllDefinedSeqBinCountCalc])
+}
+
 ////////////////////
 // Helper Classes //
 ////////////////////

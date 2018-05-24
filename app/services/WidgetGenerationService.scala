@@ -117,17 +117,22 @@ class WidgetGenerationServiceImpl @Inject() (
   ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
 
+    def isScalar(fieldName: String) =
+      nameFieldMap.get(fieldName).map(!_.isArray).getOrElse(true)
+
     val splitWidgetSpecs: Traversable[Either[WidgetSpec, WidgetSpec]] =
       if (genMethod.isRepoBased)
         widgetSpecs.collect {
-          case p: DistributionWidgetSpec => Left(p)
-          case p: BoxWidgetSpec => Left(p)
-          case p: CumulativeCountWidgetSpec => if (p.numericBinCount.isDefined) Left(p) else Right(p)
+          case p: DistributionWidgetSpec => if (isScalar(p.fieldName)) Left(p) else Right(p)
+          case p: BoxWidgetSpec => if (isScalar(p.fieldName)) Left(p) else Right(p)
+          case p: CumulativeCountWidgetSpec => if (p.numericBinCount.isDefined && isScalar(p.fieldName)) Left(p) else Right(p)
+          case p: TemplateHtmlWidgetSpec => Left(p)
+          case p: GridDistributionCountWidgetSpec => Left(p)
           case p: ScatterWidgetSpec => Right(p)
-          case p: GridMeanWidgetSpec => Right(p)
+          case p: HeatmapAggWidgetSpec => Right(p)
+          case p: WidgetSpec => Right(p)
           case p: CorrelationWidgetSpec => Right(p)
           case p: BasicStatsWidgetSpec => Right(p)
-          case p: TemplateHtmlWidgetSpec => Left(p)
         }
       else
         widgetSpecs.map(Right(_))
@@ -423,7 +428,7 @@ class WidgetGenerationServiceImpl @Inject() (
 
     widgetSpec match {
 
-      case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && fields(0).isNumeric =>
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isEmpty && fields(0).isNumeric && !fields(0).isArray =>
         val field = getField(spec.fieldName)
         calcNumericDistributionCountsFromRepo(repo, criteria, field, spec.numericBinCount).map(
           NumericDistributionWidgetGenerator(0, 1).apply(spec)(nameFieldMap)
@@ -435,7 +440,7 @@ class WidgetGenerationServiceImpl @Inject() (
           CategoricalDistributionWidgetGenerator(spec)(nameFieldMap)
         )
 
-      case spec: DistributionWidgetSpec if spec.groupFieldName.isDefined && fields(1).isNumeric =>
+      case spec: DistributionWidgetSpec if spec.groupFieldName.isDefined && fields(1).isNumeric && !fields(1).isArray =>
         val field = getField(spec.fieldName)
         val groupField = getField(spec.groupFieldName.get)
         calcGroupedNumericDistributionCountsFromRepo(repo, criteria, field, groupField, spec.numericBinCount).map(
@@ -449,10 +454,10 @@ class WidgetGenerationServiceImpl @Inject() (
           GroupCategoricalDistributionWidgetGenerator(spec)(nameFieldMap)
         )
 
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty && fields(0).isNumeric =>
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty && fields(0).isNumeric && !fields(0).isArray =>
         val field = getField(spec.fieldName)
-        calcNumericDistributionCountsFromRepo(repo, criteria, field, spec.numericBinCount).map(
-          CumulativeNumericBinCountWidgetGenerator(0, 1)(spec)(nameFieldMap)
+        calcNumericDistributionCountsFromRepo(repo, criteria, field, spec.numericBinCount).map( counts =>
+          CumulativeNumericBinCountWidgetGenerator(0, 1)(spec)(nameFieldMap)(toCumCounts(counts))
         )
 
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isEmpty && !fields(0).isNumeric =>
@@ -461,11 +466,11 @@ class WidgetGenerationServiceImpl @Inject() (
           UniqueCumulativeCountWidgetGenerator(spec)(nameFieldMap)
         )
 
-      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined && fields(1).isNumeric =>
+      case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined && fields(1).isNumeric && !fields(1).isArray =>
         val field = getField(spec.fieldName)
         val groupField = getField(spec.groupFieldName.get)
-        calcGroupedNumericDistributionCountsFromRepo(repo, criteria, field, groupField, spec.numericBinCount).map(
-          GroupCumulativeNumericBinCountWidgetGenerator(0, 1)(spec)(nameFieldMap)
+        calcGroupedNumericDistributionCountsFromRepo(repo, criteria, field, groupField, spec.numericBinCount).map( groupCounts =>
+          GroupCumulativeNumericBinCountWidgetGenerator(0, 1)(spec)(nameFieldMap)(groupCounts.map { case (group, counts) => (group, toCumCounts(counts))})
         )
 
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined && !fields(1).isNumeric =>
@@ -480,12 +485,27 @@ class WidgetGenerationServiceImpl @Inject() (
           BoxWidgetGenerator(spec)(nameFieldMap)
         )
 
+      case spec: GridDistributionCountWidgetSpec =>
+        calcSeqNumericDistributionCountsFromRepo(
+          repo, criteria, Seq((getField(spec.xFieldName), Some(spec.xBinCount)), (getField(spec.yFieldName), Some(spec.yBinCount)))
+        ).map(
+          GridDistributionCountWidgetGenerator(0, 1, 0, 1)(spec)(nameFieldMap)
+        )
+
       case spec: TemplateHtmlWidgetSpec =>
         val widget = HtmlWidget("", spec.content, spec.displayOptions)
         Future(Some(widget))
 
       case _ => Future(None)
     }
+  }
+
+  protected def toCumCounts[T](
+    counts: Traversable[(BigDecimal, Int)]
+  ): Traversable[(BigDecimal, Int)] = {
+    val countsSeq = counts.toSeq
+    val cumCounts = countsSeq.scanLeft(0) { case (sum, (_, count)) => sum + count }
+    countsSeq.zip(cumCounts.tail).map { case ((value, _), sum) => (value, sum)}
   }
 
   override def genFromFullData(
@@ -645,9 +665,13 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: ScatterWidgetSpec if spec.groupFieldName.isDefined =>
         aux(GroupScatterWidgetGenerator[Any, Any])
 
-      case spec: GridMeanWidgetSpec =>
+      case spec: HeatmapAggWidgetSpec =>
         val minMaxValues = minMaxes
-        aux(GridMeanWidgetGenerator.apply(minMaxValues(0), minMaxValues(1)))
+        aux(HeatmapAggWidgetGenerator.apply(spec.aggType, minMaxValues(0), minMaxValues(1)))
+
+      case spec: GridDistributionCountWidgetSpec =>
+        val minMaxValues = minMaxes
+        aux(GridDistributionCountWidgetGenerator(minMaxValues(0), minMaxValues(1)))
 
       case spec: CorrelationWidgetSpec =>
         aux(CorrelationWidgetGenerator(Some(streamedCorrelationCalcParallelism)))
@@ -693,7 +717,10 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isDefined && spec.groupFieldName.isDefined =>
         Seq(fields(1))
 
-      case spec: GridMeanWidgetSpec =>
+      case spec: HeatmapAggWidgetSpec =>
+        Seq(fields(0), fields(1))
+
+      case spec: GridDistributionCountWidgetSpec =>
         Seq(fields(0), fields(1))
 
       case _ => Nil
