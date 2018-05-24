@@ -609,7 +609,7 @@
             },
             tooltip: {
                 formatter: function () {
-                    var value = (this.point.value) ? Highcharts.numberFormat(this.point.value, 3, '.') : "Undefined"
+                    var value = (this.point.value != null) ? Highcharts.numberFormat(this.point.value, 3, '.') : "Undefined"
                     return '<b>' + this.series.xAxis.categories[this.point.x] + '</b><br><b>' +
                         this.series.yAxis.categories[this.point.y] + '</b><br>' + value;
                 },
