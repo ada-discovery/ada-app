@@ -5,12 +5,12 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.CalculatorHelper._
-import services.stats.calc.{AllDefinedSeqBinMeanCalc, NumericDistributionFlowOptions, NumericDistributionOptions, SeqBinMeanCalc}
+import services.stats.calc.{AllDefinedSeqBinMaxCalc, NumericDistributionFlowOptions, NumericDistributionOptions, SeqBinMaxCalc}
 
 import scala.concurrent.Future
 import scala.util.Random
 
-class SeqBinMeanTest extends AsyncFlatSpec with Matchers {
+class SeqBinMaxTest extends AsyncFlatSpec with Matchers {
 
   private val xs = Seq(3.2, 8.9, -1.2, 3.7, -10.8, 12.3, -0.1, 0, 5.1)
 
@@ -33,7 +33,7 @@ class SeqBinMeanTest extends AsyncFlatSpec with Matchers {
 
     Seq(-12, 0.9, 0.4) -> None,
     Seq(-12, 0.9, 2.4) -> None,
-    Seq(-12, 0.9, 4.4) -> Some((xs(5) + xs(8)) / 2),
+    Seq(-12, 0.9, 4.4) -> Some(Seq(xs(5), xs(8)).max),
 
     Seq(-12, 3.9, 0.4) -> None,
     Seq(-12, 3.9, 2.4) -> None,
@@ -51,7 +51,7 @@ class SeqBinMeanTest extends AsyncFlatSpec with Matchers {
     Seq(-7, 3.9, 2.4) -> None,
     Seq(-7, 3.9, 4.4) -> Some(xs(2)),
 
-    Seq(-2, -2.1, 0.4) -> Some((xs(0) + xs(1) + xs(3) + xs(4)) / 4),
+    Seq(-2, -2.1, 0.4) -> Some(Seq(xs(0), xs(1), xs(3), xs(4)).max),
     Seq(-2, -2.1, 2.4) -> Some(xs(6)),
     Seq(-2, -2.1, 4.4) -> None,
 
@@ -73,13 +73,13 @@ class SeqBinMeanTest extends AsyncFlatSpec with Matchers {
   private val randomInputSize = 10000
   private val randomFeaturesNum = 8
 
-  private val calc = SeqBinMeanCalc.apply
-  private val allDefinedCalc = AllDefinedSeqBinMeanCalc.apply
+  private val calc = SeqBinMaxCalc.apply
+  private val allDefinedCalc = AllDefinedSeqBinMaxCalc.apply
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
-  "Seq bin means" should "match the static example" in {
+  "Seq bin maxes" should "match the static example" in {
     val inputs = values.map(_.map(Some(_)))
     val inputsAllDefined = values
     val inputSource = Source.fromIterator(() => inputs.toIterator)
@@ -120,7 +120,7 @@ class SeqBinMeanTest extends AsyncFlatSpec with Matchers {
     allDefinedCalc.runFlow(streamOptions, streamOptions)(inputSourceAllDefined).map(checkResult)
   }
 
-  "Seq bin means" should "match each other" in {
+  "Seq bin maxes" should "match each other" in {
     val inputsAllDefined = for (_ <- 1 to randomInputSize) yield {
       for (_ <- 1 to randomFeaturesNum) yield (Random.nextDouble() * 2) - 1
     }

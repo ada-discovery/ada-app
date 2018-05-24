@@ -5,63 +5,63 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.CalculatorHelper._
-import services.stats.calc.{AllDefinedSeqBinMaxCalc, NumericDistributionFlowOptions, NumericDistributionOptions, SeqBinMaxCalc}
+import services.stats.calc.{AllDefinedSeqBinCountCalc, NumericDistributionFlowOptions, NumericDistributionOptions, SeqBinCountCalc}
 
 import scala.concurrent.Future
 import scala.util.Random
 
-class SeqBinMaxTest extends AsyncFlatSpec with Matchers {
+class SeqBinCountTest extends AsyncFlatSpec with Matchers {
 
   private val xs = Seq(3.2, 8.9, -1.2, 3.7, -10.8, 12.3, -0.1, 0, 5.1)
 
   private val values = Seq(
-    Seq(  0.5,  0.7,  1.2, xs(0)),
-    Seq(  2.5,  0.4,  1.5, xs(1)),
-    Seq( -2.6,  6.9,  6.4, xs(2)),
-    Seq(  2.8, -2.1,  0.4, xs(3)),
-    Seq(  0.5,    0,  0.4, xs(4)),
-    Seq(  -12,  0.9,  5.6, xs(5)),
-    Seq(    3,  0.1,  3.2, xs(6)),
-    Seq(-11.5, -1.1,  5.1, xs(7)),
-    Seq(-10.1,  1.3,  4.8, xs(8))
+    Seq(  0.5,  0.7,  1.2),
+    Seq(  2.5,  0.4,  1.5),
+    Seq( -2.6,  6.9,  6.4),
+    Seq(  2.8, -2.1,  0.4),
+    Seq(  0.5,    0,  0.4),
+    Seq(  -12,  0.9,  5.6),
+    Seq(    3,  0.1,  3.2),
+    Seq(-11.5, -1.1,  5.1),
+    Seq(-10.1,  1.3,  4.8)
   )
 
   private val expectedResult = Seq(
-    Seq(-12, -2.1, 0.4) -> None,
-    Seq(-12, -2.1, 2.4) -> None,
-    Seq(-12, -2.1, 4.4) -> Some(xs(7)),
+    Seq(-12, -2.1, 0.4) -> 0,
+    Seq(-12, -2.1, 2.4) -> 0,
+    Seq(-12, -2.1, 4.4) -> 1,
 
-    Seq(-12, 0.9, 0.4) -> None,
-    Seq(-12, 0.9, 2.4) -> None,
-    Seq(-12, 0.9, 4.4) -> Some(Seq(xs(5), xs(8)).max),
+    Seq(-12, 0.9, 0.4) -> 0,
+    Seq(-12, 0.9, 2.4) -> 0,
+    Seq(-12, 0.9, 4.4) -> 2,
 
-    Seq(-12, 3.9, 0.4) -> None,
-    Seq(-12, 3.9, 2.4) -> None,
-    Seq(-12, 3.9, 4.4) -> None,
+    Seq(-12, 3.9, 0.4) -> 0,
+    Seq(-12, 3.9, 2.4) -> 0,
+    Seq(-12, 3.9, 4.4) -> 0,
 
-    Seq(-7, -2.1, 0.4) -> None,
-    Seq(-7, -2.1, 2.4) -> None,
-    Seq(-7, -2.1, 4.4) -> None,
+    Seq(-7, -2.1, 0.4) -> 0,
+    Seq(-7, -2.1, 2.4) -> 0,
+    Seq(-7, -2.1, 4.4) -> 0,
 
-    Seq(-7, 0.9, 0.4) -> None,
-    Seq(-7, 0.9, 2.4) -> None,
-    Seq(-7, 0.9, 4.4) -> None,
+    Seq(-7, 0.9, 0.4) -> 0,
+    Seq(-7, 0.9, 2.4) -> 0,
+    Seq(-7, 0.9, 4.4) -> 0,
 
-    Seq(-7, 3.9, 0.4) -> None,
-    Seq(-7, 3.9, 2.4) -> None,
-    Seq(-7, 3.9, 4.4) -> Some(xs(2)),
+    Seq(-7, 3.9, 0.4) -> 0,
+    Seq(-7, 3.9, 2.4) -> 0,
+    Seq(-7, 3.9, 4.4) -> 1,
 
-    Seq(-2, -2.1, 0.4) -> Some(Seq(xs(0), xs(1), xs(3), xs(4)).max),
-    Seq(-2, -2.1, 2.4) -> Some(xs(6)),
-    Seq(-2, -2.1, 4.4) -> None,
+    Seq(-2, -2.1, 0.4) -> 4,
+    Seq(-2, -2.1, 2.4) -> 1,
+    Seq(-2, -2.1, 4.4) -> 0,
 
-    Seq(-2, 0.9, 0.4) -> None,
-    Seq(-2, 0.9, 2.4) -> None,
-    Seq(-2, 0.9, 4.4) -> None,
+    Seq(-2, 0.9, 0.4) -> 0,
+    Seq(-2, 0.9, 2.4) -> 0,
+    Seq(-2, 0.9, 4.4) -> 0,
 
-    Seq(-2, 3.9, 0.4) -> None,
-    Seq(-2, 3.9, 2.4) -> None,
-    Seq(-2, 3.9, 4.4) -> None
+    Seq(-2, 3.9, 0.4) -> 0,
+    Seq(-2, 3.9, 2.4) -> 0,
+    Seq(-2, 3.9, 4.4) -> 0
   )
 
 //  Seq(-12, -7, -2),
@@ -73,19 +73,19 @@ class SeqBinMaxTest extends AsyncFlatSpec with Matchers {
   private val randomInputSize = 10000
   private val randomFeaturesNum = 8
 
-  private val calc = SeqBinMaxCalc.apply
-  private val allDefinedCalc = AllDefinedSeqBinMaxCalc.apply
+  private val calc = SeqBinCountCalc.apply
+  private val allDefinedCalc = AllDefinedSeqBinCountCalc.apply
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
-  "Seq bin maxes" should "match the static example" in {
+  "Seq bin counts" should "match the static example" in {
     val inputs = values.map(_.map(Some(_)))
     val inputsAllDefined = values
     val inputSource = Source.fromIterator(() => inputs.toIterator)
     val inputSourceAllDefined = Source.fromIterator(() => inputsAllDefined.toIterator)
 
-    def checkResult(result: Traversable[(Seq[BigDecimal], Option[Double])]) = {
+    def checkResult(result: Traversable[(Seq[BigDecimal], Int)]) = {
       result.size should be (expectedResult.size)
 
       expectedResult.zip(result.toSeq).map { case (expectedResult, result) =>
@@ -95,7 +95,7 @@ class SeqBinMaxTest extends AsyncFlatSpec with Matchers {
         result._2 should be (expectedResult._2)
       }
 
-      result.flatMap(_._2).sum  should be (expectedResult.flatMap(_._2).sum)
+      result.map(_._2).sum  should be (expectedResult.map(_._2).sum)
     }
 
 
@@ -120,7 +120,7 @@ class SeqBinMaxTest extends AsyncFlatSpec with Matchers {
     allDefinedCalc.runFlow(streamOptions, streamOptions)(inputSourceAllDefined).map(checkResult)
   }
 
-  "Seq bin maxes" should "match each other" in {
+  "Seq bin counts" should "match each other" in {
     val inputsAllDefined = for (_ <- 1 to randomInputSize) yield {
       for (_ <- 1 to randomFeaturesNum) yield (Random.nextDouble() * 2) - 1
     }
@@ -135,7 +135,7 @@ class SeqBinMaxTest extends AsyncFlatSpec with Matchers {
     val standardOptions = binCounts.map(NumericDistributionOptions(_))
     val protoResult = calc.fun(standardOptions)(inputs)
 
-    def checkResult(result: Traversable[(Seq[BigDecimal], Option[Double])]) = {
+    def checkResult(result: Traversable[(Seq[BigDecimal], Int)]) = {
       result.map(_._1.size should be (randomFeaturesNum))
 
       result.toSeq.zip(protoResult.toSeq).map { case (row1, row2) =>

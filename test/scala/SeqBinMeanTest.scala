@@ -15,10 +15,10 @@ class SeqBinMeanTest extends AsyncFlatSpec with Matchers {
   private val xs = Seq(3.2, 8.9, -1.2, 3.7, -10.8, 12.3, -0.1, 0, 5.1)
 
   private val values = Seq(
-    Seq(  0.5,  0.7,  1.2,  xs(0)),
-    Seq(  2.5,  0.4,  1.5,  xs(1)),
-    Seq( -2.6,  6.9,  6.4,  xs(2)),
-    Seq(  2.8, -2.1,  0.4,  xs(3)),
+    Seq(  0.5,  0.7,  1.2, xs(0)),
+    Seq(  2.5,  0.4,  1.5, xs(1)),
+    Seq( -2.6,  6.9,  6.4, xs(2)),
+    Seq(  2.8, -2.1,  0.4, xs(3)),
     Seq(  0.5,    0,  0.4, xs(4)),
     Seq(  -12,  0.9,  5.6, xs(5)),
     Seq(    3,  0.1,  3.2, xs(6)),
