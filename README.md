@@ -103,7 +103,7 @@ TODO
 
 ## API
 
-Use **http://10.79.2.192:8080** as the API's core url. Note that it's planned to change the protocol to https so pls. check this site for future announcements.
+Use **https://ada.parkinson.lu** as the API's core url.
 
 Since html and json service types share the same end points you need to specify the **"Accept: application/json"** header to get JSONs back.
 
@@ -111,7 +111,7 @@ Since html and json service types share the same end points you need to specify 
 
 **Login**
 ```bash
-curl -v -X POST -H "Accept: application/json" --data "id=userxxx&password=yyy" http://10.79.2.192:8080/login
+curl -v -X POST -H "Accept: application/json" --data "id=userxxx&password=yyy" https://ada.parkinson.lu/login
 ```
 
 __Response__
@@ -148,7 +148,7 @@ The following parameters are supported:
 ***All***
 
 ```bash
-curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json"
+curl -X GET -G https://ada.parkinson.lu/dataSets/records/findCustom -H "Accept: application/json"
             -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx"
 ```
 
@@ -157,7 +157,7 @@ curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: ap
 ***All with JSON formatted***
 
 ```bash
-curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json"
+curl -X GET -G https://ada.parkinson.lu/dataSets/records/findCustom -H "Accept: application/json"
             -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx" | jq .
 ```
 
@@ -168,7 +168,7 @@ curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: ap
 The following query returns JSONs with two fields: __Geschlecht__ (gender), and __a_Alter__ (age), ordered by __a_Alter__ from the __denopa.clinical_baseline__ data set for all the items with __a_Alter__ greater than 70.
 
 ```bash
-curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: application/json" 
+curl -X GET -G https://ada.parkinson.lu/dataSets/records/findCustom -H "Accept: application/json" 
                 -d "dataSet=denopa.clinical_baseline&orderBy=a_Alter&projection=Geschlecht&projection=a_Alter&filterOrId=[{\"fieldName\":\"a_Alter\",\"conditionType\":\">\",\"value\":\"70\"}]" --cookie "PLAY2AUTH_SESS_ID=xxx"
 ```
 
@@ -179,7 +179,7 @@ curl -X GET -G http://10.79.2.192:8080/studies/records/findCustom -H "Accept: ap
 ***Full Dictionary***
 
 ```bash
-curl -X GET -G http://10.79.2.192:8080/studies/dictionary/listAll -H "Accept: application/json"
+curl -X GET -G https://ada.parkinson.lu/dataSets/dictionary/listAll -H "Accept: application/json"
             -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx"
 ```
 
@@ -188,6 +188,6 @@ curl -X GET -G http://10.79.2.192:8080/studies/dictionary/listAll -H "Accept: ap
 E.g. "Geschlecht"
 
 ```bash
-curl -v -X GET -G http://10.79.2.192:8080/studies/dictionary/get/Geschlecht -H "Accept: application/json"
+curl -v -X GET -G https://ada.parkinson.lu/dataSets/dictionary/get/Geschlecht -H "Accept: application/json"
             -d "dataSet=denopa.clinical_baseline" --cookie "PLAY2AUTH_SESS_ID=xxx"
 ```
