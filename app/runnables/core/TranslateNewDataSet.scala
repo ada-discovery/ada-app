@@ -13,7 +13,8 @@ import scala.reflect.runtime.universe.typeOf
 class TranslateNewDataSet @Inject()(dataSetService: DataSetService) extends InputFutureRunnable[TranslateNewDataSetSpec] {
 
   override def runAsFuture(spec: TranslateNewDataSetSpec) = {
-    val dataSetSetting = new DataSetSetting(spec.newDataSetId, spec.storageType, spec.defaultDistributionFieldName)
+
+    val dataSetSetting = new DataSetSetting(spec.newDataSetId, spec.storageType)
 
     dataSetService.translateData(
       spec.originalDataSetId,
@@ -33,6 +34,5 @@ case class TranslateNewDataSetSpec(
   newDataSetId: String,
   newDataSetName: String,
   storageType: StorageType.Value,
-  defaultDistributionFieldName: String,
   saveBatchSize: Option[Int]
 )

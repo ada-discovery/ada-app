@@ -43,7 +43,7 @@ class LinkADSMTBAndDrugDataSet @Inject()(
   override def runAsFuture =
     for {
       // register the linked data set (if not registered already)
-      linkedDsa <- dataSetService.register(globalDsa, linkedDataSetId, linkedDataSetName, StorageType.ElasticSearch, "country")
+      linkedDsa <- dataSetService.register(globalDsa, linkedDataSetId, linkedDataSetName, StorageType.ElasticSearch)
 
       // get all the global fields
       globalFields <- globalFieldRepo.find()

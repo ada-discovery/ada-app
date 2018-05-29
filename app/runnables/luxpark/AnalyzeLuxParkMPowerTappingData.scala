@@ -5,7 +5,7 @@ import javax.inject.Inject
 import dataaccess.Criterion
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
-import runnables.DataSetId._
+import DataSetId._
 import runnables.GuiceBuilderRunnable
 import Criterion.Infix
 import scala.concurrent.duration._

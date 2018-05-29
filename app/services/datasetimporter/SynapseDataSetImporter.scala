@@ -89,19 +89,20 @@ private class SynapseDataSetImporter @Inject() (
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
-    val dsa = createDataSetAccessor(importInfo)
-    val fieldRepo = dsa.fieldRepo
     val delimiter = synapseDelimiter.toString
 
     try {
       for {
+        // create/retrieve a dsa
+        dsa <- createDataSetAccessor(importInfo)
+
         csv <- {
           logger.info("Downloading CSV table from Synapse...")
           synapseService.getTableAsCsv(importInfo.tableId)
         }
 
         // get all the fields
-        fields <- fieldRepo.find()
+        fields <- dsa.fieldRepo.find()
 
         // create jsons and field types
         (jsons, fieldNameAndTypes) = {

@@ -56,7 +56,7 @@ class DataSetSettingController @Inject() (
       "exportOrderByFieldName" -> optional(text),
       "defaultScatterXFieldName" -> optional(text),
       "defaultScatterYFieldName" -> optional(text),
-      "defaultDistributionFieldName" -> nonEmptyText,
+      "defaultDistributionFieldName" -> optional(text),
       "defaultCumulativeCountFieldName" -> optional(text),
       "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
       "filterShowNonNullCount" -> boolean,

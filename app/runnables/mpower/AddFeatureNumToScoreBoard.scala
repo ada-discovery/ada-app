@@ -49,8 +49,7 @@ class AddFeatureNumToScoreBoard @Inject()(
         dsa,
         newDataSetId,
         dataSetName + " Ext",
-        StorageType.ElasticSearch,
-        setting.defaultDistributionFieldName
+        StorageType.ElasticSearch
       )
 
       // create a new dictionary

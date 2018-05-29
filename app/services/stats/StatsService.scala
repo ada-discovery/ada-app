@@ -19,9 +19,9 @@ import org.apache.spark.ml.stat.ChiSquareTest
 import org.apache.spark.sql.DataFrame
 import play.api.Logger
 import play.api.libs.json._
-import services.ml.BooleanLabelIndexer
+import services.ml.{BooleanLabelIndexer, FeaturesDataFrameFactory}
 import services.stats.calc._
-import services.{FeaturesDataFrameFactory, SparkApp}
+import services.SparkApp
 import JsonFieldUtil._
 import breeze.linalg.{DenseMatrix, eig, eigSym}
 import breeze.linalg.eigSym.EigSym

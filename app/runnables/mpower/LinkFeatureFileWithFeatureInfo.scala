@@ -48,8 +48,7 @@ class LinkFeatureFileWithFeatureInfo @Inject()(
         metaInfoDsa,
         input.newDataSetId,
         input.newDataSetName,
-        StorageType.ElasticSearch,
-        setting.defaultDistributionFieldName
+        StorageType.ElasticSearch
       )
 
       // create a submission feature name -> json map

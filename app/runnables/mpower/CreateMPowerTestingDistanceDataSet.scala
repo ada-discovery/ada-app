@@ -58,7 +58,7 @@ class CreateMPowerTestingDistanceDataSet @Inject()(
   override def runAsFuture =
     for {
     // register the norm data set (if not registered already)
-      newDsa <- dataSetService.register(dsa, normDataSetId, normDataSetName, StorageType.Mongo, "medTimepoint")
+      newDsa <- dataSetService.register(dsa, normDataSetId, normDataSetName, StorageType.Mongo)
 
       // get all the fields
       fields <- fieldRepo.find()

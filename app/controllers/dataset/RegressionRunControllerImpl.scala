@@ -228,8 +228,6 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
     setting: RegressionSetting,
     saveResults: Boolean
   ) = Action.async { implicit request =>
-    println(Json.prettyPrint(Json.toJson(setting)))
-
     val mlModelFuture = regressionRepo.get(setting.mlModelId)
     val criteriaFuture = loadCriteria(setting.filterId)
     val replicationCriteriaFuture = loadCriteria(setting.replicationFilterId)
@@ -412,8 +410,7 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
         dsa,
         newDataSetId,
         newDataSetName,
-        StorageType.Mongo,
-        "timeCreated"
+        StorageType.Mongo
       )
 
       // update the dictionary

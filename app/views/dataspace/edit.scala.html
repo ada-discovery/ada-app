@@ -22,7 +22,7 @@
     elements(form, dataSetIdSizeMap, Some(id)),
     dataSpaceMetaInfoRoutes.update(id),
     dataSpaceMetaInfoRoutes.get(id),
-    None,
+    Some(dataSpaceMetaInfoRoutes.delete(id)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     None
 )

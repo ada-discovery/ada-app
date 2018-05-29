@@ -6,6 +6,15 @@
 @(form: Form[DataSetSetting])(implicit msg: play.api.i18n.Messages)
 
 @inputTextReadonly("dataSetSetting", "dataSetId", form)
+
+@select("dataSetSetting", "storageType", form,
+    StorageType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), false
+)
+@checkbox("dataSetSetting", "mongoAutoCreateIndexForProjection", form)
+@checkbox("dataSetSetting", "cacheDataSet", form)
+
+<hr/>
+
 @inputText("dataSetSetting", "keyFieldName", form)
 @inputText("dataSetSetting", "exportOrderByFieldName", form)
 @inputText("dataSetSetting", "defaultDistributionFieldName", form)
@@ -18,8 +27,3 @@
 @checkbox("dataSetSetting", "filterShowNonNullCount", form)
 @inputText("dataSetSetting", "tranSMARTVisitFieldName", form)
 @inputText("dataSetSetting", "tranSMARTReplacements", form)
-@select("dataSetSetting", "storageType", form,
-    StorageType.values.toSeq.sortBy(_.id).map(value => (value.toString, value.toString)), false
-)
-@checkbox("dataSetSetting", "mongoAutoCreateIndexForProjection", form)
-@checkbox("dataSetSetting", "cacheDataSet", form)

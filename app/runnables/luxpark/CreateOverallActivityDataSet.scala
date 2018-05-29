@@ -11,7 +11,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import play.api.libs.json.{JsNumber, JsObject, Json}
 import reactivemongo.bson.BSONObjectID
-import runnables.DataSetId.lux_park_clinical
+import DataSetId.lux_park_clinical
 import runnables.GuiceBuilderRunnable
 
 import scala.concurrent.duration._

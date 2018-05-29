@@ -149,8 +149,7 @@ trait DataSetService {
     sourceDsa: DataSetAccessor,
     newDataSetId: String,
     newDataSetName: String,
-    newStorageType: StorageType.Value,
-    newDefaultDistributionFieldName: String
+    newStorageType: StorageType.Value
   ): Future[DataSetAccessor]
 
   def mergeDataSets(
@@ -1558,8 +1557,7 @@ class DataSetServiceImpl @Inject()(
     sourceDsa: DataSetAccessor,
     newDataSetId: String,
     newDataSetName: String,
-    newStorageType: StorageType.Value,
-    newDefaultDistributionFieldName: String
+    newStorageType: StorageType.Value
   ): Future[DataSetAccessor] = {
     for {
       // get the data set meta info
@@ -1568,7 +1566,7 @@ class DataSetServiceImpl @Inject()(
       // register the norm data set (if not registered already)
       newDsa <- dsaf.register(
         metaInfo.copy(_id = None, id = newDataSetId, name = newDataSetName, timeCreated = new ju.Date()),
-        Some(new DataSetSetting(newDataSetId, newStorageType, newDefaultDistributionFieldName)),
+        Some(new DataSetSetting(newDataSetId, newStorageType)),
         None
       )
     } yield

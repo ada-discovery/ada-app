@@ -43,11 +43,6 @@ private class RedCapDataSetImporter @Inject() (
     // Red cap service to pull the data from
     val redCapService = redCapServiceFactory(importInfo.url, importInfo.token)
 
-    // Data repo to store the data to
-    val dsa = createDataSetAccessor(importInfo)
-    val fieldRepo = dsa.fieldRepo
-    val categoryRepo = dsa.categoryRepo
-
     val stringFieldType = ftf.stringScalar
 
     val batchSize = importInfo.saveBatchSize.getOrElse(defaultSaveBatchSize)
@@ -72,7 +67,6 @@ private class RedCapDataSetImporter @Inject() (
     }
 
     for {
-
       // get the data from a given red cap service
       records <- {
         logger.info("Downloading records from REDCap...")
@@ -84,6 +78,12 @@ private class RedCapDataSetImporter @Inject() (
         } else
           redCapService.listAllRecords // "cdisc_dm_usubjd"
       }
+
+      // create/retrieve a dsa
+      dsa <- createDataSetAccessor(importInfo)
+
+      fieldRepo = dsa.fieldRepo
+      categoryRepo = dsa.categoryRepo
 
       // import dictionary (if needed) otherwise use an existing one (should exist)
       fields <- importOrGetDictionary(importInfo, redCapService, fieldRepo, categoryRepo, records)

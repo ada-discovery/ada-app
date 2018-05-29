@@ -14,7 +14,6 @@ import controllers._
 import models.DataSetImportFormattersAndIds.{DataSetImportIdentity, dataSetImportFormat}
 import models._
 import persistence.RepoTypes.{DataSetImportRepo, MessageRepo}
-import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import play.api.{Configuration, Logger}
 import play.api.data.{Form, Mapping}
 import play.api.data.Forms.{optional, _}
@@ -35,8 +34,8 @@ import views.html.{datasetimport => view}
 import views.html.layout
 import util.{MessageLogger, getRequestParamValue}
 import play.api.data.format.Formats._
-
 import _root_.util.retry
+import models.DataSetFormattersAndIds.JsObjectIdentity
 
 import scala.concurrent.{Await, Future}
 
@@ -78,11 +77,11 @@ class DataSetImportController @Inject()(
   private val dataSetSettingMapping: Mapping[DataSetSetting] = mapping(
     "id" -> ignored(Option.empty[BSONObjectID]),
     "dataSetId" -> nonEmptyText,
-    "keyFieldName" -> nonEmptyText,
+    "keyFieldName" -> default(nonEmptyText, JsObjectIdentity.name),
     "exportOrderByFieldName" -> optional(text),
     "defaultScatterXFieldName" -> optional(text),
     "defaultScatterYFieldName" -> optional(text),
-    "defaultDistributionFieldName" -> nonEmptyText,
+    "defaultDistributionFieldName" -> optional(text),
     "defaultCumulativeCountFieldName" -> optional(text),
     "filterShowFieldStyle" -> optional(of[FilterShowFieldStyle.Value]),
     "filterShowNonNullCount" -> boolean,

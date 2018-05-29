@@ -94,7 +94,6 @@ class RCPredictionServiceImpl @Inject()(
     preserveWeightFieldNames: Seq[String]
   ): Future[Unit] = {
     val start = new ju.Date
-    val idName = JsObjectIdentity.name
     val dsa = dsaf(ioSpec.sourceDataSetId).get
     val dataSetRepo = dsa.dataSetRepo
 
@@ -323,40 +322,19 @@ class RCPredictionServiceImpl @Inject()(
     json: JsObject,
     ioSpec: RCPredictionInputOutputSpec
   ): Option[(Seq[Seq[jl.Double]], Seq[jl.Double])] = {
-    // helper method to extract series for a given path
-    def extractSeries(path: String): Option[Seq[jl.Double]] = {
-      val jsValues = JsonUtil.traverse(json, path)
-
-      val leftTrimmedJsValues =
-        ioSpec.dropLeftLength.map(jsValues.drop).getOrElse(jsValues)
-
-      val trimmedJsValues = ioSpec.seriesLength match {
-        case Some(length) =>
-          val series = leftTrimmedJsValues.take(length)
-          if (series.size == length) Some(series) else None
-
-        case None =>
-          val series = ioSpec.dropRightLength.map(leftTrimmedJsValues.dropRight).getOrElse(leftTrimmedJsValues)
-          Some(series)
-      }
-
-      trimmedJsValues.map(_.map(_.as[Double]: jl.Double))
+    // TODO: only the first output series path is taken
+    IOSeriesUtil.applyJson(
+      json,
+      ioSpec.inputSeriesFieldPaths,
+      ioSpec.outputSeriesFieldPaths.head,
+      ioSpec.dropLeftLength,
+      ioSpec.dropRightLength,
+      ioSpec.seriesLength
+    ).map { case (input, output) =>
+      val jlInput = input.map(_.map(x => x: jl.Double))
+      val jlOutput = output.map(x => x: jl.Double)
+      (jlInput, jlOutput)
     }
-
-    // extract input series
-    val inputSeriesAux = ioSpec.inputSeriesFieldPaths.flatMap(extractSeries)
-
-    val inputSeries =
-      if (inputSeriesAux.size == ioSpec.inputSeriesFieldPaths.size)
-        Some(inputSeriesAux.transpose)
-      else
-        None
-
-    // extract output series
-    // TODO: only the first output field is taken
-    val outputSeries = extractSeries(ioSpec.outputSeriesFieldPaths.head)
-
-    (inputSeries, outputSeries).zipped.headOption
   }
 
   // note that empty input or output series are return as None
@@ -409,7 +387,7 @@ class RCPredictionServiceImpl @Inject()(
   ): Future[Unit] =
     for {
       // register the weight output data set
-      weightDsa <- dataSetService.register(sourceDsa, resultDataSetId, resultDataSetName, StorageType.ElasticSearch, "rc_w_0")
+      weightDsa <- dataSetService.register(sourceDsa, resultDataSetId, resultDataSetName, StorageType.ElasticSearch)
 
       weightsCount = resultsAndJsons.head._1.finalWeights.size
 
@@ -581,7 +559,7 @@ class RCPredictionServiceImpl @Inject()(
   ): Future[Unit] =
     for {
       // register the results data set (if not registered already)
-      newDsa <- dataSetService.register(sourceDsa, resultDataSetId, resultDataSetName, StorageType.ElasticSearch, "reservoirNodeNum")
+      newDsa <- dataSetService.register(sourceDsa, resultDataSetId, resultDataSetName, StorageType.ElasticSearch)
 
       // update the dictionary
       _ <- dataSetService.updateDictionary(resultDataSetId, settingAndResultsFields, false, true)
@@ -689,7 +667,7 @@ object RCPredictionStaticHelper extends Serializable {
 
       val weights: Seq[jl.Double] = {
         for {
-          reservoirNode <- reservoirNodes;
+          reservoirNode <- reservoirNodes
           outputNode <- outputNodes
         } yield
           weightAccessor.getWeight(reservoirNode, outputNode)

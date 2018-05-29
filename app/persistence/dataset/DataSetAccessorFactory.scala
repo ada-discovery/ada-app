@@ -18,6 +18,7 @@ import scala.concurrent.Future
 import scala.concurrent.Await._
 
 trait DataSetAccessorFactory {
+
   def register(
     dataSpaceName: String,
     dataSetId: String,
@@ -106,8 +107,6 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     val classificationResultRepo = classificationResultRepoFactory(dataSetId)
     val regressionResultRepo = regressionResultRepoFactory(dataSetId)
 
-    val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(dataSpaceId)
-
     new DataSetAccessorImpl(
       dataSetId,
       fieldRepo,
@@ -117,7 +116,8 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
       classificationResultRepo,
       regressionResultRepo,
       dataSetRepoCreate(dataSetId),
-      dataSetMetaInfoRepo,
+      dataSetMetaInfoRepoFactory.apply,
+      dataSetMetaInfoRepoFactory(dataSpaceId),
       dataSetSettingRepo
     )
   }
@@ -168,80 +168,128 @@ protected[persistence] class DataSetAccessorFactoryImpl @Inject()(
     dataView: Option[DataView]
   ) = {
     val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(metaInfo.dataSpaceId)
-    val metaInfosFuture = dataSetMetaInfoRepo.find(Seq("id" #== metaInfo.id))
-    val settingsFuture = dataSetSettingRepo.find(Seq("dataSetId" #== metaInfo.id))
+    val existingMetaInfosFuture = dataSetMetaInfoRepo.find(Seq("id" #== metaInfo.id)).map(_.headOption)
+    val existingSettingFuture = dataSetSettingRepo.find(Seq("dataSetId" #== metaInfo.id)).map(_.headOption)
 
-    metaInfosFuture.zip(settingsFuture).flatMap { case (metaInfos, settings) =>
+    for {
+      existingMetaInfos <- existingMetaInfosFuture
+      existingSetting <- existingSettingFuture
+      dsa <- registerAux(dataSetMetaInfoRepo, metaInfo, setting, existingMetaInfos, existingSetting, dataView)
+    } yield
+      dsa
+  }
 
-      // register setting
-      val settingFuture = setting.map( setting =>
-        if (settings.isEmpty)
-          dataSetSettingRepo.save(setting)
-        else
-          Future(())
-          // dataSetSettingRepo.update(setting.copy(_id = settings.head._id))
+  private def registerAux(
+    dataSetMetaInfoRepo: DataSetMetaInfoRepo,
+    metaInfo: DataSetMetaInfo,
+    setting: Option[DataSetSetting],
+    existingMetaInfo: Option[DataSetMetaInfo],
+    existingSetting: Option[DataSetSetting],
+    dataView: Option[DataView]
+  ) = {
+    // register setting
+    val settingFuture = setting.map( setting =>
+      existingSetting.map( existingSetting =>
+        // if already exists then update a storage type
+        dataSetSettingRepo.update(existingSetting.copy(storageType = setting.storageType))
       ).getOrElse(
-        // if no setting provided either create a dummy one if needed or do nothing
-        if (metaInfos.isEmpty)
-          dataSetSettingRepo.save(new DataSetSetting(metaInfo.id))
-        else
-          Future(())
+        // otherwise save
+        dataSetSettingRepo.save(setting)
+      )
+    ).getOrElse(
+      // no setting provided
+      existingSetting.map( _ =>
+        // if already exists, do nothing
+        Future(())
+      ).getOrElse(
+        // otherwise save a dummy one
+        dataSetSettingRepo.save(new DataSetSetting(metaInfo.id))
+      )
+    )
+
+    // register meta info
+    val metaInfoFuture = updateMetaInfo(dataSetMetaInfoRepo, metaInfo, existingMetaInfo)
+
+    for {
+      // execute the setting registration
+      _ <- settingFuture
+
+      // execute the meta info registration
+      _ <- metaInfoFuture
+
+      // create a data set accessor (and data view repo)
+      dsa <- cache.get(metaInfo.id).map(
+        Future(_)
+      ).getOrElse(
+        createInstance(metaInfo.id).map { case Some(dsa) =>
+          cache.update(metaInfo.id, dsa)
+          dsa
+        }
       )
 
-      // register meta info
-      val metaInfoFuture =
-        if (metaInfos.isEmpty) {
-          for {
-            dataSpaceMetaInfo <- dataSpaceMetaInfoRepo.get(metaInfo.dataSpaceId)
+      dataViewRepo = dsa.dataViewRepo
 
-            metaInfoId <- dataSetMetaInfoRepo.save(metaInfo)
+      // check if the data view exist
+      dataViewExist <- dataViewRepo.count().map(_ > 0)
 
-            _ <-
-              dataSpaceMetaInfo match {
-                case Some(dataSpaceMetaInfo) =>
-                  val metaInfoWithId = DataSetMetaInfoIdentity.set(metaInfo, metaInfoId)
-                  dataSpaceMetaInfoRepo.update(
-                    dataSpaceMetaInfo.copy(dataSetMetaInfos = (dataSpaceMetaInfo.dataSetMetaInfos ++ Seq(metaInfoWithId)))
-                  )
-                case None => Future(())
-              }
-          } yield
-            metaInfoId
-        } else
-          // if already exists update the name
-          dataSetMetaInfoRepo.update(metaInfos.head.copy(name = metaInfo.name))
-
-      for {
-        // execute the setting registration
-        _ <- settingFuture
-
-        // execute the meta info registration
-        _ <- metaInfoFuture
-
-        // create a data set accessor (and data view repo)
-        dsa <- cache.get(metaInfo.id).map(
-          Future(_)
-        ).getOrElse(
-          createInstance(metaInfo.id).map { case Some(dsa) =>
-            cache.update(metaInfo.id, dsa)
-            dsa
-          }
-        )
-
-        dataViewRepo = dsa.dataViewRepo
-
-        // check if the data view exist
-        dataViewExist <- dataViewRepo.count().map(_ > 0)
-
-        // register (save) data view if none view already exists
-        _ <- if (!dataViewExist && dataView.isDefined)
-            dsa.dataViewRepo.save(dataView.get)
-          else
-            Future(())
-      } yield
-        dsa
-    }
+      // register (save) data view if none view already exists
+      _ <- if (!dataViewExist && dataView.isDefined)
+        dsa.dataViewRepo.save(dataView.get)
+      else
+        Future(())
+    } yield
+      dsa
   }
+
+  private def updateMetaInfo(
+    dataSetMetaInfoRepo: DataSetMetaInfoRepo,
+    metaInfo: DataSetMetaInfo,
+    existingMetaInfo: Option[DataSetMetaInfo]
+  ): Future[BSONObjectID] =
+    existingMetaInfo.map( existingMetaInfo =>
+      for {
+        // if already exists update the name
+        metaInfoId <- dataSetMetaInfoRepo.update(existingMetaInfo.copy(name = metaInfo.name))
+
+        // receive an associated data space meta info
+        dataSpaceMetaInfo <- dataSpaceMetaInfoRepo.get(existingMetaInfo.dataSpaceId)
+
+        _ <- dataSpaceMetaInfo match {
+          // find a data set info and update its name, replace it in the data space, and update
+          case Some(dataSpaceMetaInfo) =>
+            val metaInfos = dataSpaceMetaInfo.dataSetMetaInfos
+            val metaInfoInSpace = metaInfos.find(_._id == existingMetaInfo._id).get
+            val unchangedMetaInfos = metaInfos.filterNot(_._id == existingMetaInfo._id)
+
+            dataSpaceMetaInfoRepo.update(
+              dataSpaceMetaInfo.copy(dataSetMetaInfos = (unchangedMetaInfos ++ Seq(metaInfoInSpace.copy(name = metaInfo.name))))
+            )
+          case None => Future(())
+        }
+      } yield
+        metaInfoId
+
+    ).getOrElse(
+      for {
+        // if it doesn't exists save a new one
+        metaInfoId <- dataSetMetaInfoRepo.save(metaInfo)
+
+        // receive an associated data space meta info
+        dataSpaceMetaInfo <- dataSpaceMetaInfoRepo.get(metaInfo.dataSpaceId)
+
+        _ <- dataSpaceMetaInfo match {
+          // add a new data set info to the data space and update
+          case Some(dataSpaceMetaInfo) =>
+            val metaInfoWithId = DataSetMetaInfoIdentity.set(metaInfo, metaInfoId)
+
+            dataSpaceMetaInfoRepo.update(
+              dataSpaceMetaInfo.copy(dataSetMetaInfos = (dataSpaceMetaInfo.dataSetMetaInfos ++ Seq(metaInfoWithId)))
+            )
+          case None => Future(())
+        }
+      } yield
+        metaInfoId
+    )
 
   override def register(
     dataSpaceName: String,

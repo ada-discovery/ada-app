@@ -24,10 +24,9 @@ import org.apache.spark.ml.param._
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.catalyst.util.DateTimeUtils
 import org.apache.spark.sql.functions.col
 import play.api.libs.json.{JsObject, Json}
-import services.{FeaturesDataFrameFactory, SparkApp}
+import services.SparkApp
 import play.api.{Configuration, Logger}
 import services.stats.StatsService
 
@@ -55,6 +54,17 @@ trait MachineLearningService {
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
     replicationData: Traversable[JsObject] = Nil
+  ): Future[RegressionResultsHolder]
+
+  def regressSeries(
+    data: JsObject,
+    inputSeriesFieldPaths: Seq[String],
+    outputSeriesFieldPath: String,
+    dlSize: Int,
+    predictAhead: Int,
+    mlModel: Regression,
+    setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
+    replicationData: Option[JsObject] = None
   ): Future[RegressionResultsHolder]
 
   def cluster(
@@ -366,19 +376,11 @@ private class MachineLearningServiceImpl @Inject() (
     setting: LearningSetting[RegressionEvalMetric.Value],
     replicationData: Traversable[JsObject]
   ): Future[RegressionResultsHolder] = {
-    // TRAINING AND TEST DATA
 
     // create a data frame with all the features
     val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName))
-    df.cache
 
-    // transform the df to a regression one
-    val finalDf = transformToRegressionDataFrame(df, setting)
-    finalDf.cache
-
-    // REPLICATION DATA (if any)
-
-    // create a data frame with all the features
+    // create a replication data frame with all the features
     val replicationDf =
       if (replicationData.nonEmpty) {
         val df = FeaturesDataFrameFactory(session, replicationData, fields, Some(outputFieldName))
@@ -386,9 +388,50 @@ private class MachineLearningServiceImpl @Inject() (
       } else
         None
 
-    // transform the df to a classification one
+    regress(df, replicationDf, mlModel, setting)
+  }
+
+  override def regressSeries(
+    data: JsObject,
+    inputSeriesFieldPaths: Seq[String],
+    outputSeriesFieldPath: String,
+    dlSize: Int,
+    predictAhead: Int,
+    mlModel: Regression,
+    setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
+    replicationData: Option[JsObject] = None
+  ): Future[RegressionResultsHolder] = {
+
+    // create a data frame with all the features
+    val df = FeaturesDataFrameFactory.apply(session)(data, inputSeriesFieldPaths, outputSeriesFieldPath, dlSize, predictAhead)
+
+    // create a replication data frame with all the features
+    val replicationDf =
+      replicationData.map { replicationData =>
+        val df = FeaturesDataFrameFactory.apply(session)(replicationData, inputSeriesFieldPaths, outputSeriesFieldPath, dlSize, predictAhead)
+        df.cache
+      }
+
+    regress(df, replicationDf, mlModel, setting)
+  }
+
+  private def regress(
+    df: DataFrame,
+    replicationDf: Option[DataFrame],
+    mlModel: Regression,
+    setting: LearningSetting[RegressionEvalMetric.Value]
+  ): Future[RegressionResultsHolder] = {
+    // TRAINING AND TEST DATA
+
+    // transform the df to a regression one
+    val finalDf = transformToRegressionDataFrame(df, setting)
+    finalDf.cache
+
+    // REPLICATION DATA (if any)
+
+    // transform the df to a regression one
     val finalReplicationDf = replicationDf.map { replicationDf =>
-      val df = transformToClassificationDataFrame(replicationDf, setting)
+      val df = transformToRegressionDataFrame(replicationDf, setting)
       df.cache
     }
 

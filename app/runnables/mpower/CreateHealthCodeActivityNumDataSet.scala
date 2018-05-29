@@ -42,8 +42,7 @@ class CreateHealthCodeActivityNumDataSet @Inject()(
         dsa,
         newDataSetId,
         dataSetName + " Records num",
-        StorageType.ElasticSearch,
-        healthCodeFieldName
+        StorageType.ElasticSearch
       )
 
       // create a new dictionary

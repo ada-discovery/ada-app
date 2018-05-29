@@ -10,19 +10,23 @@
         <div id="settingDiv" style="display:none">
             <input type="hidden" id="setting_dataSetId" name="setting.dataSetId" value="">
             <hr/>
-            @inputText("dataSetImport", "setting.keyFieldName", form)
-            @inputText("dataSetImport", "setting.exportOrderByFieldName", form)
-            @inputText("dataSetImport", "setting.defaultDistributionFieldName", form)
-            @inputText("dataSetImport", "setting.defaultScatterXFieldName", form)
-            @inputText("dataSetImport", "setting.defaultScatterYFieldName", form)
-            @inputText("dataSetImport", "setting.defaultCumulativeCountFieldName", form)
-            @select("dataSetImport", "setting.filterShowFieldStyle", form, util.enumToValueString(FilterShowFieldStyle), true)
-            @checkbox("dataSetImport", "setting.filterShowNonNullCount", form)
-            @inputText("dataSetImport", "setting.tranSMARTVisitFieldName", form)
-            @inputText("dataSetImport", "setting.tranSMARTReplacements", form)
             @select("dataSetImport", "setting.storageType", form, util.enumToValueString(StorageType), true)
-            @checkbox("dataSetImport", "setting.mongoAutoCreateIndexForProjection", form)
-            @checkbox("dataSetImport", "setting.cacheDataSet", form)
+            <a class="pull-right" href="#advancedSetting" data-toggle="collapse">Show Advanced</a>
+
+            <div id="advancedSetting" class="collapse">
+                @checkbox("dataSetImport", "setting.mongoAutoCreateIndexForProjection", form)
+                @checkbox("dataSetImport", "setting.cacheDataSet", form)
+                @inputText("dataSetImport", "setting.keyFieldName", form)
+                @inputText("dataSetImport", "setting.exportOrderByFieldName", form)
+                @inputText("dataSetImport", "setting.defaultDistributionFieldName", form)
+                @inputText("dataSetImport", "setting.defaultScatterXFieldName", form)
+                @inputText("dataSetImport", "setting.defaultScatterYFieldName", form)
+                @inputText("dataSetImport", "setting.defaultCumulativeCountFieldName", form)
+                @select("dataSetImport", "setting.filterShowFieldStyle", form, util.enumToValueString(FilterShowFieldStyle), true)
+                @checkbox("dataSetImport", "setting.filterShowNonNullCount", form)
+                @inputText("dataSetImport", "setting.tranSMARTVisitFieldName", form)
+                @inputText("dataSetImport", "setting.tranSMARTReplacements", form)
+            </div>
         </div>
     </div>
 </div>

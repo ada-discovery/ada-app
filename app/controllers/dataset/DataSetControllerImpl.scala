@@ -1117,7 +1117,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def getDistribution(
+  def getDistribution(
     fieldNameOption: Option[String],
     groupFieldNameOption: Option[String],
     filterOrId: FilterOrId
@@ -1146,10 +1146,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // get the data set setting
         setting <- dsa.setting
 
-        fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
+        // widget field
+        field <- {
+          val fieldName = fieldNameOption match {
+            case Some(fieldName) => Some(fieldName)
+            case None => setting.defaultDistributionFieldName
+          }
 
-        // chart field
-        field <- fieldRepo.get(fieldName)
+          fieldName.map(fieldRepo.get).getOrElse(Future(None))
+        }
 
         // get the group field
         groupField <- groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
@@ -1495,10 +1500,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // get the data set name, data space tree and the data set setting
         (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
 
-        fieldName = fieldNameOption.getOrElse(setting.defaultDistributionFieldName)
-
         // field
-        field <- fieldRepo.get(fieldName)
+        field <- {
+          val fieldName = fieldNameOption match {
+            case Some(fieldName) => Some(fieldName)
+            case None => setting.defaultDistributionFieldName
+          }
+
+          fieldName.map(fieldRepo.get).getOrElse(Future(None))
+        }
       } yield {
         val sessionCookie = request.cookies.get("PLAY2AUTH_SESS_ID")
         val sessionId = sessionCookie.map(_.value)

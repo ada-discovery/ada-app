@@ -515,8 +515,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
           dsa,
           newDataSetId,
           newDataSetName,
-          StorageType.Mongo,
-          "timeCreated"
+          StorageType.Mongo
         )
 
       // update the dictionary

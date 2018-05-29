@@ -51,7 +51,7 @@ class ExportClassificationResultsToDataSet @Inject() (
       dataSetName <- dsa.dataSetName
 
       // register target dsa
-      targetDsa <- dataSetService.register(dsa, targetDataSetId, dataSetName + " Classification", StorageType.Mongo, "timeCreated")
+      targetDsa <- dataSetService.register(dsa, targetDataSetId, dataSetName + " Classification", StorageType.Mongo)
 
       // update the dictionary
       _ <- dataSetService.updateDictionary(targetDataSetId, fields ++ extraFields, false, true)

@@ -53,7 +53,7 @@ class LinkLuxParkClinicalAndIBBLSampleDataSet @Inject()(
   override def runAsFuture =
     for {
       // register the merged data set (if not registered already)
-      linkedDsa <- dataSetService.register(biosampleDsa, linkedDataSetId, linkedDataSetName, StorageType.ElasticSearch, "sampletypeid")
+      linkedDsa <- dataSetService.register(biosampleDsa, linkedDataSetId, linkedDataSetName, StorageType.ElasticSearch)
 
       // get the selected clinical fields
       clinicalFields <- clinicalFieldRepo.find(Seq(FieldIdentity.name #-> clinicalFieldNames))

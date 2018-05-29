@@ -22,7 +22,7 @@ class AddCsvDataSetImportsFromFolder @Inject()(
       val dataSetId = spec.dataSetIdPrefix + "." + importFileNameWoExt
       val dataSetName = spec.dataSetNamePrefix + " " + importFileNameWoExt
 
-      val dataSetSetting = new DataSetSetting(dataSetId, spec.storageType, spec.defaultDistributionFieldName)
+      val dataSetSetting = new DataSetSetting(dataSetId, spec.storageType)
 
       CsvDataSetImport(
         None,
@@ -54,6 +54,5 @@ case class AddCsvDataSetImportsFromFolderSpec(
   dataSetNamePrefix: String,
   delimiter: String,
   storageType: StorageType.Value,
-  defaultDistributionFieldName: String,
   batchSize: Option[Int]
 )

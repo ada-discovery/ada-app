@@ -11,7 +11,7 @@ import services.{DataSetService, DeNoPaSetting}
 import DeNoPaBaselineTranSMARTMapping.{subjectsData, clinicalData}
 import DeNoPaBaselineTranSMARTMapping.{fieldCategoryMap => baselineFieldCategoryMap}
 import DeNoPaBaselineTranSMARTMapping.{fieldLabelMap => baselineFieldLabelMap}
-import runnables.DataSetId._
+import runnables.luxpark.DataSetId._
 import runnables.GuiceBuilderRunnable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import dataaccess.CategoryRepo.saveRecursively

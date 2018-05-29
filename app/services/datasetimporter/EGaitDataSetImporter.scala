@@ -64,14 +64,16 @@ private class EGaitDataSetImporter @Inject()(
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
     val eGaitService = eGaitServiceFactory(username, password)
-    val dsa = createDataSetAccessor(importInfo)
 
     try {
       for {
+        dsa <- createDataSetAccessor(importInfo)
+
         _ <- if (importInfo.importRawData)
           importRawKineticData(importInfo, eGaitService, dsa)
         else
           importFeatures(importInfo, eGaitService, dsa)
+
       } yield {
         messageLogger.info(s"Import of data set '${importInfo.dataSetName}' successfully finished.")
       }

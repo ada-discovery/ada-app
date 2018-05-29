@@ -24,8 +24,6 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
-    val dsa = createDataSetAccessor(importInfo)
-
     val delimiter = tranSmartDelimeter.toString
 
     try {
@@ -44,6 +42,9 @@ private class TranSmartDataSetImporter extends AbstractDataSetImporter[TranSmart
       val values = dataSetService.parseLines(columnNames, lines, delimiter, false, prefixSuffixSeparators)
 
       for {
+        // create/retrieve a dsa
+        dsa <- createDataSetAccessor(importInfo)
+
         // save the jsons and dictionary
         _ <-
           if (importInfo.inferFieldTypes)

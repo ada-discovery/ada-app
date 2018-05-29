@@ -45,11 +45,13 @@ protected class DataSetAccessorImpl(
     val classificationResultRepo: ClassificationResultRepo,
     val regressionResultRepo: RegressionResultRepo,
     dataSetRepoCreate: (Seq[(String, FieldTypeSpec)], Option[DataSetSetting]) => Future[JsonCrudRepo],
-    dataSetMetaInfoRepo: DataSetMetaInfoRepo,
+    dataSetMetaInfoRepoCreate: BSONObjectID => DataSetMetaInfoRepo,
+    initDataSetMetaInfoRepo: DataSetMetaInfoRepo,
     dataSetSettingRepo: DataSetSettingRepo
   ) extends DataSetAccessor {
 
   private var _dataSetRepo: Option[JsonCrudRepo] = None
+  private var dataSetMetaInfoRepo = initDataSetMetaInfoRepo
 
   override def dataSetRepo = {
     if (_dataSetRepo.isEmpty) {
@@ -80,14 +82,6 @@ protected class DataSetAccessorImpl(
     } yield
       _dataSetRepo = Some(newDataSetRepo)
 
-  override def metaInfo =
-    for {
-      metaInfos <- dataSetMetaInfoRepo.find(Seq("id" #== dataSetId))
-    } yield
-      metaInfos.headOption.getOrElse(
-        throw new IllegalStateException("Meta info not available for data set '" + dataSetId + "'.")
-      )
-
   override def setting =
     for {
       settings <- dataSetSettingRepo.find(Seq("dataSetId" #== dataSetId))
@@ -99,6 +93,18 @@ protected class DataSetAccessorImpl(
   override def updateSetting(setting: DataSetSetting) =
     dataSetSettingRepo.update(setting)
 
-  override def updateMetaInfo(metaInfo: DataSetMetaInfo) =
+  // meta info
+
+  override def metaInfo =
+    for {
+      metaInfos <- dataSetMetaInfoRepo.find(Seq("id" #== dataSetId))
+    } yield
+      metaInfos.headOption.getOrElse(
+        throw new IllegalStateException("Meta info not available for data set '" + dataSetId + "'.")
+      )
+
+  override def updateMetaInfo(metaInfo: DataSetMetaInfo) = {
+    dataSetMetaInfoRepo = dataSetMetaInfoRepoCreate(metaInfo.dataSpaceId)
     dataSetMetaInfoRepo.update(metaInfo)
+  }
 }

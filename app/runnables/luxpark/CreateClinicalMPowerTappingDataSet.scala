@@ -6,7 +6,7 @@ import java.{util => ju}
 import dataaccess.{Criterion, FieldTypeHelper}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
-import runnables.DataSetId._
+import DataSetId._
 import runnables.GuiceBuilderRunnable
 import Criterion.Infix
 import dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo}
@@ -97,7 +97,7 @@ class CreateClinicalMPowerTappingDataSet @Inject()(
           None,
           Some(NewMPowerTappingField.LeftTappingScore.toString),
           Some(NewMPowerTappingField.RightTappingScore.toString),
-          NewMPowerTappingField.LeftTappingScore.toString,
+          Some(NewMPowerTappingField.LeftTappingScore.toString),
           None,
           None,
           false,

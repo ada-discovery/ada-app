@@ -35,19 +35,25 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
   protected val defaultFti = FieldTypeHelper.fieldTypeInferrer
   protected val ftf = FieldTypeHelper.fieldTypeFactory()
   protected val defaultCharset = "UTF-8"
-  protected val timeout = 2 minutes
 
-  protected def createDataSetAccessor(importInfo: DataSetImport): DataSetAccessor =
-    result(dsaf.register(
-      importInfo.dataSpaceName,
-      importInfo.dataSetId,
-      importInfo.dataSetName,
-      importInfo.setting,
-      importInfo.dataView
-    ), timeout)
-
-  val df = new DecimalFormat("#")
+  private val df = new DecimalFormat("#")
   df.setMaximumIntegerDigits(40)
+
+  protected def createDataSetAccessor(
+    importInfo: DataSetImport
+  ): Future[DataSetAccessor] =
+    for {
+      dsa <- dsaf.register(
+        importInfo.dataSpaceName,
+        importInfo.dataSetId,
+        importInfo.dataSetName,
+        importInfo.setting,
+        importInfo.dataView
+      )
+
+      _ <- dsa.updateDataSetRepo
+    } yield
+      dsa
 
   protected def createJsonsWithFieldTypes(
     fieldNames: Seq[String],

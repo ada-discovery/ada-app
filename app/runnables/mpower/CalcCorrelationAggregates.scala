@@ -137,8 +137,7 @@ class CalcCorrelationAggregates @Inject()(
         correlationDsa,
         newDataSetId,
         newDataSetName,
-        StorageType.ElasticSearch,
-        ""
+        StorageType.ElasticSearch
       )
 
       // create a new dictionary

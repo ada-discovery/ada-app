@@ -20,16 +20,15 @@ import play.api.data.Form
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import controllers.dataset.routes.javascript.{DataSpaceMetaInfoController => dataSpaceMetaInfoJsRoutes}
-import dataaccess.User
+import dataaccess.{DataSetMetaInfoRepoFactory, User}
 import services.DataSpaceService
-
-import scala.collection.mutable.Buffer
 
 class DataSpaceMetaInfoController @Inject() (
     repo: DataSpaceMetaInfoRepo,
     dsaf: DataSetAccessorFactory,
     dataSetSettingRepo: DataSetSettingRepo,
-    dataSpaceService: DataSpaceService
+    dataSpaceService: DataSpaceService,
+    dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory
   ) extends CrudControllerImpl[DataSpaceMetaInfo, BSONObjectID](repo)
     with SubjectPresentRestrictedCrudController[BSONObjectID]
     with HasBasicFormCreateView[DataSpaceMetaInfo]
@@ -142,12 +141,12 @@ class DataSpaceMetaInfoController @Inject() (
         val dataSetMetaInfoIdMap = existingDataSetMetaInfos.map( info => (info._id.get, info)).toMap
 
         ((ids, newDataSetNames, newDataSetSortOrders).zipped, newHides).zipped.map{ case ((id, newDataSetName, newDataSetSortOrder), newHide) =>
-          val existingDataSetMetaInfo = dataSetMetaInfoIdMap(BSONObjectID(id))
+          val existingDataSetMetaInfo = dataSetMetaInfoIdMap(BSONObjectID.parse(id).get)
 
           val newSortOrder = try {
             newDataSetSortOrder.toInt
           } catch {
-            // if it's not int use an existing sort order
+            // if it's not an int use an existing sort order
             case e: NumberFormatException => existingDataSetMetaInfo.sortOrder
           }
 
@@ -157,7 +156,11 @@ class DataSpaceMetaInfoController @Inject() (
 
       // update the data space meta info
       id <-
-        repo.update(item.copy(dataSetMetaInfos = newDataSetMetaInfos.toSeq, timeCreated = existingItem.timeCreated))
+        repo.update(item.copy(
+          dataSetMetaInfos = newDataSetMetaInfos.toSeq,
+          timeCreated = existingItem.timeCreated,
+          parentId = existingItem.parentId
+        ))
 
       // update the individual data set meta infos
       _ <- Future.sequence(
@@ -191,10 +194,26 @@ class DataSpaceMetaInfoController @Inject() (
 
         val dsa = dsaf(dataSetId).get
 
-        def unregisterDataSet: Future[_] = {
-          val filteredDataSetInfos = dataSpaceInfo.dataSetMetaInfos.filter(!_.id.equals(dataSetId))
-          repo.update(dataSpaceInfo.copy(dataSetMetaInfos = filteredDataSetInfos))
-        }
+        def unregisterDataSet: Future[_] =
+          for {
+            // remove a data set from the data space
+            _ <- {
+              val filteredDataSetInfos = dataSpaceInfo.dataSetMetaInfos.filterNot(_.id.equals(dataSetId))
+              repo.update(dataSpaceInfo.copy(dataSetMetaInfos = filteredDataSetInfos))
+            }
+
+            // remove a data set from the data set meta info repo
+            _ <- {
+              dataSpaceInfo.dataSetMetaInfos.find(_.id.equals(dataSetId)).map { dataSetInfoToRemove =>
+                val dataSetMetaInfoRepo = dataSetMetaInfoRepoFactory(dataSpaceInfo._id.get)
+                dataSetMetaInfoRepo.delete(dataSetInfoToRemove._id.get)
+              }.getOrElse(
+                // should never happen
+                Future(())
+              )
+            }
+          } yield
+            ()
 
         // maybe dropping the entire table/collection would be more appropriate than deleting all the records
         def deleteDataSet: Future[_] =

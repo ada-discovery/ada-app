@@ -70,7 +70,7 @@ class CreatePPMIClinicalDataSet @Inject()(
     val repo = dsa.dataSetRepo
     val fieldRepo = dsa.fieldRepo
 
-    val registerDataSetFuture = dataSetService.register(dsa, newDataSetId, newDataSetName, StorageType.ElasticSearch, "aa")
+    val registerDataSetFuture = dataSetService.register(dsa, newDataSetId, newDataSetName, StorageType.ElasticSearch)
     val jsonsFuture = repo.find(projection = fieldNames ++ Seq(idName))
     val fieldsFuture  = fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
 

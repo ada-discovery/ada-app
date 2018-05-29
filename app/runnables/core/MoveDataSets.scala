@@ -3,6 +3,7 @@ package runnables.core
 import javax.inject.Inject
 
 import dataaccess.DataSetMetaInfoRepoFactory
+import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.AdaException
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
@@ -15,6 +16,7 @@ import scala.reflect.runtime.universe.typeOf
 
 class MoveDataSets @Inject() (
     dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory,
+    dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo,
     dsaf: DataSetAccessorFactory
   ) extends InputFutureRunnable[MoveDataSetsSpec] {
 
@@ -32,24 +34,61 @@ class MoveDataSets @Inject() (
       ()
   }
 
-  private def move(dataSetId: String, newDataSpaceId: BSONObjectID): Future[Unit] = {
+  private def move(
+    dataSetId: String,
+    newDataSpaceId: BSONObjectID
+  ): Future[Unit] = {
     val dsa = dsaf(dataSetId).getOrElse(
       throw new AdaException(s"Data set $dataSetId not found.")
     )
 
     for {
+      // get a meta info associated with the data set
       metaInfo <- dsa.metaInfo
+
+      // new meta info
+      newMetaInfo = metaInfo.copy(dataSpaceId = newDataSpaceId)
+
       // delete meta info at the old data space
       _ <- {
         val repo = dataSetMetaInfoRepoFactory(metaInfo.dataSpaceId)
         repo.delete(metaInfo._id.get)
       }
 
+      // old data space meta info
+      oldDataSpaceMetaInfo <- dataSpaceMetaInfoRepo.get(metaInfo.dataSpaceId)
+
+      // remove from the old space and update
+      _ <- {
+        oldDataSpaceMetaInfo.map { oldDataSpaceMetaInfo =>
+          val filteredMetaInfos = oldDataSpaceMetaInfo.dataSetMetaInfos.filterNot(_._id == metaInfo._id)
+          dataSpaceMetaInfoRepo.update(oldDataSpaceMetaInfo.copy(dataSetMetaInfos = filteredMetaInfos))
+        }.getOrElse(
+          Future(())
+        )
+      }
+
       // save it to a new one
       _ <- {
         val repo = dataSetMetaInfoRepoFactory(newDataSpaceId)
-        repo.save(metaInfo.copy(dataSpaceId = newDataSpaceId))
+        repo.save(newMetaInfo)
       }
+
+      // new data space meta info
+      newDataSpaceMetaInfo <- dataSpaceMetaInfoRepo.get(newDataSpaceId)
+
+      // add to the new space and update
+      _ <- {
+        newDataSpaceMetaInfo.map { newDataSpaceMetaInfo =>
+          val newMetaInfos = newDataSpaceMetaInfo.dataSetMetaInfos ++ Seq(newMetaInfo)
+          dataSpaceMetaInfoRepo.update(newDataSpaceMetaInfo.copy(dataSetMetaInfos = newMetaInfos))
+        }.getOrElse(
+          Future(())
+        )
+      }
+
+      // update a meta info
+      _ <- dsa.updateMetaInfo(newMetaInfo)
     } yield
       ()
   }

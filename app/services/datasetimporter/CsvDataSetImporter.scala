@@ -18,8 +18,6 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
     try {
-      val dsa = createDataSetAccessor(importInfo)
-
       val lines = createCsvFileLineIterator(
         importInfo.path.get,
         importInfo.charsetName,
@@ -35,6 +33,9 @@ private class CsvDataSetImporter extends AbstractDataSetImporter[CsvDataSetImpor
       val values = dataSetService.parseLines(columnNames, lines, importInfo.delimiter, importInfo.eol.isDefined, prefixSuffixSeparators)
 
       for {
+        // create/retrieve a dsa
+        dsa <- createDataSetAccessor(importInfo)
+
         // save the jsons and dictionary
         _ <-
           if (importInfo.inferFieldTypes)

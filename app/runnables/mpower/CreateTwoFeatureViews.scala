@@ -67,7 +67,7 @@ class CreateTwoFeatureViews extends DsaInputFutureRunnable[CreateTwoFeatureViews
       // adapt the data set setting if needed
       _ <- if (input.adaptDataSetSetting)
         dsa_.setting.flatMap { setting =>
-          dsa_.updateSetting(setting.copy(filterShowFieldStyle = Some(FilterShowFieldStyle.LabelsOnly), defaultDistributionFieldName = numericFieldNames.head))
+          dsa_.updateSetting(setting.copy(filterShowFieldStyle = Some(FilterShowFieldStyle.LabelsOnly), defaultDistributionFieldName = Some(numericFieldNames.head)))
         } else
           Future(())
     } yield

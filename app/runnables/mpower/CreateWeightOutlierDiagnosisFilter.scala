@@ -1,18 +1,18 @@
-package runnables
+package runnables.mpower
 
 import javax.inject.Inject
 
 import dataaccess.{AsyncReadonlyRepo, Criterion, EqualsCriterion, NotEqualsNullCriterion}
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import dataaccess.Criterion._
 import models.{ConditionType, Field, Filter, FilterCondition}
+import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
+import runnables.InputFutureRunnable
 import services.stats.StatsService
 
-import scala.reflect.runtime.universe._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.reflect.runtime.universe._
 
 class CreateWeightOutlierDiagnosisFilter @Inject()(
     dsaf: DataSetAccessorFactory,

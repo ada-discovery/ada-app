@@ -20,7 +20,7 @@ class InferNewDataSet @Inject()(dataSetService: DataSetService) extends InputFut
       FieldTypeHelper.arrayDelimiter
     )
 
-    val dataSetSetting = new DataSetSetting(spec.newDataSetId, spec.storageType, spec.defaultDistributionFieldName)
+    val dataSetSetting = new DataSetSetting(spec.newDataSetId, spec.storageType)
 
     dataSetService.translateDataAndDictionaryOptimal(
       spec.originalDataSetId,
@@ -43,7 +43,6 @@ case class InferNewDataSetSpec(
   newDataSetId: String,
   newDataSetName: String,
   storageType: StorageType.Value,
-  defaultDistributionFieldName: String,
   saveBatchSize: Option[Int],
   inferenceGroupSize: Option[Int],
   inferenceGroupsInParallel: Option[Int],

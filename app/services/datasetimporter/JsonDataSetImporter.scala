@@ -18,8 +18,6 @@ private class JsonDataSetImporter extends AbstractDataSetImporter[JsonDataSetImp
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
     try {
-      val dsa = createDataSetAccessor(importInfo)
-
       val charset = Charset.forName(importInfo.charsetName.getOrElse(defaultCharset))
       def source = Source.fromFile(importInfo.path.get)(charset)
 
@@ -64,6 +62,9 @@ private class JsonDataSetImporter extends AbstractDataSetImporter[JsonDataSetImp
           }
 
           for {
+            // create/retrieve a dsa
+            dsa <- createDataSetAccessor(importInfo)
+
             // save the fields
             _ <- {
               val fieldNameTypeSpecs = fieldNameTypes.map { case (fieldName, fieldType) => (fieldName, fieldType.spec) }

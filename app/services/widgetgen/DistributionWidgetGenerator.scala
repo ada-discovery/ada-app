@@ -330,7 +330,13 @@ trait DistributionWidgetGeneratorHelper {
   ): Traversable[Count[String]] =
     counts.map { case (value, count) =>
       val stringKey = value.map(_.toString)
-      val label = value.map(value => fieldType.valueToDisplayString(Some(value))).getOrElse("Undefined")
+
+      val label = value.map{ value =>
+        if (fieldType.spec.isArray)
+          fieldType.asValueOf[Array[Option[T]]].valueToDisplayString(Some(Array(Some(value))))
+        else
+          fieldType.valueToDisplayString(Some(value))
+      }.getOrElse("Undefined")
       Count(label, count, stringKey)
     }
 
