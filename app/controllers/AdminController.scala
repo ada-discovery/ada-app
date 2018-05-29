@@ -17,12 +17,15 @@ import _root_.util.SecurityUtil.restrictAdminAnyNoCaching
 import views.html.{admin => adminviews}
 import java.{util => ju}
 
+import models.security.UserManager
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class AdminController @Inject() (
     deadbolt: DeadboltActions,
     messageRepo: MessageRepo,
+    userManager: UserManager,
     messagesApi: MessagesApi,
     webJarAssets: WebJarAssets
   ) extends Controller {
@@ -53,6 +56,7 @@ class AdminController @Inject() (
   }
 
   private val runnablesRedirect = Redirect(routes.AdminController.listRunnables())
+  private val mainRedirect = Redirect(routes.AppController.index())
 
   def runScript(className: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {
@@ -121,5 +125,19 @@ class AdminController @Inject() (
           runnablesRedirect.flashing("errors" -> s"Script ${className} failed due to: ${e.getMessage}")
       }
     }
+  }
+
+  def importLdapUsers = restrictAdminAnyNoCaching(deadbolt) {
+    implicit request =>
+      userManager.synchronizeRepos.map ( _ =>
+        runnablesRedirect.flashing("success" -> "LDAP users successfully imported.")
+      )
+  }
+
+  def purgeMissingLdapUsers = restrictAdminAnyNoCaching(deadbolt) {
+    implicit request =>
+      userManager.purgeMissing.map ( _ =>
+        runnablesRedirect.flashing("success" -> "Missing users successfully purged.")
+      )
   }
 }

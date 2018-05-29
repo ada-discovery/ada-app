@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import models.{DataSetSetting, StorageType}
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
-import runnables.luxpark.DataSetId._
+import runnables.denopa.DataSetId._
 import services.DataSetService
 
 class CleanupDeNoPaBaseline @Inject()(dataSetService: DataSetService) extends FutureRunnable {

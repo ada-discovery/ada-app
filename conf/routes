@@ -37,6 +37,8 @@ GET         /ldap/:id/get                                                       
 GET         /admin/runnables                                                        controllers.AdminController.listRunnables
 POST        /admin/runScript                                                        controllers.AdminController.runScript(className : String)
 POST        /admin/runInputScript                                                   controllers.AdminController.runInputScript(className : String)
+POST        /admin/importLdapUsers                                                  controllers.AdminController.importLdapUsers
+POST        /admin/purgeMissingLdapUsers                                            controllers.AdminController.purgeMissingLdapUsers
 
 GET         /admin/showRCPrediction                                                 controllers.ml.RCPredictionController.showRCPrediction
 POST        /admin/runRCPrediction                                                  controllers.ml.RCPredictionController.runRCPrediction

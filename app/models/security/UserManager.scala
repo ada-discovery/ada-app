@@ -11,14 +11,13 @@ import dataaccess.RepoTypes.UserRepo
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.Future.sequence
-import scala.concurrent.duration._
 import dataaccess.User
 
 @ImplementedBy(classOf[UserManagerImpl])
 trait UserManager {
 
   /**
-    * Matches email and password for authentification.
+    * Matches email and password for authentication.
     * Returns an Account, if successful.
  *
     * @param id ID (e.g. mail) for matching.
@@ -98,23 +97,21 @@ private class UserManagerImpl @Inject()(
     * Use this to clean the user data base or when moving from debug to production.
     * This will also remove all debug users!
     */
-  override def purgeMissing: Future[Unit] = {
-    val ldapUserUids = ldapUserService.getAll.map(_.uid).toSet
+  override def purgeMissing: Future[Unit] =
     for {
+      // local users
       localUsers <- userRepo.find()
+
+      // retrieve all LDAP users and remove those who are not matched
       _ <- {
-        val nonMatchingLocalUsers = localUsers.filterNot( user =>
-          ldapUserUids.contains(user.ldapDn)
-        )
-        sequence(
-          nonMatchingLocalUsers.map( user =>
-            userRepo.delete(user._id.get)
-          )
-        )
+        val ldapUserUids = ldapUserService.getAll.map(_.uid).toSet
+        val nonMatchingLocalUsers = localUsers.filterNot(user => ldapUserUids.contains(user.ldapDn))
+        val nonMatchingIds = nonMatchingLocalUsers.map(_._id.get)
+
+        userRepo.delete(nonMatchingIds)
       }
     } yield
       ()
-  }
 
   /**
     * Authenticate user.

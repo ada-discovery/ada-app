@@ -6,11 +6,16 @@
 
 @()(implicit request: AuthenticatedRequest[_],  msg: Messages)
 
-@listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
-
-    <li @if(matchesPath(call.url, request.path, matchPrefixDepth)) {
-        class="active"}>
+@listItem(call: Call, text: String, matchPrefixDepth: Option[Int] = None) = {
+    @listItemCustom(call, matchPrefixDepth) {
         <a href="@call">@text</a>
+    }
+}
+
+@listItemCustom(call: Call, matchPrefixDepth: Option[Int] = None)(element: Html) = {
+
+    <li @if(matchesPath(call.url, request.path, matchPrefixDepth)) { class="active"} >
+        @element
     </li>
 }
 
@@ -53,13 +58,30 @@
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
                             Admin<span class="caret"></span></a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu multi-level">
                             @listItem(controllers.dataset.routes.DataSetImportController.find(), "Data Set Imports")
                             @listItem(controllers.dataset.routes.DataSetSettingController.find(), "Data Set Settings")
                             <li role="separator" class="divider"></li>
                             @listItem(routes.UserController.listAll(), "Users")
                             @listItem(routes.LdapUserController.listAll, "LDAP User")
                             @listItem(routes.LdapController.settings(), "LDAP Settings")
+
+                            <li class="dropdown-submenu">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">User Actions</a>
+                                <ul class="dropdown-menu">
+                                    @listItemCustom(routes.AdminController.importLdapUsers()) {
+                                        <a href="#" onclick="submit('post', '@routes.AdminController.importLdapUsers'); return false;">
+                                            Import from LDAP
+                                        </a>
+                                    }
+                                    @listItemCustom(routes.AdminController.purgeMissingLdapUsers()) {
+                                        <a href="#" onclick="submit('post', '@routes.AdminController.purgeMissingLdapUsers'); return false;">
+                                            Purge Missing
+                                        </a>
+                                    }
+                                </ul>
+                            </li>
+
                             <li role="separator" class="divider"></li>
                             @listItem(routes.AdminController.listRunnables(), "Runnables")
                         </ul>
