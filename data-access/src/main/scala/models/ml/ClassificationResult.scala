@@ -64,7 +64,7 @@ case class ClassificationSetting(
     if (inputFieldNames.nonEmpty) (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq else Nil
 
   def learningSetting =
-    LearningSetting[ClassificationEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, replicationFilterId, samplingRatios, repetitions, crossValidationFolds, crossValidationEvalMetric)
+    LearningSetting[ClassificationEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, samplingRatios, repetitions, crossValidationFolds, crossValidationEvalMetric)
 }
 
 object ClassificationResult {

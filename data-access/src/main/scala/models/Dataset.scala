@@ -50,7 +50,7 @@ case class DataSetSetting(
   exportOrderByFieldName: Option[String] = None,
   defaultScatterXFieldName: Option[String] = None,
   defaultScatterYFieldName: Option[String] = None,
-  defaultDistributionFieldName: String,
+  defaultDistributionFieldName: Option[String] = None,
   defaultCumulativeCountFieldName: Option[String] = None,
   filterShowFieldStyle: Option[FilterShowFieldStyle.Value] = None,
   filterShowNonNullCount: Boolean = false,
@@ -62,13 +62,12 @@ case class DataSetSetting(
 ) {
   def this(
     dataSetId: String,
-    storageType: StorageType.Value,
-    defaultDistributionFieldName: String
+    storageType: StorageType.Value
   ) =
-    this(None, dataSetId, "_id", None, None, None, defaultDistributionFieldName, None, None, false, None, Map(("\r", " "), ("\n", " ")), storageType)
+    this(None, dataSetId, "_id", None, None, None, None, None, None, false, None, Map(("\r", " "), ("\n", " ")), storageType)
 
   def this(dataSetId: String) =
-    this(dataSetId, StorageType.Mongo, "")
+    this(dataSetId, StorageType.Mongo)
 }
 
 @Deprecated
