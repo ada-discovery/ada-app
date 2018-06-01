@@ -133,10 +133,11 @@ case class CumulativeCountWidgetSpec(
 
 case class BoxWidgetSpec(
   fieldName: String,
+  groupFieldName: Option[String] = None,
   subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec {
-  override val fieldNames = Seq(fieldName)
+  override val fieldNames = Seq(groupFieldName, Some(fieldName)).flatten
 }
 
 case class ScatterWidgetSpec(
@@ -265,7 +266,21 @@ case class Category(
 ) {
   def this(name : String) = this(None, name)
 
-  def getPath : Seq[String] = (if (parent.isDefined && parent.get.parent.isDefined) parent.get.getPath else Seq[String]()) ++ Seq(name)
+  def getPath: Seq[String] =
+    (
+      if (parent.isDefined && parent.get.parent.isDefined)
+        parent.get.getPath
+      else
+        Seq[String]()
+    ) ++ Seq(name)
+
+  def getLabelPath: Seq[String] =
+    (
+      if (parent.isDefined && parent.get.parent.isDefined)
+        parent.get.getLabelPath
+      else
+        Seq[String]()
+    ) ++ Seq(labelOrElseName)
 
   def setChildren(newChildren: Seq[Category]): Category = {
     children = newChildren

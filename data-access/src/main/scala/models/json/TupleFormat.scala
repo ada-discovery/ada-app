@@ -4,7 +4,7 @@ import play.api.libs.json.{JsObject, _}
 
 private class Tuple2Format[A, B](
     implicit val firstFormat: Format[A], secondFormat: Format[B]
-  ) extends Format[(A, B)] {
+  ) extends Tuple2Writes[A, B] with Format[(A, B)] {
 
   override def reads(json: JsValue): JsResult[(A, B)] =
     json match {
@@ -23,17 +23,22 @@ private class Tuple2Format[A, B](
 
       case _ => JsError("JSON array value expected for Tuple2 type.")
     }
+}
+
+private class Tuple2Writes[A, B](
+    implicit val firstWrites: Writes[A], secondWrites: Writes[B]
+  ) extends Writes[(A, B)] {
 
   override def writes(o: (A, B)): JsValue =
     JsArray(Seq(
-      firstFormat.writes(o._1),
-      secondFormat.writes(o._2)
+      firstWrites.writes(o._1),
+      secondWrites.writes(o._2)
     ))
 }
 
 private class Tuple3Format[A, B, C](
     implicit val firstFormat: Format[A], secondFormat: Format[B], thirdFormat: Format[C]
-  ) extends Format[(A, B, C)] {
+  ) extends Tuple3Writes[A, B, C] with Format[(A, B, C)] {
 
   override def reads(json: JsValue): JsResult[(A, B, C)] =
     json match {
@@ -53,16 +58,26 @@ private class Tuple3Format[A, B, C](
 
       case _ => JsError("JSON array value expected for Tuple3 type.")
     }
+}
+
+private class Tuple3Writes[A, B, C](
+    implicit val firstWrites: Writes[A], secondWrites: Writes[B], thirdWrites: Writes[C]
+  ) extends Writes[(A, B, C)] {
 
   override def writes(o: (A, B, C)): JsValue =
     JsArray(Seq(
-      firstFormat.writes(o._1),
-      secondFormat.writes(o._2),
-      thirdFormat.writes(o._3)
+      firstWrites.writes(o._1),
+      secondWrites.writes(o._2),
+      thirdWrites.writes(o._3)
     ))
 }
 
 object TupleFormat {
   implicit def apply[A: Format, B: Format]: Format[(A, B)] = new Tuple2Format[A, B]
   implicit def apply[A: Format, B: Format, C: Format]: Format[(A, B, C)] = new Tuple3Format[A, B, C]
+}
+
+object TupleWrites {
+  implicit def apply[A: Writes, B: Writes]: Writes[(A, B)] = new Tuple2Writes[A, B]
+  implicit def apply[A: Writes, B: Writes, C: Writes]: Writes[(A, B, C)] = new Tuple3Writes[A, B, C]
 }

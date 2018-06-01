@@ -6,7 +6,7 @@ import reactivemongo.bson.BSONObjectID
 import models.DataSetFormattersAndIds.widgetSpecFormat
 import java.util.Date
 
-import models.json.{EitherFormat, OptionFormat}
+import models.json.{EitherFormat, EnumFormat}
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
 
@@ -19,15 +19,31 @@ case class DataView(
   elementGridWidth: Int = 3,
   default: Boolean = false,
   isPrivate: Boolean = false,
-  useOptimizedRepoChartCalcMethod: Boolean = false,
+  generationMethod: WidgetGenerationMethod.Value = WidgetGenerationMethod.Auto,
   createdById: Option[BSONObjectID] = None,
   timeCreated: Date = new Date(),
   var createdBy: Option[User] = None
 )
 
+object WidgetGenerationMethod extends Enumeration {
+
+  val Auto = Value("Auto")
+  val FullData = Value("Full Data")
+  val StreamedAll = Value("Streamed All")
+  val StreamedIndividually = Value("Streamed Individually")
+  val RepoAndFullData = Value("Repo and Full Data")
+  val RepoAndStreamedAll = Value("Repo and Streamed All")
+  val RepoAndStreamedIndividually = Value("Repo and Streamed Individually")
+
+  implicit class ValueExt(method: WidgetGenerationMethod.Value) {
+    def isRepoBased = method == RepoAndFullData || method == RepoAndStreamedAll || method == RepoAndStreamedIndividually
+  }
+}
+
 object DataView {
 
   implicit val eitherFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
+  implicit val generationMethodFormat = EnumFormat.enumFormat(WidgetGenerationMethod)
 
   implicit val dataViewFormat : Format[DataView] = (
     (__ \ "_id").formatNullable[BSONObjectID] and
@@ -38,7 +54,7 @@ object DataView {
     (__ \ "elementGridWidth").format[Int] and
     (__ \ "default").format[Boolean] and
     (__ \ "isPrivate").format[Boolean] and
-    (__ \ "useOptimizedRepoChartCalcMethod").format[Boolean] and
+    (__ \ "generationMethod").format[WidgetGenerationMethod.Value] and
     (__ \ "createdById").formatNullable[BSONObjectID] and
     (__ \ "timeCreated").format[Date]
   )(
@@ -52,9 +68,10 @@ object DataView {
       item.elementGridWidth,
       item.default,
       item.isPrivate,
-      item.useOptimizedRepoChartCalcMethod,
+      item.generationMethod,
       item.createdById,
-      item.timeCreated)
+      item.timeCreated
+    )
   )
 
   implicit object DataViewIdentity extends BSONObjectIdentity[DataView] {
@@ -66,7 +83,7 @@ object DataView {
     tableColumnNames: Seq[String],
     distributionChartFieldNames: Seq[String],
     elementGridWidth: Int,
-    useOptimizedRepoChartCalcMethod: Boolean
+    generationMethod: WidgetGenerationMethod.Value
   ) =
     DataView(
       None,
@@ -77,6 +94,6 @@ object DataView {
       elementGridWidth,
       true,
       false,
-      useOptimizedRepoChartCalcMethod
+      generationMethod
     )
 }

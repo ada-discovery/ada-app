@@ -630,6 +630,8 @@
     function boxPlot(
         title,
         chartElementId,
+        categories,
+        xAxisCaption,
         yAxisCaption,
         data,
         min,
@@ -647,7 +649,10 @@
                 text:  title
             },
             xAxis: {
-                categories: ['']
+                categories: categories,
+                title: {
+                    text: xAxisCaption
+                }
             },
             yAxis: {
                 type: dataType,

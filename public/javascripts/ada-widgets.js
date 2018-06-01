@@ -141,8 +141,14 @@ function boxWidget(elementId, widget) {
     var isDate = widget.fieldType == "Date"
     var dataType = (isDate) ? 'datetime' : null;
 
-    var data = widget.data
-    var datas = [[data.lowerWhisker, data.lowerQuantile, data.median, data.upperQuantile, data.upperWhisker]]
+    var datas = widget.data.map(function(namedQuartiles) {
+        var quartiles = namedQuartiles[1]
+        return [quartiles.lowerWhisker, quartiles.lowerQuantile, quartiles.median, quartiles.upperQuantile, quartiles.upperWhisker]
+    })
+
+    var categories = widget.data.map(function(namedQuartiles) {
+        return namedQuartiles[0]
+    })
 
     var min = widget.min
     var max = widget.max
@@ -161,7 +167,7 @@ function boxWidget(elementId, widget) {
         '- Lower 1.5 IQR: {point.low}<br/>'
 
     var height = widget.displayOptions.height || 400
-    boxPlot(widget.title, elementId, widget.yAxisCaption, datas, min, max, pointFormat, height, dataType)
+    boxPlot(widget.title, elementId, categories, widget.xAxisCaption, widget.yAxisCaption, datas, min, max, pointFormat, height, dataType)
 }
 
 function scatterWidget(elementId, widget) {

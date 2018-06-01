@@ -26,7 +26,7 @@ class ElasticJsonCrudRepo @Inject()(
     collectionName,
     collectionName,
     client,
-    ElasticSetting(scrollBatchSize = configuration.getInt("elasticdb.scroll.batch.size").getOrElse(100))
+    ElasticSetting(scrollBatchSize = configuration.getInt("elasticdb.scroll.batch.size").getOrElse(1000))
   ) with JsonCrudRepo {
 
   private implicit val jsonIdRenameFormat = ElasticIdRenameUtil.createFormat
