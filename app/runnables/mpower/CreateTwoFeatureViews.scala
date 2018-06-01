@@ -89,7 +89,7 @@ class CreateTwoFeatureViews extends DsaInputFutureRunnable[CreateTwoFeatureViews
     )
 
     val boxPlotWidgets = widgetFieldNames.map(
-      BoxWidgetSpec(_, displayOptions = BasicDisplayOptions(gridWidth = spec.boxWidgetGridWidth))
+      BoxWidgetSpec(_, None, displayOptions = BasicDisplayOptions(gridWidth = spec.boxWidgetGridWidth))
     )
 
     DataView(
@@ -100,8 +100,7 @@ class CreateTwoFeatureViews extends DsaInputFutureRunnable[CreateTwoFeatureViews
       distributionWidgets ++ boxPlotWidgets,
       spec.defaultElementGridWidth,
       false,
-      false,
-      true
+      false
     )
   }
 
@@ -116,8 +115,7 @@ class CreateTwoFeatureViews extends DsaInputFutureRunnable[CreateTwoFeatureViews
       Nil,
       spec.defaultElementGridWidth,
       true,
-      false,
-      true
+      false
     )
 
   override def inputType = typeOf[CreateTwoFeatureViewsSpec]

@@ -432,13 +432,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Html() => {
             val callbackId = UUID.randomUUID.toString
 
-            val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
-
             val viewPartsWidgetFutures = (viewResponses, tablePagesToUse, filterOrIdsToUse).zipped.map {
               case (viewResponse, tablePage, filterOrId) =>
                 val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
                 val viewData = TableViewData(newPage, viewResponse.tableFields)
-                val widgetsFuture = getViewWidgets(filterOrId, widgetSpecs, widgetFieldMap, useChartRepoMethod)
+                val method = dataView.map(_.generationMethod).getOrElse(WidgetGenerationMethod.Auto)
+                val widgetsFuture = getViewWidgets(filterOrId, widgetSpecs, widgetFieldMap, method)
 
                 (viewData, widgetsFuture)
             }
@@ -566,9 +565,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           val (columnNames, widgetSpecs) =
             dataView.map(view => (view.tableColumnNames, view.widgetSpecs)).getOrElse((Nil, Nil))
 
-          val useChartRepoMethod = dataView.map(_.useOptimizedRepoChartCalcMethod).getOrElse(false)
-
-          getViewResponse(tablePage, tableOrder, filterOrId, columnNames, widgetSpecs, Map(), useChartRepoMethod)
+          val generationMethod = dataView.map(_.generationMethod).getOrElse(WidgetGenerationMethod.Auto)
+          getViewResponse(tablePage, tableOrder, filterOrId, columnNames, widgetSpecs, Map(), generationMethod)
         }
       } yield {
         Logger.info(s"Data loading of a widget panel and a table for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
@@ -647,8 +645,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Nil => None
         case _ =>
           implicit val ordering = boxWidgets.head.ordering
-          val minLowerWhisker = boxWidgets.map(_.data.lowerWhisker).min
-          val maxUpperWhisker = boxWidgets.map(_.data.upperWhisker).max
+          val minLowerWhisker = boxWidgets.flatMap(_.data.map(_._2.lowerWhisker)).min
+          val maxUpperWhisker = boxWidgets.flatMap(_.data.map(_._2.upperWhisker)).max
           Some(minLowerWhisker.asInstanceOf[T], maxUpperWhisker.asInstanceOf[T])
       }
     }
@@ -688,7 +686,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     tableFieldNames: Seq[String],
     widgetSpecs: Seq[WidgetSpec],
     widgetFieldMap: Map[String, Field],
-    useOptimizedRepoChartCalcMethod: Boolean
+    generationMethod: WidgetGenerationMethod.Value
   ): Future[ViewResponse] = {
     // future to retrieve a filter
     val resolvedFilterFuture = filterRepo.resolve(filterOrId)
@@ -731,7 +729,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
 
       response <- getViewResponseAux(
-        page, orderBy, resolvedFilter, criteria, filterSubCriteria.toMap, nameFieldMap, tableFieldNames, widgetSpecs, useOptimizedRepoChartCalcMethod
+        page, orderBy, resolvedFilter, criteria, filterSubCriteria.toMap, nameFieldMap, tableFieldNames, widgetSpecs, generationMethod
       )
     } yield
       response
@@ -741,7 +739,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterOrId: FilterOrId,
     widgetSpecs: Seq[WidgetSpec],
     widgetFieldMap: Map[String, Field],
-    useOptimizedRepoWidgetCalcMethod: Boolean
+    generationMethod: WidgetGenerationMethod.Value
   ): Future[Traversable[Option[Widget]]] = {
     // future to retrieve a filter
     val resolvedFilterFuture = filterRepo.resolve(filterOrId)
@@ -781,7 +779,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       }
 
-      widgetFields <- widgetService.applyOld(widgetSpecs, repo, criteria, filterSubCriteria.toMap, fields, useOptimizedRepoWidgetCalcMethod)
+      widgetFields <- widgetService(widgetSpecs, repo, criteria, filterSubCriteria.toMap, fields, generationMethod)
     } yield
       widgetFields.map(_.map(_._1))
   }
@@ -836,14 +834,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     nameFieldMap: Map[String, Field],
     tableFieldNames: Seq[String],
     widgetSpecs: Seq[WidgetSpec],
-    useOptimizedRepoChartCalcMethod: Boolean
+    generationMethod: WidgetGenerationMethod.Value
   ): Future[ViewResponse] = {
 
     // total count
     val countFuture = repo.count(criteria)
 
     // widgets
-    val widgetsFuture = widgetService.applyOld(widgetSpecs, repo, criteria, widgetSubCriteria, nameFieldMap.values, useOptimizedRepoChartCalcMethod)
+    val widgetsFuture = widgetService(widgetSpecs, repo, criteria, widgetSubCriteria, nameFieldMap.values, generationMethod)
 
     // table items
     val tableItemsFuture = getTableItems(page, orderBy, criteria, nameFieldMap, tableFieldNames)
@@ -1180,6 +1178,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
               ),
               BoxWidgetSpec(
                 fieldName = field.name,
+                groupFieldName = groupField.map(_.name),
                 displayOptions = BasicDisplayOptions(gridWidth = Some(3), height = Some(500))
               ),
               BasicStatsWidgetSpec(

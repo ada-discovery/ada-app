@@ -5,7 +5,6 @@ import javax.inject.Inject
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import controllers.WebJarAssets
 import controllers.core.WebContext
-import dataaccess.{AscSort, DescSort}
 import dataaccess.JsonRepoExtra._
 import dataaccess.Criterion._
 import models._
@@ -14,7 +13,7 @@ import play.api.Logger
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, AnyContent, Controller, Request}
-import services.{WidgetGenerationMethod, WidgetGenerationService}
+import services.WidgetGenerationService
 import views.html.mpowerchallenge.clustering
 
 class MPowerChallengeClusteringController @Inject()(

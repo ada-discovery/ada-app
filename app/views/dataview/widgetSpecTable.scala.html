@@ -62,7 +62,8 @@
                 ))
             case x: BoxWidgetSpec =>
                 fieldLabelElements(Seq(
-                    ("fieldNameTypeahead", x.fieldName)
+                    ("fieldNameTypeahead", x.fieldName)) ++
+                    x.groupFieldName.map( ("groupFieldNameTypeahead", _)
                 ))
             case x: ScatterWidgetSpec =>
                 fieldLabelElements(Seq(
@@ -734,7 +735,7 @@
                 labelFields = ["fieldNameTypeahead", "groupFieldNameTypeahead"];
                 break;
             case "@{classOf[BoxWidgetSpec].getName}" :
-                labelFields = ["fieldNameTypeahead"];
+                labelFields = ["fieldNameTypeahead", "groupFieldNameTypeahead"];
                 break;
             case "@{classOf[ScatterWidgetSpec].getName}" :
                 labelFields = ["xFieldNameTypeahead", "yFieldNameTypeahead", "groupFieldNameTypeahead"];

@@ -52,7 +52,7 @@ class CreateDefaultMainView extends DsaInputFutureRunnable[CreateDefaultMainView
     )
 
     val boxPlotWidgets = doubleFieldNames.map(
-      BoxWidgetSpec(_, displayOptions = BasicDisplayOptions(gridWidth = spec.boxWidgetGridWidth))
+      BoxWidgetSpec(_, None, displayOptions = BasicDisplayOptions(gridWidth = spec.boxWidgetGridWidth))
     )
 
     val correlationWidget = CorrelationWidgetSpec(

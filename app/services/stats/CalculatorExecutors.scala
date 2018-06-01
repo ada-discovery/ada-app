@@ -155,6 +155,22 @@ trait CalculatorExecutors {
   def quartilesAnySeqExec =
     QuartilesAnyExec.withSeq
 
+  def groupQuartilesExec[G, T: Ordering](
+    implicit inputTypeTag: TypeTag[GroupQuartilesCalcTypePack[G, T]#IN]
+  ) = withSingle(GroupQuartilesCalc[G, T])
+
+  def groupQuartilesSeqExec[G, T: Ordering](
+    implicit inputTypeTag: TypeTag[GroupQuartilesCalcTypePack[G, T]#IN]
+  ) = withSeq(GroupQuartilesCalc[G, T])
+
+  def groupQuartilesAnyExec[G](
+    implicit groupTypeTag: TypeTag[G]
+  ) = GroupQuartilesAnyExec.withSingle[G]
+
+  def groupQuartilesAnySeqExec[G](
+    implicit groupTypeTag: TypeTag[G]
+  ) = GroupQuartilesAnyExec.withSeq[G]
+
   // Pearson correlation
 
   def pearsonCorrelationExec =

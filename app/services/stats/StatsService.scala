@@ -100,11 +100,21 @@ trait StatsService extends CalculatorExecutors {
   // Quartiles From Repo //
   /////////////////////////
 
+  type QuartilesOut = QuartilesCalcTypePack[Any]#OUT
+  type GroupQuartilesOut[G] = GroupQuartilesCalcTypePack[G, Any]#OUT
+
   def calcQuartilesFromRepo(
     dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field
-  ): Future[Option[Quartiles[Any]]]
+  ): Future[QuartilesOut]
+
+  def calcGroupQuartilesFromRepo(
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    field: Field,
+    groupField: Field
+  ): Future[GroupQuartilesOut[Any]]
 
   /////////////////////////
   // Min & Max From Repo //
@@ -653,7 +663,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     dataRepo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     field: Field
-  ): Future[Option[Quartiles[Any]]] = {
+  ): Future[QuartilesOut] = {
     val typeSpec = field.fieldTypeSpec
 
     def quartiles[T: Ordering](toDouble: T => Double) =
@@ -668,6 +678,35 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
       case _ => Future(None)
     }
   }
+
+  override def calcGroupQuartilesFromRepo(
+    dataRepo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    field: Field,
+    groupField: Field
+  ): Future[GroupQuartilesOut[Any]] =
+    for {
+      groupVals <- groupValues(dataRepo, criteria, groupField)
+
+      seriesCounts <- {
+        val groupFieldName = groupField.name
+        val countFutures = groupVals.par.map { value =>
+          val finalCriteria = criteria ++ Seq(groupFieldName #== value)
+
+          calcQuartilesFromRepo(dataRepo, finalCriteria, field).map { counts =>
+            (Some(value), counts)
+          }
+        }.toList
+
+        val undefinedGroupCriteria = criteria ++ Seq(groupFieldName #=@)
+        val naValueFuture = calcQuartilesFromRepo(dataRepo, undefinedGroupCriteria, field).map { counts =>
+          (None, counts)
+        }
+
+        Future.sequence(countFutures ++ Seq(naValueFuture))
+      }
+    } yield
+      seriesCounts
 
   private def calcQuartilesFromRepo[T: Ordering](
     dataRepo: JsonReadonlyRepo,

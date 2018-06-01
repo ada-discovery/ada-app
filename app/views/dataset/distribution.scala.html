@@ -98,21 +98,21 @@
                 }
             )
 
-             populateFieldTypeahedFromUrl(
+            populateFieldTypeahedFromUrl(
                 $('#fieldForm #groupFieldTypeahead'),
                 $('#fieldForm #groupFieldName'),
                 '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)).url)',
                 @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
-             );
+            );
 
-             $('#fieldForm #fieldTypeahead').keypress(function (e) {
+            $('#fieldForm #fieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
                     $('#fieldForm').submit();;
                     return false;
                 }
-             });
+            });
 
-             $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
+            $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
                     var groupFieldTypeahedVal = $('#fieldForm #groupFieldTypeahead').val();
                     if (!groupFieldTypeahedVal)
@@ -120,7 +120,7 @@
                     $('#fieldForm').submit();;
                     return false;
                 }
-             });
+            });
         });
 
         $(window).load(function() {
@@ -178,9 +178,12 @@
             var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
             var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
             var fieldName = $('#fieldForm #fieldName').val()
+            var groupFieldName = $('#fieldForm #groupFieldName').val()
+            if (groupFieldName == "")
+                groupFieldName = null
 
             if (fieldName) {
-                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId, [fieldName]).ajax( {
+                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBoxPlot(dataViewId, fieldName, groupFieldName).ajax( {
                     success: function() {
                         showMessage("Box plot for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
                     },
@@ -236,6 +239,6 @@
 
 @helper.javascriptRouter("dataViewJsRoutes")(
     dataViewJsRouter.addDistribution,
-    dataViewJsRouter.addBoxPlots,
+    dataViewJsRouter.addBoxPlot,
     dataViewJsRouter.addBasicStats
 )

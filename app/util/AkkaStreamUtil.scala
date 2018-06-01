@@ -39,7 +39,7 @@ object AkkaStreamUtil {
       .mergeSubstreams
 
   def groupFlow[A, B](
-    maxSubstreams: Int
+    maxSubstreams: Int = Int.MaxValue
   ): Flow[(A, B), (A, Seq[B]), NotUsed] =
     Flow[(A,B)]
       .groupBy(maxSubstreams, _._1)

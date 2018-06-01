@@ -437,7 +437,7 @@ class RCPredictionServiceImpl @Inject()(
 
     val distributionWidgets = weightFieldNames.take(6).map(DistributionWidgetSpec(_, None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))))
 
-    val boxPlotWidgets = weightFieldNames.take(6).map(BoxWidgetSpec(_))
+    val boxPlotWidgets = weightFieldNames.take(6).map(BoxWidgetSpec(_, None))
 
     val correlationWidget = CorrelationWidgetSpec(
       fieldNames = weightFieldNames.take(15),
@@ -458,7 +458,7 @@ class RCPredictionServiceImpl @Inject()(
 
     val distributionWidgets = weightFieldNames.take(10).map(DistributionWidgetSpec(_, None, displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Column))))
 
-    val boxPlotWidgets = weightFieldNames.take(10).map(BoxWidgetSpec(_))
+    val boxPlotWidgets = weightFieldNames.take(10).map(BoxWidgetSpec(_, None))
 
     val correlationWidget = CorrelationWidgetSpec(fieldNames = weightFieldNames.take(15))
 

@@ -73,6 +73,7 @@ class DataSetImportController @Inject()(
   private implicit val mapFormatter = MapJsonFormatter.apply
   private implicit val filterShowFieldStyleFormatter = EnumFormatter(FilterShowFieldStyle)
   private implicit val storageTypeFormatter = EnumFormatter(StorageType)
+  private implicit val widgetGenerationMethodFormatter = EnumFormatter(WidgetGenerationMethod)
 
   private val dataSetSettingMapping: Mapping[DataSetSetting] = mapping(
     "id" -> ignored(Option.empty[BSONObjectID]),
@@ -96,13 +97,13 @@ class DataSetImportController @Inject()(
     "tableColumnNames" -> of[Seq[String]],
     "distributionCalcFieldNames" -> of[Seq[String]],
     "elementGridWidth" -> number(min = 1, max = 12),
-    "useOptimizedRepoChartCalcMethod" -> boolean
+    "generationMethod" -> of[WidgetGenerationMethod.Value]
   )(DataView.applyMain) { (item: DataView) =>
     Some((
       item.tableColumnNames,
       item.widgetSpecs.collect { case p: DistributionWidgetSpec => p }.map(_.fieldName),
       item.elementGridWidth,
-      item.useOptimizedRepoChartCalcMethod
+      item.generationMethod
     ))
   }
 

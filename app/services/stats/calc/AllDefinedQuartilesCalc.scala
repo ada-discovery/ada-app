@@ -15,7 +15,7 @@ private class AllDefinedQuartilesCalc[T: Ordering] extends FullDataCalculatorAda
     * Generation is meant for Tukey boxplots.
     *
     * @param elements sequence of elements.
-    * @return 5-value tuple with (lower 1.5 IQR whisker, lower quantile, median, upper quantile, upper 1.5 IQR whisker)
+    * @return 5-value tuple with (lower 1.5 IQR whisker, lower quartile, median, upper quartile, upper 1.5 IQR whisker)
     */
   override def fun(toDouble: T => Double)  = { elements =>
     elements.headOption.map { _ =>
@@ -26,22 +26,22 @@ private class AllDefinedQuartilesCalc[T: Ordering] extends FullDataCalculatorAda
       val median = sorted(length / 2)
 
       // upper quartile
-      val upperQuantile = sorted(3 * length / 4)
+      val upperQuartile = sorted(3 * length / 4)
 
       // lower quartile
-      val lowerQuantile = sorted(length / 4)
+      val lowerQuartile = sorted(length / 4)
 
-      val upperQuantileDouble = toDouble(upperQuantile)
-      val lowerQuantileDouble = toDouble(lowerQuantile)
-      val iqr = upperQuantileDouble - lowerQuantileDouble
+      val upperQuartileDouble = toDouble(upperQuartile)
+      val lowerQuartileDouble = toDouble(lowerQuartile)
+      val iqr = upperQuartileDouble - lowerQuartileDouble
 
-      val upperWhiskerValue = upperQuantileDouble + 1.5 * iqr
-      val lowerWhiskerValue = lowerQuantileDouble - 1.5 * iqr
+      val upperWhiskerValue = upperQuartileDouble + 1.5 * iqr
+      val lowerWhiskerValue = lowerQuartileDouble - 1.5 * iqr
 
       val lowerWhisker = sorted.find(value => toDouble(value) >= lowerWhiskerValue).getOrElse(sorted.last)
       val upperWhisker = sorted.reverse.find(value => toDouble(value) <= upperWhiskerValue).getOrElse(sorted.head)
 
-      Quartiles(lowerWhisker, lowerQuantile, median, upperQuantile, upperWhisker)
+      Quartiles(lowerWhisker, lowerQuartile, median, upperQuartile, upperWhisker)
     }
   }
 }

@@ -59,8 +59,9 @@ case class LineWidget[T](
 
 case class BoxWidget[T <% Ordered[T]](
   title: String,
+  xAxisCaption: Option[String],
   yAxisCaption: String,
-  data: Quartiles[T],
+  data: Seq[(String, Quartiles[T])],
   min: Option[T] = None,
   max: Option[T] = None,
   displayOptions: DisplayOptions = BasicDisplayOptions()
@@ -133,7 +134,7 @@ object Widget {
   implicit val tuple2Format = TupleFormat[String, String, Seq[Seq[Double]]]
   implicit val optionFormat = new OptionFormat[Double]
 
-  def quantilesFormat[T <% Ordered[T]](fieldType: FieldType[T]): Format[Quartiles[T]] = {
+  def quartilesFormat[T <% Ordered[T]](fieldType: FieldType[T]): Format[Quartiles[T]] = {
     implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
 
     (
@@ -145,7 +146,7 @@ object Widget {
     )(Quartiles[T](_, _, _, _, _), { x => (x.lowerWhisker, x.lowerQuantile, x.median, x.upperQuantile, x.upperWhisker)})
   }
 
-  def quantilesWrites[T](fieldType: FieldType[T]): Writes[Quartiles[T]] = {
+  def quartilesWrites[T](fieldType: FieldType[T]): Writes[Quartiles[T]] = {
     implicit val valueFormat = FieldTypeFormat.apply[T](fieldType)
 
     (
@@ -159,28 +160,34 @@ object Widget {
 
   def boxWidgetFormat[T <% Ordered[T]](fieldType: FieldType[T]): Format[BoxWidget[T]] = {
     implicit val valueFormat = FieldTypeFormat.applyOptional[T](fieldType)
+    implicit val quartilesFormatx = quartilesFormat[T](fieldType)
+    implicit val tupleFormat = TupleFormat[String, Quartiles[T]]
 
     (
       (__ \ "title").format[String] and
+      (__ \ "xAxisCaption").formatNullable[String] and
       (__ \ "yAxisCaption").format[String] and
-      (__ \ "data").format[Quartiles[T]](quantilesFormat[T](fieldType)) and
+      (__ \ "data").format[Seq[(String, Quartiles[T])]] and
       (__ \ "min").format[Option[T]] and
       (__ \ "max").format[Option[T]] and
       (__ \ "displayOptions").format[DisplayOptions]
-    )(BoxWidget[T](_, _, _, _, _, _), {x => (x.title, x.yAxisCaption, x.data, x.min, x.max, x.displayOptions)})
+    )(BoxWidget[T](_, _, _, _, _, _, _), {x => (x.title, x.xAxisCaption, x.yAxisCaption, x.data, x.min, x.max, x.displayOptions)})
   }
 
   def boxWidgetWrites[T](fieldType: FieldType[T]): Writes[BoxWidget[T]] = {
     implicit val valueFormat = FieldTypeFormat.applyOptional[T](fieldType)
+    implicit val quartilesWritesx = quartilesWrites[T](fieldType)
+    implicit val tupleFormat = TupleWrites[String, Quartiles[T]]
 
     (
       (__ \ "title").write[String] and
+      (__ \ "xAxisCaption").writeNullable[String] and
       (__ \ "yAxisCaption").write[String] and
-      (__ \ "data").write[Quartiles[T]](quantilesWrites[T](fieldType)) and
+      (__ \ "data").write[Seq[(String, Quartiles[T])]] and
       (__ \ "min").write[Option[T]] and
       (__ \ "max").write[Option[T]] and
       (__ \ "displayOptions").write[DisplayOptions]
-    ){x => (x.title, x.yAxisCaption, x.data, x.min, x.max, x.displayOptions)}
+    ){x => (x.title, x.xAxisCaption, x.yAxisCaption, x.data, x.min, x.max, x.displayOptions)}
   }
 
   def numericalCountWidgetFormat[T](fieldType: FieldType[T]): Format[NumericalCountWidget[T]] = {
@@ -289,7 +296,7 @@ object Widget {
           scatterWidgetFormat(fieldTypes(fieldTypes.size - 2), fieldTypes.last).writes(e)
 
         case e: BoxWidget[T] =>
-          boxWidgetWrites(fieldTypes.head).writes(e)
+          boxWidgetWrites(fieldTypes.last).writes(e)
 
         case e: HeatmapWidget =>
           heatmapWidgetFormat.writes(e)

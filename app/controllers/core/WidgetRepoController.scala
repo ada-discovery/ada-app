@@ -3,7 +3,7 @@ package controllers.core
 import dataaccess.{AsyncReadonlyRepo, Criterion, JsonFormatRepoAdapter}
 import dataaccess.Criterion._
 import models.DataSetFormattersAndIds.FieldIdentity
-import models.{Widget, WidgetSpec}
+import models.{Widget, WidgetGenerationMethod, WidgetSpec}
 import persistence.dataset.CaseClassFieldRepo
 import play.api.libs.json.Format
 import services.WidgetGenerationService
@@ -33,7 +33,7 @@ trait WidgetRepoController[E] {
         fieldCaseClassRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
       }
 
-      widgets <- wgs.applyOld(widgetSpecs, jsonCaseClassRepo, criteria, Map(), fields, false)
+      widgets <- wgs(widgetSpecs, jsonCaseClassRepo, criteria, Map(), fields, WidgetGenerationMethod.FullData)
   } yield
       widgets.map(_.map(_._1))
 }

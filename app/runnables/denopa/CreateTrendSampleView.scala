@@ -44,8 +44,7 @@ class CreateTrendSampleView extends DsaInputFutureRunnable[CreateTrendSampleView
       distributionWidgets,
       4,
       false,
-      false,
-      true
+      false
     )
   }
 

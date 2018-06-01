@@ -1,6 +1,6 @@
 @import views.html.elements._
 
-@(domainName: String, form: Form[_])(implicit msg: Messages)
+@(domainName: String, form: Form[_ <: DataSetImport])(implicit msg: Messages)
 
 <div class="panel panel-default">
     <div class="panel-heading">Data Set Info</div>

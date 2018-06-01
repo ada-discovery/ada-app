@@ -130,14 +130,14 @@ class AdminController @Inject() (
   def importLdapUsers = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
       userManager.synchronizeRepos.map ( _ =>
-        runnablesRedirect.flashing("success" -> "LDAP users successfully imported.")
+        mainRedirect.flashing("success" -> "LDAP users successfully imported.")
       )
   }
 
   def purgeMissingLdapUsers = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
       userManager.purgeMissing.map ( _ =>
-        runnablesRedirect.flashing("success" -> "Missing users successfully purged.")
+        mainRedirect.flashing("success" -> "Missing users successfully purged.")
       )
   }
 }

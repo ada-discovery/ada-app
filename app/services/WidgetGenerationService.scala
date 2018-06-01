@@ -26,24 +26,6 @@ import scala.concurrent.Future.sequence
 @ImplementedBy(classOf[WidgetGenerationServiceImpl])
 trait WidgetGenerationService {
 
-  @Deprecated
-  def applyOld(
-    widgetSpecs: Traversable[WidgetSpec],
-    repo: JsonReadonlyRepo,
-    criteria: Seq[Criterion[Any]] = Nil,
-    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]] = Map(),
-    fields: Traversable[Field],
-    usePerWidgetRepoMethod: Boolean = false
-  ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
-    val method =
-      if (usePerWidgetRepoMethod)
-        WidgetGenerationMethod.RepoAndFullData
-      else
-        WidgetGenerationMethod.FullData
-
-    apply(widgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, fields, method)
-  }
-
   def apply(
     widgetSpecs: Traversable[WidgetSpec],
     repo: JsonReadonlyRepo,
@@ -75,21 +57,6 @@ trait WidgetGenerationService {
   ): Future[Option[Widget]]
 }
 
-object WidgetGenerationMethod extends Enumeration {
-
-  protected case class Val(val isRepoBased: Boolean, outputString: String) extends super.Val {
-    override def toString = outputString
-  }
-  implicit def valueToVal(x: Value) = x.asInstanceOf[Val]
-
-  val FullData = Val(false, "Full Data")
-  val StreamedAll = Val(false, "Streamed All")
-  val StreamedIndividually = Val(false, "Streamed Individually")
-  val RepoAndFullData = Val(true, "Repo and Full Data")
-  val RepoAndStreamedAll = Val(true, "Repo and Streamed All")
-  val RepoAndStreamedIndividually = Val(true, "Repo and Streamed Individually")
-}
-
 @Singleton
 class WidgetGenerationServiceImpl @Inject() (
     statsService: StatsService,
@@ -115,13 +82,30 @@ class WidgetGenerationServiceImpl @Inject() (
     fields: Traversable[Field],
     genMethod: WidgetGenerationMethod.Value
   ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
+    // TODO: if auto decide which method to use intelligently
+    val initGenMathod =
+      if (genMethod == WidgetGenerationMethod.Auto)
+        WidgetGenerationMethod.FullData
+      else
+        genMethod
+    applyAux(widgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, fields, initGenMathod)
+  }
+
+  private def applyAux(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
+    fields: Traversable[Field],
+    genMethod: WidgetGenerationMethod.Value
+  ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
 
     def isScalar(fieldName: String) =
       nameFieldMap.get(fieldName).map(!_.isArray).getOrElse(true)
 
     val splitWidgetSpecs: Traversable[Either[WidgetSpec, WidgetSpec]] =
-      if (genMethod.isRepoBased)
+      if (genMethod.isRepoBased) {
         widgetSpecs.collect {
           case p: DistributionWidgetSpec => if (isScalar(p.fieldName)) Left(p) else Right(p)
           case p: BoxWidgetSpec => if (isScalar(p.fieldName)) Left(p) else Right(p)
@@ -134,7 +118,7 @@ class WidgetGenerationServiceImpl @Inject() (
           case p: CorrelationWidgetSpec => Right(p)
           case p: BasicStatsWidgetSpec => Right(p)
         }
-      else
+      } else
         widgetSpecs.map(Right(_))
 
     val repoWidgetSpecs = splitWidgetSpecs.flatMap(_.left.toOption)
@@ -480,9 +464,17 @@ class WidgetGenerationServiceImpl @Inject() (
           GroupUniqueCumulativeCountWidgetGenerator(spec)(nameFieldMap)
         )
 
-      case spec: BoxWidgetSpec =>
-        calcQuartilesFromRepo(repo, criteria, getField(spec.fieldName)).map(
+      case spec: BoxWidgetSpec if spec.groupFieldName.isEmpty =>
+        val field = getField(spec.fieldName)
+        calcQuartilesFromRepo(repo, criteria, field).map(
           BoxWidgetGenerator(spec)(nameFieldMap)
+        )
+
+      case spec: BoxWidgetSpec if spec.groupFieldName.isDefined =>
+        val field = getField(spec.fieldName)
+        val groupField = getField(spec.groupFieldName.get)
+        calcGroupQuartilesFromRepo(repo, criteria, field, groupField).map(
+          GroupBoxWidgetGenerator(spec)(nameFieldMap)
         )
 
       case spec: GridDistributionCountWidgetSpec =>
@@ -656,8 +648,11 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: CumulativeCountWidgetSpec if spec.numericBinCount.isEmpty && spec.groupFieldName.isDefined =>
         aux(GroupCumulativeCountWidgetGenerator)
 
-      case spec: BoxWidgetSpec =>
+      case spec: BoxWidgetSpec if spec.groupFieldName.isEmpty =>
         aux(BoxWidgetGenerator)
+
+      case spec: BoxWidgetSpec if spec.groupFieldName.isDefined =>
+        aux(GroupBoxWidgetGenerator)
 
       case spec: ScatterWidgetSpec if spec.groupFieldName.isEmpty =>
         aux(ScatterWidgetGenerator[Any, Any])

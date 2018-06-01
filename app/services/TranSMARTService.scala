@@ -4,9 +4,8 @@ import javax.inject.{Inject, Singleton}
 
 import dataaccess.JsonUtil.jsonObjectsToCsv
 import com.google.inject.ImplementedBy
-import models.Category
-import dataaccess.{FieldTypeHelper, FieldType}
-import models.Field
+import models.{AdaException, Category, Field}
+import dataaccess.{AdaConversionException, FieldType, FieldTypeHelper}
 import play.api.libs.json._
 
 @ImplementedBy(classOf[TranSMARTServiceImpl])
@@ -142,7 +141,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
         (JsString("VISIT_ID"), None)
       else {
         val label = JsString(fieldNameLabelMap.get(fieldName).flatten.getOrElse(fieldName))
-        val path = fieldCategoryMap.get(fieldName).map(_.getPath.mkString("+").replaceAll(" ", "_"))
+        val path = fieldCategoryMap.get(fieldName).map(_.getLabelPath.mkString("+").replaceAll(" ", "_"))
         (label, path)
       }
 
@@ -281,7 +280,12 @@ class TranSMARTServiceImpl extends TranSMARTService {
             case JsNull => JsNull
             case _ => {
               nameFieldTypeMap.get(fieldName).map { fieldType =>
-                JsString(fieldType.jsonToDisplayString(json))
+                try {
+                  JsString(fieldType.jsonToDisplayString(json))
+                } catch {
+                  case e: AdaConversionException =>
+                    throw new AdaException(s"String conversion of the field $fieldName failed", e)
+                }
               }.getOrElse(json)
             }
           }

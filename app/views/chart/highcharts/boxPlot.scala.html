@@ -5,15 +5,21 @@
 
 <script type="text/javascript">
     $(function () {
-        var isDate = @{widget.data.median.isInstanceOf[java.util.Date]};
+        var isDate = @{widget.data.headOption.map(_._2.median.isInstanceOf[java.util.Date]).getOrElse(false)};
         var dataType = (isDate) ? 'datetime' : null;
 
-        var data = [[
-            @widget.data.toSeq.map( x => x match {
-                case x: java.util.Date => x.getTime.toString
-                case _ => x.toString
-            }).mkString(",")
-        ]];
+        var data = [
+            @widget.data.map { case (group, quartiles) =>
+            [
+                @quartiles.toSeq.map(x => x match {
+                    case x: java.util.Date => x.getTime.toString
+                    case _ => x.toString
+                }).mkString(",")
+            ],
+            }
+        ]
+
+        var categories = [ @widget.data.map { case (group, _) => "@group", } ]
 
         var min = @if(widget.min.isDefined) {
             @if(widget.min.get.isInstanceOf[java.util.Date]) {
@@ -48,6 +54,15 @@
             '- Q1: {point.q1}<br/>' +
             '- Lower 1.5 IQR: {point.low}<br/>'
 
-        boxPlot("@widget.title", "@{elementId}", '@widget.yAxisCaption', data, min, max, pointFormat, @widget.displayOptions.height.getOrElse(400), dataType)
+        var xCaption =
+            @if(widget.xAxisCaption.isDefined) {
+                '@widget.xAxisCaption.get'
+            } else {
+                null
+            }
+
+        console.log(xCaption)
+
+        boxPlot("@widget.title", "@{elementId}", categories, xCaption, '@widget.yAxisCaption', data, min, max, pointFormat, @widget.displayOptions.height.getOrElse(400), dataType)
     });
 </script>

@@ -59,7 +59,9 @@
 
 @inputText("dataView", "elementGridWidth", form)
 
-@checkbox("dataView", "useOptimizedRepoChartCalcMethod", form)
+@labelValue("generationMethod", "Generation Method") {
+    @selectEnum("generationMethod", WidgetGenerationMethod, false, None, form.value.map(_.generationMethod.toString))
+}
 
 <script>
     function addAllFields() {

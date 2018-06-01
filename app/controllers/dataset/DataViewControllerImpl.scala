@@ -6,7 +6,7 @@ import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
-import controllers.{DataSetWebContext, JsonFormatter}
+import controllers.{DataSetWebContext, EnumFormatter, JsonFormatter}
 import dataaccess.RepoTypes.UserRepo
 import dataaccess._
 import models._
@@ -63,6 +63,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   private implicit val widgetSpecFormatter = JsonFormatter[WidgetSpec]
   private implicit val eitherFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
   private implicit val eitherFormatter = JsonFormatter[Either[Seq[models.FilterCondition], BSONObjectID]]
+  private implicit val widgetGenerationMethodFormatter = EnumFormatter(WidgetGenerationMethod)
 
   override protected[controllers] val form = Form(
     mapping(
@@ -74,11 +75,11 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       "elementGridWidth" -> default(number(min = 1, max = 12), 3),
       "default" -> boolean,
       "isPrivate" -> boolean,
-      "useOptimizedRepoChartCalcMethod" -> boolean
+      "generationMethod" -> of[WidgetGenerationMethod.Value]
     ) {
        DataView(_, _, _, _, _, _, _, _, _)
      }
-    ((item: DataView) => Some((item._id, item.name, item.filterOrIds, item.tableColumnNames, item.widgetSpecs, item.elementGridWidth, item.default, item.isPrivate, item.useOptimizedRepoChartCalcMethod)))
+    ((item: DataView) => Some((item._id, item.name, item.filterOrIds, item.tableColumnNames, item.widgetSpecs, item.elementGridWidth, item.default, item.isPrivate, item.generationMethod)))
   )
 
   // router for requests; to be passed to views as helper.
@@ -227,7 +228,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     for {
       dataViews <- repo.find(
 //        sort = Seq(AscSort("name")),
-        projection = Seq("name", "default", "elementGridWidth", "timeCreated")
+        projection = Seq("name", "default", "elementGridWidth", "timeCreated", "generationMethod")
       )
     } yield {
       val sorted = dataViews.toSeq.sortBy(dataView =>
@@ -248,7 +249,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     // auxiliary function to find data views for given criteria
     def findAux(criteria: Seq[Criterion[Any]]) = repo.find(
       criteria = criteria,
-      projection = Seq("name", "default", "elementGridWidth", "timeCreated", "isPrivate", "createdById")
+      projection = Seq("name", "default", "elementGridWidth", "timeCreated", "isPrivate", "createdById", "generationMethod")
     )
 
     for {
@@ -402,10 +403,19 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
 
     if (newFieldNames.nonEmpty) {
-      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ newFieldNames.map(BoxWidgetSpec(_)))
+      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ newFieldNames.map(BoxWidgetSpec(_, None)))
       repo.update(newDataView)
     } else
       Future(())
+  }
+
+  override def addBoxPlot(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    groupFieldName: Option[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ Seq(BoxWidgetSpec(fieldName, groupFieldName)))
+    repo.update(newDataView)
   }
 
   override def addBasicStats(

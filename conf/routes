@@ -166,6 +166,7 @@ GET         /dataSets/dataviews/addDistribution                                 
 GET         /dataSets/dataviews/addCumulativeCounts                                  controllers.dataset.DataViewDispatcher.addCumulativeCounts(dataViewId: BSONObjectID, fieldNames: Seq[String])
 GET         /dataSets/dataviews/addCumulativeCount                                   controllers.dataset.DataViewDispatcher.addCumulativeCount(dataViewId: BSONObjectID, fieldName: String, groupFieldName: Option[String])
 GET         /dataSets/dataviews/addBoxPlots                                          controllers.dataset.DataViewDispatcher.addBoxPlots(dataViewId: BSONObjectID, fieldNames: Seq[String])
+GET         /dataSets/dataviews/addBoxPlot                                           controllers.dataset.DataViewDispatcher.addBoxPlot(dataViewId: BSONObjectID, fieldName: String, groupFieldName: Option[String])
 GET         /dataSets/dataviews/addBasicStats                                        controllers.dataset.DataViewDispatcher.addBasicStats(dataViewId: BSONObjectID, fieldNames: Seq[String])
 GET         /dataSets/dataviews/addScatter                                           controllers.dataset.DataViewDispatcher.addScatter(dataViewId: BSONObjectID, xFieldName: String, yFieldName: String, groupFieldName: Option[String])
 GET         /dataSets/dataviews/addCorrelation                                       controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId: BSONObjectID, fieldNames: Seq[String])

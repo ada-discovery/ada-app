@@ -13,8 +13,6 @@ trait GroupTupleCalcTypePack[G, A, B] extends NoOptionsCalculatorTypePack {
 
 private[stats] class GroupTupleCalc[G, A, B] extends Calculator[GroupTupleCalcTypePack[G, A, B]] {
 
-  private val maxGroups = Int.MaxValue
-
   override def fun(opt: Unit)  =
     _.toGroupMap.map {
       case (groupValue, values) => (groupValue, values.flatMap(toOption))
@@ -22,7 +20,7 @@ private[stats] class GroupTupleCalc[G, A, B] extends Calculator[GroupTupleCalcTy
 
   override def flow(options: Unit) = {
     val flatFlow = Flow[IN].collect{ case (g, Some(x), Some(y)) => (g, (x, y)) }
-    val groupedFlow = flatFlow.via(groupFlow[Option[G], (A, B)](maxGroups))
+    val groupedFlow = flatFlow.via(groupFlow[Option[G], (A, B)]())
 
     groupedFlow.via(seqFlow)
   }

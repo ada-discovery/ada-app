@@ -18,11 +18,11 @@ trait QuartilesCalcNoOptionsTypePack[T] extends NoOptionsCalculatorTypePack {
   type INTER = Traversable[T]
 }
 
-private class QuartilesAnyExec[F] extends CalculatorExecutor[QuartilesCalcNoOptionsTypePack[Any], F] {
+private trait QuartilesAnyExec[F] extends CalculatorExecutor[QuartilesCalcNoOptionsTypePack[Any], F] with DispatchHelper[F, QuartilesCalcTypePack] {
 
   toFields: ToFields[F] =>
 
-  private def genericExec[T: Ordering](
+  override protected def genericExec[T: Ordering](
     implicit inputTypeTag: TypeTag[T]
   ) = CalculatorExecutor.withSeq(QuartilesCalc[T])
 
@@ -89,7 +89,6 @@ private class QuartilesAnyExec[F] extends CalculatorExecutor[QuartilesCalcNoOpti
         _.createJsonFlowA(options, scalarOrArrayField, toFields(fields))
     )(fields, Flow[JsObject].map(_ => Nil))
 
-
   override def execJsonRepoStreamed(
     flowOptions: Unit,
     postFlowOptions: Unit,
@@ -121,26 +120,39 @@ private class QuartilesAnyExec[F] extends CalculatorExecutor[QuartilesCalcNoOpti
     source: Source[Option[Any], _])(
     implicit materializer: Materializer
   ) =
-    throw new RuntimeException("Method QuartilesAnyExecAux.execStreamed is not supported due to unknown value type (ordering).")
+    throw new RuntimeException("Method QuartilesAnyExec.execStreamed is not supported due to unknown value type (ordering).")
 
   override def execPostFlow(
     options: Unit)(
     flowOutput: Traversable[Any]
-  ): Option[Quartiles[Any]] =
+  ) =
     flowOutput.headOption.flatMap { someVal =>
       dispatchVal(
         (executor) => executor.execPostFlow(_)(flowOutput)
       )(someVal, None)
     }
+}
+
+trait DispatchHelper[F, C[X] <: CalculatorTypePack] {
+
+  toFields: ToFields[F] =>
+
+  protected def valueField(fields: F): Option[Field] = {
+    val fieldz = toFields(fields)
+    fieldz.headOption.map(_ => fieldz.last)
+  }
+
+  protected def genericExec[T: Ordering](
+    implicit inputTypeTag: TypeTag[T]
+  ): CalculatorExecutor[C[T], Seq[Field]] with WithSeqFields
 
   // auxiliary functions
-
-  private def dispatch[OUT](
-    exec: CalculatorExecutor[QuartilesCalcTypePack[Any], Seq[Field]] => ((Any => Double) => OUT))(
+  protected def dispatch[OUT](
+    exec: CalculatorExecutor[C[Any], Seq[Field]] => ((Any => Double) => OUT))(
     fields: F,
     defaultOutput: OUT
   ): OUT =
-    toFields(fields).headOption.flatMap( field =>
+    valueField(fields).flatMap( field =>
       fieldTypeToDouble(field.fieldType).flatMap ( toDouble =>
         fieldTypeOrdering(field.fieldType).map { implicit ordering =>
           exec(genericExec[Any])(toDouble)
@@ -148,19 +160,19 @@ private class QuartilesAnyExec[F] extends CalculatorExecutor[QuartilesCalcNoOpti
       )
     ).getOrElse(defaultOutput)
 
-  private def dispatchPlain[OUT](
-    exec: CalculatorExecutor[QuartilesCalcTypePack[Any], Seq[Field]] => OUT)(
+  protected def dispatchPlain[OUT](
+    exec: CalculatorExecutor[C[Any], Seq[Field]] => OUT)(
     fields: F,
     defaultOutput: OUT
   ): OUT =
-    toFields(fields).headOption.flatMap( field =>
+    valueField(fields).flatMap( field =>
       fieldTypeOrdering(field.fieldType).map { implicit ordering =>
         exec(genericExec[Any])
       }
     ).getOrElse(defaultOutput)
 
-  private def dispatchVal[OUT](
-    exec: CalculatorExecutor[QuartilesCalcTypePack[Any], Seq[Field]] => ((Any => Double) => OUT))(
+  protected def dispatchVal[OUT](
+    exec: CalculatorExecutor[C[Any], Seq[Field]] => ((Any => Double) => OUT))(
     value: Any,
     defaultOutput: OUT
   ): OUT =

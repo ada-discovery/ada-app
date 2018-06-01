@@ -107,6 +107,12 @@ class DataViewDispatcher @Inject()(
     fieldNames: Seq[String]
   ) = dispatchIsAdminOrOwner(dataViewId, _.addBoxPlots(dataViewId, fieldNames))
 
+  override def addBoxPlot(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    groupFieldName: Option[String]
+  ) = dispatchIsAdminOrOwner(dataViewId, _.addBoxPlot(dataViewId, fieldName, groupFieldName))
+
   override def addBasicStats(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]

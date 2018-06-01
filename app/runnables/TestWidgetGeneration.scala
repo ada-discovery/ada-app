@@ -2,12 +2,12 @@ package runnables
 import javax.inject.Inject
 
 import dataaccess.RepoTypes.JsonReadonlyRepo
-import models.{DataView, Field}
+import models.{DataView, Field, WidgetGenerationMethod}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import services.{WidgetGenerationMethod, WidgetGenerationService}
+import services.WidgetGenerationService
 import util.seqFutures
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class TestWidgetGeneration @Inject()(
