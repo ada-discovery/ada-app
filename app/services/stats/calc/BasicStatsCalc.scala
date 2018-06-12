@@ -18,13 +18,14 @@ object BasicStatsCalc extends Calculator[BasicStatsCalcTypePack] {
 
       val min = flattenedValues.min
       val max = flattenedValues.max
-      val mean = flattenedValues.sum / count
+      val sum = flattenedValues.sum
+      val mean = sum / count
 
-      val meanSq = flattenedValues.foldLeft(0.0)((accum, value) => accum + value * value) / count
-      val variance = meanSq - mean * mean
+      val sqSum = flattenedValues.foldLeft(0.0)((accum, value) => accum + value * value)
+      val variance = sqSum / count - mean * mean
       val sVariance = sampleVariance(variance, count)
 
-      Some(BasicStatsResult(min, max, mean, variance, Math.sqrt(variance), sVariance, Math.sqrt(sVariance), count, values.size - count))
+      Some(BasicStatsResult(min, max, mean, sum, sqSum, variance, Math.sqrt(variance), sVariance, Math.sqrt(sVariance), count, values.size - count))
     } else
       None
   }
@@ -40,12 +41,11 @@ object BasicStatsCalc extends Calculator[BasicStatsCalcTypePack] {
     if (accum.count > 0) {
       val mean = accum.sum / accum.count
 
-      val meanSq = accum.sqSum / accum.count
-      val variance = meanSq - mean * mean
+      val variance = (accum.sqSum / accum.count) - mean * mean
       val sVariance = sampleVariance(variance, accum.count)
 
       Some(BasicStatsResult(
-        accum.min, accum.max, mean, variance, Math.sqrt(variance), sVariance, Math.sqrt(sVariance), accum.count, accum.undefinedCount
+        accum.min, accum.max, mean, accum.sum, accum.sqSum, variance, Math.sqrt(variance), sVariance, Math.sqrt(sVariance), accum.count, accum.undefinedCount
       ))
     } else
       None
@@ -77,6 +77,8 @@ case class BasicStatsResult(
   min: Double,
   max: Double,
   mean: Double,
+  sum: Double,
+  sqSum: Double,
   variance: Double,
   standardDeviation: Double,
   sampleVariance: Double,
