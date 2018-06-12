@@ -1,89 +1,110 @@
 package services.stats.calc
 
+import org.apache.commons.math3.special.Beta
 import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import services.stats.CalculatorHelper._
 
 trait OneWayAnovaCalcTypePack[G] extends NoOptionsCalculatorTypePack{
   type IN = (Option[G], Option[Double])
-  type OUT = OneWayAnovaResult
+  type OUT = Option[OneWayAnovaResult]
   type INTER = Traversable[(Option[G], BasicStatsAccum)]
 }
 
-class OneWayAnovaCalc[G] extends Calculator[OneWayAnovaCalcTypePack[G]] {
+private class OneWayAnovaCalc[G] extends Calculator[OneWayAnovaCalcTypePack[G]] with OneWayAnovaHelper {
 
   private val basicStatsCalc = GroupBasicStatsCalc[G]
 
   override def fun(o: Unit) = { values: Traversable[IN] =>
-
     val anovaInputs = basicStatsCalc.fun_(values).collect {
-      case (_, Some(basicStatsResult)) => OneWayAnovaInputAux(basicStatsResult.sum, basicStatsResult.sqSum, basicStatsResult.definedCount)
+      case (_, Some(basicStatsResult)) =>
+        OneWayAnovaStatsInputAux(basicStatsResult.sum, basicStatsResult.sqSum, basicStatsResult.definedCount)
     }
 
-    anovaStats(anovaInputs)
+    calcAnovaStatsOptional(anovaInputs)
   }
 
   override def flow(o: Unit) = basicStatsCalc.flow(())
 
   override def postFlow(o: Unit) = { accums: INTER =>
     val anovaInputs = accums.map { case (_, accum) =>
-      OneWayAnovaInputAux(accum.sum, accum.sqSum, accum.count)
+      OneWayAnovaStatsInputAux(accum.sum, accum.sqSum, accum.count)
     }
 
-    anovaStats(anovaInputs)
+    calcAnovaStatsOptional(anovaInputs)
+  }
+}
+
+trait OneWayAnovaHelper {
+
+  private val epsilon = 1E-300
+
+  protected def calcAnovaStatsOptional(
+    groups: Traversable[OneWayAnovaStatsInputAux]
+  ): Option[OneWayAnovaResult] =
+    if (groups.size > 1)
+      Some(calcAnovaStats(groups))
+    else
+      None
+
+  protected def calcAnovaStats(
+    groups: Traversable[OneWayAnovaStatsInputAux]
+  ): OneWayAnovaResult = {
+    val resultAux =
+      groups.foldLeft(OneWayAnovaResultAux()) { case (result, data) =>
+        val ss = data.sqSum - ((data.sum * data.sum) / data.count)
+
+        OneWayAnovaResultAux(
+          result.sum + data.sum,
+          result.sqSum + data.sqSum,
+          result.count + data.count,
+          result.dfwg + data.count - 1,
+          result.sswg + ss
+        )
+      }
+
+    val sst = resultAux.sqSum - ((resultAux.sum * resultAux.sum) / resultAux.count)
+
+    // between group stats
+    val dfbg = groups.size - 1
+    val msbg = (sst - resultAux.sswg) / dfbg
+
+    // within group stats
+    val mswg = resultAux.sswg / resultAux.dfwg
+
+    // F-value
+    val FValue = msbg / mswg
+
+    // p-value
+    val pValue = if (FValue <= 0)
+      1d
+    else
+      1d - Beta.regularizedBeta((dfbg * FValue) / (resultAux.dfwg + dfbg * FValue), 0.5 * dfbg, 0.5 * resultAux.dfwg, epsilon)
+
+    OneWayAnovaResult(pValue, FValue, dfbg, resultAux.dfwg)
   }
 
-  private def anovaStats(categoryData: Traversable[OneWayAnovaInputAux], allowOneElementData: Boolean = true) = {
-//    if (!allowOneElementData) {
-//      // check if we have enough categories
-//      if (categoryData.size < 2) throw new DimensionMismatchException(LocalizedFormats.TWO_OR_MORE_CATEGORIES_REQUIRED, categoryData.size, 2)
-//      // check if each category has enough data
-//      import scala.collection.JavaConversions._
-//      for (array <- categoryData) {
-//        if (array.getN <= 1) throw new DimensionMismatchException(LocalizedFormats.TWO_OR_MORE_VALUES_IN_CATEGORY_REQUIRED, array.getN.toInt, 2)
-//      }
-//    }
-
-    var dfwg = 0
-    var sswg = 0d
-    var totsum = 0d
-    var totsumsq = 0d
-    var totnum = 0
-
-    for (data <- categoryData) {
-      val sum = data.sum
-      val sumsq = data.sqSum
-      val num = data.count
-
-      totnum += num
-      totsum += sum
-      totsumsq += sumsq
-
-      dfwg += num - 1
-
-      val ss = sumsq - ((sum * sum) / num)
-      sswg += ss
-    }
-
-    val sst = totsumsq - ((totsum * totsum) / totnum)
-    val ssbg = sst - sswg
-    val dfbg = categoryData.size - 1
-    val msbg = ssbg / dfbg
-    val mswg = sswg / dfwg
-    val F = msbg / mswg
-
-    OneWayAnovaResult(1.1d, F, dfbg, dfwg)
-  }
-
-  case class OneWayAnovaInputAux(
+  case class OneWayAnovaStatsInputAux(
     sum: Double,
     sqSum: Double,
     count: Int
+  )
+
+  case class OneWayAnovaResultAux(
+    sum: Double = 0,
+    sqSum: Double = 0,
+    count: Double = 0,
+    dfwg: Int = 0,
+    sswg: Double = 0
   )
 }
 
 case class OneWayAnovaResult(
   pValue: Double,
   FValue: Double,
-  degreeOfFreedomNumerator: Int, // degreeoffreedom between groups
-  degreeOfFreedomDenominator: Int // degreeoffreedom within groups
+  dfbg: Int, // degree of freedom between groups, degree of freedom in numerator
+  dfwg: Int // degree of freedom within groups, degree of freedom in denominator
 )
+
+object OneWayAnovaCalc {
+  def apply[G]: Calculator[OneWayAnovaCalcTypePack[G]] = new OneWayAnovaCalc[G]
+}

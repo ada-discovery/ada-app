@@ -44,7 +44,9 @@ import models.ml.DataSetTransformation._
 import models.security.{SecurityRole, UserManager}
 import play.mvc.With
 import services.stats.ChiSquareResult.chiSquareResultFormat
-import services.stats.{AnovaResult, ChiSquareResult, StatsService}
+import services.stats.calc.OneWayAnovaResult
+import services.stats.{ChiSquareResult, StatsService}
+import services.stats.OneWayAnovaResult.anovaResultFormat
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -1763,7 +1765,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   // TODO: this is ugly... fix by introducing a proper JSON formatter
   private def testResultToJson(
     fieldName: String,
-    result: Option[Either[ChiSquareResult, AnovaResult]],
+    result: Option[Either[ChiSquareResult, OneWayAnovaResult]],
     fieldNameLabelMap: Map[String, String]
   ): Option[JsObject] = {
     val fieldLabel = fieldNameLabelMap.get(fieldName).get

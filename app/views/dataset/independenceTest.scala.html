@@ -82,11 +82,11 @@
                         (item.result.pValue >= 0.001) ? "green" : "darkGreen"
 
                     var significantStyleDivStart = (item.result.pValue < 0.05) ? ("<div style='color: " + color + "; font-weight: bold'>") : "<div>"
-                    var isAnovaTest = (item.result.fValue != null)
+                    var isAnovaTest = (item.result.FValue != null)
                     var rowStart = [item.fieldLabel,  significantStyleDivStart + item.result.pValue.toExponential(3).replace("e", " E") + "</div>"]
 
                     var rowEnd = (isAnovaTest) ?
-                        [item.result.degreeOfFreedomWithinGroups, item.result.fValue.toFixed(2), "ANOVA"]
+                        [item.result.dfwg, item.result.FValue.toFixed(2), "ANOVA"]
                         :
                         [item.result.degreeOfFreedom, item.result.statistics.toFixed(2), "Chi-Square"]
 

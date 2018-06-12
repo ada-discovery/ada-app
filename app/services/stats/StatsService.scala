@@ -218,19 +218,19 @@ trait StatsService extends CalculatorExecutors {
     items: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[Option[AnovaResult]]
+  ): Seq[Option[OneWayAnovaResult]]
 
   def testIndependence(
     items: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[Option[Either[ChiSquareResult, AnovaResult]]]
+  ): Seq[Option[Either[ChiSquareResult, OneWayAnovaResult]]]
 
   def testIndependenceSorted(
     items: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[(Field, Option[Either[ChiSquareResult, AnovaResult]])]
+  ): Seq[(Field, Option[Either[ChiSquareResult, OneWayAnovaResult]])]
 
   def selectFeaturesAsChiSquare(
     data: DataFrame,
@@ -1171,7 +1171,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     items: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[Option[AnovaResult]] = {
+  ): Seq[Option[OneWayAnovaResult]] = {
 
     val fieldNameTypeMap: Map[String, FieldType[_]] = (inputFields ++ Seq(targetField)).map { field => (field.name, ftf(field.fieldTypeSpec))}.toMap
 
@@ -1192,53 +1192,25 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     val labeledFeatures = items.map { json =>
       val features = inputFields.map(field => doubleValue(field.name, json))
       val label = fieldNameTypeMap.get(targetField.name).get.jsonToDisplayString(json \ targetField.name)
-      (label, features)
+      (Some(label), features)
     }
 
-    anovaTestAux(labeledFeatures)
-  }
-
-  private def anovaTestAux(
-    labeledValues: Traversable[(String, Seq[Option[Double]])]
-  ): Seq[Option[AnovaResult]] = {
-    val featuresNum = labeledValues.head._2.size
-
-    val groupedLabelFeatureValues = labeledValues.toGroupMap.map {
-      case (label, values) => (label, values.toSeq.transpose)
-    }.toSeq
-
-    (0 until featuresNum).map { featureIndex =>
-      val featureValues: Seq[Array[Double]] =
-        groupedLabelFeatureValues.map { case (_, featureValues) =>
-          featureValues(featureIndex).flatten.toArray[Double]
-        }
-
-//      println("Feature: " + featureIndex)
-//      featureValues.foreach(array => println(array.mkString(", ")))
-//      println
-
-      if (featureValues.size > 1 && featureValues.forall(_.size > 1)) {
-        val anovaStats = anovaTest.anovaStats(featureValues)
-        val pValue = anovaTest.anovaPValue(anovaStats)
-        Some(AnovaResult(pValue, anovaStats.F, anovaStats.dfbg, anovaStats.dfwg))
-      } else
-        None
-    }
+    MultiOneWayAnovaCalc[String].fun_(labeledFeatures)
   }
 
   override def testIndependenceSorted(
     items: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[(Field, Option[Either[ChiSquareResult, AnovaResult]])] = {
+  ): Seq[(Field, Option[Either[ChiSquareResult, OneWayAnovaResult]])] = {
     val results = testIndependence(items, inputFields, targetField)
 
     // Sort and combine the results
-    def pValueAndStat(result: Option[Either[ChiSquareResult, AnovaResult]]): (Double, Double) =
+    def pValueAndStat(result: Option[Either[ChiSquareResult, OneWayAnovaResult]]): (Double, Double) =
       result.map {
         _ match {
           case Left(chiSquareResult) => (chiSquareResult.pValue, chiSquareResult.statistics)
-          case Right(anovaResult) => (anovaResult.pValue, anovaResult.fValue)
+          case Right(anovaResult) => (anovaResult.pValue, anovaResult.FValue)
         }
       }.getOrElse((Double.PositiveInfinity, 0d))
 
@@ -1254,7 +1226,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     items: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[Option[Either[ChiSquareResult, AnovaResult]]] = {
+  ): Seq[Option[Either[ChiSquareResult, OneWayAnovaResult]]] = {
     // ANOVA
     val numericalTypes = Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
     val numericalInputFields = inputFields.filter(field => numericalTypes.contains(field.fieldTypeSpec.fieldType))
@@ -1338,10 +1310,8 @@ object ChiSquareResult {
   implicit val chiSquareResultFormat = Json.format[ChiSquareResult]
 }
 
-case class AnovaResult(pValue: Double, fValue: Double, degreeOfFreedomBetweenGroups: Int, degreeOfFreedomWithinGroups: Int)
-
-object AnovaResult {
-  implicit val anovaResultFormat = Json.format[AnovaResult]
+object OneWayAnovaResult {
+  implicit val anovaResultFormat = Json.format[OneWayAnovaResult]
 }
 
 case class SmileTSNESetting(
