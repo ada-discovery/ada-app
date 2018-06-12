@@ -5,67 +5,86 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.CalculatorHelper._
-import services.stats.calc.{OneWayAnovaCalc, OneWayAnovaResult}
+import services.stats.calc.{MultiOneWayAnovaCalc, OneWayAnovaCalc, OneWayAnovaResult}
 
 import scala.concurrent.Future
 import scala.util.Random
 
-class OneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
+class MultiOneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
 
-  private val inputs1 = Seq(
-    Seq(0.5, 0.7, 1.2, 6.3, 0.1, 0.4, 0.7, -1.2, 3, 4.2, 5.7, 4.2, 8.1),
-    Seq(0.5, 0.4, 0.4, 0.4, -1.2, 0.8, 0.23, 0.9, 2, 0.1, -4.1, 3, 4)
-  )
-  private val expectedResult1 = OneWayAnovaResult(0.04405750860028412, 4.516646514922993, 1, 24)
+  private val exampleInputs: Seq[(Option[String], Seq[Option[Double]])] = Seq(
+    Some("x") -> Seq(Some(0.5), Some(643d)),
+    Some("x") -> Seq(Some(0.7), Some(655d)),
+    Some("x") -> Seq(Some(1.2), Some(702d)),
+    Some("x") -> Seq(Some(6.3), None),
+    Some("x") -> Seq(Some(0.1), None),
 
-  private val inputs2 = Seq(
-    Seq(643d, 655d, 702d),
-    Seq(469d, 427d, 525d),
-    Seq(484d, 456d, 402d)
+    Some("y") -> Seq(Some(0.4), None),
+    Some("y") -> Seq(Some(-1.2), None),
+    Some("y") -> Seq(Some(0.8), None),
+    Some("y") -> Seq(Some(0.23), None),
+
+    Some("x") -> Seq(Some(0.4), None),
+    Some("x") -> Seq(Some(0.7), None),
+    Some("x") -> Seq(Some(-1.2), None),
+
+    None -> Seq(None, Some(484d)),
+    None -> Seq(None, Some(456d)),
+
+    Some("x") -> Seq(Some(3), None),
+    Some("x") -> Seq(Some(4.2), None),
+    Some("x") -> Seq(Some(5.7), None),
+
+    Some("y") -> Seq(Some(0.5), Some(469d)),
+    Some("y") -> Seq(Some(0.4), Some(427d)),
+    Some("y") -> Seq(Some(0.4), Some(525d)),
+
+    Some("x") -> Seq(Some(4.2), None),
+    Some("x") -> Seq(Some(8.1), None),
+
+    Some("y") -> Seq(Some(0.9), None),
+    Some("y") -> Seq(Some(2), None),
+    Some("y") -> Seq(Some(0.1), None),
+    Some("y") -> Seq(Some(-4.1), None),
+    Some("y") -> Seq(Some(3), None),
+    Some("y") -> Seq(Some(4), None),
+
+    None -> Seq(None, Some(402d))
   )
-  private val expectedResult2 = OneWayAnovaResult(0.0012071270284831348, 25.17541122163707, 2, 6)
+
+  private val expectedResult =
+    Seq(
+      OneWayAnovaResult(0.04405750860028412, 4.516646514922993, 1, 24),
+      OneWayAnovaResult(0.0012071270284831348, 25.17541122163707, 2, 6)
+    )
 
   private val precision = 0.00000000001
 
   private val randomInputSize = 100
   private val randomFeaturesNum = 25
 
-  private val calc = OneWayAnovaCalc[String]
+  private val calc = MultiOneWayAnovaCalc[String]
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
-  "One-way ANOVA test" should "match the static example 1" in {
-    testExpectedAux(inputs1, expectedResult1)
-  }
-
-  "One-way ANOVA test" should "match the static example 2" in {
-    testExpectedAux(inputs2, expectedResult2)
-  }
-
-  private def testExpectedAux(
-    rawInputs: Seq[Seq[Double]],
-    expectedResult: OneWayAnovaResult
-  ) = {
-    val inputs = rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(value => (Some(groupIndex.toString), Some(value)))}
-    val inputSource = Source.fromIterator(() => inputs.toIterator)
+  "Multi one-way ANOVA test" should "match the static example" in {
+    val inputSource = Source.fromIterator(() => exampleInputs.toIterator)
 
     // standard calculation
-    Future(calc.fun_(inputs)).map(checkResult(Some(expectedResult)))
+    Future(calc.fun_(exampleInputs)).map(checkResult(expectedResult.map(Some(_))))
 
     // streamed calculations
-    calc.runFlow_(inputSource).map(checkResult(Some(expectedResult)))
+    calc.runFlow_(inputSource).map(checkResult(expectedResult.map(Some(_))))
   }
 
-  "One-way ANOVA test" should "match each other" in {
-    val allInputs = for (_ <- 1 to randomInputSize) yield {
-      for (i <- 1 to randomFeaturesNum) yield {
-        val value = if (Random.nextDouble() > 0.8) Some((Random.nextDouble() * 2) - 1) else None
-        (Some(i.toString), value)
+  "Multi one-way ANOVA test" should "match each other" in {
+    val inputs = for (_ <- 1 to randomInputSize) yield {
+      val values = for (i <- 1 to randomFeaturesNum) yield {
+        if (Random.nextDouble() > 0.8) Some((Random.nextDouble() * 2) - 1) else None
       }
+      (Some(Random.nextInt(5).toString), values)
     }
-    val inputs = allInputs.flatten
-
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
@@ -76,17 +95,21 @@ class OneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
   }
 
   private def checkResult(
-    result2: Option[OneWayAnovaResult])(
-    result1: Option[OneWayAnovaResult]
+    results2: Seq[Option[OneWayAnovaResult]])(
+    results1: Seq[Option[OneWayAnovaResult]]
   ) = {
-    result1 should not be (None)
-    result2 should not be (None)
-    val resultDefined1 = result1.get
-    val resultDefined2 = result2.get
+    results1.zip(results2).map { case (result1, result2) =>
+      result1 should not be (None)
+      result2 should not be (None)
+      val resultDefined1 = result1.get
+      val resultDefined2 = result2.get
 
-    resultDefined1.pValue shouldBeAround (resultDefined2.pValue, precision)
-    resultDefined1.FValue shouldBeAround (resultDefined2.FValue, precision)
-    resultDefined1.dfbg shouldBeAround (resultDefined2.dfbg, precision)
-    resultDefined1.dfwg shouldBeAround (resultDefined2.dfwg, precision)
+      resultDefined1.pValue shouldBeAround(resultDefined2.pValue, precision)
+      resultDefined1.FValue shouldBeAround(resultDefined2.FValue, precision)
+      resultDefined1.dfbg shouldBeAround(resultDefined2.dfbg, precision)
+      resultDefined1.dfwg shouldBeAround(resultDefined2.dfwg, precision)
+    }
+
+    results1.size should be (results2.size)
   }
 }
