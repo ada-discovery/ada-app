@@ -16,7 +16,7 @@ class BasicStatsTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
 
   private val variance = 22.495 - 2.4 * 2.4
   private val expectedResult = BasicStatsResult(
-    -3.5, 8.9, 2.4, variance, Math.sqrt(variance), variance * 8 / 7, Math.sqrt(variance * 8 / 7), 8, 2
+    -3.5, 8.9, 2.4, 19.2, 179.96, variance, Math.sqrt(variance), variance * 8 / 7, Math.sqrt(variance * 8 / 7), 8, 2
   )
 
   private val randomInputSize = 1000
@@ -30,26 +30,11 @@ class BasicStatsTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
   "Basic stats" should "match the static example" in {
     val inputSource = Source.fromIterator(() => values.toIterator)
 
-    def checkResult(result: Option[BasicStatsResult]) = {
-      result should not be (None)
-      val resultDefined = result.get
-
-      resultDefined.min should be (expectedResult.min)
-      resultDefined.max should be (expectedResult.max)
-      resultDefined.mean shouldBeAround (expectedResult.mean, precision)
-      resultDefined.variance shouldBeAround (expectedResult.variance, precision)
-      resultDefined.standardDeviation shouldBeAround (expectedResult.standardDeviation, precision)
-      resultDefined.sampleVariance shouldBeAround (expectedResult.sampleVariance, precision)
-      resultDefined.sampleStandardDeviation shouldBeAround (expectedResult.sampleStandardDeviation, precision)
-      resultDefined.definedCount should be (expectedResult.definedCount)
-      resultDefined.undefinedCount should be (expectedResult.undefinedCount)
-    }
-
     // standard calculation
-    Future(calc.fun_(values)).map(checkResult)
+    Future(calc.fun_(values)).map(checkResult(Some(expectedResult)))
 
     // streamed calculations
-    calc.runFlow_(inputSource).map(checkResult)
+    calc.runFlow_(inputSource).map(checkResult(Some(expectedResult)))
   }
 
   "Basic stats" should "match each other" in {
@@ -61,21 +46,29 @@ class BasicStatsTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
     // standard calculation
     val protoResult = calc.fun_(inputs).get
 
-    def checkResult(result: Option[BasicStatsResult]) = {
-      result should not be (None)
-
-      val resultDefined = result.get
-
-      resultDefined.min should be (protoResult.min)
-      resultDefined.max should be (protoResult.max)
-      resultDefined.mean shouldBeAround (protoResult.mean, precision)
-      resultDefined.variance shouldBeAround (protoResult.variance, precision)
-      resultDefined.standardDeviation shouldBeAround (protoResult.standardDeviation, precision)
-      resultDefined.definedCount should be (protoResult.definedCount)
-      resultDefined.undefinedCount should be (protoResult.undefinedCount)
-    }
-
     // streamed calculations
-    calc.runFlow_(inputSource).map(checkResult)
+    calc.runFlow_(inputSource).map(checkResult(Some(protoResult)))
+  }
+
+  private def checkResult(
+    result2: Option[BasicStatsResult])(
+    result1: Option[BasicStatsResult]
+  ) = {
+    result1 should not be (None)
+    result2 should not be (None)
+    val resultDefined1 = result1.get
+    val resultDefined2 = result2.get
+
+    resultDefined1.min should be (resultDefined2.min)
+    resultDefined1.max should be (resultDefined2.max)
+    resultDefined1.mean shouldBeAround (resultDefined2.mean, precision)
+    resultDefined1.sum shouldBeAround (resultDefined2.sum, precision)
+    resultDefined1.sqSum shouldBeAround (resultDefined2.sqSum, precision)
+    resultDefined1.variance shouldBeAround (resultDefined2.variance, precision)
+    resultDefined1.standardDeviation shouldBeAround (resultDefined2.standardDeviation, precision)
+    resultDefined1.sampleVariance shouldBeAround (resultDefined2.sampleVariance, precision)
+    resultDefined1.sampleStandardDeviation shouldBeAround (resultDefined2.sampleStandardDeviation, precision)
+    resultDefined1.definedCount should be (resultDefined2.definedCount)
+    resultDefined1.undefinedCount should be (resultDefined2.undefinedCount)
   }
 }

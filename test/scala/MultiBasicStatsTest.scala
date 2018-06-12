@@ -29,8 +29,8 @@ class MultiBasicStatsTest extends AsyncFlatSpec with Matchers with ExtraMatchers
   private val variance2 = 37.643333333 - 2 * 2
 
   private val expectedResult = Seq(
-    BasicStatsResult(-3.5, 8.9, 2.4, variance1, Math.sqrt(variance1), variance1 * 8 / 7, Math.sqrt(variance1 * 8 / 7), 8, 2),
-    BasicStatsResult(-8.2, 9,     2, variance2, Math.sqrt(variance2), variance2 * 6 / 5, Math.sqrt(variance2 * 6 / 5), 6, 4)
+    BasicStatsResult(-3.5, 8.9, 2.4, 19.2, 179.96, variance1, Math.sqrt(variance1), variance1 * 8 / 7, Math.sqrt(variance1 * 8 / 7), 8, 2),
+    BasicStatsResult(-8.2, 9,     2, 12, 225.86, variance2, Math.sqrt(variance2), variance2 * 6 / 5, Math.sqrt(variance2 * 6 / 5), 6, 4)
   )
 
   private val randomInputSize = 1000
@@ -92,6 +92,8 @@ class MultiBasicStatsTest extends AsyncFlatSpec with Matchers with ExtraMatchers
     result1Defined.min should be(result2Defined.min)
     result1Defined.max should be(result2Defined.max)
     result1Defined.mean shouldBeAround(result2Defined.mean, precision)
+    result1Defined.sum shouldBeAround (result2Defined.sum, precision)
+    result1Defined.sqSum shouldBeAround (result2Defined.sqSum, precision)
     result1Defined.variance shouldBeAround(result2Defined.variance, precision)
     result1Defined.standardDeviation shouldBeAround(result2Defined.standardDeviation, precision)
     result1Defined.sampleVariance shouldBeAround(result2Defined.sampleVariance, precision)
