@@ -262,6 +262,9 @@ $.widget( "custom.multiFilter", {
                             that.repopulateFieldNameChoices();
                             if (successFun)
                                 successFun()
+                        },
+                        error: function(data) {
+                            showErrorResponse(data)
                         }
                     });
                 }
@@ -321,8 +324,8 @@ $.widget( "custom.multiFilter", {
             success: function(data) {
                 showMessage("Filter '" + name + "' successfully saved.");
             },
-            error: function(data){
-                showError(data.responseText);
+            error: function(data) {
+                showErrorResponse(data)
             }
         });
     },
@@ -367,6 +370,9 @@ $.widget( "custom.multiFilter", {
                     } else {
                         that.loadFilterButtonElement.hide();
                     }
+                },
+                error: function(data) {
+                    showErrorResponse(data)
                 }
             });
         }

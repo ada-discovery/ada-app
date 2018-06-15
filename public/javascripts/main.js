@@ -391,6 +391,17 @@ function showMessage(text) {
   registerMessageDividerRemoval();
 }
 
+function showErrorResponse(data) {
+    if (data.responseText) {
+        showError(data.responseText)
+    } else {
+        if (data.status == 401)
+            showError("Access denied! We're sorry, but you are not authorized to perform the requested operation.")
+        else
+            showError(data.status + ": " + data.statusText)
+    }
+}
+
 function showError(message) {
   $('#errorDiv').hide();
 
@@ -499,6 +510,9 @@ function loadNewContent(url, elementId) {
         url: url,
         success: function (html) {
             $("#" + elementId).html(html);
+        },
+        error: function(data) {
+            showErrorResponse(data)
         }
     });
 }

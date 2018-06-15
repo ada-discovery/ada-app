@@ -607,6 +607,14 @@
                 y: 25,
                 symbolHeight: 280
             },
+            plotOptions: {
+                series: {
+                    boostThreshold: 100
+                }
+            },
+            boost: {
+                useGPUTranslations: true
+            },
             tooltip: {
                 formatter: function () {
                     var value = (this.point.value != null) ? Highcharts.numberFormat(this.point.value, 3, '.') : "Undefined"
