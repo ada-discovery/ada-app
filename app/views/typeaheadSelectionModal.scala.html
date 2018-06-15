@@ -39,6 +39,9 @@
                     typeaheadData,
                     @FilterShowFieldStyle.LabelsOnly.id
                 );
+            },
+            error: function(data){
+                showErrorResponse(data)
             }
         });
     })

@@ -57,18 +57,29 @@
 
                 $('#outputDiv').html("");
 
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.testIndependence(targetFieldName, inputFieldNames, filterId).ajax( {
-                    success: function(results) {
-                        showMessage("Independence test finished.")
-                        showTestResults(results)
-                    },
-                    error: function(data){
-                        showError( data.responseText );
-                    }
-                });
+                if (!targetFieldName) {
+                    showError("No target field specified.")
+                } else if (inputFieldNames.length == 0) {
+                    showError("No input fields specified.")
+                } else {
+                    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.testIndependence(filterId).ajax({
+                        data: {
+                            "inputFieldNames": inputFieldNames,
+                            "targetFieldName": targetFieldName
+                        },
+                        success: function (results) {
+                            showMessage("Independence test finished.")
+                            showTestResults(results)
+                        },
+                        error: function (data) {
+                            showError(data.responseText);
+                        }
+                    });
 
-                showMessage("Independence test for the field '" + targetFieldLabel + "' launched.")
-                addSpinner($("#outputDiv"))
+                    hideErrors()
+                    showMessage("Independence test for the field '" + targetFieldLabel + "' launched.")
+                    addSpinner($("#outputDiv"))
+                }
             }
 
             function showTestResults(results) {
@@ -105,6 +116,10 @@
 @extraFieldButtons = {
     <a id="addAllFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllFields();" data-toggle="tooltip" title="Add All Fields">
         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All
+    </a>
+
+    <a id="addAllNumericalFieldsButton" class="btn btn-info btn-sm" href="#" onclick="addAllNumericalFields();" data-toggle="tooltip" title="Add All Numerical Fields">
+        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> All Numerical
     </a>
 }
 

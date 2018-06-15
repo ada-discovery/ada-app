@@ -7,8 +7,9 @@
 @import views.html.elements.selectEnum
 @import controllers.mpower.VisNode
 @import controllers.mpower.VisEdge
-
 @import controllers.mpower.AggFunction
+@import views.html.mpowerchallenge.correlationSideBar
+
 @(
     domainName: String,
     threshold: Double,
@@ -18,27 +19,6 @@
     nodes: Traversable[VisNode],
     edges: Traversable[VisEdge]
 )(implicit context: WebContext)
-
-@sideBar = @{
-    basicSideBar(Seq(
-        ("1. mPower", Seq(
-            (challengeRoutes.mPowerTeamNetwork(), "Teams", Some(2)),
-            (challengeRoutes.mPowerSubmissionNetwork(), "Submissions", Some(2))
-        )),
-        ("2.1 Tremor", Seq(
-            (challengeRoutes.tremorTeamNetwork(), "Teams", Some(2)),
-            (challengeRoutes.tremorSubmissionNetwork(), "Submissions", Some(2))
-        )),
-        ("2.2 Dyskinesia", Seq(
-            (challengeRoutes.dyskinesiaTeamNetwork(), "Teams", Some(2)),
-            (challengeRoutes.dyskinesiaSubmissionNetwork(), "Submissions", Some(2))
-        )),
-        ("2.3 Bradykinesia", Seq(
-            (challengeRoutes.bradykinesiaTeamNetwork(), "Teams", Some(2)),
-            (challengeRoutes.bradykinesiaSubmissionNetwork(), "Submissions", Some(2))
-        ))
-    ))
-}
 
 @option(i: Int) = {
     <option value="@{i*5}">Top @{i*5}</option>
@@ -180,7 +160,7 @@
 
 @main(
     title = Messages("network.title", domainName),
-    sideBar = Some(sideBar),
+    sideBar = Some(correlationSideBar()),
     bottomResources = Some(bottomResources),
     showMessageBox = false
 ) {

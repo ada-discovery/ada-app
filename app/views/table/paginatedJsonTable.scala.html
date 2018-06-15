@@ -1,8 +1,8 @@
 @import play.api.libs.json.{JsObject, JsNull, JsValue}
 @import views.html.table.{header, displayJsonTable, pagination}
 @import reactivemongo.bson.BSONObjectID
-
 @import util.FieldTypeFullRenderer.FieldTypeFullRenderer
+
 @(
     page: Page[JsObject],
     refreshCall : (Int, String) => Call,

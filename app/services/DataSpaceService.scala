@@ -2,7 +2,6 @@ package services
 
 import javax.inject.{Inject, Named, Singleton}
 
-import be.objectify.deadbolt.scala.DeadboltActions
 import com.google.inject.ImplementedBy
 import dataaccess.RepoTypes.{DataSetMetaInfoRepo, DataSpaceMetaInfoRepo}
 import models.DataSpaceMetaInfo
@@ -42,6 +41,7 @@ class DataSpaceServiceImpl @Inject() (
 
   private val r1 = """^[DS:](.*[.].*)""".r
   private val r2 = """^[DS:](.*[.].*[.])""".r
+  private val r3 = """^[DS:](.*[.].*[.].*[.])""".r
 
   override def getTreeForCurrentUser(request: Request[_]) =
     for {
@@ -79,7 +79,7 @@ class DataSpaceServiceImpl @Inject() (
       currentUser.map { user =>
         dataSpace.children.clear()
         dataSpace.children.appendAll(foundChildren)
-        val isAdmin = user.roles.contains("admin")
+        val isAdmin = user.roles.contains(SecurityRole.admin)
         if (isAdmin)
           Some(dataSpace)
         else {
@@ -91,10 +91,16 @@ class DataSpaceServiceImpl @Inject() (
   private def getUsersDataSetIds(user: User) =
     user.permissions.map { permission =>
       val dotsCount = permission.count(_ == '.')
-      if (dotsCount == 1)
-        r1.findFirstIn(permission).map(_.substring(3))
-      else
-        r2.findFirstIn(permission).map( string => string.substring(3, string.length - 1))
+      if (permission.startsWith("DS:") && dotsCount > 0) {
+        val output = if (dotsCount == 1) {
+          permission
+        } else {
+          val parts = permission.split('.')
+          parts(0) + "." + parts(1)
+        }
+        Some(output.substring(3))
+      } else
+        None
     }.flatten.toSet
 
   private def allAsTree: Future[Traversable[DataSpaceMetaInfo]] = {

@@ -45,13 +45,13 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
 
   override def getCategoryD3Root = dispatch(_.getCategoryD3Root)
 
-  override def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]) = dispatch(_.relocateToParent(id, parentId))
+  override def relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID]) = dispatchAjax(_.relocateToParent(id, parentId))
 
-  override def idAndNames = dispatch(_.idAndNames)
+  override def idAndNames = dispatchAjax(_.idAndNames)
 
   override def addFields(categoryId: BSONObjectID, fieldNames: Seq[String]) = dispatch(_.addFields(categoryId, fieldNames))
 
-  override def updateLabel(id: BSONObjectID, label: String) = dispatch(_.updateLabel(id, label))
+  override def updateLabel(id: BSONObjectID, label: String) = dispatchAjax(_.updateLabel(id, label))
 
   override def jsRoutes = dispatch(_.jsRoutes)
 }

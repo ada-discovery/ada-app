@@ -151,6 +151,10 @@ class MPowerChallengeClusteringController @Inject()(
     WebContext(messagesApi, webJarAssets)
   }
 
+  def index = Action { implicit request =>
+    Ok(views.html.mpowerchallenge.clusteringHome())
+  }
+
   // MDS
 
   def tremorMDS(

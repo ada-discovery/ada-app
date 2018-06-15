@@ -95,7 +95,7 @@ GET         /dataSets/scatter                                                   
 GET         /dataSets/distribution                                                   controllers.dataset.DataSetDispatcher.getDistribution(fieldName: Option[String] ?= None, groupFieldName: Option[String] ?= None, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /dataSets/distributionWidget                                             controllers.dataset.DataSetDispatcher.getDistributionWidget(fieldName: String, groupFieldName: Option[String] ?= None, filterId: Option[BSONObjectID])
 GET         /dataSets/correlations                                                   controllers.dataset.DataSetDispatcher.getCorrelations(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
-POST        /dataSets/calcCorrelations                                               controllers.dataset.DataSetDispatcher.calcCorrelations(fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+POST        /dataSets/calcCorrelations                                               controllers.dataset.DataSetDispatcher.calcCorrelations(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /dataSets/cumulativeCount                                                controllers.dataset.DataSetDispatcher.getCumulativeCount(fieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /dataSets/clusterization                                                 controllers.dataset.DataSetDispatcher.getClusterization
 GET         /dataSets/getIndependenceTest                                            controllers.dataset.DataSetDispatcher.getIndependenceTest
@@ -104,7 +104,7 @@ POST        /dataSets/runSeriesProcessing                                       
 GET         /dataSets/getSeriesTransformationSpec                                    controllers.dataset.DataSetDispatcher.getSeriesTransformationSpec
 POST        /dataSets/runSeriesTransformation                                        controllers.dataset.DataSetDispatcher.runSeriesTransformation
 POST        /dataSets/cluster                                                        controllers.dataset.DataSetDispatcher.cluster(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterId: Option[BSONObjectID], featuresNormalizationType: Option[models.ml.VectorTransformType.Value], pcaDims: Option[Int])
-POST        /dataSets/testIndependence                                               controllers.dataset.DataSetDispatcher.testIndependence(targetFieldName: String, inputFieldNames: Seq[String], filterId: Option[BSONObjectID])
+POST        /dataSets/testIndependence                                               controllers.dataset.DataSetDispatcher.testIndependence(filterId: Option[BSONObjectID])
 GET         /dataSets/fractalis                                                      controllers.dataset.DataSetDispatcher.getFractalis(fieldName: Option[String] ?= None)
 GET         /dataSets/table                                                          controllers.dataset.DataSetDispatcher.getTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
 GET         /dataSets/widgetPanelAndTable                                            controllers.dataset.DataSetDispatcher.getWidgetPanelAndTable(dataViewId: BSONObjectID, tablePage: Int, tableOrder: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
@@ -268,6 +268,7 @@ GET         /documentation/dataSetImport                                        
 GET         /documentation/technology                                               controllers.DocumentationController.technology()
 
 #Temporary for mpower challenge correlation
+GET         /pdChallenge/correlations                                               controllers.mpower.MPowerChallengeCorrelationController.index
 GET         /pdChallenge/mpowerTeam                                                 controllers.mpower.MPowerChallengeCorrelationController.mPowerTeamNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
 GET         /pdChallenge/ldopaTremorTeam                                            controllers.mpower.MPowerChallengeCorrelationController.tremorTeamNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
 GET         /pdChallenge/ldopaDyskinesiaTeam                                        controllers.mpower.MPowerChallengeCorrelationController.dyskinesiaTeamNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
@@ -278,6 +279,7 @@ GET         /pdChallenge/ldopaDyskinesiaSubmission                              
 GET         /pdChallenge/ldopaBradykinesiaSubmission                                controllers.mpower.MPowerChallengeCorrelationController.bradykinesiaSubmissionNetwork(aggOut: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.mean, aggIn: controllers.mpower.AggFunction.Value ?= controllers.mpower.AggFunction.max, withDemographics: Boolean ?= false, corrThreshold: Option[Double] ?= None)
 
 #Temporary for mpower challenge clustering
+GET         /pdChallenge/clusters                                                  controllers.mpower.MPowerChallengeClusteringController.index
 GET         /pdChallenge/mpowerMDS                                                 controllers.mpower.MPowerChallengeClusteringController.mPowerMDS(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1)
 GET         /pdChallenge/ldopaTremorMDS                                            controllers.mpower.MPowerChallengeClusteringController.tremorMDS(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1)
 GET         /pdChallenge/ldopaDyskinesiaMDS                                        controllers.mpower.MPowerChallengeClusteringController.dyskinesiaMDS(topRank: Option[Int] ?= None, k: Int ?= 10, method: Int ?= 1)

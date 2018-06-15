@@ -40,7 +40,7 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
 
   override def save = dispatch(_.save)
 
-  override def updateLabel(id: String, label: String) = dispatch(_.updateLabel(id, label))
+  override def updateLabel(id: String, label: String) = dispatchAjax(_.updateLabel(id, label))
 
   override def jsRoutes = dispatch(_.jsRoutes)
 

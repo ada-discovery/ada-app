@@ -5,6 +5,7 @@
 @import views.html.basicSideBar
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.{widgetPanel, widgetPanelJs}
+@import views.html.mpowerchallenge.clusteringSideBar
 
 @(
     domainName: String,
@@ -18,27 +19,6 @@
     scaled: Boolean,
     isTSNE: Boolean
 )(implicit context: WebContext)
-
-@sideBar = @{
-    basicSideBar(Seq(
-        ("1. mPower", Seq(
-            (challengeRoutes.mPowerMDS(Some(10), 10), "MDS", Some(2)),
-            (challengeRoutes.mPowerTSNE(Some(10), 10), "t-SNE", Some(2))
-        )),
-        ("2.1 Tremor", Seq(
-            (challengeRoutes.tremorMDS(Some(10), 10), "MDS", Some(2)),
-            (challengeRoutes.tremorTSNE(Some(10), 10), "t-SNE", Some(2))
-        )),
-        ("2.2 Dyskinesia", Seq(
-            (challengeRoutes.dyskinesiaMDS(Some(10), 10), "MDS", Some(2)),
-            (challengeRoutes.dyskinesiaTSNE(Some(10), 10), "t-SNE", Some(2))
-        )),
-        ("2.3 Bradykinesia", Seq(
-            (challengeRoutes.bradykinesiaMDS(Some(10), 10), "MDS", Some(2)),
-            (challengeRoutes.bradykinesiaTSNE(Some(10), 10), "t-SNE", Some(2))
-        ))
-    ))
-}
 
 @bottomResources = {
     @highchartsJsImport()
@@ -79,7 +59,7 @@
 
 @main(
     title = if (isTSNE) Messages("tsne.title", domainName) else Messages("mds.title", domainName),
-    sideBar = Some(sideBar),
+    sideBar = Some(clusteringSideBar()),
     bottomResources = Some(bottomResources),
     showMessageBox = false
 ) {

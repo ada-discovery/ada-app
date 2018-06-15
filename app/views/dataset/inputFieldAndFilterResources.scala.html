@@ -41,12 +41,27 @@
 
     function addAllFields() {
         $.ajax({
-            url: '@Html(dataSetRouter.allFields.url)',
+            url: '@Html(dataSetRouter.allFieldNamesAndLabels.url)',
             success: function (data) {
-                $.each(data, function(index, field) {
+                $.each(data, function(index, fieldNameLabel) {
                     var values = {};
-                    values["fieldName"] = field.name;
-                    values["fieldTypeahead"] = field.label ? field.label : field.name;
+                    values["fieldName"] = fieldNameLabel[0];
+                    values["fieldTypeahead"] = fieldNameLabel[1] ? fieldNameLabel[1] : fieldNameLabel[0];
+
+                    $('#inputFieldNameDiv').dynamicTable('addTableRow', values)
+                });
+            }
+        });
+    }
+
+    function addAllNumericalFields() {
+        $.ajax({
+            url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date)).url)',
+            success: function (data) {
+                $.each(data, function(index, fieldNameLabel) {
+                    var values = {};
+                    values["fieldName"] = fieldNameLabel[0];
+                    values["fieldTypeahead"] = fieldNameLabel[1] ? fieldNameLabel[1] : fieldNameLabel[0];
 
                     $('#inputFieldNameDiv').dynamicTable('addTableRow', values)
                 });

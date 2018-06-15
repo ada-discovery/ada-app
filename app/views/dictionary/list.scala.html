@@ -165,8 +165,8 @@
                         success: function() {
                             showMessage("The field '" + id + "' has been successfully relabeled to '" + label + "'.");
                         },
-                        error: function(data){
-                            showError( data.responseText );
+                        error: function(data) {
+                            showErrorResponse(data);
                         }
                     });
                 }

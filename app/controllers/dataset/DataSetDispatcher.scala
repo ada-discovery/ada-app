@@ -59,11 +59,11 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     orderBy: String,
     fieldNames: Seq[String],
     filterOrId: FilterOrId
-  ) = dispatch(_.getTable(page, orderBy, fieldNames, filterOrId))
+  ) = dispatchAjax(_.getTable(page, orderBy, fieldNames, filterOrId))
 
   override def getWidgets(
     callbackId: String
-  ) = dispatch(_.getWidgets(callbackId))
+  ) = dispatchAjax(_.getWidgets(callbackId))
 
   override def getScatterStats(
     xFieldName: Option[String],
@@ -89,9 +89,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   ) = dispatch(_.getCorrelations(filterOrId))
 
   override def calcCorrelations(
-    fieldNames: Seq[String],
     filterOrId: FilterOrId
-  ) = dispatch(_.calcCorrelations(fieldNames, filterOrId))
+  ) = dispatch(_.calcCorrelations(filterOrId))
 
   override def getCumulativeCount(
     dateFieldName: Option[String],
@@ -116,10 +115,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   ) = dispatch(_.cluster(mlModelId, inputFieldNames, filterId, featuresNormalizationType, pcaDims))
 
   override def testIndependence(
-    targetFieldName: String,
-    inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID]
-  ) = dispatch(_.testIndependence(targetFieldName, inputFieldNames, filterId))
+  ) = dispatch(_.testIndependence(filterId))
 
   override def getSeriesProcessingSpec = dispatch(_.getSeriesProcessingSpec)
 
@@ -129,26 +126,34 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def runSeriesTransformation = dispatch(_.runSeriesTransformation)
 
-  override def getField(fieldName: String) = dispatch(_.getField(fieldName))
+  // field stuff
 
-  override def getFieldNames = dispatch(_.getFieldNames)
+  override def getField(fieldName: String) = dispatchAjax(_.getField(fieldName))
+
+  override def getFieldNames = dispatchAjax(_.getFieldNames)
 
   override def getFieldNamesAndLabels(
     fieldTypeIds: Seq[FieldTypeId.Value]
-  ) = dispatch(_.getFieldNamesAndLabels(fieldTypeIds))
+  ) = dispatchAjax(_.getFieldNamesAndLabels(fieldTypeIds))
 
   override def getFieldTypeWithAllowedValues(
     fieldName: String
-  ) = dispatch(_.getFieldTypeWithAllowedValues(fieldName))
+  ) = dispatchAjax(_.getFieldTypeWithAllowedValues(fieldName))
 
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
-  ) = dispatch(_.getFields(fieldTypeIds))
+  ) = dispatchAjax(_.getFields(fieldTypeIds))
 
   override def getFieldValue(
     id: BSONObjectID,
     fieldName: String
-  ) = dispatch(_.getFieldValue(id, fieldName))
+  ) = dispatchAjax(_.getFieldValue(id, fieldName))
+
+  override def getCategoriesWithFieldsAsTreeNodes(
+    filterOrId: FilterOrId
+  ) = dispatchAjax(_.getCategoriesWithFieldsAsTreeNodes(filterOrId))
+
+  // export
 
   override def exportRecordsAsCsv(
     dataViewId: BSONObjectID,
@@ -173,6 +178,8 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     delimiter : String
   ) = dispatch(_.exportTranSMARTMappingFile(delimiter))
 
+  // api function
+
   override def findCustom(
     filterOrId: Either[Seq[FilterCondition], BSONObjectID],
     orderBy: String,
@@ -180,8 +187,4 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     limit: Option[Int],
     skip: Option[Int]
   ) = dispatch(_.findCustom(filterOrId, orderBy, projection, limit, skip))
-
-  override def getCategoriesWithFieldsAsTreeNodes(
-    filterOrId: FilterOrId
-  ) = dispatch(_.getCategoriesWithFieldsAsTreeNodes(filterOrId))
 }

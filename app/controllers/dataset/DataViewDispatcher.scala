@@ -55,7 +55,7 @@ class DataViewDispatcher @Inject()(
 
   override def idAndNames = dispatchIsAdmin(_.idAndNames)
 
-  override def idAndNamesAccessible = dispatch(_.idAndNamesAccessible)
+  override def idAndNamesAccessible = dispatchAjax(_.idAndNamesAccessible)
 
   override def getAndShowView(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.getAndShowView(id))
 

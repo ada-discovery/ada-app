@@ -37,7 +37,7 @@ class ChiSquareTest @Inject()(
       jsons <- dsa.dataSetRepo.find(criteria = Seq(NotEqualsNullCriterion(targetFieldName)), projection = fieldNames)
     } yield {
       val inputFieldsSeq = inputFields.toSeq
-      val results = statsService.testChiSquare(jsons, inputFieldsSeq, targetField.get)
+      val results = statsService.testChiSquare(jsons, inputFieldsSeq, targetField.get).flatten
 
       inputFieldsSeq.zip(results).foreach { case (field, result) =>
         println(s"Field: ${field.name} =>      pValue = ${result.pValue}, degree of freedom = ${result.degreeOfFreedom}, statistics = ${result.statistics}")

@@ -1,5 +1,6 @@
 package controllers
 
+import be.objectify.deadbolt.scala.DeadboltHandler
 import controllers.core.WithNoCaching
 import play.api.mvc.{Action, AnyContent, Controller, Request}
 

@@ -52,6 +52,10 @@ class MPowerChallengeCorrelationController @Inject()(
     WebContext(messagesApi, webJarAssets)
   }
 
+  def index = Action { implicit request =>
+    Ok(views.html.mpowerchallenge.correlationHome())
+  }
+
   def tremorTeamNetwork(
     aggOut: AggFunction.Value,
     aggIn: AggFunction.Value,
@@ -318,9 +322,6 @@ class MPowerChallengeCorrelationController @Inject()(
           } else
             None
       }
-      println("Nodes: " + nodes.size)
-      println("Edges: " + edges.size)
-      println(edges.mkString("\n"))
       Ok(views.html.mpowerchallenge.correlationNetwork(domainName, threshold, aggOut, aggIn, withDemographics, nodes, edges))
     }
   }
@@ -386,9 +387,6 @@ class MPowerChallengeCorrelationController @Inject()(
               None
           }
       }
-      println("Nodes: " + nodes.size)
-      println("Edges: " + edges.size)
-      println(edges.mkString("\n"))
       Ok(views.html.mpowerchallenge.correlationNetwork(domainName, threshold, aggOut, aggIn, withDemographics, nodes, edges))
     }
   }

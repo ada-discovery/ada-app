@@ -30,7 +30,7 @@ class AddCsvDataSetImportsFromFolder @Inject()(
         dataSetId,
         dataSetName,
         Some(importFile.getAbsolutePath),
-        ",",
+        spec.delimiter,
         None,
         None,
         true,

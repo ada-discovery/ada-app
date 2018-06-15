@@ -41,7 +41,7 @@
 }
 
 @bottomResources = {
-    @highchartsJsImport()
+    @highchartsJsImport(false)
 }
 
 @fieldButtons = {
@@ -125,7 +125,10 @@
         if (inputFieldNames.length == 0) {
             showError("Correlation calculation cannot be launched. No fields specified.");
         } else {
-            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcCorrelations(inputFieldNames, filterOrIdJson).ajax({
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcCorrelations(filterOrIdJson).ajax({
+                data: {
+                    "fieldNames": inputFieldNames
+                },
                 success: function (widget) {
                     showMessage("Correlation calculation finished.")
                     $("#widgetDiv").html(widgetDiv(widget))
@@ -136,6 +139,7 @@
                 }
             });
 
+            hideErrors()
             showMessage("Correlation calculation for " + inputFieldNames.length + " fields launched.")
             addSpinner($("#widgetDiv"))
         }

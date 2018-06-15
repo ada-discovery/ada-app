@@ -1,6 +1,10 @@
 package services.stats.calc
 
+import java.{lang => jl}
+
+import org.apache.commons.math3.exception.MaxCountExceededException
 import org.apache.commons.math3.special.Beta
+import org.apache.commons.math3.util.{ContinuedFraction, FastMath}
 import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import services.stats.CalculatorHelper._
 
@@ -20,7 +24,7 @@ private class OneWayAnovaCalc[G] extends Calculator[OneWayAnovaCalcTypePack[G]] 
         OneWayAnovaStatsInputAux(basicStatsResult.sum, basicStatsResult.sqSum, basicStatsResult.definedCount)
     }
 
-    calcAnovaStatsOptional(anovaInputs)
+    calcAnovaStatsSafe(anovaInputs)
   }
 
   override def flow(o: Unit) = basicStatsCalc.flow(())
@@ -30,25 +34,32 @@ private class OneWayAnovaCalc[G] extends Calculator[OneWayAnovaCalcTypePack[G]] 
       OneWayAnovaStatsInputAux(accum.sum, accum.sqSum, accum.count)
     }
 
-    calcAnovaStatsOptional(anovaInputs)
+    calcAnovaStatsSafe(anovaInputs)
   }
 }
 
 trait OneWayAnovaHelper {
 
-  private val epsilon = 1E-300
+  private val epsilon = 1E-100
 
-  protected def calcAnovaStatsOptional(
+  protected def calcAnovaStatsSafe(
     groups: Traversable[OneWayAnovaStatsInputAux]
-  ): Option[OneWayAnovaResult] =
-    if (groups.size > 1)
-      Some(calcAnovaStats(groups))
+  ): Option[OneWayAnovaResult] = {
+    val totalCount = groups.map(_.count).sum
+
+    if (groups.size > 1 && (totalCount - groups.size) > 0)
+      try {
+        calcAnovaStats(groups)
+      } catch {
+        case _: MaxCountExceededException => None
+      }
     else
       None
+  }
 
-  protected def calcAnovaStats(
+  private def calcAnovaStats(
     groups: Traversable[OneWayAnovaStatsInputAux]
-  ): OneWayAnovaResult = {
+  ): Option[OneWayAnovaResult] = {
     val resultAux =
       groups.foldLeft(OneWayAnovaResultAux()) { case (result, data) =>
         val ss = data.sqSum - ((data.sum * data.sum) / data.count)
@@ -74,14 +85,56 @@ trait OneWayAnovaHelper {
     // F-value
     val FValue = msbg / mswg
 
-    // p-value
-    val pValue = if (FValue <= 0)
-      1d
-    else
-      1d - Beta.regularizedBeta((dfbg * FValue) / (resultAux.dfwg + dfbg * FValue), 0.5 * dfbg, 0.5 * resultAux.dfwg, epsilon)
+    def result(pValue: Double) = OneWayAnovaResult(pValue, FValue, dfbg, resultAux.dfwg)
 
-    OneWayAnovaResult(pValue, FValue, dfbg, resultAux.dfwg)
+    // p-value
+    if (FValue <= 0)
+      Some(result(1d))
+    else {
+      val beta = regularizedBeta((dfbg * FValue) / (resultAux.dfwg + dfbg * FValue), 0.5 * dfbg, 0.5 * resultAux.dfwg, epsilon, Integer.MAX_VALUE)
+      beta.map(beta => result((1d - beta).doubleValue()))
+    }
   }
+
+  /**
+    * This is a Scala version with an optimized precision of the <code>org.apache.commons.math3.special.Beta.regularizedBeta</code> function
+    */
+  def regularizedBeta(
+    x: Double,
+    a: Double,
+    b: Double,
+    epsilon: Double,
+    maxIterations: Int
+  ): Option[BigDecimal] =
+    if (jl.Double.isNaN(x) || jl.Double.isNaN(a) || jl.Double.isNaN(b) || x < 0 || x > 1 || a <= 0 || b <= 0)
+      None
+    else if (x > (a + 1) / (2 + b + a) && 1 - x <= (b + 1) / (2 + b + a))
+      regularizedBeta(1 - x, b, a, epsilon, maxIterations).map ( beta =>
+        1d - beta
+      )
+    else {
+      val fraction = new ContinuedFraction() {
+
+        protected def getB(n: Int, x: Double): Double = {
+          var ret = .0
+          var m = .0
+          if (n % 2 == 0) {
+            // even
+            m = n / 2.0
+            ret = (m * (b - m) * x) / ((a + (2 * m) - 1) * (a + (2 * m)))
+          }
+          else {
+            m = (n - 1.0) / 2.0
+            ret = -((a + m) * (a + b + m) * x) / ((a + (2 * m)) * (a + (2 * m) + 1.0))
+          }
+          ret
+        }
+
+        protected def getA(n: Int, x: Double) = 1.0
+      }
+      val result: BigDecimal = FastMath.exp((a * FastMath.log(x)) + (b * FastMath.log1p(-x)) - FastMath.log(a) - Beta.logBeta(a, b)) * 1.0 / fraction.evaluate(x, epsilon, maxIterations)
+      Some(result)
+    }
 
   case class OneWayAnovaStatsInputAux(
     sum: Double,

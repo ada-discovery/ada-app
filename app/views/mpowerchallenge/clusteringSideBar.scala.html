@@ -1,0 +1,25 @@
+@import controllers.core.WebContext
+@import controllers.core.WebContext._
+@import controllers.mpower.routes.{MPowerChallengeClusteringController => challengeRoutes}
+@import views.html.basicSideBar
+
+@()(implicit context: WebContext)
+
+@basicSideBar(Seq(
+    ("1. mPower", Seq(
+        (challengeRoutes.mPowerMDS(Some(10), 10), "MDS", Some(2)),
+        (challengeRoutes.mPowerTSNE(Some(10), 10), "t-SNE", Some(2))
+    )),
+    ("2.1 Tremor", Seq(
+        (challengeRoutes.tremorMDS(Some(10), 10), "MDS", Some(2)),
+        (challengeRoutes.tremorTSNE(Some(10), 10), "t-SNE", Some(2))
+    )),
+    ("2.2 Dyskinesia", Seq(
+        (challengeRoutes.dyskinesiaMDS(Some(10), 10), "MDS", Some(2)),
+        (challengeRoutes.dyskinesiaTSNE(Some(10), 10), "t-SNE", Some(2))
+    )),
+    ("2.3 Bradykinesia", Seq(
+        (challengeRoutes.bradykinesiaMDS(Some(10), 10), "MDS", Some(2)),
+        (challengeRoutes.bradykinesiaTSNE(Some(10), 10), "t-SNE", Some(2))
+    ))
+))

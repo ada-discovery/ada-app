@@ -71,7 +71,6 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   ): Action[AnyContent]
 
   def calcCorrelations(
-    fieldNames: Seq[String],
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
@@ -92,8 +91,6 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   ): Action[AnyContent]
 
   def testIndependence(
-    targetFieldName: String,
-    inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID]
   ): Action[AnyContent]
 

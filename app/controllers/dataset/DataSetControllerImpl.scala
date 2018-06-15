@@ -1266,7 +1266,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
   }
 
-  override def getCorrelations(filterOrId: FilterOrId) = Action.async { implicit request => {
+  override def getCorrelations(
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request => {
     val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting(request)
     val filterFuture = filterRepo.resolve(filterOrId)
     for {
@@ -1299,10 +1301,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
   }
 
-  def calcCorrelations(
+  override def calcCorrelations(
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request =>
+    val fieldNames = request.body.asFormUrlEncoded.flatMap(_.get("fieldNames[]")).getOrElse(Nil)
+
+    if (fieldNames.isEmpty)
+      Future(BadRequest("No input provided."))
+    else
+      calcCorrelationsAux(fieldNames, filterOrId)
+  }
+
+  private def calcCorrelationsAux(
     fieldNames: Seq[String],
     filterOrId: FilterOrId
-  ) = Action.async { implicit request => {
+  ): Future[Result] = {
     for {
       // use a given filter conditions or load one
       resolvedFilter <-  filterRepo.resolve(filterOrId)
@@ -1346,7 +1359,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     case t: TimeoutException =>
       Logger.error("Problem found in the getCorrelations method")
       InternalServerError(t.getMessage)
-  }
   }
 
   override def getCumulativeCount(
@@ -1694,10 +1706,25 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   override def testIndependence(
+    filterId: Option[BSONObjectID]
+  ) = Action.async { implicit request =>
+    val (inputFieldNames, targetFieldName) = request.body.asFormUrlEncoded.map { inputs =>
+      val x = inputs.get("inputFieldNames[]").getOrElse(Nil)
+      val y = inputs.get("targetFieldName").map(_.head)
+      (x, y)
+    }.getOrElse((Nil, None))
+
+    if (inputFieldNames.isEmpty || targetFieldName.isEmpty)
+      Future(BadRequest("No input provided."))
+    else
+      testIndependenceAux(targetFieldName.get, inputFieldNames, filterId)
+  }
+
+  private def testIndependenceAux(
     targetFieldName: String,
     inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID]
-  ) = Action.async { implicit request =>
+  ): Future[Result] = {
     val explFieldNamesToLoads =
       if (inputFieldNames.nonEmpty)
         (inputFieldNames ++ Seq(targetFieldName)).toSet.toSeq

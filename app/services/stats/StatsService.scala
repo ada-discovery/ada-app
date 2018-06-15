@@ -28,6 +28,7 @@ import breeze.linalg.eigSym.EigSym
 import com.jujutsu.tsne.TSneConfig
 import com.jujutsu.tsne.barneshut.{BHTSne, ParallelBHTsne}
 import dataaccess.RepoTypes.JsonReadonlyRepo
+import org.apache.commons.math3.exception.{DimensionMismatchException, MaxCountExceededException, NotPositiveException}
 import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -212,7 +213,7 @@ trait StatsService extends CalculatorExecutors {
     data: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[ChiSquareResult]
+  ): Seq[Option[ChiSquareResult]]
 
   def testOneWayAnova(
     items: Traversable[JsObject],
@@ -259,7 +260,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
   private val session = sparkApp.session
   private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
   private val defaultNumericBinCount = 20
-  private val anovaTest = new CommonsOneWayAnovaAdjusted()
 
   private val logger = Logger
 
@@ -1132,39 +1132,39 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     data: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[ChiSquareResult] = {
-    val fieldTypeSpces = (inputFields ++ Seq(targetField)).map(field => (field.name, field.fieldTypeSpec))
+  ): Seq[Option[ChiSquareResult]] = {
+    val fieldNameTypeMap: Map[String, FieldType[_]] = (inputFields ++ Seq(targetField)).map { field => (field.name, ftf(field.fieldTypeSpec))}.toMap
 
-    // prepare the features->label data frame
-    val df = FeaturesDataFrameFactory(session, data, fieldTypeSpces, Some(targetField.name), Some(10), true)
+    def value[T](json: JsObject)(field: Field): Option[T] =
+      fieldNameTypeMap.get(field.name).get.asValueOf[T].jsonToValue(json \ field.name)
 
-    val inputDf = BooleanLabelIndexer.transform(df)
+    val labeledFeatures = data.map { json =>
+      val features = inputFields.map(value(json))
+      val target = value(json)(targetField)
+      (target, features)
+    }
 
-    // run the chi-square independence test
-    val results = testChiSquareAux(inputDf)
+    inputFields.zipWithIndex.map { case (field, index) =>
+      val pairs = labeledFeatures.map { case (label, features) => (label, features(index))}
 
-    // collect the results in the order prescribed by the inout fields sequence
-    val featureNames = inputDf.columns.filterNot(columnName => columnName.equals("features") || columnName.equals("label"))
-    val featureNameResultMap = featureNames.zip(results).toMap
-    inputFields.map(field =>
-      featureNameResultMap.get(field.name).get
-    )
-  }
+      val distinctValues = pairs.map(_._2).toSet.toSeq
 
-  private def testChiSquareAux(
-    df: DataFrame
-  ): Seq[ChiSquareResult] = {
-    val resultDf = ChiSquareTest.test(df, "features", "label")
+      val counts: Seq[Array[Long]] = pairs.toGroupMap.map { case (_, values) =>
+        val valueSizeMap: Map[Option[_], Long] = values.groupBy(identity).map { case (value, items) => value -> items.size.toLong}
+        distinctValues.map( value => valueSizeMap.get(value).getOrElse(0l)).toArray[Long]
+      }.toSeq
 
-    val chi = resultDf.head
+      val chiSquareTest = new CommonsChiSquareTest()
 
-    val pValues = chi.getAs[Vector](0).toArray.toSeq
-    val degreesOfFreedom = chi.getSeq[Int](1)
-    val statistics = chi.getAs[Vector](2).toArray.toSeq
-
-    (pValues, degreesOfFreedom, statistics).zipped.map(
-      ChiSquareResult(_, _, _)
-    )
+      try {
+        val result = chiSquareTest.chiSquareTest(counts.toArray)
+        Some(result)
+      } catch {
+        case _: DimensionMismatchException => None
+        case _: NotPositiveException => None
+        case _: MaxCountExceededException => None
+      }
+    }
   }
 
   override def testOneWayAnova(
@@ -1172,7 +1172,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     inputFields: Seq[Field],
     targetField: Field
   ): Seq[Option[OneWayAnovaResult]] = {
-
     val fieldNameTypeMap: Map[String, FieldType[_]] = (inputFields ++ Seq(targetField)).map { field => (field.name, ftf(field.fieldTypeSpec))}.toMap
 
     def doubleValue[T](fieldName: String, json: JsObject): Option[Double] = {
@@ -1243,7 +1242,8 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
       val name = field.name
 
       chiSquareFieldNameResultMap.get(name) match {
-        case Some(chiSquareResult) => Some(Left(chiSquareResult))
+        case Some(chiSquareResult) => chiSquareResult.map(Left(_))
+
         case None => anovaFieldNameResultMap.get(name).flatMap {
           case Some(anovaResult) => Some(Right(anovaResult))
           case None => None

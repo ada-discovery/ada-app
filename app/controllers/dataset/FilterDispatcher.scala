@@ -50,11 +50,11 @@ class FilterDispatcher @Inject()(
 
   override def save = dispatch(_.save)
 
-  override def saveAjax(filter: Filter) = dispatch(_.saveAjax(filter))
+  override def saveAjax(filter: Filter) = dispatchAjax(_.saveAjax(filter))
 
-  override def idAndNames = dispatch(_.idAndNames)
+  override def idAndNames = dispatchIsAdmin(_.idAndNames)
 
-  override def idAndNamesAccessible  = dispatch(_.idAndNamesAccessible)
+  override def idAndNamesAccessible  = dispatchAjax(_.idAndNamesAccessible)
 
   protected def dispatchIsAdminOrOwner(
     id: BSONObjectID,
@@ -74,5 +74,14 @@ class FilterDispatcher @Inject()(
     }
 
     dispatchIsAdminOrOwnerAux(objectOwnerFun, currentUserFun)(action)
+  }
+
+  protected def dispatchIsAdmin(
+    action: FilterController => Action[AnyContent]
+  ): Action[AnyContent] = {
+    val currentUserFun = {
+      request: Request[_] => currentUser(request)
+    }
+    dispatchIsAdminAux(currentUserFun)(action)
   }
 }

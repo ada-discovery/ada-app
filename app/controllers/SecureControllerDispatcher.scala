@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.DeadboltActions
+import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions, DeadboltHandler}
 import be.objectify.deadbolt.scala.cache.HandlerCache
 import be.objectify.deadbolt.scala.models.PatternType
 import dataaccess.User
@@ -18,7 +18,6 @@ import util.SecurityUtil
 import collection.mutable.{Map => MMap}
 import scala.concurrent.Future
 import play.api.http.{Status => HttpStatus}
-import be.objectify.deadbolt.scala.AuthenticatedRequest
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil.{AuthenticatedAction, restrictChainFuture, restrictChainFuture2, toActionAny}
 
@@ -39,20 +38,33 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
     actionName: String
   ): Option[String] = None
 
-  override protected def dispatch(action: C => Action[AnyContent]) = Action.async { implicit request =>
+  override protected def dispatch(
+    action: C => Action[AnyContent]
+  ) = dispatchAux(action, None)
+
+  protected def dispatchAjax(
+    action: C => Action[AnyContent]
+  ) = dispatchAux(action, Some(unauthorizedDeadboltHandler))
+
+  private def dispatchAux(
+    action: C => Action[AnyContent],
+    outputDeadboltHandler: Option[DeadboltHandler]
+  ) = Action.async { implicit request =>
     val controllerId = getControllerId(request)
     val actionName = request.tags.get(RouteActionMethod).get
 
     val restrictedAction = actionNameMap.getOrElseUpdate(
       (controllerId, actionName),
-      createRestrictedAction(controllerId, actionName)_
+      createRestrictedAction(controllerId, actionName, outputDeadboltHandler)_
     )
     restrictedAction(action).apply(request)
   }
 
   protected def createRestrictedAction(
     controllerId: String,
-    actionName: String)(
+    actionName: String,
+    outputDeadboltHandler: Option[DeadboltHandler] = None
+  )(
     action: C => Action[AnyContent]
   ): Action[AnyContent] = {
     val roleGroups = getAllowedRoleGroups(controllerId, actionName)
@@ -60,13 +72,15 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
 
     // TODO: once we migrate to deadbolt >= 2.5 we can use deadbolt.Composite instead
 
+    val handler = outputDeadboltHandler.getOrElse(deadboltHandlerCache())
+
     val actionTransform: AuthenticatedAction[AnyContent] => Action[AnyContent] =
       if (roleGroups.nonEmpty && permission.isDefined)
-        RestrictOrPattern(roleGroups, permission.get)_
+        RestrictOrPattern(roleGroups, permission.get, outputDeadboltHandler)_
       else if (roleGroups.nonEmpty)
-        deadbolt.Restrict[AnyContent](roleGroups)()_
+        deadbolt.Restrict[AnyContent](roleGroups, handler)()_
       else if (permission.isDefined)
-        deadbolt.Pattern[AnyContent](permission.get, PatternType.REGEX)()_
+        deadbolt.Pattern[AnyContent](permission.get, PatternType.REGEX, None, handler)()_
       else
         // no deadbolt action needed
         {authenticatedAction => toActionAny(authenticatedAction)} //  identity[Action[AnyContent]]_
@@ -81,13 +95,17 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
 
   private def RestrictOrPattern(
     roleGroups: List[Array[String]],
-    permission: String)(
+    permission: String,
+    outputDeadboltHandler: Option[DeadboltHandler] = None)(
     action: AuthenticatedAction[AnyContent]
-  ): Action[AnyContent] =
+  ): Action[AnyContent] = {
+    val handler = outputDeadboltHandler.getOrElse(deadboltHandlerCache())
+
     SecurityUtil.restrictChain2(Seq(
-      deadbolt.Restrict[AnyContent](roleGroups, unauthorizedDeadboltHandler)()_,
-      deadbolt.Pattern[AnyContent](permission, PatternType.REGEX)()_
+      deadbolt.Restrict[AnyContent](roleGroups, unauthorizedDeadboltHandler)() _,
+      deadbolt.Pattern[AnyContent](permission, PatternType.REGEX, None, handler)() _
     ))(action)
+  }
 
   //  private def RestrictOrPattern[A](
 //    roleGroups: List[Array[String]],
@@ -115,7 +133,7 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
     // check if the view owner matches a currently logged user
     def checkOwner = { action: AuthenticatedAction[AnyContent] =>
       val unauthorizedAction: Action[AnyContent] =
-        toActionAny{ implicit req: AuthenticatedRequest[AnyContent] => defaultDeadboltHandler.onAuthFailure(req) }
+          toActionAny{ implicit req: AuthenticatedRequest[AnyContent] => defaultDeadboltHandler.onAuthFailure(req) }
 
       val accessingUserFuture = currentUser(request)
       val objectOwnerIdFuture = objectOwnerId((request))

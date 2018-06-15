@@ -31,7 +31,7 @@ private class MultiOneWayAnovaCalc[G] extends Calculator[MultiOneWayAnovaCalcTyp
         OneWayAnovaStatsInputAux(basicStatsResult.sum, basicStatsResult.sqSum, basicStatsResult.definedCount)
       )
 
-      calcAnovaStatsOptional(anovaInputs)
+      calcAnovaStatsSafe(anovaInputs)
     }
 
     (0 until elementsCount).par.map(calcAt).toList
