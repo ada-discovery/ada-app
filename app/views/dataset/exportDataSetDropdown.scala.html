@@ -3,6 +3,7 @@
 @import views.html.elements.labelValue
 
 @(
+    dataSetName: String,
     conditions: Seq[FilterCondition],
     exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call,
     exportJsonCall: (Seq[FilterCondition], Boolean) => Call,
@@ -56,10 +57,11 @@
 }
 
 <script type="text/javascript">
+    var exportFileName = '@{dataSetName.replaceAllLiterally(".","_").replaceAllLiterally(" ", "_").toLowerCase + "-charts"}'
     function exportCharts(type) {
         var chartIds = $.map($(".chart-holder"), function (chart, i) {
             return chart.id;
         })
-        Highcharts.exportCharts(chartIds, {type: type});
+        Highcharts.exportCharts(chartIds, {type: type, filename: exportFileName});
     }
 </script>

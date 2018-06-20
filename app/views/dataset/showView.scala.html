@@ -73,6 +73,7 @@
 
 @exportMenu(viewData: TableViewData) = @{
     exportDataSetDropdown(
+        dataSetName,
         viewData.page.filterConditions,
         dataSetRouter.exportCsv(dataViewId, _, true, None, _, _),
         dataSetRouter.exportJson(dataViewId, _, _),

@@ -18,7 +18,7 @@
     <div class="row">
         @labelValue("dataSetPermission", "DS Id") {
             <select id="permission-dataSetId" name="permission-dataSetId" class="form-control">
-            @metaInfos.map(_.dataSetMetaInfos).flatten.toSeq.sortBy(_.id).map { dataSet =>
+            @metaInfos.flatMap(_.dataSetMetaInfos).toSeq.sortBy(_.id).map { dataSet =>
                 <option value="@{dataSet.id}">@{dataSet.id}</option>
             }
             </select>
@@ -52,7 +52,7 @@
     <button type="button" class="btn btn-primary" id="addDataSetPermissionSubmitButton" data-dismiss="modal">OK</button>
 }
 
-@addDataSetPermissionButton = {
+@extraButtons = {
     <a class="btn btn-info btn-sm" href="#" onclick="$('#addDataSetPermissionModal').modal();return false;" title="Add Data Set Permission">
         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
         DS
@@ -66,7 +66,7 @@
     @dynamicStringTable("role", form.value.map(_.roles).getOrElse(Nil))
 }
 @labelValue("user", "Permissions"){
-    @dynamicStringTable("permission", form.value.map(_.permissions).getOrElse(Nil), false, None, Some(addDataSetPermissionButton))
+    @dynamicStringTable("permission", form.value.map(_.permissions.sorted).getOrElse(Nil), false, None, Some(extraButtons), true)
 }
 
 @actionNamesAsString(array: Array[String]) = @{

@@ -6,7 +6,8 @@
     items: Traversable[String],
     sortable: Boolean = false,
     addModalInner: Option[Html] = None,
-    extraActions: Option[Html] = None
+    extraActions: Option[Html] = None,
+    multi: Boolean = false
 )
 
 @defaultModalInner = {
@@ -31,8 +32,21 @@
 
 @itemToRowJsFun = {
     function(values) {
-        var name = values["newItem"];
-        return "<tr><td><input type='checkbox' class='table-selection'></input></td><td id='name'>" + name + "</td></tr>";
+        var input = values["newItem"];
+        var items = []
+        if (@multi) {
+            items = input.split(",").map(function(item) {
+                return item.trim();
+            })
+        } else {
+            items = [input.trim()]
+        }
+
+        var rows = items.map(function(item) {
+            return "<tr><td><input type='checkbox' class='table-selection'></input></td><td id='name'>" + item + "</td></tr>";
+        })
+
+        return rows.join();
     }
 }
 

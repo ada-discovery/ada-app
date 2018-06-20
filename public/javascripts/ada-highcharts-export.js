@@ -52,13 +52,16 @@ $(function () {
         // Get SVG asynchronously and then download the resulting SVG
         Highcharts.getSVG(charts, options, function (svg) {
             var imageType = options.type;
-            Highcharts.downloadSVGLocal(svg,
-                (options.filename || 'chart')  + '.' + (imageType === 'image/svg+xml' ? 'svg' : imageType.split('/')[1]),
-                imageType,
-                options.scale || 2,
+            Highcharts.downloadSVGLocal(
+                svg,
+                options,
+                // (options.filename || 'chart')  + '.' + (imageType === 'image/svg+xml' ? 'svg' : imageType.split('/')[1]),
+                // imageType,
+                // options.scale || 2,
                 function () {
-                console.log("Failed to export on client side");
-            });
+                    console.log("Failed to export on client side");
+                }
+            );
         });
     };
 

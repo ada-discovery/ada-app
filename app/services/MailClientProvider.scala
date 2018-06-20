@@ -6,10 +6,6 @@ import com.google.inject.ImplementedBy
 import play.api.Configuration
 import play.api.libs.mailer._
 
-
-/**
-  *
-  */
 @ImplementedBy(classOf[MailClientProviderImpl])
 trait MailClientProvider {
   def enabled(): Boolean
@@ -20,7 +16,7 @@ trait MailClientProvider {
 @Singleton
 class MailClientProviderImpl  @Inject() (
     configuration: Configuration
-  ) extends MailClientProvider{
+  ) extends MailClientProvider {
 
   val mailerHost: Option[String] = configuration.getString("play.mailer.host")
   val mailerUser: Option[String] = configuration.getString("play.mailer.user")
@@ -66,5 +62,4 @@ class MailClientProviderImpl  @Inject() (
       bodyHtml = None
     )
   }
-
 }
