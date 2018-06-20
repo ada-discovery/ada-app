@@ -316,7 +316,8 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     })
   }
 
-  override def jsRoutes = Action { implicit request =>
+  @Deprecated
+  private def jsRoutes = Action { implicit request =>
     Ok(
       JavaScriptReverseRouter("categoryJsRoutes")(
         jsRouter.get,

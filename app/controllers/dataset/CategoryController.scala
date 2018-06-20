@@ -26,6 +26,4 @@ trait CategoryController extends CrudController[BSONObjectID] {
     id: BSONObjectID,
     label: String
   ): Action[AnyContent]
-
-  def jsRoutes: Action[AnyContent]
 }

@@ -101,12 +101,17 @@
     page.total,
     Some(actions),
     table,
-    Some(treeChart(categoryRouter)),
+    Some(treeChart(categoryRouter, categoryJsRouter)),
     Some(datasetMenu(dataSpaceMetaInfos)),
     Some(datasetSubNavWithJs())
 )
 
-<script type="text/javascript" src="@categoryRouter.jsRoutes"></script>
+@helper.javascriptRouter("categoryJsRoutes")(
+    categoryJsRouter.updateLabel,
+    categoryJsRouter.saveForName,
+    categoryJsRouter.get,
+    categoryJsRouter.relocateToParent
+)
 
 <script type="text/javascript">
     $(function () {

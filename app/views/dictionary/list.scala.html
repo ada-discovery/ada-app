@@ -150,8 +150,14 @@
     dataViewJsRouter.addTableFields
 )
 
-<script type="text/javascript" src="@dictionaryRouter.jsRoutes"></script>
-<script type="text/javascript" src="@categoryRouter.jsRoutes"></script>
+@helper.javascriptRouter("dictionaryJsRoutes")(
+    dictionaryJsRouter.updateLabel
+)
+
+@helper.javascriptRouter("categoryJsRoutes")(
+    categoryJsRouter.addFields
+)
+
 <script type="text/javascript">
     $(function () {
         $("#inferModal").modal()

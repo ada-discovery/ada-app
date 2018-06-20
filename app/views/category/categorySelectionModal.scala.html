@@ -1,11 +1,13 @@
 @import controllers.dataset.{CategoryRouter}
+@import play.api.mvc.Flash
+@import play.api.i18n.Messages
 
 @(
     modalName: String,
     routers: CategoryRouter,
     call: Option[Call] = None
 )(
-    implicit flash: play.api.mvc.Flash, msg: play.api.i18n.Messages, request: Request[_]
+    implicit flash: Flash, msg: Messages, request: Request[_]
 )
 
 @selectionModalBody = {

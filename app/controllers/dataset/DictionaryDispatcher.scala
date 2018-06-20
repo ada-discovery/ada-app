@@ -6,8 +6,10 @@ import javax.inject.Inject
 
 import util.SecurityUtil._
 
-class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: DictionaryControllerFactory)
-  extends SecureControllerDispatcher[DictionaryController]("dataSet") with DictionaryController {
+class DictionaryDispatcher @Inject() (
+    dscf: DataSetControllerFactory,
+    dcf: DictionaryControllerFactory
+  ) extends SecureControllerDispatcher[DictionaryController]("dataSet") with DictionaryController {
 
   override protected def getController(id: String) =
     dscf(id).map(_ => dcf(id)).getOrElse(
@@ -41,8 +43,6 @@ class DictionaryDispatcher @Inject() (dscf: DataSetControllerFactory, dcf: Dicti
   override def save = dispatch(_.save)
 
   override def updateLabel(id: String, label: String) = dispatchAjax(_.updateLabel(id, label))
-
-  override def jsRoutes = dispatch(_.jsRoutes)
 
   override def exportRecordsAsCsv(
     delimiter : String,

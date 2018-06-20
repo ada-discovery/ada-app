@@ -274,7 +274,8 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     })
   }
 
-  override def jsRoutes = Action { implicit request =>
+  @Deprecated
+  private def jsRoutes = Action { implicit request =>
     Ok(
       JavaScriptReverseRouter("dictionaryJsRoutes")(
         jsRouter.updateLabel

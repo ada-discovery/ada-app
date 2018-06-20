@@ -52,6 +52,4 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
   override def addFields(categoryId: BSONObjectID, fieldNames: Seq[String]) = dispatch(_.addFields(categoryId, fieldNames))
 
   override def updateLabel(id: BSONObjectID, label: String) = dispatchAjax(_.updateLabel(id, label))
-
-  override def jsRoutes = dispatch(_.jsRoutes)
 }

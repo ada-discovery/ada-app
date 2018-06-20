@@ -1,14 +1,17 @@
 @import controllers.dataset.CategoryRouter
-@import play.api.mvc.Flash
-@import play.api.i18n.Messages
+@import controllers.dataset.CategoryJsRouter
 
-@(router : CategoryRouter)(implicit webJarAssets: WebJarAssets)
+@(
+    router : CategoryRouter,
+    jsRouter: CategoryJsRouter)(
+    implicit request: Request[_], webJarAssets: WebJarAssets
+)
 
 <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/tree.min.css")">
 <script src="@routes.WebJarAssets.at(webJarAssets.locate("d3.min.js"))"></script>
 <script src="@routes.WebJarAssets.at(webJarAssets.locate("jquery-ui.min.js"))"></script>
 <script type="text/javascript" src="@routes.Assets.versioned("javascripts/tree.min.js")"></script>
-<script type="text/javascript" src="@router.jsRoutes"></script>
+
 <div id="treeDiv" name="treeDiv" class="treeDiv"></div>
 <script>
     $.ajax({

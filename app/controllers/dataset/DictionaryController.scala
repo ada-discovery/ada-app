@@ -8,8 +8,6 @@ trait DictionaryController extends CrudController[String] {
 
   def updateLabel(id: String, label: String): Action[AnyContent]
 
-  def jsRoutes: Action[AnyContent]
-
   def exportRecordsAsCsv(
     delimiter: String,
     replaceEolWithSpace: Boolean,

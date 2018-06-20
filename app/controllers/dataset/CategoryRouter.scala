@@ -17,7 +17,6 @@ final class CategoryRouter(dataSetId: String) extends GenericRouter(routes.Categ
   val getCategoryD3Root= routeFun(_.getCategoryD3Root)
   val relocateToParent = routes.relocateToParent _ map route
   val idAndNames = routeFun(_.idAndNames)
-  val jsRoutes = routeFun(_.jsRoutes)
 }
 
 final class CategoryJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.CategoryDispatcher, "dataSet", dataSetId) {
