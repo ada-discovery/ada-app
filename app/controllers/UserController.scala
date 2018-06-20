@@ -46,7 +46,9 @@ class UserController @Inject() (
     getMethodNames[DictionaryController],
     getMethodNames[CategoryController],
     getMethodNames[FilterController],
-    getMethodNames[DataViewController]
+    getMethodNames[DataViewController],
+    getMethodNames[ClassificationRunController],
+    getMethodNames[RegressionRunController]
   )
 
   // create view and data
@@ -117,5 +119,7 @@ case class DataSetControllerActionNames(
   fieldActions: Array[String],
   categoryActions: Array[String],
   filterActions: Array[String],
-  dataViewActions: Array[String]
+  dataViewActions: Array[String],
+  classificationRunActions: Array[String],
+  regressionRunActions: Array[String]
 )

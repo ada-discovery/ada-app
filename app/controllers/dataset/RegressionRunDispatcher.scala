@@ -24,7 +24,7 @@ class RegressionRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf: Re
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, "classificationRun", actionName))
+  ) = Some(createDataSetPermission(controllerId, "regressionRun", actionName))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

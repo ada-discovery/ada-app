@@ -11,7 +11,7 @@ import _root_.util.{FieldUtil, GroupMapList}
 import dataaccess.JsonUtil._
 import models.ConditionType._
 import _root_.util.WebExportUtil._
-import _root_.util.{seqFutures, shorten, toHumanReadableCamel}
+import _root_.util.{seqFutures, shorten}
 import dataaccess._
 import dataaccess.FilterRepoExtra._
 import models.{MultiChartDisplayOptions, _}
@@ -38,15 +38,15 @@ import services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Filter => _, _}
 import reactivemongo.play.json.BSONFormats._
-import services.ml.{MachineLearningService, Performance}
+import services.ml.MachineLearningService
 import views.html.dataset
 import models.ml.DataSetTransformation._
 import models.security.{SecurityRole, UserManager}
-import play.mvc.With
 import services.stats.ChiSquareResult.chiSquareResultFormat
 import services.stats.calc.OneWayAnovaResult
-import services.stats.{ChiSquareResult, StatsService}
+import services.stats.{StatsService}
 import services.stats.OneWayAnovaResult.anovaResultFormat
+import services.stats.calc.ChiSquareResult
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}

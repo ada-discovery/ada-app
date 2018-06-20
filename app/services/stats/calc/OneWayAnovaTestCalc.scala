@@ -1,20 +1,18 @@
 package services.stats.calc
 
-import java.{lang => jl}
-
 import org.apache.commons.math3.exception.MaxCountExceededException
-import org.apache.commons.math3.special.Beta
-import org.apache.commons.math3.util.{ContinuedFraction, FastMath}
+import play.api.Logger
 import services.stats.{Calculator, NoOptionsCalculatorTypePack}
+import services.stats.CommonsMathUtil._
 import services.stats.CalculatorHelper._
 
-trait OneWayAnovaCalcTypePack[G] extends NoOptionsCalculatorTypePack{
+trait OneWayAnovaTestCalcTypePack[G] extends NoOptionsCalculatorTypePack{
   type IN = (Option[G], Option[Double])
   type OUT = Option[OneWayAnovaResult]
   type INTER = Traversable[(Option[G], BasicStatsAccum)]
 }
 
-private class OneWayAnovaCalc[G] extends Calculator[OneWayAnovaCalcTypePack[G]] with OneWayAnovaHelper {
+private class OneWayAnovaTestCalc[G] extends Calculator[OneWayAnovaTestCalcTypePack[G]] with OneWayAnovaHelper {
 
   private val basicStatsCalc = GroupBasicStatsCalc[G]
 
@@ -51,10 +49,14 @@ trait OneWayAnovaHelper {
       try {
         calcAnovaStats(groups)
       } catch {
-        case _: MaxCountExceededException => None
+        case _: MaxCountExceededException =>
+          Logger.warn(s"Max number of iterations reached for a one-way ANOVA test.")
+          None
       }
-    else
+    else {
+      Logger.warn(s"Not enough values to perform a one-way ANOVA test for: ${groups.size} groups.")
       None
+    }
   }
 
   private def calcAnovaStats(
@@ -96,46 +98,6 @@ trait OneWayAnovaHelper {
     }
   }
 
-  /**
-    * This is a Scala version with an optimized precision of the <code>org.apache.commons.math3.special.Beta.regularizedBeta</code> function
-    */
-  def regularizedBeta(
-    x: Double,
-    a: Double,
-    b: Double,
-    epsilon: Double,
-    maxIterations: Int
-  ): Option[BigDecimal] =
-    if (jl.Double.isNaN(x) || jl.Double.isNaN(a) || jl.Double.isNaN(b) || x < 0 || x > 1 || a <= 0 || b <= 0)
-      None
-    else if (x > (a + 1) / (2 + b + a) && 1 - x <= (b + 1) / (2 + b + a))
-      regularizedBeta(1 - x, b, a, epsilon, maxIterations).map ( beta =>
-        1d - beta
-      )
-    else {
-      val fraction = new ContinuedFraction() {
-
-        protected def getB(n: Int, x: Double): Double = {
-          var ret = .0
-          var m = .0
-          if (n % 2 == 0) {
-            // even
-            m = n / 2.0
-            ret = (m * (b - m) * x) / ((a + (2 * m) - 1) * (a + (2 * m)))
-          }
-          else {
-            m = (n - 1.0) / 2.0
-            ret = -((a + m) * (a + b + m) * x) / ((a + (2 * m)) * (a + (2 * m) + 1.0))
-          }
-          ret
-        }
-
-        protected def getA(n: Int, x: Double) = 1.0
-      }
-      val result: BigDecimal = FastMath.exp((a * FastMath.log(x)) + (b * FastMath.log1p(-x)) - FastMath.log(a) - Beta.logBeta(a, b)) * 1.0 / fraction.evaluate(x, epsilon, maxIterations)
-      Some(result)
-    }
-
   case class OneWayAnovaStatsInputAux(
     sum: Double,
     sqSum: Double,
@@ -158,6 +120,6 @@ case class OneWayAnovaResult(
   dfwg: Int // degree of freedom within groups, degree of freedom in denominator
 )
 
-object OneWayAnovaCalc {
-  def apply[G]: Calculator[OneWayAnovaCalcTypePack[G]] = new OneWayAnovaCalc[G]
+object OneWayAnovaTestCalc {
+  def apply[G]: Calculator[OneWayAnovaTestCalcTypePack[G]] = new OneWayAnovaTestCalc[G]
 }

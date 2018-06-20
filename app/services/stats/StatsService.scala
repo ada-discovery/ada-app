@@ -1304,8 +1304,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
   }
 }
 
-case class ChiSquareResult(pValue: Double, degreeOfFreedom: Int, statistics: Double)
-
 object ChiSquareResult {
   implicit val chiSquareResultFormat = Json.format[ChiSquareResult]
 }

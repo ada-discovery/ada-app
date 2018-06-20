@@ -32,6 +32,8 @@
                 <option value="category">category</option>
                 <option value="filter">filter</option>
                 <option value="dataview">dataview</option>
+                <option value="classificationRun">classificationRun</option>
+                <option value="regressionRun">regressionRun</option>
             </select>
         }
 
@@ -82,20 +84,36 @@
     var categoryActionNames = [@actionNamesAsString(controllerActionNames.categoryActions)]
     var filterActionNames = [@actionNamesAsString(controllerActionNames.filterActions)]
     var dataViewActionNames = [@actionNamesAsString(controllerActionNames.dataViewActions)]
+    var classificationRunActionNames = [@actionNamesAsString(controllerActionNames.classificationRunActions)]
+    var regressionRunActionNames = [@actionNamesAsString(controllerActionNames.regressionRunActions)]
 
     function updateActionItems() {
         var permission_controller = $('#permission-controller').val()
         var actions = []
-        if (permission_controller == "dataSet")
-            actions = dataSetActionNames
-        else if (permission_controller == "field")
-            actions = fieldActionNames
-        else if (permission_controller == "category")
-            actions = categoryActionNames
-        else if (permission_controller == "filter")
-            actions = filterActionNames
-        else if (permission_controller == "dataview")
-            actions = dataViewActionNames
+
+        switch (permission_controller) {
+            case "dataSet":
+                actions = dataSetActionNames;
+                break;
+            case "field":
+                actions = fieldActionNames;
+                break;
+            case "category":
+                actions = categoryActionNames;
+                break;
+            case "filter":
+                actions = filterActionNames;
+                break;
+            case "dataview":
+                actions = dataViewActionNames;
+                break;
+            case "dataview":
+                actions = dataViewActionNames;
+                break;
+            case "dataview":
+                actions = dataViewActionNames;
+                break;
+        }
 
         if (actions.length == 0)
             $('#permission-actionDiv').hide()

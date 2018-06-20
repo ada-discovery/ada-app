@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 object AkkaStreamUtil {
 
   def groupCountFlow[A](
-    maxSubstreams: Int
+    maxSubstreams: Int = Int.MaxValue
   ): Flow[A, (A, Int), NotUsed] =
     Flow[A]
       .groupBy(maxSubstreams, identity)
@@ -22,7 +22,7 @@ object AkkaStreamUtil {
       .mergeSubstreams
 
   def uniqueFlow[A](
-    maxSubstreams: Int
+    maxSubstreams: Int = Int.MaxValue
   ): Flow[A, A, NotUsed] =
     Flow[A]
       .groupBy(maxSubstreams, identity)
@@ -30,7 +30,7 @@ object AkkaStreamUtil {
       .mergeSubstreams
 
   def groupCountFlowTuple[A, B](
-    maxSubstreams: Int
+    maxSubstreams: Int = Int.MaxValue
   ): Flow[(A, B), (A, Int), NotUsed] =
     Flow[(A, B)]
       .groupBy(maxSubstreams, _._1)

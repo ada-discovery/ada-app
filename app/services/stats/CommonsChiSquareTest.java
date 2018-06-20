@@ -8,6 +8,9 @@ import org.apache.commons.math3.special.Gamma;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.MathArrays;
 
+import services.stats.calc.ChiSquareResult;
+import services.stats.calc.ChiSquareResult$;
+
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -62,11 +65,12 @@ public class CommonsChiSquareTest {
      * @throws DimensionMismatchException if the array is not rectangular
      * @throws NotPositiveException if {@code counts} has negative entries
      */
-    public double chiSquare(final long[][] counts)
+    private double chiSquare(final long[][] counts)
         throws NullArgumentException, NotPositiveException,
         DimensionMismatchException {
 
         checkArray(counts);
+
         int nRows = counts.length;
         int nCols = counts[0].length;
 
@@ -139,16 +143,16 @@ public class CommonsChiSquareTest {
         double scale = 2;
 
         BigDecimal pValue = BigDecimal.ONE.subtract(cumulativeProbability(shape, scale, statistics));
-        return ChiSquareResult$.MODULE$.apply(pValue.doubleValue(), (int) df, statistics);
+        return ChiSquareResult$.MODULE$.apply(pValue.doubleValue(), statistics, (int) df);
     }
 
-    public BigDecimal cumulativeProbability(double shape, double scale, double x) {
+    public BigDecimal cumulativeProbability(double shape, double scale, double statistics) {
         BigDecimal ret;
 
-        if (x <= 0) {
+        if (statistics <= 0) {
             ret = BigDecimal.ZERO;
         } else {
-            ret = regularizedGammaP(shape, x / scale, DEFAULT_EPSILON, Integer.MAX_VALUE);
+            ret = regularizedGammaP(shape, statistics / scale, DEFAULT_EPSILON, Integer.MAX_VALUE);
         }
 
         return ret;
