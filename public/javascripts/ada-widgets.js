@@ -339,6 +339,7 @@ function basicStatsWidget(elementId, widget) {
     var data = [
         ["Min", roundOrInt(widget.data.min)],
         ["Max", roundOrInt(widget.data.max)],
+        ["Sum", roundOrInt(widget.data.sum)],
         ["Mean", roundOrInt(widget.data.mean)],
         ["Variance", roundOrInt(widget.data.variance)],
         ["STD", roundOrInt(widget.data.standardDeviation)],

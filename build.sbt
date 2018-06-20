@@ -51,7 +51,7 @@ libraryDependencies ++= Seq(
   "org.webjars" % "typeaheadjs" % "0.11.1",
   "org.webjars" % "html5shiv" % "3.7.0",
   "org.webjars" % "respond" % "1.4.2",
-  "org.webjars" % "highcharts" % "4.2.7",
+  "org.webjars" % "highcharts" % "5.0.14",  // "4.2.7",
 //  "org.webjars.npm" % "fractalis" % "0.1.9",
   "org.webjars.bower" % "plotly.js" % "1.5.1",
   "org.webjars.bower" % "d3" % "3.5.16",

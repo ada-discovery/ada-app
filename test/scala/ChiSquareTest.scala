@@ -5,79 +5,89 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.CalculatorHelper._
-import services.stats.calc.{OneWayAnovaTestCalc, OneWayAnovaResult}
+import services.stats.calc.{ChiSquareResult, ChiSquareTestCalc}
 
 import scala.concurrent.Future
 import scala.util.Random
+import Seq.fill
+import scala.util.Random.shuffle
 
-class OneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
+class ChiSquareTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
 
-  private val inputs1 = Seq(
-    Seq(0.5, 0.7, 1.2, 6.3, 0.1, 0.4, 0.7, -1.2, 3, 4.2, 5.7, 4.2, 8.1),
-    Seq(0.5, 0.4, 0.4, 0.4, -1.2, 0.8, 0.23, 0.9, 2, 0.1, -4.1, 3, 4)
+  private val inputs1: Seq[Seq[Double]] = Seq(
+    createSeq((60, 0), (54, -1), (46, 22), (41, 3.5)),
+    createSeq((40, 0), (44, -1), (53, 22), (57, 3.5))
   )
-  private val expectedResult1 = OneWayAnovaResult(0.04405750860028412, 4.516646514922993, 1, 24)
+  private val expectedResult1 = ChiSquareResult(0.04588650089174715, 8.00606624626254, 3)
 
-  private val inputs2 = Seq(
-    Seq(643d, 655d, 702d),
-    Seq(469d, 427d, 525d),
-    Seq(484d, 456d, 402d)
+  private val inputs2: Seq[Seq[Double]] = Seq(
+    createSeq((33, 0), (29, 1)),
+    createSeq((153, 0), (181, 1)),
+    createSeq((103, 0), (81, 1)),
+    createSeq((16, 0), (14, 1))
   )
-  private val expectedResult2 = OneWayAnovaResult(0.0012071270284831348, 25.17541122163707, 2, 6)
+
+  private val expectedResult2 = ChiSquareResult(0.14667851968027895, 5.369138021292619, 3)
+
+  def createSeq[T](counts: (Int, T)*): Seq[T] =
+    shuffle(
+      counts.flatMap { case (count, value) => fill(count)(value) }
+    )
 
   private val precision = 0.00000000001
 
   private val randomInputSize = 100
   private val randomFeaturesNum = 25
 
-  private val calc = OneWayAnovaTestCalc[String]
+  private val stringDoubleCalc = ChiSquareTestCalc[String, Double]
+  private val stringIntCalc = ChiSquareTestCalc[String, Int]
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
-  "One-way ANOVA test" should "match the static example 1" in {
+  "Chi-Square test" should "match the static example 1" in {
     testExpectedAux(inputs1, expectedResult1)
   }
 
-  "One-way ANOVA test" should "match the static example 2" in {
+  "Chi-Square test" should "match the static example 2" in {
     testExpectedAux(inputs2, expectedResult2)
   }
 
   private def testExpectedAux(
     rawInputs: Seq[Seq[Double]],
-    expectedResult: OneWayAnovaResult
+    expectedResult: ChiSquareResult
   ) = {
-    val inputs = rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(value => (Some(groupIndex.toString), Some(value)))}
+    val groupInputs: Seq[(Option[String], Option[Double])] = rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(value => (Some(groupIndex.toString), Some(value)))}
+    val inputs = shuffle(groupInputs)
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    Future(calc.fun_(inputs)).map(checkResult(Some(expectedResult)))
+    Future(stringDoubleCalc.fun_(inputs)).map(checkResult(Some(expectedResult)))
 
     // streamed calculations
-    calc.runFlow_(inputSource).map(checkResult(Some(expectedResult)))
+    stringDoubleCalc.runFlow_(inputSource).map(checkResult(Some(expectedResult)))
   }
 
-  "One-way ANOVA test" should "match each other" in {
+  "Chi-Square test" should "match each other" in {
     val allInputs = for (_ <- 1 to randomInputSize) yield {
       for (i <- 1 to randomFeaturesNum) yield {
-        val value = if (Random.nextDouble() > 0.8) Some((Random.nextDouble() * 2) - 1) else None
+        val value = if (Random.nextDouble() > 0.8) Some(Random.nextInt(10)) else None
         (Some(i.toString), value)
       }
     }
     val inputs = allInputs.flatten
-
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val protoResult = calc.fun_(inputs)
+    val protoResult = stringIntCalc.fun_(inputs)
 
     // streamed calculations
-    calc.runFlow_(inputSource).map(checkResult(protoResult))
+    stringIntCalc.runFlow_(inputSource).map(checkResult(protoResult))
   }
 
   private def checkResult(
-    result2: Option[OneWayAnovaResult])(
-    result1: Option[OneWayAnovaResult]
+    result2: Option[ChiSquareResult])(
+    result1: Option[ChiSquareResult]
   ) = {
     result1 should not be (None)
     result2 should not be (None)
@@ -85,8 +95,7 @@ class OneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
     val resultDefined2 = result2.get
 
     resultDefined1.pValue shouldBeAround (resultDefined2.pValue, precision)
-    resultDefined1.FValue shouldBeAround (resultDefined2.FValue, precision)
-    resultDefined1.dfbg shouldBeAround (resultDefined2.dfbg, precision)
-    resultDefined1.dfwg shouldBeAround (resultDefined2.dfwg, precision)
+    resultDefined1.statistics shouldBeAround (resultDefined2.statistics, precision)
+    resultDefined1.degreeOfFreedom shouldBeAround (resultDefined2.degreeOfFreedom, precision)
   }
 }

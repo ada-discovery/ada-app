@@ -5,10 +5,11 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.CalculatorHelper._
-import services.stats.calc.{OneWayAnovaCalc, OneWayAnovaResult}
+import services.stats.calc.{OneWayAnovaTestCalc, OneWayAnovaResult}
 
 import scala.concurrent.Future
 import scala.util.Random
+import scala.util.Random.shuffle
 
 class OneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
 
@@ -30,7 +31,7 @@ class OneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
   private val randomInputSize = 100
   private val randomFeaturesNum = 25
 
-  private val calc = OneWayAnovaCalc[String]
+  private val calc = OneWayAnovaTestCalc[String]
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
@@ -47,7 +48,8 @@ class OneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
     rawInputs: Seq[Seq[Double]],
     expectedResult: OneWayAnovaResult
   ) = {
-    val inputs = rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(value => (Some(groupIndex.toString), Some(value)))}
+    val groupInputs = rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(value => (Some(groupIndex.toString), Some(value)))}
+    val inputs = shuffle(groupInputs)
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
