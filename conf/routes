@@ -119,7 +119,6 @@ POST        /dataSets/dictionary/save                                           
 GET         /dataSets/dictionary/edit/:name                                          controllers.dataset.DictionaryDispatcher.edit(name: String)
 POST        /dataSets/dictionary/:name                                               controllers.dataset.DictionaryDispatcher.update(name: String)
 POST        /dataSets/dictionary/updateLabel/:id/:label                              controllers.dataset.DictionaryDispatcher.updateLabel(id: String, label: String)
-GET         /dataSets/dictionary/jsRoutes                                            controllers.dataset.DictionaryDispatcher.jsRoutes
 GET         /dataSets/dictionary/exportAsCsv                                         controllers.dataset.DictionaryDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 GET         /dataSets/dictionary/exportAsJson                                        controllers.dataset.DictionaryDispatcher.exportRecordsAsJson(filter: Seq[models.FilterCondition], tableColumnsOnly: Boolean)
 
@@ -136,7 +135,6 @@ GET         /dataSets/categories/getCategoryD3Root                              
 GET         /dataSets/categories/relocateToParent/:id/$parentId<[^/]*>               controllers.dataset.CategoryDispatcher.relocateToParent(id: BSONObjectID, parentId: Option[BSONObjectID])
 GET         /dataSets/categories/addFields                                           controllers.dataset.CategoryDispatcher.addFields(categoryId: BSONObjectID, fieldNames: Seq[String])
 POST        /dataSets/categories/updateLabel/:id/:label                              controllers.dataset.CategoryDispatcher.updateLabel(id: BSONObjectID, label: String)
-GET         /dataSets/categories/jsRoutes                                            controllers.dataset.CategoryDispatcher.jsRoutes
 
 # FilterDispatcher
 GET         /dataSets/filters                                                        controllers.dataset.FilterDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[models.FilterCondition] ?= Nil)
