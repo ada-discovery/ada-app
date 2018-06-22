@@ -79,7 +79,6 @@ POST        /translations/:id/delete                                            
 GET         /dataSets/records                                                        controllers.dataset.DataSetDispatcher.find(p: Int ?= 0, s: String ?= "", filter: Seq[models.FilterCondition] ?= Nil)
 GET         /dataSets/records/get/:id                                                controllers.dataset.DataSetDispatcher.get(id: BSONObjectID)
 GET         /dataSets/fields                                                         controllers.dataset.DataSetDispatcher.getFields(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
-GET         /dataSets/fieldNames                                                     controllers.dataset.DataSetDispatcher.getFieldNames
 GET         /dataSets/fieldNamesAndLabels                                            controllers.dataset.DataSetDispatcher.getFieldNamesAndLabels(fieldTypeIds: Seq[models.FieldTypeId.Value] ?= Nil)
 GET         /dataSets/fieldValue/:id/:fieldName                                      controllers.dataset.DataSetDispatcher.getFieldValue(id: BSONObjectID, fieldName: String)
 GET         /dataSets/fieldTypeAndAllowedValues/:fieldName                           controllers.dataset.DataSetDispatcher.getFieldTypeWithAllowedValues(fieldName: String)
