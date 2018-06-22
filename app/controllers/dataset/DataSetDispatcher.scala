@@ -130,8 +130,6 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getField(fieldName: String) = dispatchAjax(_.getField(fieldName))
 
-  override def getFieldNames = dispatchAjax(_.getFieldNames)
-
   override def getFieldNamesAndLabels(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ) = dispatchAjax(_.getFieldNamesAndLabels(fieldTypeIds))

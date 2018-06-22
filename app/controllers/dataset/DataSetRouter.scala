@@ -32,7 +32,6 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val fieldNamesAndLabels = routes.getFieldNamesAndLabels _ map route
   val allFields = routeFun(_.getFields())
   val allFieldNamesAndLabels = routeFun(_.getFieldNamesAndLabels())
-  val fieldNames = routeFun(_.getFieldNames)
   val getFieldValue = routes.getFieldValue _ map route
   val exportCsv = routes.exportRecordsAsCsv _ map route
   val exportJson  = routes.exportRecordsAsJson _ map route

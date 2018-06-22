@@ -79,8 +79,7 @@ class DataSetSettingController @Inject() (
 
   override protected type EditViewData = (
     BSONObjectID,
-    Form[DataSetSetting],
-    Call
+    Form[DataSetSetting]
   )
 
   override protected def getFormEditViewData(
@@ -97,13 +96,12 @@ class DataSetSettingController @Inject() (
       setting <- settingFuture
     } yield {
       val newForm = form.copy(value = setting)
-      val fieldNamesCall = new DataSetRouter(setting.get.dataSetId).fieldNames
-      (id, newForm, fieldNamesCall)
+      (id, newForm)
     }
   }
 
   override protected[controllers] def editView = { implicit ctx =>
-    (view.editNormal(_, _, _)).tupled
+    (view.editNormal(_, _)).tupled
   }
 
   // list view
@@ -118,7 +116,6 @@ class DataSetSettingController @Inject() (
           NotFound(s"Setting for the data set '#$dataSet' not found")
         ) { entity =>
           implicit val msg = messagesApi.preferred(request)
-          val fieldNamesCall = new DataSetRouter(dataSet).fieldNames
 
           render {
             case Accepts.Html() => {
@@ -130,7 +127,6 @@ class DataSetSettingController @Inject() (
                 fillForm(entity),
                 updateCall,
                 cancelCall,
-                fieldNamesCall,
                 result(dataSpaceService.getTreeForCurrentUser(request)))
               )
             }

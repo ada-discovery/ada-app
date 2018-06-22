@@ -2,7 +2,7 @@ package services.stats.calc
 
 import akka.stream.scaladsl.Flow
 import services.stats.{Calculator, NoOptionsCalculatorTypePack}
-import util.AkkaStreamUtil.{groupCountFlow, seqFlow}
+import util.AkkaStreamUtil.{countFlow, seqFlow}
 
 trait CumulativeOrderedCountsCalcTypePack[T] extends NoOptionsCalculatorTypePack {
   type IN = Option[T]
@@ -21,7 +21,7 @@ private class CumulativeOrderedCountsCalc[T: Ordering] extends Calculator[Cumula
 
   override def flow(options: Unit) = {
     val flatFlow = Flow[IN].collect { case Some(x) => x }
-    flatFlow.via(groupCountFlow[T](maxGroups)).via(seqFlow) map sortAndCountFlow[T]
+    flatFlow.via(countFlow[T](maxGroups)).via(seqFlow) map sortAndCountFlow[T]
   }
 
   override def postFlow(options: Unit) = identity

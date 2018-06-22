@@ -102,8 +102,6 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def runSeriesTransformation: Action[AnyContent]
 
-  def getFieldNames: Action[AnyContent]
-
   def getFieldNamesAndLabels(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ): Action[AnyContent]

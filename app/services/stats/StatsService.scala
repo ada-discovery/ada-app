@@ -1144,27 +1144,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
       (target, features)
     }
 
-    inputFields.zipWithIndex.map { case (field, index) =>
-      val pairs = labeledFeatures.map { case (label, features) => (label, features(index))}
-
-      val distinctValues = pairs.map(_._2).toSet.toSeq
-
-      val counts: Seq[Array[Long]] = pairs.toGroupMap.map { case (_, values) =>
-        val valueSizeMap: Map[Option[_], Long] = values.groupBy(identity).map { case (value, items) => value -> items.size.toLong}
-        distinctValues.map( value => valueSizeMap.get(value).getOrElse(0l)).toArray[Long]
-      }.toSeq
-
-      val chiSquareTest = new CommonsChiSquareTest()
-
-      try {
-        val result = chiSquareTest.chiSquareTest(counts.toArray)
-        Some(result)
-      } catch {
-        case _: DimensionMismatchException => None
-        case _: NotPositiveException => None
-        case _: MaxCountExceededException => None
-      }
-    }
+    MultiChiSquareCalc[Any, Any].fun_(labeledFeatures)
   }
 
   override def testOneWayAnova(
@@ -1174,8 +1154,9 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
   ): Seq[Option[OneWayAnovaResult]] = {
     val fieldNameTypeMap: Map[String, FieldType[_]] = (inputFields ++ Seq(targetField)).map { field => (field.name, ftf(field.fieldTypeSpec))}.toMap
 
-    def doubleValue[T](fieldName: String, json: JsObject): Option[Double] = {
-      val fieldType: FieldType[_] = fieldNameTypeMap.get(fieldName).getOrElse(throw new IllegalArgumentException(s"Field name $fieldName not found."))
+    def doubleValue[T](json: JsObject)(field: Field): Option[Double] = {
+      val fieldName = field.name
+      val fieldType: FieldType[_] = fieldNameTypeMap.get(fieldName).getOrElse(throw new IllegalArgumentException(s"Field name ${fieldName} not found."))
 
       fieldType.spec.fieldType match {
         case FieldTypeId.Double => fieldType.asValueOf[Double].jsonToValue(json \ fieldName)
@@ -1189,12 +1170,12 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     }
 
     val labeledFeatures = items.map { json =>
-      val features = inputFields.map(field => doubleValue(field.name, json))
-      val label = fieldNameTypeMap.get(targetField.name).get.jsonToDisplayString(json \ targetField.name)
-      (Some(label), features)
+      val features = inputFields.map(doubleValue(json))
+      val target = fieldNameTypeMap.get(targetField.name).get.jsonToValue(json \ targetField.name)
+      (target, features)
     }
 
-    MultiOneWayAnovaCalc[String].fun_(labeledFeatures)
+    MultiOneWayAnovaCalc[Any].fun_(labeledFeatures)
   }
 
   override def testIndependenceSorted(

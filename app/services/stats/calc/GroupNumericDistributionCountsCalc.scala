@@ -44,7 +44,7 @@ private[stats] class GroupNumericDistributionCountsCalc[G] extends Calculator[Gr
           stepSize, options.binCount, minBg, max)(value)
       }.mergeSubstreams
 
-    flatFlow.via(groupBucketIndexFlow).via(groupCountFlow(maxGroups)).via(seqFlow)
+    flatFlow.via(groupBucketIndexFlow).via(countFlow(maxGroups)).via(seqFlow)
   }
 
   override def postFlow(options: FLOW_OPT) = { elements =>

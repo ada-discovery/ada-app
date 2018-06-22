@@ -3,23 +3,24 @@ package util
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source, Zip, ZipN}
-import scala.collection.mutable.{Buffer, ListBuffer}
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source, Zip, ZipN}
 
-import scala.annotation.tailrec
+import scala.collection.mutable
+import scala.collection.mutable.{Buffer, ListBuffer}
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 object AkkaStreamUtil {
 
-  def groupCountFlow[A](
+  def countFlow[A](
     maxSubstreams: Int = Int.MaxValue
   ): Flow[A, (A, Int), NotUsed] =
     Flow[A]
       .groupBy(maxSubstreams, identity)
       .map { a => a -> 1}
-      .reduce((l, r) ⇒ (l._1, l._2 + r._2))
-      .mergeSubstreams
+      .reduce((l, r) ⇒
+        (l._1, l._2 + r._2)
+      ).mergeSubstreams
 
   def uniqueFlow[A](
     maxSubstreams: Int = Int.MaxValue
@@ -81,8 +82,30 @@ object AkkaStreamUtil {
       FlowShape(bcast.in, zipper.out)
     })
 
+  def unzipNFlowsAndApply[T, U](
+    seqSize: Int)(
+    flow: Flow[T, U, NotUsed]
+  ): Flow[Seq[T], Seq[U], NotUsed] =
+    Flow.fromGraph(GraphDSL.create() { implicit b =>
+      import GraphDSL.Implicits._
+
+      val unzipper = b.add(UnzipN[T](seqSize))
+      val zipper = b.add(ZipN[U](seqSize))
+
+      (0 to seqSize - 1).foreach { i => unzipper.out(i) ~> flow ~> zipper.in(i) }
+
+      FlowShape(unzipper.in, zipper.out)
+    })
+
+  // note that an Option/None initialization solution is needed to make the flow threadsafe and reusable
   def seqFlow[T]: Flow[T, Seq[T], NotUsed] =
-    Flow[T].fold(Vector.newBuilder[T]) { _ += _ }.map(_.result)
+    Flow[T].fold(None: Option[mutable.Builder[T, Vector[T]]]) { case (builder, value) =>
+      val defBuilder = builder.getOrElse(Vector.newBuilder[T])
+      Some(defBuilder += value)
+    }.map(_.map(_.result).getOrElse(Nil))
+
+//  private def seqFlow[T]: Flow[T, Seq[T], NotUsed] =
+//    Flow[T].fold(Vector.newBuilder[T]) { _ += _ }.map(_.result)
 }
 
 object AkkaTest extends App {

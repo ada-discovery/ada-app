@@ -1808,6 +1808,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
+  @Deprecated
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
   ) = Action.async { implicit request =>
@@ -1826,7 +1827,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def getFieldNames = Action.async { implicit request =>
+  @Deprecated
+  private def getFieldNames = Action.async { implicit request =>
     for {
       fields <- fieldRepo.find(sort = Seq(AscSort("name")))
     } yield {

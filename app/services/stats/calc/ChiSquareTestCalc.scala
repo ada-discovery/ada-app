@@ -3,7 +3,7 @@ package services.stats.calc
 import org.apache.commons.math3.exception.MaxCountExceededException
 import play.api.Logger
 import services.stats.{Calculator, CommonsMathUtil, NoOptionsCalculatorTypePack}
-import util.AkkaStreamUtil.{groupCountFlow, seqFlow}
+import util.AkkaStreamUtil.{countFlow, seqFlow}
 import Seq.fill
 
 trait ChiSquareTestCalcTypePack[T1, T2] extends NoOptionsCalculatorTypePack{
@@ -25,7 +25,7 @@ private class ChiSquareTestCalc[T1, T2] extends Calculator[ChiSquareTestCalcType
   }
 
   override def flow(o: Unit) =
-    groupCountFlow[IN]().via(seqFlow)
+    countFlow[IN]().via(seqFlow)
 
   override def postFlow(o: Unit) = { values =>
     calcChiSquareSafe(values.toMap)

@@ -17,7 +17,7 @@ private[stats] class UniqueDistributionCountsCalc[T] extends Calculator[UniqueDi
     _.groupBy(identity).map { case (value, seq) => (value, seq.size) }
 
   override def flow(options: Unit) =
-    groupCountFlow[Option[T]](maxGroups).via(seqFlow)
+    countFlow[Option[T]](maxGroups).via(seqFlow)
 
   override def postFlow(options: Unit) = identity
 }

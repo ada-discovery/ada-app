@@ -12,8 +12,6 @@ trait GroupUniqueDistributionCountsCalcTypePack[G, T] extends NoOptionsCalculato
 
 private class GroupUniqueDistributionCountsCalc[G,T] extends Calculator[GroupUniqueDistributionCountsCalcTypePack[G, T]] {
 
-  private val maxGroups = Int.MaxValue
-
   private val normalCalc = new UniqueDistributionCountsCalc[T]
 
   override def fun(options: Unit) =
@@ -22,7 +20,7 @@ private class GroupUniqueDistributionCountsCalc[G,T] extends Calculator[GroupUni
     }
 
   override def flow(options: Unit) =
-    groupCountFlow[(Option[G], Option[T])](maxGroups).via(seqFlow)
+    countFlow[IN]().via(seqFlow)
 
   override def postFlow(options: Unit) =
     _.map { case ((group, value), count) => (group, (value, count)) }.toGroupMap
