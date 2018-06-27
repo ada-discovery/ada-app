@@ -13,8 +13,8 @@ object GroupBoxWidgetGenerator extends CalculatorWidgetGenerator[BoxWidgetSpec, 
 
   override protected val supportArray = true
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: BoxWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields.tail)
 

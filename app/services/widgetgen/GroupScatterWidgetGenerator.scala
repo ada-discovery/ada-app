@@ -18,8 +18,8 @@ private class GroupScatterWidgetGenerator[T1, T2](
 
   override protected val supportArray = false
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: ScatterWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields.tail)
 

@@ -44,10 +44,10 @@ trait CalculatorWidgetGenerator[S <: WidgetSpec, +W <: Widget, C <: CalculatorTy
 
   protected def withProjection: Boolean = true
 
-  protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  protected def extraStreamCriteria(
+    spec: S,
     fields: Seq[Field]
-  ) = criteria
+  ): Seq[Criterion[Any]] = Nil
 
   protected def withNotNull(fields: Seq[Field]): Seq[Criterion[Any]] =
     fields.map(field => NotEqualsNullCriterion(field.name))
@@ -55,22 +55,25 @@ trait CalculatorWidgetGenerator[S <: WidgetSpec, +W <: Widget, C <: CalculatorTy
   protected def scalarOrArrayField(fields: Seq[Field]): Field =
     if (fields.size > 1) fields(1) else fields(0)
 
+  protected def filterFields(fields: Seq[Field]) = fields
+
   def genJson(
     spec: S)(
     fields: Seq[Field])(
     jsons: Traversable[JsObject]
   ): Option[W] = {
     val options = specToOptions(spec)
+    val filteredFields = filterFields(fields)
 
     // decide whether to use a pure scalar json executor or a scalar/array one
     val result =
       if (supportArray)
-        seqExecutor.execJsonA(options, scalarOrArrayField(fields), fields)(jsons)
+        seqExecutor.execJsonA(options, scalarOrArrayField(filteredFields), filteredFields)(jsons)
       else
-        seqExecutor.execJson(options, fields)(jsons)
+        seqExecutor.execJson(options, filteredFields)(jsons)
 
     // generate widget out of it
-    applyFields(spec)(fields)(result)
+    applyFields(spec)(filteredFields)(result)
   }
 
   def genJsonRepoStreamed(
@@ -82,19 +85,20 @@ trait CalculatorWidgetGenerator[S <: WidgetSpec, +W <: Widget, C <: CalculatorTy
   ): Future[Option[W]] = {
     val flowOptions = specToFlowOptions(spec)
     val sinkOptions = specToSinkOptions(spec)
+    val filteredFields = filterFields(fields)
 
     // decide whether to use a pure scalar json streamed executor or a scalar/array one
     val exec = if (supportArray)
-      seqExecutor.execJsonRepoStreamedA(flowOptions, sinkOptions, withProjection, scalarOrArrayField(fields), fields)_
+      seqExecutor.execJsonRepoStreamedA(flowOptions, sinkOptions, withProjection, scalarOrArrayField(filteredFields), filteredFields)_
     else
-      seqExecutor.execJsonRepoStreamed(flowOptions, sinkOptions, withProjection, fields)_
+      seqExecutor.execJsonRepoStreamed(flowOptions, sinkOptions, withProjection, filteredFields)_
 
     for {
       // execute on given data repo with criteria
-      calcResult <- exec(dataRepo, adjustStreamedCriteria(criteria, fields))
+      calcResult <- exec(dataRepo, criteria ++ extraStreamCriteria(spec, filteredFields))
     } yield
       // generate widget out of it
-      applyFields(spec)(fields)(calcResult)
+      applyFields(spec)(filteredFields)(calcResult)
   }
 
   def flow(
@@ -102,12 +106,13 @@ trait CalculatorWidgetGenerator[S <: WidgetSpec, +W <: Widget, C <: CalculatorTy
     fields: Seq[Field]
   ): Flow[JsObject, C#INTER, NotUsed] = {
     val flowOptions = specToFlowOptions(spec)
+    val filteredFields = filterFields(fields)
 
     // decide whether to use a pure scalar flow or a scalar/array one
     if (supportArray)
-      seqExecutor.createJsonFlowA(flowOptions, scalarOrArrayField(fields), fields)
+      seqExecutor.createJsonFlowA(flowOptions, scalarOrArrayField(filteredFields), filteredFields)
     else
-      seqExecutor.createJsonFlow(flowOptions, fields)
+      seqExecutor.createJsonFlow(flowOptions, filteredFields)
   }
 
   def genPostFlow(
@@ -116,10 +121,11 @@ trait CalculatorWidgetGenerator[S <: WidgetSpec, +W <: Widget, C <: CalculatorTy
     flowOutput: C#INTER
   ): Option[W] = {
     val sinkOptions = specToSinkOptions(spec)
+    val filteredFields = filterFields(fields)
 
     val result = seqExecutor.execPostFlow(sinkOptions)(flowOutput)
 
-    applyFields(spec)(fields)(result)
+    applyFields(spec)(filteredFields)(result)
   }
 }
 

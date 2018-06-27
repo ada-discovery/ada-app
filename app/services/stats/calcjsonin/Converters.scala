@@ -132,6 +132,18 @@ class AllDefinedSeqBinCountCalcConverter extends AllDefinedSeqDoubleConverter {
   override def specificUseClass = Some(classOf[AllDefinedSeqBinCountCalc])
 }
 
+class OneWayAnovaTestConverter extends GroupScalarDoubleConverter[Any] {
+  override def specificUseClass = Some(classOf[OneWayAnovaTestCalc[_]])
+}
+
+class MultiOneWayAnovaTestConverter extends GroupSeqDoubleConverter[Any] {
+  override def specificUseClass = Some(classOf[MultiOneWayAnovaTestCalc[_]])
+}
+
+class MultiChiSquareTestConverter extends GroupSeqConverter[Any, Any] {
+  override def specificUseClass = Some(classOf[MultiChiSquareTestCalc[_, _]])
+}
+
 ////////////////////
 // Helper Classes //
 ////////////////////
@@ -139,7 +151,7 @@ class AllDefinedSeqBinCountCalcConverter extends AllDefinedSeqDoubleConverter {
 private[calcjsonin] abstract class ScalarConverter[T: TypeTag] extends JsonInputConverter[Option[T]] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 1)
+    checkFields(fields, 1)
     jsonToValue[T](fields(0))
   }
 
@@ -149,7 +161,7 @@ private[calcjsonin] abstract class ScalarConverter[T: TypeTag] extends JsonInput
 private[calcjsonin] abstract class ScalarDoubleConverter extends JsonInputConverter[Option[Double]] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 1)
+    checkFields(fields, 1)
     jsonToDouble(fields(0))
   }
 
@@ -159,7 +171,7 @@ private[calcjsonin] abstract class ScalarDoubleConverter extends JsonInputConver
 private[calcjsonin] abstract class ArrayConverter[T: TypeTag] extends JsonInputConverter[Array[Option[T]]] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 1)
+    checkFields(fields, 1)
     jsonToArrayValue[T](fields(0))
   }
 
@@ -169,11 +181,26 @@ private[calcjsonin] abstract class ArrayConverter[T: TypeTag] extends JsonInputC
 private[calcjsonin] abstract class ArrayDoubleConverter extends JsonInputConverter[Array[Option[Double]]] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 1)
+    checkFields(fields, 1)
     jsonToArrayDouble(fields(0))
   }
 
   override def inputType = typeOf[Array[Option[Double]]]
+}
+
+private[calcjsonin] abstract class GroupScalarDoubleConverter[G: TypeTag] extends JsonInputConverter[(Option[G], Option[Double])] {
+
+  override def apply(fields: Seq[Field]) = {
+    checkFields(fields, 2)
+
+    val groupConverter = jsonToValue[G](fields(0))
+    val valueConverter = jsonToDouble(fields(1))
+
+    (jsObject: JsObject) =>
+      (groupConverter(jsObject), valueConverter(jsObject))
+  }
+
+  override def inputType = typeOf[(Option[G], Option[Double])]
 }
 
 private[calcjsonin] abstract class SeqDoubleConverter extends JsonInputConverter[Seq[Option[Double]]] {
@@ -182,6 +209,36 @@ private[calcjsonin] abstract class SeqDoubleConverter extends JsonInputConverter
     jsonToDoubles(fields)
 
   override def inputType = typeOf[Seq[Option[Double]]]
+}
+
+private[calcjsonin] abstract class GroupSeqDoubleConverter[G: TypeTag] extends JsonInputConverter[(Option[G], Seq[Option[Double]])] {
+
+  override def apply(fields: Seq[Field]) = {
+    checkFieldsMin(fields, 1)
+
+    val groupConverter = jsonToValue[G](fields(0))
+    val valuesConverter = jsonToDoubles(fields.tail)
+
+    (jsObject: JsObject) =>
+      (groupConverter(jsObject), valuesConverter(jsObject))
+  }
+
+  override def inputType = typeOf[(Option[G], Seq[Option[Double]])]
+}
+
+private[calcjsonin] abstract class GroupSeqConverter[G: TypeTag, T: TypeTag] extends JsonInputConverter[(Option[G], Seq[Option[T]])] {
+
+  override def apply(fields: Seq[Field]) = {
+    checkFieldsMin(fields, 1)
+
+    val groupConverter = jsonToValue[G](fields(0))
+    val valuesConverter = jsonToValues(fields.tail)
+
+    (jsObject: JsObject) =>
+      (groupConverter(jsObject), valuesConverter(jsObject))
+  }
+
+  override def inputType = typeOf[(Option[G], Seq[Option[T]])]
 }
 
 private[calcjsonin] abstract class AllDefinedSeqDoubleConverter extends JsonInputConverter[Seq[Double]] {
@@ -195,7 +252,7 @@ private[calcjsonin] abstract class AllDefinedSeqDoubleConverter extends JsonInpu
 private[calcjsonin] abstract class TupleConverter[T1: TypeTag, T2: TypeTag] extends JsonInputConverter[(Option[T1], Option[T2])] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 2)
+    checkFields(fields, 2)
     jsonToTuple[T1, T2](fields(0), fields(1))
   }
 
@@ -205,7 +262,8 @@ private[calcjsonin] abstract class TupleConverter[T1: TypeTag, T2: TypeTag] exte
 private[calcjsonin] abstract class ScalarGroupDoubleConverter[G: TypeTag] extends JsonInputConverter[(Option[G], Option[Double])] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 2)
+    checkFields(fields, 2)
+
     val groupConverter = jsonToValue(fields(0))
     val doubleConverter = jsonToDouble(fields(1))
     (jsObject: JsObject) =>
@@ -218,7 +276,7 @@ private[calcjsonin] abstract class ScalarGroupDoubleConverter[G: TypeTag] extend
 private[calcjsonin] abstract class ArrayTupleConverter[T1: TypeTag, T2: TypeTag] extends JsonInputConverter[Array[(Option[T1], Option[T2])]] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 2)
+    checkFields(fields, 2)
 
     val groupConverter = jsonToValue[T1](fields(0))
     val arrayValueConverter = jsonToArrayValue[T2](fields(1))
@@ -250,20 +308,9 @@ private[calcjsonin] abstract class ArrayGroupDoubleConverter[G: TypeTag] extends
 private[calcjsonin] abstract class ScalarNumericConverter[T: TypeTag] extends JsonInputConverter[Option[T]] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 1)
+    checkFields(fields, 1)
 
-    val converter = jsonToValue[T](fields(0))
-
-    fields(0).fieldType match {
-      case FieldTypeId.Date =>
-        (jsObject: JsObject) =>
-          converter(jsObject).map(
-            _.asInstanceOf[java.util.Date].getTime.asInstanceOf[T]
-          )
-
-      case _ =>
-        converter
-    }
+    jsonToNumericValue[T](fields(0))
   }
 
   override def inputType = typeOf[Option[T]]
@@ -272,20 +319,9 @@ private[calcjsonin] abstract class ScalarNumericConverter[T: TypeTag] extends Js
 private[calcjsonin] abstract class ArrayNumericConverter[T: TypeTag] extends JsonInputConverter[Array[Option[T]]] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 1)
+    checkFields(fields, 1)
 
-    val converter = jsonToArrayValue[T](fields(0))
-
-    fields(0).fieldType match {
-      case FieldTypeId.Date =>
-        (jsObject: JsObject) =>
-          converter(jsObject).map(_.map(
-            _.asInstanceOf[java.util.Date].getTime.asInstanceOf[T])
-          )
-
-      case _ =>
-        converter
-    }
+    jsonToArrayNumericValue[T](fields(0))
   }
 
   override def inputType = typeOf[Array[Option[T]]]
@@ -294,25 +330,14 @@ private[calcjsonin] abstract class ArrayNumericConverter[T: TypeTag] extends Jso
 private[calcjsonin] abstract class GroupScalarNumericConverter[G: TypeTag, T: TypeTag] extends JsonInputConverter[(Option[G], Option[T])] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 2)
+    checkFields(fields, 2)
 
     val groupConverter = jsonToValue[G](fields(0))
-    val converter = jsonToValue[T](fields(1))
-
-    val valueConverter = fields(1).fieldType match {
-      case FieldTypeId.Date =>
-        (jsObject: JsObject) =>
-          converter(jsObject).map(
-            _.asInstanceOf[java.util.Date].getTime.asInstanceOf[T]
-          )
-
-      case _ =>
-        converter
-    }
+    val converter = jsonToNumericValue[T](fields(1))
 
     (jsObject: JsObject) =>
       val group = groupConverter(jsObject)
-      val value = valueConverter(jsObject)
+      val value = converter(jsObject)
       (group, value)
   }
 
@@ -322,25 +347,14 @@ private[calcjsonin] abstract class GroupScalarNumericConverter[G: TypeTag, T: Ty
 private[calcjsonin] abstract class ArrayGroupNumericConverter[G: TypeTag, T: TypeTag] extends JsonInputConverter[Array[(Option[G], Option[T])]] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 2)
+    checkFields(fields, 2)
 
     val groupConverter = jsonToValue[G](fields(0))
-    val converter = jsonToArrayValue[T](fields(1))
-
-    val arrayValueConverter = fields(1).fieldType match {
-      case FieldTypeId.Date =>
-        (jsObject: JsObject) =>
-          converter(jsObject).map(_.map(
-            _.asInstanceOf[java.util.Date].getTime.asInstanceOf[T])
-          )
-
-      case _ =>
-        converter
-    }
+    val converter = jsonToArrayNumericValue[T](fields(1))
 
     (jsObject: JsObject) =>
       val group = groupConverter(jsObject)
-      val array = arrayValueConverter(jsObject)
+      val array = converter(jsObject)
       array.map((group, _))
   }
 
@@ -350,7 +364,7 @@ private[calcjsonin] abstract class ArrayGroupNumericConverter[G: TypeTag, T: Typ
 private[calcjsonin] abstract class StringGroupTupleConverter[T1: TypeTag, T2: TypeTag] extends JsonInputConverter[GroupTupleCalcTypePack[String, T1, T2]#IN] {
 
   override def apply(fields: Seq[Field]) = {
-    requireFields(fields, 3)
+    checkFields(fields, 3)
 
     // json to tuple converter
     val jsonTuple = jsonToTuple[T1, T2](fields(1), fields(2))

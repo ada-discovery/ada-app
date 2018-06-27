@@ -21,6 +21,7 @@
             case x: HeatmapWidget => highcharts.heatmap(widgetElementId(x), x)
             case x: LineWidget[_] => highcharts.lineChart(widgetElementId(x), x)
             case x: BasicStatsWidget => textual.basicStats(widgetElementId(x), x)
+            case x: IndependenceTestWidget => textual.independenceTest(widgetElementId(x), x)
             case x: HtmlWidget => ""  // no-op
             case _ => throw new IllegalArgumentException(s"Widget '$widget' is unknown.")
         }

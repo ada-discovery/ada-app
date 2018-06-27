@@ -109,10 +109,11 @@
                         drawScatter(scatters[i], 'scatterDiv' + i, 350);
                     };
 
-                    showTestResults(data.testResults)
+                    var table = createIndependenceTestTable(data.testResults, true)
+                    $("#independenceTestPanelDiv").html(table);
                 },
                 error: function(data){
-                    showError( data.responseText );
+                    showErrorResponse(data);
                 }
             });
 
@@ -123,31 +124,6 @@
         function drawScatter(scatter, divId, height) {
             scatterChart(scatter.title, divId, scatter.xAxisCaption, scatter.yAxisCaption, scatter.data, height);
         }
-
-        function showTestResults(results) {
-            var header = ["Field", "p-Value", "Degree of Freedom", "Statistics/F-Value", "Test Type"]
-            var rowData = results.map(function(item) {
-                var color =
-                        (item.result.pValue >= 0.05) ? "black":
-                                (item.result.pValue >= 0.01) ? "forestGreen":
-                                        (item.result.pValue >= 0.001) ? "green" : "darkGreen"
-
-                var significantStyleDivStart = (item.result.pValue < 0.05) ? ("<div style='color: " + color + "; font-weight: bold'>") : "<div>"
-                var isAnovaTest = (item.result.fValue != null)
-                var rowStart = [item.fieldLabel,  significantStyleDivStart + item.result.pValue.toExponential(3).replace("e", " E") + "</div>"]
-
-                var rowEnd = (isAnovaTest) ?
-                        [item.result.degreeOfFreedomWithinGroups, item.result.fValue.toFixed(2), "ANOVA"]
-                        :
-                        [item.result.degreeOfFreedom, item.result.statistics.toFixed(2), "Chi-Square"]
-
-                return rowStart.concat(rowEnd)
-            });
-
-            var table = createTable(header, rowData);
-            $("#independenceTestPanelDiv").html(table);
-        }
-
     </script>
 }
 

@@ -461,6 +461,19 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       Future(())
   }
 
+  override def addIndependenceTest(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    inputFieldNames: Seq[String]
+  ) = processDataView(dataViewId) { dataView =>
+    val existingNames = filterSpecsOf[IndependenceTestWidgetSpec](dataView).map(_.fieldNames)
+    if (!existingNames.contains(Seq(fieldName) ++ inputFieldNames)) {
+      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ Seq(IndependenceTestWidgetSpec(fieldName, inputFieldNames)))
+      repo.update(newDataView)
+    } else
+      Future(())
+  }
+
   override def addTableFields(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]

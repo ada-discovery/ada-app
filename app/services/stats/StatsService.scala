@@ -225,13 +225,13 @@ trait StatsService extends CalculatorExecutors {
     items: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[Option[Either[ChiSquareResult, OneWayAnovaResult]]]
+  ): Seq[Option[IndependenceTestResult]]
 
   def testIndependenceSorted(
     items: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[(Field, Option[Either[ChiSquareResult, OneWayAnovaResult]])]
+  ): Seq[(Field, Option[IndependenceTestResult])]
 
   def selectFeaturesAsChiSquare(
     data: DataFrame,
@@ -505,7 +505,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     criteria: Seq[Criterion[Any]],
     fieldsAndBinCounts: Seq[(Field, Option[Int])]
   ): Future[SeqNumericCount] = {
-    println("CALLING calcSeqNumericDistributionCountsFromRepo")
     val repoCountSpecs = fieldsAndBinCounts.flatMap { case (field, numericBinCount) =>
       createRepoCountSpec(field, numericBinCount).asInstanceOf[Option[RepoCountSpec[Any]]]
     }
@@ -1144,7 +1143,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
       (target, features)
     }
 
-    MultiChiSquareCalc[Any, Any].fun_(labeledFeatures)
+    MultiChiSquareTestCalc[Any, Any].fun_(labeledFeatures)
   }
 
   override def testOneWayAnova(
@@ -1175,22 +1174,22 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
       (target, features)
     }
 
-    MultiOneWayAnovaCalc[Any].fun_(labeledFeatures)
+    MultiOneWayAnovaTestCalc[Any].fun_(labeledFeatures)
   }
 
   override def testIndependenceSorted(
     items: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[(Field, Option[Either[ChiSquareResult, OneWayAnovaResult]])] = {
+  ): Seq[(Field, Option[IndependenceTestResult])] = {
     val results = testIndependence(items, inputFields, targetField)
 
     // Sort and combine the results
-    def pValueAndStat(result: Option[Either[ChiSquareResult, OneWayAnovaResult]]): (Double, Double) =
+    def pValueAndStat(result: Option[IndependenceTestResult]): (Double, Double) =
       result.map {
         _ match {
-          case Left(chiSquareResult) => (chiSquareResult.pValue, chiSquareResult.statistics)
-          case Right(anovaResult) => (anovaResult.pValue, anovaResult.FValue)
+          case ChiSquareResult(pValue, statistics, _) => (pValue, statistics)
+          case OneWayAnovaResult(pValue, fValue, _, _) => (pValue, fValue)
         }
       }.getOrElse((Double.PositiveInfinity, 0d))
 
@@ -1206,7 +1205,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     items: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field
-  ): Seq[Option[Either[ChiSquareResult, OneWayAnovaResult]]] = {
+  ): Seq[Option[IndependenceTestResult]] = {
     // ANOVA
     val numericalTypes = Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
     val numericalInputFields = inputFields.filter(field => numericalTypes.contains(field.fieldTypeSpec.fieldType))
@@ -1223,12 +1222,9 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
       val name = field.name
 
       chiSquareFieldNameResultMap.get(name) match {
-        case Some(chiSquareResult) => chiSquareResult.map(Left(_))
+        case Some(chiSquareResult) => chiSquareResult
 
-        case None => anovaFieldNameResultMap.get(name).flatMap {
-          case Some(anovaResult) => Some(Right(anovaResult))
-          case None => None
-        }
+        case None => anovaFieldNameResultMap.get(name).flatten
       }
     }
   }
@@ -1283,14 +1279,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
 
     selector.fit(data)
   }
-}
-
-object ChiSquareResult {
-  implicit val chiSquareResultFormat = Json.format[ChiSquareResult]
-}
-
-object OneWayAnovaResult {
-  implicit val anovaResultFormat = Json.format[OneWayAnovaResult]
 }
 
 case class SmileTSNESetting(

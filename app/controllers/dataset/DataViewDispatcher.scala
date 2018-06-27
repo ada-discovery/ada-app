@@ -118,6 +118,12 @@ class DataViewDispatcher @Inject()(
     fieldNames: Seq[String]
   ) = dispatchIsAdminOrOwner(dataViewId, _.addBasicStats(dataViewId, fieldNames))
 
+  override def addIndependenceTest(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    inputFieldNames: Seq[String]
+  ) = dispatchIsAdminOrOwner(dataViewId, _.addIndependenceTest(dataViewId, fieldName, inputFieldNames))
+
   override def saveFilter(
     dataViewId: BSONObjectID,
     filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]]

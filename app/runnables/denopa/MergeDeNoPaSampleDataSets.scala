@@ -3,6 +3,7 @@ package runnables.denopa
 import javax.inject.Inject
 
 import models.StorageType
+import models.ml.ResultDataSetSpec
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
 
@@ -30,9 +31,11 @@ class MergeDeNoPaSampleDataSets @Inject() (
 
   override def runAsFuture =
     dataSetService.mergeDataSets(
-      mergedDataSetId,
-      mergedDataSetName,
-      StorageType.ElasticSearch,
+      ResultDataSetSpec(
+        mergedDataSetId,
+        mergedDataSetName,
+        StorageType.ElasticSearch
+      ),
       dataSetIds,
       fieldNameMappings
     )

@@ -47,8 +47,8 @@ private class NumericDistributionWidgetGenerator(
 
   override protected val supportArray = true
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: DistributionWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields)
 
@@ -86,8 +86,8 @@ object UniqueIntDistributionWidgetGenerator extends CalculatorWidgetGenerator[Di
 
   override protected val supportArray = true
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: DistributionWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields)
 
@@ -147,8 +147,8 @@ private class GroupNumericDistributionWidgetGenerator(
 
   override protected val supportArray = true
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: DistributionWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields.tail)
 
@@ -190,8 +190,8 @@ object GroupUniqueIntDistributionWidgetGenerator extends CalculatorWidgetGenerat
 
   override protected val supportArray = true
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: DistributionWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields.tail)
 

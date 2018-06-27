@@ -11,8 +11,8 @@ object BoxWidgetGenerator extends CalculatorWidgetGenerator[BoxWidgetSpec, BoxWi
 
   override protected val supportArray = true
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: BoxWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields)
 
@@ -25,7 +25,6 @@ object BoxWidgetGenerator extends CalculatorWidgetGenerator[BoxWidgetSpec, BoxWi
         implicit val ordering = quartiles.ordering
         val field = fieldNameMap.get(spec.fieldName).get
         val chartTitle = title(spec).getOrElse(field.labelOrElseName)
-        val widget = BoxWidget[Any](chartTitle, None, field.labelOrElseName, Seq(("", quartiles)), None, None, spec.displayOptions)
-        widget
+        BoxWidget[Any](chartTitle, None, field.labelOrElseName, Seq(("", quartiles)), None, None, spec.displayOptions)
       }
 }

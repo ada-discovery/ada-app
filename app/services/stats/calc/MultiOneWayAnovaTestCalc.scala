@@ -3,13 +3,13 @@ package services.stats.calc
 import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import services.stats.CalculatorHelper._
 
-trait MultiOneWayAnovaCalcTypePack[G] extends NoOptionsCalculatorTypePack{
+trait MultiOneWayAnovaTestCalcTypePack[G] extends NoOptionsCalculatorTypePack{
   type IN = (Option[G], Seq[Option[Double]])
   type OUT = Seq[Option[OneWayAnovaResult]]
   type INTER = Traversable[(Option[G], Seq[BasicStatsAccum])]
 }
 
-private class MultiOneWayAnovaCalc[G] extends Calculator[MultiOneWayAnovaCalcTypePack[G]] with OneWayAnovaHelper {
+private[stats] class MultiOneWayAnovaTestCalc[G] extends Calculator[MultiOneWayAnovaTestCalcTypePack[G]] with OneWayAnovaHelper {
 
   private val basicStatsCalc = GroupMultiBasicStatsCalc[G]
 
@@ -38,6 +38,6 @@ private class MultiOneWayAnovaCalc[G] extends Calculator[MultiOneWayAnovaCalcTyp
   }
 }
 
-object MultiOneWayAnovaCalc {
-  def apply[G]: Calculator[MultiOneWayAnovaCalcTypePack[G]] = new MultiOneWayAnovaCalc[G]
+object MultiOneWayAnovaTestCalc {
+  def apply[G]: Calculator[MultiOneWayAnovaTestCalcTypePack[G]] = new MultiOneWayAnovaTestCalc[G]
 }

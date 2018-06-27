@@ -218,4 +218,26 @@ trait CalculatorExecutors {
 
   def seqBinCountAllDefinedExec =
     withSeq(AllDefinedSeqBinCountCalc.apply)
+
+  // Independence Tests
+
+  def chiSquareTestExec[G, T](
+    implicit inputTypeTag: TypeTag[ChiSquareTestCalcTypePack[G, T]#IN]
+  ) =
+    with2Tuple(ChiSquareTestCalc[G, T])
+
+  def oneWayAnovaTestExec[G](
+    implicit inputTypeTag: TypeTag[OneWayAnovaTestCalcTypePack[G]#IN]
+  ) =
+    with2Tuple(OneWayAnovaTestCalc[G])
+
+  def multiChiSquareTestExec[G, T](
+    implicit inputTypeTag: TypeTag[MultiChiSquareTestCalcTypePack[G, T]#IN]
+  ) =
+    withSeq(MultiChiSquareTestCalc[G, T])
+
+  def multiOneWayAnovaTestExec[G](
+    implicit inputTypeTag: TypeTag[MultiOneWayAnovaTestCalcTypePack[G]#IN]
+  ) =
+    withSeq(MultiOneWayAnovaTestCalc[G])
 }

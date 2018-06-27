@@ -4,10 +4,10 @@ import javax.inject.{Inject, Singleton}
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.stream.{ActorMaterializer}
 import akka.stream.scaladsl.{Flow, Sink}
 import com.google.inject.ImplementedBy
-import dataaccess.{Criterion, FieldType, FieldTypeHelper}
+import dataaccess.{Criterion}
 import dataaccess.RepoTypes.JsonReadonlyRepo
 import models._
 import play.api.{Configuration, Logger}
@@ -18,6 +18,7 @@ import services.widgetgen._
 import services.stats.CalculatorHelper._
 import util.AkkaStreamUtil
 import util.FieldUtil._
+import util.GroupMapList
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -33,13 +34,22 @@ trait WidgetGenerationService {
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]] = Map(),
     fields: Traversable[Field],
     genMethod: WidgetGenerationMethod.Value
+  ): Future[Traversable[Option[Widget]]]
+
+  def applyWithFields(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]] = Nil,
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]] = Map(),
+    fields: Traversable[Field],
+    genMethod: WidgetGenerationMethod.Value
   ): Future[Traversable[Option[(Widget, Seq[String])]]]
 
   def genFromFullData(
     widgetSpec: WidgetSpec,
     items: Traversable[JsObject],
     fields: Traversable[Field]
-  ): Option[Widget]
+  ): Seq[Option[Widget]]
 
   def genStreamed(
     widgetSpec: WidgetSpec,
@@ -47,14 +57,14 @@ trait WidgetGenerationService {
     criteria: Seq[Criterion[Any]],
     fields: Traversable[Field],
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]] = Map()
-  ): Future[Option[Widget]]
+  ): Future[Seq[Option[Widget]]]
 
   def genFromRepo(
     widgetSpec: WidgetSpec,
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     fields: Traversable[Field]
-  ): Future[Option[Widget]]
+  ): Future[Seq[Option[Widget]]]
 }
 
 @Singleton
@@ -81,14 +91,27 @@ class WidgetGenerationServiceImpl @Inject() (
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
     fields: Traversable[Field],
     genMethod: WidgetGenerationMethod.Value
+  ): Future[Traversable[Option[Widget]]] =
+    applyWithFields(
+      widgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, fields, genMethod
+    ).map(_.map(_.map(_._1)))
+
+  override def applyWithFields(
+    widgetSpecs: Traversable[WidgetSpec],
+    repo: JsonReadonlyRepo,
+    criteria: Seq[Criterion[Any]],
+    widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
+    fields: Traversable[Field],
+    genMethod: WidgetGenerationMethod.Value
   ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
     // TODO: if auto decide which method to use intelligently
-    val initGenMathod =
+    val initGenMethod =
       if (genMethod == WidgetGenerationMethod.Auto)
         WidgetGenerationMethod.FullData
       else
         genMethod
-    applyAux(widgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, fields, initGenMathod)
+
+    applyAux(widgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, fields, initGenMethod)
   }
 
   private def applyAux(
@@ -152,12 +175,12 @@ class WidgetGenerationServiceImpl @Inject() (
       val specWidgetMap = (specWidgets1 ++ specWidgets2).toMap
 
       // add field names
-      val specWidgetFieldNamesMap = specWidgetMap.map { case (spec, widgetOption) =>
-        spec -> widgetOption.map(widget => (widget, spec.fieldNames.toSeq))
+      val specWidgetFieldNamesMap = specWidgetMap.map { case (spec, widgets) =>
+        spec -> widgets.map(_.map(widget => (widget, spec.fieldNames.toSeq)))
       }
 
       // return widgets (with field names) in the specified order
-      widgetSpecs.flatMap(specWidgetFieldNamesMap.get)
+      widgetSpecs.flatMap(specWidgetFieldNamesMap.get).flatten
     }
   }
 
@@ -167,13 +190,13 @@ class WidgetGenerationServiceImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
     nameFieldMap: Map[String, Field]
-  ): Future[Traversable[(WidgetSpec, Option[Widget])]] = sequence(
+  ): Future[Traversable[(WidgetSpec, Seq[Option[Widget]])]] = sequence(
       widgetSpecs.par.map { widgetSpec =>
         val newCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(widgetSpec.subFilterId)
 
         genFromRepoAux(
           widgetSpec, repo, newCriteria, nameFieldMap
-        ).map((widgetSpec, _))
+        ).map(widget => (widgetSpec, Seq(widget)))
 
       }.toList
     )
@@ -184,7 +207,7 @@ class WidgetGenerationServiceImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
     nameFieldMap: Map[String, Field]
-  ): Future[Traversable[(WidgetSpec, Option[Widget])]] =
+  ): Future[Traversable[(WidgetSpec, Seq[Option[Widget]])]] =
     for {
       // calc min maxes for requested fields and filter widgets without min/max
       (fieldNameMinMaxesDefined, filteredWidgetSpecs) <- createMinMaxMapAndFilterSpec(widgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
@@ -202,7 +225,7 @@ class WidgetGenerationServiceImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
     nameFieldMap: Map[String, Field]
-  ): Future[Traversable[(WidgetSpec, Option[Widget])]] =
+  ): Future[Traversable[(WidgetSpec, Seq[Option[Widget]])]] =
     for {
       // calc min maxes for requested fields and filter widgets without min/max
       (fieldNameMinMaxesDefined, filteredWidgetSpecs) <- createMinMaxMapAndFilterSpec(widgetSpecs, repo, criteria, widgetFilterSubCriteriaMap, nameFieldMap)
@@ -277,15 +300,15 @@ class WidgetGenerationServiceImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     nameFieldMap: Map[String, Field],
     fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
-  ): Future[Traversable[(WidgetSpec, Option[Widget])]] = {
+  ): Future[Traversable[(WidgetSpec, Seq[Option[Widget]])]] = {
 
     // create (loaded) generators
     val specGenerators = widgetSpecs.map { widgetSpec =>
-      val generator = createGenerator(widgetSpec, nameFieldMap, fieldNameSubFilterIdMinMaxes)
-      (widgetSpec, generator)
+      val generators = createGenerator(widgetSpec, nameFieldMap, fieldNameSubFilterIdMinMaxes)
+      (widgetSpec, generators)
     }.toSeq
 
-    val definedGenerators = specGenerators.collect { case (_, Some(generator)) => generator }
+    val definedGenerators = specGenerators.flatMap(_._2)
 
     // referenced field names
     val flowFieldNames = specGenerators.collect { case (spec, _) => spec.fieldNames }.flatten.toSet
@@ -318,22 +341,32 @@ class WidgetGenerationServiceImpl @Inject() (
 
       // execute the flows (with post flows) on the data source to generate widgets
 //      widgets <- source.via(zippedFlow.via(zippedPostFlow)).runWith(Sink.head) // .buffer(100, OverflowStrategy.backpressure)
+
       flowOutputs <- source.via(zippedFlow).runWith(Sink.head)
     } yield {
-      val widgets = flowOutputs.zip(postFlows).par.map { case (flowOutput, postFlow) =>
+      val allWidgets = flowOutputs.zip(postFlows).par.map { case (flowOutput, postFlow) =>
         postFlow(flowOutput)
       }.toList
 
-      val specWidgetMap = definedGenerators.zip(widgets).map { case (generator, widget) =>
+      val specWidgetsMap = definedGenerators.zip(allWidgets).map { case (generator, widget) =>
         (generator.spec, widget)
-      }.toMap
+      }.toGroupMap
 
       specGenerators.map { case (spec, generator) =>
-        val widget = specWidgetMap.get(spec) match {
-          case Some(widget) => widget
-          case None => genStaticWidget(spec)
+
+        // check if static widgets should be generated
+        val widgets = specWidgetsMap.get(spec) match {
+          case Some(widgets) =>
+            if (widgets.isEmpty)
+              Seq(genStaticWidget(spec))
+            else
+              widgets.toSeq
+
+          case None =>
+            Seq(genStaticWidget(spec))
         }
-        (spec, widget)
+
+        (spec, widgets)
       }
     }
   }
@@ -345,7 +378,7 @@ class WidgetGenerationServiceImpl @Inject() (
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
     nameFieldMap: Map[String, Field],
     fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
-  ): Future[Traversable[(WidgetSpec, Option[Widget])]] = sequence(
+  ): Future[Traversable[(WidgetSpec, Seq[Option[Widget]])]] = sequence(
     widgetSpecs.par.map { widgetSpec =>
       val newCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(widgetSpec.subFilterId)
 
@@ -362,7 +395,7 @@ class WidgetGenerationServiceImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]],
     nameFieldMap: Map[String, Field]
-  ): Future[Traversable[(WidgetSpec, Option[Widget])]] =
+  ): Future[Traversable[(WidgetSpec, Seq[Option[Widget]])]] =
     sequence(
       widgetSpecs.groupBy(_.subFilterId).map { case (subFilterId, widgetSpecs) =>
         val fieldNames = widgetSpecs.map(_.fieldNames).flatten.toSet
@@ -373,8 +406,8 @@ class WidgetGenerationServiceImpl @Inject() (
           projection = fieldNames
         ).map { jsons =>
           widgetSpecs.par.map { widgetSpec =>
-            val widget = genFromFullDataAux(widgetSpec, jsons, nameFieldMap)
-            (widgetSpec, widget)
+            val widgets = genFromFullDataAux(widgetSpec, jsons, nameFieldMap)
+            (widgetSpec, widgets)
           }.toList
         }
       }
@@ -393,9 +426,9 @@ class WidgetGenerationServiceImpl @Inject() (
     repo: JsonReadonlyRepo,
     criteria: Seq[Criterion[Any]],
     fields: Traversable[Field]
-  ): Future[Option[Widget]] = {
+  ): Future[Seq[Option[Widget]]] = {
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
-    genFromRepoAux(widgetSpec, repo, criteria, nameFieldMap)
+    genFromRepoAux(widgetSpec, repo, criteria, nameFieldMap).map(Seq(_))
   }
 
   private def genFromRepoAux(
@@ -504,7 +537,7 @@ class WidgetGenerationServiceImpl @Inject() (
     widgetSpec: WidgetSpec,
     items: Traversable[JsObject],
     fields: Traversable[Field]
-  ): Option[Widget] = {
+  ): Seq[Option[Widget]] = {
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
     genFromFullDataAux(widgetSpec, items, nameFieldMap)
   }
@@ -513,15 +546,18 @@ class WidgetGenerationServiceImpl @Inject() (
     widgetSpec: WidgetSpec,
     jsons: Traversable[JsObject],
     nameFieldMap: Map[String, Field]
-  ): Option[Widget] = {
+  ): Seq[Option[Widget]] = {
     val fields = widgetSpec.fieldNames.flatMap(nameFieldMap.get).toSeq
 
     // we don't use streaming (flows) here hence we can feed any min/max flow option values
     val dummyFlowMinMaxMap = fields.map( field => ((field.name, widgetSpec.subFilterId) -> (0d, 1d))).toMap
 
-    createGenerator(widgetSpec, nameFieldMap, dummyFlowMinMaxMap).map(
-      generatorLoaded => generatorLoaded.genJson(jsons)
-    ).getOrElse(genStaticWidget(widgetSpec))
+    val generators = createGenerator(widgetSpec, nameFieldMap, dummyFlowMinMaxMap)
+
+    generators match {
+      case Nil => Seq(genStaticWidget(widgetSpec))
+      case _ => generators.map(_.genJson(jsons))
+    }
   }
 
   override def genStreamed(
@@ -530,7 +566,7 @@ class WidgetGenerationServiceImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     fields: Traversable[Field],
     widgetFilterSubCriteriaMap: Map[BSONObjectID, Seq[Criterion[Any]]]
-  ): Future[Option[Widget]] = {
+  ): Future[Seq[Option[Widget]]] = {
     val nameFieldMap = fields.map(field => (field.name, field)).toMap
     val subFilterId = widgetSpec.subFilterId
     val finalCriteria = criteria ++ getSubCriteria(widgetFilterSubCriteriaMap)(subFilterId)
@@ -552,18 +588,19 @@ class WidgetGenerationServiceImpl @Inject() (
         }
       )
 
-      widget <-
+      widgets <-
         if (fieldNameMinMaxes.contains(None)) {
-          Future(None)
+          Future(Nil)
         } else {
           // if min and max values are available, create a map and generate a streamed widget
           val fieldNameMinMaxMap = fieldNameMinMaxes.collect { case Some(x) => x }.map { case (fieldName, min, max) =>
             (fieldName, subFilterId) -> (min, max)
           }.toMap
+
           genStreamedAux(widgetSpec, repo, criteria, nameFieldMap, fieldNameMinMaxMap)
         }
     } yield
-      widget
+      widgets
   }
 
   private def genStreamedAux(
@@ -572,12 +609,16 @@ class WidgetGenerationServiceImpl @Inject() (
     criteria: Seq[Criterion[Any]],
     nameFieldMap: Map[String, Field],
     fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
-  ): Future[Option[Widget]] =
-    createGenerator(widgetSpec, nameFieldMap, fieldNameSubFilterIdMinMaxes).map(
-      generatorLoaded => generatorLoaded.genJsonRepoStreamed(repo, criteria)
-    ).getOrElse(
-      Future(genStaticWidget(widgetSpec))
-    )
+  ): Future[Seq[Option[Widget]]] = {
+    val generators = createGenerator(widgetSpec, nameFieldMap, fieldNameSubFilterIdMinMaxes)
+
+    generators match {
+      case Nil => Future(Seq(genStaticWidget(widgetSpec)))
+      case _ => sequence(
+        generators.map(_.genJsonRepoStreamed(repo, criteria))
+      )
+    }
+  }
 
   private def genStaticWidget(widgetSpec: WidgetSpec) =
     widgetSpec match {
@@ -592,12 +633,12 @@ class WidgetGenerationServiceImpl @Inject() (
     widgetSpec: WidgetSpec,
     nameFieldMap: Map[String, Field],
     fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
-  ): Option[CalculatorWidgetGeneratorLoaded[_, Widget,_]] = {
+  ): Seq[CalculatorWidgetGeneratorLoaded[_, Widget,_]] = {
     val fields = widgetSpec.fieldNames.map(nameFieldMap.get).toSeq
 
     if (fields.exists(_.isEmpty)) {
       logger.warn(s"Cannot generate a widget ${widgetSpec.getClass.getSimpleName} because some of its fields do not exist : ${widgetSpec.fieldNames.mkString(", ")}.")
-      None
+      Nil
     } else
       createGenerator(widgetSpec, fields.flatten, nameFieldMap, fieldNameSubFilterIdMinMaxes)
   }
@@ -607,14 +648,14 @@ class WidgetGenerationServiceImpl @Inject() (
     fields: Seq[Field],
     nameFieldMap: Map[String, Field],
     fieldNameSubFilterIdMinMaxes: Map[(String, Option[BSONObjectID]), (Double, Double)]
-  ): Option[CalculatorWidgetGeneratorLoaded[_, Widget,_]] = {
+  ): Seq[CalculatorWidgetGeneratorLoaded[_, Widget,_]] = {
     def minMaxes = flowMinMaxes(widgetSpec, nameFieldMap, fieldNameSubFilterIdMinMaxes)
     def minMax = minMaxes.head
 
     def aux[S <: WidgetSpec, W <: Widget, C <: CalculatorTypePack](
       generator: CalculatorWidgetGenerator[S, W, C]
     ) =
-      Some(CalculatorWidgetGeneratorLoaded[S, W, C](generator, widgetSpec.asInstanceOf[S], fields))
+      Seq(CalculatorWidgetGeneratorLoaded[S, W, C](generator, widgetSpec.asInstanceOf[S], fields))
 
     widgetSpec match {
 
@@ -674,7 +715,10 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: BasicStatsWidgetSpec =>
         aux(BasicStatsWidgetGenerator)
 
-      case _ => None
+      case spec: IndependenceTestWidgetSpec =>
+        aux(ChiSquareTestWidgetGenerator) ++ aux(OneWayAnovaTestWidgetGenerator)
+
+      case _ => Nil
     }
   }
 
@@ -685,8 +729,8 @@ class WidgetGenerationServiceImpl @Inject() (
   ): Seq[(Double, Double)] = {
     flowMinMaxFields(widgetSpec, nameFieldMap).map { field =>
       val fieldName = field.name
-      val subfilterId = widgetSpec.subFilterId
-      fieldNameSubFilterIdMinMaxes.get((fieldName, subfilterId)).getOrElse(
+      val subFilterId = widgetSpec.subFilterId
+      fieldNameSubFilterIdMinMaxes.get((fieldName, subFilterId)).getOrElse(
         throw new AdaException(s"Min max values for field $fieldName requested by a widget ${widgetSpec.getClass.getName} is not available.")
       )
     }

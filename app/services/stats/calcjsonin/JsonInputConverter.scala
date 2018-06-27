@@ -16,9 +16,16 @@ trait JsonInputConverter[IN] {
 
   protected[stats] def specificUseClass: Option[Class[_]] = None
 
-  protected def requireFields(fields: Seq[Field], expectedSize: Int) =
+  protected def checkFields(fields: Seq[Field], expectedSize: Int) =
     try {
       require(fields.size == expectedSize, s"# fields is ${fields.size} but $expectedSize expected.")
+    } catch {
+      case e: IllegalArgumentException => throw e
+    }
+
+  protected def checkFieldsMin(fields: Seq[Field], minSize: Int) =
+    try {
+      require(fields.size >= minSize, s"# fields is ${fields.size} but at least $minSize expected.")
     } catch {
       case e: IllegalArgumentException => throw e
     }

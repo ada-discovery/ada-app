@@ -15,8 +15,8 @@ object CumulativeCountWidgetGenerator extends CalculatorWidgetGenerator[Cumulati
 
   override protected val supportArray = true
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: CumulativeCountWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields)
 
@@ -51,8 +51,8 @@ object GroupCumulativeCountWidgetGenerator extends CalculatorWidgetGenerator[Cum
 
   override protected val supportArray = true
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: CumulativeCountWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields.tail)
 
@@ -107,8 +107,8 @@ private class CumulativeNumericBinCountWidgetGenerator(
 
   override protected val supportArray = true
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: CumulativeCountWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields)
 
@@ -158,8 +158,8 @@ private class GroupCumulativeNumericBinCountWidgetGenerator(
 
   override protected val supportArray = true
 
-  override protected def adjustStreamedCriteria(
-    criteria: Seq[Criterion[Any]],
+  override protected def extraStreamCriteria(
+    spec: CumulativeCountWidgetSpec,
     fields: Seq[Field]
   ) = withNotNull(fields.tail)
 

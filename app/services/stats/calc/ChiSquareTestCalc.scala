@@ -12,7 +12,7 @@ trait ChiSquareTestCalcTypePack[T1, T2] extends NoOptionsCalculatorTypePack{
   type INTER = Traversable[((Option[T1], Option[T2]), Int)]
 }
 
-private class ChiSquareTestCalc[T1, T2] extends Calculator[ChiSquareTestCalcTypePack[T1, T2]] {
+private[stats] class ChiSquareTestCalc[T1, T2] extends Calculator[ChiSquareTestCalcTypePack[T1, T2]] {
 
   private val epsilon = 1E-100
   private val logger = Logger
@@ -98,7 +98,7 @@ case class ChiSquareResult(
   pValue: Double,
   statistics: Double,
   degreeOfFreedom: Int
-)
+) extends IndependenceTestResult
 
 object ChiSquareTestCalc {
   def apply[T1, T2]: Calculator[ChiSquareTestCalcTypePack[T1, T2]] = new ChiSquareTestCalc[T1, T2]

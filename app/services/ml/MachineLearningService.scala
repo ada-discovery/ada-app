@@ -172,7 +172,10 @@ private class MachineLearningServiceImpl @Inject() (
     df.cache
 
     // transform the df to classification one
-    val finalDf = transformToClassificationDataFrame(df, setting)
+    val finalDf = df.transform {
+      println("Transforming a data frame to a classification one...")
+      transformToClassificationDataFrame(setting)
+    }
     finalDf.cache
 
     // REPLICATION DATA (if any)
@@ -187,7 +190,9 @@ private class MachineLearningServiceImpl @Inject() (
 
     // transform the df to classification one
     val finalReplicationDf = replicationDf.map { replicationDf =>
-      val df = transformToClassificationDataFrame(replicationDf, setting)
+      val df = replicationDf.transform(
+        transformToClassificationDataFrame(setting)
+      )
       df.cache
     }
 
@@ -319,8 +324,8 @@ private class MachineLearningServiceImpl @Inject() (
   }
 
   private def transformToClassificationDataFrame(
-    df: DataFrame,
-    setting: LearningSetting[_]
+    setting: LearningSetting[_])(
+    df: DataFrame
   ): DataFrame = {
     // normalize the features
     val normalizeFeatures = new SchemaUnchangedTransformer(normalizeFeaturesOptional(setting.featuresNormalizationType))
@@ -424,14 +429,17 @@ private class MachineLearningServiceImpl @Inject() (
     // TRAINING AND TEST DATA
 
     // transform the df to a regression one
-    val finalDf = transformToRegressionDataFrame(df, setting)
+    val finalDf = df.transform {
+      println("Transforming a data frame to a regression one...")
+      transformToRegressionDataFrame(setting)
+    }
     finalDf.cache
 
     // REPLICATION DATA (if any)
 
     // transform the df to a regression one
     val finalReplicationDf = replicationDf.map { replicationDf =>
-      val df = transformToRegressionDataFrame(replicationDf, setting)
+      val df = replicationDf.transform(transformToRegressionDataFrame(setting))
       df.cache
     }
 
@@ -505,8 +513,8 @@ private class MachineLearningServiceImpl @Inject() (
   }
 
   private def transformToRegressionDataFrame(
-    df: DataFrame,
-    setting: LearningSetting[_]
+    setting: LearningSetting[_])(
+    df: DataFrame
   ): DataFrame = {
     // normalize the features
     val normalizeFeatures = new SchemaUnchangedTransformer(normalizeFeaturesOptional(setting.featuresNormalizationType))

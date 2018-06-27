@@ -3,6 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import models.StorageType
+import models.ml.ResultDataSetSpec
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
 
@@ -43,9 +44,11 @@ class MergeMPowerChallengeDemographicsDataSets @Inject()(
 
   override def runAsFuture =
     dataSetService.mergeDataSets(
-      mergedDataSetId,
-      mergedDataSetName,
-      StorageType.ElasticSearch,
+      ResultDataSetSpec(
+        mergedDataSetId,
+        mergedDataSetName,
+        StorageType.ElasticSearch
+      ),
       Seq(demographicsDataSetId1, demographicsDataSetId2),
       fieldNameMappings
     )

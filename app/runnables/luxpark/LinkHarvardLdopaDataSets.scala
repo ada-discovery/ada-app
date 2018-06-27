@@ -4,7 +4,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import models.StorageType
-import models.ml.{DataSetLink, DataSetTransformationCore}
+import models.ml.{DataSetLink, ResultDataSetSpec}
 import runnables.FutureRunnable
 import services.DataSetService
 
@@ -54,12 +54,12 @@ class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extend
     Seq("patient", "visit", "session", "task"),
     walkingFieldNames,
     scoreFieldNames,
-    DataSetTransformationCore(
+    Some(4),
+    Some(1),
+    ResultDataSetSpec(
       "harvard_ldopa.walking_data_w_scores",
       "Walking Data with Score",
-      StorageType.Mongo,
-      Some(4),
-      Some(1)
+      StorageType.Mongo
     )
   )
 

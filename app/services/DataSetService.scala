@@ -153,17 +153,13 @@ trait DataSetService {
   ): Future[DataSetAccessor]
 
   def mergeDataSets(
-    resultDataSetId: String,
-    resultDataSetName: String,
-    resultStorageType: StorageType.Value,
+    resultDataSetSpec: ResultDataSetSpec,
     dataSetIds: Seq[String],
     fieldNameMappings: Seq[Seq[String]]
   ): Future[Unit]
 
   def mergeDataSetsWoInference(
-    resultDataSetId: String,
-    resultDataSetName: String,
-    resultStorageType: StorageType.Value,
+    resultDataSetSpec: ResultDataSetSpec,
     dataSetIds: Seq[String],
     fieldNames: Seq[Seq[Option[String]]],
     keyField: Option[String] = None,
@@ -558,9 +554,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def mergeDataSets(
-    resultDataSetId: String,
-    resultDataSetName: String,
-    resultStorageType: StorageType.Value,
+    resultDataSetSpec: ResultDataSetSpec,
     dataSetIds: Seq[String],
     fieldNames: Seq[Seq[String]]
   ): Future[Unit] = {
@@ -571,7 +565,7 @@ class DataSetServiceImpl @Inject()(
 
     for {
       // register the result data set (if not registered already)
-      newDsa <- registerDerivedDataSet(dsafs.head, resultDataSetId, resultDataSetName, resultStorageType)
+      newDsa <- registerDerivedDataSet(dsafs.head, resultDataSetSpec)
 
       newFieldRepo = newDsa.fieldRepo
 
@@ -624,7 +618,7 @@ class DataSetServiceImpl @Inject()(
 
       // delete all the data
       _ <- {
-        logger.info(s"Deleting all the data for '${resultDataSetId}'.")
+        logger.info(s"Deleting all the data for '${resultDataSetSpec.id}'.")
         newDataRepo.deleteAll
       }
 
@@ -659,9 +653,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def mergeDataSetsWoInference(
-    resultDataSetId: String,
-    resultDataSetName: String,
-    resultStorageType: StorageType.Value,
+    resultDataSetSpec: ResultDataSetSpec,
     dataSetIds: Seq[String],
     fieldNames: Seq[Seq[Option[String]]],
     keyField: Option[String] = None,
@@ -676,7 +668,7 @@ class DataSetServiceImpl @Inject()(
 
     for {
       // register the result data set (if not registered already)
-      newDsa <- registerDerivedDataSet(dsafs.head, resultDataSetId, resultDataSetName, resultStorageType)
+      newDsa <- registerDerivedDataSet(dsafs.head, resultDataSetSpec)
 
       newFieldRepo = newDsa.fieldRepo
 
@@ -733,7 +725,7 @@ class DataSetServiceImpl @Inject()(
 
       // delete all the data if a key field is not defined
       _ <- if (keyField.isEmpty) {
-        logger.info(s"Deleting all the data for '${resultDataSetId}'.")
+        logger.info(s"Deleting all the data for '${resultDataSetSpec.id}'.")
         newDataRepo.deleteAll
       } else
         Future(())
@@ -895,7 +887,7 @@ class DataSetServiceImpl @Inject()(
 
     for {
       // register the result data set (if not registered already)
-      linkedDsa <- registerDerivedDataSet(leftDsa, spec.resultDataSetId, spec.resultDataSetName, spec.resultStorageType)
+      linkedDsa <- registerDerivedDataSet(leftDsa, spec.resultDataSetSpec)
 
       // get all the left data set fields
       leftFieldTypeMap <- fieldTypeMap(leftDsa.fieldRepo, leftFieldNames)
@@ -1067,7 +1059,7 @@ class DataSetServiceImpl @Inject()(
 
     for {
       // register the result data set (if not registered already)
-      linkedDsa <- registerDerivedDataSet(leftDataSetInfo.dsa, spec.resultDataSetId, spec.resultDataSetName, spec.resultStorageType)
+      linkedDsa <- registerDerivedDataSet(leftDataSetInfo.dsa, spec.resultDataSetSpec)
 
       // get all the left data set fields
       leftFieldTypeMap <- fieldTypeMap(leftDataSetInfo)
@@ -1251,12 +1243,12 @@ class DataSetServiceImpl @Inject()(
       throw new AdaException(s"Data set id ${spec.sourceDataSetId} not found."))
 
     val processingBatchSize = spec.processingBatchSize.getOrElse(20)
-    val saveBatchSize = spec.core.saveBatchSize.getOrElse(5)
+    val saveBatchSize = spec.saveBatchSize.getOrElse(5)
     val preserveFieldNameSet = spec.preserveFieldNames.toSet
 
     for {
       // register the result data set (if not registered already)
-      newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetId, spec.resultDataSetName, spec.resultStorageType)
+      newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetSpec)
 
       // get all the fields
       fields <- dsa.fieldRepo.find()
@@ -1305,12 +1297,12 @@ class DataSetServiceImpl @Inject()(
       throw new AdaException(s"Data set id ${spec.sourceDataSetId} not found."))
 
     val processingBatchSize = spec.processingBatchSize.getOrElse(20)
-    val saveBatchSize = spec.core.saveBatchSize.getOrElse(5)
+    val saveBatchSize = spec.saveBatchSize.getOrElse(5)
     val preserveFieldNameSet = spec.preserveFieldNames.toSet
 
     for {
     // register the result data set (if not registered already)
-      newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetId, spec.resultDataSetName, spec.resultStorageType)
+      newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetSpec)
 
       // get all the fields
       fields <- dsa.fieldRepo.find()
@@ -1525,9 +1517,7 @@ class DataSetServiceImpl @Inject()(
 
   private def registerDerivedDataSet(
     sourceDsa: DataSetAccessor,
-    resultDataSetId: String,
-    resultDataSetName: String,
-    resultStorageType: StorageType.Value
+    spec: ResultDataSetSpec
   ): Future[DataSetAccessor] = {
     val metaInfoFuture = sourceDsa.metaInfo
     val settingFuture = sourceDsa.setting
@@ -1545,8 +1535,8 @@ class DataSetServiceImpl @Inject()(
 
       // register the norm data set (if not registered already)
       newDsa <- dsaf.register(
-        metaInfo.copy(_id = None, id = resultDataSetId, name = resultDataSetName, timeCreated = new ju.Date()),
-        Some(setting.copy(_id = None, dataSetId = resultDataSetId, storageType = resultStorageType)),
+        metaInfo.copy(_id = None, id = spec.id, name = spec.name, timeCreated = new ju.Date()),
+        Some(setting.copy(_id = None, dataSetId = spec.id, storageType = spec.storageType)),
         dataViews.find(_.default)
       )
     } yield
@@ -1862,6 +1852,46 @@ class DataSetServiceImpl @Inject()(
           logger.info(s"Saving ${newJsons.size} items.")
           newDataSetRepo.save(newJsons)
         }.runWith(Sink.ignore)
+    } yield
+      ()
+  }
+
+  private def dropFields(
+    spec: DropFieldsSpec
+  ): Future[Unit] = {
+    val sourceDsa = dsaf(spec.sourceDataSetId).get
+
+    val processingBatchSize = spec.processingBatchSize.getOrElse(10)
+    val parallelism = spec.parallelism.getOrElse(4)
+
+    for {
+      // get the fields except those to drop
+      fields <- sourceDsa.fieldRepo.find(Seq(FieldIdentity.name #!-> spec.fieldNamesToDrop.toSeq))
+
+      // input data stream
+      stream <- sourceDsa.dataSetRepo.findAsStream(projection = fields.map(_.name))
+
+      // register a new data set
+      resultDsa <- registerDerivedDataSet(sourceDsa, spec.resultDataSetSpec)
+
+      // delete all the new fields (if any)
+      _ <- resultDsa.fieldRepo.deleteAll
+
+      // save the new fields (minus the dropped ones)
+      _ <- resultDsa.fieldRepo.save(fields)
+
+      // delete the new data set if needed
+      _ <- resultDsa.dataSetRepo.deleteAll
+
+      // group and save the stream as it goes
+      _ <- {
+        logger.info(s"Streaming data from ${spec.sourceDataSetId} to ${spec.resultDataSetId}...")
+        stream
+          .grouped(processingBatchSize)
+          .buffer(spec.backpressureBufferSize, OverflowStrategy.backpressure)
+          .mapAsync(parallelism)(resultDsa.dataSetRepo.save)
+          .runWith(Sink.ignore)
+      }
     } yield
       ()
   }

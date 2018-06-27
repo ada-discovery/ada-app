@@ -327,7 +327,7 @@ class MPowerChallengeClusteringController @Inject()(
       rankJson <- dsa.dataSetRepo.max(rankFieldName, Nil)
 
       // create widgets
-      widgetsAndFieldNames <- {
+      widgets <- {
         val fieldNameSet = fields.map(_.name).toSet
 
         val filteredWidgetSpecs = widgetSpecs.filter(_.fieldNames.forall(fieldNameSet.contains))
@@ -341,11 +341,9 @@ class MPowerChallengeClusteringController @Inject()(
         )
       }
     } yield {
-      val widgets = widgetsAndFieldNames.flatMap(_.map(_._1))
-
       def round4(value: Double) = Math.round(value * 10000).toDouble / 10000
 
-      val newWidgets = widgets.map { widget =>
+      val newWidgets = widgets.flatten.map { widget =>
         widget match {
           case x: ScatterWidget[Double, Double] =>
             val newData =

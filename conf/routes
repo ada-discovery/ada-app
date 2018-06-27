@@ -95,15 +95,15 @@ GET         /dataSets/distribution                                              
 GET         /dataSets/distributionWidget                                             controllers.dataset.DataSetDispatcher.getDistributionWidget(fieldName: String, groupFieldName: Option[String] ?= None, filterId: Option[BSONObjectID])
 GET         /dataSets/correlations                                                   controllers.dataset.DataSetDispatcher.getCorrelations(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 POST        /dataSets/calcCorrelations                                               controllers.dataset.DataSetDispatcher.calcCorrelations(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /dataSets/getIndependenceTest                                            controllers.dataset.DataSetDispatcher.getIndependenceTest(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
+POST        /dataSets/testIndependence                                               controllers.dataset.DataSetDispatcher.testIndependence(filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /dataSets/cumulativeCount                                                controllers.dataset.DataSetDispatcher.getCumulativeCount(fieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /dataSets/clusterization                                                 controllers.dataset.DataSetDispatcher.getClusterization
-GET         /dataSets/getIndependenceTest                                            controllers.dataset.DataSetDispatcher.getIndependenceTest
 GET         /dataSets/getSeriesProcessingSpec                                        controllers.dataset.DataSetDispatcher.getSeriesProcessingSpec
 POST        /dataSets/runSeriesProcessing                                            controllers.dataset.DataSetDispatcher.runSeriesProcessing
 GET         /dataSets/getSeriesTransformationSpec                                    controllers.dataset.DataSetDispatcher.getSeriesTransformationSpec
 POST        /dataSets/runSeriesTransformation                                        controllers.dataset.DataSetDispatcher.runSeriesTransformation
 POST        /dataSets/cluster                                                        controllers.dataset.DataSetDispatcher.cluster(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterId: Option[BSONObjectID], featuresNormalizationType: Option[models.ml.VectorTransformType.Value], pcaDims: Option[Int])
-POST        /dataSets/testIndependence                                               controllers.dataset.DataSetDispatcher.testIndependence(filterId: Option[BSONObjectID])
 GET         /dataSets/fractalis                                                      controllers.dataset.DataSetDispatcher.getFractalis(fieldName: Option[String] ?= None)
 GET         /dataSets/table                                                          controllers.dataset.DataSetDispatcher.getTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
 GET         /dataSets/widgetPanelAndTable                                            controllers.dataset.DataSetDispatcher.getWidgetPanelAndTable(dataViewId: BSONObjectID, tablePage: Int, tableOrder: String, filterOrId: Either[Seq[models.FilterCondition], BSONObjectID])
@@ -167,6 +167,7 @@ GET         /dataSets/dataviews/addBoxPlot                                      
 GET         /dataSets/dataviews/addBasicStats                                        controllers.dataset.DataViewDispatcher.addBasicStats(dataViewId: BSONObjectID, fieldNames: Seq[String])
 GET         /dataSets/dataviews/addScatter                                           controllers.dataset.DataViewDispatcher.addScatter(dataViewId: BSONObjectID, xFieldName: String, yFieldName: String, groupFieldName: Option[String])
 GET         /dataSets/dataviews/addCorrelation                                       controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId: BSONObjectID, fieldNames: Seq[String])
+GET         /dataSets/dataviews/addIndependenceTest                                  controllers.dataset.DataViewDispatcher.addIndependenceTest(dataViewId: BSONObjectID, fieldName: String, inputFieldNames: Seq[String])
 GET         /dataSets/dataviews/addTableFields                                       controllers.dataset.DataViewDispatcher.addTableFields(dataViewId: BSONObjectID, fieldNames: Seq[String])
 GET         /dataSets/dataviews/saveFilter                                           controllers.dataset.DataViewDispatcher.saveFilter(dataViewId: BSONObjectID, filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]])
 

@@ -12,7 +12,7 @@ trait OneWayAnovaTestCalcTypePack[G] extends NoOptionsCalculatorTypePack{
   type INTER = Traversable[(Option[G], BasicStatsAccum)]
 }
 
-private class OneWayAnovaTestCalc[G] extends Calculator[OneWayAnovaTestCalcTypePack[G]] with OneWayAnovaHelper {
+private[stats] class OneWayAnovaTestCalc[G] extends Calculator[OneWayAnovaTestCalcTypePack[G]] with OneWayAnovaHelper {
 
   private val basicStatsCalc = GroupBasicStatsCalc[G]
 
@@ -118,7 +118,7 @@ case class OneWayAnovaResult(
   FValue: Double,
   dfbg: Int, // degree of freedom between groups, degree of freedom in numerator
   dfwg: Int // degree of freedom within groups, degree of freedom in denominator
-)
+) extends IndependenceTestResult
 
 object OneWayAnovaTestCalc {
   def apply[G]: Calculator[OneWayAnovaTestCalcTypePack[G]] = new OneWayAnovaTestCalc[G]

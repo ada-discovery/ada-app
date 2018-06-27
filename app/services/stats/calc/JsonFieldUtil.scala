@@ -158,6 +158,43 @@ object JsonFieldUtil {
     jsonToSeqAux(valueGets)
   }
 
+  def jsonToNumericValue[T](
+    field: Field)(
+    implicit ftf: FieldTypeFactory
+  ) = {
+    val converter = jsonToValue[T](field)
+
+    field.fieldType match {
+      case FieldTypeId.Date =>
+        (jsObject: JsObject) =>
+          converter(jsObject).map(
+            _.asInstanceOf[java.util.Date].getTime.asInstanceOf[T]
+          )
+
+      case _ =>
+        converter
+    }
+  }
+
+  def jsonToArrayNumericValue[T](
+    field: Field)(
+    implicit ftf: FieldTypeFactory
+  ) = {
+    val converter = jsonToArrayValue[T](field)
+
+    field.fieldType match {
+      case FieldTypeId.Date =>
+        (jsObject: JsObject) =>
+          converter(jsObject).map(_.map(
+            _.asInstanceOf[java.util.Date].getTime.asInstanceOf[T])
+          )
+
+      case _ =>
+        converter
+    }
+  }
+
+  // aux methods
   private def doubleGets(
     fields: Seq[Field])(
     implicit ftf: FieldTypeFactory

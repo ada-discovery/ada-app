@@ -4,6 +4,7 @@ import java.{util => ju}
 
 import dataaccess.{FieldType, FieldTypeHelper}
 import models.{FieldTypeId, FieldTypeSpec}
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.feature.{QuantileDiscretizer, StringIndexer, VectorAssembler}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types._
@@ -85,7 +86,9 @@ object FeaturesDataFrameFactory {
     val valueBroadVar = session.sparkContext.broadcast(values)
     val size = values.size
 
-    val data = session.sparkContext.range(0, size).map { index =>
+    val data: RDD[Row] = session.sparkContext.range(0, size).map { index =>
+      if (index == 0)
+        println(s"Creating Spark rows from a broadcast variable of size ${size}")
       Row.fromSeq(valueBroadVar.value(index.toInt))
     }
 
@@ -101,6 +104,8 @@ object FeaturesDataFrameFactory {
     val structTypes = (inputFieldNames ++ Seq(outputFieldName)).map(StructField(_, DoubleType, true))
 
     val df = session.createDataFrame(data, StructType(structTypes))
+
+    df.cache()
 
     df.transform(
       prepFeaturesDataFrame(inputFieldNames.toSet, Some(outputFieldName), true)
@@ -145,6 +150,19 @@ object FeaturesDataFrameFactory {
     fieldNameAndTypes: Seq[(String, FieldType[_])],
     stringFieldsNotToIndex: Set[String] = Set()
   ): DataFrame = {
+    val (df, broadcastVar) = jsonsToDataFrameAux(session)(jsons, fieldNameAndTypes, stringFieldsNotToIndex)
+
+    df.cache()
+    broadcastVar.unpersist()
+    df
+  }
+
+  private def jsonsToDataFrameAux(
+    session: SparkSession)(
+    jsons: Traversable[JsObject],
+    fieldNameAndTypes: Seq[(String, FieldType[_])],
+    stringFieldsNotToIndex: Set[String] = Set()
+  ): (DataFrame, Broadcast[_]) = {
     val values = jsons.toSeq.map( json =>
       fieldNameAndTypes.map { case (fieldName, fieldType) =>
         fieldType.spec.fieldType match {
@@ -164,8 +182,12 @@ object FeaturesDataFrameFactory {
     val size = values.size
 
     val data: RDD[Row] = session.sparkContext.range(0, size).map { index =>
+      if (index == 0)
+        println(s"Creating Spark rows from a broadcast variable of size ${size}")
       Row.fromSeq(valueBroadVar.value(index.toInt))
     }
+
+    data.cache()
 
     val structTypes = fieldNameAndTypes.map { case (fieldName, fieldType) =>
       val sparkFieldType: DataType = fieldType.spec.fieldType match {
@@ -194,7 +216,7 @@ object FeaturesDataFrameFactory {
     //    df = session.createDataFrame(rdd_of_rows)
     val df = session.createDataFrame(data, StructType(structTypes))
 
-    stringTypes.foldLeft(df){ case (newDf, stringType) =>
+    val finalDf = stringTypes.foldLeft(df){ case (newDf, stringType) =>
       if (!stringFieldsNotToIndex.contains(stringType.name)) {
         val randomIndex = Random.nextLong()
         val indexer = new StringIndexer().setInputCol(stringType.name).setOutputCol(stringType.name + randomIndex)
@@ -203,6 +225,8 @@ object FeaturesDataFrameFactory {
         newDf
       }
     }
+
+    (finalDf, valueBroadVar)
   }
 
   private def discretizeAsQuantiles(

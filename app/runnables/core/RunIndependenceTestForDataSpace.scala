@@ -12,6 +12,7 @@ import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import runnables.InputFutureRunnable
 import services.stats.StatsService
+import services.stats.calc.{ChiSquareResult, OneWayAnovaResult}
 import util.writeByteArrayStream
 
 import scala.reflect.runtime.universe.typeOf
@@ -65,8 +66,8 @@ class RunIndependenceTestForDataSpace @Inject()(
     } yield
       statsService.testIndependence(jsons, Seq(inputField.get), targetField.get).head.map(
         _ match {
-          case Left(chiSquareResult) => Seq(dataSetId, chiSquareResult.pValue, chiSquareResult.statistics, chiSquareResult.degreeOfFreedom, "Chi-Square").mkString(delimiter)
-          case Right(anovaResult) => Seq(dataSetId, anovaResult.pValue, anovaResult.FValue, anovaResult.dfwg, "ANOVA").mkString(delimiter)
+          case x: ChiSquareResult => Seq(dataSetId, x.pValue, x.statistics, x.degreeOfFreedom, "Chi-Square").mkString(delimiter)
+          case x: OneWayAnovaResult => Seq(dataSetId, x.pValue, x.FValue, x.dfwg, "ANOVA").mkString(delimiter)
         }
       ).getOrElse(
         Seq(dataSetId, "", "", "").mkString(delimiter)

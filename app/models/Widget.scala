@@ -8,7 +8,8 @@ import play.api.libs.functional.syntax._
 import models.json._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import services.stats.calc.{BasicStatsResult, Quartiles}
+import services.stats.calc.{BasicStatsResult, IndependenceTestResult, Quartiles}
+import controllers.dataset.IndependenceTestResult.independenceTestResultFormat
 
 abstract class Widget {
   val title: String
@@ -86,6 +87,12 @@ case class BasicStatsWidget(
   title: String,
   fieldLabel: String,
   data: BasicStatsResult,
+  displayOptions: DisplayOptions = BasicDisplayOptions()
+) extends Widget
+
+case class IndependenceTestWidget(
+  title: String,
+  data: Seq[(String, IndependenceTestResult)],
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 
@@ -262,6 +269,10 @@ object Widget {
 
   implicit val basicStatsWidgetFormat = Json.format[BasicStatsWidget]
 
+  implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
+
+  implicit val independenceTestWidgetFormat = Json.format[IndependenceTestWidget]
+
   implicit val stringCountTupleFormat = TupleFormat[String, Traversable[Count[String]]]
 
   class WidgetWrites[T](
@@ -303,6 +314,9 @@ object Widget {
 
         case e: BasicStatsWidget =>
           basicStatsWidgetFormat.writes(e)
+
+        case e: IndependenceTestWidget =>
+          independenceTestWidgetFormat.writes(e)
 
         case e: HtmlWidget =>
           Json.format[HtmlWidget].writes(e)

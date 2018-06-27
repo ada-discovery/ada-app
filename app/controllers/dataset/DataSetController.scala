@@ -70,7 +70,15 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
+  def getIndependenceTest(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
   def calcCorrelations(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def testIndependence(
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
@@ -80,18 +88,12 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getClusterization: Action[AnyContent]
 
-  def getIndependenceTest: Action[AnyContent]
-
   def cluster(
     mlModelId: BSONObjectID,
     inputFieldNames: Seq[String],
     filterId: Option[BSONObjectID],
     featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDims: Option[Int]
-  ): Action[AnyContent]
-
-  def testIndependence(
-    filterId: Option[BSONObjectID]
   ): Action[AnyContent]
 
   def getSeriesProcessingSpec: Action[AnyContent]

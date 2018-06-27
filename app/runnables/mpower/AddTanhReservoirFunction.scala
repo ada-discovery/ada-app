@@ -7,12 +7,12 @@ import runnables.DsaInputFutureRunnable
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AddTanhReservoirFunction extends DsaInputFutureRunnable[DataSetSpec] {
+class AddTanhReservoirFunction extends DsaInputFutureRunnable[AddTanhReservoirFunctionSpec] {
 
   private val funFieldName = "setting-reservoirFunctionType"
   private val tanhJsValue = JsNumber(ActivationFunctionType.Tanh.ordinal())
 
-  override def runAsFuture(spec: DataSetSpec) = {
+  override def runAsFuture(spec: AddTanhReservoirFunctionSpec) = {
     val repo = dataSetRepo(spec.dataSetId)
 
     for {
@@ -35,7 +35,7 @@ class AddTanhReservoirFunction extends DsaInputFutureRunnable[DataSetSpec] {
       ()
   }
 
-  override def inputType = typeOf[DataSetSpec]
+  override def inputType = typeOf[AddTanhReservoirFunctionSpec]
 }
 
-case class DataSetSpec(dataSetId: String)
+case class AddTanhReservoirFunctionSpec(dataSetId: String)

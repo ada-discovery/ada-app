@@ -3,8 +3,10 @@ package runnables.mpower
 import javax.inject.Inject
 
 import models.StorageType
+import models.ml.ResultDataSetSpec
 import runnables.{FutureRunnable, GuiceBuilderRunnable, InputFutureRunnable}
 import services.DataSetService
+
 import scala.reflect.runtime.universe.typeOf
 
 class MergeMPowerTrainingTestingNormsDiffDataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnable[MergeMPowerTrainingTestingNormsDiffDataSetsSpec] {
@@ -63,9 +65,11 @@ class MergeMPowerTrainingTestingNormsDiffDataSets @Inject()(dataSetService: Data
 
   override def runAsFuture(input: MergeMPowerTrainingTestingNormsDiffDataSetsSpec) = {
     dataSetService.mergeDataSetsWoInference(
-      mergedDataSetId,
-      mergedDataSetName,
-      StorageType.Mongo,
+      ResultDataSetSpec(
+        mergedDataSetId,
+        mergedDataSetName,
+        StorageType.Mongo
+      ),
       Seq(dataSet1, dataSet2),
       fieldNameMappings,
       if (input.useDeltaInsert) Some("recordId") else None,

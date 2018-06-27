@@ -69,6 +69,12 @@ trait DataViewController extends CrudController[BSONObjectID] {
     fieldNames: Seq[String]
   ): Action[AnyContent]
 
+  def addIndependenceTest(
+    dataViewId: BSONObjectID,
+    fieldName: String,
+    inputFieldNames: Seq[String]
+  ): Action[AnyContent]
+
   def addTableFields(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]

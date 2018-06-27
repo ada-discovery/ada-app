@@ -86,6 +86,10 @@
                 fieldLabelElements(Seq(
                     ("fieldNameTypeahead", x.fieldName)
                 ))
+            case x: IndependenceTestWidgetSpec =>
+                fieldLabelElements(Seq(
+                    ("fieldNameTypeahead", x.fieldName)
+                ))
             case _ => ""
         }
     }
@@ -162,6 +166,11 @@
                             Some("Y Bin Count: " + x.yBinCount)
                         )
 
+                    case x: IndependenceTestWidgetSpec =>
+                        Seq(
+                            Some("Keep Undefined: " + x.keepUndefined)
+                        )
+
                     case x: TemplateHtmlWidgetSpec =>
                         Seq(
                             Some("Content: " + Html(util.shorten(x.content, 50)))
@@ -218,6 +227,7 @@
         var isCorrelationType = concreteClass == "@{classOf[CorrelationWidgetSpec].getName}"
         var isHeatmapAggType = concreteClass == "@{classOf[HeatmapAggWidgetSpec].getName}"
         var isGridDistributionCountType = concreteClass == "@{classOf[GridDistributionCountWidgetSpec].getName}"
+        var isIndependenceTest = concreteClass == "@{classOf[IndependenceTestWidgetSpec].getName}"
         var isTemplateHtmlType = concreteClass == "@{classOf[TemplateHtmlWidgetSpec].getName}"
 
         var xyFieldsDefined = values["xFieldName"] != null && values["xFieldName"].length > 0 && values["yFieldName"] != null && values["yFieldName"].length > 0
@@ -240,6 +250,10 @@
 
         if (isCorrelationType) {
             isDefined = values["fieldNames"] != null && values["fieldNames"].length > 0
+        }
+
+        if (isIndependenceTest) {
+            isDefined = values["inputFieldNames"] != null && values["inputFieldNames"].length > 0 && values["fieldName"] != null && values["fieldName"].length > 0
         }
 
         var row = null
@@ -267,6 +281,7 @@
             var contentDisplayColumn = $("<td></td>")
             if (fieldLabels.length > 0)
                 contentDisplayColumn.append("<div class='row'>Fields: " + fieldLabels + "</div>")
+
 
             // DISPLAY ELEMENTS
             var displayElements = []
@@ -300,12 +315,20 @@
                 displayElements.push("Agg Type: " + values["aggType"])
             }
 
+            // independence test
+            if (isIndependenceTest) {
+                displayElements.push(", " + values["inputFieldNames"])
+                displayElements.push("Keep Undefined: " + values["keepUndefined"])
+            }
+
             var subFilterIdValue = values["subFilterId"]
 
             if (subFilterIdValue)
                 displayElements.push("Sub Filter Id: " + subFilterIdValue)
 
             contentDisplayColumn.append("<div class='row'>" + displayElements.join(", ") + "</div>")
+
+
 
             // DISPLAY OPTIONS
             var displayOptions = values["displayOptions"]
@@ -446,6 +469,12 @@
             }
         </div>
 
+        <div id="inputFieldNamesDiv" style="display: none">
+            @labelValueAux("inputFieldNames", "Input Fields") {
+                <input type="text" id="inputFieldNames">
+            }
+        </div>
+
         <div id="contentDiv" style="display: none">
             @labelValueAux("content", "Content") {
                 <textarea id="content" rows="15" cols="35"></textarea>
@@ -485,6 +514,12 @@
         <div id="yBinCountDiv" style="display: none">
             @labelValueAux("yBinCount", "Y Bins #") {
                 <input type="text" id="yBinCount">
+            }
+        </div>
+
+        <div id="keepUndefinedDiv" style="display: none">
+            @labelValueAux("keepUndefined", "Keep Undefined?") {
+                <input type="checkbox" id="keepUndefined"/>
             }
         </div>
 
@@ -603,7 +638,7 @@
         // numeric bin count is integer hence we need to do the setting again
         setIfNotNull(output, "numericBinCount", getIntValue("numericBinCount", 20))
 
-        // relative percentage is boolean hence we need to do the setting again
+        // relative values is boolean hence we need to do the setting again
         setIfNotNull(output, "relativeValues", getBoolValue("relativeValues"))
 
         // useDateMonthBins is boolean hence we need to do the setting again
@@ -617,6 +652,12 @@
 
         // fieldNames (of correlation widget) is array  hence we need to do the setting again
         setIfNotNull(output, "fieldNames", getArray("fieldNames"))
+
+        // inputFieldNames (of the chi-square and anova widgets) is array hence we need to do the setting again
+        setIfNotNull(output, "inputFieldNames", getArray("inputFieldNames"))
+
+        // keep undefined is boolean hence we need to do the setting again
+        setIfNotNull(output, "keepUndefined", getBoolValue("keepUndefined"))
 
         var subFilterId = getValue("subFilterId")
         if (subFilterId) {
@@ -650,6 +691,8 @@
         $("#" + modalName + " #xBinCountDiv").hide();
         $("#" + modalName + " #yBinCountDiv").hide();
         $("#" + modalName + " #useDateMonthBinsDiv").hide();
+        $("#" + modalName + " #excludeUndefined").hide();
+        $("#" + modalName + " #inputFieldNamesDiv").hide();
     }
 
     function showEditModal(source) {
@@ -667,6 +710,7 @@
         $('#edit_widgetSpecModal #groupFieldName').val(model["groupFieldName"]);
         $('#edit_widgetSpecModal #valueFieldName').val(model["valueFieldName"]);
         $('#edit_widgetSpecModal #fieldNames').val(model["fieldNames"]);
+        $('#edit_widgetSpecModal #inputFieldNames').val(model["inputFieldNames"]);
 
         $('#edit_widgetSpecModal #fieldNameTypeahead').val(model["fieldNameTypeahead"]);
         $('#edit_widgetSpecModal #xFieldNameTypeahead').val(model["xFieldNameTypeahead"]);
@@ -681,6 +725,8 @@
         $('#edit_widgetSpecModal #aggType').val(model["aggType"]);
         $('#edit_widgetSpecModal #relativeValues').prop('checked', model["relativeValues"]);
         $('#edit_widgetSpecModal #useDateMonthBins').prop('checked', model["useDateMonthBins"]);
+        $('#edit_widgetSpecModal #keepUndefined').prop('checked', model["keepUndefined"]);
+
         $('#edit_widgetSpecModal #content').val(model["content"]);
 
         var subFilterId = model["subFilterId"]
@@ -749,6 +795,9 @@
             case "@{classOf[CorrelationWidgetSpec].getName}" :
                 break;
             case "@{classOf[BasicStatsWidgetSpec].getName}" :
+                labelFields = ["fieldNameTypeahead"];
+                break;
+            case "@{classOf[IndependenceTestWidgetSpec].getName}" :
                 labelFields = ["fieldNameTypeahead"];
                 break;
             case "@{classOf[TemplateHtmlWidgetSpec].getName}" :

@@ -35,5 +35,5 @@ trait WidgetRepoController[E] {
 
       widgets <- wgs(widgetSpecs, jsonCaseClassRepo, criteria, Map(), fields, WidgetGenerationMethod.FullData)
   } yield
-      widgets.map(_.map(_._1))
+      widgets
 }

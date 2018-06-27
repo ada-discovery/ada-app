@@ -21,7 +21,7 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getCumulativeCount = routes.getCumulativeCount _ map route
   val getCorrelations = routes.getCorrelations _ map route
   val getClusterization = routeFun(_.getClusterization)
-  val getIndependenceTest = routeFun(_.getIndependenceTest)
+  val getIndependenceTest = routes.getIndependenceTest _ map route
   val getSeriesProcessingSpec = routeFun(_.getSeriesProcessingSpec)
   val runSeriesProcessing = routeFun(_.runSeriesProcessing)
   val getSeriesTransformationSpec = routeFun(_.getSeriesTransformationSpec)

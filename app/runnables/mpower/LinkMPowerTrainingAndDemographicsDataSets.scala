@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import models.StorageType
-import models.ml.{DataSetLink, DataSetTransformationCore}
+import models.ml.{DataSetLink, ResultDataSetSpec}
 import runnables.FutureRunnable
 import services.DataSetService
 
@@ -73,12 +73,12 @@ class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSe
     Seq("healthCode"),
     walkingFieldNames,
     demographicsFieldNames,
-    DataSetTransformationCore(
+    Some(1),
+    Some(1),
+    ResultDataSetSpec(
       "mpower_challenge.walking_activity_training_w_demographics",
       "Walking Activity Training with Demographics",
-      StorageType.Mongo,
-      Some(1),
-      Some(1)
+      StorageType.Mongo
     )
   )
 

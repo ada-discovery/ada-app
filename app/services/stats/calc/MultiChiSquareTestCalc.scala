@@ -5,13 +5,13 @@ import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import services.stats.CalculatorHelper._
 import util.AkkaStreamUtil.unzipNFlowsAndApply
 
-trait MultiChiSquareCalcTypePack[G, T] extends NoOptionsCalculatorTypePack {
+trait MultiChiSquareTestCalcTypePack[G, T] extends NoOptionsCalculatorTypePack {
   type IN = (Option[G], Seq[Option[T]])
   type OUT = Seq[Option[ChiSquareResult]]
   type INTER =  Seq[ChiSquareTestCalcTypePack[G, T]#INTER]
 }
 
-private class MultiChiSquareCalc[G, T] extends Calculator[MultiChiSquareCalcTypePack[G, T]] {
+private[stats] class MultiChiSquareTestCalc[G, T] extends Calculator[MultiChiSquareTestCalcTypePack[G, T]] {
 
   private val coreCalc = ChiSquareTestCalc[G, T]
 
@@ -45,6 +45,6 @@ private class MultiChiSquareCalc[G, T] extends Calculator[MultiChiSquareCalcType
     _.map(coreCalc.postFlow_(_))
 }
 
-object MultiChiSquareCalc {
-  def apply[G, T]: Calculator[MultiChiSquareCalcTypePack[G, T]] = new MultiChiSquareCalc[G, T]
+object MultiChiSquareTestCalc {
+  def apply[G, T]: Calculator[MultiChiSquareTestCalcTypePack[G, T]] = new MultiChiSquareTestCalc[G, T]
 }

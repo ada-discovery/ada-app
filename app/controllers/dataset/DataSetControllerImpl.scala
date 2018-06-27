@@ -23,7 +23,7 @@ import controllers.core._
 import org.apache.commons.lang3.StringEscapeUtils
 import models.FilterCondition.FilterOrId
 import models.Widget.WidgetWrites
-import models.json.{OptionFormat, TupleFormat}
+import models.json.{ManifestedFormat, OptionFormat, SubTypeFormat, TupleFormat}
 import models.ml._
 import persistence.RepoTypes.{ClassificationRepo, RegressionRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -42,11 +42,9 @@ import services.ml.MachineLearningService
 import views.html.dataset
 import models.ml.DataSetTransformation._
 import models.security.{SecurityRole, UserManager}
-import services.stats.ChiSquareResult.chiSquareResultFormat
-import services.stats.calc.OneWayAnovaResult
-import services.stats.{StatsService}
-import services.stats.OneWayAnovaResult.anovaResultFormat
-import services.stats.calc.ChiSquareResult
+import services.stats.calc.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult}
+import services.stats.StatsService
+import IndependenceTestResult.independenceTestResultFormat
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -124,28 +122,30 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private val fractalisServerUrl = configuration.getString("fractalis.server.url").getOrElse("https://fractalis.lcsb.uni.lu")
 
-  private val coreMapping: Mapping[DataSetTransformationCore] = mapping(
-    "resultDataSetId" -> nonEmptyText,
-    "resultDataSetName" -> nonEmptyText,
-    "resultStorageType" -> of[StorageType.Value],
-    "processingBatchSize" -> optional(number(min = 1, max = 200)),
-    "saveBatchSize" -> optional(number(min = 1, max = 200))
-  )(DataSetTransformationCore.apply)(DataSetTransformationCore.unapply)
+  private val resultDataSetMapping: Mapping[ResultDataSetSpec] = mapping(
+    "id" -> nonEmptyText,
+    "name" -> nonEmptyText,
+    "storageType" -> of[StorageType.Value]
+  )(ResultDataSetSpec.apply)(ResultDataSetSpec.unapply)
 
   private val seriesProcessingSpecForm = Form(
     mapping(
       "sourceDataSetId" -> ignored(dataSetId),
-      "core" -> coreMapping,
+      "resultDataSetSpec" -> resultDataSetMapping,
       "seriesProcessingSpecs" -> seq(of[SeriesProcessingSpec]),
-      "preserveFieldNames" -> seq(nonEmptyText)
+      "preserveFieldNames" -> seq(nonEmptyText),
+      "processingBatchSize" -> optional(number(min = 1, max = 200)),
+      "saveBatchSize" -> optional(number(min = 1, max = 200))
     )(DataSetSeriesProcessingSpec.apply)(DataSetSeriesProcessingSpec.unapply))
 
   private val seriesTransformationSpecForm = Form(
     mapping(
       "sourceDataSetId" -> ignored(dataSetId),
-      "core" -> coreMapping,
+      "resultDataSetSpec" -> resultDataSetMapping,
       "seriesTransformationSpecs" -> seq(of[SeriesTransformationSpec]),
-      "preserveFieldNames" -> seq(nonEmptyText)
+      "preserveFieldNames" -> seq(nonEmptyText),
+      "processingBatchSize" -> optional(number(min = 1, max = 200)),
+      "saveBatchSize" -> optional(number(min = 1, max = 200))
     )(DataSetSeriesTransformationSpec.apply)(DataSetSeriesTransformationSpec.unapply))
 
   override protected def listViewColumns = result(
@@ -439,17 +439,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
                 val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
                 val viewData = TableViewData(newPage, viewResponse.tableFields)
                 val method = dataView.map(_.generationMethod).getOrElse(WidgetGenerationMethod.Auto)
-                val widgetsFuture = getViewWidgets(filterOrId, widgetSpecs, widgetFieldMap, method)
+                val widgetsWithFieldsFuture = getViewWidgetsWithFields(filterOrId, widgetSpecs, widgetFieldMap, method)
 
-                (viewData, widgetsFuture)
+                (viewData, widgetsWithFieldsFuture)
             }
 
             val viewParts = viewPartsWidgetFutures.map(_._1)
-            val jsonsFuture = Future.sequence(viewPartsWidgetFutures.map(_._2)).map { allWidgets =>
+            val jsonsFuture = Future.sequence(viewPartsWidgetFutures.map(_._2)).map { allWidgetsWithFields =>
+              val allWidgets = allWidgetsWithFields.map(_.map(_.map(_._1)))
+              val allFieldNames = allWidgetsWithFields.map(_.flatMap(_.map(_._2)))
               val minMaxWidgets = if (allWidgets.size > 1) setBoxPlotMinMax(allWidgets) else allWidgets
-              minMaxWidgets.map( widgets =>
-                widgetsToJsons(widgets.toSeq, widgetSpecs, widgetFieldMap)
-              )
+              minMaxWidgets.zip(allFieldNames).map { case (widgets, fieldNames) =>
+                widgetsToJsons(widgets.toSeq, fieldNames.toSeq, widgetFieldMap)
+              }
             }
 
             jsonWidgetResponseCache.put(callbackId, jsonsFuture)
@@ -488,12 +490,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private def widgetsToJsons(
     widgets: Seq[Option[Widget]],
-    widgetSpecs: Seq[WidgetSpec],
+    fieldNames: Seq[Seq[String]],
     fieldMap: Map[String, Field]
   ): JsArray = {
-    val jsons = widgetSpecs.zip(widgets).flatMap { case (widgetSpec, widget) =>
+    val jsons = fieldNames.zip(widgets).flatMap { case (fieldNames, widget) =>
       widget.map(
-        widgetToJson(_, widgetSpec, fieldMap)
+        widgetToJson(_, fieldNames, fieldMap)
       )
     }
 
@@ -502,10 +504,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private def widgetToJson(
     widget: Widget,
-    widgetSpec: WidgetSpec,
+    fieldNames: Seq[String],
     fieldMap: Map[String, Field]
   ): JsValue = {
-    val fields = widgetSpec.fieldNames.map(fieldMap.get).flatten
+    val fields = fieldNames.map(fieldMap.get).flatten
     val fieldTypes = fields.map(field => ftf(field.fieldTypeSpec).asValueOf[Any])
 
     // make a scalar type out of it
@@ -737,12 +739,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       response
   }
 
-  private def getViewWidgets(
+  private def getViewWidgetsWithFields(
     filterOrId: FilterOrId,
     widgetSpecs: Seq[WidgetSpec],
     widgetFieldMap: Map[String, Field],
     generationMethod: WidgetGenerationMethod.Value
-  ): Future[Traversable[Option[Widget]]] = {
+  ): Future[Traversable[Option[(Widget, Seq[String])]]] = {
     // future to retrieve a filter
     val resolvedFilterFuture = filterRepo.resolve(filterOrId)
 
@@ -781,9 +783,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       }
 
-      widgetFields <- widgetService(widgetSpecs, repo, criteria, filterSubCriteria.toMap, fields, generationMethod)
+      widgetsWithFields <- widgetService.applyWithFields(widgetSpecs, repo, criteria, filterSubCriteria.toMap, fields, generationMethod)
     } yield
-      widgetFields.map(_.map(_._1))
+      widgetsWithFields
   }
 
   private def getViewResponseWoWidgets(
@@ -853,13 +855,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       count <- countFuture
 
       // generate the widgets
-      widgetsFields <- widgetsFuture
+      widgets <- widgetsFuture
 
       // load the table items
       tableItems <- tableItemsFuture
     } yield {
       val tableFields = tableFieldNames.map(nameFieldMap.get).flatten
-      val widgets = widgetsFields.map(_.map(_._1))
       val newFilter = setFilterLabels(filter, nameFieldMap)
       ViewResponse(count, widgets, tableItems, newFilter, tableFields)
     }
@@ -1087,9 +1088,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         (xField zip yField).headOption.map { case (xField, yField) =>
           val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, groupFieldName, None, displayOptions)
 
-          widgetService.genStreamed(widgetSpec, repo, criteria, fields).map { widget =>
+          widgetService.genStreamed(widgetSpec, repo, criteria, fields).map { widgets =>
             println(s"Scatter widget generated in ${new ju.Date().getTime - startTime.getTime} ms.")
-            widget
+            widgets.head
           }
         }.getOrElse(
           Future(None)
@@ -1207,7 +1208,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             dataSetName,
             field,
             groupField,
-            widgets.flatMap(_.map(_._1)).toSeq,
+            widgets.flatten.toSeq,
             newFilter,
             setting.filterShowFieldStyle,
             dataSpaceTree
@@ -1253,8 +1254,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           )
 
           val fields = Seq(field) ++ groupField
-          widgetService.genFromRepo(widgetSpec, repo, criteria, fields).map( widget =>
-            widget.map(widgetToJson(_, widgetSpec, fields.map( field => (field.name, field)).toMap))
+          widgetService.genFromRepo(widgetSpec, repo, criteria, fields).map( widgets =>
+            widgets.headOption.flatten.map(widgetToJson(_, widgetSpec.fieldNames, fields.map( field => (field.name, field)).toMap))
           )
         case None =>
           Future(None)
@@ -1336,9 +1337,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
 
       // generate a widget
-      widget <- widgetService.genStreamed(widgetSpec, repo, criteria, fields)
+      widgets <- widgetService.genStreamed(widgetSpec, repo, criteria, fields)
     } yield {
-      val widgetJson = widget.map { widget =>
+      val widgetJson = widgets.head.map { widget =>
         // if we have more than 50 fields for performance purposed we round correlation to 3 decimal places
         val newWidget =
           if (fields.size > 50) {
@@ -1347,7 +1348,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             heatmapWidget.copy(data = newData)
           } else
             widget
-        widgetToJson(newWidget, widgetSpec, fields.map( field => (field.name, field)).toMap)
+
+        widgetToJson(newWidget, widgetSpec.fieldNames, fields.map( field => (field.name, field)).toMap)
       }
 
       widgetJson match {
@@ -1408,7 +1410,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         criteria <- toCriteria(resolvedFilter.conditions)
 
         // retrieve the jsons/items with or without a group field and generate the widget
-        widget <-
+        widgets <-
           field.map { field =>
             val projection = Seq(field.name) ++ groupField.map(_.name)
             repo.find(criteria, Nil, projection.toSet).map { items =>
@@ -1422,7 +1424,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
               widgetService.genFromFullData(widgetSpec, items, Seq(field) ++ groupField)
             }
           }.getOrElse(
-            Future(None)
+            Future(Nil)
           )
 
         // create a name -> field map of the filter referenced fields
@@ -1435,7 +1437,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             dataSetName,
             field,
             groupField,
-            widget,
+            widgets.head,
             newFilter,
             setting.filterShowFieldStyle,
             dataSpaceTree
@@ -1574,28 +1576,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
   }
 
-  override def getIndependenceTest = Action.async { implicit request =>
-    {
-      for {
-      // get the data set name, data space tree and the data set setting
-        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
-      } yield {
-        render {
-          case Accepts.Html() => Ok(dataset.independenceTest(
-            dataSetName,
-            setting.filterShowFieldStyle,
-            tree
-          ))
-          case Accepts.Json() => BadRequest("getIndependenceTest function doesn't support JSON response.")
-        }
-      }
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the getIndependenceTest process")
-        InternalServerError(t.getMessage)
-    }
-  }
-
   private def getDataSetNameTreeAndSetting(request: Request[_]): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
     val dataSetNameFuture = dsa.dataSetName
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
@@ -1670,7 +1650,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
             val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, Some(clusterClassField.name), None, displayOptions)
 
             // generate a scatter widget
-            widgetService.genFromFullData(widgetSpec, jsonsWithClasses, Seq(xField, yField, clusterClassField))
+            widgetService.genFromFullData(widgetSpec, jsonsWithClasses, Seq(xField, yField, clusterClassField)).head
           }
 
           // Transform Scatters into JSONs
@@ -1689,9 +1669,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
           val testResults = statsService.testIndependenceSorted(jsonsWithClasses, fields, clusterClassField)
 
+          implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
+
           // Create JSON results
           val jsonResults = testResults.flatMap { case (field, result) =>
-            testResultToJson(field.name, result, fieldNameLabelMap)
+            val fieldLabel = fieldNameLabelMap.get(field.name).get
+
+            result.map( result =>
+              Json.toJson((fieldLabel, result))
+            )
           }
 
           Ok(Json.obj(
@@ -1705,8 +1691,44 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
   }
 
+  override def getIndependenceTest(
+    filterOrId: FilterOrId
+  ) = Action.async { implicit request => {
+    val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting(request)
+    val filterFuture = filterRepo.resolve(filterOrId)
+
+    for {
+      // get the data set name, the data space tree, and the setting
+      (dataSetName, dataSpaceTree, setting) <- dataSetNameTreeSettingFuture
+
+      // use a given filter conditions or load one
+      resolvedFilter <- filterFuture
+
+      // create a name -> field map of the filter referenced fields
+      fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
+    } yield {
+      // get a new filter
+      val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+
+      render {
+        case Accepts.Html() => Ok(dataset.independenceTest(
+          dataSetName,
+          newFilter,
+          setting.filterShowFieldStyle,
+          dataSpaceTree
+        ))
+        case Accepts.Json() => BadRequest("GetIndependenceTest function doesn't support JSON response.")
+      }
+    }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the GetIndependenceTest method")
+        InternalServerError(t.getMessage)
+    }
+  }
+
   override def testIndependence(
-    filterId: Option[BSONObjectID]
+    filterOrId: FilterOrId
   ) = Action.async { implicit request =>
     val (inputFieldNames, targetFieldName) = request.body.asFormUrlEncoded.map { inputs =>
       val x = inputs.get("inputFieldNames[]").getOrElse(Nil)
@@ -1717,13 +1739,13 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     if (inputFieldNames.isEmpty || targetFieldName.isEmpty)
       Future(BadRequest("No input provided."))
     else
-      testIndependenceAux(targetFieldName.get, inputFieldNames, filterId)
+      testIndependenceAux(targetFieldName.get, inputFieldNames, filterOrId)
   }
 
   private def testIndependenceAux(
     targetFieldName: String,
     inputFieldNames: Seq[String],
-    filterId: Option[BSONObjectID]
+    filterOrId: FilterOrId
   ): Future[Result] = {
     val explFieldNamesToLoads =
       if (inputFieldNames.nonEmpty)
@@ -1732,7 +1754,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         Nil
 
     for {
-      criteria <- loadCriteria(filterId)
+      // use a given filter conditions or load one
+      resolvedFilter <- filterRepo.resolve(filterOrId)
+
+        // criteria
+      criteria <- toCriteria(resolvedFilter.conditions)
 
       (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria ++ Seq(NotEqualsNullCriterion(targetFieldName)))
     } yield {
@@ -1743,11 +1769,14 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
       val resultsSorted = statsService.testIndependenceSorted(jsons, inputFields, outputField)
 
+      implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
+
       // create jsons
-      val jsonResults = resultsSorted.flatMap { case (field, result) =>
-        testResultToJson(field.name, result, fieldNameLabelMap)
+      val labelResults = resultsSorted.flatMap { case (field, result) =>
+        val fieldLabel = fieldNameLabelMap.get(field.name).get
+        result.map((fieldLabel, _))
       }
-      Ok(JsArray(jsonResults))
+      Ok(Json.toJson(labelResults))
     }
   }
 
@@ -1789,25 +1818,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     Json.obj("title" -> scatter.title, "xAxisCaption" -> scatter.xAxisCaption, "yAxisCaption" -> scatter.yAxisCaption, "data" -> JsArray(seriesJsons))
   }
 
-  // TODO: this is ugly... fix by introducing a proper JSON formatter
-  private def testResultToJson(
-    fieldName: String,
-    result: Option[Either[ChiSquareResult, OneWayAnovaResult]],
-    fieldNameLabelMap: Map[String, String]
-  ): Option[JsObject] = {
-    val fieldLabel = fieldNameLabelMap.get(fieldName).get
-
-    result.map {
-      _ match {
-        case Left(chiSquareResult) =>
-          Json.obj("fieldLabel" -> fieldLabel, "result" -> Json.toJson(chiSquareResult))
-
-        case Right(anovaResult) =>
-          Json.obj("fieldLabel" -> fieldLabel, "result" -> Json.toJson(anovaResult))
-      }
-    }
-  }
-
   @Deprecated
   override def getFields(
     fieldTypeIds: Seq[FieldTypeId.Value]
@@ -1824,16 +1834,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     } yield {
       implicit val fieldFormat = DataSetFormattersAndIds.fieldFormat
       Ok(Json.toJson(fields))
-    }
-  }
-
-  @Deprecated
-  private def getFieldNames = Action.async { implicit request =>
-    for {
-      fields <- fieldRepo.find(sort = Seq(AscSort("name")))
-    } yield {
-      val fieldNames = fields.map(_.name)
-      Ok(Json.toJson(fieldNames))
     }
   }
 
@@ -2152,3 +2152,12 @@ case class DataSetShowViewDataHolder(
   fieldNameLabelAndRendererMap: Map[String, (String, JsReadable => String)],
   dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )
+
+object IndependenceTestResult {
+  implicit val independenceTestResultFormat: Format[IndependenceTestResult] = new SubTypeFormat[IndependenceTestResult] (
+    Seq(
+      ManifestedFormat(Json.format[ChiSquareResult]),
+      ManifestedFormat(Json.format[OneWayAnovaResult])
+    )
+  )
+}

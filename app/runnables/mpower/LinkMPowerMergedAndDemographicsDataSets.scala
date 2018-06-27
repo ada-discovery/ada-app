@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import models.StorageType
-import models.ml.{DataSetLink, DataSetTransformationCore}
+import models.ml.{DataSetLink, ResultDataSetSpec}
 import runnables.{FutureRunnable, InputFutureRunnable}
 import services.DataSetService
 import scala.reflect.runtime.universe.typeOf
@@ -56,12 +56,12 @@ class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetS
     Seq("healthCode"),
     walkingFieldNames,
     demographicsFieldNames,
-    DataSetTransformationCore(
+    input.processingBatchSize,
+    input.saveBatchSize,
+    ResultDataSetSpec(
       "mpower_challenge.walking_activity_2_w_demographics",
       "Merged Activity with Demographics",
-      StorageType.Mongo,
-      input.processingBatchSize,
-      input.saveBatchSize
+      StorageType.Mongo
     )
   )
 

@@ -35,6 +35,9 @@ class SparkApp @Inject() (configuration: Configuration) {
     .set("spark.worker.cleanup.interval", "900")
     .setJars(configuration.getStringSeq("spark.driver.jars").getOrElse(Nil))
     .setAll(settings)
+    .registerKryoClasses(Array(
+      classOf[scala.collection.mutable.ArraySeq[_]]
+    ))
 
   val session = SparkSession
     .builder()
