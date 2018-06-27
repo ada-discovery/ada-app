@@ -216,6 +216,7 @@ function genericWidget(widget, filterElementId) {
             case "models.HtmlWidget": htmlWidget(elementIdVal, widget); break;
             case 'models.LineWidget': lineWidget(elementIdVal, widget); break;
             case "models.BasicStatsWidget": basicStatsWidget(elementIdVal, widget); break;
+            case "models.IndependenceTestWidget": independenceTestWidget(elementIdVal, widget); break;
             default: console.log("Widget type" + widget.concreteClass + " unrecognized.")
         }
 }
@@ -353,6 +354,30 @@ function basicStatsWidget(elementId, widget) {
     var div = $("<div style='position: relative; overflow: hidden; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
 
     var table = createTable(columnNames, data)
+
+    div.append(caption)
+
+    var centerWrapper = $("<table align='center'>")
+    var tr = $("<tr class='vertical-divider' valign='top'>")
+    var td = $("<td>")
+
+    td.append(table)
+    tr.append(td)
+    centerWrapper.append(tr)
+    div.append(centerWrapper)
+
+    $('#' + elementId).html(div)
+}
+
+function independenceTestWidget(elementId, widget) {
+    var caption = "<h4 align='center'>" + widget.title + "</h4>"
+
+    var height = widget.displayOptions.height || 400
+    var div = $("<div style='position: relative; overflow: hidden; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
+
+    console.log(widget)
+
+    var table = createIndependenceTestTable(widget.data)
 
     div.append(caption)
 

@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.CalculatorHelper._
-import services.stats.calc.{MultiOneWayAnovaCalc, OneWayAnovaTestCalc, OneWayAnovaResult}
+import services.stats.calc.{MultiOneWayAnovaTestCalc, OneWayAnovaTestCalc, OneWayAnovaResult}
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -63,7 +63,7 @@ class MultiOneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatcher
   private val randomInputSize = 100
   private val randomFeaturesNum = 25
 
-  private val calc = MultiOneWayAnovaCalc[String]
+  private val calc = MultiOneWayAnovaTestCalc[String]
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()

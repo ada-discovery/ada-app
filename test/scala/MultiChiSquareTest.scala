@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import org.scalatest._
 import services.stats.CalculatorHelper._
-import services.stats.calc.{ChiSquareResult, MultiChiSquareCalc}
+import services.stats.calc.{ChiSquareResult, MultiChiSquareTestCalc}
 
 import scala.concurrent.{Await, Future}
 import scala.util.Random
@@ -44,7 +44,7 @@ class MultiChiSquareTest extends AsyncFlatSpec with Matchers with ExtraMatchers 
   private val randomInputSize = 5000
   private val randomFeaturesNum = 10
 
-  private val calc = MultiChiSquareCalc[String, Int]
+  private val calc = MultiChiSquareTestCalc[String, Int]
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()

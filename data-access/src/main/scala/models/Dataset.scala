@@ -184,6 +184,16 @@ case class CorrelationWidgetSpec(
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
 ) extends WidgetSpec
 
+case class IndependenceTestWidgetSpec(
+  fieldName: String,
+  inputFieldNames: Seq[String],
+  keepUndefined: Boolean = false,
+  subFilterId: Option[BSONObjectID] = None,
+  displayOptions: BasicDisplayOptions = BasicDisplayOptions()
+) extends WidgetSpec {
+  override val fieldNames = Seq(fieldName) ++ inputFieldNames
+}
+
 case class BasicStatsWidgetSpec(
   fieldName: String,
   subFilterId: Option[BSONObjectID] = None,
@@ -347,6 +357,7 @@ object DataSetFormattersAndIds {
       ManifestedFormat(Json.format[HeatmapAggWidgetSpec]),
       ManifestedFormat(Json.format[GridDistributionCountWidgetSpec]),
       ManifestedFormat(Json.format[CorrelationWidgetSpec]),
+      ManifestedFormat(Json.format[IndependenceTestWidgetSpec]),
       ManifestedFormat(Json.format[BasicStatsWidgetSpec]),
       ManifestedFormat(Json.format[TemplateHtmlWidgetSpec])
     )

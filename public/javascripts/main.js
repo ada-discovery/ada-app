@@ -733,3 +733,37 @@ function scrollToAnchor(id, offset){
         offset = 0
     $('html,body').animate({scrollTop: tag.offset().top + offset},'slow');
 }
+
+function createIndependenceTestTable(results, withTestType) {
+    var header = ["Field", "p-Value", "Degree of Freedom", "Stats/F-Value"]
+    if (withTestType)
+        header.push("Test Type")
+
+    var rowData = results.map(function(item) {
+        var fieldLabel = item[0]
+        var result = item[1]
+
+        var color =
+            (result.pValue >= 0.05) ? "black":
+                (result.pValue >= 0.01) ? "forestGreen":
+                    (result.pValue >= 0.001) ? "green" : "darkGreen"
+
+        var significantStyleDivStart = (result.pValue < 0.05) ? ("<div style='color: " + color + "; font-weight: bold'>") : "<div>"
+        var isAnovaTest = (result.FValue != null)
+        var rowStart = [fieldLabel,  significantStyleDivStart + result.pValue.toExponential(3).replace("e", " E") + "</div>"]
+
+        var rowEnd = (isAnovaTest) ?
+            [result.dfbg, result.FValue.toFixed(2)]
+            :
+            [result.degreeOfFreedom, result.statistics.toFixed(2)]
+
+        var testTypeText = (isAnovaTest) ? "ANOVA" : "Chi-Square"
+
+        if (withTestType)
+            rowEnd.push(testTypeText)
+
+        return rowStart.concat(rowEnd)
+    });
+
+    return createTable(header, rowData);
+}
