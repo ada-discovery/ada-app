@@ -177,7 +177,7 @@
                     showMessage("Scatter for the fields '" + xFieldName + "', '" + yFieldName + "' has been successfully added to the view '" + dataViewName + "'.");
                 },
                 error: function(data){
-                    showError( data.responseText );
+                    showErrorResponse(data);
                 }
             });
         }

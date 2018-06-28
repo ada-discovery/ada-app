@@ -92,7 +92,8 @@
                             genericWidget(widget)
                         },
                         error: function (data) {
-                            showError(data.responseText);
+                            $("#widgetDiv").html("")
+                            showErrorResponse(data);
                         }
                     });
 
@@ -114,7 +115,7 @@
                             showMessage("Correlation for the field(s) '" + fieldNames.join(", ") + "' has been successfully added to the view '" + dataViewName + "'.");
                         },
                         error: function(data){
-                            showError( data.responseText );
+                            showErrorResponse(data);
                         }
                     });
                 } else {

@@ -2,6 +2,7 @@ package controllers.dataset
 
 import javax.inject.Inject
 
+import be.objectify.deadbolt.scala.DeadboltHandler
 import controllers.SecureControllerDispatcher
 import dataaccess.User
 import models.security.{SecurityRole, UserManager}
@@ -66,72 +67,85 @@ class DataViewDispatcher @Inject()(
   override def addDistributions(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addDistributions(dataViewId, fieldNames))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addDistributions(dataViewId, fieldNames))
 
   override def addDistribution(
     dataViewId: BSONObjectID,
     fieldName: String,
     groupFieldName: Option[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addDistribution(dataViewId, fieldName, groupFieldName))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addDistribution(dataViewId, fieldName, groupFieldName))
 
   override def addCumulativeCounts(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addCumulativeCounts(dataViewId, fieldNames))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addCumulativeCounts(dataViewId, fieldNames))
 
   override def addCumulativeCount(
     dataViewId: BSONObjectID,
     fieldName: String,
     groupFieldName: Option[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addCumulativeCount(dataViewId, fieldName, groupFieldName))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addCumulativeCount(dataViewId, fieldName, groupFieldName))
 
   override def addTableFields(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addTableFields(dataViewId, fieldNames))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addTableFields(dataViewId, fieldNames))
 
   override def addCorrelation(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addCorrelation(dataViewId, fieldNames))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addCorrelation(dataViewId, fieldNames))
 
   override def addScatter(
     dataViewId: BSONObjectID,
     xFieldName: String,
     yFieldName: String,
     groupFieldName: Option[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addScatter(dataViewId, xFieldName, yFieldName, groupFieldName))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addScatter(dataViewId, xFieldName, yFieldName, groupFieldName))
 
   override def addBoxPlots(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addBoxPlots(dataViewId, fieldNames))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addBoxPlots(dataViewId, fieldNames))
 
   override def addBoxPlot(
     dataViewId: BSONObjectID,
     fieldName: String,
     groupFieldName: Option[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addBoxPlot(dataViewId, fieldName, groupFieldName))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addBoxPlot(dataViewId, fieldName, groupFieldName))
 
   override def addBasicStats(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addBasicStats(dataViewId, fieldNames))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addBasicStats(dataViewId, fieldNames))
 
   override def addIndependenceTest(
     dataViewId: BSONObjectID,
     fieldName: String,
     inputFieldNames: Seq[String]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.addIndependenceTest(dataViewId, fieldName, inputFieldNames))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addIndependenceTest(dataViewId, fieldName, inputFieldNames))
 
   override def saveFilter(
     dataViewId: BSONObjectID,
     filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]]
-  ) = dispatchIsAdminOrOwner(dataViewId, _.saveFilter(dataViewId, filterOrIds))
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.saveFilter(dataViewId, filterOrIds))
 
   protected def dispatchIsAdminOrOwner(
     id: BSONObjectID,
     action: DataViewController => Action[AnyContent]
+  ): Action[AnyContent] =
+    dispatchIsAdminOrOwnerAux(id, action, None)
+
+  protected def dispatchIsAdminOrOwnerAjax(
+    id: BSONObjectID,
+    action: DataViewController => Action[AnyContent]
+  ): Action[AnyContent] =
+    dispatchIsAdminOrOwnerAux(id, action, Some(unauthorizedDeadboltHandler))
+
+  protected def dispatchIsAdminOrOwnerAux(
+    id: BSONObjectID,
+    action: DataViewController => Action[AnyContent],
+    outputDeadboltHandler: Option[DeadboltHandler]
   ): Action[AnyContent] = {
     val currentUserFun = {
       request: Request[_] => currentUser(request)
@@ -146,7 +160,7 @@ class DataViewDispatcher @Inject()(
         }
       }
 
-    dispatchIsAdminOrOwnerAux(objectOwnerFun, currentUserFun)(action)
+    dispatchIsAdminOrOwnerAux(objectOwnerFun, currentUserFun, outputDeadboltHandler)(action)
   }
 
   protected def dispatchIsAdmin(

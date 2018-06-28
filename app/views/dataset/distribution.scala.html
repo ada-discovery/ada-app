@@ -168,7 +168,7 @@
                         showMessage("Distribution for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
                     },
                     error: function(data){
-                        showError(data.responseText);
+                        showErrorResponse(data);
                     }
                 });
             }
@@ -188,7 +188,7 @@
                         showMessage("Box plot for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
                     },
                     error: function(data){
-                        showError( data.responseText );
+                        showErrorResponse(data);
                     }
                 });
             }
@@ -205,7 +205,7 @@
                         showMessage("Basic stats for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
                     },
                     error: function(data){
-                        showError( data.responseText );
+                        showErrorResponse(data);
                     }
                 });
             }

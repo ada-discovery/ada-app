@@ -90,7 +90,7 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def calcCorrelations(
     filterOrId: FilterOrId
-  ) = dispatch(_.calcCorrelations(filterOrId))
+  ) = dispatchAjax(_.calcCorrelations(filterOrId))
 
   override def getIndependenceTest(
     filterOrId: FilterOrId
@@ -98,7 +98,7 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def testIndependence(
     filterOrId: FilterOrId
-  ) = dispatch(_.testIndependence(filterOrId))
+  ) = dispatchAjax(_.testIndependence(filterOrId))
 
   override def getCumulativeCount(
     dateFieldName: Option[String],
@@ -118,7 +118,7 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterId: Option[BSONObjectID],
     featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDims: Option[Int]
-  ) = dispatch(_.cluster(mlModelId, inputFieldNames, filterId, featuresNormalizationType, pcaDims))
+  ) = dispatchAjax(_.cluster(mlModelId, inputFieldNames, filterId, featuresNormalizationType, pcaDims))
 
   override def getSeriesProcessingSpec = dispatch(_.getSeriesProcessingSpec)
 

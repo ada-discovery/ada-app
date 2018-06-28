@@ -129,7 +129,7 @@
                         showMessage("Cumulative count for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
                     },
                     error: function(data){
-                        showError( data.responseText );
+                        showErrorResponse(data);
                     }
                 });
             }

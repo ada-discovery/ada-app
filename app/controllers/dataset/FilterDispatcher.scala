@@ -73,7 +73,7 @@ class FilterDispatcher @Inject()(
         }
     }
 
-    dispatchIsAdminOrOwnerAux(objectOwnerFun, currentUserFun)(action)
+    dispatchIsAdminOrOwnerAux(objectOwnerFun, currentUserFun, None)(action)
   }
 
   protected def dispatchIsAdmin(

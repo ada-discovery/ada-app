@@ -125,15 +125,18 @@ abstract class SecureControllerDispatcher[C](controllerParamId: String) extends 
 
   protected def dispatchIsAdminOrOwnerAux(
     objectOwnerId: Request[AnyContent] => Future[Option[BSONObjectID]],
-    currentUser: Request[_] => Future[Option[User]])(
+    currentUser: Request[_] => Future[Option[User]],
+    outputDeadboltHandler: Option[DeadboltHandler])(
     action: C => Action[AnyContent]
   ) = Action.async { implicit request =>
     val originalAction = dispatchAuthenticated(action)
 
+    val outputHandler = outputDeadboltHandler.getOrElse(deadboltHandlerCache())
+
     // check if the view owner matches a currently logged user
     def checkOwner = { action: AuthenticatedAction[AnyContent] =>
       val unauthorizedAction: Action[AnyContent] =
-          toActionAny{ implicit req: AuthenticatedRequest[AnyContent] => defaultDeadboltHandler.onAuthFailure(req) }
+          toActionAny{ implicit req: AuthenticatedRequest[AnyContent] => outputHandler.onAuthFailure(req) }
 
       val accessingUserFuture = currentUser(request)
       val objectOwnerIdFuture = objectOwnerId((request))

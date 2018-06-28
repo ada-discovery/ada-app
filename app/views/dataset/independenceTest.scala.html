@@ -112,6 +112,7 @@
                         $('#outputDiv').fadeIn('2000');
                     },
                     error: function (data) {
+                        $("#outputDiv").html("")
                         showErrorResponse(data);
                     }
                 });
