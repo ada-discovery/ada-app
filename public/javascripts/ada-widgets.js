@@ -375,8 +375,6 @@ function independenceTestWidget(elementId, widget) {
     var height = widget.displayOptions.height || 400
     var div = $("<div style='position: relative; overflow: hidden; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
 
-    console.log(widget)
-
     var table = createIndependenceTestTable(widget.data)
 
     div.append(caption)

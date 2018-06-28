@@ -39,8 +39,10 @@ class ChiSquareTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
   private val randomInputSize = 100
   private val randomFeaturesNum = 25
 
-  private val stringDoubleCalc = ChiSquareTestCalc[String, Double]
-  private val stringIntCalc = ChiSquareTestCalc[String, Int]
+  private val stringDoubleCalc = ChiSquareTestCalc[Option[String], Option[Double]]
+  private val stringIntCalc = ChiSquareTestCalc[Option[String], Option[Int]]
+
+  private val allDefinedStringDoubleCalc = ChiSquareTestCalc[String, Double]
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
@@ -57,15 +59,26 @@ class ChiSquareTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
     rawInputs: Seq[Seq[Double]],
     expectedResult: ChiSquareResult
   ) = {
-    val groupInputs: Seq[(Option[String], Option[Double])] = rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(value => (Some(groupIndex.toString), Some(value)))}
+    val allDefinedGroupInputs: Seq[(String, Double)] = rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(value => (groupIndex.toString, value))}
+    val groupInputs = allDefinedGroupInputs.map { case (group, value) => (Some(group), Some(value))}
+
     val inputs = shuffle(groupInputs)
     val inputSource = Source.fromIterator(() => inputs.toIterator)
+
+    val allDefinedInputs = shuffle(allDefinedGroupInputs)
+    val allDefinedInputSource = Source.fromIterator(() => allDefinedInputs.toIterator)
 
     // standard calculation
     Future(stringDoubleCalc.fun_(inputs)).map(checkResult(Some(expectedResult)))
 
     // streamed calculations
     stringDoubleCalc.runFlow_(inputSource).map(checkResult(Some(expectedResult)))
+
+    // all-defined standard calculation
+    Future(allDefinedStringDoubleCalc.fun_(allDefinedInputs)).map(checkResult(Some(expectedResult)))
+
+    // all-defined streamed calculations
+    allDefinedStringDoubleCalc.runFlow_(allDefinedInputSource).map(checkResult(Some(expectedResult)))
   }
 
   "Chi-Square test" should "match each other" in {

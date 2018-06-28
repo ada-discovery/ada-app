@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import org.scalatest._
 import services.stats.CalculatorHelper._
-import services.stats.calc.{ChiSquareResult, MultiChiSquareTestCalc}
+import services.stats.calc.{NullExcludedMultiChiSquareTestCalc, ChiSquareResult, MultiChiSquareTestCalc}
 
 import scala.concurrent.{Await, Future}
 import scala.util.Random
@@ -44,7 +44,9 @@ class MultiChiSquareTest extends AsyncFlatSpec with Matchers with ExtraMatchers 
   private val randomInputSize = 5000
   private val randomFeaturesNum = 10
 
-  private val calc = MultiChiSquareTestCalc[String, Int]
+  private val stringIntCalc = MultiChiSquareTestCalc[Option[String], Int]
+  private val definedStringIntCalc = MultiChiSquareTestCalc[String, Int]
+  private val nullExcludedStringIntCalc = NullExcludedMultiChiSquareTestCalc[String, Int]
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
@@ -61,36 +63,61 @@ class MultiChiSquareTest extends AsyncFlatSpec with Matchers with ExtraMatchers 
     rawInputs: Seq[Seq[Seq[Int]]],
     expectedResults: Seq[ChiSquareResult]
   ) = {
-    val groupInputs: Seq[(Option[String], Seq[Option[Int]])] =
-      rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(value => (Some(groupIndex.toString), value.map(Some(_))))}
+    val stringDefinedGroupInputs: Seq[(String, Seq[Option[Int]])] =
+      rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(values => (groupIndex.toString, values.map(Some(_))))}
+    val groupInputs = stringDefinedGroupInputs.map { case (group, value) => (Some(group), value) }
 
     val inputs = shuffle(groupInputs)
     val inputSource = Source.fromIterator(() => inputs.toIterator)
+
+    val stringDefinedInputs = shuffle(stringDefinedGroupInputs)
+    val stringDefinedInputSource = Source.fromIterator(() => stringDefinedInputs.toIterator)
+
     val results = expectedResults.map(Some(_))
 
     // standard calculation
-    Future(calc.fun_(inputs)).map(checkResult(results))
+    Future(stringIntCalc.fun_(inputs)).map(checkResult(results))
 
     // streamed calculations
-    calc.runFlow_(inputSource).map(checkResult(results))
+    stringIntCalc.runFlow_(inputSource).map(checkResult(results))
+
+    // standard calculation (with string defined)
+    Future(definedStringIntCalc.fun_(stringDefinedInputs)).map(checkResult(results))
+
+    // streamed calculations (with string defined)
+    definedStringIntCalc.runFlow_(stringDefinedInputSource).map(checkResult(results))
+
+    // standard calculation (with all defined)
+    Future(nullExcludedStringIntCalc.fun_(inputs)).map(checkResult(results))
+
+    // streamed calculations (with all defined)
+    nullExcludedStringIntCalc.runFlow_(inputSource).map(checkResult(results))
   }
 
   "Multi Chi-Square test" should "match each other" in {
-    val inputs: Seq[(Option[String], Seq[Option[Int]])] =
+    val stringDefinedInputs: Seq[(String, Seq[Option[Int]])] =
       for (_ <- 1 to randomInputSize) yield {
         val values = for (i <- 1 to randomFeaturesNum) yield {
           if (Random.nextDouble() > 0.8) Some(i + Random.nextInt(10)) else None
         }
-        (Some(Random.nextInt(5).toString), values)
+        (Random.nextInt(5).toString, values)
       }
+    val inputs = stringDefinedInputs.map { case (string, values) => (Some(string), values) }
 
+    val stringDefinedInputSource = Source.fromIterator(() => stringDefinedInputs.toIterator)
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val protoResult = calc.fun_(inputs)
+    val protoResult = stringIntCalc.fun_(inputs)
 
     // streamed calculations
-    calc.runFlow_(inputSource).map(checkResult(protoResult))
+    stringIntCalc.runFlow_(inputSource).map(checkResult(protoResult))
+
+    // standard calculation (with string defined)
+    Future(definedStringIntCalc.fun_(stringDefinedInputs)).map(checkResult(protoResult))
+
+    // streamed calculations (with string defined)
+    definedStringIntCalc.runFlow_(stringDefinedInputSource).map(checkResult(protoResult))
   }
 
   private def checkResult(

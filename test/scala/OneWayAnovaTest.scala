@@ -31,7 +31,8 @@ class OneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
   private val randomInputSize = 100
   private val randomFeaturesNum = 25
 
-  private val calc = OneWayAnovaTestCalc[String]
+  private val stringCalc = OneWayAnovaTestCalc[Option[String]]
+  private val definedStringCalc = OneWayAnovaTestCalc[String]
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
@@ -48,33 +49,53 @@ class OneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatchers {
     rawInputs: Seq[Seq[Double]],
     expectedResult: OneWayAnovaResult
   ) = {
-    val groupInputs = rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(value => (Some(groupIndex.toString), Some(value)))}
+    val definedGroupInputs = rawInputs.zipWithIndex.flatMap { case (values, groupIndex) => values.map(value => (groupIndex.toString, Some(value)))}
+    val groupInputs = definedGroupInputs.map { case (group, value) => (Some(group), value) }
+
     val inputs = shuffle(groupInputs)
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
+    val definedInputs = shuffle(definedGroupInputs)
+    val definedInputSource = Source.fromIterator(() => definedInputs.toIterator)
+
     // standard calculation
-    Future(calc.fun_(inputs)).map(checkResult(Some(expectedResult)))
+    Future(stringCalc.fun_(inputs)).map(checkResult(Some(expectedResult)))
 
     // streamed calculations
-    calc.runFlow_(inputSource).map(checkResult(Some(expectedResult)))
+    stringCalc.runFlow_(inputSource).map(checkResult(Some(expectedResult)))
+
+    // standard calculation (with defined group)
+    Future(definedStringCalc.fun_(definedInputs)).map(checkResult(Some(expectedResult)))
+
+    // streamed calculations (with defined group)
+    definedStringCalc.runFlow_(definedInputSource).map(checkResult(Some(expectedResult)))
   }
 
   "One-way ANOVA test" should "match each other" in {
-    val allInputs = for (_ <- 1 to randomInputSize) yield {
+    val allDefinedInputs = for (_ <- 1 to randomInputSize) yield {
       for (i <- 1 to randomFeaturesNum) yield {
         val value = if (Random.nextDouble() > 0.8) Some((Random.nextDouble() * 2) - 1) else None
-        (Some(i.toString), value)
+        (i.toString, value)
       }
     }
-    val inputs = allInputs.flatten
 
+    val definedInputs = allDefinedInputs.flatten
+    val definedInputSource = Source.fromIterator(() => definedInputs.toIterator)
+
+    val inputs = definedInputs.map { case (group, value) => (Some(group), value) }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
-    val protoResult = calc.fun_(inputs)
+    val protoResult = stringCalc.fun_(inputs)
 
     // streamed calculations
-    calc.runFlow_(inputSource).map(checkResult(protoResult))
+    stringCalc.runFlow_(inputSource).map(checkResult(protoResult))
+
+    // standard calculation (with defined group)
+    Future(definedStringCalc.fun_(definedInputs)).map(checkResult(protoResult))
+
+    // streamed calculations (with defined group)
+    definedStringCalc.runFlow_(definedInputSource).map(checkResult(protoResult))
   }
 
   private def checkResult(

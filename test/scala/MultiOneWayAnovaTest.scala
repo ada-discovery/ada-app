@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
 import services.stats.CalculatorHelper._
-import services.stats.calc.{MultiOneWayAnovaTestCalc, OneWayAnovaTestCalc, OneWayAnovaResult}
+import services.stats.calc.{MultiOneWayAnovaTestCalc, NullExcludedMultiOneWayAnovaTestCalc, OneWayAnovaResult}
 
 import scala.concurrent.Future
 import scala.util.Random
@@ -63,7 +63,8 @@ class MultiOneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatcher
   private val randomInputSize = 100
   private val randomFeaturesNum = 25
 
-  private val calc = MultiOneWayAnovaTestCalc[String]
+  private val calc = MultiOneWayAnovaTestCalc[Option[String]]
+  private val nullExcludedCalc = NullExcludedMultiOneWayAnovaTestCalc[String]
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
@@ -85,6 +86,7 @@ class MultiOneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatcher
       }
       (Some(Random.nextInt(5).toString), values)
     }
+
     val inputSource = Source.fromIterator(() => inputs.toIterator)
 
     // standard calculation
@@ -92,6 +94,12 @@ class MultiOneWayAnovaTest extends AsyncFlatSpec with Matchers with ExtraMatcher
 
     // streamed calculations
     calc.runFlow_(inputSource).map(checkResult(protoResult))
+
+    // standard calculation (with null group values excluded)
+    Future(nullExcludedCalc.fun_(inputs)).map(checkResult(protoResult))
+
+    // streamed calculations (with null group values excluded)
+    nullExcludedCalc.runFlow_(inputSource).map(checkResult(protoResult))
   }
 
   private def checkResult(
