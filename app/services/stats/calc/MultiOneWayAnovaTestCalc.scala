@@ -4,9 +4,9 @@ import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import services.stats.CalculatorHelper._
 
 trait MultiOneWayAnovaTestCalcTypePack[G] extends NoOptionsCalculatorTypePack{
-  type IN = (Option[G], Seq[Option[Double]])
+  type IN = (G, Seq[Option[Double]])
   type OUT = Seq[Option[OneWayAnovaResult]]
-  type INTER = Traversable[(Option[G], Seq[BasicStatsAccum])]
+  type INTER = Traversable[(G, Seq[BasicStatsAccum])]
 }
 
 private[stats] class MultiOneWayAnovaTestCalc[G] extends Calculator[MultiOneWayAnovaTestCalcTypePack[G]] with OneWayAnovaHelper {

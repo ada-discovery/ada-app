@@ -715,8 +715,11 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: BasicStatsWidgetSpec =>
         aux(BasicStatsWidgetGenerator)
 
-      case spec: IndependenceTestWidgetSpec =>
+      case spec: IndependenceTestWidgetSpec if spec.keepUndefined =>
         aux(ChiSquareTestWidgetGenerator) ++ aux(OneWayAnovaTestWidgetGenerator)
+
+      case spec: IndependenceTestWidgetSpec if !spec.keepUndefined =>
+        aux(NullExcludedChiSquareTestWidgetGenerator) ++ aux(NullExcludedOneWayAnovaTestWidgetGenerator)
 
       case _ => Nil
     }

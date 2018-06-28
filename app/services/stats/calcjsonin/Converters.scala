@@ -140,8 +140,16 @@ class MultiOneWayAnovaTestConverter extends GroupSeqDoubleConverter[Any] {
   override def specificUseClass = Some(classOf[MultiOneWayAnovaTestCalc[_]])
 }
 
+class NullExcludedMultiOneWayAnovaTestConverter extends GroupSeqDoubleConverter[Any] {
+  override def specificUseClass = Some(classOf[NullExcludedMultiOneWayAnovaTestCalc[_]])
+}
+
 class MultiChiSquareTestConverter extends GroupSeqConverter[Any, Any] {
   override def specificUseClass = Some(classOf[MultiChiSquareTestCalc[_, _]])
+}
+
+class NullExcludedMultiChiSquareTestConverter extends GroupSeqConverter[Any, Any] {
+  override def specificUseClass = Some(classOf[NullExcludedMultiChiSquareTestCalc[_, _]])
 }
 
 ////////////////////
@@ -239,6 +247,21 @@ private[calcjsonin] abstract class GroupSeqConverter[G: TypeTag, T: TypeTag] ext
   }
 
   override def inputType = typeOf[(Option[G], Seq[Option[T]])]
+}
+
+private[calcjsonin] abstract class GroupDefinedSeqConverter[G: TypeTag, T: TypeTag] extends JsonInputConverter[(G, Seq[Option[T]])] {
+
+  override def apply(fields: Seq[Field]) = {
+    checkFieldsMin(fields, 1)
+
+    val groupConverter = jsonToDefinedValue[G](fields(0))
+    val valuesConverter = jsonToValues(fields.tail)
+
+    (jsObject: JsObject) =>
+      (groupConverter(jsObject), valuesConverter(jsObject))
+  }
+
+  override def inputType = typeOf[(G, Seq[Option[T]])]
 }
 
 private[calcjsonin] abstract class AllDefinedSeqDoubleConverter extends JsonInputConverter[Seq[Double]] {

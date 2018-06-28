@@ -7,9 +7,9 @@ import services.stats.CommonsMathUtil._
 import services.stats.CalculatorHelper._
 
 trait OneWayAnovaTestCalcTypePack[G] extends NoOptionsCalculatorTypePack{
-  type IN = (Option[G], Option[Double])
+  type IN = (G, Option[Double])
   type OUT = Option[OneWayAnovaResult]
-  type INTER = Traversable[(Option[G], BasicStatsAccum)]
+  type INTER = Traversable[(G, BasicStatsAccum)]
 }
 
 private[stats] class OneWayAnovaTestCalc[G] extends Calculator[OneWayAnovaTestCalcTypePack[G]] with OneWayAnovaHelper {

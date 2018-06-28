@@ -119,6 +119,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
 //  private val distScreenWidgetsGenMethod = WidgetGenerationMethod.FullData
   private val distScreenWidgetsGenMethod = WidgetGenerationMethod.RepoAndFullData
+  private val independenceTestKeepUndefined = false
 
   private val fractalisServerUrl = configuration.getString("fractalis.server.url").getOrElse("https://fractalis.lcsb.uni.lu")
 
@@ -1757,17 +1758,20 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // use a given filter conditions or load one
       resolvedFilter <- filterRepo.resolve(filterOrId)
 
-        // criteria
+      // criteria
       criteria <- toCriteria(resolvedFilter.conditions)
 
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria ++ Seq(NotEqualsNullCriterion(targetFieldName)))
-    } yield {
+      // add a target-field-undefined criterion if needed
+      finalCriteria = if (independenceTestKeepUndefined) criteria else criteria ++ Seq(NotEqualsNullCriterion(targetFieldName))
+
+      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, finalCriteria)
+     } yield {
       val fieldNameLabelMap = fields.map(field => (field.name, field.labelOrElseName)).toMap
 
       val inputFields = fields.filterNot(_.name.equals(targetFieldName))
       val outputField = fields.find(_.name.equals(targetFieldName)).get
 
-      val resultsSorted = statsService.testIndependenceSorted(jsons, inputFields, outputField)
+      val resultsSorted = statsService.testIndependenceSorted(jsons, inputFields, outputField, independenceTestKeepUndefined)
 
       implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
 

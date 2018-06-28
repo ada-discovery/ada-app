@@ -7,9 +7,9 @@ import services.stats.CalculatorHelper._
 import util.AkkaStreamUtil.seqFlow
 
 trait GroupMultiBasicStatsCalcTypePack[G] extends NoOptionsCalculatorTypePack{
-  type IN = (Option[G], Seq[Option[Double]])
-  type OUT = Traversable[(Option[G], Seq[Option[BasicStatsResult]])]
-  type INTER = Traversable[(Option[G], Seq[BasicStatsAccum])]
+  type IN = (G, Seq[Option[Double]])
+  type OUT = Traversable[(G, Seq[Option[BasicStatsResult]])]
+  type INTER = Traversable[(G, Seq[BasicStatsAccum])]
 }
 
 private class GroupMultiBasicStatsCalc[G] extends Calculator[GroupMultiBasicStatsCalcTypePack[G]] with GroupBasicStatsHelper {

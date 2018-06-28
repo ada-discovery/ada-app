@@ -5,23 +5,24 @@ import services.stats.{Calculator, NoOptionsCalculatorTypePack}
 import services.stats.CalculatorHelper._
 import util.AkkaStreamUtil.unzipNFlowsAndApply
 
-trait MultiChiSquareTestCalcTypePack[G, T] extends NoOptionsCalculatorTypePack {
-  type IN = (G, Seq[Option[T]])
+trait NullExcludedMultiChiSquareTestCalcTypePack[G, T] extends NoOptionsCalculatorTypePack {
+  type IN = (Option[G], Seq[Option[T]])
   type OUT = Seq[Option[ChiSquareResult]]
-  type INTER =  Seq[ChiSquareTestCalcTypePack[G, Option[T]]#INTER]
+  type INTER =  Seq[ChiSquareTestCalcTypePack[G, T]#INTER]
 }
 
-private[stats] class MultiChiSquareTestCalc[G, T] extends Calculator[MultiChiSquareTestCalcTypePack[G, T]] {
+private[stats] class NullExcludedMultiChiSquareTestCalc[G, T] extends Calculator[NullExcludedMultiChiSquareTestCalcTypePack[G, T]] {
 
-  private val coreCalc = ChiSquareTestCalc[G, Option[T]]
+  private val coreCalc = ChiSquareTestCalc[G, T]
 
   override def fun(o: Unit) = { values: Traversable[IN] =>
     if (values.isEmpty || values.head._2.isEmpty)
       Nil
     else {
+      val groupDefinedValues = values.collect { case (Some(group), values) => (group, values) }
       val testsNum = values.head._2.size
       (0 to testsNum - 1).map { index =>
-        val inputs = values.map(row => (row._1, row._2(index)))
+        val inputs = groupDefinedValues.flatMap(row => row._2(index).map((row._1, _)))
         coreCalc.fun_(inputs)
       }
     }
@@ -31,8 +32,11 @@ private[stats] class MultiChiSquareTestCalc[G, T] extends Calculator[MultiChiSqu
     // create tuples for each value
     val tupleSeqFlow = Flow[IN].map { case (group, values) => values.map((group, _))}
 
+    // flatten the flow by removing undefined values
+    val flatFlow = Flow[(Option[G], Option[T])].collect { case (Some(group), Some(value)) => (group, value) }
+
     // apply core flow for a single chi-square test in parallel by splitting the flow
-    val seqChiSquareFlow = (size: Int) => unzipNFlowsAndApply(size)(coreCalc.flow_)
+    val seqChiSquareFlow = (size: Int) => unzipNFlowsAndApply(size)(flatFlow.via(coreCalc.flow_))
 
     // since we need to know the number of features (seq size) we take the first element out, apply the flow and concat
     tupleSeqFlow.prefixAndTail(1).flatMapConcat { case (first, tail) =>
@@ -45,6 +49,6 @@ private[stats] class MultiChiSquareTestCalc[G, T] extends Calculator[MultiChiSqu
     _.map(coreCalc.postFlow_(_))
 }
 
-object MultiChiSquareTestCalc {
-  def apply[G, T]: Calculator[MultiChiSquareTestCalcTypePack[G, T]] = new MultiChiSquareTestCalc[G, T]
+object NullExcludedMultiChiSquareTestCalc {
+  def apply[G, T]: Calculator[NullExcludedMultiChiSquareTestCalcTypePack[G, T]] = new NullExcludedMultiChiSquareTestCalc[G, T]
 }

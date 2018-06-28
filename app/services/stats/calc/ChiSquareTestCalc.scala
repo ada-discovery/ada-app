@@ -7,9 +7,9 @@ import util.AkkaStreamUtil.{countFlow, seqFlow}
 import Seq.fill
 
 trait ChiSquareTestCalcTypePack[T1, T2] extends NoOptionsCalculatorTypePack{
-  type IN = (Option[T1], Option[T2])
+  type IN = (T1, T2)
   type OUT = Option[ChiSquareResult]
-  type INTER = Traversable[((Option[T1], Option[T2]), Int)]
+  type INTER = Traversable[((T1, T2), Int)]
 }
 
 private[stats] class ChiSquareTestCalc[T1, T2] extends Calculator[ChiSquareTestCalcTypePack[T1, T2]] {

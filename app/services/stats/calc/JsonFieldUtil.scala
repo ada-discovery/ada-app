@@ -20,6 +20,15 @@ object JsonFieldUtil {
     valueGet(fieldType.asValueOf[T], field.name)
   }
 
+  def jsonToDefinedValue[T](
+    field: Field
+  )(
+    implicit ftf: FieldTypeFactory
+  ): JsObject => T = {
+    val fieldType = ftf(field.fieldTypeSpec)
+    valueDefinedGet(fieldType.asValueOf[T], field.name)
+  }
+
   def jsonToDouble(
     field: Field
   )(
@@ -257,10 +266,15 @@ object JsonFieldUtil {
       case _ => emptyDoubleValue
     }
 
-  private def valueGet[T](fieldType: FieldType[T], fieldName: String) = {
-    jsObject: JsObject =>
+  private def valueGet[T](fieldType: FieldType[T], fieldName: String) =
+    (jsObject: JsObject) =>
       fieldType.jsonToValue(jsObject \ fieldName)
-  }
+
+  private def valueDefinedGet[T](fieldType: FieldType[T], fieldName: String) =
+    (jsObject: JsObject) =>
+      fieldType.jsonToValue(jsObject \ fieldName).getOrElse(
+        throw new AdaConversionException(s"All values for the field ${fieldName} are expected to be defined but got None for JSON:\n ${Json.prettyPrint(jsObject)}.")
+      )
 
   private def displayStringGet[T](fieldType: FieldType[T], fieldName: String) = {
     jsObject: JsObject =>

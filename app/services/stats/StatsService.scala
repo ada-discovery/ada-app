@@ -5,6 +5,7 @@ import java.{util => ju}
 import javax.inject.{Inject, Singleton}
 
 import _root_.util.{AkkaStreamUtil, GroupMapList, crossProduct}
+import _root_.util.FieldUtil.InfixFieldOps
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.ActorMaterializer
@@ -14,8 +15,6 @@ import dataaccess._
 import dataaccess.JsonRepoExtra._
 import models._
 import org.apache.spark.ml.feature.ChiSqSelector
-import org.apache.spark.ml.linalg.Vector
-import org.apache.spark.ml.stat.ChiSquareTest
 import org.apache.spark.sql.DataFrame
 import play.api.Logger
 import play.api.libs.json._
@@ -28,7 +27,6 @@ import breeze.linalg.eigSym.EigSym
 import com.jujutsu.tsne.TSneConfig
 import com.jujutsu.tsne.barneshut.{BHTSne, ParallelBHTsne}
 import dataaccess.RepoTypes.JsonReadonlyRepo
-import org.apache.commons.math3.exception.{DimensionMismatchException, MaxCountExceededException, NotPositiveException}
 import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -38,8 +36,6 @@ import services.stats.CalculatorHelper._
 import services.stats.calc.SeqBinCountCalc.SeqBinCountCalcTypePack
 import smile.manifold.{Operators => ManifoldOperators}
 import smile.projection.{Operators => ProjectionOperators}
-
-import scala.reflect.runtime.universe.TypeTag
 
 @ImplementedBy(classOf[StatsServiceImpl])
 trait StatsService extends CalculatorExecutors {
@@ -175,9 +171,9 @@ trait StatsService extends CalculatorExecutors {
     setting: TSNESetting = TSNESetting()
   ): Array[Array[Double]]
 
-    //////////////////////////
-  // Eigenvectors/values //
   //////////////////////////
+  // Eigenvectors/values //
+  /////////////////////////
 
   def calcEigenValuesAndVectors(
     matrix: Seq[Seq[Double]]
@@ -209,28 +205,18 @@ trait StatsService extends CalculatorExecutors {
   // Independence Tests //
   ////////////////////////
 
-  def testChiSquare(
-    data: Traversable[JsObject],
-    inputFields: Seq[Field],
-    targetField: Field
-  ): Seq[Option[ChiSquareResult]]
-
-  def testOneWayAnova(
-    items: Traversable[JsObject],
-    inputFields: Seq[Field],
-    targetField: Field
-  ): Seq[Option[OneWayAnovaResult]]
-
   def testIndependence(
     items: Traversable[JsObject],
     inputFields: Seq[Field],
-    targetField: Field
+    targetField: Field,
+    keepUndefined: Boolean = false
   ): Seq[Option[IndependenceTestResult]]
 
   def testIndependenceSorted(
     items: Traversable[JsObject],
     inputFields: Seq[Field],
-    targetField: Field
+    targetField: Field,
+    keepUndefined: Boolean = false
   ): Seq[(Field, Option[IndependenceTestResult])]
 
   def selectFeaturesAsChiSquare(
@@ -250,7 +236,8 @@ trait StatsService extends CalculatorExecutors {
     data: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field,
-    featuresToSelectNum: Int
+    featuresToSelectNum: Int,
+    keepUndefined: Boolean = false
   ): Seq[Field]
 }
 
@@ -1127,62 +1114,13 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
   // Independence Tests //
   ////////////////////////
 
-  override def testChiSquare(
-    data: Traversable[JsObject],
-    inputFields: Seq[Field],
-    targetField: Field
-  ): Seq[Option[ChiSquareResult]] = {
-    val fieldNameTypeMap: Map[String, FieldType[_]] = (inputFields ++ Seq(targetField)).map { field => (field.name, ftf(field.fieldTypeSpec))}.toMap
-
-    def value[T](json: JsObject)(field: Field): Option[T] =
-      fieldNameTypeMap.get(field.name).get.asValueOf[T].jsonToValue(json \ field.name)
-
-    val labeledFeatures = data.map { json =>
-      val features = inputFields.map(value(json))
-      val target = value(json)(targetField)
-      (target, features)
-    }
-
-    MultiChiSquareTestCalc[Any, Any].fun_(labeledFeatures)
-  }
-
-  override def testOneWayAnova(
-    items: Traversable[JsObject],
-    inputFields: Seq[Field],
-    targetField: Field
-  ): Seq[Option[OneWayAnovaResult]] = {
-    val fieldNameTypeMap: Map[String, FieldType[_]] = (inputFields ++ Seq(targetField)).map { field => (field.name, ftf(field.fieldTypeSpec))}.toMap
-
-    def doubleValue[T](json: JsObject)(field: Field): Option[Double] = {
-      val fieldName = field.name
-      val fieldType: FieldType[_] = fieldNameTypeMap.get(fieldName).getOrElse(throw new IllegalArgumentException(s"Field name ${fieldName} not found."))
-
-      fieldType.spec.fieldType match {
-        case FieldTypeId.Double => fieldType.asValueOf[Double].jsonToValue(json \ fieldName)
-
-        case FieldTypeId.Integer => fieldType.asValueOf[Long].jsonToValue(json \ fieldName).map(_.toDouble)
-
-        case FieldTypeId.Date => fieldType.asValueOf[ju.Date].jsonToValue(json \ fieldName).map(_.getTime.toDouble)
-
-        case _ => None
-      }
-    }
-
-    val labeledFeatures = items.map { json =>
-      val features = inputFields.map(doubleValue(json))
-      val target = fieldNameTypeMap.get(targetField.name).get.jsonToValue(json \ targetField.name)
-      (target, features)
-    }
-
-    MultiOneWayAnovaTestCalc[Any].fun_(labeledFeatures)
-  }
-
   override def testIndependenceSorted(
     items: Traversable[JsObject],
     inputFields: Seq[Field],
-    targetField: Field
+    targetField: Field,
+    keepUndefined: Boolean
   ): Seq[(Field, Option[IndependenceTestResult])] = {
-    val results = testIndependence(items, inputFields, targetField)
+    val results = testIndependence(items, inputFields, targetField, keepUndefined)
 
     // Sort and combine the results
     def pValueAndStat(result: Option[IndependenceTestResult]): (Double, Double) =
@@ -1201,31 +1139,40 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     }
   }
 
+  private val chiSquareTestExec = multiChiSquareTestExec[Option[Any], Any]
+  private val anovaTestExec = multiOneWayAnovaTestExec[Option[Any]]
+  private val nullExcludedChiSquareTestExec = nullExcludedMultiChiSquareTestExec[Any, Any]
+  private val nullExcludedAnovaTestExec = nullExcludedMultiOneWayAnovaTestExec[Any]
+
   override def testIndependence(
     items: Traversable[JsObject],
     inputFields: Seq[Field],
-    targetField: Field
+    targetField: Field,
+    keepUndefined: Boolean
   ): Seq[Option[IndependenceTestResult]] = {
-    // ANOVA
-    val numericalTypes = Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
-    val numericalInputFields = inputFields.filter(field => numericalTypes.contains(field.fieldTypeSpec.fieldType))
-    val anovaResults = testOneWayAnova(items, numericalInputFields, targetField)
-    val anovaFieldNameResultMap = numericalInputFields.map(_.name).zip(anovaResults).toMap
+    val numericInputFields = inputFields.filter(_.isNumeric)
+    val nonNumericInputFields = inputFields.filter(!_.isNumeric)
 
-    // Chi-Square
-    val categoricalTypes = Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)
-    val categoricalInputFields = inputFields.filter(field => categoricalTypes.contains(field.fieldTypeSpec.fieldType))
-    val chiSquareResults = testChiSquare(items, categoricalInputFields, targetField)
-    val chiSquareFieldNameResultMap = categoricalInputFields.map(_.name).zip(chiSquareResults).toMap
+    val chiSquareResults =
+      if (keepUndefined)
+        chiSquareTestExec.execJson_(Seq(targetField) ++ nonNumericInputFields)(items)
+      else
+        nullExcludedChiSquareTestExec.execJson_(Seq(targetField) ++ nonNumericInputFields)(items)
+
+    val anovaResults =
+      if (keepUndefined)
+        anovaTestExec.execJson_(Seq(targetField) ++ numericInputFields)(items)
+      else
+        nullExcludedAnovaTestExec.execJson_(Seq(targetField) ++ numericInputFields)(items)
+
+    val fieldChiSquareResultMap = nonNumericInputFields.zip(chiSquareResults).toMap
+    val fieldAnovaResultMap = numericInputFields.zip(anovaResults).toMap
 
     inputFields.map { field =>
-      val name = field.name
-
-      chiSquareFieldNameResultMap.get(name) match {
-        case Some(chiSquareResult) => chiSquareResult
-
-        case None => anovaFieldNameResultMap.get(name).flatten
-      }
+      if (field.isNumeric)
+        fieldAnovaResultMap.get(field).get
+      else
+        fieldChiSquareResultMap.get(field).get
     }
   }
 
@@ -1233,9 +1180,10 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     data: Traversable[JsObject],
     inputFields: Seq[Field],
     targetField: Field,
-    featuresToSelectNum: Int
+    featuresToSelectNum: Int,
+    keepUndefined: Boolean
   ): Seq[Field] = {
-    val results = testIndependenceSorted(data, inputFields, targetField)
+    val results = testIndependenceSorted(data, inputFields, targetField, keepUndefined)
     results.map(_._1).take(featuresToSelectNum)
   }
 

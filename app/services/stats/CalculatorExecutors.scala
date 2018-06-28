@@ -236,8 +236,18 @@ trait CalculatorExecutors {
   ) =
     withSeq(MultiChiSquareTestCalc[G, T])
 
+  def nullExcludedMultiChiSquareTestExec[G, T](
+    implicit inputTypeTag: TypeTag[NullExcludedMultiChiSquareTestCalcTypePack[G, T]#IN]
+  ) =
+    withSeq(NullExcludedMultiChiSquareTestCalc[G, T])
+
   def multiOneWayAnovaTestExec[G](
     implicit inputTypeTag: TypeTag[MultiOneWayAnovaTestCalcTypePack[G]#IN]
   ) =
     withSeq(MultiOneWayAnovaTestCalc[G])
+
+  def nullExcludedMultiOneWayAnovaTestExec[G](
+    implicit inputTypeTag: TypeTag[NullExcludedMultiOneWayAnovaTestCalcTypePack[G]#IN]
+  ) =
+    withSeq(NullExcludedMultiOneWayAnovaTestCalc[G])
 }

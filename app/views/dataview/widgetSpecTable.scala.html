@@ -317,7 +317,7 @@
 
             // independence test
             if (isIndependenceTest) {
-                displayElements.push(", " + values["inputFieldNames"])
+                displayElements.push(values["inputFieldNames"])
                 displayElements.push("Keep Undefined: " + values["keepUndefined"])
             }
 
@@ -327,8 +327,6 @@
                 displayElements.push("Sub Filter Id: " + subFilterIdValue)
 
             contentDisplayColumn.append("<div class='row'>" + displayElements.join(", ") + "</div>")
-
-
 
             // DISPLAY OPTIONS
             var displayOptions = values["displayOptions"]
