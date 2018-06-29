@@ -46,7 +46,7 @@ package object util {
   }
 
   def shorten(string : String, length: Int = 25) =
-    if (string.length > length) string.substring(0, length) + ".." else string
+    if (string.length > length) string.substring(0, length - 2) + ".." else string
 
   /**
    * Helper function for conversion of input string to camel case.

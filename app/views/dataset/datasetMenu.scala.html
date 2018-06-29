@@ -1,6 +1,6 @@
 @import controllers.dataset.DataSetRouter
 @import models.DataSpaceMetaInfo
-@import util.{getParamValue, matchesPath}
+@import util.{getParamValue, matchesPath, shorten}
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import reactivemongo.bson.BSONObjectID
 
@@ -10,27 +10,10 @@
     @defining(getParamValue(request.uri, "dataSet")) { reqDataSetId =>
         <li @if(reqDataSetId.isDefined && reqDataSetId.get.equals(dataSetId)) {class="inner-node active"} else {class="inner-node"}>
             <a href="@call">
-                <ul class="list-inline">
-                    <li>
-                        <span class="glyphicon glyphicon-chevron-right"></span>
-                    </li>
-                    <li>
-                        <h6>@text</h6>
-                    </li>
-                </ul>
-            </a>
-        </li>
-    }
-}
-
-@topSpaceItem(spaceMetaInfo: DataSpaceMetaInfo) = {
-    @defining(dataSpaceMetaInfoRoutes.get(spaceMetaInfo._id.get)) { call =>
-        <li @if(matchesPath(call.url, request.uri, Some(3))) { class="dataspace top-node active" } else {class="dataspace top-node"} >
-            <button type="button" class="btn btn-sm btn-default btn-dataspace-expand btn-dataspace-expand-top" data-toggle="collapse" data-target="#dataSets-@spaceMetaInfo._id.get.stringify">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-            </button>
-            <a href="@call" class="float-left">
-                <h4>@spaceMetaInfo.name</h4>
+                <div class="nowrap inner-node-label">
+                    <span class="glyphicon glyphicon-chevron-right inner-node-icon"></span>
+                    @shorten(text)
+                </div>
             </a>
         </li>
     }
@@ -40,14 +23,25 @@
     @defining(dataSpaceMetaInfoRoutes.get(spaceMetaInfo._id.get)) { call =>
         <li @if(matchesPath(call.url, request.uri, Some(3))) { class="dataspace inner-node active" } else {class="dataspace inner-node"} >
             <a href="@call">
-                <ul class="list-inline">
-                    <li class="btn-dataspace-expand">
-                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
-                    </li>
-                    <li>
-                        <h6>@spaceMetaInfo.name</h6>
-                    </li>
-                </ul>
+                <div class="nowrap inner-node-label">
+                    <span class="btn-dataspace-expand">
+                        <span class="glyphicon glyphicon-plus inner-node-icon" aria-hidden="true"></span>
+                    </span>
+                    @shorten(spaceMetaInfo.name)
+                </div>
+            </a>
+        </li>
+    }
+}
+
+@topSpaceItem(spaceMetaInfo: DataSpaceMetaInfo) = {
+    @defining(dataSpaceMetaInfoRoutes.get(spaceMetaInfo._id.get)) { call =>
+        <li @if(matchesPath(call.url, request.uri, Some(3))) { class="dataspace top-node active" } else {class="dataspace top-node"}>
+            <button type="button" class="btn btn-sm btn-default btn-dataspace-expand btn-dataspace-expand-top" data-toggle="collapse" data-target="#dataSets-@spaceMetaInfo._id.get.stringify">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+            </button>
+            <a href="@call" class="float-left">
+                <h4>@spaceMetaInfo.name</h4>
             </a>
         </li>
     }
