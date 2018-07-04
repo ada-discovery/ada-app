@@ -35,7 +35,9 @@ trait AbstractChiSquareTestWidget[C <: NoOptionsCalculatorTypePack] extends Calc
         }
 
       if (fieldResults.nonEmpty) {
-        val widget = IndependenceTestWidget(chartTitle, fieldResults, spec.displayOptions)
+        val topFieldResults = spec.topCount.map(fieldResults.take).getOrElse(fieldResults)
+
+        val widget = IndependenceTestWidget(chartTitle, topFieldResults, spec.displayOptions)
         Some(widget)
       } else
         None

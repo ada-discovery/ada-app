@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import models.StorageType
-import models.ml.{DataSetLink, ResultDataSetSpec}
+import models.ml.{DataSetLinkSpec, ResultDataSetSpec}
 import runnables.FutureRunnable
 import services.DataSetService
 
@@ -48,7 +48,7 @@ class LinkMPowerTrainingNormsAndDemographicsDataSets @Inject()(dataSetService: D
       "years-smoking"
     )
 
-  private val dataSetLinkSpec = DataSetLink(
+  private val dataSetLinkSpec = DataSetLinkSpec(
     "mpower_challenge.walking_activity_training_norms",
     "mpower_challenge.demographics_training",
     Seq("healthCode"),

@@ -4,7 +4,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import models.StorageType
-import models.ml.{DataSetLink, ResultDataSetSpec}
+import models.ml.{DataSetLinkSpec, ResultDataSetSpec}
 import runnables.FutureRunnable
 import services.DataSetService
 
@@ -47,7 +47,7 @@ class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extend
       "tremor_RightUpperLimb"
     )
 
-  private val dataSetLinkSpec = DataSetLink(
+  private val dataSetLinkSpec = DataSetLinkSpec(
     "harvard_ldopa.walking_data",
     "harvard_ldopa.scores",
     Seq("patient", "visit", "session", "task"),

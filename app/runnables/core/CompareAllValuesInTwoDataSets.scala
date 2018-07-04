@@ -89,7 +89,7 @@ class CompareAllValuesInTwoDataSets @Inject()(
   }
 
   // returns the number of errors
-  def compare(keyFieldName: String)(jsObject1: JsObject, jsObject2: JsObject): Int = {
+  private def compare(keyFieldName: String)(jsObject1: JsObject, jsObject2: JsObject): Int = {
     val key1 = getValueFromJson((jsObject1 \ keyFieldName).get)
     val key2 = getValueFromJson((jsObject2 \ keyFieldName).get)
 

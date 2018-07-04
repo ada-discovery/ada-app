@@ -168,7 +168,8 @@
 
                     case x: IndependenceTestWidgetSpec =>
                         Seq(
-                            Some("Keep Undefined: " + x.keepUndefined)
+                            Some("Keep Undefined: " + x.keepUndefined),
+                            x.topCount.map( count => "Top Count: " + count)
                         )
 
                     case x: TemplateHtmlWidgetSpec =>
@@ -521,6 +522,12 @@
             }
         </div>
 
+        <div id="topCountDiv" style="display: none">
+            @labelValueAux("topCount", "Top Count") {
+                <input type="text" id="topCount">
+            }
+        </div>
+
         @labelValueAux("subFilterId", "Sub Filter") {
             <input type="text" id="subFilterTypeahead" class="typeahead">
             <input type="hidden" id="subFilterId">
@@ -657,6 +664,9 @@
         // keep undefined is boolean hence we need to do the setting again
         setIfNotNull(output, "keepUndefined", getBoolValue("keepUndefined"))
 
+        // top count is integer hence we need to do the setting again
+        setIfNotNull(output, "topCount", getIntValue("topCount"))
+
         var subFilterId = getValue("subFilterId")
         if (subFilterId) {
             setIfNotNull(output, "subFilterId", {"$oid": subFilterId})
@@ -689,7 +699,8 @@
         $("#" + modalName + " #xBinCountDiv").hide();
         $("#" + modalName + " #yBinCountDiv").hide();
         $("#" + modalName + " #useDateMonthBinsDiv").hide();
-        $("#" + modalName + " #excludeUndefined").hide();
+        $("#" + modalName + " #excludeUndefinedDiv").hide();
+        $("#" + modalName + " #topCountDiv").hide();
         $("#" + modalName + " #inputFieldNamesDiv").hide();
     }
 
@@ -724,6 +735,7 @@
         $('#edit_widgetSpecModal #relativeValues').prop('checked', model["relativeValues"]);
         $('#edit_widgetSpecModal #useDateMonthBins').prop('checked', model["useDateMonthBins"]);
         $('#edit_widgetSpecModal #keepUndefined').prop('checked', model["keepUndefined"]);
+        $('#edit_widgetSpecModal #topCount').val(model["topCount"]);
 
         $('#edit_widgetSpecModal #content').val(model["content"]);
 

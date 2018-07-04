@@ -18,11 +18,11 @@ case class ResultDataSetSpec(
 )
 
 case class SeriesProcessingSpec(
-    fieldPath: String,
-    processingType: SeriesProcessingType.Value,
-    pastValuesCount: Int,
-    addInitPaddingWithZeroes: Boolean = true
-  ) {
+  fieldPath: String,
+  processingType: SeriesProcessingType.Value,
+  pastValuesCount: Int,
+  addInitPaddingWithZeroes: Boolean = true
+) {
 
   override def toString =
     if (pastValuesCount == 1)
@@ -58,7 +58,7 @@ case class SeriesTransformationSpec(
     fieldPath + "_" + transformType.toString
 }
 
-case class DataSetLink(
+case class DataSetLinkSpec(
   leftSourceDataSetId: String,
   rightSourceDataSetId: String,
   leftLinkFieldNames: Seq[String],
@@ -72,7 +72,7 @@ case class DataSetLink(
   def linkFieldNames = leftLinkFieldNames.zip(rightLinkFieldNames)
 }
 
-case class GeneralDataSetLink(
+case class GeneralDataSetLinkSpec(
   leftSourceDataSetId: String,
   rightSourceDataSetIds: Seq[String],
   leftLinkFieldNames: Seq[String],
@@ -86,6 +86,14 @@ case class GeneralDataSetLink(
 ) extends DataSetTransformation {
   def linkFieldNames = leftLinkFieldNames.zip(rightLinkFieldNames)
 }
+
+case class SelfLinkSpec(
+  dataSetId: String,
+  keyFieldNames: Seq[String],
+  valueFieldName: String,
+  processingBatchSize: Option[Int],
+  resultDataSetSpec: ResultDataSetSpec
+) extends DataSetTransformation
 
 case class DropFieldsSpec(
   sourceDataSetId: String,

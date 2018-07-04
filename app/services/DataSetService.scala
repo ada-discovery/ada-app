@@ -11,13 +11,14 @@ import dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, JsonCrudRepo}
 import dataaccess.JsonRepoExtra.InfixOps
 import dataaccess.JsonUtil
 import _root_.util.{AkkaStreamUtil, GroupMapList, MessageLogger}
+import _root_.util.FieldUtil.JsonFieldOps
 import com.google.inject.ImplementedBy
 import models._
 import Criterion.Infix
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
-import play.api.libs.json._
+import play.api.libs.json.{JsObject, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
 
@@ -168,11 +169,11 @@ trait DataSetService {
   ): Future[Unit]
 
   def linkDataSets(
-    spec: DataSetLink
+    spec: DataSetLinkSpec
   ): Future[Unit]
 
   def linkDataSetsGeneral(
-    spec: GeneralDataSetLink
+    spec: GeneralDataSetLinkSpec
   ): Future[Unit]
 
   def processSeriesAndSaveDataSet(
@@ -196,6 +197,10 @@ trait DataSetService {
     backpressureBufferSize: Int,
     saveDeltaOnly: Boolean,
     targetStorageType: StorageType.Value
+  ): Future[Unit]
+
+  def selfLink(
+    spec: SelfLinkSpec
   ): Future[Unit]
 
   def extractPeaks(
@@ -821,7 +826,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def linkDataSets(
-    spec: DataSetLink
+    spec: DataSetLinkSpec
   ) = {
     val leftDsa = dsaf(spec.leftSourceDataSetId).getOrElse(throw new AdaException(s"Data Set ${spec.leftSourceDataSetId} not found."))
     val rightDsa = dsaf(spec.rightSourceDataSetId).getOrElse(throw new AdaException(s"Data Set ${spec.rightSourceDataSetId} not found."))
@@ -968,7 +973,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def linkDataSetsGeneral(
-    spec: GeneralDataSetLink
+    spec: GeneralDataSetLinkSpec
   ) = {
     val leftDataSetInfo = dsaf(spec.leftSourceDataSetId).map { dsa =>
       LinkedDataSetInfo(dsa, spec.leftPreserveFieldNames, spec.leftLinkFieldNames)
@@ -1133,7 +1138,98 @@ class DataSetServiceImpl @Inject()(
       ()
   }
 
-  def linkDataSetStreamed(spec: CompareAllValuesInTwoDataSetsSpec) = {
+  override def selfLink(spec: SelfLinkSpec) = {
+    val dsa = dsaf(spec.dataSetId).get
+
+    // helper function to merge jsons by ids into a single one, and save it
+    def mergeAndSaveAux[T](
+      newDsa: DataSetAccessor,
+      valueFieldType: FieldType[T])(
+      ids: Seq[BSONObjectID]
+    ): Future[Unit] =
+      for {
+        jsons <- dsa.dataSetRepo.find(Seq(JsObjectIdentity.name #-> ids))
+
+        _ <- {
+          val newJsonValues = jsons.flatMap { json =>
+            val prefixLabel = json.toDisplayString(spec.valueFieldName, valueFieldType)
+            val prefix = prefixLabel.toLowerCase.replaceAllLiterally(" ", "_")
+
+            json.value.toSeq.filter(!_._1.equals(JsObjectIdentity.name)).map { case (fieldName, value) =>
+              (prefix + "_" + fieldName, value)
+            }
+          }
+
+          newDsa.dataSetRepo.save(JsObject(newJsonValues.toSeq))
+        }
+      } yield
+        ()
+
+    // the main part
+    for {
+      // load jsons with key fields and id
+      items <- dsa.dataSetRepo.find(projection = spec.keyFieldNames ++ Seq(JsObjectIdentity.name))
+
+      // register a new data set
+      newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetSpec, false)
+
+      // retrieve a value field
+      valueField <- dsa.fieldRepo.get(spec.valueFieldName)
+
+      // get all the fields
+      allFields <- dsa.fieldRepo.find()
+
+      // create the type of a value field
+      valueFieldType = ftf(valueField.get.fieldTypeSpec)
+
+      // get all the value field prefixes
+      fieldPrefixes <- {
+        dsa.dataSetRepo.find(projection = Seq(valueField.get.name)).map { jsons =>
+          jsons.map { json =>
+            val prefixLabel = json.toDisplayString(spec.valueFieldName, valueFieldType)
+            val prefix = prefixLabel.toLowerCase.replaceAllLiterally(" ", "_")
+
+            (prefix, prefixLabel)
+          }.toSet
+        }
+      }
+
+      // update the new dictionary
+      _ <- {
+        val newFields = allFields.flatMap(field =>
+          fieldPrefixes.map { case (prefix, prefixLabel) =>
+            field.copy(name = prefix + "_" + field.name, label = Some(prefixLabel + " " + field.label.getOrElse("")))
+          }
+        )
+
+        updateDictionaryFields(newDsa.fieldRepo, newFields, true, true)
+      }
+
+
+      // delete the new data set (if contains any data)
+      _ <- newDsa.dataSetRepo.deleteAll
+
+      // group jsons by key fields, merge and save them
+      _ <- {
+        val idGroups = items.map { json =>
+          val key = spec.keyFieldNames.map { fieldName =>
+            (json \ fieldName).toOption
+          }
+          val id = (json \ JsObjectIdentity.name).as[BSONObjectID]
+          (key, id)
+        }.toGroupMap.map(_._2.toSeq)
+
+        seqFutures(idGroups.grouped(spec.processingBatchSize.getOrElse(10))) { idGroups =>
+          Future.sequence(
+            idGroups.map(mergeAndSaveAux(newDsa, valueFieldType))
+          )
+        }
+      }
+    } yield
+      ()
+  }
+
+  def lalal(spec: CompareAllValuesInTwoDataSetsSpec) = {
     val dsa1 = dsaf(spec.dataSetId1).get
     val dsa2 = dsaf(spec.dataSetId2).get
 
@@ -1517,7 +1613,8 @@ class DataSetServiceImpl @Inject()(
 
   private def registerDerivedDataSet(
     sourceDsa: DataSetAccessor,
-    spec: ResultDataSetSpec
+    spec: ResultDataSetSpec,
+    saveDataView: Boolean = true
   ): Future[DataSetAccessor] = {
     val metaInfoFuture = sourceDsa.metaInfo
     val settingFuture = sourceDsa.setting
@@ -1537,7 +1634,7 @@ class DataSetServiceImpl @Inject()(
       newDsa <- dsaf.register(
         metaInfo.copy(_id = None, id = spec.id, name = spec.name, timeCreated = new ju.Date()),
         Some(setting.copy(_id = None, dataSetId = spec.id, storageType = spec.storageType)),
-        dataViews.find(_.default)
+        if (saveDataView) dataViews.find(_.default) else None
       )
     } yield
       newDsa

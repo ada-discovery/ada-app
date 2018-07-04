@@ -2,12 +2,12 @@ package util
 
 import scala.reflect.runtime.universe._
 import models.{AdaException, Field, FieldTypeId, FieldTypeSpec}
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsObject, JsValue}
 import java.{util => ju}
-import dataaccess.Criterion._
 
+import dataaccess.Criterion._
 import dataaccess.RepoTypes.FieldRepo
-import dataaccess.{FieldTypeHelper, ReflectionUtil => CoreReflectionUtil}
+import dataaccess.{FieldType, FieldTypeHelper, ReflectionUtil => CoreReflectionUtil}
 import models.DataSetFormattersAndIds.FieldIdentity
 import reactivemongo.bson.BSONObjectID
 
@@ -103,6 +103,19 @@ object FieldUtil {
     def isJson = field.fieldType == FieldTypeId.Json
 
     def isNull = field.fieldType == FieldTypeId.Null
+  }
+
+  implicit class JsonFieldOps(val json: JsObject) {
+
+    def toValue[T](
+      fieldName: String,
+      fieldType: FieldType[T]
+    ) = fieldType.jsonToValue(json \ fieldName)
+
+    def toDisplayString[T](
+      fieldName: String,
+      fieldType: FieldType[T]
+    ) = fieldType.jsonToDisplayString(json \ fieldName)
   }
 
   implicit class InfixOp(val typ: Type) {

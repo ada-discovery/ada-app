@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import models.StorageType
-import models.ml.{DataSetLink, ResultDataSetSpec}
+import models.ml.{DataSetLinkSpec, ResultDataSetSpec}
 import runnables.{FutureRunnable, InputFutureRunnable}
 import services.DataSetService
 import scala.reflect.runtime.universe.typeOf
@@ -49,7 +49,7 @@ class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetS
       "years-smoking"
     )
 
-  private def dataSetLinkSpec(input: LinkMPowerMergedAndDemographicsDataSetsSpec) = DataSetLink(
+  private def dataSetLinkSpec(input: LinkMPowerMergedAndDemographicsDataSetsSpec) = DataSetLinkSpec(
     "mpower_challenge.walking_activity_2",
     "mpower_challenge.demographics_training_2",
     Seq("healthCode"),
