@@ -187,6 +187,7 @@ case class CorrelationWidgetSpec(
 case class IndependenceTestWidgetSpec(
   fieldName: String,
   inputFieldNames: Seq[String],
+  topCount: Option[Int] = None,
   keepUndefined: Boolean = false,
   subFilterId: Option[BSONObjectID] = None,
   displayOptions: BasicDisplayOptions = BasicDisplayOptions()
