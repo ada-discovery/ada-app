@@ -55,13 +55,14 @@ class LinkMPowerTrainingNormsAndDemographicsDataSets @Inject()(dataSetService: D
     Seq("healthCode"),
     walkingNormsFieldNames,
     demographicsFieldNames,
-    Some(4),
-    Some(1),
+    false,
     ResultDataSetSpec(
       "mpower_challenge.walking_activity_training_norms_w_demographics",
       "Walking Activity Training Norms with Demographics",
       StorageType.Mongo
-    )
+    ),
+    Some(4),
+    Some(1)
   )
 
   override def runAsFuture = dataSetService.linkDataSets(dataSetLinkSpec)

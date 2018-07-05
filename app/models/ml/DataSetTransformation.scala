@@ -65,14 +65,17 @@ case class DataSetLinkSpec(
   rightLinkFieldNames: Seq[String],
   leftPreserveFieldNames: Traversable[String],
   rightPreserveFieldNames: Traversable[String],
-  processingBatchSize: Option[Int],
-  saveBatchSize: Option[Int],
-  resultDataSetSpec: ResultDataSetSpec
+  addDataSetIdToRightFieldNames: Boolean,
+  resultDataSetSpec: ResultDataSetSpec,
+  processingBatchSize: Option[Int] = None,
+  saveBatchSize: Option[Int] = None,
+  backpressureBufferSize: Option[Int] = None,
+  parallelism: Option[Int] = None
 ) extends DataSetTransformation {
   def linkFieldNames = leftLinkFieldNames.zip(rightLinkFieldNames)
 }
 
-case class GeneralDataSetLinkSpec(
+case class MultiDataSetLinkSpec(
   leftSourceDataSetId: String,
   rightSourceDataSetIds: Seq[String],
   leftLinkFieldNames: Seq[String],
@@ -80,12 +83,12 @@ case class GeneralDataSetLinkSpec(
   leftPreserveFieldNames: Traversable[String],
   rightPreserveFieldNames: Seq[Traversable[String]],
   addDataSetIdToRightFieldNames: Boolean,
-  saveBatchSize: Option[Int],
-  processingBatchSize: Option[Int],
-  resultDataSetSpec: ResultDataSetSpec
-) extends DataSetTransformation {
-  def linkFieldNames = leftLinkFieldNames.zip(rightLinkFieldNames)
-}
+  resultDataSetSpec: ResultDataSetSpec,
+  processingBatchSize: Option[Int] = None,
+  saveBatchSize: Option[Int] = None,
+  backpressureBufferSize: Option[Int] = None,
+  parallelism: Option[Int] = None
+) extends DataSetTransformation
 
 case class SelfLinkSpec(
   dataSetId: String,

@@ -54,13 +54,14 @@ class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extend
     Seq("patient", "visit", "session", "task"),
     walkingFieldNames,
     scoreFieldNames,
-    Some(4),
-    Some(1),
+    false,
     ResultDataSetSpec(
       "harvard_ldopa.walking_data_w_scores",
       "Walking Data with Score",
       StorageType.Mongo
-    )
+    ),
+    Some(4),
+    Some(1)
   )
 
   override def runAsFuture = dataSetService.linkDataSets(dataSetLinkSpec)

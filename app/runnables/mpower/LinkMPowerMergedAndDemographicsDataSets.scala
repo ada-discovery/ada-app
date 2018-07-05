@@ -56,13 +56,14 @@ class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetS
     Seq("healthCode"),
     walkingFieldNames,
     demographicsFieldNames,
-    input.processingBatchSize,
-    input.saveBatchSize,
+    false,
     ResultDataSetSpec(
       "mpower_challenge.walking_activity_2_w_demographics",
       "Merged Activity with Demographics",
       StorageType.Mongo
-    )
+    ),
+    input.processingBatchSize,
+    input.saveBatchSize
   )
 
   override def runAsFuture(input: LinkMPowerMergedAndDemographicsDataSetsSpec) =
