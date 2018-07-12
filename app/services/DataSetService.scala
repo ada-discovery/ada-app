@@ -11,7 +11,7 @@ import dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, JsonCrudRepo}
 import dataaccess.JsonRepoExtra.InfixOps
 import dataaccess.JsonUtil
 import _root_.util.{AkkaStreamUtil, GroupMapList, MessageLogger}
-import _root_.util.FieldUtil.JsonFieldOps
+import _root_.util.FieldUtil.{JsonFieldOps, fieldTypeOrdering}
 import com.google.inject.ImplementedBy
 import models._
 import Criterion.Infix
@@ -843,7 +843,7 @@ class DataSetServiceImpl @Inject()(
   case class LinkedDataSetInfo(
     dsa: DataSetAccessor,
     preserveFieldNames: Traversable[String],
-    linkFieldNames: Traversable[String]
+    linkFieldNames: Seq[String]
   ) {
     lazy val fieldNamesToLoad: Traversable[String] = {
       preserveFieldNames match {
@@ -871,21 +871,15 @@ class DataSetServiceImpl @Inject()(
     val processingBatchSize = spec.processingBatchSize.getOrElse(10)
     val bufferSize = spec.backpressureBufferSize.getOrElse(10)
 
-    // a helper function to load the fields and create a field name -> field type map
-    def fieldTypeMapAux(dataSetInfo: LinkedDataSetInfo) =
-      fieldTypeMap(dataSetInfo.dsa.fieldRepo, dataSetInfo.fieldNamesToLoad)
-
     for {
       // register the result data set (if not registered already)
       linkedDsa <- registerDerivedDataSet(leftDataSetInfo.dsa, spec.resultDataSetSpec)
 
       // get all the left data set fields
-      leftFieldTypeMap <- fieldTypeMapAux(leftDataSetInfo)
+      leftFieldTypeMap <- fieldTypeMap(leftDataSetInfo)
 
       // get all the right data set fields
-      rightFieldTypeMaps <- Future.sequence(
-        rightDataSetInfos.map(fieldTypeMapAux)
-      )
+      rightFieldTypeMaps <- Future.sequence(rightDataSetInfos.map(fieldTypeMap))
 
       // update the linked dictionary
       _ <- {
@@ -921,6 +915,7 @@ class DataSetServiceImpl @Inject()(
       // delete all items from the linked data set
       _ <- linkedDsa.dataSetRepo.deleteAll
 
+      // create an input stream for the left data set
       stream <- leftDsa.dataSetRepo.findAsStream(projection = leftDataSetInfo.fieldNamesToLoad)
 
       // group, link and save the stream as it goes
@@ -933,21 +928,25 @@ class DataSetServiceImpl @Inject()(
       ()
   }
 
+
   private def fieldTypeMap(
-    fieldRepo: FieldRepo,
-    fieldNames: Traversable[String]
-  ): Future[Map[String, FieldType[_]]] =
+    dataSetInfo: LinkedDataSetInfo
+  ): Future[Map[String, FieldType[_]]] = {
+    val fieldRepo = dataSetInfo.dsa.fieldRepo
+    val fieldNames = dataSetInfo.fieldNamesToLoad
+
     for {
       fields <- fieldNames match {
         case Nil => fieldRepo.find()
         case _ => fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames.toSeq))
       }
     } yield
-      fields.map( field => (field.name, ftf(field.fieldTypeSpec))).toMap
+      fields.map(field => (field.name, ftf(field.fieldTypeSpec))).toMap
+  }
 
   private def linkAndSave(
     leftLinkFieldNames: Seq[String],
-    linkRightJsonsMaps: Seq[Map[Traversable[String], Traversable[JsObject]]],
+    linkRightJsonsMaps: Seq[Map[Seq[String], Traversable[JsObject]]],
     leftFieldTypeMap: Map[String, FieldType[_]],
     linkedDsa: DataSetAccessor,
     saveBatchSize: Option[Int])(
@@ -985,7 +984,7 @@ class DataSetServiceImpl @Inject()(
     dataSetInfo: LinkedDataSetInfo,
     fieldTypeMap: Map[String, FieldType[_]],
     addDataSetIdToRightFieldNames: Boolean
-  ): Future[Map[Traversable[String], Traversable[JsObject]]] =
+  ): Future[Map[Seq[String], Traversable[JsObject]]] =
     for {
       jsons <- dataSetInfo.dsa.dataSetRepo.find(projection = dataSetInfo.fieldNamesToLoad)
     } yield {
@@ -1010,6 +1009,126 @@ class DataSetServiceImpl @Inject()(
         (link, JsObject(strippedJson))
       }.toGroupMap
     }
+
+
+  def lalal(
+    spec: MultiDataSetLinkSpec
+  ) = {
+    val leftDataSetInfo = dsaf(spec.leftSourceDataSetId).map { dsa =>
+      LinkedDataSetInfo(dsa, spec.leftPreserveFieldNames, spec.leftLinkFieldNames)
+    }.getOrElse(throw new AdaException(s"Data Set ${spec.leftSourceDataSetId} not found."))
+
+    val leftDsa = leftDataSetInfo.dsa
+
+    val rightDataSetInfos = spec.rightSourceDataSetIds.zip(spec.rightPreserveFieldNames).zip(spec.rightLinkFieldNames).map {
+      case ((dataSetId, preserveFieldNames), linkFieldNames) =>
+        val dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data Set ${dataSetId} not found."))
+        LinkedDataSetInfo(dsa, preserveFieldNames, linkFieldNames)
+    }
+
+    val processingBatchSize = spec.processingBatchSize.getOrElse(10)
+    val bufferSize = spec.backpressureBufferSize.getOrElse(10)
+
+    // aux function that creates a data stream for a given dsa
+    def createStream(info: LinkedDataSetInfo) = {
+      if(info.fieldNamesToLoad.nonEmpty)
+        logger.info(s"Creating a stream for these fields ${info.fieldNamesToLoad.mkString(",")}.")
+      else
+        logger.info(s"Creating a stream for all available fields.")
+
+      leftDsa.dataSetRepo.findAsStream(
+        sort = info.linkFieldNames.map(AscSort(_)),
+        projection = info.fieldNamesToLoad
+      )
+    }
+
+    // aux function to create orderings for the link fields
+    def linkOrderings(
+      info: LinkedDataSetInfo,
+      fieldTypeMap: Map[String, FieldType[_]]
+    ): Seq[Ordering[Any]] =
+      info.linkFieldNames.map { fieldName =>
+        val fieldType = fieldTypeMap.get(fieldName).get
+        fieldTypeOrdering(fieldType.spec.fieldType).getOrElse(
+          throw new AdaException(s"No ordering available for the field type ${fieldType.spec.fieldType}.")
+        )
+      }
+
+    // aux function to convert a given json to a sequence of link values
+    def linkValues(
+      info: LinkedDataSetInfo,
+      fieldTypeMap: Map[String, FieldType[_]])(
+      json: JsObject
+    ): Seq[Option[Any]] =
+      info.linkFieldNames.map { fieldName =>
+        val fieldType = fieldTypeMap.get(fieldName).get
+        json.toValue(fieldName, fieldType)
+      }
+
+    for {
+      // register the result data set (if not registered already)
+      linkedDsa <- registerDerivedDataSet(leftDataSetInfo.dsa, spec.resultDataSetSpec)
+
+      // get all the left data set fields
+      leftFieldTypeMap <- fieldTypeMap(leftDataSetInfo)
+
+      // get all the right data set fields
+      rightFieldTypeMaps <- Future.sequence(rightDataSetInfos.map(fieldTypeMap))
+
+      // left link fields' orderings
+      leftLinkOrderings = linkOrderings(leftDataSetInfo, leftFieldTypeMap)
+
+      // right link fields' orderings
+      rightLinkOrderings = rightDataSetInfos.zip(rightFieldTypeMaps).map((linkOrderings(_,_)).tupled)
+
+      // left stream
+      leftStream <- createStream(leftDataSetInfo)
+
+      // right streams
+      rightSources <- Future.sequence(rightDataSetInfos.map(createStream))
+
+      _ <- {
+        val rightIterators = rightSources.map(_.runWith(StreamConverters.asJavaStream[JsObject]).iterator())
+
+        var currentRightJson: Option[JsObject] = None
+        var currentRightKey: Seq[Any] = Nil
+
+        def findEqualLinkValues(
+          info: LinkedDataSetInfo,
+          fieldTypeMap: Map[String, FieldType[_]],
+          linkOrderings: Seq[Ordering[Any]],
+          jsonIterator: Iterator[JsObject])(
+          leftLink: Seq[Option[Any]]
+        ) = {
+
+          jsonIterator.takeWhile { rightJson =>
+            val rightLink = linkValues(info, fieldTypeMap)(rightJson)
+
+            val isEqual = (leftLink.zip(rightLink)).zip(linkOrderings).forall { case ((leftValue, rightValue), ordering: Ordering[Any]) =>
+              ordering.equiv(leftValue, rightValue)
+            }
+            isEqual
+          }
+        }
+
+        leftStream.map { leftJson =>
+
+//          if (currentRightJson.isEmpty && rightIterator.hasNext) {
+//            currentRightJson = Some(rightIterator.next())
+//            currentRightKey = key(currentRightJson.get)
+//          }
+
+          val leftLink = linkValues(leftDataSetInfo, leftFieldTypeMap)(leftJson)
+
+
+
+          leftJson
+        }
+        Future(())
+      }
+    } yield
+      ()
+  }
 
   override def selfLink(spec: SelfLinkSpec) = {
     val dsa = dsaf(spec.dataSetId).get
@@ -1100,109 +1219,6 @@ class DataSetServiceImpl @Inject()(
       }
     } yield
       ()
-  }
-
-  def lalal(spec: DataSetLinkSpec) = {
-    val leftDsa = dsaf(spec.leftSourceDataSetId).get
-    val rightDsa = dsaf(spec.rightSourceDataSetId).get
-
-    def key(json: JsObject): Seq[Any] = {
-      Seq()
-    }
-
-    def compare(value1: Any, value2: Any): Int = {
-      def aux[T](implicit ordering: Ordering[T]) = {
-        val value1X = value1.asInstanceOf[T]
-        val value2X = value2.asInstanceOf[T]
-
-        ordering.compare(value1X, value2X)
-      }
-
-      value1 match {
-        case _: String => aux[String]
-        case _: Boolean => aux[Boolean]
-        case _: Double => aux[Double]
-        case _: Float => aux[Float]
-        case _: Long => aux[Long]
-        case _: Int => aux[Int]
-        case _: Short => aux[Short]
-        case _: Byte => aux[Byte]
-        case _: java.util.Date => aux[java.util.Date]
-        case _ => throw new AdaException(s"No ordering found for ${value1.getClass.getName}")
-      }
-    }
-
-    for {
-      // get all the field names
-      fieldNames <- leftDsa.fieldRepo.find(
-        sort = Seq(AscSort(FieldIdentity.name))
-      ).map(_.map(_.name).toSeq)
-
-      // stream1
-      leftSource <- {
-        if(fieldNames.nonEmpty)
-          logger.info(s"Creating a stream for these fields ${fieldNames.mkString(",")}.")
-        else
-          logger.info(s"Creating a stream for all available fields.")
-
-        leftDsa.dataSetRepo.findAsStream(
-          sort = spec.leftLinkFieldNames.map(AscSort(_)),
-          projection = Nil // TODO
-        )
-      }
-
-      // stream2
-      rightSource <- rightDsa.dataSetRepo.findAsStream(
-        sort = spec.rightLinkFieldNames.map(AscSort(_)),
-        projection = Nil // TODO
-      )
-
-      // paired stream
-      pairedStream = AkkaStreamUtil.zipSources(leftSource, rightSource)
-
-      errorCount <- {
-        val rightIterator = rightSource.runWith(StreamConverters.asJavaStream[JsObject]).iterator()
-        var currentRightJson: Option[JsObject] = None
-        var currentRightKey: Seq[Any] = Nil
-
-        leftSource.map { leftJson =>
-
-          if (currentRightJson.isEmpty && rightIterator.hasNext) {
-            currentRightJson = Some(rightIterator.next())
-            currentRightKey = key(currentRightJson.get)
-          }
-
-          val leftKey = key(leftJson)
-
-
-          leftJson
-        }
-        pairedStream.map { case (left, right) => 0 }.runWith(Sink.fold(0)(_+_))
-      }
-    } yield
-      if (errorCount > 0)
-        logger.error(s"In total $errorCount errors were found during json data set comparison.")
-  }
-
-  def asJavaStream[T](): Sink[T, java.util.stream.Stream[T]] = {
-    Sink.fromGraph(new QueueSink[T]())
-      .mapMaterializedValue(queue ⇒ StreamSupport.stream(
-        Spliterators.spliteratorUnknownSize(new java.util.Iterator[T] {
-          var nextElementFuture: Future[Option[T]] = queue.pull()
-          var nextElement: Option[T] = null
-
-          override def hasNext: Boolean = {
-            nextElement = Await.result(nextElementFuture, Inf)
-            nextElement.isDefined
-          }
-
-          override def next(): T = {
-            val next = nextElement.get
-            nextElementFuture = queue.pull()
-            next
-          }
-        }, 0), false).onClose(new Runnable { def run = queue.cancel() }))
-      .withAttributes(DefaultAttributes.asJavaStream)
   }
 
   override def processSeriesAndSaveDataSet(

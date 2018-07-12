@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import controllers.core.WebContext
+import play.api.Configuration
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, Controller, Request}
 import play.twirl.api.Html
@@ -13,12 +14,13 @@ import play.api.cache.Cached
 class DocumentationController @Inject()(
     messagesApi: MessagesApi,
     webJarAssets: WebJarAssets,
+    configuration: Configuration,
     cached: Cached
   ) extends Controller {
 
   private implicit def webContext(implicit request: Request[_]) = {
     implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets)
+    WebContext(messagesApi, webJarAssets, configuration)
   }
 
   def intro =

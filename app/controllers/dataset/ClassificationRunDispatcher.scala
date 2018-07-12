@@ -7,6 +7,7 @@ import models.FilterCondition
 import models.ml.ClassificationSetting
 import reactivemongo.bson.BSONObjectID
 import models.ml.ClassificationEvalMetric
+import models.security.SecurityRole
 import play.api.mvc.{Action, AnyContent}
 import util.SecurityUtil.createDataSetPermission
 
@@ -21,12 +22,12 @@ class ClassificationRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("admin"))
+  ) = List(Array(SecurityRole.admin))
 
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, "classificationRun", actionName))
+  ) = Some(createDataSetPermission(controllerId, ControllerName.classificationRun, actionName))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

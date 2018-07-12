@@ -6,8 +6,8 @@
     title: Option[String],
     count: Long,
     actions: Option[Html],
-    table: Html,
-    charts: Option[Html] = None,
+    table: Option[Html] = None,
+    widgets: Option[Html] = None,
     sideBar: Option[Html] = None,
     topContentBar: Option[Html] = None,
     topResources: Option[Html] = None,
@@ -31,11 +31,11 @@
         <hr/>
     }
 
-    @if(charts.isDefined){
-        @charts.get
+    @if(widgets.isDefined){
+        @widgets.get
 
-        @if(count > 0) {
-            @collapsibleElement(table)
+        @if(table.isDefined && count > 0) {
+            @collapsibleElement(table.get)
         }
     } else {
         @table

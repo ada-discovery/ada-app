@@ -65,7 +65,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     unsupervisedLearningRepo: UnsupervisedLearningRepo,
     dataSpaceService: DataSpaceService,
     tranSMARTService: TranSMARTService,
-    configuration: Configuration,
     val userManager: UserManager
   ) extends ReadonlyControllerImpl[JsObject, BSONObjectID]
 
@@ -121,7 +120,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private val distScreenWidgetsGenMethod = WidgetGenerationMethod.RepoAndFullData
   private val independenceTestKeepUndefined = false
 
-  private val fractalisServerUrl = configuration.getString("fractalis.server.url").getOrElse("https://fractalis.lcsb.uni.lu")
+  private lazy val fractalisServerUrl = configuration.getString("fractalis.server.url")
 
   private val resultDataSetMapping: Mapping[ResultDataSetSpec] = mapping(
     "id" -> nonEmptyText,
@@ -447,7 +446,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
             val viewParts = viewPartsWidgetFutures.map(_._1)
             val jsonsFuture = Future.sequence(viewPartsWidgetFutures.map(_._2)).map { allWidgetsWithFields =>
-              val allWidgets = allWidgetsWithFields.map(_.map(_.map(_._1)))
+              val allWidgets = allWidgetsWithFields.map(_.flatMap(_.map(_._1)))
               val allFieldNames = allWidgetsWithFields.map(_.flatMap(_.map(_._2)))
               val minMaxWidgets = if (allWidgets.size > 1) setBoxPlotMinMax(allWidgets) else allWidgets
               minMaxWidgets.zip(allFieldNames).map { case (widgets, fieldNames) =>
@@ -490,14 +489,12 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def widgetsToJsons(
-    widgets: Seq[Option[Widget]],
+    widgets: Seq[Widget],
     fieldNames: Seq[Seq[String]],
     fieldMap: Map[String, Field]
   ): JsArray = {
-    val jsons = fieldNames.zip(widgets).flatMap { case (fieldNames, widget) =>
-      widget.map(
-        widgetToJson(_, fieldNames, fieldMap)
-      )
+    val jsons = fieldNames.zip(widgets).map { case (fieldNames, widget) =>
+      widgetToJson(widget, fieldNames, fieldMap)
     }
 
     JsArray(jsons)
@@ -636,15 +633,18 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def setBoxPlotMinMax(
-    widgets: Seq[Traversable[Option[Widget]]]
-  ): Seq[Traversable[Option[Widget]]] = {
+    widgets: Seq[Traversable[Widget]]
+  ): Seq[Traversable[Widget]] = {
     val widgetsSeqs = widgets.map(_.toSeq)
     val chartCount = widgets.head.size
 
     def getMinMaxWhiskers[T](index: Int): Option[(T, T)] = {
-      val boxWidgets: Seq[BoxWidget[T]] = widgetsSeqs.map { widgets =>
-        widgets(index).collect { case x: BoxWidget[T] => x }
-      }.flatten
+      val boxWidgets: Seq[BoxWidget[T]] = widgetsSeqs.flatMap { widgets =>
+        widgets(index) match {
+          case x: BoxWidget[T] => Some(x)
+          case _ => None
+        }
+      }
 
       boxWidgets match {
         case Nil => None
@@ -670,13 +670,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       widgets.zip(indexMinMaxWhiskers).map { case (widget, (index, minMaxWhiskers)) =>
         minMaxWhiskers match {
           case Some(minMaxWhiskers) =>
-            widget.map { widget =>
-              widget match {
-                case x: BoxWidget[_] =>
-                  implicit val ordering = x.ordering
-                  setMinMax(x, minMaxWhiskers)
-                case _ => widget
-              }
+            widget match {
+              case x: BoxWidget[_] =>
+                implicit val ordering = x.ordering
+                setMinMax(x, minMaxWhiskers)
+              case _ => widget
             }
           case None => widget
         }
@@ -1529,24 +1527,28 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val sessionCookie = request.cookies.get("PLAY2AUTH_SESS_ID")
         val sessionId = sessionCookie.map(_.value)
 
-//        println("isSecure  : " + sessionCookie.get.secure)
-//        println("HTTP Only : " + sessionCookie.get.httpOnly)
-//        println("Value     : " + sessionCookie.get.value)
+        //        println("isSecure  : " + sessionCookie.get.secure)
+        //        println("HTTP Only : " + sessionCookie.get.httpOnly)
+        //        println("Value     : " + sessionCookie.get.value)
 
-        sessionId.map { sessionId =>
-          render {
-            case Accepts.Html() => Ok(dataset.fractalis(
-              dataSetName,
-              fractalisServerUrl,
-              sessionId,
-              field,
-              setting.filterShowFieldStyle,
-              tree
-            ))
-            case Accepts.Json() => BadRequest("getFractalis function doesn't support JSON response.")
-          }
+        fractalisServerUrl.map { url =>
+          sessionId.map { sessionId =>
+            render {
+              case Accepts.Html() => Ok(dataset.fractalis(
+                dataSetName,
+                url,
+                sessionId,
+                field,
+                setting.filterShowFieldStyle,
+                tree
+              ))
+              case Accepts.Json() => BadRequest("getFractalis function doesn't support JSON response.")
+            }
+          }.getOrElse(
+            BadRequest("Session id not available.")
+          )
         }.getOrElse(
-          BadRequest("Session id not available.")
+          BadRequest("URL for Fractalis is not available. Set one in a config file with the id \'fractalis.server.url\'.")
         )
       }
     }.recover {

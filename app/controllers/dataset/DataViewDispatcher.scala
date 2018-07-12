@@ -31,12 +31,12 @@ class DataViewDispatcher @Inject()(
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("admin"))
+  ) = List(Array(SecurityRole.admin))
 
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, "dataview", actionName))
+  ) = Some(createDataSetPermission(controllerId, ControllerName.dataview, actionName))
 
   override def get(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.get(id))
 

@@ -209,7 +209,11 @@
     Some(dataSetName + " ("+ dataViewName + ")"),
     tableViewParts.map(_.page.total).sum,
     Some(actions),
-    viewTables(dataViewId, tableViewParts, dataSetRouter),
+    if(tableViewParts.exists(_.tableFields.nonEmpty)) {
+        Some(viewTables(dataViewId, tableViewParts, dataSetRouter))
+    } else {
+        None
+    },
     if (tableViewParts.size == 1) {
         Some(widgetsDiv)
     } else {

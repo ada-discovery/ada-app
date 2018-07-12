@@ -8,6 +8,7 @@ import models.ml.VectorTransformType
 import models.{FieldTypeId, FilterCondition, PageOrder}
 import reactivemongo.bson.BSONObjectID
 import models.ml.RegressionEvalMetric
+import models.security.SecurityRole
 import play.api.mvc.{Action, AnyContent}
 import util.SecurityUtil._
 
@@ -21,12 +22,12 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("admin"))
+  ) = List(Array(SecurityRole.admin))
 
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, "dataSet", actionName))
+  ) = Some(createDataSetPermission(controllerId, ControllerName.dataSet, actionName))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

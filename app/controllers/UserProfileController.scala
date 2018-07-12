@@ -6,7 +6,7 @@ import dataaccess.{Criterion, RepoException, User}
 import models.workspace.Workspace
 import Criterion.Infix
 import persistence.RepoTypes.UserSettingsRepo
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json.Json
@@ -31,10 +31,11 @@ class UserProfileController @Inject() (
     userManager: UserManager,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets
+    webJarAssets: WebJarAssets,
+    configuration: Configuration
   ) extends Controller {
 
-  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)
+  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets, configuration)
 
   protected val userUpdateForm = Form(
     mapping(

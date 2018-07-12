@@ -5,7 +5,7 @@ import javax.inject.Inject
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import controllers.core.{GenericMapping, WebContext}
 import persistence.RepoTypes.MessageRepo
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, AnyContent, Controller, Request}
 import play.api.Play.current
@@ -27,7 +27,8 @@ class AdminController @Inject() (
     messageRepo: MessageRepo,
     userManager: UserManager,
     messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets
+    webJarAssets: WebJarAssets,
+    configuration: Configuration
   ) extends Controller {
 
   private val logger = Logger
@@ -37,7 +38,7 @@ class AdminController @Inject() (
   private val libPrefix = "org.ada"
 
 //  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
-  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)(request)
+  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets, configuration)(request)
 
   /**
     * Creates view showing all runnables.

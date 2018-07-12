@@ -9,7 +9,7 @@ import dataaccess.JsonRepoExtra._
 import dataaccess.Criterion._
 import models._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, AnyContent, Controller, Request}
@@ -20,7 +20,8 @@ class MPowerChallengeClusteringController @Inject()(
     dsaf: DataSetAccessorFactory,
     widgetGenerationService: WidgetGenerationService,
     messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets
+    webJarAssets: WebJarAssets,
+    configuration: Configuration
   ) extends Controller {
 
   private val x1 = "x1"
@@ -148,7 +149,7 @@ class MPowerChallengeClusteringController @Inject()(
 
   private implicit def webContext(implicit request: Request[_]) = {
     implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets)
+    WebContext(messagesApi, webJarAssets, configuration)
   }
 
   def index = Action { implicit request =>

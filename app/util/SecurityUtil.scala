@@ -4,6 +4,7 @@ import java.security.MessageDigest
 
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import controllers.core.WithNoCaching
+import controllers.dataset.ControllerName
 import models.security.SecurityRole
 import play.api.http.{Status => HttpStatus}
 import play.api.mvc.BodyParsers.parse
@@ -63,9 +64,9 @@ object SecurityUtil {
 
   def createDataSetPermission(
     dataSetId: String,
-    controllerName: String,
+    controllerName: ControllerName.Value,
     actionName: String
-  ) = "\\bDS:" + dataSetId.replaceAll("\\.","\\\\.") + "(\\." + controllerName + "(\\." + actionName + ")?)?\\b"
+  ) = "\\bDS:" + dataSetId.replaceAll("\\.","\\\\.") + "(\\." + controllerName.toString + "(\\." + actionName + ")?)?\\b"
 
   type AuthenticatedAction[A] =
     AuthenticatedRequest[A] => Future[Result]

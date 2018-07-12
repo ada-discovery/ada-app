@@ -6,7 +6,7 @@ import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import controllers.core.{WebContext, WithNoCaching}
 import models.DataSpaceMetaInfo
 import models.security.UserManager
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, AnyContent, Controller, Request}
@@ -24,7 +24,8 @@ class AppController @Inject() (
     val userManager: UserManager,
     cached: Cached,
     messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets
+    webJarAssets: WebJarAssets,
+    configuration: Configuration
   ) extends Controller with AdaAuthConfig {
 
   @Inject var deadbolt: DeadboltActions = _
@@ -33,7 +34,7 @@ class AppController @Inject() (
 
   private implicit def webContext(implicit request: Request[_]) = {
     implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets)
+    WebContext(messagesApi, webJarAssets, configuration)
   }
 
   def index =

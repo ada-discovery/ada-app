@@ -15,6 +15,7 @@
     tableId: Option[String] = None
 )
 
+<div class="horizontal-scroll">
 <table @if(tableId.isDefined) {id="@tableId.get"} class="table table-striped">
 	<thead>
 		<tr>
@@ -59,3 +60,4 @@
 	    }
 	</tbody>
 </table>
+</div>

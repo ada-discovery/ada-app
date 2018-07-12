@@ -5,6 +5,7 @@ import javax.inject.Inject
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import controllers.core.WebContext
 import ldap.LdapUserService
+import play.api.Configuration
 import views.html.ldapviews._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.mvc._
@@ -17,10 +18,11 @@ class LdapUserController @Inject() (
     ldapUserService: LdapUserService,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets
+    webJarAssets: WebJarAssets,
+    configuration: Configuration
   ) extends Controller {
 
-  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)
+  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets, configuration)
 
   def listAll = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {

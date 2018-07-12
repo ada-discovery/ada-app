@@ -7,7 +7,7 @@ import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import controllers.WebJarAssets
 import dataaccess._
 import models._
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
@@ -40,6 +40,7 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
   @Inject var messagesApi: MessagesApi = _
   @Inject var deadbolt: DeadboltActions = _
   @Inject var webJarAssets: WebJarAssets = _
+  @Inject var configuration: Configuration = _
 
   protected val pageLimit = 20
 
@@ -59,7 +60,7 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
 //  protected implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi)
   protected implicit def webContext(implicit request: Request[_]) = {
     implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets)
+    WebContext(messagesApi, webJarAssets, configuration)
   }
 
   //  protected implicit def authenticatedRequest[A](implicit request: Request[A]) = new AuthenticatedRequest(request, None)

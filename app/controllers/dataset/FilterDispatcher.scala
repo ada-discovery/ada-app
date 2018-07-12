@@ -3,13 +3,14 @@ package controllers.dataset
 import javax.inject.Inject
 
 import controllers.SecureControllerDispatcher
-import models.security.UserManager
+import models.security.{SecurityRole, UserManager}
 import models.{AdaException, Filter, FilterCondition}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
 import util.SecurityUtil.createDataSetPermission
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class FilterDispatcher @Inject()(
@@ -27,12 +28,12 @@ class FilterDispatcher @Inject()(
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("admin"))
+  ) = List(Array(SecurityRole.admin))
 
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, "filter", actionName))
+  ) = Some(createDataSetPermission(controllerId, ControllerName.filter, actionName))
 
   override def get(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.get(id))
 

@@ -137,9 +137,9 @@ class WidgetGenerationServiceImpl @Inject() (
           case p: GridDistributionCountWidgetSpec => Left(p)
           case p: ScatterWidgetSpec => Right(p)
           case p: HeatmapAggWidgetSpec => Right(p)
-          case p: WidgetSpec => Right(p)
           case p: CorrelationWidgetSpec => Right(p)
           case p: BasicStatsWidgetSpec => Right(p)
+          case p: IndependenceTestWidgetSpec => Right(p)
         }
       } else
         widgetSpecs.map(Right(_))

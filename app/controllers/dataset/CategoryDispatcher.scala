@@ -4,6 +4,7 @@ import javax.inject.Inject
 
 import controllers.SecureControllerDispatcher
 import models.FilterCondition
+import models.security.SecurityRole
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil.createDataSetPermission
 
@@ -18,12 +19,12 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("admin"))
+  ) = List(Array(SecurityRole.admin))
 
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, "category", actionName))
+  ) = Some(createDataSetPermission(controllerId, ControllerName.category, actionName))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

@@ -8,8 +8,9 @@ import play.api.i18n.MessagesApi
 import play.api.mvc.{Action, AnyContent, Controller, Request}
 import util.SecurityUtil._
 import ldap.{LdapConnector, LdapSettings}
-import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.Configuration
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 /**
@@ -20,11 +21,12 @@ class LdapController @Inject() (
     ldapSettings: LdapSettings,
     deadbolt: DeadboltActions,
     messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets
+    webJarAssets: WebJarAssets,
+    configuration: Configuration
   ) extends Controller{
 
   //  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
-  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)
+  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets, configuration)
 
   def settings = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future (

@@ -4,6 +4,7 @@ import controllers.SecureControllerDispatcher
 import models.FilterCondition
 import javax.inject.Inject
 
+import models.security.SecurityRole
 import util.SecurityUtil._
 
 class DictionaryDispatcher @Inject() (
@@ -19,12 +20,12 @@ class DictionaryDispatcher @Inject() (
   override protected def getAllowedRoleGroups(
     controllerId: String,
     actionName: String
-  ) = List(Array("admin"))
+  ) = List(Array(SecurityRole.admin))
 
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, "field", actionName))
+  ) = Some(createDataSetPermission(controllerId, ControllerName.field, actionName))
 
   override def get(id: String) = dispatch(_.get(id))
 

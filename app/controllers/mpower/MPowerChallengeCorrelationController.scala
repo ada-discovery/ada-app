@@ -10,7 +10,7 @@ import dataaccess.Criterion._
 import models.AdaException
 import models.DataSetFormattersAndIds.FieldIdentity
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{Json, _}
@@ -21,7 +21,8 @@ import scala.concurrent.Future
 class MPowerChallengeCorrelationController @Inject()(
     dsaf: DataSetAccessorFactory,
     messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets
+    webJarAssets: WebJarAssets,
+    configuration: Configuration
   ) extends Controller {
 
   private val tremorCorrDataSetPrefix = "harvard_ldopa.tremor_correlation_abs"
@@ -49,7 +50,7 @@ class MPowerChallengeCorrelationController @Inject()(
 
   private implicit def webContext(implicit request: Request[_]) = {
     implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets)
+    WebContext(messagesApi, webJarAssets, configuration)
   }
 
   def index = Action { implicit request =>

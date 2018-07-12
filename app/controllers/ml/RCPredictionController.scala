@@ -70,7 +70,7 @@ class RCPredictionController @Inject()(
       "preserveWeightFieldNames" -> of[Seq[String]]
     )(RCPredictionSettings.apply)(RCPredictionSettings.unapply))
 
-  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets)
+  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets, configuration)
 
   private val weightRdp = RandomDistributionProviderFactory(RandomDistribution.createNormalDistribution[jl.Double](classOf[jl.Double], 0d, 1d))
 

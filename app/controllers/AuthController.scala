@@ -5,7 +5,7 @@ import javax.inject.Inject
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import controllers.core.WebContext
 import models.FieldTypeId
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.json._
@@ -30,7 +30,8 @@ class AuthController @Inject() (
     val userManager: UserManager,
     mailClientProvider: MailClientProvider,
     messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets
+    webJarAssets: WebJarAssets,
+    configuration: Configuration
   ) extends Controller with LoginLogout with AdaAuthConfig {
 
   private val logger = Logger
@@ -51,7 +52,7 @@ class AuthController @Inject() (
 
   private implicit def webContext(implicit request: Request[_]) = {
     implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets)
+    WebContext(messagesApi, webJarAssets, configuration)
   }
 
   /**

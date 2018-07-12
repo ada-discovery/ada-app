@@ -11,16 +11,18 @@
     implicit request: Request[_]
 )
 
+
 <div class="row vertical-divider">
     @viewParts.map { viewPart =>
         <div class="col-md-@{12 / viewParts.size}">
-            @viewTable(
-                viewPart.page,
-                viewPart.tableFields,
-                dataSetRouter
-            )
+        @viewTable(
+            viewPart.page,
+            viewPart.tableFields,
+            dataSetRouter
+        )
         </div>
     }
     @jsonModal("jsonModal", None)
     @lineChartArrayModal("lineChartArrayModal")
 </div>
+

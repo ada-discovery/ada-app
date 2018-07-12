@@ -1,16 +1,27 @@
 @import util.{matchesPath, getParamValue}
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+@import be.objectify.deadbolt.scala.views.html.{subjectPresent, subjectPresentOr, restrict, pattern}
 @import controllers.DataSetWebContext._
+@import views.html.restrictOrPattern
+@import models.security.SecurityRole
+@import util.SecurityUtil.createDataSetPermission
 
+@import controllers.dataset.ControllerName
 @()(implicit context: DataSetWebContext)
 
+@listItemWithPermission(call: Call, text: String, permissionControllerName: ControllerName.Value, permissionActionName: String, matchPrefixDepth : Option[Int] = None) = {
+    @restrictOrPattern(Array(SecurityRole.admin), createDataSetPermission(context.dataSetId, permissionControllerName, permissionActionName)) {
+        @listItem(call, text, matchPrefixDepth)
+    }
+}
+
 @listItem(call: Call, text: String, matchPrefixDepth : Option[Int] = None) = {
-    <li @if(matchesPath(call.url, toRequest.uri, matchPrefixDepth)) {class="active"}>
+    <li @if(matchesPath(call.url, toRequest.uri, matchPrefixDepth)) { class="active"}>
         <a href="@call">@text</a>
     </li>
 }
 
-<ul class="nav nav-tabs">
+<ul id="dataSetSubMenu" class="nav nav-tabs">
     <li id="viewsDiv" class="dropdown">
         <a class="dropdown-toggle" data-toggle="dropdown" href="#">Views<span class="caret"></span></a>
         <ul id="viewsDropdownDiv" class="dropdown-menu">
@@ -19,30 +30,54 @@
     <li class="dropdown">
         <a class="dropdown-toggle" data-toggle="dropdown" href="#">Analytics<span class="caret"></span></a>
         <ul class="dropdown-menu">
-            @listItem(dataSetRouter.plainGetDistribution, "Distribution", Some(2))
-            @listItem(dataSetRouter.getCumulativeCount(None, None, Left(Nil)), "Cumulative Count", Some(2))
-            @listItem(dataSetRouter.plainGetScatterStats, "Scatter", Some(2))
-            @listItem(dataSetRouter.getCorrelations(Left(Nil)), "Correlation", Some(2))
-            @listItem(dataSetRouter.getIndependenceTest(Left(Nil)), "Independence Test (Chi-Square/ANOVA)", Some(2))
+            @listItemWithPermission(dataSetRouter.plainGetDistribution, "Distribution", ControllerName.dataSet, "getDistribution", Some(2))
+            @listItemWithPermission(dataSetRouter.getCumulativeCount(None, None, Left(Nil)), "Cumulative Count", ControllerName.dataSet, "getCumulativeCount", Some(2))
+            @listItemWithPermission(dataSetRouter.plainGetScatterStats, "Scatter", ControllerName.dataSet, "getScatterStats", Some(2))
+            @listItemWithPermission(dataSetRouter.getCorrelations(Left(Nil)), "Correlation", ControllerName.dataSet, "getCorrelations", Some(2))
+            @listItemWithPermission(dataSetRouter.getIndependenceTest(Left(Nil)), "Independence Test (Chi-Square/ANOVA)", ControllerName.dataSet, "getIndependenceTest", Some(2))
             <li role="separator" class="divider"></li>
-            @listItem(classificationRunRouter.plainList, "ML Classification", Some(2))
-            @listItem(regressionRunRouter.plainList, "ML Regression", Some(2))
-            @listItem(dataSetRouter.getClusterization, "ML Clusterization", Some(2))
+            @listItemWithPermission(classificationRunRouter.plainList, "ML Classification", ControllerName.classificationRun, "find", Some(2))
+            @listItemWithPermission(regressionRunRouter.plainList, "ML Regression", ControllerName.regressionRun, "find", Some(2))
+            @listItemWithPermission(dataSetRouter.getClusterization, "ML Clusterization", ControllerName.dataSet, "getClusterization", Some(2))
             <li role="separator" class="divider"></li>
-            @listItem(dataSetRouter.getSeriesProcessingSpec, "Series Processing", Some(2))
-            @listItem(dataSetRouter.getSeriesTransformationSpec, "Series Transformation", Some(2))
-            <li role="separator" class="divider"></li>
-            @listItem(dataSetRouter.getFractalis(None), "Fractalis", Some(2))
+            @listItemWithPermission(dataSetRouter.getSeriesProcessingSpec, "Series Processing", ControllerName.dataSet, "getSeriesProcessingSpec", Some(2))
+            @listItemWithPermission(dataSetRouter.getSeriesTransformationSpec, "Series Transformation", ControllerName.dataSet, "getSeriesTransformationSpec", Some(2))
+            @if(configuration.getString("fractalis.server.url").isDefined) {
+                <li role="separator" class="divider"></li>
+                @listItemWithPermission(dataSetRouter.getFractalis(None), "Fractalis", ControllerName.dataSet, "getFractalis", Some(2))
+            }
         </ul>
     </li>
-    @listItem(dictionaryRouter.plainList, "Dictionary", Some(2))
-    @listItem(categoryRouter.plainList, "Categorical Tree", Some(2))
+    @listItemWithPermission(dictionaryRouter.plainList, "Dictionary", ControllerName.field, "find", Some(2))
+    @listItemWithPermission(categoryRouter.plainList, "Categorical Tree", ControllerName.category, "find", Some(2))
     <li class="dropdown">
         <a class="dropdown-toggle" data-toggle="dropdown" href="#">Setting<span class="caret"></span></a>
         <ul class="dropdown-menu">
-            @listItem(dataSetSettingRoutes.editForDataSet(context.dataSetId), "General", Some(2))
-            @listItem(filterRouter.plainList, "Filters", Some(2))
-            @listItem(dataViewRouter.plainList, "Views", Some(2))
+            @restrict(roles = List(Array(SecurityRole.admin))) {
+                @listItem(dataSetSettingRoutes.editForDataSet(context.dataSetId), "General", Some(2))
+            }
+            @listItemWithPermission(filterRouter.plainList, "Filters", ControllerName.filter, "find", Some(2))
+            @listItemWithPermission(dataViewRouter.plainList, "Views", ControllerName.dataview, "find", Some(2))
         </ul>
     </li>
 </ul>
+
+<script type="text/javascript">
+    $("#dataSetSubMenu .dropdown:not(#viewsDiv)").each(function () {
+        var liCount = $(this).find("li").size()
+        var separatorCount = $(this).find("li.divider").size()
+        if (liCount - separatorCount == 0) {
+            $(this).remove()
+        } else {
+            $(this).find("li").each(function(index, item) {
+                if ($(item).hasClass("divider")) {
+                    var prev = $(item).prev()
+                    var next = $(item).next()
+                    if (next.size() == 0 || next.hasClass("divider")) {
+                        $(item).remove()
+                    }
+                }
+            })
+        }
+    });
+</script>
