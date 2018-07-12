@@ -426,3 +426,8 @@ tr.vertical-divider > td:last-child {
 .nowrap {
     white-space: nowrap ;
 }
+
+.horizontal-scroll {
+    overflow-x: auto;
+    width: auto;
+}
