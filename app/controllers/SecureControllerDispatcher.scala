@@ -6,7 +6,6 @@ import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions, Deadb
 import be.objectify.deadbolt.scala.cache.HandlerCache
 import be.objectify.deadbolt.scala.models.PatternType
 import dataaccess.User
-import models.AdaException
 import models.security.SecurityRole
 
 import scala.concurrent.ExecutionContext.Implicits.global

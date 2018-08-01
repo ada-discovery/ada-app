@@ -1,16 +1,18 @@
 package services.stats
 
 import java.io.File
+
+import com.banda.core.plotter.Plotter
 import com.jujutsu.tsne.barneshut.BHTSne
 import com.jujutsu.tsne.barneshut.ParallelBHTsne
 import com.jujutsu.utils.MatrixUtils
 import com.jujutsu.utils.TSneUtils
-import smile.plot.Palette
-import smile.plot.plot
+import util.writeStringAsStream
 
 object LejonTSNEExample extends App {
 
   val folder = "/home/peter/Downloads/smile/shell/src/universal/data/mnist/"
+  val plotter = Plotter.createExportInstance("svg")
 
   val initial_dims = 55
   val perplexity = 20.0
@@ -23,7 +25,8 @@ object LejonTSNEExample extends App {
 
   var tsne = if (parallel) new ParallelBHTsne else new BHTSne
   val config = TSneUtils.buildConfig(input, 2, initial_dims, perplexity, 1000)
-
   val output = tsne.tsne(config)
-  plot(output, 'o', Palette.RED)
+
+  plotter.plotXY(output.map(_.toIterable).toIterable, "t-SNE")
+  writeStringAsStream(plotter.getOutput, new java.io.File("t-SNE-example.svg"))
 }

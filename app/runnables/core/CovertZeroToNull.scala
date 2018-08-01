@@ -3,7 +3,7 @@ package runnables.core
 import java.{util => ju}
 
 import util.seqFutures
-import dataaccess.FieldTypeHelper
+import field.FieldTypeHelper
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{AdaException, FieldTypeId}
 import play.api.Logger

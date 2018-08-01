@@ -16,14 +16,6 @@ trait ClassificationRunController extends ReadonlyController[BSONObjectID]{
     saveBinCurves: Boolean
   ): Action[AnyContent]
 
-  def selectFeaturesAsChiSquare(
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterId: Option[BSONObjectID],
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
-  ): Action[AnyContent]
-
   def selectFeaturesAsAnovaChiSquare(
     inputFieldNames: Seq[String],
     outputFieldName: String,

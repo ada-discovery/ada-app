@@ -3,8 +3,6 @@ package runnables.core
 import breeze.linalg._
 
 import breeze.linalg.svd.SVD
-import breeze.plot._
-
 import scala.util.Random._
 
 object BreezePCA extends App {
@@ -19,11 +17,6 @@ object BreezePCA extends App {
   val pcaRes = v(0 until 2, ::).t //top 'components' eigenvectors
 
    println("result pca \n" + pcaRes)
-
-  val f1 = Figure("data")
-  val f2 = Figure("pca")
-  f1.subplot(0) += scatter(data(::, 0), data(::, 3), { _ => 0.1 })
-  f2.subplot(0) += scatter(pcaRes(::, 0), pcaRes(::, 1), { _ => 0.1 })
 
   private def pca(data: DenseMatrix[Double], components: Int) = {
     val d = zeroMean(data)

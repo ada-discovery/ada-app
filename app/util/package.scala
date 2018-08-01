@@ -1,4 +1,5 @@
 import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
 
 import models._
@@ -279,6 +280,11 @@ package object util {
       } else
         empty.next()
     }
+  }
+
+  def writeStringAsStream(string: String, file: File) = {
+    val outputStream = Stream(string.getBytes(StandardCharsets.UTF_8))
+    writeByteArrayStream(outputStream, file)
   }
 
   def writeByteArrayStream(data: Stream[Array[Byte]], file : File) = {

@@ -22,8 +22,10 @@
             </div>
         </div>
     </div>
-    @carousel()
-    <hr/>
+    @if(context.configuration.getBoolean("homepage.carousel.enabled").getOrElse(true)) {
+        @carousel()
+        <hr/>
+    }
     <div class="row-fluid jumbotron homepage-jumbotron">
         @Html(Messages("homepage.html"))
     </div>

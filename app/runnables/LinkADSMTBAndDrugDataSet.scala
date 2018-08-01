@@ -4,7 +4,8 @@ import java.{util => ju}
 import javax.inject.Inject
 
 import dataaccess.Criterion.Infix
-import dataaccess.{FieldTypeHelper, NotEqualsNullCriterion}
+import dataaccess.NotEqualsNullCriterion
+import field.FieldTypeHelper
 import models._
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsNumber}

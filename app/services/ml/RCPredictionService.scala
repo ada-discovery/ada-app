@@ -15,8 +15,6 @@ import com.banda.network.domain._
 import com.google.inject.{ImplementedBy, Singleton}
 import dataaccess.Criterion.Infix
 import dataaccess.JsonRepoExtra.InfixOps
-import dataaccess.JsonUtil
-import models.DataSetFormattersAndIds.JsObjectIdentity
 import models._
 import models.ml.RCPredictionSettingAndResults.rcPredictionSettingAndResultsFormat
 import models.ml._
@@ -28,7 +26,8 @@ import play.api.Logger
 import util.FieldUtil.caseClassToFlatFieldTypes
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import services.{DataSetService, SparkApp, SparkUtil}
+import services.ml.transformers.VectorColumnScalerNormalizer
+import services.{DataSetService, SparkApp}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -52,12 +51,6 @@ trait RCPredictionService {
     json: JsObject,
     ioSpec: RCPredictionInputOutputSpec
   ): Future[Option[RCPredictionResults]]
-
-  def transformVectors(
-    data: DataFrame,
-    transformType: VectorTransformType.Value,
-    inRow: Boolean = false
-  ): DataFrame
 
   def transformSeriesJava(
     series: Seq[Seq[jl.Double]],
@@ -607,13 +600,6 @@ class RCPredictionServiceImpl @Inject()(
     logger.info("Mean SAMP                     : " + meanSamp)
   }
 
-  override def transformVectors(
-    data: DataFrame,
-    transformType: VectorTransformType.Value,
-    inRow: Boolean = false
-  ): DataFrame =
-    FeatureTransformer(sparkApp.session)(data, transformType, inRow)
-
   override def transformSeriesJava(
     series: Seq[Seq[jl.Double]],
     transformType: VectorTransformType.Value
@@ -697,19 +683,15 @@ object RCPredictionStaticHelper extends Serializable {
 
   def transformSeries(
     session: SparkSession)(
-    series: Seq[Seq[Double]],
+    inputSeries: Seq[Seq[Double]],
     transformType: VectorTransformType.Value
   ): Future[Seq[Seq[Double]]] = {
-    val inRow = transformType == VectorTransformType.L1Normalizer || transformType == VectorTransformType.L2Normalizer
-
-    val inputSeries = if (inRow) series.transpose else series
-
     val rows = inputSeries.zipWithIndex.map { case (oneSeries, index) =>
       (index, Vectors.dense(oneSeries.toArray))
     }
 
     val df = session.createDataFrame(rows).toDF("id", "features")
-    val newDf = FeatureTransformer(session)(df, transformType, inRow)
+    val newDf = VectorColumnScalerNormalizer(transformType).fit(df).transform(df)
 
     for {
       rows <- newDf.select("scaledFeatures").rdd.collectAsync()
@@ -717,11 +699,9 @@ object RCPredictionStaticHelper extends Serializable {
       newDf.unpersist()
       df.unpersist()
 
-      val outputSeries: Seq[Seq[Double]] = rows.map(row =>
+      rows.map(row =>
         row.getAs[Vector](0).toArray: Seq[Double]
       )
-
-      if (inRow) outputSeries.transpose else outputSeries
     }
   }
 }

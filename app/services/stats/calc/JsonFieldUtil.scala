@@ -1,6 +1,7 @@
 package services.stats.calc
 
-import dataaccess.{AdaConversionException, FieldType, FieldTypeFactory}
+import dataaccess.AdaConversionException
+import field.{FieldType, FieldTypeFactory}
 import models.{Field, FieldTypeId}
 import play.api.libs.json.{JsObject, JsReadable, Json}
 import java.{util => ju}

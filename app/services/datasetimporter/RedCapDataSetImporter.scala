@@ -4,19 +4,19 @@ import java.util.Date
 import javax.inject.Inject
 
 import util.seqFutures
-
 import dataaccess.RepoTypes.CategoryRepo
 import dataaccess.RepoTypes.FieldRepo
 import dataaccess._
-import models.{Field, FieldTypeId, FieldTypeSpec, Category}
+import models.{Category, Field, FieldTypeId, FieldTypeSpec}
 import models.redcap.{Metadata, FieldType => RCFieldType}
-import models.{AdaParseException, AdaException, RedCapDataSetImport}
+import models.{AdaException, AdaParseException, RedCapDataSetImport}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import services.{RedCapServiceFactory, RedCapService}
+import services.{RedCapService, RedCapServiceFactory}
 import dataaccess.Criterion.Infix
-import scala.concurrent.ExecutionContext.Implicits.global
+import field.FieldType
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 private class RedCapDataSetImporter @Inject() (

@@ -4,6 +4,7 @@ import java.nio.charset.Charset
 import java.util.Date
 
 import dataaccess._
+import field.{FieldType, FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
 import models.JsonDataSetImport
 import play.api.libs.json._
 

@@ -2,7 +2,7 @@ package runnables.mpower
 
 import java.nio.charset.StandardCharsets
 
-import util.writeByteArrayStream
+import util.writeStringAsStream
 
 import scala.io.Source
 
@@ -12,12 +12,8 @@ object MergeClusteringCsvs extends App {
   private val tsneHeader = Seq("subchallengeName", "k", "biskmeans", "perplexity", "pca")
   private val mdsHeader = Seq("subchallengeName", "k", "biskmeans")
 
-
-
   private val folderName = "/home/peter/Research/LCSB/mPower/mPower Challenge/Clustering_pValues/"
 //  private val fileName = "mpower_kmeans_tsne_auroc_vs_clazz.csv"
-
-
 
   val csvFiles = util.getListOfFiles(folderName).filter(_.getName.endsWith("csv"))
 
@@ -85,8 +81,7 @@ object MergeClusteringCsvs extends App {
 
     val newContent = (Seq(newHeder) ++ newLines).mkString("\n")
 
-    val outputStream = Stream(newContent.getBytes(StandardCharsets.UTF_8))
-    writeByteArrayStream(outputStream, new java.io.File(folderName + "new_" + fileName))
+    writeStringAsStream(newContent, new java.io.File(folderName + "new_" + fileName))
   }
 
   def processMDSFile(fileName: String) = {
@@ -114,8 +109,7 @@ object MergeClusteringCsvs extends App {
 
     val newContent = (Seq(newHeder) ++ newLines).mkString("\n")
 
-    val outputStream = Stream(newContent.getBytes(StandardCharsets.UTF_8))
-    writeByteArrayStream(outputStream, new java.io.File(folderName + "new_" + fileName))
+    writeStringAsStream(newContent, new java.io.File(folderName + "new_" + fileName))
   }
 
   case class TSNEClusteringInfo(

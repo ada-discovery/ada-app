@@ -1,7 +1,7 @@
 package runnables.core
 
 import dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo}
-import dataaccess.{FieldType, FieldTypeHelper}
+import field.{FieldType, FieldTypeHelper}
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{AdaException, Field, FieldTypeId}
 import play.api.libs.json.{JsNull, JsString, JsValue, Json}

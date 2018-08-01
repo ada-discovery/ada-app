@@ -1,21 +1,21 @@
 package services.ml
 
-import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import java.{lang => jl, util => ju}
 
+import util.parallelize
 import com.google.inject.ImplementedBy
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{AdaException, Field, FieldTypeId, FieldTypeSpec}
 import models.ml.classification.Classification
 import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
-import models.ml._
+import models.ml.{ClassificationEvalMetric, _}
 import util.{GroupMapList, STuple3}
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import org.apache.spark.ml.evaluation.{BinaryClassificationEvaluator, Evaluator, MulticlassClassificationEvaluator, RegressionEvaluator}
 import org.apache.spark.ml.feature._
-import org.apache.spark.ml.{Estimator, Model, Pipeline, Transformer}
+import org.apache.spark.ml._
 import org.apache.spark.sql.types.{Metadata, MetadataBuilder, StructType, _}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.ml.clustering._
@@ -23,11 +23,11 @@ import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions.col
 import play.api.libs.json.{JsObject, Json}
 import services.SparkApp
 import play.api.{Configuration, Logger}
+import services.ml.transformers._
 import services.stats.StatsService
 
 import scala.concurrent.{Await, Future}
@@ -47,6 +47,18 @@ trait MachineLearningService {
     binCurvesNumBins: Option[Int] = None
   ): Future[ClassificationResultsHolder]
 
+  def classifyWithDelayLine(
+    data: JsObject,
+    inputSeriesFieldPaths: Seq[String],
+    outputSeriesFieldPath: String,
+    dlSize: Int,
+    predictAhead: Int,
+    mlModel: Classification,
+    setting: LearningSetting[ClassificationEvalMetric.Value] = LearningSetting[ClassificationEvalMetric.Value](),
+    replicationData: Option[JsObject] = None,
+    binCurvesNumBins: Option[Int] = None
+  ): Future[ClassificationResultsHolder]
+
   def regress(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
@@ -56,7 +68,7 @@ trait MachineLearningService {
     replicationData: Traversable[JsObject] = Nil
   ): Future[RegressionResultsHolder]
 
-  def regressSeries(
+  def regressSeriesWithDelayLine(
     data: JsObject,
     inputSeriesFieldPaths: Seq[String],
     outputSeriesFieldPath: String,
@@ -122,6 +134,20 @@ private class MachineLearningServiceImpl @Inject() (
     setInputCol("prediction"); setOutputCol(binaryClassifierInputName)
   }
 
+  private val randomSplit = (splitRatio: Double) => (dataFrame: DataFrame) => {
+    val Array(training, test) = dataFrame.randomSplit(Array(splitRatio, 1 - splitRatio))
+    (training, test)
+  }
+
+  private val seqSplit = (orderColumn: String) => (splitRatio: Double) => (df: DataFrame) => {
+    val splitValue = df.stat.approxQuantile(orderColumn, Array(splitRatio), 0.001)(0)
+    val headDf = df.where(df(orderColumn) < splitValue)
+    val tailDf = df.where(df(orderColumn) >= splitValue)
+    (headDf, tailDf)
+  }
+
+  private val useConsecutiveOrderForDL = configuration.getBoolean("ml.dl_use_consecutive_order_transformers").getOrElse(false)
+
   private val classificationEvaluators =
     ClassificationEvalMetric.values.filter(metric =>
       metric != ClassificationEvalMetric.areaUnderPR && metric != ClassificationEvalMetric.areaUnderROC
@@ -165,36 +191,86 @@ private class MachineLearningServiceImpl @Inject() (
     replicationData: Traversable[JsObject],
     binCurvesNumBins: Option[Int]
   ): Future[ClassificationResultsHolder] = {
-    // TRAINING AND TEST DATA
+    // training, test, and replication data
 
-    // create a data frame with all the features
-    val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName))
-    df.cache
-
-    // transform the df to classification one
-    val finalDf = df.transform {
-      println("Transforming a data frame to a classification one...")
-      transformToClassificationDataFrame(setting)
+    // aux function to create a data frame
+    def crateDataFrame(jsons: Traversable[JsObject]) = {
+      val df = FeaturesDataFrameFactory(session, jsons, fields, Some(outputFieldName))
+      BooleanLabelIndexer(Some("labelString")).transform(df)
     }
-    finalDf.cache
 
-    // REPLICATION DATA (if any)
+    // create a training/test data frame with all the features
+    val df = crateDataFrame(data)
+    // create a replication data frame with all the features
+    val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
-    // create a data frame with all the features
-    val replicationDf =
-      if (replicationData.nonEmpty) {
-        val df = FeaturesDataFrameFactory(session, replicationData, fields, Some(outputFieldName))
-        Some(df.cache)
-      } else
-        None
+    // classify with a random split
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, randomSplit, Nil, Nil)
+  }
 
-    // transform the df to classification one
-    val finalReplicationDf = replicationDf.map { replicationDf =>
-      val df = replicationDf.transform(
-        transformToClassificationDataFrame(setting)
-      )
-      df.cache
+  def classifyWithDelayLine(
+    data: JsObject,
+    inputSeriesFieldPaths: Seq[String],
+    outputSeriesFieldPath: String,
+    dlSize: Int,
+    predictAhead: Int,
+    mlModel: Classification,
+    setting: LearningSetting[ClassificationEvalMetric.Value] = LearningSetting[ClassificationEvalMetric.Value](),
+    replicationData: Option[JsObject] = None,
+    binCurvesNumBins: Option[Int] = None
+  ): Future[ClassificationResultsHolder] = {
+    // training, test, and replication data
+
+    // aux function to create a data frame
+    def crateDataFrame(jsons: JsObject) = {
+      val df = FeaturesDataFrameFactory.applySeries(session)(data, inputSeriesFieldPaths, outputSeriesFieldPath)
+      BooleanLabelIndexer(Some("labelString")).transform(df)
     }
+
+    // create a training/test data frame with all the features
+    val df = crateDataFrame(data)
+    // create a replication data frame with all the features
+    val replicationDf = replicationData.map(crateDataFrame)
+
+    // delay line transformers
+    val dlTransformers = createDelayLineTransformers(dlSize, predictAhead)
+
+    // classify with the DL transformers and a sequential split
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, seqSplit("index"), Nil, dlTransformers)
+  }
+
+  private def classifyAux(
+    df: DataFrame,
+    replicationDf: Option[DataFrame],
+    mlModel: Classification,
+    setting: LearningSetting[ClassificationEvalMetric.Value],
+    binCurvesNumBins: Option[Int],
+    split: Double => (DataFrame => (DataFrame, DataFrame)),
+    initStages: Seq[_ <: PipelineStage],
+    preTrainingStages: Seq[_ <: PipelineStage]
+  ): Future[ClassificationResultsHolder] = {
+    // stages
+    val coreStages = classificationStages(setting)
+    val stages = initStages ++ coreStages ++ preTrainingStages
+
+    // classify with the stages
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, split, stages)
+  }
+
+  private def classifyAux(
+    df: DataFrame,
+    replicationDf: Option[DataFrame],
+    mlModel: Classification,
+    setting: LearningSetting[ClassificationEvalMetric.Value],
+    binCurvesNumBins: Option[Int],
+    split: Double => (DataFrame => (DataFrame, DataFrame)),
+    stages: Seq[_ <: PipelineStage]
+  ): Future[ClassificationResultsHolder] = {
+
+    // cache the data frames
+    df.cache()
+    if (replicationDf.isDefined)
+      replicationDf.get.cache()
 
     // CREATE A TRAINER
 
@@ -202,25 +278,16 @@ private class MachineLearningServiceImpl @Inject() (
     val originalInputSize = originalFeaturesType.metadata.getMetadata("ml_attr").getLong("num_attrs").toInt
     val inputSize = setting.pcaDims.getOrElse(originalInputSize)
 
-    val outputLabelType = finalDf.schema.fields.find(_.name == "label").get
+    val outputLabelType = df.schema.fields.find(_.name == "label").get
     val outputSize = outputLabelType.metadata.getMetadata("ml_attr").getStringArray("vals").length
 
     val (trainer, paramMaps) = SparkMLEstimatorFactory(mlModel, inputSize, outputSize)
+    val fullTrainer = new Pipeline().setStages((stages ++ Seq(trainer)).toArray)
 
     // REPEAT THE TRAINING-TEST CYCLE
 
-    val samplingNeeded = setting.samplingRatios.nonEmpty
-
-    import sparkApp.sqlContext.implicits._
-
-    val labelStrings: Traversable[String] =
-      if (samplingNeeded)
-        finalDf.select("labelString").distinct().map(_.getString(0)).collect()
-      else
-        Nil
-
-    // split the data into training and test parts
-    val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
+    // split for the data into training and test parts
+    val splitRatio = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
 
     // evaluators
     val evaluators = classificationEvaluators ++ (if (outputSize == 2) binClassificationEvaluators else Nil)
@@ -233,68 +300,41 @@ private class MachineLearningServiceImpl @Inject() (
         evaluators.find(_.metric == defaultClassificationCrossValidationEvalMetric).get
       )
 
-    val resultHoldersFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
-      logger.info(s"Execution of repetition $index started.")
+    val count = df.count()
 
-      // sampling
-      val sampledDf =
-        if (samplingNeeded)
-          sample(setting.samplingRatios, labelStrings)(finalDf)
-        else
-          finalDf
-      val count = sampledDf.count()
+    val resultHoldersFuture = parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
+      logger.info(s"Execution of repetition $index started for $count rows.")
+      val (training, test) = split(splitRatio)(df)
 
-      logger.info("Total count : " + count)
+      training.cache()
+      test.cache()
 
-      val Array(training, test) = sampledDf.randomSplit(Array(split, 1 - split))
-
-      // run the trainer (with folds) on the given training and test data sets (replication df is treated as "another" test data set if provided)
-
-      val testSets = Seq(Some(test.cache), finalReplicationDf).flatten
-
-      val (trainingPredictions, testPredictions) = trainWithCrossValidation(
-        trainer, paramMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training.cache, testSets
+      // classify and evaluate
+      val results = classifyAndEvaluate(
+        fullTrainer,
+        paramMaps,
+        evaluators,
+        crossValidationEvaluator.evaluator,
+        setting.crossValidationFolds,
+        outputSize,
+        count,
+        binCurvesNumBins,
+        training,
+        test,
+        replicationDf
       )
 
-      // evaluate the performance
+      training.unpersist()
+      test.unpersist()
 
-      def withBinaryEvaluationCol(df: DataFrame) =
-        if (outputSize == 2 && !df.columns.contains(binaryClassifierInputName)) {
-          binaryPredictionVectorizer.transform(df)
-        } else
-          df
-
-      val trainingPredictionsExt = withBinaryEvaluationCol(trainingPredictions)
-      val testPredictionsExt = testPredictions.map(withBinaryEvaluationCol)
-
-      val results = evaluate(evaluators, trainingPredictionsExt, testPredictionsExt)
-
-      // generate binary classification curves (roc, pr, etc.) if the output is binary
-      val (binTrainingCurves, binTestCurves) =
-        if (outputSize == 2) {
-          // is binary
-          val trainingCurves = binaryMetricsCurves(trainingPredictionsExt, binCurvesNumBins)
-          val testCurves = testPredictionsExt.map(binaryMetricsCurves(_, binCurvesNumBins))
-          (trainingCurves, testCurves)
-        } else
-          (None, testPredictionsExt.map(_ => None))
-
-      // unpersist and return the results
-      training.unpersist
-      test.unpersist
-
-      ClassificationResultsAuxHolder(results, count, binTrainingCurves, binTestCurves)
+      results
     }
 
-
-    // EVALUATE PERFORMANCE
+    // CREATE FINAL PERFORMANCE RESULTS
 
     resultHoldersFuture.map { resultHolders =>
       // uncache
-      finalDf.unpersist
       df.unpersist
-      if (finalReplicationDf.isDefined)
-        finalReplicationDf.get.unpersist
       if (replicationDf.isDefined)
         replicationDf.get.unpersist
 
@@ -323,56 +363,6 @@ private class MachineLearningServiceImpl @Inject() (
     }
   }
 
-  private def transformToClassificationDataFrame(
-    setting: LearningSetting[_])(
-    df: DataFrame
-  ): DataFrame = {
-    // normalize the features
-    val normalizeFeatures = new SchemaUnchangedTransformer(normalizeFeaturesOptional(setting.featuresNormalizationType))
-
-    // reduce the dimensionality if needed
-    val reduceDim = new SchemaUnchangedTransformer(pcaComponentsOptional(setting.pcaDims))
-
-    // make sure the output is string
-    val makeIndexBooleanLabel = BooleanLabelIndexer
-
-    // keep the label as string for sampling (if needed)
-    val keepLabelString = new IndexToString()
-      .setInputCol("label")
-      .setOutputCol("labelString")
-
-    // create the stages and run a pipeline
-    val preStages = Seq(normalizeFeatures, reduceDim, makeIndexBooleanLabel)
-    val stages = if (setting.samplingRatios.nonEmpty) preStages ++ Seq(keepLabelString) else preStages
-    val pipeline = new Pipeline().setStages(stages.toArray)
-    pipeline.fit(df).transform(df)
-  }
-
-  private def sample(
-    samplingRatios: Seq[(String, Double)],
-    labelStrings: Traversable[String])(
-    df: DataFrame
-  ): DataFrame = {
-    import sparkApp.sqlContext.implicits._
-
-    val labelSamplingRatioMap = samplingRatios.toMap
-
-    val sampledDfs = labelStrings.map { label =>
-      val pdf = df.filter($"labelString" === label)
-
-      labelSamplingRatioMap.get(label).map { samplingRatio =>
-        val newPdf = pdf.sample(false, samplingRatio)
-        logger.info(label + ": " + pdf.count() + " -> " + newPdf.count())
-        newPdf
-      }.getOrElse(pdf)
-    }
-
-    if (sampledDfs.nonEmpty)
-      sampledDfs.tail.foldLeft(sampledDfs.head)(_.union(_))
-    else
-      df
-  }
-
   override def regress(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
@@ -381,22 +371,22 @@ private class MachineLearningServiceImpl @Inject() (
     setting: LearningSetting[RegressionEvalMetric.Value],
     replicationData: Traversable[JsObject]
   ): Future[RegressionResultsHolder] = {
+    // training, test, and replication data
 
-    // create a data frame with all the features
-    val df = FeaturesDataFrameFactory(session, data, fields, Some(outputFieldName))
+    // aux function to create a data frame
+    def crateDataFrame(jsons: Traversable[JsObject]) =
+      FeaturesDataFrameFactory(session, jsons, fields, Some(outputFieldName))
 
+    // create a training/test data frame with all the features
+    val df = crateDataFrame(data)
     // create a replication data frame with all the features
-    val replicationDf =
-      if (replicationData.nonEmpty) {
-        val df = FeaturesDataFrameFactory(session, replicationData, fields, Some(outputFieldName))
-        Some(df.cache)
-      } else
-        None
+    val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
-    regress(df, replicationDf, mlModel, setting)
+    // REGRESS
+    regressAux(df, replicationDf, mlModel, setting, randomSplit, Nil, Nil)
   }
 
-  override def regressSeries(
+  override def regressSeriesWithDelayLine(
     data: JsObject,
     inputSeriesFieldPaths: Seq[String],
     outputSeriesFieldPath: String,
@@ -404,55 +394,80 @@ private class MachineLearningServiceImpl @Inject() (
     predictAhead: Int,
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
-    replicationData: Option[JsObject] = None
+    replicationData: Option[JsObject]
   ): Future[RegressionResultsHolder] = {
+    // training, test, and replication data
 
-    // create a data frame with all the features
-    val df = FeaturesDataFrameFactory.apply(session)(data, inputSeriesFieldPaths, outputSeriesFieldPath, dlSize, predictAhead)
+    // aux function to create a data frame
+    def crateDataFrame(jsons: JsObject) =
+      FeaturesDataFrameFactory.applySeries(session)(data, inputSeriesFieldPaths, outputSeriesFieldPath)
 
+    // create a training/test data frame with all the features
+    val df = crateDataFrame(data)
     // create a replication data frame with all the features
-    val replicationDf =
-      replicationData.map { replicationData =>
-        val df = FeaturesDataFrameFactory.apply(session)(replicationData, inputSeriesFieldPaths, outputSeriesFieldPath, dlSize, predictAhead)
-        df.cache
-      }
+    val replicationDf = replicationData.map(crateDataFrame)
 
-    regress(df, replicationDf, mlModel, setting)
+    // delay line transformers
+    val dlTransformers = createDelayLineTransformers(dlSize, predictAhead)
+    val showDf = SchemaUnchangedTransformer { df: DataFrame => df.orderBy("index").show(false); df }
+
+    df.show(false)
+
+    // regress with the DL transformers and a sequential split
+    regressAux(df, replicationDf, mlModel, setting, seqSplit("index"), Nil, dlTransformers ++ Seq(showDf), true)
   }
 
-  private def regress(
+  private def createDelayLineTransformers(
+    windowSize: Int,
+    labelShift: Int
+  ) =
+    if (useConsecutiveOrderForDL)
+      Seq(
+        SlidingWindowWithConsecutiveOrder.applyInPlace(windowSize, "features", "index"),
+        SeqShiftWithConsecutiveOrder.applyInPlace(labelShift, "label", "index")
+      )
+    else
+      Seq(
+        SlidingWindow.applyInPlace(windowSize, "features", "index"),
+        SeqShift.applyInPlace(labelShift, "label", "index")
+      )
+
+  private def regressAux(
     df: DataFrame,
     replicationDf: Option[DataFrame],
     mlModel: Regression,
-    setting: LearningSetting[RegressionEvalMetric.Value]
+    setting: LearningSetting[RegressionEvalMetric.Value],
+    split: Double => (DataFrame => (DataFrame, DataFrame)),
+    initStages: Seq[_ <: PipelineStage],
+    preTrainingStages: Seq[_ <: PipelineStage],
+    collectOutputs: Boolean = false
   ): Future[RegressionResultsHolder] = {
-    // TRAINING AND TEST DATA
+    // stages
+    val coreStages = regressionStages(setting)
+    val stages = initStages ++ coreStages ++ preTrainingStages
 
-    // transform the df to a regression one
-    val finalDf = df.transform {
-      println("Transforming a data frame to a regression one...")
-      transformToRegressionDataFrame(setting)
-    }
-    finalDf.cache
+    // regress with the stages
+    regressAux(df, replicationDf, mlModel, setting, split, stages, collectOutputs)
+  }
 
-    // REPLICATION DATA (if any)
-
-    // transform the df to a regression one
-    val finalReplicationDf = replicationDf.map { replicationDf =>
-      val df = replicationDf.transform(transformToRegressionDataFrame(setting))
-      df.cache
-    }
-
+  private def regressAux(
+    df: DataFrame,
+    replicationDf: Option[DataFrame],
+    mlModel: Regression,
+    setting: LearningSetting[RegressionEvalMetric.Value],
+    split: Double => (DataFrame => (DataFrame, DataFrame)),
+    stages: Seq[_ <: PipelineStage],
+    collectOutputs: Boolean
+  ): Future[RegressionResultsHolder] = {
     // CREATE A TRAINER
 
     val (trainer, paramMaps) = SparkMLEstimatorFactory(mlModel)
-
-    println(paramMaps.mkString("\n"))
+    val fullTrainer = new Pipeline().setStages((stages ++ Seq(trainer)).toArray)
 
     // REPEAT THE TRAINING-TEST CYCLE
 
-    // split the data into training and test parts
-    val split = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
+    // split ratio for the data into training and test parts
+    val splitRatio = setting.trainingTestingSplit.getOrElse(defaultTrainingTestingSplit)
 
     // cross-validation evaluator
     val crossValidationEvaluator =
@@ -462,17 +477,21 @@ private class MachineLearningServiceImpl @Inject() (
         regressionEvaluators.find(_.metric == defaultRegressionCrossValidationEvalMetric).get
       )
 
-    val count = finalDf.count()
+    val count = df.count()
 
-    val resultHoldersFuture = util.parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
-      logger.info(s"Execution of repetition $index started.")
-      val Array(training, test) = finalDf.randomSplit(Array(split, 1 - split))
+    val resultHoldersFuture = parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
+      logger.info(s"Execution of repetition $index started for $count rows.")
+      val (training, test) = split(splitRatio)(df)
+      logger.info("Dataset split into training and test parts as: " + training.count() + " / " + test.count())
 
-      val testSets = Seq(Some(test.cache), finalReplicationDf).flatten
+      training.cache()
+      test.cache()
+
+      val testSets = Seq(Some(test), replicationDf).flatten
 
       // run the trainer (with folds) on the given training and test data sets
       val (trainPredictions, testPredictions) = trainWithCrossValidation(
-        trainer, paramMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training.cache, testSets
+        fullTrainer, paramMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training, testSets
       )
 
       // evaluate the performance
@@ -481,20 +500,26 @@ private class MachineLearningServiceImpl @Inject() (
       // unpersist and return the results
       training.unpersist
       test.unpersist
-      if (finalReplicationDf.isDefined)
-        finalReplicationDf.get.unpersist
-      if (replicationDf.isDefined)
-        replicationDf.get.unpersist
 
-      RegressionResultsAuxHolder(results, count)
+      // collect the actual vs expected outputs (if needed)
+      val outputs: Traversable[Seq[(Double, Double)]] =
+        if (collectOutputs) {
+          val trainingOutputs = collectLabelPredictions(trainPredictions)
+          val testOutputs = testPredictions.map(collectLabelPredictions)
+          Seq(trainingOutputs) ++ testOutputs
+        } else
+          Nil
+
+      RegressionResultsAuxHolder(results, count, outputs)
     }
 
     // EVALUATE PERFORMANCE
 
     resultHoldersFuture.map { resultHolders =>
       // uncache
-      finalDf.unpersist
       df.unpersist
+      if (replicationDf.isDefined)
+        replicationDf.get.unpersist
 
       // create performance results
       val results = resultHolders.flatMap(_.evalResults)
@@ -508,24 +533,113 @@ private class MachineLearningServiceImpl @Inject() (
       // counts
       val counts = resultHolders.map(_.count)
 
-      RegressionResultsHolder(performanceResults, counts)
+      // actual vs expected outputs
+      val expectedAndActualOutputs = resultHolders.map(_.expectedAndActualOutputs)
+
+      RegressionResultsHolder(performanceResults, counts, expectedAndActualOutputs)
     }
   }
 
-  private def transformToRegressionDataFrame(
-    setting: LearningSetting[_])(
-    df: DataFrame
-  ): DataFrame = {
+  private def collectLabelPredictions(dataFrame: DataFrame) = {
+    val df =
+      if (dataFrame.columns.find(_.equals("index")).isDefined)
+        dataFrame.orderBy("index")
+      else
+        dataFrame
+
+    df.select("label", "prediction")
+      .collect().toSeq
+      .map { row => (row.getDouble(0), row.getDouble(1)) }
+  }
+
+  private def classifyAndEvaluate[M <: Model[M]](
+    trainer: Estimator[M],
+    paramMaps: Array[ParamMap],
+    evaluators: Seq[EvaluatorWrapper[ClassificationEvalMetric.Value]],
+    crossValidationEvaluator: Evaluator,
+    folds: Option[Int],
+    outputSize: Int,
+    count: Long,
+    binCurvesNumBins: Option[Int],
+    trainingDf: DataFrame,
+    testDf: DataFrame,
+    replicationDf: Option[DataFrame]
+  ): ClassificationResultsAuxHolder = {
+
+    // run the trainer (with folds) on the given training and test data sets (replication df is treated as "another" test data set if provided)
+
+    val testSets = Seq(Some(testDf), replicationDf).flatten
+
+    val (trainingPredictions, testPredictions) = trainWithCrossValidation(
+      trainer, paramMaps, crossValidationEvaluator, folds, trainingDf, testSets
+    )
+
+    // evaluate the performance
+
+    def withBinaryEvaluationCol(df: DataFrame) =
+      if (outputSize == 2 && !df.columns.contains(binaryClassifierInputName)) {
+        binaryPredictionVectorizer.transform(df)
+      } else
+        df
+
+    trainingPredictions.cache()
+    testPredictions.foreach(_.cache())
+
+    val trainingPredictionsExt = withBinaryEvaluationCol(trainingPredictions)
+    val testPredictionsExt = testPredictions.map(withBinaryEvaluationCol)
+
+    val results = evaluate(evaluators, trainingPredictionsExt, testPredictionsExt)
+
+    // generate binary classification curves (roc, pr, etc.) if the output is binary
+
+    val (binTrainingCurves, binTestCurves) =
+      if (outputSize == 2) {
+        // is binary
+        val trainingCurves = binaryMetricsCurves(trainingPredictionsExt, binCurvesNumBins)
+        val testCurves = testPredictionsExt.map(binaryMetricsCurves(_, binCurvesNumBins))
+        (trainingCurves, testCurves)
+      } else
+        (None, testPredictionsExt.map(_ => None))
+
+    // unpersist and return the results
+
+    trainingPredictions.unpersist
+    testPredictions.foreach(_.unpersist)
+
+    ClassificationResultsAuxHolder(results, count, binTrainingCurves, binTestCurves)
+  }
+
+  private def classificationStages(
+    setting: LearningSetting[_]
+  ): Seq[_ <: PipelineStage] = {
     // normalize the features
-    val normalizeFeatures = new SchemaUnchangedTransformer(normalizeFeaturesOptional(setting.featuresNormalizationType))
+    val normalize = setting.featuresNormalizationType.map(VectorColumnScalerNormalizer.applyInPlace(_, "features"))
 
     // reduce the dimensionality if needed
-    val reduceDim = new SchemaUnchangedTransformer(pcaComponentsOptional(setting.pcaDims))
+    val reduceDim = setting.pcaDims.map(InPlacePCA(_))
 
-    // create the stages and run a pipeline
-    val stages = Seq(normalizeFeatures, reduceDim)
-    val pipeline = new Pipeline().setStages(stages.toArray)
-    pipeline.fit(df).transform(df)
+    // keep the label as string for sampling (if needed)
+    val keepLabelString = IndexToStringIfNeeded("label", "labelString")
+
+    // sampling
+    val sample = SamplingTransformer(setting.samplingRatios)
+
+    // sequence the stages and return
+    val preStages = Seq(normalize, reduceDim).flatten
+    if (setting.samplingRatios.nonEmpty) preStages ++ Seq(keepLabelString, sample) else preStages
+  }
+
+  private def regressionStages(
+    setting: LearningSetting[_]
+  ): Seq[_ <: PipelineStage] = {
+    // normalize the features
+    val normalize = setting.featuresNormalizationType.map(VectorColumnScalerNormalizer.applyInPlace(_, "features"))
+
+    // reduce the dimensionality if needed
+    val reduceDim = setting.pcaDims.map(InPlacePCA(_))
+
+    // sequence the stages and return
+    Seq(normalize, reduceDim).flatten
   }
 
   override def cluster(
@@ -549,7 +663,7 @@ private class MachineLearningServiceImpl @Inject() (
     val (df, idClusters) = clusterAux(data, fields, mlModel, featuresNormalizationType, pcaDim)
 
     // reduce the dimensionality if needed
-    val pca12Df = df.transform(pcaComponents(2))
+    val pca12Df = InPlacePCA(2).fit(df).transform(df)
 
     import sparkApp.session.implicits._
 
@@ -602,10 +716,15 @@ private class MachineLearningServiceImpl @Inject() (
   ): (DataFrame, Traversable[(String, Int)]) = {
     val trainer = SparkMLEstimatorFactory[M](mlModel)
 
-    val normalizedDf = normalizeFeaturesOptional(featuresNormalizationType)(df)
+    // normalize
+    val normalize = featuresNormalizationType.map(VectorColumnScalerNormalizer.applyInPlace(_, "features"))
 
     // reduce the dimensionality if needed
-    val dataFrame = normalizedDf.transform(pcaComponentsOptional(pcaDim))
+    val reduceDim = pcaDim.map(InPlacePCA(_))
+
+    val stages = Seq(normalize, reduceDim).flatten
+    val pipeline = new Pipeline().setStages(stages.toArray)
+    val dataFrame = pipeline.fit(df).transform(df)
 
     val cachedDf = dataFrame.cache()
 
@@ -645,45 +764,14 @@ private class MachineLearningServiceImpl @Inject() (
     predictions.unpersist()
     cachedDf.unpersist
 
-    (normalizedDf, result)
+    (dataFrame, result)
   }
-
-  private def pcaComponentsOptional(
-    k: Option[Int])(
-    df: DataFrame
-  ) =
-    k.map(pcaDims =>
-      df.transform(pcaComponents(pcaDims))
-    ).getOrElse(df)
 
   override def pcaComponents(
     k: Int)(
     df: DataFrame
-  ): DataFrame = {
-    val pca = new PCA()
-      .setInputCol("features")
-      .setOutputCol("pcaFeatures")
-      .setK(k)
-      .fit(df)
-
-    PCAModel
-    // replace in-place
-    pca.transform(df).drop("features").withColumnRenamed("pcaFeatures", "features")
-  }
-
-  private def normalizeFeaturesOptional(
-    featuresNormalizationType: Option[VectorTransformType.Value])(
-    df: DataFrame
   ): DataFrame =
-    if (featuresNormalizationType.isDefined) {
-      val featureTransformer = new SchemaUnchangedTransformer(
-        FeatureTransformer(session)(_, featuresNormalizationType.get)
-      )
-
-      // replace in-place
-      featureTransformer.transform(df).drop("features").withColumnRenamed("scaledFeatures", "features")
-    } else
-      df
+    InPlacePCA(k).fit(df).transform(df)
 
   private def train[M <: Model[M]](
     estimator: Estimator[M],
@@ -694,10 +782,10 @@ private class MachineLearningServiceImpl @Inject() (
     val lrModel = estimator.fit(trainingDf)
 
     // get the predictions for the training and test data sets
-    def getPredictions(df: DataFrame) = lrModel.transform(df)
 
-    val trainPredictions = getPredictions(trainingDf)
-    val testPredictions = testDfs.map(getPredictions)
+    val trainPredictions = lrModel.transform(trainingDf)
+    val testPredictions = testDfs.map(lrModel.transform)
+
     (trainPredictions, testPredictions)
   }
 
@@ -859,8 +947,8 @@ object MachineLearningUtil {
     if (seq.size % 2 == 1)
       seq(middle)
     else {
-      val med1 = seq(middle)
-      val med2 = seq(1 + middle)
+      val med1 = seq(middle - 1)
+      val med2 = seq(middle)
       (med1 + med2) /2
     }
   }
@@ -1036,72 +1124,45 @@ object MachineLearningUtil {
     )
   }
 
-  //  private def train(
-  //    reg: LogisticRegression,
-  //    trainData: DataFrame,
-  //    testData: DataFrame
-  //  ) = {
-  //    // Fit the model
-  //    val lrModel = reg.fit(trainData)
+  //  override def selectFeaturesAsChiSquare(
+  //    data: DataFrame,
+  //    featuresToSelectNum: Int
+  //  ): DataFrame = {
+  //    val model = selectFeaturesAsChiSquareModel(data, featuresToSelectNum)
   //
-  //    // Make predictions.
-  //    val predictions = lrModel.transform(testData)
-  //    predictions.printSchema()
+  //    model.transform(data)
+  //  }
+
+  //  override def selectFeaturesAsChiSquare(
+  //    data: Traversable[JsObject],
+  //    inputAndOutputFields: Seq[Field],
+  //    outputFieldName: String,
+  //    featuresToSelectNum: Int,
+  //    discretizerBucketsNum: Int
+  //  ): Traversable[String] = {
+  //    val fieldNameSpecs = inputAndOutputFields.map(field => (field.name, field.fieldTypeSpec))
+  //    val df = FeaturesDataFrameFactory(session, data, fieldNameSpecs, Some(outputFieldName), Some(discretizerBucketsNum))
+  //    val inputDf = BooleanLabelIndexer().transform(df)
   //
-  //    // Select example rows to display.
-  //    predictions.select("rawPrediction", "prediction", "label", "features").show(20)
+  //    // get the Chi-Square model
+  //    val model = selectFeaturesAsChiSquareModel(inputDf, featuresToSelectNum)
   //
-  //    // Select (prediction, true label) and compute test error
-  //    val evaluator = new BinaryClassificationEvaluator()
-  //      .setLabelCol("label")
-  //      .setRawPredictionCol("rawPrediction")
-  //
-  //    val accuracy = evaluator.evaluate(predictions)
-  //    println("Test Error = " + (1.0 - accuracy))
-  //
-  //    val binarySummary = lrModel.evaluate(testData).asInstanceOf[BinaryLogisticRegressionSummary]
-  //
-  //    val roc = binarySummary.roc
-  //    println(s"areaUnderROC: ${binarySummary.areaUnderROC}")
-  //
-  //    // Set the model threshold to maximize F-Measure
-  //    val fMeasure = binarySummary.fMeasureByThreshold
-  //    val maxFMeasure = fMeasure.select(max("F-Measure")).head().getDouble(0)
-  //    val bestThreshold = fMeasure.where($"F-Measure" === maxFMeasure).select("threshold").head().getDouble(0)
-  //    lrModel.setThreshold(bestThreshold)
-  //    println("Best threshold = " + bestThreshold)
-  //
-  //    val predictions2 = lrModel.transform(testData)
-  //
-  //    val accuracy2 = evaluator.evaluate(predictions2)
-  //    println("Test Error for the est threshold = " + (1.0 - accuracy2))
-  //
-  ////    // Print the coefficients and intercept for logistic regression
-  ////    println(s"Coefficients: ${lrModel.coefficients} Intercept: ${lrModel.intercept}")
+  //    // extract the features
+  //    val featureNames = inputDf.columns.filterNot(columnName => columnName.equals("features") || columnName.equals("label"))
+  //    model.selectedFeatures.map(featureNames(_))
   //  }
   //
-  //  private def train(
-  //    reg: RandomForestClassifier,
-  //    trainData: DataFrame,
-  //    testData: DataFrame
+  //  private def selectFeaturesAsChiSquareModel(
+  //    data: DataFrame,
+  //    featuresToSelectNum: Int
   //  ) = {
-  //    // Fit the model
-  //    val lrModel = reg.fit(trainData)
-  //
-  //    // Make predictions.
-  //    val predictions = lrModel.transform(testData)
-  //    predictions.printSchema()
-  //
-  //    // Select example rows to display.
-  //    predictions.select("rawPrediction", "prediction", "label", "features").show(20)
-  //
-  //    // Select (prediction, true label) and compute test error
-  //    val evaluator = new BinaryClassificationEvaluator()
+  //    val selector = new ChiSqSelector()
+  //      .setFeaturesCol("features")
   //      .setLabelCol("label")
-  //      .setRawPredictionCol("rawPrediction")
+  //      .setOutputCol("selectedFeatures")
+  //      .setNumTopFeatures(featuresToSelectNum)
   //
-  //    val accuracy = evaluator.evaluate(predictions)
-  //    println("Test Error = " + (1.0 - accuracy))
+  //    selector.fit(data)
   //  }
 }
 
@@ -1114,7 +1175,8 @@ case class ClassificationResultsAuxHolder(
 
 case class RegressionResultsAuxHolder(
   evalResults: Traversable[(RegressionEvalMetric.Value, Double, Seq[Double])],
-  count: Long
+  count: Long,
+  expectedAndActualOutputs: Traversable[Seq[(Double, Double)]]
 )
 
 case class ClassificationResultsHolder(
@@ -1125,5 +1187,6 @@ case class ClassificationResultsHolder(
 
 case class RegressionResultsHolder(
   performanceResults: Traversable[RegressionPerformance],
-  counts: Traversable[Long]
+  counts: Traversable[Long],
+  expectedAndActualOutputs: Traversable[Traversable[Seq[(Double, Double)]]]
 )

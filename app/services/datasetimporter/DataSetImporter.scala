@@ -5,6 +5,7 @@ import java.text.DecimalFormat
 import javax.inject.Inject
 
 import dataaccess._
+import field.{FieldType, FieldTypeHelper, FieldTypeInferrer}
 import models.{AdaParseException, CsvDataSetImport, DataSetImport, FieldTypeSpec}
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}

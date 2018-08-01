@@ -1,6 +1,7 @@
 package controllers.core
 
-import dataaccess.{AsyncReadonlyRepo, Criterion, FieldType, Sort}
+import dataaccess.{AsyncReadonlyRepo, Criterion, Sort}
+import field.FieldType
 import models.FilterCondition
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._

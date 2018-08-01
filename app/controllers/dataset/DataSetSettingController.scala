@@ -6,8 +6,8 @@ import javax.inject.Inject
 import controllers._
 import dataaccess.{AscSort, Criterion}
 import dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
-import models.{ChartType, DataSetFormattersAndIds, DataSetSetting, FieldChartType}
-import models.DataSetFormattersAndIds.{DataSetSettingIdentity, fieldChartTypeFormat, serializableDataSetSettingFormat, widgetSpecFormat}
+import models.{ChartType, DataSetFormattersAndIds, DataSetSetting}
+import models.DataSetFormattersAndIds.{DataSetSettingIdentity, serializableDataSetSettingFormat, widgetSpecFormat}
 import models._
 import models.FilterShowFieldStyle
 import Criterion.Infix
@@ -16,10 +16,8 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.i18n.Messages
 import play.api.mvc._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DataSpaceService}
 import views.html.{category, datasetsetting => view}

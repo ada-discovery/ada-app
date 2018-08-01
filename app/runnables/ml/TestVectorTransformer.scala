@@ -8,10 +8,9 @@ import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.DataFrame
 import runnables.GuiceBuilderRunnable
 import services.SparkApp
-import services.ml.RCPredictionService
+import services.ml.transformers.{VectorColumnScalerNormalizer, Normalizer, VectorNorm}
 
 class TestVectorTransformer @Inject()(
-  rcPredictionService: RCPredictionService,
   sparkApp: SparkApp
   ) extends Runnable {
 
@@ -36,25 +35,30 @@ class TestVectorTransformer @Inject()(
   )
 
   override def run = {
-    val newSeries = rcPredictionService.transformSeriesJava(series, VectorTransformType.MinMaxPlusMinusOneScaler)
-
-    println(series)
-    println(newSeries)
-
-    runAux(dataFrame1, true)
+    runAux(dataFrame1, false)
     runAux(dataFrame2, false)
   }
 
   private def runAux(df: DataFrame, inRow: Boolean) = {
-    val l1NormalizedDf = rcPredictionService.transformVectors(df, VectorTransformType.L1Normalizer, inRow)
-    val l2NormalizedDf = rcPredictionService.transformVectors(df, VectorTransformType.L2Normalizer, inRow)
-    val standardScaledDf = rcPredictionService.transformVectors(df, VectorTransformType.StandardScaler, inRow)
-    val minMaxZeroOneScaledDf = rcPredictionService.transformVectors(df, VectorTransformType.MinMaxZeroOneScaler, inRow)
-    val minMaxPlusMinusOneScaledDf = rcPredictionService.transformVectors(df, VectorTransformType.MinMaxPlusMinusOneScaler, inRow)
-    val maxAbsScaledDf = rcPredictionService.transformVectors(df, VectorTransformType.MaxAbsScaler, inRow)
+    val l1NormalizedDf = transformVectors(df, VectorTransformType.L1Normalizer, inRow)
+    val l2NormalizedDf = transformVectors(df, VectorTransformType.L2Normalizer, inRow)
+    val standardScaledDf = transformVectors(df, VectorTransformType.StandardScaler, inRow)
+    val minMaxZeroOneScaledDf = transformVectors(df, VectorTransformType.MinMaxZeroOneScaler, inRow)
+    val minMaxPlusMinusOneScaledDf = transformVectors(df, VectorTransformType.MinMaxPlusMinusOneScaler, inRow)
+    val maxAbsScaledDf = transformVectors(df, VectorTransformType.MaxAbsScaler, inRow)
 
     println("Original")
     df.show(20, false)
+
+    val l1Norm = VectorNorm(df, "features", 1)
+    val l2Norm = VectorNorm(df, "features", 2)
+    val l3Norm = VectorNorm(df, "features", 3)
+    val linfNorm = VectorNorm(df, "features", Double.PositiveInfinity)
+
+    println("L1 Norm  : " + l1Norm)
+    println("L2 Norm  : " + l2Norm)
+    println("L3 Norm  : " + l3Norm)
+    println("Linf Norm: " + linfNorm)
 
     println("L1 Normalized")
     l1NormalizedDf.show(20, false)
@@ -74,6 +78,13 @@ class TestVectorTransformer @Inject()(
     println("Max-Abs Scaled")
     maxAbsScaledDf.show(20, false)
   }
+
+  private def transformVectors(
+    data: DataFrame,
+    transformType: VectorTransformType.Value,
+    inRow: Boolean = false
+  ): DataFrame =
+    VectorColumnScalerNormalizer(transformType).fit(data).transform(data)
 }
 
 object TestVectorTransformer extends GuiceBuilderRunnable[TestVectorTransformer] with App { run }

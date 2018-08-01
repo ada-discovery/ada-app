@@ -5,7 +5,8 @@ import javax.inject.{Inject, Singleton}
 import dataaccess.JsonUtil.jsonObjectsToCsv
 import com.google.inject.ImplementedBy
 import models.{AdaException, Category, Field}
-import dataaccess.{AdaConversionException, FieldType, FieldTypeHelper}
+import dataaccess.AdaConversionException
+import field.{FieldType, FieldTypeHelper}
 import play.api.libs.json._
 
 @ImplementedBy(classOf[TranSMARTServiceImpl])

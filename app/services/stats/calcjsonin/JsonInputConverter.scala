@@ -1,6 +1,6 @@
 package services.stats.calcjsonin
 
-import dataaccess.FieldTypeHelper
+import field.FieldTypeHelper
 import models.Field
 import play.api.libs.json.JsObject
 

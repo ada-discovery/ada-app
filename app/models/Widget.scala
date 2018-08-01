@@ -1,6 +1,7 @@
 package models
 
-import dataaccess.{AdaConversionException, FieldType, FieldTypeHelper}
+import dataaccess.{AdaConversionException}
+import field.FieldType
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._

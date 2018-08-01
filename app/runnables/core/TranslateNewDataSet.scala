@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import dataaccess.{FieldTypeHelper, FieldTypeInferrerFactory}
+import field.{FieldTypeHelper, FieldTypeInferrerFactory}
 import models.StorageType
 import models.DataSetSetting
 import runnables.InputFutureRunnable

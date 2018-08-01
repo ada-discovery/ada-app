@@ -3,7 +3,7 @@ package services.datasetimporter
 import java.util.Date
 import javax.inject.Inject
 
-import dataaccess.{FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
+import field.{FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
 import models.{EGaitDataSetImport, FieldTypeId, FieldTypeSpec}
 import models.egait.EGaitKineticData
 import play.api.Configuration

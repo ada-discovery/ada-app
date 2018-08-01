@@ -1,9 +1,8 @@
 package controllers.core
 
-import controllers.{BSONObjectIDStringFormatter, EnumFormatter, JsonFormatter, SeqFormatter}
+import controllers.{BSONObjectIDStringFormatter, EnumFormatter, SeqFormatter}
 import models.{AdaException, StorageType}
-import play.api.data._
-import play.api.data.Forms.{mapping, _}
+import play.api.data.Forms._
 import play.api.data.format.Formats._
 import play.api.data.validation.Constraint
 
@@ -17,8 +16,8 @@ import reactivemongo.bson.BSONObjectID
 import scala.collection.Traversable
 
 private class GenericMapping[R, A](
-    apply: Function1[Traversable[A], R],
-    unapply: Function1[R, Option[Traversable[A]]],
+    apply: Traversable[A] => R,
+    unapply: R => Option[Traversable[A]],
     fs: Traversable[(String, Mapping[A])],
     val key: String = "",
     val constraints: Seq[Constraint[R]] = Nil

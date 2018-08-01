@@ -1,7 +1,8 @@
 package runnables.core
 
+import com.banda.core.plotter.Plotter
 import com.google.inject.Inject
-import dataaccess.FieldTypeHelper
+import field.FieldTypeHelper
 import models.AdaException
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
@@ -9,7 +10,7 @@ import runnables.InputFutureRunnable
 import runnables.core.CalcUtil._
 import services.stats.{StatsService, TSNESetting}
 import services.stats.calc.JsonFieldUtil._
-import smile.plot._
+import util.writeStringAsStream
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
@@ -23,6 +24,7 @@ class CalcTSNEProjectionForRows @Inject()(
 
   private val logger = Logger
   implicit val ftf = FieldTypeHelper.fieldTypeFactory()
+  private val plotter = Plotter.createExportInstance("svg")
 
   def runAsFuture(input: CalcTSNEProjectionForRowsSpec) = {
     val dsa = dsaf(input.dataSetId).get
@@ -72,9 +74,8 @@ class CalcTSNEProjectionForRows @Inject()(
         if (tsneFailed)
           logger.error(s"Row-based t-SNE for ${numericFields.size} fields return NaN values. Image export is not possible.")
         else {
-          val labels = tsneProjections.map(_ => 0)
-          val canvas = ScatterPlot.plot(tsneProjections, labels, 'o', Palette.COLORS)
-          saveCanvasAsImage(input.plotExportFileName.get, 1000, 800)(canvas)
+          plotter.plotXY(tsneProjections.map(_.toIterable).toIterable, "t-SNE")
+          writeStringAsStream(plotter.getOutput, new java.io.File(input.plotExportFileName.get))
         }
       }
 

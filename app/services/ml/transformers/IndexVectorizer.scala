@@ -1,23 +1,21 @@
-package services.ml
+package services.ml.transformers
 
 import org.apache.spark.ml.Transformer
-import org.apache.spark.ml.attribute._
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.util._
-import org.apache.spark.sql.{DataFrame, Dataset}
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{DataFrame, Dataset}
 
 class IndexVectorizer(override val uid: String) extends Transformer with DefaultParamsWritable {
 
   def this() = this(Identifiable.randomUID("vectorizer"))
 
-  final val inputCol: Param[String] = new Param[String](this, "inputCol", "input column name")
-  final val outputCol: Param[String] = new Param[String](this, "outputCol", "output column name")
+  protected final val inputCol: Param[String] = new Param[String](this, "inputCol", "input column name")
+  protected final val outputCol: Param[String] = new Param[String](this, "outputCol", "output column name")
 
   def setInputCol(value: String): this.type = set(inputCol, value)
-
   def setOutputCol(value: String): this.type = set(outputCol, value)
 
   override def transformSchema(schema: StructType): StructType = {

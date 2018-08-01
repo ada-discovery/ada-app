@@ -2,7 +2,7 @@ package runnables.ppmi
 
 import javax.inject.Inject
 
-import dataaccess.{FieldTypeHelper, FieldTypeInferrerFactory}
+import field.{FieldTypeHelper, FieldTypeInferrerFactory}
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
 

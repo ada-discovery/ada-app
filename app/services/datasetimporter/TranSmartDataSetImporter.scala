@@ -3,7 +3,7 @@ package services.datasetimporter
 import java.util.Date
 
 import dataaccess.CategoryRepo._
-import dataaccess.{FieldTypeHelper, FieldTypeInferrerFactory, FieldType}
+import field.{FieldTypeHelper, FieldTypeInferrerFactory, FieldType}
 import dataaccess.RepoTypes.{CategoryRepo, FieldRepo}
 import models._
 import persistence.dataset.DataSetAccessor

@@ -5,7 +5,8 @@ import java.{util => ju}
 
 import com.google.inject.assistedinject.Assisted
 import controllers.DataSetWebContext
-import dataaccess.{Criterion, FieldTypeHelper, RepoException}
+import dataaccess.{Criterion, RepoException}
+import field.FieldTypeHelper
 import dataaccess.Criterion._
 import models.{DistributionWidgetSpec, _}
 import models.FilterCondition.{FilterIdentity, FilterOrId, toCriterion}

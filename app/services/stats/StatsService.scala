@@ -1,6 +1,5 @@
 package services.stats
 
-import java.io.File
 import java.{util => ju}
 import javax.inject.{Inject, Singleton}
 
@@ -14,19 +13,16 @@ import dataaccess.Criterion.Infix
 import dataaccess._
 import dataaccess.JsonRepoExtra._
 import models._
-import org.apache.spark.ml.feature.ChiSqSelector
-import org.apache.spark.sql.DataFrame
 import play.api.Logger
 import play.api.libs.json._
-import services.ml.{BooleanLabelIndexer, FeaturesDataFrameFactory}
 import services.stats.calc._
-import services.SparkApp
 import JsonFieldUtil._
 import breeze.linalg.{DenseMatrix, eig, eigSym}
 import breeze.linalg.eigSym.EigSym
 import com.jujutsu.tsne.TSneConfig
 import com.jujutsu.tsne.barneshut.{BHTSne, ParallelBHTsne}
 import dataaccess.RepoTypes.JsonReadonlyRepo
+import field.{FieldType, FieldTypeHelper}
 import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -34,8 +30,6 @@ import scala.concurrent.Future
 import scala.collection.JavaConversions._
 import services.stats.CalculatorHelper._
 import services.stats.calc.SeqBinCountCalc.SeqBinCountCalcTypePack
-import smile.manifold.{Operators => ManifoldOperators}
-import smile.projection.{Operators => ProjectionOperators}
 
 @ImplementedBy(classOf[StatsServiceImpl])
 trait StatsService extends CalculatorExecutors {
@@ -161,11 +155,6 @@ trait StatsService extends CalculatorExecutors {
   // t-SNE //
   ///////////
 
-  def performSmileTSNE(
-    data: Array[Array[Double]],
-    setting: SmileTSNESetting = SmileTSNESetting()
-  ): Array[Array[Double]]
-
   def performTSNE(
     data: Array[Array[Double]],
     setting: TSNESetting = TSNESetting()
@@ -219,19 +208,6 @@ trait StatsService extends CalculatorExecutors {
     keepUndefined: Boolean = false
   ): Seq[(Field, Option[IndependenceTestResult])]
 
-  def selectFeaturesAsChiSquare(
-    data: DataFrame,
-    featuresToSelectNum: Int
-  ): DataFrame
-
-  def selectFeaturesAsChiSquare(
-    data: Traversable[JsObject],
-    inputAndOutputFields: Seq[Field],
-    outputFieldName: String,
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
-  ): Traversable[String]
-
   def selectFeaturesAsAnovaChiSquare(
     data: Traversable[JsObject],
     inputFields: Seq[Field],
@@ -242,9 +218,8 @@ trait StatsService extends CalculatorExecutors {
 }
 
 @Singleton
-class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with ManifoldOperators {
+class StatsServiceImpl extends StatsService {
 
-  private val session = sparkApp.session
   private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
   private val defaultNumericBinCount = 20
 
@@ -1049,18 +1024,6 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
   // t-SNE //
   ///////////
 
-  override def performSmileTSNE(
-    data: Array[Array[Double]],
-    setting: SmileTSNESetting
-  ): Array[Array[Double]] = {
-    if (data.length > 0) {
-      logger.info(s"Running t-SNE for ${data.length} items with ${data(0).length} features and ${setting.iterations} iterations.")
-      val sne = tsne(data, setting.dims, setting.perplexity, setting.eta, setting.iterations)
-      sne.getCoordinates
-    } else
-      Array[Array[Double]]()
-  }
-
   private val parallelTSNE = true
   private val silentTSNSE = true
 
@@ -1186,55 +1149,7 @@ class StatsServiceImpl @Inject() (sparkApp: SparkApp) extends StatsService with 
     val results = testIndependenceSorted(data, inputFields, targetField, keepUndefined)
     results.map(_._1).take(featuresToSelectNum)
   }
-
-  override def selectFeaturesAsChiSquare(
-    data: DataFrame,
-    featuresToSelectNum: Int
-  ): DataFrame = {
-    val model = selectFeaturesAsChiSquareModel(data, featuresToSelectNum)
-
-    model.transform(data)
-  }
-
-  override def selectFeaturesAsChiSquare(
-    data: Traversable[JsObject],
-    inputAndOutputFields: Seq[Field],
-    outputFieldName: String,
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
-  ): Traversable[String] = {
-    val fieldNameSpecs = inputAndOutputFields.map(field => (field.name, field.fieldTypeSpec))
-    val df = FeaturesDataFrameFactory(session, data, fieldNameSpecs, Some(outputFieldName), Some(discretizerBucketsNum))
-    val inputDf = BooleanLabelIndexer.transform(df)
-
-    // get the Chi-Square model
-    val model = selectFeaturesAsChiSquareModel(inputDf, featuresToSelectNum)
-
-    // extract the features
-    val featureNames = inputDf.columns.filterNot(columnName => columnName.equals("features") || columnName.equals("label"))
-    model.selectedFeatures.map(featureNames(_))
-  }
-
-  private def selectFeaturesAsChiSquareModel(
-    data: DataFrame,
-    featuresToSelectNum: Int
-  ) = {
-    val selector = new ChiSqSelector()
-      .setFeaturesCol("features")
-      .setLabelCol("label")
-      .setOutputCol("selectedFeatures")
-      .setNumTopFeatures(featuresToSelectNum)
-
-    selector.fit(data)
-  }
 }
-
-case class SmileTSNESetting(
-  dims: Int = 2,
-  perplexity: Double = 20,
-  eta: Double = 100,
-  iterations: Int = 1000
-)
 
 case class TSNESetting(
   dims: Int = 2,

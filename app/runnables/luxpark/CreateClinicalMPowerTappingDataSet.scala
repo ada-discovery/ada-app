@@ -1,9 +1,10 @@
 package runnables.luxpark
 
-import javax.inject.Inject
 import java.{util => ju}
+import javax.inject.Inject
 
-import dataaccess.{Criterion, FieldTypeHelper}
+import dataaccess.Criterion
+import field.FieldTypeHelper
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import DataSetId._

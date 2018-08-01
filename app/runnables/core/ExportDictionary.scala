@@ -4,7 +4,8 @@ import java.io.{File, PrintWriter}
 
 import play.api.Logger
 import runnables.DsaInputFutureRunnable
-import dataaccess.{AscSort, FieldTypeHelper, JsonUtil}
+import dataaccess.{AscSort, JsonUtil}
+import field.FieldTypeHelper
 import play.api.libs.json.{JsObject, JsString, Json}
 
 import scala.reflect.runtime.universe.typeOf

@@ -32,12 +32,12 @@ import akka.stream.impl.QueueSink
 import akka.stream.impl.Stages.DefaultAttributes
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.{Sink, StreamConverters}
+import field.{FieldType, FieldTypeHelper, FieldTypeInferrer}
 import models.FilterCondition.FilterOrId
 import models.ml._
 
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-import runnables.core.CompareAllValuesInTwoDataSetsSpec
 import services.ml.{RCPredictionService, RCPredictionStaticHelper}
 
 import scala.concurrent.duration.Duration.Inf

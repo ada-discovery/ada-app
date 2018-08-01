@@ -1,6 +1,7 @@
 package services.widgetgen
 
-import dataaccess.{Criterion, FieldTypeHelper}
+import dataaccess.Criterion
+import field.FieldTypeHelper
 import models.{BoxWidget, BoxWidgetSpec, Field}
 import services.stats.calc.GroupQuartilesCalcNoOptionsTypePack
 

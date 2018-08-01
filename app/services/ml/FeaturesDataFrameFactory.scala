@@ -2,14 +2,15 @@ package services.ml
 
 import java.{util => ju}
 
-import dataaccess.{FieldType, FieldTypeHelper}
+import field.{FieldType, FieldTypeHelper}
 import models.{FieldTypeId, FieldTypeSpec}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.feature.{QuantileDiscretizer, StringIndexer, VectorAssembler}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsArray, JsObject, JsString, Json}
+import services.ml.transformers.FixedOrderStringIndexer
 
 import scala.util.Random
 
@@ -70,17 +71,15 @@ object FeaturesDataFrameFactory {
     )
   }
 
-  def apply(
+  def applySeries(
     session: SparkSession)(
     json: JsObject,
     inputSeriesFieldPaths: Seq[String],
-    outputSeriesFieldPath: String,
-    dlSize: Int,
-    predictAhead: Int
+    outputSeriesFieldPath: String
   ): DataFrame = {
-    val values: Seq[Seq[Double]] =
-      IOSeriesUtil.applyJson(json, inputSeriesFieldPaths, outputSeriesFieldPath).map { case (input, output) =>
-        createDelayLine(input, output.drop(dlSize + predictAhead - 1), dlSize)
+    val values: Seq[Seq[Any]] =
+      IOSeriesUtil.applyJson(json, inputSeriesFieldPaths, outputSeriesFieldPath).map { case (inputs, outputs) =>
+        inputs.zip(outputs).zipWithIndex.map { case ((input, output), index) => Seq(index) ++ input ++ Seq(output) }
       }.getOrElse(Nil)
 
     val valueBroadVar = session.sparkContext.broadcast(values)
@@ -92,16 +91,13 @@ object FeaturesDataFrameFactory {
       Row.fromSeq(valueBroadVar.value(index.toInt))
     }
 
-    val inputFieldNames =
-      (1 to dlSize).flatMap( i =>
-        inputSeriesFieldPaths.map( fieldName =>
-          fieldName.replaceAllLiterally(".", "_") + "_" + i
-        )
-      )
+    val inputFieldNames = inputSeriesFieldPaths.map( fieldName =>
+      fieldName.replaceAllLiterally(".", "_")
+    )
 
     val outputFieldName = outputSeriesFieldPath.replaceAllLiterally(".", "_")
-
-    val structTypes = (inputFieldNames ++ Seq(outputFieldName)).map(StructField(_, DoubleType, true))
+    val ioTypes = (inputFieldNames ++ Seq(outputFieldName)).toSet.map { name: String => StructField(name, DoubleType, true) }
+    val structTypes = Seq(StructField("index", IntegerType, true)) ++ ioTypes
 
     val df = session.createDataFrame(data, StructType(structTypes))
 
@@ -125,23 +121,36 @@ object FeaturesDataFrameFactory {
   def prepFeaturesDataFrame(
     featureFieldNames: Set[String],
     outputFieldName: Option[String],
+    dropFeatureCols: Boolean = true,
     dropNaValues: Boolean = true)(
     df: DataFrame
   ): DataFrame = {
     // drop null values
     val nonNullDf = if (dropNaValues) df.na.drop else df
 
+    val existingFeatureCols = nonNullDf.columns.filter(featureFieldNames.contains)
+
     val assembler = new VectorAssembler()
-      .setInputCols(nonNullDf.columns.filter(featureFieldNames.contains))
+      .setInputCols(existingFeatureCols)
       .setOutputCol("features")
 
     val featuresDf = assembler.transform(nonNullDf)
 
-    outputFieldName.map(
+    val finalDf = outputFieldName.map(
       featuresDf.withColumnRenamed(_, "label")
     ).getOrElse(
       featuresDf
     )
+
+    if (dropFeatureCols) {
+      val columnsToDrop = outputFieldName.map { outputFieldName =>
+        existingFeatureCols.filterNot(_.equals(outputFieldName))
+      }.getOrElse(
+        existingFeatureCols
+      )
+      finalDf.drop(columnsToDrop: _ *)
+    } else
+      finalDf
   }
 
   private def jsonsToDataFrame(
@@ -189,8 +198,10 @@ object FeaturesDataFrameFactory {
 
     data.cache()
 
-    val structTypes = fieldNameAndTypes.map { case (fieldName, fieldType) =>
-      val sparkFieldType: DataType = fieldType.spec.fieldType match {
+    val structTypesWithEnumLabels = fieldNameAndTypes.map { case (fieldName, fieldType) =>
+      val spec = fieldType.spec
+
+      val sparkFieldType: DataType = spec.fieldType match {
         case FieldTypeId.Integer => LongType
         case FieldTypeId.Double => DoubleType
         case FieldTypeId.Boolean => BooleanType
@@ -201,26 +212,50 @@ object FeaturesDataFrameFactory {
         case FieldTypeId.Null => NullType
       }
 
-      // TODO: we can perhaps create our own metadata for enums without StringIndexer
-      //      val jsonMetadata = Json.obj("ml_attr" -> Json.obj(
-      //        "vals" -> JsArray(Seq(JsString("lala"), JsString("lili"))),
-      //        "type" -> "nominal"
-      //      ))
-      //      val metadata = Metadata.fromJson(Json.stringify(jsonMetadata))
+      val metadata = if (spec.fieldType == FieldTypeId.Boolean) {
+        val aliases = Seq(
+          spec.displayTrueValue.map(_ -> "true"),
+          spec.displayFalseValue.map(_ -> "false")
+        ).flatten
 
-      StructField(fieldName, sparkFieldType, true)
+        val jsonMetadata = Json.obj("ml_attr" -> Json.obj(
+          "aliases" -> Json.obj(
+            "from" -> JsArray(aliases.map(x => JsString(x._1))),
+            "to" -> JsArray(aliases.map(x => JsString(x._2)))
+          )),
+          "type" -> "nominal"
+        )
+        Metadata.fromJson(Json.stringify(jsonMetadata))
+      } else
+        Metadata.empty
+
+
+      val enumLabels = if (spec.fieldType == FieldTypeId.Enum) {
+        spec.enumValues.map(_.map(_._2)).getOrElse(Nil).toSeq.sorted
+      } else
+        Nil
+
+      val structField = StructField(fieldName, sparkFieldType, true, metadata)
+      (structField, enumLabels)
     }
 
-    val stringTypes = structTypes.filter(_.dataType.equals(StringType))
+    val structTypes = structTypesWithEnumLabels.map(_._1)
+    val stringTypesWithEnumLabels = structTypesWithEnumLabels.filter(_._1.dataType.equals(StringType))
 
     //    df = session.createDataFrame(rdd_of_rows)
     val df = session.createDataFrame(data, StructType(structTypes))
 
-    val finalDf = stringTypes.foldLeft(df){ case (newDf, stringType) =>
+    val finalDf = stringTypesWithEnumLabels.foldLeft(df){ case (newDf, (stringType, enumLabels)) =>
       if (!stringFieldsNotToIndex.contains(stringType.name)) {
-        val randomIndex = Random.nextLong()
-        val indexer = new StringIndexer().setInputCol(stringType.name).setOutputCol(stringType.name + randomIndex)
-        indexer.fit(newDf).transform(newDf).drop(stringType.name).withColumnRenamed(stringType.name + randomIndex, stringType.name)
+        val tempCol = stringType.name + Random.nextLong()
+
+        // if enum labels provided create an fixed-order string indexer, otherwise use a standard one, which index values based on their frequencies
+        val indexer = if (enumLabels.nonEmpty) {
+          new FixedOrderStringIndexer().setLabels(enumLabels.toArray).setInputCol(stringType.name).setOutputCol(tempCol)
+        } else
+          new StringIndexer().setInputCol(stringType.name).setOutputCol(tempCol)
+
+        indexer.fit(newDf).transform(newDf).drop(stringType.name).withColumnRenamed(tempCol, stringType.name)
       } else {
         newDf
       }
@@ -244,45 +279,4 @@ object FeaturesDataFrameFactory {
 
     result.drop(columnName).withColumnRenamed(outputColumnName, columnName)
   }
-
-  def createDelayLine[T](
-    inputStream: Seq[Seq[T]],
-    outputStream: Seq[T],
-    dlSize : Int
-  ): Seq[Seq[T]] = {
-    val inputDelayLineStream = inputStream.sliding(dlSize).toStream.map(x => x.flatten)
-    inputDelayLineStream.zip(outputStream).map { case (inputs, output) =>
-      inputs ++ Seq(output)
-    }
-  }
-}
-
-object Lala extends App {
-  private val size = 20
-  private val featuresNum = 3
-  private val dlSize = 4
-
-  private val inputs: Seq[Seq[Int]] =
-    for (_ <- 0 to size - 1) yield
-      for (_ <- 0 to featuresNum - 1) yield Random.nextInt(10)
-
-  private val outputs: Seq[Int] =
-    for (_ <- 0 to size) yield Random.nextInt(100)
-
-  val dlFeatures = FeaturesDataFrameFactory.createDelayLine(inputs, outputs, dlSize)
-
-  println("Inputs:\n")
-  inputs.transpose.foreach( values =>
-    println(values.mkString(","))
-  )
-
-  println
-  println("Outputs:\n")
-  println(outputs.mkString(","))
-  println
-
-  println("DL Features:\n")
-  dlFeatures.foreach( values =>
-    println(values.mkString(","))
-  )
 }

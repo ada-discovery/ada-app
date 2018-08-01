@@ -120,8 +120,3 @@ case class CalcCorrelationsSpec(
   streamAreValuesAllDefined: Boolean,
   exportFileName: Option[String]
 )
-
-object FeatureMatrixExport {
-
-
-}

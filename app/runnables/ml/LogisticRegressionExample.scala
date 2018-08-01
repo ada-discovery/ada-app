@@ -2,7 +2,7 @@ package runnables.ml
 
 import javax.inject.Inject
 
-import dataaccess.{FieldType, FieldTypeHelper}
+import field.{FieldType, FieldTypeHelper}
 import models.FieldTypeId
 import org.apache.spark.ml._
 import org.apache.spark.ml.classification._

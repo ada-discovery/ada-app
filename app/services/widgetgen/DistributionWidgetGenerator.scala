@@ -1,6 +1,7 @@
 package services.widgetgen
 
-import dataaccess.{Criterion, FieldType, FieldTypeHelper}
+import dataaccess.Criterion
+import field.{FieldType, FieldTypeHelper}
 import models._
 import services.stats.calc._
 import util.{fieldLabel, shorten}

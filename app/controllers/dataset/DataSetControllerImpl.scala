@@ -45,6 +45,7 @@ import models.security.{SecurityRole, UserManager}
 import services.stats.calc.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult}
 import services.stats.StatsService
 import IndependenceTestResult.independenceTestResultFormat
+import field.{FieldType, FieldTypeHelper}
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}

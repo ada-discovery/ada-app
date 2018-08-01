@@ -7,7 +7,8 @@ import java.{util => ju}
 
 import dataaccess.Criterion._
 import dataaccess.RepoTypes.FieldRepo
-import dataaccess.{FieldType, FieldTypeHelper, ReflectionUtil => CoreReflectionUtil}
+import dataaccess.{ReflectionUtil => CoreReflectionUtil}
+import field.{FieldType, FieldTypeHelper}
 import models.DataSetFormattersAndIds.FieldIdentity
 import reactivemongo.bson.BSONObjectID
 

@@ -6,7 +6,7 @@ import javax.inject.Inject
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import models.{Field, FieldTypeId, FieldTypeSpec}
-import dataaccess.{FieldType, FieldTypeHelper}
+import field.{FieldType, FieldTypeHelper}
 import models.synapse._
 import models.SynapseDataSetImport
 import play.api.Configuration

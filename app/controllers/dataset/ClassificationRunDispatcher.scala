@@ -43,14 +43,6 @@ class ClassificationRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf
     saveBinCurves: Boolean
   ) = dispatch(_.classify(setting, saveResults, saveBinCurves))
 
-  override def selectFeaturesAsChiSquare(
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterId: Option[BSONObjectID],
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
-  ) = dispatch(_.selectFeaturesAsChiSquare(inputFieldNames, outputFieldName, filterId, featuresToSelectNum, discretizerBucketsNum))
-
   override def selectFeaturesAsAnovaChiSquare(
     inputFieldNames: Seq[String],
     outputFieldName: String,

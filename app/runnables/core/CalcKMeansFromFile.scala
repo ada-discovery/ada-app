@@ -2,22 +2,21 @@ package runnables.core
 
 import java.nio.file.Paths
 
+import com.banda.core.plotter.Plotter
 import com.google.inject.Inject
 import models.ml.unsupervised.{BisectingKMeans, KMeans, UnsupervisedLearning}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.apache.hadoop.fs._
-import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
-import runnables.core.CalcUtil.saveCanvasAsImage
 import runnables.InputRunnable
 import services.SparkApp
 import services.ml.MachineLearningService
-import smile.plot._
 
 import collection.JavaConverters._
 import scala.reflect.runtime.universe.typeOf
 import scala.util.Random
+import util.writeStringAsStream
 
 class CalcKMeansFromFile @Inject()(
     val sparkApp: SparkApp,
@@ -96,6 +95,7 @@ trait CalcKMeansHelper {
   private val fs = FileSystem.get(sparkApp.sc.hadoopConfiguration)
 
   private val clusterClassColumnName = "clazz"
+  private val plotter = Plotter.createExportInstance("svg")
 
   protected def calcKMeansAux(
     inputFileName: String,
@@ -146,18 +146,14 @@ trait CalcKMeansHelper {
       val finalDfRows = finalDf.select(clusterClassColumnName, featureColumnNames: _*).collect()
 
       val values = finalDfRows.map { row =>
-        val values = for (i <- 1 to row.size - 1) yield row.getDouble(i)
-        values.toArray
+        for (i <- 1 to row.size - 1) yield row.getDouble(i)
       }
 
+      // TODO: use labels
       val labels = finalDfRows.map(_.getInt(0))
 
-      val canvas = ScatterPlot.plot(values, labels, 'o', Palette.COLORS)
-      try {
-        saveCanvasAsImage(exportPlotFileName.get, 1000, 800)(canvas)
-      } catch {
-        case e: Exception => logger.error("k-Means image export is not possible due to " + e.getMessage)
-      }
+      plotter.plotXY(values, "k-Means")
+      writeStringAsStream(plotter.getOutput, new java.io.File(exportPlotFileName.get))
     }
   }
 

@@ -3,7 +3,7 @@ package util
 import models.{Field, FieldTypeId}
 import play.api.libs.json.JsValue
 import play.twirl.api.{Html, HtmlFormat}
-import dataaccess.FieldTypeHelper
+import field.FieldTypeHelper
 import reactivemongo.bson.BSONObjectID
 import views.html.dataset.{renderers => rendererView}
 import scala.collection.immutable.{ Seq => ISeq }

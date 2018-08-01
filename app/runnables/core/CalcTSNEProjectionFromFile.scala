@@ -3,14 +3,14 @@ package runnables.core
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
+import com.banda.core.plotter.Plotter
 import com.google.inject.Inject
 import models.AdaException
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import runnables.InputFutureRunnable
-import runnables.core.CalcUtil._
 import services.stats.{StatsService, TSNESetting}
-import smile.plot._
+import util.writeStringAsStream
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
@@ -23,6 +23,7 @@ class CalcTSNEProjectionFromFile @Inject()(
   import statsService._
 
   private val logger = Logger
+  private val plotter = Plotter.createExportInstance("svg")
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
@@ -101,13 +102,8 @@ class CalcTSNEProjectionFromFile @Inject()(
       if (tsneFailed)
         logger.error(s"$prefix t-SNE for a file ${inputFileName} returned NaN values. Image export is not possible.")
       else {
-        val labels = tsneProjections.map(_ => 0)
-        val canvas = ScatterPlot.plot(tsneProjections, labels, 'o', Palette.COLORS)
-        try {
-          saveCanvasAsImage(plotExportFileName.get, 1000, 800)(canvas)
-        } catch {
-          case e: Exception => logger.error("t-SNE image export is not possible due to " + e.getMessage)
-        }
+        plotter.plotXY(tsneProjections.map(_.toIterable).toIterable, "t-SNE")
+        writeStringAsStream(plotter.getOutput, new java.io.File(plotExportFileName.get))
       }
     }
 

@@ -5,7 +5,7 @@ import java.{util => ju}
 
 import com.google.inject.assistedinject.Assisted
 import controllers.DataSetWebContext
-import dataaccess.{Criterion, FieldTypeHelper, RepoException}
+import dataaccess.{Criterion, RepoException}
 import dataaccess.Criterion._
 import models.{DistributionWidgetSpec, _}
 import models.FilterCondition.{FilterIdentity, FilterOrId, toCriterion}
@@ -29,6 +29,7 @@ import services.ml._
 import _root_.util.FieldUtil
 import _root_.util.FieldUtil.caseClassToFlatFieldTypes
 import _root_.util.toHumanReadableCamel
+import field.FieldTypeHelper
 import models.json.{EnumFormat, OrdinalEnumFormat}
 import models.ml.classification.Classification.ClassificationIdentity
 import services.stats.StatsService
@@ -361,31 +362,6 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     Seq(
       rocWidget, prWidget, fMeasureThresholdWidget, precisionThresholdWidget, recallThresholdWidget
     ).flatten
-  }
-
-  override def selectFeaturesAsChiSquare(
-    inputFieldNames: Seq[String],
-    outputFieldName: String,
-    filterId: Option[BSONObjectID],
-    featuresToSelectNum: Int,
-    discretizerBucketsNum: Int
-  ) = Action.async { implicit request =>
-    val explFieldNamesToLoads =
-      if (inputFieldNames.nonEmpty)
-        (inputFieldNames ++ Seq(outputFieldName)).toSet.toSeq
-      else
-        Nil
-
-    val criteriaFuture = loadCriteria(filterId)
-
-    for {
-      criteria <- criteriaFuture
-      (jsons, fields) <- dataSetService.loadDataAndFields(dsa, explFieldNamesToLoads, criteria)
-    } yield {
-      val fieldNames = statsService.selectFeaturesAsChiSquare(jsons, fields, outputFieldName, featuresToSelectNum, discretizerBucketsNum)
-      val json = JsArray(fieldNames.map(JsString(_)).toSeq)
-      Ok(json)
-    }
   }
 
   override def selectFeaturesAsAnovaChiSquare(

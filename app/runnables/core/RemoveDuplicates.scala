@@ -4,7 +4,7 @@ import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import play.api.Logger
 import runnables.DsaInputFutureRunnable
 import dataaccess.Criterion._
-import dataaccess.FieldTypeHelper
+import field.FieldTypeHelper
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
 

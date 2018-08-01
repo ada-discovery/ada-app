@@ -11,7 +11,6 @@ import models.{Field, FieldTypeId}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import dataaccess.Criterion._
-import smile.plot.{Headless, PlotCanvas}
 
 import scala.concurrent.Future
 
@@ -34,23 +33,6 @@ object CalcUtil {
           FieldIdentity.name #!-> allFeaturesExcept
         )
       )
-  }
-
-  @throws[IOException]
-  def saveCanvasAsImage(
-    fileName: String,
-    width: Int,
-    height: Int)(
-    canvas: PlotCanvas
-  ) {
-    canvas.setPreferredSize(new Dimension(width, height))
-    canvas.setMinimumSize(new Dimension(width, height))
-
-    val headless = new Headless(canvas)
-    headless.pack()
-    headless.setVisible(true)
-
-    canvas.save(new File(fileName))
   }
 
   object repeatWithTime {

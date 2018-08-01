@@ -2,14 +2,16 @@ package runnables.core
 
 import javax.inject.Inject
 
+import com.banda.core.plotter.{Plotter, TimeSeriesPlotSetting}
 import models.ml.{LearningSetting, RegressionEvalMetric, VectorTransformType}
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID
 import runnables.InputFutureRunnable
 import services.ml.{MachineLearningService, MachineLearningUtil}
-import scala.concurrent.ExecutionContext.Implicits.global
+import util.writeStringAsStream
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.Future
 
@@ -18,6 +20,8 @@ class RunDelayLineSeriesRegression @Inject() (
     mlService: MachineLearningService,
     regressionRepo: RegressionRepo
   ) extends InputFutureRunnable[DelayLineRegressionSetting] {
+
+  private val plotter = Plotter.createExportInstance("svg")
 
   override def runAsFuture(
     setting: DelayLineRegressionSetting
@@ -40,7 +44,7 @@ class RunDelayLineSeriesRegression @Inject() (
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
-        val results = mlService.regressSeries(
+        val results = mlService.regressSeriesWithDelayLine(
           item.get, setting.inputSeriesFieldPaths, setting.outputSeriesFieldPath, setting.dlSize, setting.predictAhead, mlModel, setting.learningSetting, replicationItem
         )
         results.map(Some(_))
@@ -52,11 +56,38 @@ class RunDelayLineSeriesRegression @Inject() (
         // prepare the results stats
         val metricStatsMap = MachineLearningUtil.calcMetricStats(resultsHolder.performanceResults)
 
-        val (trainingScore, testingScore, replicationScore) = metricStatsMap.get(RegressionEvalMetric.rmse).get
+        val (trainingScore, testingScore, _) = metricStatsMap.get(RegressionEvalMetric.rmse).get
 
-        println(trainingScore)
-        println(testingScore)
+        println("Training RMSE: " + trainingScore)
+        println("Test RMSE    : " + testingScore)
+
+        resultsHolder.expectedAndActualOutputs.headOption.map { outputs =>
+          val trainingOutputs = outputs.head
+          val testOutputs = outputs.tail.head
+
+          exportOutputs(trainingOutputs, "DL_IO_training.svg")
+          exportOutputs(testOutputs, "DL_IO_test.svg")
+        }
       }
+  }
+
+  private def exportOutputs(
+    outputs: Seq[(Double, Double)],
+    fileName: String
+  ) = {
+    val y = outputs.map{ case (y, yhat) => y }
+    val yhat = outputs.map{ case (y, yhat) => yhat }
+
+    plotter.plotSeries(
+      Seq(y, yhat),
+      new TimeSeriesPlotSetting() {
+        xLabel = "Time"
+        yLabel = "Value"
+        captions = Seq("y", "y^")
+      }
+    )
+
+    writeStringAsStream(plotter.getOutput, new java.io.File(fileName))
   }
 
   override def inputType = typeOf[DelayLineRegressionSetting]

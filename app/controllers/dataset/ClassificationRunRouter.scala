@@ -17,6 +17,5 @@ class ClassificationRunRouter(dataSetId: String) extends GenericRouter(routes.Cl
 
 final class ClassificationRunJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.ClassificationRunDispatcher, "dataSet", dataSetId) {
   val classify = routeFun(_.classify)
-  val selectFeaturesAsChiSquare = routeFun(_.selectFeaturesAsChiSquare)
   val selectFeaturesAsAnovaChiSquare = routeFun(_.selectFeaturesAsAnovaChiSquare)
 }
