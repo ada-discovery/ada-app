@@ -4,7 +4,8 @@ import java.text.SimpleDateFormat
 import java.{util => ju}
 
 import dataaccess._
-import models.{FieldTypeSpec, FieldTypeId}
+import field.{FieldType, FieldTypeHelper}
+import models.{FieldTypeId, FieldTypeSpec}
 import org.scalatest._
 import play.api.libs.json._
 

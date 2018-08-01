@@ -1,5 +1,6 @@
 import dataaccess._
-import models.{FieldTypeSpec, FieldTypeId}
+import field.FieldTypeHelper
+import models.{FieldTypeId, FieldTypeSpec}
 import org.scalatest._
 import play.api.libs.json._
 

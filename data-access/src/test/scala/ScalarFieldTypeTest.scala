@@ -1,10 +1,12 @@
 import java.text.SimpleDateFormat
 
 import dataaccess._
-import models.{FieldTypeSpec, FieldTypeId}
+import models.{FieldTypeId, FieldTypeSpec}
 import org.scalatest._
 import play.api.libs.json._
 import java.{util => ju}
+
+import field.{FieldType, FieldTypeHelper}
 
 class ScalarFieldTypeTest extends FlatSpec with Matchers {
 
