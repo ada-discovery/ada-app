@@ -1,16 +1,17 @@
-package dataaccess
+package field
 
+import dataaccess.AdaConversionException
+import dataaccess.ReflectionUtil.typeToClass
 import models.FieldTypeSpec
 import play.api.libs.json._
 
 import scala.reflect.runtime.universe._
-import dataaccess.ReflectionUtil.typeToClass
 
 trait FieldType[T] {
 
   val spec: FieldTypeSpec
 
-  protected[dataaccess] val nullAliases: Set[String]
+  protected[field] val nullAliases: Set[String]
 
   def displayStringToValue(text: String): Option[T] =
     if (text == null)

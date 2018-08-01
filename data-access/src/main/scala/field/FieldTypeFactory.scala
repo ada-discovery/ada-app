@@ -1,16 +1,16 @@
-package dataaccess
+package field
 
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.{lang => jl, util => ju}
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
+import dataaccess.ConversionUtil._
+import dataaccess._
 import models.{FieldTypeId, FieldTypeSpec}
 import play.api.libs.json._
-import java.{util => ju}
-import java.{lang => jl}
 
-import dataaccess.ConversionUtil._
 import scala.reflect.runtime.universe._
 
 trait FieldTypeFactory {
@@ -84,7 +84,7 @@ private case class DoubleFieldType(
     displayDecimalPlaces: Option[Int] = None
   ) extends  FormatFieldType[Double] {
 
-  val spec = FieldTypeSpec(FieldTypeId.Double, false)
+  val spec = FieldTypeSpec(FieldTypeId.Double, false, displayDecimalPlaces = displayDecimalPlaces)
 
   override val valueTypeTag = typeTag[Double]
 
@@ -129,7 +129,7 @@ private case class BooleanFieldType(
     displayFalseValue: Option[String] = None
   ) extends FormatFieldType[Boolean] {
 
-  val spec = FieldTypeSpec(FieldTypeId.Boolean, false)
+  val spec = FieldTypeSpec(FieldTypeId.Boolean, false, displayTrueValue = displayTrueValue, displayFalseValue = displayFalseValue)
 
   override val valueTypeTag = typeTag[Boolean]
 
@@ -164,10 +164,9 @@ private case class ArrayFieldType[T](
     delimiter: String
   ) extends FieldType[Array[Option[T]]] {
 
-  val elementFieldTypeSpec = elementFieldType.spec
-  val spec = FieldTypeSpec(elementFieldTypeSpec.fieldType, true, elementFieldTypeSpec.enumValues)
+  val spec = elementFieldType.spec.copy(isArray = true)
 
-  override protected[dataaccess] val nullAliases: Set[String] = elementFieldType.nullAliases
+  override protected[field] val nullAliases: Set[String] = elementFieldType.nullAliases
 
   private implicit val elementClassTag: TypeTag[T] = elementFieldType.valueTypeTag
 
@@ -239,7 +238,7 @@ private class FieldTypeFactoryImpl(
 
       override val valueTypeTag = typeTag[Nothing]
 
-      override protected[dataaccess] val nullAliases = nullValues
+      override protected[field] val nullAliases = nullValues
 
       override protected def displayStringToValueWoNull(text: String) =
         throw new AdaConversionException(s"$text is not null.")
@@ -262,7 +261,7 @@ private class FieldTypeFactoryImpl(
 
       override val valueTypeTag = typeTag[Long]
 
-      override protected[dataaccess] val nullAliases = nullValues
+      override protected[field] val nullAliases = nullValues
 
       override protected def displayJsonToValueWoString(json: JsReadable) =
         json match {
@@ -290,7 +289,7 @@ private class FieldTypeFactoryImpl(
 
       private val displayFormatter = new SimpleDateFormat(displayDateFormat)
 
-      override protected[dataaccess] val nullAliases = nullValues
+      override protected[field] val nullAliases = nullValues
 
       override protected def displayStringToValueWoNull(text: String) =
         try {
@@ -325,7 +324,7 @@ private class FieldTypeFactoryImpl(
 
       override val valueTypeTag = typeTag[String]
 
-      override protected[dataaccess] val nullAliases = nullValues
+      override protected[field] val nullAliases = nullValues
 
       override protected def displayStringToValueWoNull(text: String) =
         text
@@ -350,7 +349,7 @@ private class FieldTypeFactoryImpl(
 
       override val valueTypeTag = typeTag[JsObject]
 
-      override protected[dataaccess] val nullAliases = nullValues
+      override protected[field] val nullAliases = nullValues
 
       override protected def displayStringToValueWoNull(text: String) =
         try {
@@ -383,7 +382,7 @@ private class FieldTypeFactoryImpl(
 
     override val valueTypeTag = typeTag[Array[Option[JsObject]]]
 
-    override protected[dataaccess] val nullAliases = nullValues
+    override protected[field] val nullAliases = nullValues
 
     override protected def displayStringToValueWoNull(text: String) =
       try {

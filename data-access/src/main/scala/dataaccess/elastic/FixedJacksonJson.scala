@@ -1,18 +1,18 @@
-package models.json
+package dataaccess.elastic
 
 import java.io.InputStream
 
 import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
 import com.fasterxml.jackson.databind.Module.SetupContext
+import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.`type`.TypeFactory
 import com.fasterxml.jackson.databind.deser.Deserializers
-import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.Serializers
 import play.api.libs.json._
 
-import scala.annotation.{ switch, tailrec }
+import scala.annotation.{switch, tailrec}
 import scala.collection.mutable.ListBuffer
 
 object FixedPlayJsonModule extends SimpleModule("FixedPlayJson", Version.unknownVersion()) {
@@ -26,8 +26,9 @@ object FixedPlayJsonModule extends SimpleModule("FixedPlayJson", Version.unknown
   * The only purpose of class is to fix a situation where BigDecimal with more then 10 floating points (E-10) is attempted to be parsed as BigInteger, which fails
   */
 private object JsValueSerializer extends JsonSerializer[JsValue] {
-  import java.math.{ BigDecimal => JBigDec, BigInteger }
-  import com.fasterxml.jackson.databind.node.{ BigIntegerNode, DecimalNode }
+  import java.math.{BigInteger, BigDecimal => JBigDec}
+
+  import com.fasterxml.jackson.databind.node.{BigIntegerNode, DecimalNode}
 
   // Maximum magnitude of BigDecimal to write out as a plain string
   val MaxPlain: BigDecimal = 1e20

@@ -1,6 +1,7 @@
 package models.json
 
-import dataaccess.{AdaConversionException, FieldType}
+import dataaccess.AdaConversionException
+import field.FieldType
 import play.api.libs.json._
 
 private class OptionalFieldTypeFormat[T](fieldType: FieldType[T]) extends Format[Option[T]] {

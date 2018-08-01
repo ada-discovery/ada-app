@@ -1,4 +1,4 @@
-package dataaccess
+package field
 
 object FieldTypeHelper {
   val nullAliases = Set("", "na", "n/a", "null")

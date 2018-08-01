@@ -5,18 +5,20 @@ import javax.cache.configuration.Factory
 import javax.inject.Inject
 
 import dataaccess._
-import models.{FieldTypeSpec, FieldTypeId}
+import models.{FieldTypeId, FieldTypeSpec}
 import FieldTypeId._
 import org.apache.ignite.binary.BinaryObject
 import org.apache.ignite.cache.store.CacheStore
-import org.apache.ignite.cache.{QueryIndex, QueryEntity, CacheAtomicityMode, CacheMode}
+import org.apache.ignite.cache.{CacheAtomicityMode, CacheMode, QueryEntity, QueryIndex}
 import org.apache.ignite.configuration.CacheConfiguration
-import org.apache.ignite.{IgniteCache, Ignite}
+import org.apache.ignite.{Ignite, IgniteCache}
 import play.api.Logger
 import play.api.libs.json.JsObject
+
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import dataaccess.ignite.BinaryJsonUtil.{escapeIgniteFieldName, getValueFromJson}
+import field.FieldTypeHelper
 
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag

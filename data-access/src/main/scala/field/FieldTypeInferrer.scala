@@ -1,16 +1,17 @@
-package dataaccess
+package field
 
-import dataaccess.FieldTypInferrer.INFER_FIELD_TYPE
-import models.{FieldTypeSpec, FieldTypeId}
-import play.api.libs.json.{JsArray, JsReadable}
+import dataaccess.AdaConversionException
+import field.FieldTypeInferrer.INFER_FIELD_TYPE
+import models.{FieldTypeId, FieldTypeSpec}
+import play.api.libs.json.JsReadable
 
-import collection.mutable.{Map => MMap}
+import scala.collection.mutable.{Map => MMap}
 
 trait FieldTypeInferrer[T] {
   def apply(values: Traversable[T]): FieldType[_]
 }
 
-object FieldTypInferrer {
+object FieldTypeInferrer {
   type INFER_FIELD_TYPE[T] = Traversable[T] => Option[FieldType[_]]
 }
 

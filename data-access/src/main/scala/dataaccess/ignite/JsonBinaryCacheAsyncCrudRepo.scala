@@ -2,12 +2,13 @@ package dataaccess.ignite
 
 import javax.inject.Inject
 
-import models.{FieldTypeSpec, FieldTypeId, DataSetFormattersAndIds}
+import models.{DataSetFormattersAndIds, FieldTypeId, FieldTypeSpec}
 import DataSetFormattersAndIds.JsObjectIdentity
 import dataaccess._
 import dataaccess.RepoTypes._
 import dataaccess.ignite.BinaryJsonUtil._
 import dataaccess.mongo.MongoJsonRepoFactory
+import field.FieldTypeFactory
 import org.apache.ignite.{Ignite, IgniteCache}
 import org.apache.ignite.binary.BinaryObject
 import play.api.Configuration

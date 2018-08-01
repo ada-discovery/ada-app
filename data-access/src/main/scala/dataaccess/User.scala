@@ -6,9 +6,8 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
 /**
-  * Links LDAP DN with entry in MongoDB.
-  * Holds extra authorization information not included in LDAP.
- *
+  *  User object - holds info about a user such as ldapDn, email, roles, and  permissions.
+  *
   * @param _id BSON ID of entry/ user
   * @param ldapDn LDAP DN of user on LDAP server.
   * @param email Email of user (can be used to send notifications.
@@ -17,7 +16,7 @@ import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
   */
 case class User(_id: Option[BSONObjectID], ldapDn: String, email: String, roles: Seq[String], permissions: Seq[String])
 
-object User{
+object User {
   val userFormat: Format[User] = Json.format[User]
   implicit val serializableUserFormat: Format[User] = new SerializableFormat(userFormat.reads, userFormat.writes)
 

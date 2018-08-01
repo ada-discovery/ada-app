@@ -14,7 +14,6 @@ import reactivemongo.play.json.BSONObjectIDFormat
 import dataaccess.RepoTypes.JsonCrudRepo
 import javax.inject.Inject
 
-import models.json.FixedJacksonJson
 import play.api.Configuration
 
 class ElasticJsonCrudRepo @Inject()(
