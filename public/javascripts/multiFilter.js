@@ -128,9 +128,15 @@ $.widget( "custom.multiFilter", {
 
     addAndSubmitCondition: function(condition) {
         this.jsonConditions.push(condition);
-        var index = this.jsonConditions.size - 1;
 
-        // this._createNewFilterCondition(index, condition);
+        this.submitFilter();
+    },
+
+    addAndSubmitConditions: function(conditions) {
+        var that = this;
+        $.each(conditions, function(i, condition) {
+            that.jsonConditions.push(condition);
+        });
 
         this.submitFilter();
     },

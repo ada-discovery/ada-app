@@ -80,9 +80,10 @@ libraryDependencies ++= Seq(
   "com.github.lejon.T-SNE-Java" % "tsne" % "v2.5.0"	,// t-SNE Java
   "org.scalanlp" %% "breeze" % "0.13.2",        // linear algebra and stuff
   "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
-//  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze vizualization
-  "com.banda" % "incal" % "0.1.6" exclude("org.springframework", "spring-context") exclude("org.springframework", "spring-test") exclude("org.springframework", "spring-web") exclude("org.springframework", "spring-webmvc"),
-//  "org.scalatra.scalate" %% "scalate-core" % "1.8.0"
+//  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze visualization
+//  "com.banda" % "incal" % "0.1.6" exclude("org.springframework", "spring-context") exclude("org.springframework", "spring-test") exclude("org.springframework", "spring-web") exclude("org.springframework", "spring-webmvc"),
+  "com.banda.network" % "banda-network-business" % "0.5.6.1",
+  //  "org.scalatra.scalate" %% "scalate-core" % "1.8.0"
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12" ))
 

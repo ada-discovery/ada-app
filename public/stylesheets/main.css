@@ -431,3 +431,17 @@ tr.vertical-divider > td:last-child {
     overflow-x: auto;
     width: auto;
 }
+
+.filter-part {
+    float: left;
+    margin-right: 20px;
+}
+
+.condition {
+    font-size: 18px;
+}
+
+.aligned-container {
+    display: flex;
+    align-items: center;
+}

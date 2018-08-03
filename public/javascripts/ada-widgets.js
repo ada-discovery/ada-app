@@ -68,7 +68,7 @@ function categoricalCountWidget(elementId, widget, filterElementId) {
     plotCategoricalChart(widget.displayOptions.chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat)
 
     if (filterElementId) {
-        $('#' + elementId).on('pointClick', function (event, data) {
+        $('#' + elementId).on('pointSelected', function (event, data) {
             var condition = {fieldName: widget.fieldName, conditionType: "=", value: data.key};
             $('#' + filterElementId).multiFilter('addAndSubmitCondition', condition);
         });
@@ -170,14 +170,27 @@ function boxWidget(elementId, widget) {
     boxPlot(widget.title, elementId, categories, widget.xAxisCaption, widget.yAxisCaption, datas, min, max, pointFormat, height, dataType)
 }
 
-function scatterWidget(elementId, widget) {
+function scatterWidget(elementId, widget, filterElementId) {
     var datas = widget.data.map(function(series) {
         return {name : shorten(series[0]), data : series[1]}
     })
 
     var height = widget.displayOptions.height || 400;
 
-    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, height)
+    if (filterElementId) {
+        $('#' + elementId).on('areaSelected', function (event, data) {
+            var conditions = [
+                {fieldName: widget.xFieldName, conditionType: ">=", value: data.xMin.toString()},
+                {fieldName: widget.xFieldName, conditionType: "<=", value: data.xMax.toString()},
+                {fieldName: widget.yFieldName, conditionType: ">=", value: data.yMin.toString()},
+                {fieldName: widget.yFieldName, conditionType: "<=", value: data.yMax.toString()}
+            ]
+
+            $('#' + filterElementId).multiFilter('addAndSubmitConditions', conditions);
+        });
+    }
+
+    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, height, true, filterElementId != null)
 }
 
 function heatmapWidget(elementId, widget) {
@@ -211,7 +224,7 @@ function genericWidget(widget, filterElementId) {
             case "models.CategoricalCountWidget": categoricalCountWidget(elementIdVal, widget, filterElementId); break;
             case "models.NumericalCountWidget": numericalCountWidget(elementIdVal, widget); break;
             case "models.BoxWidget": boxWidget(elementIdVal, widget); break;
-            case "models.ScatterWidget": scatterWidget(elementIdVal, widget); break;
+            case "models.ScatterWidget": scatterWidget(elementIdVal, widget, filterElementId); break;
             case "models.HeatmapWidget": heatmapWidget(elementIdVal, widget); break;
             case "models.HtmlWidget": htmlWidget(elementIdVal, widget); break;
             case 'models.LineWidget': lineWidget(elementIdVal, widget); break;

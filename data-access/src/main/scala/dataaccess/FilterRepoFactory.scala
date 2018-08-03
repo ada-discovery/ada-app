@@ -46,7 +46,7 @@ object FilterRepoExtra {
 
   implicit class InfixOps(val filterRepo: FilterRepo) extends AnyVal {
 
-    def resolve(filterOrId: FilterOrId): Future[Filter] =
+    def resolveBasic(filterOrId: FilterOrId): Future[Filter] =
       // use a given filter conditions or load one
       filterOrId match {
         case Right(id) =>
@@ -54,6 +54,19 @@ object FilterRepoExtra {
 
         case Left(conditions) =>
           Future(new models.Filter(conditions))
+      }
+
+    def resolve(filterOrId: FilterOrId): Future[Filter] =
+      for {
+        filter <- resolveBasic(filterOrId)
+      } yield {
+        // optimize the conditions (if redundant take the last)
+        val optimizedConditions = filter.conditions.zipWithIndex
+          .groupBy { case (condition, index) => (condition.fieldName, condition.conditionType) }
+          .map { case (_, conditions) => conditions.last }.toSeq
+          .sortBy(_._2).map(_._1)
+
+        filter.copy(conditions = optimizedConditions)
       }
   }
 }

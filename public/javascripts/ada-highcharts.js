@@ -6,7 +6,7 @@
         showLegend,
         pointFormat,
         height,
-        allowPointClick,
+        allowSelectionEvent,
         allowChartTypeChange
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
@@ -15,7 +15,7 @@
             exporting = chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
-        if (allowPointClick)
+        if (allowSelectionEvent)
             cursor = 'pointer';
 
         var pointFormatter = null
@@ -42,7 +42,7 @@
             },
             plotOptions: {
                 pie: {
-                    allowPointSelect: allowPointClick,
+                    allowPointSelect: allowSelectionEvent,
                     cursor: cursor,
                     dataLabels: {
                         enabled: showLabels,
@@ -55,8 +55,8 @@
                     point: {
                         events: {
                             click: function () {
-                                if (allowPointClick)
-                                    $('#' + chartElementId).trigger("pointClick", this);
+                                if (allowSelectionEvent)
+                                    $('#' + chartElementId).trigger("pointSelected", this);
                             }
                         }
                     }
@@ -91,7 +91,7 @@
         pointFormat,
         height,
         dataType,
-        allowPointClick,
+        allowSelectionEvent,
         allowChartTypeChange
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
@@ -100,7 +100,7 @@
             exporting = chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
-        if (allowPointClick)
+        if (allowSelectionEvent)
             cursor = 'pointer';
 
         var pointFormatter = null
@@ -162,13 +162,13 @@
                             return (value === parseInt(value, 10)) ? value : Highcharts.numberFormat(value, 1)
                         }
                     },
-                    allowPointSelect: allowPointClick,
+                    allowPointSelect: allowSelectionEvent,
                     cursor: cursor,
                     point: {
                         events: {
                             click: function () {
-                                if (allowPointClick)
-                                    $('#' + chartElementId).trigger("pointClick", this);
+                                if (allowSelectionEvent)
+                                    $('#' + chartElementId).trigger("pointSelected", this);
                             }
                         }
                     },
@@ -262,7 +262,7 @@
         pointFormat,
         height,
         dataType,
-        allowPointClick,
+        allowSelectionEvent,
         allowChartTypeChange,
         xMin,
         xMax,
@@ -275,7 +275,7 @@
             exporting = chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
-        if (allowPointClick)
+        if (allowSelectionEvent)
             cursor = 'pointer';
 
         var pointFormatter = null
@@ -304,8 +304,8 @@
                 title: {
                     text: yAxisCaption
                 },
-                min: xMin,
-                max: xMax
+                min: yMin,
+                max: yMax
             },
             legend: {
                 layout: 'vertical',
@@ -335,13 +335,13 @@
                         }
                     },
                     turboThreshold: 5000,
-                    allowPointSelect: allowPointClick,
+                    allowPointSelect: allowSelectionEvent,
                     cursor: cursor,
                     point: {
                         events: {
                             click: function () {
-                                if (allowPointClick)
-                                    $('#' + chartElementId).trigger("pointClick", this);
+                                if (allowSelectionEvent)
+                                    $('#' + chartElementId).trigger("pointSelected", this);
                             }
                         }
                     },
@@ -370,7 +370,7 @@
         pointFormat,
         height,
         dataType,
-        allowPointClick,
+        allowSelectionEvent,
         allowChartTypeChange
     ) {
         var chartTypes = ["Pie", "Column", "Bar", "Line", "Spline", "Polar"];
@@ -379,7 +379,7 @@
             exporting = chartTypeMenu(chartElementId, chartTypes)
 
         var cursor = '';
-        if (allowPointClick)
+        if (allowSelectionEvent)
             cursor = 'pointer';
 
         var pointFormatter = null
@@ -433,13 +433,13 @@
                     dataLabels: {
                         enabled: false
                     },
-                    allowPointSelect: allowPointClick,
+                    allowPointSelect: allowSelectionEvent,
                     cursor: cursor,
                     point: {
                         events: {
                             click: function () {
-                                if (allowPointClick)
-                                    $('#' + chartElementId).trigger("pointClick", this);
+                                if (allowSelectionEvent)
+                                    $('#' + chartElementId).trigger("pointSelected", this);
                             }
                         }
                     },
@@ -467,12 +467,106 @@
         xAxisCaption,
         yAxisCaption,
         series,
-        height
+        height,
+        zoomIfDragged,
+        allowSelectionEvent
     ) {
+
+        /**
+         * Custom selection handler that selects points and cancels the default zoom behaviour
+         */
+        function selectPointsByDrag(e) {
+
+            // Select points
+            Highcharts.each(this.series, function (series) {
+                Highcharts.each(series.points, function (point) {
+                    if (point.x >= e.xAxis[0].min && point.x <= e.xAxis[0].max &&
+                        point.y >= e.yAxis[0].min && point.y <= e.yAxis[0].max) {
+                        point.select(true, true);
+                    }
+                });
+            });
+
+            toast(this, '<b>' + this.getSelectedPoints().length + ' points selected.</b>' +
+                '<br>Click on empty space to deselect.');
+
+            if (allowSelectionEvent) triggerSelectionEvent(this.series, e)
+
+            return false; // Don't zoom
+        }
+
+        function zoomByDrag(e) {
+            if (e.xAxis && e.yAxis) {
+                // count the selected points
+                var count = 0
+
+                Highcharts.each(this.series, function (series) {
+                    Highcharts.each(series.points, function (point) {
+                        if (point.x >= e.xAxis[0].min && point.x <= e.xAxis[0].max &&
+                            point.y >= e.yAxis[0].min && point.y <= e.yAxis[0].max) {
+                            count++;
+                        }
+                    });
+                });
+
+//                toast(this, '<b>' + count + ' points selected.</b>');
+
+                if (allowSelectionEvent) triggerSelectionEvent(this.series, e)
+            }
+
+            return true;
+        }
+
+        function triggerSelectionEvent(series, event) {
+            var cornerPoints = findCornerPoints(series, event)
+            if (cornerPoints)
+                $('#' + chartElementId).trigger("areaSelected", cornerPoints);
+        }
+
+        function findCornerPoints(series, event) {
+            var xMin, xMax, yMin, yMax;
+            Highcharts.each(series, function (series) {
+                Highcharts.each(series.points, function (point) {
+                    if (point.x >= event.xAxis[0].min && point.x <= event.xAxis[0].max &&
+                        point.y >= event.yAxis[0].min && point.y <= event.yAxis[0].max) {
+
+                        if (!xMin || point.x < xMin)
+                            xMin = point.x
+
+                        if (!xMax || point.x > xMax)
+                            xMax = point.x
+
+                        if (!yMin || point.y < yMin)
+                            yMin = point.y
+
+                        if (!yMax || point.y > yMax)
+                            yMax = point.y
+                    }
+                });
+            });
+            return (xMin) ? {xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax} : null
+        }
+
+        /**
+         * On click, unselect all points
+         */
+        function unselectByClick() {
+            var points = this.getSelectedPoints();
+            if (points.length > 0) {
+                Highcharts.each(points, function (point) {
+                    point.select(false);
+                });
+            }
+        }
+
         $('#' + chartElementId).highcharts({
             chart: {
                 type: 'scatter',
                 zoomType: 'xy',
+                events: {
+                    selection: (zoomIfDragged) ? zoomByDrag : selectPointsByDrag,
+                    click: unselectByClick
+                },
                 height: height
             },
             title: {
@@ -889,4 +983,35 @@
         return getPointFormatHeader(that) +
             getPointFormatCategoricalValue(that) +
             getPointFormatPercent2(that)
+    }
+
+    /**
+     * Display a temporary label on the chart
+     */
+    function toast(chart, text) {
+        if (chart.toast)
+            chart.toast = chart.toast.destroy();
+
+        chart.toast = chart.renderer.label(text, 100, 120)
+            .attr({
+                fill: Highcharts.getOptions().colors[0],
+                padding: 10,
+                r: 5,
+                zIndex: 8
+            })
+            .css({
+                color: '#FFFFFF'
+            })
+            .add();
+
+        setTimeout(function () {
+            if (chart.toast)
+                chart.toast.fadeOut();
+        }, 2000);
+
+        setTimeout(function () {
+            if (chart.toast) {
+                chart.toast = chart.toast.destroy();
+            }
+        }, 2500);
     }
