@@ -23,7 +23,7 @@ class CalcTSNEProjectionFromFile @Inject()(
   import statsService._
 
   private val logger = Logger
-  private val plotter = Plotter.createExportInstance("svg")
+  private val plotter = Plotter("svg")
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
@@ -102,8 +102,8 @@ class CalcTSNEProjectionFromFile @Inject()(
       if (tsneFailed)
         logger.error(s"$prefix t-SNE for a file ${inputFileName} returned NaN values. Image export is not possible.")
       else {
-        plotter.plotXY(tsneProjections.map(_.toIterable).toIterable, "t-SNE")
-        writeStringAsStream(plotter.getOutput, new java.io.File(plotExportFileName.get))
+        val output = plotter.plotXY(tsneProjections.map(_.toIterable).toIterable, "t-SNE")
+        writeStringAsStream(output, new java.io.File(plotExportFileName.get))
       }
     }
 

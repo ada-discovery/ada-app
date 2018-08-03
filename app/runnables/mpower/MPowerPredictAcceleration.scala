@@ -3,12 +3,11 @@ package runnables.mpower
 import java.{lang => jl, util => ju}
 import javax.inject.Inject
 
-import com.banda.core.plotter.{Plotter, TimeSeriesPlotSetting}
-import com.banda.core.util.FileUtil
-import com.banda.incal.prediction.ReservoirTrainerFactory
+import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.business.TopologyFactory
+import com.banda.network.business.learning.ReservoirTrainerFactory
 import com.banda.network.domain.ActivationFunctionType
 import dataaccess.Criterion.Infix
 import models.ml.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec}
@@ -16,6 +15,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.ml.{RCPredictionResults, RCPredictionService}
+import util.writeStringAsStream
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -45,8 +45,7 @@ class MPowerPredictAcceleration @Inject() (
   private val washoutPeriod = 500
   private val weightAdaptationIterationNum = 100
 
-  private val plotter = Plotter.createExportInstance("svg")
-  private val fileUtil = FileUtil.getInstance
+  private val plotter = Plotter("svg")
 
   private val ioSpec = RCPredictionInputOutputSpec(
     inputSeriesFieldPaths = Seq(fieldName + ".x", fieldName + ".y", fieldName + ".z"),
@@ -102,15 +101,14 @@ class MPowerPredictAcceleration @Inject() (
   }
 
   private def plotResults(results: RCPredictionResults, fileName: String) = {
-    plotter.plotSeries(
+    val output = plotter.plotSeries(
       Seq(results.outputs.takeRight(weightAdaptationIterationNum): Seq[jl.Double], results.desiredOutputs.takeRight(weightAdaptationIterationNum): Seq[jl.Double]),
-          new TimeSeriesPlotSetting {
-            captions = Seq("Predicted", "Acceleration (x)")
-            title = "Output vs Desired Output"
-          }
-        )
+      new SeriesPlotSetting()
+        .setCaptions(Seq("Predicted", "Acceleration (x)"))
+        .setTitle("Output vs Desired Output")
+    )
 
-    FileUtil.getInstance().overwriteStringToFileSafe(plotter.getOutput, fileName)
+    writeStringAsStream(output, new java.io.File(fileName))
   }
 
   private def checkResults(results: Traversable[RCPredictionResults]) = {

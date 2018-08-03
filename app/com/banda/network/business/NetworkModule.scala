@@ -6,7 +6,7 @@ import com.banda.core.metrics.MetricsFactory
 import com.banda.function.business.FunctionEvaluatorFactoryImpl
 import com.banda.function.enumerator.{ListEnumeratorFactory, ListEnumeratorFactoryImpl}
 import com.banda.function.evaluator.FunctionEvaluatorFactory
-import com.banda.incal.prediction.ReservoirTrainerFactory
+import com.banda.network.business.learning.ReservoirTrainerFactory
 import com.banda.math.business.learning.IOStreamFactory
 import com.banda.network.business.function.{ActivationFunctionFactory, DoubleActivationFunctionFactory, JavaDoubleActivationFunctionFactory}
 import com.banda.network.business.integrator.{DoubleConvertibleSWIntegratorFactory, MetaStatesWeightsIntegratorFactory, StatesWeightsIntegratorFactory}
@@ -17,7 +17,7 @@ import net.codingwell.scalaguice.ScalaModule
 
 import collection.JavaConverters._
 
-class InCalModule extends ScalaModule {
+class NetworkModule extends ScalaModule {
 
   /////////////////
   // Basic Stuff //

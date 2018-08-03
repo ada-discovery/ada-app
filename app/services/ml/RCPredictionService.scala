@@ -5,12 +5,11 @@ import java.{lang => jl, util => ju}
 import javax.inject.Inject
 
 import _root_.util.{retry, seqFutures}
-import com.banda.incal.domain.ReservoirLearningSetting
-import com.banda.incal.prediction.{ErrorMeasures, ReservoirTrainerFactory}
 import com.banda.math.business.MathUtil
 import com.banda.math.business.learning.{IOStream, IOStreamFactory}
 import com.banda.math.domain.rand._
 import com.banda.network.business._
+import com.banda.network.business.learning.{ErrorMeasures, ReservoirTrainerFactory}
 import com.banda.network.domain._
 import com.google.inject.{ImplementedBy, Singleton}
 import dataaccess.Criterion.Infix

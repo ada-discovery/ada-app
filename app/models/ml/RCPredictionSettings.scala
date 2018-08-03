@@ -8,8 +8,7 @@ import reactivemongo.bson.BSONObjectID
 import util.FieldUtil
 import java.{util => ju}
 
-import com.banda.incal.domain.ReservoirLearningSetting
-import com.banda.network.domain.ActivationFunctionType
+import com.banda.network.domain.{ActivationFunctionType, ReservoirLearningSetting}
 
 case class RCPredictionSettings(
   reservoirNodeNums: Seq[Int],

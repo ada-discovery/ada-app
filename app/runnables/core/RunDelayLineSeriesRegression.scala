@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import com.banda.core.plotter.{Plotter, TimeSeriesPlotSetting}
+import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import models.ml.{LearningSetting, RegressionEvalMetric, VectorTransformType}
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
@@ -21,7 +21,7 @@ class RunDelayLineSeriesRegression @Inject() (
     regressionRepo: RegressionRepo
   ) extends InputFutureRunnable[DelayLineRegressionSetting] {
 
-  private val plotter = Plotter.createExportInstance("svg")
+  private val plotter = Plotter("svg")
 
   override def runAsFuture(
     setting: DelayLineRegressionSetting
@@ -78,16 +78,15 @@ class RunDelayLineSeriesRegression @Inject() (
     val y = outputs.map{ case (y, yhat) => y }
     val yhat = outputs.map{ case (y, yhat) => yhat }
 
-    plotter.plotSeries(
+    val output = plotter.plotSeries(
       Seq(y, yhat),
-      new TimeSeriesPlotSetting() {
-        xLabel = "Time"
-        yLabel = "Value"
-        captions = Seq("y", "y^")
-      }
+      new SeriesPlotSetting()
+        .setXLabel("Time")
+        .setYLabel("Value")
+        .setCaptions(Seq("y", "y^"))
     )
 
-    writeStringAsStream(plotter.getOutput, new java.io.File(fileName))
+    writeStringAsStream(output, new java.io.File(fileName))
   }
 
   override def inputType = typeOf[DelayLineRegressionSetting]

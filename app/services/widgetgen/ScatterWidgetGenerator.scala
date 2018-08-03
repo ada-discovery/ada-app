@@ -38,6 +38,8 @@ private class ScatterWidgetGenerator[T1, T2](
 
         val widget = ScatterWidget(
           title(spec).getOrElse(s"$shortXFieldLabel vs. $shortYFieldLabel"),
+          xField.name,
+          yField.name,
           xField.labelOrElseName,
           yField.labelOrElseName,
           finalData,

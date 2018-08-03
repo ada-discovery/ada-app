@@ -95,7 +95,7 @@ trait CalcKMeansHelper {
   private val fs = FileSystem.get(sparkApp.sc.hadoopConfiguration)
 
   private val clusterClassColumnName = "clazz"
-  private val plotter = Plotter.createExportInstance("svg")
+  private val plotter = Plotter("svg")
 
   protected def calcKMeansAux(
     inputFileName: String,
@@ -130,7 +130,6 @@ trait CalcKMeansHelper {
     val idClustersDf = session.createDataFrame(rows, schema)
     val finalDf = df.join(idClustersDf, Seq(idColumnName))
 
-
     // export results to as a csv
     val exportDir = createRandomTempDirName
     finalDf.write.option("header", "true").csv(exportDir)
@@ -152,8 +151,8 @@ trait CalcKMeansHelper {
       // TODO: use labels
       val labels = finalDfRows.map(_.getInt(0))
 
-      plotter.plotXY(values, "k-Means")
-      writeStringAsStream(plotter.getOutput, new java.io.File(exportPlotFileName.get))
+      val output = plotter.plotXY(values, "k-Means")
+      writeStringAsStream(output, new java.io.File(exportPlotFileName.get))
     }
   }
 

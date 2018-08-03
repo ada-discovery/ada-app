@@ -41,6 +41,8 @@ case class NumericalCountWidget[T](
 
 case class ScatterWidget[T1, T2](
   title: String,
+  xFieldName: String,
+  yFieldName: String,
   xAxisCaption: String,
   yAxisCaption: String,
   data: Seq[(String, Traversable[(T1, T2)])],
@@ -244,11 +246,13 @@ object Widget {
 
     (
       (__ \ "title").format[String] and
+      (__ \ "xFieldName").format[String] and
+      (__ \ "yFieldName").format[String] and
       (__ \ "xAxisCaption").format[String] and
       (__ \ "yAxisCaption").format[String] and
       (__ \ "data").format[Seq[(String, Traversable[(T1, T2)])]] and
       (__ \ "displayOptions").format[DisplayOptions]
-    )(ScatterWidget[T1, T2](_, _, _, _, _), {x => (x.title, x.xAxisCaption, x.yAxisCaption, x.data, x.displayOptions)})
+    )(ScatterWidget[T1, T2](_, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.yFieldName, x.xAxisCaption, x.yAxisCaption, x.data, x.displayOptions)})
   }
 
   implicit val heatmapWidgetFormat: Format[HeatmapWidget] = {

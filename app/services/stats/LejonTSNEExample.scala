@@ -12,7 +12,7 @@ import util.writeStringAsStream
 object LejonTSNEExample extends App {
 
   val folder = "/home/peter/Downloads/smile/shell/src/universal/data/mnist/"
-  val plotter = Plotter.createExportInstance("svg")
+  val plotter = Plotter("svg")
 
   val initial_dims = 55
   val perplexity = 20.0
@@ -25,8 +25,8 @@ object LejonTSNEExample extends App {
 
   var tsne = if (parallel) new ParallelBHTsne else new BHTSne
   val config = TSneUtils.buildConfig(input, 2, initial_dims, perplexity, 1000)
-  val output = tsne.tsne(config)
+  val projections = tsne.tsne(config)
 
-  plotter.plotXY(output.map(_.toIterable).toIterable, "t-SNE")
-  writeStringAsStream(plotter.getOutput, new java.io.File("t-SNE-example.svg"))
+  val output = plotter.plotXY(projections.map(_.toSeq), "t-SNE")
+  writeStringAsStream(output, new java.io.File("t-SNE-example.svg"))
 }

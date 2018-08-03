@@ -62,38 +62,30 @@
 }
 
 @conditionPanel(isDisplayed: Boolean) = {
-    <ul class="list-inline">
-        <li>
-            <ul id="conditionPanel" class="list-inline" @if(!isDisplayed) {style="display:None"}>
-                @filter.map{ f =>
+            <div id="conditionPanel" @if(!isDisplayed) {style="display:None"}>
+                @filter.map { f =>
                     @f.conditions.zipWithIndex.map { case (condition, index) =>
-                    <li id="condition-full@index" class="condition-full">
-                        <h4>
-                            <span class="condition">
-                                <span class="label label-primary" id="fieldLabel">@condition.fieldLabelOrElseName</span>
-                                <span id="conditionType"><b>@condition.conditionType</b></span>
-                                <span class="label label-primary" id="value">@valueOrUndefined(condition)</span>
-                            </span>
-                            <span class="condition-buttons" style="display: none; padding-left: 5px">
-                                <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showEditConditionModal', '@index')">
-                                    <span class="glyphicon glyphicon-pencil"></span>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('deleteCondition', '@index')">
-                                    <span class="glyphicon glyphicon-trash"></span>
-                                </button>
-                            </span>
-                        </h4>
-                    </li>
-                    }.reduceLeftOption((e1: Html, e2: Html) => Html(e1 + "<li>AND</li>" + e2))
+                        <div id="condition-full@index" class="filter-part condition-full">
+                                <span class="condition">
+                                    <span class="label label-primary" id="fieldLabel">@condition.fieldLabelOrElseName</span>
+                                    <span id="conditionType"><b>@condition.conditionType</b></span>
+                                    <span class="label label-primary" id="value">@valueOrUndefined(condition)</span>
+                                </span>
+                                <span class="condition-buttons" style="display: none; padding-left: 5px">
+                                    <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showEditConditionModal', '@index')">
+                                        <span class="glyphicon glyphicon-pencil"></span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('deleteCondition', '@index')">
+                                        <span class="glyphicon glyphicon-trash"></span>
+                                    </button>
+                                </span>
+                        </div>
+                        @if(index < f.conditions.size - 1) {
+                            <span class="filter-part" style="padding-top: 5px">AND</span>
+                        }
+                    }
                 }.getOrElse(Html(""))
-            </ul>
-        </li>
-        <li>
-            <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showAddConditionModal')" data-toggle="tooltip" title="Add Filter Condition">
-                <span class="glyphicon glyphicon-plus"></span>
-            </button>
-        </li>
-    </ul>
+            </div>
 }
 
 @categoryTreeNodeSelectedJsFun = {
@@ -111,7 +103,7 @@
     }
 }
 
-<div id="@filterElementName">
+@conditionModal = {
     <div class="modal fade" id="addEditConditionModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -135,9 +127,9 @@
                             </div>
                             <div class="col-md-6">
                                 <select id="conditionType" class="float-left ">
-                                    @ConditionType.values.map{ conditionType =>
-                                        <option value="@conditionType">@conditionType</option>
-                                    }
+                                @ConditionType.values.map{ conditionType =>
+                                    <option value="@conditionType">@conditionType</option>
+                                }
                                 </select>
                                 <input id="value" class="float-left conditionValue" placeholder="Condition"/>
                             </div>
@@ -178,36 +170,41 @@
             </div>
         </div>
     </div>
+}
 
-    <ul class="list-inline">
-        <li>
-            Filter:
-        </li>
-        @if(filter.isDefined && filter.get._id.isDefined) {
-            <li>
-                <button id="filterNameButton" type="button" class="btn btn-sm" onclick="$('#@filterElementName').multiFilter('showConditionPanel')" title="Show Conditions">
-                    <h5><b>@filter.get.name.getOrElse("No Name")</b></h5>
+<div id="@filterElementName" class="aligned-container">
+    @conditionModal
+
+    <span class="filter-part">Filter:</span>
+
+        @defining((filter.isEmpty || filter.get._id.isEmpty) && filter.map(_.conditions.size).getOrElse(0) < 4) { showPanel =>
+            @if(!showPanel) {
+                <button id="filterNameButton" type="button" class="filter-part btn btn-sm" onclick="$('#@filterElementName').multiFilter('showConditionPanel')" title="Show Conditions">
+                    <h5><b>@filter.get.name.getOrElse("...")</b></h5>
                 </button>
-            </li>
+            }
+            @conditionPanel(showPanel)
         }
-        <li>
-        @conditionPanel(!filter.isDefined || !filter.get._id.isDefined)
-        </li>
-        <li>
-            @if(filterJsRouter.isDefined && filter.isDefined && filter.get._id.isEmpty && filter.get.conditions.nonEmpty) {
-                <button type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#saveFilterModal@filterElementName" title="Save Filter">
-                    <span class="glyphicon glyphicon glyphicon-save"></span>
-                </button>
-                @modal(s"saveFilterModal$filterElementName", "Save Filter", saveFilterModalBody, None, Some(saveFilterModelButtons))
-            }
 
-            @if(listFiltersCall.isDefined) {
-                <button id="loadFilterButton" type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('loadFilterSelectionAndShowModal')" title="Load Filter">
-                    <span class="glyphicon glyphicon-book"></span>
-                </button>
+    <span class="nowrap">
 
-                @modal("loadFilterModal", "Load Filter", loadFilterModalBody, None, Some(loadFilterModelButtons))
-            }
-        </li>
-    </ul>
+        <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showAddConditionModal')" data-toggle="tooltip" title="Add Filter Condition">
+            <span class="glyphicon glyphicon-plus"></span>
+        </button>
+
+        @if(filterJsRouter.isDefined && filter.isDefined && filter.get._id.isEmpty && filter.get.conditions.nonEmpty) {
+            <button type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#saveFilterModal@filterElementName" title="Save Filter">
+                <span class="glyphicon glyphicon glyphicon-save"></span>
+            </button>
+            @modal(s"saveFilterModal$filterElementName", "Save Filter", saveFilterModalBody, None, Some(saveFilterModelButtons))
+        }
+
+        @if(listFiltersCall.isDefined) {
+            <button id="loadFilterButton" type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('loadFilterSelectionAndShowModal')" title="Load Filter">
+                <span class="glyphicon glyphicon-book"></span>
+            </button>
+
+            @modal("loadFilterModal", "Load Filter", loadFilterModalBody, None, Some(loadFilterModelButtons))
+        }
+    </span>
 </div>

@@ -2,16 +2,16 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import com.banda.core.plotter.{Plotter, TimeSeriesPlotSetting}
-import com.banda.core.util.FileUtil
+import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import dataaccess.Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import runnables.{FutureRunnable, InputFutureRunnable}
 import services.DataSetService
 import dataaccess.JsonUtil
-import scala.reflect.runtime.universe.typeOf
+import util.writeStringAsStream
 
+import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class ExtractSeriesPeaks @Inject() (
@@ -26,8 +26,7 @@ class ExtractSeriesPeaks @Inject() (
 
   private val dsa = dsaf(dataSetId).get
 
-  private val plotter = Plotter.createExportInstance("svg")
-  private val fileUtil = FileUtil.getInstance
+  private val plotter = Plotter("svg")
 
   // helper method to extract series
   def extractSeries(json: JsObject): Seq[Double] = {
@@ -57,14 +56,12 @@ class ExtractSeriesPeaks @Inject() (
     title: String,
     fileName: String
   ) = {
-    plotter.plotSingleSeries(
+    val output = plotter.plotSingleSeries(
       series,
-      new TimeSeriesPlotSetting {
-        title = title
-      }
+      new SeriesPlotSetting().setTitle(title)
     )
 
-    FileUtil.getInstance().overwriteStringToFileSafe(plotter.getOutput, fileName)
+    writeStringAsStream(output, new java.io.File(fileName))
   }
 
   override def inputType = typeOf[ExtractSeriesPeaksSpec]

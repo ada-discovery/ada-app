@@ -11,7 +11,8 @@
             [ @widget.data.map { case (name, data) =>
                 {name : '@shorten(name)', data : [@data.map{ point => [@{point._1 + "," + point._2}],}]},}
             ], // color : 'color'
-            @{widget.displayOptions.height.getOrElse(400)}
+            @{widget.displayOptions.height.getOrElse(400)},
+            false, false
         )
     });
 </script>

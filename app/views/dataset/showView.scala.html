@@ -7,7 +7,6 @@
 @import views.html.filter.{filter, filterJs}
 @import reactivemongo.bson.BSONObjectID
 @import models.DataSpaceMetaInfo
-@import be.objectify.deadbolt.scala.views.html.restrict
 @import models.FilterConditionExtraFormats.eitherFilterOrIdFormat
 @import controllers.DataSetWebContext
 @import controllers.DataSetWebContext._
@@ -30,11 +29,11 @@
 
 @actions = {
     <div class="row">
-        <div class="col-md-10">
-            @if(tableViewParts.size == 1) {
+        @if(tableViewParts.size == 1) {
+            <div class="col-md-10">
                 @viewFilter(tableViewParts.head, 0)
-            }
-        </div>
+            </div>
+        }
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
@@ -130,9 +129,15 @@
                     </div>
                 </div>
                 <div class="row">
-                    <div class="col-md-10">
-                        @viewFilter(viewPart, index)
-                    </div>
+                    @if(tableViewParts.size == 1) {
+                        <div class="col-md-10">
+                           @viewFilter(viewPart, index)
+                        </div>
+                    } else {
+                        <div class="col-md-12">
+                            @viewFilter(viewPart, index)
+                        </div>
+                    }
                 </div>
             </div>
         }
