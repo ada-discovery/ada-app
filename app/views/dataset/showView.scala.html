@@ -18,7 +18,7 @@
     dataViewId: BSONObjectID,
     dataViewName: String,
     tableViewParts: Seq[TableViewData],
-    widgetCallbackId: String,
+    widgetsCallbackId: String,
     widgetGridElementWidth: Int,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
     canEditView: Boolean = false,
@@ -37,7 +37,7 @@
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
-                    @exportMenu(tableViewParts.head)
+                    @exportMenu("filter0")
                 </li>
                 <li>
                     @if(canEditView) {
@@ -70,10 +70,10 @@
     tableViewParts.map(_.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)))
 }
 
-@exportMenu(viewData: TableViewData) = @{
+@exportMenu(filterId: String) = @{
     exportDataSetDropdown(
         dataSetName,
-        viewData.page.filterConditions,
+        filterId,
         dataSetRouter.exportCsv(dataViewId, _, true, None, _, _),
         dataSetRouter.exportJson(dataViewId, _, _),
         dataSetRouter.exportTranSMARTData,
@@ -91,6 +91,36 @@
     }
 }
 
+@filterRefreshAjaxFun(index: Int) = {
+    function(url, params) {
+        var coreUrl = getCoreURL(url);
+        var index = @index
+
+        var totalCount = viewTotalCounts.reduce(function (a, b) {return a + b;}, 0);
+        params["oldCountDiff"] = totalCount - viewTotalCounts[index];
+        $.ajax({
+            url: coreUrl,
+            data: params,
+            success: function(data) {
+                $("#tableDiv" + index).html(data.table);
+                $("#filter" + index).find("#conditionPanel").replaceWith(data.conditionPanel)
+
+                $("#filter" + index).multiFilter("initConditionButtons")
+                $("#filter" + index).multiFilter("setModel", data.filterModel)
+
+                $("#count" + index).html("<h3>" + data.count + "</h3>");
+                $(".page-header").html("<h3>" + data.pageHeader + "</h3>");
+                viewTotalCounts[index] = data.count;
+
+                updateWidgetsFromCallback(data.widgetsCallbackId, index, @widgetGridElementWidth)
+            },
+            error: function(data) {
+                showErrorResponse(data)
+            }
+        });
+    }
+}
+
 @viewFilter(viewPart: TableViewData, index: Int) = {
     @filter(
         viewPart.page.filter,
@@ -105,14 +135,15 @@
 @viewFilterJs(viewPart: TableViewData, index: Int) = {
     @filterJs(
         viewPart.page.filter,
-        dataSetRouter.getView(dataViewId, Nil, Nil, true),
+        dataSetRouter.getViewElementsAndWidgetCallback(dataViewId, viewPart.page.orderBy, Left(Nil), None),
         Right(dataSetRouter.allFieldNamesAndLabels),
         Some(filterJsRouter),
         Some(filterRouter.idAndNamesAccessible),
-        "filterOrIds",
+        "filterOrId",
         s"filter$index",
-        Some(createSubmissionJsonJsFunction(index)),
-        Some("categoryTree")
+        None,
+        Some("categoryTree"),
+        Some(filterRefreshAjaxFun(index))
     )
 }
 
@@ -124,7 +155,7 @@
                     <div class="col-md-7">
                         <ul class="list-inline">
                             <li>Count:</li>
-                            <li><h3>@viewPart.page.total</h3></li>
+                            <li id="count@index"><h3>@viewPart.page.total</h3></li>
                         </ul>
                     </div>
                 </div>
@@ -158,17 +189,18 @@
 
 @bottomResources = {
     @highchartsJsImport()
-    @widgetPanelAjaxLoadJs(widgetCallbackId, widgetGridElementWidth, dataSetJsRouter)
-
-    @datasetSubNavJs()
 
     @helper.javascriptRouter("dataViewJsRoutes")(
         dataViewJsRouter.saveFilter
     )
 
-    @helper.javascriptRouter("dataSetJsRoutes2")(
-        dataSetJsRouter.getFieldTypeWithAllowedValues
+    @helper.javascriptRouter("dataSetJsRoutes")(
+        dataSetJsRouter.getWidgets
     )
+
+    @widgetPanelAjaxLoadJs(widgetsCallbackId, widgetGridElementWidth)
+
+    @datasetSubNavJs()
 
     @tableViewParts.zipWithIndex.map { case (viewPart, index) =>
         @viewFilterJs(viewPart, index)
@@ -177,12 +209,10 @@
     @viewTablesJs(dataSetJsRouter)
 
     <script type="text/javascript">
+        var viewTotalCounts = [@tableViewParts.map(_.page.total).mkString(",")]
+
         function getFilterOrId(index) {
-            var filterOrId = $("#filter" + index).multiFilter('getJsonFilterId')
-            if (!filterOrId) {
-                filterOrId = $("#filter" + index).multiFilter('getJsonConditions')
-            }
-            return filterOrId;
+            return $("#filter" + index).multiFilter('getIdOrModel');
         }
 
         function saveFilterToView() {
@@ -199,6 +229,39 @@
                 },
                 error: function(data){
                     showError( data.responseText );
+                }
+            });
+        }
+
+        function updateWidgetsFromCallback(callbackId, index, elementWidth) {
+            var widgetsDiv = $("#widgetsDiv" + index)
+            widgetsDiv.html("")
+            addSpinner(widgetsDiv, "margin-bottom: 20px;")
+
+            dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getWidgets().ajax( {
+                data: {
+                    "callbackId": callbackId
+                },
+                success: function(data) {
+                    var filterId = "filter" + index
+                    var widgets = data[0]
+
+//                    var widgetHolders = $("#widgetsDiv" + index).find(".chart-holder")
+
+                    var row = $("<div class='row'>")
+                    $.each(widgets, function (j, widget) {
+                        row.append(widgetDiv(widget, elementWidth))
+                    })
+                    widgetsDiv.html(row)
+                    $.each(widgets, function (j, widget) {
+                        genericWidget(widget, filterId)
+                    })
+//                    $.each(widgetHolders, function(i, widgetHolder){
+//                        genericWidgetForElement(widgetHolder.id, widgets[i], filterId)
+//                    })
+                },
+                error: function(data) {
+                    showErrorResponse(data)
                 }
             });
         }

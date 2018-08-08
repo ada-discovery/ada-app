@@ -1,7 +1,6 @@
 @(
     orderByFieldName: String,
     refreshCall: (Int, Option[String]) => Call,
-    tableDivId: Option[String] = None,
     isAjaxRefresh: Boolean = false
 )(
     fieldName: Option[String],
@@ -10,7 +9,7 @@
 
 @link = {
     @if(isAjaxRefresh) {
-        <a href="#" onclick="loadNewContent('@refreshCall(0, fieldName).url', '@tableDivId.getOrElse(throw new IllegalArgumentException("TableDivId expected for ajax refresh"))'); return false">@label</a>
+        <a href="#" onclick="loadNewTableContent(this, '@refreshCall(0, fieldName).url'); return false">@label</a>
     } else {
         <a href="@refreshCall(0, fieldName)">@label</a>
     }

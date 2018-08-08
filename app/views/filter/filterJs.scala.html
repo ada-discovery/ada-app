@@ -13,7 +13,8 @@
     filterSubmitParamName: String,
     filterElementName: String,
     createSubmissionJson: Option[Html],
-    categoryTreeElementName: Option[String]
+    categoryTreeElementName: Option[String],
+    refreshAjaxFun: Option[Html] = None
 )(
     implicit request: Request[_], webJarAssets: WebJarAssets
 )
@@ -83,6 +84,8 @@
             } else {
                 null
             }
+
+        var refreshAjaxFun = @if(refreshAjaxFun.isDefined) {@refreshAjaxFun.get} else { null }
 
         var createSubmissionJson = @if(createSubmissionJson.isDefined) {@createSubmissionJson} else {null}
 
@@ -162,6 +165,7 @@
             fieldNameAndLabels: fieldNameAndLabels,
             getFieldsUrl: getFieldsUrl,
             submitUrl: '@submitCall.url',
+            refreshAjaxFun: refreshAjaxFun,
             listFiltersUrl: listFiltersUrl,
             filterSubmitParamName: '@filterSubmitParamName',
             filterId: filterId,

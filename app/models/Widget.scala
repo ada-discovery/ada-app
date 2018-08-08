@@ -290,6 +290,7 @@ object Widget {
     override def writes(o: Widget): JsValue = {
       val concreteClassName = o.getClass.getName
 
+      // widget as a json
       val json = o match {
         case e: CategoricalCountWidget =>
           Json.format[CategoricalCountWidget].writes(e)
@@ -327,15 +328,31 @@ object Widget {
           Json.format[HtmlWidget].writes(e)
       }
 
-      val fieldTypeJson = fieldTypes match {
-        case Nil => JsNull
-        case _ => JsString(fieldTypes.last.spec.fieldType.toString)
+      // field type(s) as json
+      val fieldTypeJson = o match {
+        case e: ScatterWidget[T, T] =>
+          val xFieldType = fieldTypes(fieldTypes.size - 2)
+          val yFieldType = fieldTypes.last
+
+          Json.obj(
+            "xFieldType" -> JsString(xFieldType.spec.fieldType.toString),
+            "yFieldType" -> JsString(yFieldType.spec.fieldType.toString)
+          )
+
+        case _ =>
+          val json = fieldTypes match {
+            case Nil => JsNull
+            case _ => JsString(fieldTypes.last.spec.fieldType.toString)
+          }
+
+          Json.obj(
+            "fieldType" -> json
+          )
       }
 
-      json.asInstanceOf[JsObject] ++ Json.obj(
+      json.asInstanceOf[JsObject] ++ fieldTypeJson ++ Json.obj(
         concreteClassFieldName -> JsString(concreteClassName),
-        JsObjectIdentity.name -> o._id,
-        "fieldType" -> fieldTypeJson
+        JsObjectIdentity.name -> o._id
       )
     }
   }

@@ -7,19 +7,32 @@
     page: Page[JsObject],
     tableFields: Traversable[Field],
     dataSetRouter: DataSetRouter,
-    withRowClickableJs: Boolean = false
+    withRowClickableJs: Boolean = false,
+    tableDivId: Option[String] = None
 )(
     implicit request: Request[_]
 )
 
-@jsonTable(
-    page,
-    tableFields,
-    dataSetRouter.getTable(_, _,
-        tableFields.map(_.name).toSeq,
-        page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))
-    ),
-    Some(dataSetRouter.get),
-    withRowClickableJs,
-    true
-)
+@jsonTableAux = {
+    @jsonTable(
+        page,
+        tableFields,
+        dataSetRouter.getTable(_, _,
+            tableFields.map(_.name).toSeq,
+            page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))
+        ),
+        Some(dataSetRouter.get),
+        withRowClickableJs,
+        true
+    )
+}
+
+@if(page.items.nonEmpty) {
+    @if(tableDivId.isEmpty) {
+        @jsonTableAux
+    } else {
+        <div id='@tableDivId.get' class="table-div">
+            @jsonTableAux
+        </div>
+    }
+}

@@ -86,7 +86,7 @@
 
             var filterOrId = $("#filterDiv").multiFilter('getJsonFilterId')
             if (!filterOrId) {
-                filterOrId = $("#filterDiv").multiFilter('getJsonConditions')
+                filterOrId = $("#filterDiv").multiFilter('getModel')
             }
             var filterOrIdJson = JSON.stringify(filterOrId)
 

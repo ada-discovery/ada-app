@@ -2,22 +2,20 @@
 
 @(
     widgetCallbackId: String,
-    widgetGridElementWidth: Int,
-    dataSetJsRouter: DataSetJsRouter
+    widgetGridElementWidth: Int
 )(
     implicit request: Request[_]
 )
 
-@helper.javascriptRouter("dataSetJsRoutes")(
-    dataSetJsRouter.getWidgets
-)
-
 <script type="text/javascript">
-    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getWidgets('@widgetCallbackId').ajax( {
+    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getWidgets().ajax( {
+        data: {
+            "callbackId": '@widgetCallbackId'
+        },
         success: function(data) {
             $("#widgetsDiv").html("")
             $.each(data, function (i, widgets) {
-                var div = $("<div class='col-md-" + (12 / data.length) + "'>")
+                var div = $("<div id='widgetsDiv" + i + "' class='col-md-" + (12 / data.length) + "'>")
                 var row = $("<div class='row'>")
                 $.each(widgets, function (j, widget) {
                     row.append(widgetDiv(widget, @widgetGridElementWidth))

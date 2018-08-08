@@ -40,9 +40,9 @@
             <ul class="list-inline">
                 <li>
                     @exportDropdown(
-                        page.filterConditions,
                         dictionaryRouter.exportCsv(_, true, None, _, _),
-                        dictionaryRouter.exportJson
+                        dictionaryRouter.exportJson,
+                        Left(page.filterConditions)
                     )()()
                 </li>
             </ul>

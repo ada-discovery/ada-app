@@ -11,18 +11,18 @@
     implicit request: Request[_]
 )
 
-
 <div class="row vertical-divider">
-    @viewParts.map { viewPart =>
+    @viewParts.zipWithIndex.map { case (viewPart, index) =>
         <div class="col-md-@{12 / viewParts.size}">
         @viewTable(
             viewPart.page,
             viewPart.tableFields,
-            dataSetRouter
+            dataSetRouter,
+            false,
+            Some("tableDiv" + index)
         )
         </div>
     }
     @jsonModal("jsonModal", None)
     @lineChartArrayModal("lineChartArrayModal")
 </div>
-

@@ -96,7 +96,7 @@
 <script type="text/javascript">
     $(function () {
         $.ajax({
-            url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double)).url)',
+            url: '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date)).url)',
             success: function (data) {
                 populateFieldTypeahed(
                     $('#fieldForm #xFieldTypeahead'),

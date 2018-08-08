@@ -71,11 +71,8 @@
             function calcCorrelations() {
                 var inputFieldNames = getFieldNames()
 
-                var filterOrId = $("#filterDiv").multiFilter('getJsonFilterId')
-                if (!filterOrId) {
-                    filterOrId = $("#filterDiv").multiFilter('getJsonConditions')
-                }
-                var filterOrIdJson = JSON.stringify(filterOrId)
+                var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
+                var filterOrIdJson = JSON.stringify(filterOrId);
 
                 $("#widgetDiv").html("")
 

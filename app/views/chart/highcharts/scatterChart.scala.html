@@ -1,4 +1,4 @@
-@import util.shorten
+@import util.{shorten, toChartData}
 
 @(
     elementId: String,
@@ -7,12 +7,16 @@
 
 <script type="text/javascript">
     $(function () {
+        var isXDate = @{widget.data.headOption.flatMap(_._2.headOption.map(_._1.isInstanceOf[java.util.Date])).getOrElse(false)};
+        var isYDate = @{widget.data.headOption.flatMap(_._2.headOption.map(_._2.isInstanceOf[java.util.Date])).getOrElse(false)};
+
+        var xDataType = (isXDate) ? 'datetime' : null;
+        var yDataType = (isYDate) ? 'datetime' : null;
+
+        var datas = [@toChartData(widget).map { singleSeries => {name: '@shorten(singleSeries._1)', data: [@singleSeries._2.map { case (x, y) => [@x, @y], }]}, }];
+
         scatterChart('@widget.title', '@{elementId}', '@{widget.xAxisCaption}', '@{widget.yAxisCaption}',
-            [ @widget.data.map { case (name, data) =>
-                {name : '@shorten(name)', data : [@data.map{ point => [@{point._1 + "," + point._2}],}]},}
-            ], // color : 'color'
-            @{widget.displayOptions.height.getOrElse(400)},
-            false, false
+            datas, @{widget.displayOptions.height.getOrElse(400)}, xDataType, yDataType, false, false
         )
     });
 </script>

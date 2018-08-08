@@ -4,7 +4,7 @@
 
 @(
     dataSetName: String,
-    conditions: Seq[FilterCondition],
+    filterId: String,
     exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call,
     exportJsonCall: (Seq[FilterCondition], Boolean) => Call,
     exportTranSMARTDataCall: Call,
@@ -20,9 +20,9 @@
 }
 
 @exportDropdown(
-    conditions,
     exportCsvCall,
-    exportJsonCall
+    exportJsonCall,
+    Right(filterId)
 ) {
     <li role="separator" class="divider"></li>
     <li>

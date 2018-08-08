@@ -23,11 +23,11 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getDefaultView: Action[AnyContent]
 
-  def getWidgetPanelAndTable(
+  def getViewElementsAndWidgetCallback(
     dataViewId: BSONObjectID,
-    tablePage: Int,
     tableOrder: String,
-    filterOrId: FilterOrId
+    filterOrId: FilterOrId,
+    oldCountDiff: Option[Int]
   ): Action[AnyContent]
 
   def getTable(
@@ -37,9 +37,7 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def getWidgets(
-    callbackId: String
-  ): Action[AnyContent]
+  def getWidgets: Action[AnyContent]
 
   def getDistribution(
     fieldName: Option[String],

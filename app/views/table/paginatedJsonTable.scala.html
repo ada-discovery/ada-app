@@ -24,18 +24,14 @@
 }
 
 @if(page.items.nonEmpty) {
-    @defining("tableDiv_" + scala.util.Random.nextLong()) { tableDivId =>
-        <div id="@tableDivId">
-            @displayJsonTable(
-                page.items,
-                header(page.orderBy, refreshCallAux, Some(tableDivId), isAjaxRefresh)(_, _),
-                fieldLabelMap,
-                fieldsToShow,
-                rowClickCall,
-                fieldNameRenderMap
-            )
-            <hr/>
-            @pagination(page, refreshCallAux, Some(tableDivId), isAjaxRefresh)
-        </div>
-    }
+    @displayJsonTable(
+        page.items,
+        header(page.orderBy, refreshCallAux, isAjaxRefresh)(_, _),
+        fieldLabelMap,
+        fieldsToShow,
+        rowClickCall,
+        fieldNameRenderMap
+    )
+    <hr/>
+    @pagination(page, refreshCallAux, isAjaxRefresh)
 }

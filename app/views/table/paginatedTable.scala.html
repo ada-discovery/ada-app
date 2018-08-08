@@ -21,16 +21,14 @@
 }
 
 @if(page.items.nonEmpty) {
-    @defining(tableId.getOrElse("tableDiv_" + scala.util.Random.nextLong())) { tableDivId =>
-        @displayTable(
-            page.items,
-            columns,
-            Some(header(page.orderBy, refreshCallAux, Some(tableDivId), isAjaxRefresh)),
-            rowClickCall,
-            hiddenRowId,
-            tableId
-        )
-        <hr/>
-        @pagination(page, refreshCallAux, Some(tableDivId), isAjaxRefresh)
-    }
+    @displayTable(
+        page.items,
+        columns,
+        Some(header(page.orderBy, refreshCallAux, isAjaxRefresh)),
+        rowClickCall,
+        hiddenRowId,
+        tableId
+    )
+    <hr/>
+    @pagination(page, refreshCallAux, isAjaxRefresh)
 }

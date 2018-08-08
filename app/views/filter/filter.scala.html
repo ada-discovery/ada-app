@@ -5,7 +5,7 @@
 @import models.JsTreeNode.format
 @import controllers.dataset.FilterJsRouter
 @import views.html.filter.{jsTree, categoricalTree}
-@import play.api.libs.json.JsArray
+@import views.html.filter.conditionPanel
 
 @(
     filter: Option[Filter],
@@ -45,47 +45,7 @@
 
 @loadFilterModelButtons = {
     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-    <button type="button" id="submitButton" onclick="$('#@filterElementName').multiFilter('loadFilter');" data-dismiss="modal" class="btn btn-primary">OK</button>
-}
-
-@valueOrUndefined(condition: FilterCondition) = @{
-    val valueOrLabel =
-        condition.valueLabel match {
-            case Some(label) => Some(label)
-            case None => condition.value
-        }
-    valueOrLabel match {
-        case None => "undefined"
-        case Some(s) if s.isEmpty => "undefined"
-        case Some(s) => s
-    }
-}
-
-@conditionPanel(isDisplayed: Boolean) = {
-            <div id="conditionPanel" @if(!isDisplayed) {style="display:None"}>
-                @filter.map { f =>
-                    @f.conditions.zipWithIndex.map { case (condition, index) =>
-                        <div id="condition-full@index" class="filter-part condition-full">
-                                <span class="condition">
-                                    <span class="label label-primary" id="fieldLabel">@condition.fieldLabelOrElseName</span>
-                                    <span id="conditionType"><b>@condition.conditionType</b></span>
-                                    <span class="label label-primary" id="value">@valueOrUndefined(condition)</span>
-                                </span>
-                                <span class="condition-buttons" style="display: none; padding-left: 5px">
-                                    <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showEditConditionModal', '@index')">
-                                        <span class="glyphicon glyphicon-pencil"></span>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('deleteCondition', '@index')">
-                                        <span class="glyphicon glyphicon-trash"></span>
-                                    </button>
-                                </span>
-                        </div>
-                        @if(index < f.conditions.size - 1) {
-                            <span class="filter-part" style="padding-top: 5px">AND</span>
-                        }
-                    }
-                }.getOrElse(Html(""))
-            </div>
+    <button type="button" id="submitButton" onclick="$('#@filterElementName').multiFilter('loadFilterFromModal');" data-dismiss="modal" class="btn btn-primary">OK</button>
 }
 
 @categoryTreeNodeSelectedJsFun = {
@@ -172,28 +132,18 @@
     </div>
 }
 
-<div id="@filterElementName" class="aligned-container">
+<div id="@filterElementName" class="filter-div">
     @conditionModal
 
-    <span class="filter-part">Filter:</span>
+    @conditionPanel(filter)
 
-        @defining((filter.isEmpty || filter.get._id.isEmpty) && filter.map(_.conditions.size).getOrElse(0) < 4) { showPanel =>
-            @if(!showPanel) {
-                <button id="filterNameButton" type="button" class="filter-part btn btn-sm" onclick="$('#@filterElementName').multiFilter('showConditionPanel')" title="Show Conditions">
-                    <h5><b>@filter.get.name.getOrElse("...")</b></h5>
-                </button>
-            }
-            @conditionPanel(showPanel)
-        }
-
-    <span class="nowrap">
-
+    <span class="filter-part">
         <button type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('showAddConditionModal')" data-toggle="tooltip" title="Add Filter Condition">
             <span class="glyphicon glyphicon-plus"></span>
         </button>
 
-        @if(filterJsRouter.isDefined && filter.isDefined && filter.get._id.isEmpty && filter.get.conditions.nonEmpty) {
-            <button type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#saveFilterModal@filterElementName" title="Save Filter">
+        @defining(filterJsRouter.isDefined && filter.isDefined && filter.get._id.isEmpty && filter.get.conditions.nonEmpty) { showPanel =>
+            <button id="saveFilterButton" type="button" class="btn btn-sm btn-default" data-toggle="modal" data-target="#saveFilterModal@filterElementName" title="Save Filter" @if(!showPanel) {style="display:None"}>
                 <span class="glyphicon glyphicon glyphicon-save"></span>
             </button>
             @modal(s"saveFilterModal$filterElementName", "Save Filter", saveFilterModalBody, None, Some(saveFilterModelButtons))
@@ -206,5 +156,10 @@
 
             @modal("loadFilterModal", "Load Filter", loadFilterModalBody, None, Some(loadFilterModelButtons))
         }
+
+        <button id="rollbackFilterButton" type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementName').multiFilter('rollbackModelAndSubmit')" title="Rollback Filter" style="display:None">
+            <span class="glyphicon glyphicon-arrow-left"></span>
+        </button>
+
     </span>
 </div>

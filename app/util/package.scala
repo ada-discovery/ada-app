@@ -144,6 +144,19 @@ package object util {
     }
   }
 
+  def toChartData(widget: ScatterWidget[_, _]) = {
+    def numericValue(x: Any) =
+      x match {
+        case x: java.util.Date => x.getTime.toString
+        case _ => x.toString
+      }
+
+    widget.data.map { case (name, points) =>
+      var numPoints = points.map { case (point1, point2) => (numericValue(point1), numericValue(point2)) }
+      (name, numPoints)
+    }
+  }
+
   def seqFutures[T, U](
     items: TraversableOnce[T])(
     fun: T => Future[U]

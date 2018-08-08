@@ -6,13 +6,13 @@
     implicit request: Request[_]
 )
 
-@helper.javascriptRouter("dataSetJsRoutes")(
+@helper.javascriptRouter("dataSetJsTableRoutes")(
     dataSetJsRouter.getFieldValue
 )
 
 <script type="text/javascript">
     function showJsonFieldValue(id, fieldName, fieldLabel, isArray) {
-        dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
+        dataSetJsTableRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
             success: function(data) {
                 var title =  fieldLabel
                 var size = 0
@@ -37,7 +37,7 @@
     }
 
     function showArrayFieldChart(id, fieldName, fieldLabel) {
-        dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
+        dataSetJsTableRoutes.controllers.dataset.DataSetDispatcher.getFieldValue(id, fieldName).ajax( {
             success: function(data) {
                 $("#lineChartDiv").html("")
 

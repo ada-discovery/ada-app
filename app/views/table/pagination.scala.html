@@ -1,13 +1,12 @@
 @(
     page: Page[_],
     refreshCall: (Int, Option[String]) => Call,
-    tableDivId: Option[String] = None,
     isAjaxRefresh: Boolean = false
 )
 
 @link(page: Int)(title: Html) = {
     @if(isAjaxRefresh) {
-        <a href="#" onclick="loadNewContent('@refreshCall(page, None).url', '@tableDivId.getOrElse(throw new IllegalArgumentException("TableDivId expected for ajax refresh"))'); return false">@title</a>
+        <a href="#" onclick="loadNewTableContent(this, '@refreshCall(page, None).url'); return false">@title</a>
     } else {
         <a href="@refreshCall(page, None)">@title</a>
     }

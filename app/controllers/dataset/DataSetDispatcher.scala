@@ -48,12 +48,12 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getDefaultView = dispatch(_.getDefaultView)
 
-  override def getWidgetPanelAndTable(
+  override def getViewElementsAndWidgetCallback(
     dataViewId: BSONObjectID,
-    tablePage: Int,
     tableOrder: String,
-    filterOrId: FilterOrId
-  ) = dispatch(_.getWidgetPanelAndTable(dataViewId, tablePage, tableOrder, filterOrId))
+    filterOrId: FilterOrId,
+    oldCountDiff: Option[Int]
+  ) = dispatch(_.getViewElementsAndWidgetCallback(dataViewId, tableOrder, filterOrId, oldCountDiff))
 
   override def getTable(
     page: Int,
@@ -62,9 +62,7 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     filterOrId: FilterOrId
   ) = dispatchAjax(_.getTable(page, orderBy, fieldNames, filterOrId))
 
-  override def getWidgets(
-    callbackId: String
-  ) = dispatchAjax(_.getWidgets(callbackId))
+  override def getWidgets = dispatchAjax(_.getWidgets)
 
   override def getScatterStats(
     xFieldName: Option[String],
