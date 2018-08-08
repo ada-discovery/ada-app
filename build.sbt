@@ -28,8 +28,8 @@ resolvers ++= Seq(
   "JCenter" at "http://jcenter.bintray.com/",
   "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
   "jitpack.io" at "https://jitpack.io",   // for t-SNE (Java impl)
-  Resolver.mavenLocal
-//  "Ivylocal" at "file://home/peter/.ivy2/local/" // " + Path.userHome.absolutePath + "
+  "Local Maven Repository" at "file:///"+Path.userHome.absolutePath+"/.m2/repository"
+//  "Ivylocal" at "file:///"++Path.userHome.absolutePath+"/.ivy2/local/"
 )
 
 routesImport ++= Seq(

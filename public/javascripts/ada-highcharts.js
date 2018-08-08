@@ -468,9 +468,18 @@
         yAxisCaption,
         series,
         height,
+        xDataType,
+        yDataType,
         zoomIfDragged,
         allowSelectionEvent
     ) {
+
+        var pointFormatter = function () {
+            var xPoint = (xDataType == "datetime") ? Highcharts.dateFormat('%Y-%m-%d', this.point.x) : this.point.x
+            var yPoint = (yDataType == "datetime") ? Highcharts.dateFormat('%Y-%m-%d', this.point.y) : this.point.y
+
+            return '<b>' + this.series.name + '</b><br>' + xPoint + ", " + yPoint
+        }
 
         /**
          * Custom selection handler that selects points and cancels the default zoom behaviour
@@ -577,6 +586,7 @@
                     enabled: true,
                     text: xAxisCaption
                 },
+                type: xDataType,
                 startOnTick: true,
                 endOnTick: true,
                 showLastLabel: true
@@ -584,7 +594,8 @@
             yAxis: {
                 title: {
                     text: yAxisCaption
-                }
+                },
+                type: yDataType
             },
             legend: {
                 layout: 'vertical',
@@ -618,11 +629,13 @@
                             }
                         }
                     },
-                    tooltip: {
-                        headerFormat: '<b>{series.name}</b><br>',
-                        pointFormat: '{point.x}, {point.y}'
+                    animation: {
+                        duration: 400
                     }
                 }
+            },
+            tooltip:{
+                formatter: pointFormatter
             },
             series: series
         });
@@ -773,8 +786,11 @@
             plotOptions: {
                 boxplot: {
                     fillColor: '#eeeeee',
-                        lineWidth: 2,
-                        medianWidth: 3
+                    lineWidth: 2,
+                    medianWidth: 3,
+                    animation: {
+                        duration: 400
+                    }
                 }
             },
             series: [{

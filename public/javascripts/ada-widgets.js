@@ -70,7 +70,7 @@ function categoricalCountWidget(elementId, widget, filterElementId) {
     if (filterElementId) {
         $('#' + elementId).on('pointSelected', function (event, data) {
             var condition = {fieldName: widget.fieldName, conditionType: "=", value: data.key};
-            $('#' + filterElementId).multiFilter('addAndSubmitCondition', condition);
+            $('#' + filterElementId).multiFilter('addConditionsAndSubmit', [condition]);
         });
     }
 }
@@ -177,20 +177,32 @@ function scatterWidget(elementId, widget, filterElementId) {
 
     var height = widget.displayOptions.height || 400;
 
+    var isXDate = widget.xFieldType == "Date"
+    var xDataType = (isXDate) ? 'datetime' : null;
+
+    var isYDate = widget.yFieldType == "Date"
+    var yDataType = (isYDate) ? 'datetime' : null;
+
     if (filterElementId) {
         $('#' + elementId).on('areaSelected', function (event, data) {
+            var xMin = (isXDate) ? msToStandardDateString(data.xMin) : data.xMin.toString();
+            var xMax = (isXDate) ? msToStandardDateString(data.xMax) : data.xMax.toString();
+            var yMin = (isYDate) ? msToStandardDateString(data.yMin) : data.yMin.toString();
+            var yMax = (isYDate) ? msToStandardDateString(data.yMax) : data.yMax.toString();
+
+            console.log(xMin + ", " + xMax)
             var conditions = [
-                {fieldName: widget.xFieldName, conditionType: ">=", value: data.xMin.toString()},
-                {fieldName: widget.xFieldName, conditionType: "<=", value: data.xMax.toString()},
-                {fieldName: widget.yFieldName, conditionType: ">=", value: data.yMin.toString()},
-                {fieldName: widget.yFieldName, conditionType: "<=", value: data.yMax.toString()}
+                {fieldName: widget.xFieldName, conditionType: ">=", value: xMin},
+                {fieldName: widget.xFieldName, conditionType: "<=", value: xMax},
+                {fieldName: widget.yFieldName, conditionType: ">=", value: yMin},
+                {fieldName: widget.yFieldName, conditionType: "<=", value: yMax}
             ]
 
-            $('#' + filterElementId).multiFilter('addAndSubmitConditions', conditions);
+            $('#' + filterElementId).multiFilter('addConditionsAndSubmit', conditions);
         });
     }
 
-    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, height, true, filterElementId != null)
+    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, height, xDataType, yDataType, true, filterElementId != null)
 }
 
 function heatmapWidget(elementId, widget) {
@@ -211,25 +223,29 @@ function htmlWidget(elementId, widget) {
 }
 
 function genericWidget(widget, filterElementId) {
-    var elementIdVal = elementId(widget)
+    var widgetId = elementId(widget)
+    genericWidgetForElement(widgetId, widget, filterElementId)
+}
+
+function genericWidgetForElement(widgetId, widget, filterElementId) {
     if(widget.displayOptions.isTextualForm)
         switch (widget.concreteClass) {
-            case "models.CategoricalCountWidget": categoricalTableWidget(elementIdVal, widget); break;
-            case "models.NumericalCountWidget": numericalTableWidget(elementIdVal, widget); break;
-            case "models.BasicStatsWidget": basicStatsWidget(elementIdVal, widget); break;
+            case "models.CategoricalCountWidget": categoricalTableWidget(widgetId, widget); break;
+            case "models.NumericalCountWidget": numericalTableWidget(widgetId, widget); break;
+            case "models.BasicStatsWidget": basicStatsWidget(widgetId, widget); break;
             default: console.log(widget.concreteClass + " does not have a textual representation.")
         }
     else
         switch (widget.concreteClass) {
-            case "models.CategoricalCountWidget": categoricalCountWidget(elementIdVal, widget, filterElementId); break;
-            case "models.NumericalCountWidget": numericalCountWidget(elementIdVal, widget); break;
-            case "models.BoxWidget": boxWidget(elementIdVal, widget); break;
-            case "models.ScatterWidget": scatterWidget(elementIdVal, widget, filterElementId); break;
-            case "models.HeatmapWidget": heatmapWidget(elementIdVal, widget); break;
-            case "models.HtmlWidget": htmlWidget(elementIdVal, widget); break;
-            case 'models.LineWidget': lineWidget(elementIdVal, widget); break;
-            case "models.BasicStatsWidget": basicStatsWidget(elementIdVal, widget); break;
-            case "models.IndependenceTestWidget": independenceTestWidget(elementIdVal, widget); break;
+            case "models.CategoricalCountWidget": categoricalCountWidget(widgetId, widget, filterElementId); break;
+            case "models.NumericalCountWidget": numericalCountWidget(widgetId, widget); break;
+            case "models.BoxWidget": boxWidget(widgetId, widget); break;
+            case "models.ScatterWidget": scatterWidget(widgetId, widget, filterElementId); break;
+            case "models.HeatmapWidget": heatmapWidget(widgetId, widget); break;
+            case "models.HtmlWidget": htmlWidget(widgetId, widget); break;
+            case 'models.LineWidget': lineWidget(widgetId, widget); break;
+            case "models.BasicStatsWidget": basicStatsWidget(widgetId, widget); break;
+            case "models.IndependenceTestWidget": independenceTestWidget(widgetId, widget); break;
             default: console.log("Widget type" + widget.concreteClass + " unrecognized.")
         }
 }

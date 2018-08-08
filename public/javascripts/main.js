@@ -505,9 +505,11 @@ function shorten(string, length) {
         string
 }
 
-function loadNewContent(url, elementId) {
+function loadNewContent(url, elementId, data, callType) {
     $.ajax({
         url: url,
+        data: data,
+        type: (callType) ? callType : "GET",
         success: function (html) {
             $("#" + elementId).html(html);
         },
@@ -515,6 +517,45 @@ function loadNewContent(url, elementId) {
             showErrorResponse(data)
         }
     });
+}
+
+function loadNewTableContent(element, url, data, callType) {
+    $.ajax({
+        url: url,
+        data: data,
+        type: (callType) ? callType : "GET",
+        success: function(content) {
+            var tableDiv = element.closest(".table-div")
+            $(tableDiv).html(content);
+        },
+        error: function(data) {
+            showErrorResponse(data)
+        }
+    });
+}
+
+function showConditionPanel(element) {
+    var filterDiv = element.closest(".filter-div");
+    if (filterDiv)
+        $(filterDiv).multiFilter('showConditionPanel')
+    else
+        console.log("filter-div not found.")
+}
+
+function showEditConditionModal(element, index) {
+    var filterDiv = element.closest(".filter-div");
+    if (filterDiv)
+        $(filterDiv).multiFilter('showEditConditionModal', index)
+    else
+        console.log("filter-div not found.")
+}
+
+function deleteCondition(element, index) {
+    var filterDiv = element.closest(".filter-div");
+    if (filterDiv)
+        $(filterDiv).multiFilter('deleteCondition', index)
+    else
+        console.log("filter-div not found.")
 }
 
 function activateRowClickable() {
@@ -543,7 +584,6 @@ function getModalValues(modalElementId) {
 }
 
 function showMLOutput(evalRates) {
-    console.log(evalRates)
     $("#outputDiv").html("");
 
     var header = ["Metrics", "Training", "Test"]
@@ -691,8 +731,11 @@ function moveModalRight(modalId) {
     });
 }
 
-function addSpinner(element) {
-    element.append("<div class='spinner' style='margin: auto;'></div>")
+function addSpinner(element, style) {
+    if (style)
+        element.append("<div class='spinner' style='margin: auto; " + style + "'></div>")
+    else
+        element.append("<div class='spinner' style='margin: auto;'></div>")
 }
 
 function updateFilterValueElement(filterElement, data) {
@@ -709,10 +752,10 @@ function updateFilterValueElement(filterElement, data) {
     } else {
         newValueElement = "<input id='value' class='float-left conditionValue' placeholder='Condition'/>"
     }
-    var valueElement = filterElement.find("#value")
+    var valueElement = filterElement.find("#addEditConditionModal #value")
     var oldValue = valueElement.val()
     valueElement.replaceWith(newValueElement)
-    filterElement.find("#value").val(oldValue)
+    filterElement.find("#addEditConditionModal #value").val(oldValue)
 }
 
 function updatePlusMinusIcon(element) {
@@ -766,4 +809,28 @@ function createIndependenceTestTable(results, withTestType) {
     });
 
     return createTable(header, rowData);
+}
+
+function msToStandardDateString(ms) {
+    var date = new Date(ms)
+    return date.getFullYear() + '-' +('0' + (date.getMonth()+1)).slice(-2)+ '-' + date.getDate() + ' ' + date.getHours() + ':'+('0' + (date.getMinutes())).slice(-2)+ ':' + date.getSeconds();
+}
+
+function addFilterUpdateBeforeModalSubmit(modalId, filterId, filterParamName) {
+    $('#' + modalId + ' form').submit(function(event) {
+        event.preventDefault();
+
+        // remove the old filter
+        $(this).find("input[name='" + filterParamName + "']").remove();
+
+        // add a new one
+        var filterModel = $("#" + filterId).multiFilter("getModel")
+
+        var params = {}
+        params[filterParamName] = JSON.stringify(filterModel)
+        addParams($(this), params)
+
+        // submit
+        this.submit();
+    });
 }
