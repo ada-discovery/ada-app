@@ -4,7 +4,7 @@ import java.util.Date
 
 import dataaccess._
 import models.FilterCondition.FilterOrId
-import models.json.{EitherFormat, EnumFormat, OptionFormat}
+import models.json.{EitherFormat, EnumFormat}
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID

@@ -2,9 +2,7 @@ package dataaccess
 
 import java.util.UUID
 
-import play.api.libs.json.{Json, JsObject}
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
 /**
  * Type class providing identity manipulation methods

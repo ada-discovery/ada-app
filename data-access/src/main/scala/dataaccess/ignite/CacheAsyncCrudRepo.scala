@@ -3,10 +3,11 @@ package dataaccess.ignite
 import javax.cache.configuration.Factory
 import javax.inject.Inject
 
-import dataaccess.ReflectionUtil.shortName
+import org.incal.core.util.ReflectionUtil.shortName
 import dataaccess.mongo.{ReactiveMongoApi, MongoAsyncCrudRepo}
 import dataaccess._
 import dataaccess.ignite.BinaryJsonUtil.unescapeFieldName
+import org.incal.core.util.DynamicConstructorFinder
 import org.apache.ignite.{Ignite, IgniteCache}
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle

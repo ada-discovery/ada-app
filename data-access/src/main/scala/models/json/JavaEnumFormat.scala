@@ -1,6 +1,6 @@
 package models.json
 
-import dataaccess.ReflectionUtil
+import org.incal.core.util.ReflectionUtil
 import play.api.libs.json._
 
 import scala.reflect.ClassTag

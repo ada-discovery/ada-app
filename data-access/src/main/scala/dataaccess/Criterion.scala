@@ -62,32 +62,4 @@ object Criterion {
     def #<[T](value: T) = LessCriterion(fieldName, value)
     def #<=[T](value: T) = LessEqualCriterion(fieldName, value)
   }
-
-  def matches[T](
-    criterion: Criterion[T],
-    value: T
-  ): Boolean =
-    criterion match {
-      case c: EqualsCriterion[T] => c.value.equals(value)
-
-      case c: EqualsNullCriterion => value == null || value == None
-
-      case c: RegexEqualsCriterion => value.equals(c.value) // TODO
-
-      case c: NotEqualsCriterion[T] => !c.value.equals(value)
-
-      case c: NotEqualsNullCriterion => value != null && value != None
-
-      case c: InCriterion[T] => c.value.contains(value)
-
-      case c: NotInCriterion[T] => !c.value.contains(value)
-
-      case c: GreaterCriterion[T] => value.toString.toDouble > c.value.toString.toDouble // TODO
-
-      case c: GreaterEqualCriterion[T] => value.toString.toDouble >= c.value.toString.toDouble // TODO
-
-      case c: LessCriterion[T] => value.toString.toDouble < c.value.toString.toDouble // TODO
-
-      case c: LessEqualCriterion[T] => value.toString.toDouble <= c.value.toString.toDouble // TODO
-    }
 }

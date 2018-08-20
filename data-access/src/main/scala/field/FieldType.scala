@@ -1,7 +1,7 @@
 package field
 
 import dataaccess.AdaConversionException
-import dataaccess.ReflectionUtil.typeToClass
+import org.incal.core.util.ReflectionUtil.typeToClass
 import models.FieldTypeSpec
 import play.api.libs.json._
 

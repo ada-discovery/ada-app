@@ -416,10 +416,10 @@ class MongoAsyncStreamRepo[E: Format, ID: Format](
     Await.result(futureSource, 1 minute)
   }
 
-  override lazy val oldStream: Enumerator[E] = {
-    val enumerator = Enumerator.flatten(akkaCursor.map(_.enumerate()))
-    Concurrent.broadcast(enumerator)._1
-  }
+//  override lazy val oldStream: Enumerator[E] = {
+//    val enumerator = Enumerator.flatten(akkaCursor.map(_.enumerate()))
+//    Concurrent.broadcast(enumerator)._1
+//  }
 
   import reactivemongo.akkastream.cursorProducer
 

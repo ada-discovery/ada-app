@@ -2,7 +2,7 @@ package dataaccess.elastic
 
 import com.evojam.play.elastic4s.PlayElasticJsonSupport
 import com.sksamuel.elastic4s.{RichGetResponse, RichSearchHit, RichSearchResponse}
-import dataaccess.DynamicConstructorFinder
+import org.incal.core.util.DynamicConstructorFinder
 import play.api.libs.json.{Format, JsNull, JsObject, Json}
 
 import collection.mutable.{Map => MMap}

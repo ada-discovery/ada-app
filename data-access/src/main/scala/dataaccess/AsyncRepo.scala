@@ -1,11 +1,12 @@
 package dataaccess
 
 import akka.stream.scaladsl.Source
-import play.api.libs.iteratee.Enumerator
-import reactivemongo.akkastream.State
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
+import dataaccess.Criterion
+import dataaccess.Sort
 
 /**
  * Generic async repo trait
@@ -77,7 +78,5 @@ trait AsyncCrudRepo[E, ID] extends AsyncRepo[E, ID] {
 }
 
 trait AsyncStreamRepo[E, ID] extends AsyncRepo[E, ID] {
-  def stream: Source[E, Future[State]]
-  @Deprecated
-  def oldStream: Enumerator[E]
+  def stream: Source[E, _]
 }
