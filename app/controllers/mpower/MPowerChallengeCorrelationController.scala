@@ -5,7 +5,7 @@ import javax.inject.Inject
 import _root_.util.{GroupMapList, seqFutures}
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import controllers.WebJarAssets
-import controllers.core.WebContext
+import controllers.core.{AuthAction, BaseController, WebContext}
 import dataaccess.Criterion._
 import models.AdaException
 import models.DataSetFormattersAndIds.FieldIdentity
@@ -18,12 +18,7 @@ import play.api.mvc.{Action, AnyContent, Controller, Request}
 
 import scala.concurrent.Future
 
-class MPowerChallengeCorrelationController @Inject()(
-    dsaf: DataSetAccessorFactory,
-    messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets,
-    configuration: Configuration
-  ) extends Controller {
+class MPowerChallengeCorrelationController @Inject()(dsaf: DataSetAccessorFactory) extends BaseController {
 
   private val tremorCorrDataSetPrefix = "harvard_ldopa.tremor_correlation_abs"
   private lazy val tremorScoreBoardDsa = dsaf("harvard_ldopa.score_board_tremor_ext").get
@@ -48,13 +43,8 @@ class MPowerChallengeCorrelationController @Inject()(
   private implicit val ldopaScoreSubmissionFormat = Json.format[LDOPAScoreSubmissionInfo]
   private implicit val mPowerScoreSubmissionFormat = Json.format[mPowerScoreSubmissionInfo]
 
-  private implicit def webContext(implicit request: Request[_]) = {
-    implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets, configuration)
-  }
-
-  def index = Action { implicit request =>
-    Ok(views.html.mpowerchallenge.correlationHome())
+  def index = AuthAction { implicit request =>
+    Future(Ok(views.html.mpowerchallenge.correlationHome()))
   }
 
   def tremorTeamNetwork(
@@ -62,7 +52,7 @@ class MPowerChallengeCorrelationController @Inject()(
     aggIn: AggFunction.Value,
     withDemographics: Boolean,
     corrThreshold: Option[Double]
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val correlationDsa = getCorrelationDsa(tremorCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showTeamCorrelationNetwork(
@@ -82,7 +72,7 @@ class MPowerChallengeCorrelationController @Inject()(
     aggIn: AggFunction.Value,
     withDemographics: Boolean,
     corrThreshold: Option[Double]
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val correlationDsa = getCorrelationDsa(dyskinesiaCorrDateSetPrefix, aggOut, aggIn, withDemographics)
 
     showTeamCorrelationNetwork(
@@ -102,7 +92,7 @@ class MPowerChallengeCorrelationController @Inject()(
     aggIn: AggFunction.Value,
     withDemographics: Boolean,
     corrThreshold: Option[Double]
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val correlationDsa = getCorrelationDsa(bradykinesiaCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showTeamCorrelationNetwork(
@@ -122,7 +112,7 @@ class MPowerChallengeCorrelationController @Inject()(
     aggIn: AggFunction.Value,
     withDemographics: Boolean,
     corrThreshold: Option[Double]
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val correlationDsa = getCorrelationDsa(mPowerCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showTeamCorrelationNetwork(
@@ -142,7 +132,7 @@ class MPowerChallengeCorrelationController @Inject()(
     aggIn: AggFunction.Value,
     withDemographics: Boolean,
     corrThreshold: Option[Double]
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val correlationDsa = getCorrelationDsa(tremorCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showSubmissionCorrelationNetwork(
@@ -162,7 +152,7 @@ class MPowerChallengeCorrelationController @Inject()(
     aggIn: AggFunction.Value,
     withDemographics: Boolean,
     corrThreshold: Option[Double]
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val correlationDsa = getCorrelationDsa(dyskinesiaCorrDateSetPrefix, aggOut, aggIn, withDemographics)
 
     showSubmissionCorrelationNetwork(
@@ -182,7 +172,7 @@ class MPowerChallengeCorrelationController @Inject()(
     aggIn: AggFunction.Value,
     withDemographics: Boolean,
     corrThreshold: Option[Double]
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val correlationDsa = getCorrelationDsa(bradykinesiaCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showSubmissionCorrelationNetwork(
@@ -202,7 +192,7 @@ class MPowerChallengeCorrelationController @Inject()(
     aggIn: AggFunction.Value,
     withDemographics: Boolean,
     corrThreshold: Option[Double]
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val correlationDsa = getCorrelationDsa(mPowerCorrDataSetPrefix, aggOut, aggIn, withDemographics)
 
     showSubmissionCorrelationNetwork(
@@ -239,7 +229,7 @@ class MPowerChallengeCorrelationController @Inject()(
     aggOut: AggFunction.Value,
     aggIn: AggFunction.Value,
     withDemographics: Boolean)(
-    implicit request: Request[AnyContent]
+    implicit request: AuthenticatedRequest[AnyContent]
   ) = {
     val threshold = corrThreshold.getOrElse(defaultAbsCorrMeanCutoff)
     for {
@@ -336,7 +326,7 @@ class MPowerChallengeCorrelationController @Inject()(
     aggOut: AggFunction.Value,
     aggIn: AggFunction.Value,
     withDemographics: Boolean)(
-    implicit request: Request[AnyContent]
+    implicit request: AuthenticatedRequest[AnyContent]
   ) = {
     val threshold = corrThreshold.getOrElse(defaultAbsCorrMeanCutoff)
     for {

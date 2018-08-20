@@ -5,7 +5,7 @@ import java.io.File
 import org.clapper.classutil.{ClassFinder, ClassInfo}
 import scala.reflect.ClassTag
 
-object ReflectionUtil {
+object ClassFinderUtil {
 
 //  private val tomcatLibFolder = "../webapps/ROOT/WEB-INF/lib/"
   private val nettyLibFolder = "../lib/"
@@ -58,7 +58,4 @@ object ReflectionUtil {
       }
     }
   }
-
-  def getMethodNames[T](implicit tag: ClassTag[T]): Array[String] =
-    tag.runtimeClass.getMethods.map(_.getName)
 }

@@ -3,7 +3,7 @@ package services.stats.calcjsonin
 import services.stats.calc._
 import dataaccess.ReflectionUtil.construct2
 import models.AdaException
-import util.ReflectionUtil.findClasses
+import util.ClassFinderUtil.findClasses
 
 import scala.reflect.runtime.universe._
 

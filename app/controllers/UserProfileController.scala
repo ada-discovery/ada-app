@@ -22,20 +22,14 @@ import javax.inject.Inject
 
 import models.security.{DeadboltUser, UserManager}
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
-import controllers.core.WebContext
+import controllers.core.{BaseController, WebContext}
 import reactivemongo.bson.BSONObjectID
 import util.SecurityUtil.restrictSubjectPresentAnyNoCaching
 
 class UserProfileController @Inject() (
     workspaceRepo: UserSettingsRepo,
-    userManager: UserManager,
-    deadbolt: DeadboltActions,
-    messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets,
-    configuration: Configuration
-  ) extends Controller {
-
-  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets, configuration)
+    userManager: UserManager
+  ) extends BaseController {
 
   protected val userUpdateForm = Form(
     mapping(

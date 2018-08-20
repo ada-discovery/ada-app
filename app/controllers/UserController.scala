@@ -14,7 +14,7 @@ import services.MailClientProvider
 import views.html.{user => view}
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
-import util.ReflectionUtil.getMethodNames
+import dataaccess.ReflectionUtil.getMethodNames
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -24,7 +24,6 @@ class UserController @Inject() (
     mailClientProvider: MailClientProvider,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
   ) extends CrudControllerImpl[User, BSONObjectID](userRepo)
-
     with AdminRestrictedCrudController[BSONObjectID]
     with HasFormShowEqualEditView[User, BSONObjectID]
     with HasBasicListView[User] {
@@ -115,11 +114,11 @@ class UserController @Inject() (
 }
 
 case class DataSetControllerActionNames(
-  dataSetActions: Array[String],
-  fieldActions: Array[String],
-  categoryActions: Array[String],
-  filterActions: Array[String],
-  dataViewActions: Array[String],
-  classificationRunActions: Array[String],
-  regressionRunActions: Array[String]
+  dataSetActions: Traversable[String],
+  fieldActions: Traversable[String],
+  categoryActions: Traversable[String],
+  filterActions: Traversable[String],
+  dataViewActions: Traversable[String],
+  classificationRunActions: Traversable[String],
+  regressionRunActions: Traversable[String]
 )

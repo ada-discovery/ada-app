@@ -2,27 +2,23 @@ package controllers.mpower
 
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.AuthenticatedRequest
-import controllers.WebJarAssets
-import controllers.core.WebContext
+import controllers.core.{AuthAction, BaseController, WebContext}
 import dataaccess.JsonRepoExtra._
 import dataaccess.Criterion._
 import models._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.{Configuration, Logger}
-import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.{Action, AnyContent, Controller, Request}
 import services.WidgetGenerationService
 import views.html.mpowerchallenge.clustering
 
-class MPowerChallengeClusteringController @Inject()(
+import scala.concurrent.Future
+
+class MPowerChallengeClusteringController @Inject() (
     dsaf: DataSetAccessorFactory,
-    widgetGenerationService: WidgetGenerationService,
-    messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets,
-    configuration: Configuration
-  ) extends Controller {
+    widgetGenerationService: WidgetGenerationService
+  ) extends BaseController {
 
   private val x1 = "x1"
   private val x2 = "x2"
@@ -147,13 +143,8 @@ class MPowerChallengeClusteringController @Inject()(
     )
   )
 
-  private implicit def webContext(implicit request: Request[_]) = {
-    implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets, configuration)
-  }
-
-  def index = Action { implicit request =>
-    Ok(views.html.mpowerchallenge.clusteringHome())
+  def index = AuthAction { implicit request =>
+    Future(Ok(views.html.mpowerchallenge.clusteringHome()))
   }
 
   // MDS
@@ -314,7 +305,7 @@ class MPowerChallengeClusteringController @Inject()(
     pcaDims: Option[Int],
     scaled: Boolean,
     isTSNE: Boolean
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val criteria = topRank.map(rank => Seq(rankFieldName #<= rank)).getOrElse(Nil)
 
     for {

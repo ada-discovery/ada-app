@@ -45,10 +45,7 @@ class DataSetImportController @Inject()(
     dataSetImporterCentral: DataSetImporterCentral,
     dataSetImportScheduler: DataSetImportScheduler,
     dataSpaceService: DataSpaceService,
-    deadbolt: DeadboltActions,
-    messagesApi: MessagesApi,
-    messageRepo: MessageRepo,
-    configuration: Configuration
+    messageRepo: MessageRepo
   ) extends CrudControllerImpl[DataSetImport, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
     with HasCreateEditSubTypeFormViews[DataSetImport, BSONObjectID]
@@ -57,9 +54,8 @@ class DataSetImportController @Inject()(
   private val logger = Logger
   private val messageLogger = MessageLogger(logger, messageRepo)
 
-  // (this.getClass)
-  private val importFolder = configuration.getString("datasetimport.import.folder").get
-  private val importRetryNum = configuration.getInt("datasetimport.retrynum").getOrElse(3)
+  private lazy val importFolder = configuration.getString("datasetimport.import.folder").get
+  private lazy val importRetryNum = configuration.getInt("datasetimport.retrynum").getOrElse(3)
 
   // Forms
 

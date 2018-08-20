@@ -11,7 +11,7 @@ import models.DataSetFormattersAndIds.{DataSetSettingIdentity, serializableDataS
 import models._
 import models.FilterShowFieldStyle
 import Criterion.Infix
-import controllers.core.{CrudControllerImpl, HasBasicFormCreateView, HasBasicListView, HasFormShowEqualEditView}
+import controllers.core._
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.data.Form
@@ -26,6 +26,7 @@ import controllers.dataset.routes.javascript.{DataSetSettingController => dataSe
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
+import util.SecurityUtil.restrictAdminAnyNoCaching
 
 class DataSetSettingController @Inject() (
     repo: DataSetSettingRepo,
@@ -106,45 +107,41 @@ class DataSetSettingController @Inject() (
 
   override protected[controllers] def listView = { implicit ctx => view.list(_) }
 
-  def editForDataSet(dataSet: String) = restrictAny {
-    Action.async { implicit request =>
-      val foundSettingFuture = repo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
-      foundSettingFuture.map { setting =>
-        setting.fold(
-          NotFound(s"Setting for the data set '#$dataSet' not found")
-        ) { entity =>
-          implicit val msg = messagesApi.preferred(request)
+  def editForDataSet(dataSet: String) = restrictAdminAnyNoCaching(deadbolt) { implicit request =>
+    val foundSettingFuture = repo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
+    foundSettingFuture.map { setting =>
+      setting.fold(
+        NotFound(s"Setting for the data set '#$dataSet' not found")
+      ) { entity =>
+        implicit val msg = messagesApi.preferred(request)
 
-          render {
-            case Accepts.Html() => {
-              implicit val context = DataSetWebContext(dataSet)
-              val updateCall = dataSetSettingRoutes.updateForDataSet(entity._id.get)
-              val cancelCall = context.dataSetRouter.getDefaultView
+        render {
+          case Accepts.Html() => {
+            implicit val context = DataSetWebContext(dataSet)
+            val updateCall = dataSetSettingRoutes.updateForDataSet(entity._id.get)
+            val cancelCall = context.dataSetRouter.getDefaultView
 
-              Ok(view.edit(
-                fillForm(entity),
-                updateCall,
-                cancelCall,
-                result(dataSpaceService.getTreeForCurrentUser(request)))
-              )
-            }
-            case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
+            Ok(view.edit(
+              fillForm(entity),
+              updateCall,
+              cancelCall,
+              result(dataSpaceService.getTreeForCurrentUser(request)))
+            )
           }
+          case Accepts.Json() => BadRequest("Edit function doesn't support JSON response. Use get instead.")
         }
-      }.recover {
-        case t: TimeoutException =>
-          Logger.error("Problem found in the edit process")
-          InternalServerError(t.getMessage)
       }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the edit process")
+        InternalServerError(t.getMessage)
     }
   }
 
-  def updateForDataSet(id: BSONObjectID) = restrictAny {
-    Action.async { implicit request =>
-      val dataSetIdFuture = repo.get(id).map(_.get.dataSetId)
-      dataSetIdFuture.flatMap { dataSetId =>
-        update(id, Redirect(new DataSetRouter(dataSetId).getDefaultView)).apply(request)
-      }
+  def updateForDataSet(id: BSONObjectID) = restrictAdminAnyNoCaching(deadbolt) { implicit request =>
+    val dataSetIdFuture = repo.get(id).map(_.get.dataSetId)
+    dataSetIdFuture.flatMap { dataSetId =>
+      update(id, Redirect(new DataSetRouter(dataSetId).getDefaultView)).apply(request)
     }
   }
 

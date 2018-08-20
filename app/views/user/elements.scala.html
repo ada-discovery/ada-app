@@ -69,8 +69,8 @@
     @dynamicStringTable("permission", form.value.map(_.permissions.sorted).getOrElse(Nil), false, None, Some(extraButtons), true)
 }
 
-@actionNamesAsString(array: Array[String]) = @{
-    Html(array.map(s => "\"" + s + "\"").mkString(","))
+@actionNamesAsString(list: Traversable[String]) = @{
+    Html(list.map(s => "\"" + s + "\"").mkString(","))
 }
 
 <script type="text/javascript">

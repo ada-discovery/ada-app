@@ -45,6 +45,7 @@ import models.security.{SecurityRole, UserManager}
 import services.stats.calc.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult}
 import services.stats.StatsService
 import IndependenceTestResult.independenceTestResultFormat
+import be.objectify.deadbolt.scala.AuthenticatedRequest
 import field.{FieldType, FieldTypeHelper}
 import models.FilterConditionExtraFormats.coreFilterConditionFormat
 
@@ -360,7 +361,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     tablePages: Seq[PageOrder],
     filterOrIds: Seq[FilterOrId],
     filterChanged: Boolean
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val start = new ju.Date()
 
     val dataSetNameFuture = dsa.dataSetName
@@ -454,10 +455,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
             val viewParts = viewPartsWidgetFutures.map(_._1)
             val jsonsFuture = Future.sequence(viewPartsWidgetFutures.map(_._2)).map { allWidgetsWithFields =>
-              val allWidgets = allWidgetsWithFields.map(_.flatMap(_.map(_._1)))
-              val allFieldNames = allWidgetsWithFields.map(_.flatMap(_.map(_._2)))
+              val allWidgets = allWidgetsWithFields.map(_.map(_.map(_._1)))
               val minMaxWidgets = if (allWidgets.size > 1) setBoxPlotMinMax(allWidgets) else allWidgets
-              minMaxWidgets.zip(allFieldNames).map { case (widgets, fieldNames) =>
+
+              val allFieldNames = allWidgetsWithFields.map(_.flatMap(_.map(_._2)))
+              minMaxWidgets.map(_.flatten).zip(allFieldNames).map { case (widgets, fieldNames) =>
                 widgetsToJsons(widgets.toSeq, fieldNames.toSeq, nameFieldMap)
               }
             }
@@ -689,17 +691,19 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }
 
   private def setBoxPlotMinMax(
-    widgets: Seq[Traversable[Widget]]
-  ): Seq[Traversable[Widget]] = {
+    widgets: Seq[Traversable[Option[Widget]]]
+  ): Seq[Traversable[Option[Widget]]] = {
     val widgetsSeqs = widgets.map(_.toSeq)
     val chartCount = widgets.head.size
 
     def getMinMaxWhiskers[T](index: Int): Option[(T, T)] = {
       val boxWidgets: Seq[BoxWidget[T]] = widgetsSeqs.flatMap { widgets =>
-        widgets(index) match {
-          case x: BoxWidget[T] => Some(x)
-          case _ => None
-        }
+        widgets(index).flatMap(
+          _ match {
+            case x: BoxWidget[T] => Some(x)
+            case _ => None
+          }
+        )
       }
 
       boxWidgets match {
@@ -723,16 +727,17 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         (index, getMinMaxWhiskers[Any](index))
 
     widgetsSeqs.map { widgets =>
-      widgets.zip(indexMinMaxWhiskers).map { case (widget, (index, minMaxWhiskers)) =>
-        minMaxWhiskers match {
-          case Some(minMaxWhiskers) =>
+      widgets.zip(indexMinMaxWhiskers).map { case (widgetOption, (index, minMaxWhiskersOption)) =>
+
+        widgetOption.map { widget =>
+          minMaxWhiskersOption.map { minMaxWhiskers =>
             widget match {
               case x: BoxWidget[_] =>
                 implicit val ordering = x.ordering
                 setMinMax(x, minMaxWhiskers)
               case _ => widget
             }
-          case None => widget
+          }.getOrElse(widget)
         }
       }
     }
@@ -900,7 +905,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     yFieldNameOption: Option[String],
     groupFieldNameOption: Option[String],
     filterOrId: FilterOrId
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     dsa.setting.flatMap { setting =>
       // initialize the x, y, and group field names
       val xFieldName: Option[String] =
@@ -929,7 +934,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     groupFieldName: Option[String],
     filterOrId: FilterOrId,
     setting: DataSetSetting)(
-    implicit request: Request[_]
+    implicit request: AuthenticatedRequest[_]
   ): Future[Result] = {
 
     // auxiliary function to retrieve a field definition
@@ -1012,7 +1017,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldNameOption: Option[String],
     groupFieldNameOption: Option[String],
     filterOrId: FilterOrId
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
 
     val groupFieldName: Option[String] =
       groupFieldNameOption.map { fieldName =>
@@ -1159,7 +1164,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getCorrelations(
     filterOrId: FilterOrId
-  ) = Action.async { implicit request => {
+  ) = AuthAction { implicit request => {
     val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting(request)
     val filterFuture = filterRepo.resolve(filterOrId)
     for {
@@ -1257,7 +1262,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     fieldNameOption: Option[String],
     groupFieldNameOption: Option[String],
     filterOrId: FilterOrId
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     implicit val msg = messagesApi.preferred(request)
 
     // initialize the group name
@@ -1400,7 +1405,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getFractalis(
     fieldNameOption: Option[String]
-  ) = Action.async { implicit request => {
+  ) = AuthAction { implicit request => {
       for {
         // get the data set name, data space tree and the data set setting
         (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
@@ -1449,7 +1454,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def getClusterization = Action.async { implicit request => {
+  override def getClusterization = AuthAction { implicit request => {
     for {
       // get the data set name, data space tree and the data set setting
       (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
@@ -1494,7 +1499,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     filterId: Option[BSONObjectID],
     featuresNormalizationType: Option[VectorTransformType.Value],
     pcaDims: Option[Int]
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
     val explFieldNamesToLoads =
       if (inputFieldNames.nonEmpty)
         (inputFieldNames ++ Seq(JsObjectIdentity.name)).toSet.toSeq
@@ -1587,7 +1592,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   override def getIndependenceTest(
     filterOrId: FilterOrId
-  ) = Action.async { implicit request => {
+  ) = AuthAction { implicit request => {
     val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting(request)
     val filterFuture = filterRepo.resolve(filterOrId)
 
@@ -1806,7 +1811,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
   }
 
-  override def getSeriesProcessingSpec = Action.async { implicit request =>
+  override def getSeriesProcessingSpec = AuthAction { implicit request =>
     for {
       // get the data set name, data space tree and the data set setting
       (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
@@ -1814,7 +1819,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       Ok(dataset.processSeries(dataSetName, seriesProcessingSpecForm, setting.filterShowFieldStyle, tree))
   }
 
-  override def runSeriesProcessing = Action.async { implicit request =>
+  override def runSeriesProcessing = AuthAction { implicit request =>
     seriesProcessingSpecForm.bindFromRequest.fold(
       { formWithErrors =>
         for {
@@ -1833,7 +1838,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     )
   }
 
-  override def getSeriesTransformationSpec = Action.async { implicit request =>
+  override def getSeriesTransformationSpec = AuthAction { implicit request =>
     for {
     // get the data set name, data space tree and the data set setting
       (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
@@ -1841,7 +1846,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       Ok(dataset.transformSeries(dataSetName, seriesTransformationSpecForm, setting.filterShowFieldStyle, tree))
   }
 
-  override def runSeriesTransformation = Action.async { implicit request =>
+  override def runSeriesTransformation = AuthAction { implicit request =>
     seriesTransformationSpecForm.bindFromRequest.fold(
       { formWithErrors =>
         for {
@@ -1894,7 +1899,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param delimiter Delimiter for output file.
     * @return View for download.
     */
-  def exportTranSMARTDataFile(delimiter : String) = Action.async { implicit request =>
+  def exportTranSMARTDataFile(delimiter : String) = AuthAction { implicit request =>
     for {
       setting <- dsa.setting
 
@@ -1913,7 +1918,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @param delimiter Delimiter for output file.
     * @return View for download.
     */
-  def exportTranSMARTMappingFile(delimiter : String) = Action.async { implicit request =>
+  def exportTranSMARTMappingFile(delimiter : String) = AuthAction { implicit request =>
     for {
       setting <- dsa.setting
 

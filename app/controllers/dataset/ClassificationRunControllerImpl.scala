@@ -207,7 +207,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
   // run
 
-  override def create = Action.async { implicit request =>
+  override def create = AuthAction { implicit request =>
     {
       for {
       // get the data set name, data space tree and the data set setting

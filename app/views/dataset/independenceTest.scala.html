@@ -84,10 +84,7 @@
             $('#inputFieldNameDiv').dynamicTable('updateModelFromTable');
             var inputFieldNames = $("#inputFieldNameDiv").dynamicTable('getModel')
 
-            var filterOrId = $("#filterDiv").multiFilter('getJsonFilterId')
-            if (!filterOrId) {
-                filterOrId = $("#filterDiv").multiFilter('getModel')
-            }
+            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel');
             var filterOrIdJson = JSON.stringify(filterOrId)
 
             $('#outputDiv').html("");

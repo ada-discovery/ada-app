@@ -8,7 +8,7 @@
     implicit context: WebContext
 )
 
-@layout.main("Ada Login", None, None, None, None, Some(formErrors("login", form.errors))) {
+@layout.main(title = "Ada Login", extraMessages = Some(formErrors("login", form.errors))) {
 
     <div class="page-header">
         <h1>Login</h1>

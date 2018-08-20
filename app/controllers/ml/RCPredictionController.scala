@@ -8,7 +8,7 @@ import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
 import controllers._
-import controllers.core.WebContext
+import controllers.core.{BaseController, WebContext}
 import models.ml._
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory
@@ -28,12 +28,8 @@ class RCPredictionController @Inject()(
     dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService,
     mPowerWalkingRCPredictionService: RCPredictionService,
-    deadbolt: DeadboltActions,
-    messageRepo: MessageRepo,
-    webJarAssets: WebJarAssets,
-    configuration: Configuration,
-    messagesApi: MessagesApi
-  ) extends Controller {
+    messageRepo: MessageRepo
+  ) extends BaseController {
 
   private val logger = Logger
   private val messageLogger = MessageLogger(logger, messageRepo)
@@ -69,8 +65,6 @@ class RCPredictionController @Inject()(
       "batchSize" -> optional(number(min = 1, max = 200)),
       "preserveWeightFieldNames" -> of[Seq[String]]
     )(RCPredictionSettings.apply)(RCPredictionSettings.unapply))
-
-  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets, configuration)
 
   private val weightRdp = RandomDistributionProviderFactory(RandomDistribution.createNormalDistribution[jl.Double](classOf[jl.Double], 0d, 1d))
 

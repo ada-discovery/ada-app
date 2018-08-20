@@ -2,9 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.AuthenticatedRequest
-import controllers.core.WebContext
-import models.FieldTypeId
+import controllers.core.{AuthAction, BaseController, WebContext}
 import play.api.{Configuration, Logger}
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
@@ -12,27 +10,18 @@ import play.api.libs.json._
 import play.api.mvc._
 import play.api.data.Forms._
 import play.api.data._
-import play.api.i18n.MessagesApi
 import services.MailClientProvider
-import views.html.dataset
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
-import scala.concurrent.duration._
-
-// authentification
 import jp.t2v.lab.play2.auth.LoginLogout
 import models.security._
-import dataaccess.{User => AdaUser}
 import security.AdaAuthConfig
 
 class AuthController @Inject() (
     val userManager: UserManager,
-    mailClientProvider: MailClientProvider,
-    messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets,
-    configuration: Configuration
-  ) extends Controller with LoginLogout with AdaAuthConfig {
+    mailClientProvider: MailClientProvider
+  ) extends BaseController with LoginLogout with AdaAuthConfig {
 
   private val logger = Logger
 
@@ -50,17 +39,13 @@ class AuthController @Inject() (
 //      )
   }
 
-  private implicit def webContext(implicit request: Request[_]) = {
-    implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets, configuration)
-  }
-
   /**
     * Redirect to login page.
     */
-  def login = Action { implicit request =>
-
-    Ok(views.html.auth.login(loginForm))
+  def login = AuthAction { implicit request =>
+    Future(
+      Ok(views.html.auth.login(loginForm))
+    )
   }
 
   /**
@@ -82,10 +67,10 @@ class AuthController @Inject() (
   /**
     * Redirect to logout message page
     */
-  def loggedOut = Action { implicit request =>
-    implicit val authenticatedRequest = new AuthenticatedRequest[AnyContent](request, None)
-
-    Ok(views.html.auth.loggedOut())
+  def loggedOut = AuthAction { implicit request =>
+    Future(
+      Ok(views.html.auth.loggedOut())
+    )
   }
 
   /**
@@ -93,9 +78,7 @@ class AuthController @Inject() (
     *
     * @return Redirect to success page (if successful) or redirect back to login form (if failed).
     */
-  def authenticate = Action.async { implicit request =>
-    implicit val authenticatedRequest = new AuthenticatedRequest[AnyContent](request, None)
-
+  def authenticate = AuthAction { implicit request =>
     render.async {
       case Accepts.Html() =>
         authenticateAux(
@@ -148,24 +131,22 @@ class AuthController @Inject() (
     * TODO: Give more specific error message (e.g. you are supposed to be admin)
     * Redirect user on authorization failure.
     */
-  def unauthorized = Action { implicit request =>
-    implicit val authenticatedRequest = new AuthenticatedRequest[AnyContent](request, None)
-
+  def unauthorized = AuthAction { implicit request =>
     val message = "It appears that you don't have sufficient rights for access. Please login to proceed."
-    Ok(views.html.auth.login(loginForm)).flashing("errors" -> message)
+    Future(Ok(views.html.auth.login(loginForm)).flashing("errors" -> message))
   }
 
   // immediately login as basic user
-  def loginBasic = Action.async{ implicit request =>
-    if(!userManager.debugUsers.isEmpty)
+  def loginBasic = Action.async { implicit request =>
+    if(userManager.debugUsers.nonEmpty)
       gotoLoginSucceeded(userManager.basicUser.ldapDn)
     else
       Future(Redirect(routes.AuthController.unauthorized()))
   }
 
   // immediately login as admin user
-  def loginAdmin = Action.async{ implicit request =>
-    if(!userManager.debugUsers.isEmpty)
+  def loginAdmin = Action.async { implicit request =>
+    if (userManager.debugUsers.nonEmpty)
       gotoLoginSucceeded(userManager.adminUser.ldapDn)
     else
       Future(Redirect(routes.AuthController.unauthorized()))

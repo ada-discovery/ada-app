@@ -49,7 +49,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
 
   // actions
 
-  def create = Action.async { implicit request =>
+  def create = AuthAction { implicit request =>
     getCreateViewData.map(viewData =>
       Ok(createViewWithContext(viewData))
     )
@@ -61,7 +61,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
     *
     * @param id id/ primary key of the object.
     */
-  def edit(id: ID) = Action.async { implicit request =>
+  def edit(id: ID) = AuthAction { implicit request =>
     {
       for {
         // retrieve the item
@@ -94,7 +94,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
 
   def save = save(home)
 
-  protected def save(redirect: Result) = Action.async { implicit request =>
+  protected def save(redirect: Result) = AuthAction { implicit request =>
     formFromRequest.fold(
       { formWithErrors =>
         getFormCreateViewData(formWithErrors).map(viewData =>
@@ -126,7 +126,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
 
   def update(id: ID): Action[AnyContent] = update(id, home)
 
-  protected def update(id: ID, redirect: Result): Action[AnyContent] = Action.async { implicit request =>
+  protected def update(id: ID, redirect: Result): Action[AnyContent] = AuthAction { implicit request =>
     formFromRequest.fold(
       { formWithErrors =>
         getFormEditViewData(id, formWithErrors)(request).map { viewData =>
@@ -155,7 +155,7 @@ protected[controllers] abstract class CrudControllerImpl[E: Format, ID](
 
   protected def updateCall(item: E)(implicit request: Request[AnyContent]): Future[ID] = repo.update(item)
 
-  def delete(id: ID) = Action.async { implicit request =>
+  def delete(id: ID) = AuthAction { implicit request =>
     deleteCall(id).map { _ =>
       render {
         case Accepts.Html() => home.flashing("success" -> s"$entityName '${formatId(id)}' has been deleted")

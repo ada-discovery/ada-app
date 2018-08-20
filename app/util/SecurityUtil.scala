@@ -2,7 +2,7 @@ package util
 
 import java.security.MessageDigest
 
-import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
+import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions, DeadboltHandler, SubjectActionBuilder}
 import controllers.core.WithNoCaching
 import controllers.dataset.ControllerName
 import models.security.SecurityRole
@@ -10,6 +10,7 @@ import play.api.http.{Status => HttpStatus}
 import play.api.mvc.BodyParsers.parse
 import play.api.mvc._
 import play.api.mvc.Results._
+import util.SecurityUtil.AuthenticatedAction
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

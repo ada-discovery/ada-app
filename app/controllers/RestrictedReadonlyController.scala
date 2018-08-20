@@ -57,7 +57,7 @@ trait RestrictedCrudController[ID] extends RestrictedReadonlyController[ID] with
 
 trait AdminRestricted {
 
-  def deadbolt: DeadboltActions
+  protected def deadbolt: DeadboltActions
 
   protected def restrict[A](
     bodyParser: BodyParser[A])(
@@ -74,7 +74,7 @@ trait AdminRestrictedCrudController[ID] extends RestrictedCrudController[ID] wit
 
 trait SubjectPresentRestricted {
 
-  def deadbolt: DeadboltActions
+  protected def deadbolt: DeadboltActions
 
   protected def restrict[A](
     bodyParser: BodyParser[A])(

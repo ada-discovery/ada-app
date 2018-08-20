@@ -2,7 +2,7 @@ package controllers.dataset
 
 import com.google.inject.ImplementedBy
 import persistence.dataset.DataSetAccessorFactory
-import util.ReflectionUtil.findClasses
+import util.ClassFinderUtil.findClasses
 import util.toHumanReadableCamel
 import play.api.inject.Injector
 import javax.inject.{Inject, Singleton}

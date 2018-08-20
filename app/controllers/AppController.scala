@@ -2,8 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
-import controllers.core.{WebContext, WithNoCaching}
+import controllers.core.{AuthAction, BaseController, WebContext, WithNoCaching}
 import models.DataSpaceMetaInfo
 import models.security.UserManager
 import play.api.{Configuration, Logger}
@@ -22,30 +21,18 @@ import scala.concurrent.Future
 class AppController @Inject() (
     dataSpaceService: DataSpaceService,
     val userManager: UserManager,
-    cached: Cached,
-    messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets,
-    configuration: Configuration
-  ) extends Controller with AdaAuthConfig {
-
-  @Inject var deadbolt: DeadboltActions = _
+    cached: Cached
+  ) extends BaseController with AdaAuthConfig {
 
   private val logger = Logger
 
-  private implicit def webContext(implicit request: Request[_]) = {
-    implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets, configuration)
+  def index = AuthAction { implicit request =>
+    Future(Ok(layout.home()))
   }
 
-  def index =
-    Action { implicit request =>
-      Ok(layout.home())
-    }
-
-  def contact =
-    Action { implicit request =>
-      Ok(layout.contact())
-    }
+  def contact = AuthAction { implicit request =>
+    Future(Ok(layout.contact()))
+  }
 
   // TODO: move elsewhere
   def dataSets = restrictSubjectPresentAnyNoCaching(deadbolt) {
@@ -79,12 +66,4 @@ class AppController @Inject() (
     dataSpace.children.foldLeft(1) {
       case (count, dataSpace) => count + countDataSpacesNumRecursively(dataSpace)
     }
-
-  def javascriptRoutes = Action { implicit request =>
-    Ok(
-      JavaScriptReverseRouter("jsRoutes")(
-        routes.javascript.AdminController.listRunnables
-      )
-    ).as("text/javascript")
-  }
 }

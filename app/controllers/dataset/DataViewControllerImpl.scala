@@ -28,7 +28,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import java.util.Date
 
-import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
+import controllers.core.{AuthAction, CrudControllerImpl, HasFormShowEqualEditView, WebContext}
 import services.DataSpaceService
 import views.html.{dataview => view}
 
@@ -295,7 +295,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   }
 
   override def getAndShowView(id: BSONObjectID) =
-    Action.async { implicit request =>
+    AuthAction { implicit request =>
       repo.get(id).flatMap(_.fold(
         Future(NotFound(s"Entity #$id not found"))
       ) { entity =>

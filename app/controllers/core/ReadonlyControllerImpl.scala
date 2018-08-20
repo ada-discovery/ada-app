@@ -3,8 +3,6 @@ package controllers.core
 import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
-import controllers.WebJarAssets
 import dataaccess._
 import models._
 import play.api.{Configuration, Logger}
@@ -32,15 +30,10 @@ trait ReadonlyController[ID] {
  * @param E type of entity
  * @param ID type of identity of entity (primary key)
  */
-protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] extends Controller
+protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] extends BaseController
   with ReadonlyController[ID]
   with HasListView[E]
   with HasShowView[E, ID] {
-
-  @Inject var messagesApi: MessagesApi = _
-  @Inject var deadbolt: DeadboltActions = _
-  @Inject var webJarAssets: WebJarAssets = _
-  @Inject var configuration: Configuration = _
 
   protected val pageLimit = 20
 
@@ -57,21 +50,13 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
 
   protected def formatId(id: ID) = id.toString
 
-//  protected implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi)
-  protected implicit def webContext(implicit request: Request[_]) = {
-    implicit val authenticatedRequest = new AuthenticatedRequest(request, None)
-    WebContext(messagesApi, webJarAssets, configuration)
-  }
-
-  //  protected implicit def authenticatedRequest[A](implicit request: Request[A]) = new AuthenticatedRequest(request, None)
-
   /**
    * Retrieve single object by its Id.
    * NotFound response is generated if key does not exists.
    *
    * @param id id/ primary key of the object.
    */
-  def get(id: ID) = Action.async { implicit request =>
+  def get(id: ID) = AuthAction { implicit request =>
     {
       for {
         // retrieve the item
@@ -110,7 +95,8 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
     page: Int,
     orderBy: String,
     filter: Seq[FilterCondition]
-  ) = Action.async { implicit request =>
+  ) = AuthAction { implicit request =>
+
     {
       for {
         (items, count) <- getFutureItemsAndCount(page, orderBy, filter)
@@ -135,7 +121,7 @@ protected[controllers] abstract class ReadonlyControllerImpl[E: Format, ID] exte
    *
    * @param orderBy Column to be sorted
    */
-  def listAll(orderBy: String) = Action.async { implicit request =>
+  def listAll(orderBy: String) = AuthAction { implicit request =>
     {
       for {
         (items, count) <- getFutureItemsAndCount(None, orderBy, Nil, Nil, None)

@@ -2,17 +2,14 @@ package controllers
 
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
-import controllers.core.{GenericMapping, WebContext}
+import controllers.core.{BaseController, GenericMapping, WebContext}
 import persistence.RepoTypes.MessageRepo
 import play.api.{Configuration, Logger}
-import play.api.i18n.MessagesApi
-import play.api.mvc.{Action, AnyContent, Controller, Request}
 import play.api.Play.current
 import play.api.data.Form
 import runnables.InputRunnable
 import util.MessageLogger
-import util.ReflectionUtil.findClasses
+import util.ClassFinderUtil.findClasses
 import _root_.util.SecurityUtil.restrictAdminAnyNoCaching
 import views.html.{admin => adminviews}
 import java.{util => ju}
@@ -23,22 +20,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class AdminController @Inject() (
-    deadbolt: DeadboltActions,
     messageRepo: MessageRepo,
-    userManager: UserManager,
-    messagesApi: MessagesApi,
-    webJarAssets: WebJarAssets,
-    configuration: Configuration
-  ) extends Controller {
+    userManager: UserManager
+  ) extends BaseController {
 
   private val logger = Logger
   private val messageLogger = MessageLogger(logger, messageRepo)
 
   // we scan only the jars starting with this prefix to speed up the class search
   private val libPrefix = "org.ada"
-
-//  private implicit def webContext(implicit request: Request[_]) = WebContext(messagesApi)
-  private implicit def webContext(implicit request: AuthenticatedRequest[_]) = WebContext(messagesApi, webJarAssets, configuration)(request)
 
   /**
     * Creates view showing all runnables.
