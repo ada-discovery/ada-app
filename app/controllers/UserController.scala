@@ -14,7 +14,7 @@ import services.MailClientProvider
 import views.html.{user => view}
 import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
-import dataaccess.ReflectionUtil.getMethodNames
+import org.incal.core.util.ReflectionUtil.getMethodNames
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

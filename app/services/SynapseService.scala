@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await.result
 import scala.concurrent.duration._
 import models.synapse.JsonFormat._
-import util.ZipFileIterator
+import org.incal.core.util.ZipFileIterator
 import dataaccess.JsonUtil
 import _root_.util.retry
 import akka.util.ByteString

@@ -1,12 +1,10 @@
 package controllers.core
 
 import java.util.concurrent.TimeoutException
-import javax.inject.Inject
 
 import dataaccess._
 import models._
-import play.api.{Configuration, Logger}
-import play.api.i18n.MessagesApi
+import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._

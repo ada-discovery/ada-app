@@ -1,7 +1,7 @@
 package services.stats.calcjsonin
 
 import services.stats.calc._
-import dataaccess.ReflectionUtil.construct2
+import org.incal.core.util.ReflectionUtil.construct2
 import models.AdaException
 import util.ClassFinderUtil.findClasses
 

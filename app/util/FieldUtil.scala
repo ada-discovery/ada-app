@@ -7,7 +7,7 @@ import java.{util => ju}
 
 import dataaccess.Criterion._
 import dataaccess.RepoTypes.FieldRepo
-import dataaccess.{ReflectionUtil => CoreReflectionUtil}
+import org.incal.core.util.ReflectionUtil
 import field.{FieldType, FieldTypeHelper}
 import models.DataSetFormattersAndIds.FieldIdentity
 import reactivemongo.bson.BSONObjectID
@@ -54,7 +54,7 @@ object FieldUtil {
     excludedFieldSet: Set[String] = Set(),
     treatEnumAsString: Boolean = false
   ): Traversable[(String, FieldTypeSpec)] = {
-    val memberNamesAndTypes = CoreReflectionUtil.getCaseClassMemberNamesAndTypes(typ).filter(x => !excludedFieldSet.contains(x._1))
+    val memberNamesAndTypes = ReflectionUtil.getCaseClassMemberNamesAndTypes(typ).filter(x => !excludedFieldSet.contains(x._1))
 
     memberNamesAndTypes.map { case (fieldName, memberType) =>
       try {
@@ -149,8 +149,8 @@ object FieldUtil {
 
   private def getJavaEnumOrdinalValues[E <: Enum[E]](typ: Type): Map[Int, String] = {
     val enumType = unwrapIfOption(typ)
-    val clazz = CoreReflectionUtil.typeToClass(enumType).asInstanceOf[Class[E]]
-    val enumValues = CoreReflectionUtil.javaEnumOrdinalValues(clazz)
+    val clazz = ReflectionUtil.typeToClass(enumType).asInstanceOf[Class[E]]
+    val enumValues = ReflectionUtil.javaEnumOrdinalValues(clazz)
     enumValues.map { case (ordinal, value) => (ordinal, value.toString) }
   }
 

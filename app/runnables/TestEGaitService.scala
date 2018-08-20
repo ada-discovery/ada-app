@@ -7,11 +7,10 @@ import services.EGaitServiceFactory
 import scala.concurrent.Await.result
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.{Configuration, Play}
-import util.ZipFileIterator
+import org.incal.core.util.ZipFileIterator
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.xml.XML
 
 class TestEGaitService @Inject() (
     configuration: Configuration,

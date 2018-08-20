@@ -2,14 +2,13 @@ package controllers.mpower
 
 import javax.inject.Inject
 
-import controllers.core.{AuthAction, BaseController, WebContext}
+import controllers.core.{AuthAction, BaseController}
 import dataaccess.JsonRepoExtra._
 import dataaccess.Criterion._
 import models._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.{Configuration, Logger}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{Action, AnyContent, Controller, Request}
 import services.WidgetGenerationService
 import views.html.mpowerchallenge.clustering
 

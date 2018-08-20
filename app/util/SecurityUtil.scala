@@ -10,7 +10,6 @@ import play.api.http.{Status => HttpStatus}
 import play.api.mvc.BodyParsers.parse
 import play.api.mvc._
 import play.api.mvc.Results._
-import util.SecurityUtil.AuthenticatedAction
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

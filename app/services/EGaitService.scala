@@ -16,7 +16,7 @@ import play.api.libs.ws.ning.NingWSClient
 import org.apache.commons.codec.binary.{Base64, Hex}
 import org.asynchttpclient.DefaultAsyncHttpClientConfig
 import play.api.libs.ws.ahc.{AhcConfigBuilder, AhcWSClient}
-import util.ZipFileIterator
+import org.incal.core.util.ZipFileIterator
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -49,15 +49,5 @@ object WebExportUtil {
       header = ResponseHeader(200, Map(CONTENT_DISPOSITION -> s"attachment; filename=${filename}")),
       body = HttpEntity.Streamed(source, None, Some("application/x-download")) // source.via(Compression.gzip) Some(content.length)
     )
-
-//    Result(
-//      header = ResponseHeader(200, Map(
-//        CONTENT_TYPE -> "application/x-download",
-//        // TODO: an explicit setting of the content length sometimes shrinks the file by a few characters
-// //       CONTENT_LENGTH -> content.length.toString,
-//        CONTENT_DISPOSITION -> s"attachment; filename=${filename}")
-//      ),
-//      body = fileContent
-//    )
   }
 }
