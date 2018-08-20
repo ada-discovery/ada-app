@@ -9,7 +9,7 @@ name := "ada-web"
 
 version := "0.7.0"
 
-scalaVersion := "2.11.11"
+scalaVersion := "2.11.12"
 
 Play2WarPlugin.play2WarSettings
 
@@ -83,7 +83,8 @@ libraryDependencies ++= Seq(
 //  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze visualization
 //  "com.banda" % "incal" % "0.1.6" exclude("org.springframework", "spring-context") exclude("org.springframework", "spring-test") exclude("org.springframework", "spring-web") exclude("org.springframework", "spring-webmvc"),
   "com.banda.network" % "banda-network-business" % "0.5.6.1",
-  //  "org.scalatra.scalate" %% "scalate-core" % "1.8.0"
+  "org.incal" %% "incal-core" % "0.0.1",
+//  "org.scalatra.scalate" %% "scalate-core" % "1.8.0"
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12" ))
 

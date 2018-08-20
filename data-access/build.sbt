@@ -4,7 +4,7 @@ name := "ada-dataaccess"
 
 version := "0.7.0"
 
-scalaVersion := "2.11.11"
+scalaVersion := "2.11.12"
 
 isSnapshot := true
 
@@ -28,5 +28,6 @@ libraryDependencies ++= Seq(
   "org.apache.ignite" % "ignite-indexing" % "1.6.0",
   "org.apache.ignite" % "ignite-scalar" % "1.6.0",
   "org.scalactic" %% "scalactic" % "3.0.0",
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
+  "org.incal" %% "incal-core" % "0.0.1"
 )
