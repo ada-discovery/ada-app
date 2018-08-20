@@ -3,7 +3,6 @@ package dataaccess
 import java.lang.reflect.InvocationTargetException
 
 import dataaccess.ReflectionUtil._
-import play.api.Logger
 import java.{lang => jl}
 
 import scala.collection.Traversable
@@ -221,8 +220,6 @@ private class DynamicConstructorImpl[E](
     typeValueConverters: Traversable[(ru.Type, Any => Any)]
   ) extends DynamicConstructor[E] {
 
-  private val logger = Logger
-
   private lazy val fieldConstructorIndeces = {
     val paramNameIndexMap = paramNameAndTypes.map(_._1).zipWithIndex.toMap
     fieldNames.map(paramNameIndexMap.get(_).get)
@@ -258,7 +255,7 @@ private class DynamicConstructorImpl[E](
       )
     } catch {
       case e: Exception => {
-        logger.error(s"Dynamic constructor of ${reflectedClass.fullName} invocation failed.", e)
+//        logger.error(s"Dynamic constructor of ${reflectedClass.fullName} invocation failed.", e)
         None
       }
     }
