@@ -6,29 +6,33 @@ import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
-import controllers.{DataSetWebContext, EnumFormatter, JsonFormatter}
 import dataaccess.RepoTypes.UserRepo
 import dataaccess._
 import models._
 import models.DataSetFormattersAndIds._
 import models.json.EitherFormat
-import models.FilterCondition.{FilterIdentity, filterFormat}
-import models.security.{SecurityRole, UserManager}
-import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
-import dataaccess.Criterion._
+import models.Filter.{FilterIdentity, filterConditionFormat, filterFormat}
+import models.security.UserManager
+import org.incal.core.dataaccess.Criterion._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.i18n.Messages
 import play.api.libs.json.{JsArray, Json}
-import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
+import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import java.util.Date
 
-import controllers.core.{AuthAction, CrudControllerImpl, HasFormShowEqualEditView, WebContext}
+import controllers.core.AdaCrudControllerImpl
+import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.Criterion
+import org.incal.play.Page
+import org.incal.play.controllers.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
+import org.incal.play.formatters._
+import org.incal.play.security.AuthAction
+import org.incal.play.security.SecurityRole
 import services.DataSpaceService
 import views.html.{dataview => view}
 
@@ -45,7 +49,8 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     dataSpaceService: DataSpaceService,
     userRepo: UserRepo,
     val userManager: UserManager
-  ) extends CrudControllerImpl[DataView, BSONObjectID](dsaf(dataSetId).get.dataViewRepo)
+
+  ) extends AdaCrudControllerImpl[DataView, BSONObjectID](dsaf(dataSetId).get.dataViewRepo)
 
     with DataViewController
     with AdaAuthConfig
@@ -61,15 +66,15 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   override protected def formatId(id: BSONObjectID) = id.stringify
 
   private implicit val widgetSpecFormatter = JsonFormatter[WidgetSpec]
-  private implicit val eitherFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
-  private implicit val eitherFormatter = JsonFormatter[Either[Seq[models.FilterCondition], BSONObjectID]]
+  private implicit val eitherFormat = EitherFormat[Seq[FilterCondition], BSONObjectID]
+  private implicit val eitherFormatter = JsonFormatter[Either[Seq[FilterCondition], BSONObjectID]]
   private implicit val widgetGenerationMethodFormatter = EnumFormatter(WidgetGenerationMethod)
 
   override protected[controllers] val form = Form(
     mapping(
       "id" -> ignored(Option.empty[BSONObjectID]),
       "name" -> nonEmptyText,
-      "filterOrIds" -> seq(of[Either[Seq[models.FilterCondition], BSONObjectID]]),
+      "filterOrIds" -> seq(of[Either[Seq[FilterCondition], BSONObjectID]]),
       "tableColumnNames" -> seq(text),
       "widgetSpecs" -> seq(of[WidgetSpec]),
       "elementGridWidth" -> default(number(min = 1, max = 12), 3),
@@ -89,8 +94,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
-  override protected lazy val home =
-    Redirect(router.plainList)
+  override protected val homeCall = router.plainList
 
   // create view and data
 
@@ -102,7 +106,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     } yield
       (dataSetName + " Data View", form)
 
-  override protected[controllers] def createView = { implicit ctx =>
+  override protected def createView = { implicit ctx =>
     (view.create(_, _)).tupled
   }
 
@@ -159,7 +163,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
     }
   }
 
-  override protected[controllers] def editView = { implicit ctx =>
+  override protected def editView = { implicit ctx =>
     (view.editNormal(_, _, _, _, _, _)).tupled
   }
 
@@ -168,11 +172,13 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   override protected type ListViewData = (
     String,
     Page[DataView],
+    Seq[FilterCondition],
     Traversable[DataSpaceMetaInfo]
   )
 
   override protected def getListViewData(
-    page: Page[DataView]
+    page: Page[DataView],
+    conditions: Seq[FilterCondition]
   ) = { request =>
     val setCreatedByFuture = DataViewRepo.setCreatedBy(userRepo, page.items)
     val dataSpaceTreeFuture = dataSpaceService.getTreeForCurrentUser(request)
@@ -183,11 +189,11 @@ protected[controllers] class DataViewControllerImpl @Inject() (
       tree <- dataSpaceTreeFuture
       dataSetName <- dataSetNameFuture
     } yield
-      (dataSetName + " Data View", page, tree)
+      (dataSetName + " Data View", page, conditions, tree)
   }
 
-  override protected[controllers] def listView = { implicit ctx =>
-    (view.list(_, _, _)).tupled
+  override protected def listView = { implicit ctx =>
+    (view.list(_, _, _, _)).tupled
   }
 
   // actions
@@ -324,7 +330,10 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override def updateAndShowView(id: BSONObjectID) =
     Action.async { implicit request =>
-      update(id, Redirect(dataSetRouter.getView(id, Nil, Nil, false))).apply(request)
+      update(
+        id,
+        {_ => Redirect(dataSetRouter.getView(id, Nil, Nil, false))}
+      ).apply(request)
     }
 
   override def copy(id: BSONObjectID) =
@@ -510,7 +519,7 @@ protected[controllers] class DataViewControllerImpl @Inject() (
 
   override def saveFilter(
     dataViewId: BSONObjectID,
-    filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]]
+    filterOrIds: Seq[Either[Seq[FilterCondition], BSONObjectID]]
   ) = processDataView(dataViewId) { dataView =>
     val newDataView = dataView.copy(filterOrIds = filterOrIds)
     repo.update(newDataView)

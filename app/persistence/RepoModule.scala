@@ -90,7 +90,7 @@ private object RepoDef extends Enumeration {
 class RepoModule extends ScalaModule {
 
   import models.DataSetFormattersAndIds.{serializableDataSetSettingFormat, serializableDataSpaceMetaInfoFormat, serializableBSONObjectIDFormat, DataSetSettingIdentity}
-  import dataaccess.User.{serializableUserFormat, UserIdentity}
+  import models.User.{serializableUserFormat, UserIdentity}
 
   def configure = {
 

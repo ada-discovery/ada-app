@@ -2,8 +2,8 @@
 @import views.html.table.{displayTable, paginatedTable}
 @import util.typeColumns
 @import models.security.LdapUser
-@import controllers.core.WebContext._
-@import controllers.core.WebContext
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
 
 @(items: Traversable[LdapUser])(implicit context: WebContext)
 

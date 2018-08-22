@@ -1,6 +1,6 @@
 package services.widgetgen
 
-import dataaccess.Criterion
+import org.incal.core.dataaccess.Criterion
 import field.{FieldType, FieldTypeHelper}
 import models._
 import services.stats.calc.{GroupCumulativeOrderedCountsCalcTypePack, _}

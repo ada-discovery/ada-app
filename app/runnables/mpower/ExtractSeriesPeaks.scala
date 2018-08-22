@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
 import runnables.{FutureRunnable, InputFutureRunnable}

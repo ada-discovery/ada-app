@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import models.FieldTypeId
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import play.api.Configuration
 
 import scala.concurrent.Future

@@ -1,14 +1,14 @@
 @import views.html.chart.highcharts.highchartsJsImport
-@import views.html.widget.{widgetJs, widget}
+@import views.html.widget.{widget, widgetJs}
 @import views.html.layout.main
 @import views.html.dataset.datasetSubNavWithJs
 @import views.html.dataset.dataSetFilterWithJs
 @import views.html.dataview.dataViewSelectionModal
 @import play.api.libs.json.Json
-@import models.{DataSpaceMetaInfo, FieldTypeId, Field}
-@import models.FilterConditionExtraFormats.eitherFilterOrIdFormat
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import models.{DataSpaceMetaInfo, Field, FieldTypeId}
+@import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
 
 @(
     domainName: String,

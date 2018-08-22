@@ -2,25 +2,25 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.{AdminRestrictedCrudController, SubjectPresentRestrictedCrudController}
 import models._
 import DataSetFormattersAndIds._
-import controllers.core.{CrudControllerImpl, HasBasicFormCreateView, HasBasicListView}
+import controllers.core.AdaCrudControllerImpl
 import dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
-import play.api.data.Form
 import play.api.data.Forms._
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import reactivemongo.bson.BSONObjectID
-import util.SecurityUtil._
+import org.incal.play.security.SecurityUtil._
 import views.html.{dataspace => view}
 import play.api.data.Form
 
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import controllers.dataset.routes.javascript.{DataSpaceMetaInfoController => dataSpaceMetaInfoJsRoutes}
-import dataaccess.{DataSetMetaInfoRepoFactory, User}
+import dataaccess.DataSetMetaInfoRepoFactory
+import models.User
+import org.incal.play.controllers.{CrudControllerImpl, HasBasicFormCreateView, HasBasicListView, SubjectPresentRestrictedCrudController}
 import services.DataSpaceService
 
 class DataSpaceMetaInfoController @Inject() (
@@ -29,7 +29,8 @@ class DataSpaceMetaInfoController @Inject() (
     dataSetSettingRepo: DataSetSettingRepo,
     dataSpaceService: DataSpaceService,
     dataSetMetaInfoRepoFactory: DataSetMetaInfoRepoFactory
-  ) extends CrudControllerImpl[DataSpaceMetaInfo, BSONObjectID](repo)
+
+  ) extends AdaCrudControllerImpl[DataSpaceMetaInfo, BSONObjectID](repo)
     with SubjectPresentRestrictedCrudController[BSONObjectID]
     with HasBasicFormCreateView[DataSpaceMetaInfo]
     with HasBasicListView[DataSpaceMetaInfo] {
@@ -46,8 +47,7 @@ class DataSpaceMetaInfoController @Inject() (
         Some((item._id, item.name, item.sortOrder, item.timeCreated, item.dataSetMetaInfos))
   ))
 
-  override protected val home =
-    Redirect(routes.DataSpaceMetaInfoController.find())
+  override protected val homeCall = routes.DataSpaceMetaInfoController.find()
 
   // create view
 
@@ -68,7 +68,7 @@ class DataSpaceMetaInfoController @Inject() (
     }
   }
 
-  override protected[controllers] def showView = { implicit ctx =>
+  override protected def showView = { implicit ctx =>
     (view.show(_, _, _)).tupled
   }
 
@@ -124,7 +124,9 @@ class DataSpaceMetaInfoController @Inject() (
 
   // list view
 
-  override protected[controllers] def listView = { implicit ctx => view.list(_) }
+  override protected[controllers] def listView = { implicit ctx =>
+    (view.list(_, _)).tupled
+  }
 
   override protected def updateCall(item: DataSpaceMetaInfo)(implicit request: Request[AnyContent]) =
     for {
@@ -178,7 +180,7 @@ class DataSpaceMetaInfoController @Inject() (
   // if update successful redirect to get/show instead of list
   override def update(id: BSONObjectID) = restrictAdminAnyNoCaching(deadbolt) (
     toAuthenticatedAction(
-      update(id, Redirect(routes.DataSpaceMetaInfoController.get(id)))
+      update(id, _ => Redirect(routes.DataSpaceMetaInfoController.get(id)))
     )
   )
 

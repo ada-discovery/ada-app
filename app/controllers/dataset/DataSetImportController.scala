@@ -26,16 +26,21 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import java.io.{File, FileInputStream, FileOutputStream}
 
-import controllers.core._
-import dataaccess.AscSort
 import services.{DataSetImportScheduler, DataSetService, DataSpaceService}
-import util.SecurityUtil.restrictAdminAnyNoCaching
+import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 import views.html.{datasetimport => view}
 import views.html.layout
-import util.{MessageLogger, getRequestParamValue}
+import util.MessageLogger
 import play.api.data.format.Formats._
 import _root_.util.retry
+import controllers.core.AdaCrudControllerImpl
 import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.AscSort
+import org.incal.play.Page
+import org.incal.play.controllers._
+import org.incal.play.formatters._
+import org.incal.play.util.WebUtil.getRequestParamValue
 
 import scala.concurrent.{Await, Future}
 
@@ -46,7 +51,8 @@ class DataSetImportController @Inject()(
     dataSetImportScheduler: DataSetImportScheduler,
     dataSpaceService: DataSpaceService,
     messageRepo: MessageRepo
-  ) extends CrudControllerImpl[DataSetImport, BSONObjectID](repo)
+
+  ) extends AdaCrudControllerImpl[DataSetImport, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
     with HasCreateEditSubTypeFormViews[DataSetImport, BSONObjectID]
     with HasFormShowEqualEditView[DataSetImport, BSONObjectID] {
@@ -264,7 +270,7 @@ class DataSetImportController @Inject()(
     override protected[controllers] def fillForm(item: E) =
       form.fill(item)
 
-    override protected[controllers] def createView = { implicit ctx: WebContext =>
+    override protected def createView = { implicit ctx: WebContext =>
       form: Form[E] =>
         layout.create(
           name,
@@ -276,7 +282,7 @@ class DataSetImportController @Inject()(
         )
     }
 
-    override protected[controllers] def editView = { implicit ctx: WebContext =>
+    override protected def editView = { implicit ctx: WebContext =>
       data: IdForm[BSONObjectID, E] =>
         layout.edit(
           name,
@@ -333,33 +339,34 @@ class DataSetImportController @Inject()(
     )
 
   // default form... unused
-  override protected[controllers] val form = csvForm.asInstanceOf[Form[DataSetImport]]
+  override protected val form = csvForm.asInstanceOf[Form[DataSetImport]]
 
-  override protected val home =
-    Redirect(routes.DataSetImportController.find())
+  override protected val homeCall = routes.DataSetImportController.find()
 
-  override protected type ListViewData = (Page[DataSetImport], Traversable[DataSpaceMetaInfo])
+  override protected type ListViewData = (
+    Page[DataSetImport],
+    Seq[FilterCondition],
+    Traversable[DataSpaceMetaInfo]
+  )
 
   override protected def getListViewData(
-    page: Page[DataSetImport]
+    page: Page[DataSetImport],
+    conditions: Seq[FilterCondition]
   ) = { request =>
     for {
       tree <- dataSpaceService.getTreeForCurrentUser(request)
     } yield
-      (page, tree)
+      (page, conditions, tree)
   }
 
-  override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled}
+  override protected def listView = { implicit ctx => (view.list(_, _, _)).tupled}
 
   def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
 
-      def createAux[E <: DataSetImport](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =
-        x.getCreateViewData.map { viewData =>
-          Ok(x.createView(implicitly[WebContext])(viewData))
-        }
-
-      createAux(getFormWithViews(concreteClassName))
+      getFormWithViews(concreteClassName)
+        .createViewWithContextX(implicitly[WebContext])
+        .map(Ok(_))
   }
 
   def execute(id: BSONObjectID) = restrictAdminAnyNoCaching(deadbolt) {
@@ -368,29 +375,28 @@ class DataSetImportController @Inject()(
         Future(NotFound(s"Data set import #$id not found"))
       ) { importInfo =>
           val start = new Date()
+
           implicit val msg = messagesApi.preferred(request)
-          def errorRedirect(errorMessage: String, error: Option[Exception] = None) = {
-            val fullMessage = s"Data set '${importInfo.dataSetName}' import failed. $errorMessage"
-            if (error.isDefined)
-              logger.error(fullMessage, error.get)
-            else
-              logger.error(fullMessage)
-            home.flashing("errors" -> fullMessage)
-          }
-          val successRedirect = home// Redirect(new DataSetRouter(importInfo.dataSetId).plainOverviewList)
+          val errorMessage = s"Data set '${importInfo.dataSetName}' import failed"
+
           retry(s"Data set '${importInfo.dataSetName}' import failed: ", logger, importRetryNum)(
             dataSetImporterCentral(importInfo)
           ).map { _ =>
             val execTimeSec = (new Date().getTime - start.getTime) / 1000
 //            messageLogger.info()
             render {
-              case Accepts.Html() => successRedirect.flashing("success" -> s"Data set '${importInfo.dataSetName}' has been imported in $execTimeSec sec(s).")
+              case Accepts.Html() => referrerOrHome().flashing("success" -> s"Data set '${importInfo.dataSetName}' has been imported in $execTimeSec sec(s).")
               case Accepts.Json() => Created(Json.obj("message" -> s"Data set has been imported in $execTimeSec sec(s)", "name" -> importInfo.dataSetName))
             }
           }.recover {
-            case e: AdaParseException => errorRedirect(s"Parsing problem occurred. ${e.getMessage}")
-            case e: AdaException => errorRedirect(e.getMessage, Some(e))
-            case e: Exception => errorRedirect(s"Fatal problem detected. ${e.getMessage}. Contact your admin.", Some(e))
+            case e: AdaParseException =>
+              handleBusinessException(s"$errorMessage. Parsing problem occurred. ${e.getMessage}", e)
+
+            case e: AdaException =>
+              handleBusinessException(s"$errorMessage. ${e.getMessage}", e)
+
+            case e: Exception =>
+              handleBusinessException(s"$errorMessage. Fatal problem detected. ${e.getMessage}. Contact your admin.", e)
           }
         }
       )

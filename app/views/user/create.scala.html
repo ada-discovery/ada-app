@@ -1,9 +1,8 @@
 @import views.html.layout
 @import views.html.user.elements
-@import models.DataSpaceMetaInfo
-@import dataaccess.User
-@import controllers.core.WebContext._
-@import controllers.core.WebContext
+@import models.{DataSpaceMetaInfo, User}
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
 
 @(
 	form: Form[User],

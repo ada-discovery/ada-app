@@ -3,7 +3,7 @@ package runnables
 import com.google.inject.Inject
 import models.{RedCapDataSetImport, CsvDataSetImport}
 import persistence.RepoTypes._
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 

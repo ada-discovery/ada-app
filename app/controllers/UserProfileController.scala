@@ -2,29 +2,24 @@ package controllers
 
 import java.util.concurrent.TimeoutException
 
-import dataaccess.{Criterion, RepoException, User}
-import models.workspace.Workspace
-import Criterion.Infix
+import dataaccess.AdaDataAccessException
 import persistence.RepoTypes.UserSettingsRepo
-import play.api.{Configuration, Logger}
+import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json.Json
-import play.api.mvc.{Action, Controller, Request}
-import play.api.i18n.MessagesApi
 import play.api.i18n.Messages.Implicits._
 import views.html.{userprofile => views}
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
 import javax.inject.Inject
 
 import models.security.{DeadboltUser, UserManager}
-import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
-import controllers.core.{BaseController, WebContext}
+import models.User
+import org.incal.play.controllers.BaseController
 import reactivemongo.bson.BSONObjectID
-import util.SecurityUtil.restrictSubjectPresentAnyNoCaching
+import org.incal.play.security.SecurityUtil.restrictSubjectPresentAnyNoCaching
 
 class UserProfileController @Inject() (
     workspaceRepo: UserSettingsRepo,
@@ -89,7 +84,7 @@ class UserProfileController @Inject() (
               case t: TimeoutException =>
                 Logger.error("Problem found in the update process")
                 InternalServerError(t.getMessage)
-              case i: RepoException =>
+              case i: AdaDataAccessException =>
                 Logger.error("Problem found in the update process")
                 InternalServerError(i.getMessage)
             }

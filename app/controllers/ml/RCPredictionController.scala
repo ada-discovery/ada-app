@@ -3,24 +3,22 @@ package controllers.ml
 import java.{lang => jl}
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
 import com.banda.math.business.rand.RandomDistributionProviderFactory
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.ActivationFunctionType
-import controllers._
-import controllers.core.{BaseController, WebContext}
 import models.ml._
 import persistence.RepoTypes.MessageRepo
 import persistence.dataset.DataSetAccessorFactory
 import play.api.{Configuration, Logger}
 import play.api.data.Form
 import play.api.data.Forms.{mapping, _}
-import play.api.i18n.MessagesApi
-import play.api.mvc.{Action, AnyContent, Controller, Request}
+import org.incal.play.controllers._
+import org.incal.play.formatters._
+import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
+
 import services.DataSpaceService
 import services.ml.RCPredictionService
 import util.MessageLogger
-import util.SecurityUtil.restrictAdminAnyNoCaching
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

@@ -8,7 +8,7 @@ import runnables.InputFutureRunnable
 import services.DataSetService
 import dataaccess.RepoTypes.JsonCrudRepo
 import dataaccess.JsonRepoExtra._
-import dataaccess.Criterion._
+import org.incal.core.dataaccess.Criterion._
 import models.AdaException
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import dataaccess.ignite.BinaryJsonUtil.getValueFromJson

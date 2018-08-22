@@ -2,11 +2,11 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.SecureControllerDispatcher
-import models.FilterCondition
-import models.security.SecurityRole
+import org.incal.play.controllers.SecureControllerDispatcher
+import org.incal.core.FilterCondition
+import org.incal.play.security.SecurityRole
 import reactivemongo.bson.BSONObjectID
-import util.SecurityUtil.createDataSetPermission
+import models.security.DataSetPermission
 
 class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: CategoryControllerFactory)
   extends SecureControllerDispatcher[CategoryController]("dataSet") with CategoryController {
@@ -24,7 +24,7 @@ class CategoryDispatcher @Inject()(dscf: DataSetControllerFactory, ccf: Category
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, ControllerName.category, actionName))
+  ) = Some(DataSetPermission(controllerId, ControllerName.category, actionName))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

@@ -2,15 +2,13 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import controllers.core.{AuthAction, BaseController, WebContext}
-import play.api.Configuration
-import play.api.i18n.MessagesApi
-import play.api.mvc.{Action, Controller, Request}
+import org.incal.play.controllers.{BaseController, WebContext}
+import org.incal.play.security.AuthAction
 import play.twirl.api.Html
 import views.html.documentation
 import play.api.cache.Cached
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class DocumentationController @Inject() (cached: Cached) extends BaseController {

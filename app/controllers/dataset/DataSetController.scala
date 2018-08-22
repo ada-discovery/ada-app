@@ -1,16 +1,13 @@
 package controllers.dataset
 
-import controllers.core.{CrudController, ReadonlyController}
-import models.FilterCondition.FilterOrId
+import models.Filter.FilterOrId
 import models.ml.VectorTransformType
-import models.{FieldTypeId, FilterCondition, PageOrder}
-import play.api.libs.json.JsArray
+import models.FieldTypeId
+import org.incal.play.PageOrder
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
-import models.ml.RegressionEvalMetric
-import views.html.dataset
-
-import scala.concurrent.Future
+import org.incal.core.FilterCondition
+import org.incal.play.controllers.ReadonlyController
 
 trait DataSetController extends ReadonlyController[BSONObjectID] {
 

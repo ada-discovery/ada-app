@@ -2,11 +2,11 @@
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.elements._
-@import views.html.dataset.{mlElements, inputFieldAndFilterResources, datasetSubNavWithJs}
+@import views.html.dataset.{datasetSubNavWithJs, inputFieldAndFilterResources, mlElements}
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
 
 @(
     dataSetName: String,

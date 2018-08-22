@@ -3,8 +3,7 @@ package runnables
 import java.{util => ju}
 import javax.inject.Inject
 
-import dataaccess.Criterion.Infix
-import dataaccess.NotEqualsNullCriterion
+import org.incal.core.dataaccess.Criterion.Infix
 import field.FieldTypeHelper
 import models._
 import persistence.dataset.DataSetAccessorFactory

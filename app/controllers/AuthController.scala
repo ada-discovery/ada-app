@@ -2,7 +2,6 @@ package controllers
 
 import javax.inject.Inject
 
-import controllers.core.{AuthAction, BaseController, WebContext}
 import play.api.{Configuration, Logger}
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
@@ -16,6 +15,8 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
 import jp.t2v.lab.play2.auth.LoginLogout
 import models.security._
+import org.incal.play.controllers.BaseController
+import org.incal.play.security.AuthAction
 import security.AdaAuthConfig
 
 class AuthController @Inject() (

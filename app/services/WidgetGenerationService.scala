@@ -4,12 +4,12 @@ import javax.inject.{Inject, Singleton}
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer}
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink}
 import com.google.inject.ImplementedBy
-import dataaccess.{Criterion}
 import dataaccess.RepoTypes.JsonReadonlyRepo
 import models._
+import org.incal.core.dataaccess.Criterion
 import play.api.{Configuration, Logger}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID

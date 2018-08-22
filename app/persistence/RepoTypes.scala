@@ -1,16 +1,12 @@
 package persistence
 
-import dataaccess._
 import models._
-import dataaccess.User
 import models.workspace.Workspace
-import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
-import dataaccess.mongo.MongoAsyncCrudExtraRepo
-import models.ml.RegressionResult
 import models.ml.classification.Classification
 import models.ml.regression.Regression
 import models.ml.unsupervised.UnsupervisedLearning
+import org.incal.core.dataaccess.{AsyncCrudRepo, AsyncStreamRepo}
 
 /**
  * Common repo type shortcuts

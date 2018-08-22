@@ -10,7 +10,7 @@ import models.DataSetFormattersAndIds.FieldIdentity
 import models.{Field, FieldTypeId}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import dataaccess.Criterion._
+import org.incal.core.dataaccess.Criterion._
 
 import scala.concurrent.Future
 

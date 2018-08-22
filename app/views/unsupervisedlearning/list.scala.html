@@ -5,12 +5,16 @@
 @import controllers.ml.routes.{UnsupervisedLearningController => route}
 @import util.{formatTimeElement, toHumanReadableCamel, typeColumns}
 @import models.{DataSpaceMetaInfo, Field}
-@import controllers.core.WebContext._
-@import controllers.core.WebContext
+@import models.Filter
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
 @import models.ml.unsupervised._
+@import org.incal.play.Page
+@import org.incal.core.FilterCondition
 
 @(
     page: Page[UnsupervisedLearning],
+    conditions: Seq[FilterCondition],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit webContext: WebContext
@@ -28,7 +32,7 @@
     <div class="row">
         <div class="col-md-10">
             @filterWithJs(
-                page.filter,
+                Filter(conditions),
                 route.find(),
                 Left(Seq(
                     Field("name", Some("Name"))
@@ -55,7 +59,7 @@
 @table = @{
     paginatedTable(
         page,
-        route.find(_, _, page.filterConditions),
+        route.find(_, _, conditions),
         typeColumns[UnsupervisedLearning](
             (Some("concreteClass"), "Type", {x => toHumanReadableCamel(x.getClass.getSimpleName)}),
             (Some("name"), "Name", _.name.getOrElse("")),

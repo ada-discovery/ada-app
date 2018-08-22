@@ -3,7 +3,7 @@ package runnables.luxpark
 import javax.inject.Inject
 
 import field.FieldTypeHelper
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import dataaccess.RepoTypes.FieldRepo
 import models.DataSetFormattersAndIds.FieldIdentity
 import models._

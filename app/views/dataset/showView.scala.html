@@ -1,16 +1,15 @@
 @import views.html.layout
-@import views.html.dataset.{datasetSubNav, datasetSubNavJs, datasetMenu, dataSetFilterValuesUpdate}
-@import views.html.widget.{widgetPanelJs, widgetPanelAjaxLoadJs}
+@import views.html.dataset.{dataSetFilterValuesUpdate, datasetMenu, datasetSubNav, datasetSubNavJs}
+@import views.html.widget.{widgetPanelAjaxLoadJs, widgetPanelJs}
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
 @import views.html.dataset.{viewTables, viewTablesJs}
 @import views.html.dataset.exportDataSetDropdown
 @import views.html.filter.{filter, filterJs}
 @import reactivemongo.bson.BSONObjectID
 @import models.DataSpaceMetaInfo
-@import models.FilterConditionExtraFormats.eitherFilterOrIdFormat
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
-@import controllers.dataset.TableViewData
+@import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.{DataSetWebContext, TableViewData}
 @import play.api.libs.json.Json
 
 @(
@@ -67,7 +66,7 @@
 }
 
 @inputFilterConditionsOrIds = @{
-    tableViewParts.map(_.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil)))
+    tableViewParts.map(_.filter.map(_.conditionsOrId).getOrElse(Left(Nil)))
 }
 
 @exportMenu(filterId: String) = @{
@@ -123,8 +122,8 @@
 
 @viewFilter(viewPart: TableViewData, index: Int) = {
     @filter(
-        viewPart.page.filter,
-        Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(viewPart.page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))))),
+        viewPart.filter,
+        Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(viewPart.filter.map(_.conditionsOrId).getOrElse(Left(Nil))))),
         filterShowFieldStyle,
         Some(filterJsRouter),
         Some(filterRouter.idAndNamesAccessible),
@@ -134,7 +133,7 @@
 
 @viewFilterJs(viewPart: TableViewData, index: Int) = {
     @filterJs(
-        viewPart.page.filter,
+        viewPart.filter,
         dataSetRouter.getViewElementsAndWidgetCallback(dataViewId, viewPart.page.orderBy, Left(Nil), None),
         Right(dataSetRouter.allFieldNamesAndLabels),
         Some(filterJsRouter),

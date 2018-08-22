@@ -2,17 +2,20 @@ package controllers
 
 import javax.inject.Inject
 
-import controllers.core._
-import models.{Translation}
+import controllers.core.AdaCrudControllerImpl
+import models.Translation
+import models.Translation._
+import org.incal.play.controllers.{AdminRestrictedCrudController, CrudControllerImpl, HasBasicFormCrudViews}
 import persistence.RepoTypes._
 import play.api.data.Form
 import play.api.data.Forms.{ignored, mapping, nonEmptyText}
+import play.api.mvc.{Request, Result}
 import reactivemongo.bson.BSONObjectID
 import views.html.{translation => view}
 
 class TranslationController @Inject() (
     translationRepo: TranslationRepo
-  ) extends CrudControllerImpl[Translation, BSONObjectID](translationRepo)
+  ) extends AdaCrudControllerImpl[Translation, BSONObjectID](translationRepo)
     with AdminRestrictedCrudController[BSONObjectID]
     with HasBasicFormCrudViews[Translation, BSONObjectID] {
 
@@ -23,10 +26,9 @@ class TranslationController @Inject() (
       "translated" -> nonEmptyText
     )(Translation.apply)(Translation.unapply))
 
-  override protected val home = Redirect(routes.TranslationController.find())
-
-  override protected[controllers] def createView = { implicit ctx => view.create(_) }
-  override protected[controllers] def showView = editView
-  override protected[controllers] def editView = { implicit ctx => view.edit(_) }
-  override protected[controllers] def listView = { implicit ctx => view.list(_) }
+  override protected val homeCall = routes.TranslationController.find()
+  override protected def createView = { implicit ctx => view.create(_) }
+  override protected def showView = editView
+  override protected def editView = { implicit ctx => view.edit(_) }
+  override protected def listView = { implicit ctx => (view.list(_, _)).tupled }
 }

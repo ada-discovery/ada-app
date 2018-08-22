@@ -1,11 +1,9 @@
 package controllers.dataset
 
-import controllers.core.CrudController
-import models.{BoxWidgetSpec, CorrelationWidgetSpec, DistributionWidgetSpec, ScatterWidgetSpec}
+import org.incal.core.FilterCondition
+import org.incal.play.controllers.CrudController
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
-
-import scala.concurrent.Future
 
 trait DataViewController extends CrudController[BSONObjectID] {
 
@@ -82,6 +80,6 @@ trait DataViewController extends CrudController[BSONObjectID] {
 
   def saveFilter(
     dataViewId: BSONObjectID,
-    filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]]
+    filterOrIds: Seq[Either[Seq[FilterCondition], BSONObjectID]]
   ): Action[AnyContent]
 }

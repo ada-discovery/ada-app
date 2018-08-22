@@ -3,7 +3,7 @@ package runnables.ppmi
 import javax.inject.Inject
 
 import _root_.util.GroupMapList
-import dataaccess.Criterion._
+import org.incal.core.dataaccess.Criterion._
 import field.{FieldType, FieldTypeHelper}
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import models.{Field, FieldTypeId, StorageType}

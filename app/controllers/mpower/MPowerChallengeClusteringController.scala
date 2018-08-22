@@ -2,17 +2,18 @@ package controllers.mpower
 
 import javax.inject.Inject
 
-import controllers.core.{AuthAction, BaseController}
 import dataaccess.JsonRepoExtra._
-import dataaccess.Criterion._
 import models._
+import org.incal.core.dataaccess.Criterion._
+import org.incal.play.controllers._
+import org.incal.play.security.AuthAction
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import play.api.{Configuration, Logger}
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.Logger
 import services.WidgetGenerationService
 import views.html.mpowerchallenge.clustering
 
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class MPowerChallengeClusteringController @Inject() (
     dsaf: DataSetAccessorFactory,

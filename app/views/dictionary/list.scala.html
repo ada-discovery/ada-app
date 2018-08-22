@@ -1,6 +1,6 @@
 @import models.Field
 @import views.html.layout
-@import views.html.dataset.{filterWidgetPanel, datasetSubNavWithJs, datasetMenu}
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs, filterWidgetPanel}
 @import views.html.table.paginatedTable
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.widgetPanelJs
@@ -11,13 +11,17 @@
 @import views.html.filter.{filter, filterWithJs}
 @import util.typeColumns
 @import models.DataSpaceMetaInfo
+@import models.Filter
 @import dataaccess.JsonUtil
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
+@import org.incal.play.Page
+@import org.incal.core.FilterCondition
 
 @(
     domainName : String,
     page: Page[Field],
+    conditions: Seq[FilterCondition],
     widgets: Traversable[Widget],
     fieldNameLabels: Traversable[(String, Option[String])],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
@@ -29,7 +33,7 @@
     <div class="row">
         <div class="col-md-10">
             @filterWithJs(
-                page.filter,
+                Filter(conditions),
                 dictionaryRouter.plainList,
                 Left(fieldNameLabels.map { case (name, label) => Field(name, label)}),
                 None,
@@ -42,7 +46,7 @@
                     @exportDropdown(
                         dictionaryRouter.exportCsv(_, true, None, _, _),
                         dictionaryRouter.exportJson,
-                        Left(page.filterConditions)
+                        Left(conditions)
                     )()()
                 </li>
             </ul>
@@ -107,7 +111,7 @@
     </div>
     @paginatedTable(
         page,
-        dictionaryRouter.list(_, _, page.filterConditions),
+        dictionaryRouter.list(_, _, conditions),
         typeColumns[Field](
             (None, "", _ => {<input type="checkbox" class="table-selection"/>}),
             (Some("name"), "Name", {field => JsonUtil.unescapeKey(field.name)}),

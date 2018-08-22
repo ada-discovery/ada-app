@@ -10,7 +10,7 @@ import services.DataSetService
 import _root_.util.{GroupMapList, seqFutures}
 import controllers.mpower._
 import models.DataSetFormattersAndIds.FieldIdentity
-import dataaccess.Criterion._
+import org.incal.core.dataaccess.Criterion._
 import play.api.Logger
 
 import scala.concurrent.ExecutionContext.Implicits.global

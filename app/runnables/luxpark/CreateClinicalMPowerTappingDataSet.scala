@@ -3,7 +3,7 @@ package runnables.luxpark
 import java.{util => ju}
 import javax.inject.Inject
 
-import dataaccess.Criterion
+import org.incal.core.dataaccess.Criterion
 import field.FieldTypeHelper
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration

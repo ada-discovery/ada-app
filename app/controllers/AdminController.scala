@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import controllers.core.{BaseController, GenericMapping, WebContext}
+import controllers.core.GenericMapping
 import persistence.RepoTypes.MessageRepo
 import play.api.{Configuration, Logger}
 import play.api.Play.current
@@ -10,7 +10,8 @@ import play.api.data.Form
 import runnables.InputRunnable
 import util.MessageLogger
 import util.ClassFinderUtil.findClasses
-import _root_.util.SecurityUtil.restrictAdminAnyNoCaching
+import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
+import org.incal.play.controllers.BaseController
 import views.html.{admin => adminviews}
 import java.{util => ju}
 

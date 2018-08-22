@@ -1,11 +1,10 @@
-@import models.ConditionType
-@import play.api.libs.json.Json
 @import models.FilterShowFieldStyle
 @import models.{Field, Filter}
 @import models.JsTreeNode.format
 @import controllers.dataset.FilterJsRouter
 @import views.html.filter.{jsTree, categoricalTree}
 @import views.html.filter.conditionPanel
+@import org.incal.core.ConditionType
 
 @(
     filter: Option[Filter],
@@ -86,7 +85,7 @@
                                 <input id="fieldName" type="hidden" value="">
                             </div>
                             <div class="col-md-6">
-                                <select id="conditionType" class="float-left ">
+                                <select id="conditionType" class="float-left">
                                 @ConditionType.values.map{ conditionType =>
                                     <option value="@conditionType">@conditionType</option>
                                 }

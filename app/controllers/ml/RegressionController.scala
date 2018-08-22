@@ -3,27 +3,28 @@ package controllers.ml
 import java.util.Date
 import javax.inject.Inject
 
-import controllers.core._
-import controllers.{AdminRestrictedCrudController, EnumFormatter, SeqFormatter}
-import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
+import controllers.core.AdaCrudControllerImpl
 import models._
 import models.ml.TreeCore
-import models.ml.classification._
 import models.ml.regression._
 import persistence.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
 import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}
 import play.api.i18n.Messages
-import play.api.mvc.{Action, AnyContent, Result}
+import play.api.mvc.{Action, AnyContent, Request, Result}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
+import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, regression => view}
 import controllers.ml.routes.{RegressionController => regressionRoutes}
-import dataaccess.AscSort
 import models.ml.classification.ValueOrSeq.ValueOrSeq
+import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.AscSort
+import org.incal.play.Page
+import org.incal.play.controllers._
+import org.incal.play.formatters._
 import play.api.libs.json.{JsArray, Json}
 import services.DataSpaceService
 
@@ -33,7 +34,8 @@ import scala.concurrent.Future
 class RegressionController @Inject()(
     repo: RegressionRepo,
     dataSpaceService: DataSpaceService
-  ) extends CrudControllerImpl[Regression, BSONObjectID](repo)
+
+  ) extends AdaCrudControllerImpl[Regression, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
     with HasCreateEditSubTypeFormViews[Regression, BSONObjectID]
     with HasFormShowEqualEditView[Regression, BSONObjectID] {
@@ -195,7 +197,7 @@ class RegressionController @Inject()(
       )
     )
 
-  override protected val home = Redirect(routes.RegressionController.find())
+  override protected val homeCall = routes.RegressionController.find()
 
   // default form... unused
   override protected[controllers] val form = linearRegressionForm.asInstanceOf[Form[Regression]]
@@ -203,24 +205,28 @@ class RegressionController @Inject()(
   def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
 
-      def createAux[E <: Regression](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =
-        x.getCreateViewData.map { viewData =>
-          Ok(x.createView(implicitly[WebContext])(viewData))
-        }
-
-      createAux(getFormWithViews(concreteClassName))
+      getFormWithViews(concreteClassName)
+        .createViewWithContextX(implicitly[WebContext])
+        .map(Ok(_))
   }
 
-  override protected type ListViewData = (Page[Regression], Traversable[DataSpaceMetaInfo])
+  override protected type ListViewData = (
+    Page[Regression],
+    Seq[FilterCondition],
+    Traversable[DataSpaceMetaInfo]
+  )
 
-  override protected def getListViewData(page: Page[Regression]) = { request =>
+  override protected def getListViewData(
+    page: Page[Regression],
+    conditions: Seq[FilterCondition]
+  ) = { request =>
     for {
       tree <- dataSpaceService.getTreeForCurrentUser(request)
     } yield
-      (page, tree)
+      (page, conditions, tree)
   }
 
-  override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
+  override protected def listView = { implicit ctx => (view.list(_, _, _)).tupled }
 
   def idAndNames = restrictSubjectPresentAnyNoCaching(deadbolt) {
     implicit request =>

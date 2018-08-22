@@ -8,9 +8,9 @@
 @import be.objectify.deadbolt.scala.views.html.{subjectPresent, subjectPresentOr, restrictOr}
 @import models.DataSpaceMetaInfo
 @import models.DataSetMetaInfo
-@import models.security.SecurityRole
-@import controllers.core.WebContext._
-@import controllers.core.WebContext
+@import org.incal.play.security.SecurityRole
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
 
 @(
     dataSpaceMetaInfo: DataSpaceMetaInfo,

@@ -1,6 +1,6 @@
 package services.widgetgen
 
-import dataaccess.Criterion
+import org.incal.core.dataaccess.Criterion
 import models.{BoxWidget, BoxWidgetSpec, Field}
 import services.stats.calc.QuartilesCalcNoOptionsTypePack
 

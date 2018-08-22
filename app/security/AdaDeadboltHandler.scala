@@ -10,6 +10,7 @@ import Results._
 import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltHandler, DynamicResourceHandler}
 import be.objectify.deadbolt.scala.models.Subject
 import io.netty.handler.codec.http.HttpHeaders.Names
+import org.incal.play.util.WebUtil.redirectToRefererOrElse
 
 /**
   * Hooks for deadbolt
@@ -35,10 +36,7 @@ class AdaOnFailureRedirectDeadboltHandler(
 
           val username = subject.identifier
           Logger.error(s"Unauthorized access by [$username].")
-          val result = request.headers.get("referer") match {
-            case None => Redirect(routes.AppController.index())
-            case Some(refererUrl) => Redirect(refererUrl)
-          }
+          val result = redirectToRefererOrElse(routes.AppController.index())(request)
           result.flashing("errors" -> "Access denied! We're sorry, but you are not authorized to perform the requested operation.")
         }
 

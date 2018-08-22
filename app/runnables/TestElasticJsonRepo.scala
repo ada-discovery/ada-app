@@ -1,9 +1,9 @@
 package runnables
 
 import com.google.inject.Inject
-import dataaccess.AscSort
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.incal.core.dataaccess.AscSort
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsObject, Json}
@@ -15,9 +15,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestElasticJsonRepo @Inject() (dsaf: DataSetAccessorFactory) extends FutureRunnable {
 
-  val dsa = dsaf("lux_park.ibbl_biosamples").get
-  val dataSetRepo = dsa.dataSetRepo
-  val idName = JsObjectIdentity.name
+  private val dsa = dsaf("lux_park.ibbl_biosamples").get
+  private val dataSetRepo = dsa.dataSetRepo
+  private val idName = JsObjectIdentity.name
 
   def runAsFuture =
     for {

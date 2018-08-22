@@ -1,54 +1,18 @@
-package models
+package controllers
 
 import com.fasterxml.jackson.core.JsonParseException
-import controllers.{BSONObjectIDQueryStringBindable, EnumStringBindable}
-import play.api.mvc.QueryStringBindable
-import dataaccess.JsonUtil
-import dataaccess.BSONObjectIdentity
-import models.FilterCondition.{FilterOrId, filterConditionFormat, filterFormat}
-import models.DataSetFormattersAndIds.enumTypeFormat
-import play.api.libs.json.Json
-import reactivemongo.bson.BSONObjectID
-import java.util.{Date, UUID}
-
 import controllers.mpower.AggFunction
-import reactivemongo.play.json.BSONFormats._
-import play.api.libs.json._
-import models.json.EnumFormat
-import models.json.EitherFormat._
+import models.Filter._
+import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
+import models.{FieldTypeId, Filter}
 import models.ml._
-import models.ml.ClassificationResult.classificationSettingFormat
-import models.ml.RegressionResult.regressionSettingFormat
-
-case class Message(
-  _id: Option[BSONObjectID],
-  content: String,
-  createdByUser: Option[String] = None, // no user means a system message
-  isUserAdmin: Boolean = false,
-  timeCreated: Date = new Date()
-)
-
-object Message {
-  implicit val MessageFormat = Json.format[Message]
-
-  implicit object MessageIdentity extends BSONObjectIdentity[Message] {
-    def of(entity: Message): Option[BSONObjectID] = entity._id
-    protected def set(entity: Message, id: Option[BSONObjectID]) = entity.copy(_id = id)
-  }
-}
-
-case class Translation(_id : Option[BSONObjectID], original : String, translated : String) {
-  override def toString = original + " -> " + translated
-}
-
-object Translation {
-  implicit val TranslationFormat = Json.format[Translation]
-
-  implicit object TranslationIdentity extends BSONObjectIdentity[Translation] {
-    def of(entity: Translation): Option[BSONObjectID] = entity._id
-    protected def set(entity: Translation, id: Option[BSONObjectID]) = entity.copy(_id = id)
-  }
-}
+import models.DataSetFormattersAndIds.enumTypeFormat
+import models.ml.ClassificationResult._
+import models.ml.RegressionResult._
+import org.incal.core.FilterCondition
+import org.incal.play.PageOrder
+import play.api.libs.json.{Format, Json}
+import play.api.mvc.QueryStringBindable
 
 object QueryStringBinders {
 

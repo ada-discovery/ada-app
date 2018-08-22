@@ -2,10 +2,10 @@ package controllers
 
 import javax.inject.Inject
 
-import be.objectify.deadbolt.scala.{AuthenticatedRequest, DeadboltActions}
-import controllers.core.{BaseController, WebContext}
-import util.SecurityUtil._
+import org.incal.play.security.SecurityUtil._
 import ldap.{LdapConnector, LdapSettings}
+import org.incal.play.controllers.BaseController
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 

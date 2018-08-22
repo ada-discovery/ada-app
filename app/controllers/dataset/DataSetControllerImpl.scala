@@ -9,7 +9,6 @@ import security.AdaAuthConfig
 import scala.collection.mutable.{Map => MMap}
 import _root_.util.{FieldUtil, GroupMapList}
 import dataaccess.JsonUtil._
-import models.ConditionType._
 import _root_.util.WebExportUtil._
 import _root_.util.{seqFutures, shorten}
 import dataaccess._
@@ -18,16 +17,15 @@ import models.{MultiChartDisplayOptions, _}
 import com.google.inject.assistedinject.Assisted
 import controllers.{routes, _}
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
-import Criterion.Infix
-import controllers.core._
 import org.apache.commons.lang3.StringEscapeUtils
-import models.FilterCondition.FilterOrId
+import models.Filter.FilterOrId
 import models.Widget.WidgetWrites
 import models.json.{ManifestedFormat, OptionFormat, SubTypeFormat, TupleFormat}
 import models.ml._
+import controllers.dataset.IndependenceTestResult._
 import persistence.RepoTypes.{ClassificationRepo, RegressionRepo, UnsupervisedLearningRepo}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
-import play.api.{Configuration, Logger}
+import play.api.Logger
 import play.api.data.{Form, Mapping}
 import play.api.data.Forms.{mapping, number, of, optional}
 import play.api.libs.json._
@@ -41,13 +39,23 @@ import reactivemongo.play.json.BSONFormats._
 import services.ml.MachineLearningService
 import views.html.dataset
 import models.ml.DataSetTransformation._
-import models.security.{SecurityRole, UserManager}
+import models.security.UserManager
 import services.stats.calc.{ChiSquareResult, IndependenceTestResult, OneWayAnovaResult}
 import services.stats.StatsService
-import IndependenceTestResult.independenceTestResultFormat
 import be.objectify.deadbolt.scala.AuthenticatedRequest
 import field.{FieldType, FieldTypeHelper}
-import models.FilterConditionExtraFormats.coreFilterConditionFormat
+import controllers.FilterConditionExtraFormats.coreFilterConditionFormat
+import controllers.core.AdaReadonlyControllerImpl
+import controllers.core.{AdaExceptionHandler, ExportableAction}
+import org.incal.core.FilterCondition
+import org.incal.core.ConditionType._
+import org.incal.core.dataaccess.{Criterion, DescSort, NotEqualsNullCriterion, Sort}
+import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.play.{Page, PageOrder}
+import org.incal.play.controllers._
+import org.incal.play.formatters._
+import org.incal.play.security.AuthAction
+import org.incal.play.security.SecurityRole
 
 import scala.math.Ordering.Implicits._
 import scala.concurrent.{Future, TimeoutException}
@@ -69,7 +77,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     dataSpaceService: DataSpaceService,
     tranSMARTService: TranSMARTService,
     val userManager: UserManager
-  ) extends ReadonlyControllerImpl[JsObject, BSONObjectID]
+  ) extends AdaReadonlyControllerImpl[JsObject, BSONObjectID]
 
     with DataSetController
     with ExportableAction[JsObject]
@@ -114,6 +122,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private val doubleFieldType = ftf(FieldTypeSpec(FieldTypeId.Double)).asValueOf[Double]
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
+  override protected def formatId(id: BSONObjectID) = id.stringify
 
   private implicit val storageTypeFormatter =  EnumFormatter(StorageType)
   private implicit val seriesProcessingSpec = JsonFormatter[SeriesProcessingSpec]
@@ -157,17 +166,21 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   )
 
+  override protected val homeCall = router.getDefaultView
+
   // list view and data
 
   override protected type ListViewData = (
     String,
     Page[JsObject],
+    Seq[FilterCondition],
     Map[String, String],
     Seq[String]
   )
 
   override protected def getListViewData(
-    page: Page[JsObject]
+    page: Page[JsObject],
+    conditions: Seq[FilterCondition]
   ) = { request =>
     val dataSetNameFuture = dsa.dataSetName
     val fieldLabelMapFuture = getFieldLabelMap(listViewColumns.get)
@@ -176,11 +189,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       dataSetName <- dataSetNameFuture
       fieldLabelMap <- fieldLabelMapFuture
     } yield
-      (dataSetName + " Item", page, fieldLabelMap, listViewColumns.get)
+      (dataSetName + " Item", page, conditions, fieldLabelMap, listViewColumns.get)
   }
 
   override protected[controllers] def listView = { implicit ctx =>
-    (dataset.list(_, _, _, _)).tupled
+    (dataset.list(_, _, _, _, _)).tupled
   }
 
   // show view and data
@@ -445,8 +458,8 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
             val viewPartsWidgetFutures = (viewResponses, tablePagesToUse, criteria).zipped.map {
               case (viewResponse, tablePage, criteria) =>
-                val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy, Some(viewResponse.filter))
-                val viewData = TableViewData(newPage, viewResponse.tableFields)
+                val newPage = Page(viewResponse.tableItems, tablePage.page, tablePage.page * pageLimit, viewResponse.count, tablePage.orderBy)
+                val viewData = TableViewData(newPage, Some(viewResponse.filter), viewResponse.tableFields)
                 val method = dataView.map(_.generationMethod).getOrElse(WidgetGenerationMethod.Auto)
                 val widgetsWithFieldsFuture = getViewWidgetsWithFields(widgetSpecs, criteria, nameFieldMap.values, method)
 
@@ -485,17 +498,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Json() => Ok(Json.toJson(viewResponses.head.tableItems))
         }
       }
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the getView process")
-        InternalServerError(t.getMessage)
-      case e: AdaConversionException => {
-        request.headers.get("Referer") match {
-          case Some(refererUrl) => Redirect(refererUrl).flashing("errors" -> s"Conversion problem: ${e.getMessage}")
-          case None => Redirect(router.getDefaultView).flashing("errors" -> s"Conversion problem: ${e.getMessage}")
-        }
-      }
-    }
+    }.recover(handleExceptionsWithId("a show-view", dataViewId))
   }
 
   private def createNameFieldMap(
@@ -627,11 +630,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
         render {
           case Accepts.Html() => {
-            val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder, Some(viewResponse.filter))
+            val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder)
 
             val pageHeader = messagesApi.apply("list.count.title", oldCountDiff.getOrElse(0) + viewResponse.count, dataSetName + " Item")
 
-            val table = dataset.viewTable(newPage, viewResponse.tableFields, router, true)
+            val table = dataset.viewTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, router, true)
             val conditionPanel = views.html.filter.conditionPanel(Some(viewResponse.filter))
             val filterModel = Json.toJson(viewResponse.filter.conditions)
 
@@ -683,10 +686,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       // get the total count
       count <- repo.count(criteria)
     } yield {
-      val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy, Some(resolvedFilter))
+      val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
       val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
 
-      Ok(dataset.viewTable(tablePage, fieldsInOrder, router, true))
+      Ok(dataset.viewTable(tablePage, Some(resolvedFilter), fieldsInOrder, router, true))
     }
   }
 
@@ -1111,11 +1114,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
         }
       }
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the distribution process")
-        InternalServerError(t.getMessage)
-    }
+    }.recover(handleExceptions("a distribution"))
   }
 
   override def getDistributionWidget(
@@ -1190,11 +1189,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Accepts.Json() => BadRequest("Correlations function doesn't support JSON response.")
       }
     }
-  }.recover {
-    case t: TimeoutException =>
-      Logger.error("Problem found in the getCorrelations method")
-      InternalServerError(t.getMessage)
-  }
+    }.recover(handleExceptions("a correlation"))
   }
 
   override def calcCorrelations(
@@ -1340,11 +1335,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Json() => BadRequest("GetCumulativeCount function doesn't support JSON response.")
         }
       }
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the GetCumulativeCount process")
-        InternalServerError(t.getMessage)
-    }
+    }.recover(handleExceptions("a cumulative count"))
   }
 
   def getCategoriesWithFieldsAsTreeNodes(
@@ -1447,11 +1438,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           BadRequest("URL for Fractalis is not available. Set one in a config file with the id \'fractalis.server.url\'.")
         )
       }
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the getFractalis process")
-        InternalServerError(t.getMessage)
-    }
+    }.recover(handleExceptions("a fractalis"))
   }
 
   override def getClusterization = AuthAction { implicit request => {
@@ -1468,11 +1455,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Accepts.Json() => BadRequest("getUnsupervisedLearning function doesn't support JSON response.")
       }
     }
-  }.recover {
-    case t: TimeoutException =>
-      Logger.error("Problem found in the getUnsupervisedLearning process")
-      InternalServerError(t.getMessage)
-  }
+  }.recover(handleExceptions("a clusterization"))
   }
 
   private def getDataSetNameTreeAndSetting(request: Request[_]): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
@@ -1619,11 +1602,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         case Accepts.Json() => BadRequest("GetIndependenceTest function doesn't support JSON response.")
       }
     }
-    }.recover {
-      case t: TimeoutException =>
-        Logger.error("Problem found in the GetIndependenceTest method")
-        InternalServerError(t.getMessage)
-    }
+    }.recover(handleExceptions("an independence test"))
   }
 
   override def testIndependence(
@@ -1830,11 +1809,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         }
       },
       spec =>
-        for {
-          _ <- dataSetService.processSeriesAndSaveDataSet(spec)
-        } yield {
+        dataSetService.processSeriesAndSaveDataSet(spec).map( _ =>
           Redirect(router.getSeriesProcessingSpec).flashing("success" -> s"Series processing finished.")
-        }
+        )
     )
   }
 
@@ -1900,16 +1877,20 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @return View for download.
     */
   def exportTranSMARTDataFile(delimiter : String) = AuthAction { implicit request =>
-    for {
-      setting <- dsa.setting
+    {
+      for {
+        setting <- dsa.setting
 
-      fileContent <- generateTranSMARTDataFile(
-        tranSMARTDataFileName,
-        delimiter,
-        setting.exportOrderByFieldName
-      )
-    } yield
-      stringToFile(tranSMARTDataFileName)(fileContent)
+        fileContent <- generateTranSMARTDataFile(
+          tranSMARTDataFileName,
+          delimiter,
+          setting.exportOrderByFieldName
+        )
+      } yield
+        stringToFile(tranSMARTDataFileName)(fileContent)
+    }.recover(
+      handleExceptions("an export TranSMART data file")
+    )
   }
 
   /**
@@ -1919,16 +1900,20 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     * @return View for download.
     */
   def exportTranSMARTMappingFile(delimiter : String) = AuthAction { implicit request =>
-    for {
-      setting <- dsa.setting
+    {
+      for {
+        setting <- dsa.setting
 
-      fileContent <- generateTranSMARTMappingFile(
-        tranSMARTDataFileName,
-        delimiter,
-        setting.exportOrderByFieldName
-      )
-    } yield
-      stringToFile(tranSMARTMappingFileName)(fileContent)
+        fileContent <- generateTranSMARTMappingFile(
+          tranSMARTDataFileName,
+          delimiter,
+          setting.exportOrderByFieldName
+        )
+      } yield
+        stringToFile(tranSMARTMappingFileName)(fileContent)
+    }.recover(
+      handleExceptions("an export TranSMART mapping file")
+    )
   }
 
   /**

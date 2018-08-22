@@ -1,6 +1,6 @@
 package services.widgetgen
 
-import dataaccess.Criterion
+import org.incal.core.dataaccess.Criterion
 import models.{Field, ScatterWidget, ScatterWidgetSpec}
 import services.stats.calc.GroupTupleCalcTypePack
 import util.shorten

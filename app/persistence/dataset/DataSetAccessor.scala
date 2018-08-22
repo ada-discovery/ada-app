@@ -1,8 +1,8 @@
 package persistence.dataset
 
-import dataaccess.{Criterion, JsonCrudRepoFactory}
+import dataaccess.JsonCrudRepoFactory
 import models.{DataSetMetaInfo, DataSetSetting, FieldTypeSpec}
-import Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 
 import scala.concurrent.duration._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext

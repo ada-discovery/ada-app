@@ -2,14 +2,17 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.SecureControllerDispatcher
-import models.security.{SecurityRole, UserManager}
-import models.{AdaException, Filter, FilterCondition}
+import controllers.core.AdminOrOwnerControllerDispatcherExt
+import org.incal.play.controllers.SecureControllerDispatcher
+import models.security.UserManager
+import models.{AdaException, Filter}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
-import util.SecurityUtil.createDataSetPermission
+import models.security.DataSetPermission
+import org.incal.core.FilterCondition
+import org.incal.play.security.SecurityRole
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -18,7 +21,10 @@ class FilterDispatcher @Inject()(
     fcf: FilterControllerFactory,
     dsaf: DataSetAccessorFactory,
     val userManager: UserManager
-  ) extends SecureControllerDispatcher[FilterController]("dataSet") with FilterController with AdaAuthConfig {
+  ) extends SecureControllerDispatcher[FilterController]("dataSet")
+      with AdminOrOwnerControllerDispatcherExt[FilterController]
+      with FilterController
+      with AdaAuthConfig {
 
   override protected def getController(id: String) =
     dscf(id).map(_ => fcf(id)).getOrElse(
@@ -33,7 +39,7 @@ class FilterDispatcher @Inject()(
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, ControllerName.filter, actionName))
+  ) = Some(DataSetPermission(controllerId, ControllerName.filter, actionName))
 
   override def get(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.get(id))
 
@@ -61,9 +67,6 @@ class FilterDispatcher @Inject()(
     id: BSONObjectID,
     action: FilterController => Action[AnyContent]
   ): Action[AnyContent] = {
-    val currentUserFun = {
-      request: Request[_] => currentUser(request)
-    }
 
     val objectOwnerFun = {
       request: Request[AnyContent] =>
@@ -74,15 +77,6 @@ class FilterDispatcher @Inject()(
         }
     }
 
-    dispatchIsAdminOrOwnerAux(objectOwnerFun, currentUserFun, None)(action)
-  }
-
-  protected def dispatchIsAdmin(
-    action: FilterController => Action[AnyContent]
-  ): Action[AnyContent] = {
-    val currentUserFun = {
-      request: Request[_] => currentUser(request)
-    }
-    dispatchIsAdminAux(currentUserFun)(action)
+    dispatchIsAdminOrOwnerAux(objectOwnerFun, None)(action)
   }
 }

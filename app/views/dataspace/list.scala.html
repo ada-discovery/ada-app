@@ -3,11 +3,15 @@
 @import views.html.filter.{filter, filterWithJs}
 @import controllers.dataset.routes.{DataSpaceMetaInfoController => dataSpaceMetaInfoRoutes}
 @import models.{DataSpaceMetaInfo, Field}
-@import controllers.core.WebContext._
-@import controllers.core.WebContext
+@import models.Filter
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.Page
+@import org.incal.core.FilterCondition
 
 @(
-    page: Page[DataSpaceMetaInfo]
+    page: Page[DataSpaceMetaInfo],
+    conditions: Seq[FilterCondition]
 )(
     implicit context: WebContext
 )
@@ -16,7 +20,7 @@
     <div class="row">
         <div class="col-md-8">
             @filterWithJs(
-                page.filter,
+                Filter(conditions),
                 dataSpaceMetaInfoRoutes.find(),
                 Left(Seq(
                     Field("name", Some("Name"))
@@ -32,7 +36,7 @@
 @table = @{
     paginatedTable(
         page,
-        dataSpaceMetaInfoRoutes.find(_, _, page.filterConditions),
+        dataSpaceMetaInfoRoutes.find(_, _, conditions),
         Seq(
             (Some("name"), "Name", {item : Any => Html(item.asInstanceOf[DataSpaceMetaInfo].name)}),
             (Some("timeCreated"), "Time Created", {item : Any => Html(item.asInstanceOf[DataSpaceMetaInfo].timeCreated.toString)})

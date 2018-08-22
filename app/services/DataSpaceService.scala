@@ -4,14 +4,12 @@ import javax.inject.{Inject, Named, Singleton}
 
 import com.google.inject.ImplementedBy
 import dataaccess.RepoTypes.{DataSetMetaInfoRepo, DataSpaceMetaInfoRepo}
-import models.DataSpaceMetaInfo
-import models.security.{SecurityRole, UserManager}
-import persistence.RepoTypes.UserSettingsRepo
-import play.api.i18n.MessagesApi
+import models.{DataSpaceMetaInfo, User}
+import models.security.UserManager
 import play.api.mvc.Request
 import security.AdaAuthConfig
-import dataaccess.Criterion.Infix
-import dataaccess.User
+import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.play.security.SecurityRole
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

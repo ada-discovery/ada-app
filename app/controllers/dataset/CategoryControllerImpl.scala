@@ -1,17 +1,12 @@
 package controllers.dataset
 
 import javax.inject.Inject
-import java.{util => ju}
 
 import com.google.inject.assistedinject.Assisted
-import controllers.DataSetWebContext
-import dataaccess.{AscSort, Criterion}
+import controllers.core.AdaExceptionHandler
+import controllers.core.AdaCrudControllerImpl
 import models._
 import models.DataSetFormattersAndIds._
-import Criterion.Infix
-import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
-import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
-import models.FilterCondition.FilterOrId
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -22,8 +17,13 @@ import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.AscSort
+import org.incal.play.Page
+import org.incal.play.controllers._
+import org.incal.play.util.WebUtil.getRequestParamMap
 import services.DataSpaceService
-import util.getRequestParamMap
 import views.html.{category => view}
 
 import scala.concurrent.Future
@@ -36,8 +36,8 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     @Assisted val dataSetId: String,
     dsaf: DataSetAccessorFactory,
     dataSpaceService: DataSpaceService
-  ) extends CrudControllerImpl[Category, BSONObjectID](dsaf(dataSetId).get.categoryRepo)
 
+  ) extends AdaCrudControllerImpl[Category, BSONObjectID](dsaf(dataSetId).get.categoryRepo)
     with CategoryController
     with HasFormShowEqualEditView[Category, BSONObjectID] {
 
@@ -71,8 +71,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   protected val jsRouter = new CategoryJsRouter(dataSetId)
   protected val fieldRouter = new DictionaryRouter(dataSetId)
 
-  override protected lazy val home =
-    Redirect(router.plainList)
+  override protected val homeCall = router.plainList
 
   // create view and data
 
@@ -93,7 +92,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       (dataSetName + " Category", form, allCategories)
   }
 
-  override protected[controllers] def createView = { implicit ctx =>
+  override protected def createView = { implicit ctx =>
     (view.create(_, _, _)).tupled
   }
 
@@ -113,7 +112,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
     id: BSONObjectID,
     form: Form[Category]
   ) = { request =>
-    val assocfieldsFuture = fieldRepo.find(
+    val assocFieldsFuture = fieldRepo.find(
       criteria = Seq("categoryId" #== Some(id)),
       sort = Seq(AscSort("name"))
     )
@@ -124,7 +123,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
 
     for {
       // retrieve the associated fields
-      fields <- assocfieldsFuture
+      fields <- assocFieldsFuture
 
       // get the data set name
       dataSetName <- dataSetNameFuture
@@ -141,7 +140,7 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       (dataSetName + " Category", id, form, allCategories, fields, showFieldStyle, tree)
   }
 
-  override protected[controllers] def editView = { implicit ctx =>
+  override protected def editView = { implicit ctx =>
     (view.edit(_, _, _, _, _, _, _)).tupled
   }
 
@@ -150,11 +149,13 @@ protected[controllers] class CategoryControllerImpl @Inject() (
   override protected type ListViewData = (
     String,
     Page[Category],
+    Seq[FilterCondition],
     Traversable[DataSpaceMetaInfo]
   )
 
   override protected def getListViewData(
-    page: Page[Category]
+    page: Page[Category],
+    conditions: Seq[FilterCondition]
   ) = { request =>
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val nameFuture = dsa.dataSetName
@@ -163,10 +164,10 @@ protected[controllers] class CategoryControllerImpl @Inject() (
       tree <- treeFuture
       dataSetName <- nameFuture
     } yield
-      (dataSetName + " Category", page, tree)
+      (dataSetName + " Category", page, conditions, tree)
   }
 
-  override protected[controllers] def listView = { implicit ctx => (view.list(_, _, _)).tupled }
+  override protected def listView = { implicit ctx => (view.list(_, _, _, _)).tupled }
 
   override protected def deleteCall(id: BSONObjectID)(implicit request: Request[AnyContent]): Future[Unit] = {
     // relocate the children to a new parent

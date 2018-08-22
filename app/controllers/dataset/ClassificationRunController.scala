@@ -1,8 +1,8 @@
 package controllers.dataset
 
-import controllers.core.ReadonlyController
-import models.FilterCondition
-import models.ml.{ClassificationEvalMetric, ClassificationSetting}
+import org.incal.core.FilterCondition
+import models.ml.ClassificationSetting
+import org.incal.play.controllers.ReadonlyController
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 

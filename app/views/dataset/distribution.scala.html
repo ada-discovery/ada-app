@@ -1,6 +1,7 @@
-@import models.{FilterCondition, Widget}
+@import models.Widget
 @import models.Field
-@import models.FilterConditionExtraFormats.eitherFilterOrIdFormat
+@import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
+@import org.incal.core.FilterCondition
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
@@ -13,8 +14,8 @@
 @import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import models.DataSpaceMetaInfo
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
 
 @(
     domainName: String,

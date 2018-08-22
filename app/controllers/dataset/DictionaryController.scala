@@ -1,7 +1,7 @@
 package controllers.dataset
 
-import controllers.core.CrudController
-import models.FilterCondition
+import org.incal.core.FilterCondition
+import org.incal.play.controllers.CrudController
 import play.api.mvc.{Action, AnyContent}
 
 trait DictionaryController extends CrudController[String] {

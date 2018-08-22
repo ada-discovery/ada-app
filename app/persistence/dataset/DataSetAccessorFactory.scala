@@ -6,7 +6,7 @@ import dataaccess._
 import models.DataSetFormattersAndIds.DataSetMetaInfoIdentity
 import models._
 import dataaccess.RepoTypes._
-import Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import play.api.Logger
 import play.api.libs.json.JsObject
 import util.RefreshableCache

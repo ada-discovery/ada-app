@@ -1,4 +1,4 @@
-package models
+package controllers
 
 import play.api.mvc.PathBindable
 import reactivemongo.bson._

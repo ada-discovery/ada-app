@@ -1,20 +1,23 @@
 @import views.html.layout
-@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import views.html.table.paginatedTable
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.filter.{filter, filterWithJs}
 @import models.DataView
 @import util.typeColumns
-@import controllers.dataset.{DataViewRouter, DataViewJsRouter}
+@import controllers.dataset.{DataSetWebContext, DataViewJsRouter, DataViewRouter}
 @import models.DataSpaceMetaInfo
 @import models.Field
+@import models.Filter
 @import reactivemongo.bson.BSONObjectID
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
+@import org.incal.play.Page
+@import org.incal.core.FilterCondition
 
 @(
     domainName : String,
     page: Page[DataView],
+    conditions: Seq[FilterCondition],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit context: DataSetWebContext
@@ -24,11 +27,12 @@
     <div class="row">
         <div class="col-md-10">
             @filterWithJs(
-                page.filter,
+                Filter(conditions),
                 dataViewRouter.plainList,
                 Left(Seq(Field("name", None)))
             )
         </div>
+
         <div class="pull-right">
             <ul class="list-inline">
                 <li>
@@ -50,7 +54,7 @@
 @table = {
     @paginatedTable(
         page,
-        dataViewRouter.list(_, _, page.filterConditions),
+        dataViewRouter.list(_, _, conditions),
         typeColumns[DataView](
             (Some("name"), "Name", _.name),
             (Some("default"), "Default?", _.default.toString),

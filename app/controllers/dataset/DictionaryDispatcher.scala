@@ -1,11 +1,11 @@
 package controllers.dataset
 
-import controllers.SecureControllerDispatcher
-import models.FilterCondition
+import org.incal.core.FilterCondition
 import javax.inject.Inject
 
-import models.security.SecurityRole
-import util.SecurityUtil._
+import org.incal.play.controllers.SecureControllerDispatcher
+import org.incal.play.security.SecurityRole
+import models.security.DataSetPermission
 
 class DictionaryDispatcher @Inject() (
     dscf: DataSetControllerFactory,
@@ -25,7 +25,7 @@ class DictionaryDispatcher @Inject() (
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, ControllerName.field, actionName))
+  ) = Some(DataSetPermission(controllerId, ControllerName.field, actionName))
 
   override def get(id: String) = dispatch(_.get(id))
 

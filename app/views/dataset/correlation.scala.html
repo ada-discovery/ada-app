@@ -2,16 +2,16 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
-@import views.html.widget.{widgetJs, widget}
-@import views.html.dataset.{dynamicFieldTable, datasetSubNavWithJs}
+@import views.html.widget.{widget, widgetJs}
+@import views.html.dataset.{datasetSubNavWithJs, dynamicFieldTable}
 @import views.html.dataset.dataSetFilterWithJs
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.table.dynamicTableJsImport
 @import views.html.filter.{filter, filterWithJs}
 @import play.api.libs.json.Json
 @import models.DataSpaceMetaInfo
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
 
 @(
     domainName: String,

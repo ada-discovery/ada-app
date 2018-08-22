@@ -1,16 +1,17 @@
 package controllers.core
 
-import dataaccess.{AsyncReadonlyRepo, Criterion, JsonFormatRepoAdapter}
-import dataaccess.Criterion._
+import dataaccess.JsonFormatRepoAdapter
 import models.DataSetFormattersAndIds.FieldIdentity
 import models.{Widget, WidgetGenerationMethod, WidgetSpec}
+import org.incal.core.dataaccess.Criterion._
+import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion}
 import persistence.dataset.CaseClassFieldRepo
 import play.api.libs.json.Format
 import services.WidgetGenerationService
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.reflect.runtime.universe._
-import scala.concurrent.ExecutionContext.Implicits.global
 
 trait WidgetRepoController[E] {
 

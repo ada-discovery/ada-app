@@ -7,44 +7,17 @@ import org.apache.commons.lang.StringUtils
 import play.api.{Logger, LoggerLike}
 import dataaccess.JsonUtil
 import org.apache.commons.io.IOUtils
+import org.incal.play.util.WebUtil
 import play.api.libs.json.{Json, Writes}
-import play.api.mvc.{AnyContent, Request}
+import play.api.mvc.{AnyContent, Call, Request, Result}
 import play.twirl.api.Html
+import play.api.mvc.Results.Redirect
 
 import scala.collection.Iterator.empty
 import scala.collection.{AbstractIterator, Iterator, Traversable}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.blocking
 
 package object util {
-
-//  def getDomainName(form: Form[_]) = form.get.getClass.getSimpleName.toLowerCase
-
-  def matchesPath(coreUrl : String, url : String, matchPrefixDepth : Option[Int] = None) =
-    matchPrefixDepth match {
-      case Some(prefixDepth) => {
-        var slashPos = 0
-        for (i <- 1 to prefixDepth) {
-          slashPos = coreUrl.indexOf('/', slashPos + 1)
-        }
-        if (slashPos == -1) {
-          slashPos = coreUrl.indexOf('?')
-          if (slashPos == -1)
-            slashPos = coreUrl.length
-        }
-        val subString = coreUrl.substring(0, slashPos)
-        url.startsWith(coreUrl.substring(0, slashPos))
-      }
-      case None => url.startsWith(coreUrl)
-    }
-
-  def getParamValue(url : String, param: String): Option[String] = {
-    val tokens = url.split(param + "=")
-    if (tokens.isDefinedAt(1))
-      Some(tokens(1).split("&")(0))
-    else
-      None
-  }
 
   def shorten(string : String, length: Int = 25) =
     if (string.length > length) string.substring(0, length - 2) + ".." else string
@@ -102,19 +75,6 @@ package object util {
         ":"
       else "")
     ).getOrElse(noneValue)
-
-  def getRequestParamMap(implicit request: Request[AnyContent]): Map[String, Seq[String]] = {
-    val body = request.body
-    if (body.asFormUrlEncoded.isDefined)
-      body.asFormUrlEncoded.get
-    else if (body.asMultipartFormData.isDefined)
-      body.asMultipartFormData.get.asFormUrlEncoded
-    else
-      throw new AdaException("FormUrlEncoded or MultipartFormData request expected.")
-  }
-
-  def getRequestParamValue(paramKey: String)(implicit request: Request[AnyContent]) =
-    getRequestParamMap.get(paramKey).get.head
 
   def enumToValueString(enum: Enumeration): Seq[(String, String)] =
     enum.values.toSeq.sortBy(_.id).map(value => (value.toString, toHumanReadableCamel(value.toString)))
@@ -315,6 +275,4 @@ package object util {
 
   def toJsonHtml[T](o: T)(implicit tjs: Writes[T]): Html =
     Html(Json.stringify(Json.toJson(o)))
-
-  val noCacheSetting = "no-cache, max-age=0, must-revalidate, no-store"
 }

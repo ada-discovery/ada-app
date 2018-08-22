@@ -1,7 +1,8 @@
 package models.security
 
 import be.objectify.deadbolt.scala.models.Subject
-import dataaccess.User
+import models.User
+import org.incal.play.security.{SecurityPermission, SecurityRole}
 
 case class DeadboltUser(user: User) extends Subject {
   override def identifier =

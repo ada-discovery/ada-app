@@ -3,9 +3,8 @@ package controllers.ml
 import java.util.Date
 import javax.inject.Inject
 
-import controllers.core._
 import controllers._
-import dataaccess.AscSort
+import controllers.core.AdaCrudControllerImpl
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models._
 import models.ml.TreeCore
@@ -16,14 +15,19 @@ import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsArray, Json}
-import play.api.mvc.{Action, AnyContent, Result}
+import play.api.mvc.{Action, AnyContent, Request, Result}
 import play.twirl.api.Html
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
 import services.DataSpaceService
-import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
+import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, classification => view}
 import models.ml.classification.ValueOrSeq.ValueOrSeq
+import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.AscSort
+import org.incal.play.Page
+import org.incal.play.controllers._
+import org.incal.play.formatters._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -31,7 +35,8 @@ import scala.concurrent.Future
 class ClassificationController @Inject()(
     repo: ClassificationRepo,
     dataSpaceService: DataSpaceService
-  ) extends CrudControllerImpl[Classification, BSONObjectID](repo)
+
+  ) extends AdaCrudControllerImpl[Classification, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
     with HasCreateEditSubTypeFormViews[Classification, BSONObjectID]
     with HasFormShowEqualEditView[Classification, BSONObjectID] {
@@ -231,7 +236,7 @@ class ClassificationController @Inject()(
       )
     )
 
-  override protected val home = Redirect(routes.ClassificationController.find())
+  override protected val homeCall = routes.ClassificationController.find()
 
   // default form... unused
   override protected[controllers] val form = logisticRegressionForm.asInstanceOf[Form[Classification]]
@@ -239,24 +244,28 @@ class ClassificationController @Inject()(
   def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
 
-      def createAux[E <: Classification](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =
-        x.getCreateViewData.map { viewData =>
-          Ok(x.createView(implicitly[WebContext])(viewData))
-        }
-
-      createAux(getFormWithViews(concreteClassName))
+      getFormWithViews(concreteClassName)
+        .createViewWithContextX(implicitly[WebContext])
+        .map(Ok(_))
   }
 
-  override protected type ListViewData = (Page[Classification], Traversable[DataSpaceMetaInfo])
+  override protected type ListViewData = (
+    Page[Classification],
+    Seq[FilterCondition],
+    Traversable[DataSpaceMetaInfo]
+  )
 
-  override protected def getListViewData(page: Page[Classification]) = { request =>
+  override protected def getListViewData(
+    page: Page[Classification],
+    conditions: Seq[FilterCondition]
+  ) = { request =>
     for {
       tree <- dataSpaceService.getTreeForCurrentUser(request)
     } yield
-      (page, tree)
+      (page, conditions, tree)
   }
 
-  override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
+  override protected def listView = { implicit ctx => (view.list(_, _, _)).tupled }
 
   def idAndNames = restrictSubjectPresentAnyNoCaching(deadbolt) {
     implicit request =>

@@ -1,7 +1,6 @@
 package controllers.dataset
 
-import controllers.{GenericRouter, GenericJsRouter}
-import play.api.routing.JavaScriptReverseRoute
+import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
 
 import scalaz.Scalaz._
 

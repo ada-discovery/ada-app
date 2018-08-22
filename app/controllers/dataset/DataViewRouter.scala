@@ -1,6 +1,7 @@
 package controllers.dataset
 
-import controllers.{GenericJsRouter, GenericRouter}
+import org.incal.play.controllers.{GenericJsRouter, GenericRouter}
+
 import scalaz.Scalaz._
 
 final class DataViewRouter(dataSetId: String) extends GenericRouter(routes.DataViewDispatcher, "dataSet", dataSetId) {

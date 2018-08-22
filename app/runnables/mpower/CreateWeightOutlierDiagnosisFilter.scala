@@ -2,8 +2,9 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import dataaccess.{AsyncReadonlyRepo, Criterion, EqualsCriterion, NotEqualsNullCriterion}
-import models.{ConditionType, Field, Filter, FilterCondition}
+import models.{Field, Filter}
+import org.incal.core.{ConditionType, FilterCondition}
+import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion, EqualsCriterion, NotEqualsNullCriterion}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID

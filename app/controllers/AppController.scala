@@ -2,17 +2,15 @@ package controllers
 
 import javax.inject.Inject
 
-import controllers.core.{AuthAction, BaseController, WebContext, WithNoCaching}
 import models.DataSpaceMetaInfo
 import models.security.UserManager
 import play.api.{Configuration, Logger}
-import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.mvc.{Action, AnyContent, Controller, Request}
-import play.api.routing.JavaScriptReverseRouter
 import security.AdaAuthConfig
 import services.DataSpaceService
-import util.SecurityUtil._
+import org.incal.play.controllers.BaseController
+import org.incal.play.security.AuthAction
+import org.incal.play.security.SecurityUtil._
 import views.html.layout
 import play.api.cache.Cached
 

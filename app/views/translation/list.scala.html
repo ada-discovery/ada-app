@@ -3,11 +3,15 @@
 @import views.html.filter.{filter, filterWithJs}
 @import util.typeColumns
 @import models.Field
-@import controllers.core.WebContext._
-@import controllers.core.WebContext
+@import models.Filter
+@import org.incal.play.controllers.WebContext._
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.Page
+@import org.incal.core.FilterCondition
 
 @(
-    page: Page[Translation]
+    page: Page[Translation],
+    conditions: Seq[FilterCondition]
 )(
     implicit context: WebContext
 )
@@ -16,7 +20,7 @@
     <div class="row">
         <div class="col-md-8">
             @filterWithJs(
-                page.filter,
+                Filter(conditions),
                 routes.TranslationController.find(),
                 Left(Seq(
                     Field("original", Some("Original")),
@@ -35,7 +39,7 @@
 @table = @{
     paginatedTable(
         page,
-        routes.TranslationController.find(_, _, page.filterConditions),
+        routes.TranslationController.find(_, _, conditions),
         typeColumns[Translation](
             (Some("original"), "Original", _.original),
             (Some("translated"), "Translated", _.translated)

@@ -3,7 +3,7 @@ package runnables.core
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import play.api.Logger
 import runnables.DsaInputFutureRunnable
-import dataaccess.Criterion._
+import org.incal.core.dataaccess.Criterion._
 import field.FieldTypeHelper
 
 import scala.reflect.runtime.universe.typeOf

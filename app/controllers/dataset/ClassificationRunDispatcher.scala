@@ -2,14 +2,12 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.SecureControllerDispatcher
-import models.FilterCondition
+import org.incal.play.controllers.SecureControllerDispatcher
+import org.incal.core.FilterCondition
 import models.ml.ClassificationSetting
 import reactivemongo.bson.BSONObjectID
-import models.ml.ClassificationEvalMetric
-import models.security.SecurityRole
-import play.api.mvc.{Action, AnyContent}
-import util.SecurityUtil.createDataSetPermission
+import org.incal.play.security.SecurityRole
+import models.security.DataSetPermission
 
 class ClassificationRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf: ClassificationRunControllerFactory)
   extends SecureControllerDispatcher[ClassificationRunController]("dataSet") with ClassificationRunController {
@@ -27,7 +25,7 @@ class ClassificationRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, ControllerName.classificationRun, actionName))
+  ) = Some(DataSetPermission(controllerId, ControllerName.classificationRun, actionName))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

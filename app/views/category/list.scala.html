@@ -1,17 +1,20 @@
 @import models.{Category, DataSpaceMetaInfo, Field}
 @import views.html.layout
 @import views.html.table.paginatedTable
-@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import views.html.category.treeChart
 @import views.html.filter.{filter, filterWithJs}
 @import util.typeColumns
-@import models.Page
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import models.Filter
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
+@import org.incal.play.Page
+@import org.incal.core.FilterCondition
 
 @(
     domainName : String,
     page: Page[Category],
+    conditions: Seq[FilterCondition],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit context: DataSetWebContext
@@ -28,7 +31,7 @@
 @actions = {
     <div class="row">
         <div class="col-md-9">
-            @filterWithJs(page.filter, categoryRouter.plainList, Left(Seq(Field("name"))))
+            @filterWithJs(Filter(conditions), categoryRouter.plainList, Left(Seq(Field("name"))))
         </div>
         <div class="pull-right">
             <a class="btn btn-info btn-sm" id="collapseAll" href="#" data-toggle="tooltip" title="Collapse All" onclick="$('#treeDiv').tree('collapseAll');return false;">
@@ -84,7 +87,7 @@
 @table = @{
     paginatedTable(
         page,
-        categoryRouter.list(_, _, page.filterConditions),
+        categoryRouter.list(_, _, conditions),
         typeColumns[Category](
             (Some("name"), "Name", _.name),
             (Some("label"), "Label", editableCategoryLabelInput)

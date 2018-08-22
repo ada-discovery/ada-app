@@ -1,7 +1,7 @@
 package runnables.ignite
 
 import com.google.inject.Inject
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import dataaccess._
 import models.FieldTypeId
 import org.apache.ignite.Ignite

@@ -1,11 +1,7 @@
-@import models.ConditionType
-@import play.api.libs.json.Json
 @import models.FilterShowFieldStyle
 @import models.{Field, Filter}
-@import models.JsTreeNode.format
 @import controllers.dataset.FilterJsRouter
 @import views.html.filter.{filter => filterUI, filterJs}
-@import play.api.libs.json.JsArray
 
 @(
     filter: Option[Filter],

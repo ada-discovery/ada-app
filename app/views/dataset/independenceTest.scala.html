@@ -1,6 +1,6 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
-@import views.html.dataset.{inputFieldAndFilterResources, datasetMenu, datasetSubNavWithJs}
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs, inputFieldAndFilterResources}
 @import views.html.table.dynamicTableJsImport
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.dataset.dynamicFieldTable
@@ -8,8 +8,8 @@
 @import play.api.i18n.Messages
 @import models.DataSpaceMetaInfo
 @import views.html.elements._
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
 
 @(
     dataSetName: String,

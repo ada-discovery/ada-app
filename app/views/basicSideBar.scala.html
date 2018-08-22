@@ -1,6 +1,6 @@
-@import util.matchesPath
-@import controllers.core.WebContext
-@import controllers.core.WebContext._
+@import org.incal.play.util.WebUtil.matchesPath
+@import org.incal.play.controllers.WebContext
+@import org.incal.play.controllers.WebContext._
 
 @(
     menus: Traversable[(String, Traversable[(Call, String, Option[Int])])]

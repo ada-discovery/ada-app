@@ -9,14 +9,12 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.ActorMaterializer
 import com.google.inject.ImplementedBy
-import dataaccess.Criterion.Infix
-import dataaccess._
-import dataaccess.JsonRepoExtra._
+import org.incal.core.dataaccess.Criterion.Infix
 import models._
 import play.api.Logger
 import play.api.libs.json._
+import dataaccess.JsonRepoExtra.InfixOps
 import services.stats.calc._
-import JsonFieldUtil._
 import breeze.linalg.{DenseMatrix, eig, eigSym}
 import breeze.linalg.eigSym.EigSym
 import com.jujutsu.tsne.TSneConfig
@@ -24,6 +22,7 @@ import com.jujutsu.tsne.barneshut.{BHTSne, ParallelBHTsne}
 import dataaccess.RepoTypes.JsonReadonlyRepo
 import field.{FieldType, FieldTypeHelper}
 import org.apache.commons.math3.linear.{Array2DRowRealMatrix, EigenDecomposition}
+import org.incal.core.dataaccess.{AscSort, Criterion, DescSort, NotEqualsNullCriterion}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

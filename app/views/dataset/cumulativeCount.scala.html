@@ -1,6 +1,6 @@
 @import models.FieldTypeId
 @import models.Field
-@import models.FilterConditionExtraFormats.eitherFilterOrIdFormat
+@import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.{highchartsJsImport, timeLineChart}
@@ -11,8 +11,8 @@
 @import play.api.libs.json.Json
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import models.DataSpaceMetaInfo
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
 
 @(
     domainName: String,

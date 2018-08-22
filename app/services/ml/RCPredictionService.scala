@@ -12,7 +12,7 @@ import com.banda.network.business._
 import com.banda.network.business.learning.{ErrorMeasures, ReservoirTrainerFactory}
 import com.banda.network.domain._
 import com.google.inject.{ImplementedBy, Singleton}
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import dataaccess.JsonRepoExtra.InfixOps
 import models._
 import models.ml.RCPredictionSettingAndResults.rcPredictionSettingAndResultsFormat
@@ -20,6 +20,7 @@ import models.ml._
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.incal.core.{ConditionType, FilterCondition}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import util.FieldUtil.caseClassToFlatFieldTypes

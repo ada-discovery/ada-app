@@ -2,19 +2,18 @@ package controllers
 
 import javax.inject.Inject
 
-import controllers.core.{CrudControllerImpl, HasBasicListView, HasFormShowEqualEditView}
+import controllers.core.AdaCrudControllerImpl
 import controllers.dataset._
-import dataaccess.User
 import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
 import play.api.data.Form
 import play.api.data.Forms.{email, ignored, mapping, nonEmptyText, seq, text}
-import models.{DataSpaceMetaInfo, Page}
+import models.{DataSpaceMetaInfo, User}
 import reactivemongo.bson.BSONObjectID
 import services.MailClientProvider
 import views.html.{user => view}
-import play.api.i18n.Messages
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import org.incal.core.util.ReflectionUtil.getMethodNames
+import org.incal.play.controllers.{AdminRestrictedCrudController, CrudControllerImpl, HasBasicListView, HasFormShowEqualEditView}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -23,7 +22,7 @@ class UserController @Inject() (
     userRepo: UserRepo,
     mailClientProvider: MailClientProvider,
     dataSpaceMetaInfoRepo: DataSpaceMetaInfoRepo
-  ) extends CrudControllerImpl[User, BSONObjectID](userRepo)
+  ) extends AdaCrudControllerImpl[User, BSONObjectID](userRepo)
     with AdminRestrictedCrudController[BSONObjectID]
     with HasFormShowEqualEditView[User, BSONObjectID]
     with HasBasicListView[User] {
@@ -37,8 +36,7 @@ class UserController @Inject() (
       "permissions" -> seq(text)
       )(User.apply)(User.unapply))//(SecurityUtil.secureUserApply)(SecurityUtil.secureUserUnapply))
 
-  override protected val home =
-    Redirect(routes.UserController.find())
+  override protected val homeCall = routes.UserController.find()
 
   private val controllerActionNames = DataSetControllerActionNames(
     getMethodNames[DataSetController],
@@ -93,7 +91,9 @@ class UserController @Inject() (
 
   // list view and data
 
-  override protected[controllers] def listView = { implicit ctx => view.list(_) }
+  override protected def listView = { implicit ctx =>
+    (view.list(_, _)).tupled
+  }
 
   // actions
 

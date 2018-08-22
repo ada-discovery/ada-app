@@ -5,7 +5,7 @@ import models.{AdaException, Field, FieldTypeId, FieldTypeSpec}
 import play.api.libs.json.{JsObject, JsValue}
 import java.{util => ju}
 
-import dataaccess.Criterion._
+import org.incal.core.dataaccess.Criterion._
 import dataaccess.RepoTypes.FieldRepo
 import org.incal.core.util.ReflectionUtil
 import field.{FieldType, FieldTypeHelper}

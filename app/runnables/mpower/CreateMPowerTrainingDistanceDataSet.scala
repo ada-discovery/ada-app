@@ -5,7 +5,6 @@ import javax.inject.Inject
 
 import _root_.util.seqFutures
 import dataaccess.JsonUtil
-import dataaccess.AscSort
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}

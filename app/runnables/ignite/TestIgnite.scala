@@ -1,12 +1,12 @@
 package runnables.ignite
 
 import com.google.inject.Inject
-import dataaccess.Criterion.Infix
 import dataaccess.ignite.CacheAsyncCrudRepoFactory
 import models.DataSetFormattersAndIds.{DataSetSettingIdentity, serializableBSONObjectIDFormat, serializableDataSetSettingFormat}
 import models.DataSetSetting
 import reactivemongo.bson.BSONObjectID
 import runnables.GuiceBuilderRunnable
+import org.incal.core.dataaccess.Criterion.Infix
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global

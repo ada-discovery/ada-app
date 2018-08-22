@@ -13,7 +13,7 @@ import models.{AdaException, AdaParseException, RedCapDataSetImport}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import services.{RedCapService, RedCapServiceFactory}
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import field.FieldType
 
 import scala.concurrent.ExecutionContext.Implicits.global

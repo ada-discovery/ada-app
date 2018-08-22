@@ -1,10 +1,12 @@
 @import views.html.dataset.jsonTable
 @import play.api.libs.json.JsObject
-@import models.Field
+@import models.{Field, Filter}
 @import controllers.dataset.DataSetRouter
 
+@import org.incal.play.Page
 @(
     page: Page[JsObject],
+    filter: Option[Filter],
     tableFields: Traversable[Field],
     dataSetRouter: DataSetRouter,
     withRowClickableJs: Boolean = false,
@@ -19,7 +21,7 @@
         tableFields,
         dataSetRouter.getTable(_, _,
             tableFields.map(_.name).toSeq,
-            page.filter.map(_.conditionsOrId).getOrElse(Left(Nil))
+            filter.map(_.conditionsOrId).getOrElse(Left(Nil))
         ),
         Some(dataSetRouter.get),
         withRowClickableJs,

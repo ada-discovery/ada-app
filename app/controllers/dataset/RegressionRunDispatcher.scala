@@ -2,12 +2,12 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.SecureControllerDispatcher
-import models.FilterCondition
+import org.incal.play.controllers.SecureControllerDispatcher
+import org.incal.core.FilterCondition
 import models.ml.RegressionSetting
-import models.security.SecurityRole
+import org.incal.play.security.SecurityRole
 import reactivemongo.bson.BSONObjectID
-import util.SecurityUtil.createDataSetPermission
+import models.security.DataSetPermission
 
 class RegressionRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf: RegressionRunControllerFactory)
   extends SecureControllerDispatcher[RegressionRunController]("dataSet") with RegressionRunController {
@@ -25,7 +25,7 @@ class RegressionRunDispatcher @Inject()(dscf: DataSetControllerFactory, crcf: Re
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, ControllerName.regressionRun, actionName))
+  ) = Some(DataSetPermission(controllerId, ControllerName.regressionRun, actionName))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

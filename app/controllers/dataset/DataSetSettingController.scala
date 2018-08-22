@@ -4,14 +4,12 @@ import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import controllers._
-import dataaccess.{AscSort, Criterion}
+import controllers.core.AdaCrudControllerImpl
 import dataaccess.RepoTypes.{DataSetSettingRepo, DataSpaceMetaInfoRepo}
 import models.{ChartType, DataSetFormattersAndIds, DataSetSetting}
 import models.DataSetFormattersAndIds.{DataSetSettingIdentity, serializableDataSetSettingFormat, widgetSpecFormat}
 import models._
 import models.FilterShowFieldStyle
-import Criterion.Infix
-import controllers.core._
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.data.Form
@@ -23,17 +21,19 @@ import services.{DataSetService, DataSpaceService}
 import views.html.{category, datasetsetting => view}
 import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 import controllers.dataset.routes.javascript.{DataSetSettingController => dataSetSettingJsRoutes}
+import org.incal.core.dataaccess.Criterion.Infix
+import org.incal.play.controllers._
+import org.incal.play.formatters._
+import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
 
 import scala.concurrent.Future
-import scala.reflect.ClassTag
-import util.SecurityUtil.restrictAdminAnyNoCaching
 
 class DataSetSettingController @Inject() (
     repo: DataSetSettingRepo,
     dataSpaceService: DataSpaceService,
     dataSetService: DataSetService,
     dsaf: DataSetAccessorFactory
-  ) extends CrudControllerImpl[DataSetSetting, BSONObjectID](repo)
+  ) extends AdaCrudControllerImpl[DataSetSetting, BSONObjectID](repo)
 
     with AdminRestrictedCrudController[BSONObjectID]
     with HasBasicFormCreateView[DataSetSetting]
@@ -67,12 +67,11 @@ class DataSetSettingController @Inject() (
     )(DataSetSetting.apply)(DataSetSetting.unapply)
   )
 
-  override protected val home =
-    Redirect(routes.DataSetSettingController.find())
+  override protected val homeCall = routes.DataSetSettingController.find()
 
   // create view
 
-  override protected[controllers] def createView = { implicit ctx => view.create(_) }
+  override protected def createView = { implicit ctx => view.create(_) }
 
   // edit view and data (show view = edit view)
 
@@ -99,13 +98,15 @@ class DataSetSettingController @Inject() (
     }
   }
 
-  override protected[controllers] def editView = { implicit ctx =>
+  override protected def editView = { implicit ctx =>
     (view.editNormal(_, _)).tupled
   }
 
   // list view
 
-  override protected[controllers] def listView = { implicit ctx => view.list(_) }
+  override protected def listView = { implicit ctx =>
+    (view.list(_, _)).tupled
+  }
 
   def editForDataSet(dataSet: String) = restrictAdminAnyNoCaching(deadbolt) { implicit request =>
     val foundSettingFuture = repo.find(Seq("dataSetId" #== dataSet)).map(_.headOption)
@@ -141,7 +142,10 @@ class DataSetSettingController @Inject() (
   def updateForDataSet(id: BSONObjectID) = restrictAdminAnyNoCaching(deadbolt) { implicit request =>
     val dataSetIdFuture = repo.get(id).map(_.get.dataSetId)
     dataSetIdFuture.flatMap { dataSetId =>
-      update(id, Redirect(new DataSetRouter(dataSetId).getDefaultView)).apply(request)
+      update(
+        id,
+        _ => Redirect(new DataSetRouter(dataSetId).getDefaultView)
+      ).apply(request)
     }
   }
 

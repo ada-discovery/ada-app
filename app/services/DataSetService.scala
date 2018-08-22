@@ -6,7 +6,6 @@ import java.{util => ju}
 import javax.inject.Inject
 
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
-import dataaccess._
 import dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, JsonCrudRepo}
 import dataaccess.JsonRepoExtra.InfixOps
 import dataaccess.JsonUtil
@@ -14,13 +13,13 @@ import _root_.util.{AkkaStreamUtil, GroupMapList, MessageLogger}
 import _root_.util.FieldUtil.{JsonFieldOps, fieldTypeOrdering}
 import com.google.inject.ImplementedBy
 import models._
-import Criterion.Infix
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.json.{JsObject, _}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import reactivemongo.bson.BSONObjectID
+import org.incal.core.dataaccess.Criterion.Infix
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{Await, Future}
@@ -33,8 +32,9 @@ import akka.stream.impl.Stages.DefaultAttributes
 import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.{Sink, StreamConverters}
 import field.{FieldType, FieldTypeHelper, FieldTypeInferrer}
-import models.FilterCondition.FilterOrId
+import models.Filter.FilterOrId
 import models.ml._
+import org.incal.core.dataaccess.{AscSort, Criterion}
 
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat

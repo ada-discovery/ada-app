@@ -1,12 +1,13 @@
 package runnables.ignite
 
 import com.google.inject.Inject
-import dataaccess.Criterion.Infix
 import dataaccess.ignite.{BinaryCacheFactory, JsonBinaryCacheAsyncCrudRepo}
 import dataaccess.mongo.MongoJsonRepoFactory
-import dataaccess.{AscSort, SerializableApplicationLifecycle}
+import dataaccess.SerializableApplicationLifecycle
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import org.apache.ignite.Ignite
+import org.incal.core.dataaccess.AscSort
+import org.incal.core.dataaccess.Criterion._
 import play.api.Configuration
 import reactivemongo.bson.BSONObjectID
 import runnables.GuiceBuilderRunnable

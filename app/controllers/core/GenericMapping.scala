@@ -1,6 +1,6 @@
 package controllers.core
 
-import controllers.{BSONObjectIDStringFormatter, EnumFormatter, SeqFormatter}
+import controllers.BSONObjectIDStringFormatter
 import models.{AdaException, StorageType}
 import play.api.data.Forms._
 import play.api.data.format.Formats._
@@ -11,6 +11,7 @@ import play.api.data._
 import java.{util => ju}
 
 import org.incal.core.util.ReflectionUtil
+import org.incal.play.formatters._
 import reactivemongo.bson.BSONObjectID
 
 import scala.collection.Traversable

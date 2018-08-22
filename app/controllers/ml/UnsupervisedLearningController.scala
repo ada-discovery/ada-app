@@ -3,11 +3,8 @@ package controllers.ml
 import java.util.Date
 import javax.inject.Inject
 
-import controllers.core._
-import controllers.{AdminRestrictedCrudController, EnumFormatter, SeqFormatter}
-import dataaccess.AscSort
+import controllers.core.AdaCrudControllerImpl
 import models._
-import models.ml.TreeCore
 import models.ml.unsupervised._
 import persistence.RepoTypes._
 import play.api.data.Forms.{mapping, optional, _}
@@ -15,13 +12,18 @@ import play.api.data.format.Formats._
 import play.api.data.{Form, Mapping}
 import play.api.i18n.Messages
 import play.api.libs.json.{JsArray, Json}
-import play.api.mvc.{Action, AnyContent, Result}
+import play.api.mvc.{Action, AnyContent, Request, Result}
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import services.DataSpaceService
 import controllers.ml.routes.{UnsupervisedLearningController => route}
-import util.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
+import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.AscSort
+import org.incal.play.Page
+import org.incal.play.controllers._
+import org.incal.play.formatters._
+import org.incal.play.security.SecurityUtil.{restrictAdminAnyNoCaching, restrictSubjectPresentAnyNoCaching}
 import views.html.{layout, unsupervisedlearning => view}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -30,7 +32,8 @@ import scala.concurrent.Future
 class UnsupervisedLearningController @Inject()(
     repo: UnsupervisedLearningRepo,
     dataSpaceService: DataSpaceService
-  ) extends CrudControllerImpl[UnsupervisedLearning, BSONObjectID](repo)
+
+  ) extends AdaCrudControllerImpl[UnsupervisedLearning, BSONObjectID](repo)
     with AdminRestrictedCrudController[BSONObjectID]
     with HasCreateEditSubTypeFormViews[UnsupervisedLearning, BSONObjectID]
     with HasFormShowEqualEditView[UnsupervisedLearning, BSONObjectID] {
@@ -159,7 +162,7 @@ class UnsupervisedLearningController @Inject()(
       )
     )
 
-  override protected val home = Redirect(routes.UnsupervisedLearningController.find())
+  override protected val homeCall = routes.UnsupervisedLearningController.find()
 
   // default form... unused
   override protected[controllers] val form = kMeansForm.asInstanceOf[Form[UnsupervisedLearning]]
@@ -167,24 +170,28 @@ class UnsupervisedLearningController @Inject()(
   def create(concreteClassName: String) = restrictAdminAnyNoCaching(deadbolt) {
     implicit request =>
 
-      def createAux[E <: UnsupervisedLearning](x: CreateEditFormViews[E, BSONObjectID]): Future[Result] =
-        x.getCreateViewData.map { viewData =>
-          Ok(x.createView(implicitly[WebContext])(viewData))
-        }
-
-      createAux(getFormWithViews(concreteClassName))
+      getFormWithViews(concreteClassName)
+        .createViewWithContextX(implicitly[WebContext])
+        .map(Ok(_))
   }
 
-  override protected type ListViewData = (Page[UnsupervisedLearning], Traversable[DataSpaceMetaInfo])
+  override protected type ListViewData = (
+    Page[UnsupervisedLearning],
+    Seq[FilterCondition],
+    Traversable[DataSpaceMetaInfo]
+  )
 
-  override protected def getListViewData(page: Page[UnsupervisedLearning]) = { request =>
+  override protected def getListViewData(
+    page: Page[UnsupervisedLearning],
+    conditions: Seq[FilterCondition]
+  ) = { request =>
     for {
       tree <- dataSpaceService.getTreeForCurrentUser(request)
     } yield
-      (page, tree)
+      (page, conditions, tree)
   }
 
-  override protected[controllers] def listView = { implicit ctx => (view.list(_, _)).tupled }
+  override protected def listView = { implicit ctx => (view.list(_, _, _)).tupled }
 
   def idAndNames = restrictSubjectPresentAnyNoCaching(deadbolt) {
     implicit request =>

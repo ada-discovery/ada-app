@@ -3,11 +3,12 @@ package runnables.core
 import javax.inject.Inject
 
 import dataaccess.RepoTypes.FieldRepo
-import dataaccess.Criterion
-import dataaccess.Criterion._
-import models.FilterCondition.toCriterion
-import models.{AdaException, Filter, FilterCondition}
+import org.incal.core.dataaccess.Criterion
+import org.incal.core.dataaccess.Criterion._
+import org.incal.core.FilterCondition.toCriterion
+import models.{AdaException, Filter}
 import models.ml.{ClassificationEvalMetric, ClassificationSetting, VectorTransformType}
+import org.incal.core.FilterCondition
 import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger

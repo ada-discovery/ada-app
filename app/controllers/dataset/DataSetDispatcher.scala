@@ -2,15 +2,15 @@ package controllers.dataset
 
 import javax.inject.Inject
 
-import controllers.SecureControllerDispatcher
-import models.FilterCondition.FilterOrId
+import org.incal.play.controllers.SecureControllerDispatcher
+import models.Filter.FilterOrId
 import models.ml.VectorTransformType
-import models.{FieldTypeId, FilterCondition, PageOrder}
+import models.FieldTypeId
 import reactivemongo.bson.BSONObjectID
-import models.ml.RegressionEvalMetric
-import models.security.SecurityRole
-import play.api.mvc.{Action, AnyContent}
-import util.SecurityUtil._
+import org.incal.play.security.SecurityRole
+import models.security.DataSetPermission
+import org.incal.core.FilterCondition
+import org.incal.play.PageOrder
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
 
@@ -27,7 +27,7 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, ControllerName.dataSet, actionName))
+  ) = Some(DataSetPermission(controllerId, ControllerName.dataSet, actionName))
 
   override def get(id: BSONObjectID) = dispatch(_.get(id))
 

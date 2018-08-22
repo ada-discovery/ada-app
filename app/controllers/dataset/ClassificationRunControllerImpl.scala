@@ -4,14 +4,11 @@ import javax.inject.Inject
 import java.{util => ju}
 
 import com.google.inject.assistedinject.Assisted
-import controllers.DataSetWebContext
-import dataaccess.{Criterion, RepoException}
-import dataaccess.Criterion._
+import dataaccess.AdaDataAccessException
 import models.{DistributionWidgetSpec, _}
-import models.FilterCondition.{FilterIdentity, FilterOrId, toCriterion}
+import models.Filter.{FilterIdentity, FilterOrId}
 import models.DataSetFormattersAndIds._
 import dataaccess.FilterRepoExtra._
-import controllers.core._
 import models.ml.{ClassificationSetting, _}
 import models.ml.ClassificationResult.classificationResultFormat
 import models.Widget.{WidgetWrites, scatterWidgetFormat}
@@ -29,10 +26,19 @@ import services.ml._
 import _root_.util.FieldUtil
 import _root_.util.FieldUtil.caseClassToFlatFieldTypes
 import _root_.util.toHumanReadableCamel
+import controllers.core.AdaReadonlyControllerImpl
+import controllers.core.{ExportableAction, WidgetRepoController}
 import field.FieldTypeHelper
 import models.json.{EnumFormat, OrdinalEnumFormat}
 import models.ml.classification.Classification.ClassificationIdentity
 import services.stats.StatsService
+import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.Criterion
+import org.incal.play.Page
+import org.incal.core.dataaccess.Criterion._
+import org.incal.core.FilterCondition.toCriterion
+import org.incal.play.controllers._
+import org.incal.play.security.AuthAction
 
 import scala.reflect.runtime.universe.TypeTag
 import views.html.{classificationrun => view}
@@ -52,8 +58,8 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     dataSetService: DataSetService,
     dataSpaceService: DataSpaceService,
     val wgs: WidgetGenerationService
-  ) extends ReadonlyControllerImpl[ClassificationResult, BSONObjectID]
 
+  ) extends AdaReadonlyControllerImpl[ClassificationResult, BSONObjectID]
     with ClassificationRunController
     with WidgetRepoController[ClassificationResult]
     with ExportableAction[ClassificationResult]  {
@@ -111,6 +117,8 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
   protected val router = new ClassificationRunRouter(dataSetId)
 
+  override protected val homeCall = router.plainList
+
   // show view and data
 
   override protected type ShowViewData = (
@@ -133,7 +141,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       (dataSetName + " Classification Run", item, tree)
   }
 
-  override protected[controllers] def showView = { implicit ctx =>
+  override protected def showView = { implicit ctx =>
     (view.show(_, _, _)).tupled
   }
 
@@ -143,6 +151,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     String,
     String,
     Page[ClassificationResult],
+    Seq[FilterCondition],
     Traversable[Widget],
     Map[String, String],
     Traversable[Field],
@@ -152,7 +161,8 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   )
 
   override protected def getListViewData(
-    page: Page[ClassificationResult]
+    page: Page[ClassificationResult],
+    conditions: Seq[FilterCondition]
   ) = { request =>
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val nameFuture = dsa.dataSetName
@@ -174,7 +184,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
 
     val filtersFuture = dsa.filterRepo.find(Seq(FilterIdentity.name #-> filterIds.toSeq))
 
-    val widgetsFuture = toCriteria(page.filterConditions).flatMap( criteria =>
+    val widgetsFuture = toCriteria(conditions).flatMap( criteria =>
       widgets(widgetSpecs, criteria)
     )
 
@@ -197,12 +207,12 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       val mlModelIdNameMap = mlModels.map(mlModel => (mlModel._id.get, mlModel.name.get)).toMap
       val filterIdNameMap = filters.map(filter => (filter._id.get, filter.name.get)).toMap
 
-      (dataSetName + " Classification Run", dataSetName, page, widgets.flatten, fieldNameLabelMap, allClassificationRunFields, mlModelIdNameMap, filterIdNameMap, tree)
+      (dataSetName + " Classification Run", dataSetName, page, conditions, widgets.flatten, fieldNameLabelMap, allClassificationRunFields, mlModelIdNameMap, filterIdNameMap, tree)
     }
   }
 
-  override protected[controllers] def listView = { implicit ctx =>
-    (view.list(_, _, _, _, _, _, _, _, _)).tupled
+  override protected def listView = { implicit ctx =>
+    (view.list(_, _, _, _, _, _, _, _, _, _)).tupled
   }
 
   // run
@@ -456,7 +466,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
       case t: TimeoutException =>
         Logger.error(s"Problem deleting the item ${id}")
         InternalServerError(t.getMessage)
-      case i: RepoException =>
+      case i: AdaDataAccessException =>
         Logger.error(s"Problem deleting the item ${id}")
         InternalServerError(i.getMessage)
     }

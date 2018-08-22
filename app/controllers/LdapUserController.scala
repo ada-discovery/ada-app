@@ -2,11 +2,11 @@ package controllers
 
 import javax.inject.Inject
 
-import controllers.core.{BaseController, WebContext}
 import ldap.LdapUserService
+import org.incal.play.controllers.BaseController
 import views.html.ldapviews._
 import play.api.mvc._
-import util.SecurityUtil._
+import org.incal.play.security.SecurityUtil._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

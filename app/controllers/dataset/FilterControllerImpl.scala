@@ -5,12 +5,10 @@ import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
 import com.google.inject.assistedinject.Assisted
-import controllers.{DataSetWebContext, JsonFormatter}
-import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
-import dataaccess._
+import dataaccess.RepoTypes.UserRepo
 import models._
-import models.FilterCondition.{FilterIdentity, filterFormat}
-import models.security.{SecurityRole, UserManager}
+import models.Filter.{FilterIdentity, filterConditionFormat, filterFormat}
+import models.security.UserManager
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -21,8 +19,15 @@ import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import java.util.Date
 
+import controllers.core.AdaCrudControllerImpl
 import reactivemongo.play.json.BSONFormats._
-import controllers.core.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
+import dataaccess.{AdaDataAccessException, FilterRepo}
+import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.{AscSort, Criterion}
+import org.incal.play.Page
+import org.incal.play.controllers.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
+import org.incal.play.formatters.JsonFormatter
+import org.incal.play.security.SecurityRole
 import services.DataSpaceService
 import views.html.{dataview, filters => view}
 
@@ -38,8 +43,8 @@ protected[controllers] class FilterControllerImpl @Inject() (
     dataSpaceService: DataSpaceService,
     userRepo: UserRepo,
     val userManager: UserManager
-  ) extends CrudControllerImpl[Filter, BSONObjectID](dsaf(dataSetId).get.filterRepo)
 
+  ) extends AdaCrudControllerImpl[Filter, BSONObjectID](dsaf(dataSetId).get.filterRepo)
     with FilterController
     with AdaAuthConfig
     with HasFormShowEqualEditView[Filter, BSONObjectID] {
@@ -71,8 +76,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
-  override protected lazy val home =
-    Redirect(router.plainList)
+  override protected val homeCall = router.plainList
 
   // create view and data
 
@@ -84,7 +88,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
     } yield
       (dataSetName + " Filter", form)
 
-  override protected[controllers] def createView = { implicit ctx =>
+  override protected def createView = { implicit ctx =>
     (view.create(_, _)).tupled
   }
 
@@ -123,7 +127,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
       (dataSetName + " Filter", id, form, tree)
   }
 
-  override protected[controllers] def editView = { implicit ctx =>
+  override protected def editView = { implicit ctx =>
     (view.edit(_, _, _, _)).tupled
   }
 
@@ -132,11 +136,13 @@ protected[controllers] class FilterControllerImpl @Inject() (
   override protected type ListViewData = (
     String,
     Page[Filter],
+    Seq[FilterCondition],
     Traversable[DataSpaceMetaInfo]
   )
 
   override protected def getListViewData(
-    page: Page[Filter]
+    page: Page[Filter],
+    conditions: Seq[FilterCondition]
   ) = { request =>
     val setCreatedByFuture = FilterRepo.setCreatedBy(userRepo, page.items)
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
@@ -152,11 +158,11 @@ protected[controllers] class FilterControllerImpl @Inject() (
       // get the data set name
       dataSetName <- dataSetNameFuture
     } yield
-      (dataSetName + " Filter", page, tree)
+      (dataSetName + " Filter", page, conditions, tree)
   }
 
-  override protected[controllers] def listView = { implicit ctx =>
-    (view.list(_, _, _)).tupled
+  override protected def listView = { implicit ctx =>
+    (view.list(_, _, _, _)).tupled
   }
 
   override def saveCall(
@@ -185,7 +191,7 @@ protected[controllers] class FilterControllerImpl @Inject() (
       case t: TimeoutException =>
         Logger.error("Problem found while executing the save function")
         InternalServerError(t.getMessage)
-      case i: RepoException =>
+      case i: AdaDataAccessException =>
         Logger.error("Problem found while executing the save function")
         InternalServerError(i.getMessage)
     }

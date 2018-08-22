@@ -5,22 +5,21 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import be.objectify.deadbolt.scala.DeadboltActions
 import models.Message
-import models.security.{SecurityRole, UserManager}
-import dataaccess.DescSort
+import models.Message._
+import models.security.UserManager
 import persistence.RepoTypes.MessageRepo
-import play.api.libs.Comet
 import play.api.libs.EventSource.EventIdExtractor
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, Controller, Results}
 import models.Message.MessageFormat
 import play.api.libs.EventSource
-import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
 import controllers.routes.javascript.{MessageController => messageJsRoutes}
+import org.incal.core.dataaccess.DescSort
+import org.incal.play.security.SecurityRole
 import play.api.http.{ContentTypes, HttpEntity}
 import play.api.libs.streams.Streams
 

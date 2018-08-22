@@ -1,11 +1,11 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
-@import views.html.dataset.{datasetMenu, mlElements, inputFieldAndFilterResources, datasetSubNavWithJs, trainingSettingFields}
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs, inputFieldAndFilterResources, mlElements, trainingSettingFields}
 @import play.api.i18n.Messages
 @import models.{DataSpaceMetaInfo, FilterShowFieldStyle}
 @import views.html.elements._
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
 @import models.ml.RegressionEvalMetric
 
 @(

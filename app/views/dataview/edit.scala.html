@@ -1,13 +1,12 @@
 @import views.html.layout
-@import views.html.dataset.{datasetSubNav, datasetSubNavJs, datasetMenu}
-@import controllers.dataset.DataViewRouter
+@import views.html.dataset.{datasetMenu, datasetSubNav, datasetSubNavJs}
+@import controllers.dataset.{DataSetWebContext, DataViewRouter}
 @import models.DataSpaceMetaInfo
 @import models.{DataView, Field}
 @import reactivemongo.bson.BSONObjectID
 @import views.html.dataview.elements
 @import views.html.dataview.activateTypeahead
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
 
 @(
     domainName: String,

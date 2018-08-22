@@ -4,15 +4,12 @@ import javax.inject.Inject
 import java.{util => ju}
 
 import com.google.inject.assistedinject.Assisted
-import controllers.DataSetWebContext
-import dataaccess.{Criterion, RepoException}
+import dataaccess.AdaDataAccessException
 import field.FieldTypeHelper
-import dataaccess.Criterion._
 import models.{DistributionWidgetSpec, _}
-import models.FilterCondition.{FilterIdentity, FilterOrId, toCriterion}
+import models.Filter.{FilterIdentity, FilterOrId}
 import models.DataSetFormattersAndIds._
 import dataaccess.FilterRepoExtra._
-import controllers.core._
 import models.ml.{RegressionSetting, _}
 import models.ml.RegressionResult.{regressionResultFormat, regressionSettingFormat}
 import models.Widget.WidgetWrites
@@ -20,20 +17,26 @@ import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.json._
 import play.api.mvc.{Action, Request}
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DataSpaceService, WidgetGenerationService}
 import services.ml._
-import _root_.util.toHumanReadableCamel
-import _root_.util.FieldUtil
 import models.ml.regression.Regression.RegressionIdentity
 import _root_.util.FieldUtil
 import _root_.util.FieldUtil.caseClassToFlatFieldTypes
 import _root_.util.toHumanReadableCamel
+import controllers.core.AdaReadonlyControllerImpl
+import controllers.core.{ExportableAction, WidgetRepoController}
 import models.json.OrdinalEnumFormat
+import org.incal.core.dataaccess.Criterion._
+import org.incal.core.FilterCondition.toCriterion
+import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.Criterion
+import org.incal.play.Page
+import org.incal.play.controllers.{ReadonlyControllerImpl, WebContext}
+import org.incal.play.security.AuthAction
 
 import scala.reflect.runtime.universe.TypeTag
 import views.html.{regressionrun => view}
@@ -52,8 +55,8 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
     dataSetService: DataSetService,
     dataSpaceService: DataSpaceService,
     val wgs: WidgetGenerationService
-  ) extends ReadonlyControllerImpl[RegressionResult, BSONObjectID]
 
+  ) extends AdaReadonlyControllerImpl[RegressionResult, BSONObjectID]
     with RegressionRunController
     with WidgetRepoController[RegressionResult]
     with ExportableAction[RegressionResult]  {
@@ -107,6 +110,8 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
 
   protected val router = new RegressionRunRouter(dataSetId)
 
+  override protected val homeCall = router.plainList
+
   // show view and data
 
   override protected type ShowViewData = (
@@ -129,7 +134,7 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
       (dataSetName + " Regression Run", item, tree)
   }
 
-  override protected[controllers] def showView = { implicit ctx =>
+  override protected def showView = { implicit ctx =>
     (view.show(_, _, _)).tupled
   }
 
@@ -139,6 +144,7 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
     String,
     String,
     Page[RegressionResult],
+    Seq[FilterCondition],
     Traversable[Widget],
     Map[String, String],
     Traversable[Field],
@@ -148,7 +154,8 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
   )
 
   override protected def getListViewData(
-    page: Page[RegressionResult]
+    page: Page[RegressionResult],
+    conditions: Seq[FilterCondition]
   ) = { request =>
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val nameFuture = dsa.dataSetName
@@ -170,8 +177,8 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
 
     val filtersFuture = dsa.filterRepo.find(Seq(FilterIdentity.name #-> filterIds.toSeq))
 
-    val widgetsFuture = toCriteria(page.filterConditions).flatMap( criteria =>
-      widgets(widgetSpecs, criteria)
+    val widgetsFuture = toCriteria(conditions).flatMap(
+      widgets(widgetSpecs, _)
     )
 
     for {
@@ -193,12 +200,12 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
       val mlModelIdNameMap = mlModels.map(mlModel => (mlModel._id.get, mlModel.name.get)).toMap
       val filterIdNameMap = filters.map(filter => (filter._id.get, filter.name.get)).toMap
 
-      (dataSetName + " Regression Run", dataSetName, page, widgets.flatten, fieldNameLabelMap, allRegressionRunFields, mlModelIdNameMap, filterIdNameMap, tree)
+      (dataSetName + " Regression Run", dataSetName, page, conditions, widgets.flatten, fieldNameLabelMap, allRegressionRunFields, mlModelIdNameMap, filterIdNameMap, tree)
     }
   }
 
-  override protected[controllers] def listView = { implicit ctx =>
-    (view.list(_, _, _, _, _, _, _, _, _)).tupled
+  override protected def listView = { implicit ctx =>
+    (view.list(_, _, _, _, _, _, _, _, _, _)).tupled
   }
 
   // run
@@ -376,7 +383,7 @@ protected[controllers] class RegressionRunControllerImpl @Inject()(
       case t: TimeoutException =>
         Logger.error(s"Problem deleting the item ${id}")
         InternalServerError(t.getMessage)
-      case i: RepoException =>
+      case i: AdaDataAccessException =>
         Logger.error(s"Problem deleting the item ${id}")
         InternalServerError(i.getMessage)
     }

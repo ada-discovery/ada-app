@@ -3,25 +3,29 @@ package controllers.dataset
 import javax.inject.Inject
 
 import be.objectify.deadbolt.scala.DeadboltHandler
-import controllers.SecureControllerDispatcher
-import dataaccess.User
-import models.security.{SecurityRole, UserManager}
-import models.{AdaException, FilterCondition}
+import controllers.core.AdminOrOwnerControllerDispatcherExt
+import org.incal.play.controllers.SecureControllerDispatcher
+import models.security.UserManager
+import models.AdaException
 import persistence.dataset.DataSetAccessorFactory
-import play.api.mvc.{Action, AnyContent, Request, Result}
+import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
 import security.AdaAuthConfig
-import util.SecurityUtil.createDataSetPermission
+import models.security.DataSetPermission
+import org.incal.core.FilterCondition
+import org.incal.play.security.SecurityRole
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class DataViewDispatcher @Inject()(
     dscf: DataSetControllerFactory,
     dvc: DataViewControllerFactory,
     dsaf: DataSetAccessorFactory,
     val userManager: UserManager
-  ) extends SecureControllerDispatcher[DataViewController]("dataSet") with DataViewController with AdaAuthConfig {
+  ) extends SecureControllerDispatcher[DataViewController]("dataSet")
+      with AdminOrOwnerControllerDispatcherExt[DataViewController]
+      with DataViewController
+      with AdaAuthConfig {
 
   override protected def getController(id: String) =
     dscf(id).map(_ => dvc(id)).getOrElse(
@@ -36,7 +40,7 @@ class DataViewDispatcher @Inject()(
   override protected def getPermission(
     controllerId: String,
     actionName: String
-  ) = Some(createDataSetPermission(controllerId, ControllerName.dataview, actionName))
+  ) = Some(DataSetPermission(controllerId, ControllerName.dataview, actionName))
 
   override def get(id: BSONObjectID) = dispatchIsAdminOrOwner(id, _.get(id))
 
@@ -127,7 +131,7 @@ class DataViewDispatcher @Inject()(
 
   override def saveFilter(
     dataViewId: BSONObjectID,
-    filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]]
+    filterOrIds: Seq[Either[Seq[FilterCondition], BSONObjectID]]
   ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.saveFilter(dataViewId, filterOrIds))
 
   protected def dispatchIsAdminOrOwner(
@@ -147,9 +151,6 @@ class DataViewDispatcher @Inject()(
     action: DataViewController => Action[AnyContent],
     outputDeadboltHandler: Option[DeadboltHandler]
   ): Action[AnyContent] = {
-    val currentUserFun = {
-      request: Request[_] => currentUser(request)
-    }
 
     val objectOwnerFun = {
       request: Request[AnyContent] =>
@@ -160,15 +161,6 @@ class DataViewDispatcher @Inject()(
         }
       }
 
-    dispatchIsAdminOrOwnerAux(objectOwnerFun, currentUserFun, outputDeadboltHandler)(action)
-  }
-
-  protected def dispatchIsAdmin(
-    action: DataViewController => Action[AnyContent]
-  ): Action[AnyContent] = {
-    val currentUserFun = {
-      request: Request[_] => currentUser(request)
-    }
-    dispatchIsAdminAux(currentUserFun)(action)
+    dispatchIsAdminOrOwnerAux(objectOwnerFun, outputDeadboltHandler)(action)
   }
 }

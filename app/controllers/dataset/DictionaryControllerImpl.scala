@@ -7,19 +7,22 @@ import models.DistributionWidgetSpec
 import scala.reflect.runtime.universe.TypeTag
 import com.google.inject.assistedinject.Assisted
 import controllers._
-import controllers.core._
+import controllers.core.AdaCrudControllerImpl
+import controllers.core.{ExportableAction, WidgetRepoController}
 import dataaccess.RepoTypes.CategoryRepo
-import dataaccess._
-import dataaccess.Criterion._
 import models._
 import models.DataSetFormattersAndIds._
 import persistence.RepoTypes._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import dataaccess.FieldRepo._
-import play.api.Logger
+import org.incal.core.dataaccess.Criterion._
+import org.incal.core.FilterCondition
+import org.incal.core.dataaccess.AscSort
+import org.incal.play.Page
+import org.incal.play.controllers.{CrudControllerImpl, HasFormShowEqualEditView, WebContext}
+import org.incal.play.formatters.{EnumFormatter, MapJsonFormatter}
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.i18n.Messages
 import play.api.mvc.{Action, Request}
 import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
@@ -42,8 +45,8 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     statsService: StatsService,
     dataSpaceService: DataSpaceService,
     val wgs: WidgetGenerationService
-  ) extends CrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo)
 
+  ) extends AdaCrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo)
     with DictionaryController
     with ExportableAction[Field]
     with WidgetRepoController[Field]
@@ -112,8 +115,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   protected val router = new DictionaryRouter(dataSetId)
   protected val jsRouter = new DictionaryJsRouter(dataSetId)
 
-  override protected lazy val home =
-    Redirect(router.plainList)
+  override protected val homeCall = router.plainList
 
   // create view and  data
 
@@ -133,7 +135,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       (dataSetName + " Field", form, allCategories)
   }
 
-  override protected[controllers] def createView = { implicit ctx =>
+  override protected def createView = { implicit ctx =>
     (view.create(_, _, _)).tupled
   }
 
@@ -168,7 +170,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       (dataSetName + " Field", id, form, allCategories, tree)
   }
 
-  override protected[controllers] def editView = { implicit ctx =>
+  override protected def editView = { implicit ctx =>
     (view.edit(_, _, _, _, _)).tupled
   }
 
@@ -177,6 +179,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
   override protected type ListViewData = (
     String,
     Page[Field],
+    Seq[FilterCondition],
     Traversable[Widget],
     Traversable[(String, Option[String])],
     Traversable[DataSpaceMetaInfo]
@@ -186,13 +189,14 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     DistributionWidgetSpec("fieldType", None)
   )
 
-  override protected def getListViewData(page: Page[Field]) = { request =>
-    val newConditions = page.filterConditions.map { condition =>
+  override protected def getListViewData(
+    page: Page[Field],
+    conditions: Seq[FilterCondition]
+  ) = { request =>
+    val newConditions = conditions.map { condition =>
       val label = fieldNameLabelMap.get(condition.fieldName.trim)
       condition.copy(fieldLabel = label.flatten)
     }
-
-    val newPage = page.copy(filter = Some(new models.Filter(newConditions)))
 
     // create futures as vals so they are executed in parallel
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
@@ -203,7 +207,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       widgets(widgetSpecs, criteria)
     )
 
-    val setCategoriesFuture = setCategoriesById(categoryRepo, newPage.items)
+    val setCategoriesFuture = setCategoriesById(categoryRepo, page.items)
 
     for {
       // get the data space tree
@@ -218,11 +222,11 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       // set categories
       _ <- setCategoriesFuture
     } yield
-      (dataSetName + " Field", newPage, widgets.flatten, fieldNameLabels, tree)
+      (dataSetName + " Field", page, newConditions, widgets.flatten, fieldNameLabels, tree)
   }
 
-  override protected[controllers] def listView = { implicit ctx =>
-    (view.list(_, _, _, _, _)).tupled
+  override protected def listView = { implicit ctx =>
+    (view.list(_, _, _, _, _, _)).tupled
   }
 
   // actions

@@ -15,9 +15,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 import akka.stream.{ActorMaterializer, SourceShape}
 import akka.stream.scaladsl.{GraphDSL, Sink, Source, Zip}
-import dataaccess.AscSort
 import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
 import models.StorageType
+import org.incal.core.dataaccess.AscSort
 import play.api.Logger
 
 class CompareAllValuesInTwoDataSets @Inject()(

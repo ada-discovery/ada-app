@@ -1,12 +1,12 @@
 @import views.html.layout
 @import views.html.table.{dynamicStringTable, dynamicTableJsImport}
-@import views.html.dataset.{datasetSubNavWithJs, datasetMenu}
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs}
 @import views.html.elements._
 @import reactivemongo.bson.BSONObjectID
 @import models.DataSpaceMetaInfo
 @import models.Category
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
 
 @(
     domainName: String,

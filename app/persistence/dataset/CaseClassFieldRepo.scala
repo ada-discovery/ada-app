@@ -1,13 +1,14 @@
 package persistence.dataset
 
 import dataaccess._
-import dataaccess.Criterion._
+import org.incal.core.dataaccess.Criterion._
 import dataaccess.RepoTypes.FieldRepo
 import models.ml.RCPredictionSettingAndResults
 import models.{Field, FieldTypeId}
+import org.incal.core.dataaccess.AscSort
 import util.FieldUtil.caseClassToFlatFieldTypes
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe._
 import scala.concurrent.Await
 import scala.concurrent.duration._

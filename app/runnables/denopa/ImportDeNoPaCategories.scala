@@ -2,9 +2,9 @@ package runnables.denopa
 
 import javax.inject.Inject
 import dataaccess.RepoTypes.FieldRepo
-import dataaccess.{Criterion, CategoryRepo}
+import dataaccess.CategoryRepo
 import models._
-import Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
 import services.{DataSetService, DeNoPaSetting}

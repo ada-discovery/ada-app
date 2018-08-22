@@ -1,17 +1,22 @@
 package models.workspace
 
-import models.FilterCondition
-import FilterCondition.filterConditionFormat
+import org.incal.core.FilterCondition
+import models.Filter.filterConditionFormat
 import dataaccess.BSONObjectIdentity
-import models.FilterCondition
+import org.incal.core.FilterCondition
 import play.api.libs.json._
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 
-import play.modules.reactivemongo.json.BSONFormats._
+import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 
-
-case class Workspace(_id: Option[BSONObjectID], userId: String, collaborators: UserGroup, filters: Seq[FilterCondition], treeProjections: Seq[JsObject])
+case class Workspace(
+  _id: Option[BSONObjectID],
+  userId: String,
+  collaborators: UserGroup,
+  filters: Seq[FilterCondition],
+  treeProjections: Seq[JsObject]
+)
 
 object Workspace {
   val emptyUserGroup = UserGroup(None, "empty", None, Seq())

@@ -5,7 +5,7 @@ import javax.inject.Inject
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import play.api.Logger
 import runnables.FutureRunnable
-import dataaccess.Criterion._
+import org.incal.core.dataaccess.Criterion._
 import field.FieldTypeHelper
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.play.json.BSONFormats._

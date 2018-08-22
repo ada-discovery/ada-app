@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.dataset.{filterWidgetPanel, datasetSubNavWithJs, datasetMenu}
+@import views.html.dataset.{datasetMenu, datasetSubNavWithJs, filterWidgetPanel}
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.table.paginatedTable
 @import views.html.filter.{filter, filterWithJs}
@@ -8,15 +8,19 @@
 @import util.typeColumns
 @import models.DataSpaceMetaInfo
 @import models.Field
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import models.Filter
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
 @import models.ml.ClassificationResult
 @import reactivemongo.bson.BSONObjectID
+@import org.incal.play.Page
+@import org.incal.core.FilterCondition
 
 @(
     domainName : String,
     dataSetName: String,
     page: Page[ClassificationResult],
+    conditions: Seq[FilterCondition],
     widgets: Traversable[Widget],
     fieldNameLabelMap: Map[String, String],
     allClassificationRunFields: Traversable[Field],
@@ -47,7 +51,7 @@
     <div class="row">
         <div class="col-md-10">
             @filterWithJs(
-                page.filter,
+                Filter(conditions),
                 classificationRunRouter.plainList,
                 Left(allClassificationRunFields),
                 None,
@@ -70,7 +74,7 @@
                     @exportDropdown(
                         classificationRunRouter.exportCsv(_, true, None, _, _),
                         classificationRunRouter.exportJson,
-                        Left(page.filterConditions)
+                        Left(conditions)
                     )()()
                 </li>
             </ul>
@@ -82,7 +86,7 @@
 @table = {
     @paginatedTable(
         page,
-        classificationRunRouter.list(_, _, page.filterConditions),
+        classificationRunRouter.list(_, _, conditions),
         typeColumns[ClassificationResult](
             (Some("setting-mlModelId"), "ML Model", result => mlModelIdNameMap.get(result.setting.mlModelId).get),
             (Some("setting-filterId"), "Filter", _.setting.filterId.map(filterId => filterIdNameMap.get(filterId).get).getOrElse("")),

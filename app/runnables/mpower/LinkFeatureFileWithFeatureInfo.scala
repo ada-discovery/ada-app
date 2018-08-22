@@ -9,7 +9,7 @@ import play.api.Logger
 import play.api.libs.json._
 import runnables.InputFutureRunnable
 import services.DataSetService
-import dataaccess.Criterion._
+import org.incal.core.dataaccess.Criterion._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source

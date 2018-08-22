@@ -3,8 +3,8 @@ package services.widgetgen
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
-import dataaccess.{AsyncReadonlyRepo, Criterion, NotEqualsNullCriterion}
 import models.{Field, Widget, WidgetSpec}
+import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion, NotEqualsNullCriterion}
 import play.api.libs.json.JsObject
 import services.stats.{CalculatorExecutor, CalculatorExecutors, CalculatorTypePack}
 

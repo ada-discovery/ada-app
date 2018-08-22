@@ -1,11 +1,11 @@
-package controllers
+package controllers.dataset
 
 import be.objectify.deadbolt.scala.AuthenticatedRequest
-import controllers.core.WebContext
-import controllers.dataset._
+import controllers.WebJarAssets
+import org.incal.play.controllers.WebContext
 import play.api.Configuration
-import play.api.mvc.{Flash, Request}
 import play.api.i18n.Messages
+import play.api.mvc.Flash
 
 class DataSetWebContext(
   val dataSetId: String)(

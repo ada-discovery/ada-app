@@ -1,16 +1,17 @@
-@import util.{matchesPath, getParamValue}
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import be.objectify.deadbolt.scala.views.html.{subjectPresent, subjectPresentOr, restrict, pattern}
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
 @import views.html.restrictOrPattern
-@import models.security.SecurityRole
-@import util.SecurityUtil.createDataSetPermission
-
+@import org.incal.play.security.SecurityRole
+@import models.security.DataSetPermission
+@import org.incal.play.util.WebUtil.matchesPath
 @import controllers.dataset.ControllerName
+
+@import controllers.dataset.DataSetWebContext
 @()(implicit context: DataSetWebContext)
 
 @listItemWithPermission(call: Call, text: String, permissionControllerName: ControllerName.Value, permissionActionName: String, matchPrefixDepth : Option[Int] = None) = {
-    @restrictOrPattern(Array(SecurityRole.admin), createDataSetPermission(context.dataSetId, permissionControllerName, permissionActionName)) {
+    @restrictOrPattern(Array(SecurityRole.admin), DataSetPermission(context.dataSetId, permissionControllerName, permissionActionName)) {
         @listItem(call, text, matchPrefixDepth)
     }
 }

@@ -1,11 +1,10 @@
-@import controllers.dataset.DataViewRouter
+@import controllers.dataset.{DataSetWebContext, DataViewRouter}
 @import models.DataSpaceMetaInfo
 @import models.DataView
 @import reactivemongo.bson.BSONObjectID
 @import views.html.dataview.edit
 @import models.Field
-@import controllers.DataSetWebContext
-@import controllers.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext._
 
 @(
     domainName: String,

@@ -9,7 +9,7 @@ import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.business.TopologyFactory
 import com.banda.network.business.learning.ReservoirTrainerFactory
 import com.banda.network.domain.ActivationFunctionType
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import models.ml.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
