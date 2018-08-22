@@ -5,7 +5,7 @@ import javax.inject.Inject
 import dataaccess.RepoTypes.FilterRepo
 import dataaccess._
 import dataaccess.mongo.dataset.FilterMongoAsyncCrudRepoFactory
-import models.FilterCondition.FilterIdentity
+import models.Filter.FilterIdentity
 import play.api.Configuration
 
 protected[dataaccess] class FilterCacheCrudRepoFactory @Inject()(

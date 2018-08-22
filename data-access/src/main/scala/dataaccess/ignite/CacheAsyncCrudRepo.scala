@@ -3,19 +3,22 @@ package dataaccess.ignite
 import javax.cache.configuration.Factory
 import javax.inject.Inject
 
-import org.incal.core.util.ReflectionUtil.shortName
-import dataaccess.mongo.{ReactiveMongoApi, MongoAsyncCrudRepo}
+import dataaccess.mongo.{MongoAsyncCrudRepo, ReactiveMongoApi}
 import dataaccess._
 import dataaccess.ignite.BinaryJsonUtil.unescapeFieldName
 import org.incal.core.util.DynamicConstructorFinder
 import org.apache.ignite.{Ignite, IgniteCache}
+import org.incal.core.Identity
+import org.incal.core.util.ReflectionUtil.shortName
+import org.incal.core.dataaccess._
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsResult, JsValue, Format}
-import scala.collection.mutable
+import play.api.libs.json.{Format, JsResult, JsValue}
+
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe._
 import scala.reflect.runtime.{universe => ru}
-
 import scala.reflect.ClassTag
 
 private class CacheAsyncCrudRepo[ID, E: TypeTag](

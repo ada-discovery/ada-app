@@ -1,9 +1,11 @@
-package dataaccess
+package models
 
+import dataaccess.BSONObjectIdentity
 import models.json.SerializableFormat
 import play.api.libs.json.{Json, _}
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
+import reactivemongo.play.json.BSONFormats._
+
 
 /**
   *  User object - holds info about a user such as ldapDn, email, roles, and  permissions.

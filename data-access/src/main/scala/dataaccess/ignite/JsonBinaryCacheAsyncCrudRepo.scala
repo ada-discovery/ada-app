@@ -11,6 +11,7 @@ import dataaccess.mongo.MongoJsonRepoFactory
 import field.FieldTypeFactory
 import org.apache.ignite.{Ignite, IgniteCache}
 import org.apache.ignite.binary.BinaryObject
+import org.incal.core.Identity
 import play.api.Configuration
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID

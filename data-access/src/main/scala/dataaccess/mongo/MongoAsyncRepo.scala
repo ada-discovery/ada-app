@@ -1,5 +1,6 @@
 package dataaccess.mongo
 
+import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 
 import akka.actor.ActorSystem
@@ -7,26 +8,25 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import dataaccess._
 import dataaccess.ignite.BinaryJsonUtil.toJson
-import org.apache.commons.lang3.StringUtils
 import play.api.Logger
-import play.api.libs.iteratee.{Concurrent, Enumerator}
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 import play.modules.reactivemongo.ReactiveMongoApi
-import reactivemongo.api.collections.GenericQueryBuilder
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.collection.JSONBatchCommands.JSONCountCommand.Count
-import reactivemongo.core.errors.{DatabaseException, DetailedDatabaseException}
-import reactivemongo.play.json.collection.JSONCollection
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import models._
+import org.incal.core.Identity
+import org.incal.core.dataaccess._
 import reactivemongo.akkastream.{AkkaStreamCursor, State}
 import reactivemongo.api._
+import reactivemongo.core.actors.Exceptions.PrimaryUnavailableException
 import reactivemongo.core.commands.RawCommand
+import reactivemongo.core.errors.ReactiveMongoException
 
 import scala.util.Random
 
@@ -74,7 +74,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
         case Some(limit) => cursor.collect[List](limit)
         case None => cursor.collect[List]()
       }
-    )
+    ).recover(handleExceptions)
   }
 
   override def findAsStream(
@@ -90,7 +90,7 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
         case Some(limit) => cursor.documentSource(limit)(materializer)
         case None => cursor.documentSource()(materializer)
       }
-    }
+    }.recover(handleExceptions)
 
   import reactivemongo.akkastream.cursorProducer
 
@@ -235,15 +235,27 @@ protected class MongoAsyncReadonlyRepo[E: Format, ID: Format](
 
   override def count(criteria: Seq[Criterion[Any]]): Future[Int] =
     criteria match {
-      case Nil => collection.count()
+      case Nil => collection.count().recover(handleExceptions)
       case _ => {
         val jsonCriteria = toMongoCriteria(criteria)
-        collection.runCommand(Count(jsonCriteria)).map(_.value)
+        collection.runCommand(Count(jsonCriteria)).map(_.value).recover(handleExceptions)
       }
     }
 
   protected def handleResult(result : WriteResult) =
-    if (!result.ok) throw new RepoException(result.writeErrors.map(_.errmsg).mkString(". "))
+    if (!result.ok) throw new AdaDataAccessException(result.writeErrors.map(_.errmsg).mkString(". "))
+
+  protected def handleExceptions[A]: PartialFunction[Throwable, A] = {
+    case e: PrimaryUnavailableException =>
+      val message = "Mongo node is not available."
+      logger.error(message, e)
+      throw new AdaDataAccessException(message, e)
+
+    case e: ReactiveMongoException =>
+      val message = "Problem with Mongo DB detected."
+      logger.error(message, e)
+      throw new AdaDataAccessException(message, e)
+  }
 }
 
 protected class MongoAsyncRepo[E: Format, ID: Format](
@@ -259,8 +271,8 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
 
     collection.insert(doc).map {
       case le if le.ok => id
-      case le => throw new RepoException(le.writeErrors.map(_.errmsg).mkString(". "))
-    }
+      case le => throw new AdaDataAccessException(le.writeErrors.map(_.errmsg).mkString(". "))
+    }.recover(handleExceptions)
   }
 
   override def save(entities: Traversable[E]): Future[Traversable[ID]] = {
@@ -268,8 +280,8 @@ protected class MongoAsyncRepo[E: Format, ID: Format](
 
     collection.bulkInsert(docAndIds.map(_._1).toStream, ordered = false).map { // bulkSize = 100, bulkByteSize = 16793600
       case le if le.ok => docAndIds.map(_._2)
-      case le => throw new RepoException(le.errmsg.getOrElse(""))
-    }
+      case le => throw new AdaDataAccessException(le.errmsg.getOrElse(""))
+    }.recover(handleExceptions)
   }
 
   private def toJsonAndId(entity: E): (JsObject, ID) = {
@@ -305,26 +317,33 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
     identity.of(entity).map{ id =>
       collection.update(Json.obj(identity.name -> id), doc) map {
         case le if le.ok => id
-        case le => throw new RepoException(le.writeErrors.map(_.errmsg).mkString(". "))
+        case le => throw new AdaDataAccessException(le.writeErrors.map(_.errmsg).mkString(". "))
       }
     }.getOrElse(
-      throw new RepoException("Id required for update.")
+      throw new AdaDataAccessException("Id required for update.")
     )
-  }
+  }.recover(
+    handleExceptions
+  )
 
   // collection.remove(Json.obj(identity.name -> id), firstMatchOnly = true)
-  override def delete(id: ID): Future[Unit] =
+  override def delete(id: ID): Future[Unit] = {
     collection.remove(Json.obj(identity.name -> id)) map handleResult
+  }.recover(
+    handleExceptions
+  )
 
-  override def deleteAll: Future[Unit] =
+  override def deleteAll: Future[Unit] = {
     collection.remove(Json.obj()) map handleResult
+  }.recover(handleExceptions)
 
   // extra functions which should not be exposed beyond the persistence layer
   override protected[dataaccess] def updateCustom(
     selector: JsObject,
     modifier : JsObject
   ): Future[Unit] =
-    collection.update(selector, modifier) map handleResult
+    collection.update(selector, modifier)
+      .recover(handleExceptions) map handleResult
 
   override protected[dataaccess] def findAggregate(
     rootCriteria: Seq[Criterion[Any]],
@@ -351,7 +370,7 @@ class MongoAsyncCrudRepo[E: Format, ID: Format](
       idGroup.map(id => Group(id)(groups.get: _*))                    // $group
     ).flatten
 
-    val result = collection.aggregate(params.head, params.tail, false, false)
+    val result = collection.aggregate(params.head, params.tail, false, false).recover(handleExceptions)
     result.map(_.documents)
 
     // TODO: once "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24" is release use the following aggregate call, which uses cursor and should be more optimal

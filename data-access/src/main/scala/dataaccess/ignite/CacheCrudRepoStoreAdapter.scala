@@ -5,14 +5,18 @@ import java.util
 import javax.cache.Cache.Entry
 import javax.cache.configuration.Factory
 
-import dataaccess.{AsyncCrudRepo, RepoSynchronizer}
 import org.apache.ignite.cache.store.{CacheStore, CacheStoreAdapter}
 import org.apache.ignite.lang.IgniteBiInClosure
+import org.incal.core.dataaccess.{AsyncCrudRepo, RepoSynchronizer}
 import play.api.Logger
+
 import scala.concurrent.duration._
 import scala.collection.JavaConversions._
 
-protected class CacheCrudRepoStoreAdapter[ID, E](repoFactory: Factory[AsyncCrudRepo[E, ID]], getId: E => Option[ID]) extends CacheStoreAdapter[ID, E] with Serializable {
+protected class CacheCrudRepoStoreAdapter[ID, E](
+    repoFactory: Factory[AsyncCrudRepo[E, ID]],
+    getId: E => Option[ID]
+  ) extends CacheStoreAdapter[ID, E] with Serializable {
 
   private val logger = Logger
   private val crudRepo: AsyncCrudRepo[E, ID] = repoFactory.create

@@ -5,7 +5,6 @@ import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
 import dataaccess.mongo.{ReactiveMongoApi, MongoAsyncCrudRepo}
-import dataaccess.AsyncCrudRepo
 import dataaccess.RepoTypes.DictionaryRootRepo
 import models.{Category, Dictionary, DataSetFormattersAndIds}
 import DataSetFormattersAndIds.{CategoryIdentity, categoryFormat, dictionaryFormat, DictionaryIdentity}
@@ -13,8 +12,9 @@ import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-import scala.concurrent.duration._
+import org.incal.core.dataaccess.AsyncCrudRepo
 
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 class CategoryMongoAsyncCrudRepo @Inject()(

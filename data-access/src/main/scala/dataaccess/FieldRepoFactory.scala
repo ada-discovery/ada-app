@@ -1,7 +1,7 @@
 package dataaccess
 
 import com.google.inject.ImplementedBy
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import models.{Field, DataSetFormattersAndIds}
 import DataSetFormattersAndIds.CategoryIdentity
 import dataaccess.RepoTypes._

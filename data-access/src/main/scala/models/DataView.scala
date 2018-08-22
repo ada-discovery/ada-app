@@ -1,19 +1,21 @@
 package models
 
-import dataaccess._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
 import models.DataSetFormattersAndIds.widgetSpecFormat
 import java.util.Date
 
 import models.json.{EitherFormat, EnumFormat}
+import dataaccess.BSONObjectIdentity
+import org.incal.core.FilterCondition
+import models.Filter._
 import play.api.libs.json._
 import reactivemongo.play.json.BSONFormats._
 
 case class DataView(
   _id: Option[BSONObjectID],
   name: String,
-  filterOrIds: Seq[Either[Seq[models.FilterCondition], BSONObjectID]],
+  filterOrIds: Seq[Either[Seq[FilterCondition], BSONObjectID]],
   tableColumnNames: Seq[String],
   widgetSpecs: Seq[WidgetSpec],
   elementGridWidth: Int = 3,
@@ -42,13 +44,13 @@ object WidgetGenerationMethod extends Enumeration {
 
 object DataView {
 
-  implicit val eitherFormat = EitherFormat[Seq[models.FilterCondition], BSONObjectID]
+  implicit val eitherFormat = EitherFormat[Seq[FilterCondition], BSONObjectID]
   implicit val generationMethodFormat = EnumFormat.enumFormat(WidgetGenerationMethod)
 
   implicit val dataViewFormat : Format[DataView] = (
     (__ \ "_id").formatNullable[BSONObjectID] and
     (__ \ "name").format[String] and
-    (__ \ "filterOrIds").format[Seq[Either[Seq[models.FilterCondition], BSONObjectID]]] and
+    (__ \ "filterOrIds").format[Seq[Either[Seq[FilterCondition], BSONObjectID]]] and
     (__ \ "tableColumnNames").format[Seq[String]] and
     (__ \ "widgetSpecs").format[Seq[WidgetSpec]] and
     (__ \ "elementGridWidth").format[Int] and

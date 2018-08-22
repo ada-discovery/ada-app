@@ -2,10 +2,10 @@ package dataaccess
 
 import com.google.inject.ImplementedBy
 import dataaccess.RepoTypes._
-import dataaccess.User.UserIdentity
+import models.User.UserIdentity
 import dataaccess.ignite.DataViewCacheCrudRepoFactory
 import models.DataView
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 

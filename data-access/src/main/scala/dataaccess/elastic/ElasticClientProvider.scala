@@ -5,11 +5,7 @@ import javax.inject.{Inject, Provider}
 import com.evojam.play.elastic4s.PlayElasticFactory
 import com.evojam.play.elastic4s.configuration.ClusterSetup
 import com.sksamuel.elastic4s.ElasticClient
-import dataaccess.{AsyncCrudRepo, Identity}
-import play.api.libs.json.Format
-
-import scala.reflect.ClassTag
-import scala.reflect.runtime.universe._
+import org.incal.core.dataaccess.AsyncCrudRepo
 
 class ElasticClientProvider extends Provider[ElasticClient] {
 

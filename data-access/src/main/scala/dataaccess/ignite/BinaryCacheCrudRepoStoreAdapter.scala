@@ -4,16 +4,14 @@ import java.io.Serializable
 import javax.cache.Cache.Entry
 import javax.cache.configuration.Factory
 
-import dataaccess.{AsyncCrudRepo, RepoSynchronizer}
+import org.incal.core.dataaccess._
 import org.apache.ignite.Ignite
 import org.apache.ignite.binary.{BinaryObject, BinaryType}
 import org.apache.ignite.cache.store.{CacheStore, CacheStoreAdapter}
 import org.apache.ignite.lang.IgniteBiInClosure
 import org.apache.ignite.resources.IgniteInstanceResource
 import play.api.Logger
-import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json.{JsObject, Json, JsValue}
-import reactivemongo.bson.BSONObjectID
 import scala.collection.JavaConversions._
 import dataaccess.ignite.BinaryJsonUtil._
 

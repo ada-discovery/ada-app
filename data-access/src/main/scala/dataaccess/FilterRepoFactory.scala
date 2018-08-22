@@ -2,14 +2,14 @@ package dataaccess
 
 import com.google.inject.ImplementedBy
 import dataaccess.RepoTypes.{FilterRepo, JsonCrudRepo, UserRepo}
-import dataaccess.User.UserIdentity
+import models.User.UserIdentity
 import dataaccess.ignite.FilterCacheCrudRepoFactory
 
 import scala.concurrent.Future
 import models.Filter
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess.Criterion.Infix
 import models.DataSetFormattersAndIds.JsObjectIdentity
-import models.FilterCondition.FilterOrId
+import models.Filter.FilterOrId
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 
@@ -50,10 +50,10 @@ object FilterRepoExtra {
       // use a given filter conditions or load one
       filterOrId match {
         case Right(id) =>
-          filterRepo.get(id).map(_.getOrElse(new Filter(Nil)))
+          filterRepo.get(id).map(_.getOrElse(Filter()))
 
         case Left(conditions) =>
-          Future(new models.Filter(conditions))
+          Future(Filter(conditions = conditions))
       }
 
     def resolve(filterOrId: FilterOrId): Future[Filter] =

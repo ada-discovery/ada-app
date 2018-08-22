@@ -9,8 +9,10 @@ import org.apache.ignite.configuration.CacheConfiguration
 import org.h2.value.DataType
 import dataaccess.ignite.BinaryJsonUtil.escapeIgniteFieldName
 import org.h2.value.Value
+import org.incal.core.Identity
 import play.api.Logger
 import play.api.libs.json.JsNull
+import org.incal.core.dataaccess._
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -283,7 +285,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     }
 
   override def update(entity: E): Future[ID] =
-    Future{
+    Future {
       val id = identity.of(entity).get
 //      val cacheEntry = cache.getEntry(toCacheId(id))
       cache.replace(toCacheId(id), toCacheItem(entity))
@@ -307,4 +309,7 @@ abstract protected class AbstractCacheAsyncCrudRepo[ID, E, CACHE_ID, CACHE_E](
     }
     (id, toCacheItem(entityWithId))
   }
+
+  // essentially no-op
+  override def flushOps = Future(())
 }

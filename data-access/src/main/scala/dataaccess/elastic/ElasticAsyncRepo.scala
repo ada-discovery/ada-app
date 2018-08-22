@@ -3,6 +3,7 @@ package dataaccess.elastic
 import com.sksamuel.elastic4s._
 import org.elasticsearch.search.sort.SortOrder
 import reactivemongo.bson.BSONObjectID
+import org.incal.core.dataaccess._
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -14,6 +15,9 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
 import com.sksamuel.elastic4s.streams.ReactiveElastic._
 import dataaccess._
+import org.elasticsearch.{ElasticsearchException, ElasticsearchTimeoutException}
+import org.incal.core.Identity
+import play.api.Logger
 
 abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     indexName: String,
@@ -25,9 +29,9 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
       with ElasticDsl {
 
   protected val indexAndType = IndexAndType(indexName, typeName)
-
   protected val unboundLimit = Integer.MAX_VALUE
   protected val scrollKeepAlive = "3m"
+  private val logger = Logger
 
   def get(id: ID): Future[Option[E]] =
     client execute {
@@ -43,24 +47,26 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
   ): Future[Traversable[E]] = {
     val searchDefinition = createSearchDefinition(criteria, sort, projection, limit, skip)
 
-    client execute (
-      searchDefinition
-    ) map { searchResult =>
-      val projectionSeq = projection.map(toDBFieldName).toSeq
+    {
+      client execute (
+        searchDefinition
+        ) map { searchResult =>
+        val projectionSeq = projection.map(toDBFieldName).toSeq
 
-      val serializationStart = new Date()
+        val serializationStart = new Date()
 
-      if (searchResult.shardFailures.nonEmpty) {
-        throw new AdaDataAccessException(searchResult.shardFailures(0).reason())
+        if (searchResult.shardFailures.nonEmpty) {
+          throw new AdaDataAccessException(searchResult.shardFailures(0).reason())
+        }
+
+        val result: Traversable[E] = projection match {
+          case Nil => serializeSearchResult(searchResult)
+          case _ => serializeProjectionSearchHits(projectionSeq, searchResult.hits)
+        }
+        println(s"Serialization for the projection '${projection.mkString(", ")}' finished in ${new Date().getTime - serializationStart.getTime} ms.")
+        result
       }
-
-      val result: Traversable[E] = projection match {
-        case Nil => serializeSearchResult(searchResult)
-        case _ => serializeProjectionSearchHits(projectionSeq, searchResult.hits)
-      }
-      println(s"Serialization for the projection '${projection.mkString(", ")}' finished in ${new Date().getTime - serializationStart.getTime} ms.")
-      result
-    }
+    }.recover(handleExceptions)
   }
 
   implicit val system = ActorSystem()
@@ -202,9 +208,9 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
     val countDef =
       ElasticDsl.count from indexAndType query new BoolQueryDefinition().must(criteria.map(toQuery))
 
-    client.execute {
-      countDef
-    }.map(_.getCount.toInt)
+    client.execute(countDef)
+      .map(_.getCount.toInt)
+      .recover(handleExceptions)
   }
 
   protected def createIndex(): Future[_] =
@@ -228,6 +234,18 @@ abstract protected class ElasticAsyncReadonlyRepo[E, ID](
       },
       20 seconds
     )
+
+  protected def handleExceptions[A]: PartialFunction[Throwable, A] = {
+    case e: ElasticsearchTimeoutException =>
+      val message = "Elastic Search operation timed out."
+      logger.error(message, e)
+      throw new AdaDataAccessException(message, e)
+
+    case e: ElasticsearchException =>
+      val message = "Problem with Elastic Search detected."
+      logger.error(message, e)
+      throw new AdaDataAccessException(message, e)
+  }
 }
 
 abstract protected class ElasticAsyncRepo[E, ID](
@@ -238,16 +256,19 @@ abstract protected class ElasticAsyncRepo[E, ID](
     implicit identity: Identity[E, ID]
   ) extends ElasticAsyncReadonlyRepo[E, ID](indexName, typeName, client, setting) with AsyncRepo[E, ID] {
 
-  protected def flushIndex: Future[Unit] =
-    client execute {
-      flush index indexName
-    } map ( _ => ())
+  protected def flushIndex: Future[Unit] = {
+    client execute {flush index indexName} map (_ => ())
+  }.recover(
+    handleExceptions
+  )
 
   override def save(entity: E): Future[ID] = {
     val (saveDef, id) = createSaveDefWithId(entity)
 
     client execute (saveDef refresh setting.saveRefresh) map (_ => id)
-  }
+  }.recover(
+    handleExceptions
+  )
 
   override def save(entities: Traversable[E]): Future[Traversable[ID]] = {
     val saveDefAndIds = entities map createSaveDefWithId
@@ -262,7 +283,9 @@ abstract protected class ElasticAsyncRepo[E, ID](
       )
     } else
       Future(Nil)
-  }
+  }.recover(
+    handleExceptions
+  )
 
   protected def createSaveDefWithId(entity: E): (IndexDefinition, ID) = {
     val (id, entityWithId) = getIdWithEntity(entity)
@@ -298,7 +321,10 @@ abstract protected class ElasticAsyncCrudRepo[E, ID](
     val (updateDef, id) = createUpdateDefWithId(entity)
 
     client execute (updateDef refresh setting.updateRefresh) map (_ => id)
-  }
+
+  }.recover(
+    handleExceptions
+  )
 
   override def update(entities: Traversable[E]): Future[Traversable[ID]] = {
     val updateDefAndIds = entities map createUpdateDefWithId
@@ -313,7 +339,10 @@ abstract protected class ElasticAsyncCrudRepo[E, ID](
       )
     } else
       Future(Nil)
-  }
+
+  }.recover(
+    handleExceptions
+  )
 
   protected def createUpdateDefWithId(entity: E): (UpdateDefinition, ID) = {
     val id = identity.of(entity).getOrElse(
@@ -324,12 +353,16 @@ abstract protected class ElasticAsyncCrudRepo[E, ID](
 
   protected def createUpdateDef(entity: E, id: ID): UpdateDefinition
 
-  override def delete(id: ID): Future[Unit] =
+  override def delete(id: ID): Future[Unit] = {
     client execute {
       ElasticDsl.delete id id from indexAndType
     } map (_ => ())
 
-  override def deleteAll: Future[Unit] =
+  }.recover(
+    handleExceptions
+  )
+
+  override def deleteAll: Future[Unit] = {
     for {
       indexExists <- existsIndex()
       _ <- if (indexExists)
@@ -341,4 +374,7 @@ abstract protected class ElasticAsyncCrudRepo[E, ID](
       _ <- createIndex()
     } yield
       ()
+  }.recover(
+    handleExceptions
+  )
 }

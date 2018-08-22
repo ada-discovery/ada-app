@@ -14,13 +14,13 @@ import org.apache.ignite.configuration.CacheConfiguration
 import org.apache.ignite.{Ignite, IgniteCache}
 import play.api.Logger
 import play.api.libs.json.JsObject
+import org.incal.core.dataaccess._
 
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
 import dataaccess.ignite.BinaryJsonUtil.{escapeIgniteFieldName, getValueFromJson}
 import field.FieldTypeHelper
 
-import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
 import scala.concurrent.ExecutionContext.Implicits.global
 

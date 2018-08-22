@@ -1,7 +1,7 @@
 package dataaccess.elastic
 
 import com.sksamuel.elastic4s.{ElasticClient, ElasticDsl, IndexDefinition}
-import dataaccess.Identity
+import org.incal.core.Identity
 import play.api.libs.json.Format
 
 class ElasticFormatAsyncReadonlyRepo[E, ID](

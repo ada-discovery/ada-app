@@ -1,7 +1,9 @@
 package dataaccess.mongo
 
-import dataaccess.Criterion.Infix
+import org.incal.core.dataaccess._
+import org.incal.core.dataaccess.Criterion.Infix
 import dataaccess._
+import org.incal.core.Identity
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.modules.reactivemongo.json.commands.JSONAggregationFramework.{Push, PushField, SumValue}
@@ -203,7 +205,7 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
     limit: Option[Int] = None,
     skip: Option[Int] = None
   ): Future[Traversable[E]] = {
-    val page:Option[Int] = None
+    val page: Option[Int] = None
 
     val rootCriteria = Seq(rootIdentity.name #== rootId)
     val subCriteria = criteria.map(criterion => criterion.copyWithFieldName(listName + "." + criterion.fieldName))
@@ -226,7 +228,7 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
       sort = fullSort,
       projection = None, //fullProjection,
       idGroup = Some(JsNull),
-      groups = Some(Seq(listName -> PushField(listName))),  // Push(listName)
+      groups = Some(Seq(listName -> PushField(listName))), // Push(listName)
       unwindFieldName = Some(listName),
       limit = limit,
       skip = skip
@@ -240,4 +242,6 @@ abstract class SubordinateObjectMongoAsyncCrudRepo[E: Format, ID: Format, ROOT_E
         Seq[E]()
     }
   }
+
+  override def flushOps = rootRepo.flushOps
 }

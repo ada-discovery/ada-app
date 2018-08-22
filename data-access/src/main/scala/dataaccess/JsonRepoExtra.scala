@@ -5,10 +5,10 @@ import models.DataSetFormattersAndIds.JsObjectIdentity
 import play.api.libs.json.{JsLookupResult, JsObject}
 import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
+import org.incal.core.dataaccess._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-
 
 object JsonRepoExtra {
 
@@ -16,7 +16,7 @@ object JsonRepoExtra {
 
   implicit class InfixOps(val dataSetRepo: JsonReadonlyRepo) extends AnyVal {
 
-    import dataaccess.Criterion.Infix
+    import Criterion.Infix
 
     def allIds: Future[Traversable[BSONObjectID]] =
       dataSetRepo.find(

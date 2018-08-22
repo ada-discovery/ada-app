@@ -1,8 +1,9 @@
 package dataaccess
 
-/**
-  * Created by peter on 21.08.18.
-  */
-class BSONObjectIdentity {
+import org.incal.core.Identity
+import reactivemongo.bson.BSONObjectID
 
+trait BSONObjectIdentity[E] extends Identity[E, BSONObjectID] {
+  val name = "_id" // must be like that!
+  def next = BSONObjectID.generate
 }

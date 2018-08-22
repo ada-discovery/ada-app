@@ -3,7 +3,7 @@ package models.ml
 import java.{util => ju}
 
 import dataaccess.BSONObjectIdentity
-import models.FilterCondition.FilterOrId
+import models.Filter.FilterOrId
 import models.json.{EitherFormat, EnumFormat, FlattenFormat, TupleFormat, OptionFormat}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID

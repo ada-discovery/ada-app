@@ -2,20 +2,17 @@ package models
 
 import java.util.{Date, UUID}
 
-import models.json.ManifestedFormat
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import dataaccess._
-import models.FilterCondition.filterFormat
-import models.DataView.dataViewFormat
 import models.json.{EnumFormat, ManifestedFormat, SerializableFormat, SubTypeFormat}
 import models.ml.ClassificationResult
+import org.incal.core.Identity
 
 import scala.collection.mutable.Buffer
 import scala.collection.mutable.ListBuffer
-import scala.reflect.ClassTag
 
 case class DataSpaceMetaInfo(
   _id: Option[BSONObjectID],

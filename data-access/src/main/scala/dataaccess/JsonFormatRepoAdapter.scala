@@ -4,6 +4,7 @@ import akka.stream.scaladsl.Source
 import dataaccess.RepoTypes.{JsonCrudRepo, JsonReadonlyRepo}
 import play.api.libs.json.{Format, JsObject, Json}
 import reactivemongo.bson.BSONObjectID
+import org.incal.core.dataaccess._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -101,6 +102,8 @@ private[dataaccess] class JsonFormatCrudRepoAdapter[E: Format](
     repo.delete(id)
 
   override protected def toOutputId(id: BSONObjectID) = id
+
+  override def flushOps = repo.flushOps
 }
 
 private[dataaccess] class NoIdJsonFormatCrudRepoAdapter[E: Format, ID](
@@ -118,6 +121,8 @@ private[dataaccess] class NoIdJsonFormatCrudRepoAdapter[E: Format, ID](
   // TODO: this should be returned with a warning since the BSON object id is generated randomly
   override protected def toOutputId(id: ID): BSONObjectID =
     BSONObjectID.generate
+
+  override def flushOps = repo.flushOps
 }
 
 object JsonFormatRepoAdapter {

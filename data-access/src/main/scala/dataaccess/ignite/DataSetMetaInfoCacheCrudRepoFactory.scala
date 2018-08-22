@@ -2,10 +2,8 @@ package dataaccess.ignite
 
 import javax.inject.Inject
 
-import com.google.inject.ImplementedBy
 import dataaccess.RepoTypes.DataSetMetaInfoRepo
 import dataaccess._
-import dataaccess.ignite.CacheAsyncCrudRepoFactory
 import dataaccess.mongo.dataset.DataSetMetaInfoMongoAsyncCrudRepoFactory
 import play.api.Configuration
 import reactivemongo.bson.BSONObjectID

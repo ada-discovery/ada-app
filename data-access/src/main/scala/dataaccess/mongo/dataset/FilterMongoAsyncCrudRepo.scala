@@ -4,18 +4,18 @@ import javax.cache.configuration.Factory
 import javax.inject.Inject
 
 import com.google.inject.assistedinject.Assisted
-import dataaccess.mongo.{ReactiveMongoApi, MongoAsyncCrudRepo}
-import dataaccess.AsyncCrudRepo
+import dataaccess.mongo.{MongoAsyncCrudRepo, ReactiveMongoApi}
 import dataaccess.RepoTypes.DictionaryRootRepo
-import models.{Filter, Dictionary}
+import models.{Dictionary, Filter}
 import models.DataSetFormattersAndIds.{DictionaryIdentity, dictionaryFormat}
-import models.FilterCondition.{FilterIdentity, filterFormat}
+import models.Filter.{FilterIdentity, filterFormat}
+import org.incal.core.dataaccess.AsyncCrudRepo
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 class FilterMongoAsyncCrudRepo @Inject()(

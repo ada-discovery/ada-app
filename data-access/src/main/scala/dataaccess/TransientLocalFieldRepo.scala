@@ -3,6 +3,7 @@ package dataaccess
 import scala.collection.mutable.{Map => MMap}
 import dataaccess.RepoTypes.FieldRepo
 import models.Field
+import org.incal.core.dataaccess._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -142,6 +143,9 @@ private class TransientLocalFieldRepo(fields: Seq[Field]) extends FieldRepo {
 
       case c: LessEqualCriterion[T] => value.toString.toDouble <= c.value.toString.toDouble // TODO
     }
+
+  // essentially no-op
+  override def flushOps: Future[Unit] = Future(())
 }
 
 object TransientLocalFieldRepo {
