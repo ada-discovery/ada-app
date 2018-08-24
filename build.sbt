@@ -40,12 +40,10 @@ routesImport ++= Seq(
 
 libraryDependencies ++= Seq(
   "org.ada" % "ada-dataaccess_2.11" % "0.7.0",
-//  "nioc-bot" % "nioc-bot_2.11" % "0.2.3",
   "org.reactivemongo" %% "play2-reactivemongo" % "0.12.6-play25" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11") exclude("com.typesafe.play", "play-iteratees_2.11") exclude("com.typesafe.play", "play-server_2.11") exclude("com.typesafe.play", "play-netty-server_2.11"), // "0.11.14-play24", // "0.12.6-play24", // "0.11.14-play24", // "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-SNAPSHOT", "org.reactivemongo" %% "play2-reactivemongo" % "0.11.7.play24", "org.reactivemongo" %% "play2-reactivemongo" % "0.12.0-play24",
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
   "com.sksamuel.elastic4s" %% "elastic4s-streams" % "2.3.0",
-//  "org.webjars" %% "webjars-play" % "2.5.0",
   "org.webjars" % "bootstrap" % "3.3.5",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
   "org.webjars" % "typeaheadjs" % "0.11.1",
@@ -59,8 +57,6 @@ libraryDependencies ++= Seq(
 //  "org.webjars.bower" % "vis" % "4.19.1" exclude("org.webjars" % "jquery"),  // to create graphs visualizations
   "org.webjars" % "visjs" % "4.21.0", // to create graphs visualizations
   "org.webjars" % "jquery-ui" % "1.11.1",
-//  "net.codingwell" %% "scala-guice" % "4.0.1",
-//  "com.google.inject.extensions" % "guice-spring" % "4.0", // so we can initialize spring container in Guice
   "org.clapper" % "classutil_2.11" % "1.0.6",
   "org.scalaz" % "scalaz-core_2.11" % "7.2.1",
 //  "org.apache.spark" % "spark-core_2.11" % "2.3.1" exclude("com.fasterxml.jackson.core", "jackson-databind"), // exclude("asm", "asm")
@@ -72,7 +68,6 @@ libraryDependencies ++= Seq(
   //    "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.2", // exclude("asm", "asm")
   "commons-net" % "commons-net" % "3.5",   // for ftp access
   "com.typesafe.play" % "play-java-ws_2.11" % "2.5.6",
-//  "be.objectify" % "deadbolt-scala_2.11" % "2.5.1",
   "jp.t2v" %% "play2-auth" % "0.14.1",
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
   "com.typesafe.play" %% "play-mailer" % "4.0.0",
@@ -81,10 +76,8 @@ libraryDependencies ++= Seq(
   "org.scalanlp" %% "breeze" % "0.13.2",        // linear algebra and stuff
   "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
 //  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze visualization
-//  "com.banda" % "incal" % "0.1.6" exclude("org.springframework", "spring-context") exclude("org.springframework", "spring-test") exclude("org.springframework", "spring-web") exclude("org.springframework", "spring-webmvc"),
   "com.banda.network" % "banda-network-business" % "0.5.6.1",
-  "org.incal" %% "incal-play" % "0.0.17",
-  //  "org.scalatra.scalate" %% "scalate-core" % "1.8.0"
+  "org.in-cal" %% "incal-play" % "0.0.18",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12" ))
 
