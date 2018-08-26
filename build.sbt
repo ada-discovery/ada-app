@@ -28,7 +28,8 @@ resolvers ++= Seq(
   "JCenter" at "http://jcenter.bintray.com/",
   "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
   "jitpack.io" at "https://jitpack.io",   // for t-SNE (Java impl)
-  "Local Maven Repository" at "file:///"+Path.userHome.absolutePath+"/.m2/repository"
+  "Local Maven Repository" at "file:///"+ Path.userHome.absolutePath + "/.m2/repository",
+  "bnd libs" at "https://peterbanda.net/maven2"
 //  "Ivylocal" at "file:///"++Path.userHome.absolutePath+"/.ivy2/local/"
 )
 

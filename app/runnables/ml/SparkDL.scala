@@ -1,10 +1,11 @@
-package runnables
+package runnables.ml
 
 import javax.inject.Inject
 
-import org.apache.spark.ml.linalg.{Vector, Vectors}
-import services.ml.transformers.{SeqShift, SeqShiftWithConsecutiveOrder, SlidingWindow, SlidingWindowWithConsecutiveOrder}
+import org.apache.spark.ml.linalg.Vectors
+import runnables.GuiceBuilderRunnable
 import services.SparkApp
+import services.ml.transformers.{SeqShift, SeqShiftWithConsecutiveOrder, SlidingWindow, SlidingWindowWithConsecutiveOrder}
 
 class SparkDL @Inject() (sparkApp: SparkApp) extends Runnable {
 

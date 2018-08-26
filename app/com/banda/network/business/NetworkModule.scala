@@ -6,7 +6,7 @@ import com.banda.core.metrics.MetricsFactory
 import com.banda.function.business.FunctionEvaluatorFactoryImpl
 import com.banda.function.enumerator.{ListEnumeratorFactory, ListEnumeratorFactoryImpl}
 import com.banda.function.evaluator.FunctionEvaluatorFactory
-import com.banda.network.business.learning.ReservoirTrainerFactory
+import com.banda.network.business.learning.{ReservoirRunnableFactory, ReservoirTrainerFactory}
 import com.banda.math.business.learning.IOStreamFactory
 import com.banda.network.business.function.{ActivationFunctionFactory, DoubleActivationFunctionFactory, JavaDoubleActivationFunctionFactory}
 import com.banda.network.business.integrator.{DoubleConvertibleSWIntegratorFactory, MetaStatesWeightsIntegratorFactory, StatesWeightsIntegratorFactory}
@@ -208,6 +208,13 @@ class NetworkModule extends ScalaModule {
     doubleMetricsFactory: MetricsFactory[java.lang.Double]
   ) =
     new ReservoirTrainerFactory(metaNetworkRunnableFactory, topologyFactory, doubleMetricsFactory)
+
+  @Provides @Singleton
+  def reservoirRunnableFactory(
+    metaNetworkRunnableFactory: MetaNetworkRunnableFactory,
+    topologyFactory: TopologyFactory
+  ) =
+    new ReservoirRunnableFactory(metaNetworkRunnableFactory, topologyFactory)
 
   override def configure = {}
 }

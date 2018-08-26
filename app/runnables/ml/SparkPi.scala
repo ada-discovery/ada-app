@@ -1,9 +1,11 @@
-package runnables
+package runnables.ml
 
 import javax.inject.Inject
 
-import scala.math.random
+import runnables.GuiceBuilderRunnable
 import services.SparkApp
+
+import scala.math.random
 
 class SparkPi @Inject() (sparkApp: SparkApp) extends Runnable {
 
