@@ -1,6 +1,5 @@
 package services.ml
 
-import models.AdaException
 import models.ml.classification.{Classification, DecisionTree, GradientBoostTree, LinearSupportVectorMachine, LogisticRegression, MultiLayerPerceptron, NaiveBayes, RandomForest}
 import models.ml.regression.{Regression, GeneralizedLinearRegression => GeneralizedLinearRegressionDef, GradientBoostRegressionTree => GradientBoostRegressionTreeDef, LinearRegression => LinearRegressionDef, RandomRegressionForest => RandomRegressionForestDef, RegressionTree => RegressionTreeDef}
 import models.ml.unsupervised.{UnsupervisedLearning, BisectingKMeans => BisectingKMeansDef, GaussianMixture => GaussianMixtureDef, KMeans => KMeansDef, LDA => LDADef}
@@ -9,10 +8,7 @@ import org.apache.spark.ml.classification.{LogisticRegression => LogisticRegress
 import org.apache.spark.ml.regression.{DecisionTreeRegressor, GBTRegressor, RandomForestRegressor, GeneralizedLinearRegression => GeneralizedLinearRegressor, LinearRegression => LinearRegressor}
 import org.apache.spark.ml.clustering.{BisectingKMeans, GaussianMixture, KMeans, LDA}
 import org.apache.spark.ml.param._
-import org.apache.spark.ml.tuning.ParamGridBuilder
 import models.ml.classification.ValueOrSeq._
-
-import scala.collection.mutable.{Buffer, ListBuffer}
 
 object SparkMLEstimatorFactory {
 
@@ -58,10 +54,10 @@ object SparkMLEstimatorFactory {
       case x: GaussianMixtureDef => applyAux(x).asInstanceOf[Estimator[M]]
     }
 
-  private def applyAux(model: LogisticRegression): (LogisticRegressionClassifier, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, LogisticRegression, LogisticRegressionClassifier](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new LogisticRegressionClassifier())
+  private def applyAux(
+    model: LogisticRegression
+  ): (LogisticRegressionClassifier, Array[ParamMap]) =
+    ParamSourceBinder(model, new LogisticRegressionClassifier())
       .bind2(_.aggregationDepth, "aggregationDepth")
       .bind2(_.elasticMixingRatio, "elasticNetParam")
       .bind(_.family.map(_.toString), "family")
@@ -74,19 +70,14 @@ object SparkMLEstimatorFactory {
       .bind2(_.tolerance, "tol")
       .build
 
-    (estimator2, paramMaps)
-  }
-
   private def applyAux(
     model: MultiLayerPerceptron,
     inputSize: Int,
     outputSize: Int
   ): (MultilayerPerceptronClassifier, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, MultiLayerPerceptron, MultilayerPerceptronClassifier](model)_
-
     val layers = (Seq(inputSize) ++ model.hiddenLayers ++ Seq(outputSize)).toArray
 
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new MultilayerPerceptronClassifier())
+    ParamSourceBinder(model, new MultilayerPerceptronClassifier())
       .bind2(_.blockSize, "blockSize")
       .bind(_.seed, "seed")
       .bind2(_.maxIteration, "maxIter")
@@ -95,14 +86,12 @@ object SparkMLEstimatorFactory {
       .bind2(_.tolerance, "tol")
       .bind(o => Some(layers), "layers")
       .build
-
-    (estimator2, paramMaps)
   }
 
-  private def applyAux(model: DecisionTree): (DecisionTreeClassifier, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, DecisionTree, DecisionTreeClassifier](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new DecisionTreeClassifier())
+  private def applyAux(
+    model: DecisionTree
+  ): (DecisionTreeClassifier, Array[ParamMap]) =
+    ParamSourceBinder(model, new DecisionTreeClassifier())
       .bind2(_.core.maxDepth, "maxDepth")
       .bind2(_.core.maxBins, "maxBins")
       .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
@@ -111,13 +100,10 @@ object SparkMLEstimatorFactory {
       .bind(_.impurity.map(_.toString), "impurity")
       .build
 
-    (estimator2, paramMaps)
-  }
-
-  private def applyAux(model: RandomForest): (RandomForestClassifier, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, RandomForest, RandomForestClassifier](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new RandomForestClassifier())
+  private def applyAux(
+    model: RandomForest
+  ): (RandomForestClassifier, Array[ParamMap]) =
+    ParamSourceBinder(model, new RandomForestClassifier())
       .bind2(_.numTrees, "numTrees")
       .bind2(_.core.maxDepth, "maxDepth")
       .bind2(_.core.maxBins, "maxBins")
@@ -129,13 +115,10 @@ object SparkMLEstimatorFactory {
       .bind(_.featureSubsetStrategy.map(_.toString), "featureSubsetStrategy")
       .build
 
-    (estimator2, paramMaps)
-  }
-
-  private def applyAux(model: GradientBoostTree): (GBTClassifier, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, GradientBoostTree, GBTClassifier](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new GBTClassifier())
+  private def applyAux(
+    model: GradientBoostTree
+  ): (GBTClassifier, Array[ParamMap]) =
+    ParamSourceBinder(model, new GBTClassifier())
       .bind(_.lossType.map(_.toString), "lossType")
       .bind2(_.maxIteration, "maxIter")
       .bind2(_.stepSize, "stepSize")
@@ -148,24 +131,18 @@ object SparkMLEstimatorFactory {
       //    .bind(_.impurity.map(_.toString), "impurity")
       .build
 
-    (estimator2, paramMaps)
-  }
-
-  private def applyAux(model: NaiveBayes): (NaiveBayesClassifier, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, NaiveBayes, NaiveBayesClassifier](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new NaiveBayesClassifier())
+  private def applyAux(
+    model: NaiveBayes
+  ): (NaiveBayesClassifier, Array[ParamMap]) =
+    ParamSourceBinder(model, new NaiveBayesClassifier())
       .bind2(_.smoothing, "smoothing")
       .bind(_.modelType.map(_.toString), "modelType")
       .build
 
-    (estimator2, paramMaps)
-  }
-
-  private def applyAux(model: LinearSupportVectorMachine): (LinearSVC, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, LinearSupportVectorMachine, LinearSVC](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new LinearSVC())
+  private def applyAux(
+    model: LinearSupportVectorMachine
+  ): (LinearSVC, Array[ParamMap]) =
+    ParamSourceBinder(model, new LinearSVC())
       .bind2(_.aggregationDepth, "aggregationDepth")
       .bind(_.fitIntercept, "fitIntercept")
       .bind2(_.maxIteration, "maxIter")
@@ -175,13 +152,10 @@ object SparkMLEstimatorFactory {
       .bind2(_.tolerance, "tol")
       .build
 
-    (estimator2, paramMaps)
-  }
-
-  private def applyAux(model: LinearRegressionDef): (LinearRegressor, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, LinearRegressionDef, LinearRegressor](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new LinearRegressor())
+  private def applyAux(
+    model: LinearRegressionDef
+  ): (LinearRegressor, Array[ParamMap]) =
+    ParamSourceBinder(model, new LinearRegressor())
       .bind2(_.aggregationDepth, "aggregationDepth")
       .bind2(_.elasticMixingRatio, "elasticNetParam")
       .bind(_.solver.map(_.toString), "solver")
@@ -192,13 +166,10 @@ object SparkMLEstimatorFactory {
       .bind2(_.tolerance, "tol")
       .build
 
-    (estimator2, paramMaps)
-  }
-
-  private def applyAux(model: GeneralizedLinearRegressionDef): (GeneralizedLinearRegressor, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, GeneralizedLinearRegressionDef, GeneralizedLinearRegressor](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new GeneralizedLinearRegressor())
+  private def applyAux(
+    model: GeneralizedLinearRegressionDef
+  ): (GeneralizedLinearRegressor, Array[ParamMap]) =
+    ParamSourceBinder(model, new GeneralizedLinearRegressor())
       .bind(_.solver.map(_.toString), "solver")
       .bind(_.family.map(_.toString), "family")
       .bind(_.fitIntercept, "fitIntercept")
@@ -208,13 +179,10 @@ object SparkMLEstimatorFactory {
       .bind2(_.tolerance, "tol")
       .build
 
-    (estimator2, paramMaps)
-  }
-
-  private def applyAux(model: RegressionTreeDef): (DecisionTreeRegressor, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, RegressionTreeDef, DecisionTreeRegressor](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new DecisionTreeRegressor())
+  private def applyAux(
+    model: RegressionTreeDef
+  ): (DecisionTreeRegressor, Array[ParamMap]) =
+    ParamSourceBinder(model, new DecisionTreeRegressor())
       .bind2(_.core.maxDepth, "maxDepth")
       .bind2(_.core.maxBins, "maxBins")
       .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
@@ -223,13 +191,10 @@ object SparkMLEstimatorFactory {
       .bind(_.impurity.map(_.toString), "impurity")
       .build
 
-    (estimator2, paramMaps)
-  }
-
-  private def applyAux(model: RandomRegressionForestDef): (RandomForestRegressor, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, RandomRegressionForestDef, RandomForestRegressor](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new RandomForestRegressor())
+  private def applyAux(
+    model: RandomRegressionForestDef
+  ): (RandomForestRegressor, Array[ParamMap]) =
+    ParamSourceBinder(model, new RandomForestRegressor())
       .bind(_.impurity.map(_.toString), "impurity")
       .bind2(_.numTrees, "numTrees")
       .bind2(_.core.maxDepth, "maxDepth")
@@ -241,13 +206,10 @@ object SparkMLEstimatorFactory {
       .bind(_.featureSubsetStrategy.map(_.toString), "featureSubsetStrategy")
       .build
 
-    (estimator2, paramMaps)
-  }
-
-  private def applyAux(model: GradientBoostRegressionTreeDef): (GBTRegressor, Array[ParamMap]) = {
-    def set[T] = setSourceParam[T, GradientBoostRegressionTreeDef, GBTRegressor](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new GBTRegressor())
+  private def applyAux(
+    model: GradientBoostRegressionTreeDef
+  ): (GBTRegressor, Array[ParamMap]) =
+    ParamSourceBinder(model, new GBTRegressor())
       .bind(_.lossType.map(_.toString), "lossType")
       .bind2(_.maxIteration, "maxIter")
       .bind2(_.stepSize, "stepSize")
@@ -260,13 +222,10 @@ object SparkMLEstimatorFactory {
       //    .bind(_.impurity.map(_.toString), "impurity")
       .build
 
-    (estimator2, paramMaps)
-  }
-
-  private def applyAux(model: KMeansDef): KMeans = {
-    def set[T] = setSourceParam[T, KMeansDef, KMeans](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new KMeans())
+  private def applyAux(
+    model: KMeansDef)
+  : KMeans = {
+    val (estimator, _) = ParamSourceBinder(model, new KMeans())
       .bind(_.initMode.map(_.toString), "initMode")
       .bind(_.initSteps, "initSteps")
       .bind({o => Some(o.k)}, "k")
@@ -275,13 +234,13 @@ object SparkMLEstimatorFactory {
       .bind(_.seed, "seed")
       .build
 
-    estimator2
+    estimator
   }
 
-  private def applyAux(model: LDADef): LDA = {
-    def set[T] = setSourceParam[T, LDADef, LDA](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new LDA())
+  private def applyAux(
+    model: LDADef
+  ): LDA = {
+    val (estimator, _) = ParamSourceBinder(model, new LDA())
       .bind(_.checkpointInterval, "checkpointInterval")
       .bind(_.keepLastCheckpoint, "keepLastCheckpoint")
       .bind[Array[Double]](_.docConcentration.map(_.toArray), "docConcentration")
@@ -296,33 +255,33 @@ object SparkMLEstimatorFactory {
       .bind(_.seed, "seed")
       .build
 
-    estimator2
+    estimator
   }
 
-  private def applyAux(model: BisectingKMeansDef): BisectingKMeans = {
-    def set[T] = setSourceParam[T, BisectingKMeansDef, BisectingKMeans](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new BisectingKMeans())
+  private def applyAux(
+    model: BisectingKMeansDef
+  ): BisectingKMeans = {
+    val (estimator, _) = ParamSourceBinder(model, new BisectingKMeans())
       .bind({o => Some(o.k)}, "k")
       .bind(_.maxIteration, "maxIter")
       .bind(_.seed, "seed")
       .bind(_.minDivisibleClusterSize, "minDivisibleClusterSize")
       .build
 
-    estimator2
+    estimator
   }
 
-  private def applyAux(model: GaussianMixtureDef): GaussianMixture = {
-    def set[T] = setSourceParam[T, GaussianMixtureDef, GaussianMixture](model)_
-
-    val (estimator2, paramMaps) = ParamSourceBinder(model, new GaussianMixture())
+  private def applyAux(
+    model: GaussianMixtureDef
+  ): GaussianMixture = {
+    val (estimator, _) = ParamSourceBinder(model, new GaussianMixture())
       .bind({o => Some(o.k)}, "k")
       .bind(_.maxIteration, "maxIter")
       .bind(_.tolerance, "tol")
       .bind(_.seed, "seed")
       .build
 
-    estimator2
+    estimator
   }
 
   // helper functions
@@ -344,64 +303,4 @@ object SparkMLEstimatorFactory {
 
   private def chain[T](trans: (T => T)*)(init: T) =
     trans.foldLeft(init){case (a, trans) => trans(a)}
-
-  case class ParamSourceBinder[S, T <: Params](source: S, model: T) {
-    private var paramValueSetters: Buffer[ParamValueSetter[S, _]] = Buffer[ParamValueSetter[S, _]]()
-
-    def bind[T](value: S => Option[T], paramName: String): this.type =
-      bindAux({x => Left(value(x))}, model.getParam(paramName))
-
-    def bind2[T](value: S => ValueOrSeq[T], paramName: String): this.type =
-      bindAux(value, model.getParam(paramName))
-
-    private def bindAux[T](values: S => Either[Option[T], Iterable[T]], param: Param[T]): this.type = {
-      paramValueSetters.append(ParamValueSetter(param, values))
-      this
-    }
-
-    def build: (T, Array[ParamMap]) = {
-      val paramGrid = new ParamGridBuilder()
-      paramValueSetters.foreach(_.set(model, paramGrid, source))
-      (model, paramGrid.build())
-    }
-  }
-
-  case class ParamValueSetter[S, T](
-    val param: Param[T],
-    value: S => (Either[Option[T], Iterable[T]])
-  ) {
-    def set(
-      params: Params,
-      paramGridBuilder: ParamGridBuilder,
-      source: S
-    ): Unit = value(source) match {
-      case Left(valueOption) => valueOption.foreach(params.set(param, _))
-      case Right(values) => paramGridBuilder.addGrid(param, values)
-    }
-//    def get: Option[T] = params.get(param)
-  }
-
-  private def compareParamValues(params1: Params, params2: Params) = {
-    val pars1 = params1.params
-    val pars2 = params2.params
-
-    if (pars1.size != pars2.size) {
-      throw new AdaException(s"Param size ${pars1.size} is not the same as param size ${pars2.size}.")
-    }
-
-    pars1.foreach { par1 =>
-      val par2 = params2.getParam(par1.name)
-
-      val val1 = params1.get(par1)
-      val val2 = params2.get(par2)
-
-      if (val1.isDefined != val2.isDefined) {
-        throw new AdaException(s"Param value defined: ${val1.isDefined} is not the same as param value defined ${val2.isDefined}.")
-      }
-      if (val1.isDefined && val2.isDefined)
-        if (!val1.get.equals(val2.get)) {
-          throw new AdaException(s"Param value ${val1} is not the same as param value ${val2}.")
-        }
-    }
-  }
 }

@@ -6,6 +6,7 @@ import org.apache.spark.ml.{Estimator, Pipeline, PipelineModel, PipelineStage}
 import org.apache.spark.sql.{DataFrame, Row, SQLContext, SparkSession}
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.ml.linalg.{DenseVector, SparseVector, Vector, Vectors}
+import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.sql.functions.{monotonically_increasing_id, struct, udf}
 import org.apache.spark.sql.types.StructType
 import play.api.Configuration
@@ -117,6 +118,21 @@ object SparkUtil {
     )
 
     new Pipeline().setStages(Array(stage, renameColumn))
+  }
+
+  def transformInPlaceWithParamMaps(
+    outputColumnToStage: String => (PipelineStage, Array[ParamMap]),
+    inputOutputCol: String
+  ): (Estimator[PipelineModel], Array[ParamMap]) = {
+    val tempOutputCol = inputOutputCol + Random.nextLong()
+    val (stage, paramMaps) = outputColumnToStage(tempOutputCol)
+
+    val renameColumn = SchemaUnchangedTransformer(
+      _.drop(inputOutputCol).withColumnRenamed(tempOutputCol, inputOutputCol)
+    )
+
+    val inPlaceTransformer = new Pipeline().setStages(Array(stage, renameColumn))
+    (inPlaceTransformer, paramMaps)
   }
 
   def joinByOrder(df1: DataFrame, df2: DataFrame) = {

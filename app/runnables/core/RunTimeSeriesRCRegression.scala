@@ -1,9 +1,12 @@
 package runnables.core
 
+import java.{lang => jl}
 import javax.inject.Inject
 
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
-import models.ml.{LearningSetting, RegressionEvalMetric, VectorTransformType}
+import com.banda.math.domain.rand.RandomDistribution
+import com.banda.network.domain.{ActivationFunctionType, ReservoirSetting}
+import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric, VectorTransformType}
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID
@@ -15,16 +18,16 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.Future
 
-class RunDelayLineSeriesRegression @Inject() (
+class RunTimeSeriesRCRegression @Inject() (
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
     regressionRepo: RegressionRepo
-  ) extends InputFutureRunnable[DelayLineRegressionSetting] {
+  ) extends InputFutureRunnable[RunTimeSeriesRCRegressionSpec] {
 
   private val plotter = Plotter("svg")
 
   override def runAsFuture(
-    setting: DelayLineRegressionSetting
+    setting: RunTimeSeriesRCRegressionSpec
   ): Future[Unit] = {
     val dsa = dsaf(setting.dataSetId).get
 
@@ -44,8 +47,15 @@ class RunDelayLineSeriesRegression @Inject() (
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
-        val results = mlService.regressSeriesWithDelayLine(
-          item.get, setting.inputSeriesFieldPaths, setting.outputSeriesFieldPath, setting.dlSize, setting.predictAhead, mlModel, setting.learningSetting, replicationItem
+        val results = mlService.regressTimeSeries(
+          item.get,
+          setting.ioSpec,
+          setting.predictAhead,
+          setting.windowSize,
+          Some(setting.reservoirSetting),
+          mlModel,
+          setting.learningSetting,
+          replicationItem
         )
         results.map(Some(_))
       }.getOrElse(
@@ -89,17 +99,26 @@ class RunDelayLineSeriesRegression @Inject() (
     writeStringAsStream(output, new java.io.File(fileName))
   }
 
-  override def inputType = typeOf[DelayLineRegressionSetting]
+  override def inputType = typeOf[RunTimeSeriesRCRegressionSpec]
 }
 
-case class DelayLineRegressionSetting(
+case class RunTimeSeriesRCRegressionSpec(
   dataSetId: String,
-  mlModelId: BSONObjectID,
   itemId: BSONObjectID,
-  outputSeriesFieldPath: String,
-  inputSeriesFieldPaths: Seq[String],
-  dlSize: Int,
+  ioSpec: IOJsonTimeSeriesSpec,
+  mlModelId: BSONObjectID,
   predictAhead: Int,
+  windowSize: Option[Int],
+  reservoirNodeNum: Int,
+  reservoirInDegree: Option[Int],
+  reservoirEdgesNum: Option[Int] = None,
+  reservoirPreferentialAttachment: Boolean = false,
+  reservoirBias: Boolean,
+  reservoirCircularInEdges: Option[Seq[Int]] = None,
+  inputReservoirConnectivity: Double,
+  reservoirSpectralRadius: Option[Double] = None,
+  reservoirFunctionType: ActivationFunctionType,
+  reservoirFunctionParams: Seq[Double] = Nil,
   featuresNormalizationType: Option[VectorTransformType.Value],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
@@ -110,6 +129,22 @@ case class DelayLineRegressionSetting(
 ) {
   def learningSetting =
     LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
+
+  def reservoirSetting =
+    ReservoirSetting(
+      inputNodeNum = pcaDims.getOrElse(ioSpec.inputSeriesFieldPaths.size) * windowSize.getOrElse(1),
+      bias = 1,
+      nonBiasInitial = 0,
+      reservoirNodeNum = reservoirNodeNum,
+      reservoirInDegree = reservoirInDegree,
+      reservoirEdgesNum = reservoirEdgesNum,
+      reservoirPreferentialAttachment = reservoirPreferentialAttachment,
+      reservoirBias = reservoirBias,
+      reservoirCircularInEdges = reservoirCircularInEdges,
+      inputReservoirConnectivity = inputReservoirConnectivity,
+      reservoirSpectralRadius = reservoirSpectralRadius,
+      reservoirFunctionType = reservoirFunctionType,
+      reservoirFunctionParams = reservoirFunctionParams,
+      weightDistribution = RandomDistribution.createNormalDistribution(classOf[jl.Double], 0d, 1d)
+    )
 }
-
-

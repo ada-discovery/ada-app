@@ -3,6 +3,7 @@ package services.ml
 import javax.inject.{Inject, Singleton}
 import java.{lang => jl, util => ju}
 
+import com.banda.network.domain.ReservoirSetting
 import util.parallelize
 import com.google.inject.ImplementedBy
 import models.DataSetFormattersAndIds.JsObjectIdentity
@@ -47,12 +48,12 @@ trait MachineLearningService {
     binCurvesNumBins: Option[Int] = None
   ): Future[ClassificationResultsHolder]
 
-  def classifyWithDelayLine(
+  def classifyTimeSeries(
     data: JsObject,
-    inputSeriesFieldPaths: Seq[String],
-    outputSeriesFieldPath: String,
-    dlSize: Int,
+    ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSetting],
     mlModel: Classification,
     setting: LearningSetting[ClassificationEvalMetric.Value] = LearningSetting[ClassificationEvalMetric.Value](),
     replicationData: Option[JsObject] = None,
@@ -68,12 +69,12 @@ trait MachineLearningService {
     replicationData: Traversable[JsObject] = Nil
   ): Future[RegressionResultsHolder]
 
-  def regressSeriesWithDelayLine(
+  def regressTimeSeries(
     data: JsObject,
-    inputSeriesFieldPaths: Seq[String],
-    outputSeriesFieldPath: String,
-    dlSize: Int,
+    ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSetting],
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
     replicationData: Option[JsObject] = None
@@ -116,7 +117,8 @@ trait MachineLearningService {
 private class MachineLearningServiceImpl @Inject() (
     sparkApp: SparkApp,
     configuration: Configuration,
-    statsService: StatsService
+    statsService: StatsService,
+    rcStatesWindowFactory: RCStatesWindowFactory
   ) extends MachineLearningService {
 
   private val logger = Logger // (this.getClass())
@@ -208,35 +210,36 @@ private class MachineLearningServiceImpl @Inject() (
     classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, randomSplit, Nil, Nil)
   }
 
-  def classifyWithDelayLine(
+  override def classifyTimeSeries(
     data: JsObject,
-    inputSeriesFieldPaths: Seq[String],
-    outputSeriesFieldPath: String,
-    dlSize: Int,
+    ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSetting],
     mlModel: Classification,
-    setting: LearningSetting[ClassificationEvalMetric.Value] = LearningSetting[ClassificationEvalMetric.Value](),
-    replicationData: Option[JsObject] = None,
-    binCurvesNumBins: Option[Int] = None
+    setting: LearningSetting[ClassificationEvalMetric.Value],
+    replicationData: Option[JsObject],
+    binCurvesNumBins: Option[Int]
   ): Future[ClassificationResultsHolder] = {
     // training, test, and replication data
 
     // aux function to create a data frame
-    def crateDataFrame(jsons: JsObject) = {
-      val df = FeaturesDataFrameFactory.applySeries(session)(data, inputSeriesFieldPaths, outputSeriesFieldPath)
+    def crateDataFrame(json: JsObject) = {
+      val df = FeaturesDataFrameFactory.applySeries(session)(json, ioSpec)
       BooleanLabelIndexer(Some("labelString")).transform(df)
     }
 
     // create a training/test data frame with all the features
     val df = crateDataFrame(data)
+
     // create a replication data frame with all the features
     val replicationDf = replicationData.map(crateDataFrame)
 
-    // delay line transformers
-    val dlTransformers = createDelayLineTransformers(dlSize, predictAhead)
+    // time series transformers/stages
+    val (timeSeriesStages, paramMaps) = createTimeSeriesStagesWithParamMaps(windowSize, reservoirSetting, predictAhead)
 
     // classify with the DL transformers and a sequential split
-    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, seqSplit("index"), Nil, dlTransformers)
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, seqSplit("index"), Nil, timeSeriesStages, paramMaps)
   }
 
   private def classifyAux(
@@ -247,14 +250,15 @@ private class MachineLearningServiceImpl @Inject() (
     binCurvesNumBins: Option[Int],
     split: Double => (DataFrame => (DataFrame, DataFrame)),
     initStages: Seq[_ <: PipelineStage],
-    preTrainingStages: Seq[_ <: PipelineStage]
+    preTrainingStages: Seq[_ <: PipelineStage],
+    paramMaps: Array[ParamMap] = Array()
   ): Future[ClassificationResultsHolder] = {
     // stages
     val coreStages = classificationStages(setting)
     val stages = initStages ++ coreStages ++ preTrainingStages
 
     // classify with the stages
-    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, split, stages)
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, split, stages, paramMaps)
   }
 
   private def classifyAux(
@@ -264,7 +268,8 @@ private class MachineLearningServiceImpl @Inject() (
     setting: LearningSetting[ClassificationEvalMetric.Value],
     binCurvesNumBins: Option[Int],
     split: Double => (DataFrame => (DataFrame, DataFrame)),
-    stages: Seq[_ <: PipelineStage]
+    stages: Seq[_ <: PipelineStage],
+    paramMaps: Array[ParamMap]
   ): Future[ClassificationResultsHolder] = {
 
     // cache the data frames
@@ -281,8 +286,9 @@ private class MachineLearningServiceImpl @Inject() (
     val outputLabelType = df.schema.fields.find(_.name == "label").get
     val outputSize = outputLabelType.metadata.getMetadata("ml_attr").getStringArray("vals").length
 
-    val (trainer, paramMaps) = SparkMLEstimatorFactory(mlModel, inputSize, outputSize)
+    val (trainer, trainerParamMaps) = SparkMLEstimatorFactory(mlModel, inputSize, outputSize)
     val fullTrainer = new Pipeline().setStages((stages ++ Seq(trainer)).toArray)
+    val fullParamMaps = trainerParamMaps ++ paramMaps
 
     // REPEAT THE TRAINING-TEST CYCLE
 
@@ -312,7 +318,7 @@ private class MachineLearningServiceImpl @Inject() (
       // classify and evaluate
       val results = classifyAndEvaluate(
         fullTrainer,
-        paramMaps,
+        fullParamMaps,
         evaluators,
         crossValidationEvaluator.evaluator,
         setting.crossValidationFolds,
@@ -379,58 +385,44 @@ private class MachineLearningServiceImpl @Inject() (
 
     // create a training/test data frame with all the features
     val df = crateDataFrame(data)
+
     // create a replication data frame with all the features
     val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
-    // REGRESS
+    // regress
     regressAux(df, replicationDf, mlModel, setting, randomSplit, Nil, Nil)
   }
 
-  override def regressSeriesWithDelayLine(
+  override def regressTimeSeries(
     data: JsObject,
-    inputSeriesFieldPaths: Seq[String],
-    outputSeriesFieldPath: String,
-    dlSize: Int,
+    ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSetting],
     mlModel: Regression,
-    setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
-    replicationData: Option[JsObject]
+    setting: LearningSetting[RegressionEvalMetric.Value],
+    replicationData: Option[JsObject] = None
   ): Future[RegressionResultsHolder] = {
     // training, test, and replication data
 
     // aux function to create a data frame
-    def crateDataFrame(jsons: JsObject) =
-      FeaturesDataFrameFactory.applySeries(session)(data, inputSeriesFieldPaths, outputSeriesFieldPath)
+    def crateDataFrame(json: JsObject) = FeaturesDataFrameFactory.applySeries(session)(json, ioSpec)
 
     // create a training/test data frame with all the features
     val df = crateDataFrame(data)
+
     // create a replication data frame with all the features
     val replicationDf = replicationData.map(crateDataFrame)
 
-    // delay line transformers
-    val dlTransformers = createDelayLineTransformers(dlSize, predictAhead)
+    // time series transformers/stages
+    val (timeSeriesStages, paramMaps) = createTimeSeriesStagesWithParamMaps(windowSize, reservoirSetting, predictAhead)
     val showDf = SchemaUnchangedTransformer { df: DataFrame => df.orderBy("index").show(false); df }
 
     df.show(false)
 
-    // regress with the DL transformers and a sequential split
-    regressAux(df, replicationDf, mlModel, setting, seqSplit("index"), Nil, dlTransformers ++ Seq(showDf), true)
+    // regress with the time series transformers and a sequential split
+    regressAux(df, replicationDf, mlModel, setting, seqSplit("index"), Nil, timeSeriesStages ++ Seq(showDf), paramMaps, true)
   }
-
-  private def createDelayLineTransformers(
-    windowSize: Int,
-    labelShift: Int
-  ) =
-    if (useConsecutiveOrderForDL)
-      Seq(
-        SlidingWindowWithConsecutiveOrder.applyInPlace(windowSize, "features", "index"),
-        SeqShiftWithConsecutiveOrder.applyInPlace(labelShift, "label", "index")
-      )
-    else
-      Seq(
-        SlidingWindow.applyInPlace(windowSize, "features", "index"),
-        SeqShift.applyInPlace(labelShift, "label", "index")
-      )
 
   private def regressAux(
     df: DataFrame,
@@ -440,6 +432,7 @@ private class MachineLearningServiceImpl @Inject() (
     split: Double => (DataFrame => (DataFrame, DataFrame)),
     initStages: Seq[_ <: PipelineStage],
     preTrainingStages: Seq[_ <: PipelineStage],
+    paramMaps: Array[ParamMap] = Array(),
     collectOutputs: Boolean = false
   ): Future[RegressionResultsHolder] = {
     // stages
@@ -447,7 +440,7 @@ private class MachineLearningServiceImpl @Inject() (
     val stages = initStages ++ coreStages ++ preTrainingStages
 
     // regress with the stages
-    regressAux(df, replicationDf, mlModel, setting, split, stages, collectOutputs)
+    regressAux(df, replicationDf, mlModel, setting, split, stages, paramMaps, collectOutputs)
   }
 
   private def regressAux(
@@ -457,12 +450,14 @@ private class MachineLearningServiceImpl @Inject() (
     setting: LearningSetting[RegressionEvalMetric.Value],
     split: Double => (DataFrame => (DataFrame, DataFrame)),
     stages: Seq[_ <: PipelineStage],
+    paramMaps: Array[ParamMap],
     collectOutputs: Boolean
   ): Future[RegressionResultsHolder] = {
     // CREATE A TRAINER
 
-    val (trainer, paramMaps) = SparkMLEstimatorFactory(mlModel)
+    val (trainer, trainerParamMaps) = SparkMLEstimatorFactory(mlModel)
     val fullTrainer = new Pipeline().setStages((stages ++ Seq(trainer)).toArray)
+    val fullParamMaps = trainerParamMaps ++ paramMaps
 
     // REPEAT THE TRAINING-TEST CYCLE
 
@@ -491,7 +486,7 @@ private class MachineLearningServiceImpl @Inject() (
 
       // run the trainer (with folds) on the given training and test data sets
       val (trainPredictions, testPredictions) = trainWithCrossValidation(
-        fullTrainer, paramMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training, testSets
+        fullTrainer, fullParamMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training, testSets
       )
 
       // evaluate the performance
@@ -538,6 +533,38 @@ private class MachineLearningServiceImpl @Inject() (
 
       RegressionResultsHolder(performanceResults, counts, expectedAndActualOutputs)
     }
+  }
+
+  private def createTimeSeriesStagesWithParamMaps(
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSetting],
+    labelShift: Int
+  ): (Seq[_ <: PipelineStage], Array[ParamMap]) = {
+    if (windowSize.isEmpty && reservoirSetting.isEmpty)
+      logger.warn("Window size or reservoir setting should be set for time series transformations.")
+
+    val dlTransformer = windowSize.map( windowSize =>
+      if (useConsecutiveOrderForDL)
+        SlidingWindowWithConsecutiveOrder.applyInPlace(windowSize, "features", "index")
+      else
+        SlidingWindow.applyInPlace(windowSize, "features", "index")
+    )
+
+    val rcTransformerWithParamMaps = reservoirSetting.map( reservoirSetting =>
+      rcStatesWindowFactory.applyInPlace(reservoirSetting, "features", "index")
+    )
+
+    val rcTransformer = rcTransformerWithParamMaps.map(_._1)
+    val paramMaps = rcTransformerWithParamMaps.map(_._2).getOrElse(Array())
+
+    val labelShiftTransformer =
+      if (useConsecutiveOrderForDL)
+        SeqShiftWithConsecutiveOrder.applyInPlace(labelShift, "label", "index")
+      else
+        SeqShift.applyInPlace(labelShift, "label", "index")
+
+    val stages = Seq(dlTransformer, rcTransformer, Some(labelShiftTransformer)).flatten
+    (stages, paramMaps)
   }
 
   private def collectLabelPredictions(dataFrame: DataFrame) = {

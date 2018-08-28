@@ -32,6 +32,7 @@ class CovertNumericValuesToNull extends DsaInputFutureRunnable[CovertNumericValu
       fieldNameTypes: Traversable[(String, FieldType[_])])(
       jsons: Traversable[JsObject]
     ) = {
+      logger.info(s"Processing ${jsons.size} items...")
       val jsonsToUpdate = jsons.map { json =>
         val fieldsToReplace = fieldNameTypes.flatMap { case (fieldName, fieldType) =>
           val value = json.toValue(fieldName, fieldType)
@@ -47,8 +48,7 @@ class CovertNumericValuesToNull extends DsaInputFutureRunnable[CovertNumericValu
     for {
       // fields
       numericFields <- dsa_.fieldRepo.find(
-        criteria = Seq("fieldType" #-> Seq(FieldTypeId.Double, FieldTypeId.Integer)),
-        projection = Seq("name", "fieldType")
+        criteria = Seq("fieldType" #-> Seq(FieldTypeId.Double, FieldTypeId.Integer))
       )
 
       fieldNameTypes = numericFields.map(field => (field.name, ftf(field.fieldTypeSpec)))

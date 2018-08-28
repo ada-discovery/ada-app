@@ -1,7 +1,7 @@
 package controllers.core
 
 import controllers.BSONObjectIDStringFormatter
-import models.{AdaException, StorageType}
+import models.{AdaException, FieldTypeId, FieldTypeSpec, StorageType}
 import play.api.data.Forms._
 import play.api.data.format.Formats._
 import play.api.data.validation.Constraint
@@ -13,7 +13,6 @@ import java.{util => ju}
 import org.incal.core.util.ReflectionUtil
 import org.incal.play.formatters._
 import reactivemongo.bson.BSONObjectID
-
 import scala.collection.Traversable
 
 private class GenericMapping[R, A](
@@ -145,6 +144,12 @@ object GenericMapping {
   private implicit val intSeqFormatter = SeqFormatter.applyInt
   private implicit val doubleSeqFormatter = SeqFormatter.applyDouble
 
+  private def getJavaEnumOrdinalValues[E <: Enum[E]](enumType: Type): Map[Int, String] = {
+    val clazz = ReflectionUtil.typeToClass(enumType).asInstanceOf[Class[E]]
+    val enumValues = ReflectionUtil.javaEnumOrdinalValues(clazz)
+    enumValues.map { case (ordinal, value) => (ordinal, value.toString) }
+  }
+
   @throws(classOf[AdaException])
   private def genericMapping(typ: Type): Mapping[Any] = {
     val mapping = typ match {
@@ -184,6 +189,11 @@ object GenericMapping {
       case t if t subMatches typeOf[Enumeration#Value] =>
         val enum = ReflectionUtil.enum(t)
         of(EnumFormatter(enum))
+
+      // Java enum
+      case t if t subMatches typeOf[Enum[_]] =>
+        val clazz = ReflectionUtil.typeToClass(t)
+        of(JavaEnumMapFormatter(clazz))
 
       // string
       case t if t matches typeOf[String] =>

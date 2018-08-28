@@ -35,30 +35,26 @@ class TestVectorTransformer @Inject()(
   )
 
   override def run = {
-    runAux(dataFrame1, false)
-    runAux(dataFrame2, false)
+    runAux(dataFrame1, dataFrame1, false)
+    runAux(dataFrame1, dataFrame2, false)
   }
 
-  private def runAux(df: DataFrame, inRow: Boolean) = {
-    val l1NormalizedDf = transformVectors(df, VectorTransformType.L1Normalizer, inRow)
-    val l2NormalizedDf = transformVectors(df, VectorTransformType.L2Normalizer, inRow)
-    val standardScaledDf = transformVectors(df, VectorTransformType.StandardScaler, inRow)
-    val minMaxZeroOneScaledDf = transformVectors(df, VectorTransformType.MinMaxZeroOneScaler, inRow)
-    val minMaxPlusMinusOneScaledDf = transformVectors(df, VectorTransformType.MinMaxPlusMinusOneScaler, inRow)
-    val maxAbsScaledDf = transformVectors(df, VectorTransformType.MaxAbsScaler, inRow)
+  private def runAux(fitDf: DataFrame, testDf: DataFrame, inRow: Boolean) = {
+    def transformVectors(transformType: VectorTransformType.Value) =
+      VectorColumnScalerNormalizer(transformType).fit(fitDf).transform(testDf)
 
-    println("Original")
-    df.show(20, false)
+    val l1NormalizedDf = transformVectors(VectorTransformType.L1Normalizer)
+    val l2NormalizedDf = transformVectors(VectorTransformType.L2Normalizer)
+    val standardScaledDf = transformVectors(VectorTransformType.StandardScaler)
+    val minMaxZeroOneScaledDf = transformVectors(VectorTransformType.MinMaxZeroOneScaler)
+    val minMaxPlusMinusOneScaledDf = transformVectors(VectorTransformType.MinMaxPlusMinusOneScaler)
+    val maxAbsScaledDf = transformVectors(VectorTransformType.MaxAbsScaler)
 
-    val l1Norm = VectorNorm(df, "features", 1)
-    val l2Norm = VectorNorm(df, "features", 2)
-    val l3Norm = VectorNorm(df, "features", 3)
-    val linfNorm = VectorNorm(df, "features", Double.PositiveInfinity)
+    println("Original Fit")
+    fitDf.show(20, false)
 
-    println("L1 Norm  : " + l1Norm)
-    println("L2 Norm  : " + l2Norm)
-    println("L3 Norm  : " + l3Norm)
-    println("Linf Norm: " + linfNorm)
+    println("Original Test")
+    testDf.show(20, false)
 
     println("L1 Normalized")
     l1NormalizedDf.show(20, false)
@@ -78,13 +74,6 @@ class TestVectorTransformer @Inject()(
     println("Max-Abs Scaled")
     maxAbsScaledDf.show(20, false)
   }
-
-  private def transformVectors(
-    data: DataFrame,
-    transformType: VectorTransformType.Value,
-    inRow: Boolean = false
-  ): DataFrame =
-    VectorColumnScalerNormalizer(transformType).fit(data).transform(data)
 }
 
 object TestVectorTransformer extends GuiceBuilderRunnable[TestVectorTransformer] with App { run }

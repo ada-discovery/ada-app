@@ -14,15 +14,6 @@ protected class NetworkStateVectorAgg(
   override protected def newStateFun(
     inputWithIndeces: Traversable[(Double, Int)]
   ): Array[Double] = {
-    println("Network Runnable Time     : " + networkRunnable.currentTime)
-    println("Network Runnable HashCode : " + networkRunnable.hashCode())
-    println("Input Nodes HashCode      : " + inputNodes.map(_.hashCode).mkString(", "))
-    println("Output Nodes HashCode     : " + outputNodes.map(_.hashCode).mkString(", "))
-    println("-------------")
-
-    println("Input Nodes Indeces       : " + inputNodes.map(_.getIndex).mkString(", "))
-    println("Output Nodes Indeces      : " + outputNodes.map(_.getIndex).mkString(", "))
-
     // set the inputs
     inputWithIndeces.foreach { case (input, index) =>
       val inputNode = inputNodes(index)

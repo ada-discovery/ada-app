@@ -13,6 +13,8 @@ import runnables.InputFutureRunnable
 import services.stats.StatsService
 import _root_.util.FieldUtil.JsonFieldOps
 import org.incal.core.dataaccess.NotEqualsNullCriterion
+import org.incal.core.dataaccess.Criterion.Infix
+import play.api.libs.json.JsObject
 import services.stats.calc.MatrixCalcHelper
 import util.writeByteArrayStream
 
@@ -27,7 +29,7 @@ class CalcEuclideanDistanceBetweenGroupsForDataSpace @Inject()(
   ) extends InputFutureRunnable[CalcEuclideanDistanceBetweenGroupsForDataSpaceSpec] with MatrixCalcHelper {
 
   private val eol = "\n"
-  private val headerColumnNames = Seq("dataSetId", "global_avg_dist", "within_group_avg_dist", "between_group_avg_dist", "point_pairs_count", "groups_count")
+  private val headerColumnNames = Seq("dataSetId", "within_group_avg_dist", "between_group_avg_dist", "groups_count")
   private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   private val logger = Logger
@@ -62,58 +64,90 @@ class CalcEuclideanDistanceBetweenGroupsForDataSpace @Inject()(
     logger.info(s"Calculating an Euclidean distance between points for the data set $dataSetId using the group field '$groupFieldName'.")
     val dsa = dsaf(dataSetId).get
 
-    for {
-      jsons <- dsa.dataSetRepo.find(
-        criteria = Seq(NotEqualsNullCriterion(xFieldName), NotEqualsNullCriterion(yFieldName), NotEqualsNullCriterion(groupFieldName)),
-        projection = Seq(xFieldName, yFieldName, groupFieldName)
-      )
-
-      xField <- dsa.fieldRepo.get(xFieldName)
-      yField <- dsa.fieldRepo.get(yFieldName)
-      groupField <- dsa.fieldRepo.get(groupFieldName)
-    } yield {
-      val groupFieldType = ftf(groupField.get.fieldTypeSpec)
-      val pointsWithGroup = jsons.map { json =>
+    def points(jsons: Traversable[JsObject]) =
+      jsons.map { json =>
         val x = (json \ xFieldName).toOption.map(_.as[Double]).get
         val y = (json \ yFieldName).toOption.map(_.as[Double]).get
-        val group = json.toValue(groupFieldName, groupFieldType).get
-        (x, y, group)
-      }.toSeq
+        (x, y)
+      }
 
-      val groupIndexMap = pointsWithGroup.map(_._3).groupBy(identity).map(_._1).toSeq.zipWithIndex.toMap
+    def dist(
+      point1: (Double, Double))(
+      point2: (Double, Double)
+    ) = {
+      val xDiff = (point1._1 - point2._1)
+      val yDiff = (point1._2 - point2._2)
+      Math.sqrt(xDiff * xDiff + yDiff * yDiff)
+    }
 
-      logger.info(s"$pointsWithGroup points with ${groupIndexMap.size} groups prepared for calculation...")
+    def betweenGroupDist(
+      group1Points: Traversable[(Double, Double)],
+      group2Points: Traversable[(Double, Double)]
+    ): Double = {
+      val dists = group1Points.flatMap( point1 => group2Points.map(dist(point1)))
 
-      val startEnds = calcStartEnds(pointsWithGroup.size, Some(16))
+      dists.sum / dists.size
+    }
 
-      val groupPairDists = startEnds.par.flatMap { case (start, end) =>
-        (start to end).map(i =>
-          for (j <- 0 until i) yield {
-            val point1 = pointsWithGroup(i)
-            val point2 = pointsWithGroup(j)
+    def withinGroupDist(
+      groupPoints: Seq[(Double, Double)]
+    ): Double = {
+      val dists = (0 until groupPoints.size).flatMap( i =>
+        (0 until i).map( j =>
+          dist(groupPoints(i))(groupPoints(j))
+        )
+      )
 
-            val xDiff = (point1._1 - point2._1)
-            val yDiff = (point1._2 - point2._2)
-            val dist = Math.sqrt(xDiff * xDiff + yDiff * yDiff)
-            val groupIndex1 = groupIndexMap.get(point1._3).get
-            val groupIndex2 = groupIndexMap.get(point2._3).get
+      dists.sum / dists.size
+    }
 
-            if (groupIndex1 <= groupIndex2)
-              ((groupIndex1, groupIndex2), dist)
-            else
-              ((groupIndex2, groupIndex1), dist)
-          })
-      }.toList.flatten
+    for {
+      groupField <- dsa.fieldRepo.get(groupFieldName)
+      groupFieldType = ftf(groupField.get.fieldTypeSpec)
 
-      val globalAvgDist = groupPairDists.map(_._2).sum / groupPairDists.size
+      groupJsons <- dsa.dataSetRepo.find(
+        criteria = Seq(NotEqualsNullCriterion(groupFieldName)),
+        projection = Seq(groupFieldName)
+      )
 
-      val withinSameGroupDists = groupPairDists.filter { case ((groupIndex1, groupIndex2), _) => groupIndex1 == groupIndex2 }
-      val betweenDiffGroupsDists = groupPairDists.filter { case ((groupIndex1, groupIndex2), _) => groupIndex1 != groupIndex2 }
+      groups = groupJsons.map { groupJson =>
+        groupJson.toValue(groupFieldName, groupFieldType).get
+      }.toSet.toSeq
 
-      val withinSameGroupAvgDist = withinSameGroupDists.map(_._2).sum / withinSameGroupDists.size
-      val betweenDiffGroupsAvgDist = betweenDiffGroupsDists.map(_._2).sum / betweenDiffGroupsDists.size
+      groupDists <- util.seqFutures((0 until groups.size)) { groupIndex1 =>
 
-      Seq(dataSetId, globalAvgDist, withinSameGroupAvgDist, betweenDiffGroupsAvgDist, groupPairDists.size, groupIndexMap.size).mkString(delimiter)
+        for {
+          group1Jsons <- dsa.dataSetRepo.find(
+            criteria = Seq(NotEqualsNullCriterion(xFieldName), NotEqualsNullCriterion(yFieldName), groupFieldName #== groups(groupIndex1)),
+            projection = Seq(xFieldName, yFieldName)
+          )
+
+          group1Points = points(group1Jsons)
+
+          betweenGroupDists <- util.seqFutures((0 until groupIndex1)) { groupIndex2 =>
+
+            for {
+              group2Jsons <- dsa.dataSetRepo.find(
+                criteria = Seq(NotEqualsNullCriterion(xFieldName), NotEqualsNullCriterion(yFieldName), groupFieldName #== groups(groupIndex2)),
+                projection = Seq(xFieldName, yFieldName)
+              )
+            } yield {
+              val group2Points = points(group2Jsons)
+              betweenGroupDist(group1Points, group2Points)
+            }
+          }
+        } yield {
+          (withinGroupDist(group1Points.toSeq), betweenGroupDists)
+        }
+      }
+    } yield {
+      val withinGroupDists = groupDists.map(_._1)
+      val betweenGroupDists = groupDists.flatMap(_._2)
+
+      val withinGroupAvgDist = withinGroupDists.sum / withinGroupDists.size
+      val betweenGroupsAvgDist = betweenGroupDists.sum / betweenGroupDists.size
+
+      Seq(dataSetId, withinGroupAvgDist, betweenGroupsAvgDist, groups.size).mkString(delimiter)
     }
   }
 

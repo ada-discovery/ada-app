@@ -26,7 +26,7 @@ class SparkRC @Inject() (
     reservoirBias = true,
     inputReservoirConnectivity = 0.2,
     reservoirFunctionType = ActivationFunctionType.Linear,
-    reservoirFunctionParams = Some(Seq(1d)),
+    reservoirFunctionParams = Seq(1d),
     reservoirSpectralRadius = None,
 //    weightDistribution = new RepeatedDistribution(Array(1d))
     weightDistribution = RandomDistribution.createNormalDistribution[jl.Double](classOf[jl.Double], 0d, 1d)
@@ -41,17 +41,26 @@ class SparkRC @Inject() (
     (6, Vectors.dense(-9, 5), 10)
   ).toDF("time", "features", "label")
 
+  private val df2 = Seq(
+    (1, Vectors.dense(1, 2), -1),
+    (2, Vectors.dense(4, 5), 2),
+    (3, Vectors.dense(7, 8), -3),
+    (5, Vectors.dense(10, 11), 8),
+    (4, Vectors.dense(-2, 1), 4),
+    (6, Vectors.dense(-9, 5), 10)
+  ).toDF("time", "features", "label")
+
   private val windowSize = 3
 
   override def run = {
     df.show()
 
-    val rcTransform = rcStatesWindowFactory(reservoirSetting, "features", "time", "rc_states")
+    val (rcTransform, _) = rcStatesWindowFactory(reservoirSetting, "features", "time", "rc_states")
 
     val rcDf1 = rcTransform.transform(df)
     rcDf1.show(truncate = false)
 
-    val rcDf2 = rcTransform.transform(df.toDF())
+    val rcDf2 = rcTransform.transform(df2)
     rcDf2.show(truncate = false)
 
     sparkApp.session.stop()

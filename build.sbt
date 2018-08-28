@@ -78,13 +78,13 @@ libraryDependencies ++= Seq(
   "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
 //  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze visualization
   "com.banda.network" % "banda-network-business" % "0.5.6.1",
-  "org.in-cal" %% "incal-play" % "0.0.18",
+  "org.in-cal" %% "incal-play" % "0.0.19",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12" ))
 
 //  "com.typesafe.play" % "play-logback_2.11" % "2.5.1"
 // Following overrides are needed since Spark 1.6 uses jackson-databind 2.4.4
-// Note that deadbolt's dependency jackson-datatype-jsr310 has to be overriden as well because of transitivity
+// Note that deadbolt's dependency jackson-datatype-jsr310 has to be overridden as well because of transitivity
 // dependencyOverrides ++= Set(
 //  "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.4",
 //  "com.fasterxml.jackson.core" % "jackson-annotations" % "2.4.4",

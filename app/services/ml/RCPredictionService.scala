@@ -97,16 +97,6 @@ class RCPredictionServiceImpl @Inject()(
 
     val seriesFieldNames = ioSpec.inputSeriesFieldPaths.map(_.split('.').head) ++ ioSpec.outputSeriesFieldPaths.map(_.split('.').head)
 
-    // helper method to execute prediction on a given json
-    def predict(json: JsObject): Future[Option[(RCPredictionResults, JsObject)]] =
-      for {
-        results <- predictSeries(topology, setting, json, ioSpec)
-      } yield
-        results.map { results =>
-          val otherDataJson = seriesFieldNames.foldLeft(json) { case (json, fieldName) => json.-(fieldName) }
-          (results, otherDataJson)
-        }
-
     val actualBatchSize = batchSize.getOrElse(defaultBatchSize)
 
     // helper function to get a single json batch
@@ -316,13 +306,15 @@ class RCPredictionServiceImpl @Inject()(
     ioSpec: RCPredictionInputOutputSpec
   ): Option[(Seq[Seq[jl.Double]], Seq[jl.Double])] = {
     // TODO: only the first output series path is taken
-    IOSeriesUtil.applyJson(
+    IOSeriesUtil(
       json,
-      ioSpec.inputSeriesFieldPaths,
-      ioSpec.outputSeriesFieldPaths.head,
-      ioSpec.dropLeftLength,
-      ioSpec.dropRightLength,
-      ioSpec.seriesLength
+      IOJsonTimeSeriesSpec(
+        ioSpec.inputSeriesFieldPaths,
+        ioSpec.outputSeriesFieldPaths.head,
+        ioSpec.dropLeftLength,
+        ioSpec.dropRightLength,
+        ioSpec.seriesLength
+      )
     ).map { case (input, output) =>
       val jlInput = input.map(_.map(x => x: jl.Double))
       val jlOutput = output.map(x => x: jl.Double)

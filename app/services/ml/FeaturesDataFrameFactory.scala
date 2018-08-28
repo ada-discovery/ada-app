@@ -3,6 +3,7 @@ package services.ml
 import java.{util => ju}
 
 import field.{FieldType, FieldTypeHelper}
+import models.ml.IOJsonTimeSeriesSpec
 import models.{FieldTypeId, FieldTypeSpec}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.feature.{QuantileDiscretizer, StringIndexer, VectorAssembler}
@@ -74,11 +75,10 @@ object FeaturesDataFrameFactory {
   def applySeries(
     session: SparkSession)(
     json: JsObject,
-    inputSeriesFieldPaths: Seq[String],
-    outputSeriesFieldPath: String
+    ioSpec: IOJsonTimeSeriesSpec
   ): DataFrame = {
     val values: Seq[Seq[Any]] =
-      IOSeriesUtil.applyJson(json, inputSeriesFieldPaths, outputSeriesFieldPath).map { case (inputs, outputs) =>
+      IOSeriesUtil(json, ioSpec).map { case (inputs, outputs) =>
         inputs.zip(outputs).zipWithIndex.map { case ((input, output), index) => Seq(index) ++ input ++ Seq(output) }
       }.getOrElse(Nil)
 
@@ -91,11 +91,11 @@ object FeaturesDataFrameFactory {
       Row.fromSeq(valueBroadVar.value(index.toInt))
     }
 
-    val inputFieldNames = inputSeriesFieldPaths.map( fieldName =>
+    val inputFieldNames = ioSpec.inputSeriesFieldPaths.map( fieldName =>
       fieldName.replaceAllLiterally(".", "_")
     )
 
-    val outputFieldName = outputSeriesFieldPath.replaceAllLiterally(".", "_")
+    val outputFieldName = ioSpec.outputSeriesFieldPath.replaceAllLiterally(".", "_")
     val ioTypes = (inputFieldNames ++ Seq(outputFieldName)).toSet.map { name: String => StructField(name, DoubleType, true) }
     val structTypes = Seq(StructField("index", IntegerType, true)) ++ ioTypes
 
