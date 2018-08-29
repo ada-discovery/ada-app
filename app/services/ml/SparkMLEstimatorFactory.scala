@@ -16,7 +16,7 @@ object SparkMLEstimatorFactory {
     model: Classification,
     inputSize: Int,
     outputSize: Int
-  ): (Estimator[M], Array[ParamMap]) = {
+  ): (Estimator[M], Traversable[ParamGrid[_]]) = {
     val (estimator, paramMaps) = model match {
       case x: LogisticRegression => applyAux(x)
       case x: MultiLayerPerceptron => applyAux(x, inputSize, outputSize)
@@ -32,7 +32,7 @@ object SparkMLEstimatorFactory {
 
   def apply[M <: Model[M]](
     model: Regression
-  ): (Estimator[M], Array[ParamMap]) = {
+  ): (Estimator[M], Traversable[ParamGrid[_]]) = {
     val (estimator, paramMaps) = model match {
       case x: LinearRegressionDef => applyAux(x)
       case x: GeneralizedLinearRegressionDef => applyAux(x)
@@ -56,169 +56,169 @@ object SparkMLEstimatorFactory {
 
   private def applyAux(
     model: LogisticRegression
-  ): (LogisticRegressionClassifier, Array[ParamMap]) =
+  ): (LogisticRegressionClassifier, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new LogisticRegressionClassifier())
-      .bind2(_.aggregationDepth, "aggregationDepth")
-      .bind2(_.elasticMixingRatio, "elasticNetParam")
+      .bindValOrSeq(_.aggregationDepth, "aggregationDepth")
+      .bindValOrSeq(_.elasticMixingRatio, "elasticNetParam")
       .bind(_.family.map(_.toString), "family")
       .bind(_.fitIntercept, "fitIntercept")
-      .bind2(_.maxIteration, "maxIter")
-      .bind2(_.regularization, "regParam")
-      .bind2(_.threshold, "threshold")
+      .bindValOrSeq(_.maxIteration, "maxIter")
+      .bindValOrSeq(_.regularization, "regParam")
+      .bindValOrSeq(_.threshold, "threshold")
       .bind(_.thresholds.map(_.toArray), "thresholds")
       .bind(_.standardization, "standardization")
-      .bind2(_.tolerance, "tol")
+      .bindValOrSeq(_.tolerance, "tol")
       .build
 
   private def applyAux(
     model: MultiLayerPerceptron,
     inputSize: Int,
     outputSize: Int
-  ): (MultilayerPerceptronClassifier, Array[ParamMap]) = {
+  ): (MultilayerPerceptronClassifier, Traversable[ParamGrid[_]]) = {
     val layers = (Seq(inputSize) ++ model.hiddenLayers ++ Seq(outputSize)).toArray
 
     ParamSourceBinder(model, new MultilayerPerceptronClassifier())
-      .bind2(_.blockSize, "blockSize")
+      .bindValOrSeq(_.blockSize, "blockSize")
       .bind(_.seed, "seed")
-      .bind2(_.maxIteration, "maxIter")
+      .bindValOrSeq(_.maxIteration, "maxIter")
       .bind(_.solver.map(_.toString), "solver")
-      .bind2(_.stepSize, "stepSize")
-      .bind2(_.tolerance, "tol")
+      .bindValOrSeq(_.stepSize, "stepSize")
+      .bindValOrSeq(_.tolerance, "tol")
       .bind(o => Some(layers), "layers")
       .build
   }
 
   private def applyAux(
     model: DecisionTree
-  ): (DecisionTreeClassifier, Array[ParamMap]) =
+  ): (DecisionTreeClassifier, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new DecisionTreeClassifier())
-      .bind2(_.core.maxDepth, "maxDepth")
-      .bind2(_.core.maxBins, "maxBins")
-      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind2(_.core.minInfoGain, "minInfoGain")
+      .bindValOrSeq(_.core.maxDepth, "maxDepth")
+      .bindValOrSeq(_.core.maxBins, "maxBins")
+      .bindValOrSeq(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bindValOrSeq(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
       .bind(_.impurity.map(_.toString), "impurity")
       .build
 
   private def applyAux(
     model: RandomForest
-  ): (RandomForestClassifier, Array[ParamMap]) =
+  ): (RandomForestClassifier, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new RandomForestClassifier())
-      .bind2(_.numTrees, "numTrees")
-      .bind2(_.core.maxDepth, "maxDepth")
-      .bind2(_.core.maxBins, "maxBins")
-      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind2(_.core.minInfoGain, "minInfoGain")
+      .bindValOrSeq(_.numTrees, "numTrees")
+      .bindValOrSeq(_.core.maxDepth, "maxDepth")
+      .bindValOrSeq(_.core.maxBins, "maxBins")
+      .bindValOrSeq(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bindValOrSeq(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
-      .bind2(_.subsamplingRate, "subsamplingRate")
+      .bindValOrSeq(_.subsamplingRate, "subsamplingRate")
       .bind(_.impurity.map(_.toString), "impurity")
       .bind(_.featureSubsetStrategy.map(_.toString), "featureSubsetStrategy")
       .build
 
   private def applyAux(
     model: GradientBoostTree
-  ): (GBTClassifier, Array[ParamMap]) =
+  ): (GBTClassifier, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new GBTClassifier())
       .bind(_.lossType.map(_.toString), "lossType")
-      .bind2(_.maxIteration, "maxIter")
-      .bind2(_.stepSize, "stepSize")
-      .bind2(_.core.maxDepth, "maxDepth")
-      .bind2(_.core.maxBins, "maxBins")
-      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind2(_.core.minInfoGain, "minInfoGain")
+      .bindValOrSeq(_.maxIteration, "maxIter")
+      .bindValOrSeq(_.stepSize, "stepSize")
+      .bindValOrSeq(_.core.maxDepth, "maxDepth")
+      .bindValOrSeq(_.core.maxBins, "maxBins")
+      .bindValOrSeq(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bindValOrSeq(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
-      .bind2(_.subsamplingRate, "subsamplingRate")
+      .bindValOrSeq(_.subsamplingRate, "subsamplingRate")
       //    .bind(_.impurity.map(_.toString), "impurity")
       .build
 
   private def applyAux(
     model: NaiveBayes
-  ): (NaiveBayesClassifier, Array[ParamMap]) =
+  ): (NaiveBayesClassifier, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new NaiveBayesClassifier())
-      .bind2(_.smoothing, "smoothing")
+      .bindValOrSeq(_.smoothing, "smoothing")
       .bind(_.modelType.map(_.toString), "modelType")
       .build
 
   private def applyAux(
     model: LinearSupportVectorMachine
-  ): (LinearSVC, Array[ParamMap]) =
+  ): (LinearSVC, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new LinearSVC())
-      .bind2(_.aggregationDepth, "aggregationDepth")
+      .bindValOrSeq(_.aggregationDepth, "aggregationDepth")
       .bind(_.fitIntercept, "fitIntercept")
-      .bind2(_.maxIteration, "maxIter")
-      .bind2(_.regularization, "regParam")
+      .bindValOrSeq(_.maxIteration, "maxIter")
+      .bindValOrSeq(_.regularization, "regParam")
       .bind(_.standardization, "standardization")
-      .bind2(_.threshold, "threshold")
-      .bind2(_.tolerance, "tol")
+      .bindValOrSeq(_.threshold, "threshold")
+      .bindValOrSeq(_.tolerance, "tol")
       .build
 
   private def applyAux(
     model: LinearRegressionDef
-  ): (LinearRegressor, Array[ParamMap]) =
+  ): (LinearRegressor, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new LinearRegressor())
-      .bind2(_.aggregationDepth, "aggregationDepth")
-      .bind2(_.elasticMixingRatio, "elasticNetParam")
+      .bindValOrSeq(_.aggregationDepth, "aggregationDepth")
+      .bindValOrSeq(_.elasticMixingRatio, "elasticNetParam")
       .bind(_.solver.map(_.toString), "solver")
       .bind(_.fitIntercept, "fitIntercept")
-      .bind2(_.maxIteration, "maxIter")
-      .bind2(_.regularization, "regParam")
+      .bindValOrSeq(_.maxIteration, "maxIter")
+      .bindValOrSeq(_.regularization, "regParam")
       .bind(_.standardization, "standardization")
-      .bind2(_.tolerance, "tol")
+      .bindValOrSeq(_.tolerance, "tol")
       .build
 
   private def applyAux(
     model: GeneralizedLinearRegressionDef
-  ): (GeneralizedLinearRegressor, Array[ParamMap]) =
+  ): (GeneralizedLinearRegressor, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new GeneralizedLinearRegressor())
       .bind(_.solver.map(_.toString), "solver")
       .bind(_.family.map(_.toString), "family")
       .bind(_.fitIntercept, "fitIntercept")
       .bind(_.link.map(_.toString), "link")
-      .bind2(_.maxIteration, "maxIter")
-      .bind2(_.regularization, "regParam")
-      .bind2(_.tolerance, "tol")
+      .bindValOrSeq(_.maxIteration, "maxIter")
+      .bindValOrSeq(_.regularization, "regParam")
+      .bindValOrSeq(_.tolerance, "tol")
       .build
 
   private def applyAux(
     model: RegressionTreeDef
-  ): (DecisionTreeRegressor, Array[ParamMap]) =
+  ): (DecisionTreeRegressor, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new DecisionTreeRegressor())
-      .bind2(_.core.maxDepth, "maxDepth")
-      .bind2(_.core.maxBins, "maxBins")
-      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind2(_.core.minInfoGain, "minInfoGain")
+      .bindValOrSeq(_.core.maxDepth, "maxDepth")
+      .bindValOrSeq(_.core.maxBins, "maxBins")
+      .bindValOrSeq(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bindValOrSeq(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
       .bind(_.impurity.map(_.toString), "impurity")
       .build
 
   private def applyAux(
     model: RandomRegressionForestDef
-  ): (RandomForestRegressor, Array[ParamMap]) =
+  ): (RandomForestRegressor, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new RandomForestRegressor())
       .bind(_.impurity.map(_.toString), "impurity")
-      .bind2(_.numTrees, "numTrees")
-      .bind2(_.core.maxDepth, "maxDepth")
-      .bind2(_.core.maxBins, "maxBins")
-      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind2(_.core.minInfoGain, "minInfoGain")
+      .bindValOrSeq(_.numTrees, "numTrees")
+      .bindValOrSeq(_.core.maxDepth, "maxDepth")
+      .bindValOrSeq(_.core.maxBins, "maxBins")
+      .bindValOrSeq(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bindValOrSeq(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
-      .bind2(_.subsamplingRate, "subsamplingRate")
+      .bindValOrSeq(_.subsamplingRate, "subsamplingRate")
       .bind(_.featureSubsetStrategy.map(_.toString), "featureSubsetStrategy")
       .build
 
   private def applyAux(
     model: GradientBoostRegressionTreeDef
-  ): (GBTRegressor, Array[ParamMap]) =
+  ): (GBTRegressor, Traversable[ParamGrid[_]]) =
     ParamSourceBinder(model, new GBTRegressor())
       .bind(_.lossType.map(_.toString), "lossType")
-      .bind2(_.maxIteration, "maxIter")
-      .bind2(_.stepSize, "stepSize")
-      .bind2(_.core.maxDepth, "maxDepth")
-      .bind2(_.core.maxBins, "maxBins")
-      .bind2(_.core.minInstancesPerNode, "minInstancesPerNode")
-      .bind2(_.core.minInfoGain, "minInfoGain")
+      .bindValOrSeq(_.maxIteration, "maxIter")
+      .bindValOrSeq(_.stepSize, "stepSize")
+      .bindValOrSeq(_.core.maxDepth, "maxDepth")
+      .bindValOrSeq(_.core.maxBins, "maxBins")
+      .bindValOrSeq(_.core.minInstancesPerNode, "minInstancesPerNode")
+      .bindValOrSeq(_.core.minInfoGain, "minInfoGain")
       .bind(_.core.seed, "seed")
-      .bind2(_.subsamplingRate, "subsamplingRate")
+      .bindValOrSeq(_.subsamplingRate, "subsamplingRate")
       //    .bind(_.impurity.map(_.toString), "impurity")
       .build
 

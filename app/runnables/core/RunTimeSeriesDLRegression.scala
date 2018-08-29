@@ -53,6 +53,7 @@ class RunTimeSeriesDLRegression @Inject() (
           None,
           mlModel,
           setting.learningSetting,
+          setting.crossValidationMinTrainingSize,
           replicationItem
         )
         results.map(Some(_))
@@ -113,6 +114,7 @@ case class RunTimeSeriesDLRegressionSpec(
   replicationItemId: Option[BSONObjectID],
   repetitions: Option[Int],
   crossValidationFolds: Option[Int],
+  crossValidationMinTrainingSize: Option[Double],
   crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
 ) {
   def learningSetting =

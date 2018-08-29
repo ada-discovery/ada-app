@@ -1,7 +1,7 @@
 package services.ml.transformers
 
 import org.apache.spark.ml.{Estimator, PipelineModel, Transformer}
-import org.apache.spark.ml.param.{Param, ParamMap}
+import org.apache.spark.ml.param.{Param, ParamMap, ParamValidators}
 import org.apache.spark.ml.util.{DefaultParamsWritable, Identifiable}
 import org.apache.spark.sql.{DataFrame, Dataset}
 import org.apache.spark.sql.types._
@@ -11,7 +11,7 @@ private class SeqShiftWithConsecutiveOrder(override val uid: String) extends Tra
 
   def this() = this(Identifiable.randomUID("seq_shift_with_consecutive_order"))
 
-  protected final val shift: Param[Int] = new Param[Int](this, "shift", "shift")
+  protected final val shift: Param[Int] = new Param[Int](this, "shift", "shift", ParamValidators.gt(0))
   protected final val inputCol: Param[String] = new Param[String](this, "inputCol", "input column name")
   protected final val orderCol: Param[String] = new Param[String](this, "orderCol", "order column name")
   protected final val outputCol: Param[String] = new Param[String](this, "outputCol", "output column name")
@@ -22,8 +22,6 @@ private class SeqShiftWithConsecutiveOrder(override val uid: String) extends Tra
   def setOutputCol(value: String): this.type = set(outputCol, value)
 
   override def transform(dataset: Dataset[_]): DataFrame = {
-    require($(shift) > 0, "Shift must be a non-negative integer.")
-
     val df = dataset.toDF()
 
     val shiftOrderDf = df
@@ -54,19 +52,19 @@ private class SeqShiftWithConsecutiveOrder(override val uid: String) extends Tra
 object SeqShiftWithConsecutiveOrder {
 
   def apply(
-    shift: Int,
     inputCol: String,
     orderCol: String,
-    outputCol: String
+    outputCol: String)(
+    shift: Int
   ): Transformer = new SeqShiftWithConsecutiveOrder().setShift(shift).setInputCol(inputCol).setOrderCol(orderCol).setOutputCol(outputCol)
 
   def applyInPlace(
-    shift: Int,
     inputOutputCol: String,
-    orderCol: String
+    orderCol: String)(
+    shift: Int
   ): Estimator[PipelineModel] =
     SparkUtil.transformInPlace(
-      apply(shift, inputOutputCol, orderCol, _),
+      apply(inputOutputCol, orderCol, _)(shift),
       inputOutputCol
     )
 }

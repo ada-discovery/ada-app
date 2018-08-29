@@ -126,9 +126,9 @@ class RCPredictionController @Inject()(
         },
         settings =>
           for {
-            _ <- util.seqFutures(toRCSettings(settings)) {
+            _ <- util.seqFutures(toRCSettings(settings))(
               (mPowerWalkingRCPredictionService.predictAndStoreResults(_,_,_,_)).tupled
-            }
+            )
           } yield {
             Ok("Hooray")
           }

@@ -8,13 +8,15 @@ import org.apache.spark.annotation.Since
 import org.apache.spark.internal.Logging
 import org.apache.spark.ml.evaluation.Evaluator
 import org.apache.spark.ml.{Estimator, Model}
-import org.apache.spark.ml.param.{IntParam, Param, ParamMap, ParamValidators}
+import org.apache.spark.ml.param.{Param, ParamMap, ParamValidators}
 import org.apache.spark.ml.util._
 import org.apache.spark.mllib.util.MLUtils
-
-import scala.collection.JavaConverters._
+import org.apache.spark.sql.functions.{max, min}
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.types.StructType
+
+import services.ml.MachineLearningUtil.orderDependentTestPredictionsWithParams
+import scala.collection.JavaConverters._
 import org.json4s.DefaultFormats
 
 // TODO: could be substantially simplified if CrossValidator provides "splits" function, which can be overridden, plus the model is generic
@@ -41,7 +43,12 @@ class ForwardChainingCrossValidator(override val uid: String)
 
   def setOrderCol(value: String): this.type = set(orderCol, value)
 
-  protected def splitFolds(dataset: Dataset[_]): Array[(Dataset[_], Dataset[_])] = {
+  protected final val minTrainingSize: Param[Double] = new Param[Double](this, "minTrainingSize", "min training size", ParamValidators.gt(0))
+
+  def setMinTrainingSize(value: Double): this.type = set(minTrainingSize, value)
+
+  // can be removed
+  private def splitFolds(dataset: Dataset[_]): Array[(Dataset[_], Dataset[_])] = {
     val sparkSession = dataset.sparkSession
     val schema = dataset.schema
 
@@ -53,18 +60,19 @@ class ForwardChainingCrossValidator(override val uid: String)
     }
   }
 
-  protected def splitForward(dataset: Dataset[_]):  Array[(Dataset[_], Dataset[_])] = {
-    val minRatio = 0.5
-    val stepSize = (1 - minRatio) / $(numFolds)
-    println(stepSize)
+  protected def splitForward(dataset: Dataset[_]):  Array[(Dataset[_], Dataset[_], Dataset[_])] = {
+    val stepSize = (1 - $(minTrainingSize)) / $(numFolds)
+    val maxOrderValue = dataset.agg(max($(orderCol))).head.getInt(0)
 
     val splitValues = for (i <- 0 until $(numFolds)) yield
-      dataset.stat.approxQuantile($(orderCol), Array(minRatio + i * stepSize), 0.001)(0)
+      dataset.stat.approxQuantile($(orderCol), Array($(minTrainingSize) + i * stepSize), 0.001)(0)
 
-    splitValues.zip(splitValues.tail).map { case (trainingSplitValue, validationSplitValue) =>
-      val trainingDf = dataset.where(dataset($(orderCol)) < trainingSplitValue)
-      val validationDf = dataset.where(dataset($(orderCol)) >= trainingSplitValue and dataset($(orderCol)) < validationSplitValue)
-      (trainingDf, validationDf)
+    splitValues.zip(splitValues.tail ++ Seq(maxOrderValue: Double)).map { case (trainingSplitValue, validationSplitValue) =>
+      println(trainingSplitValue + " - " + validationSplitValue)
+      val trainingSet = dataset.where(dataset($(orderCol)) <= trainingSplitValue)
+      val validationSet = dataset.where(dataset($(orderCol)) > trainingSplitValue and dataset($(orderCol)) <= validationSplitValue)
+      val fullSet = dataset.where(dataset($(orderCol)) <= validationSplitValue)
+      (trainingSet, validationSet, fullSet)
     }.toArray
   }
 
@@ -72,7 +80,7 @@ class ForwardChainingCrossValidator(override val uid: String)
   override def fit(dataset: Dataset[_]): ForwardChainingCrossValidatorModel = {
     val schema = dataset.schema
     transformSchema(schema, logging = true)
-    val sparkSession = dataset.sparkSession
+
     val est = $(estimator)
     val eval = $(evaluator)
     val epm = $(estimatorParamMaps)
@@ -84,9 +92,12 @@ class ForwardChainingCrossValidator(override val uid: String)
     logTuningParams(instr)
 
     // this is the only line we had to change
-    val splits = splitForward(dataset)
+    val splitDatasets = splitForward(dataset)
 
-    splits.zipWithIndex.foreach { case ((trainingDataset, validationDataset), splitIndex) =>
+    // function to calculate test predictions for ordered data sets
+    val calcTestPredictions = orderDependentTestPredictionsWithParams($(orderCol))
+
+    splitDatasets.zipWithIndex.foreach { case ((trainingDataset, validationDataset, fullDataset), splitIndex) =>
       trainingDataset.cache()
       validationDataset.cache()
 
@@ -96,19 +107,23 @@ class ForwardChainingCrossValidator(override val uid: String)
       trainingDataset.unpersist()
       var i = 0
       while (i < numModels) {
-        // TODO: duplicate evaluator to take extra params from input
-        val metric = eval.evaluate(models(i).transform(validationDataset, epm(i)))
+//        val validationPredictions = models(i).transform(validationDataset, epm(i))
+        val validationPredictions = calcTestPredictions(models(i), validationDataset, fullDataset, epm(i))
+        val metric = eval.evaluate(validationPredictions)
         logDebug(s"Got metric $metric for model trained with ${epm(i)}.")
         metrics(i) += metric
         i += 1
       }
       validationDataset.unpersist()
     }
+
+    // choosing best model (params)
     f2jBLAS.dscal(numModels, 1.0 / $(numFolds), metrics, 1)
     logInfo(s"Average cross-validation metrics: ${metrics.toSeq}")
     val (bestMetric, bestIndex) =
       if (eval.isLargerBetter) metrics.zipWithIndex.maxBy(_._1)
       else metrics.zipWithIndex.minBy(_._1)
+
     logInfo(s"Best set of parameters:\n${epm(bestIndex)}")
     logInfo(s"Best cross-validation metric: $bestMetric.")
     val bestModel = est.fit(dataset, epm(bestIndex)).asInstanceOf[Model[_]]
@@ -164,13 +179,17 @@ object ForwardChainingCrossValidator extends MLReadable[ForwardChainingCrossVali
         ValidatorParams.loadImpl(path, sc, className)
       val numFolds = (metadata.params \ "numFolds").extract[Int]
       val seed = (metadata.params \ "seed").extract[Long]
+      val orderCol = (metadata.params \ "orderCol").extract[String]
+      val minTrainingSize = (metadata.params \ "minTrainingSize").extract[Double]
 
       new ForwardChainingCrossValidator(metadata.uid)
         .setEstimator(estimator)
         .setEvaluator(evaluator)
         .setEstimatorParamMaps(estimatorParamMaps)
-        .setNumFolds(numFolds)
         .setSeed(seed)
+        .setNumFolds(numFolds)
+        .setOrderCol(orderCol)
+        .setMinTrainingSize(minTrainingSize)
     }
   }
 }
@@ -180,6 +199,9 @@ class ForwardChainingCrossValidatorModel private[ml] (
   @Since("1.2.0") val bestModel: Model[_],
   @Since("1.5.0") val avgMetrics: Array[Double]
 ) extends Model[ForwardChainingCrossValidatorModel] with CrossValidatorParams with MLWritable {
+
+  protected final val orderCol: Param[String] = new Param[String](this, "orderCol", "order column name")
+  protected final val minTrainingSize: Param[Double] = new Param[Double](this, "minTrainingSize", "min training size")
 
   /** A Python-friendly auxiliary constructor. */
   private[ml] def this(uid: String, bestModel: Model[_], avgMetrics: JList[Double]) = {
@@ -246,6 +268,9 @@ object ForwardChainingCrossValidatorModel extends MLReadable[ForwardChainingCros
         ValidatorParams.loadImpl(path, sc, className)
       val numFolds = (metadata.params \ "numFolds").extract[Int]
       val seed = (metadata.params \ "seed").extract[Long]
+      val orderCol = (metadata.params \ "orderCol").extract[String]
+      val minTrainingSize = (metadata.params \ "minTrainingSize").extract[Double]
+
       val bestModelPath = new Path(path, "bestModel").toString
       val bestModel = DefaultParamsReader.loadParamsInstance[Model[_]](bestModelPath, sc)
       val avgMetrics = (metadata.metadata \ "avgMetrics").extract[Seq[Double]].toArray
@@ -256,6 +281,8 @@ object ForwardChainingCrossValidatorModel extends MLReadable[ForwardChainingCros
         .set(model.estimatorParamMaps, estimatorParamMaps)
         .set(model.numFolds, numFolds)
         .set(model.seed, seed)
+        .set(model.orderCol, orderCol)
+        .set(model.minTrainingSize, minTrainingSize)
     }
   }
 }

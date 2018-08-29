@@ -254,6 +254,14 @@ object GenericMapping {
         val mapping2 = genericMapping(typeArgs(1))
         tuple(("1" -> mapping1), ("2" -> mapping2))
 
+      // either valuer or seq (int)
+      case t if t subMatches typeOf[Either[Option[Int], Seq[Int]]] =>
+        of(EitherSeqFormatter[Int])
+
+      // either valuer or seq (double)
+      case t if t subMatches typeOf[Either[Option[Double], Seq[Double]]] =>
+        of(EitherSeqFormatter[Double])
+
       // otherwise
       case _ =>
         val typeName =

@@ -5,10 +5,12 @@ import javax.inject.Inject
 
 import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import com.banda.math.domain.rand.RandomDistribution
-import com.banda.network.domain.{ActivationFunctionType, ReservoirSetting}
+import com.banda.network.domain.ActivationFunctionType
+import models.ml.classification.ValueOrSeq.ValueOrSeq
+import models.ml.timeseries.ReservoirSpec
 import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric, VectorTransformType}
 import persistence.RepoTypes.RegressionRepo
-import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
+import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
 import runnables.InputFutureRunnable
 import services.ml.{MachineLearningService, MachineLearningUtil}
@@ -27,19 +29,21 @@ class RunTimeSeriesRCRegression @Inject() (
   private val plotter = Plotter("svg")
 
   override def runAsFuture(
-    setting: RunTimeSeriesRCRegressionSpec
+    input: RunTimeSeriesRCRegressionSpec
   ): Future[Unit] = {
-    val dsa = dsaf(setting.dataSetId).get
+    println(input)
+
+    val dsa = dsaf(input.dataSetId).get
 
     for {
       // load a ML model
-      mlModel <- regressionRepo.get(setting.mlModelId)
+      mlModel <- regressionRepo.get(input.mlModelId)
 
       // main item
-      item <- dsa.dataSetRepo.get(setting.itemId)
+      item <- dsa.dataSetRepo.get(input.itemId)
 
       // replication item
-      replicationItem <- setting.replicationItemId.map { replicationId =>
+      replicationItem <- input.replicationItemId.map { replicationId =>
         dsa.dataSetRepo.get(replicationId)
       }.getOrElse(
         Future(None)
@@ -49,12 +53,13 @@ class RunTimeSeriesRCRegression @Inject() (
       resultsHolder <- mlModel.map { mlModel =>
         val results = mlService.regressTimeSeries(
           item.get,
-          setting.ioSpec,
-          setting.predictAhead,
-          setting.windowSize,
-          Some(setting.reservoirSetting),
+          input.ioSpec,
+          input.predictAhead,
+          input.windowSize,
+          Some(input.reservoirSpec),
           mlModel,
-          setting.learningSetting,
+          input.learningSetting,
+          input.crossValidationMinTrainingSize,
           replicationItem
         )
         results.map(Some(_))
@@ -103,35 +108,46 @@ class RunTimeSeriesRCRegression @Inject() (
 }
 
 case class RunTimeSeriesRCRegressionSpec(
+  // input/output specification
   dataSetId: String,
   itemId: BSONObjectID,
   ioSpec: IOJsonTimeSeriesSpec,
   mlModelId: BSONObjectID,
   predictAhead: Int,
+
+  // delay line window size
   windowSize: Option[Int],
-  reservoirNodeNum: Int,
-  reservoirInDegree: Option[Int],
-  reservoirEdgesNum: Option[Int] = None,
+
+  // reservoir setting
+  reservoirNodeNum: ValueOrSeq[Int] = Left(None),
+  reservoirInDegree: ValueOrSeq[Int] = Left(None),
+  reservoirEdgesNum: ValueOrSeq[Int] = Left(None),
   reservoirPreferentialAttachment: Boolean = false,
-  reservoirBias: Boolean,
+  reservoirBias: Boolean = false,
   reservoirCircularInEdges: Option[Seq[Int]] = None,
-  inputReservoirConnectivity: Double,
-  reservoirSpectralRadius: Option[Double] = None,
+  inputReservoirConnectivity: ValueOrSeq[Double] = Left(None),
+  reservoirSpectralRadius: ValueOrSeq[Double] = Left(None),
   reservoirFunctionType: ActivationFunctionType,
   reservoirFunctionParams: Seq[Double] = Nil,
+  washoutPeriod: ValueOrSeq[Int] = Left(None),
+
+  // cross-validation
+  crossValidationFolds: Option[Int],
+  crossValidationMinTrainingSize: Option[Double],
+  crossValidationEvalMetric: Option[RegressionEvalMetric.Value],
+
+  // pre-processing and other stuff
   featuresNormalizationType: Option[VectorTransformType.Value],
   pcaDims: Option[Int],
   trainingTestingSplit: Option[Double],
   replicationItemId: Option[BSONObjectID],
-  repetitions: Option[Int],
-  crossValidationFolds: Option[Int],
-  crossValidationEvalMetric: Option[RegressionEvalMetric.Value]
+  repetitions: Option[Int]
 ) {
   def learningSetting =
     LearningSetting[RegressionEvalMetric.Value](featuresNormalizationType, pcaDims, trainingTestingSplit, Nil, repetitions, crossValidationFolds, crossValidationEvalMetric)
 
-  def reservoirSetting =
-    ReservoirSetting(
+  def reservoirSpec =
+    ReservoirSpec(
       inputNodeNum = pcaDims.getOrElse(ioSpec.inputSeriesFieldPaths.size) * windowSize.getOrElse(1),
       bias = 1,
       nonBiasInitial = 0,
@@ -145,6 +161,7 @@ case class RunTimeSeriesRCRegressionSpec(
       reservoirSpectralRadius = reservoirSpectralRadius,
       reservoirFunctionType = reservoirFunctionType,
       reservoirFunctionParams = reservoirFunctionParams,
-      weightDistribution = RandomDistribution.createNormalDistribution(classOf[jl.Double], 0d, 1d)
+      weightDistribution = RandomDistribution.createNormalDistribution(classOf[jl.Double], 0d, 1d),
+      washoutPeriod = washoutPeriod
     )
 }

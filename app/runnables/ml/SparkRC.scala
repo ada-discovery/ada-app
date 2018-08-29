@@ -5,6 +5,7 @@ import java.{lang => jl}
 
 import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.{ActivationFunctionType, ReservoirSetting}
+import models.ml.timeseries.ReservoirSpec
 import org.apache.spark.ml.linalg.Vectors
 import runnables.GuiceBuilderRunnable
 import services.SparkApp
@@ -17,17 +18,17 @@ class SparkRC @Inject() (
 
   import sparkApp.sqlContext.implicits._
 
-  private val reservoirSetting = ReservoirSetting(
+  private val reservoirSpec = ReservoirSpec(
     inputNodeNum = 2,
-    reservoirNodeNum = 10,
+    reservoirNodeNum = Left(Some(10)),
     bias = 0,
     nonBiasInitial = 0,
-    reservoirInDegree = Some(4),
+    reservoirInDegree = Left(Some(4)),
     reservoirBias = true,
-    inputReservoirConnectivity = 0.2,
+    inputReservoirConnectivity = Left(Some(0.2)),
     reservoirFunctionType = ActivationFunctionType.Linear,
     reservoirFunctionParams = Seq(1d),
-    reservoirSpectralRadius = None,
+    reservoirSpectralRadius = Left(None),
 //    weightDistribution = new RepeatedDistribution(Array(1d))
     weightDistribution = RandomDistribution.createNormalDistribution[jl.Double](classOf[jl.Double], 0d, 1d)
   )
@@ -55,7 +56,7 @@ class SparkRC @Inject() (
   override def run = {
     df.show()
 
-    val (rcTransform, _) = rcStatesWindowFactory(reservoirSetting, "features", "time", "rc_states")
+    val (rcTransform, _) = rcStatesWindowFactory.applyWoWashout("features", "time", "rc_states")(reservoirSpec)
 
     val rcDf1 = rcTransform.transform(df)
     rcDf1.show(truncate = false)

@@ -1,15 +1,14 @@
 package services.ml
 
 import javax.inject.{Inject, Singleton}
-import java.{lang => jl, util => ju}
 
-import com.banda.network.domain.ReservoirSetting
 import util.parallelize
 import com.google.inject.ImplementedBy
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.{AdaException, Field, FieldTypeId, FieldTypeSpec}
 import models.ml.classification.Classification
 import models.ml.regression.Regression
+import models.ml.timeseries.ReservoirSpec
 import models.ml.unsupervised.UnsupervisedLearning
 import models.ml.{ClassificationEvalMetric, _}
 import util.{GroupMapList, STuple3}
@@ -22,14 +21,16 @@ import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.ml.clustering._
 import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
 import org.apache.spark.ml.param._
-import org.apache.spark.ml.tuning.{CrossValidator, ParamGridBuilder}
+import org.apache.spark.ml.tuning.ParamGridBuilder
+import org.apache.spark.sql.functions.{col, last, max, min}
+import services.ml.CrossValidatorFactory.CrossValidatorCreator
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
-import org.apache.spark.sql.functions.col
 import play.api.libs.json.{JsObject, Json}
 import services.SparkApp
 import play.api.{Configuration, Logger}
 import services.ml.transformers._
 import services.stats.StatsService
+import services.ml.MachineLearningUtil._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -53,9 +54,10 @@ trait MachineLearningService {
     ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
     windowSize: Option[Int],
-    reservoirSetting: Option[ReservoirSetting],
+    reservoirSetting: Option[ReservoirSpec],
     mlModel: Classification,
     setting: LearningSetting[ClassificationEvalMetric.Value] = LearningSetting[ClassificationEvalMetric.Value](),
+    minCrossValidationTrainingSize: Option[Double],
     replicationData: Option[JsObject] = None,
     binCurvesNumBins: Option[Int] = None
   ): Future[ClassificationResultsHolder]
@@ -74,9 +76,10 @@ trait MachineLearningService {
     ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
     windowSize: Option[Int],
-    reservoirSetting: Option[ReservoirSetting],
+    reservoirSetting: Option[ReservoirSpec],
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
+    minCrossValidationTrainingSize: Option[Double],
     replicationData: Option[JsObject] = None
   ): Future[RegressionResultsHolder]
 
@@ -136,17 +139,7 @@ private class MachineLearningServiceImpl @Inject() (
     setInputCol("prediction"); setOutputCol(binaryClassifierInputName)
   }
 
-  private val randomSplit = (splitRatio: Double) => (dataFrame: DataFrame) => {
-    val Array(training, test) = dataFrame.randomSplit(Array(splitRatio, 1 - splitRatio))
-    (training, test)
-  }
-
-  private val seqSplit = (orderColumn: String) => (splitRatio: Double) => (df: DataFrame) => {
-    val splitValue = df.stat.approxQuantile(orderColumn, Array(splitRatio), 0.001)(0)
-    val headDf = df.where(df(orderColumn) < splitValue)
-    val tailDf = df.where(df(orderColumn) >= splitValue)
-    (headDf, tailDf)
-  }
+  private val seriesOrderCol = "index"
 
   private val useConsecutiveOrderForDL = configuration.getBoolean("ml.dl_use_consecutive_order_transformers").getOrElse(false)
 
@@ -203,11 +196,15 @@ private class MachineLearningServiceImpl @Inject() (
 
     // create a training/test data frame with all the features
     val df = crateDataFrame(data)
+
     // create a replication data frame with all the features
     val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
-    // classify with a random split
-    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, randomSplit, Nil, Nil)
+    // k-folds cross validator
+    val crossValidatorCreator = setting.crossValidationFolds.map(CrossValidatorFactory.withFolds)
+
+    // classify with a random splitDataset
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, randomSplit, independentTestPredictions, crossValidatorCreator, Nil, Nil)
   }
 
   override def classifyTimeSeries(
@@ -215,9 +212,10 @@ private class MachineLearningServiceImpl @Inject() (
     ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
     windowSize: Option[Int],
-    reservoirSetting: Option[ReservoirSetting],
+    reservoirSetting: Option[ReservoirSpec],
     mlModel: Classification,
     setting: LearningSetting[ClassificationEvalMetric.Value],
+    minCrossValidationTrainingSize: Option[Double],
     replicationData: Option[JsObject],
     binCurvesNumBins: Option[Int]
   ): Future[ClassificationResultsHolder] = {
@@ -236,10 +234,15 @@ private class MachineLearningServiceImpl @Inject() (
     val replicationDf = replicationData.map(crateDataFrame)
 
     // time series transformers/stages
-    val (timeSeriesStages, paramMaps) = createTimeSeriesStagesWithParamMaps(windowSize, reservoirSetting, predictAhead)
+    val (timeSeriesStages, paramGrids) = createTimeSeriesStagesWithParamGrids(windowSize, reservoirSetting, predictAhead)
+
+    // forward chaining cross validator
+    val crossValidatorCreator = setting.crossValidationFolds.map(
+      CrossValidatorFactory.withForwardChaining(seriesOrderCol, minCrossValidationTrainingSize)
+    )
 
     // classify with the DL transformers and a sequential split
-    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, seqSplit("index"), Nil, timeSeriesStages, paramMaps)
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, seqSplit(seriesOrderCol), orderDependentTestPredictions(seriesOrderCol), crossValidatorCreator, Nil, timeSeriesStages, paramGrids)
   }
 
   private def classifyAux(
@@ -248,17 +251,19 @@ private class MachineLearningServiceImpl @Inject() (
     mlModel: Classification,
     setting: LearningSetting[ClassificationEvalMetric.Value],
     binCurvesNumBins: Option[Int],
-    split: Double => (DataFrame => (DataFrame, DataFrame)),
+    splitDataSet: Double => (DataFrame => (DataFrame, DataFrame)),
+    calcTestPredictions: (Transformer, Dataset[_], Dataset[_]) => DataFrame,
+    crossValidatorCreator: Option[CrossValidatorCreator],
     initStages: Seq[_ <: PipelineStage],
     preTrainingStages: Seq[_ <: PipelineStage],
-    paramMaps: Array[ParamMap] = Array()
+    paramGrids: Traversable[ParamGrid[_]] = Nil
   ): Future[ClassificationResultsHolder] = {
     // stages
     val coreStages = classificationStages(setting)
     val stages = initStages ++ coreStages ++ preTrainingStages
 
     // classify with the stages
-    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, split, stages, paramMaps)
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, splitDataSet, calcTestPredictions, crossValidatorCreator, stages, paramGrids)
   }
 
   private def classifyAux(
@@ -267,9 +272,11 @@ private class MachineLearningServiceImpl @Inject() (
     mlModel: Classification,
     setting: LearningSetting[ClassificationEvalMetric.Value],
     binCurvesNumBins: Option[Int],
-    split: Double => (DataFrame => (DataFrame, DataFrame)),
+    splitDataset: Double => (DataFrame => (DataFrame, DataFrame)),
+    calcTestPredictions: (Transformer, Dataset[_], Dataset[_]) => DataFrame,
+    crossValidatorCreator: Option[CrossValidatorCreator],
     stages: Seq[_ <: PipelineStage],
-    paramMaps: Array[ParamMap]
+    paramGrids: Traversable[ParamGrid[_]]
   ): Future[ClassificationResultsHolder] = {
 
     // cache the data frames
@@ -286,9 +293,9 @@ private class MachineLearningServiceImpl @Inject() (
     val outputLabelType = df.schema.fields.find(_.name == "label").get
     val outputSize = outputLabelType.metadata.getMetadata("ml_attr").getStringArray("vals").length
 
-    val (trainer, trainerParamMaps) = SparkMLEstimatorFactory(mlModel, inputSize, outputSize)
+    val (trainer, trainerParamGrids) = SparkMLEstimatorFactory(mlModel, inputSize, outputSize)
     val fullTrainer = new Pipeline().setStages((stages ++ Seq(trainer)).toArray)
-    val fullParamMaps = trainerParamMaps ++ paramMaps
+    val fullParamMaps = buildParamGrids(trainerParamGrids ++ paramGrids)
 
     // REPEAT THE TRAINING-TEST CYCLE
 
@@ -310,30 +317,22 @@ private class MachineLearningServiceImpl @Inject() (
 
     val resultHoldersFuture = parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
       logger.info(s"Execution of repetition $index started for $count rows.")
-      val (training, test) = split(splitRatio)(df)
-
-      training.cache()
-      test.cache()
 
       // classify and evaluate
-      val results = classifyAndEvaluate(
+      classifyAndEvaluate(
         fullTrainer,
         fullParamMaps,
         evaluators,
         crossValidationEvaluator.evaluator,
-        setting.crossValidationFolds,
+        crossValidatorCreator,
+        splitDataset(splitRatio),
+        calcTestPredictions,
         outputSize,
         count,
         binCurvesNumBins,
-        training,
-        test,
+        df,
         replicationDf
       )
-
-      training.unpersist()
-      test.unpersist()
-
-      results
     }
 
     // CREATE FINAL PERFORMANCE RESULTS
@@ -389,8 +388,11 @@ private class MachineLearningServiceImpl @Inject() (
     // create a replication data frame with all the features
     val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
+    // k-folds cross-validator
+    val crossValidatorCreator = setting.crossValidationFolds.map(CrossValidatorFactory.withFolds)
+
     // regress
-    regressAux(df, replicationDf, mlModel, setting, randomSplit, Nil, Nil)
+    regressAux(df, replicationDf, mlModel, setting, randomSplit, independentTestPredictions, crossValidatorCreator, Nil, Nil)
   }
 
   override def regressTimeSeries(
@@ -398,9 +400,10 @@ private class MachineLearningServiceImpl @Inject() (
     ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
     windowSize: Option[Int],
-    reservoirSetting: Option[ReservoirSetting],
+    reservoirSetting: Option[ReservoirSpec],
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value],
+    minCrossValidationTrainingSize: Option[Double],
     replicationData: Option[JsObject] = None
   ): Future[RegressionResultsHolder] = {
     // training, test, and replication data
@@ -415,13 +418,18 @@ private class MachineLearningServiceImpl @Inject() (
     val replicationDf = replicationData.map(crateDataFrame)
 
     // time series transformers/stages
-    val (timeSeriesStages, paramMaps) = createTimeSeriesStagesWithParamMaps(windowSize, reservoirSetting, predictAhead)
-    val showDf = SchemaUnchangedTransformer { df: DataFrame => df.orderBy("index").show(false); df }
+    val (timeSeriesStages, paramMaps) = createTimeSeriesStagesWithParamGrids(windowSize, reservoirSetting, predictAhead)
+//    val showDf = SchemaUnchangedTransformer { df: DataFrame => df.orderBy(seriesOrderCol).show(false); df }
 
     df.show(false)
 
+    // forward chaining cross validator
+    val crossValidatorCreator = setting.crossValidationFolds.map(
+      CrossValidatorFactory.withForwardChaining(seriesOrderCol, minCrossValidationTrainingSize)
+    )
+
     // regress with the time series transformers and a sequential split
-    regressAux(df, replicationDf, mlModel, setting, seqSplit("index"), Nil, timeSeriesStages ++ Seq(showDf), paramMaps, true)
+    regressAux(df, replicationDf, mlModel, setting, seqSplit(seriesOrderCol), orderDependentTestPredictions(seriesOrderCol), crossValidatorCreator, Nil, timeSeriesStages, paramMaps, true)
   }
 
   private def regressAux(
@@ -429,10 +437,12 @@ private class MachineLearningServiceImpl @Inject() (
     replicationDf: Option[DataFrame],
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value],
-    split: Double => (DataFrame => (DataFrame, DataFrame)),
+    splitDataSet: Double => (DataFrame => (DataFrame, DataFrame)),
+    calcTestPredictions: (Transformer, Dataset[_], Dataset[_]) => DataFrame,
+    crossValidatorCreator: Option[CrossValidatorCreator],
     initStages: Seq[_ <: PipelineStage],
     preTrainingStages: Seq[_ <: PipelineStage],
-    paramMaps: Array[ParamMap] = Array(),
+    paramGrids: Traversable[ParamGrid[_]] = Nil,
     collectOutputs: Boolean = false
   ): Future[RegressionResultsHolder] = {
     // stages
@@ -440,7 +450,7 @@ private class MachineLearningServiceImpl @Inject() (
     val stages = initStages ++ coreStages ++ preTrainingStages
 
     // regress with the stages
-    regressAux(df, replicationDf, mlModel, setting, split, stages, paramMaps, collectOutputs)
+    regressAux(df, replicationDf, mlModel, setting, splitDataSet, calcTestPredictions, crossValidatorCreator, stages, paramGrids, collectOutputs)
   }
 
   private def regressAux(
@@ -448,16 +458,18 @@ private class MachineLearningServiceImpl @Inject() (
     replicationDf: Option[DataFrame],
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value],
-    split: Double => (DataFrame => (DataFrame, DataFrame)),
+    splitDataset: Double => (DataFrame => (DataFrame, DataFrame)),
+    calcTestPredictions: (Transformer, Dataset[_], Dataset[_]) => DataFrame,
+    crossValidatorCreator: Option[CrossValidatorCreator],
     stages: Seq[_ <: PipelineStage],
-    paramMaps: Array[ParamMap],
+    paramGrids: Traversable[ParamGrid[_]],
     collectOutputs: Boolean
   ): Future[RegressionResultsHolder] = {
     // CREATE A TRAINER
 
-    val (trainer, trainerParamMaps) = SparkMLEstimatorFactory(mlModel)
+    val (trainer, trainerParamGrids) = SparkMLEstimatorFactory(mlModel)
     val fullTrainer = new Pipeline().setStages((stages ++ Seq(trainer)).toArray)
-    val fullParamMaps = trainerParamMaps ++ paramMaps
+    val fullParamMaps = buildParamGrids(trainerParamGrids ++ paramGrids)
 
     // REPEAT THE TRAINING-TEST CYCLE
 
@@ -476,32 +488,28 @@ private class MachineLearningServiceImpl @Inject() (
 
     val resultHoldersFuture = parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
       logger.info(s"Execution of repetition $index started for $count rows.")
-      val (training, test) = split(splitRatio)(df)
-      logger.info("Dataset split into training and test parts as: " + training.count() + " / " + test.count())
 
-      training.cache()
-      test.cache()
-
-      val testSets = Seq(Some(test), replicationDf).flatten
-
-      // run the trainer (with folds) on the given training and test data sets
-      val (trainPredictions, testPredictions) = trainWithCrossValidation(
-        fullTrainer, fullParamMaps, crossValidationEvaluator.evaluator, setting.crossValidationFolds, training, testSets
+      // run the trainer (with folds) with a given split (which will produce training and test data sets) and a replication df (if provided)
+      val (trainPredictions, testPredictions, replicationPredictions) = train(
+        fullTrainer,
+        fullParamMaps,
+        crossValidationEvaluator.evaluator,
+        crossValidatorCreator,
+        splitDataset(splitRatio),
+        calcTestPredictions,
+        df,
+        Seq(replicationDf).flatten
       )
 
       // evaluate the performance
-      val results = evaluate(regressionEvaluators, trainPredictions, testPredictions)
-
-      // unpersist and return the results
-      training.unpersist
-      test.unpersist
+      val results = evaluate(regressionEvaluators, trainPredictions, Seq(testPredictions) ++ replicationPredictions)
 
       // collect the actual vs expected outputs (if needed)
       val outputs: Traversable[Seq[(Double, Double)]] =
         if (collectOutputs) {
           val trainingOutputs = collectLabelPredictions(trainPredictions)
-          val testOutputs = testPredictions.map(collectLabelPredictions)
-          Seq(trainingOutputs) ++ testOutputs
+          val testOutputs = collectLabelPredictions(testPredictions)
+          Seq(trainingOutputs, testOutputs)
         } else
           Nil
 
@@ -535,42 +543,48 @@ private class MachineLearningServiceImpl @Inject() (
     }
   }
 
-  private def createTimeSeriesStagesWithParamMaps(
+  private def createTimeSeriesStagesWithParamGrids(
     windowSize: Option[Int],
-    reservoirSetting: Option[ReservoirSetting],
+    reservoirSetting: Option[ReservoirSpec],
     labelShift: Int
-  ): (Seq[_ <: PipelineStage], Array[ParamMap]) = {
+  ): (Seq[_ <: PipelineStage], Traversable[ParamGrid[_]]) = {
     if (windowSize.isEmpty && reservoirSetting.isEmpty)
       logger.warn("Window size or reservoir setting should be set for time series transformations.")
 
-    val dlTransformer = windowSize.map( windowSize =>
+    val dlTransformer = windowSize.map(
       if (useConsecutiveOrderForDL)
-        SlidingWindowWithConsecutiveOrder.applyInPlace(windowSize, "features", "index")
+        SlidingWindowWithConsecutiveOrder.applyInPlace("features", seriesOrderCol)
       else
-        SlidingWindow.applyInPlace(windowSize, "features", "index")
+        SlidingWindow.applyInPlace("features", seriesOrderCol)
     )
 
-    val rcTransformerWithParamMaps = reservoirSetting.map( reservoirSetting =>
-      rcStatesWindowFactory.applyInPlace(reservoirSetting, "features", "index")
-    )
+    val rcTransformerWithParamGrids = reservoirSetting.map(rcStatesWindowFactory.applyInPlace("features", seriesOrderCol))
 
-    val rcTransformer = rcTransformerWithParamMaps.map(_._1)
-    val paramMaps = rcTransformerWithParamMaps.map(_._2).getOrElse(Array())
+    val rcTransformer = rcTransformerWithParamGrids.map(_._1)
+    val paramGrids = rcTransformerWithParamGrids.map(_._2).getOrElse(Nil)
 
     val labelShiftTransformer =
       if (useConsecutiveOrderForDL)
-        SeqShiftWithConsecutiveOrder.applyInPlace(labelShift, "label", "index")
+        SeqShiftWithConsecutiveOrder.applyInPlace("label", seriesOrderCol)(labelShift)
       else
-        SeqShift.applyInPlace(labelShift, "label", "index")
+        SeqShift.applyInPlace("label", seriesOrderCol)(labelShift)
 
     val stages = Seq(dlTransformer, rcTransformer, Some(labelShiftTransformer)).flatten
-    (stages, paramMaps)
+    (stages, paramGrids)
+  }
+
+  private def buildParamGrids(
+    paramGrids: Traversable[ParamGrid[_]]
+  ): Array[ParamMap] = {
+    val paramGridBuilder = new ParamGridBuilder()
+    paramGrids.foreach{ case ParamGrid(param, values) => paramGridBuilder.addGrid(param, values)}
+    paramGridBuilder.build
   }
 
   private def collectLabelPredictions(dataFrame: DataFrame) = {
     val df =
-      if (dataFrame.columns.find(_.equals("index")).isDefined)
-        dataFrame.orderBy("index")
+      if (dataFrame.columns.find(_.equals(seriesOrderCol)).isDefined)
+        dataFrame.orderBy(seriesOrderCol)
       else
         dataFrame
 
@@ -579,26 +593,31 @@ private class MachineLearningServiceImpl @Inject() (
       .map { row => (row.getDouble(0), row.getDouble(1)) }
   }
 
-  private def classifyAndEvaluate[M <: Model[M]](
-    trainer: Estimator[M],
+  private def classifyAndEvaluate(
+    trainer: Estimator[_],
     paramMaps: Array[ParamMap],
     evaluators: Seq[EvaluatorWrapper[ClassificationEvalMetric.Value]],
     crossValidationEvaluator: Evaluator,
-    folds: Option[Int],
+    crossValidatorCreator: Option[CrossValidatorCreator],
+    splitDataset: DataFrame => (DataFrame, DataFrame),
+    calcTestPredictions: (Transformer, Dataset[_], Dataset[_]) => DataFrame,
     outputSize: Int,
     count: Long,
     binCurvesNumBins: Option[Int],
-    trainingDf: DataFrame,
-    testDf: DataFrame,
+    mainDf: DataFrame,
     replicationDf: Option[DataFrame]
   ): ClassificationResultsAuxHolder = {
 
-    // run the trainer (with folds) on the given training and test data sets (replication df is treated as "another" test data set if provided)
-
-    val testSets = Seq(Some(testDf), replicationDf).flatten
-
-    val (trainingPredictions, testPredictions) = trainWithCrossValidation(
-      trainer, paramMaps, crossValidationEvaluator, folds, trainingDf, testSets
+    // run the trainer (with folds) with a given split (which will produce training and test data sets) and a replication df (if provided)
+    val (trainPredictions, testPredictions, replicationPredictions) = train(
+      trainer,
+      paramMaps,
+      crossValidationEvaluator,
+      crossValidatorCreator,
+      splitDataset,
+      calcTestPredictions,
+      mainDf,
+      Seq(replicationDf).flatten
     )
 
     // evaluate the performance
@@ -609,16 +628,17 @@ private class MachineLearningServiceImpl @Inject() (
       } else
         df
 
-    trainingPredictions.cache()
-    testPredictions.foreach(_.cache())
+    // cache the predictions
+    trainPredictions.cache()
+    testPredictions.cache()
+    replicationPredictions.foreach(_.cache())
 
-    val trainingPredictionsExt = withBinaryEvaluationCol(trainingPredictions)
-    val testPredictionsExt = testPredictions.map(withBinaryEvaluationCol)
+    val trainingPredictionsExt = withBinaryEvaluationCol(trainPredictions)
+    val testPredictionsExt = (Seq(testPredictions) ++ replicationPredictions).map(withBinaryEvaluationCol)
 
     val results = evaluate(evaluators, trainingPredictionsExt, testPredictionsExt)
 
     // generate binary classification curves (roc, pr, etc.) if the output is binary
-
     val (binTrainingCurves, binTestCurves) =
       if (outputSize == 2) {
         // is binary
@@ -629,9 +649,9 @@ private class MachineLearningServiceImpl @Inject() (
         (None, testPredictionsExt.map(_ => None))
 
     // unpersist and return the results
-
-    trainingPredictions.unpersist
-    testPredictions.foreach(_.unpersist)
+    trainPredictions.unpersist
+    testPredictions.unpersist
+    replicationPredictions.foreach(_.unpersist)
 
     ClassificationResultsAuxHolder(results, count, binTrainingCurves, binTestCurves)
   }
@@ -800,22 +820,6 @@ private class MachineLearningServiceImpl @Inject() (
   ): DataFrame =
     InPlacePCA(k).fit(df).transform(df)
 
-  private def train[M <: Model[M]](
-    estimator: Estimator[M],
-    trainingDf: DataFrame,
-    testDfs: Seq[DataFrame]
-  ): (DataFrame, Seq[DataFrame]) = {
-    // fit the model
-    val lrModel = estimator.fit(trainingDf)
-
-    // get the predictions for the training and test data sets
-
-    val trainPredictions = lrModel.transform(trainingDf)
-    val testPredictions = testDfs.map(lrModel.transform)
-
-    (trainPredictions, testPredictions)
-  }
-
   private def evaluate[Q](
     evaluatorWrappers: Traversable[EvaluatorWrapper[Q]],
     trainPredictions: DataFrame,
@@ -886,26 +890,54 @@ private class MachineLearningServiceImpl @Inject() (
       None
   }
 
-  private def trainWithCrossValidation[M <: Model[M]](
-    trainer: Estimator[M],
+  private def train(
+    trainer: Estimator[_],
     paramMaps: Array[ParamMap],
     crossValidationEvaluator: Evaluator,
-    folds: Option[Int],
-    trainingDf: DataFrame,
-    testDfs: Seq[DataFrame]
-  ): (DataFrame, Seq[DataFrame]) = {
-    def trainAux[MM <: Model[MM]](estimator: Estimator[MM]) =
-      train(estimator, trainingDf, testDfs)
+    crossValidatorCreator: Option[CrossValidatorCreator],
+    splitDataset: DataFrame => (DataFrame, DataFrame),
+    calcTestPredictions: (Transformer, Dataset[_], Dataset[_]) => DataFrame,
+    mainDf: DataFrame,
+    replicationDfs: Seq[DataFrame]
+  ): (DataFrame, DataFrame, Seq[DataFrame]) = {
+    def trainAux(estimator: Estimator[_]) = {
+      // split the main data frame
+      val (trainingDf, testDf) = splitDataset(mainDf)
+
+      logger.info("Dataset split into training and test parts as: " + trainingDf.count() + " / " + testDf.count())
+
+      // cache training and test data frames
+      trainingDf.cache()
+      testDf.cache()
+
+      // fit the model to the training set
+      val mlModel = estimator.fit(trainingDf).asInstanceOf[Transformer]
+
+      // get the predictions for the training, test and replication data sets
+
+      val trainPredictions = mlModel.transform(trainingDf)
+      val testPredictions = calcTestPredictions(mlModel, testDf, mainDf)
+      val replicationPredictions = replicationDfs.map(mlModel.transform)
+
+      logger.info("Obtained training/test predictions as: " + trainPredictions.count() + " / " + testPredictions.count())
+//      println("Training predictions min index  : " + trainPredictions.agg(min(trainPredictions("index"))).head.getInt(0))
+//      println("Training predictions max index  : " + trainPredictions.agg(max(trainPredictions("index"))).head.getInt(0))
+//      println("Test predictions min index      : " + testPredictions.agg(min(testPredictions("index"))).head.getInt(0))
+//      println("Test predictions max index      : " + testPredictions.agg(max(testPredictions("index"))).head.getInt(0))
+
+      trainPredictions.show(false)
+      testPredictions.show(false)
+
+      // unpersist and return the predictions
+      trainingDf.unpersist
+      testDf.unpersist
+
+      (trainPredictions, testPredictions, replicationPredictions)
+    }
 
     // use cross-validation if the folds specified together with params to search through, and train
-    folds.map { folds =>
-
-      val cv = new CrossValidator()
-        .setEstimator(trainer)
-        .setEstimatorParamMaps(paramMaps)
-        .setEvaluator(crossValidationEvaluator)
-        .setNumFolds(folds)
-
+    crossValidatorCreator.map { crossValidatorCreator =>
+      val cv = crossValidatorCreator(trainer, paramMaps, crossValidationEvaluator)
       trainAux(cv)
     }.getOrElse(
       trainAux(trainer)
@@ -944,6 +976,35 @@ case class RegressionPerformance(
 ) extends Performance[RegressionEvalMetric.Value]
 
 object MachineLearningUtil {
+
+  val randomSplit = (splitRatio: Double) => (dataFrame: DataFrame) => {
+    val Array(training, test) = dataFrame.randomSplit(Array(splitRatio, 1 - splitRatio))
+    (training, test)
+  }
+
+  val seqSplit = (orderColumn: String) => (splitRatio: Double) => (df: DataFrame) => {
+    val splitValue = df.stat.approxQuantile(orderColumn, Array(splitRatio), 0.001)(0)
+    val headDf = df.where(df(orderColumn) <= splitValue)
+    val tailDf = df.where(df(orderColumn) > splitValue)
+    (headDf, tailDf)
+  }
+
+  val independentTestPredictions =
+    (mlModel: Transformer, testDf: Dataset[_], _: Dataset[_]) => mlModel.transform(testDf)
+
+  val orderDependentTestPredictions = (orderColumn: String) =>
+    (mlModel: Transformer, testDf: Dataset[_], mainDf: Dataset[_]) => {
+      val allPredictions = mlModel.transform(mainDf)
+      val minTestIndexVal = testDf.agg(min(testDf(orderColumn))).head.getInt(0)
+      allPredictions.where(allPredictions(orderColumn) >= minTestIndexVal)
+    }
+
+  val orderDependentTestPredictionsWithParams = (orderColumn: String) =>
+    (mlModel: Transformer, testDf: Dataset[_], mainDf: Dataset[_], paramMap: ParamMap) => {
+      val allPredictions = mlModel.transform(mainDf, paramMap)
+      val minTestIndexVal = testDf.agg(min(testDf(orderColumn))).head.getInt(0)
+      allPredictions.where(allPredictions(orderColumn) >= minTestIndexVal)
+    }
 
   def calcMetricStats[T <: Enumeration#Value](results: Traversable[Performance[T]]): Map[T, (MetricStatsValues, MetricStatsValues, Option[MetricStatsValues])] =
     results.map { result =>
@@ -1217,3 +1278,5 @@ case class RegressionResultsHolder(
   counts: Traversable[Long],
   expectedAndActualOutputs: Traversable[Traversable[Seq[(Double, Double)]]]
 )
+
+case class ParamGrid[T](param: Param[T], values: Iterable[T])

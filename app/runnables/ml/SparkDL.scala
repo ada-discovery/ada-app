@@ -32,10 +32,10 @@ class SparkDL @Inject() (sparkApp: SparkApp) extends Runnable {
   private val windowSize = 3
   private val shift = 1
 
-  private val slidingWindow = SlidingWindow.applyInPlace(windowSize, "features", "time")
-  private val slidingWindowWithConsecutiveOrder = SlidingWindowWithConsecutiveOrder.applyInPlace(windowSize, "features", "time")
-  private val seqShift = SeqShift(shift, "label", "time", "shiftLabel")
-  private val seqShiftWithConsecutiveOrder = SeqShiftWithConsecutiveOrder(shift, "label", "time", "shiftLabel")
+  private val slidingWindow = SlidingWindow.applyInPlace("features", "time")(windowSize)
+  private val slidingWindowWithConsecutiveOrder = SlidingWindowWithConsecutiveOrder.applyInPlace("features", "time")(windowSize)
+  private val seqShift = SeqShift("label", "time", "shiftLabel")(shift)
+  private val seqShiftWithConsecutiveOrder = SeqShiftWithConsecutiveOrder("label", "time", "shiftLabel")(shift)
 
   override def run = {
     df.show()

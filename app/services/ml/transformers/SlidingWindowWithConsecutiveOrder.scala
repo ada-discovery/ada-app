@@ -78,19 +78,19 @@ private class SlidingWindowWithConsecutiveOrder(override val uid: String) extend
 object SlidingWindowWithConsecutiveOrder {
 
   def apply(
-    windowSize: Int,
     inputCol: String,
     orderCol: String,
-    outputCol: String
+    outputCol: String)(
+    windowSize: Int
   ): Transformer = new SlidingWindowWithConsecutiveOrder().setWindowSize(windowSize).setInputCol(inputCol).setOrderCol(orderCol).setOutputCol(outputCol)
 
   def applyInPlace(
-    windowSize: Int,
     inputOutputCol: String,
-    orderCol: String
+    orderCol: String)(
+    windowSize: Int
   ): Estimator[PipelineModel] =
     SparkUtil.transformInPlace(
-      apply(windowSize, inputOutputCol, orderCol, _),
+      apply(inputOutputCol, orderCol, _)(windowSize),
       inputOutputCol
     )
 }
