@@ -1,13 +1,14 @@
 package runnables
 
 import javax.inject.Inject
-
 import dataaccess.JsonRepoExtra._
 import models.FieldTypeId
 import persistence.dataset.DataSetAccessorFactory
 import org.incal.core.dataaccess.Criterion.Infix
 import play.api.Logger
+
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.reflect.runtime.universe.typeOf
 
 class FrancescosRun @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureRunnable[FrancescosRunSpec] {
@@ -53,4 +54,11 @@ case class FrancescosRunSpec(
   fieldName: String
 )
 
-object FrancescosRun extends GuiceBuilderRunnable[FrancescosRun] with App { run }
+class FrancescosRunForWine  @Inject() (runwithinput: FrancescosRun) extends FutureRunnable {
+
+  override def runAsFuture = runwithinput.runAsFuture(
+    FrancescosRunSpec("public.wine", "Alcohol")
+  )
+}
+
+object FrancescosRunForWine extends GuiceBuilderRunnable[FrancescosRunForWine] with App { run }
