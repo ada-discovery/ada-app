@@ -3,9 +3,10 @@ package runnables.core
 import java.{lang => jl}
 import javax.inject.Inject
 
-import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import com.banda.math.domain.rand.RandomDistribution
 import com.banda.network.domain.ActivationFunctionType
+import field.FieldTypeHelper
+import models.DataSetFormattersAndIds.FieldIdentity
 import models.ml.classification.ValueOrSeq.ValueOrSeq
 import models.ml.timeseries.ReservoirSpec
 import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric, VectorTransformType}
@@ -13,52 +14,67 @@ import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.DataSetAccessorFactory
 import reactivemongo.bson.BSONObjectID
 import runnables.InputFutureRunnable
-import services.ml.{MachineLearningService, MachineLearningUtil}
-import util.writeStringAsStream
+import services.ml.MachineLearningService
+import org.incal.core.dataaccess.Criterion.Infix
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.Future
 
-class RunTimeSeriesRCRegression @Inject() (
+class RunRowTimeSeriesRCRegression @Inject() (
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
     regressionRepo: RegressionRepo
-  ) extends InputFutureRunnable[RunTimeSeriesRCRegressionSpec] with TimeSeriesResultsHelper {
+  ) extends InputFutureRunnable[RunRowTimeSeriesRCRegressionSpec] with TimeSeriesResultsHelper {
+
+  private val ftf = FieldTypeHelper.fieldTypeFactory()
 
   override def runAsFuture(
-    input: RunTimeSeriesRCRegressionSpec
+    input: RunRowTimeSeriesRCRegressionSpec
   ): Future[Unit] = {
     println(input)
 
     val dsa = dsaf(input.dataSetId).get
 
+    val fieldNames = (input.inputFieldNames ++ Seq(input.outputFieldName, input.orderFieldName)).toSet.toSeq
+
     for {
-      // load a ML model
+    // load a ML model
       mlModel <- regressionRepo.get(input.mlModelId)
 
-      // main item
-      item <- dsa.dataSetRepo.get(input.itemId)
+      // get all the fields
+      fields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> fieldNames))
+      fieldNameSpecs = fields.map(field => (field.name, field.fieldTypeSpec)).toSeq
 
-      // replication item
-      replicationItem <- input.replicationItemId.map { replicationId =>
-        dsa.dataSetRepo.get(replicationId)
-      }.getOrElse(
-        Future(None)
-      )
+      // order field (and type)
+      orderField <- dsa.fieldRepo.get(input.orderFieldName).map(_.get)
+      orderFieldType = ftf(orderField.fieldTypeSpec).asValueOf[Any]
+      orderedValues = input.orderedStringValues.map(orderFieldType.displayStringToValue)
+
+      // criterion field (and type)
+      criterionField <- dsa.fieldRepo.get(input.criterionFieldName).map(_.get)
+      criterionFieldType = ftf(criterionField.fieldTypeSpec).asValueOf[Any]
+      criterionValue = criterionFieldType.displayStringToValue(input.criterionStringValue).get
+
+      // jsons
+      data <- dsa.dataSetRepo.find(criteria = Seq(input.criterionFieldName #== criterionValue), projection = fieldNames)
 
       // run the selected classifier (ML model)
       resultsHolder <- mlModel.map { mlModel =>
-        val results = mlService.regressTimeSeries(
-          item.get,
-          input.ioSpec,
+        val results = mlService.regressRowTimeSeries(
+          data,
+          fieldNameSpecs,
+          input.inputFieldNames,
+          input.outputFieldName,
+          input.orderFieldName,
+          orderedValues,
           input.predictAhead,
           input.windowSize,
           Some(input.reservoirSpec),
           mlModel,
           input.learningSetting,
           input.crossValidationMinTrainingSize,
-          replicationItem
+          Nil
         )
         results.map(Some(_))
       }.getOrElse(
@@ -68,14 +84,18 @@ class RunTimeSeriesRCRegression @Inject() (
       resultsHolder.foreach(exportResults)
   }
 
-  override def inputType = typeOf[RunTimeSeriesRCRegressionSpec]
+  override def inputType = typeOf[RunRowTimeSeriesRCRegressionSpec]
 }
 
-case class RunTimeSeriesRCRegressionSpec(
+case class RunRowTimeSeriesRCRegressionSpec(
   // input/output specification
   dataSetId: String,
-  itemId: BSONObjectID,
-  ioSpec: IOJsonTimeSeriesSpec,
+  inputFieldNames: Seq[String],
+  outputFieldName: String,
+  orderFieldName: String,
+  orderedStringValues: Seq[String],
+  criterionFieldName: String,
+  criterionStringValue: String,
   predictAhead: Int,
 
   // ML model
@@ -114,7 +134,7 @@ case class RunTimeSeriesRCRegressionSpec(
 
   def reservoirSpec =
     ReservoirSpec(
-      inputNodeNum = pcaDims.getOrElse(ioSpec.inputSeriesFieldPaths.size) * windowSize.getOrElse(1),
+      inputNodeNum = pcaDims.getOrElse(inputFieldNames.size) * windowSize.getOrElse(1),
       bias = 1,
       nonBiasInitial = 0,
       reservoirNodeNum = reservoirNodeNum,

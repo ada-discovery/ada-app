@@ -20,24 +20,22 @@ class RunTimeSeriesDLRegression @Inject() (
     dsaf: DataSetAccessorFactory,
     mlService: MachineLearningService,
     regressionRepo: RegressionRepo
-  ) extends InputFutureRunnable[RunTimeSeriesDLRegressionSpec] {
-
-  private val plotter = Plotter("svg")
+  ) extends InputFutureRunnable[RunTimeSeriesDLRegressionSpec] with TimeSeriesResultsHelper {
 
   override def runAsFuture(
-    setting: RunTimeSeriesDLRegressionSpec
+    input: RunTimeSeriesDLRegressionSpec
   ): Future[Unit] = {
-    val dsa = dsaf(setting.dataSetId).get
+    val dsa = dsaf(input.dataSetId).get
 
     for {
       // load a ML model
-      mlModel <- regressionRepo.get(setting.mlModelId)
+      mlModel <- regressionRepo.get(input.mlModelId)
 
       // main item
-      item <- dsa.dataSetRepo.get(setting.itemId)
+      item <- dsa.dataSetRepo.get(input.itemId)
 
       // replication item
-      replicationItem <- setting.replicationItemId.map { replicationId =>
+      replicationItem <- input.replicationItemId.map { replicationId =>
         dsa.dataSetRepo.get(replicationId)
       }.getOrElse(
         Future(None)
@@ -47,13 +45,13 @@ class RunTimeSeriesDLRegression @Inject() (
       resultsHolder <- mlModel.map { mlModel =>
         val results = mlService.regressTimeSeries(
           item.get,
-          setting.ioSpec,
-          setting.predictAhead,
-          Some(setting.windowSize),
+          input.ioSpec,
+          input.predictAhead,
+          Some(input.windowSize),
           None,
           mlModel,
-          setting.learningSetting,
-          setting.crossValidationMinTrainingSize,
+          input.learningSetting,
+          input.crossValidationMinTrainingSize,
           replicationItem
         )
         results.map(Some(_))
@@ -61,41 +59,7 @@ class RunTimeSeriesDLRegression @Inject() (
         Future(None)
       )
     } yield
-      resultsHolder.map { resultsHolder =>
-        // prepare the results stats
-        val metricStatsMap = MachineLearningUtil.calcMetricStats(resultsHolder.performanceResults)
-
-        val (trainingScore, testingScore, _) = metricStatsMap.get(RegressionEvalMetric.rmse).get
-
-        println("Training RMSE: " + trainingScore)
-        println("Test RMSE    : " + testingScore)
-
-        resultsHolder.expectedAndActualOutputs.headOption.map { outputs =>
-          val trainingOutputs = outputs.head
-          val testOutputs = outputs.tail.head
-
-          exportOutputs(trainingOutputs, "DL_IO_training.svg")
-          exportOutputs(testOutputs, "DL_IO_test.svg")
-        }
-      }
-  }
-
-  private def exportOutputs(
-    outputs: Seq[(Double, Double)],
-    fileName: String
-  ) = {
-    val y = outputs.map{ case (y, yhat) => y }
-    val yhat = outputs.map{ case (y, yhat) => yhat }
-
-    val output = plotter.plotSeries(
-      Seq(y, yhat),
-      new SeriesPlotSetting()
-        .setXLabel("Time")
-        .setYLabel("Value")
-        .setCaptions(Seq("y", "y^"))
-    )
-
-    writeStringAsStream(output, new java.io.File(fileName))
+      resultsHolder.foreach(exportResults)
   }
 
   override def inputType = typeOf[RunTimeSeriesDLRegressionSpec]

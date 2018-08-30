@@ -25,7 +25,6 @@ import org.apache.spark.ml.tuning.ParamGridBuilder
 import org.apache.spark.sql.functions._
 import services.ml.CrossValidatorFactory.CrossValidatorCreator
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
-import org.apache.spark.sql.expressions.Window
 import play.api.libs.json.{JsObject, Json}
 import services.SparkApp
 import play.api.{Configuration, Logger}
@@ -63,6 +62,22 @@ trait MachineLearningService {
     binCurvesNumBins: Option[Int] = None
   ): Future[ClassificationResultsHolder]
 
+  def classifyRowTimeSeries(
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: String,
+    orderFieldName: String,
+    orderedValues: Seq[Any],
+    predictAhead: Int,
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSpec],
+    mlModel: Classification,
+    setting: LearningSetting[ClassificationEvalMetric.Value] = LearningSetting[ClassificationEvalMetric.Value](),
+    minCrossValidationTrainingSize: Option[Double] = None,
+    replicationData: Traversable[JsObject] = Nil,
+    binCurvesNumBins: Option[Int] = None
+  ): Future[ClassificationResultsHolder]
+
   def regress(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
@@ -80,8 +95,24 @@ trait MachineLearningService {
     reservoirSetting: Option[ReservoirSpec],
     mlModel: Regression,
     setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
-    minCrossValidationTrainingSize: Option[Double],
+    minCrossValidationTrainingSize: Option[Double] = None,
     replicationData: Option[JsObject] = None
+  ): Future[RegressionResultsHolder]
+
+  def regressRowTimeSeries(
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    orderFieldName: String,
+    orderedValues: Seq[Any],
+    predictAhead: Int,
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSpec],
+    mlModel: Regression,
+    setting: LearningSetting[RegressionEvalMetric.Value] = LearningSetting[RegressionEvalMetric.Value](),
+    minCrossValidationTrainingSize: Option[Double] = None,
+    replicationData: Traversable[JsObject] = Nil
   ): Future[RegressionResultsHolder]
 
   def cluster(
@@ -235,13 +266,7 @@ private class MachineLearningServiceImpl @Inject() (
     classifyTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize, binCurvesNumBins)
   }
 
-  private def mapValuesUDF(map: Map[Any, Int]) = udf { value: Any =>
-    map.get(value).getOrElse(
-      throw new IllegalStateException(s"The map $map does not contain a value $value.")
-    )
-  }
-
-  def classifyTimeSeriesX(
+  override def classifyRowTimeSeries(
     data: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: String,
@@ -253,9 +278,10 @@ private class MachineLearningServiceImpl @Inject() (
     mlModel: Classification,
     setting: LearningSetting[ClassificationEvalMetric.Value],
     minCrossValidationTrainingSize: Option[Double],
-    replicationData: Option[Traversable[JsObject]],
+    replicationData: Traversable[JsObject],
     binCurvesNumBins: Option[Int]
   ): Future[ClassificationResultsHolder] = {
+
     // mapping between an order value and index
     val orderValueIndexFun = mapValuesUDF(orderedValues.zipWithIndex.toMap)
 
@@ -265,7 +291,6 @@ private class MachineLearningServiceImpl @Inject() (
     def crateDataFrame(jsons: Traversable[JsObject]) = {
       val df = FeaturesDataFrameFactory(session, jsons, fields, Some(outputFieldName))
       val df2 = BooleanLabelIndexer(Some("labelString")).transform(df)
-
       df2.withColumn(seriesOrderCol, orderValueIndexFun(df2(orderFieldName)))
     }
 
@@ -273,10 +298,16 @@ private class MachineLearningServiceImpl @Inject() (
     val df = crateDataFrame(data)
 
     // create a replication data frame with all the features
-    val replicationDf = replicationData.map(crateDataFrame)
+    val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
     // run time-series classification with the newly created data frames
     classifyTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize, binCurvesNumBins)
+  }
+
+  private def mapValuesUDF(map: Map[Any, Int]) = udf { value: Any =>
+    map.get(value).getOrElse(
+      throw new IllegalStateException(s"The map $map does not contain a value $value.")
+    )
   }
 
   private def classify(
@@ -500,7 +531,47 @@ private class MachineLearningServiceImpl @Inject() (
     val replicationDf = replicationData.map(crateDataFrame)
 
     // run time-series regression with the newly created data frames
-    regressTimeSeries(df, replicationDf, ioSpec, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize)
+    regressTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize)
+  }
+
+  override def regressRowTimeSeries(
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    inputFieldNames: Seq[String],
+    outputFieldName: String,
+    orderFieldName: String,
+    orderedValues: Seq[Any],
+    predictAhead: Int,
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSpec],
+    mlModel: Regression,
+    setting: LearningSetting[RegressionEvalMetric.Value],
+    minCrossValidationTrainingSize: Option[Double],
+    replicationData: Traversable[JsObject]
+  ): Future[RegressionResultsHolder] = {
+    // mapping between an order value and index
+    val orderValueIndexFun = mapValuesUDF(orderedValues.zipWithIndex.toMap)
+
+    // create training-test and replication data
+
+    // aux function to create a data frame
+    def crateDataFrame(jsons: Traversable[JsObject]) = {
+      val df = FeaturesDataFrameFactory(session, jsons, fields)
+      val featuresDf = FeaturesDataFrameFactory.prepFeaturesDataFrame(inputFieldNames.toSet, Some(outputFieldName))(df)
+
+      featuresDf.withColumn(seriesOrderCol, orderValueIndexFun(featuresDf(orderFieldName)))
+    }
+
+    // create a training/test data frame with all the features
+    val df = crateDataFrame(data)
+
+    df.show()
+
+    // create a replication data frame with all the features
+    val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
+
+    // run time-series regression with the newly created data frames
+    regressTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize)
   }
 
   private def regress(
@@ -526,7 +597,6 @@ private class MachineLearningServiceImpl @Inject() (
   private def regressTimeSeries(
     df: DataFrame,
     replicationDf: Option[DataFrame],
-    ioSpec: IOJsonTimeSeriesSpec,
     predictAhead: Int,
     windowSize: Option[Int],
     reservoirSetting: Option[ReservoirSpec],
@@ -709,9 +779,17 @@ private class MachineLearningServiceImpl @Inject() (
       else
         dataFrame
 
+    def toDouble(value: Any) =
+      value match {
+        case x: Double => x
+        case x: Int => x.toDouble
+        case x: Long => x.toDouble
+        case _ => throw new IllegalArgumentException(s"Cannot convert $value of type ${value.getClass.getName} to double.")
+      }
+
     df.select("label", "prediction")
       .collect().toSeq
-      .map { row => (row.getDouble(0), row.getDouble(1)) }
+      .map(row => (toDouble(row.get(0)), toDouble(row.get(1))))
   }
 
   private def classifyAndEvaluate(

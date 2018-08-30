@@ -39,13 +39,21 @@ object FeaturesDataFrameFactory {
   def apply(
     session: SparkSession,
     jsons: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)]
+  ) = {
+    val fieldNameAndTypes = fields.map { case (name, fieldTypeSpec) => (name, ftf(fieldTypeSpec)) }
+    jsonsToDataFrame(session)(jsons, fieldNameAndTypes)
+  }
+
+  def applyWoFeatures(
+    session: SparkSession,
+    jsons: Traversable[JsObject],
     fields: Seq[(String, FieldTypeSpec)],
     outputFieldName: Option[String],
-    discretizerBucketNum: Option[Int] = None,
-    dropNaValues: Boolean = true
+    discretizerBucketNum: Option[Int] = None
   ): DataFrame = {
     // convert jsons to a data frame
-    val fieldNameAndTypes = fields.map { case (name, fieldTypeSpec) => (name, ftf(fieldTypeSpec))}
+    val fieldNameAndTypes = fields.map { case (name, fieldTypeSpec) => (name, ftf(fieldTypeSpec)) }
     val df = jsonsToDataFrame(session)(jsons, fieldNameAndTypes)
 
     // prep the features of the data frame
@@ -61,14 +69,29 @@ object FeaturesDataFrameFactory {
         None
     }
 
-    val discretizedDf = discretizerBucketNum.map( discretizerBucketNum =>
+    discretizerBucketNum.map(discretizerBucketNum =>
       numericFieldNames.foldLeft(df) { case (newDf, fieldName) =>
         discretizeAsQuantiles(newDf, discretizerBucketNum, fieldName)
       }
     ).getOrElse(df)
+  }
 
-    discretizedDf.transform(
-      prepFeaturesDataFrame(featureNames, outputFieldName, dropNaValues)
+  def apply(
+    session: SparkSession,
+    jsons: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: Option[String],
+    discretizerBucketNum: Option[Int] = None,
+    dropFeatureCols: Boolean = true,
+    dropNaValues: Boolean = true
+  ): DataFrame = {
+    val df = applyWoFeatures(session, jsons, fields, outputFieldName, discretizerBucketNum)
+
+    // prep the features of the data frame
+    val featureNames = featureFieldNames(fields, outputFieldName)
+
+    df.transform(
+      prepFeaturesDataFrame(featureNames, outputFieldName, dropFeatureCols, dropNaValues)
     )
   }
 
@@ -105,7 +128,7 @@ object FeaturesDataFrameFactory {
     df.cache()
 
     df.transform(
-      prepFeaturesDataFrame(inputFieldNames.toSet, Some(outputFieldName), true)
+      prepFeaturesDataFrame(inputFieldNames.toSet, Some(outputFieldName))
     )
   }
 

@@ -52,5 +52,3 @@ case class FrancescosRunSpec(
   dataSetId: String,
   fieldName: String
 )
-
-object FrancescosRun extends GuiceBuilderRunnable[FrancescosRun] with App { run }
