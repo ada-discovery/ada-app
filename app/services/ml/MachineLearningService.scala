@@ -22,9 +22,10 @@ import org.apache.spark.ml.clustering._
 import org.apache.spark.ml.linalg.{DenseVector, Vector, Vectors}
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.tuning.ParamGridBuilder
-import org.apache.spark.sql.functions.{col, last, max, min}
+import org.apache.spark.sql.functions._
 import services.ml.CrossValidatorFactory.CrossValidatorCreator
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
+import org.apache.spark.sql.expressions.Window
 import play.api.libs.json.{JsObject, Json}
 import services.SparkApp
 import play.api.{Configuration, Logger}
@@ -186,7 +187,7 @@ private class MachineLearningServiceImpl @Inject() (
     replicationData: Traversable[JsObject],
     binCurvesNumBins: Option[Int]
   ): Future[ClassificationResultsHolder] = {
-    // training, test, and replication data
+    // create training-test and replication data
 
     // aux function to create a data frame
     def crateDataFrame(jsons: Traversable[JsObject]) = {
@@ -200,11 +201,8 @@ private class MachineLearningServiceImpl @Inject() (
     // create a replication data frame with all the features
     val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
-    // k-folds cross validator
-    val crossValidatorCreator = setting.crossValidationFolds.map(CrossValidatorFactory.withFolds)
-
-    // classify with a random splitDataset
-    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, randomSplit, independentTestPredictions, crossValidatorCreator, Nil, Nil)
+    // run classification with the newly created data frames
+    classify(df, replicationDf, mlModel, setting, binCurvesNumBins)
   }
 
   override def classifyTimeSeries(
@@ -219,11 +217,11 @@ private class MachineLearningServiceImpl @Inject() (
     replicationData: Option[JsObject],
     binCurvesNumBins: Option[Int]
   ): Future[ClassificationResultsHolder] = {
-    // training, test, and replication data
+    // create training-test and replication data
 
     // aux function to create a data frame
     def crateDataFrame(json: JsObject) = {
-      val df = FeaturesDataFrameFactory.applySeries(session)(json, ioSpec)
+      val df = FeaturesDataFrameFactory.applySeries(session)(json, ioSpec, seriesOrderCol)
       BooleanLabelIndexer(Some("labelString")).transform(df)
     }
 
@@ -233,16 +231,103 @@ private class MachineLearningServiceImpl @Inject() (
     // create a replication data frame with all the features
     val replicationDf = replicationData.map(crateDataFrame)
 
+    // run time-series classification with the newly created data frames
+    classifyTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize, binCurvesNumBins)
+  }
+
+  private def mapValuesUDF(map: Map[Any, Int]) = udf { value: Any =>
+    map.get(value).getOrElse(
+      throw new IllegalStateException(s"The map $map does not contain a value $value.")
+    )
+  }
+
+  def classifyTimeSeriesX(
+    data: Traversable[JsObject],
+    fields: Seq[(String, FieldTypeSpec)],
+    outputFieldName: String,
+    orderFieldName: String,
+    orderedValues: Seq[Any],
+    predictAhead: Int,
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSpec],
+    mlModel: Classification,
+    setting: LearningSetting[ClassificationEvalMetric.Value],
+    minCrossValidationTrainingSize: Option[Double],
+    replicationData: Option[Traversable[JsObject]],
+    binCurvesNumBins: Option[Int]
+  ): Future[ClassificationResultsHolder] = {
+    // mapping between an order value and index
+    val orderValueIndexFun = mapValuesUDF(orderedValues.zipWithIndex.toMap)
+
+    // create training-test and replication data
+
+    // aux function to create a data frame
+    def crateDataFrame(jsons: Traversable[JsObject]) = {
+      val df = FeaturesDataFrameFactory(session, jsons, fields, Some(outputFieldName))
+      val df2 = BooleanLabelIndexer(Some("labelString")).transform(df)
+
+      df2.withColumn(seriesOrderCol, orderValueIndexFun(df2(orderFieldName)))
+    }
+
+    // create a training/test data frame with all the features
+    val df = crateDataFrame(data)
+
+    // create a replication data frame with all the features
+    val replicationDf = replicationData.map(crateDataFrame)
+
+    // run time-series classification with the newly created data frames
+    classifyTimeSeries(df, replicationDf, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize, binCurvesNumBins)
+  }
+
+  private def classify(
+    df: DataFrame,
+    replicationDf: Option[DataFrame],
+    mlModel: Classification,
+    setting: LearningSetting[ClassificationEvalMetric.Value],
+    binCurvesNumBins: Option[Int]
+  ): Future[ClassificationResultsHolder]  = {
+
+    // k-folds cross validator
+    val crossValidatorCreator = setting.crossValidationFolds.map(CrossValidatorFactory.withFolds)
+
+    // data set training / test split
+    val split = randomSplit
+
+    // how to calculate test predictions
+    val calcTestPredictions = independentTestPredictions
+
+    // classify with a random splitDataset
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, split, calcTestPredictions, crossValidatorCreator, Nil, Nil)
+  }
+
+  private def classifyTimeSeries(
+    df: DataFrame,
+    replicationDf: Option[DataFrame],
+    predictAhead: Int,
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSpec],
+    mlModel: Classification,
+    setting: LearningSetting[ClassificationEvalMetric.Value],
+    minCrossValidationTrainingSize: Option[Double],
+    binCurvesNumBins: Option[Int]
+  ): Future[ClassificationResultsHolder] = {
+
     // time series transformers/stages
     val (timeSeriesStages, paramGrids) = createTimeSeriesStagesWithParamGrids(windowSize, reservoirSetting, predictAhead)
 
-    // forward chaining cross validator
+    // forward-chaining cross validator
     val crossValidatorCreator = setting.crossValidationFolds.map(
       CrossValidatorFactory.withForwardChaining(seriesOrderCol, minCrossValidationTrainingSize)
     )
 
-    // classify with the DL transformers and a sequential split
-    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, seqSplit(seriesOrderCol), orderDependentTestPredictions(seriesOrderCol), crossValidatorCreator, Nil, timeSeriesStages, paramGrids)
+    // data set training / test split
+    val split = seqSplit(seriesOrderCol)
+
+    // how to calculate test predictions
+    val calcTestPredictions = orderDependentTestPredictions(seriesOrderCol)
+
+    // classify with the time-series transformers and a sequential split
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, split, calcTestPredictions, crossValidatorCreator, Nil, timeSeriesStages, paramGrids)
   }
 
   private def classifyAux(
@@ -376,7 +461,7 @@ private class MachineLearningServiceImpl @Inject() (
     setting: LearningSetting[RegressionEvalMetric.Value],
     replicationData: Traversable[JsObject]
   ): Future[RegressionResultsHolder] = {
-    // training, test, and replication data
+    // create training-test and replication data
 
     // aux function to create a data frame
     def crateDataFrame(jsons: Traversable[JsObject]) =
@@ -388,11 +473,8 @@ private class MachineLearningServiceImpl @Inject() (
     // create a replication data frame with all the features
     val replicationDf = if (replicationData.nonEmpty) Some(crateDataFrame(replicationData)) else None
 
-    // k-folds cross-validator
-    val crossValidatorCreator = setting.crossValidationFolds.map(CrossValidatorFactory.withFolds)
-
-    // regress
-    regressAux(df, replicationDf, mlModel, setting, randomSplit, independentTestPredictions, crossValidatorCreator, Nil, Nil)
+    // run regression with the newly created data frames
+    regress(df, replicationDf, mlModel, setting)
   }
 
   override def regressTimeSeries(
@@ -406,10 +488,10 @@ private class MachineLearningServiceImpl @Inject() (
     minCrossValidationTrainingSize: Option[Double],
     replicationData: Option[JsObject] = None
   ): Future[RegressionResultsHolder] = {
-    // training, test, and replication data
+    // create training-test and replication data
 
     // aux function to create a data frame
-    def crateDataFrame(json: JsObject) = FeaturesDataFrameFactory.applySeries(session)(json, ioSpec)
+    def crateDataFrame(json: JsObject) = FeaturesDataFrameFactory.applySeries(session)(json, ioSpec, seriesOrderCol)
 
     // create a training/test data frame with all the features
     val df = crateDataFrame(data)
@@ -417,19 +499,58 @@ private class MachineLearningServiceImpl @Inject() (
     // create a replication data frame with all the features
     val replicationDf = replicationData.map(crateDataFrame)
 
+    // run time-series regression with the newly created data frames
+    regressTimeSeries(df, replicationDf, ioSpec, predictAhead, windowSize, reservoirSetting, mlModel, setting, minCrossValidationTrainingSize)
+  }
+
+  private def regress(
+    df: DataFrame,
+    replicationDf: Option[DataFrame],
+    mlModel: Regression,
+    setting: LearningSetting[RegressionEvalMetric.Value]
+  ): Future[RegressionResultsHolder] = {
+
+    // k-folds cross-validator
+    val crossValidatorCreator = setting.crossValidationFolds.map(CrossValidatorFactory.withFolds)
+
+    // data set training / test split
+    val split = randomSplit
+
+    // how to calculate test predictions
+    val calcTestPredictions = independentTestPredictions
+
+    // regress
+    regressAux(df, replicationDf, mlModel, setting, split, calcTestPredictions, crossValidatorCreator, Nil, Nil)
+  }
+
+  private def regressTimeSeries(
+    df: DataFrame,
+    replicationDf: Option[DataFrame],
+    ioSpec: IOJsonTimeSeriesSpec,
+    predictAhead: Int,
+    windowSize: Option[Int],
+    reservoirSetting: Option[ReservoirSpec],
+    mlModel: Regression,
+    setting: LearningSetting[RegressionEvalMetric.Value],
+    minCrossValidationTrainingSize: Option[Double]
+  ): Future[RegressionResultsHolder] = {
     // time series transformers/stages
     val (timeSeriesStages, paramMaps) = createTimeSeriesStagesWithParamGrids(windowSize, reservoirSetting, predictAhead)
-//    val showDf = SchemaUnchangedTransformer { df: DataFrame => df.orderBy(seriesOrderCol).show(false); df }
+    //    val showDf = SchemaUnchangedTransformer { df: DataFrame => df.orderBy(seriesOrderCol).show(false); df }
 
-    df.show(false)
-
-    // forward chaining cross validator
+    // forward-chaining cross validator
     val crossValidatorCreator = setting.crossValidationFolds.map(
       CrossValidatorFactory.withForwardChaining(seriesOrderCol, minCrossValidationTrainingSize)
     )
 
+    // data set training / test split
+    val split = seqSplit(seriesOrderCol)
+
+    // how to calculate test predictions
+    val calcTestPredictions = orderDependentTestPredictions(seriesOrderCol)
+
     // regress with the time series transformers and a sequential split
-    regressAux(df, replicationDf, mlModel, setting, seqSplit(seriesOrderCol), orderDependentTestPredictions(seriesOrderCol), crossValidatorCreator, Nil, timeSeriesStages, paramMaps, true)
+    regressAux(df, replicationDf, mlModel, setting, split, calcTestPredictions, crossValidatorCreator, Nil, timeSeriesStages, paramMaps, true)
   }
 
   private def regressAux(

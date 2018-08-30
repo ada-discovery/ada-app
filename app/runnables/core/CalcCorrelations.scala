@@ -1,16 +1,10 @@
 package runnables.core
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
-import java.{util => ju}
-
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import runnables.core.CalcUtil._
-import akka.util.ByteString
 import com.google.inject.Inject
 import org.incal.core.dataaccess.Criterion._
-import models.DataSetFormattersAndIds.FieldIdentity
 import models.{Field, FieldTypeId}
 import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion}
 import persistence.dataset.DataSetAccessorFactory
@@ -19,7 +13,6 @@ import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
 import runnables.InputFutureRunnable
 import services.stats.StatsService
-import util.{seqFutures, writeByteArrayStream}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

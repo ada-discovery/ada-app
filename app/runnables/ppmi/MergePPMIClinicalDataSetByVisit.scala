@@ -66,7 +66,9 @@ class MergePPMIClinicalDataSetByVisit @Inject()(
           }.toGroupMap
 
           val newJsons = subjectVisitJsons.map { case (_, jsons) =>
-            jsons.foldLeft(Json.obj())(_++_).-(JsObjectIdentity.name)
+            jsons.foldLeft(Json.obj()) { case (accum, json) =>
+              accum.++(JsObject(json.fields.filterNot(_._2 == JsNull)))
+            }.-(JsObjectIdentity.name)
           }
 
           // update

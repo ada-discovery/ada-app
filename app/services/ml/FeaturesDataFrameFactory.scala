@@ -75,7 +75,8 @@ object FeaturesDataFrameFactory {
   def applySeries(
     session: SparkSession)(
     json: JsObject,
-    ioSpec: IOJsonTimeSeriesSpec
+    ioSpec: IOJsonTimeSeriesSpec,
+    seriesOrderCol: String
   ): DataFrame = {
     val values: Seq[Seq[Any]] =
       IOSeriesUtil(json, ioSpec).map { case (inputs, outputs) =>
@@ -97,7 +98,7 @@ object FeaturesDataFrameFactory {
 
     val outputFieldName = ioSpec.outputSeriesFieldPath.replaceAllLiterally(".", "_")
     val ioTypes = (inputFieldNames ++ Seq(outputFieldName)).toSet.map { name: String => StructField(name, DoubleType, true) }
-    val structTypes = Seq(StructField("index", IntegerType, true)) ++ ioTypes
+    val structTypes = Seq(StructField(seriesOrderCol, IntegerType, true)) ++ ioTypes
 
     val df = session.createDataFrame(data, StructType(structTypes))
 
