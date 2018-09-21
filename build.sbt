@@ -45,6 +45,9 @@ libraryDependencies ++= Seq(
   "org.reactivemongo" %% "reactivemongo-akkastream" % "0.12.6",
   "com.evojam" %% "play-elastic4s" % "0.3.1" exclude("com.typesafe.play", "play_2.11") exclude("com.typesafe.play", "play-json_2.11"),
   "com.sksamuel.elastic4s" %% "elastic4s-streams" % "2.3.0",
+  "org.in-cal" %% "incal-play" % "0.0.19",
+  "com.typesafe.play" % "play-java-ws_2.11" % "2.5.6",
+  "jp.t2v" %% "play2-auth" % "0.14.1",
   "org.webjars" % "bootstrap" % "3.3.5",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
   "org.webjars" % "typeaheadjs" % "0.11.1",
@@ -60,16 +63,14 @@ libraryDependencies ++= Seq(
   "org.webjars" % "jquery-ui" % "1.11.1",
   "org.clapper" % "classutil_2.11" % "1.0.6",
   "org.scalaz" % "scalaz-core_2.11" % "7.2.1",
-//  "org.apache.spark" % "spark-core_2.11" % "2.3.1" exclude("com.fasterxml.jackson.core", "jackson-databind"), // exclude("asm", "asm")
-//  "org.apache.spark" % "spark-sql_2.11" % "2.3.1" exclude("com.fasterxml.jackson.core", "jackson-databind"), // exclude("asm", "asm") exclude("com.fasterxml.jackson.module", "jackson-module-scala_2.11")
-//  "org.apache.spark" % "spark-mllib_2.11" % "2.3.1" exclude("com.fasterxml.jackson.core", "jackson-databind"),
+//  "org.apache.spark" %% "spark-core" % "2.3.1", // exclude("io.netty", "netty-all"),  // uses netty 4.1.17.Final incompatible with Play's netty 4.0.39.Final (which was upgraded to 4.0.56.Final)
+//  "org.apache.spark" %% "spark-sql" % "2.3.1",
+//  "org.apache.spark" %% "spark-mllib" % "2.3.1",
   "org.apache.spark" % "spark-core_2.11" % "2.2.0" exclude("com.fasterxml.jackson.core", "jackson-databind"), // exclude("asm", "asm")
   "org.apache.spark" % "spark-sql_2.11" % "2.2.0" exclude("com.fasterxml.jackson.core", "jackson-databind"), // exclude("asm", "asm") exclude("com.fasterxml.jackson.module", "jackson-module-scala_2.11")
   "org.apache.spark" % "spark-mllib_2.11" % "2.2.0" exclude("com.fasterxml.jackson.core", "jackson-databind"),
-  //    "com.stratio.datasource" % "spark-mongodb_2.11" % "0.11.2", // exclude("asm", "asm")
+  //  "io.netty" % "netty-all" % "4.0.56.Final",
   "commons-net" % "commons-net" % "3.5",   // for ftp access
-  "com.typesafe.play" % "play-java-ws_2.11" % "2.5.6",
-  "jp.t2v" %% "play2-auth" % "0.14.1",
   "com.unboundid" % "unboundid-ldapsdk" % "2.3.8",
   "com.typesafe.play" %% "play-mailer" % "4.0.0",
   "org.apache.ignite" % "ignite-spark" % "1.6.0",
@@ -78,21 +79,17 @@ libraryDependencies ++= Seq(
   "org.scalanlp" %% "breeze-natives" % "0.13.2",  // linear algebra and stuff (native)
 //  "org.scalanlp" %% "breeze-viz" % "0.13.2",    // breeze visualization
   "com.banda.network" % "banda-network-business" % "0.5.6.1",
-  "org.in-cal" %% "incal-play" % "0.0.19",
   "org.scalatest" %% "scalatest" % "3.0.0" % "test"
 ).map(_.exclude("org.slf4j", "slf4j-log4j12" ))
 
-//  "com.typesafe.play" % "play-logback_2.11" % "2.5.1"
-// Following overrides are needed since Spark 1.6 uses jackson-databind 2.4.4
-// Note that deadbolt's dependency jackson-datatype-jsr310 has to be overridden as well because of transitivity
-// dependencyOverrides ++= Set(
-//  "com.fasterxml.jackson.core" % "jackson-databind" % "2.4.4",
-//  "com.fasterxml.jackson.core" % "jackson-annotations" % "2.4.4",
-// "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.4.4"
-// )
-
 dependencyOverrides ++= Set(
   "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.7.6"
+//  "io.netty" % "netty-transport-native-epoll" % "4.1.17.Final",
+//  "io.netty" % "netty-codec-http" % "4.1.17.Final", // 4.1.17.Final
+//  "io.netty" % "netty-handler" % "4.1.17.Final", // 4.0.56.Final
+//  "io.netty" % "netty-buffer" % "4.1.17.Final",
+//  "io.netty" % "netty-common" % "4.1.17.Final",
+//  "io.netty" % "netty-transport" % "4.1.17.Final"
 )
 
 // TODO: could be removed in Play 2.5 (since it's considered by default)

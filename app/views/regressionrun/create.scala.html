@@ -110,6 +110,21 @@
 
                 $('#outputDiv').html();
 
+                if (!mlModelId) {
+                    showError("ML regression cannot be launched. No model selected.");
+                    return
+                }
+
+                if (!outputFieldName) {
+                    showError("ML regression cannot be launched. No output field selected.");
+                    return
+                }
+
+                if (inputFieldNames.length == 0) {
+                    showError("ML regression cannot be launched. No input fields selected.");
+                    return
+                }
+
                 regressionRunJsRoutes.controllers.dataset.RegressionRunDispatcher.regress(settingJSON, saveResults).ajax( {
                     success: function(results) {
                         showMessage("'" + mlModelName + "' regression finished.")

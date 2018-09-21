@@ -99,7 +99,7 @@
 
             $('#samplingRatioDiv').dynamicTable('updateModelFromTable');
             var samplingJsons = $("#samplingRatioDiv").dynamicTable('getModel')
-            var samplingTuples = samplingJsons.map(function(item) {
+            var samplingTuples = samplingJsons.map(function (item) {
                 var json = JSON.parse(item)
                 return [json.outputValue, parseFloat(json.samplingRatio)]
             })
@@ -125,13 +125,28 @@
                 "binCurvesNumBins": intValue(binCurvesNumBins)
             };
 
-            var settingJSON = JSON.stringify(setting)
+            var settingJSON = JSON.stringify(setting);
 
             $('#outputDiv').html("");
             $("#binCurvesPanelDiv").html("");
 
-            classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.classify(settingJSON, saveResults, saveBinCurves).ajax( {
-                success: function(data) {
+            if (!mlModelId) {
+                showError("ML classification cannot be launched. No model selected.");
+                return
+            }
+
+            if (!outputFieldName) {
+                showError("ML classification cannot be launched. No output field selected.");
+                return
+            }
+
+            if (inputFieldNames.length == 0) {
+                showError("ML classification cannot be launched. No input fields selected.");
+                return
+            }
+
+            classificationRunJsRoutes.controllers.dataset.ClassificationRunDispatcher.classify(settingJSON, saveResults, saveBinCurves).ajax({
+                success: function (data) {
                     showMessage("'" + mlModelName + "' classification finished.")
                     showMLOutput(data.results)
 
@@ -145,13 +160,14 @@
                             addBinCurves("Replication", data.replicationCurves, columnWidth)
                     }
                 },
-                error: function(data){
-                    showError( data.responseText );
+                error: function (data) {
+                    showError(data.responseText);
                 }
             });
 
             showMessage("Classification for the field '" + outputFieldLabel + "' using the ML model '" + mlModelName + "' launched.")
             addSpinner($("#outputDiv"))
+
         }
 
         function addBinCurves(name, binCurves, columnWidth) {
@@ -205,7 +221,12 @@
             var featuresToSelectNum = $("#featuresToSelectNum").val();
 
             if (!outputFieldName) {
-                showError("Output field name must be defined");
+                showError("Feature selection cannot be performed. No output field selected.");
+                return
+            }
+
+            if (inputFieldNames.length == 0) {
+                showError("Feature selection cannot be performed. No input fields selected.");
                 return
             }
 

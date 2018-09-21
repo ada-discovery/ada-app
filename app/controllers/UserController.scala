@@ -103,7 +103,7 @@ class UserController @Inject() (
   ): Future[BSONObjectID] = {
     val mailer = mailClientProvider.createClient()
     val mail = mailClientProvider.createTemplate(
-      "Ucer Created",
+      "User Created",
       Seq(item.email),
       bodyText = Some("A new user account has been created." + System.lineSeparator() +
         "You can now log into the Ada Reporting System with this mail address.")

@@ -78,7 +78,15 @@
             $('#pcaScatterDiv').html("")
             $("#independenceTestPanelDiv").html("");
 
-//            $('#scatterPanelDiv').hide();
+            if (!mlModelId) {
+                showError("ML clusterization cannot be launched. No model selected.");
+                return
+            }
+
+            if (inputFieldNames.length == 0) {
+                showError("ML clusterization cannot be launched. No input fields selected.");
+                return
+            }
 
             dataSetJsRoutes.controllers.dataset.DataSetDispatcher.cluster(mlModelId, inputFieldNames, filterId, featuresNormalizationType, pcaDims).ajax( {
                 success: function(data) {

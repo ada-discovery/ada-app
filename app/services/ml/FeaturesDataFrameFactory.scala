@@ -266,27 +266,30 @@ object FeaturesDataFrameFactory {
     val structTypes = structTypesWithEnumLabels.map(_._1)
     val stringTypesWithEnumLabels = structTypesWithEnumLabels.filter(_._1.dataType.equals(StringType))
 
-    //    df = session.createDataFrame(rdd_of_rows)
     val df = session.createDataFrame(data, StructType(structTypes))
 
-    val finalDf = stringTypesWithEnumLabels.foldLeft(df){ case (newDf, (stringType, enumLabels)) =>
-      if (!stringFieldsNotToIndex.contains(stringType.name)) {
-        val tempCol = stringType.name + Random.nextLong()
-
-        // if enum labels provided create an fixed-order string indexer, otherwise use a standard one, which index values based on their frequencies
-        val indexer = if (enumLabels.nonEmpty) {
-          new FixedOrderStringIndexer().setLabels(enumLabels.toArray).setInputCol(stringType.name).setOutputCol(tempCol)
-        } else
-          new StringIndexer().setInputCol(stringType.name).setOutputCol(tempCol)
-
-        indexer.fit(newDf).transform(newDf).drop(stringType.name).withColumnRenamed(tempCol, stringType.name)
-      } else {
-        newDf
-      }
-    }
+    // index string columns
+    val filteredStringTypesWithEnumLabels = stringTypesWithEnumLabels.filter { case (stringType, _) => !stringFieldsNotToIndex.contains(stringType.name) }
+    val finalDf = indexStringCols(filteredStringTypesWithEnumLabels)(df)
 
     (finalDf, valueBroadVar)
   }
+
+  private def indexStringCols(
+    stringTypesWithEnumLabels: Seq[(StructField, Seq[String])])(
+    df: DataFrame
+  ) =
+    stringTypesWithEnumLabels.foldLeft(df){ case (newDf, (stringType, enumLabels)) =>
+      val tempCol = stringType.name + Random.nextLong()
+
+      // if enum labels provided create an fixed-order string indexer, otherwise use a standard one, which index values based on their frequencies
+      val indexer = if (enumLabels.nonEmpty) {
+        new FixedOrderStringIndexer().setLabels(enumLabels.toArray).setInputCol(stringType.name).setOutputCol(tempCol).setHandleInvalid("skip")
+      } else
+        new StringIndexer().setInputCol(stringType.name).setOutputCol(tempCol).setHandleInvalid("skip")
+
+      indexer.fit(newDf).transform(newDf).drop(stringType.name).withColumnRenamed(tempCol, stringType.name)
+    }
 
   private def discretizeAsQuantiles(
     df: DataFrame,
