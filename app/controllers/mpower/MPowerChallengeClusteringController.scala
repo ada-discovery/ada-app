@@ -26,6 +26,7 @@ class MPowerChallengeClusteringController @Inject() (
   private val category = "Category"
   private val team = "Team"
   private val auroc = "AUROC_Unbiased_Subset"
+  private val individualAuroc = "Individual_AUROC"
   private val aupr = "AUPR"
 
   private val logger = Logger
@@ -35,7 +36,7 @@ class MPowerChallengeClusteringController @Inject() (
       xFieldName = x1,
       yFieldName = x2,
       groupFieldName = Some(clazz),
-      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(750), title = Some("X1 vs X2 by Clusterization Class"))
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(750), title = Some("X1 vs X2 by Clustering Class"))
     ),
     ScatterWidgetSpec(
       xFieldName = x1,
@@ -56,7 +57,16 @@ class MPowerChallengeClusteringController @Inject() (
       xBinCount = 50,
       yBinCount = 50,
       aggType = AggType.Mean,
-      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUROC Mean"))
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by Submission AUROC Mean"))
+    ),
+    HeatmapAggWidgetSpec(
+      xFieldName = x1,
+      yFieldName = x2,
+      valueFieldName = individualAuroc,
+      xBinCount = 50,
+      yBinCount = 50,
+      aggType = AggType.Mean,
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by Individual AUROC Mean"))
     ),
     HeatmapAggWidgetSpec(
       xFieldName = x1,
@@ -65,7 +75,7 @@ class MPowerChallengeClusteringController @Inject() (
       xBinCount = 50,
       yBinCount = 50,
       aggType = AggType.Mean,
-      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUPR Mean"))
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by Submission AUPR Mean"))
     ),
     HeatmapAggWidgetSpec(
       xFieldName = x1,
@@ -74,7 +84,16 @@ class MPowerChallengeClusteringController @Inject() (
       xBinCount = 20,
       yBinCount = 20,
       aggType = AggType.Mean,
-      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUROC Mean"))
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by Submission AUROC Mean"))
+    ),
+    HeatmapAggWidgetSpec(
+      xFieldName = x1,
+      yFieldName = x2,
+      valueFieldName = individualAuroc,
+      xBinCount = 20,
+      yBinCount = 20,
+      aggType = AggType.Mean,
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by Individual AUROC Mean"))
     ),
     HeatmapAggWidgetSpec(
       xFieldName = x1,
@@ -83,14 +102,22 @@ class MPowerChallengeClusteringController @Inject() (
       xBinCount = 20,
       yBinCount = 20,
       aggType = AggType.Mean,
-      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by AUPR Mean"))
+      displayOptions = BasicDisplayOptions(gridWidth = Some(12), height = Some(850), title = Some("X1 vs X2 by Submission AUPR Mean"))
     ),
     DistributionWidgetSpec(
       fieldName = auroc,
       groupFieldName = Some(clazz),
       relativeValues = true,
       displayOptions = MultiChartDisplayOptions(
-        chartType = Some(ChartType.Spline), gridWidth = Some(8), gridOffset = Some(2), height = Some(400), title = Some("AUROC by Clusterization Class")
+        chartType = Some(ChartType.Spline), gridWidth = Some(8), gridOffset = Some(2), height = Some(400), title = Some("Submission AUROC by Clustering Class")
+      )
+    ),
+    DistributionWidgetSpec(
+      fieldName = individualAuroc,
+      groupFieldName = Some(clazz),
+      relativeValues = true,
+      displayOptions = MultiChartDisplayOptions(
+        chartType = Some(ChartType.Spline), gridWidth = Some(8), gridOffset = Some(2), height = Some(400), title = Some("Individual AUROC by Clustering Class")
       )
     ),
     DistributionWidgetSpec(
@@ -98,7 +125,7 @@ class MPowerChallengeClusteringController @Inject() (
       groupFieldName = Some(clazz),
       relativeValues = true,
       displayOptions = MultiChartDisplayOptions(
-        chartType = Some(ChartType.Spline), gridWidth = Some(8), gridOffset = Some(2), height = Some(400), title = Some("AUPR by Clusterization Class")
+        chartType = Some(ChartType.Spline), gridWidth = Some(8), gridOffset = Some(2), height = Some(400), title = Some("Submission AUPR by Clustering Class")
       )
     ),
     DistributionWidgetSpec(
@@ -126,6 +153,18 @@ class MPowerChallengeClusteringController @Inject() (
     ScatterWidgetSpec(
       xFieldName = x2,
       yFieldName = auroc,
+      groupFieldName = None,
+      displayOptions = BasicDisplayOptions(gridWidth = Some(6), height = None)
+    ),
+    ScatterWidgetSpec(
+      xFieldName = x1,
+      yFieldName = individualAuroc,
+      groupFieldName = None,
+      displayOptions = BasicDisplayOptions(gridWidth = Some(6), height = None)
+    ),
+    ScatterWidgetSpec(
+      xFieldName = x2,
+      yFieldName = individualAuroc,
       groupFieldName = None,
       displayOptions = BasicDisplayOptions(gridWidth = Some(6), height = None)
     ),
@@ -199,7 +238,7 @@ class MPowerChallengeClusteringController @Inject() (
   private def mPowerMDSDsa(
     k: Int,
     method: Int
-  ) = dsa(s"mpower_challenge.mpower-scaled-mds_eigen_unscaled-${methodToString(method)}kmeans_${k}_iter_50")
+  ) = dsa(s"mpower_challenge.mpower-scaled-mds_eigen_unscaled-${methodToString(method)}kmeans_${k}_iter_50_ext")
 
   // t-SNE
 
@@ -270,7 +309,7 @@ class MPowerChallengeClusteringController @Inject() (
     method: Int,
     pcaDims: Option[Int],
     scaled: Boolean
-  ) = dsa(s"mpower_challenge.mpower${scaledToString(scaled)}-cols-2d_iter-4000_per-20_0_theta-0_25${pcaDimsToString(pcaDims)}-${methodToString(method)}kmeans_${k}_iter_50")
+  ) = dsa(s"mpower_challenge.mpower${scaledToString(scaled)}-cols-2d_iter-4000_per-20_0_theta-0_25${pcaDimsToString(pcaDims)}-${methodToString(method)}kmeans_${k}_iter_50_ext")
 
   private def dsa(dataSetId: String) = dsaf(dataSetId).getOrElse(
     throw new AdaException(s"Data set $dataSetId does not exist.")
@@ -280,7 +319,7 @@ class MPowerChallengeClusteringController @Inject() (
     method match {
       case 1 => ""
       case 2 => "bis"
-      case _ => throw new AdaException(s"Clusterization method $method unrecognized.")
+      case _ => throw new AdaException(s"Clustering method $method unrecognized.")
     }
 
   private def scaledToString(scaled: Boolean) =
