@@ -11,9 +11,10 @@ import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.DataSetService
 import dataaccess.JsonRepoExtra.InfixOps
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -146,4 +147,4 @@ class CreateMPowerTestingDistanceDataSet @Inject()(
     }
 }
 
-object CreateMPowerTestingDistanceDataSet extends GuiceBuilderRunnable[CreateMPowerTestingDistanceDataSet] with App { run }
+object CreateMPowerTestingDistanceDataSet extends GuiceRunnableApp[CreateMPowerTestingDistanceDataSet]

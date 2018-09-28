@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

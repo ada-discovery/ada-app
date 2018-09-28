@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import scala.reflect.runtime.universe.typeOf
 import models.ml.DataSetLinkSpec
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.DataSetService
 
 class LinkDataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnable[DataSetLinkSpec] {

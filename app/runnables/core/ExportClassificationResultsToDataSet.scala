@@ -10,7 +10,7 @@ import persistence.RepoTypes.ClassificationRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 import play.api.libs.json.{JsObject, Json}
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.DataSetService
 import util.FieldUtil.caseClassToFlatFieldTypes
 

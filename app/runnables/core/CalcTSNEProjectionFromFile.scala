@@ -8,7 +8,7 @@ import com.google.inject.Inject
 import models.AdaException
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.stats.{StatsService, TSNESetting}
 import util.writeStringAsStream
 

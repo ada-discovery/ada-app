@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import dataaccess.ClassificationResultRepoFactory
 import play.api.Logger
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import models._
 
 import scala.reflect.runtime.universe.typeOf

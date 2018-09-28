@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import models.StorageType
 import models.ml.{DataSetLinkSpec, ResultDataSetSpec}
-import runnables.FutureRunnable
+import org.incal.core.FutureRunnable
 import services.DataSetService
 
 class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends FutureRunnable {

@@ -5,9 +5,9 @@ import javax.inject.Inject
 import models.{Field, FieldTypeId, StorageType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json._
-import runnables.{FutureRunnable, InputFutureRunnable}
 import services.DataSetService
 import _root_.util.seqFutures
+import org.incal.core.InputFutureRunnable
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

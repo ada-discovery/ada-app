@@ -7,7 +7,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json._
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.DataSetService
 import dataaccess.ignite.BinaryJsonUtil.getValueFromJson
 

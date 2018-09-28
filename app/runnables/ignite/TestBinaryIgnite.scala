@@ -10,7 +10,7 @@ import org.incal.core.dataaccess.AscSort
 import org.incal.core.dataaccess.Criterion._
 import play.api.Configuration
 import reactivemongo.bson.BSONObjectID
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -51,4 +51,4 @@ class TestBinaryIgnite @Inject() (ignite: Ignite, cacheFactory: BinaryCacheFacto
   }
 }
 
-object TestBinaryIgnite extends GuiceBuilderRunnable[TestBinaryIgnite] with App { run }
+object TestBinaryIgnite extends GuiceRunnableApp[TestBinaryIgnite]

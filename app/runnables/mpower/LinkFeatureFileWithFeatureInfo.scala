@@ -7,7 +7,7 @@ import models.{AdaException, Field, FieldTypeId, StorageType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json._
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.DataSetService
 import org.incal.core.dataaccess.Criterion._
 

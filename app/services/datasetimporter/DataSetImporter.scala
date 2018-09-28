@@ -68,11 +68,6 @@ private abstract class AbstractDataSetImporter[T <: DataSetImport] extends DataS
         (fieldNames, fieldTypes, vals).zipped.map {
           case (fieldName, fieldType, text) =>
             val jsonValue = fieldType.displayStringToJson(text)
-//            if (text.contains("E+") || text.contains("e+")) {
-//              val newJsNumber = JsNumber(BigDecimal(df.format(text.toDouble).toDouble))
-//              println(newJsNumber)
-//              println(fieldType.spec.fieldType + " : " + text + " -> " + jsonValue)
-//            }
             (fieldName, jsonValue)
         })
     )

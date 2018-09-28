@@ -13,7 +13,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import play.api.libs.json.JsObject
 import reactivemongo.bson.BSONObjectID
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.stats.StatsService
 import util.seqFutures
 import runnables.core.CalcUtil._

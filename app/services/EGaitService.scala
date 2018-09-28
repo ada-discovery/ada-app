@@ -1,7 +1,6 @@
 package services
 
 import javax.inject.Inject
-import javax.net.ssl.SSLContext
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -11,21 +10,22 @@ import dataaccess.ConversionUtil
 import models.egait.{EGaitKineticData, SpatialPoint}
 import play.api.libs.ws._
 import play.api.{Configuration, Logger}
-import play.api.libs.json.{JsObject, Json}
-import play.api.libs.ws.ning.NingWSClient
 import org.apache.commons.codec.binary.{Base64, Hex}
 import org.asynchttpclient.DefaultAsyncHttpClientConfig
-import play.api.libs.ws.ahc.{AhcConfigBuilder, AhcWSClient}
+import play.api.libs.ws.ahc.AhcWSClient
 import org.incal.core.util.ZipFileIterator
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.io.{Codec, Source}
 import scala.xml.{Node, XML}
 
 trait EGaitServiceFactory {
-  def apply(@Assisted("username") username: String, @Assisted("password") password: String): EGaitService
+  def apply(
+    @Assisted("username") username: String,
+    @Assisted("password") password: String,
+    @Assisted("baseUrl") baseUrl: String
+  ): EGaitService
 }
 
 trait EGaitService {
@@ -33,7 +33,7 @@ trait EGaitService {
   /**
     * Gets a session token needed for login and all services
     */
-  def getProxySessionToken: Future[String]
+  def getProxySessionToken(certificateFileName: String): Future[String]
 
   /**
     * Gets a connection token used to access a given service
@@ -92,12 +92,12 @@ trait EGaitService {
 protected[services] class EGaitServiceWSImpl @Inject() (
     @Assisted("username") private val username: String,
     @Assisted("password") private val password: String,
-//    ws: WSClient,
+    @Assisted("baseUrl") private val baseUrl: String,
+  //    ws: WSClient,
     configuration: Configuration
   ) extends EGaitService {
 
   object Url {
-    val Base = confValue("egait.api.rest.url")
     val Session = confValue("egait.api.session.url")
     val ServiceConnectionToken = confValue("egait.api.service_connection_token.url")
     val Login = confValue("egait.api.login.url")
@@ -133,14 +133,13 @@ protected[services] class EGaitServiceWSImpl @Inject() (
   }
 
   private val logger = Logger
-  private val certificateFileName = confValue("egait.api.certificate.path")
 
   private def confValue(key: String) = configuration.getString(key).get
 
-  override def getProxySessionToken: Future[String] = {
+  override def getProxySessionToken(certificateFileName: String): Future[String] = {
     val certificateContent = loadFileAsBase64(certificateFileName)
 
-    val request = ws.url(Url.Base + Url.Session).withHeaders(
+    val request = ws.url(baseUrl + Url.Session).withHeaders(
       "Content-Type" -> "application/octet-stream",
       "Content-Length" -> certificateContent.length.toString
     )
@@ -154,7 +153,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
     serviceName: String,
     sessionToken: String
   ): Future[String] = {
-    val request = ws.url(Url.Base + Url.ServiceConnectionToken + serviceName).withHeaders(
+    val request = ws.url(baseUrl + Url.ServiceConnectionToken + serviceName).withHeaders(
       "session-token" -> sessionToken
     )
 
@@ -186,7 +185,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
         val request =
           withXmlContent(
             withConnectionToken(connectionToken)(
-              ws.url(Url.Base + Url.Login)
+              ws.url(baseUrl + Url.Login)
             )
           )
 
@@ -215,7 +214,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
           withXmlContent(
             withConnectionToken(connectionToken)(
               withUserSessionId(userSessionId)(
-                ws.url(Url.Base + Url.Logoff)
+                ws.url(baseUrl + Url.Logoff)
               )
             )
           )
@@ -246,7 +245,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
           withXmlContent(
             withConnectionToken(connectionToken)(
               withUserSessionId(userSessionId)(
-                ws.url(Url.Base + Url.SearchSessions)
+                ws.url(baseUrl + Url.SearchSessions)
               )
             )
           )
@@ -274,7 +273,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
         val request =
           withConnectionToken(connectionToken)(
             withUserSessionId(userSessionId)(
-              ws.url(Url.Base + Url.DownloadParametersAsCsvSub1 + searchSessionId + Url.DownloadParametersAsCsvSub2)
+              ws.url(baseUrl + Url.DownloadParametersAsCsvSub1 + searchSessionId + Url.DownloadParametersAsCsvSub2)
             )
           )
 
@@ -298,7 +297,7 @@ protected[services] class EGaitServiceWSImpl @Inject() (
         val request =
           withConnectionToken(connectionToken)(
             withUserSessionId(userSessionId)(
-              ws.url(Url.Base + Url.DownloadRawData + searchSessionId)
+              ws.url(baseUrl + Url.DownloadRawData + searchSessionId)
             )
           )
 

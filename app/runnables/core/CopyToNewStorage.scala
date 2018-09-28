@@ -3,7 +3,7 @@ package runnables.core
 import javax.inject.Inject
 
 import models.StorageType
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.DataSetService
 
 import scala.reflect.runtime.universe.typeOf

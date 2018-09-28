@@ -8,7 +8,7 @@ import models.ml.{IOJsonTimeSeriesSpec, LearningSetting, RegressionEvalMetric, V
 import persistence.RepoTypes.RegressionRepo
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import reactivemongo.bson.BSONObjectID
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.ml.{MachineLearningService, MachineLearningUtil}
 import org.incal.core.dataaccess.Criterion.Infix
 

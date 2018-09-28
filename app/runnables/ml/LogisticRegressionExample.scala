@@ -12,7 +12,7 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.types._
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json.JsObject
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 import services.SparkApp
 
 import scala.concurrent.Await
@@ -296,4 +296,4 @@ class LogisticRegressionExample @Inject() (
 //  }
 }
 
-object LogisticRegressionExample extends GuiceBuilderRunnable[LogisticRegressionExample] with App { run }
+object LogisticRegressionExample extends GuiceRunnableApp[LogisticRegressionExample]

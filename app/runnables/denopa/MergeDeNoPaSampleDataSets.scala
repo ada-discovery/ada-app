@@ -4,12 +4,11 @@ import javax.inject.Inject
 
 import models.StorageType
 import models.ml.ResultDataSetSpec
-import runnables.{FutureRunnable, GuiceBuilderRunnable}
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import services.DataSetService
 
-class MergeDeNoPaSampleDataSets @Inject() (
-    dataSetService: DataSetService
-  ) extends FutureRunnable {
+class MergeDeNoPaSampleDataSets @Inject() (dataSetService: DataSetService) extends FutureRunnable {
 
   private val mergedDataSetId = "denopa.sample"
   private val mergedDataSetName = "Sample"
@@ -41,4 +40,4 @@ class MergeDeNoPaSampleDataSets @Inject() (
     )
 }
 
-object MergeDeNoPaSampleDataSets extends GuiceBuilderRunnable[MergeDeNoPaSampleDataSets] with App { run }
+object MergeDeNoPaSampleDataSets extends GuiceRunnableApp[MergeDeNoPaSampleDataSets]

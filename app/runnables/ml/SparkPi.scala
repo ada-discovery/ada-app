@@ -2,7 +2,7 @@ package runnables.ml
 
 import javax.inject.Inject
 
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 import services.SparkApp
 
 import scala.math.random
@@ -23,4 +23,4 @@ class SparkPi @Inject() (sparkApp: SparkApp) extends Runnable {
   }
 }
 
-object SparkPi extends GuiceBuilderRunnable[SparkPi] with App { run }
+object SparkPi extends GuiceRunnableApp[SparkPi]

@@ -3,7 +3,8 @@ package runnables.denopa
 import javax.inject.Inject
 
 import models.{DataSetSetting, StorageType}
-import runnables.{FutureRunnable, GuiceBuilderRunnable}
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import runnables.denopa.DataSetId._
 import services.DataSetService
 
@@ -43,6 +44,6 @@ class CleanupDeNoPaSecondVisit @Inject()(dataSetService: DataSetService) extends
     )
 }
 
-object CleanupDeNoPaBaseline extends GuiceBuilderRunnable[CleanupDeNoPaBaseline] with App { run }
-object CleanupDeNoPaFirstVisit extends GuiceBuilderRunnable[CleanupDeNoPaFirstVisit] with App { run }
-object CleanupDeNoPaSecondVisit extends GuiceBuilderRunnable[CleanupDeNoPaSecondVisit] with App { run }
+object CleanupDeNoPaBaseline extends GuiceRunnableApp[CleanupDeNoPaBaseline]
+object CleanupDeNoPaFirstVisit extends GuiceRunnableApp[CleanupDeNoPaFirstVisit]
+object CleanupDeNoPaSecondVisit extends GuiceRunnableApp[CleanupDeNoPaSecondVisit]

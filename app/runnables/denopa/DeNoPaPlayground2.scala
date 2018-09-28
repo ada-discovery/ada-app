@@ -1,6 +1,5 @@
 package runnables.denopa
 
-import java.io.{File, PrintWriter}
 import javax.inject.Inject
 
 import models.FieldTypeId
@@ -10,8 +9,9 @@ import play.api.Configuration
 
 import scala.concurrent.Future
 import scala.io.Source
-import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import dataaccess.JsonUtil
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import persistence.RepoTypes.TranslationRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -123,4 +123,4 @@ class DeNoPaPlayground2 @Inject() (
   //  }
 }
 
-object DeNoPaPlayground2 extends GuiceBuilderRunnable[DeNoPaPlayground2] with App { run }
+object DeNoPaPlayground2 extends GuiceRunnableApp[DeNoPaPlayground2]

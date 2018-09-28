@@ -3,7 +3,7 @@ package runnables.core
 import javax.inject.Inject
 
 import play.api.Logger
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import models.AdaException
 import persistence.dataset.DataSetAccessorFactory
 

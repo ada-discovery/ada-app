@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import dataaccess.JsonUtil
 import persistence.dataset.DataSetAccessorFactory
-import runnables.FutureRunnable
+import org.incal.core.FutureRunnable
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

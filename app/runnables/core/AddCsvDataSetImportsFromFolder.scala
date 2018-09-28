@@ -5,7 +5,7 @@ import javax.inject.Inject
 import _root_.util.getListOfFiles
 import models.{CsvDataSetImport, DataSetSetting, StorageType}
 import persistence.RepoTypes.DataSetImportRepo
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf

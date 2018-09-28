@@ -12,7 +12,8 @@ import play.api.Configuration
 import play.api.libs.json.{JsNumber, JsObject, Json}
 import reactivemongo.bson.BSONObjectID
 import DataSetId.lux_park_clinical
-import runnables.GuiceBuilderRunnable
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -21,10 +22,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class CreateOverallActivityDataSet  @Inject()(
     configuration: Configuration,
     dsaf: DataSetAccessorFactory
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
   private val ftf = FieldTypeHelper.fieldTypeFactory()
-  private val timeout = 120000 millis
 
   val dataSetIdWithActivityEnums = Seq(
 //    "lux_park.mpower_my_thoughts",
@@ -136,9 +136,9 @@ class CreateOverallActivityDataSet  @Inject()(
   private val appVersionFieldType = ftf(appVersionField.fieldTypeSpec)
   private val externalIdFieldType = ftf(externalIdField.fieldTypeSpec)
 
-  override def run() = {
-    val future = for {
-      // register a new data set and object dsa
+  override def runAsFuture =
+    for {
+    // register a new data set and object dsa
       newDsa <- dsaf.register(mergedDataSetInfo, None, None)
 
       // collect all the items from mPower activity data sets and match them with clinical subject id
@@ -157,9 +157,6 @@ class CreateOverallActivityDataSet  @Inject()(
       _ <- newDsa.fieldRepo.save(mergedFields)
     } yield
       ()
-
-    Await.result(future, timeout)
-  }
 
   def createJsons: Future[Traversable[JsObject]] =
     for {
@@ -257,4 +254,4 @@ class CreateOverallActivityDataSet  @Inject()(
   }
 }
 
-object CreateOverallActivityDataSet extends GuiceBuilderRunnable[CreateOverallActivityDataSet] with App { run }
+object CreateOverallActivityDataSet extends GuiceRunnableApp[CreateOverallActivityDataSet]

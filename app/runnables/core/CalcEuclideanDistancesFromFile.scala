@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.stats.StatsService
 
 import scala.concurrent.ExecutionContext.Implicits.global

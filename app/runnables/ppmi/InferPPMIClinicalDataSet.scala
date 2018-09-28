@@ -3,7 +3,8 @@ package runnables.ppmi
 import javax.inject.Inject
 
 import field.{FieldTypeHelper, FieldTypeInferrerFactory}
-import runnables.{FutureRunnable, GuiceBuilderRunnable}
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import services.DataSetService
 
 class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends FutureRunnable {
@@ -30,4 +31,4 @@ class InferPPMIClinicalDataSet @Inject()(dataSetService: DataSetService) extends
   }
 }
 
-object InferPPMIClinicalDataSet extends GuiceBuilderRunnable[InferPPMIClinicalDataSet] with App { run }
+object InferPPMIClinicalDataSet extends GuiceRunnableApp[InferPPMIClinicalDataSet]

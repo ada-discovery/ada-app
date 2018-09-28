@@ -4,7 +4,8 @@ import javax.inject.Inject
 
 import models.StorageType
 import models.ml.ResultDataSetSpec
-import runnables.{FutureRunnable, GuiceBuilderRunnable}
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import services.DataSetService
 
 class MergeMPowerChallengeDemographicsDataSets @Inject()(
@@ -54,4 +55,4 @@ class MergeMPowerChallengeDemographicsDataSets @Inject()(
     )
 }
 
-object MergeMPowerChallengeDemographicsDataSets extends GuiceBuilderRunnable[MergeMPowerChallengeDemographicsDataSets] with App { run }
+object MergeMPowerChallengeDemographicsDataSets extends GuiceRunnableApp[MergeMPowerChallengeDemographicsDataSets]

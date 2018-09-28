@@ -1,25 +1,27 @@
-@import play.api.Play.current
+@import play.api.Configuration
 
-@()(implicit msg: Messages)
+@()(implicit msg: Messages, configuration: Configuration)
 
 <footer>
     <div align="center">
         <hr/>
-        <ul class="list-inline">
-        @current.configuration.getObjectList("footer.logos").get.map(_.toConfig).map { logoConfig =>
-            <li>
-                <a target="_blank" href="@{logoConfig.getString("url")}">
-                    <img @if(logoConfig.hasPath("height")) {height="@logoConfig.getInt("height") px" } src="@routes.Assets.versioned(logoConfig.getString("logo"))"/>
-                </a>
-            </li>
+        @configuration.getObjectList("footer.logos").map { configObjects =>
+            <ul class="list-inline">
+            @configObjects.map(_.toConfig).map { logoConfig =>
+                <li>
+                    <a target="_blank" href="@{logoConfig.getString("url")}">
+                        <img @if(logoConfig.hasPath("height")) {height="@logoConfig.getInt("height") px" } src="@routes.Assets.versioned(logoConfig.getString("logo"))"/>
+                    </a>
+                </li>
+            }
+            </ul>
+            <hr/>
         }
-        </ul>
-        <hr/>
         <p class="text-muted" align="center">
-            Ada (@Messages("project.name") Reporting System), Version @current.configuration.getString("app.version").get
+            Ada: A Discovery Analysis Platform, (@Messages("project.name") Project (Version @configuration.getString("app.version").get)
         </p>
         <p class="text-muted" align="center">
-            &copy; <a target="_blank" href="@current.configuration.getString("unilu.url").get">Université du Luxembourg</a> 2016-@(new java.util.Date().format("yyyy")). All rights reserved.
+            &copy; <a target="_blank" href="@configuration.getString("unilu.url").get">Université du Luxembourg</a> 2016-@(new java.util.Date().format("yyyy")). All rights reserved.
         </p>
     </div>
 </footer>

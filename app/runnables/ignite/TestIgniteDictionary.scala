@@ -6,7 +6,7 @@ import dataaccess._
 import models.FieldTypeId
 import org.apache.ignite.Ignite
 import reactivemongo.bson.BSONObjectID
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -53,4 +53,4 @@ class TestIgniteDictionary @Inject() (ignite: Ignite, dictionaryFieldRepoFactory
   }
 }
 
-object TestIgniteDictionary extends GuiceBuilderRunnable[TestIgniteDictionary] with App { run }
+object TestIgniteDictionary extends GuiceRunnableApp[TestIgniteDictionary]

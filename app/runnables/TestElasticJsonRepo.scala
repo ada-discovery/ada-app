@@ -3,6 +3,7 @@ package runnables
 import com.google.inject.Inject
 import org.incal.core.dataaccess.Criterion.Infix
 import models.DataSetFormattersAndIds.JsObjectIdentity
+import org.incal.core.FutureRunnable
 import org.incal.core.dataaccess.AscSort
 import persistence.RepoTypes._
 import persistence.dataset.DataSetAccessorFactory
@@ -174,4 +175,4 @@ class TestElasticJsonRepo @Inject() (dsaf: DataSetAccessorFactory) extends Futur
     jsons.forall(json => (json \ JsObjectIdentity.name).toOption.isDefined)
 }
 
-//object TestElasticJsonRepo extends GuiceBuilderRunnable[TestElasticJsonRepo] with App { run }
+//object TestElasticJsonRepo extends GuiceRunnableApp[TestElasticJsonRepo] with App { run }

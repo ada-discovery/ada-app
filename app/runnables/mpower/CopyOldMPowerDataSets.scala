@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import persistence.dataset.DataSetAccessorFactory
-import runnables.FutureRunnable
+import org.incal.core.FutureRunnable
 import services.DataSetService
 import util.seqFutures
 

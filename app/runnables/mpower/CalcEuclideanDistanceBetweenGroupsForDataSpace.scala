@@ -9,7 +9,7 @@ import org.apache.commons.lang3.StringEscapeUtils
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.stats.StatsService
 import _root_.util.FieldUtil.JsonFieldOps
 import org.incal.core.dataaccess.NotEqualsNullCriterion

@@ -6,6 +6,8 @@ import javax.inject.Inject
 import org.incal.core.dataaccess.Criterion.Infix
 import field.FieldTypeHelper
 import models._
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNull, JsNumber}
 import services.DataSetService
@@ -115,4 +117,4 @@ class LinkADSMTBAndDrugDataSet @Inject()(
       ()
 }
 
-object LinkADSMTBAndDrugDataSet extends GuiceBuilderRunnable[LinkADSMTBAndDrugDataSet] with App { run }
+object LinkADSMTBAndDrugDataSet extends GuiceRunnableApp[LinkADSMTBAndDrugDataSet]

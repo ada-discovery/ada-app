@@ -6,7 +6,7 @@ import field.FieldTypeHelper
 import models.AdaException
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import runnables.core.CalcUtil._
 import services.stats.{StatsService, TSNESetting}
 import services.stats.calc.JsonFieldUtil._

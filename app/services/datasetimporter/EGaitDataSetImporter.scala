@@ -4,7 +4,7 @@ import java.util.Date
 import javax.inject.Inject
 
 import field.{FieldTypeFactory, FieldTypeHelper, FieldTypeInferrerFactory}
-import models.{EGaitDataSetImport, FieldTypeId, FieldTypeSpec}
+import models.{AdaException, EGaitDataSetImport, FieldTypeId, FieldTypeSpec}
 import models.egait.EGaitKineticData
 import play.api.Configuration
 import play.api.libs.json.{JsObject, Json}
@@ -23,8 +23,16 @@ private class EGaitDataSetImporter @Inject()(
 
   private val delimiter = ','
   private val eol = "\r\n"
-  private val username = configuration.getString("egait.api.username").get
-  private val password = configuration.getString("egait.api.password").get
+
+  private lazy val username = confValue("egait.api.username")
+  private lazy val password = confValue("egait.api.password")
+  private lazy val certificateFileName = confValue("egait.api.certificate.path")
+  private lazy val baseUrl = confValue("egait.api.rest.url")
+
+  private def confValue(key: String) = configuration.getString(key).getOrElse(
+    throw new AdaException(s"Configuration entry '$key' not specified.")
+  )
+
   private val saveBatchSize = 100
 //  private val rawSaveBatchSize = 2
 
@@ -36,8 +44,7 @@ private class EGaitDataSetImporter @Inject()(
   // Field type inferrer
   private val fti = {
     val ftf = FieldTypeHelper.fieldTypeFactory(nullAliases = Set("", "-"))
-    val ftif = FieldTypeHelper.fieldTypeInferrerFactory(ftf = ftf)
-    ftif.apply
+    FieldTypeHelper.fieldTypeInferrerFactory(ftf).apply
   }
 
   private val rawKineticDataDictionary = Seq(
@@ -63,9 +70,8 @@ private class EGaitDataSetImporter @Inject()(
     logger.info(new Date().toString)
     logger.info(s"Import of data set '${importInfo.dataSetName}' initiated.")
 
-    val eGaitService = eGaitServiceFactory(username, password)
-
     try {
+      val eGaitService = eGaitServiceFactory(username, password, baseUrl)
       for {
         dsa <- createDataSetAccessor(importInfo)
 
@@ -141,14 +147,11 @@ private class EGaitDataSetImporter @Inject()(
     eGaitService: EGaitService
   ): Future[Traversable[String]] =
     for {
-      proxySessionToken <-
-        eGaitService.getProxySessionToken
+      proxySessionToken <- eGaitService.getProxySessionToken(certificateFileName)
 
-      userSessionId <-
-        eGaitService.login(proxySessionToken)
+      userSessionId <- eGaitService.login(proxySessionToken)
 
-      searchSessionIds <-
-        eGaitService.searchSessions(proxySessionToken, userSessionId)
+      searchSessionIds <- eGaitService.searchSessions(proxySessionToken, userSessionId)
 
       csvs <- Future.sequence(
         searchSessionIds.map( searchSessionId =>
@@ -164,14 +167,11 @@ private class EGaitDataSetImporter @Inject()(
     eGaitService: EGaitService
   ): Future[Traversable[EGaitKineticData]] =
     for {
-      proxySessionToken <-
-        eGaitService.getProxySessionToken
+      proxySessionToken <- eGaitService.getProxySessionToken(certificateFileName)
 
-      userSessionId <-
-        eGaitService.login(proxySessionToken)
+      userSessionId <- eGaitService.login(proxySessionToken)
 
-      searchSessionIds <-
-        eGaitService.searchSessions(proxySessionToken, userSessionId)
+      searchSessionIds <- eGaitService.searchSessions(proxySessionToken, userSessionId)
 
       kineticDatas <- Future.sequence(
         searchSessionIds.map( searchSessionId =>

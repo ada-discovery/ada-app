@@ -12,7 +12,7 @@ import DeNoPaBaselineTranSMARTMapping.{subjectsData, clinicalData}
 import DeNoPaBaselineTranSMARTMapping.{fieldCategoryMap => baselineFieldCategoryMap}
 import DeNoPaBaselineTranSMARTMapping.{fieldLabelMap => baselineFieldLabelMap}
 import runnables.denopa.DataSetId._
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import dataaccess.CategoryRepo.saveRecursively
 import dataaccess.JsonUtil.escapeKey
@@ -167,10 +167,10 @@ class ImportDeNoPaSecondVisitCategories extends ImportDeNoPaCategories(
 )
 
 // app main launchers
-object ImportDeNoPaRawBaselineCategories extends GuiceBuilderRunnable[ImportDeNoPaRawBaselineCategories] with App { run }
-object ImportDeNoPaRawFirstVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaRawFirstVisitCategories] with App { run }
-object ImportDeNoPaRawSecondVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaRawSecondVisitCategories] with App { run }
+object ImportDeNoPaRawBaselineCategories extends GuiceRunnableApp[ImportDeNoPaRawBaselineCategories]
+object ImportDeNoPaRawFirstVisitCategories extends GuiceRunnableApp[ImportDeNoPaRawFirstVisitCategories]
+object ImportDeNoPaRawSecondVisitCategories extends GuiceRunnableApp[ImportDeNoPaRawSecondVisitCategories]
 
-object ImportDeNoPaBaselineCategories extends GuiceBuilderRunnable[ImportDeNoPaBaselineCategories] with App { run }
-object ImportDeNoPaFirstVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaFirstVisitCategories] with App { run }
-object ImportDeNoPaSecondVisitCategories extends GuiceBuilderRunnable[ImportDeNoPaSecondVisitCategories] with App { run }
+object ImportDeNoPaBaselineCategories extends GuiceRunnableApp[ImportDeNoPaBaselineCategories]
+object ImportDeNoPaFirstVisitCategories extends GuiceRunnableApp[ImportDeNoPaFirstVisitCategories]
+object ImportDeNoPaSecondVisitCategories extends GuiceRunnableApp[ImportDeNoPaSecondVisitCategories]

@@ -1,13 +1,13 @@
 package runnables
 
 import com.google.inject.Inject
-import models.{RedCapDataSetImport, CsvDataSetImport}
+import models.{CsvDataSetImport, RedCapDataSetImport}
+import org.incal.core.FutureRunnable
 import persistence.RepoTypes._
 import org.incal.core.dataaccess.Criterion.Infix
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
+import org.incal.play.GuiceRunnableApp
 
-import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class TestDataSetImportRepo @Inject() (repo: DataSetImportRepo) extends FutureRunnable {
 
@@ -42,4 +42,4 @@ class TestDataSetImportRepo @Inject() (repo: DataSetImportRepo) extends FutureRu
     }
 }
 
-object TestDataSetImportRepo extends GuiceBuilderRunnable[TestDataSetImportRepo] with App { run }
+object TestDataSetImportRepo extends GuiceRunnableApp[TestDataSetImportRepo]

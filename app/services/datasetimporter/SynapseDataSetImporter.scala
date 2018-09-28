@@ -5,18 +5,16 @@ import javax.inject.Inject
 
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
-import models.{Field, FieldTypeId, FieldTypeSpec}
+import models._
 import field.{FieldType, FieldTypeHelper}
 import models.synapse._
-import models.SynapseDataSetImport
 import play.api.Configuration
 import play.api.libs.json.{JsArray, JsObject, Json}
 import services.{SynapseService, SynapseServiceFactory}
 import dataaccess.JsonUtil
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Await._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 private class SynapseDataSetImporter @Inject() (
     synapseServiceFactory: SynapseServiceFactory,
@@ -25,8 +23,6 @@ private class SynapseDataSetImporter @Inject() (
 
   private val synapseDelimiter = ','
   private val synapseEol = "\n"
-  private val synapseUsername = configuration.getString("synapse.api.username").get
-  private val synapsePassword = configuration.getString("synapse.api.password").get
   private val synapseBulkDownloadAttemptNumber = 4
   private val synapseDefaultBulkDownloadGroupNumber = 5
   private val keyField = "ROW_ID"
@@ -41,45 +37,53 @@ private class SynapseDataSetImporter @Inject() (
     ("\"", "\"")
   )
 
+  private lazy val synapseUsername = confValue("synapse.api.username")
+  private lazy val synapsePassword = confValue("synapse.api.password")
+
+  private def confValue(key: String) = configuration.getString(key).getOrElse(
+    throw new AdaException(s"Configuration entry '$key' not specified.")
+  )
+
   override def apply(importInfo: SynapseDataSetImport): Future[Unit] = {
-    val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
+    try {
+      val synapseService = synapseServiceFactory(synapseUsername, synapsePassword)
 
-    def escapedColumnName(column: ColumnModel) =
-      JsonUtil.escapeKey(column.name.replaceAll("\"", "").trim)
+      def escapedColumnName(column: ColumnModel) =
+        JsonUtil.escapeKey(column.name.replaceAll("\"", "").trim)
 
-    val futureImport = if (importInfo.downloadColumnFiles)
-      for {
+      if (importInfo.downloadColumnFiles)
+        for {
         // get the columns of the "file" and "entity" type (max 1)
-        (entityColumnName, fileFieldNames) <- synapseService.getTableColumnModels(importInfo.tableId).map { columnModels =>
-          val fileColumns = columnModels.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(escapedColumnName)
-          val entityColumn = columnModels.results.find(_.columnType == ColumnType.ENTITYID).map(escapedColumnName)
-          (entityColumn, fileColumns)
-        }
+          (entityColumnName, fileFieldNames) <- synapseService.getTableColumnModels(importInfo.tableId).map { columnModels =>
+            val fileColumns = columnModels.results.filter(_.columnType == ColumnType.FILEHANDLEID).map(escapedColumnName)
+            val entityColumn = columnModels.results.find(_.columnType == ColumnType.ENTITYID).map(escapedColumnName)
+            (entityColumn, fileColumns)
+          }
 
-        _ <- {
-          val bulkDownloadGroupNumber = importInfo.bulkDownloadGroupNumber.getOrElse(synapseDefaultBulkDownloadGroupNumber)
+          _ <- {
+            val bulkDownloadGroupNumber = importInfo.bulkDownloadGroupNumber.getOrElse(synapseDefaultBulkDownloadGroupNumber)
 
-          val fun = updateJsonsFileFields(
-            synapseService,
-            fileFieldNames,
-            entityColumnName,
-            importInfo.tableId,
-            bulkDownloadGroupNumber,
-            Some(synapseBulkDownloadAttemptNumber)
-          )_
+            val fun = updateJsonsFileFields(
+              synapseService,
+              fileFieldNames,
+              entityColumnName,
+              importInfo.tableId,
+              bulkDownloadGroupNumber,
+              Some(synapseBulkDownloadAttemptNumber)
+            ) _
 
-          importDataSetAux(importInfo, synapseService, fileFieldNames, Some(fun), importInfo.batchSize)
-        }
-      } yield
-        ()
-    else
-      importDataSetAux(importInfo, synapseService, Nil, None, importInfo.batchSize).map(_ => ())
-
-    futureImport
-//    futureImport.map(_ => synapseService.close)
+            importDataSetAux(importInfo, synapseService, fileFieldNames, Some(fun), importInfo.batchSize)
+          }
+        } yield
+          ()
+      else
+        importDataSetAux(importInfo, synapseService, Nil, None, importInfo.batchSize).map(_ => ())
+    } catch {
+      case e: Exception => Future.failed(e)
+    }
   }
 
-  def importDataSetAux(
+  private def importDataSetAux(
     importInfo: SynapseDataSetImport,
     synapseService: SynapseService,
     fileFieldNames: Traversable[String],

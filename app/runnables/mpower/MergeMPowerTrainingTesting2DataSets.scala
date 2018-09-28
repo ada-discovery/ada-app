@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import models.StorageType
 import models.ml.ResultDataSetSpec
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.DataSetService
 
 import scala.reflect.runtime.universe.typeOf

@@ -4,7 +4,7 @@ import java.util.Date
 import javax.inject.Inject
 
 import dataaccess.FieldRepoFactory
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -51,4 +51,4 @@ class TestIgniteDictionaryFindAll @Inject() (dictionaryFieldRepoFactory: FieldRe
     }
 }
 
-object TestIgniteDictionaryFindAll extends GuiceBuilderRunnable[TestIgniteDictionaryFindAll] with App { run }
+object TestIgniteDictionaryFindAll extends GuiceRunnableApp[TestIgniteDictionaryFindAll]

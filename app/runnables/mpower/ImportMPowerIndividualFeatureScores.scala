@@ -8,7 +8,7 @@ import akka.stream.scaladsl.Sink
 import models.{Field, FieldTypeId, StorageType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.{JsNumber, Json}
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.DataSetService
 
 import scala.io.Source

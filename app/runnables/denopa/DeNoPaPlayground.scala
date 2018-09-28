@@ -10,8 +10,9 @@ import play.api.Configuration
 
 import scala.concurrent.Future
 import scala.io.Source
-import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import dataaccess.JsonUtil
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import persistence.RepoTypes.TranslationRepo
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -181,4 +182,4 @@ class DeNoPaPlayground @Inject() (
 //  }
 }
 
-object DeNoPaPlayground extends GuiceBuilderRunnable[DeNoPaPlayground] with App { run }
+object DeNoPaPlayground extends GuiceRunnableApp[DeNoPaPlayground]

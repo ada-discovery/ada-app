@@ -7,7 +7,7 @@ import com.banda.math.domain.rand.{RandomDistribution, RepeatedDistribution}
 import com.banda.network.domain.{ActivationFunctionType, ReservoirSetting}
 import models.ml.timeseries.ReservoirSpec
 import org.apache.spark.ml.linalg.Vectors
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 import services.SparkApp
 import services.ml.transformers.RCStatesWindowFactory
 
@@ -68,4 +68,4 @@ class SparkRC @Inject() (
   }
 }
 
-object SparkRC extends GuiceBuilderRunnable[SparkRC] with App { run }
+object SparkRC extends GuiceRunnableApp[SparkRC]

@@ -6,7 +6,7 @@ import javax.inject.Inject
 import models.ml.VectorTransformType
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.DataFrame
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 import services.SparkApp
 import services.ml.transformers.{VectorColumnScalerNormalizer, Normalizer, VectorNorm}
 
@@ -76,4 +76,4 @@ class TestVectorTransformer @Inject()(
   }
 }
 
-object TestVectorTransformer extends GuiceBuilderRunnable[TestVectorTransformer] with App { run }
+object TestVectorTransformer extends GuiceRunnableApp[TestVectorTransformer]

@@ -5,11 +5,11 @@ import javax.inject.Inject
 import models.{AdaException, Field, FieldTypeId, StorageType}
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.libs.json._
-import runnables.{FutureRunnable, InputFutureRunnable}
 import services.DataSetService
 import _root_.util.{GroupMapList, seqFutures}
 import controllers.mpower._
 import models.DataSetFormattersAndIds.FieldIdentity
+import org.incal.core.InputFutureRunnable
 import org.incal.core.dataaccess.Criterion._
 import play.api.Logger
 

@@ -5,7 +5,7 @@ import javax.inject.Inject
 import models.ml.TreeCore
 import models.ml.classification._
 import persistence.dataset.DataSetAccessorFactory
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 import services.DataSetService
 import services.ml.MachineLearningService
 import services.stats.StatsService
@@ -109,4 +109,4 @@ class MachineLearningClassificationTest @Inject()(
   }
 }
 
-object MachineLearningClassificationTest extends GuiceBuilderRunnable[MachineLearningClassificationTest] with App { run }
+object MachineLearningClassificationTest extends GuiceRunnableApp[MachineLearningClassificationTest]

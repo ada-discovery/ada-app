@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
 import persistence.dataset.DataSetAccessorFactory
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.DataSetService
 
 import scala.concurrent.ExecutionContext.Implicits.global

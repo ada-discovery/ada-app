@@ -7,7 +7,6 @@ import persistence.RepoTypes.MessageRepo
 import play.api.{Configuration, Logger}
 import play.api.Play.current
 import play.api.data.Form
-import runnables.InputRunnable
 import util.MessageLogger
 import util.ClassFinderUtil.findClasses
 import org.incal.play.security.SecurityUtil.restrictAdminAnyNoCaching
@@ -16,6 +15,7 @@ import views.html.{admin => adminviews}
 import java.{util => ju}
 
 import models.security.UserManager
+import org.incal.core.InputRunnable
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

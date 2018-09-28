@@ -8,7 +8,7 @@ import org.apache.ignite.Ignite
 class ServiceModule extends ScalaModule {
 
   override def configure = {
-    bind[Ignite].toInstance(IgniteFactory.apply)
+    bind[Ignite].toProvider(classOf[IgniteFactory]).asEagerSingleton
 
     install(new FactoryModuleBuilder()
       .implement(classOf[SynapseService], classOf[SynapseServiceWSImpl])

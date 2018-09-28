@@ -4,8 +4,9 @@ import javax.inject.Inject
 
 import models.StorageType
 import models.ml.{DataSetLinkSpec, ResultDataSetSpec}
-import runnables.{FutureRunnable, InputFutureRunnable}
+import org.incal.core.InputFutureRunnable
 import services.DataSetService
+
 import scala.reflect.runtime.universe.typeOf
 
 class LinkMPowerMergedAndDemographicsDataSets @Inject()(dataSetService: DataSetService) extends InputFutureRunnable[LinkMPowerMergedAndDemographicsDataSetsSpec] {

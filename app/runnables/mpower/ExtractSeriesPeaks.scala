@@ -6,9 +6,9 @@ import com.banda.core.plotter.{Plotter, SeriesPlotSetting}
 import org.incal.core.dataaccess.Criterion.Infix
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
-import runnables.{FutureRunnable, InputFutureRunnable}
 import services.DataSetService
 import dataaccess.JsonUtil
+import org.incal.core.InputFutureRunnable
 import util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf

@@ -9,7 +9,7 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.apache.hadoop.fs._
 import play.api.Logger
-import runnables.InputRunnable
+import org.incal.core.InputRunnable
 import services.SparkApp
 import services.ml.MachineLearningService
 

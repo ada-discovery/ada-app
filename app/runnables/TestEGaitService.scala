@@ -2,12 +2,11 @@ package runnables
 
 import javax.inject.Inject
 
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import services.EGaitServiceFactory
-
-import scala.concurrent.Await.result
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.{Configuration, Play}
-import org.incal.core.util.ZipFileIterator
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -15,25 +14,24 @@ import scala.concurrent.duration._
 class TestEGaitService @Inject() (
     configuration: Configuration,
     eGaitServiceFactory: EGaitServiceFactory
-  ) extends Runnable {
+  ) extends FutureRunnable {
 
   private val username = configuration.getString("egait.api.username").get
   private val password = configuration.getString("egait.api.password").get
-  private val timeout = 10 minutes
+  private val certificateFileName = configuration.getString("egait.api.certificate.path").get
+  private val baseUrl = configuration.getString("egait.api.rest.url").get
+
   private val adviser = "CHe" // "kf"
 
-  override def run = {
-    val eGaitService = eGaitServiceFactory(username, password)
+  override def runAsFuture = {
+    val eGaitService = eGaitServiceFactory(username, password, baseUrl)
 
-    val future = for {
-      proxySessionToken <-
-        eGaitService.getProxySessionToken
+    for {
+      proxySessionToken <- eGaitService.getProxySessionToken(certificateFileName)
 
-      userSessionId <-
-        eGaitService.login(proxySessionToken)
+      userSessionId <- eGaitService.login(proxySessionToken)
 
-      searchSessionIds <-
-        eGaitService.searchSessions(proxySessionToken, userSessionId)
+      searchSessionIds <- eGaitService.searchSessions(proxySessionToken, userSessionId)
 
       csvs <- Future.sequence(
         searchSessionIds.map( searchSessionId =>
@@ -91,9 +89,7 @@ class TestEGaitService @Inject() (
 
       println(kineticDataStrings.mkString("\n"))
     }
-
-    result(future, timeout)
   }
 }
 
-object TestEGaitService extends GuiceBuilderRunnable[TestEGaitService] with App { run }
+object TestEGaitService extends GuiceRunnableApp[TestEGaitService]

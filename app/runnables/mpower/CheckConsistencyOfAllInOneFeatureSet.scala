@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json._
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import services.DataSetService
 import dataaccess.RepoTypes.JsonCrudRepo
 import dataaccess.JsonRepoExtra._

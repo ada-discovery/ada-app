@@ -5,7 +5,7 @@ import javax.inject.Inject
 import models.ml.TreeCore
 import models.ml.regression._
 import persistence.dataset.DataSetAccessorFactory
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 import services.DataSetService
 import services.ml.MachineLearningService
 
@@ -78,4 +78,4 @@ class MachineLearningRegressionTest @Inject()(
   }
 }
 
-object MachineLearningRegressionTest extends GuiceBuilderRunnable[MachineLearningRegressionTest] with App { run }
+object MachineLearningRegressionTest extends GuiceRunnableApp[MachineLearningRegressionTest]

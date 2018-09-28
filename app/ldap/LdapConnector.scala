@@ -2,13 +2,12 @@ package ldap
 
 import javax.net.ssl.{SSLContext, SSLSocketFactory}
 
-import com.google.inject.{ImplementedBy, Singleton, Inject}
-
-import com.unboundid.ldap.listener.{InMemoryListenerConfig, InMemoryDirectoryServer, InMemoryDirectoryServerConfig}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
+import com.unboundid.ldap.listener.{InMemoryDirectoryServer, InMemoryDirectoryServerConfig, InMemoryListenerConfig}
 import com.unboundid.ldap.sdk._
 import com.unboundid.ldap.sdk.extensions.StartTLSExtendedRequest
-import com.unboundid.util.ssl.{TrustStoreTrustManager, TrustAllTrustManager, SSLUtil}
-
+import com.unboundid.util.ssl.{SSLUtil, TrustAllTrustManager, TrustStoreTrustManager}
+import models.AdaException
 import play.api.Logger
 import play.api.inject.ApplicationLifecycle
 
@@ -42,7 +41,10 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
   private def setupInterface(): Option[LDAPInterface] = {
     val interface = settings.mode match{
       case "local" => Some(createServer)
-      case "remote" => createConnectionPool()
+      case "remote" => createConnectionPool(
+        settings.bindDN,
+        settings.bindPassword.getOrElse(throw new AdaException("Environmental variable 'ADA_LDAP_BIND_PASSWORD' or a conf entry 'ldap.bindPassword' not set but expected."))
+      )
       case _ => None
     }
     // hook interface in lifecycle for proper cleanup
@@ -82,16 +84,16 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     */
   private def createServer(): InMemoryDirectoryServer = {
     // setup configuration
-    val config = new InMemoryDirectoryServerConfig(settings.dit);
+    val config = new InMemoryDirectoryServerConfig(settings.dit)
     config.setSchema(null); // do not check (attribute) schema
     config.setAuthenticationRequiredOperationTypes(OperationType.DELETE, OperationType.ADD, OperationType.MODIFY, OperationType.MODIFY_DN)
 
     // required for interaction; commented out for debugging reasons
     val listenerConfig = new InMemoryListenerConfig("defaultListener", null, settings.port, null, null, null);
-    config.setListenerConfigs(listenerConfig);
+    config.setListenerConfigs(listenerConfig)
 
-    val server = new InMemoryDirectoryServer(config);
-    server.startListening();
+    val server = new InMemoryDirectoryServer(config)
+    server.startListening()
 
     // initialize ldap structures
     createTree(server)
@@ -117,8 +119,8 @@ class LdapConnectorImpl @Inject()(applicationLifecycle: ApplicationLifecycle, se
     * @return LDAPConnection object  with specified credentials. None, if no connection could be established.
     */
   protected def createConnectionPool(
-    bind: String = settings.bindDN,
-    pw: String = settings.bindPassword
+    bind: String,
+    pw: String
   ): Option[LDAPConnectionPool] = {
     val (connection, processor) = createConnection
 

@@ -6,7 +6,7 @@ import org.incal.core.dataaccess.Criterion
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Configuration
 import DataSetId._
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 import Criterion.Infix
 import scala.concurrent.duration._
 import scala.concurrent.Await._
@@ -84,5 +84,5 @@ class AnalyzeLuxParkMPowerTappingData @Inject()(
   }
 }
 
-object AnalyzeLuxParkMPowerTappingData extends GuiceBuilderRunnable[AnalyzeLuxParkMPowerTappingData] with App { run }
+object AnalyzeLuxParkMPowerTappingData extends GuiceRunnableApp[AnalyzeLuxParkMPowerTappingData]
 

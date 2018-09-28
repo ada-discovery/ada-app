@@ -2,7 +2,7 @@ package runnables.mpower
 
 import javax.inject.Inject
 
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global

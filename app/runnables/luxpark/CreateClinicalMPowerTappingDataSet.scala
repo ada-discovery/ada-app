@@ -6,13 +6,11 @@ import javax.inject.Inject
 import org.incal.core.dataaccess.Criterion
 import field.FieldTypeHelper
 import persistence.dataset.DataSetAccessorFactory
-import play.api.Configuration
 import DataSetId._
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 import Criterion.Infix
 import dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo}
 import models._
-import models.FieldTypeId.Value
 
 import scala.concurrent.duration._
 import scala.concurrent.Await._
@@ -22,9 +20,7 @@ import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 
-class CreateClinicalMPowerTappingDataSet @Inject()(
-    dsaf: DataSetAccessorFactory
-  ) extends Runnable {
+class CreateClinicalMPowerTappingDataSet @Inject()(dsaf: DataSetAccessorFactory) extends Runnable {
 
   object MPowerTappingField extends Enumeration {
     val ExternalId = Value("externalId")
@@ -271,4 +267,4 @@ class CreateClinicalMPowerTappingDataSet @Inject()(
     }
 }
 
-object CreateClinicalMPowerTappingDataSet extends GuiceBuilderRunnable[CreateClinicalMPowerTappingDataSet] with App { run }
+object CreateClinicalMPowerTappingDataSet extends GuiceRunnableApp[CreateClinicalMPowerTappingDataSet]

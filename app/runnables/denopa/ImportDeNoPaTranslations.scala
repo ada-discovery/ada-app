@@ -3,12 +3,11 @@ package runnables.denopa
 import javax.inject.{Inject, Named}
 
 import models.Translation
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import persistence.RepoTypes._
 import play.api.Configuration
-import runnables.{FutureRunnable, GuiceBuilderRunnable}
 
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
 import scala.io.Source
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -53,4 +52,4 @@ class ImportDeNoPaTranslations @Inject()(
   }
 }
 
-object ImportDeNoPaTranslations extends GuiceBuilderRunnable[ImportDeNoPaTranslations] with App { run }
+object ImportDeNoPaTranslations extends GuiceRunnableApp[ImportDeNoPaTranslations]

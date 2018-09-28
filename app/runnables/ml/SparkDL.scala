@@ -3,7 +3,7 @@ package runnables.ml
 import javax.inject.Inject
 
 import org.apache.spark.ml.linalg.Vectors
-import runnables.GuiceBuilderRunnable
+import org.incal.play.GuiceRunnableApp
 import services.SparkApp
 import services.ml.transformers.{SeqShift, SeqShiftWithConsecutiveOrder, SlidingWindow, SlidingWindowWithConsecutiveOrder}
 
@@ -56,4 +56,4 @@ class SparkDL @Inject() (sparkApp: SparkApp) extends Runnable {
   }
 }
 
-object SparkDL extends GuiceBuilderRunnable[SparkDL] with App { run }
+object SparkDL extends GuiceRunnableApp[SparkDL]

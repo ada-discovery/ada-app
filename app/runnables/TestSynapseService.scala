@@ -1,18 +1,21 @@
 package runnables
 
-import java.io.{ByteArrayOutputStream, BufferedReader, InputStreamReader}
+import java.io.{BufferedReader, ByteArrayOutputStream, InputStreamReader}
 import java.util.zip.ZipEntry
 import javax.inject.Inject
 
 import models.synapse._
 import org.apache.commons.io.IOUtils
 import services.SynapseServiceFactory
+
 import scala.concurrent.Await.result
 import scala.concurrent.Future
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.Configuration
 import play.api.libs.json.Json
 import models.synapse.JsonFormat._
+import org.incal.play.GuiceRunnableApp
+
 import scala.concurrent.duration._
 
 class TestSynapseService @Inject() (
@@ -88,4 +91,4 @@ class TestSynapseService @Inject() (
   }
 }
 
-object TestSynapseService extends GuiceBuilderRunnable[TestSynapseService] with App { run }
+object TestSynapseService extends GuiceRunnableApp[TestSynapseService]

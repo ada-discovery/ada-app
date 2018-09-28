@@ -2,10 +2,10 @@ package runnables.mpower
 
 import javax.inject.Inject
 
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.Json
-import reactivemongo.bson.BSONObjectID
-import runnables.{FutureRunnable, GuiceBuilderRunnable}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -51,4 +51,4 @@ class UpdateMPowerPredictionResults @Inject() (dsaf: DataSetAccessorFactory) ext
       ()
 }
 
-object UpdateMPowerPredictionResults extends GuiceBuilderRunnable[UpdateMPowerPredictionResults] with App { run }
+object UpdateMPowerPredictionResults extends GuiceRunnableApp[UpdateMPowerPredictionResults]

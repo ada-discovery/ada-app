@@ -2,7 +2,7 @@ package runnables.denopa
 
 import java.io.{File, PrintWriter}
 import scala.reflect.runtime.universe.typeOf
-import runnables.InputRunnable
+import org.incal.core.InputRunnable
 
 import scala.io.Source
 

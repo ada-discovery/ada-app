@@ -12,14 +12,6 @@ import org.apache.spark.sql.types.StructType
 import play.api.Configuration
 import play.api.libs.json._
 
-import scala.reflect.ClassTag
-import org.apache.spark.sql.Encoders
-import services.ml.ParamGrid
-import services.ml.transformers.SchemaUnchangedTransformer
-
-import scala.collection.mutable.ArrayBuilder
-import scala.util.Random
-
 @Singleton
 class SparkApp @Inject() (configuration: Configuration) {
 

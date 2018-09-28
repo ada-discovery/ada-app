@@ -6,7 +6,7 @@ import org.incal.core.dataaccess.Criterion._
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
-import runnables.FutureRunnable
+import org.incal.core.FutureRunnable
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

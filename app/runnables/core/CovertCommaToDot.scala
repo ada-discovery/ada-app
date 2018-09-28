@@ -2,7 +2,7 @@ package runnables.core
 
 import javax.inject.Inject
 
-import runnables.InputFutureRunnable
+import org.incal.core.InputFutureRunnable
 import scala.reflect.runtime.universe.typeOf
 
 class ConvertCommaToDot @Inject()(replaceString: ReplaceString) extends InputFutureRunnable[ConvertCommaToDotSpec] {

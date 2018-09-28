@@ -2,7 +2,7 @@ package runnables.luxpark
 
 import javax.inject.Inject
 
-import runnables.FutureRunnable
+import org.incal.core.FutureRunnable
 import runnables.core.{RemoveDuplicates, RemoveDuplicatesSpec}
 
 class RemoveDuplicateIBBLSamples @Inject()(removeDuplicates: RemoveDuplicates) extends FutureRunnable {

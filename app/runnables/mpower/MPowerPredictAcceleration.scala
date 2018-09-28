@@ -11,9 +11,10 @@ import com.banda.network.business.learning.ReservoirTrainerFactory
 import com.banda.network.domain.ActivationFunctionType
 import org.incal.core.dataaccess.Criterion.Infix
 import models.ml.{ExtendedReservoirLearningSetting, RCPredictionInputOutputSpec}
+import org.incal.core.FutureRunnable
+import org.incal.play.GuiceRunnableApp
 import persistence.dataset.DataSetAccessorFactory
 import play.api.libs.json.JsObject
-import runnables.{FutureRunnable, GuiceBuilderRunnable}
 import services.ml.{RCPredictionResults, RCPredictionService}
 import util.writeStringAsStream
 
@@ -162,4 +163,4 @@ class MPowerPredictAcceleration @Inject() (
   }
 }
 
-object MPowerPredictAcceleration extends GuiceBuilderRunnable[MPowerPredictAcceleration] with App { run }
+object MPowerPredictAcceleration extends GuiceRunnableApp[MPowerPredictAcceleration]
