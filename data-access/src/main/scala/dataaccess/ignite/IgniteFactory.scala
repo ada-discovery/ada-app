@@ -1,23 +1,25 @@
 package dataaccess.ignite
 
-import org.apache.ignite.configuration.IgniteConfiguration
+import javax.inject.{Inject, Provider, Singleton}
+
 import org.apache.ignite.internal.IgnitionEx
 import org.apache.ignite.{Ignite, Ignition}
+import play.api.Configuration
 
-object IgniteFactory {
+@Singleton
+class IgniteFactory @Inject() (configuration: Configuration) extends Provider[Ignite] {
 
-  private val configurationFilePath = "conf/ignite-cache.xml"
+  private val configurationFilePath = configuration.getString("ignite.conf.path").get
 
-  def apply: Ignite = {
-    // Create new configuration.
-    val cfg = new IgniteConfiguration();
+  override def get(): Ignite = {
+//    // Create new configuration.
+//    val cfg = new IgniteConfiguration()
 
     // Provide lifecycle bean to configuration.
-    //  cfg.setLifecycleBeans(new MyLifecycleBean());
+//  cfg.setLifecycleBeans(new MyLifecycleBean());
 
     // Start Ignite node with given configuration.
     val configuration = IgnitionEx.loadConfiguration(configurationFilePath).getKey
-    val ignite = Ignition.getOrStart(configuration)
-    ignite
+    Ignition.getOrStart(configuration)
   }
 }
