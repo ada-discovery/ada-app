@@ -1,13 +1,12 @@
 import com.github.play2war.plugin._
 import PlayKeys._
-
-// val conf = play.api.Configuration.load(new File("."))
-
-organization := "org.ada"
+import com.typesafe.config._
 
 name := "ada-web"
 
-version := "0.7.0"
+// load version from the app config
+val conf = ConfigFactory.parseFile(new java.io.File("conf/application.conf")).resolve()
+version := conf.getString("app.version")
 
 scalaVersion := "2.11.12"
 
