@@ -741,21 +741,56 @@ function addSpinner(element, style) {
 function updateFilterValueElement(filterElement, data) {
     var fieldType = (data.isArray) ? data.fieldType + " Array" : data.fieldType
     filterElement.find("#fieldInfo").html("Field type: " + fieldType)
+    var conditionTypeElement = filterElement.find("#conditionType")
 
-    var newValueElement = null
+    var conditionType = conditionTypeElement.val();
+    var isInNinType = (conditionType == "in" || conditionType == "nin") ? "multiple" : ""
+
+    var newValueElement = null;
     if (data.allowedValues.length > 0) {
-        newValueElement = $("<select id='value' class='float-left conditionValue'>")
-        newValueElement.append("<option value=''></option>")
+        conditionTypeElement.change(function() {
+            var valueElement = $(this).parent().find("#value")
+
+            if (this.value == "in" || this.value == "nin") {
+                valueElement.prop('multiple', 'multiple');
+                var emptyOption = valueElement.find('option[value=""]');
+                emptyOption.remove()
+            } else {
+                valueElement.removeProp('multiple');
+                if (valueElement.find('option[value=""]').length == 0) {
+                    var firstOption = valueElement.find('option').first();
+                    firstOption.before('<option value="">[undefined]</option>');
+                }
+            }
+
+            valueElement.selectpicker('destroy');
+            valueElement.selectpicker();
+        })
+
+        var multiple = (isInNinType) ? "multiple" : ""
+        newValueElement = $("<select id='value' " + multiple + " class='selectpicker float-left show-menu-arrow form-control conditionValue'>")
+        if (!isInNinType)
+            newValueElement.append("<option value=''>[undefined]</option>")
         $.each(data.allowedValues, function (index, keyValue) {
             newValueElement.append("<option value='" + keyValue[0] + "'>" + keyValue[1] + "</option>")
         });
     } else {
-        newValueElement = "<input id='value' class='float-left conditionValue' placeholder='Condition'/>"
+        newValueElement = $("<input id='value' class='float-left conditionValue' placeholder='Condition'/>")
     }
-    var valueElement = filterElement.find("#addEditConditionModal #value")
-    var oldValue = valueElement.val()
-    valueElement.replaceWith(newValueElement)
-    filterElement.find("#addEditConditionModal #value").val(oldValue)
+    var oldValueElement = filterElement.find("#addEditConditionModal .conditionValue")
+    var oldValue = oldValueElement.val()
+    oldValueElement.selectpicker('destroy');
+    oldValueElement.replaceWith(newValueElement);
+
+    if (data.allowedValues.length > 0) {
+        if (isInNinType) {
+            oldValue = oldValue.split(",");
+        }
+        newValueElement.val(oldValue);
+        newValueElement.selectpicker();
+    } else {
+        newValueElement.val(oldValue);
+    }
 }
 
 function updatePlusMinusIcon(element) {

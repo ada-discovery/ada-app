@@ -113,7 +113,7 @@ $.widget( "custom.multiFilter", {
 
             // set the value element to a text field (by default)
             var newValueElement = "<input id='value' class='float-left conditionValue' placeholder='Condition'/>"
-            var valueElement = that.addEditConditionModalElement.find("#value")
+            var valueElement = that.addEditConditionModalElement.find(".conditionValue")
             valueElement.replaceWith(newValueElement)
 
             var condition = that.jsonConditions[index]
@@ -237,7 +237,13 @@ $.widget( "custom.multiFilter", {
     },
 
     _defaultCreateSubmissionJson: function (conditions, filterId) {
-        var filterOrId = (filterId) ? {'$oid': filterId} : conditions;
+        var adjustedConditions = conditions.map(function(condition, index) {
+            if (Array.isArray(condition.value))
+                condition["value"] = condition.value.join(",")
+            return condition;
+        })
+
+        var filterOrId = (filterId) ? {'$oid': filterId} : adjustedConditions;
 
         var filterIdOrConditions = {};
         filterIdOrConditions[this.options.filterSubmitParamName] = JSON.stringify(filterOrId);

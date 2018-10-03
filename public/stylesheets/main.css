@@ -445,3 +445,31 @@ tr.vertical-divider > td:last-child {
     display: flex;
     align-items: center;
 }
+
+.fixed-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.fixed-table>tbody>tr>td {
+    border-left: 6px solid #F2F7F9;
+    border-right: 6px solid #F2F7F9;
+}
+
+.fixed-table>tbody>tr>td:first-child {
+    border-left: none;
+}
+
+.fixed-table>tbody>tr>td:last-child {
+    border-right: none;
+}
+
+.bootstrap-select .btn {
+    background-color: white;
+    color: #626262;
+}
+
+.bootstrap-select .dropdown-toggle.btn-default {
+    background-color: white;
+    color: #626262;
+}

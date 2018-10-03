@@ -8,10 +8,8 @@ import dataaccess.ignite.FilterCacheCrudRepoFactory
 import scala.concurrent.Future
 import models.Filter
 import org.incal.core.dataaccess.Criterion.Infix
-import models.DataSetFormattersAndIds.JsObjectIdentity
 import models.Filter.FilterOrId
-import play.api.libs.json.JsObject
-import reactivemongo.bson.BSONObjectID
+import org.incal.core.ConditionType
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -63,8 +61,12 @@ object FilterRepoExtra {
         // optimize the conditions (if redundant take the last)
         val optimizedConditions = filter.conditions.zipWithIndex
           .groupBy { case (condition, index) => (condition.fieldName, condition.conditionType) }
-          .map { case (_, conditions) => conditions.last }.toSeq
-          .sortBy(_._2).map(_._1)
+          .flatMap { case ((_, conditionType), conditions) =>
+            conditionType match {
+              case ConditionType.NotEquals | ConditionType.In | ConditionType.NotIn => conditions
+              case _ => Seq(conditions.last)
+            }
+          }.toSeq.sortBy(_._2).map(_._1)
 
         filter.copy(conditions = optimizedConditions)
       }
