@@ -7,13 +7,13 @@ import util.ClassFinderUtil.findClasses
 
 import scala.reflect.runtime.universe._
 
-object JsonInputConverterFactory {
+class JsonInputConverterFactory(libPath: Option[String]) {
 
   // we scan only the jars starting with this prefix to speed up the class search
   private val libPrefix = "org.ada"
 
   // find the converter classes in a package services and create instances
-  private val converterClasses = findClasses[JsonInputConverter[_]](libPrefix, Some("services."), None)
+  private val converterClasses = findClasses[JsonInputConverter[_]](libPrefix, Some("services."), None, libPath)
 
   private val converters = converterClasses.map { clazz =>
     construct2[JsonInputConverter[_]](clazz, Nil)
@@ -27,7 +27,7 @@ object JsonInputConverterFactory {
   private val specificUseClassConvertersMap: Map[Class[_], Traversable[JsonInputConverter[_]]] =
     converters.filter(_.specificUseClass.isDefined).map { converter =>
       (converter.specificUseClass.get, converter)
-    }.toTraversable.groupBy(_._1).map(x => (x._1, x._2.map(_._2))).toMap
+    }.groupBy(_._1).map(x => (x._1, x._2.map(_._2))).toMap
 
   def apply[IN: TypeTag]: JsonInputConverter[IN] =
     applyOption[IN].getOrElse(throwNotFound[IN])
@@ -87,7 +87,7 @@ object JsonInputConverterFactory {
 }
 
 object TestFind extends App {
-  val factory = JsonInputConverterFactory
+  val factory = new JsonInputConverterFactory(None)
 
   println("----------------------------")
 

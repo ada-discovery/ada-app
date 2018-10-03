@@ -6,8 +6,9 @@ import util.ClassFinderUtil.findClasses
 import util.toHumanReadableCamel
 import play.api.inject.Injector
 import javax.inject.{Inject, Singleton}
+
 import collection.mutable.{Map => MMap}
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 
 import scala.reflect.ClassTag
@@ -21,13 +22,15 @@ trait DataSetControllerFactory {
 protected class DataSetControllerFactoryImpl @Inject()(
     dsaf: DataSetAccessorFactory,
     genericFactory: GenericDataSetControllerFactory,
-    injector : Injector
+    injector : Injector,
+    configuration: Configuration
   ) extends DataSetControllerFactory {
 
   private val logger = Logger  // (this.getClass())
   protected val cache = MMap[String, DataSetController]()
 
-  private val libPrefix = "ncer-pd"
+  private val libPrefix = "org.ada"
+  private val libPath = configuration.getString("lib.path")
 
   // TODO: locking and concurrency
   override def apply(dataSetId: String): Option[DataSetController] = {
@@ -56,7 +59,7 @@ protected class DataSetControllerFactoryImpl @Inject()(
 
   private def findControllerClass[T : ClassTag](dataSetId: String): Option[Class[T]] = {
     val className = controllerClassName(dataSetId)
-    val classes = findClasses[T](libPrefix, Some("controllers."), Some(className))
+    val classes = findClasses[T](libPrefix, Some("controllers."), Some(className), libPath)
     if (classes.nonEmpty)
       Some(classes.head)
     else

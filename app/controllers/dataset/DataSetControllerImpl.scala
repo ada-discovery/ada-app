@@ -47,9 +47,10 @@ import field.{FieldType, FieldTypeHelper}
 import controllers.FilterConditionExtraFormats.coreFilterConditionFormat
 import controllers.core.AdaReadonlyControllerImpl
 import controllers.core.{AdaExceptionHandler, ExportableAction}
-import org.incal.core.FilterCondition
+import org.incal.core.{ConditionType, FilterCondition}
 import org.incal.core.ConditionType._
-import org.incal.core.dataaccess.{Criterion, DescSort, NotEqualsNullCriterion, Sort}
+import org.incal.core.FilterCondition.toCriterion
+import org.incal.core.dataaccess._
 import org.incal.core.dataaccess.Criterion.Infix
 import org.incal.play.{Page, PageOrder}
 import org.incal.play.controllers._
@@ -596,6 +597,84 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     {
       for {
         // data set name
+        dataSetName <- dataSetNameFuture
+
+        // load the view
+        dataView <- dataViewFuture
+
+        // resolved filter
+        resolvedFilter <- resolvedFilterFuture
+
+        // criteria
+        criteria <- toCriteria(resolvedFilter.conditions)
+
+        (tableColumnNames, widgetSpecs) = dataView.map(view => (view.tableColumnNames, view.widgetSpecs)).getOrElse((Nil, Nil))
+
+        // create a name -> field map of all the referenced fields for a quick lookup
+        nameFieldMap <- createNameFieldMap(Seq(resolvedFilter.conditions), widgetSpecs, tableColumnNames)
+
+        // get the init response data
+        viewResponse <- getInitViewResponse(tablePage, tableOrder, resolvedFilter, criteria, nameFieldMap, tableColumnNames)
+      } yield {
+        Logger.info(s"Data loading of a widget panel and a table for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
+
+        // create a widgets-future calculation and register with a callback id
+        val method = dataView.map(_.generationMethod).getOrElse(WidgetGenerationMethod.Auto)
+        val jsonWidgetsFuture = getViewWidgetsWithFields(widgetSpecs, criteria, nameFieldMap.values, method).map { widgetsWithFields =>
+          val widgets = widgetsWithFields.flatMap(_.map(_._1))
+          val fieldNames = widgetsWithFields.flatMap(_.map(_._2))
+          val jsons = widgetsToJsons(widgets.toSeq, fieldNames.toSeq, nameFieldMap)
+          Seq(jsons)
+        }
+        val widgetsCallbackId = UUID.randomUUID.toString
+        jsonWidgetResponseCache.put(widgetsCallbackId, jsonWidgetsFuture)
+
+        render {
+          case Accepts.Html() => {
+            val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder)
+
+            val pageHeader = messagesApi.apply("list.count.title", oldCountDiff.getOrElse(0) + viewResponse.count, dataSetName + " Item")
+
+            val table = dataset.viewTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, router, true)
+            val conditionPanel = views.html.filter.conditionPanel(Some(viewResponse.filter))
+            val filterModel = Json.toJson(viewResponse.filter.conditions)
+
+            Ok(Json.obj(
+              "table" -> table.toString(),
+              "conditionPanel" -> conditionPanel.toString(),
+              "filterModel" -> filterModel,
+              "count" -> viewResponse.count,
+              "pageHeader" -> pageHeader,
+              "widgetsCallbackId" -> widgetsCallbackId
+            ))
+          }
+          case Accepts.Json() => Ok(Json.toJson(viewResponse.tableItems))
+        }
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the getWidgetPanelAndTable process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+  // TODO
+  def getNewViewElementsAndWidgetCallback(
+    dataViewId: BSONObjectID,
+    tableOrder: String,
+    filterOrId: FilterOrId,
+    oldCountDiff: Option[Int]
+  ) = Action.async { implicit request =>
+    val start = new ju.Date()
+    val tablePage = 0
+
+    val dataSetNameFuture = dsa.dataSetName
+    val dataViewFuture = dataViewRepo.get(dataViewId)
+    val resolvedFilterFuture = filterRepo.resolve(filterOrId)
+
+    {
+      for {
+      // data set name
         dataSetName <- dataSetNameFuture
 
         // load the view

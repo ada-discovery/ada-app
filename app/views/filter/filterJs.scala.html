@@ -11,9 +11,9 @@
     filterJsRouter: Option[FilterJsRouter],
     listFiltersCall: Option[Call],
     filterSubmitParamName: String,
-    filterElementName: String,
+    filterElementId: String,
     createSubmissionJson: Option[Html],
-    categoryTreeElementName: Option[String],
+    categoryTreeElementId: Option[String],
     refreshAjaxFun: Option[Html] = None
 )(
     implicit request: Request[_], webJarAssets: WebJarAssets
@@ -51,127 +51,50 @@
 @typeaheadJsImport()
 
 <script src="@routes.WebJarAssets.at(webJarAssets.locate("jquery-ui.min.js"))"></script>
-<script type="text/javascript" src="@routes.Assets.versioned("javascripts/multiFilter.min.js")"></script>
+<script type="text/javascript" src="@routes.Assets.versioned("javascripts/multiFilterX.min.js")"></script>
+<script type="text/javascript" src="@routes.Assets.versioned("javascripts/multiCategoryFilter.min.js")"></script>
 
 <script type="text/javascript">
     $(function () {
         var jsConditions = JSON.parse('@{toJsonHtml(filter.map(_.conditions).getOrElse(Nil))}');
 
-        var filterId =
-            @if(filter.isDefined && filter.get._id.isDefined) {
-                '@filter.get._id.get.stringify'
-            } else {
-                null
-            }
+        var filterId = @if(filter.isDefined && filter.get._id.isDefined) { '@filter.get._id.get.stringify' } else { null }
 
-        var fieldNameAndLabels =
-            @if(fieldsOrCall.isLeft) {
-                JSON.parse('@fieldNameLabelsAsString')
-            } else {
-                null
-            }
+        var fieldNameAndLabels = @if(fieldsOrCall.isLeft) { JSON.parse('@fieldNameLabelsAsString') } else { null }
 
-        var getFieldsUrl =
-            @if(fieldsOrCall.isRight) {
-                '@fieldsUrl'
-            } else {
-                null
-            }
+        var getFieldsUrl = @if(fieldsOrCall.isRight) {'@fieldsUrl'} else { null }
 
-        var listFiltersUrl =
-            @if(listFiltersCall.isDefined) {
-                '@listFiltersCall.get.url'
-            } else {
-                null
-            }
+        var listFiltersUrl = @if(listFiltersCall.isDefined) {'@listFiltersCall.get.url'} else { null }
 
-        var refreshAjaxFun = @if(refreshAjaxFun.isDefined) {@refreshAjaxFun.get} else { null }
+        var refreshAjaxFun = @if(refreshAjaxFun.isDefined) { @{refreshAjaxFun.get} } else { null }
 
-        var createSubmissionJson = @if(createSubmissionJson.isDefined) {@createSubmissionJson} else {null}
+        var createSubmissionJson = @if(createSubmissionJson.isDefined) { @createSubmissionJson } else {null}
 
-        var fieldDisplayChoiceCallback = null;
-        var initFilterIfNeededTreeCallback = null;
-
-        @if(categoryTreeElementName.isDefined) {
-            var categoryTreeFieldNodeDatas = [];
-
-            function initCategoryTreeFieldNodeDatas() {
-                categoryTreeFieldNodeDatas = Object.values($("#@categoryTreeElementName.get").jstree(true)._model.data).filter(
-                    function(node) {
-                        return node.type.startsWith("field-");
-                    }
-                ).map(function (field, index) { return {id: field.id, label: field.data.label, nonNullCount: field.data.nonNullCount}; });
-            }
-
-            $("#@categoryTreeElementName.get").on('open_node.jstree', function (event, data) {
-                data.instance.set_type(data.node,'category-open');
-            });
-
-            $("#@categoryTreeElementName.get").on('close_node.jstree', function (event, data) {
-                data.instance.set_type(data.node,'category');
-            });
-
-            fieldDisplayChoiceCallback = function(choiceVal) {
-                if (categoryTreeFieldNodeDatas.length == 0) {
-                    initCategoryTreeFieldNodeDatas()
-                }
-                $.each(categoryTreeFieldNodeDatas, function( index, field ) {
-                    var text;
-                    var nonNullCount = field.nonNullCount
-                    switch (choiceVal) {
-                        case 0: text = field.id; break;
-                        case 1: text = field.label; break;
-                        case 2: text = (field.label) ? field.label : field.id; break;
-                        case 3: text = (field.label) ? field.label : field.id; break;
-                    }
-                    if (text) {
-                        if (nonNullCount) {
-                            text = text + " (" + nonNullCount + ")"
-                        }
-                        $("#@categoryTreeElementName.get").jstree('set_text', field.id, text);
-                        $("#@categoryTreeElementName.get").jstree(true).show_node(field.id);
-                    } else {
-                        $("#@categoryTreeElementName.get").jstree(true).hide_node(field.id);
-                    }
-                });
-                $('#@categoryTreeElementName.get').jstree("deselect_all");
-            }
-
-            if (fieldNameAndLabels) {
-                $("#@categoryTreeElementName.get").jsTreeWidget('init');
-                $('#@categoryTreeElementName.get').jstree("deselect_all");
-                $("#@categoryTreeElementName.get").bind('ready.jstree', function(e, data) {
-                    var rootNode = $('#@categoryTreeElementName.get').jstree(true).get_node("#")
-                        if(rootNode.children.length == 0) {
-                            $("#showCategoryTreeButton").hide();
-                        }
-                    })
-            } else {
-                initFilterIfNeededTreeCallback = function() {
-                    $("#@categoryTreeElementName.get").jsTreeWidget('init');
-                    $('#@categoryTreeElementName.get').jstree("deselect_all");
-                    $("#@categoryTreeElementName.get").bind('ready.jstree', function(e, data) {
-                        var rootNode = $('#@categoryTreeElementName.get').jstree(true).get_node("#")
-                        if(rootNode.children.length == 0) {
-                            $("#showCategoryTreeButton").hide();
-                        }
-                    })
-                }
-            }
+        @if(categoryTreeElementId.isDefined) {
+            $("#@{filterElementId}").multiCategoryFilter({
+                jsonConditions: jsConditions,
+                fieldNameAndLabels: fieldNameAndLabels,
+                getFieldsUrl: getFieldsUrl,
+                submitUrl: '@submitCall.url',
+                refreshAjaxFun: refreshAjaxFun,
+                listFiltersUrl: listFiltersUrl,
+                filterSubmitParamName: '@filterSubmitParamName',
+                filterId: filterId,
+                createSubmissionJson: createSubmissionJson,
+                categoryTreeElementId: '@categoryTreeElementId.get'
+            })
+        } else {
+            $("#@{filterElementId}").multiFilter({
+                jsonConditions: jsConditions,
+                fieldNameAndLabels: fieldNameAndLabels,
+                getFieldsUrl: getFieldsUrl,
+                submitUrl: '@submitCall.url',
+                refreshAjaxFun: refreshAjaxFun,
+                listFiltersUrl: listFiltersUrl,
+                filterSubmitParamName: '@filterSubmitParamName',
+                filterId: filterId,
+                createSubmissionJson: createSubmissionJson
+            })
         }
-
-        $("#@{filterElementName}").multiFilter({
-            jsonConditions: jsConditions,
-            fieldNameAndLabels: fieldNameAndLabels,
-            getFieldsUrl: getFieldsUrl,
-            submitUrl: '@submitCall.url',
-            refreshAjaxFun: refreshAjaxFun,
-            listFiltersUrl: listFiltersUrl,
-            filterSubmitParamName: '@filterSubmitParamName',
-            filterId: filterId,
-            createSubmissionJson: createSubmissionJson,
-            initFilterIfNeededCallback: initFilterIfNeededTreeCallback,
-            fieldDisplayChoiceCallback: fieldDisplayChoiceCallback
-        })
     })
 </script>

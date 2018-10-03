@@ -13,15 +13,17 @@
             "callbackId": '@widgetCallbackId'
         },
         success: function(data) {
-            $("#widgetsDiv").html("")
+            $("#widgetsTr").html("")
             $.each(data, function (i, widgets) {
-                var div = $("<div id='widgetsDiv" + i + "' class='col-md-" + (12 / data.length) + "'>")
+                var td = $("<td style='vertical-align:top'>")
+                var div = $("<div id='widgetsDiv" + i + "' class='col-md-12'>")
                 var row = $("<div class='row'>")
                 $.each(widgets, function (j, widget) {
                     row.append(widgetDiv(widget, @widgetGridElementWidth))
                 })
+                td.append(div)
                 div.append(row)
-                $("#widgetsDiv").append(div)
+                $("#widgetsTr").append(td)
             })
             $.each(data, function (i, widgets) {
                 var filterId = "filter" + i
@@ -31,7 +33,7 @@
             })
         },
         error: function(data){
-            $("#widgetsDiv").html("")
+            $("#widgetsTr").html("")
             showErrorResponse(data)
         }
     });

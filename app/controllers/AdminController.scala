@@ -22,7 +22,8 @@ import scala.concurrent.Future
 
 class AdminController @Inject() (
     messageRepo: MessageRepo,
-    userManager: UserManager
+    userManager: UserManager,
+    configuration: Configuration
   ) extends BaseController {
 
   private val logger = Logger
@@ -30,6 +31,7 @@ class AdminController @Inject() (
 
   // we scan only the jars starting with this prefix to speed up the class search
   private val libPrefix = "org.ada"
+  private val libPath = configuration.getString("lib.path")
 
   /**
     * Creates view showing all runnables.
@@ -39,8 +41,8 @@ class AdminController @Inject() (
     */
   def listRunnables = restrictAdminAnyNoCaching(deadbolt) {
     implicit request => Future {
-      val classes1 = findClasses[Runnable](libPrefix, Some("runnables."), None)
-      val classes2 = findClasses[InputRunnable[_]](libPrefix, Some("runnables."), None)
+      val classes1 = findClasses[Runnable](libPrefix, Some("runnables."), None, libPath)
+      val classes2 = findClasses[InputRunnable[_]](libPrefix, Some("runnables."), None, libPath)
 
       val runnableNames = (classes1 ++ classes2).map(_.getName).sorted
       Ok(adminviews.runnables(runnableNames))

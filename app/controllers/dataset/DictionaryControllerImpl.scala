@@ -24,12 +24,12 @@ import org.incal.play.formatters.{EnumFormatter, MapJsonFormatter}
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.mvc.{Action, Request}
-import play.api.routing.JavaScriptReverseRouter
 import reactivemongo.bson.BSONObjectID
 import services._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import services.stats.StatsService
 import util.FieldUtil
+import dataaccess.JsonUtil.unescapeKey
 import views.html.{dataview, dictionary => view}
 
 import scala.concurrent.Future
@@ -94,7 +94,7 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       "displayFalseValue" ->  optional(nonEmptyText),
       "aliases" ->  seq(nonEmptyText),
       "categoryId" -> optional(nonEmptyText)
-      // TODO: make it more pretty perhaps by moving the category stuff to proxy/subclass of Field
+      // TODO: make it prettier perhaps by moving the category stuff to proxy/subclass of Field
     ) { (name, label, fieldType, isArray, numValues, displayDecimalPlaces, displayTrueValue, displayFalseValue, aliases, categoryId) =>
       Field(name, label, fieldType, isArray, numValues, displayDecimalPlaces, displayTrueValue, displayFalseValue, aliases, categoryId.map(BSONObjectID(_)))
     }
@@ -278,13 +278,17 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
     })
   }
 
-  @Deprecated
-  private def jsRoutes = Action { implicit request =>
-    Ok(
-      JavaScriptReverseRouter("dictionaryJsRoutes")(
-        jsRouter.updateLabel
+  override def setDefaultLabels = Action.async { implicit request =>
+    for {
+      fields <- repo.find()
+
+      fieldsWithoutLabel = fields.filter(_.label.isEmpty).map(field =>
+        field.copy(label = Some(unescapeKey(field.name)))
       )
-    ).as("text/javascript")
+
+      _ <- repo.update(fieldsWithoutLabel)
+    } yield
+      goHome.flashing("success" -> s"Default labels successfully set for ${fieldsWithoutLabel.size} fields.")
   }
 
   protected def allCategoriesFuture =

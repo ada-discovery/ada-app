@@ -57,4 +57,6 @@ class DictionaryDispatcher @Inject() (
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean
   ) = dispatch(_.exportRecordsAsJson(filter, tableColumnsOnly))
+
+  override def setDefaultLabels = dispatch(_.setDefaultLabels)
 }

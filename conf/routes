@@ -120,6 +120,7 @@ POST        /dataSets/dictionary/:name                                          
 POST        /dataSets/dictionary/updateLabel/:id/:label                              controllers.dataset.DictionaryDispatcher.updateLabel(id: String, label: String)
 GET         /dataSets/dictionary/exportAsCsv                                         controllers.dataset.DictionaryDispatcher.exportRecordsAsCsv(delimiter: String, replaceEolWithSpace: Boolean, eol: Option[String], filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
 GET         /dataSets/dictionary/exportAsJson                                        controllers.dataset.DictionaryDispatcher.exportRecordsAsJson(filter: Seq[org.incal.core.FilterCondition], tableColumnsOnly: Boolean)
+GET         /dataSets/dictionary/setDefaultLabels                                    controllers.dataset.DictionaryDispatcher.setDefaultLabels
 
 # CategoryDispatcher
 GET         /dataSets/categories                                                     controllers.dataset.CategoryDispatcher.find(p: Int ?= 0, s: String ?= "name", filter : Seq[org.incal.core.FilterCondition] ?= Nil)

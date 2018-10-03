@@ -2,6 +2,8 @@ import com.github.play2war.plugin._
 import PlayKeys._
 import com.typesafe.config._
 
+organization := "org.ada"
+
 name := "ada-web"
 
 // load version from the app config
@@ -47,12 +49,13 @@ libraryDependencies ++= Seq(
   "org.in-cal" %% "incal-play" % "0.0.20",
   "com.typesafe.play" % "play-java-ws_2.11" % "2.5.6",
   "jp.t2v" %% "play2-auth" % "0.14.1",
-  "org.webjars" % "bootstrap" % "3.3.5",
+  "org.webjars" % "bootstrap" % "3.3.7",
   "org.webjars" % "bootswatch-united" % "3.3.4+1",
   "org.webjars" % "typeaheadjs" % "0.11.1",
   "org.webjars" % "html5shiv" % "3.7.0",
   "org.webjars" % "respond" % "1.4.2",
   "org.webjars" % "highcharts" % "5.0.14",  // "4.2.7",
+  "org.webjars.npm" % "bootstrap-select" % "1.13.2", // bootstrap select element
 //  "org.webjars.npm" % "fractalis" % "0.1.9",
   "org.webjars.bower" % "plotly.js" % "1.5.1",
   "org.webjars.bower" % "d3" % "3.5.16",

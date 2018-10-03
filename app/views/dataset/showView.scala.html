@@ -56,6 +56,11 @@
                                         Save Filter To View
                                     </a>
                                 </li>
+                                @*<li>*@
+                                    @*<a href="#" onclick="addNewColumn()">*@
+                                        @*Add New Column/Filter*@
+                                    @*</a>*@
+                                @*</li>*@
                             </ul>
                         </div>
                      }
@@ -147,43 +152,55 @@
 }
 
 @filters = {
-    <div class="row vertical-divider">
-        @tableViewParts.zipWithIndex.map { case (viewPart, index) =>
-            <div class="col-md-@{12 / tableViewParts.size}">
-                <div class="row">
-                    <div class="col-md-7">
-                        <ul class="list-inline">
-                            <li>Count:</li>
-                            <li id="count@index"><h3>@viewPart.page.total</h3></li>
-                        </ul>
+    <table class="fixed-table">
+        <tbody>
+            <tr id="filtersTr">
+                @tableViewParts.zipWithIndex.map { case (viewPart, index) =>
+                <td>
+                    <div class="col-md-12">
+                        <div class="row">
+                            <div class="col-md-7">
+                                <ul class="list-inline">
+                                    <li>Count:</li>
+                                    <li id="count@index"><h3>@viewPart.page.total</h3></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="row">
+                            @if(tableViewParts.size == 1) {
+                                <div class="col-md-10">
+                                    @viewFilter(viewPart, index)
+                                </div>
+                            } else {
+                                <div class="col-md-12">
+                                    @viewFilter(viewPart, index)
+                                </div>
+                            }
+                        </div>
                     </div>
-                </div>
-                <div class="row">
-                    @if(tableViewParts.size == 1) {
-                        <div class="col-md-10">
-                           @viewFilter(viewPart, index)
-                        </div>
-                    } else {
-                        <div class="col-md-12">
-                            @viewFilter(viewPart, index)
-                        </div>
-                    }
-                </div>
-            </div>
-        }
-    </div>
+                </td>
+                }
+            </tr>
+        </tbody>
+    </table>
 }
 
-@widgetsDiv = {
-    <div id="widgetsDiv" class="row vertical-divider">
-        <div class='spinner' style='margin: auto; margin-bottom: 20px'></div>
-    </div>
+@widgets = {
+    <table class="fixed-table">
+        <tbody>
+            <tr id="widgetsTr">
+                <td>
+                    <div class='spinner' style='margin: auto; margin-bottom: 20px'></div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
 }
 
 @filtersAndWidgets = {
     @filters
     <hr/>
-    @widgetsDiv
+    @widgets
 }
 
 @bottomResources = {
@@ -264,6 +281,26 @@
                 }
             });
         }
+
+        function addNewColumn() {
+            // filters
+            var filterTd = $("<td>")
+            var filterDiv = $("<div class='col-md-12'>")
+            var filterRow = $("<div class='row'>")
+
+            filterTd.append(filterDiv)
+            filterDiv.append(filterRow)
+            $("#filtersTr").append(filterTd)
+
+            // widgets
+            var widgetTd = $("<td>")
+            var widgetDiv = $("<div id='widgetsDiv" + i + "' class='col-md-12'>")
+            var widgetRow = $("<div class='row'>")
+
+            widgetTd.append(widgetDiv)
+            widgetDiv.append(widgetRow)
+            $("#widgetsTr").append(widgetTd)
+        }
     </script>
 
     @tableViewParts.zipWithIndex.map { case (_, index) => @dataSetFilterValuesUpdate("filter" + index) }
@@ -282,7 +319,7 @@
         None
     },
     if (tableViewParts.size == 1) {
-        Some(widgetsDiv)
+        Some(widgets)
     } else {
         Some(filtersAndWidgets)
     },

@@ -17,6 +17,7 @@ class DictionaryRouter(dataSetId: String) extends GenericRouter(routes.Dictionar
   val updateLabel = routes.updateLabel _ map route
   val exportCsv = routes.exportRecordsAsCsv _ map route
   val exportJson  = routes.exportRecordsAsJson _ map route
+  val setDefaultLabels = routeFun(_.setDefaultLabels)
 }
 
 final class DictionaryJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.DictionaryDispatcher, "dataSet", dataSetId) {

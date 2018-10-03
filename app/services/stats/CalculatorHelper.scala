@@ -6,7 +6,6 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import models.Field
 import org.incal.core.dataaccess.{AsyncReadonlyRepo, Criterion}
 import play.api.libs.json.JsObject
-import reactivemongo.bson.BSONObjectID
 import services.stats.calc.{ArrayCalc, ArrayCalculatorTypePack}
 import services.stats.calcjsonin.JsonInputConverterFactory
 
@@ -16,7 +15,8 @@ import scala.reflect.runtime.universe._
 
 object CalculatorHelper {
 
-  private val jicf = JsonInputConverterFactory
+  private val libPath = "lib"
+  private val jicf = new JsonInputConverterFactory(Some(libPath))
 
   implicit class RunExt[C <: CalculatorTypePack] (
     val calculator: Calculator[C])(

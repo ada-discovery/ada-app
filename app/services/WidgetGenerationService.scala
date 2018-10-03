@@ -81,7 +81,6 @@ class WidgetGenerationServiceImpl @Inject() (
   private implicit val materializer = ActorMaterializer()
 
   import statsService._
-
   import WidgetGenerationMethod._
 
   override def apply(
