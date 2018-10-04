@@ -7,19 +7,19 @@
 
 @basicSideBar(Seq(
     ("1. mPower", Seq(
-        (challengeRoutes.mPowerMDS(Some(10), 10), "MDS", Some(2)),
-        (challengeRoutes.mPowerTSNE(Some(10), 10), "t-SNE", Some(2))
+        (challengeRoutes.mPowerMDS(topRank = Some(10)), "MDS", Some(2)),
+        (challengeRoutes.mPowerTSNE(topRank = Some(10)), "t-SNE", Some(2))
     )),
     ("2.1 Tremor", Seq(
-        (challengeRoutes.tremorMDS(Some(10), 10), "MDS", Some(2)),
-        (challengeRoutes.tremorTSNE(Some(10), 10), "t-SNE", Some(2))
+        (challengeRoutes.tremorMDS(topRank = Some(10)), "MDS", Some(2)),
+        (challengeRoutes.tremorTSNE(topRank = Some(10)), "t-SNE", Some(2))
     )),
     ("2.2 Dyskinesia", Seq(
-        (challengeRoutes.dyskinesiaMDS(Some(10), 10), "MDS", Some(2)),
-        (challengeRoutes.dyskinesiaTSNE(Some(10), 10), "t-SNE", Some(2))
+        (challengeRoutes.dyskinesiaMDS(topRank = Some(10)), "MDS", Some(2)),
+        (challengeRoutes.dyskinesiaTSNE(topRank = Some(10)), "t-SNE", Some(2))
     )),
     ("2.3 Bradykinesia", Seq(
-        (challengeRoutes.bradykinesiaMDS(Some(10), 10), "MDS", Some(2)),
-        (challengeRoutes.bradykinesiaTSNE(Some(10), 10), "t-SNE", Some(2))
+        (challengeRoutes.bradykinesiaMDS(topRank = Some(10)), "MDS", Some(2)),
+        (challengeRoutes.bradykinesiaTSNE(topRank = Some(10)), "t-SNE", Some(2))
     ))
 ))

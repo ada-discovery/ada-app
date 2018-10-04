@@ -189,35 +189,39 @@ class MPowerChallengeClusteringController @Inject() (
   // MDS
 
   def tremorMDS(
-    topRank: Option[Int],
     k: Int,
-    method: Int
+    method: Int,
+    topRank: Option[Int],
+    leaveTopRank: Option[Int]
   ) = clusterizationAux(
-    "Tremor Features", tremorMDSDsa(k, method), "Rank", topRank, k, method, None, false, false
+    "Tremor Features", tremorMDSDsa(k, method), "Rank", topRank, leaveTopRank, k, method, None, false, false
   )
 
   def dyskinesiaMDS(
-    topRank: Option[Int],
     k: Int,
-    method: Int
+    method: Int,
+    topRank: Option[Int],
+    leaveTopRank: Option[Int]
   ) = clusterizationAux(
-    "Dyskinesia Features", dyskinesiaMDSDsa(k, method), "Rank", topRank, k, method, None, false, false
+    "Dyskinesia Features", dyskinesiaMDSDsa(k, method), "Rank", topRank, leaveTopRank, k, method, None, false, false
   )
 
   def bradykinesiaMDS(
-    topRank: Option[Int],
     k: Int,
-    method: Int
+    method: Int,
+    topRank: Option[Int],
+    leaveTopRank: Option[Int]
   ) = clusterizationAux(
-    "Bradykinesia Features", bradykinesiaMDSDsa(k, method), "Rank", topRank, k, method, None, false, false
+    "Bradykinesia Features", bradykinesiaMDSDsa(k, method), "Rank", topRank, leaveTopRank, k, method, None, false, false
   )
 
   def mPowerMDS(
-    topRank: Option[Int],
     k: Int,
-    method: Int
+    method: Int,
+    topRank: Option[Int],
+    leaveTopRank: Option[Int]
   ) = clusterizationAux(
-    "mPower Features", mPowerMDSDsa(k, method), "Rank_Unbiased_Subset", topRank, k, method, None, false, false
+    "mPower Features", mPowerMDSDsa(k, method), "Rank_Unbiased_Subset", topRank, leaveTopRank, k, method, None, false, false
   )
 
   private def tremorMDSDsa(
@@ -243,44 +247,48 @@ class MPowerChallengeClusteringController @Inject() (
   // t-SNE
 
   def tremorTSNE(
-    topRank: Option[Int],
     k: Int,
     method: Int,
     pcaDims: Option[Int],
-    scaled: Boolean
+    scaled: Boolean,
+    topRank: Option[Int],
+    leaveTopRank: Option[Int]
   ) = clusterizationAux(
-    "Tremor Features", tremorTSNEDsa(k, method, pcaDims, scaled), "Rank", topRank, k, method, pcaDims, scaled, true
+    "Tremor Features", tremorTSNEDsa(k, method, pcaDims, scaled), "Rank", topRank, leaveTopRank, k, method, pcaDims, scaled, true
   )
 
   def dyskinesiaTSNE(
-    topRank: Option[Int],
     k: Int,
     method: Int,
     pcaDims: Option[Int],
-    scaled: Boolean
+    scaled: Boolean,
+    topRank: Option[Int],
+    leaveTopRank: Option[Int]
   ) = clusterizationAux(
-    "Dyskinesia Features", dyskinesiaTSNEDsa(k, method, pcaDims, scaled), "Rank", topRank, k, method, pcaDims, scaled, true
+    "Dyskinesia Features", dyskinesiaTSNEDsa(k, method, pcaDims, scaled), "Rank", topRank, leaveTopRank, k, method, pcaDims, scaled, true
   )
 
   def bradykinesiaTSNE(
-    topRank: Option[Int],
     k: Int,
     method: Int,
     pcaDims: Option[Int],
-    scaled: Boolean
+    scaled: Boolean,
+    topRank: Option[Int],
+    leaveTopRank: Option[Int]
   ) = clusterizationAux(
-    "Bradykinesia Features", bradykinesiaTSNEDsa(k, method, pcaDims, scaled), "Rank", topRank, k, method, pcaDims, scaled, true
+    "Bradykinesia Features", bradykinesiaTSNEDsa(k, method, pcaDims, scaled), "Rank", topRank, leaveTopRank, k, method, pcaDims, scaled, true
   )
 
   // no pca for mPower t-SNE (TODO)
   def mPowerTSNE(
-    topRank: Option[Int],
     k: Int,
     method: Int,
     pcaDims: Option[Int],
-    scaled: Boolean
+    scaled: Boolean,
+    topRank: Option[Int],
+    leaveTopRank: Option[Int]
   ) = clusterizationAux(
-    "mPower Features", mPowerTSNEDsa(k, method, None, scaled), "Rank_Unbiased_Subset", topRank, k, method, None, scaled, true
+    "mPower Features", mPowerTSNEDsa(k, method, None, scaled), "Rank_Unbiased_Subset", topRank, leaveTopRank, k, method, None, scaled, true
   )
 
   private def tremorTSNEDsa(
@@ -339,13 +347,17 @@ class MPowerChallengeClusteringController @Inject() (
     dsa: DataSetAccessor,
     rankFieldName: String,
     topRank: Option[Int],
+    leaveTopRank: Option[Int],
     k: Int,
     method: Int,
     pcaDims: Option[Int],
     scaled: Boolean,
     isTSNE: Boolean
   ) = AuthAction { implicit request =>
-    val criteria = topRank.map(rank => Seq(rankFieldName #<= rank)).getOrElse(Nil)
+    val criteria = Seq(
+      topRank.map(rank => rankFieldName #<= rank),
+      leaveTopRank.map(rank => rankFieldName #> rank)
+    ).flatten
 
     for {
       // get all the fields
@@ -384,7 +396,7 @@ class MPowerChallengeClusteringController @Inject() (
           case _ => widget
         }
       }
-      Ok(clustering(title, newWidgets, count, rankJson.get.as[Int], topRank, k, method, pcaDims, scaled, isTSNE))
+      Ok(clustering(title, newWidgets, count, rankJson.get.as[Int], topRank, leaveTopRank, k, method, pcaDims, scaled, isTSNE))
     }
   }
 }

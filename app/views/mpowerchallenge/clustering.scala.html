@@ -13,6 +13,7 @@
     count: Int,
     maxRank: Int,
     topRankSelection: Option[Int],
+    leaveTopRankSelection: Option[Int],
     k: Int,
     method: Int,
     pcaDims: Option[Int],
@@ -32,6 +33,10 @@
             if (topRank)
                 params["topRank"] = topRank;
 
+            var leaveTopRank = $("#leaveTopSubmissionSelection").val()
+            if (leaveTopRank)
+                params["leaveTopRank"] = leaveTopRank;
+
             params["k"] = $("#k").val();
             params["method"] = $("#method").val();
 
@@ -49,8 +54,12 @@
     </script>
 }
 
-@option(i: Int) = {
+@topRankOption(i: Int) = {
     <option @if(topRankSelection.isDefined && topRankSelection.get.equals(i*5)) { selected="selected" } value="@{i*5}">Top @{i*5}</option>
+}
+
+@leaveTopRankOption(i: Int) = {
+    <option @if(leaveTopRankSelection.isDefined && leaveTopRankSelection.get.equals(i)) { selected="selected" } value="@{i}">Top @{i}</option>
 }
 
 @kOption(i: Int) = {
@@ -94,10 +103,19 @@
             }
             <div class="panel panel-default pull-right">
                 <div class="panel-body">
-                    <span style="padding-top: 5px">Show Submissions</span>
-                    <select id="topSubmissionSelection" name="topSubmissionSelection" onchange="resubmit()" >
+                    <span style="padding-top: 5px">Leave</span>
+                    <select id="leaveTopSubmissionSelection" name="leaveTopSubmissionSelection" onchange="resubmit()" data-toggle="tooltip" title="Leave Top Submissions">
+                        <option value="">None</option>
+                        @{for(i <- 1 to 4) yield leaveTopRankOption(i)}
+                    </select>
+                </div>
+            </div>
+            <div class="panel panel-default pull-right">
+                <div class="panel-body">
+                    <span style="padding-top: 5px">Show</span>
+                    <select id="topSubmissionSelection" name="topSubmissionSelection" onchange="resubmit()" data-toggle="tooltip" title="Show Top Submissions">
                         <option value="">All</option>
-                        @{for(i <- 1 to ((maxRank - 1) / 5)) yield option(i)}
+                        @{for(i <- 1 to ((maxRank - 1) / 5)) yield topRankOption(i)}
                     </select>
                 </div>
             </div>
