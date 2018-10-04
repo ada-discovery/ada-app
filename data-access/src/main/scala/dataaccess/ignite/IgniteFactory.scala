@@ -18,8 +18,11 @@ class IgniteFactory @Inject() (configuration: Configuration) extends Provider[Ig
     // Provide lifecycle bean to configuration.
 //  cfg.setLifecycleBeans(new MyLifecycleBean());
 
+    // We need an absolute path due to some execution discrepancies
+    val configurationAbsPath = new java.io.File(configurationFilePath).getAbsolutePath
+
     // Start Ignite node with given configuration.
-    val configuration = IgnitionEx.loadConfiguration(configurationFilePath).getKey
+    val configuration = IgnitionEx.loadConfiguration(configurationAbsPath).getKey
     Ignition.getOrStart(configuration)
   }
 }
