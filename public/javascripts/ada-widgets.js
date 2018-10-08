@@ -184,25 +184,66 @@ function scatterWidget(elementId, widget, filterElementId) {
     var yDataType = (isYDate) ? 'datetime' : null;
 
     if (filterElementId) {
-        $('#' + elementId).on('areaSelected', function (event, data) {
-            var xMin = (isXDate) ? msToStandardDateString(data.xMin) : data.xMin.toString();
-            var xMax = (isXDate) ? msToStandardDateString(data.xMax) : data.xMax.toString();
-            var yMin = (isYDate) ? msToStandardDateString(data.yMin) : data.yMin.toString();
-            var yMax = (isYDate) ? msToStandardDateString(data.yMax) : data.yMax.toString();
-
-            console.log(xMin + ", " + xMax)
-            var conditions = [
-                {fieldName: widget.xFieldName, conditionType: ">=", value: xMin},
-                {fieldName: widget.xFieldName, conditionType: "<=", value: xMax},
-                {fieldName: widget.yFieldName, conditionType: ">=", value: yMin},
-                {fieldName: widget.yFieldName, conditionType: "<=", value: yMax}
-            ]
-
-            $('#' + filterElementId).multiFilter('addConditionsAndSubmit', conditions);
-        });
+        addScatterAreaSelected(elementId, filterElementId, widget, isXDate, isYDate);
     }
 
-    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, height, xDataType, yDataType, true, filterElementId != null)
+    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, true, null, height, xDataType, yDataType, true, filterElementId != null)
+}
+
+function addScatterAreaSelected(elementId, filterElementId, widget, isXDate, isYDate) {
+    $('#' + elementId).on('areaSelected', function (event, data) {
+        var xMin = (isXDate) ? msToStandardDateString(data.xMin) : data.xMin.toString();
+        var xMax = (isXDate) ? msToStandardDateString(data.xMax) : data.xMax.toString();
+        var yMin = (isYDate) ? msToStandardDateString(data.yMin) : data.yMin.toString();
+        var yMax = (isYDate) ? msToStandardDateString(data.yMax) : data.yMax.toString();
+
+        var conditions = [
+            {fieldName: widget.xFieldName, conditionType: ">=", value: xMin},
+            {fieldName: widget.xFieldName, conditionType: "<=", value: xMax},
+            {fieldName: widget.yFieldName, conditionType: ">=", value: yMin},
+            {fieldName: widget.yFieldName, conditionType: "<=", value: yMax}
+        ]
+
+        $('#' + filterElementId).multiFilter('addConditionsAndSubmit', conditions);
+    });
+}
+
+function valueScatterWidget(elementId, widget, filterElementId) {
+    var zs = widget.data.map(function(point) {
+        return point[2];
+    })
+
+    var zMin = Math.min.apply(null, zs);
+    var zMax = Math.max.apply(null, zs);
+
+    var data = widget.data.map(function(point) {
+        var zColor = (1 - Math.abs((point[2] - zMin) / zMax)) * 210;
+        return {x: point[0], y: point[1], z: point[2], color: 'rgba(255, ' + zColor + ',' + zColor + ', 0.8)'};
+    })
+
+    var datas = [{data : data}];
+
+    var height = widget.displayOptions.height || 400;
+
+    var isXDate = widget.xFieldType == "Date"
+    var xDataType = (isXDate) ? 'datetime' : null;
+
+    var isYDate = widget.yFieldType == "Date"
+    var yDataType = (isYDate) ? 'datetime' : null;
+
+    if (filterElementId) {
+        addScatterAreaSelected(elementId, filterElementId, widget, isXDate, isYDate);
+    }
+
+    var pointFormatter = function () {
+        var xPoint = (xDataType == "datetime") ? Highcharts.dateFormat('%Y-%m-%d', this.point.x) : this.point.x;
+        var yPoint = (yDataType == "datetime") ? Highcharts.dateFormat('%Y-%m-%d', this.point.y) : this.point.y;
+        var zPoint = this.point.z;
+
+        return xPoint + ", " + yPoint + " (" + zPoint + ")";
+    }
+
+    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, false, pointFormatter, height, xDataType, yDataType, true, filterElementId != null)
 }
 
 function heatmapWidget(elementId, widget) {
@@ -241,6 +282,7 @@ function genericWidgetForElement(widgetId, widget, filterElementId) {
             case "models.NumericalCountWidget": numericalCountWidget(widgetId, widget); break;
             case "models.BoxWidget": boxWidget(widgetId, widget); break;
             case "models.ScatterWidget": scatterWidget(widgetId, widget, filterElementId); break;
+            case "models.ValueScatterWidget": valueScatterWidget(widgetId, widget, filterElementId); break;
             case "models.HeatmapWidget": heatmapWidget(widgetId, widget); break;
             case "models.HtmlWidget": htmlWidget(widgetId, widget); break;
             case 'models.LineWidget': lineWidget(widgetId, widget); break;

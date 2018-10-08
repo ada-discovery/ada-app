@@ -467,6 +467,8 @@
         xAxisCaption,
         yAxisCaption,
         series,
+        showLegend,
+        pointFormat,
         height,
         xDataType,
         yDataType,
@@ -474,11 +476,12 @@
         allowSelectionEvent
     ) {
 
-        var pointFormatter = function () {
-            var xPoint = (xDataType == "datetime") ? Highcharts.dateFormat('%Y-%m-%d', this.point.x) : this.point.x
-            var yPoint = (yDataType == "datetime") ? Highcharts.dateFormat('%Y-%m-%d', this.point.y) : this.point.y
-
-            return '<b>' + this.series.name + '</b><br>' + xPoint + ", " + yPoint
+        var pointFormatter = null
+        if (!pointFormat) {
+            pointFormatter = defaultScatterPointFormatter(xDataType, yDataType)
+        } else if (typeof pointFormat === "function") {
+            pointFormatter = pointFormat
+            pointFormat = null
         }
 
         /**
@@ -606,7 +609,8 @@
                     width:'100px',
                     textOverflow: 'ellipsis',
                     overflow: 'hidden'
-                }
+                },
+                enabled: showLegend
             },
             credits: {
                 enabled: false
@@ -635,10 +639,21 @@
                 }
             },
             tooltip:{
+                pointFormat: pointFormat,
                 formatter: pointFormatter
-            },
+           },
             series: series
         });
+    }
+
+    function defaultScatterPointFormatter(xDataType, yDataType) {
+        var formatter = function () {
+            var xPoint = (xDataType == "datetime") ? Highcharts.dateFormat('%Y-%m-%d', this.point.x) : this.point.x
+            var yPoint = (yDataType == "datetime") ? Highcharts.dateFormat('%Y-%m-%d', this.point.y) : this.point.y
+
+            return '<b>' + this.series.name + '</b><br>' + xPoint + ", " + yPoint
+        }
+        return formatter;
     }
 
     function heatmapChart(
