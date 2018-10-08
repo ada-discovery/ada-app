@@ -17,6 +17,7 @@
             case x: CategoricalCountWidget => highcharts.categoricalCountWidget(widgetElementId(x), x)
             case x: NumericalCountWidget[_] => highcharts.numericalCountWidget(widgetElementId(x), x)
             case x: ScatterWidget[_, _] => highcharts.scatterChart(widgetElementId(x), x)
+            case x: ValueScatterWidget[_, _, _] => highcharts.valueScatterChart(widgetElementId(x), x)
             case x: BoxWidget[_] => highcharts.boxPlot(widgetElementId(x), x)
             case x: HeatmapWidget => highcharts.heatmap(widgetElementId(x), x)
             case x: LineWidget[_] => highcharts.lineChart(widgetElementId(x), x)

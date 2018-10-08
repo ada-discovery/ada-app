@@ -117,6 +117,18 @@ package object util {
     }
   }
 
+  def toChartData(widget: ValueScatterWidget[_, _, _]) = {
+    def numericValue(x: Any) =
+      x match {
+        case x: java.util.Date => x.getTime.toString
+        case _ => x.toString
+      }
+
+    widget.data.map { case (x, y, z) =>
+      (numericValue(x), numericValue(y), numericValue(z))
+    }
+  }
+
   def seqFutures[T, U](
     items: TraversableOnce[T])(
     fun: T => Future[U]

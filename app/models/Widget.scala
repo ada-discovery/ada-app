@@ -49,6 +49,17 @@ case class ScatterWidget[T1, T2](
   displayOptions: DisplayOptions = BasicDisplayOptions()
 ) extends Widget
 
+case class ValueScatterWidget[T1, T2, T3](
+  title: String,
+  xFieldName: String,
+  yFieldName: String,
+  valueFieldName: String,
+  xAxisCaption: String,
+  yAxisCaption: String,
+  data: Traversable[(T1, T2, T3)],
+  displayOptions: DisplayOptions = BasicDisplayOptions()
+) extends Widget
+
 case class LineWidget[T](
   title: String,
   xAxisCaption: String,
@@ -255,6 +266,29 @@ object Widget {
     )(ScatterWidget[T1, T2](_, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.yFieldName, x.xAxisCaption, x.yAxisCaption, x.data, x.displayOptions)})
   }
 
+  implicit def valueScatterWidgetFormat[T1, T2, T3](
+    fieldType1: FieldType[T1],
+    fieldType2: FieldType[T2],
+    fieldType3: FieldType[T3]
+  ): Format[ValueScatterWidget[T1, T2, T3]] = {
+    implicit val value1Format = FieldTypeFormat.apply[T1](fieldType1)
+    implicit val value2Format = FieldTypeFormat.apply[T2](fieldType2)
+    implicit val value3Format = FieldTypeFormat.apply[T3](fieldType3)
+
+    implicit val tupleFormat = TupleFormat[T1, T2, T3]
+
+    (
+      (__ \ "title").format[String] and
+      (__ \ "xFieldName").format[String] and
+      (__ \ "yFieldName").format[String] and
+      (__ \ "valueFieldName").format[String] and
+      (__ \ "xAxisCaption").format[String] and
+      (__ \ "yAxisCaption").format[String] and
+      (__ \ "data").format[Traversable[(T1, T2, T3)]] and
+      (__ \ "displayOptions").format[DisplayOptions]
+    )(ValueScatterWidget[T1, T2, T3](_, _, _, _, _, _, _, _), {x => (x.title, x.xFieldName, x.yFieldName, x.valueFieldName, x.xAxisCaption, x.yAxisCaption, x.data, x.displayOptions)})
+  }
+
   implicit val heatmapWidgetFormat: Format[HeatmapWidget] = {
     (
       (__ \ "title").format[String] and
@@ -311,6 +345,9 @@ object Widget {
 
         case e: ScatterWidget[T, T] =>
           scatterWidgetFormat(fieldTypes(fieldTypes.size - 2), fieldTypes.last).writes(e)
+
+        case e: ValueScatterWidget[T, T, T] =>
+          valueScatterWidgetFormat(fieldTypes(0), fieldTypes(1), fieldTypes(2)).writes(e)
 
         case e: BoxWidget[T] =>
           boxWidgetWrites(fieldTypes.last).writes(e)

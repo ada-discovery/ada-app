@@ -109,6 +109,16 @@ trait CalculatorExecutors {
   ) =
     withSeq(TupleCalc.apply[A, B])
 
+  def tuple3Exec[A, B, C](
+    implicit inputTypeTag: TypeTag[Tuple3CalcTypePack[A, B, C]#IN]
+  ) =
+    with3Tuple(Tuple3Calc.apply[A, B, C])
+
+  def tuple3SeqExec[A, B, C](
+    implicit inputTypeTag: TypeTag[Tuple3CalcTypePack[A, B, C]#IN]
+  ) =
+    withSeq(Tuple3Calc.apply[A, B, C])
+
   def uniqueTupleExec[A, B](
     implicit inputTypeTag: TypeTag[TupleCalcTypePack[A, B]#IN]
   ) =
@@ -118,6 +128,16 @@ trait CalculatorExecutors {
     implicit inputTypeTag: TypeTag[TupleCalcTypePack[A, B]#IN]
   ) =
     withSeq(UniqueTupleCalc.apply[A, B])
+
+  def uniqueTuple3Exec[A, B, C](
+    implicit inputTypeTag: TypeTag[Tuple3CalcTypePack[A, B, C]#IN]
+  ) =
+    with2Tuple(UniqueTuple3Calc.apply[A, B, C])
+
+  def uniqueTuple3SeqExec[A, B, C](
+    implicit inputTypeTag: TypeTag[Tuple3CalcTypePack[A, B, C]#IN]
+  ) =
+    withSeq(UniqueTuple3Calc.apply[A, B, C])
 
   def groupTupleExec[G, A, B](
     implicit inputTypeTag: TypeTag[GroupTupleCalcTypePack[G, A, B]#IN]

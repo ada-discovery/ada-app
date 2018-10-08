@@ -700,6 +700,9 @@ class WidgetGenerationServiceImpl @Inject() (
       case spec: ScatterWidgetSpec if spec.groupFieldName.isDefined =>
         aux(GroupScatterWidgetGenerator[Any, Any])
 
+      case spec: ValueScatterWidgetSpec =>
+        aux(ValueScatterWidgetGenerator[Any, Any, Any])
+
       case spec: HeatmapAggWidgetSpec =>
         val minMaxValues = minMaxes
         aux(HeatmapAggWidgetGenerator.apply(spec.aggType, minMaxValues(0), minMaxValues(1)))

@@ -23,6 +23,7 @@ class BooleanArrayConverter extends ArrayConverter[Boolean]
 
 class AnyTupleConverter extends TupleConverter[Any, Any]
 class AnyArrayTupleConverter extends ArrayTupleConverter[Any, Any]
+class AnyTuple3Converter extends Tuple3Converter[Any, Any, Any]
 
 ////////////////////////////////////
 // Calculator Specific Converters //
@@ -280,6 +281,16 @@ private[calcjsonin] abstract class TupleConverter[T1: TypeTag, T2: TypeTag] exte
   }
 
   override def inputType = typeOf[(Option[T1], Option[T2])]
+}
+
+private[calcjsonin] abstract class Tuple3Converter[T1: TypeTag, T2: TypeTag, T3: TypeTag] extends JsonInputConverter[(Option[T1], Option[T2], Option[T3])] {
+
+  override def apply(fields: Seq[Field]) = {
+    checkFields(fields, 3)
+    jsonToTuple[T1, T2, T3](fields(0), fields(1), fields(2))
+  }
+
+  override def inputType = typeOf[(Option[T1], Option[T2], Option[T3])]
 }
 
 private[calcjsonin] abstract class ScalarGroupDoubleConverter[G: TypeTag] extends JsonInputConverter[(Option[G], Option[Double])] {

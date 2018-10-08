@@ -11,6 +11,7 @@
 @import dataaccess.JsonUtil
 @import play.api.libs.json.JsArray
 @import reactivemongo.bson.BSONObjectID
+@import util.toHumanReadableCamel
 
 @(
     items: Traversable[WidgetSpec],
@@ -71,6 +72,12 @@
                     ("yFieldNameTypeahead", x.yFieldName)) ++
                     x.groupFieldName.map( ("groupFieldNameTypeahead", _)
                 ))
+            case x: ValueScatterWidgetSpec =>
+                fieldLabelElements(Seq(
+                    ("xFieldNameTypeahead", x.xFieldName),
+                    ("yFieldNameTypeahead", x.yFieldName),
+                    ("valueFieldNameTypeahead", x.valueFieldName)
+                ))
             case x: HeatmapAggWidgetSpec =>
                 fieldLabelElements(Seq(
                     ("xFieldNameTypeahead", x.xFieldName),
@@ -111,7 +118,7 @@
 }
 
 @concreteClassName(clazz: Class[_]) = @{
-    clazz.getName.split("\\.")(1).replaceAll("WidgetSpec", "")
+    toHumanReadableCamel(clazz.getName.split("\\.")(1).replaceAll("WidgetSpec", ""))
 }
 
 @gridWidthElement(widgetSpec: WidgetSpec) = {
@@ -225,6 +232,7 @@
         var isCumulativeCountType = concreteClass == "@{classOf[CumulativeCountWidgetSpec].getName}"
         var isBoxType = concreteClass == "@{classOf[BoxWidgetSpec].getName}"
         var isScatterType = concreteClass == "@{classOf[ScatterWidgetSpec].getName}"
+        var isValueScatterType = concreteClass == "@{classOf[ValueScatterWidgetSpec].getName}"
         var isCorrelationType = concreteClass == "@{classOf[CorrelationWidgetSpec].getName}"
         var isHeatmapAggType = concreteClass == "@{classOf[HeatmapAggWidgetSpec].getName}"
         var isGridDistributionCountType = concreteClass == "@{classOf[GridDistributionCountWidgetSpec].getName}"
@@ -239,6 +247,10 @@
 
         if (isScatterType) {
             isDefined = xyFieldsDefined
+        }
+
+        if (isValueScatterType) {
+            isDefined = xyFieldsDefined && values["valueFieldName"] != null && values["valueFieldName"].length > 0
         }
 
         if (isGridDistributionCountType) {
@@ -795,6 +807,9 @@
                 break;
             case "@{classOf[ScatterWidgetSpec].getName}" :
                 labelFields = ["xFieldNameTypeahead", "yFieldNameTypeahead", "groupFieldNameTypeahead"];
+                break;
+            case "@{classOf[ValueScatterWidgetSpec].getName}" :
+                labelFields = ["xFieldNameTypeahead", "yFieldNameTypeahead", "valueFieldNameTypeahead"];
                 break;
             case "@{classOf[HeatmapAggWidgetSpec].getName}" :
                 labelFields = ["xFieldNameTypeahead", "yFieldNameTypeahead", "valueFieldNameTypeahead"];

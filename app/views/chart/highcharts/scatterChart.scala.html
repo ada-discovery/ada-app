@@ -16,7 +16,7 @@
         var datas = [@toChartData(widget).map { singleSeries => {name: '@shorten(singleSeries._1)', data: [@singleSeries._2.map { case (x, y) => [@x, @y], }]}, }];
 
         scatterChart('@widget.title', '@{elementId}', '@{widget.xAxisCaption}', '@{widget.yAxisCaption}',
-            datas, @{widget.displayOptions.height.getOrElse(400)}, xDataType, yDataType, false, false
+            datas, true, null, @{widget.displayOptions.height.getOrElse(400)}, xDataType, yDataType, false, false
         )
     });
 </script>

@@ -1,6 +1,5 @@
 package services.widgetgen
 
-import org.incal.core.dataaccess.Criterion
 import models._
 import services.stats.calc.{GroupTupleCalcTypePack, TupleCalcTypePack}
 import util.shorten

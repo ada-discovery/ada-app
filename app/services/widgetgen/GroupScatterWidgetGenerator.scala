@@ -3,7 +3,7 @@ package services.widgetgen
 import org.incal.core.dataaccess.Criterion
 import models.{Field, ScatterWidget, ScatterWidgetSpec}
 import services.stats.calc.GroupTupleCalcTypePack
-import util.shorten
+import util.{fieldLabel, shorten}
 
 import scala.reflect.runtime.universe._
 
@@ -31,12 +31,15 @@ private class GroupScatterWidgetGenerator[T1, T2](
       if (data.nonEmpty) {
         val xField = fieldNameMap.get(spec.xFieldName).get
         val yField = fieldNameMap.get(spec.yFieldName).get
+        val groupField = fieldNameMap.get(spec.groupFieldName.get).get
+
         val shortXFieldLabel = shorten(xField.labelOrElseName, 20)
         val shortYFieldLabel = shorten(yField.labelOrElseName, 20)
+        val shortGroupFieldLabel = shorten(groupField.labelOrElseName, 20)
         val finalData = data.map { case (groupName, values) => (groupName.getOrElse("Undefined"), values)}.toSeq.sortBy(_._1)
 
         val widget = ScatterWidget(
-          title(spec).getOrElse(s"$shortXFieldLabel vs. $shortYFieldLabel"),
+          title(spec).getOrElse(s"$shortXFieldLabel vs. $shortYFieldLabel by $shortGroupFieldLabel"),
           xField.name,
           yField.name,
           xField.labelOrElseName,
