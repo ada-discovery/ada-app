@@ -206,6 +206,7 @@ object DataSetFormattersAndIds {
       ManifestedFormat(Json.format[CumulativeCountWidgetSpec]),
       ManifestedFormat(Json.format[BoxWidgetSpec]),
       ManifestedFormat(Json.format[ScatterWidgetSpec]),
+      ManifestedFormat(Json.format[ValueScatterWidgetSpec]),
       ManifestedFormat(Json.format[HeatmapAggWidgetSpec]),
       ManifestedFormat(Json.format[GridDistributionCountWidgetSpec]),
       ManifestedFormat(Json.format[CorrelationWidgetSpec]),

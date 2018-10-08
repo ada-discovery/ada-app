@@ -80,6 +80,16 @@ case class ScatterWidgetSpec(
   override val fieldNames = Seq(groupFieldName, Some(xFieldName), Some(yFieldName)).flatten
 }
 
+case class ValueScatterWidgetSpec(
+  xFieldName: String,
+  yFieldName: String,
+  valueFieldName: String,
+  subFilterId: Option[BSONObjectID] = None,
+  displayOptions: BasicDisplayOptions = BasicDisplayOptions()
+) extends WidgetSpec {
+  override val fieldNames = Seq(xFieldName, yFieldName, valueFieldName)
+}
+
 object AggType extends Enumeration {
   val Mean, Max, Min, Variance = Value
 }
