@@ -229,6 +229,7 @@ package object util {
 
   def crossProduct[T](list: Traversable[Traversable[T]]): Traversable[Traversable[T]] =
     list match {
+      case Nil => Nil
       case xs :: Nil => xs map (Traversable(_))
       case x :: xs => for {
         i <- x
