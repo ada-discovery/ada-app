@@ -225,10 +225,10 @@ function valueScatterWidget(elementId, widget, filterElementId) {
 
     var height = widget.displayOptions.height || 400;
 
-    var isXDate = widget.xFieldType == "Date"
+    var isXDate = widget.xFieldType == "Date";
     var xDataType = (isXDate) ? 'datetime' : null;
 
-    var isYDate = widget.yFieldType == "Date"
+    var isYDate = widget.yFieldType == "Date";
     var yDataType = (isYDate) ? 'datetime' : null;
 
     if (filterElementId) {

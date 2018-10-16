@@ -635,7 +635,8 @@
                     },
                     animation: {
                         duration: 400
-                    }
+                    },
+                    turboThreshold: 5000
                 }
             },
             tooltip:{
