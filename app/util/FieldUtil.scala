@@ -113,6 +113,13 @@ object FieldUtil {
       fieldType: FieldType[T]
     ) = fieldType.jsonToValue(json \ fieldName)
 
+    def toValues[T](
+      fieldNameTypes: Seq[(String, FieldType[T])]
+    ): Seq[Option[T]] =
+      fieldNameTypes.map { case (fieldName, fieldType) =>
+        json.toValue(fieldName, fieldType)
+      }
+
     def toDisplayString[T](
       fieldName: String,
       fieldType: FieldType[T]

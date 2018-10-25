@@ -1,16 +1,15 @@
 package services
 
-import java.util.Spliterators
-import java.util.stream.StreamSupport
 import java.{util => ju}
 import javax.inject.Inject
 
-import models.DataSetFormattersAndIds.{FieldIdentity, JsObjectIdentity}
-import dataaccess.RepoTypes.{DataSetSettingRepo, FieldRepo, JsonCrudRepo}
-import dataaccess.JsonRepoExtra.InfixOps
-import dataaccess.JsonUtil
-import _root_.util.{AkkaStreamUtil, GroupMapList, MessageLogger}
-import _root_.util.FieldUtil.{JsonFieldOps, fieldTypeOrdering}
+import models.DataSetFormattersAndIds.{CategoryIdentity, FieldIdentity, JsObjectIdentity}
+import dataaccess.RepoTypes.{FieldRepo, JsonCrudRepo, JsonReadonlyRepo}
+import dataaccess.JsonReadonlyRepoExtra._
+import dataaccess.JsonCrudRepoExtra._
+import dataaccess.{JsonUtil, StreamSpec}
+import _root_.util.{GroupMapList, MessageLogger}
+import _root_.util.FieldUtil.{fieldTypeOrdering, isNumeric}
 import com.google.inject.ImplementedBy
 import models._
 import persistence.RepoTypes._
@@ -27,20 +26,18 @@ import play.api.Configuration
 import dataaccess.JsonUtil._
 import _root_.util.{crossProduct, retry, seqFutures}
 import akka.actor.ActorSystem
-import akka.stream.impl.QueueSink
-import akka.stream.impl.Stages.DefaultAttributes
 import akka.stream.{ActorMaterializer, OverflowStrategy}
-import akka.stream.scaladsl.{Sink, StreamConverters}
+import akka.stream.scaladsl.{Sink, Source, StreamConverters}
 import field.{FieldType, FieldTypeHelper, FieldTypeInferrer}
-import models.Filter.FilterOrId
 import models.ml._
 import org.incal.core.dataaccess.{AscSort, Criterion}
+import _root_.util.FieldUtil.{InfixFieldOps, JsonFieldOps}
 
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import services.ml.{RCPredictionService, RCPredictionStaticHelper}
 
-import scala.concurrent.duration.Duration.Inf
+import scala.util.Random
 
 @ImplementedBy(classOf[DataSetServiceImpl])
 trait DataSetService {
@@ -154,13 +151,13 @@ trait DataSetService {
   ): Future[DataSetAccessor]
 
   def mergeDataSets(
-    resultDataSetSpec: ResultDataSetSpec,
+    resultDataSetSpec: DerivedDataSetSpec,
     dataSetIds: Seq[String],
     fieldNameMappings: Seq[Seq[String]]
   ): Future[Unit]
 
   def mergeDataSetsWoInference(
-    resultDataSetSpec: ResultDataSetSpec,
+    resultDataSetSpec: DerivedDataSetSpec,
     dataSetIds: Seq[String],
     fieldNames: Seq[Seq[Option[String]]],
     keyField: Option[String] = None,
@@ -216,6 +213,20 @@ trait DataSetService {
 
   def selfLink(
     spec: SelfLinkSpec
+  ): Future[Unit]
+
+  def dropFields(
+    spec: DropFieldsSpec
+  ): Future[Unit]
+
+  def matchGroups(
+    dataSetId: String,
+    derivedDataSetSpec: DerivedDataSetSpec,
+    criteria: Seq[Criterion[Any]],
+    targetGroupFieldName: String,
+    confoundingFieldNames: Seq[String],
+    numericDistTolerance: Double,
+    targetGroupDisplayStringRatios: Seq[(String, Int)]
   ): Future[Unit]
 
   def extractPeaks(
@@ -574,7 +585,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def mergeDataSets(
-    resultDataSetSpec: ResultDataSetSpec,
+    resultDataSetSpec: DerivedDataSetSpec,
     dataSetIds: Seq[String],
     fieldNames: Seq[Seq[String]]
   ): Future[Unit] = {
@@ -673,7 +684,7 @@ class DataSetServiceImpl @Inject()(
   }
 
   override def mergeDataSetsWoInference(
-    resultDataSetSpec: ResultDataSetSpec,
+    resultDataSetSpec: DerivedDataSetSpec,
     dataSetIds: Seq[String],
     fieldNames: Seq[Seq[Option[String]]],
     keyField: Option[String] = None,
@@ -1163,7 +1174,7 @@ class DataSetServiceImpl @Inject()(
       items <- dsa.dataSetRepo.find(projection = spec.keyFieldNames ++ Seq(JsObjectIdentity.name))
 
       // register a new data set
-      newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetSpec, false)
+      newDsa <- registerDerivedDataSet(dsa, spec.resultDataSetSpec)
 
       // retrieve a value field
       valueField <- dsa.fieldRepo.get(spec.valueFieldName)
@@ -1306,7 +1317,7 @@ class DataSetServiceImpl @Inject()(
 
 //      // delete all from the old data set
 //      _ <- newDsa.dataSetRepo.deleteAll
-//      ids <- dsa.dataSetRepo.allIds
+      ids <- dsa.dataSetRepo.allIds
 
       // TODO: quick fix that should be removed
 
@@ -1502,12 +1513,10 @@ class DataSetServiceImpl @Inject()(
 
   private def registerDerivedDataSet(
     sourceDsa: DataSetAccessor,
-    spec: ResultDataSetSpec,
-    saveDataView: Boolean = true
+    spec: DerivedDataSetSpec
   ): Future[DataSetAccessor] = {
     val metaInfoFuture = sourceDsa.metaInfo
     val settingFuture = sourceDsa.setting
-    val dataViewsFuture = sourceDsa.dataViewRepo.find()
 
     for {
       // get the data set meta info
@@ -1516,14 +1525,11 @@ class DataSetServiceImpl @Inject()(
       // get the data set setting
       setting <- settingFuture
 
-      // get the data set setting
-      dataViews <- dataViewsFuture
-
-      // register the norm data set (if not registered already)
+      // register the data set (if not registered already)
       newDsa <- dsaf.register(
         metaInfo.copy(_id = None, id = spec.id, name = spec.name, timeCreated = new ju.Date()),
         Some(setting.copy(_id = None, dataSetId = spec.id, storageType = spec.storageType)),
-        if (saveDataView) dataViews.find(_.default) else None
+        None
       )
     } yield
       newDsa
@@ -1822,7 +1828,7 @@ class DataSetServiceImpl @Inject()(
       _ <- if (!saveDeltaOnly) newDataSetRepo.deleteAll else Future(())
 
       // existing ids at the new data set
-      existingIds <- newDataSetRepo.allIds.map(_.toSet)
+      existingIds <- Future(Nil) // newDataSetRepo.asInstanceOf[JsonReadonlyRepo].allIds.map(_.toSet)
 
       // group and save the stream as it goes
       _ <- stream.map{ json => logger.info("Reading from the source DB..."); json}
@@ -1842,45 +1848,136 @@ class DataSetServiceImpl @Inject()(
       ()
   }
 
-  private def dropFields(
+  override def dropFields(
     spec: DropFieldsSpec
   ): Future[Unit] = {
     val sourceDsa = dsaf(spec.sourceDataSetId).get
-
-    val processingBatchSize = spec.processingBatchSize.getOrElse(10)
-    val parallelism = spec.parallelism.getOrElse(4)
 
     for {
       // get the fields except those to drop
       fields <- sourceDsa.fieldRepo.find(Seq(FieldIdentity.name #!-> spec.fieldNamesToDrop.toSeq))
 
       // input data stream
-      stream <- sourceDsa.dataSetRepo.findAsStream(projection = fields.map(_.name))
+      inputStream <- sourceDsa.dataSetRepo.findAsStream(projection = fields.map(_.name))
 
-      // register a new data set
-      resultDsa <- registerDerivedDataSet(sourceDsa, spec.resultDataSetSpec)
-
-      // delete all the new fields (if any)
-      _ <- resultDsa.fieldRepo.deleteAll
-
-      // save the new fields (minus the dropped ones)
-      _ <- resultDsa.fieldRepo.save(fields)
-
-      // delete the new data set if needed
-      _ <- resultDsa.dataSetRepo.deleteAll
-
-      // group and save the stream as it goes
-      _ <- {
-        logger.info(s"Streaming data from ${spec.sourceDataSetId} to ${spec.resultDataSetId}...")
-        stream
-          .grouped(processingBatchSize)
-          .buffer(spec.backpressureBufferSize, OverflowStrategy.backpressure)
-          .mapAsync(parallelism)(resultDsa.dataSetRepo.save)
-          .runWith(Sink.ignore)
-      }
+      _ <- saveDerivedDataSet(sourceDsa, spec.resultDataSetSpec, inputStream, fields.toSeq, spec.streamSpec, true)
     } yield
       ()
   }
+
+  private def saveDerivedDataSet(
+    sourceDsa: DataSetAccessor,
+    derivedDataSetSpec: DerivedDataSetSpec,
+    inputSource: Source[JsObject, _],
+    fields: Seq[Field],
+    streamSpec: StreamSpec = StreamSpec(),
+    saveViewsAndFiltersFlag: Boolean = true
+  ): Future[Unit] = {
+    for {
+      // register a new data set
+      targetDsa <- registerDerivedDataSet(sourceDsa, derivedDataSetSpec)
+
+      // reference category ids from the original data set
+      refCategoryIds = fields.flatMap(_.categoryId).toSet.toSeq
+
+      // delete all the new categories (if any)
+      _ <- targetDsa.categoryRepo.deleteAll
+
+      // save the referenced categories and collect new ids
+      newCategoryIds <- sourceDsa.categoryRepo.find(Seq(CategoryIdentity.name #-> refCategoryIds)).flatMap(categories =>
+        targetDsa.categoryRepo.save(categories.map(_.copy(_id = None)))
+      )
+
+      // old -> new category id map
+      oldNewCategoryIdMap = refCategoryIds.zip(newCategoryIds.toSeq).toMap
+
+      // new fields (with replaced category ids)
+      newFields = fields.map(field => field.copy(categoryId = field.categoryId.flatMap(oldNewCategoryIdMap.get)))
+
+      // delete all the new fields (if any)
+      _ <- targetDsa.fieldRepo.deleteAll
+
+      // save the new fields (minus the dropped ones)
+      _ <- targetDsa.fieldRepo.save(newFields)
+
+      // delete the new data set if needed
+      _ <- targetDsa.dataSetRepo.deleteAll
+
+      // group and save the stream as it goes
+      _ <- {
+        logger.info(s"Streaming data from ${sourceDsa.dataSetId} to ${derivedDataSetSpec.id}...")
+        targetDsa.dataSetRepo.saveAsStream(inputSource, streamSpec)
+      }
+
+      // handle the filters and views (if needed)
+      _ <- if (saveViewsAndFiltersFlag) saveViewsAndFilters(sourceDsa, targetDsa, fields) else Future(())
+    } yield
+      ()
+  }
+
+  private def saveViewsAndFilters(
+    sourceDsa: DataSetAccessor,
+    targetDsa: DataSetAccessor,
+    fields: Seq[Field]
+  ): Future[Unit] =
+    for {
+      // get the original filters
+      oldFilters <- sourceDsa.filterRepo.find()
+
+      // field name set for a quick lookup
+      fieldNameSet = fields.map(_.name).toSet
+
+      // collect the filters with the available fields
+      refFilters = oldFilters.filter(filter => filter.conditions.map(_.fieldName).forall(fieldNameSet.contains))
+
+      // delete all the new filters (if any)
+      _ <- targetDsa.filterRepo.deleteAll
+
+      // save the new filters
+      newFilterIds <- targetDsa.filterRepo.save(refFilters.map(_.copy(_id = None, timeCreated = Some(new java.util.Date()))))
+
+      // old -> new filter id map
+      oldNewFilterIdMap = refFilters.toSeq.map(_._id.get).zip(newFilterIds.toSeq).toMap
+
+      // get the original views
+      oldViews <- sourceDsa.dataViewRepo.find()
+
+      // referenced filter id set for a quick lookup
+      refFilterIdSet = refFilters.flatMap(_._id).toSet
+
+      // collect the views for the available filters (and fields)
+      refViews = oldViews.filter { view =>
+        val filterIds = view.filterOrIds.flatMap(_.right.toOption)
+        val conditionFieldIds = view.filterOrIds.flatMap(_.left.toOption.map(_.map(_.fieldName))).flatten
+        filterIds.forall(refFilterIdSet.contains) && conditionFieldIds.forall(fieldNameSet.contains)
+      }
+
+      // create new views
+      newViews = refViews.map { view =>
+
+        val newFilterOrIds = view.filterOrIds.map(
+          _ match {
+            case Left(conditions) => Left(conditions)
+            case Right(filterId) => Right(oldNewFilterIdMap.get(filterId).get)
+          }
+        )
+
+        val newWidgets = view.widgetSpecs.filter(widgetSpec =>
+          widgetSpec.fieldNames.forall(fieldNameSet.contains)
+        )
+
+        val newTableColumnNames = view.tableColumnNames.filter(fieldNameSet.contains)
+
+        view.copy(_id = None, timeCreated = new java.util.Date(), filterOrIds = newFilterOrIds, widgetSpecs = newWidgets, tableColumnNames = newTableColumnNames)
+      }
+
+      // delete all the new views (if any)
+      _ <- targetDsa.dataViewRepo.deleteAll
+
+      // save the new views
+      _ <- targetDsa.dataViewRepo.save(newViews)
+    } yield
+      ()
 
   override def translateDataAndDictionaryOptimal(
     originalDataSetId: String,
@@ -2369,6 +2466,211 @@ class DataSetServiceImpl @Inject()(
       jsons <- dataFuture
     } yield
       (jsons, fields.toSeq)
+  }
+
+  override def matchGroups(
+    dataSetId: String,
+    derivedDataSetSpec: DerivedDataSetSpec,
+    criteria: Seq[Criterion[Any]],
+    targetGroupFieldName: String,
+    confoundingFieldNames: Seq[String],
+    numericDistTolerance: Double,
+    targetGroupSelectionRatios: Seq[(String, Int)]
+  ) = {
+    val dsa = dsaf(dataSetId).getOrElse(throw new AdaException(s"Data Set ${dataSetId} not found."))
+
+    // aux function to find group confounding values
+    def findGroupConfoundingValues(
+      fieldNameTypes: Seq[(String, FieldType[Any])])(
+      groupValueSelectionRatio: (Any, Int)
+    ): Future[(Int, ListBuffer[(BSONObjectID, Seq[Option[Any]])])] =
+      dsa.dataSetRepo.find(
+        criteria = criteria ++ Seq(targetGroupFieldName #== groupValueSelectionRatio._1),
+        projection = confoundingFieldNames ++ Seq(JsObjectIdentity.name)
+      ).map { jsons =>
+        val idValues = jsons.map { json =>
+          val id = (json \ JsObjectIdentity.name).as[BSONObjectID]
+          (id, json.toValues(fieldNameTypes))
+        }
+        (groupValueSelectionRatio._2, ListBuffer(Random.shuffle(idValues).toSeq :_*))
+      }
+
+    // aux function to get the list of availble values (boolean, enum supported only)
+    def availableValues(targetField: Field) = targetField.fieldType match {
+      case FieldTypeId.Enum => targetField.numValues.map(_.keys.toSeq).getOrElse(Nil)
+      case FieldTypeId.Boolean => Seq(true, false)
+      case _ => throw new AdaException(s"Only enum and boolean types are allowed for a target group field. Got ${targetField.fieldType}.")
+    }
+
+    for {
+      // confounding fields
+      confoundingFields <- dsa.fieldRepo.find(Seq(FieldIdentity.name #-> confoundingFieldNames)).map(_.toSeq)
+
+      // confounding field names and types
+      confoundingFieldNameTypes = confoundingFields.map(field => (field.name, ftf(field.fieldTypeSpec).asValueOf[Any]))
+
+      // filter numberic field types
+      numericFieldNameTypes = confoundingFieldNameTypes.filter { case (_, fieldType) => isNumeric(fieldType.spec.fieldType) }
+
+      // min-maxes for numeric fields
+      nameMinMaxMap <- Future.sequence(
+        numericFieldNameTypes.map { case (fieldName, fieldType) =>
+          minMaxDoubles(dsa.dataSetRepo, fieldName, fieldType, criteria).map(minMax => minMax.map((fieldName, _)))
+        }
+      ).map(_.flatten.toMap)
+
+      // target field
+      targetField <- dsa.fieldRepo.get(targetGroupFieldName).map(
+        _.getOrElse(throw new AdaException(s"Target field $targetGroupFieldName not found."))
+      )
+
+      // target field type
+      targetFieldType = ftf(targetField.fieldTypeSpec).asValueOf[Any]
+
+      // group values with selection ratios
+      groupValueSelectionRatios = targetGroupSelectionRatios match {
+        case Nil => availableValues(targetField).map((_, 1)) // default selection is one sample per group
+        case _ =>
+          targetGroupSelectionRatios.flatMap { case (displayString, ratio) =>
+            targetFieldType.displayStringToValue(displayString).map(value => (value, ratio))
+          }
+      }
+
+      // for each group value find samples for all confounders
+      selectCountConfoundingIdSamples <- Future.sequence {
+        groupValueSelectionRatios.map(
+          findGroupConfoundingValues(confoundingFieldNameTypes)
+        )
+      }
+
+      // collect ids of the matched samples
+      sampleIds = collectMatchedSampleIds(selectCountConfoundingIdSamples, confoundingFields, nameMinMaxMap, numericDistTolerance)
+
+      // input stream (for given ids)
+      inputStream <- dsa.dataSetRepo.findAsStream(Seq(JsObjectIdentity.name #-> sampleIds.toSeq))
+
+      // get all the fields
+      fields <- dsa.fieldRepo.find()
+
+      // save the derived data set with an input stream (also save filters and data views)
+      _ <- saveDerivedDataSet(dsa, derivedDataSetSpec, inputStream, fields.toSeq, StreamSpec(batchSize = Some(10)), true)
+    } yield
+      ()
+  }
+
+  private def minMaxDoubles[T](
+    dataRepo: JsonReadonlyRepo,
+    fieldName: String,
+    fieldType: FieldType[_],
+    criteria: Seq[Criterion[Any]]
+  ): Future[Option[(Double, Double)]] = {
+    val convert = doubleValue(fieldType.spec.fieldType)
+
+    // aux function to convert to double
+    def toDouble(jsValue: JsReadable): Option[Double] =
+      convert(fieldType.asValueOf[Any].jsonToValue(jsValue))
+
+    val maxFuture = dataRepo.max(fieldName, criteria, true).map(_.flatMap(toDouble))
+    val minFuture = dataRepo.min(fieldName, criteria, true).map(_.flatMap(toDouble))
+
+    for {
+      min <- minFuture
+      max <- maxFuture
+    } yield
+      (min, max).zipped.headOption
+  }
+
+  private def collectMatchedSampleIds(
+    selectCountConfoundingIdSamples: Seq[(Int, ListBuffer[(BSONObjectID, Seq[Option[Any]])])],
+    confoundingFields: Seq[Field],
+    fieldNameMinMaxMap: Map[String, (Double, Double)],
+    numericDistTolerance: Double
+  ): Traversable[BSONObjectID] = {
+    val nonEmptySelectCountConfoundingIdSamples = selectCountConfoundingIdSamples.filter(_._2.nonEmpty)
+
+    if (nonEmptySelectCountConfoundingIdSamples.isEmpty) {
+      Nil
+    } else {
+      nonEmptySelectCountConfoundingIdSamples.head._2.flatMap { case (id, matchingConfoundingSample) =>
+        val matchedGroupIdSamples = nonEmptySelectCountConfoundingIdSamples.tail.map { case (selectCount, confoundingIdSamples) =>
+          val bestSamples = findBestSampleMatches(matchingConfoundingSample, confoundingIdSamples, confoundingFields, fieldNameMinMaxMap, numericDistTolerance, selectCount)
+
+          // only if the number of samples is as expected return them, otherwise return Nil indicating a failure
+          if (bestSamples.size == selectCount) bestSamples else Nil
+        }
+
+        if (matchedGroupIdSamples.forall(_.nonEmpty)) {
+          // remove matched samples
+          selectCountConfoundingIdSamples.tail.zip(matchedGroupIdSamples).map {
+            case ((_, confoundingIdSamples), matchedGroupIdSamples) =>
+              confoundingIdSamples.--=(matchedGroupIdSamples)
+          }
+
+          // collect ids sand return
+          val ids = matchedGroupIdSamples.flatten.map(_._1)
+          Seq(id) ++ ids
+        } else
+          Nil
+      }
+    }
+  }
+
+  private def findBestSampleMatches(
+    matchingConfoundingSample: Seq[Option[Any]],
+    confoundingIdSamples: ListBuffer[(BSONObjectID, Seq[Option[Any]])],
+    confoundingFields: Seq[Field],
+    fieldNameMinMaxMap: Map[String, (Double, Double)],
+    numericDistTolerance: Double,
+    selectCount: Int
+  ): Seq[(BSONObjectID, Seq[Option[Any]])] = {
+    val matchedIdSamples = confoundingIdSamples.filter { case (_, confoundingSample) =>
+      (matchingConfoundingSample, confoundingSample, confoundingFields).zipped.forall { case (matchingValue, value, field) =>
+        (matchingValue.isEmpty && value.isEmpty) || field.isNumeric || (field.isCategorical && matchingValue.nonEmpty && value.nonEmpty && matchingValue.get == value.get)
+      }
+    }
+
+    val idSampleDistances = matchedIdSamples.map { case (id, confoundingSample) =>
+      val squareSum = (matchingConfoundingSample, confoundingSample, confoundingFields).zipped.map { case (matchingValue, value, field) =>
+        if (field.isNumeric) {
+          if (matchingValue.isEmpty && value.isEmpty)
+            0d
+          else {
+            val (min, max) = fieldNameMinMaxMap.get(field.name).getOrElse(
+              // not possible
+              throw new IllegalArgumentException(s"Min max for a numeric field ${field.name} not found.")
+            )
+
+            val toDouble = {
+              val convert = doubleValue(field.fieldType)
+              (value: Option[Any]) => convert(value).getOrElse(Double.PositiveInfinity)
+            }
+
+            val normalizedDiff = Math.abs(toDouble(matchingValue) - toDouble(value)) / Math.abs(max - min)
+
+            // square of normalized diff
+            normalizedDiff * normalizedDiff
+          }
+        } else
+          0d
+      }.sum
+
+      ((id, confoundingSample), Math.sqrt(squareSum))
+    }.filter { case (_, distance) => distance < Math.min(numericDistTolerance, Double.PositiveInfinity) }
+
+    idSampleDistances.sortBy(_._2).take(selectCount).map(_._1)
+  }
+
+  private def doubleValue(fieldTypeId: FieldTypeId.Value): Option[Any] => Option[Double] = {
+    // aux double conversion function
+    def toDouble[T](convert: T => Double)(value: Option[Any]): Option[Double] =
+      value.asInstanceOf[Option[T]].map(convert)
+
+    fieldTypeId match {
+      case FieldTypeId.Double => toDouble[Double](identity)(_)
+      case FieldTypeId.Integer => toDouble[Long](_.toDouble)(_)
+      case FieldTypeId.Date => toDouble[java.util.Date](_.getTime.toDouble)(_)
+      case _ => throw new IllegalArgumentException(s"Numeric type expected but got ${fieldTypeId}.")
+    }
   }
 
   private def logProgress(index: Int, granularity: Double, total: Int) =

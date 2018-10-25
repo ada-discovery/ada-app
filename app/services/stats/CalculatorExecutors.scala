@@ -97,6 +97,9 @@ trait CalculatorExecutors {
   def basicStatsSeqExec =
     withSeq(BasicStatsCalc)
 
+  def multiBasicStatsSeqExec =
+    withSeq(MultiBasicStatsCalc)
+
   // Tuples
 
   def tupleExec[A, B](

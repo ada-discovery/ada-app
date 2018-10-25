@@ -327,8 +327,8 @@ private class MachineLearningServiceImpl @Inject() (
     // how to calculate test predictions
     val calcTestPredictions = independentTestPredictions
 
-    // classify with a random splitDataset
-    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, split, calcTestPredictions, crossValidatorCreator, Nil, Nil)
+    // classify with a random split
+    classifyAux(df, replicationDf, mlModel, setting, binCurvesNumBins, split, calcTestPredictions, crossValidatorCreator, Nil, Nil, Nil)
   }
 
   private def classifyTimeSeries(
@@ -591,7 +591,7 @@ private class MachineLearningServiceImpl @Inject() (
     val calcTestPredictions = independentTestPredictions
 
     // regress
-    regressAux(df, replicationDf, mlModel, setting, split, calcTestPredictions, crossValidatorCreator, Nil, Nil)
+    regressAux(df, replicationDf, mlModel, setting, split, calcTestPredictions, crossValidatorCreator, Nil, Nil, Nil, false)
   }
 
   private def regressTimeSeries(

@@ -1,17 +1,18 @@
 package models.ml
 
+import dataaccess.StreamSpec
 import models.StorageType
 import models.json.EnumFormat
 import play.api.libs.json.Json
 
 trait DataSetTransformation {
-  val resultDataSetSpec: ResultDataSetSpec
+  val resultDataSetSpec: DerivedDataSetSpec
   def resultDataSetId = resultDataSetSpec.id
   def resultDataSetName = resultDataSetSpec.name
   def resultStorageType = resultDataSetSpec.storageType
 }
 
-case class ResultDataSetSpec(
+case class DerivedDataSetSpec(
   id: String,
   name: String,
   storageType: StorageType.Value
@@ -33,7 +34,7 @@ case class SeriesProcessingSpec(
 
 case class DataSetSeriesProcessingSpec(
   sourceDataSetId: String,
-  resultDataSetSpec: ResultDataSetSpec,
+  resultDataSetSpec: DerivedDataSetSpec,
   seriesProcessingSpecs: Seq[SeriesProcessingSpec],
   preserveFieldNames: Seq[String],
   processingBatchSize: Option[Int],
@@ -43,7 +44,7 @@ case class DataSetSeriesProcessingSpec(
 // TODO: This should be merged with DataSetSeriesProcessingSpec
 case class DataSetSeriesTransformationSpec(
   sourceDataSetId: String,
-  resultDataSetSpec: ResultDataSetSpec,
+  resultDataSetSpec: DerivedDataSetSpec,
   seriesTransformationSpecs: Seq[SeriesTransformationSpec],
   preserveFieldNames: Seq[String],
   processingBatchSize: Option[Int],
@@ -66,7 +67,7 @@ case class DataSetLinkSpec(
   leftPreserveFieldNames: Traversable[String],
   rightPreserveFieldNames: Traversable[String],
   addDataSetIdToRightFieldNames: Boolean,
-  resultDataSetSpec: ResultDataSetSpec,
+  resultDataSetSpec: DerivedDataSetSpec,
   processingBatchSize: Option[Int] = None,
   saveBatchSize: Option[Int] = None,
   backpressureBufferSize: Option[Int] = None,
@@ -83,7 +84,7 @@ case class MultiDataSetLinkSpec(
   leftPreserveFieldNames: Traversable[String],
   rightPreserveFieldNames: Seq[Traversable[String]],
   addDataSetIdToRightFieldNames: Boolean,
-  resultDataSetSpec: ResultDataSetSpec,
+  resultDataSetSpec: DerivedDataSetSpec,
   processingBatchSize: Option[Int] = None,
   saveBatchSize: Option[Int] = None,
   backpressureBufferSize: Option[Int] = None,
@@ -95,16 +96,14 @@ case class SelfLinkSpec(
   keyFieldNames: Seq[String],
   valueFieldName: String,
   processingBatchSize: Option[Int],
-  resultDataSetSpec: ResultDataSetSpec
+  resultDataSetSpec: DerivedDataSetSpec
 ) extends DataSetTransformation
 
 case class DropFieldsSpec(
   sourceDataSetId: String,
   fieldNamesToDrop: Traversable[String],
-  backpressureBufferSize: Int,
-  resultDataSetSpec: ResultDataSetSpec,
-  processingBatchSize: Option[Int],
-  parallelism: Option[Int]
+  resultDataSetSpec: DerivedDataSetSpec,
+  streamSpec: StreamSpec
 ) extends DataSetTransformation
 
 object SeriesProcessingType extends Enumeration {
@@ -113,7 +112,7 @@ object SeriesProcessingType extends Enumeration {
 
 object DataSetTransformation {
   implicit val storageTypeFormat = EnumFormat.enumFormat(StorageType)
-  implicit val coreFormat = Json.format[ResultDataSetSpec]
+  implicit val coreFormat = Json.format[DerivedDataSetSpec]
   implicit val seriesProcessingTypeFormat = EnumFormat.enumFormat(SeriesProcessingType)
   implicit val seriesProcessingSpecFormat = Json.format[SeriesProcessingSpec]
   implicit val vectorTransformTypeFormat = EnumFormat.enumFormat(VectorTransformType)

@@ -13,7 +13,7 @@ import com.banda.network.business.learning.{ErrorMeasures, ReservoirTrainerFacto
 import com.banda.network.domain._
 import com.google.inject.{ImplementedBy, Singleton}
 import org.incal.core.dataaccess.Criterion.Infix
-import dataaccess.JsonRepoExtra.InfixOps
+import dataaccess.JsonReadonlyRepoExtra._
 import models._
 import models.ml.RCPredictionSettingAndResults.rcPredictionSettingAndResultsFormat
 import models.ml._

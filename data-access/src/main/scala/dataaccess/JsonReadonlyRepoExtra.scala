@@ -1,6 +1,8 @@
 package dataaccess
 
-import dataaccess.RepoTypes.JsonReadonlyRepo
+import akka.stream.OverflowStrategy
+import akka.stream.scaladsl.{Sink, Source}
+import dataaccess.RepoTypes.{JsonCrudRepo, JsonReadonlyRepo}
 import models.DataSetFormattersAndIds.JsObjectIdentity
 import play.api.libs.json.{JsLookupResult, JsObject}
 import reactivemongo.play.json.BSONFormats._
@@ -61,5 +63,37 @@ object JsonRepoExtra {
         sort = Seq(AscSort(fieldName)),
         limit = Some(1)
       ).map(_.headOption.map(_ \ fieldName))
+  }
+}
+
+object JsonCrudRepoExtra {
+
+  implicit class InfixOps(val dataSetRepo: JsonCrudRepo) extends AnyVal {
+
+    def save(
+      source: Source[JsObject, _],
+      processingBatchSize: Option[Int] = None,
+      backpressureBufferSize: Option[Int]  = None,
+      parallelism: Option[Int]  = None
+    ): Future[Unit] = {
+      val parallelismInit = parallelism.getOrElse(1)
+
+      def buffer[T](stream: Source[T, _]): Source[T, _] =
+        backpressureBufferSize.map(stream.buffer(_, OverflowStrategy.backpressure)).getOrElse(stream)
+
+      val finalStream = processingBatchSize match {
+
+        // batch size is defined
+        case Some(processingBatchSize) =>
+          buffer(source.grouped(processingBatchSize))
+            .mapAsync(parallelismInit)(dataSetRepo.save)
+
+        case None =>
+          buffer(source)
+            .mapAsync(parallelismInit)(dataSetRepo.save)
+      }
+
+      finalStream.runWith(Sink.ignore).map(_ => ())
+    }
   }
 }

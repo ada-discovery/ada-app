@@ -1,28 +1,50 @@
 package runnables.luxpark
 
+import models.{AdaException, AdaParseException}
+import org.incal.core.InputRunnable
+
 import scala.io.Source
-import util.{writeStringAsStream, GroupMapList}
+import util.{GroupMapList, writeStringAsStream}
 
-object VariantsToSubjectEntries extends App {
+import scala.reflect.runtime.universe.typeOf
 
-  private val inputFileName = "/home/peter/Data/LuxPark_Neurochip/variants2ada.csv"
-  private val outputFileName = "/home/peter/Data/LuxPark_Neurochip/variants2ada-by_subjects.csv"
-  private val labelOutputFileName = "/home/peter/Data/LuxPark_Neurochip/variantLabels.csv"
+class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpec] {
 
-  private val delimiter = "\t"
+  private val defaultDelimiter = "\t"
 
-  // Variant Internal Id, Gene, Category, Variant,	Func.refGene,	ExonicFunc.refGene,	rsID,	number cases,	number controls,	hom case,	hom control,	case IDs,	control IDs
+  private val expectedColumnNames = Map(
+    0 -> "Variant Internal Id",
+    1 -> "Gene",
+    2 -> "Category",
+    3 -> "Variant",
+    4 -> "Func.refGene",
+    5 -> "ExonicFunc.refGene",
+    6 -> "rsID",
+    7 -> "number cases",
+    8 -> "number controls",
+    9 -> "hom case",
+    10 -> "hom control",
+    11 -> "case IDs",
+    12 -> "control IDs"
+  )
 
   private val newHeaderStart = Seq("Aliquot_Id", "Kit_Id")
 
-  process
+  override def run(input: VariantsToSubjectEntriesSpec) = {
+    val delimiter = input.delimiter.getOrElse(defaultDelimiter)
 
-  private def process = {
-    val lines = Source.fromFile(inputFileName).getLines()
+    // retrieve output and label output file names
+    val (outputFileName, labelOutputFileName) = outputFileNames(input.inputFileName)
+
+    val lines = Source.fromFile(input.inputFileName).getLines()
     val header = lines.next
 
+    // first validate column names
+    val columnNames = header.split(delimiter, -1).map(_.trim)
+    validateColumnNames(columnNames)
+
     val aliquotVariantEntries = lines.zipWithIndex.map { case (line, variantIndex) =>
-      val items = line.split("\t", -1).map(_.trim)
+      val items = line.split(delimiter, -1).map(_.trim)
       val variantInternalId = items(0)
       val gene = items(1)
       val category = items(2)
@@ -84,4 +106,37 @@ object VariantsToSubjectEntries extends App {
     val variantNameLabelLines = variantInfos.map(info => info._3 + delimiter + info._4)
     writeStringAsStream(variantNameLabelLines.mkString("\n"), new java.io.File(labelOutputFileName))
   }
+
+  private def outputFileNames(inputFileName: String): (String, String) = {
+    val inputFile = new java.io.File(inputFileName)
+    if (!inputFile.exists)
+      throw new AdaException(s"Input file '${inputFileName}' doesn't exist.")
+
+    val (inputFileNamePrefix, extension) = if (inputFile.getName.contains('.')) {
+      val parts = inputFile.getName.split("\\.", 2)
+      (inputFile.getParent + "/" + parts(0), "." + parts(1))
+    } else
+      (inputFile.getName, "")
+
+    val outputFileName = inputFileNamePrefix + "-by_subjects" + extension
+    val labelOutputFileName = inputFileNamePrefix + "-labels" + extension
+
+    (outputFileName, labelOutputFileName)
+  }
+
+  private def validateColumnNames(columnNames: Seq[String]) = {
+    expectedColumnNames.map { case (index, expectedColumnName) =>
+      if (index >= columnNames.size)
+        throw new AdaParseException(s"Column $expectedColumnName at the position ${index + 1} expected but got only ${columnNames.size} columns.")
+      else if (!columnNames(index).equals(expectedColumnName))
+        throw new AdaParseException(s"Column $expectedColumnName at the position ${index + 1} expected but got ${columnNames(index)} instead.")
+    }
+  }
+
+  override def inputType = typeOf[VariantsToSubjectEntriesSpec]
 }
+
+case class VariantsToSubjectEntriesSpec(
+  inputFileName: String,
+  delimiter: Option[String]
+)

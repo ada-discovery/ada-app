@@ -13,7 +13,7 @@ import org.incal.core.dataaccess.Criterion.Infix
 import models._
 import play.api.Logger
 import play.api.libs.json._
-import dataaccess.JsonRepoExtra.InfixOps
+import dataaccess.JsonReadonlyRepoExtra._
 import services.stats.calc._
 import breeze.linalg.{DenseMatrix, eig, eigSym}
 import breeze.linalg.eigSym.EigSym
@@ -207,6 +207,12 @@ trait StatsService extends CalculatorExecutors {
     keepUndefined: Boolean = false
   ): Seq[(Field, Option[IndependenceTestResult])]
 
+  def testAnovaForMultiCriteriaSorted(
+    dataRepo: JsonReadonlyRepo,
+    multiCriteria: Seq[Seq[Criterion[Any]]],
+    inputFields: Seq[Field]
+  ): Future[Seq[(Field, Option[IndependenceTestResult])]]
+
   def selectFeaturesAsAnovaChiSquare(
     data: Traversable[JsObject],
     inputFields: Seq[Field],
@@ -217,7 +223,7 @@ trait StatsService extends CalculatorExecutors {
 }
 
 @Singleton
-class StatsServiceImpl extends StatsService {
+class StatsServiceImpl extends StatsService with OneWayAnovaHelper {
 
   private implicit val ftf = FieldTypeHelper.fieldTypeFactory()
   private val defaultNumericBinCount = 20
@@ -1084,21 +1090,7 @@ class StatsServiceImpl extends StatsService {
   ): Seq[(Field, Option[IndependenceTestResult])] = {
     val results = testIndependence(items, inputFields, targetField, keepUndefined)
 
-    // Sort and combine the results
-    def pValueAndStat(result: Option[IndependenceTestResult]): (Double, Double) =
-      result.map {
-        _ match {
-          case ChiSquareResult(pValue, statistics, _) => (pValue, statistics)
-          case OneWayAnovaResult(pValue, fValue, _, _) => (pValue, fValue)
-        }
-      }.getOrElse((Double.PositiveInfinity, 0d))
-
-    inputFields.zip(results).sortWith { case ((fieldName1, result1), (fieldName2, result2)) =>
-      val (pValue1, stat1) = pValueAndStat(result1)
-      val (pValue2, stat2) = pValueAndStat(result2)
-
-      (pValue1 < pValue2) || (pValue1 == pValue2 && stat1 > stat2)
-    }
+    sortIndependenceTestResults(results, inputFields)
   }
 
   private val chiSquareTestExec = multiChiSquareTestExec[Option[Any], Any]
@@ -1130,12 +1122,12 @@ class StatsServiceImpl extends StatsService {
     val fieldChiSquareResultMap = nonNumericInputFields.zip(chiSquareResults).toMap
     val fieldAnovaResultMap = numericInputFields.zip(anovaResults).toMap
 
-    inputFields.map { field =>
+    inputFields.map( field =>
       if (field.isNumeric)
         fieldAnovaResultMap.get(field).get
       else
         fieldChiSquareResultMap.get(field).get
-    }
+    )
   }
 
   override def selectFeaturesAsAnovaChiSquare(
@@ -1147,6 +1139,58 @@ class StatsServiceImpl extends StatsService {
   ): Seq[Field] = {
     val results = testIndependenceSorted(data, inputFields, targetField, keepUndefined)
     results.map(_._1).take(featuresToSelectNum)
+  }
+
+  private val multiBasicStatsExec = multiBasicStatsSeqExec
+
+  override def testAnovaForMultiCriteriaSorted(
+    dataRepo: JsonReadonlyRepo,
+    multiCriteria: Seq[Seq[Criterion[Any]]],
+    inputFields: Seq[Field]
+  ): Future[Seq[(Field, Option[IndependenceTestResult])]] = {
+    val numericInputFields = inputFields.filter(_.isNumeric)
+
+    // aux function to pull the required data (for given criteria) and cal basic stats for each field
+    def calcStatsAux(
+      criteria: Seq[Criterion[Any]]
+    ): Future[Seq[Option[BasicStatsResult]]] =
+      dataRepo.find(criteria = criteria, projection = inputFields.map(_.name)).map(
+        multiBasicStatsExec.execJson_(numericInputFields)
+      )
+
+    for {
+      multiStats <- Future.sequence(multiCriteria.map(calcStatsAux))
+    } yield {
+      // aux function to calculate ANOVA at a given position/field
+      def calcAt(index: Int) = calcAnovaFromStats(multiStats.flatMap(_(index)))
+
+      val elementsCount = if (multiStats.nonEmpty) multiStats.head.size else 0
+
+      val results = (0 until elementsCount).par.map(calcAt).toList
+
+      sortIndependenceTestResults(results, inputFields)
+    }
+  }
+
+  private def sortIndependenceTestResults(
+    results: Seq[Option[IndependenceTestResult]],
+    inputFields: Seq[Field]
+  ): Seq[(Field, Option[IndependenceTestResult])] = {
+    // Sort and combine the results
+    def pValueAndStat(result: Option[IndependenceTestResult]): (Double, Double) =
+      result.map {
+        _ match {
+          case ChiSquareResult(pValue, statistics, _) => (pValue, statistics)
+          case OneWayAnovaResult(pValue, fValue, _, _) => (pValue, fValue)
+        }
+      }.getOrElse((Double.PositiveInfinity, 0d))
+
+    inputFields.zip(results).sortWith { case ((fieldName1, result1), (fieldName2, result2)) =>
+      val (pValue1, stat1) = pValueAndStat(result1)
+      val (pValue2, stat2) = pValueAndStat(result2)
+
+      (pValue1 < pValue2) || (pValue1 == pValue2 && stat1 > stat2)
+    }
   }
 }
 

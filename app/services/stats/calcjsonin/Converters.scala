@@ -77,6 +77,10 @@ class ArrayBasicStatsConverter extends ArrayDoubleConverter {
   override def specificUseClass = Some(BasicStatsCalc.getClass)
 }
 
+class MultiBasicStatsConverter extends SeqDoubleConverter {
+  override def specificUseClass = Some(MultiBasicStatsCalc.getClass)
+}
+
 class PearsonCorrelationConverter extends SeqDoubleConverter {
   override def specificUseClass = Some(PearsonCorrelationCalc.getClass)
 }

@@ -11,6 +11,7 @@ import org.incal.play.security.SecurityRole
 import models.security.DataSetPermission
 import org.incal.core.FilterCondition
 import org.incal.play.PageOrder
+import play.api.mvc.{Action, AnyContent}
 
 class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends SecureControllerDispatcher[DataSetController]("dataSet") with DataSetController {
 
@@ -98,6 +99,12 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override def testIndependence(
     filterOrId: FilterOrId
   ) = dispatchAjax(_.testIndependence(filterOrId))
+
+  override def getIndependenceTestForViewFilters = dispatch(_.getIndependenceTestForViewFilters)
+
+  override def testIndependenceForViewFilters(
+    viewId: BSONObjectID
+  ) = dispatchAjax(_.testIndependenceForViewFilters(viewId))
 
   override def getCumulativeCount(
     dateFieldName: Option[String],

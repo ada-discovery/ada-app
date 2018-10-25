@@ -36,6 +36,7 @@ class CovertNumericValuesToNull extends DsaInputFutureRunnable[CovertNumericValu
       val jsonsToUpdate = jsons.map { json =>
         val fieldsToReplace = fieldNameTypes.flatMap { case (fieldName, fieldType) =>
           val value = json.toValue(fieldName, fieldType)
+
           if ((value.isDefined) && (value.get == spec.valueToReplace)) Some((fieldName, JsNull)) else None
         }
 

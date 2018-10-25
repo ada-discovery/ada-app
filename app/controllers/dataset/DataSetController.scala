@@ -69,11 +69,17 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def calcCorrelations(
+  def getIndependenceTestForViewFilters: Action[AnyContent]
+
+  def testIndependence(
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def testIndependence(
+  def testIndependenceForViewFilters(
+    viewId: BSONObjectID
+  ): Action[AnyContent]
+
+  def calcCorrelations(
     filterOrId: FilterOrId
   ): Action[AnyContent]
 

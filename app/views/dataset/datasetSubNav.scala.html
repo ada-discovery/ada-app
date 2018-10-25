@@ -36,6 +36,7 @@
             @listItemWithPermission(dataSetRouter.plainGetScatterStats, "Scatter", ControllerName.dataSet, "getScatterStats", Some(2))
             @listItemWithPermission(dataSetRouter.getCorrelations(Left(Nil)), "Correlation", ControllerName.dataSet, "getCorrelations", Some(2))
             @listItemWithPermission(dataSetRouter.getIndependenceTest(Left(Nil)), "Independence Test (Chi-Square/ANOVA)", ControllerName.dataSet, "getIndependenceTest", Some(2))
+            @listItemWithPermission(dataSetRouter.getIndependenceTestForViewFilters, "Independence Test (ANOVA) For View Filters", ControllerName.dataSet, "getIndependenceTestForViewFilters")
             <li role="separator" class="divider"></li>
             @listItemWithPermission(classificationRunRouter.plainList, "ML Classification", ControllerName.classificationRun, "find", Some(2))
             @listItemWithPermission(regressionRunRouter.plainList, "ML Regression", ControllerName.regressionRun, "find", Some(2))

@@ -12,10 +12,7 @@ trait ChiSquareTestCalcTypePack[T1, T2] extends NoOptionsCalculatorTypePack{
   type INTER = Traversable[((T1, T2), Int)]
 }
 
-private[stats] class ChiSquareTestCalc[T1, T2] extends Calculator[ChiSquareTestCalcTypePack[T1, T2]] {
-
-  private val epsilon = 1E-100
-  private val logger = Logger
+private[stats] class ChiSquareTestCalc[T1, T2] extends Calculator[ChiSquareTestCalcTypePack[T1, T2]] with ChiSquareHelper[T1, T2] {
 
   override def fun(o: Unit) = { values: Traversable[IN] =>
     val countsMap = values.groupBy(identity).map {
@@ -30,9 +27,14 @@ private[stats] class ChiSquareTestCalc[T1, T2] extends Calculator[ChiSquareTestC
   override def postFlow(o: Unit) = { values =>
     calcChiSquareSafe(values.toMap)
   }
+}
 
-  private def calcChiSquareSafe(
-    countsMap: Map[IN, Int]
+trait ChiSquareHelper[T1, T2] {
+
+  private val epsilon = 1E-100
+
+  protected def calcChiSquareSafe(
+    countsMap: Map[(T1, T2), Int]
   ) = {
     val values1 = countsMap.map(_._1._1).toSet.toSeq
     val values2 = countsMap.map(_._1._2).toSet.toSeq
@@ -54,7 +56,7 @@ private[stats] class ChiSquareTestCalc[T1, T2] extends Calculator[ChiSquareTestC
       }
   }
 
-  private def calcChiSquare(
+  protected def calcChiSquare(
     counts: Seq[Seq[Int]]
   ): Option[ChiSquareResult] = {
     val stats = chiSquareStatistics(counts)

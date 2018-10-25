@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import models.StorageType
-import models.ml.ResultDataSetSpec
+import models.ml.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
 import services.DataSetService
 
@@ -38,7 +38,7 @@ class MergeMPowerTrainingTesting2DataSets @Inject()(dataSetService: DataSetServi
 
   override def runAsFuture(input: MergeMPowerTrainingTesting2DataSetsSpec) = {
     dataSetService.mergeDataSetsWoInference(
-      ResultDataSetSpec(
+      DerivedDataSetSpec(
         mergedDataSetId,
         mergedDataSetName,
         StorageType.Mongo

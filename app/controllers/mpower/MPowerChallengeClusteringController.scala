@@ -2,7 +2,7 @@ package controllers.mpower
 
 import javax.inject.Inject
 
-import dataaccess.JsonRepoExtra._
+import dataaccess.JsonReadonlyRepoExtra._
 import models._
 import org.incal.core.dataaccess.Criterion._
 import org.incal.play.controllers._

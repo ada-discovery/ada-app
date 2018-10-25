@@ -4,7 +4,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import models.StorageType
-import models.ml.{DataSetLinkSpec, ResultDataSetSpec}
+import models.ml.{DataSetLinkSpec, DerivedDataSetSpec}
 import org.incal.core.FutureRunnable
 import services.DataSetService
 
@@ -55,7 +55,7 @@ class LinkHarvardLdopaDataSets @Inject() (dataSetService: DataSetService) extend
     walkingFieldNames,
     scoreFieldNames,
     false,
-    ResultDataSetSpec(
+    DerivedDataSetSpec(
       "harvard_ldopa.walking_data_w_scores",
       "Walking Data with Score",
       StorageType.Mongo

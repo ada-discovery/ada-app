@@ -3,7 +3,7 @@ package runnables.mpower
 import javax.inject.Inject
 
 import models.StorageType
-import models.ml.{DataSetLinkSpec, ResultDataSetSpec}
+import models.ml.{DataSetLinkSpec, DerivedDataSetSpec}
 import org.incal.core.FutureRunnable
 import services.DataSetService
 
@@ -74,7 +74,7 @@ class LinkMPowerTrainingAndDemographicsDataSets @Inject()(dataSetService: DataSe
     walkingFieldNames,
     demographicsFieldNames,
     false,
-    ResultDataSetSpec(
+    DerivedDataSetSpec(
       "mpower_challenge.walking_activity_training_w_demographics",
       "Walking Activity Training with Demographics",
       StorageType.Mongo

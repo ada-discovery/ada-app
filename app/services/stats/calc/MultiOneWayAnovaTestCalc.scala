@@ -27,11 +27,7 @@ private[stats] class MultiOneWayAnovaTestCalc[G] extends Calculator[MultiOneWayA
 
     def calcAt(index: Int) = {
       val statsResults = groupStats.flatMap(_._2(index))
-      val anovaInputs = statsResults.map (basicStatsResult =>
-        OneWayAnovaStatsInputAux(basicStatsResult.sum, basicStatsResult.sqSum, basicStatsResult.definedCount)
-      )
-
-      calcAnovaStatsSafe(anovaInputs)
+      calcAnovaFromStats(statsResults)
     }
 
     (0 until elementsCount).par.map(calcAt).toList

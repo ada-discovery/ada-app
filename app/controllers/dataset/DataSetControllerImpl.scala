@@ -135,11 +135,11 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
   private lazy val fractalisServerUrl = configuration.getString("fractalis.server.url")
 
-  private val resultDataSetMapping: Mapping[ResultDataSetSpec] = mapping(
+  private val resultDataSetMapping: Mapping[DerivedDataSetSpec] = mapping(
     "id" -> nonEmptyText,
     "name" -> nonEmptyText,
     "storageType" -> of[StorageType.Value]
-  )(ResultDataSetSpec.apply)(ResultDataSetSpec.unapply)
+  )(DerivedDataSetSpec.apply)(DerivedDataSetSpec.unapply)
 
   private val seriesProcessingSpecForm = Form(
     mapping(
@@ -1728,6 +1728,69 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val outputField = fields.find(_.name.equals(targetFieldName)).get
 
       val resultsSorted = statsService.testIndependenceSorted(jsons, inputFields, outputField, independenceTestKeepUndefined)
+
+      implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
+
+      // create jsons
+      val labelResults = resultsSorted.flatMap { case (field, result) =>
+        val fieldLabel = fieldNameLabelMap.get(field.name).get
+        result.map((fieldLabel, _))
+      }
+      Ok(Json.toJson(labelResults))
+    }
+  }
+
+  override def getIndependenceTestForViewFilters = AuthAction { implicit request => {
+    for {
+      // get the data set name, the data space tree, and the setting
+      (dataSetName, dataSpaceTree, setting) <- getDataSetNameTreeAndSetting(request)
+    } yield {
+      render {
+        case Accepts.Html() => Ok(dataset.independenceTestViewFilters(
+          dataSetName,
+          setting.filterShowFieldStyle,
+          dataSpaceTree
+        ))
+        case Accepts.Json() => BadRequest("GetIndependenceTestForViewFilters function doesn't support JSON response.")
+      }
+    }
+    }.recover(handleExceptions("an independence test for view filters"))
+  }
+
+  override def testIndependenceForViewFilters(
+    viewId: BSONObjectID
+  ) = Action.async { implicit request =>
+    val inputFieldNames = request.body.asFormUrlEncoded.flatMap(_.get("inputFieldNames[]")).getOrElse(Nil)
+
+    if (inputFieldNames.isEmpty)
+      Future(BadRequest("No input provided."))
+    else
+      testIndependenceForViewFiltersAux(inputFieldNames, viewId)
+  }
+
+  private def testIndependenceForViewFiltersAux(
+    inputFieldNames: Seq[String],
+    viewId: BSONObjectID
+  ): Future[Result] = {
+    def toCriteriaAux(filterOrId: FilterOrId) =
+      for {
+        resolvedFilter <- filterRepo.resolve(filterOrId)
+        criteria <- toCriteria(resolvedFilter.conditions)
+      } yield
+        criteria
+
+    for {
+      view <- dataViewRepo.get(viewId)
+
+      inputFields <- getFields(inputFieldNames)
+
+      filterOrIds = view.map(_.filterOrIds).getOrElse(Nil)
+
+      multiCriteria <- Future.sequence(filterOrIds.map(toCriteriaAux))
+
+      resultsSorted <- statsService.testAnovaForMultiCriteriaSorted(repo, multiCriteria, inputFields.toSeq)
+    } yield {
+      val fieldNameLabelMap = inputFields.map(field => (field.name, field.labelOrElseName)).toMap
 
       implicit val stringTestTupleFormat = TupleFormat[String, IndependenceTestResult]
 

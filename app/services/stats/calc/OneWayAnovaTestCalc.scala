@@ -22,7 +22,7 @@ private[stats] class OneWayAnovaTestCalc[G] extends Calculator[OneWayAnovaTestCa
         OneWayAnovaStatsInputAux(basicStatsResult.sum, basicStatsResult.sqSum, basicStatsResult.definedCount)
     }
 
-    calcAnovaStatsSafe(anovaInputs)
+    calcAnovaSafe(anovaInputs)
   }
 
   override def flow(o: Unit) = basicStatsCalc.flow(())
@@ -32,7 +32,7 @@ private[stats] class OneWayAnovaTestCalc[G] extends Calculator[OneWayAnovaTestCa
       OneWayAnovaStatsInputAux(accum.sum, accum.sqSum, accum.count)
     }
 
-    calcAnovaStatsSafe(anovaInputs)
+    calcAnovaSafe(anovaInputs)
   }
 }
 
@@ -40,14 +40,24 @@ trait OneWayAnovaHelper {
 
   private val epsilon = 1E-100
 
-  protected def calcAnovaStatsSafe(
+  protected def calcAnovaFromStats(
+    statsResults: Traversable[BasicStatsResult]
+  ) = {
+    val anovaInputs = statsResults.map (basicStatsResult =>
+      OneWayAnovaStatsInputAux(basicStatsResult.sum, basicStatsResult.sqSum, basicStatsResult.definedCount)
+    )
+
+    calcAnovaSafe(anovaInputs)
+  }
+
+  protected def calcAnovaSafe(
     groups: Traversable[OneWayAnovaStatsInputAux]
   ): Option[OneWayAnovaResult] = {
     val totalCount = groups.map(_.count).sum
 
     if (groups.size > 1 && (totalCount - groups.size) > 0)
       try {
-        calcAnovaStats(groups)
+        calcAnova(groups)
       } catch {
         case _: MaxCountExceededException =>
           Logger.warn(s"Max number of iterations reached for a one-way ANOVA test.")
@@ -59,7 +69,7 @@ trait OneWayAnovaHelper {
     }
   }
 
-  private def calcAnovaStats(
+  private def calcAnova(
     groups: Traversable[OneWayAnovaStatsInputAux]
   ): Option[OneWayAnovaResult] = {
     val resultAux =

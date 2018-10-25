@@ -12,7 +12,7 @@ import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import services.DataSetService
-import dataaccess.JsonRepoExtra.InfixOps
+import dataaccess.JsonReadonlyRepoExtra._
 import org.incal.core.FutureRunnable
 import org.incal.play.GuiceRunnableApp
 

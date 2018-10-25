@@ -2,7 +2,7 @@ package runnables
 
 import javax.inject.Inject
 
-import dataaccess.JsonRepoExtra._
+import dataaccess.JsonReadonlyRepoExtra._
 import models.FieldTypeId
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory

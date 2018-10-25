@@ -27,22 +27,6 @@
 
 <script type="text/javascript">
     $(function () {
-        $.ajax({
-            url: '@Html(idAndNamesCall.url)',
-            success: function (data) {
-                var typeaheadData = data.map(function (item, index) {
-                    return {name: item._id.$oid, label: item.name};
-                });
-                populateFieldTypeahed(
-                    $('#@{itemId}Typeahead'),
-                    $('#@{itemId}Id'),
-                    typeaheadData,
-                    @FilterShowFieldStyle.LabelsOnly.id
-                );
-            },
-            error: function(data){
-                showErrorResponse(data)
-            }
-        });
+        populateIdNameTypeahedFromUrl($('#@{itemId}Typeahead'), $('#@{itemId}Id'), '@Html(idAndNamesCall.url)');
     })
 </script>
