@@ -1,6 +1,6 @@
 package dataaccess
 
-import akka.stream.OverflowStrategy
+import akka.stream.{Materializer, OverflowStrategy}
 import akka.stream.scaladsl.{Sink, Source}
 import dataaccess.RepoTypes.{JsonCrudRepo, JsonReadonlyRepo}
 import models.DataSetFormattersAndIds.JsObjectIdentity
@@ -12,11 +12,11 @@ import org.incal.core.dataaccess._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-object JsonRepoExtra {
+object JsonReadonlyRepoExtra {
 
   private val idName = JsObjectIdentity.name
 
-  implicit class InfixOps(val dataSetRepo: JsonReadonlyRepo) extends AnyVal {
+  implicit class ReadonlyInfixOps(val dataSetRepo: JsonReadonlyRepo) extends AnyVal {
 
     import Criterion.Infix
 
@@ -68,24 +68,23 @@ object JsonRepoExtra {
 
 object JsonCrudRepoExtra {
 
-  implicit class InfixOps(val dataSetRepo: JsonCrudRepo) extends AnyVal {
+  implicit class CrudInfixOps(val dataSetRepo: JsonCrudRepo) extends AnyVal {
 
-    def save(
+    def saveAsStream(
       source: Source[JsObject, _],
-      processingBatchSize: Option[Int] = None,
-      backpressureBufferSize: Option[Int]  = None,
-      parallelism: Option[Int]  = None
+      spec: StreamSpec = StreamSpec())(
+      implicit materializer: Materializer
     ): Future[Unit] = {
-      val parallelismInit = parallelism.getOrElse(1)
+      val parallelismInit = spec.parallelism.getOrElse(1)
 
       def buffer[T](stream: Source[T, _]): Source[T, _] =
-        backpressureBufferSize.map(stream.buffer(_, OverflowStrategy.backpressure)).getOrElse(stream)
+        spec.backpressureBufferSize.map(stream.buffer(_, OverflowStrategy.backpressure)).getOrElse(stream)
 
-      val finalStream = processingBatchSize match {
+      val finalStream = spec.batchSize match {
 
         // batch size is defined
-        case Some(processingBatchSize) =>
-          buffer(source.grouped(processingBatchSize))
+        case Some(batchSize) =>
+          buffer(source.grouped(batchSize))
             .mapAsync(parallelismInit)(dataSetRepo.save)
 
         case None =>
@@ -97,3 +96,9 @@ object JsonCrudRepoExtra {
     }
   }
 }
+
+case class StreamSpec(
+  batchSize: Option[Int] = None,
+  backpressureBufferSize: Option[Int]  = None,
+  parallelism: Option[Int] = None
+)

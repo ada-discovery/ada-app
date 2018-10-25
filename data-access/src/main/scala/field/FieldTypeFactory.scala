@@ -133,8 +133,14 @@ private case class BooleanFieldType(
 
   override val valueTypeTag = typeTag[Boolean]
 
-  override protected def displayStringToValueWoNull(text: String) =
-    toBoolean(includeNumbers)(text)
+  override protected def displayStringToValueWoNull(text: String) = {
+    if (displayTrueValue.isDefined && displayTrueValue.get.equals(text))
+      true
+    else if (displayFalseValue.isDefined && displayFalseValue.get.equals(text))
+      false
+    else
+      toBoolean(includeNumbers)(text)
+  }
 
   override protected def valueToDisplayStringNonEmpty(value: Boolean) = {
     val displayValue = if (value)

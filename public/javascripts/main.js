@@ -307,6 +307,24 @@ function populateFieldTypeahedFromUrl(typeaheadElement, fieldNameElement, url, s
             if (postFunction) {
                 postFunction()
             }
+        },
+        error: function(data){
+            showErrorResponse(data)
+        }
+    });
+}
+
+function populateIdNameTypeahedFromUrl(typeaheadElement, idElement, url) {
+    $.ajax({
+        url: url,
+        success: function (data) {
+            var typeaheadData = data.map(function (item, index) {
+                return {name: item._id.$oid, label: item.name};
+            });
+            populateFieldTypeahed(typeaheadElement, idElement, typeaheadData, 1);
+        },
+        error: function(data){
+            showErrorResponse(data)
         }
     });
 }

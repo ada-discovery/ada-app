@@ -97,6 +97,8 @@ GET         /dataSets/correlations                                              
 POST        /dataSets/calcCorrelations                                               controllers.dataset.DataSetDispatcher.calcCorrelations(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /dataSets/getIndependenceTest                                            controllers.dataset.DataSetDispatcher.getIndependenceTest(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil))
 POST        /dataSets/testIndependence                                               controllers.dataset.DataSetDispatcher.testIndependence(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil))
+GET         /dataSets/getIndependenceTestForViewFilters                              controllers.dataset.DataSetDispatcher.getIndependenceTestForViewFilters
+POST        /dataSets/testIndependenceForViewFilters                                 controllers.dataset.DataSetDispatcher.testIndependenceForViewFilters(viewId: BSONObjectID)
 GET         /dataSets/cumulativeCount                                                controllers.dataset.DataSetDispatcher.getCumulativeCount(fieldName: Option[String] ?= None, groupFieldName: Option[String], filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /dataSets/clusterization                                                 controllers.dataset.DataSetDispatcher.getClusterization
 GET         /dataSets/getSeriesProcessingSpec                                        controllers.dataset.DataSetDispatcher.getSeriesProcessingSpec
