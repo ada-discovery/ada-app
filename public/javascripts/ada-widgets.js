@@ -27,7 +27,7 @@ function agg(series, widget) {
     }
 }
 
-function categoricalCountWidget(elementId, widget, filterElementId) {
+function categoricalCountWidget(elementId, widget, filterElement) {
     var categories = (widget.data.length > 0) ?
         widget.data[0][1].map(function(count) {
             return count.value
@@ -67,10 +67,10 @@ function categoricalCountWidget(elementId, widget, filterElementId) {
     });
     plotCategoricalChart(widget.displayOptions.chartType, categories, datas, seriesSize, widget.title, yAxisCaption, elementId, widget.showLabels, widget.showLegend, height, pointFormat)
 
-    if (filterElementId) {
+    if (filterElement) {
         $('#' + elementId).on('pointSelected', function (event, data) {
             var condition = {fieldName: widget.fieldName, conditionType: "=", value: data.key};
-            $('#' + filterElementId).multiFilter('addConditionsAndSubmit', [condition]);
+            $(filterElement).multiFilter('addConditionsAndSubmit', [condition]);
         });
     }
 }
@@ -170,7 +170,7 @@ function boxWidget(elementId, widget) {
     boxPlot(widget.title, elementId, categories, widget.xAxisCaption, widget.yAxisCaption, datas, min, max, pointFormat, height, dataType)
 }
 
-function scatterWidget(elementId, widget, filterElementId) {
+function scatterWidget(elementId, widget, filterElement) {
     var datas = widget.data.map(function(series) {
         return {name : shorten(series[0]), data : series[1]}
     })
@@ -183,14 +183,14 @@ function scatterWidget(elementId, widget, filterElementId) {
     var isYDate = widget.yFieldType == "Date"
     var yDataType = (isYDate) ? 'datetime' : null;
 
-    if (filterElementId) {
-        addScatterAreaSelected(elementId, filterElementId, widget, isXDate, isYDate);
+    if (filterElement) {
+        addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate);
     }
 
-    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, true, null, height, xDataType, yDataType, true, filterElementId != null)
+    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, true, null, height, xDataType, yDataType, true, filterElement != null)
 }
 
-function addScatterAreaSelected(elementId, filterElementId, widget, isXDate, isYDate) {
+function addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate) {
     $('#' + elementId).on('areaSelected', function (event, data) {
         var xMin = (isXDate) ? msToStandardDateString(data.xMin) : data.xMin.toString();
         var xMax = (isXDate) ? msToStandardDateString(data.xMax) : data.xMax.toString();
@@ -204,11 +204,11 @@ function addScatterAreaSelected(elementId, filterElementId, widget, isXDate, isY
             {fieldName: widget.yFieldName, conditionType: "<=", value: yMax}
         ]
 
-        $('#' + filterElementId).multiFilter('addConditionsAndSubmit', conditions);
+        $(filterElement).multiFilter('addConditionsAndSubmit', conditions);
     });
 }
 
-function valueScatterWidget(elementId, widget, filterElementId) {
+function valueScatterWidget(elementId, widget, filterElement) {
     var zs = widget.data.map(function(point) {
         return point[2];
     })
@@ -231,8 +231,8 @@ function valueScatterWidget(elementId, widget, filterElementId) {
     var isYDate = widget.yFieldType == "Date";
     var yDataType = (isYDate) ? 'datetime' : null;
 
-    if (filterElementId) {
-        addScatterAreaSelected(elementId, filterElementId, widget, isXDate, isYDate);
+    if (filterElement) {
+        addScatterAreaSelected(elementId, filterElement, widget, isXDate, isYDate);
     }
 
     var pointFormatter = function () {
@@ -243,7 +243,7 @@ function valueScatterWidget(elementId, widget, filterElementId) {
         return xPoint + ", " + yPoint + " (" + zPoint + ")";
     }
 
-    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, false, pointFormatter, height, xDataType, yDataType, true, filterElementId != null)
+    scatterChart(widget.title, elementId, widget.xAxisCaption, widget.yAxisCaption, datas, false, pointFormatter, height, xDataType, yDataType, true, filterElement != null)
 }
 
 function heatmapWidget(elementId, widget) {
@@ -263,12 +263,12 @@ function htmlWidget(elementId, widget) {
     $('#' + elementId).html(widget.content)
 }
 
-function genericWidget(widget, filterElementId) {
+function genericWidget(widget, filterElement) {
     var widgetId = elementId(widget)
-    genericWidgetForElement(widgetId, widget, filterElementId)
+    genericWidgetForElement(widgetId, widget, filterElement)
 }
 
-function genericWidgetForElement(widgetId, widget, filterElementId) {
+function genericWidgetForElement(widgetId, widget, filterElement) {
     if(widget.displayOptions.isTextualForm)
         switch (widget.concreteClass) {
             case "models.CategoricalCountWidget": categoricalTableWidget(widgetId, widget); break;
@@ -278,11 +278,11 @@ function genericWidgetForElement(widgetId, widget, filterElementId) {
         }
     else
         switch (widget.concreteClass) {
-            case "models.CategoricalCountWidget": categoricalCountWidget(widgetId, widget, filterElementId); break;
+            case "models.CategoricalCountWidget": categoricalCountWidget(widgetId, widget, filterElement); break;
             case "models.NumericalCountWidget": numericalCountWidget(widgetId, widget); break;
             case "models.BoxWidget": boxWidget(widgetId, widget); break;
-            case "models.ScatterWidget": scatterWidget(widgetId, widget, filterElementId); break;
-            case "models.ValueScatterWidget": valueScatterWidget(widgetId, widget, filterElementId); break;
+            case "models.ScatterWidget": scatterWidget(widgetId, widget, filterElement); break;
+            case "models.ValueScatterWidget": valueScatterWidget(widgetId, widget, filterElement); break;
             case "models.HeatmapWidget": heatmapWidget(widgetId, widget); break;
             case "models.HtmlWidget": htmlWidget(widgetId, widget); break;
             case 'models.LineWidget': lineWidget(widgetId, widget); break;
