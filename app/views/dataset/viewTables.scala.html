@@ -1,4 +1,4 @@
-@import views.html.dataset.{jsonModal, lineChartArrayModal, viewTable}
+@import views.html.dataset.{fixedTableRow, jsonModal, lineChartArrayModal, viewTable}
 @import reactivemongo.bson.BSONObjectID
 @import controllers.dataset.TableViewData
 @import controllers.dataset.DataSetRouter
@@ -11,19 +11,20 @@
     implicit request: Request[_]
 )
 
-<div class="row vertical-divider">
+@fixedTableRow("tablesTr") {
     @viewParts.zipWithIndex.map { case (viewPart, index) =>
-        <div class="col-md-@{12 / viewParts.size}">
-        @viewTable(
-            viewPart.page,
-            viewPart.filter,
-            viewPart.tableFields,
-            dataSetRouter,
-            false,
-            Some("tableDiv" + index)
-        )
-        </div>
+        <td style="padding-left: 10px; padding-right: 10px; vertical-align:top">
+            @viewTable(
+                viewPart.page,
+                viewPart.filter,
+                viewPart.tableFields,
+                dataSetRouter,
+                false,
+                Some("tableDiv" + index)
+            )
+        </td>
     }
-    @jsonModal("jsonModal", None)
-    @lineChartArrayModal("lineChartArrayModal")
-</div>
+}
+
+@jsonModal("jsonModal", None)
+@lineChartArrayModal("lineChartArrayModal")

@@ -16,19 +16,17 @@
             $("#widgetsTr").html("")
             $.each(data, function (i, widgets) {
                 var td = $("<td style='vertical-align:top'>")
-                var div = $("<div id='widgetsDiv" + i + "' class='col-md-12'>")
                 var row = $("<div class='row'>")
                 $.each(widgets, function (j, widget) {
                     row.append(widgetDiv(widget, @widgetGridElementWidth))
                 })
-                td.append(div)
-                div.append(row)
+                td.append(row)
                 $("#widgetsTr").append(td)
             })
             $.each(data, function (i, widgets) {
-                var filterId = "filter" + i
+                var filterElement = $("#filter" + i)
                 $.each(widgets, function (j, widget) {
-                    genericWidget(widget, filterId)
+                    genericWidget(widget, filterElement)
                 })
             })
         },

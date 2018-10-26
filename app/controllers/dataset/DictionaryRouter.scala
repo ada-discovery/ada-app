@@ -18,6 +18,7 @@ class DictionaryRouter(dataSetId: String) extends GenericRouter(routes.Dictionar
   val exportCsv = routes.exportRecordsAsCsv _ map route
   val exportJson  = routes.exportRecordsAsJson _ map route
   val setDefaultLabels = routeFun(_.setDefaultLabels)
+  val convertLabelsToCamelCase = routeFun(_.convertLabelsToCamelCase)
 }
 
 final class DictionaryJsRouter(dataSetId: String) extends GenericJsRouter(routes.javascript.DictionaryDispatcher, "dataSet", dataSetId) {

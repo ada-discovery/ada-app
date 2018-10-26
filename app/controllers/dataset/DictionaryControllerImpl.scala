@@ -31,6 +31,7 @@ import services.stats.StatsService
 import util.FieldUtil
 import dataaccess.JsonUtil.unescapeKey
 import views.html.{dataview, dictionary => view}
+import util.toHumanReadableCamel
 
 import scala.concurrent.Future
 
@@ -289,6 +290,19 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       _ <- repo.update(fieldsWithoutLabel)
     } yield
       goHome.flashing("success" -> s"Default labels successfully set for ${fieldsWithoutLabel.size} fields.")
+  }
+
+  override def convertLabelsToCamelCase = Action.async { implicit request =>
+    for {
+      fields <- repo.find()
+
+      fieldsWithNewLabel = fields.filter(_.label.nonEmpty).map(field =>
+        field.copy(label = Some(toHumanReadableCamel(field.label.get)))
+      )
+
+      _ <- repo.update(fieldsWithNewLabel)
+    } yield
+      goHome.flashing("success" -> s"Camel-case labels successfully set for ${fieldsWithNewLabel.size} fields.")
   }
 
   protected def allCategoriesFuture =

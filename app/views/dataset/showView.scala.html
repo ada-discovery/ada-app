@@ -1,5 +1,5 @@
 @import views.html.layout
-@import views.html.dataset.{dataSetFilterValuesUpdate, datasetMenu, datasetSubNav, datasetSubNavJs}
+@import views.html.dataset.{fixedTableRow, dataSetFilterValuesUpdate, datasetMenu, datasetSubNav, datasetSubNavJs}
 @import views.html.widget.{widgetPanelAjaxLoadJs, widgetPanelJs}
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
 @import views.html.dataset.{viewTables, viewTablesJs}
@@ -30,7 +30,11 @@
     <div class="row">
         @if(tableViewParts.size == 1) {
             <div class="col-md-10">
-                @viewFilter(tableViewParts.head, 0)
+                @fixedTableRow("filtersTr") {
+                    <td>
+                        @viewFilter(tableViewParts.head, 0)
+                    </td>
+                }
             </div>
         }
         <div class="pull-right">
@@ -107,16 +111,23 @@
             data: params,
             success: function(data) {
                 $("#tableDiv" + index).html(data.table);
-                $("#filter" + index).find("#conditionPanel").replaceWith(data.conditionPanel)
 
-                $("#filter" + index).multiFilter("initConditionButtons")
-                $("#filter" + index).multiFilter("setModel", data.filterModel)
+                // filter
+                var filterElement = $("#filtersTr").find(".filter-div:eq(" + index + ")")
+                filterElement.find("#conditionPanel").replaceWith(data.conditionPanel)
+                filterElement.multiFilter("initConditionButtons")
+                filterElement.multiFilter("setModel", data.filterModel)
 
+                // count
                 $("#count" + index).html("<h3>" + data.count + "</h3>");
-                $(".page-header").html("<h3>" + data.pageHeader + "</h3>");
                 viewTotalCounts[index] = data.count;
 
-                updateWidgetsFromCallback(data.widgetsCallbackId, index, @widgetGridElementWidth)
+                // page header
+                $(".page-header").html("<h3>" + data.pageHeader + "</h3>");
+
+                // widgets
+                var widgetsDiv = $("#widgetsTr > td:eq(" + index + ")")
+                updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, filterElement, @widgetGridElementWidth)
             },
             error: function(data) {
                 showErrorResponse(data)
@@ -152,49 +163,41 @@
 }
 
 @filters = {
-    <table class="fixed-table">
-        <tbody>
-            <tr id="filtersTr">
-                @tableViewParts.zipWithIndex.map { case (viewPart, index) =>
-                <td>
-                    <div class="col-md-12">
-                        <div class="row">
-                            <div class="col-md-7">
-                                <ul class="list-inline">
-                                    <li>Count:</li>
-                                    <li id="count@index"><h3>@viewPart.page.total</h3></li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="row">
-                            @if(tableViewParts.size == 1) {
-                                <div class="col-md-10">
-                                    @viewFilter(viewPart, index)
-                                </div>
-                            } else {
-                                <div class="col-md-12">
-                                    @viewFilter(viewPart, index)
-                                </div>
-                            }
+    @fixedTableRow("filtersTr"){
+        @tableViewParts.zipWithIndex.map { case (viewPart, index) =>
+            <td>
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-7">
+                            <ul class="list-inline">
+                                <li>Count:</li>
+                                <li id="count@index"><h3>@viewPart.page.total</h3></li>
+                            </ul>
                         </div>
                     </div>
-                </td>
-                }
-            </tr>
-        </tbody>
-    </table>
+                    <div class="row">
+                        @if(tableViewParts.size == 1) {
+                            <div class="col-md-10">
+                                @viewFilter(viewPart, index)
+                            </div>
+                        } else {
+                            <div class="col-md-12">
+                                @viewFilter(viewPart, index)
+                            </div>
+                        }
+                    </div>
+                </div>
+            </td>
+        }
+    }
 }
 
 @widgets = {
-    <table class="fixed-table">
-        <tbody>
-            <tr id="widgetsTr">
-                <td>
-                    <div class='spinner' style='margin: auto; margin-bottom: 20px'></div>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+    @fixedTableRow("widgetsTr") {
+        <td>
+            <div class='spinner' style='margin: auto; margin-bottom: 20px'></div>
+        </td>
+    }
 }
 
 @filtersAndWidgets = {
@@ -227,14 +230,12 @@
     <script type="text/javascript">
         var viewTotalCounts = [@tableViewParts.map(_.page.total).mkString(",")]
 
-        function getFilterOrId(index) {
-            return $("#filter" + index).multiFilter('getIdOrModel');
-        }
-
         function saveFilterToView() {
-            var filterOrIds = [
-                @tableViewParts.zipWithIndex.map{ case (_, index) => getFilterOrId(@index)}.mkString(",")
-            ];
+            var filterElements = $("#filtersTr").find(".filter-div").toArray();
+
+            var filterOrIds = filterElements.map(function(filterElement, index) {
+                return $(filterElement).multiFilter('getIdOrModel');
+            });
 
             dataViewJsRoutes.controllers.dataset.DataViewDispatcher.saveFilter(
                 "@{dataViewId.stringify}",
@@ -249,8 +250,7 @@
             });
         }
 
-        function updateWidgetsFromCallback(callbackId, index, elementWidth) {
-            var widgetsDiv = $("#widgetsDiv" + index)
+        function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, elementWidth) {
             widgetsDiv.html("")
             addSpinner(widgetsDiv, "margin-bottom: 20px;")
 
@@ -259,10 +259,9 @@
                     "callbackId": callbackId
                 },
                 success: function(data) {
-                    var filterId = "filter" + index
                     var widgets = data[0]
 
-//                    var widgetHolders = $("#widgetsDiv" + index).find(".chart-holder")
+//                    var widgetHolders = widgetsDiv.find(".chart-holder")
 
                     var row = $("<div class='row'>")
                     $.each(widgets, function (j, widget) {
@@ -270,10 +269,10 @@
                     })
                     widgetsDiv.html(row)
                     $.each(widgets, function (j, widget) {
-                        genericWidget(widget, filterId)
+                        genericWidget(widget, filterElement)
                     })
 //                    $.each(widgetHolders, function(i, widgetHolder){
-//                        genericWidgetForElement(widgetHolder.id, widgets[i], filterId)
+//                        genericWidgetForElement(widgetHolder.id, widgets[i], filterElement)
 //                    })
                 },
                 error: function(data) {
@@ -283,7 +282,7 @@
         }
 
         function addNewColumn() {
-            // filters
+            // filter
             var filterTd = $("<td>")
             var filterDiv = $("<div class='col-md-12'>")
             var filterRow = $("<div class='row'>")
@@ -294,12 +293,16 @@
 
             // widgets
             var widgetTd = $("<td>")
-            var widgetDiv = $("<div id='widgetsDiv" + i + "' class='col-md-12'>")
+            var widgetDiv = $("<div class='col-md-12'>")
             var widgetRow = $("<div class='row'>")
 
             widgetTd.append(widgetDiv)
             widgetDiv.append(widgetRow)
             $("#widgetsTr").append(widgetTd)
+
+            // table
+            var tabelTd = $("<td>")
+            $("#tabelsTr").append(tabelTd)
         }
     </script>
 

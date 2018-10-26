@@ -19,4 +19,6 @@ trait DictionaryController extends CrudController[String] {
   def exportRecordsAsJson(filter: Seq[FilterCondition], tableColumnsOnly: Boolean): Action[AnyContent]
 
   def setDefaultLabels: Action[AnyContent]
+
+  def convertLabelsToCamelCase: Action[AnyContent]
 }

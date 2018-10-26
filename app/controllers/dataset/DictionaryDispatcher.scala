@@ -59,4 +59,6 @@ class DictionaryDispatcher @Inject() (
   ) = dispatch(_.exportRecordsAsJson(filter, tableColumnsOnly))
 
   override def setDefaultLabels = dispatch(_.setDefaultLabels)
+
+  override def convertLabelsToCamelCase = dispatch(_.convertLabelsToCamelCase)
 }
