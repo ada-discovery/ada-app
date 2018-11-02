@@ -1,6 +1,6 @@
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
-@import views.html.dataset.{datasetMenu, datasetSubNavWithJs, inputFieldAndFilterResources}
+@import views.html.dataset.{datasetMenu, bootstrapSelectImport, datasetSubNavWithJs, inputFieldAndFilterResources}
 @import views.html.table.dynamicTableJsImport
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.dataset.dynamicFieldTable
@@ -42,6 +42,8 @@
 }
 
 @bottomResources = {
+    @bootstrapSelectImport()
+
     @inputFieldAndFilterResources(
         Seq("filter"),
         filterShowFieldStyle

@@ -1,5 +1,5 @@
 @import views.html.table.{dynamicTable, displayTable}
-@import views.html.filter.categoricalTree
+@import views.html.filter.{jsTreeImport, categoricalTree}
 @import util.typeColumns
 @import models.Field
 
@@ -90,6 +90,8 @@
         return row;
     }
 }
+
+@jsTreeImport()
 
 @dynamicTable(tableId, table, sortable, rowToModelJsFun, itemToRowJsFun, modalInner, extraActions, gridWidth, false, false)
 

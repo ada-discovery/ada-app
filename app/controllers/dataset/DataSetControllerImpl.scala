@@ -335,14 +335,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
     }
 
-  private case class ViewResponse(
-    count: Int,
-    widgets: Traversable[Option[Widget]],
-    tableItems: Traversable[JsObject],
-    filter: Filter,
-    tableFields: Traversable[Field]
-  )
-
   private case class InitViewResponse(
     count: Int,
     tableItems: Traversable[JsObject],
@@ -581,7 +573,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
   }
 
-  override def getViewElementsAndWidgetCallback(
+  override def getViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,
     tableOrder: String,
     filterOrId: FilterOrId,
@@ -635,7 +627,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
 
             val pageHeader = messagesApi.apply("list.count.title", oldCountDiff.getOrElse(0) + viewResponse.count, dataSetName + " Item")
 
-            val table = dataset.viewTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, router, true)
+            val table = dataset.view.viewTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, true)(request, router)
             val conditionPanel = views.html.filter.conditionPanel(Some(viewResponse.filter))
             val filterModel = Json.toJson(viewResponse.filter.conditions)
 
@@ -653,24 +645,23 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
     }.recover {
       case t: TimeoutException =>
-        Logger.error("Problem found in the getWidgetPanelAndTable process")
+        Logger.error("Problem found in the getViewElementsAndWidgetsCallback process")
         InternalServerError(t.getMessage)
     }
   }
 
-  // TODO
-  def getNewViewElementsAndWidgetCallback(
+  override def getNewFilterViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,
     tableOrder: String,
-    filterOrId: FilterOrId,
-    oldCountDiff: Option[Int]
-  ) = Action.async { implicit request =>
+    totalCount: Int
+  ) = AuthAction { implicit request =>
     val start = new ju.Date()
     val tablePage = 0
 
     val dataSetNameFuture = dsa.dataSetName
     val dataViewFuture = dataViewRepo.get(dataViewId)
-    val resolvedFilterFuture = filterRepo.resolve(filterOrId)
+    val settingFuture = dsa.setting
+    val criteria = Nil
 
     {
       for {
@@ -680,19 +671,16 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // load the view
         dataView <- dataViewFuture
 
-        // resolved filter
-        resolvedFilter <- resolvedFilterFuture
-
-        // criteria
-        criteria <- toCriteria(resolvedFilter.conditions)
+        // setting
+        setting <- settingFuture
 
         (tableColumnNames, widgetSpecs) = dataView.map(view => (view.tableColumnNames, view.widgetSpecs)).getOrElse((Nil, Nil))
 
         // create a name -> field map of all the referenced fields for a quick lookup
-        nameFieldMap <- createNameFieldMap(Seq(resolvedFilter.conditions), widgetSpecs, tableColumnNames)
+        nameFieldMap <- createNameFieldMap(Nil, widgetSpecs, tableColumnNames)
 
         // get the init response data
-        viewResponse <- getInitViewResponse(tablePage, tableOrder, resolvedFilter, criteria, nameFieldMap, tableColumnNames)
+        viewResponse <- getInitViewResponse(tablePage, tableOrder, new Filter(), criteria, nameFieldMap, tableColumnNames)
       } yield {
         Logger.info(s"Data loading of a widget panel and a table for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
 
@@ -711,17 +699,15 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           case Accepts.Html() => {
             val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder)
 
-            val pageHeader = messagesApi.apply("list.count.title", oldCountDiff.getOrElse(0) + viewResponse.count, dataSetName + " Item")
+            val pageHeader = messagesApi.apply("list.count.title", totalCount + viewResponse.count, dataSetName + " Item")
 
-            val table = dataset.viewTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, router, true)
-            val conditionPanel = views.html.filter.conditionPanel(Some(viewResponse.filter))
+            val table = dataset.view.viewTable(newPage, None, viewResponse.tableFields, true)(request, router)
+            val countFilter = dataset.view.viewCountFilter(None, viewResponse.count, setting.filterShowFieldStyle, false)
             val filterModel = Json.toJson(viewResponse.filter.conditions)
 
             Ok(Json.obj(
               "table" -> table.toString(),
-              "conditionPanel" -> conditionPanel.toString(),
-              "filterModel" -> filterModel,
-              "count" -> viewResponse.count,
+              "countFilter" -> countFilter.toString(),
               "pageHeader" -> pageHeader,
               "widgetsCallbackId" -> widgetsCallbackId
             ))
@@ -731,7 +717,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       }
     }.recover {
       case t: TimeoutException =>
-        Logger.error("Problem found in the getWidgetPanelAndTable process")
+        Logger.error("Problem found in the getNewFilterViewElementsAndWidgetsCallback process")
         InternalServerError(t.getMessage)
     }
   }
@@ -768,7 +754,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       val tablePage = Page(tableItems, page, page * pageLimit, count, orderBy)
       val fieldsInOrder = fieldNames.map(nameFieldMap.get).flatten
 
-      Ok(dataset.viewTable(tablePage, Some(resolvedFilter), fieldsInOrder, router, true))
+      Ok(dataset.view.viewTable(tablePage, Some(resolvedFilter), fieldsInOrder, true)(request, router))
     }
   }
 

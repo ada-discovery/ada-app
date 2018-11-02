@@ -6,8 +6,7 @@
 @import views.html.chart.highcharts.{highchartsJsImport, timeLineChart}
 @import views.html.widget.{widgetPanel, widgetPanelJs}
 @import views.html.dataview.dataViewSelectionModal
-@import views.html.dataset.datasetSubNavWithJs
-@import views.html.dataset.dataSetFilterWithJs
+@import views.html.dataset.{bootstrapSelectImport, datasetSubNavWithJs, dataSetFilterWithJs}
 @import play.api.libs.json.Json
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import models.DataSpaceMetaInfo
@@ -65,6 +64,9 @@
 
 @bottomResources = {
     @highchartsJsImport(true)
+
+    @bootstrapSelectImport()
+
     @widgetPanelJs(Seq(chartSpec).flatten)
 
     @helper.javascriptRouter("dataViewJsRoutes")(

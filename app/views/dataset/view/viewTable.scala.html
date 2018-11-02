@@ -2,20 +2,18 @@
 @import play.api.libs.json.JsObject
 @import models.{Field, Filter}
 @import controllers.dataset.DataSetRouter
-
 @import org.incal.play.Page
+
 @(
     page: Page[JsObject],
     filter: Option[Filter],
     tableFields: Traversable[Field],
-    dataSetRouter: DataSetRouter,
-    withRowClickableJs: Boolean = false,
-    tableDivId: Option[String] = None
+    withRowClickableJs: Boolean = false
 )(
-    implicit request: Request[_]
+    implicit request: Request[_], dataSetRouter: DataSetRouter
 )
 
-@jsonTableAux = {
+@if(page.items.nonEmpty) {
     @jsonTable(
         page,
         tableFields,
@@ -27,14 +25,4 @@
         withRowClickableJs,
         true
     )
-}
-
-@if(page.items.nonEmpty) {
-    @if(tableDivId.isEmpty) {
-        @jsonTableAux
-    } else {
-        <div id='@tableDivId.get' class="table-div">
-            @jsonTableAux
-        </div>
-    }
 }

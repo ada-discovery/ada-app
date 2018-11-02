@@ -1,0 +1,24 @@
+@import models.Filter
+@import controllers.dataset.TableViewData
+@import views.html.filter.{filter => filterUI}
+@import controllers.dataset.DataSetRouter
+@import models.FilterShowFieldStyle
+@import scala.util.Random
+@import controllers.dataset.DataSetWebContext
+@import controllers.dataset.DataSetWebContext._
+
+@(
+    filter: Option[Filter],
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value]
+)(
+    implicit dataSetWebContext: DataSetWebContext
+)
+
+@filterUI(
+    filter,
+    filterShowFieldStyle,
+    true,
+    true,
+    "filter" + Random.nextLong(),
+    Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filter.map(_.conditionsOrId).getOrElse(Left(Nil)))))
+)

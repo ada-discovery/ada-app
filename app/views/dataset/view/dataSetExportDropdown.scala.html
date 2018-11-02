@@ -1,14 +1,14 @@
-@import org.incal.core.FilterCondition
 @import views.html.{exportModal, exportDropdown}
 @import views.html.elements.labelValue
+@import controllers.dataset.DataSetWebContext
+@import controllers.dataset.DataSetWebContext._
+@import reactivemongo.bson.BSONObjectID
 
 @(
-    dataSetName: String,
-    filterId: String,
-    exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call,
-    exportJsonCall: (Seq[FilterCondition], Boolean) => Call,
-    exportTranSMARTDataCall: Call,
-    exportTranSMARTMappingCall: Call
+    dataViewId: BSONObjectID,
+    dataSetName: String
+)(
+    implicit context: DataSetWebContext
 )
 
 @modalBody(defaultDelimiter: String) = {
@@ -20,9 +20,9 @@
 }
 
 @exportDropdown(
-    exportCsvCall,
-    exportJsonCall,
-    Right(filterId)
+    dataSetRouter.exportCsv(dataViewId, _, true, None, _, _),
+    dataSetRouter.exportJson(dataViewId, _, _),
+    Nil
 ) {
     <li role="separator" class="divider"></li>
     <li>
@@ -52,16 +52,16 @@
         </a>
     </li>
 } {
-    @exportModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", exportTranSMARTDataCall, modalBody("\\t"))
-    @exportModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", exportTranSMARTMappingCall, modalBody("\\t"))
+    @exportModal("exportTranSMARTDataModal", "CSV TranSMART Data Export", dataSetRouter.exportTranSMARTData, modalBody("\\t"))
+    @exportModal("exportTranSMARTMappingModal", "CSV TranSMART Mapping Export", dataSetRouter.exportTranSMARTMapping, modalBody("\\t"))
 }
 
 <script type="text/javascript">
-    var exportFileName = '@{dataSetName.replaceAllLiterally(".","_").replaceAllLiterally(" ", "_").toLowerCase + "-charts"}'
+    var chartsExportFileName = '@{dataSetName.replaceAllLiterally(".","_").replaceAllLiterally(" ", "_").toLowerCase + "-charts"}'
     function exportCharts(type) {
         var chartIds = $.map($(".chart-holder"), function (chart, i) {
             return chart.id;
         })
-        Highcharts.exportCharts(chartIds, {type: type, filename: exportFileName});
+        Highcharts.exportCharts(chartIds, {type: type, filename: chartsExportFileName});
     }
 </script>

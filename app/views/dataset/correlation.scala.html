@@ -3,8 +3,7 @@
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.{widget, widgetJs}
-@import views.html.dataset.{datasetSubNavWithJs, dynamicFieldTable}
-@import views.html.dataset.dataSetFilterWithJs
+@import views.html.dataset.{bootstrapSelectImport, dataSetFilterWithJs, datasetSubNavWithJs, dynamicFieldTable}
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.table.dynamicTableJsImport
 @import views.html.filter.{filter, filterWithJs}
@@ -45,6 +44,8 @@
 
 @bottomResources = {
     @highchartsJsImport(true)
+
+    @bootstrapSelectImport()
 
     @helper.javascriptRouter("dataViewJsRoutes")(
         dataViewJsRouter.addCorrelation

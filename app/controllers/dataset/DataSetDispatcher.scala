@@ -49,12 +49,18 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getDefaultView = dispatch(_.getDefaultView)
 
-  override def getViewElementsAndWidgetCallback(
+  override def getViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,
     tableOrder: String,
     filterOrId: FilterOrId,
     oldCountDiff: Option[Int]
-  ) = dispatch(_.getViewElementsAndWidgetCallback(dataViewId, tableOrder, filterOrId, oldCountDiff))
+  ) = dispatch(_.getViewElementsAndWidgetsCallback(dataViewId, tableOrder, filterOrId, oldCountDiff))
+
+  override def getNewFilterViewElementsAndWidgetsCallback(
+    dataViewId: BSONObjectID,
+    tableOrder: String,
+    totalCount: Int
+  ) = dispatch(_.getNewFilterViewElementsAndWidgetsCallback(dataViewId, tableOrder, totalCount))
 
   override def getTable(
     page: Int,

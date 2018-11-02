@@ -869,7 +869,7 @@ function msToStandardDateString(ms) {
     return date.getFullYear() + '-' +('0' + (date.getMonth()+1)).slice(-2)+ '-' + date.getDate() + ' ' + date.getHours() + ':'+('0' + (date.getMinutes())).slice(-2)+ ':' + date.getSeconds();
 }
 
-function addFilterUpdateBeforeModalSubmit(modalId, filterId, filterParamName) {
+function addFilterModelBeforeModalSubmit(modalId, filterElement, filterParamName) {
     $('#' + modalId + ' form').submit(function(event) {
         event.preventDefault();
 
@@ -877,7 +877,7 @@ function addFilterUpdateBeforeModalSubmit(modalId, filterId, filterParamName) {
         $(this).find("input[name='" + filterParamName + "']").remove();
 
         // add a new one
-        var filterModel = $("#" + filterId).multiFilter("getModel")
+        var filterModel = $(filterElement).multiFilter("getModel")
 
         var params = {}
         params[filterParamName] = JSON.stringify(filterModel)

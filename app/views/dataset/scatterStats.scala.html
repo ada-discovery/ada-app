@@ -1,8 +1,7 @@
 @import views.html.chart.highcharts.highchartsJsImport
 @import views.html.widget.{widget, widgetJs}
 @import views.html.layout.main
-@import views.html.dataset.datasetSubNavWithJs
-@import views.html.dataset.dataSetFilterWithJs
+@import views.html.dataset.{bootstrapSelectImport, datasetSubNavWithJs, dataSetFilterWithJs}
 @import views.html.dataview.dataViewSelectionModal
 @import play.api.libs.json.Json
 @import models.{DataSpaceMetaInfo, Field, FieldTypeId}
@@ -69,6 +68,9 @@
 
 @bottomResources =  {
     @highchartsJsImport()
+
+    @bootstrapSelectImport()
+
     @widgetOption.map(widgetJs(_)).getOrElse("")
 }
 

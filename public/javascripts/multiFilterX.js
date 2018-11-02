@@ -7,6 +7,7 @@ $.widget( "custom.multiFilter", {
         submitUrl: null,
         refreshAjaxFun: null,
         listFiltersUrl: null,
+        saveFilterAjaxFun: null,
         filterSubmitParamName: null,
         filterId: null,
         createSubmissionJson: null,
@@ -230,7 +231,7 @@ $.widget( "custom.multiFilter", {
         $.extend(params, filterIdOrConditions);
 
         if (this.options.refreshAjaxFun) {
-            this.options.refreshAjaxFun(this.options.submitUrl, params)
+            this.options.refreshAjaxFun(this.options.submitUrl, params, this.element)
         } else {
             submit('get', this.options.submitUrl, params);
         }
@@ -308,14 +309,8 @@ $.widget( "custom.multiFilter", {
         var name = this.saveFilterNameElement.val();
         var fullFilter = {_id: null, name: name, isPrivate: false, timeCreated: 0, conditions: this.jsonConditions};
 
-        filterJsRoutes.controllers.dataset.FilterDispatcher.saveAjax(JSON.stringify(fullFilter)).ajax( {
-            success: function(data) {
-                showMessage("Filter '" + name + "' successfully saved.");
-            },
-            error: function(data) {
-                showErrorResponse(data)
-            }
-        });
+        if (this.options.saveFilterAjaxFun)
+            this.options.saveFilterAjaxFun(fullFilter)
     },
 
     loadFilterFromModal: function () {

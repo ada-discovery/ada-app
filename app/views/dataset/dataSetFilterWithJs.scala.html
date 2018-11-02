@@ -1,5 +1,5 @@
-@import views.html.filter.{filter, filterWithJs}
-@import views.html.dataset.dataSetFilterValuesUpdate
+@import views.html.filter.{filter, filterWithJs, jsTreeImport}
+@import views.html.dataset.{bootstrapSelectImport, datasetJsImport}
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 
@@ -11,15 +11,46 @@
     implicit context: DataSetWebContext
 )
 
-@filterWithJs(
-    Some(filterSpec),
-    submitCall,
-    Right(dataSetRouter.allFieldNamesAndLabels),
-    Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
-    filterShowFieldStyle,
-    Some(filterJsRouter),
-    Some(filterRouter.idAndNamesAccessible),
-    "filterOrId"
+@jsTreeImport()
+
+@datasetJsImport()
+
+@helper.javascriptRouter("dataSetJsRoutes2")(
+    dataSetJsRouter.getFieldTypeWithAllowedValues
 )
 
-@dataSetFilterValuesUpdate("filterDiv")
+@helper.javascriptRouter("filterJsRoutes")(
+    filterJsRouter.saveAjax
+)
+
+@saveFilterFun = {
+    function(filter) {
+        var filterJson = JSON.stringify(filter)
+        filterJsRoutes.controllers.dataset.FilterDispatcher.saveAjax(filterJson).ajax( {
+            success: function(data) {
+                showMessage("Filter '" + filter.name + "' successfully saved.");
+            },
+            error: function(data) {
+                showErrorResponse(data)
+            }
+        });
+    }
+}
+
+@filterWithJs(
+    filter = Some(filterSpec),
+    submitCall = submitCall,
+    fieldsOrCall = Right(dataSetRouter.allFieldNamesAndLabels),
+    categoriesOrCall = Some(Right(dataSetRouter.getCategoriesWithFieldsAsTreeNodes(filterSpec.conditionsOrId))),
+    showFieldStyle = filterShowFieldStyle,
+    filterSubmitParamName = "filterOrId",
+    filterElementId = "filterDiv",
+    listFiltersCall = Some(filterRouter.idAndNamesAccessible),
+    saveFilterAjaxFun = Some(saveFilterFun)
+)
+
+<script type="text/javascript">
+    $(function () {
+        addAllowedValuesUpdateForFilter($("#filterDiv"))
+    })
+</script>

@@ -5,16 +5,14 @@
 
 @(
     dataOrUrl: Either[JsValue, String],
-    treeElementName: String = "jstree1",
+    treeElementId: String = "jstree1",
     typesSetting: JsObject,
     nodeSelectedFun: Option[Html] = None
-)(
-    implicit webJarAssets: WebJarAssets
 )
 
 <div class="row jsTree-filter">
     <div class="col-md-9">
-        <input id="@{treeElementName}-Search-Input" class="jsTree-search-input" placeholder="Field Name or Label"></input>
+        <input id="@{treeElementId}-Search-Input" class="jsTree-search-input" placeholder="Field Name or Label"></input>
     </div>
     <div class="col-md-3">
         <a class="btn btn-info btn-sm" id="collapseAll" href="#" data-toggle="tooltip" title="Collapse All" onclick="$('#categoryTree').jstree('close_all');return false;">
@@ -26,56 +24,53 @@
     </div>
 </div>
 <div class="row jsTree-tree">
-    <div id="@treeElementName" class="col-md-12">
+    <div id="@treeElementId" class="col-md-12">
     </div>
     <hr/>
 </div>
 
-<script type="text/javascript" src="@routes.Assets.versioned("javascripts/jstree-3.3.3.min.js")"></script>
-<script src="@routes.WebJarAssets.at(webJarAssets.locate("jquery-ui.min.js"))"></script>
-<script type="text/javascript" src="@routes.Assets.versioned("javascripts/jsTreeWidget.min.js")"></script>
-<link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.versioned("stylesheets/jsTree/style.min.css")">
+<script type="text/javascript">
+    $(function () {
+        var jsonData =
+            @if(dataOrUrl.isLeft) {
+                JSON.parse('@Html(Json.stringify(dataOrUrl.left.get))')
+            } else {
+                null
+            }
 
-<script>
-    var jsonData =
-        @if(dataOrUrl.isLeft) {
-            JSON.parse('@Html(Json.stringify(dataOrUrl.left.get))')
-        } else {
-            null
-        }
+        var dataUrl =
+            @if(dataOrUrl.isRight) {
+                '@Html(dataOrUrl.right.get)'
+            } else {
+                null
+            }
 
-    var dataUrl =
-        @if(dataOrUrl.isRight) {
-            '@Html(dataOrUrl.right.get)'
-        } else {
-            null
-        }
+        var data =
+            (jsonData) ?
+                jsonData
+            :
+                {'url' : dataUrl, 'data' : function (node) {return { 'id' : node.id };}}
 
-    var data =
-        (jsonData) ?
-            jsonData
-        :
-            {'url' : dataUrl, 'data' : function (node) {return { 'id' : node.id };}}
+        var nodeSelectedFun =
+            @if(nodeSelectedFun.isDefined) {
+                @nodeSelectedFun.get
+            } else {
+                null
+            }
 
-    var nodeSelectedFun =
-        @if(nodeSelectedFun.isDefined) {
-            @nodeSelectedFun.get
-        } else {
-            null
-        }
+        $("#@{treeElementId}-Search-Input").keypress(function (e) {
+            if (e.which == 13) {
+                var searchString = $(this).val();
+                $('#@treeElementId').jstree('search', searchString);
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        });
 
-    $("#@{treeElementName}-Search-Input").keypress(function (e) {
-        if (e.which == 13) {
-            var searchString = $(this).val();
-            $('#@treeElementName').jstree('search', searchString);
-            e.stopPropagation();
-            e.preventDefault();
-        }
-    });
-
-    $("#@treeElementName").jsTreeWidget({
-        data: data,
-        typesSetting: @Html(Json.stringify(typesSetting)),
-        nodeSelectedFun: nodeSelectedFun
+        $("#@treeElementId").jsTreeWidget({
+            data: data,
+            typesSetting: @Html(Json.stringify(typesSetting)),
+            nodeSelectedFun: nodeSelectedFun
+        });
     });
 </script>

@@ -5,18 +5,11 @@
 @(
     exportCsvCall: (String, Seq[FilterCondition], Boolean) => Call,
     exportJsonCall: (Seq[FilterCondition], Boolean) => Call,
-    conditionsOrGetFromFilterElementId: Either[Seq[FilterCondition], String]
+    conditions: Seq[FilterCondition]
 )(
     extraListItems: Html = Html(""))(
     extraModals: Html = Html("")
 )
-
-@conditionsIfDefined = @{
-    conditionsOrGetFromFilterElementId match {
-        case Left(conditions) => conditions
-        case Right(_) => Nil
-    }
-}
 
 @csvBody(defaultDelimiter: String) = {
     <fieldset>
@@ -87,11 +80,11 @@
     </ul>
     @modal("exportAllConfirmationCsvModal", "Full CSV Export", exportAllModalBody, None, Some(exportAllCsvModalButtons))
     @exportModal("exportAllCsvModal", "Full CSV Export", exportCsvCall(",", Nil, false), csvBody(","))
-    @exportModal("exportFilteredCsvModal", "Filtered CSV Export", exportCsvCall(",", conditionsIfDefined, false), csvBody(","))
-    @exportModal("exportFilteredTableCsvModal", "Filtered Table CSV Export", exportCsvCall(",", conditionsIfDefined, true), csvBody(","))
+    @exportModal("exportFilteredCsvModal", "Filtered CSV Export", exportCsvCall(",", conditions, false), csvBody(","))
+    @exportModal("exportFilteredTableCsvModal", "Filtered Table CSV Export", exportCsvCall(",", conditions, true), csvBody(","))
     @exportModal("exportAllJsonModal", "Full Json Export", exportJsonCall(Nil, false), exportAllModalBody)
-    @exportModal("exportFilteredJsonModal", "Filtered Json Export", exportJsonCall(conditionsIfDefined, false), exportJsonModalBody)
-    @exportModal("exportFilteredTableJsonModal", "Filtered Table Json Export", exportJsonCall(conditionsIfDefined, true), exportJsonModalBody)
+    @exportModal("exportFilteredJsonModal", "Filtered Json Export", exportJsonCall(conditions, false), exportJsonModalBody)
+    @exportModal("exportFilteredTableJsonModal", "Filtered Table Json Export", exportJsonCall(conditions, true), exportJsonModalBody)
     @extraModals
 </div>
 
@@ -101,12 +94,5 @@
             var checked = $(this).is(":checked");
             $(this).parent().find('#replaceEolWithSpace').val(checked)
         });
-
-        @if(conditionsOrGetFromFilterElementId.isRight) {
-            addFilterUpdateBeforeModalSubmit("exportFilteredCsvModal", "@conditionsOrGetFromFilterElementId.right.get", "filter");
-            addFilterUpdateBeforeModalSubmit("exportFilteredTableCsvModal", "@conditionsOrGetFromFilterElementId.right.get", "filter");
-            addFilterUpdateBeforeModalSubmit("exportFilteredJsonModal", "@conditionsOrGetFromFilterElementId.right.get", "filter");
-            addFilterUpdateBeforeModalSubmit("exportFilteredTableJsonModal", "@conditionsOrGetFromFilterElementId.right.get", "filter");
-        }
     })
 </script>

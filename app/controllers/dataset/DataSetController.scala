@@ -20,11 +20,17 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def getDefaultView: Action[AnyContent]
 
-  def getViewElementsAndWidgetCallback(
+  def getViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,
     tableOrder: String,
     filterOrId: FilterOrId,
     oldCountDiff: Option[Int]
+  ): Action[AnyContent]
+
+  def getNewFilterViewElementsAndWidgetsCallback(
+    dataViewId: BSONObjectID,
+    tableOrder: String,
+    totalCount: Int
   ): Action[AnyContent]
 
   def getTable(

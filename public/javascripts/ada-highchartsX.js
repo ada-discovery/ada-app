@@ -1047,3 +1047,9 @@
             }
         }, 2500);
     }
+
+    function refreshHighcharts() {
+        Highcharts.charts.forEach(function (chart) {
+            if (chart) chart.reflow();
+        });
+    }

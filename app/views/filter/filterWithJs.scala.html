@@ -1,7 +1,7 @@
 @import models.FilterShowFieldStyle
 @import models.{Field, Filter}
 @import controllers.dataset.FilterJsRouter
-@import views.html.filter.{filter => filterUI, filterJs}
+@import views.html.filter.{filter => filterUI, filterJs, filterJsImport, jsTreeImport}
 
 @(
     filter: Option[Filter],
@@ -9,32 +9,39 @@
     fieldsOrCall: Either[Traversable[Field], Call],
     categoriesOrCall: Option[Either[Traversable[Category], Call]] = None,
     showFieldStyle: Option[FilterShowFieldStyle.Value] = None,
-    filterJsRouter: Option[FilterJsRouter] = None,
-    listFiltersCall: Option[Call] = None,
     filterSubmitParamName: String = "filter",
-    filterElementName: String = "filterDiv",
-    createSubmissionJson: Option[Html] = None
+    filterElementId: String = "filterDiv",
+    createSubmissionJson: Option[Html] = None,
+    listFiltersCall: Option[Call] = None,
+    saveFilterAjaxFun: Option[Html] = None
 )(
     implicit request: Request[_], webJarAssets: WebJarAssets
 )
 
+@if(categoriesOrCall.isDefined) {
+    @jsTreeImport()
+}
+
 @filterUI(
     filter,
-    categoriesOrCall,
     showFieldStyle,
-    filterJsRouter,
-    listFiltersCall,
-    filterElementName
+    listFiltersCall.isDefined,
+    saveFilterAjaxFun.isDefined,
+    filterElementId,
+    categoriesOrCall
 )
+
+@filterJsImport()
 
 @filterJs(
     filter,
     submitCall,
     fieldsOrCall,
-    filterJsRouter,
-    listFiltersCall,
     filterSubmitParamName,
-    filterElementName,
+    filterElementId,
     createSubmissionJson,
+    None,
+    listFiltersCall,
+    saveFilterAjaxFun,
     categoriesOrCall.map(_ => "categoryTree")
 )
