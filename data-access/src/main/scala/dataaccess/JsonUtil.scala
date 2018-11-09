@@ -7,55 +7,62 @@ import play.api.libs.json.{JsObject, _}
 
 object JsonUtil {
 
-  private val dateFormats = Seq(
-    "yyyy-MM-dd",
-    "yyyy-MM-dd HH:mm",
-    "yyyy-MM-dd HH:mm:ss",
-    "dd-MMM-yyyy HH:mm:ss",
-    "dd.MM.yyyy",
-    "MM.yyyy"
-  ).map(new SimpleDateFormat(_))
-
   def escapeKey(key : String) =
     key.replaceAll("\\.", "\\u002e") // \u2024// replaceAll("\\", "\\\\").replaceAll("\\$", "\\u0024").
 
   def unescapeKey(key : String) =
     key.replaceAll("u002e", "\\.") // .replaceAll("\\u0024", "\\$").replaceAll("\\\\", "\\")
 
-  def jsonObjectsToCsv(
-    delimiter : String,
+  def jsonsToCsv(
+    items: Traversable[JsObject],
+    delimiter: String = ",",
     eol: String = "\n",
-    fieldNames: Option[Seq[String]] = None,
-    replacements : Traversable[(String, String)]
-  )(items : Traversable[JsObject]) = {
+    explicitFieldNames: Seq[String] = Nil,
+    replacements: Traversable[(String, String)] = Nil
+  ) = {
     val sb = new StringBuilder(10000)
 
-    val replaceAllAux = replaceAll(replacements)_
+    if (items.nonEmpty || explicitFieldNames.nonEmpty) {
 
-    if (!items.isEmpty) {
-      val headerFieldNames = fieldNames.getOrElse(items.head.fields.map(_._1))
-      val header = headerFieldNames.map(fieldName =>
-        unescapeKey(replaceAllAux(fieldName))
-      ).mkString(delimiter)
+      // if field names are not explicitly provided use the fields of the first json
+      val headerFieldNames = explicitFieldNames match {
+        case Nil => items.head.fields.map(_._1)
+        case _ => explicitFieldNames
+      }
 
+      // create a header
+      def headerFieldName(fieldName: String) = JsonUtil.unescapeKey(replaceAll(replacements)(fieldName))
+      val header = headerFieldNames.map(headerFieldName).mkString(delimiter)
       sb.append(header + eol)
 
+      // transform each json to a delimited string and add to a buffer
       items.foreach { item =>
-        val itemFieldNameValueMap = item.fields.toMap
-        val row = headerFieldNames.map{ fieldName =>
-          itemFieldNameValueMap.get(fieldName).fold("")
-            { value =>
-              value match {
-                case JsNull => ""
-                case _: JsString => replaceAllAux(value.as[String])
-                case _ => value.toString()
-              }
-            }
-        }.mkString(delimiter)
+        val row = jsonToDelimitedString(item, headerFieldNames, delimiter, replacements)
         sb.append(row + eol)
       }
     }
+
     sb.toString
+  }
+
+  def jsonToDelimitedString(
+    json: JsObject,
+    fieldNames: Traversable[String],
+    delimiter: String = ",",
+    replacements: Traversable[(String, String)] = Nil
+  ): String = {
+    val replaceAllAux = replaceAll(replacements)_
+    val itemFieldNameValueMap = json.fields.toMap
+
+    fieldNames.map { fieldName =>
+      itemFieldNameValueMap.get(fieldName).fold("") { jsValue =>
+        jsValue match {
+          case JsNull => ""
+          case _: JsString => replaceAllAux(jsValue.as[String])
+          case _ => jsValue.toString()
+        }
+      }
+    }.mkString(delimiter)
   }
 
   def traverse(json: JsObject, path: String): Seq[JsValue] = {
