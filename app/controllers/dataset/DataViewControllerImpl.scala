@@ -5,6 +5,7 @@ import java.{util => ju}
 import javax.inject.Inject
 
 import _root_.security.AdaAuthConfig
+import _root_.util.FieldUtil.InfixFieldOps
 import com.google.inject.assistedinject.Assisted
 import dataaccess.RepoTypes.UserRepo
 import dataaccess._
@@ -361,126 +362,120 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   override def addDistributions(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
-  ) = processDataView(dataViewId) { dataView =>
-    val existingFieldNames = filterSpecsOf[DistributionWidgetSpec](dataView).map(_.fieldName)
-    val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
-
-    if (newFieldNames.nonEmpty) {
-      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ newFieldNames.map(DistributionWidgetSpec(_, None)))
-      repo.update(newDataView)
-    } else
-      Future(())
-  }
+  ) = processDataView(dataViewId)(
+    addWidgetsAndUpdateView(fieldNames.map(DistributionWidgetSpec(_, None)))
+  )
 
   override def addDistribution(
     dataViewId: BSONObjectID,
     fieldName: String,
     groupFieldName: Option[String]
-  ) = processDataView(dataViewId) { dataView =>
-    val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ Seq(DistributionWidgetSpec(fieldName, groupFieldName)))
-    repo.update(newDataView)
-  }
+  ) = processDataView(dataViewId)(
+    addWidgetsAndUpdateView(Seq(DistributionWidgetSpec(fieldName, groupFieldName)))
+  )
 
   override def addCumulativeCounts(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
-  ) = processDataView(dataViewId) { dataView =>
-    val existingFieldNames = filterSpecsOf[CumulativeCountWidgetSpec](dataView).map(_.fieldName)
-    val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
-
-    if (newFieldNames.nonEmpty) {
-      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ newFieldNames.map(CumulativeCountWidgetSpec(_, None)))
-      repo.update(newDataView)
-    } else
-      Future(())
-  }
+  ) = processDataView(dataViewId)(
+    addWidgetsAndUpdateView(fieldNames.map(CumulativeCountWidgetSpec(_, None)))
+  )
 
   override def addCumulativeCount(
     dataViewId: BSONObjectID,
     fieldName: String,
     groupFieldName: Option[String]
-  ) = processDataView(dataViewId) { dataView =>
-    val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ Seq(CumulativeCountWidgetSpec(fieldName, groupFieldName)))
-    repo.update(newDataView)
-  }
+  ) = processDataView(dataViewId)(
+    addWidgetsAndUpdateView(Seq(CumulativeCountWidgetSpec(fieldName, groupFieldName)))
+  )
 
   override def addBoxPlots(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
-  ) = processDataView(dataViewId) { dataView =>
-    val existingFieldNames = filterSpecsOf[BoxWidgetSpec](dataView).map(_.fieldName)
-    val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
-
-    if (newFieldNames.nonEmpty) {
-      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ newFieldNames.map(BoxWidgetSpec(_, None)))
-      repo.update(newDataView)
-    } else
-      Future(())
-  }
+  ) = processDataView(dataViewId)(
+    addWidgetsAndUpdateView(fieldNames.map(BoxWidgetSpec(_, None)))
+  )
 
   override def addBoxPlot(
     dataViewId: BSONObjectID,
     fieldName: String,
     groupFieldName: Option[String]
-  ) = processDataView(dataViewId) { dataView =>
-    val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ Seq(BoxWidgetSpec(fieldName, groupFieldName)))
-    repo.update(newDataView)
-  }
+  ) = processDataView(dataViewId)(
+    addWidgetsAndUpdateView(Seq(BoxWidgetSpec(fieldName, groupFieldName)))
+  )
 
   override def addBasicStats(
     dataViewId: BSONObjectID,
     fieldNames: Seq[String]
-  ) = processDataView(dataViewId) { dataView =>
-    val existingFieldNames = filterSpecsOf[BasicStatsWidgetSpec](dataView).map(_.fieldName)
-    val newFieldNames = fieldNames.filter(!existingFieldNames.contains(_))
-
-    if (newFieldNames.nonEmpty) {
-      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ newFieldNames.map(BasicStatsWidgetSpec(_)))
-      repo.update(newDataView)
-    } else
-      Future(())
-  }
+  ) = processDataView(dataViewId)(
+    addWidgetsAndUpdateView(fieldNames.map(BasicStatsWidgetSpec(_)))
+  )
 
   override def addScatter(
     dataViewId: BSONObjectID,
     xFieldName: String,
     yFieldName: String,
-    groupFieldName: Option[String]
+    groupOrValueFieldName: Option[String]
   ) = processDataView(dataViewId) { dataView =>
-    val existingXYZNames = filterSpecsOf[ScatterWidgetSpec](dataView).map { spec =>
-      (spec.xFieldName, spec.yFieldName, spec.groupFieldName)
-    }
-    val fieldNames = (xFieldName, yFieldName, groupFieldName)
-    if (!existingXYZNames.contains(fieldNames)) {
-      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ Seq(ScatterWidgetSpec(xFieldName, yFieldName, groupFieldName)))
-      repo.update(newDataView)
-    } else
-      Future(())
+    for {
+      groupOrValueField <- groupOrValueFieldName.map(fieldRepo.get).getOrElse(Future(None))
+
+      _ <- {
+        val widgetSpec = if (groupOrValueField.map(_.isNumeric).getOrElse(false))
+          ValueScatterWidgetSpec(xFieldName, yFieldName, groupOrValueFieldName.get)
+        else
+          ScatterWidgetSpec(xFieldName, yFieldName, groupOrValueFieldName)
+
+        addWidgetsAndUpdateView(Seq(widgetSpec))(dataView)
+      }
+    } yield
+      ()
   }
 
   override def addCorrelation(
-    dataViewId: BSONObjectID,
-    fieldNames: Seq[String]
-  ) = processDataView(dataViewId) { dataView =>
-    val existingNames = filterSpecsOf[CorrelationWidgetSpec](dataView).map(_.fieldNames)
-    if (!existingNames.contains(fieldNames)) {
-      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ Seq(CorrelationWidgetSpec(fieldNames)))
-      repo.update(newDataView)
-    } else
-      Future(())
+    dataViewId: BSONObjectID
+  ) = Action.async { implicit request =>
+    val fieldNames = request.body.asFormUrlEncoded.flatMap(_.get("fieldNames[]")).getOrElse(Nil)
+
+    if (fieldNames.isEmpty)
+      Future(BadRequest("No field names provided for addCorrelation function."))
+    else
+      processDataViewAux(dataViewId)(
+        addWidgetsAndUpdateView(Seq(CorrelationWidgetSpec(fieldNames)))
+      )
   }
+
+  override def addHeatmap(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    yFieldName: String,
+    valueFieldName: String,
+    aggType: AggType.Value
+  ) = processDataView(dataViewId)(
+    addWidgetsAndUpdateView(Seq(HeatmapAggWidgetSpec(xFieldName, yFieldName, valueFieldName, 20, 20, aggType)))
+  )
+
+  override def addGridDistribution(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    yFieldName: String
+  ) = processDataView(dataViewId)(
+    addWidgetsAndUpdateView(Seq(GridDistributionCountWidgetSpec(xFieldName, yFieldName, 20, 20)))
+  )
 
   override def addIndependenceTest(
     dataViewId: BSONObjectID,
-    fieldName: String,
-    inputFieldNames: Seq[String]
-  ) = processDataView(dataViewId) { dataView =>
-    val existingNames = filterSpecsOf[IndependenceTestWidgetSpec](dataView).map(_.fieldNames)
-    if (!existingNames.contains(Seq(fieldName) ++ inputFieldNames)) {
-      val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ Seq(IndependenceTestWidgetSpec(fieldName, inputFieldNames)))
-      repo.update(newDataView)
-    } else
-      Future(())
+    targetFieldName: String
+  ) = Action.async { implicit request =>
+
+    val inputFieldNames = request.body.asFormUrlEncoded.flatMap(_.get("inputFieldNames[]")).getOrElse(Nil)
+
+    if (inputFieldNames.isEmpty)
+      Future(BadRequest("No input field names provided for addIndependenceTest function."))
+    else
+      processDataViewAux(dataViewId)(
+        addWidgetsAndUpdateView(Seq(IndependenceTestWidgetSpec(targetFieldName, inputFieldNames)))
+      )
   }
 
   override def addTableFields(
@@ -503,19 +498,34 @@ protected[controllers] class DataViewControllerImpl @Inject() (
   ): Seq[T] =
     dataView.widgetSpecs.collect{ case t: T => t}
 
+  private def addWidgetsAndUpdateView(
+    widgetSpecs: Seq[WidgetSpec])(
+    dataView: DataView
+  ) = {
+    val newDataView = dataView.copy(widgetSpecs = dataView.widgetSpecs ++ widgetSpecs)
+    repo.update(newDataView)
+  }
+
   protected def processDataView(id: BSONObjectID)(fun: DataView => Future[_]) =
     Action.async { implicit request =>
-      for {
-        dataView <- repo.get(id)
-        response <- dataView match {
-          case Some(dataView) => fun(dataView).map(x => Some(x))
-          case None => Future(None)
-        }
-      } yield
-        response.fold(
-          NotFound(s"Data view '#${id.stringify}' not found")
-        ) { _ => Ok("Done")}
-  }
+      processDataViewAux(id)(fun)
+    }
+
+  protected def processDataViewAux(
+    id: BSONObjectID)(
+    fun: DataView => Future[_])(
+    implicit request: Request[_]
+  ) =
+    for {
+      dataView <- repo.get(id)
+      response <- dataView match {
+        case Some(dataView) => fun(dataView).map(x => Some(x))
+        case None => Future(None)
+      }
+    } yield
+      response.fold(
+        NotFound(s"Data view '#${id.stringify}' not found")
+      ) { _ => Ok("Done")}
 
   override def saveFilter(
     dataViewId: BSONObjectID,

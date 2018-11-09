@@ -6,7 +6,7 @@ import be.objectify.deadbolt.scala.DeadboltHandler
 import controllers.core.AdminOrOwnerControllerDispatcherExt
 import org.incal.play.controllers.SecureControllerDispatcher
 import models.security.UserManager
-import models.AdaException
+import models.{AdaException, AggType}
 import persistence.dataset.DataSetAccessorFactory
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.bson.BSONObjectID
@@ -96,16 +96,29 @@ class DataViewDispatcher @Inject()(
   ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addTableFields(dataViewId, fieldNames))
 
   override def addCorrelation(
-    dataViewId: BSONObjectID,
-    fieldNames: Seq[String]
-  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addCorrelation(dataViewId, fieldNames))
+    dataViewId: BSONObjectID
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addCorrelation(dataViewId))
 
   override def addScatter(
     dataViewId: BSONObjectID,
     xFieldName: String,
     yFieldName: String,
-    groupFieldName: Option[String]
-  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addScatter(dataViewId, xFieldName, yFieldName, groupFieldName))
+    groupOrValueFieldName: Option[String]
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addScatter(dataViewId, xFieldName, yFieldName, groupOrValueFieldName))
+
+  def addHeatmap(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    yFieldName: String,
+    valueFieldName: String,
+    aggType: AggType.Value
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addHeatmap(dataViewId, xFieldName, yFieldName, valueFieldName, aggType))
+
+  def addGridDistribution(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    yFieldName: String
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addGridDistribution(dataViewId, xFieldName, yFieldName))
 
   override def addBoxPlots(
     dataViewId: BSONObjectID,
@@ -125,9 +138,8 @@ class DataViewDispatcher @Inject()(
 
   override def addIndependenceTest(
     dataViewId: BSONObjectID,
-    fieldName: String,
-    inputFieldNames: Seq[String]
-  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addIndependenceTest(dataViewId, fieldName, inputFieldNames))
+    targetFieldName: String
+  ) = dispatchIsAdminOrOwnerAjax(dataViewId, _.addIndependenceTest(dataViewId, targetFieldName))
 
   override def saveFilter(
     dataViewId: BSONObjectID,

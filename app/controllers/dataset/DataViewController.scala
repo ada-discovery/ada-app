@@ -1,5 +1,6 @@
 package controllers.dataset
 
+import models.AggType
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.CrudController
 import play.api.mvc.{Action, AnyContent}
@@ -59,18 +60,30 @@ trait DataViewController extends CrudController[BSONObjectID] {
     dataViewId: BSONObjectID,
     xFieldName: String,
     yFieldName: String,
-    groupFieldName: Option[String]
+    groupOrValueFieldName: Option[String]
   ): Action[AnyContent]
 
   def addCorrelation(
+    dataViewId: BSONObjectID
+  ): Action[AnyContent]
+
+  def addHeatmap(
     dataViewId: BSONObjectID,
-    fieldNames: Seq[String]
+    xFieldName: String,
+    yFieldName: String,
+    valueFieldName: String,
+    aggType: AggType.Value
+  ): Action[AnyContent]
+
+  def addGridDistribution(
+    dataViewId: BSONObjectID,
+    xFieldName: String,
+    yFieldName: String
   ): Action[AnyContent]
 
   def addIndependenceTest(
     dataViewId: BSONObjectID,
-    fieldName: String,
-    inputFieldNames: Seq[String]
+    targetFieldName: String
   ): Action[AnyContent]
 
   def addTableFields(

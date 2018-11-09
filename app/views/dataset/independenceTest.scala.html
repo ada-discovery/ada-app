@@ -137,7 +137,10 @@
             } else if (inputFieldNames.length == 0) {
                 showError("No input fields specified.")
             } else {
-                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addIndependenceTest(dataViewId, targetFieldName, inputFieldNames).ajax( {
+                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addIndependenceTest(dataViewId, targetFieldName).ajax({
+                    data: {
+                        "inputFieldNames": inputFieldNames
+                    },
                     success: function() {
                         showMessage("Independence test for the field '" + targetFieldLabel + "' has been successfully added to the view '" + dataViewName + "'.");
                     },

@@ -1,4 +1,4 @@
-@import views.html.dataset.view.viewFilter
+@import views.html.dataset.filter.dataSetFilter
 @import models.Filter
 @import controllers.dataset.DataSetWebContext
 @import controllers.dataset.DataSetWebContext._
@@ -22,7 +22,7 @@
 </div>
 <div class="row">
     <div class="col-md-12">
-        @viewFilter(filter, filterShowFieldStyle)
+        @dataSetFilter(filter, filterShowFieldStyle)
         <input type="hidden" class="count-hidden" value="@count">
     </div>
 </div>

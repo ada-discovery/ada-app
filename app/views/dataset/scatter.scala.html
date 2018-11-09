@@ -1,0 +1,146 @@
+@import models.Field
+@import views.html.dataset.widgetsScreen
+@import views.html.elements.fieldTypeahead
+@import models.DataSpaceMetaInfo
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
+
+@(
+    dataSetName: String,
+    filterSpec: models.Filter,
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
+    xField: Option[Field],
+    yField: Option[Field],
+    groupOrValueField: Option[Field],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@extraActions = {
+    <div class="pull-right">
+        <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Scatter To View">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
+        </button>
+    </div>
+}
+
+@bottomResources = {
+
+    @helper.javascriptRouter("dataSetJsRoutes")(
+        dataSetJsRouter.calcScatter,
+        dataSetJsRouter.getWidgets
+    )
+
+    @helper.javascriptRouter("dataViewJsRoutes")(
+        dataViewJsRouter.addScatter
+    )
+
+    <script type="text/javascript">
+        $(function () {
+            populateMultiNumericalTypeahead(["xField", "yField"], true);
+            populateFullTypeahead("groupOrValueField");
+
+            $('#inputDiv #xFieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    calcScatter();
+                    return false;
+                }
+            });
+
+            $('#inputDiv #yFieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    calcScatter();
+                    return false;
+                }
+            });
+
+            $('#inputDiv #groupOrValueFieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    var groupOrValueFieldTypeahedVal = $('#inputDiv #groupOrValueFieldTypeahead').val();
+                    if (!groupOrValueFieldTypeahedVal)
+                        $('#inputDiv #groupOrValueFieldName').val("")
+
+                    calcScatter();
+                    return false;
+                }
+            });
+
+            $("#dataViewSelectionModal #submitButton").on("click", addScatterToView)
+
+            activateFilter($("#filterDiv"), function(filterOrId) {calcScatter()});
+        });
+
+        function calcScatter() {
+            var xFieldName = $("#inputDiv #xFieldName").val();
+            var xFieldLabel = $("#inputDiv #xFieldTypeahead").val();
+
+            var yFieldName = $("#inputDiv #yFieldName").val();
+            var yFieldLabel = $("#inputDiv #yFieldTypeahead").val();
+
+            var groupOrValueFieldName = $("#inputDiv #groupOrValueFieldName").val();
+            var groupOrValueFieldLabel = $("#inputDiv #groupOrValueFieldTypeahead").val();
+            if (!groupOrValueFieldName)
+                groupOrValueFieldName = null
+
+            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
+            var filterOrIdJson = JSON.stringify(filterOrId);
+
+            if (!xFieldName || !yFieldName) {
+                showError("Scatter generation cannot be launched. No x or y field specified.");
+            } else {
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcScatter(xFieldName, yFieldName, groupOrValueFieldName, filterOrIdJson).ajax(
+                    handleResponse("Scatter generation finished.")
+                );
+
+                hideErrors();
+                showMessage("Scatter generation for the fields '" + xFieldLabel + "' and '" + yFieldLabel + "' launched.")
+            }
+        }
+
+        function addScatterToView() {
+            var xFieldName = $("#inputDiv #xFieldName").val();
+            var xFieldLabel = $("#inputDiv #xFieldTypeahead").val();
+
+            var yFieldName = $("#inputDiv #yFieldName").val();
+            var yFieldLabel = $("#inputDiv #yFieldTypeahead").val();
+
+            var groupOrValueFieldName = $("#inputDiv #groupOrValueFieldName").val();
+            var groupOrValueFieldLabel = $("#inputDiv #groupOrValueFieldTypeahead").val();
+            if (!groupOrValueFieldName)
+                groupOrValueFieldName = null
+
+            var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+            var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
+
+            if (!xFieldName || !yFieldName) {
+                showError("No x or y field specified.");
+            } else {
+                dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addScatter(dataViewId, xFieldName, yFieldName, groupOrValueFieldName).ajax({
+                    success: function () {
+                        showMessage("Scatter for the fields '" + xFieldLabel + "' and '" + yFieldLabel + "' has been successfully added to the view '" + dataViewName + "'.");
+                    },
+                    error: function (data) {
+                        showErrorResponse(data);
+                    }
+                });
+            }
+        }
+    </script>
+}
+
+@inputElements = {
+    @fieldTypeahead(xField, Some("col-md-3 col-sm-12"), "xField", "X Field")
+    @fieldTypeahead(yField, Some("col-md-offset-1 col-md-3 col-sm-12"), "yField", "Y Field")
+    @fieldTypeahead(groupOrValueField, Some("col-md-offset-1 col-md-3 col-sm-12"), "groupOrValueField", "Group or Value Field")
+}
+
+@widgetsScreen(
+    Messages("scatterAnalysis.title", dataSetName),
+    filterSpec,
+    filterShowFieldStyle,
+    dataSpaceMetaInfos,
+    inputElements,
+    extraActions,
+    bottomResources
+)

@@ -3,7 +3,7 @@ package runnables.core
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
-import dataaccess.JsonUtil.jsonObjectsToCsv
+import dataaccess.JsonUtil.jsonsToCsv
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import org.apache.commons.lang3.StringEscapeUtils
 import persistence.dataset.DataSetAccessorFactory
@@ -53,7 +53,7 @@ class ExportDataSetsForSpaceAsCsvs @Inject() (
       val fieldNames = fields.map(_.name).toSeq.sorted
       val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter)
       val unescapedEOL = StringEscapeUtils.unescapeJava(eol)
-      val csvString = jsonObjectsToCsv(unescapedDelimiter, unescapedEOL, Some(fieldNames), Nil)(jsons)
+      val csvString = jsonsToCsv(jsons, unescapedDelimiter, unescapedEOL, fieldNames)
 
       val outputStream = Stream(csvString.getBytes(StandardCharsets.UTF_8))
       writeByteArrayStream(outputStream, new java.io.File(exportFolder + "/" + dataSetId + ".csv"))

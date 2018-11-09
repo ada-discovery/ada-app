@@ -327,14 +327,19 @@
         var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
         var fieldNames = getCheckedTableIds("dictionaryTable", "id")
 
-        dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId, fieldNames).ajax( {
-            success: function() {
-                showMessage("Correlation for the field(s) '" + fieldNames + "' has been successfully added to the view '" + dataViewName + "'.");
-            },
-            error: function(data){
-                showErrorResponse(data);
-            }
-        });
+        if (fieldNames.length == 0) {
+            showError("No fields defined.");
+        } else {
+            dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCorrelation(dataViewId).ajax({
+                data: {
+                    "fieldNames": fieldNames
+                },
+                success: function() {
+                    showMessage("Correlation for the field(s) '" + fieldNames.join(", ") + "' has been successfully added to the view '" + dataViewName + "'.");
+                },
+                error: showErrorResponse
+            });
+        }
     }
 
     function addTableFieldsToView() {

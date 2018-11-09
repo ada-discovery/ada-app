@@ -2,7 +2,7 @@ package services
 
 import javax.inject.{Inject, Singleton}
 
-import dataaccess.JsonUtil.jsonObjectsToCsv
+import dataaccess.JsonUtil.jsonsToCsv
 import com.google.inject.ImplementedBy
 import models.{AdaException, Category, Field}
 import dataaccess.AdaConversionException
@@ -187,8 +187,8 @@ class TranSMARTServiceImpl extends TranSMARTService {
     if (clinicalData.nonEmpty) {
       val mappingData = createClinicalMapping(dataFileName, keyField, visitField, fieldsToIncludeInOrder, fieldCategoryMap, rootCategory, fieldNameLabelMap)
 
-      val dataContent = jsonObjectsToCsv(delimiter, newLine, None, replacements)(clinicalData)
-      val mappingContent = jsonObjectsToCsv(delimiter, newLine, None, replacements)(mappingData)
+      val dataContent = jsonsToCsv(clinicalData, delimiter, newLine, Nil, replacements)
+      val mappingContent = jsonsToCsv(mappingData, delimiter, newLine, Nil, replacements)
       (dataContent, mappingContent)
     } else
       ("" , "")
@@ -218,7 +218,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
 
     val clinicalData = createClinicalData(items, fieldsToIncludeInOrder, nameFieldTypeMap)
     if (clinicalData.nonEmpty) {
-      val dataContent = jsonObjectsToCsv(delimiter, newLine, None, replacements)(clinicalData)
+      val dataContent = jsonsToCsv(clinicalData, delimiter, newLine, Nil, replacements)
       dataContent
     } else
       ""
@@ -249,7 +249,7 @@ class TranSMARTServiceImpl extends TranSMARTService {
     if (fieldsToIncludeInOrder.nonEmpty) {
       val mappingData = createClinicalMapping(dataFileName, keyField, visitField, fieldsToIncludeInOrder, fieldCategoryMap, rootCategory, fieldNameLabelMap)
 
-      val mappingContent = jsonObjectsToCsv(delimiter, newLine, None, replacements)(mappingData)
+      val mappingContent = jsonsToCsv(mappingData, delimiter, newLine, Nil, replacements)
       mappingContent
     } else
       ""

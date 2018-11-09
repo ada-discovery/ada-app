@@ -1,0 +1,174 @@
+@import models.Field
+@import views.html.dataset.widgetsScreen
+@import views.html.elements.fieldTypeahead
+@import views.html.elements.{selectEnum, labelValue}
+@import models.DataSpaceMetaInfo
+@import controllers.dataset.DataSetWebContext._
+@import controllers.dataset.DataSetWebContext
+
+@(
+    dataSetName: String,
+    filterSpec: models.Filter,
+    filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
+    xField: Option[Field],
+    yField: Option[Field],
+    valueField: Option[Field],
+    dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
+)(
+    implicit context: DataSetWebContext
+)
+
+@extraActions = {
+    <div class="pull-right">
+        <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Heatmap To View">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
+        </button>
+    </div>
+}
+
+@bottomResources = {
+
+    @helper.javascriptRouter("dataSetJsRoutes")(
+        dataSetJsRouter.calcHeatmap,
+        dataSetJsRouter.getWidgets
+    )
+
+    @helper.javascriptRouter("dataViewJsRoutes")(
+        dataViewJsRouter.addHeatmap,
+        dataViewJsRouter.addGridDistribution
+    )
+
+    <script type="text/javascript">
+        $(function () {
+            populateMultiNumericalTypeahead(["xField", "yField", "valueField"], true);
+
+            $('#inputDiv #xFieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    calcHeatmap();
+                    return false;
+                }
+            });
+
+            $('#inputDiv #yFieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    calcHeatmap();
+                    return false;
+                }
+            });
+
+            $('#inputDiv #valueFieldTypeahead').keypress(function (e) {
+                if (e.which == 13) {
+                    var valueFieldTypeahedVal = $('#inputDiv #valueFieldTypeahead').val();
+                    if (!valueFieldTypeahedVal)
+                        $('#inputDiv #valueFieldName').val("")
+
+                    calcHeatmap();
+                    return false;
+                }
+            });
+
+            $('#inputDiv #aggType').keypress(function (e) {
+                if (e.which == 13) {
+                    calcHeatmap();
+                    return false;
+                }
+            });
+
+            $("#dataViewSelectionModal #submitButton").on("click", addHeatmapToView)
+
+            activateFilter($("#filterDiv"), function(filterOrId) {calcHeatmap()});
+        });
+
+        function calcHeatmap() {
+            var xFieldName = $("#inputDiv #xFieldName").val();
+            var xFieldLabel = $("#inputDiv #xFieldTypeahead").val();
+
+            var yFieldName = $("#inputDiv #yFieldName").val();
+            var yFieldLabel = $("#inputDiv #yFieldTypeahead").val();
+
+            var valueFieldName = $("#inputDiv #valueFieldName").val();
+            var valueFieldLabel = $("#inputDiv #valueFieldTypeahead").val();
+            if (!valueFieldName)
+                valueFieldName = null
+
+            var aggType = $("#inputDiv #aggType").val();
+            if (!aggType)
+                aggType = null
+
+            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
+            var filterOrIdJson = JSON.stringify(filterOrId);
+
+            if (!xFieldName || !yFieldName) {
+                showError("Heatmap calculation cannot be launched. No x or y field specified.");
+            } else {
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcHeatmap(xFieldName, yFieldName, valueFieldName, aggType, filterOrIdJson).ajax(
+                    handleResponse("Heatmap calculation finished.")
+                );
+
+                hideErrors();
+                showMessage("Heatmap calculation for the fields '" + xFieldLabel + "' and '" + yFieldLabel + "' launched.")
+            }
+        }
+
+        function addHeatmapToView() {
+            var xFieldName = $("#inputDiv #xFieldName").val();
+            var xFieldLabel = $("#inputDiv #xFieldTypeahead").val();
+
+            var yFieldName = $("#inputDiv #yFieldName").val();
+            var yFieldLabel = $("#inputDiv #yFieldTypeahead").val();
+
+            var valueFieldName = $("#inputDiv #valueFieldName").val();
+            var valueFieldLabel = $("#inputDiv #valueFieldTypeahead").val();
+            if (!valueFieldName)
+                valueFieldName = null
+
+            var aggType = $("#inputDiv #aggType").val();
+            if (!aggType)
+                aggType = null
+
+            var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
+            var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
+
+            if (!xFieldName || !yFieldName) {
+                showError("No x or y field specified.");
+            } else {
+                if (valueFieldName && aggType)
+                    dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addHeatmap(dataViewId, xFieldName, yFieldName, valueFieldName, aggType).ajax({
+                        success: function () {
+                            showMessage("Heatmap for the fields '" + xFieldLabel + "' and '" + yFieldLabel + "' has been successfully added to the view '" + dataViewName + "'.");
+                        },
+                        error: showErrorResponse
+                    });
+                else
+                    dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addGridDistribution(dataViewId, xFieldName, yFieldName).ajax({
+                        success: function () {
+                            showMessage("Grid distribution (count) for the fields '" + xFieldLabel + "' and '" + yFieldLabel + "' has been successfully added to the view '" + dataViewName + "'.");
+                        },
+                        error: showErrorResponse
+                    });
+            }
+        }
+    </script>
+}
+
+@inputElements = {
+    @fieldTypeahead(xField, Some("col-md-12 top-padded"), "xField", "X Field")
+    @fieldTypeahead(yField, Some("col-md-12 top-padded"), "yField", "Y Field")
+    @fieldTypeahead(valueField, Some("col-md-12 top-padded"), "valueField", "Value Field")
+
+    <div class="col-md-12 aligned-container top-padded">
+        <label for="aggType" style="margin-right: 40px;">Aggregation Type</label>
+        @selectEnum("aggType", AggType, true, Some("input-lg"))
+    </div>
+}
+
+@widgetsScreen(
+    Messages("heatmap.title", dataSetName),
+    filterSpec,
+    filterShowFieldStyle,
+    dataSpaceMetaInfos,
+    inputElements,
+    extraActions,
+    bottomResources,
+    widgetsDivOnRight = true
+)

@@ -1124,8 +1124,8 @@ private class MachineLearningServiceImpl @Inject() (
 //      println("Test predictions min index      : " + testPredictions.agg(min(testPredictions("index"))).head.getInt(0))
 //      println("Test predictions max index      : " + testPredictions.agg(max(testPredictions("index"))).head.getInt(0))
 
-      trainPredictions.show(false)
-      testPredictions.show(false)
+//      trainPredictions.show(false)
+//      testPredictions.show(false)
 
       // unpersist and return the predictions
       trainingDf.unpersist

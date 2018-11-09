@@ -2,11 +2,7 @@
 // Filter //
 ////////////
 
-function activateDataSetFilter(filterElement, jsonConditions, filterId, submitUrl, getFieldsUrl, listFiltersUrl, widgetGridElementWidth) {
-    var refreshAjaxFun = function(url, params, filterElement) {
-        refreshViewOnFilterUpdate(url, params, filterElement, widgetGridElementWidth);
-    }
-
+function activateDataSetFilter(filterElement, jsonConditions, filterId, submitAjaxFun, getFieldsUrl, listFiltersUrl) {
     var saveFilterAjaxFun = function(filter) {
         var filterJson = JSON.stringify(filter)
         filterJsRoutes.controllers.dataset.FilterDispatcher.saveAjax(filterJson).ajax( {
@@ -22,14 +18,15 @@ function activateDataSetFilter(filterElement, jsonConditions, filterId, submitUr
     $(filterElement).multiCategoryFilter({
         jsonConditions: jsonConditions,
         getFieldsUrl: getFieldsUrl,
-        submitUrl: submitUrl,
-        refreshAjaxFun: refreshAjaxFun,
+        submitAjaxFun: submitAjaxFun,
         listFiltersUrl: listFiltersUrl,
         saveFilterAjaxFun: saveFilterAjaxFun,
         filterSubmitParamName: "filterOrId",
         filterId: filterId,
         categoryTreeElementId: 'categoryTree'
     })
+
+    addAllowedValuesUpdateForFilter(filterElement)
 }
 
 function saveFilterToView(viewId) {
@@ -52,9 +49,7 @@ function saveFilterToView(viewId) {
     });
 }
 
-function refreshViewOnFilterUpdate(url, params, filterElement, widgetGridElementWidth) {
-    var coreUrl = getCoreURL(url);
-
+function refreshViewOnFilterUpdate(viewId, filterOrId, filterElement, widgetGridElementWidth) {
     var index = $("#filtersTr").find(".filter-div").index(filterElement);
 
     var counts = $("#filtersTr").find(".count-hidden").map(function(index, element) {
@@ -63,11 +58,9 @@ function refreshViewOnFilterUpdate(url, params, filterElement, widgetGridElement
 
     // add the old count to the params
     var totalCount = counts.reduce(function (a, b) {return a + b;}, 0);
-    params["oldCountDiff"] = totalCount - counts[index];
+    var oldCountDiff = totalCount - counts[index];
 
-    $.ajax({
-        url: coreUrl,
-        data: params,
+    dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(viewId, "", filterOrId, oldCountDiff).ajax( {
         success: function(data) {
             // filter
             filterElement.find("#conditionPanel").replaceWith(data.conditionPanel)
@@ -164,7 +157,7 @@ function addAllowedValuesUpdateForFilter(filterElement) {
 // Widgets //
 /////////////
 
-function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, elementWidth) {
+function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, elementWidth, successMessage) {
     widgetsDiv.html("")
     addSpinner(widgetsDiv, "margin-bottom: 20px;")
 
@@ -173,6 +166,8 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, elemen
             "callbackId": callbackId
         },
         success: function(data) {
+            if (successMessage) showMessage(successMessage)
+
             var widgets = data[0]
 
 //                    var widgetHolders = widgetsDiv.find(".chart-holder")

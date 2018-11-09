@@ -2,6 +2,7 @@
 @import views.html.dataset.{fixedTableRow, datasetMenu, datasetSubNav, datasetSubNavJs, bootstrapSelectImport, datasetJsImport}
 @import views.html.chart.highcharts.{highchartsJsImport, highchartsJsImportForBulkExport}
 @import views.html.dataset.view.{dataSetExportDropdown, viewTables, viewCountFilters}
+@import views.html.dataset.filter.dataSetFilterJs
 @import views.html.filter.{filter, filterJs, filterJsImport, jsTreeImport}
 @import reactivemongo.bson.BSONObjectID
 @import models.DataSpaceMetaInfo
@@ -105,6 +106,7 @@
     @helper.javascriptRouter("dataSetJsRoutes")(
         dataSetJsRouter.getWidgets,
         dataSetJsRouter.getFieldValue,
+        dataSetJsRouter.getViewElementsAndWidgetsCallback,
         dataSetJsRouter.getNewFilterViewElementsAndWidgetsCallback
     )
 
@@ -112,25 +114,11 @@
         dataViewJsRouter.saveFilter
     )
 
-    @helper.javascriptRouter("dataSetJsRoutes2")(
-        dataSetJsRouter.getFieldTypeWithAllowedValues
-    )
-
-    @helper.javascriptRouter("filterJsRoutes")(
-        filterJsRouter.saveAjax
-    )
-
     @highchartsJsImport()
 
-    @datasetJsImport()
-
-    @jsTreeImport()
-
-    @filterJsImport()
+    @dataSetFilterJs()
 
     @datasetSubNavJs()
-
-    @bootstrapSelectImport()
 
     @highchartsJsImportForBulkExport()
 
@@ -149,7 +137,7 @@
                 if (!filterId)
                     filterId = null
 
-                activateFilter(filter, conditions[index], filterId);
+                activateFilter($(filter), conditions[index], filterId);
             })
 
             // link the first filter to export modals
@@ -161,17 +149,16 @@
         })
 
         function activateFilter(filterElement, jsonConditions, filterId) {
-            activateDataSetFilter(
+            var submitAjaxFun = function(filterOrId) {
+                refreshViewOnFilterUpdate('@{dataViewId.stringify}', filterOrId, filterElement, @widgetGridElementWidth);
+            }
+
+            activateDataSetFilterAux(
                 filterElement,
                 jsonConditions,
                 filterId,
-                '@dataSetRouter.getViewElementsAndWidgetsCallback(dataViewId, "", Left(Nil), None)',
-                '@dataSetRouter.allFieldNamesAndLabels',
-                '@filterRouter.idAndNamesAccessible',
-                @widgetGridElementWidth
+                submitAjaxFun
             )
-
-            addAllowedValuesUpdateForFilter(filterElement)
         }
 
         function addNewColumn() {

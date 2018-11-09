@@ -1,9 +1,12 @@
 package util
 
+import java.nio.file.Paths
+
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source, Zip, ZipN}
+import akka.stream.scaladsl.{Broadcast, FileIO, Flow, Framing, GraphDSL, Sink, Source, Zip, ZipN}
+import akka.util.ByteString
 
 import scala.collection.mutable
 import scala.collection.mutable.{Buffer, ListBuffer}
@@ -104,8 +107,16 @@ object AkkaStreamUtil {
       Some(defBuilder += value)
     }.map(_.map(_.result).getOrElse(Nil))
 
-//  private def seqFlow[T]: Flow[T, Seq[T], NotUsed] =
-//    Flow[T].fold(Vector.newBuilder[T]) { _ += _ }.map(_.result)
+  def headAndTail[T, Mat](
+    source: Source[T, Mat]
+  ): (Source[T, Mat], Source[T, Mat]) = {
+    val splitFlow = source.prefixAndTail(1)
+
+    val head = splitFlow.map(_._1.head)
+    val tail = splitFlow.flatMapConcat(_._2)
+
+    (head, tail)
+  }
 }
 
 object AkkaTest extends App {

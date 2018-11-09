@@ -1,73 +1,35 @@
-@import models.FieldTypeId
 @import models.Field
-@import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
-@import reactivemongo.play.json.BSONFormats._
-@import views.html.layout.main
-@import views.html.chart.highcharts.{highchartsJsImport, timeLineChart}
-@import views.html.widget.{widgetPanel, widgetPanelJs}
-@import views.html.dataview.dataViewSelectionModal
-@import views.html.dataset.{bootstrapSelectImport, datasetSubNavWithJs, dataSetFilterWithJs}
-@import play.api.libs.json.Json
-@import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
+@import views.html.dataset.widgetsScreen
+@import views.html.elements.fieldTypeahead
 @import models.DataSpaceMetaInfo
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 
 @(
-    domainName: String,
-    field: Option[Field],
-    groupField: Option[Field],
-    chartSpec: Option[Widget],
+    dataSetName: String,
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
+    field: Option[Field],
+    groupField: Option[Field],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit context: DataSetWebContext
 )
 
-@actions = {
-    <div class="row">
-        <div class="col-md-10">
-            @dataSetFilterWithJs(
-                filterSpec,
-                dataSetRouter.getCumulativeCount(field.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
-                filterShowFieldStyle
-            )
-        </div>
-        <div class="pull-right">
-            <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Cumulative Count To View">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
-            </button>
-        </div>
+@extraActions = {
+    <div class="pull-right">
+        <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Cumulative Count To View">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
+        </button>
     </div>
-    <hr/>
-    @helper.form(action=dataSetRouter.getCumulativeCount(None, None, Left(Nil)), 'role -> "search", 'id -> "fieldForm") {
-        <!-- hacky solution to pass data set param since it's ignored when passed as a part of the call in the form action -->
-        <input type="hidden" name="dataSet" value="@context.dataSetId"/>
-        <input type="hidden" name="filterOrId" value="@Json.toJson(filterSpec.conditionsOrId)"/>
-        <div class="row">
-            <div class="col-md-3">
-                <input id="fieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@field.map(_.labelOrElseName)">
-                <input id="fieldName" name="fieldName" type="hidden" value="@field.map(_.name)">
-            </div>
-            <div class="col-md-2" align="right">
-                <label class="top-padded">Group by</label>
-            </div>
-            <div class="col-md-3">
-                <input id="groupFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@groupField.map(_.labelOrElseName)">
-                <input id="groupFieldName" name="groupFieldName" type="hidden" value="@groupField.map(_.name)">
-            </div>
-        </div>
-   }
 }
 
-
 @bottomResources = {
-    @highchartsJsImport(true)
 
-    @bootstrapSelectImport()
-
-    @widgetPanelJs(Seq(chartSpec).flatten)
+    @helper.javascriptRouter("dataSetJsRoutes")(
+        dataSetJsRouter.calcCumulativeCount,
+        dataSetJsRouter.getWidgets
+    )
 
     @helper.javascriptRouter("dataViewJsRoutes")(
         dataViewJsRouter.addCumulativeCount
@@ -75,60 +37,71 @@
 
     <script type="text/javascript">
         $(function () {
-            populateFieldTypeahedFromUrl(
-                $('#fieldForm #fieldTypeahead'),
-                $('#fieldForm #fieldName'),
-                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Date, FieldTypeId.Integer, FieldTypeId.Double)).url)',
-                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
-            )
+            populateFullTypeahead("field", true);
+            populateCategoricalTypeahead("groupField")
 
-            populateFieldTypeahedFromUrl(
-                $('#fieldForm #groupFieldTypeahead'),
-                $('#fieldForm #groupFieldName'),
-                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)).url)',
-                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
-            );
-
-            $('#fieldForm #fieldTypeahead').on('typeahead:selected', function(e, data) {
-                $('#fieldForm').submit();
-            });
-
-            $('#fieldForm #groupFieldTypeahead').on('typeahead:selected', function(e, data) {
-                $('#fieldForm').submit();
-            });
-
-            $('#fieldForm #fieldTypeahead').keypress(function (e) {
+            $('#inputDiv #fieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
-                    $('#fieldForm').submit();;
-                        return false;
+                    calcCumulativeCount();
+                    return false;
                 }
             });
 
-            $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
+            $('#inputDiv #groupFieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
-                    var groupFieldTypeahedVal = $('#fieldForm #groupFieldTypeahead').val();
-                        if (!groupFieldTypeahedVal)
-                            $('#fieldForm #groupFieldName').val("")
-                    $('#fieldForm').submit();;
+                    var groupFieldTypeahedVal = $('#inputDiv #groupFieldTypeahead').val();
+                    if (!groupFieldTypeahedVal)
+                        $('#inputDiv #groupFieldName').val("");
+
+                    calcCumulativeCount();
                     return false;
                 }
             });
 
             $("#dataViewSelectionModal #submitButton").on("click", addCumulativeCountToView)
+
+            activateFilter($("#filterDiv"), function(filterOrId) {calcCumulativeCount()});
         });
+
+        function calcCumulativeCount() {
+            var fieldName = $("#inputDiv #fieldName").val();
+            var fieldLabel = $("#inputDiv #fieldTypeahead").val();
+
+            var groupFieldName = $("#inputDiv #groupFieldName").val();
+            var groupFieldLabel = $("#inputDiv #groupFieldTypeahead").val();
+            if (!groupFieldName)
+                groupFieldName = null
+
+            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
+            var filterOrIdJson = JSON.stringify(filterOrId);
+
+            if (!fieldName) {
+                showError("Cumulative count calculation cannot be launched. No field specified.");
+            } else {
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcCumulativeCount(fieldName, groupFieldName, filterOrIdJson).ajax(
+                    handleResponse("Cumulative count calculation finished.")
+                );
+
+                hideErrors()
+                showMessage("Cumulative count calculation for the field '" + fieldLabel + "' launched.")
+            }
+        }
 
         function addCumulativeCountToView() {
             var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
             var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
-            var fieldName = $('#fieldForm #fieldName').val()
-            var groupFieldName = $('#fieldForm #groupFieldName').val()
+
+            var fieldName = $('#inputDiv #fieldName').val()
+            var fieldLabel = $("#inputDiv #fieldTypeahead").val();
+
+            var groupFieldName = $('#inputDiv #groupFieldName').val()
             if (groupFieldName == "")
                 groupFieldName = null
 
             if (fieldName) {
                 dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addCumulativeCount(dataViewId, fieldName, groupFieldName).ajax( {
                     success: function() {
-                        showMessage("Cumulative count for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
+                        showMessage("Cumulative count for the field '" + fieldLabel + "' have been successfully added to the view '" + dataViewName + "'.");
                     },
                     error: function(data){
                         showErrorResponse(data);
@@ -139,20 +112,18 @@
     </script>
 }
 
-@main(Messages("cumulativeCount.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
-
-    <div class="page-header">
-        <h3>
-            @Messages("cumulativeCount.title", domainName)
-        </h3>
-    </div>
-
-    <div id="actions">
-        @actions
-    </div>
-    <br/>
-    <br/>
-
-    @widgetPanel(Seq(chartSpec).flatten, 12)
-    @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
+@inputElements = {
+    @fieldTypeahead(field, Some("col-md-3 col-sm-6"), "field", "Field")
+    @fieldTypeahead(groupField, Some("col-md-offset-1 col-md-5 col-sm-12"), "groupField", "Group Field")
 }
+
+@widgetsScreen(
+    Messages("cumulativeCount.title", dataSetName),
+    filterSpec,
+    filterShowFieldStyle,
+    dataSpaceMetaInfos,
+    inputElements,
+    extraActions,
+    bottomResources,
+    true
+)

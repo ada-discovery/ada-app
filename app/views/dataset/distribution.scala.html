@@ -1,174 +1,152 @@
 @import models.Widget
 @import models.Field
-@import controllers.FilterConditionExtraFormats.eitherFilterOrIdFormat
-@import org.incal.core.FilterCondition
 @import reactivemongo.play.json.BSONFormats._
 @import views.html.layout.main
 @import views.html.chart.highcharts.highchartsJsImport
-@import views.html.widget.{widgetPanel, widgetPanelJs}
-@import views.html.dataset.{datasetSubNavWithJs, dataSetFilterWithJs, datasetJsImport, bootstrapSelectImport}
+@import views.html.dataset.{widgetsScreen, datasetSubNavWithJs, dataSetFilterWithJs, datasetJsImport, bootstrapSelectImport}
+@import views.html.dataset.filter.{dataSetFilter, dataSetFilterJs}
 @import views.html.dataview.dataViewSelectionModal
 @import views.html.filter.{filter, filterWithJs}
+@import views.html.elements.fieldTypeahead
 @import play.api.libs.json.Json
 @import play.api.i18n.Messages
 @import controllers.dataset.routes.{DataSetSettingController => dataSetSettingRoutes}
 @import models.DataSpaceMetaInfo
+@import controllers.FilterConditionExtraFormats.coreFilterConditionFormat
+@import util.toJsonHtml
 @import controllers.dataset.DataSetWebContext._
 @import controllers.dataset.DataSetWebContext
 
 @(
-    domainName: String,
-    field: Option[Field],
-    groupField: Option[Field],
-    widgets: Seq[Widget],
+    dataSetName: String,
     filterSpec: models.Filter,
     filterShowFieldStyle: Option[FilterShowFieldStyle.Value],
+    field: Option[Field],
+    groupField: Option[Field],
     dataSpaceMetaInfos: Traversable[DataSpaceMetaInfo]
 )(
     implicit context: DataSetWebContext
 )
 
-@actions = {
-    <div class="row">
-        <div class="col-md-10">
-            @dataSetFilterWithJs(
-                filterSpec,
-                dataSetRouter.getDistribution(field.map(_.name), groupField.map(_.name), filterSpec.conditionsOrId),
-                filterShowFieldStyle
-            )
-        </div>
-        <div class="pull-right dropdown">
-            <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To
-                <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li>
-                    <a href="#" onclick="addDistribution();return false" data-toggle="tooltip" title="Add Distribution To View">
-                        To Distributions
-                    </a>
-                </li>
-                <li>
-                    <a href="#" onclick="addBoxPlot();return false" data-toggle="tooltip" title="Add Box Plots To View">
-                        To Box Plots
-                    </a>
-                </li>
-                <li>
-                    <a href="#" onclick="addBasicStats();return false" data-toggle="tooltip" title="Add Basic Stats To View">
-                        To Basic Stats
-                    </a>
-                </li>
-            </ul>
-        </div>
+@extraActions = {
+    <div class="pull-right dropdown">
+        <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To
+            <span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu">
+            <li>
+                <a href="#" onclick="addDistribution();return false" data-toggle="tooltip" title="Add Distribution To View">
+                    To Distributions
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="addBoxPlot();return false" data-toggle="tooltip" title="Add Box Plots To View">
+                    To Box Plots
+                </a>
+            </li>
+            <li>
+                <a href="#" onclick="addBasicStats();return false" data-toggle="tooltip" title="Add Basic Stats To View">
+                    To Basic Stats
+                </a>
+            </li>
+        </ul>
     </div>
-    <hr/>
-    @helper.form(action=dataSetRouter.plainGetDistribution, 'role -> "search", 'id -> "fieldForm") {
-        <!-- hacky solution to pass data set param since it's ignored when passed as a part of the call in the form action -->
-        <input type="hidden" name="dataSet" value="@context.dataSetId"/>
-        <input type="hidden" name="filterOrId" value="@Json.toJson(filterSpec.conditionsOrId)"/>
-        <div class="row">
-            <div class="col-md-3">
-                <input id="fieldTypeahead"class="typeahead typeahead-large" type="text" placeholder="Field Name" value="@field.map(_.labelOrElseName)">
-                <input id="fieldName" name="fieldName" type="hidden" value="@field.map(_.name)">
-            </div>
-            <div class="col-md-2" align="right">
-                <label class="top-padded">Group by</label>
-            </div>
-            <div class="col-md-3">
-                <input id="groupFieldTypeahead" class="typeahead typeahead-large" type="text" placeholder="Field Name or Label" value="@groupField.map(_.labelOrElseName)">
-                <input id="groupFieldName" name="groupFieldName" type="hidden" value="@groupField.map(_.name)">
-            </div>
-        </div>
-    }
 }
 
 @bottomResources = {
-    @highchartsJsImport()
 
-    @bootstrapSelectImport()
+    @helper.javascriptRouter("dataSetJsRoutes")(
+        dataSetJsRouter.calcDistribution,
+        dataSetJsRouter.getWidgets
+    )
 
-    @widgetPanelJs(widgets)
+    @helper.javascriptRouter("dataViewJsRoutes")(
+        dataViewJsRouter.addDistribution,
+        dataViewJsRouter.addBoxPlot,
+        dataViewJsRouter.addBasicStats
+    )
 
     <script type="text/javascript">
         $(function () {
-            populateFieldTypeahedFromUrl(
-                $('#fieldForm #fieldTypeahead'),
-                $('#fieldForm #fieldName'),
-                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)).url)',
-                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id,
-                function() {
-                    setTimeout("$('#fieldForm #fieldTypeahead').focus();", 250)
-                }
-            )
+            populateFullTypeahead("field", true);
+            populateCategoricalTypeahead("groupField")
 
-            populateFieldTypeahedFromUrl(
-                $('#fieldForm #groupFieldTypeahead'),
-                $('#fieldForm #groupFieldName'),
-                '@Html(dataSetRouter.fieldNamesAndLabels(Seq(FieldTypeId.Enum, FieldTypeId.String, FieldTypeId.Boolean, FieldTypeId.Json)).url)',
-                @filterShowFieldStyle.getOrElse(FilterShowFieldStyle.NamesAndLabels).id
-            );
-
-            $('#fieldForm #fieldTypeahead').keypress(function (e) {
+            $('#inputDiv #fieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
-                    $('#fieldForm').submit();;
+                    calcDistribution();
                     return false;
                 }
             });
 
-            $('#fieldForm #groupFieldTypeahead').keypress(function (e) {
+            $('#inputDiv #groupFieldTypeahead').keypress(function (e) {
                 if (e.which == 13) {
-                    var groupFieldTypeahedVal = $('#fieldForm #groupFieldTypeahead').val();
+                    var groupFieldTypeahedVal = $('#inputDiv #groupFieldTypeahead').val();
                     if (!groupFieldTypeahedVal)
-                        $('#fieldForm #groupFieldName').val("")
-                    $('#fieldForm').submit();;
+                        $('#inputDiv #groupFieldName').val("")
+                    calcDistribution();
                     return false;
                 }
             });
+
+            activateFilter($("#filterDiv"), function(filterOrId) {calcDistribution()})
         });
 
-        $(window).load(function() {
-            $('#fieldForm #fieldTypeahead').focus()
-        });
+        function calcDistribution() {
+            var fieldName = $("#inputDiv #fieldName").val();
+            var fieldLabel = $("#inputDiv #fieldTypeahead").val();
+
+            var groupFieldName = $("#inputDiv #groupFieldName").val();
+            var groupFieldLabel = $("#inputDiv #groupFieldTypeahead").val();
+            if (!groupFieldName)
+                groupFieldName = null
+
+            var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
+            var filterOrIdJson = JSON.stringify(filterOrId);
+
+            if (!fieldName) {
+                showError("Distribution calculation cannot be launched. No field specified.");
+            } else {
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcDistribution(fieldName, groupFieldName, filterOrIdJson).ajax(
+                    handleResponse("Distribution calculation finished.")
+                )
+
+                hideErrors()
+                showMessage("Distribution calculation for the field '" + fieldLabel + "' launched.")
+            }
+        }
+
 
         function addDistribution() {
-            var handler = function(e) {
-                addDistributionToView();
-            };
-
-            $("#dataViewSelectionModal #submitButton").one( "click", handler );
+            $("#dataViewSelectionModal #submitButton").one("click", addDistributionToView);
             $("#dataViewSelectionModal").modal('show');
         }
 
         function addBoxPlot() {
-            var handler = function(e) {
-                addBoxPlotToView();
-            };
-
-            $("#dataViewSelectionModal #submitButton").one( "click", handler );
+            $("#dataViewSelectionModal #submitButton").one("click", addBoxPlotToView);
             $("#dataViewSelectionModal").modal('show');
         }
 
         function addBasicStats() {
-            var handler = function(e) {
-                addBasicStatsToView();
-            };
-
-            $("#dataViewSelectionModal #submitButton").one( "click", handler );
+            $("#dataViewSelectionModal #submitButton").one("click", addBasicStatsToView);
             $("#dataViewSelectionModal").modal('show');
         }
 
-        function addDistributionToView() {
+        function addDistributionToView(e) {
             var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
             var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
-            var fieldName = $('#fieldForm #fieldName').val()
-            var groupFieldName = $('#fieldForm #groupFieldName').val()
+
+            var fieldName = $('#inputDiv #fieldName').val()
+            var fieldLabel = $("#inputDiv #fieldTypeahead").val();
+
+            var groupFieldName = $('#inputDiv #groupFieldName').val()
             if (groupFieldName == "")
                 groupFieldName = null
 
             if (fieldName) {
                 dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addDistribution(dataViewId, fieldName, groupFieldName).ajax( {
                     success: function() {
-                        showMessage("Distribution for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
+                        showMessage("Distribution for the field '" + fieldLabel + "' have been successfully added to the view '" + dataViewName + "'.");
                     },
                     error: function(data){
                         showErrorResponse(data);
@@ -177,18 +155,21 @@
             }
         }
 
-        function addBoxPlotToView() {
+        function addBoxPlotToView(e) {
             var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
             var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
-            var fieldName = $('#fieldForm #fieldName').val()
-            var groupFieldName = $('#fieldForm #groupFieldName').val()
+
+            var fieldName = $('#inputDiv #fieldName').val()
+            var fieldLabel = $("#inputDiv #fieldTypeahead").val();
+
+            var groupFieldName = $('#inputDiv #groupFieldName').val()
             if (groupFieldName == "")
                 groupFieldName = null
 
             if (fieldName) {
                 dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBoxPlot(dataViewId, fieldName, groupFieldName).ajax( {
                     success: function() {
-                        showMessage("Box plot for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
+                        showMessage("Box plot for the field '" + fieldLabel + "' have been successfully added to the view '" + dataViewName + "'.");
                     },
                     error: function(data){
                         showErrorResponse(data);
@@ -197,15 +178,17 @@
             }
         }
 
-        function addBasicStatsToView() {
+        function addBasicStatsToView(e) {
             var dataViewId = $("#dataViewSelectionModal #dataViewId").val().trim()
             var dataViewName = $("#dataViewSelectionModal #dataViewTypeahead").val().trim()
-            var fieldName = $('#fieldForm #fieldName').val()
+
+            var fieldName = $("#inputDiv #fieldName").val()
+            var fieldLabel = $("#inputDiv #fieldTypeahead").val();
 
             if (fieldName) {
                 dataViewJsRoutes.controllers.dataset.DataViewDispatcher.addBasicStats(dataViewId, [fieldName]).ajax( {
                     success: function() {
-                        showMessage("Basic stats for the field '" + fieldName + "' have been successfully added to the view '" + dataViewName + "'.");
+                        showMessage("Basic stats for the field '" + fieldLabel + "' have been successfully added to the view '" + dataViewName + "'.");
                     },
                     error: function(data){
                         showErrorResponse(data);
@@ -216,32 +199,17 @@
     </script>
 }
 
-@main(Messages("distribution.title", domainName), Some(datasetMenu(dataSpaceMetaInfos)), Some(datasetSubNavWithJs()), None, Some(bottomResources)) {
-
-    <div class="page-header">
-        <h3>
-            @Messages("distribution.title", domainName)
-        </h3>
-    </div>
-
-    <div id="actions">
-        @actions
-    </div>
-    <br/>
-    <br/>
-    <br/>
-    <br/>
-    <br/>
-
-    @dataViewSelectionModal("dataViewSelectionModal", dataViewRouter)
-
-    @if(widgets.nonEmpty) {
-        @widgetPanel(widgets, 12 / widgets.size)
-    }
+@inputElements = {
+    @fieldTypeahead(field, Some("col-md-3 col-sm-6"), "field", "Field")
+    @fieldTypeahead(groupField, Some("col-md-offset-1 col-md-5 col-sm-12"), "groupField", "Group Field")
 }
 
-@helper.javascriptRouter("dataViewJsRoutes")(
-    dataViewJsRouter.addDistribution,
-    dataViewJsRouter.addBoxPlot,
-    dataViewJsRouter.addBasicStats
+@widgetsScreen(
+    Messages("distribution.title", dataSetName),
+    filterSpec,
+    filterShowFieldStyle,
+    dataSpaceMetaInfos,
+    inputElements,
+    extraActions,
+    bottomResources
 )

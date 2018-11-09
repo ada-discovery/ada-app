@@ -3,7 +3,7 @@ package runnables.core
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
-import dataaccess.JsonUtil.jsonObjectsToCsv
+import dataaccess.JsonUtil.jsonsToCsv
 import dataaccess.RepoTypes.DataSpaceMetaInfoRepo
 import models.DataSetFormattersAndIds.FieldIdentity
 import org.apache.commons.lang3.StringEscapeUtils

@@ -14,12 +14,11 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getView = routes.getView _ map route
   val getDefaultView = routeFun(_.getDefaultView)
   val get = routes.get _ map route
-  val plainGetScatterStats = routeFun(_.getScatterStats())
-  val getScatterStats = routes.getScatterStats _ map route
-  val plainGetDistribution = routeFun(_.getDistribution())
+  val getScatter = routes.getScatter _ map route
   val getDistribution = routes.getDistribution _ map route
   val getCumulativeCount = routes.getCumulativeCount _ map route
   val getCorrelations = routes.getCorrelations _ map route
+  val getHeatmap = routes.getHeatmap _ map route
   val getClusterization = routeFun(_.getClusterization)
   val getIndependenceTest = routes.getIndependenceTest _ map route
   val getIndependenceTestForViewFilters = routeFun(_.getIndependenceTestForViewFilters)
@@ -29,7 +28,6 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val runSeriesTransformation = routeFun(_.runSeriesTransformation)
   val getFractalis = routes.getFractalis _ map route
   val getTable = routes.getTable _ map route
-  val getViewElementsAndWidgetsCallback = routes.getViewElementsAndWidgetsCallback _ map route
   val fields = routes.getFields _ map route
   val fieldNamesAndLabels = routes.getFieldNamesAndLabels _ map route
   val allFields = routeFun(_.getFields())
@@ -49,10 +47,14 @@ final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.ja
   val getFieldTypeWithAllowedValues = routeFun(_.getFieldTypeWithAllowedValues)
   val getWidgets = routeFun(_.getWidgets)
   val getView = routeFun(_.getView)
+  val calcDistribution = routeFun(_.calcDistribution)
+  val calcCumulativeCount = routeFun(_.calcCumulativeCount)
+  val calcScatter = routeFun(_.calcScatter)
+  val calcHeatmap = routeFun(_.calcHeatmap)
   val cluster = routeFun(_.cluster)
-  val getDistributionWidget = routeFun(_.getDistributionWidget)
   val testIndependence = routeFun(_.testIndependence)
   val testIndependenceForViewFilters = routeFun(_.testIndependenceForViewFilters)
   val calcCorrelations = routeFun(_.calcCorrelations)
+  val getViewElementsAndWidgetsCallback = routeFun(_.getViewElementsAndWidgetsCallback)
   val getNewFilterViewElementsAndWidgetsCallback = routeFun(_.getNewFilterViewElementsAndWidgetsCallback)
 }

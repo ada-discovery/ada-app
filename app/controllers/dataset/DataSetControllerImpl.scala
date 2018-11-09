@@ -11,6 +11,7 @@ import _root_.util.{FieldUtil, GroupMapList}
 import dataaccess.JsonUtil._
 import _root_.util.WebExportUtil._
 import _root_.util.{seqFutures, shorten}
+import _root_.util.FieldUtil.InfixFieldOps
 import dataaccess._
 import dataaccess.FilterRepoExtra._
 import models.{MultiChartDisplayOptions, _}
@@ -129,8 +130,10 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   private implicit val seriesProcessingSpec = JsonFormatter[SeriesProcessingSpec]
   private implicit val seriesTransformationSpec = JsonFormatter[SeriesTransformationSpec]
 
-//  private val distScreenWidgetsGenMethod = WidgetGenerationMethod.FullData
-  private val distScreenWidgetsGenMethod = WidgetGenerationMethod.RepoAndFullData
+  private val distributionGenMethod = WidgetGenerationMethod.RepoAndFullData
+  private val cumulativeCountGenMethod = WidgetGenerationMethod.FullData
+  private val scatterGenMethod = WidgetGenerationMethod.FullData
+  private val correlationsGenMethod = WidgetGenerationMethod.StreamedAll
   private val independenceTestKeepUndefined = false
 
   private lazy val fractalisServerUrl = configuration.getString("fractalis.server.url")
@@ -264,7 +267,6 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }
 
     // TODO: don't use results but stay in future
-
     val tableFieldNames = result(dataViewTableColumnNames(dataViewId))
 
     // TODO: introduce a flag for field type conversion (raw vs labels)
@@ -278,26 +280,22 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     val projection =
       if (tableColumnsOnly) tableFieldNames else Nil
 
-    val headerFieldNames =
-      if (tableColumnsOnly)
-        tableFieldNames
-      else result(fieldRepo.find().map(_.map(_.name).toSeq))
+    val headerFieldNames = if (tableColumnsOnly) tableFieldNames else result(fieldRepo.find(projection = Seq("name", "fieldType")).map(_.map(_.name).toSeq.sorted))
 
     exportToCsv(
       csvFileName,
       delimiter,
       eolToUse,
       if (replaceEolWithSpace) csvCharReplacements else Nil)(
+      headerFieldNames,
       result(dsa.setting).exportOrderByFieldName,
       filter,
-      projection,
-      Some(headerFieldNames.sorted),
       nameFieldTypeMap
     )
   }
 
   /**
-    * Generate content of Json export file and create donwload.
+    * Generate content of Json export file and create download.
     *
     * @return View for download.
     */
@@ -608,7 +606,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // get the init response data
         viewResponse <- getInitViewResponse(tablePage, tableOrder, resolvedFilter, criteria, nameFieldMap, tableColumnNames)
       } yield {
-        Logger.info(s"Data loading of a widget panel and a table for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
+//        Logger.info(s"Data loading of a widget panel and a table for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
 
         // create a widgets-future calculation and register with a callback id
         val method = dataView.map(_.generationMethod).getOrElse(WidgetGenerationMethod.Auto)
@@ -621,26 +619,26 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val widgetsCallbackId = UUID.randomUUID.toString
         jsonWidgetResponseCache.put(widgetsCallbackId, jsonWidgetsFuture)
 
+        val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder)
+
+        val pageHeader = messagesApi.apply("list.count.title", oldCountDiff.getOrElse(0) + viewResponse.count, dataSetName + " Item")
+
+        val table = dataset.view.viewTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, true)(request, router)
+        val conditionPanel = views.html.filter.conditionPanel(Some(viewResponse.filter))
+        val filterModel = Json.toJson(viewResponse.filter.conditions)
+
+        val jsonResponse = Ok(Json.obj(
+          "table" -> table.toString(),
+          "conditionPanel" -> conditionPanel.toString(),
+          "filterModel" -> filterModel,
+          "count" -> viewResponse.count,
+          "pageHeader" -> pageHeader,
+          "widgetsCallbackId" -> widgetsCallbackId
+        ))
+
         render {
-          case Accepts.Html() => {
-            val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder)
-
-            val pageHeader = messagesApi.apply("list.count.title", oldCountDiff.getOrElse(0) + viewResponse.count, dataSetName + " Item")
-
-            val table = dataset.view.viewTable(newPage, Some(viewResponse.filter), viewResponse.tableFields, true)(request, router)
-            val conditionPanel = views.html.filter.conditionPanel(Some(viewResponse.filter))
-            val filterModel = Json.toJson(viewResponse.filter.conditions)
-
-            Ok(Json.obj(
-              "table" -> table.toString(),
-              "conditionPanel" -> conditionPanel.toString(),
-              "filterModel" -> filterModel,
-              "count" -> viewResponse.count,
-              "pageHeader" -> pageHeader,
-              "widgetsCallbackId" -> widgetsCallbackId
-            ))
-          }
-          case Accepts.Json() => Ok(Json.toJson(viewResponse.tableItems))
+          case Accepts.Html() => jsonResponse
+          case Accepts.Json() => jsonResponse
         }
       }
     }.recover {
@@ -682,7 +680,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         // get the init response data
         viewResponse <- getInitViewResponse(tablePage, tableOrder, new Filter(), criteria, nameFieldMap, tableColumnNames)
       } yield {
-        Logger.info(s"Data loading of a widget panel and a table for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
+//        Logger.info(s"Data loading of a widget panel and a table for the data set '${dataSetId}' finished in ${new ju.Date().getTime - start.getTime} ms")
 
         // create a widgets-future calculation and register with a callback id
         val method = dataView.map(_.generationMethod).getOrElse(WidgetGenerationMethod.Auto)
@@ -695,29 +693,81 @@ protected[controllers] class DataSetControllerImpl @Inject() (
         val widgetsCallbackId = UUID.randomUUID.toString
         jsonWidgetResponseCache.put(widgetsCallbackId, jsonWidgetsFuture)
 
+        val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder)
+
+        val pageHeader = messagesApi.apply("list.count.title", totalCount + viewResponse.count, dataSetName + " Item")
+
+        val table = dataset.view.viewTable(newPage, None, viewResponse.tableFields, true)(request, router)
+        val countFilter = dataset.view.viewCountFilter(None, viewResponse.count, setting.filterShowFieldStyle, false)
+        val filterModel = Json.toJson(viewResponse.filter.conditions)
+
+        val jsonResponse = Ok(Json.obj(
+          "table" -> table.toString(),
+          "countFilter" -> countFilter.toString(),
+          "pageHeader" -> pageHeader,
+          "widgetsCallbackId" -> widgetsCallbackId
+        ))
+
         render {
-          case Accepts.Html() => {
-            val newPage = Page(viewResponse.tableItems, tablePage, tablePage * pageLimit, viewResponse.count, tableOrder)
-
-            val pageHeader = messagesApi.apply("list.count.title", totalCount + viewResponse.count, dataSetName + " Item")
-
-            val table = dataset.view.viewTable(newPage, None, viewResponse.tableFields, true)(request, router)
-            val countFilter = dataset.view.viewCountFilter(None, viewResponse.count, setting.filterShowFieldStyle, false)
-            val filterModel = Json.toJson(viewResponse.filter.conditions)
-
-            Ok(Json.obj(
-              "table" -> table.toString(),
-              "countFilter" -> countFilter.toString(),
-              "pageHeader" -> pageHeader,
-              "widgetsCallbackId" -> widgetsCallbackId
-            ))
-          }
-          case Accepts.Json() => Ok(Json.toJson(viewResponse.tableItems))
+          case Accepts.Html() => jsonResponse
+          case Accepts.Json() => jsonResponse
         }
       }
     }.recover {
       case t: TimeoutException =>
         Logger.error("Problem found in the getNewFilterViewElementsAndWidgetsCallback process")
+        InternalServerError(t.getMessage)
+    }
+  }
+
+  private def getFilterAndWidgetsCallbackAux(
+    widgetSpecs: Seq[WidgetSpec],
+    generationMethod: WidgetGenerationMethod.Value,
+    filterOrId: FilterOrId,
+    widgetProcessingFun: Option[Traversable[Widget] => Traversable[Widget]] = None)(
+    implicit request: Request[_]
+  ): Future[Result] = {
+    {
+      for {
+        // resolved filter
+        resolvedFilter <- filterRepo.resolve(filterOrId)
+
+        // criteria
+        criteria <- toCriteria(resolvedFilter.conditions)
+
+        // create a name -> field map of all the referenced fields for a quick lookup
+        nameFieldMap <- createNameFieldMap(Seq(resolvedFilter.conditions), widgetSpecs, Nil)
+      } yield {
+        // create a widgets-future calculation and register with a callback id
+        val jsonWidgetsFuture = getViewWidgetsWithFields(widgetSpecs, criteria, nameFieldMap.values, generationMethod).map { widgetsWithFields =>
+          val widgets = widgetsWithFields.flatMap(_.map(_._1))
+          val fieldNames = widgetsWithFields.flatMap(_.map(_._2))
+          val processedWidgets = widgetProcessingFun.map(_(widgets)).getOrElse(widgets)
+          val jsons = widgetsToJsons(processedWidgets.toSeq, fieldNames.toSeq, nameFieldMap)
+          Seq(jsons)
+        }
+        val widgetsCallbackId = UUID.randomUUID.toString
+        jsonWidgetResponseCache.put(widgetsCallbackId, jsonWidgetsFuture)
+
+        // get a new filter
+        val newFilter = setFilterLabels(resolvedFilter, nameFieldMap)
+        val conditionPanel = views.html.filter.conditionPanel(Some(newFilter))
+        val filterModel = Json.toJson(resolvedFilter.conditions)
+
+        val jsonResponse = Ok(Json.obj(
+          "conditionPanel" -> conditionPanel.toString(),
+          "filterModel" -> filterModel,
+          "widgetsCallbackId" -> widgetsCallbackId
+        ))
+
+        render {
+          case Accepts.Html() => jsonResponse
+          case Accepts.Json() => jsonResponse
+        }
+      }
+    }.recover {
+      case t: TimeoutException =>
+        Logger.error("Problem found in the getFilterAndWidgetsCallbackAux process")
         InternalServerError(t.getMessage)
     }
   }
@@ -959,448 +1009,405 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     jsonValues.map(typedFieldType.jsonToValue)
   }
 
-  /**
-    * Fetches, checks and prepares the specified data fields for a scatterplot.
-    * Only compatible FieldTypes (FieldType.Double and FieldType.Integer) are used.
-    * Displays the resulting scatterplot in a view.
-    *
-    * @param xFieldNameOption Name of field to be used for x coordinates.
-    * @param yFieldNameOption Name of field to be used for y coordinates.
-    * @return View with scatterplot and selection option for different xFieldName and yFieldName.
-    */
-  override def getScatterStats(
-    xFieldNameOption: Option[String],
-    yFieldNameOption: Option[String],
-    groupFieldNameOption: Option[String],
+  override def getDistribution(
     filterOrId: FilterOrId
-  ) = AuthAction { implicit request =>
-    dsa.setting.flatMap { setting =>
-      // initialize the x, y, and group field names
-      val xFieldName: Option[String] =
-        xFieldNameOption.map(Some(_)).getOrElse(
-          setting.defaultScatterXFieldName
-        )
-
-      val yFieldName: Option[String] =
-        yFieldNameOption.map(Some(_)).getOrElse(
-          setting.defaultScatterYFieldName
-        )
-
-      val groupFieldName: Option[String] =
-        groupFieldNameOption.map { fieldName =>
-          val trimmed = fieldName.trim
-          if (trimmed.isEmpty) None else Some(trimmed)
-        }.flatten
-
-      getScatterStatsAux(xFieldName, yFieldName, groupFieldName, filterOrId, setting)
-    }
-  }
-
-  private def getScatterStatsAux(
-    xFieldName: Option[String],
-    yFieldName: Option[String],
-    groupFieldName: Option[String],
-    filterOrId: FilterOrId,
-    setting: DataSetSetting)(
-    implicit request: AuthenticatedRequest[_]
-  ): Future[Result] = {
-
-    // auxiliary function to retrieve a field definition
-    def getField(fieldName: Option[String]): Future[Option[Field]] =
-      fieldName.map(fieldRepo.get).getOrElse(Future(None))
-
-    // field retrieve futures
-    val xFieldFuture = getField(xFieldName)
-    val yFieldFuture = getField(yFieldName)
-    val groupFieldFuture = getField(groupFieldName)
-
-    // other futures
-    val dataSetNameFuture = dsa.dataSetName
-    val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
-    val filterFuture = filterRepo.resolve(filterOrId)
-
-    // display options
-    val displayOptions = BasicDisplayOptions(height = Some(500))
-
-    for {
-      // get the data set name
-      dataSetName <- dataSetNameFuture
-
-      // get the data space tree
-      dataSpaceTree <- treeFuture
-
-      // x field
-      xField <- xFieldFuture
-
-      // y field
-      yField <- yFieldFuture
-
-      // group field
-      groupField <- groupFieldFuture
-
-      // use a given filter conditions or load one
-      resolvedFilter <- filterFuture
-
-      // get the criteria
-      criteria <- toCriteria(resolvedFilter.conditions)
-
-      widget <- {
-        // collect all the fields
-        val fields = Seq(groupField, xField, yField).flatten
-        val startTime = new ju.Date
-        (xField zip yField).headOption.map { case (xField, yField) =>
-          val widgetSpec = ScatterWidgetSpec(xField.name, yField.name, groupFieldName, None, displayOptions)
-
-          widgetService.genStreamed(widgetSpec, repo, criteria, fields).map { widgets =>
-            println(s"Scatter widget generated in ${new ju.Date().getTime - startTime.getTime} ms.")
-            widgets.head
-          }
-        }.getOrElse(
-          Future(None)
-        )
-      }
-
-      // create a name -> field map of the filter referenced fields
-      fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
-    } yield {
-      val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
-
-      render {
-        case Accepts.Html() => Ok(dataset.scatterStats(
-          dataSetName,
-          xField,
-          yField,
-          groupField,
-          widget,
-          newFilter,
-          setting.filterShowFieldStyle,
-          dataSpaceTree
-        ))
-        case Accepts.Json() => BadRequest("GetScatterStats function doesn't support JSON response.")
-      }
-    }
-  }
-
-  def getDistribution(
-    fieldNameOption: Option[String],
-    groupFieldNameOption: Option[String],
-    filterOrId: FilterOrId
-  ) = AuthAction { implicit request =>
-
-    val groupFieldName: Option[String] =
-      groupFieldNameOption.map { fieldName =>
-        val trimmed = fieldName.trim
-        if (trimmed.isEmpty) None else Some(trimmed)
-      }.flatten
-
-    {
+  ) = AuthAction { implicit request => {
       for {
-        // get the data set name
-        dataSetName <- dsa.dataSetName
+        // get the filter (with labels), data set name, the data space tree, and the setting
+        (filter, dataSetName, dataSpaceTree, setting) <- getFilterAndEssentials(filterOrId)
 
-        // get the data space tree
-        dataSpaceTree <- dataSpaceService.getTreeForCurrentUser(request)
+        // the default field
+        field <- setting.defaultDistributionFieldName.map(fieldRepo.get).getOrElse(Future(None))
+      } yield
 
-        // use a given filter conditions or load one
-        resolvedFilter <- filterRepo.resolve(filterOrId)
-
-        // get the criteria
-        criteria <- toCriteria(resolvedFilter.conditions)
-
-        // get the data set setting
-        setting <- dsa.setting
-
-        // widget field
-        field <- {
-          val fieldName = fieldNameOption match {
-            case Some(fieldName) => Some(fieldName)
-            case None => setting.defaultDistributionFieldName
-          }
-
-          fieldName.map(fieldRepo.get).getOrElse(Future(None))
+        render {
+          case Accepts.Html() => Ok(dataset.distribution(
+            dataSetName,
+            filter,
+            setting.filterShowFieldStyle,
+            field,
+            None,
+            dataSpaceTree
+          ))
+          case Accepts.Json() => BadRequest("The function getDistribution doesn't support JSON response.")
         }
 
-        // get the group field
+    }.recover(handleExceptions("a distribution"))
+  }
+
+  override def calcDistribution(
+    fieldName: String,
+    groupFieldName: Option[String],
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request =>
+    {
+      for {
+        // the (main) field
+        field <- fieldRepo.get(fieldName)
+
+        // the group field
         groupField <- groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
 
-        // generate widgets - distribution and box
-        widgets <- field match {
+        // generate the required widget(s)
+        response <- field match {
           case Some(field) =>
-            val distChartType =
-              if (numericTypes.contains(field.fieldType))
-                if (groupField.isDefined) ChartType.Spline else ChartType.Column
-              else
-                if (groupField.isDefined) ChartType.Column else ChartType.Pie
 
-            val widgetSpecs: Seq[WidgetSpec] = Seq(
+            def distWidgetSpec(chartType: ChartType.Value) =
               DistributionWidgetSpec(
                 fieldName = field.name,
                 groupFieldName = groupField.map(_.name),
                 displayOptions = MultiChartDisplayOptions(
                   gridWidth = Some(6),
                   height = Some(500),
-                  chartType = Some(distChartType)
+                  chartType = Some(chartType)
                 )
-              ),
-              BoxWidgetSpec(
-                fieldName = field.name,
-                groupFieldName = groupField.map(_.name),
-                displayOptions = BasicDisplayOptions(gridWidth = Some(3), height = Some(500))
-              ),
-              BasicStatsWidgetSpec(
-                fieldName = field.name,
-                displayOptions = BasicDisplayOptions(gridWidth = Some(3), height = Some(500))
               )
-            )
-            val start = new ju.Date
-            widgetService(widgetSpecs, repo, criteria, Map(), Seq(field) ++ groupField, distScreenWidgetsGenMethod).map { widgets =>
-              println(s"Dist. widgets generated in ${new ju.Date().getTime - start.getTime} ms using ${distScreenWidgetsGenMethod.toString} method.")
-              widgets
-            }
+
+            val widgetSpecs =
+              if (field.isNumeric) {
+                val charType = if (groupField.isDefined) ChartType.Spline else ChartType.Column
+
+                Seq(
+                  distWidgetSpec(charType),
+                  BoxWidgetSpec(
+                    fieldName = field.name,
+                    groupFieldName = groupField.map(_.name),
+                    displayOptions = BasicDisplayOptions(gridWidth = Some(3), height = Some(500))
+                  ),
+                  BasicStatsWidgetSpec(
+                    fieldName = field.name,
+                    displayOptions = BasicDisplayOptions(gridWidth = Some(3), height = Some(500))
+                  )
+                )
+
+              } else {
+                val chartType = if (groupField.isDefined) ChartType.Column else ChartType.Pie
+                val distributionWidget = distWidgetSpec(chartType)
+
+                Seq(
+                  distributionWidget,
+                  distributionWidget.copy(displayOptions = distributionWidget.displayOptions.copy(isTextualForm = true))
+                )
+              }
+
+            val genMethod =
+              if (field.isString || groupField.map(_.isString).getOrElse(false))
+                WidgetGenerationMethod.FullData
+              else
+                distributionGenMethod
+
+            getFilterAndWidgetsCallbackAux(widgetSpecs, genMethod, filterOrId)
+
           case None =>
-            Future(Nil)
+            Future(BadRequest(s"Field $fieldName not found."))
         }
-
-        // create a name -> field map of the filter referenced fields
-        fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
-      } yield {
-        val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
-
-        render {
-          case Accepts.Html() => Ok(dataset.distribution(
-            dataSetName,
-            field,
-            groupField,
-            widgets.flatten.toSeq,
-            newFilter,
-            setting.filterShowFieldStyle,
-            dataSpaceTree
-          ))
-          case Accepts.Json() => BadRequest("GetDistribution function doesn't support JSON response.")
-        }
-      }
+      } yield
+        response
     }.recover(handleExceptions("a distribution"))
   }
 
-  override def getDistributionWidget(
+  override def getCumulativeCount(
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request => {
+    for {
+        // get the filter (with labels), data set name, the data space tree, and the setting
+        (filter, dataSetName, dataSpaceTree, setting) <- getFilterAndEssentials(filterOrId)
+
+        // default field
+        field <- setting.defaultCumulativeCountFieldName.map(fieldRepo.get).getOrElse(Future(None))
+      } yield
+
+        render {
+          case Accepts.Html() => Ok(dataset.cumulativeCount(
+            dataSetName,
+            filter,
+            setting.filterShowFieldStyle,
+            field,
+            None,
+            dataSpaceTree
+          ))
+          case Accepts.Json() => BadRequest("The function getCumulativeCount doesn't support JSON response.")
+        }
+
+    }.recover(handleExceptions("a cumulative count"))
+  }
+
+  override def calcCumulativeCount(
     fieldName: String,
     groupFieldName: Option[String],
-    filterId: Option[BSONObjectID]
-  ) = Action.async { implicit request =>
-    for {
-      // get a filter
-      resolvedFilter <- filterId match {
-        case Some(filterId) => filterRepo.get(filterId)
-        case None => Future(None)
-      }
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request =>
+    {
+      for {
+        // the (main) field
+        field <- fieldRepo.get(fieldName)
 
-      // get the criteria
-      criteria <- toCriteria(resolvedFilter.map(_.conditions).getOrElse(Nil))
+        // the group field
+        groupField <- groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
 
-      // chart field
-      field <- fieldRepo.get(fieldName)
+        // generate the required widget(s)
+        response <- field match {
+          case Some(field) =>
 
-      // get the group field
-      groupField <- groupFieldName.map(fieldRepo.get).getOrElse(Future(None))
+            val charType = if (groupField.isDefined) ChartType.Spline else ChartType.Column
 
-      // generate a distribution widget
-      widgetJson <- field match {
-        case Some(field) =>
-          val widgetSpec = DistributionWidgetSpec(
-            fieldName = field.name,
-            groupFieldName = groupField.map(_.name),
-            displayOptions = MultiChartDisplayOptions(height = Some(500))
-          )
+            val widgetSpecs = Seq(
+              CumulativeCountWidgetSpec(
+                fieldName = field.name,
+                groupFieldName = groupFieldName,
+                displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Line), gridWidth = Some(6), height = Some(500))
+              ),
+              CumulativeCountWidgetSpec(
+                fieldName = field.name,
+                groupFieldName = groupFieldName,
+                numericBinCount = Some(30),
+                displayOptions = MultiChartDisplayOptions(chartType = Some(charType), gridWidth = Some(6), height = Some(500))
+              )
+            )
 
-          val fields = Seq(field) ++ groupField
-          widgetService.genFromRepo(widgetSpec, repo, criteria, fields).map( widgets =>
-            widgets.headOption.flatten.map(widgetToJson(_, widgetSpec.fieldNames, fields.map( field => (field.name, field)).toMap))
-          )
-        case None =>
-          Future(None)
-      }
-    } yield
-      widgetJson match {
-        case Some(json) => Ok(json)
-        case None => BadRequest(s"Field $fieldName couldn't be found.")
-      }
+            val genMethod =
+              if (groupField.map(_.isString).getOrElse(false))
+                WidgetGenerationMethod.FullData
+              else
+                cumulativeCountGenMethod
+
+            getFilterAndWidgetsCallbackAux(widgetSpecs, genMethod, filterOrId)
+
+          case None =>
+            Future(BadRequest(s"Field $fieldName not found."))
+        }
+      } yield
+        response
+    }.recover(handleExceptions("a cumulative count"))
+  }
+
+  override def getScatter(
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request => {
+      for {
+        // get the filter (with labels), data set name, the data space tree, and the setting
+        (filter, dataSetName, dataSpaceTree, setting) <- getFilterAndEssentials(filterOrId)
+
+        // default x field
+        xField <- setting.defaultScatterXFieldName.map(fieldRepo.get).getOrElse(Future(None))
+
+        // default y field
+        yField <- setting.defaultScatterYFieldName.map(fieldRepo.get).getOrElse(Future(None))
+      } yield
+
+        render {
+          case Accepts.Html() => Ok(dataset.scatter(
+            dataSetName,
+            filter,
+            setting.filterShowFieldStyle,
+            xField,
+            yField,
+            None,
+            dataSpaceTree
+          ))
+          case Accepts.Json() => BadRequest("The function getScatter doesn't support JSON response.")
+        }
+
+    }.recover(handleExceptions("a scatter"))
+  }
+
+  override def calcScatter(
+    xFieldName: String,
+    yFieldName: String,
+    groupOrValueFieldName: Option[String],
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request =>
+    {
+      for {
+        // the x field
+        xField <- fieldRepo.get(xFieldName)
+
+        // the x field
+        yField <- fieldRepo.get(yFieldName)
+
+        // the group or  value field
+        groupOrValueField <- groupOrValueFieldName.map(fieldRepo.get).getOrElse(Future(None))
+
+        // generate the required widget(s)
+        response <- (xField zip yField).headOption match {
+          case Some((xField, yField)) =>
+
+            val widgetSpecs = Seq(
+              if (groupOrValueField.map(_.isNumeric).getOrElse(false))
+                ValueScatterWidgetSpec(
+                  xFieldName = xField.name,
+                  yFieldName = yField.name,
+                  valueFieldName = groupOrValueFieldName.get,
+                  displayOptions = BasicDisplayOptions(height = Some(500))
+                )
+              else
+                ScatterWidgetSpec(
+                  xFieldName = xField.name,
+                  yFieldName = yField.name,
+                  groupFieldName  = groupOrValueFieldName,
+                  displayOptions = BasicDisplayOptions(height = Some(500))
+                )
+            )
+
+            getFilterAndWidgetsCallbackAux(widgetSpecs, scatterGenMethod, filterOrId)
+
+          case None =>
+            Future(BadRequest(s"Field $xFieldName or $yFieldName not found."))
+        }
+      } yield
+        response
+    }.recover(handleExceptions("a scatter"))
   }
 
   override def getCorrelations(
     filterOrId: FilterOrId
   ) = AuthAction { implicit request => {
-    val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting(request)
-    val filterFuture = filterRepo.resolve(filterOrId)
     for {
-      // get the data set name, the data space tree, and the setting
-      (dataSetName, dataSpaceTree, setting) <- dataSetNameTreeSettingFuture
-
-      // use a given filter conditions or load one
-      resolvedFilter <- filterFuture
-
-      // create a name -> field map of the filter referenced fields
-      fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
-    } yield {
-      // get a new fileter
-      val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
+      // get the filter (with labels), data set name, the data space tree, and the setting
+      (filter, dataSetName, dataSpaceTree, setting) <- getFilterAndEssentials(filterOrId)
+    } yield
 
       render {
         case Accepts.Html() => Ok(dataset.correlation(
           dataSetName,
-          newFilter,
+          filter,
           setting.filterShowFieldStyle,
           dataSpaceTree
         ))
-        case Accepts.Json() => BadRequest("Correlations function doesn't support JSON response.")
+        case Accepts.Json() => BadRequest("The function getCorrelations function doesn't support JSON response.")
       }
-    }
+
     }.recover(handleExceptions("a correlation"))
   }
 
   override def calcCorrelations(
     filterOrId: FilterOrId
-  ) = Action.async { implicit request =>
-    val fieldNames = request.body.asFormUrlEncoded.flatMap(_.get("fieldNames[]")).getOrElse(Nil)
-
-    if (fieldNames.isEmpty)
-      Future(BadRequest("No input provided."))
-    else
-      calcCorrelationsAux(fieldNames, filterOrId)
-  }
-
-  private def calcCorrelationsAux(
-    fieldNames: Seq[String],
-    filterOrId: FilterOrId
-  ): Future[Result] = {
-    for {
-      // use a given filter conditions or load one
-      resolvedFilter <-  filterRepo.resolve(filterOrId)
-
-      // get the criteria
-      criteria <- toCriteria(resolvedFilter.conditions)
-
-      // chart fields
-      fields <- getFields(fieldNames)
-
-      // create a name -> field map of the filter referenced fields
-      fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
-
-      // create a correlation widget spec
-      widgetSpec = {
-        val displayOptions = BasicDisplayOptions(height = Some(Math.max(400, fields.size * 20)))
-        CorrelationWidgetSpec(fieldNames, None, displayOptions)
-      }
-
-      // generate a widget
-      widgets <- widgetService.genStreamed(widgetSpec, repo, criteria, fields)
-    } yield {
-      val widgetJson = widgets.head.map { widget =>
-        // if we have more than 50 fields for performance purposed we round correlation to 3 decimal places
-        val newWidget =
-          if (fields.size > 50) {
-            val heatmapWidget = widget.asInstanceOf[HeatmapWidget]
-            val newData = heatmapWidget.data.map(_.map(_.map(value => Math.round(value * 1000).toDouble / 1000)))
-            heatmapWidget.copy(data = newData)
-          } else
-            widget
-
-        widgetToJson(newWidget, widgetSpec.fieldNames, fields.map( field => (field.name, field)).toMap)
-      }
-
-      widgetJson match {
-        case Some(json) => Ok(json)
-        case None => BadRequest(s"Correlation widget cannot be generated.")
-      }
-    }
-  }.recover {
-    case t: TimeoutException =>
-      Logger.error("Problem found in the getCorrelations method")
-      InternalServerError(t.getMessage)
-  }
-
-  override def getCumulativeCount(
-    fieldNameOption: Option[String],
-    groupFieldNameOption: Option[String],
-    filterOrId: FilterOrId
   ) = AuthAction { implicit request =>
-    implicit val msg = messagesApi.preferred(request)
-
-    // initialize the group name
-    val groupFieldName: Option[String] =
-      groupFieldNameOption.map { fieldName =>
-        val trimmed = fieldName.trim
-        if (trimmed.isEmpty) None else Some(trimmed)
-      }.flatten
-
-    // auxiliary function to retrieve a field definition
-    def getField(fieldName: Option[String]): Future[Option[Field]] =
-      fieldName.map(fieldRepo.get).getOrElse(Future(None))
+    val fieldNames = request.body.asFormUrlEncoded.flatMap(_.get("fieldNames[]")).getOrElse(Nil)
 
     {
       for {
-        // get the data set setting
-        setting <- dsa.setting
+        // the correlation fields
+        fields <- getFields(fieldNames)
 
-        // get the data set name
-        dataSetName <- dsa.dataSetName
+        // generate the required widget(s)
+        response <- fields match {
+          case Nil =>
+            Future(BadRequest(s"No fields provided."))
 
-        // get the data space tree
-        dataSpaceTree <- dataSpaceService.getTreeForCurrentUser(request)
+          case _ =>
+            val widgetSpecs = Seq(
+              CorrelationWidgetSpec(
+                fieldNames,
+                None,
+                BasicDisplayOptions(height = Some(Math.max(550, fields.size * 20)))
+              )
+            )
 
-        // initialize the field name
-        fieldName = fieldNameOption.map(Some(_)).getOrElse(
-          setting.defaultCumulativeCountFieldName
-        )
+            val processCorrelationsWidgets = { widgets: Traversable[Widget] =>
+              // if we have more than 50 fields for performance purposed we round correlation to 3 decimal places
+              if (fields.size > 50) {
+                widgets.map {widget =>
+                  if (widgets.isInstanceOf[HeatmapWidget]) {
+                    val heatmapWidget = widget.asInstanceOf[HeatmapWidget]
+                    val newData = heatmapWidget.data.map(_.map(_.map(value => Math.round(value * 1000).toDouble / 1000)))
+                    heatmapWidget.copy(data = newData)
+                  } else
+                    widget
+                }
+              } else
+                widgets
+            }
 
-        // get the field definition
-        field <- getField(fieldName)
+            getFilterAndWidgetsCallbackAux(widgetSpecs, correlationsGenMethod, filterOrId, Some(processCorrelationsWidgets))
+        }
+      } yield
+        response
+    }.recover(handleExceptions("correlations"))
+  }
 
-        // get the group field definition
-        groupField <- getField(groupFieldName)
+  override def getHeatmap(
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request => {
+    for {
+      // get the filter (with labels), data set name, the data space tree, and the setting
+      (filter, dataSetName, dataSpaceTree, setting) <- getFilterAndEssentials(filterOrId)
 
-        // use a given filter conditions or load one
-        resolvedFilter <- filterRepo.resolve(filterOrId)
+//      // default x field
+//      xField <- setting.defaultScatterXFieldName.map(fieldRepo.get).getOrElse(Future(None))
+//
+//      // default y field
+//      yField <- setting.defaultScatterYFieldName.map(fieldRepo.get).getOrElse(Future(None))
+    } yield
 
-        // get the criteria
-        criteria <- toCriteria(resolvedFilter.conditions)
+      render {
+        case Accepts.Html() => Ok(dataset.heatmap(
+          dataSetName,
+          filter,
+          setting.filterShowFieldStyle,
+          None,
+          None,
+          None,
+          dataSpaceTree
+        ))
 
-        // retrieve the jsons/items with or without a group field and generate the widget
-        widgets <-
-          field.map { field =>
-            val projection = Seq(field.name) ++ groupField.map(_.name)
-            repo.find(criteria, Nil, projection.toSet).map { items =>
+        case Accepts.Json() => BadRequest("The function getHeatmap doesn't support JSON response.")
+      }
 
-              val widgetSpec = CumulativeCountWidgetSpec(
-                fieldName = field.name,
-                groupFieldName = groupFieldName,
-                displayOptions = MultiChartDisplayOptions(chartType = Some(ChartType.Line), height = Some(500))
+    }.recover(handleExceptions("a heatmap"))
+  }
+
+  override def calcHeatmap(
+    xFieldName: String,
+    yFieldName: String,
+    valueFieldName: Option[String],
+    aggType: Option[AggType.Value],
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request =>
+    {
+      for {
+      // the x field
+        xField <- fieldRepo.get(xFieldName)
+
+        // the x field
+        yField <- fieldRepo.get(yFieldName)
+
+        // the value field
+        valueField <- valueFieldName.map(fieldRepo.get).getOrElse(Future(None))
+
+        // generate the required widget(s)
+        response <- (xField zip yField).headOption match {
+          case Some((xField, yField)) =>
+
+            val widgetSpecs = Seq(
+              if (valueField.isDefined && aggType.isDefined)
+                HeatmapAggWidgetSpec(
+                  xFieldName = xField.name,
+                  yFieldName = yField.name,
+                  valueFieldName = valueField.get.name,
+                  xBinCount = 20,
+                  yBinCount = 20,
+                  aggType = aggType.get,
+                  displayOptions = BasicDisplayOptions(height = Some(500))
+                )
+              else
+                GridDistributionCountWidgetSpec(
+                  xFieldName = xField.name,
+                  yFieldName = yField.name,
+                  xBinCount = 20,
+                  yBinCount = 20,
+                  displayOptions = BasicDisplayOptions(height = Some(500))
+                )
               )
 
-              widgetService.genFromFullData(widgetSpec, items, Seq(field) ++ groupField)
-            }
-          }.getOrElse(
-            Future(Nil)
-          )
+            getFilterAndWidgetsCallbackAux(widgetSpecs, scatterGenMethod, filterOrId)
 
-        // create a name -> field map of the filter referenced fields
-        fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
-      } yield {
-        val newFilter = setFilterLabels(resolvedFilter, fieldNameMap)
-
-        render {
-          case Accepts.Html() => Ok(dataset.cumulativeCount(
-            dataSetName,
-            field,
-            groupField,
-            widgets.head,
-            newFilter,
-            setting.filterShowFieldStyle,
-            dataSpaceTree
-          ))
-          case Accepts.Json() => BadRequest("GetCumulativeCount function doesn't support JSON response.")
+          case None =>
+            Future(BadRequest(s"Field $xFieldName or $yFieldName not found."))
         }
-      }
-    }.recover(handleExceptions("a cumulative count"))
+      } yield
+        response
+    }.recover(handleExceptions("a heatmap"))
   }
 
   def getCategoriesWithFieldsAsTreeNodes(
@@ -1464,7 +1471,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   ) = AuthAction { implicit request => {
       for {
         // get the data set name, data space tree and the data set setting
-        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+        (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
 
         // field
         field <- {
@@ -1509,7 +1516,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getClusterization = AuthAction { implicit request => {
     for {
       // get the data set name, data space tree and the data set setting
-      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
     } yield {
       render {
         case Accepts.Html() => Ok(dataset.cluster(
@@ -1523,7 +1530,9 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   }.recover(handleExceptions("a clusterization"))
   }
 
-  private def getDataSetNameTreeAndSetting(request: Request[_]): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
+  private def getDataSetNameTreeAndSetting(
+    implicit request: Request[_]
+  ): Future[(String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
     val dataSetNameFuture = dsa.dataSetName
     val treeFuture = dataSpaceService.getTreeForCurrentUser(request)
     val settingFuture = dsa.setting
@@ -1539,6 +1548,29 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       setting <- settingFuture
     } yield
       (dataSetName, dataSpaceTree, setting)
+  }
+
+  private def getFilterAndEssentials(
+    filterOrId: FilterOrId)(
+    implicit request: Request[_]
+  ): Future[(Filter, String, Traversable[DataSpaceMetaInfo], DataSetSetting)] = {
+    val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting
+    val filterFuture = filterRepo.resolve(filterOrId)
+
+    for {
+    // get the data set name, the data space tree, and the setting
+      (dataSetName, dataSpaceTree, setting) <- dataSetNameTreeSettingFuture
+
+      // use a given filter conditions or load one
+      resolvedFilter <- filterFuture
+
+      // create a name -> field map of the filter referenced fields
+      fieldNameMap <- getFilterFieldNameMap(resolvedFilter)
+    } yield {
+      // get a new filter
+      val filter = setFilterLabels(resolvedFilter, fieldNameMap)
+      (filter, dataSetName, dataSpaceTree, setting)
+    }
   }
 
   override def cluster(
@@ -1641,7 +1673,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getIndependenceTest(
     filterOrId: FilterOrId
   ) = AuthAction { implicit request => {
-    val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting(request)
+    val dataSetNameTreeSettingFuture = getDataSetNameTreeAndSetting
     val filterFuture = filterRepo.resolve(filterOrId)
 
     for {
@@ -1729,7 +1761,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getIndependenceTestForViewFilters = AuthAction { implicit request => {
     for {
       // get the data set name, the data space tree, and the setting
-      (dataSetName, dataSpaceTree, setting) <- getDataSetNameTreeAndSetting(request)
+      (dataSetName, dataSpaceTree, setting) <- getDataSetNameTreeAndSetting
     } yield {
       render {
         case Accepts.Html() => Ok(dataset.independenceTestViewFilters(
@@ -1921,7 +1953,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getSeriesProcessingSpec = AuthAction { implicit request =>
     for {
       // get the data set name, data space tree and the data set setting
-      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
     } yield
       Ok(dataset.processSeries(dataSetName, seriesProcessingSpecForm, setting.filterShowFieldStyle, tree))
   }
@@ -1931,7 +1963,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       { formWithErrors =>
         for {
           // get the data set name, data space tree and the data set setting
-          (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+          (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
         } yield {
           BadRequest(dataset.processSeries(dataSetName, formWithErrors, setting.filterShowFieldStyle, tree))
         }
@@ -1946,7 +1978,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
   override def getSeriesTransformationSpec = AuthAction { implicit request =>
     for {
     // get the data set name, data space tree and the data set setting
-      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+      (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
     } yield
       Ok(dataset.transformSeries(dataSetName, seriesTransformationSpecForm, setting.filterShowFieldStyle, tree))
   }
@@ -1956,7 +1988,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
       { formWithErrors =>
         for {
         // get the data set name, data space tree and the data set setting
-          (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting(request)
+          (dataSetName, tree, setting) <- getDataSetNameTreeAndSetting
         } yield {
           BadRequest(dataset.transformSeries(dataSetName, formWithErrors, setting.filterShowFieldStyle, tree))
         }
@@ -2015,7 +2047,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           setting.exportOrderByFieldName
         )
       } yield
-        stringToFile(tranSMARTDataFileName)(fileContent)
+        stringToFile(fileContent, tranSMARTDataFileName)
     }.recover(
       handleExceptions("an export TranSMART data file")
     )
@@ -2038,7 +2070,7 @@ protected[controllers] class DataSetControllerImpl @Inject() (
           setting.exportOrderByFieldName
         )
       } yield
-        stringToFile(tranSMARTMappingFileName)(fileContent)
+        stringToFile(fileContent, tranSMARTMappingFileName)
     }.recover(
       handleExceptions("an export TranSMART mapping file")
     )

@@ -6,8 +6,8 @@
 @import models.security.DataSetPermission
 @import org.incal.play.util.WebUtil.matchesPath
 @import controllers.dataset.ControllerName
-
 @import controllers.dataset.DataSetWebContext
+
 @()(implicit context: DataSetWebContext)
 
 @listItemWithPermission(call: Call, text: String, permissionControllerName: ControllerName.Value, permissionActionName: String, matchPrefixDepth : Option[Int] = None) = {
@@ -31,10 +31,11 @@
     <li class="dropdown">
         <a class="dropdown-toggle" data-toggle="dropdown" href="#">Analytics<span class="caret"></span></a>
         <ul class="dropdown-menu">
-            @listItemWithPermission(dataSetRouter.plainGetDistribution, "Distribution", ControllerName.dataSet, "getDistribution", Some(2))
-            @listItemWithPermission(dataSetRouter.getCumulativeCount(None, None, Left(Nil)), "Cumulative Count", ControllerName.dataSet, "getCumulativeCount", Some(2))
-            @listItemWithPermission(dataSetRouter.plainGetScatterStats, "Scatter", ControllerName.dataSet, "getScatterStats", Some(2))
+            @listItemWithPermission(dataSetRouter.getDistribution(Left(Nil)), "Distribution", ControllerName.dataSet, "getDistribution", Some(2))
+            @listItemWithPermission(dataSetRouter.getCumulativeCount(Left(Nil)), "Cumulative Count", ControllerName.dataSet, "getCumulativeCount", Some(2))
+            @listItemWithPermission(dataSetRouter.getScatter(Left(Nil)), "Scatter", ControllerName.dataSet, "getScatter", Some(2))
             @listItemWithPermission(dataSetRouter.getCorrelations(Left(Nil)), "Correlation", ControllerName.dataSet, "getCorrelations", Some(2))
+            @listItemWithPermission(dataSetRouter.getHeatmap(Left(Nil)), "Heatmap", ControllerName.dataSet, "getHeatmap", Some(2))
             @listItemWithPermission(dataSetRouter.getIndependenceTest(Left(Nil)), "Independence Test (Chi-Square/ANOVA)", ControllerName.dataSet, "getIndependenceTest", Some(2))
             @listItemWithPermission(dataSetRouter.getIndependenceTestForViewFilters, "Independence Test (ANOVA) For View Filters", ControllerName.dataSet, "getIndependenceTestForViewFilters")
             <li role="separator" class="divider"></li>

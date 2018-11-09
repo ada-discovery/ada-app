@@ -7,6 +7,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{FileIO, Framing, Sink, Source}
+import util.AkkaStreamUtil.headAndTail
 import akka.util.ByteString
 import util.writeByteArrayStream
 
@@ -122,12 +123,12 @@ object FeatureMatrixIO {
   private def createHeaderAndContentFileSource(
     fileName: String
   ): Future[(String, Source[String, _])] = {
-    val headerTailSource = FileIO.fromPath(Paths.get(fileName))
-      .via(Framing.delimiter(ByteString("\n"), 1000000).map(_.utf8String))
-      .prefixAndTail(1)
+    val inputSource = FileIO
+      .fromPath(Paths.get(fileName))
+      .via(Framing.delimiter(ByteString("\n"), 1000000)
+      .map(_.utf8String))
 
-    val headerSource = headerTailSource.flatMapConcat { case (header, _) => Source(header) }
-    val contentSource = headerTailSource.flatMapConcat { case (_, tail) => tail }
+    val (headerSource, contentSource) = headAndTail(inputSource)
 
     headerSource.runWith(Sink.head).map ( header =>
       (header, contentSource)

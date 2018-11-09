@@ -887,3 +887,11 @@ function addFilterModelBeforeModalSubmit(modalId, filterElement, filterParamName
         this.submit();
     });
 }
+
+function submitModalOnEnter(event, element) {
+    if (event.which == 13) {
+        var modalFooter = $(element).closest(".modal-body").parent().find(".modal-footer")
+        modalFooter.find("#submitButton").trigger("click");
+        return false;
+    }
+}

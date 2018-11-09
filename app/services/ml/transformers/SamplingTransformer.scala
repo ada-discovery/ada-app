@@ -32,7 +32,7 @@ private class SamplingTransformer(override val uid: String) extends SchemaUnchan
       val pdf = df.filter(df.col("labelString") === labelOrAlias)
 
       val newPdf = pdf.sample(false, samplingRatio, $(seed))
-      logger.info(labelOrAlias + " : " + pdf.count() + " -> " + newPdf.count())
+      logger.info("sampling " + labelOrAlias + " : " + pdf.count() + " -> " + newPdf.count())
       (newPdf, labelOrAlias)
     }
 
@@ -40,9 +40,13 @@ private class SamplingTransformer(override val uid: String) extends SchemaUnchan
     val sampledDfs = sampledDfsWithLabels.map(_._1)
 
     val nonSampledDf = df.filter(!col("labelString").isin(labels: _*))
-    logger.info("rest non-sampled : " + nonSampledDf.count())
+//    logger.info("rest non-sampled : " + nonSampledDf.count())
 
-    sampledDfs.foldLeft(nonSampledDf)(_.union(_))
+    val finalDf = sampledDfs.foldLeft(nonSampledDf)(_.union(_))
+
+    logger.info("# after sampling : " + finalDf.count())
+
+    finalDf
   }
 
   private def extractAliasMap(df: DataFrame): Map[String, String] = {

@@ -5,9 +5,9 @@ import javax.inject.Inject
 import org.incal.play.controllers.SecureControllerDispatcher
 import models.Filter.FilterOrId
 import models.ml.VectorTransformType
-import models.FieldTypeId
+import models.{AggType, FieldTypeId}
 import reactivemongo.bson.BSONObjectID
-import org.incal.play.security.SecurityRole
+import org.incal.play.security.{AuthAction, SecurityRole}
 import models.security.DataSetPermission
 import org.incal.core.FilterCondition
 import org.incal.play.PageOrder
@@ -71,24 +71,36 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
 
   override def getWidgets = dispatchAjax(_.getWidgets)
 
-  override def getScatterStats(
-    xFieldName: Option[String],
-    yFieldName: Option[String],
-    groupFieldName: Option[String],
-    filterOrId: FilterOrId
-  ) = dispatch(_.getScatterStats(xFieldName, yFieldName, groupFieldName, filterOrId))
-
   override def getDistribution(
-    fieldName: Option[String],
-    groupFieldName: Option[String],
     filterOrId: FilterOrId
-  ) = dispatch(_.getDistribution(fieldName, groupFieldName, filterOrId))
+  ) = dispatch(_.getDistribution(filterOrId))
 
-  override def getDistributionWidget(
+  override def calcDistribution(
     fieldName: String,
     groupFieldName: Option[String],
-    filterId: Option[BSONObjectID]
-  ) = dispatch(_.getDistributionWidget(fieldName, groupFieldName, filterId))
+    filterOrId: FilterOrId
+  ) = dispatchAjax(_.calcDistribution(fieldName, groupFieldName, filterOrId))
+
+  override def getCumulativeCount(
+    filterOrId: FilterOrId
+  ) = dispatch(_.getCumulativeCount(filterOrId))
+
+  override def calcCumulativeCount(
+    fieldName: String,
+    groupFieldName: Option[String],
+    filterOrId: FilterOrId
+  ) = dispatchAjax(_.calcCumulativeCount(fieldName, groupFieldName, filterOrId))
+
+  override def getScatter(
+    filterOrId: FilterOrId
+  ) = dispatch(_.getScatter(filterOrId))
+
+  override def calcScatter(
+    xFieldName: String,
+    yFieldName: String,
+    groupOrValueFieldName: Option[String],
+    filterOrId: FilterOrId
+  ) = dispatchAjax(_.calcScatter(xFieldName, yFieldName, groupOrValueFieldName, filterOrId))
 
   override def getCorrelations(
     filterOrId: FilterOrId
@@ -97,6 +109,18 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override def calcCorrelations(
     filterOrId: FilterOrId
   ) = dispatchAjax(_.calcCorrelations(filterOrId))
+
+  override def getHeatmap(
+    filterOrId: FilterOrId
+  ) = dispatch(_.getHeatmap(filterOrId))
+
+  override def calcHeatmap(
+    xFieldName: String,
+    yFieldName: String,
+    valueFieldName: Option[String],
+    aggType: Option[AggType.Value],
+    filterOrId: FilterOrId
+  ) = dispatchAjax(_.calcHeatmap(xFieldName, yFieldName, valueFieldName, aggType, filterOrId))
 
   override def getIndependenceTest(
     filterOrId: FilterOrId
@@ -111,12 +135,6 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
   override def testIndependenceForViewFilters(
     viewId: BSONObjectID
   ) = dispatchAjax(_.testIndependenceForViewFilters(viewId))
-
-  override def getCumulativeCount(
-    dateFieldName: Option[String],
-    groupFieldName: Option[String],
-    filterOrId: FilterOrId
-  ) = dispatch(_.getCumulativeCount(dateFieldName, groupFieldName, filterOrId))
 
   override def getFractalis(
     fieldNameOption: Option[String]

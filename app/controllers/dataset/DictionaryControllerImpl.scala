@@ -30,6 +30,8 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import services.stats.StatsService
 import util.FieldUtil
 import dataaccess.JsonUtil.unescapeKey
+import models.ml.ClassificationResult
+import util.FieldUtil.caseClassToFlatFieldTypes
 import views.html.{dataview, dictionary => view}
 import util.toHumanReadableCamel
 
@@ -49,9 +51,9 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   ) extends AdaCrudControllerImpl[Field, String](dsaf(dataSetId).get.fieldRepo)
     with DictionaryController
-    with ExportableAction[Field]
     with WidgetRepoController[Field]
-    with HasFormShowEqualEditView[Field, String] {
+    with HasFormShowEqualEditView[Field, String]
+    with ExportableAction[Field] {
 
   protected val dsa: DataSetAccessor = dsaf(dataSetId).get
   protected val categoryRepo: CategoryRepo = dsa.categoryRepo
@@ -68,6 +70,9 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
 
   implicit val fieldTypeFormatter = EnumFormatter(FieldTypeId)
   implicit val mapFormatter = MapJsonFormatter.apply
+
+  private val fields = caseClassToFlatFieldTypes[Field]("-", Set("category"))
+  private val allFieldNames = fields.map(_._1).toSeq
 
   private implicit def dataSetWebContext(implicit context: WebContext) = DataSetWebContext(dataSetId)
 
@@ -243,15 +248,17 @@ protected[controllers] class DictionaryControllerImpl @Inject() (
       case Some(eol) => if (eol.trim.nonEmpty) eol.trim else csvEOL
       case None => csvEOL
     }
+
+    val fieldsNames = if (tableColumnsOnly) listViewColumns.get else allFieldNames
+
     exportToCsv(
       csvFileName,
       delimiter,
       eolToUse,
       if (replaceEolWithSpace) csvCharReplacements else Nil)(
+      fieldsNames,
       Some(exportOrderByFieldName),
-      filter,
-      if (tableColumnsOnly) listViewColumns.get else Nil,
-      listViewColumns
+      filter
     )
   }
 

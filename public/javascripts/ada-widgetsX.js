@@ -347,7 +347,7 @@ function categoricalTableWidget(elementId, widget) {
     var caption = "<h4 align='center'>" + widget.title + "</h4>"
 
     var height = widget.displayOptions.height || 400
-    var div = $("<div style='position: relative; overflow: hidden; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
+    var div = $("<div style='position: relative; overflow: auto; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
 
     var table = createTable(columnNames, rowData)
 
@@ -382,7 +382,7 @@ function numericalTableWidget(elementId, widget) {
     var caption = "<h4 align='center'>" + widget.title + "</h4>"
 
     var height = widget.displayOptions.height || 400
-    var div = $("<div style='position: relative; overflow: hidden; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
+    var div = $("<div style='position: relative; overflow: auto; height:" + height + "px; text-align: left; line-height: normal; z-index: 0;'>")
 
     var table = createTable(columnNames, rowData)
 

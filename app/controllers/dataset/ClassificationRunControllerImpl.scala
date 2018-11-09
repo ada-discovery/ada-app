@@ -473,6 +473,7 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
   }
 
   private val fields = caseClassToFlatFieldTypes[ClassificationResult]("-", Set("_id"))
+  private val allFieldNames = fields.map(_._1).toSeq
 
   private case class ClassificationResultExtra(dataSetId: String, mlModelName: Option[String], filterName: Option[String])
   private implicit val classificationResultExtraFormat = Json.format[ClassificationResultExtra]
@@ -589,21 +590,21 @@ protected[controllers] class ClassificationRunControllerImpl @Inject()(
     filter: Seq[FilterCondition],
     tableColumnsOnly: Boolean
   ) = {
-    println(tableColumnsOnly)
     val eolToUse = eol match {
       case Some(eol) => if (eol.trim.nonEmpty) eol.trim else csvEOL
       case None => csvEOL
     }
-    val allFieldNames = fields.map(_._1).toSeq
+
+    val fieldsNames = if (tableColumnsOnly) listViewColumns.get else allFieldNames
+
     exportToCsv(
       csvFileName,
       delimiter,
       eolToUse,
       if (replaceEolWithSpace) csvCharReplacements else Nil)(
+      fieldsNames,
       Some(exportOrderByFieldName),
-      filter,
-      if (tableColumnsOnly) listViewColumns.get else Nil,
-      if (tableColumnsOnly) listViewColumns else Some(allFieldNames)
+      filter
     )
   }
 

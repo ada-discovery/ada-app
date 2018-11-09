@@ -10,7 +10,7 @@
     filterSubmitParamName: String,
     filterElementId: String,
     createSubmissionJson: Option[Html] = None,
-    refreshAjaxFun: Option[Html] = None,
+    submitAjaxFun: Option[Html] = None,
     listFiltersCall: Option[Call] = None,
     saveFilterAjaxFun: Option[Html] = None,
     categoryTreeElementId: Option[String] = None
@@ -48,7 +48,7 @@
 
         var listFiltersUrl = @if(listFiltersCall.isDefined) {'@listFiltersCall.get.url'} else { null }
 
-        var refreshAjaxFun = @if(refreshAjaxFun.isDefined) { @{refreshAjaxFun.get} } else { null }
+        var submitAjaxFun = @if(submitAjaxFun.isDefined) { @{submitAjaxFun.get} } else { null }
 
         var createSubmissionJson = @if(createSubmissionJson.isDefined) { @createSubmissionJson } else {null}
 
@@ -60,7 +60,7 @@
                 fieldNameAndLabels: fieldNameAndLabels,
                 getFieldsUrl: getFieldsUrl,
                 submitUrl: '@submitCall.url',
-                refreshAjaxFun: refreshAjaxFun,
+                submitAjaxFun: submitAjaxFun,
                 listFiltersUrl: listFiltersUrl,
                 saveFilterAjaxFun: saveFilterAjax,
                 filterSubmitParamName: '@filterSubmitParamName',
@@ -74,7 +74,7 @@
                 fieldNameAndLabels: fieldNameAndLabels,
                 getFieldsUrl: getFieldsUrl,
                 submitUrl: '@submitCall.url',
-                refreshAjaxFun: refreshAjaxFun,
+                submitAjaxFun: submitAjaxFun,
                 listFiltersUrl: listFiltersUrl,
                 saveFilterAjaxFun: saveFilterAjax,
                 filterSubmitParamName: '@filterSubmitParamName',

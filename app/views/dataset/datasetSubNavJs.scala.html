@@ -7,7 +7,7 @@
 @defining(getParamValue(request.uri, "dataSet").get) { dataSetId =>
 
     <script type="text/javascript">
-            $(function () {
+        $(function () {
                 var getViewUrl = '@{Html(new DataSetRouter(dataSetId).getView(BSONObjectID.generate(), Nil, Nil, false).url)}'
                 var currentUrl = '@{Html(request.uri)}'
 
@@ -53,6 +53,6 @@
                             $(this).addClass("active")
                     });
                 }
-            })
+        })
     </script>
 }

@@ -2,12 +2,13 @@ package controllers.dataset
 
 import models.Filter.FilterOrId
 import models.ml.VectorTransformType
-import models.FieldTypeId
+import models.{AggType, FieldTypeId}
 import org.incal.play.PageOrder
 import play.api.mvc.{Action, AnyContent}
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.FilterCondition
 import org.incal.play.controllers.ReadonlyController
+import org.incal.play.security.AuthAction
 
 trait DataSetController extends ReadonlyController[BSONObjectID] {
 
@@ -43,31 +44,53 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
   def getWidgets: Action[AnyContent]
 
   def getDistribution(
-    fieldName: Option[String],
-    groupFieldName: Option[String],
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def getDistributionWidget(
+  def calcDistribution(
     fieldName: String,
     groupFieldName: Option[String],
-    filterId: Option[BSONObjectID]
+    filterOrId: FilterOrId
   ): Action[AnyContent]
 
   def getCumulativeCount(
-    fieldName: Option[String],
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def calcCumulativeCount(
+    fieldName: String,
     groupFieldName: Option[String],
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
-  def getScatterStats(
-    xFieldName: Option[String],
-    yFieldName: Option[String],
-    groupFieldName: Option[String],
+  def getScatter(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def calcScatter(
+    xFieldName: String,
+    yFieldName: String,
+    groupOrValueFieldName: Option[String],
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
   def getCorrelations(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def calcCorrelations(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def getHeatmap(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
+  def calcHeatmap(
+    xFieldName: String,
+    yFieldName: String,
+    valueFieldName: Option[String],
+    aggType: Option[AggType.Value],
     filterOrId: FilterOrId
   ): Action[AnyContent]
 
@@ -83,10 +106,6 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
 
   def testIndependenceForViewFilters(
     viewId: BSONObjectID
-  ): Action[AnyContent]
-
-  def calcCorrelations(
-    filterOrId: FilterOrId
   ): Action[AnyContent]
 
   def getFractalis(

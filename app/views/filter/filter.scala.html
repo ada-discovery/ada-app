@@ -26,7 +26,7 @@
 }
 
 @saveFilterModalBody = {
-    <input id="saveFilterName" name="saveFilterName" value="" placeholder="Filter Name">
+    <input id="saveFilterName" name="saveFilterName" value="" placeholder="Filter Name" onkeypress="submitModalOnEnter(event, this);">
 }
 
 @saveFilterModelButtons = {
@@ -35,7 +35,7 @@
 }
 
 @loadFilterModalBody = {
-    <input id="filterTypeahead" class="typeahead" style="width: 100%;" type="text" placeholder="Filter Name" value="">
+    <input id="filterTypeahead" class="typeahead" style="width: 100%;" type="text" placeholder="Filter Name" value="" onkeypress="submitModalOnEnter(event, this);">
     <input id="filterId" name="filterId" type="hidden" value="">
 }
 
@@ -150,7 +150,7 @@
                 <span class="glyphicon glyphicon-book"></span>
             </button>
 
-            @modal("loadFilterModal", "Load Filter", loadFilterModalBody, None, Some(loadFilterModelButtons))
+            @modal(s"loadFilterModal$filterElementId", "Load Filter", loadFilterModalBody, None, Some(loadFilterModelButtons))
         }
 
         <button id="rollbackFilterButton" type="button" class="btn btn-sm btn-default" onclick="$('#@filterElementId').multiFilter('rollbackModelAndSubmit')" title="Rollback Filter" style="display:None">

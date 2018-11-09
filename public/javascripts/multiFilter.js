@@ -5,7 +5,7 @@ $.widget( "custom.multiFilter", {
         fieldNameAndLabels: null,
         getFieldsUrl: null,
         submitUrl: null,
-        refreshAjaxFun: null,
+        submitAjaxFun: null,
         listFiltersUrl: null,
         saveFilterAjaxFun: null,
         filterSubmitParamName: null,
@@ -30,12 +30,17 @@ $.widget( "custom.multiFilter", {
         this.fieldNameTypeaheadElement = this.element.find("#fieldNameTypeahead");
         this.fieldNameElement = this.element.find("#fieldName");
         this.filterIdModalElement = this.element.find("#filterId");
+
         var saveFilterModalName = "saveFilterModal" + this.element.attr('id');
         this.saveFilterModalElement = this.element.find("#" + saveFilterModalName);
         this.saveFilterNameElement = this.element.find("#saveFilterName");
         this.showChoicesPanelElement = this.element.find("#showChoicesPanel");
         this.showChoicesButtonElement = this.element.find("#showChoicesButton");
-        this.loadFilterModalElement = this.element.find("#loadFilterModal");
+
+        var loadFilterModalName = "loadFilterModal" + this.element.attr('id');
+        this.loadFilterModalElement = this.element.find("#" + loadFilterModalName);
+        this.loadFilterTypeaheadElement = this.loadFilterModalElement.find("#filterTypeahead");
+
         this.loadFilterButtonElement = this.element.find("#loadFilterButton");
         this.saveFilterButtonElement = this.element.find("#saveFilterButton");
         this.rollbackFilterButtonElement = this.element.find("#rollbackFilterButton");
@@ -54,6 +59,10 @@ $.widget( "custom.multiFilter", {
 
         this.saveFilterModalElement.on('shown.bs.modal', function () {
             that.saveFilterNameElement.focus();
+        })
+
+        this.loadFilterModalElement.on('shown.bs.modal', function () {
+            that.loadFilterTypeaheadElement.focus();
         })
 
         this.saveFilterNameElement.keypress(function (e) {
@@ -205,7 +214,7 @@ $.widget( "custom.multiFilter", {
         })
         this.modelHistory.push(copiedModel);
 
-        if (this.options.refreshAjaxFun)
+        if (this.options.submitAjaxFun)
             this.rollbackFilterButtonElement.show();
     },
 
@@ -220,21 +229,22 @@ $.widget( "custom.multiFilter", {
     },
 
     _submitFilterOrId: function (conditions, filterId) {
-        var params = getQueryParams(this.options.submitUrl)
-
-        var filterIdOrConditions =
+        var filterParams =
             (this.options.createSubmissionJson) ?
                 this.options.createSubmissionJson(conditions, filterId)
             :
                 this._defaultCreateSubmissionJson(conditions, filterId);
 
-        $.extend(params, filterIdOrConditions);
+        if (this.options.submitAjaxFun) {
+            var filterOrId = filterParams[this.options.filterSubmitParamName]
+            this.options.submitAjaxFun(filterOrId);
+        } else if (this.options.submitUrl) {
+            var params = getQueryParams(this.options.submitUrl);
+            $.extend(params, filterParams);
 
-        if (this.options.refreshAjaxFun) {
-            this.options.refreshAjaxFun(this.options.submitUrl, params, this.element)
-        } else {
             submit('get', this.options.submitUrl, params);
-        }
+        } else
+            console.error("submitUrl or submitAjaxFun expected for a filter.")
     },
 
     _defaultCreateSubmissionJson: function (conditions, filterId) {
@@ -332,6 +342,7 @@ $.widget( "custom.multiFilter", {
         var that = this;
         this._loadFilterSelection(function() {
             that.loadFilterModalElement.modal('show');
+            that.loadFilterModalElement.find(".typeahead").focus();
         });
     },
 
