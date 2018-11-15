@@ -60,10 +60,11 @@ GET         /users                                                              
 GET         /users/all                                                              controllers.UserController.listAll(s: String ?= "ldapDn")
 GET         /users/new                                                              controllers.UserController.create
 POST        /users/save                                                             controllers.UserController.save
-GET         /users/:id/get                                                          controllers.UserController.get(id: BSONObjectID)
-GET         /users/:id                                                              controllers.UserController.edit(id: BSONObjectID)
+GET         /users/get/:id                                                          controllers.UserController.get(id: BSONObjectID)
+GET         /users/edit/:id                                                         controllers.UserController.edit(id: BSONObjectID)
 POST        /users/:id                                                              controllers.UserController.update(id: BSONObjectID)
 POST        /users/:id/delete                                                       controllers.UserController.delete(id: BSONObjectID)
+GET         /users/listUsersForPermissionPrefix                                     controllers.UserController.listUsersForPermissionPrefix(permissionPrefix: Option[String] ?= None)
 
 # Translations
 GET         /translations                                                           controllers.TranslationController.find(p: Int ?= 0, s: String ?= "original", filter: Seq[org.incal.core.FilterCondition] ?= Nil)
@@ -104,6 +105,8 @@ GET         /dataSets/getIndependenceTest                                       
 POST        /dataSets/testIndependence                                               controllers.dataset.DataSetDispatcher.testIndependence(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID] ?= Left(Nil))
 GET         /dataSets/getIndependenceTestForViewFilters                              controllers.dataset.DataSetDispatcher.getIndependenceTestForViewFilters
 POST        /dataSets/testIndependenceForViewFilters                                 controllers.dataset.DataSetDispatcher.testIndependenceForViewFilters(viewId: BSONObjectID)
+GET         /dataSets/getTable                                                       controllers.dataset.DataSetDispatcher.getTableScreen(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID])
+GET         /dataSets/table                                                          controllers.dataset.DataSetDispatcher.getTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID])
 GET         /dataSets/clusterization                                                 controllers.dataset.DataSetDispatcher.getClusterization
 GET         /dataSets/getSeriesProcessingSpec                                        controllers.dataset.DataSetDispatcher.getSeriesProcessingSpec
 POST        /dataSets/runSeriesProcessing                                            controllers.dataset.DataSetDispatcher.runSeriesProcessing
@@ -111,7 +114,6 @@ GET         /dataSets/getSeriesTransformationSpec                               
 POST        /dataSets/runSeriesTransformation                                        controllers.dataset.DataSetDispatcher.runSeriesTransformation
 POST        /dataSets/cluster                                                        controllers.dataset.DataSetDispatcher.cluster(mlModelId: BSONObjectID, inputFieldNames: Seq[String], filterId: Option[BSONObjectID], featuresNormalizationType: Option[models.ml.VectorTransformType.Value], pcaDims: Option[Int])
 GET         /dataSets/fractalis                                                      controllers.dataset.DataSetDispatcher.getFractalis(fieldName: Option[String] ?= None)
-GET         /dataSets/table                                                          controllers.dataset.DataSetDispatcher.getTable(page: Int, orderBy: String, fieldNames: Seq[String], filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID])
 GET         /dataSets/viewElementsAndWidgetsCallback                                 controllers.dataset.DataSetDispatcher.getViewElementsAndWidgetsCallback(dataViewId: BSONObjectID, tableOrder: String, filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID], oldCountDiff: Option[Int])
 GET         /dataSets/newFilterViewElementsAndWidgetsCallback                        controllers.dataset.DataSetDispatcher.getNewFilterViewElementsAndWidgetsCallback(dataViewId: BSONObjectID, tableOrder: String, totalCount: Int)
 GET         /dataSets/categoriesWithFieldsAsTreeNodes                                controllers.dataset.DataSetDispatcher.getCategoriesWithFieldsAsTreeNodes(filterOrId: Either[Seq[org.incal.core.FilterCondition], BSONObjectID])
