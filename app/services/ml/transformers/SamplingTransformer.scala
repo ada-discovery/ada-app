@@ -44,7 +44,7 @@ private class SamplingTransformer(override val uid: String) extends SchemaUnchan
 
     val finalDf = sampledDfs.foldLeft(nonSampledDf)(_.union(_))
 
-    logger.info("# after sampling : " + finalDf.count())
+    logger.info("# after sampling : " + finalDf.count() + " with a seed: " + $(seed))
 
     finalDf
   }

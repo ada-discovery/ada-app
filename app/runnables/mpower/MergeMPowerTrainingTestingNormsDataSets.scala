@@ -2,6 +2,7 @@ package runnables.mpower
 
 import javax.inject.Inject
 
+import dataaccess.StreamSpec
 import models.StorageType
 import models.ml.DerivedDataSetSpec
 import org.incal.core.InputFutureRunnable
@@ -85,23 +86,20 @@ class MergeMPowerTrainingTestingNormsDataSets @Inject()(dataSetService: DataSetS
     Seq(Some("years-smoking"), None)
   )
 
-
-  override def runAsFuture(input: MergeMPowerTrainingTestingNormsDataSetsSpec) = {
+  override def runAsFuture(input: MergeMPowerTrainingTestingNormsDataSetsSpec) =
     dataSetService.mergeDataSetsWoInference(
+      Seq(dataSet1, dataSet2),
+      fieldNameMappings,
+      true,
       DerivedDataSetSpec(
         mergedDataSetId,
         mergedDataSetName,
         StorageType.Mongo
       ),
-      Seq(dataSet1, dataSet2),
-      fieldNameMappings,
-      if (input.useDeltaInsert) Some("recordId") else None,
-      input.processingBatchSize,
-      input.saveBatchSize
+      StreamSpec(batchSize = input.batchSize)
     )
-  }
 
   override def inputType = typeOf[MergeMPowerTrainingTestingNormsDataSetsSpec]
 }
 
-case class MergeMPowerTrainingTestingNormsDataSetsSpec(processingBatchSize: Option[Int], saveBatchSize: Option[Int], useDeltaInsert: Boolean)
+case class MergeMPowerTrainingTestingNormsDataSetsSpec(batchSize: Option[Int])

@@ -27,6 +27,7 @@ class DataSetRouter(dataSetId: String) extends GenericRouter(routes.DataSetDispa
   val getSeriesTransformationSpec = routeFun(_.getSeriesTransformationSpec)
   val runSeriesTransformation = routeFun(_.runSeriesTransformation)
   val getFractalis = routes.getFractalis _ map route
+  val getTableScreen = routes.getTableScreen _ map route
   val getTable = routes.getTable _ map route
   val fields = routes.getFields _ map route
   val fieldNamesAndLabels = routes.getFieldNamesAndLabels _ map route
@@ -55,6 +56,7 @@ final class DataSetJsRouter(dataSetId: String) extends GenericJsRouter(routes.ja
   val testIndependence = routeFun(_.testIndependence)
   val testIndependenceForViewFilters = routeFun(_.testIndependenceForViewFilters)
   val calcCorrelations = routeFun(_.calcCorrelations)
+  val getTable = routeFun(_.getTable)
   val getViewElementsAndWidgetsCallback = routeFun(_.getViewElementsAndWidgetsCallback)
   val getNewFilterViewElementsAndWidgetsCallback = routeFun(_.getNewFilterViewElementsAndWidgetsCallback)
 }

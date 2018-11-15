@@ -34,6 +34,10 @@ trait DataSetController extends ReadonlyController[BSONObjectID] {
     totalCount: Int
   ): Action[AnyContent]
 
+  def getTableScreen(
+    filterOrId: FilterOrId
+  ): Action[AnyContent]
+
   def getTable(
     page: Int,
     orderBy: String,

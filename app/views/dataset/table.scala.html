@@ -16,11 +16,11 @@
 
 @extraActions = {
     <div class="pull-right">
-        <button class="btn btn-success btn-sm" href="#" onclick="calcCorrelations();" data-toggle="tooltip" title="Calculate Correlations">
+        <button class="btn btn-success btn-sm" href="#" onclick="generateTable();" data-toggle="tooltip" title="Generate Table">
             <span class="glyphicon glyphicon-play" aria-hidden="true"></span> Launch
         </button>
 
-        <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Add Correlation(s) To View">
+        <button class="btn btn-info btn-sm" type="button" data-toggle="modal" data-target="#dataViewSelectionModal" title="Set Correlation(s) To View">
             <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>To View
         </button>
     </div>
@@ -29,7 +29,7 @@
 @bottomResources = {
 
     @helper.javascriptRouter("dataSetJsRoutes")(
-        dataSetJsRouter.calcCorrelations,
+        dataSetJsRouter.getTable,
         dataSetJsRouter.getWidgets
     )
 
@@ -39,33 +39,44 @@
 
     <script type="text/javascript">
         $(function () {
-            populateNumericalTypeahead("field")
+            populateFullTypeahead("field")
 
             $("#dataViewSelectionModal #submitButton").on("click", addCorrelationToView);
 
             $('#fieldNameDiv #addRowButton').focus();
 
-            activateFilter($("#filterDiv"), function(filterOrId) {calcCorrelations()});
+            activateFilter($("#filterDiv"), function(filterOrId) {generateTable()});
         });
 
-        function calcCorrelations() {
+        function generateTable() {
             var inputFieldNames = getFieldNames()
 
             var filterOrId = $("#filterDiv").multiFilter('getIdOrModel')
             var filterOrIdJson = JSON.stringify(filterOrId);
 
             if (inputFieldNames.length == 0) {
-                showError("Correlation calculation cannot be launched. No fields specified.");
+                showError("Table generation cannot be launched. No fields specified.");
             } else {
-                var ajaxHandler = handleResponse("Correlation calculation finished.")
-                ajaxHandler["data"] = {
-                    "fieldNames": inputFieldNames
-                };
-
-                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.calcCorrelations(filterOrIdJson).ajax(ajaxHandler)
+                var ajaxHandler = handleResponse("Table generation finished.")
+//                ajaxHandler["data"] = {
+//                    "fieldNames": inputFieldNames
+//                };
+                dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getTable(0, "", inputFieldNames, filterOrIdJson).ajax({
+                    success: function (data) {
+                        // filter
+                        var filterElement = $("#filterDiv")
+                        filterElement.find("#conditionPanel").replaceWith(data.conditionPanel)
+                        filterElement.multiFilter("initConditionButtons")
+                        filterElement.multiFilter("setModel", data.filterModel)
+                    },
+                    error: function (data) {
+                        $("#widgetsDiv").html("")
+                        showErrorResponse(data);
+                    }
+                })
 
                 hideErrors();
-                showMessage("Correlation calculation for " + inputFieldNames.length + " fields launched.")
+                showMessage("Table generation for " + inputFieldNames.length + " fields launched.")
             }
         }
 

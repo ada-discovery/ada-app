@@ -462,12 +462,21 @@ function independenceTestWidget(elementId, widget) {
     $('#' + elementId).html(div)
 }
 
-function widgetDiv(widget, gridWidth) {
+function widgetDiv(widget, defaultGridWidth, enforceWidth) {
     var elementIdVal = elementId(widget)
-    var initGridWidth = widget.displayOptions.gridWidth || gridWidth
-    var gridWidthElement = "col-md-" + initGridWidth
 
-    var gridOffset = widget.displayOptions.gridOffset
+    if (enforceWidth)
+        return widgetDivAux(elementIdVal, defaultGridWidth);
+    else {
+        var gridWidth = widget.displayOptions.gridWidth || defaultGridWidth;
+        var gridOffset = widget.displayOptions.gridOffset;
+
+        return widgetDivAux(elementIdVal, gridWidth, gridOffset);
+    }
+}
+
+function widgetDivAux(elementIdVal, gridWidth, gridOffset) {
+    var gridWidthElement = "col-md-" + gridWidth
     var gridOffsetElement = gridOffset ? "col-md-offset-" + gridOffset : ""
 
     var innerDiv = '<div id="' + elementIdVal + '" class="chart-holder"></div>'

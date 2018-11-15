@@ -39,13 +39,13 @@
                     @dataSetExportDropdown(dataViewId, dataSetName)
                 </li>
                 <li>
-                    @if(canEditView) {
-                        <div class="dropdown">
-                            <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu">
+                    <div class="dropdown">
+                        <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            @if(canEditView) {
                                 <li>
                                     <a href="@{dataViewRouter.getAndShowView(dataViewId)}">
                                         Edit View
@@ -56,19 +56,24 @@
                                         Save Filter To View
                                     </a>
                                 </li>
-                                <li>
-                                    <a href="#" onclick="addNewColumn()">
-                                        Add New Filter
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#" onclick="removeColumnRight()">
-                                        Remove Filter
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                     }
+                            }
+                            <li>
+                                <a href="#" onclick="addNewColumn()">
+                                    Add New Filter
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" onclick="removeColumnRight()">
+                                    Remove Filter
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" onclick="setFullWidth()">
+                                    Set Full Width
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </li>
             </ul>
         </div>
@@ -123,9 +128,12 @@
     @highchartsJsImportForBulkExport()
 
     <script type="text/javascript">
+        var defaultWidgetWidth = @widgetGridElementWidth;
+        var enforceWidth = false;
+
         $(function () {
             // update widgets from callback
-            updateAllWidgetsFromCallback('@{widgetsCallbackId}', @widgetGridElementWidth);
+            updateAllWidgetsFromCallback('@{widgetsCallbackId}', defaultWidgetWidth);
 
             // activate filters
             var conditions = [@tableViewParts.map { viewPart => JSON.parse('@jsonConditions(viewPart.filter)'), }]
@@ -150,7 +158,7 @@
 
         function activateFilter(filterElement, jsonConditions, filterId) {
             var submitAjaxFun = function(filterOrId) {
-                refreshViewOnFilterUpdate('@{dataViewId.stringify}', filterOrId, filterElement, @widgetGridElementWidth);
+                refreshViewOnFilterUpdate('@{dataViewId.stringify}', filterOrId, filterElement, defaultWidgetWidth, enforceWidth);
             }
 
             activateDataSetFilterAux(
@@ -161,13 +169,25 @@
             )
         }
 
+        function setFullWidth() {
+            var widgets = $("#widgetsTr .chart-holder")
+            $.each(widgets, function (index, widget) {
+                $(widget).parent().attr("class", "col-md-12");
+            })
+
+            defaultWidgetWidth = 12;
+            enforceWidth = true;
+
+            refreshHighcharts();
+        }
+
         function addNewColumn() {
             if($("#filtersTr>td").length == 1) {
                 $(".filter-count-div").show()
                 $("#multiFilterDiv").append($("#singleFilterDiv>table"));
                 $(".multi-filter-divider").show();
             }
-            addNewViewColumn('@{dataViewId.stringify}', @widgetGridElementWidth, activateFilter)
+            addNewViewColumn('@{dataViewId.stringify}', defaultWidgetWidth, enforceWidth, activateFilter)
         }
 
         function removeColumnRight() {

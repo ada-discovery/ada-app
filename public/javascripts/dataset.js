@@ -49,7 +49,7 @@ function saveFilterToView(viewId) {
     });
 }
 
-function refreshViewOnFilterUpdate(viewId, filterOrId, filterElement, widgetGridElementWidth) {
+function refreshViewOnFilterUpdate(viewId, filterOrId, filterElement, widgetGridElementWidth, enforceWidth) {
     var index = $("#filtersTr").find(".filter-div").index(filterElement);
 
     var counts = $("#filtersTr").find(".count-hidden").map(function(index, element) {
@@ -84,7 +84,7 @@ function refreshViewOnFilterUpdate(viewId, filterOrId, filterElement, widgetGrid
 
             // widgets
             var widgetsDiv = $("#widgetsTr > td:eq(" + index + ")")
-            updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, filterElement, widgetGridElementWidth)
+            updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, filterElement, widgetGridElementWidth, enforceWidth)
         },
         error: function(data) {
             showErrorResponse(data)
@@ -92,7 +92,7 @@ function refreshViewOnFilterUpdate(viewId, filterOrId, filterElement, widgetGrid
     });
 }
 
-function addNewViewColumn(viewId, widgetGridElementWidth, activateFilter) {
+function addNewViewColumn(viewId, widgetGridElementWidth, enforceWidth, activateFilter) {
     // total count
     var totalCount = getViewTotalCount();
 
@@ -121,7 +121,7 @@ function addNewViewColumn(viewId, widgetGridElementWidth, activateFilter) {
             $(tableDiv).html(data.table);
 
             // get widgets from callback
-            updateWidgetsFromCallback(data.widgetsCallbackId, widgetTd, filterElement, widgetGridElementWidth)
+            updateWidgetsFromCallback(data.widgetsCallbackId, widgetTd, filterElement, widgetGridElementWidth, enforceWidth)
 
             showMessage("New column/filter successfully added to the view.")
         },
@@ -157,7 +157,7 @@ function addAllowedValuesUpdateForFilter(filterElement) {
 // Widgets //
 /////////////
 
-function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, elementWidth, successMessage) {
+function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, defaultElementWidth, enforceWidth, successMessage) {
     widgetsDiv.html("")
     addSpinner(widgetsDiv, "margin-bottom: 20px;")
 
@@ -174,7 +174,7 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, elemen
 
             var row = $("<div class='row'>")
             $.each(widgets, function (j, widget) {
-                row.append(widgetDiv(widget, elementWidth))
+                row.append(widgetDiv(widget, defaultElementWidth, enforceWidth))
             })
             widgetsDiv.html(row)
             $.each(widgets, function (j, widget) {
@@ -191,7 +191,7 @@ function updateWidgetsFromCallback(callbackId, widgetsDiv, filterElement, elemen
     });
 }
 
-function updateAllWidgetsFromCallback(callbackId, elementWidth) {
+function updateAllWidgetsFromCallback(callbackId, defaultElementWidth) {
     dataSetJsRoutes.controllers.dataset.DataSetDispatcher.getWidgets().ajax( {
         data: {
             "callbackId": callbackId
@@ -202,7 +202,7 @@ function updateAllWidgetsFromCallback(callbackId, elementWidth) {
                 var td = $("<td style='vertical-align:top'>")
                 var row = $("<div class='row'>")
                 $.each(widgets, function (j, widget) {
-                    row.append(widgetDiv(widget, elementWidth))
+                    row.append(widgetDiv(widget, defaultElementWidth))
                 })
                 td.append(row)
                 $("#widgetsTr").append(td)

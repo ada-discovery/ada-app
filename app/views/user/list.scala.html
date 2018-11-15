@@ -1,6 +1,7 @@
 @import views.html.layout
 @import views.html.table.paginatedTable
 @import views.html.filter.{filter, filterWithJs}
+@import views.html.elements.labelValue
 @import util.typeColumns
 @import models.User
 @import models.Field
@@ -16,6 +17,12 @@
     conditions: Seq[FilterCondition]
 )(implicit context: WebContext)
 
+@modalBody = {
+    <fieldset>
+        <input id="permissionPrefix" name="permissionPrefix" value="">
+    </fieldset>
+}
+
 @actions = {
     <div class="row">
         <div class="col-md-8">
@@ -30,8 +37,26 @@
                 Some(FilterShowFieldStyle.LabelsOnly)
             )
         </div>
-        <div class="col-md-4">
-            <a class="btn btn-success btn-sm pull-right" id="add" href="@routes.UserController.create()">Add a new user</a>
+        <div class="pull-right">
+            <div class="dropdown">
+                <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Actions
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a href="@routes.UserController.create()">
+                            Add a new user
+                        </a>
+                    </li>
+                    <li>
+                        <a data-toggle="modal" data-target="#filterByPermissionPrefixModal" title="Filter By Permission Prefix">
+                            Filter by permission
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            @modal("filterByPermissionPrefixModal", "Filter By Permission Prefix", modalBody, Some(routes.UserController.listUsersForPermissionPrefix(None)))
         </div>
     </div>
 }

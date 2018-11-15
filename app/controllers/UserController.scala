@@ -8,12 +8,15 @@ import dataaccess.RepoTypes.{DataSpaceMetaInfoRepo, UserRepo}
 import play.api.data.Form
 import play.api.data.Forms.{email, ignored, mapping, nonEmptyText, seq, text}
 import models.{DataSpaceMetaInfo, User}
+import org.incal.core.dataaccess.AscSort
 import reactivemongo.bson.BSONObjectID
 import services.MailClientProvider
 import views.html.{user => view}
 import play.api.mvc.{Action, AnyContent, Request, RequestHeader}
 import org.incal.core.util.ReflectionUtil.getMethodNames
+import org.incal.play.Page
 import org.incal.play.controllers.{AdminRestrictedCrudController, CrudControllerImpl, HasBasicListView, HasFormShowEqualEditView}
+import org.incal.play.security.AuthAction
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -110,6 +113,22 @@ class UserController @Inject() (
     )
     mailer.send(mail)
     repo.save(item)
+  }
+
+  def listUsersForPermissionPrefix(
+    permissionPrefix: Option[String]
+  ) = AuthAction { implicit request =>
+    println(permissionPrefix)
+    for {
+      allUsers <- repo.find(sort = Seq(AscSort("ldapDn")))
+    } yield {
+      val filteredUsers = if (permissionPrefix.isDefined)
+        allUsers.filter(_.permissions.exists(_.startsWith(permissionPrefix.get)))
+      else
+        allUsers
+      val page = Page(filteredUsers, 0, 0, filteredUsers.size, "ldapDn")
+      Ok(view.list(page, Nil))
+    }
   }
 }
 

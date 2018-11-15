@@ -101,7 +101,15 @@ case class SelfLinkSpec(
 
 case class DropFieldsSpec(
   sourceDataSetId: String,
+  fieldNamesToKeep: Traversable[String],
   fieldNamesToDrop: Traversable[String],
+  resultDataSetSpec: DerivedDataSetSpec,
+  streamSpec: StreamSpec
+) extends DataSetTransformation
+
+case class RenameFieldsSpec(
+  sourceDataSetId: String,
+  fieldOldNewNames: Traversable[(String, String)],
   resultDataSetSpec: DerivedDataSetSpec,
   streamSpec: StreamSpec
 ) extends DataSetTransformation

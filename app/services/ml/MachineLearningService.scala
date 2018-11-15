@@ -370,8 +370,8 @@ private class MachineLearningServiceImpl @Inject() (
     splitDataSet: Double => (DataFrame => (DataFrame, DataFrame)),
     calcTestPredictions: (Transformer, Dataset[_], Dataset[_]) => DataFrame,
     crossValidatorCreator: Option[CrossValidatorCreator],
-    initStages: Seq[_ <: PipelineStage],
-    preTrainingStages: Seq[_ <: PipelineStage],
+    initStages: Seq[() => PipelineStage],
+    preTrainingStages: Seq[() => PipelineStage],
     paramGrids: Traversable[ParamGrid[_]] = Nil
   ): Future[ClassificationResultsHolder] = {
     // stages
@@ -391,7 +391,7 @@ private class MachineLearningServiceImpl @Inject() (
     splitDataset: Double => (DataFrame => (DataFrame, DataFrame)),
     calcTestPredictions: (Transformer, Dataset[_], Dataset[_]) => DataFrame,
     crossValidatorCreator: Option[CrossValidatorCreator],
-    stages: Seq[_ <: PipelineStage],
+    stages: Seq[() => PipelineStage],
     paramGrids: Traversable[ParamGrid[_]]
   ): Future[ClassificationResultsHolder] = {
 
@@ -410,7 +410,6 @@ private class MachineLearningServiceImpl @Inject() (
     val outputSize = outputLabelType.metadata.getMetadata("ml_attr").getStringArray("vals").length
 
     val (trainer, trainerParamGrids) = SparkMLEstimatorFactory(mlModel, inputSize, outputSize)
-    val fullTrainer = new Pipeline().setStages((stages ++ Seq(trainer)).toArray)
     val fullParamMaps = buildParamGrids(trainerParamGrids ++ paramGrids)
 
     // REPEAT THE TRAINING-TEST CYCLE
@@ -433,6 +432,8 @@ private class MachineLearningServiceImpl @Inject() (
 
     val resultHoldersFuture = parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
       logger.info(s"Execution of repetition $index started for $count rows.")
+
+      val fullTrainer = new Pipeline().setStages((stages.map(_()) ++ Seq(trainer)).toArray)
 
       // classify and evaluate
       classifyAndEvaluate(
@@ -631,8 +632,8 @@ private class MachineLearningServiceImpl @Inject() (
     splitDataSet: Double => (DataFrame => (DataFrame, DataFrame)),
     calcTestPredictions: (Transformer, Dataset[_], Dataset[_]) => DataFrame,
     crossValidatorCreator: Option[CrossValidatorCreator],
-    initStages: Seq[_ <: PipelineStage],
-    preTrainingStages: Seq[_ <: PipelineStage],
+    initStages: Seq[() => PipelineStage],
+    preTrainingStages: Seq[() => PipelineStage],
     paramGrids: Traversable[ParamGrid[_]] = Nil,
     collectOutputs: Boolean = false
   ): Future[RegressionResultsHolder] = {
@@ -652,14 +653,13 @@ private class MachineLearningServiceImpl @Inject() (
     splitDataset: Double => (DataFrame => (DataFrame, DataFrame)),
     calcTestPredictions: (Transformer, Dataset[_], Dataset[_]) => DataFrame,
     crossValidatorCreator: Option[CrossValidatorCreator],
-    stages: Seq[_ <: PipelineStage],
+    stages: Seq[() => PipelineStage],
     paramGrids: Traversable[ParamGrid[_]],
     collectOutputs: Boolean
   ): Future[RegressionResultsHolder] = {
     // CREATE A TRAINER
 
     val (trainer, trainerParamGrids) = SparkMLEstimatorFactory(mlModel)
-    val fullTrainer = new Pipeline().setStages((stages ++ Seq(trainer)).toArray)
     val fullParamMaps = buildParamGrids(trainerParamGrids ++ paramGrids)
 
     // REPEAT THE TRAINING-TEST CYCLE
@@ -679,6 +679,8 @@ private class MachineLearningServiceImpl @Inject() (
 
     val resultHoldersFuture = parallelize(1 to setting.repetitions.getOrElse(1), repetitionParallelism) { index =>
       logger.info(s"Execution of repetition $index started for $count rows.")
+
+      val fullTrainer = new Pipeline().setStages((stages.map(_()) ++ Seq(trainer)).toArray)
 
       // run the trainer (with folds) with a given split (which will produce training and test data sets) and a replication df (if provided)
       val (trainPredictions, testPredictions, replicationPredictions) = train(
@@ -738,7 +740,7 @@ private class MachineLearningServiceImpl @Inject() (
     windowSize: Option[Int],
     reservoirSetting: Option[ReservoirSpec],
     labelShift: Int
-  ): (Seq[_ <: PipelineStage], Traversable[ParamGrid[_]]) = {
+  ): (Seq[() => PipelineStage], Traversable[ParamGrid[_]]) = {
     if (windowSize.isEmpty && reservoirSetting.isEmpty)
       logger.warn("Window size or reservoir setting should be set for time series transformations.")
 
@@ -760,7 +762,12 @@ private class MachineLearningServiceImpl @Inject() (
       else
         SeqShift.applyInPlace("label", seriesOrderCol)(labelShift)
 
-    val stages = Seq(dlTransformer, rcTransformer, Some(labelShiftTransformer)).flatten
+    val stages = Seq(
+      dlTransformer.map(() => _),
+      rcTransformer.map(() => _),
+      Some(() => labelShiftTransformer)
+    ).flatten
+
     (stages, paramGrids)
   }
 
@@ -857,7 +864,7 @@ private class MachineLearningServiceImpl @Inject() (
 
   private def classificationStages(
     setting: LearningSetting[_]
-  ): Seq[_ <: PipelineStage] = {
+  ): Seq[() => PipelineStage] = {
     // normalize the features
     val normalize = setting.featuresNormalizationType.map(VectorColumnScalerNormalizer.applyInPlace(_, "features"))
 
@@ -865,19 +872,19 @@ private class MachineLearningServiceImpl @Inject() (
     val reduceDim = setting.pcaDims.map(InPlacePCA(_))
 
     // keep the label as string for sampling (if needed)
-    val keepLabelString = IndexToStringIfNeeded("label", "labelString")
+    val keepLabelString = () => IndexToStringIfNeeded("label", "labelString")
 
     // sampling
-    val sample = SamplingTransformer(setting.samplingRatios)
+    val sample = () => SamplingTransformer(setting.samplingRatios)
 
     // sequence the stages and return
-    val preStages = Seq(normalize, reduceDim).flatten
+    val preStages = Seq(normalize, reduceDim).flatten.map(() => _)
     if (setting.samplingRatios.nonEmpty) preStages ++ Seq(keepLabelString, sample) else preStages
   }
 
   private def regressionStages(
     setting: LearningSetting[_]
-  ): Seq[_ <: PipelineStage] = {
+  ): Seq[() => PipelineStage] = {
     // normalize the features
     val normalize = setting.featuresNormalizationType.map(VectorColumnScalerNormalizer.applyInPlace(_, "features"))
 
@@ -885,7 +892,7 @@ private class MachineLearningServiceImpl @Inject() (
     val reduceDim = setting.pcaDims.map(InPlacePCA(_))
 
     // sequence the stages and return
-    Seq(normalize, reduceDim).flatten
+    Seq(normalize, reduceDim).flatten.map(() => _)
   }
 
   override def cluster(

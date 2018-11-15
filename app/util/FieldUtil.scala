@@ -222,6 +222,10 @@ object FieldUtil {
           case e: AdaException => FieldTypeSpec(FieldTypeId.Json, true)
         }
 
+      // map
+      case t if t subMatches (typeOf[Map[String, _]]) =>
+        FieldTypeSpec(FieldTypeId.Json)
+
       // otherwise
       case _ =>
         val typeName =

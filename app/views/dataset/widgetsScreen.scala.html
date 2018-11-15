@@ -128,7 +128,7 @@
 
                     // widgets
                     var widgetsDiv = $("#widgetsDiv")
-                    updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, filterElement, 12, successMessage)
+                    updateWidgetsFromCallback(data.widgetsCallbackId, widgetsDiv, filterElement, 12, false, successMessage)
                 },
                 error: function (data) {
                     $("#widgetsDiv").html("")

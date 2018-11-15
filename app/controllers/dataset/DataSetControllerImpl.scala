@@ -1410,7 +1410,28 @@ protected[controllers] class DataSetControllerImpl @Inject() (
     }.recover(handleExceptions("a heatmap"))
   }
 
-  def getCategoriesWithFieldsAsTreeNodes(
+  override def getTableScreen(
+    filterOrId: FilterOrId
+  ) = AuthAction { implicit request => {
+    for {
+      // get the filter (with labels), data set name, the data space tree, and the setting
+      (filter, dataSetName, dataSpaceTree, setting) <- getFilterAndEssentials(filterOrId)
+    } yield
+
+      render {
+        case Accepts.Html() => Ok(dataset.table(
+          dataSetName,
+          filter,
+          setting.filterShowFieldStyle,
+          dataSpaceTree
+        ))
+        case Accepts.Json() => BadRequest("The function getTableScreen function doesn't support JSON response.")
+      }
+
+    }.recover(handleExceptions("a table"))
+  }
+
+  override def getCategoriesWithFieldsAsTreeNodes(
     filterOrId: FilterOrId
   ) = Action.async { implicit request =>
     val start = new ju.Date()

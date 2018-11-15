@@ -1,6 +1,7 @@
 package runnables.luxpark
 
 import models.{AdaException, AdaParseException}
+import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputRunnable
 
 import scala.io.Source
@@ -31,7 +32,7 @@ class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpe
   private val newHeaderStart = Seq("Aliquot_Id", "Kit_Id")
 
   override def run(input: VariantsToSubjectEntriesSpec) = {
-    val delimiter = input.delimiter.getOrElse(defaultDelimiter)
+    val delimiter = StringEscapeUtils.unescapeJava(input.delimiter.getOrElse(defaultDelimiter))
 
     // retrieve output and label output file names
     val (outputFileName, labelOutputFileName) = outputFileNames(input.inputFileName)
@@ -49,6 +50,10 @@ class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpe
       val gene = items(1)
       val category = items(2)
       val variants = items(3)
+
+      val funcRefGene = items(4)
+      val exonicFuncRefGene = items(5)
+
       val caseIds = items(11).split(",", -1).map(_.trim)
       val controlIds = items(12).split(",", -1).map(_.trim)
 
@@ -57,7 +62,7 @@ class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpe
       val aliquotIds: Seq[String] = (caseIds ++ controlIds).filter(_.nonEmpty)
 
       val aliquotEntries = aliquotIds.map((_, variantIndex))
-      val variantEntry = variantIndex -> (gene, category, variantName, variantInternalId)
+      val variantEntry = variantIndex -> (gene, category, funcRefGene, exonicFuncRefGene, variantName, variantInternalId)
 
       (aliquotEntries, variantEntry)
     }.toSeq
@@ -68,6 +73,8 @@ class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpe
 
     val genesSorted = variantIndexMap.values.map(_._1).toSet.toSeq.sorted
     val categoriesSorted = variantIndexMap.values.map(_._2).toSet.toSeq.sorted
+    val funcsSorted = variantIndexMap.values.map(_._3).toSet.toSeq.sorted
+    val exonicFuncsSorted = variantIndexMap.values.map(_._4).toSet.toSeq.sorted
 
     val aliquotVariantIndexesMap = aliquotVariantEntries.flatMap(_._1).toGroupMap
 
@@ -78,6 +85,9 @@ class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpe
 
       val geneSet = variantInfos.map(_._1).toSet
       val categorySet = variantInfos.map(_._2).toSet
+      val funcSet = variantInfos.map(_._3).toSet
+      val exonicFuncSet = variantInfos.map(_._4).toSet
+
       val variantIndexSet = variantIndexes.toSet
 
       val variantColumns = (0 until variantsCount).map( index =>
@@ -89,21 +99,31 @@ class VariantsToSubjectEntries extends InputRunnable[VariantsToSubjectEntriesSpe
       val categoryColumns = categoriesSorted.map( category =>
         categorySet.contains(category).toString
       )
-      (Seq(aliquotId, kitId) ++ variantColumns ++ geneColumns ++ categoryColumns).mkString(delimiter)
+      val funcColumns = funcsSorted.map( func =>
+        funcSet.contains(func).toString
+      )
+      val exonicFuncColumns = exonicFuncsSorted.map( exonicFunc =>
+        exonicFuncSet.contains(exonicFunc).toString
+      )
+
+      (Seq(aliquotId, kitId) ++ variantColumns ++ geneColumns ++ categoryColumns ++ funcColumns ++ exonicFuncColumns).mkString(delimiter)
     }
 
     val variantInfos = aliquotVariantEntries.map(_._2._2)
 
     // subject variants
-    val variantNames = variantInfos.map(_._3)
-    val categoryLabels = categoriesSorted.map(category => category.capitalize + "_Variant")
-    val newHeader = newHeaderStart ++ variantNames ++ genesSorted ++ categoryLabels
+    val variantNames = variantInfos.map(_._5)
+    val categoryLabels = categoriesSorted.map(_.capitalize + "_Variant")
+    val funcLabels = funcsSorted.map(_.capitalize + "_Func_Variant")
+    val exonicFuncLabels = exonicFuncsSorted.map(_.capitalize + "_ExonicFunc_Variant")
+
+    val newHeader = newHeaderStart ++ variantNames ++ genesSorted ++ categoryLabels ++ funcLabels ++ exonicFuncLabels
 
     val content = newHeader.mkString(delimiter) + "\n" + newLines.mkString("\n")
     writeStringAsStream(content, new java.io.File(outputFileName))
 
     // variant name with labels
-    val variantNameLabelLines = variantInfos.map(info => info._3 + delimiter + info._4)
+    val variantNameLabelLines = variantInfos.map(info => info._5 + delimiter + info._6)
     writeStringAsStream(variantNameLabelLines.mkString("\n"), new java.io.File(labelOutputFileName))
   }
 

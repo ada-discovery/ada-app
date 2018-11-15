@@ -54,13 +54,17 @@ class DataSetDispatcher @Inject() (dscf: DataSetControllerFactory) extends Secur
     tableOrder: String,
     filterOrId: FilterOrId,
     oldCountDiff: Option[Int]
-  ) = dispatch(_.getViewElementsAndWidgetsCallback(dataViewId, tableOrder, filterOrId, oldCountDiff))
+  ) = dispatchAjax(_.getViewElementsAndWidgetsCallback(dataViewId, tableOrder, filterOrId, oldCountDiff))
 
   override def getNewFilterViewElementsAndWidgetsCallback(
     dataViewId: BSONObjectID,
     tableOrder: String,
     totalCount: Int
-  ) = dispatch(_.getNewFilterViewElementsAndWidgetsCallback(dataViewId, tableOrder, totalCount))
+  ) = dispatchAjax(_.getNewFilterViewElementsAndWidgetsCallback(dataViewId, tableOrder, totalCount))
+
+  override def getTableScreen(
+    filterOrId: FilterOrId
+  ) = dispatch(_.getTableScreen(filterOrId))
 
   override def getTable(
     page: Int,

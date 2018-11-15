@@ -6,15 +6,16 @@ import models.DataSetFormattersAndIds.FieldIdentity
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory
 import org.incal.core.dataaccess.Criterion.Infix
+import util.seqFutures
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class RenameFields @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureRunnable[RenameFieldsSpec] {
+class ChangeFieldLabels @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureRunnable[ChangeFieldLabelsSpec] {
 
   override def runAsFuture(
-    input: RenameFieldsSpec
+    input: ChangeFieldLabelsSpec
   ) = {
     val dsa = dsaf(input.dataSetId).get
 
@@ -29,16 +30,22 @@ class RenameFields @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureR
           val newLabel = nameLabelMap.get(field.name).get
           field.copy(label = Some(newLabel))
         }
-        dsa.fieldRepo.update(newLabelFields)
+
+        input.batchSize.map( batchSize =>
+          seqFutures(newLabelFields.toSeq.grouped(batchSize))(dsa.fieldRepo.update)
+        ).getOrElse(
+          dsa.fieldRepo.update(newLabelFields)
+        )
       }
     } yield
       ()
   }
 
-  override def inputType = typeOf[RenameFieldsSpec]
+  override def inputType = typeOf[ChangeFieldLabelsSpec]
 }
 
-case class RenameFieldsSpec(
+case class ChangeFieldLabelsSpec(
   dataSetId: String,
-  fieldNameLabels: Seq[String]
+  fieldNameLabels: Seq[String],
+  batchSize: Option[Int]
 )
