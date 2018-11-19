@@ -1,37 +1,46 @@
+package scala
+
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import org.scalatest._
-import services.stats.StatsService
 import services.stats.CalculatorHelper._
-import services.stats.calc.{AllDefinedPearsonCorrelationCalc, PearsonCorrelationCalc}
+import services.stats.calc.MatthewsBinaryClassCorrelationCalc
 
 import scala.concurrent.Future
 import scala.util.Random
 
-class PearsonCorrelationTest extends AsyncFlatSpec with Matchers {
+class MatthewsBinaryClassCorrelationTest extends AsyncFlatSpec with Matchers {
 
-  private val xs = Seq(0.5, 0.7, 1.2, 6.3, 0.1, 0.4, 0.7, -1.2, 3, 4.2, 5.7, 4.2, 8.1)
-  private val ys = Seq(0.5, 0.4, 0.4, 0.4, -1.2, 0.8, 0.23, 0.9, 2, 0.1, -4.1, 3, 4)
-  private val expectedResult = 0.1725323796730674
+  private val exampleInputs = Seq(
+    (Some(true), Some(true)),
+    (Some(false), Some(false)),
+    (Some(true), Some(false)),
+    (None, None),
+    (Some(false), Some(false)),
+    (Some(false), Some(true)),
+    (Some(false), Some(false)),
+    (Some(false), None),
+    (Some(true), Some(true)),
+    (None, Some(false)),
+    (Some(true), Some(true)),
+    (Some(false), Some(false)),
+    (Some(true), Some(false))
+  )
+
+  private val expectedResult = 0.408248290463863
 
   private val randomInputSize = 100
   private val randomFeaturesNum = 25
 
-  private val calc = PearsonCorrelationCalc
-  private val allDefinedCalc = AllDefinedPearsonCorrelationCalc
-
-//  private val injector = TestApp.apply.injector
-//  private val statsService = injector.instanceOf[StatsService]
+  private val calc = MatthewsBinaryClassCorrelationCalc
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
 
-  "Correlations" should "match the static example" in {
-    val inputs = xs.zip(ys).map{ case (a,b) => Seq(Some(a),Some(b))}
-    val inputsAllDefined = xs.zip(ys).map{ case (a,b) => Seq(a, b)}
+  "Matthews correlations" should "match the static example" in {
+    val inputs = exampleInputs.map { case (a, b) => Seq(a, b) }
     val inputSource = Source.fromIterator(() => inputs.toIterator)
-    val inputSourceAllDefined = Source.fromIterator(() => inputsAllDefined.toIterator)
 
     def checkResult(result: Seq[Seq[Option[Double]]]) = {
       result.size should be (2)
@@ -42,38 +51,31 @@ class PearsonCorrelationTest extends AsyncFlatSpec with Matchers {
       result(1)(0).get should be (expectedResult)
     }
 
-    val featuresNum = inputs.head.size
-
     // standard calculation
     Future(calc.fun()(inputs)).map(checkResult)
 
     // streamed calculations
     calc.runFlow(None, None)(inputSource).map(checkResult)
 
-    // streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runFlow(None, None)(inputSourceAllDefined).map(checkResult)
-
     // parallel streamed calculations
     calc.runFlow(Some(4), Some(4))(inputSource).map(checkResult)
-
-    // parallel streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runFlow(Some(4), Some(4))(inputSourceAllDefined).map(checkResult)
   }
 
-  "Correlations" should "match each other" in {
-    val inputs = for (_ <- 1 to randomInputSize) yield {
-      for (_ <- 1 to randomFeaturesNum) yield
-       Some((Random.nextDouble() * 2) - 1)
-    }
-    val inputsAllDefined = inputs.map(_.map(_.get))
+  "Matthews correlations" should "match each other" in {
+    val inputs =
+      for (_ <- 1 to randomInputSize) yield {
+        for (_ <- 1 to randomFeaturesNum) yield
+          if (Random.nextDouble() < 0.8) Some(Random.nextBoolean) else None
+      }
+
     val inputSource = Source.fromIterator(() => inputs.toIterator)
-    val inputSourceAllDefined = Source.fromIterator(() => inputsAllDefined.toIterator)
 
     // standard calculation
     val protoResult = calc.fun()(inputs)
 
     def checkResult(result: Seq[Seq[Option[Double]]]) = {
       result.map(_.size should be (randomFeaturesNum))
+
       for (i <- 0 to randomFeaturesNum - 1) yield
         result(i)(i).get should be (1d)
 
@@ -88,13 +90,7 @@ class PearsonCorrelationTest extends AsyncFlatSpec with Matchers {
     // streamed calculations
     calc.runFlow(None, None)(inputSource).map(checkResult)
 
-    // streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runFlow(None, None)(inputSourceAllDefined).map(checkResult)
-
     // parallel streamed calculations
     calc.runFlow(Some(4), Some(4))(inputSource).map(checkResult)
-
-    // parallel streamed calculations with an all-values-defined optimization
-    allDefinedCalc.runFlow(Some(4), Some(4))(inputSourceAllDefined).map(checkResult)
   }
 }
