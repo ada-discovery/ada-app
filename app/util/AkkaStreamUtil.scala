@@ -5,7 +5,7 @@ import java.nio.file.Paths
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
-import akka.stream.scaladsl.{Broadcast, FileIO, Flow, Framing, GraphDSL, Sink, Source, Zip, ZipN}
+import akka.stream.scaladsl.{Broadcast, FileIO, Flow, Framing, GraphDSL, Sink, Source, Unzip, Zip, ZipN}
 import akka.util.ByteString
 
 import scala.collection.mutable
@@ -83,6 +83,31 @@ object AkkaStreamUtil {
       flowsB.zipWithIndex.foreach { case (flow, i) => flow.out ~> zipper.in(i)}
 
       FlowShape(bcast.in, zipper.out)
+    })
+
+  def applyTupleFlows[A_IN, A_OUT, B_IN, B_OUT](
+    flow1: Flow[A_IN, A_OUT, NotUsed],
+    flow2: Flow[B_IN, B_OUT, NotUsed]
+  ): Flow[(A_IN, B_IN), (A_OUT, B_OUT), NotUsed] =
+    Flow.fromGraph(GraphDSL.create() { implicit b =>
+      import GraphDSL.Implicits._
+
+      // prepare graph elements
+
+      val flow1B = b.add(flow1)
+      val flow2B = b.add(flow2)
+      val zip = b.add(Zip[A_OUT, B_OUT]())
+      val unzip = b.add(Unzip[A_IN, B_IN]())
+
+      // connect the elements
+
+      unzip.out0 ~> flow1B.in
+      unzip.out1 ~> flow2B.in
+
+      flow1B.out ~> zip.in0
+      flow2B.out ~> zip.in1
+
+      FlowShape(unzip.in, zip.out)
     })
 
   def unzipNFlowsAndApply[T, U](

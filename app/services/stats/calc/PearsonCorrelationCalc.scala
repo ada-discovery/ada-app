@@ -23,6 +23,7 @@ object PearsonCorrelationCalc extends Calculator[PearsonCorrelationCalcTypePack]
   override def fun(o: Unit) = { values: Traversable[IN] =>
     val elementsCount = if (values.nonEmpty) values.head.size else 0
 
+    // aux function to calculate correlations for the columns at given indeces
     def calc(index1: Int, index2: Int) = {
       val els = (
         values.map(_ (index1)).toSeq,
@@ -44,7 +45,9 @@ object PearsonCorrelationCalc extends Calculator[PearsonCorrelationCalcTypePack]
     }.toList
   }
 
-  protected[calc] def calcForPair(els: Traversable[(Double, Double)]): Option[Double] = {
+  protected[calc] def calcForPair(
+    els: Traversable[(Double, Double)]
+  ): Option[Double] = {
     if (els.nonEmpty) {
       val length = els.size
 

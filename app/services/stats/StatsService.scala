@@ -184,10 +184,15 @@ trait StatsService extends CalculatorExecutors {
     useSampleStd: Boolean
   ): Traversable[Seq[Option[Double]]]
 
-  def standardize(
+  def standardizeSimple(
     source: Source[Seq[Option[Double]], _],
     useSampleStd: Boolean
   ): Future[Traversable[Seq[Option[Double]]]]
+
+  def standardize[T](
+    source: Source[(T, Seq[Option[Double]]), _],
+    useSampleStd: Boolean
+  ): Future[Traversable[(T, Seq[Option[Double]])]]
 
   ////////////////////////
   // Independence Tests //
@@ -1056,7 +1061,7 @@ class StatsServiceImpl extends StatsService with OneWayAnovaHelper {
     StandardizationCalc.fun(meansAndStds(basicStats, useSampleStd))(inputs)
   }
 
-  def standardize(
+  def standardizeSimple(
     source: Source[Seq[Option[Double]], _],
     useSampleStd: Boolean
   ): Future[Traversable[Seq[Option[Double]]]] =
@@ -1066,6 +1071,38 @@ class StatsServiceImpl extends StatsService with OneWayAnovaHelper {
       result <- StandardizationCalc.runFlow(meansAndStds(basicStats, useSampleStd), ())(source)
     } yield
       result
+
+  def standardize[T](
+    source: Source[(T, Seq[Option[Double]]), _],
+    useSampleStd: Boolean
+  ): Future[Traversable[(T, Seq[Option[Double]])]] =
+    for {
+      basicStats <- MultiBasicStatsCalc.runFlow_(source.map(_._2))
+
+      results <- {
+        val resultFlow = StandardizationCalc.nonSeqFlow(meansAndStds(basicStats, useSampleStd))
+        val identityFlow = Flow[T]
+
+        val mergedFlow = AkkaStreamUtil.applyTupleFlows(identityFlow, resultFlow)
+
+        source.via(mergedFlow).runWith(Sink.seq)
+      }
+    } yield
+      results
+
+//  def standardizeX(
+//    source: Source[JsObject, _],
+//    fields: Seq[Field],
+//    useSampleStd: Boolean
+//  ): Future[Traversable[Seq[Option[Double]]]] =
+//    for {
+//      basicStats <- multiBasicStatsExec.execJsonStreamed_(fields)(source)
+//
+//      standardizationOptions = meansAndStds(basicStats, useSampleStd)
+//
+//      result <- standardizationExec.execJsonStreamed(standardizationOptions, (), fields)(source)
+//    } yield
+//      result
 
   private def meansAndStds(
     basicStats: Seq[Option[BasicStatsResult]],

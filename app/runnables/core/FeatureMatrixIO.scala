@@ -23,8 +23,9 @@ object FeatureMatrixIO {
     matrix: Traversable[Seq[T]],
     fieldNames: Seq[String],
     fileName: String,
-    asString: T => String
-  ) = save[T](matrix, fieldNames, fieldNames, "featureName",  fileName, asString)
+    asString: T => String,
+    delimiter: String = ","
+  ) = save[T](matrix, fieldNames, fieldNames, "featureName",  fileName, asString, delimiter)
 
   def save[T](
     matrix: Traversable[Seq[T]],
@@ -32,17 +33,18 @@ object FeatureMatrixIO {
     columnNames: Seq[String],
     idColumnName: String,
     fileName: String,
-    asString: T => String
+    asString: T => String,
+    delimiter: String = ","
   ): Unit = {
     val fixedColumnNames = columnNames.map(_.replaceAllLiterally("u002e", "."))
     val fixedRowNames = rowNames.map(_.replaceAllLiterally("u002e", "."))
 
-    val header = idColumnName + "," + fixedColumnNames.mkString(",") + "\n"
+    val header = idColumnName + delimiter + fixedColumnNames.mkString(delimiter) + "\n"
     val headerBytes = header.getBytes(StandardCharsets.UTF_8)
 
     val rowBytesStream = (matrix.toStream, fixedRowNames).zipped.toStream.map { case (row, name) =>
-      val rowValues = row.map(asString).mkString(",")
-      val rowContent = name + "," + rowValues + "\n"
+      val rowValues = row.map(asString).mkString(delimiter)
+      val rowContent = name + delimiter + rowValues + "\n"
       rowContent.getBytes(StandardCharsets.UTF_8)
     }
 
@@ -55,15 +57,16 @@ object FeatureMatrixIO {
     matrix: Traversable[Seq[T]],
     columnNames: Seq[String],
     fileName: String,
-    asString: T => String
+    asString: T => String,
+    delimiter: String = ","
   ): Unit = {
     val fixedColumnNames = columnNames.map(_.replaceAllLiterally("u002e", "."))
 
-    val header = fixedColumnNames.mkString(",") + "\n"
+    val header = fixedColumnNames.mkString(delimiter) + "\n"
     val headerBytes = header.getBytes(StandardCharsets.UTF_8)
 
     val rowBytesStream = matrix.toStream.map {row =>
-      val rowValues = row.map(asString).mkString(",")
+      val rowValues = row.map(asString).mkString(delimiter)
       val rowContent = rowValues + "\n"
       rowContent.getBytes(StandardCharsets.UTF_8)
     }
@@ -75,46 +78,55 @@ object FeatureMatrixIO {
 
   def load(
     fileName: String,
-    skipFirstColumnsOption: Option[Int]
+    skipFirstColumnsOption: Option[Int] = None,
+    delimiter: String = ","
   ): Future[(Source[Seq[Double], _], Seq[String])] =
     for {
-      (header, contentSource) <- createHeaderAndContentFileSource(fileName)
+      (arraySource, fieldNames) <- loadArray(fileName, skipFirstColumnsOption, delimiter)
     } yield {
-      val skipFirstColumns = skipFirstColumnsOption.getOrElse(0)
-      val fieldNames = header.split(",", -1).toSeq.drop(skipFirstColumns).map(_.trim)
-
-      val source = contentSource.map { line =>
-        line.split(",", -1).toSeq.drop(skipFirstColumns).map(_.trim.toDouble)
-      }
+      val source = arraySource.map(_.toSeq)
       (source, fieldNames)
     }
 
   def loadArray(
     fileName: String,
-    skipFirstColumnsOption: Option[Int]
+    skipFirstColumnsOption: Option[Int],
+    delimiter: String = ","
   ): Future[(Source[Array[Double], _], Seq[String])] =
     for {
       (header, contentSource) <- createHeaderAndContentFileSource(fileName)
     } yield {
       val skipFirstColumns = skipFirstColumnsOption.getOrElse(0)
-      val fieldNames = header.split(",", -1).toSeq.drop(skipFirstColumns).map(_.trim)
+      val fieldNames = header.split(delimiter, -1).toSeq.drop(skipFirstColumns).map(_.trim)
 
       val source = contentSource.map { line =>
-        line.split(",", -1).drop(skipFirstColumns).map(_.trim.toDouble)
+        line.split(delimiter, -1).drop(skipFirstColumns).map(_.trim.toDouble)
       }
       (source, fieldNames)
     }
 
+  def loadWithFirstIdColumn(
+    fileName: String,
+    delimiter: String = ","
+  ): Future[(Source[(String, Seq[Double]), _], Seq[String])] =
+    for {
+      (arraySource, fieldNames) <- loadArrayWithFirstIdColumn(fileName, delimiter)
+    } yield {
+      val source = arraySource.map { case (id, array) =>  (id, array.toSeq) }
+      (source, fieldNames)
+    }
+
   def loadArrayWithFirstIdColumn(
-    fileName: String
+    fileName: String,
+    delimiter: String = ","
   ): Future[(Source[(String, Array[Double]), _], Seq[String])] =
     for {
       (header, contentSource) <- createHeaderAndContentFileSource(fileName)
     } yield {
-      val fieldNames = header.split(",", -1).map(_.trim)
+      val fieldNames = header.split(delimiter, -1).map(_.trim)
 
       val source = contentSource.map { line =>
-        val parts = line.split(",", -1)
+        val parts = line.split(delimiter, -1)
         (parts(0).trim, parts.tail.map(_.trim.toDouble))
       }
       (source, fieldNames)

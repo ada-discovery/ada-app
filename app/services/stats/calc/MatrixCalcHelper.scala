@@ -1,7 +1,5 @@
 package services.stats.calc
 
-import services.stats.calc.AllDefinedPearsonCorrelationCalc.calcGroupSizes
-
 trait MatrixCalcHelper {
 
   def calcGroupSizes(n: Int, parallelism: Option[Int]) =

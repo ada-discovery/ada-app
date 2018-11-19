@@ -18,7 +18,10 @@ object StandardizationCalc extends Calculator[StandardizationCalcTypePack] {
   override def fun(options: OPT) = _.map(standardizeRow(options))
 
   override def flow(options: OPT) =
-    Flow[IN].map(standardizeRow(options)).via(seqFlow)
+    nonSeqFlow(options).via(seqFlow)
+
+  def nonSeqFlow(options: OPT) =
+    Flow[IN].map(standardizeRow(options))
 
   private def standardizeRow(
     options: OPT)(

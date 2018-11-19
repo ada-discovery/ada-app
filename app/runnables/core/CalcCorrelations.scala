@@ -69,7 +69,9 @@ class CalcCorrelations @Inject()(
 
       val correlationsToExport = if (correlations.nonEmpty) correlations else streamedCorrelations
       input.exportFileName.map { exportFileName =>
+
         logger.info(s"Exporting the calculated correlations to $exportFileName.")
+
         FeatureMatrixIO.saveSquare(
           correlationsToExport,
           sortedFields.map(_.name),

@@ -6,6 +6,7 @@ import akka.stream.scaladsl.Sink
 import com.banda.core.plotter.Plotter
 import com.google.inject.Inject
 import models.AdaException
+import org.apache.commons.lang3.StringEscapeUtils
 import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
@@ -27,11 +28,14 @@ class CalcTSNEProjectionFromFile @Inject()(
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
+  private val defaultDelimiter = ","
 
   def runAsFuture(input: CalcTSNEProjectionFromFileSpec) = {
+    val delimiter = StringEscapeUtils.unescapeJava(input.delimiter.getOrElse(defaultDelimiter))
+
     for {
       // create a double-value file source and retrieve the field names
-      (source, fieldNames) <- FeatureMatrixIO.loadArrayWithFirstIdColumn(input.inputFileName)
+      (source, fieldNames) <- FeatureMatrixIO.loadArrayWithFirstIdColumn(input.inputFileName, delimiter)
 
       // fully load everything from the source
       idInputs <- source.runWith(Sink.seq)
@@ -74,7 +78,8 @@ class CalcTSNEProjectionFromFile @Inject()(
           input.isColumnBased)(
           setting,
           exportFileName + ".csv",
-          plotExportFileName
+          plotExportFileName,
+          delimiter
         )
       }
     }
@@ -88,7 +93,8 @@ class CalcTSNEProjectionFromFile @Inject()(
     isColumnBased: Boolean)(
     setting: TSNESetting,
     exportFileName: String,
-    plotExportFileName: Option[String]
+    plotExportFileName: Option[String],
+    delimiter: String
   ) = {
     // run t-SNE
     val tsneProjections = performTSNE(inputs, setting)
@@ -118,7 +124,8 @@ class CalcTSNEProjectionFromFile @Inject()(
         for (i <- 1 to setting.dims) yield "x" + i,
         "featureName",
         exportFileName,
-        (value: Double) => value.toString
+        (value: Double) => value.toString,
+        delimiter
       )
     } else {
       if (tsneProjections.length != ids.size)
@@ -131,7 +138,8 @@ class CalcTSNEProjectionFromFile @Inject()(
         for (i <- 1 to setting.dims) yield "x" + i,
         fieldNames.head,
         exportFileName,
-        (value: Double) => value.toString
+        (value: Double) => value.toString,
+        delimiter
       )
     }
   }
@@ -141,6 +149,7 @@ class CalcTSNEProjectionFromFile @Inject()(
 
 case class CalcTSNEProjectionFromFileSpec(
   inputFileName: String,
+  delimiter: Option[String],
   dims: Int,
   iterations: Seq[Int],
   perplexities: Seq[Double],

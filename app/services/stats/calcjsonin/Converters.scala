@@ -89,6 +89,10 @@ class AllDefinedPearsonCorrelationConverter extends AllDefinedSeqDoubleConverter
   override def specificUseClass = Some(AllDefinedPearsonCorrelationCalc.getClass)
 }
 
+class MatthewsBinaryClassCorrelationConverter extends SeqBooleanConverter {
+  override def specificUseClass = Some(MatthewsBinaryClassCorrelationCalc.getClass)
+}
+
 class EuclideanDistanceCalcConverter extends SeqDoubleConverter {
   override def specificUseClass = Some(EuclideanDistanceCalc.getClass)
 }
@@ -237,6 +241,14 @@ private[calcjsonin] abstract class GroupSeqDoubleConverter[G: TypeTag] extends J
   }
 
   override def inputType = typeOf[(Option[G], Seq[Option[Double]])]
+}
+
+private[calcjsonin] abstract class SeqBooleanConverter extends JsonInputConverter[Seq[Option[Boolean]]] {
+
+  override def apply(fields: Seq[Field]) =
+    jsonToBooleans(fields)
+
+  override def inputType = typeOf[Seq[Option[Boolean]]]
 }
 
 private[calcjsonin] abstract class GroupSeqConverter[G: TypeTag, T: TypeTag] extends JsonInputConverter[(Option[G], Seq[Option[T]])] {

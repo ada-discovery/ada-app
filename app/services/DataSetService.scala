@@ -36,6 +36,8 @@ import _root_.util.FieldUtil.{InfixFieldOps, JsonFieldOps}
 import scala.collection.Set
 import reactivemongo.play.json.BSONFormats.BSONObjectIDFormat
 import services.ml.{RCPredictionService, RCPredictionStaticHelper}
+import services.stats.StatsService
+import services.stats.calc.{BasicStatsResult, MultiBasicStatsCalc}
 
 import scala.util.Random
 
@@ -251,6 +253,7 @@ class DataSetServiceImpl @Inject()(
     translationRepo: TranslationRepo,
     sparkApp: SparkApp,
     messageRepo: MessageRepo,
+    statsService: StatsService,
     configuration: Configuration
   ) extends DataSetService {
 
@@ -1867,6 +1870,25 @@ class DataSetServiceImpl @Inject()(
     } yield
       ()
   }
+
+//  def standardizeAllNumericFields(
+//    sourceDataSetId: String,
+//    resultDataSetSpec: DerivedDataSetSpec,
+//    streamSpec: StreamSpec
+//  ): Future[Unit] = {
+//    val sourceDsa = dsaf(sourceDataSetId).get
+//
+//    for {
+//      // get all the numeric fields
+//      numericFields <- sourceDsa.fieldRepo.find(Seq("fieldType" #-> Seq(FieldTypeId.Integer, FieldTypeId.Double, FieldTypeId.Date)))
+//
+//      // input data stream
+//      inputStream <- sourceDsa.dataSetRepo.findAsStream(projection = numericFields.map(_.name))
+//
+////      _ <- saveDerivedDataSet(sourceDsa, spec.resultDataSetSpec, inputStream, fieldsToKeep.toSeq, spec.streamSpec, true)
+//    } yield
+//      ()
+//  }
 
   override def dropFields(
     spec: DropFieldsSpec

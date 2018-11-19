@@ -100,6 +100,11 @@ trait CalculatorExecutors {
   def multiBasicStatsSeqExec =
     withSeq(MultiBasicStatsCalc)
 
+  // Standardization
+
+  def standardizationExec =
+    withSeq(StandardizationCalc)
+
   // Tuples
 
   def tupleExec[A, B](
@@ -201,6 +206,11 @@ trait CalculatorExecutors {
 
   def pearsonCorrelationAllDefinedExec =
     withSeq(AllDefinedPearsonCorrelationCalc)
+
+  // Matthews (binary class) correlation
+
+  def matthewsBinaryClassCorrelationExec =
+    withSeq(MatthewsBinaryClassCorrelationCalc)
 
   // Euclidean distance
 

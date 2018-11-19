@@ -147,6 +147,15 @@ object JsonFieldUtil {
     jsonToArrayDefinedAux(valueGets)
   }
 
+  def jsonToBooleans(
+    fields: Seq[Field]
+  )(
+    implicit ftf: FieldTypeFactory
+  ): JsObject => Seq[Option[Boolean]] = {
+    val valueGets: Seq[JsObject => Option[Boolean]] = booleanGets(fields)
+    jsonToSeqAux(valueGets)
+  }
+
   def jsonToDisplayString[T](
     field: Field
   )(
@@ -227,22 +236,15 @@ object JsonFieldUtil {
     val fieldType = ftf(spec)
     //      val fieldType = specFieldTypeMap.getOrElseUpdate(spec, ftf(spec))
 
-    // helper function to create a getter for array head value
-    def arrayHeadValueGet[T] = {
-      val arrayFieldType = fieldType.asValueOf[Array[Option[T]]]
-      valueGet(arrayFieldType, field.name).andThen(
-        _.flatMap(_.headOption).flatten
-      )
-    }
-
     // helper function to create a getter for a (scalar) value
     def scalarValueGet[T] = valueGet(fieldType.asValueOf[T], field.name)
+    def arrayValueGet[T] = arrayHeadValueGet(fieldType.asValueOf[T], field.name)
 
     if (spec.isArray) {
       field.fieldType match {
-        case FieldTypeId.Double => arrayHeadValueGet[Double]
-        case FieldTypeId.Integer => arrayHeadValueGet[Long].andThen(_.map(_.toDouble))
-        case FieldTypeId.Date => arrayHeadValueGet[ju.Date].andThen(_.map(_.getTime.toDouble))
+        case FieldTypeId.Double => arrayValueGet[Double]
+        case FieldTypeId.Integer => arrayValueGet[Long].andThen(_.map(_.toDouble))
+        case FieldTypeId.Date => arrayValueGet[ju.Date].andThen(_.map(_.getTime.toDouble))
         case _ => emptyDoubleValue
       }
     } else {
@@ -267,6 +269,38 @@ object JsonFieldUtil {
       case _ => emptyDoubleValue
     }
 
+  private def booleanGets(
+    fields: Seq[Field])(
+    implicit ftf: FieldTypeFactory
+  ):  Seq[JsObject => Option[Boolean]] = {
+    val emptyValue = {_: JsObject => None}
+
+    fields.map { field =>
+      booleanScalarGet(field, emptyValue)
+    }
+  }
+
+  private def booleanScalarGet(
+    field: Field,
+    emptyBooleanValue: JsObject => Option[Boolean] = {_: JsObject => None})(
+    implicit ftf: FieldTypeFactory
+  ):  JsObject => Option[Boolean] = {
+    val spec = field.fieldTypeSpec
+    val fieldType = ftf(spec)
+
+    if (spec.isArray) {
+      field.fieldType match {
+        case FieldTypeId.Boolean => arrayHeadValueGet(fieldType.asValueOf[Boolean], field.name)
+        case _ => emptyBooleanValue
+      }
+    } else {
+      field.fieldType match {
+        case FieldTypeId.Boolean => valueGet(fieldType.asValueOf[Boolean], field.name)
+        case _ => emptyBooleanValue
+      }
+    }
+  }
+
   private def valueGet[T](fieldType: FieldType[T], fieldName: String) =
     (jsObject: JsObject) =>
       fieldType.jsonToValue(jsObject \ fieldName)
@@ -276,6 +310,15 @@ object JsonFieldUtil {
       fieldType.jsonToValue(jsObject \ fieldName).getOrElse(
         throw new AdaConversionException(s"All values for the field ${fieldName} are expected to be defined but got None for JSON:\n ${Json.prettyPrint(jsObject)}.")
       )
+
+  // helper function to create a getter for array head value
+  def arrayHeadValueGet[T](fieldType: FieldType[T], fieldName: String) = {
+    val arrayFieldType = fieldType.asValueOf[Array[Option[T]]]
+
+    valueGet(arrayFieldType, fieldName).andThen(
+      _.flatMap(_.headOption).flatten
+    )
+  }
 
   private def displayStringGet[T](fieldType: FieldType[T], fieldName: String) = {
     jsObject: JsObject =>

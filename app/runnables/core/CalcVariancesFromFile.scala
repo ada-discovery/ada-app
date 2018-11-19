@@ -1,45 +1,48 @@
 package runnables.core
 
-import javax.inject.Inject
-
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputFutureRunnable
-import services.stats.{CalculatorExecutors, StatsService}
+import services.stats.CalculatorExecutors
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.runtime.universe.typeOf
+import services.stats.CalculatorHelper._
 
-class CalcEuclideanDistancesFromFile extends InputFutureRunnable[CalcEuclideanDistancesFromFileSpec] with CalculatorExecutors {
+class CalcVariancesFromFile extends InputFutureRunnable[CalcVariancesFromFileSpec] with CalculatorExecutors {
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
   private val defaultDelimiter = ","
 
-  override def runAsFuture(input: CalcEuclideanDistancesFromFileSpec) = {
+  override def runAsFuture(input: CalcVariancesFromFileSpec) = {
     val delimiter = StringEscapeUtils.unescapeJava(input.delimiter.getOrElse(defaultDelimiter))
 
     for {
       // create a double-value file source and retrieve the field names
       (source, fieldNames) <- FeatureMatrixIO.load(input.inputFileName, input.skipFirstColumns, delimiter)
 
-      // calc Euclidean distances
-      distances <- euclideanDistanceAllDefinedExec.execStreamed(input.streamParallelism, input.streamParallelism)(source)
+      optionalSource = source.map(_.map(Some(_)))
+
+      // calc basic stats
+      basicStats <- multiBasicStatsSeqExec.execStreamed_(optionalSource)
     } yield
-      FeatureMatrixIO.saveSquare(
-        distances,
+      FeatureMatrixIO.save(
+        basicStats.map(stats => Seq(stats.map(_.variance))),
         fieldNames,
+        Seq("variance"),
+        "fieldName",
         input.exportFileName,
-        (value: Double) => value.toString,
+        (value: Option[Double]) => value.map(_.toString).getOrElse(""),
         delimiter
       )
   }
 
-  override def inputType = typeOf[CalcEuclideanDistancesFromFileSpec]
+  override def inputType = typeOf[CalcVariancesFromFileSpec]
 }
 
-case class CalcEuclideanDistancesFromFileSpec(
+case class CalcVariancesFromFileSpec(
   inputFileName: String,
   delimiter: Option[String],
   skipFirstColumns: Option[Int],

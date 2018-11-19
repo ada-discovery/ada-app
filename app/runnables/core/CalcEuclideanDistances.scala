@@ -73,7 +73,9 @@ class CalcEuclideanDistances @Inject()(
 
       val euclideanDistancesToExport = if (euclideanDistances.nonEmpty) euclideanDistances else streamedEuclideanDistances
       input.exportFileName.map { exportFileName =>
+
         logger.info(s"Exporting the calculated Euclidean distances to $exportFileName.")
+
         FeatureMatrixIO.saveSquare(
           euclideanDistancesToExport,
           sortedFields.map(_.name),
