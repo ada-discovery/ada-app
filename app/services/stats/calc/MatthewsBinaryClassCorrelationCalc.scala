@@ -143,10 +143,10 @@ object MatthewsBinaryClassCorrelationCalc extends Calculator[MatthewsBinaryClass
 }
 
 case class ClassMatchCounts(
-  tp: Int = 0,
-  tn: Int = 0,
-  fp: Int = 0,
-  fn: Int = 0
+  tp: Long = 0,
+  tn: Long = 0,
+  fp: Long = 0,
+  fn: Long = 0
 ) {
   def incTP = copy(tp = tp + 1)
   def incTN = copy(tn = tn + 1)

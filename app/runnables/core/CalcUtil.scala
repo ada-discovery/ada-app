@@ -1,7 +1,5 @@
 package runnables.core
 
-import java.awt.Dimension
-import java.io.{File, IOException}
 import java.{util => ju}
 
 import _root_.util.seqFutures
@@ -16,24 +14,23 @@ import scala.concurrent.Future
 
 object CalcUtil {
 
+  private val numericCriterion = "fieldType" #-> Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)
+
   def numericFields(
     fieldRepo: FieldRepo)(
-    featuresNum: Option[Int],
-    allFeaturesExcept: Seq[String]
-  ): Future[Traversable[Field]] = {
-    if (featuresNum.isDefined)
-      fieldRepo.find(
-        Seq("fieldType" #-> Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date)),
-        limit = Some(featuresNum.get)
-      )
-    else
-      fieldRepo.find(
-        Seq(
-          "fieldType" #-> Seq(FieldTypeId.Double, FieldTypeId.Integer, FieldTypeId.Date),
-          FieldIdentity.name #!-> allFeaturesExcept
-        )
-      )
-  }
+    fieldsNum: Option[Int] = None,
+    fieldNamesToExclude: Seq[String] = Nil
+  ): Future[Traversable[Field]] =
+    fieldsNum.map( featuresNum =>
+      fieldRepo.find(Seq(numericCriterion), limit = Some(featuresNum))
+    ).getOrElse {
+      val exclusionCriterion = fieldNamesToExclude match {
+        case Nil => None
+        case _ => Some(FieldIdentity.name #!-> fieldNamesToExclude)
+      }
+
+      fieldRepo.find(Seq(Some(numericCriterion), exclusionCriterion).flatten)
+    }
 
   object repeatWithTime {
 
