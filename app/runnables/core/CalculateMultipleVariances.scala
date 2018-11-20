@@ -12,7 +12,7 @@ import play.api.Logger
 import org.incal.core.InputFutureRunnable
 import services.stats.{CalculatorExecutors, StatsService}
 import services.stats.CalculatorHelper._
-import util.writeByteArrayStream
+import util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -36,9 +36,9 @@ class CalculateMultipleVariances @Inject()(
       val unescapedDelimiter = StringEscapeUtils.unescapeJava(input.exportDelimiter)
 
       val header = Seq("targetFieldName", "variance").mkString(unescapedDelimiter)
-      val outputStream = Stream((Seq(header) ++ lines).mkString(eol).getBytes(StandardCharsets.UTF_8))
+      val output = (Seq(header) ++ lines).mkString(eol)
 
-      writeByteArrayStream(outputStream, new java.io.File(input.exportFileName))
+      writeStringAsStream(output, new java.io.File(input.exportFileName))
     }
 
   private def calcVariances(

@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.google.inject.Inject
-import models.FieldTypeId
+import models.{AdaException, FieldTypeId}
 import org.apache.commons.lang3.StringEscapeUtils
 import org.incal.core.InputFutureRunnable
 import persistence.dataset.DataSetAccessorFactory
@@ -15,10 +15,12 @@ import collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
 import runnables.core.CalcUtil._
 import services.stats.CalculatorExecutors
 import org.incal.core.dataaccess.Criterion._
-import util.writeByteArrayStream
+import play.api.libs.json.Json
+import util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class CalcMCCBasedPositions @Inject()(
     dsaf: DataSetAccessorFactory
@@ -38,16 +40,32 @@ class CalcMCCBasedPositions @Inject()(
   private val header = Seq("Cell", "Position", "MCC")
   private val eol = "\n"
 
+  private implicit val positionInfoFormat = Json.format[PositionInfo]
+  private implicit val goldStandardCellPositionInfoFormat = Json.format[GoldStandardCellPositionInfo]
+
   override def runAsFuture(input: CalcMCCBasedPositionsSpec) = {
     val delimiter = StringEscapeUtils.unescapeJava(input.delimiter.getOrElse(defaultDelimiter))
-    val dsa = dsaf(input.dataSetId).get
+    val cellPositionGeneDsa = dsaf(input.cellPositionGeneDataSetId).get
+    val goldStandardPositionDsa = dsaf(input.goldStandardPositionDataSetId).get
+    val spatialPositionDsa = dsaf(input.spatialPositionDataSetId).get
+
+    val geneCriteria = if (input.geneSelection.nonEmpty) Seq("Gene" #-> input.geneSelection) else Nil
 
     for {
       // get the boolean fields
-      booleanFields <- dsa.fieldRepo.find(Seq("fieldType" #== FieldTypeId.Boolean))
+      booleanFields <- cellPositionGeneDsa.fieldRepo.find(Seq("fieldType" #== FieldTypeId.Boolean))
 
       // sorted fields
       fieldsSeq = booleanFields.toSeq
+
+      // position infos
+      positionInfos <- spatialPositionDsa.dataSetRepo.find().map(_.map(_.as[PositionInfo]))
+
+      // gold standard cell position infos
+      goldStandardCellPositionInfos <- goldStandardPositionDsa.dataSetRepo.find().map(_.map(_.as[GoldStandardCellPositionInfo]))
+
+      // get all the referenced gene names
+      foundGenes <- cellPositionGeneDsa.dataSetRepo.find(criteria = geneCriteria, projection = Seq("Gene")).map(_.map(json => (json \ "Gene").as[String]))
 
       // calculate Matthews (binary class) correlations
       corrs <- matthewsBinaryClassCorrelationExec.execJsonRepoStreamed(
@@ -55,11 +73,21 @@ class CalcMCCBasedPositions @Inject()(
         Some(input.parallelism),
         true,
         fieldsSeq)(
-        dsa.dataSetRepo, Nil
+        cellPositionGeneDsa.dataSetRepo,
+        geneCriteria
       )
 
     } yield {
       logger.info("MCC correlations calculated.")
+
+      if (input.geneSelection.nonEmpty)
+        if (foundGenes.size < input.geneSelection.size) {
+          val notFoundGenes = input.geneSelection.toSet.--(foundGenes)
+          throw new AdaException(s"Gene(s) '${notFoundGenes.mkString(",")}' not found.")
+        }
+
+      val positionMap = positionInfos.map(info => (info.id, info)).toMap
+      val goldStandardCellPositionMap = goldStandardCellPositionInfos.map(info => (info.Cell, info)).toMap
 
       val fieldNames = fieldsSeq.map(_.name)
 
@@ -92,25 +120,67 @@ class CalcMCCBasedPositions @Inject()(
         cellIndeces.-=(cellIndex)
         posIndeces.-=(bestPosIndex)
 
-        val cellName = indexFieldNameMap.get(cellIndex).get
-        val bestPosName = indexFieldNameMap.get(bestPosIndex).get
+        val cellName = indexFieldNameMap.get(cellIndex).get.substring(cellPrefixSize)
+        val bestPosId = indexFieldNameMap.get(bestPosIndex).get.substring(positionPrefixSize)
 
-        (cellName, bestPosName, maxCorr)
+        val cellPosition = positionMap.get(bestPosId.toInt).get
+        val idealCellPosition = goldStandardCellPositionMap.get(cellName).get
+
+        val dist = euclideanDistance(cellPosition, idealCellPosition)
+
+        (cellName, bestPosId, maxCorr, dist)
       }
 
-      val lines = cellPositions.sortBy(_._1).map { case (cellName, bestPosName, corr) => Seq(cellName.substring(cellPrefixSize), bestPosName.substring(positionPrefixSize), corr).mkString(delimiter) }
+      val meanDistance = cellPositions.map(_._4).sum / cellNum
 
-      val outputStream = Stream((Seq(header.mkString(delimiter)) ++ lines).mkString(eol).getBytes(StandardCharsets.UTF_8))
-      writeByteArrayStream(outputStream, new java.io.File(input.exportFileName))
+      logger.info(s"MCC-based cell-location matching finished with a mean distance of $meanDistance.")
+
+      // export the gene locations
+      val lines = cellPositions.sortBy(_._1).map { case (cellName, bestPosId, corr, _) => Seq(cellName, bestPosId, corr).mkString(delimiter) }
+      val content = (Seq(header.mkString(delimiter)) ++ lines).mkString(eol)
+      writeStringAsStream(content, new java.io.File(input.exportFileName))
+
+      // export the meta infos
+      val metaInfoContent = Seq("Genes: " + foundGenes.mkString(", "), "Distance: " + meanDistance).mkString(eol)
+      writeStringAsStream(metaInfoContent, new java.io.File(input.exportFileName + "_meta"))
     }
+  }
+
+  private def euclideanDistance(
+    position: PositionInfo,
+    idealPosition: GoldStandardCellPositionInfo
+  ) = {
+    val xDiff = idealPosition.xcoord - position.xcoord
+    val yDiff = idealPosition.ycoord - position.ycoord
+    val zDiff = idealPosition.zcoord - position.zcoord
+
+    Math.sqrt(xDiff * xDiff + yDiff * yDiff + zDiff * zDiff)
   }
 
   override def inputType = typeOf[CalcMCCBasedPositionsSpec]
 }
 
 case class CalcMCCBasedPositionsSpec(
-  dataSetId: String,
+  cellPositionGeneDataSetId: String,
+  goldStandardPositionDataSetId: String,
+  spatialPositionDataSetId: String,
+  geneSelection: Seq[String],
   parallelism: Int,
   delimiter: Option[String],
   exportFileName: String
+)
+
+case class PositionInfo(
+  id: Int,
+  xcoord: Double,
+  ycoord: Double,
+  zcoord: Double
+)
+
+case class GoldStandardCellPositionInfo(
+  Cell: String,
+  Position: Int,
+  xcoord: Double,
+  ycoord: Double,
+  zcoord: Double
 )

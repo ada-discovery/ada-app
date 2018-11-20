@@ -10,7 +10,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
-import util.writeByteArrayStream
+import util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -55,8 +55,7 @@ class ExportDataSetsForSpaceAsCsvs @Inject() (
       val unescapedEOL = StringEscapeUtils.unescapeJava(eol)
       val csvString = jsonsToCsv(jsons, unescapedDelimiter, unescapedEOL, fieldNames)
 
-      val outputStream = Stream(csvString.getBytes(StandardCharsets.UTF_8))
-      writeByteArrayStream(outputStream, new java.io.File(exportFolder + "/" + dataSetId + ".csv"))
+      writeStringAsStream(csvString, new java.io.File(exportFolder + "/" + dataSetId + ".csv"))
     }
   }
 

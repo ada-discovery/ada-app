@@ -13,7 +13,7 @@ import reactivemongo.bson.BSONObjectID
 import org.incal.core.InputFutureRunnable
 import services.stats.StatsService
 import services.stats.calc.{ChiSquareResult, OneWayAnovaResult}
-import util.writeByteArrayStream
+import util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -45,8 +45,8 @@ class RunIndependenceTestForDataSpace @Inject()(
       )
     } yield {
       val header = headerColumnNames.mkString(unescapedDelimiter)
-      val outputStream = Stream((Seq(header) ++ outputs).mkString(eol).getBytes(StandardCharsets.UTF_8))
-      writeByteArrayStream(outputStream, new java.io.File(input.exportFileName))
+      val output = (Seq(header) ++ outputs).mkString(eol)
+      writeStringAsStream(output, new java.io.File(input.exportFileName))
     }
   }
 

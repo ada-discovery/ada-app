@@ -5,6 +5,7 @@ import java.nio.file.Paths
 import com.banda.core.plotter.Plotter
 import com.google.inject.Inject
 import models.ml.unsupervised.{BisectingKMeans, KMeans, UnsupervisedLearning}
+import org.apache.commons.lang3.StringEscapeUtils
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 import org.apache.hadoop.fs._
@@ -31,7 +32,7 @@ class CalcKMeansFromFile @Inject()(
         KMeans(None, k = input.k, maxIteration = input.maxIterations)
 
     val exportPlotFileName = if (input.exportPlot) Some(input.exportFileName + ".png") else None
-    calcKMeansAux(input.inputFileName, input.exportFileName, exportPlotFileName, model)
+    calcKMeansAux(input.inputFileName, input.delimiter, input.exportFileName, exportPlotFileName, model)
   }
 
   override def inputType = typeOf[CalcKMeansFromFileSpec]
@@ -52,15 +53,15 @@ class CalcKMeansFromFolder @Inject()(
     val modelPrefix = if (input.useBisecting) "bisKMeans" else "kMeans"
     val iterPart = input.maxIterations.map(iter => "_iter_" + iter).getOrElse("")
 
-    val inputFileNames = util.getListOfFiles(input.inputFolderName).map(_.getName).filter(_.endsWith(".csv"))
+    val inputFileNames = util.getListOfFiles(input.inputFolderName).map(_.getName).filter(_.endsWith(input.extension))
 
     inputFileNames.map { inputFileName =>
       logger.info(s"Executing k-means with k=${input.k} for the file '$inputFileName'.")
-      val exportFileBaseName = inputFileName.substring(0, inputFileName.size - 4) + s"-${modelPrefix}_${input.k}${iterPart}"
+      val exportFileBaseName = inputFileName.substring(0, inputFileName.size - (input.extension.size + 1)) + s"-${modelPrefix}_${input.k}${iterPart}"
       val exportFileName = input.exportFolderName + "/" + exportFileBaseName + ".csv"
       val exportPlotFileName = if (input.exportPlot) Some(input.exportFolderName + "/" + exportFileBaseName + ".png") else None
 
-      calcKMeansAux(input.inputFolderName + "/" + inputFileName, exportFileName, exportPlotFileName, model)
+      calcKMeansAux(input.inputFolderName + "/" + inputFileName, input.delimiter, exportFileName, exportPlotFileName, model)
     }
   }
 
@@ -72,6 +73,7 @@ case class CalcKMeansFromFileSpec(
   maxIterations: Option[Int],
   useBisecting: Boolean,
   inputFileName: String,
+  delimiter: Option[String],
   exportFileName: String,
   exportPlot: Boolean
 )
@@ -81,6 +83,8 @@ case class CalcKMeansFromFolderSpec(
   maxIterations: Option[Int],
   useBisecting: Boolean,
   inputFolderName: String,
+  extension: String,
+  delimiter: Option[String],
   exportFolderName: String,
   exportPlot: Boolean
 )
@@ -96,21 +100,25 @@ trait CalcKMeansHelper {
 
   private val clusterClassColumnName = "clazz"
   private val plotter = Plotter("svg")
+  private val defaultDelimiter = ","
 
   protected def calcKMeansAux(
     inputFileName: String,
+    delimiter: Option[String],
     exportFileName: String,
     exportPlotFileName: Option[String],
     model: UnsupervisedLearning
   ) = {
-    val df = session.read.format("csv").option("header", "true").option("inferSchema", "true").load(inputFileName)
+    val unescapedDelimiter = StringEscapeUtils.unescapeJava(delimiter.getOrElse(defaultDelimiter))
+
+    val df = session.read.format("csv").option("header", "true").option("delimiter", unescapedDelimiter).option("inferSchema", "true").load(inputFileName)
 
     val idColumnName = df.columns(0)
 
-    var idClusters = (0 to 3).foldLeft(Nil: Traversable[(String, Int)]) { case (idClusters, trail) =>
+    var idClusters = (0 to 3).foldLeft(Nil: Traversable[(String, Int)]) { case (idClusters, trial) =>
       if (idClusters.isEmpty || idClusters.forall(_._2 == 1)) {
-        val newModel = if (trail > 0) {
-          logger.error(s"A single cluster obtained! Repeating the clusterization (trail $trail).")
+        val newModel = if (trial > 0) {
+          logger.error(s"A single cluster obtained! Repeating the clustering (trial $trial).")
           setCurrentTimeAsSeed(model)
         } else
           model

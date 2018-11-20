@@ -11,7 +11,7 @@ import persistence.dataset.DataSetAccessorFactory
 import play.api.Logger
 import org.incal.core.InputFutureRunnable
 import services.stats.StatsService
-import util.writeByteArrayStream
+import util.writeStringAsStream
 
 import scala.reflect.runtime.universe.typeOf
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -33,9 +33,9 @@ class RunIndependenceTestForMultipleTargets @Inject()(
       val unescapedDelimiter = StringEscapeUtils.unescapeJava(input.exportDelimiter)
 
       val header = (Seq("targetFieldName") ++ input.inputFieldNames.sorted).mkString(unescapedDelimiter)
-      val outputStream = Stream((Seq(header) ++ outputs).mkString(eol).getBytes(StandardCharsets.UTF_8))
+      val output = (Seq(header) ++ outputs).mkString(eol)
 
-      writeByteArrayStream(outputStream, new java.io.File(input.exportFileName))
+      writeStringAsStream(output, new java.io.File(input.exportFileName))
     }
 
   private def runIndependenceTests(
