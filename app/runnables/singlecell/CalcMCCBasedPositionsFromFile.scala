@@ -46,13 +46,19 @@ class CalcMCCBasedPositionsFromFile @Inject()(
       // gold standard cell position infos
       goldStandardCellPositionInfos <- goldStandardPositionDsa.dataSetRepo.find().map(_.map(_.as[GoldStandardCellPositionInfo]))
 
-      // find cell positions
-      meanDistance <- matchCellPositions(
-        cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, input.geneSelection, input.delimiter, input.parallelism, input.exportFileName
-      )
-    } yield {
-      logger.info(s"MCC-based cell-location matching finished with a mean distance of $meanDistance.")
+      // find cell positions and return the mean distance
+      meanDistance <- if (input.finalMethod)
+          matchCellPositions2(
+            cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, input.geneSelection, input.delimiter,
+            input.parallelism, input.exportFileName, input.finalMethodPositionSelectionNum.getOrElse(10)
+          )
+        else
+          matchCellPositions(
+            cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, input.geneSelection, input.delimiter,
+            input.parallelism, input.exportFileName
+          )
 
+    } yield {
       // export the meta infos
       val metaInfoContent = Seq("Genes: " + input.geneSelection.mkString(", "), "Mean Distance: " + meanDistance).mkString(eol)
       writeStringAsStream(metaInfoContent, new java.io.File(input.exportFileName + "_meta"))
@@ -89,7 +95,8 @@ class CalcMCCBasedPositionsFromFolder @Inject()(
 
       // find cell positions for all cells in the folds
       results <- runForFolderAux(
-        cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, input.delimiter, input.parallelism, input.inputFolderName, input.extension, input.exportFolderName
+        cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, input.delimiter,
+        input.parallelism, input.inputFolderName, input.extension, input.exportFolderName, input.finalMethod, input.finalMethodPositionSelectionNum.getOrElse(10)
       )
     } yield {
       logger.info(s"${results.size} MCC-based cell-locations for the folder ${input.inputFolderName} finished.")
@@ -113,7 +120,9 @@ class CalcMCCBasedPositionsFromFolder @Inject()(
     parallelism: Int,
     inputFolderName: String,
     extension: String,
-    exportFolderName: String
+    exportFolderName: String,
+    finalMethod: Boolean,
+    finalMethodPositionSelectionNum: Int
   ): Future[Traversable[(Int, Double, String)]] = {
     val inputFileNames = util.getListOfFiles(inputFolderName).map(_.getName).filter(_.endsWith(extension))
     val delimiter = StringEscapeUtils.unescapeJava(delimiterOption.getOrElse(defaultDelimiter))
@@ -121,14 +130,21 @@ class CalcMCCBasedPositionsFromFolder @Inject()(
 
     util.seqFutures(inputFileNames) { inputFileName =>
       val selectedGenes = Source.fromFile(inputFolderName + "/" + inputFileName).mkString.split(delimiter, -1).toSeq
-      println(selectedGenes.mkString(","))
       val exportFileName = inputFileName.substring(0, inputFileName.size - (extension.size + 1)) + "_cell_positions.csv"
       val fullExportFileName = exportFolderName + "/" + exportFileName
 
-      matchCellPositions(
-        cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, selectedGenes, delimiterOption, parallelism, fullExportFileName
-      ).map { meanDistance =>
-        logger.info(s"MCC-based cell-location matching finished with a mean distance of $meanDistance.")
+      // find cell positions and return the mean distance
+      val distanceFuture =
+        if (finalMethod)
+          matchCellPositions2(
+            cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, selectedGenes, delimiterOption, parallelism, fullExportFileName, finalMethodPositionSelectionNum
+          )
+        else
+          matchCellPositions(
+            cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, selectedGenes, delimiterOption, parallelism, fullExportFileName
+          )
+
+      distanceFuture.map { meanDistance =>
         (selectedGenes.size, meanDistance, exportFileName)
       }
     }
@@ -219,7 +235,7 @@ trait CalcMCCBasedPositionsHelper extends CalculatorExecutors {
           (cellIndex, bestPosIndex, maxCorr)
         }
 
-        val (cellIndex, bestPosIndex, _) = cellMaxCorrs.maxBy(_._3)
+        val (cellIndex, bestPosIndex, corr) = cellMaxCorrs.maxBy(_._3)
 
         cellIndeces.-=(cellIndex)
         posIndeces.-=(bestPosIndex)
@@ -232,17 +248,119 @@ trait CalcMCCBasedPositionsHelper extends CalculatorExecutors {
 
         val dist = euclideanDistance(cellPosition, idealCellPosition)
 
-        (cellName, bestPosId, dist)
+        (cellName, bestPosId, dist, corr)
       }
 
       assert(cellPositions.size == cellNum, s"$cellNum cell positions expected but got ${cellPositions.size}.")
 
+      val meanDistance = cellPositions.map(_._3).sum / cellNum
+      val meanCorrelation = cellPositions.map(_._4).sum / cellNum
+
+      logger.info(s"MCC-based cell-location matching finished with a mean distance of $meanDistance and a mean MCC of $meanCorrelation.")
+
       // export the gene locations
-      val lines = cellPositions.toSeq.sortBy(_._1).map { case (cellName, bestPosId, _) => Seq(cellName, bestPosId).mkString(delimiter) }
-      val content = (Seq(foundGenes.mkString(delimiter)) ++ lines).mkString(eol)
+      val lines = cellPositions.toSeq.sortBy(_._1).map { case (cellName, bestPosId, _, _) => Seq(cellName, bestPosId).mkString(delimiter) }
+      val content = (Seq(foundGenes.toSeq.sorted.mkString(delimiter)) ++ lines).mkString(eol)
       writeStringAsStream(content, new java.io.File(exportFileName))
 
-      cellPositions.map(_._3).sum / cellNum
+      meanDistance
+    }
+  }
+
+  // return the mean distance
+  protected def matchCellPositions2(
+    cellPositionGeneDsa: DataSetAccessor,
+    positionInfos: Traversable[PositionInfo],
+    goldStandardCellPositionInfos: Traversable[GoldStandardCellPositionInfo],
+    fieldsSeq: Seq[Field],
+    selectedGenes: Seq[String],
+    delimiterOption: Option[String],
+    parallelism: Int,
+    exportFileName: String,
+    positionSelectionNum: Int
+  ): Future[Double] = {
+    val delimiter = StringEscapeUtils.unescapeJava(delimiterOption.getOrElse(defaultDelimiter))
+
+    val geneCriteria = if (selectedGenes.nonEmpty) Seq("Gene" #-> selectedGenes) else Nil
+
+    for {
+      // get all the referenced gene names
+      foundGenes <- cellPositionGeneDsa.dataSetRepo.find(criteria = geneCriteria, projection = Seq("Gene")).map(_.map(json => (json \ "Gene").as[String]))
+
+      // calculate Matthews (binary class) correlations
+      corrs <- matthewsBinaryClassCorrelationExec.execJsonRepoStreamed(
+        Some(parallelism),
+        Some(parallelism),
+        true,
+        fieldsSeq)(
+        cellPositionGeneDsa.dataSetRepo,
+        geneCriteria
+      )
+
+    } yield {
+      logger.info("MCC correlations calculated.")
+
+      if (selectedGenes.nonEmpty)
+        if (foundGenes.size < selectedGenes.size) {
+          val notFoundGenes = selectedGenes.toSet.--(foundGenes)
+          throw new AdaException(s"Gene(s) '${notFoundGenes.mkString(",")}' not found.")
+        }
+
+      val positionMap = positionInfos.map(info => (info.id, info)).toMap
+      val goldStandardCellPositionMap = goldStandardCellPositionInfos.map(info => (info.Cell, info)).toMap
+
+      val fieldNames = fieldsSeq.map(_.name)
+
+      val fieldNameIndeces = fieldNames.zipWithIndex
+      val indexFieldNameMap = fieldNameIndeces.map(_.swap).toMap
+
+      def filterIndecesByPrefix(prefix: String): Seq[Int] = {
+        fieldNameIndeces.filter { case (name, _) => name.startsWith(prefix) }.map(_._2)
+      }
+
+      val cellIndeces = filterIndecesByPrefix(cellPrefix)
+      val posIndeces = filterIndecesByPrefix(positionPrefix)
+
+      val cellNum = cellIndeces.size
+
+      logger.info(s"Finding locations for $cellNum cells.")
+
+      val cellPositions = cellIndeces.map { cellIndex =>
+        val cellName = indexFieldNameMap.get(cellIndex).get.substring(cellPrefixSize)
+        val cellCorrs = corrs(cellIndex)
+
+        val bestPositionInfos = posIndeces.map(posIndex => (cellCorrs(posIndex), posIndex)).collect { case (Some(corr), posIndex) =>
+          val posId = indexFieldNameMap.get(posIndex).get.substring(positionPrefixSize).toInt
+          (corr, posId)
+        }.sortBy(-_._1).take(positionSelectionNum)
+
+        val idealCellPosition = goldStandardCellPositionMap.get(cellName).get
+
+        val dists = bestPositionInfos.map { case (_, posId) =>
+          val position = positionMap.get(posId).get
+          euclideanDistance(position, idealCellPosition)
+        }
+
+        val bestCorrs = bestPositionInfos.map(_._1)
+        val bestPositions = bestPositionInfos.map(_._2)
+
+        (cellName, bestPositions, dists.sum / dists.size, bestCorrs.sum / bestCorrs.size)
+      }
+
+      assert(cellPositions.size == cellNum, s"$cellNum cell positions expected but got ${cellPositions.size}.")
+
+      val meanDistance = cellPositions.map(_._3).sum / cellNum
+      val meanCorrelation = cellPositions.map(_._4).sum / cellNum
+
+      logger.info(s"MCC-based cell-location matching finished with a mean distance of $meanDistance and a mean MCC of $meanCorrelation.")
+
+      // export the gene locations
+      val lines = cellPositions.sortBy(_._1).map { case (cellName, positions, _, _) => (Seq(cellName) ++ positions).mkString(delimiter) }
+
+      val content = (Seq(foundGenes.toSeq.sorted.mkString(delimiter)) ++ lines).mkString(eol)
+      writeStringAsStream(content, new java.io.File(exportFileName))
+
+      meanDistance
     }
   }
 
@@ -265,7 +383,9 @@ case class CalcMCCBasedPositionsFromFileSpec(
   geneSelection: Seq[String],
   delimiter: Option[String],
   exportFileName: String,
-  parallelism: Int
+  parallelism: Int,
+  finalMethod: Boolean,
+  finalMethodPositionSelectionNum: Option[Int]
 )
 
 case class CalcMCCBasedPositionsFromFolderSpec(
@@ -276,7 +396,9 @@ case class CalcMCCBasedPositionsFromFolderSpec(
   extension: String,
   delimiter: Option[String],
   exportFolderName: String,
-  parallelism: Int
+  parallelism: Int,
+  finalMethod: Boolean,
+  finalMethodPositionSelectionNum: Option[Int]
 )
 
 case class PositionInfo(
