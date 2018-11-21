@@ -18,10 +18,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.Source
 import scala.util.Random
 
+/**
+  * Runnable to select genes as the k-means closest centroids for a given file.
+  *
+  * @param dsaf
+  */
 class SelectGenesAsCentroidClosestFromFile @Inject()(
       dsaf: DataSetAccessorFactory
   ) extends InputFutureRunnable[SelectGenesAsCentroidClosestFromFileSpec]
-    with SelectGenesAsCentroidClosessHelper {
+    with SelectGenesAsCentroidClosestHelper {
 
   override def runAsFuture(input: SelectGenesAsCentroidClosestFromFileSpec) = {
     val cellPositionGeneDsa = dsaf(input.cellPositionGeneDataSetId).get
@@ -37,10 +42,16 @@ class SelectGenesAsCentroidClosestFromFile @Inject()(
   override def inputType = typeOf[SelectGenesAsCentroidClosestFromFileSpec]
 }
 
+
+/**
+  * Batch runnable to select genes as the k-means closest centroids for files in a given folder.
+  *
+  * @param dsaf
+  */
 class SelectGenesAsCentroidClosestFromFolder @Inject()(
     dsaf: DataSetAccessorFactory
   ) extends InputFutureRunnable[SelectGenesAsCentroidClosestFromFolderSpec]
-    with SelectGenesAsCentroidClosessHelper {
+    with SelectGenesAsCentroidClosestHelper {
 
   override def runAsFuture(input: SelectGenesAsCentroidClosestFromFolderSpec) = {
     val cellPositionGeneDsa = dsaf(input.cellPositionGeneDataSetId).get
@@ -65,15 +76,17 @@ class SelectGenesAsCentroidClosestFromFolder @Inject()(
   override def inputType = typeOf[SelectGenesAsCentroidClosestFromFolderSpec]
 }
 
-trait SelectGenesAsCentroidClosessHelper {
+
+/**
+  * Helper trait with actual centroid-based gene selection code (with and without cluster id shuffling).
+  */
+trait SelectGenesAsCentroidClosestHelper {
 
   private val logger = Logger
 
   private implicit val system = ActorSystem()
   private implicit val materializer = ActorMaterializer()
   private val defaultDelimiter = ","
-
-  private val eol = "\n"
 
   protected def selectGenes(
     targetGenes: Set[String],

@@ -1,0 +1,51 @@
+package runnables.singlecell
+
+import javax.inject.Inject
+
+import org.apache.commons.lang3.StringEscapeUtils
+import org.incal.core.InputFutureRunnable
+import persistence.dataset.DataSetAccessorFactory
+import util.writeStringAsStream
+
+import scala.concurrent.Future
+import scala.io.Source
+import scala.reflect.runtime.universe.typeOf
+
+class FilterTargetGeneVarianceFromFile @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureRunnable[FilterTargetGeneVarianceFromFileSpec] {
+
+  private val defaultDelimiter = ","
+  private val eol = "\n"
+
+  override def runAsFuture(
+    input: FilterTargetGeneVarianceFromFileSpec
+  ): Future[Unit] = {
+    val delimiter = StringEscapeUtils.unescapeJava(input.delimiter.getOrElse(defaultDelimiter))
+    val dsa = dsaf(input.targetGenesDataSetId).get
+
+    for {
+      genesSet <- dsa.dataSetRepo.find(projection = Seq("Gene")).map(_.map(json => (json \ "Gene").as[String]).toSet)
+    } yield {
+      val lines = Source.fromFile(input.varianceInputFileName).getLines()
+
+      val header = lines.next()
+
+      val newLines = lines.filter { line =>
+        val els = line.split(delimiter, -1).map(_.trim)
+        val geneName = els(0)
+        genesSet.contains(geneName)
+      }
+
+      val content = (Seq(header) ++ newLines).mkString(eol)
+      writeStringAsStream(content, new java.io.File(input.exportFileName))
+    }
+  }
+
+  override def inputType = typeOf[FilterTargetGeneVarianceFromFileSpec]
+}
+
+case class FilterTargetGeneVarianceFromFileSpec(
+  targetGenesDataSetId: String,
+  varianceInputFileName: String,
+  delimiter: Option[String],
+  exportFileName: String
+)

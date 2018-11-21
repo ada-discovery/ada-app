@@ -9,8 +9,7 @@ import org.incal.core.InputFutureRunnable
 import persistence.dataset.{DataSetAccessor, DataSetAccessorFactory}
 import play.api.Logger
 
-import collection.mutable.{ArrayBuffer, Map => MMap, Set => MSet}
-import runnables.core.CalcUtil._
+import collection.mutable.ArrayBuffer
 import services.stats.CalculatorExecutors
 import org.incal.core.dataaccess.Criterion._
 import play.api.libs.json.Json
@@ -21,6 +20,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.io.Source
 
+/**
+  * Runnable to calculate MCC-based cell positions for given genes (provided in a file)
+  *
+  * @param dsaf
+  */
 class CalcMCCBasedPositionsFromFile @Inject()(
     dsaf: DataSetAccessorFactory
   ) extends InputFutureRunnable[CalcMCCBasedPositionsFromFileSpec] with CalcMCCBasedPositionsHelper {
@@ -47,13 +51,13 @@ class CalcMCCBasedPositionsFromFile @Inject()(
       goldStandardCellPositionInfos <- goldStandardPositionDsa.dataSetRepo.find().map(_.map(_.as[GoldStandardCellPositionInfo]))
 
       // find cell positions and return the mean distance
-      meanDistance <- if (input.finalMethod)
-          matchCellPositions2(
+      meanDistance <- if (input.nonUniqueMethod)
+          matchCellPositionsNonUnique(
             cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, input.geneSelection, input.delimiter,
-            input.parallelism, input.exportFileName, input.finalMethodPositionSelectionNum.getOrElse(10)
+            input.parallelism, input.exportFileName, input.nonUniqueMethodPositionSelectionNum.getOrElse(10)
           )
         else
-          matchCellPositions(
+          matchCellPositionsUnique(
             cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, input.geneSelection, input.delimiter,
             input.parallelism, input.exportFileName
           )
@@ -68,6 +72,12 @@ class CalcMCCBasedPositionsFromFile @Inject()(
   override def inputType = typeOf[CalcMCCBasedPositionsFromFileSpec]
 }
 
+
+/**
+  * Batch runnable to calculate MCC-based cell positions for given genes (provided as files in a given folder)
+  *
+  * @param dsaf
+  */
 class CalcMCCBasedPositionsFromFolder @Inject()(
   dsaf: DataSetAccessorFactory
 ) extends InputFutureRunnable[CalcMCCBasedPositionsFromFolderSpec] with CalcMCCBasedPositionsHelper {
@@ -96,7 +106,7 @@ class CalcMCCBasedPositionsFromFolder @Inject()(
       // find cell positions for all cells in the folds
       results <- runForFolderAux(
         cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, input.delimiter,
-        input.parallelism, input.inputFolderName, input.extension, input.exportFolderName, input.finalMethod, input.finalMethodPositionSelectionNum.getOrElse(10)
+        input.parallelism, input.inputFolderName, input.extension, input.exportFolderName, input.nonUniqueMethod, input.nonUniqueMethodPositionSelectionNum.getOrElse(10)
       )
     } yield {
       logger.info(s"${results.size} MCC-based cell-locations for the folder ${input.inputFolderName} finished.")
@@ -136,11 +146,11 @@ class CalcMCCBasedPositionsFromFolder @Inject()(
       // find cell positions and return the mean distance
       val distanceFuture =
         if (finalMethod)
-          matchCellPositions2(
+          matchCellPositionsNonUnique(
             cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, selectedGenes, delimiterOption, parallelism, fullExportFileName, finalMethodPositionSelectionNum
           )
         else
-          matchCellPositions(
+          matchCellPositionsUnique(
             cellPositionGeneDsa, positionInfos, goldStandardCellPositionInfos, fieldsSeq, selectedGenes, delimiterOption, parallelism, fullExportFileName
           )
 
@@ -153,6 +163,10 @@ class CalcMCCBasedPositionsFromFolder @Inject()(
   override def inputType = typeOf[CalcMCCBasedPositionsFromFolderSpec]
 }
 
+
+/**
+  * Helper trait with two calculation methods: unique position and non-unique positions, both maximizing MCC
+  */
 trait CalcMCCBasedPositionsHelper extends CalculatorExecutors {
 
   protected val logger = Logger
@@ -168,8 +182,8 @@ trait CalcMCCBasedPositionsHelper extends CalculatorExecutors {
   protected val defaultDelimiter = ","
   protected val eol = "\n"
 
-  // return the mean distance
-  protected def matchCellPositions(
+  // returns the mean distance
+  protected def matchCellPositionsUnique(
     cellPositionGeneDsa: DataSetAccessor,
     positionInfos: Traversable[PositionInfo],
     goldStandardCellPositionInfos: Traversable[GoldStandardCellPositionInfo],
@@ -267,8 +281,8 @@ trait CalcMCCBasedPositionsHelper extends CalculatorExecutors {
     }
   }
 
-  // return the mean distance
-  protected def matchCellPositions2(
+  // returns the mean distance
+  protected def matchCellPositionsNonUnique(
     cellPositionGeneDsa: DataSetAccessor,
     positionInfos: Traversable[PositionInfo],
     goldStandardCellPositionInfos: Traversable[GoldStandardCellPositionInfo],
@@ -384,8 +398,8 @@ case class CalcMCCBasedPositionsFromFileSpec(
   delimiter: Option[String],
   exportFileName: String,
   parallelism: Int,
-  finalMethod: Boolean,
-  finalMethodPositionSelectionNum: Option[Int]
+  nonUniqueMethod: Boolean,
+  nonUniqueMethodPositionSelectionNum: Option[Int]
 )
 
 case class CalcMCCBasedPositionsFromFolderSpec(
@@ -397,8 +411,8 @@ case class CalcMCCBasedPositionsFromFolderSpec(
   delimiter: Option[String],
   exportFolderName: String,
   parallelism: Int,
-  finalMethod: Boolean,
-  finalMethodPositionSelectionNum: Option[Int]
+  nonUniqueMethod: Boolean,
+  nonUniqueMethodPositionSelectionNum: Option[Int]
 )
 
 case class PositionInfo(
