@@ -10,6 +10,7 @@ import util.writeStringAsStream
 import scala.concurrent.Future
 import scala.io.Source
 import scala.reflect.runtime.universe.typeOf
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class FilterTargetGeneVarianceFromFile @Inject() (dsaf: DataSetAccessorFactory) extends InputFutureRunnable[FilterTargetGeneVarianceFromFileSpec] {
 
